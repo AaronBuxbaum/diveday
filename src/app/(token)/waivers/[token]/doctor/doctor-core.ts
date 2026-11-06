@@ -3,6 +3,7 @@ import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
 import {
   attachDiverMedicalForm,
+  contactOnFile,
   diverMedicalFormOpen,
   getWaiverForToken,
   revealDoctorReferral,
@@ -49,6 +50,7 @@ export async function revealDoctorAnswersFor(
   const state = await getWaiverForToken(db, key);
   if (state.state !== "completed") return { status: "closed" };
   const record = state.record;
+  const readContact = await contactOnFile(db, record);
   // Keyed by the diver, so a reissued link buys no fresh budget; fails closed,
   // because this one bucket stands in front of medical answers.
   if (
@@ -66,6 +68,7 @@ export async function revealDoctorAnswersFor(
     db,
     record,
     typeof entered === "string" ? entered.trim() : "",
+    readContact,
   );
   if (answers === null) return { status: "closed" };
   if (answers === "mismatch") return { status: "mismatch" };
@@ -109,6 +112,7 @@ export async function sendDoctorFormFor(
   const state = await getWaiverForToken(db, key);
   if (state.state !== "completed") return { status: "closed" };
   const record = state.record;
+  const readContact = await contactOnFile(db, record);
   if (
     !(
       await checkRateLimitFailClosed(
@@ -132,7 +136,7 @@ export async function sendDoctorFormFor(
   if (stored.status === "not_configured") return { status: "unavailable" };
   if (stored.status !== "stored") return { status: "invalid" };
 
-  const attached = await attachDiverMedicalForm(db, record, stored.url);
+  const attached = await attachDiverMedicalForm(db, record, stored.url, readContact);
   if (attached === "sent") return { status: "sent" };
   await queueAndAttemptMediaDeletion(db, {
     shopId: record.shopId,

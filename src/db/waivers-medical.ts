@@ -38,6 +38,7 @@ import {
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatHeld, seatNotCancelled } from "./trips-queries";
+import { withVerifiedClearance } from "./waiver-record-columns";
 import { recheckAnsweredSeal } from "./waiver-seal-checks";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
@@ -91,6 +92,13 @@ export type MedicalEvaluationResult =
          * new hold that can be cleared on its own terms.
          */
         | "answer_already_recorded"
+        /**
+         * The record carries a clearance whose seal does not match its answer
+         * (tampering): boarding holds the diver, so "already recorded" would
+         * be false. The stamp stays as evidence and nothing is written
+         * (issue #3998).
+         */
+        | "answer_seal_broken"
         /**
          * The diver-sent form was ticked as the evidence with no physician's
          * name typed from it (issue #2797, domain review 1): a tick alone
@@ -439,6 +447,9 @@ export async function recordMedicalEvaluation(
     const open = openReferral(held);
     if (!open) {
       if (!answered) return { ok: false, reason: "no_medical_hold" };
+      if (withVerifiedClearance(answered).medicalClearedAt !== answered.medicalClearedAt) {
+        return { ok: false, reason: "answer_seal_broken" };
+      }
       const standing: MedicalEvaluationOutcome = answered.medicalClearedAt
         ? "cleared"
         : "not_cleared";
@@ -494,6 +505,10 @@ export async function recordMedicalEvaluation(
         clearedAt: waiverRecords.medicalClearedAt,
         declinedAt: waiverRecords.medicalClearanceDeclinedAt,
         seal: waiverRecords.medicalAnswerSeal,
+        clearedBy: waiverRecords.medicalClearedByPersonId,
+        physician: waiverRecords.medicalClearancePhysicianName,
+        evaluated: waiverRecords.medicalClearanceEvaluatedOn,
+        document: waiverRecords.medicalClearanceDocumentUrl,
       })
       .from(waiverRecords)
       .where(eq(waiverRecords.id, open.id))
@@ -525,6 +540,11 @@ export async function recordMedicalEvaluation(
           actorPersonId: recordedBy,
           code: "medical_unsealed_clearance_replaced",
           waiverRecordId: open.id,
+          replacedStamp: {
+            clearedByPersonId: locked.clearedBy,
+            physician: locked.physician,
+            evaluated: locked.evaluated,
+          },
         }))
       ) {
         throw new Error("recordMedicalEvaluation: the replaced stamp was not recorded");
@@ -584,6 +604,22 @@ export async function recordMedicalEvaluation(
     // again now, whole, and only a verdict that it is intact is written:
     // anything else on the row stays broken, and its old verdict stands.
     await recheckAnsweredSeal(tx, open.id, now);
+    // The write above overwrote the file the replaced stamp named; queued so it is not
+    // orphaned outside erasure's reach (issue #3999).
+    if (
+      locked &&
+      locked.clearedAt !== null &&
+      locked.declinedAt === null &&
+      locked.seal === null &&
+      locked.document &&
+      locked.document !== evidenceUrl
+    ) {
+      await queueMediaDeletion(tx, {
+        shopId: input.shopId,
+        kind: "waiver_document",
+        url: locked.document,
+      });
+    }
     // A form used from another of the diver's holds moves: one column, one
     // file. A form on this row the staffer did not use is not evidence of
     // anything now, so it is queued for deletion rather than kept.
@@ -1026,7 +1062,8 @@ export type DoctorReferralAnswers = {
  * layer r5-3, F3).
  */
 async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date) {
-  if (!awaitsPhysician(record) || !record.bookingId) return null;
+  // A stamp whose seal does not verify is no answer: the page holds, as boarding does (issue #3998).
+  if (!awaitsPhysician(withVerifiedClearance(record)) || !record.bookingId) return null;
   const [seat] = await db
     .select({ tripEndsAt: trips.endsAt })
     .from(bookings)
@@ -1050,14 +1087,45 @@ async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date
   return person ?? null;
 }
 
-/** Whether the record still answers to the link it was read through. */
-async function linkStillCurrent(db: DbExecutor, record: HeldRecord): Promise<boolean> {
-  const [current] = await db
-    .select({ tokenHash: waiverRecords.tokenHash })
-    .from(waiverRecords)
-    .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, record.shopId)))
+/**
+ * The diver's email and phone on file, as a doctor's-page request reads them
+ * when it resolves its release (`contactOnFile`) and checks them again before
+ * it acts (`contactStillOnFile`).
+ */
+export type ReadContact = { email: string | null; phone: string | null };
+
+/** The contact on file for a release's diver, read when the request resolved it. */
+export async function contactOnFile(
+  db: DbExecutor,
+  record: Pick<HeldRecord, "shopId" | "personId">,
+): Promise<ReadContact | null> {
+  const [person] = await db
+    .select({ email: people.email, phone: people.phone })
+    .from(people)
+    .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId), livePerson()))
     .limit(1);
-  return current?.tokenHash === record.tokenHash;
+  return person ?? null;
+}
+
+/**
+ * Whether the diver's contact is still the one the request read (security
+ * review S1): a correction since then revoked the link the request came in
+ * on (`revokeLinksSentToOldContact`), and whoever holds the old address reads
+ * and writes nothing. The person row is locked for share, so a correction in
+ * flight is waited for and its address is the one compared.
+ */
+async function contactStillOnFile(
+  db: DbExecutor,
+  record: HeldRecord,
+  read: ReadContact,
+): Promise<boolean> {
+  const [person] = await db
+    .select({ email: people.email, phone: people.phone })
+    .from(people)
+    .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId), livePerson()))
+    .for("share")
+    .limit(1);
+  return person?.email === read.email && person?.phone === read.phone;
 }
 
 /** Whether the held waiver page offers the doctor's page at all. */
@@ -1128,9 +1196,15 @@ export async function attachDiverMedicalForm(
   db: DbExecutor,
   record: HeldRecord,
   url: string,
+  /** The diver's contact as the request read it (`contactOnFile`). */
+  readContact: ReadContact | null,
   now: Date = nowDate(),
 ): Promise<"sent" | "already" | "closed"> {
   if (!(await heldPersonForDoctor(db, record, now))) return "closed";
+  // Still the contact the caller read the record through (security review
+  // S1): a correction while the file was being stored revoked that link and
+  // reopened the slot, and the old address must not fill it.
+  if (!readContact) return "closed";
   const [written] = await db
     .update(waiverRecords)
     .set({ diverMedicalFormUrl: url, diverMedicalFormSentAt: now })
@@ -1140,36 +1214,35 @@ export async function attachDiverMedicalForm(
         eq(waiverRecords.shopId, record.shopId),
         eq(waiverRecords.status, "medical_review"),
         isNull(waiverRecords.supersededAt),
+        // No stamp at all: a form beside a stamp that does not verify would sit where no desk
+        // reader looks, so that diver's upload is refused and queued for deletion (issue #3998).
         isNull(waiverRecords.medicalClearedAt),
         isNull(waiverRecords.medicalClearanceDeclinedAt),
         isNull(waiverRecords.anonymizedAt),
         isNull(waiverRecords.diverMedicalFormSentAt),
-        // Still the link the caller read the record through (security review
-        // S1): a contact change while the file was being stored rotated it and
-        // reopened the slot, and the old address must not fill it.
-        eq(waiverRecords.tokenHash, record.tokenHash),
+        // Still the contact the caller read the record through, in the same
+        // statement (security review S1): a correction that commits while the
+        // file was stored revoked that link and reopened the slot, and the old
+        // address must not fill it.
+        sql`exists (select 1 from ${people} where ${people.id} = ${waiverRecords.personId} and ${people.shopId} = ${waiverRecords.shopId} and ${people.email} is not distinct from ${readContact.email} and ${people.phone} is not distinct from ${readContact.phone})`,
       ),
     )
     .returning({ id: waiverRecords.id });
   if (written) return "sent";
+  if (!(await contactStillOnFile(db, record, readContact))) return "closed";
   const [current] = await db
     .select({
       sentAt: waiverRecords.diverMedicalFormSentAt,
       clearedAt: waiverRecords.medicalClearedAt,
       declinedAt: waiverRecords.medicalClearanceDeclinedAt,
       anonymizedAt: waiverRecords.anonymizedAt,
-      tokenHash: waiverRecords.tokenHash,
     })
     .from(waiverRecords)
     .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, record.shopId)))
     .limit(1);
   // "Already" only for a hold still waiting with a form on it; an answered or
   // erased one is closed, whatever it holds.
-  return current?.sentAt &&
-    !current.clearedAt &&
-    !current.declinedAt &&
-    !current.anonymizedAt &&
-    current.tokenHash === record.tokenHash
+  return current?.sentAt && !current.clearedAt && !current.declinedAt && !current.anonymizedAt
     ? "already"
     : "closed";
 }
@@ -1196,13 +1269,16 @@ export async function revealDoctorReferral(
   db: DbExecutor,
   record: HeldRecord,
   enteredBirthdate: string,
+  /** The diver's contact as the request read it (`contactOnFile`). */
+  readContact: ReadContact | null,
   now: Date = nowDate(),
 ): Promise<DoctorReferralAnswers | "mismatch" | "whole" | null> {
   const person = await heldPersonForDoctor(db, record, now);
   if (!person) return null;
-  // Still the link the caller read the record through (security review S1):
-  // a contact change since then rotated it, and the old address reads nothing.
-  if (!(await linkStillCurrent(db, record))) return null;
+  // Still the contact the caller read the record through (security review
+  // S1): a correction since then revoked that link, and the old address reads
+  // nothing.
+  if (!readContact || !(await contactStillOnFile(db, record, readContact))) return null;
   const items = referralItems(record.medicalAnswers);
   if (items.length === 0 || !person.dateOfBirth) return "whole";
   if (record.doctorUnlockFailures >= DOCTOR_UNLOCK_FAILURE_LIMIT) return "whole";

@@ -247,7 +247,6 @@ const CERTIFICATION_FIX: Record<
     waiver_lapsed: null,
     waiver_runs_out: null,
     waiver_pending: null,
-    waiver_expired: null,
     medical_review: null,
     medical_not_cleared: null,
     waiver_seal_failed: null,

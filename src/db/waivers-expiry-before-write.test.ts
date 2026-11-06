@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MINUTE_MS, nowDate } from "@/lib/clock";
+import { DAY_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { people, waiverRecords } from "./schema";
 import { completeWaiver, recordWaiverDraft } from "./waivers-completion";
@@ -24,8 +24,8 @@ describe("waiver expiry during validation", () => {
   it.each([
     ["sign", "counter"],
     ["draft", "counter"],
-    ["sign", "inner"],
-    ["draft", "inner"],
+    ["sign", "release"],
+    ["draft", "release"],
   ] as const)(
     "refuses %s and its contact when the %s link expires during a question read",
     async (operation, expiryKind) => {
@@ -46,11 +46,17 @@ describe("waiver expiry during validation", () => {
         recordId = link.recordId;
         expiresAt = link.expiresAt;
       } else {
-        const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
-        if (!issued.ok) throw new Error("link missing");
-        key = issued.token;
+        // A release link to a release with no seat, minted a week less half a
+        // minute ago.
+        const issued = await issueWaiverRequest(db, {
+          shopId: shop.id,
+          personId: person.id,
+          now: new Date(nowDate().getTime() - 7 * DAY_MS + 0.5 * MINUTE_MS),
+        });
+        if (!issued.ok || issued.key.kind !== "release") throw new Error("link missing");
+        key = issued.key;
         recordId = issued.recordId;
-        expiresAt = issued.expiresAt;
+        expiresAt = issued.key.expiresAt;
       }
       const original = templates.getWaiverTemplateQuestions;
       vi.spyOn(templates, "getWaiverTemplateQuestions").mockImplementation(async (...args) => {
@@ -72,11 +78,7 @@ describe("waiver expiry during validation", () => {
               shopAnswers: {},
               emergencyContact: { name: "Jordan", phone: "1234567890" },
             });
-      if (operation === "sign")
-        expect(result).toEqual({
-          ok: false,
-          reason: expiryKind === "counter" ? "unavailable" : "expired",
-        });
+      if (operation === "sign") expect(result).toEqual({ ok: false, reason: "unavailable" });
       else expect(result).toBe(false);
       const [stored] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
       expect(stored?.status).toBe("pending");

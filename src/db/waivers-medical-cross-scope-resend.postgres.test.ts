@@ -68,7 +68,7 @@ describePostgres("person-scoped waiver issuance against a physician update", () 
       now: signedAt,
     });
     if (!first.ok) throw new Error("expected an initial person-scoped link");
-    await completeWaiver(pg.db, first.token, {
+    await completeWaiver(pg.db, first.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -82,7 +82,7 @@ describePostgres("person-scoped waiver issuance against a physician update", () 
       now: referralAt,
     });
     if (!referral.ok) throw new Error("expected a booking-scoped link");
-    await completeWaiver(pg.db, referral.token, {
+    await completeWaiver(pg.db, referral.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,

@@ -10,7 +10,7 @@ import {
   waiverRecords,
   type waiverTemplates,
 } from "./schema";
-import { at, nextCreatedAt } from "./seed-clock";
+import { nextCreatedAt } from "./seed-clock";
 import { paperRelease } from "./seed-paper-release";
 
 /**
@@ -71,7 +71,7 @@ export async function seedMixedBoat(
     })
     .where(eq(trips.id, reef.id));
 
-  for (const [index, guest] of NOT_DIVING.entries()) {
+  for (const guest of NOT_DIVING) {
     const [person] = await db
       .insert(people)
       .values({
@@ -110,8 +110,6 @@ export async function seedMixedBoat(
       templateGeneration: waiverTemplate.materialGeneration,
       templateBody: waiverTemplate.body,
       // Unique per shop, like the upcoming waivers in `seed-bookings.ts`.
-      tokenHash: `seed-waiver-mixed-boat-${shopId}-${index}`,
-      expiresAt: at(30, 12),
       createdAt: signedAt,
       ...paperRelease(signedAt, recordedById, guest.fullName),
     });

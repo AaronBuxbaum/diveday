@@ -16,7 +16,6 @@ const deepRequirement = {
 } as unknown as TripRequirement;
 const signedWaiver = {
   status: "completed",
-  expiresAt: new Date("2026-07-25T12:00:00.000Z"),
 } as WaiverRecord;
 
 function certification(overrides: Partial<Certification> = {}): Certification {

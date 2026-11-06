@@ -498,7 +498,7 @@ describe("the roster's row geometry", () => {
    * K-174: the roster drew its waiver send as a hand-rolled pill (fully
    * round, 16px inset, no `pressable`, no disabled state) while the diver
    * record draws the same act as the app's `sm` button. Both are the one
-   * button now; an expired link's send wears `danger`.
+   * button now.
    */
   it("draws the waiver's send as the app's own sm button, as the diver record does", () => {
     const unsent = entry("n", "Nadia Petrov");
@@ -519,7 +519,6 @@ describe("the roster's row geometry", () => {
               status: "sent",
               completedAt: null,
               signatureMethod: null,
-              expiresAt: new Date("2020-01-01T00:00:00Z"),
               medicalAnswers: null,
             },
           },
@@ -528,10 +527,8 @@ describe("the roster's row geometry", () => {
     });
 
     const send = screen.getByRole("button", { name: "Send waiver" });
-    const resend = screen.getByRole("button", { name: "Link expired" });
     expect(send.className).toBe(buttonClass({ variant: "secondary", size: "sm" }));
-    expect(resend.className).toBe(buttonClass({ variant: "danger", size: "sm" }));
-    for (const control of [send, resend]) expect(control).not.toHaveClass("rounded-full");
+    expect(send).not.toHaveClass("rounded-full");
   });
 
   /**

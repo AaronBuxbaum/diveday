@@ -29,7 +29,6 @@ const WAIVER_CODES = new Set<ReadinessBlockerCode>([
   "waiver_lapsed",
   "waiver_runs_out",
   "waiver_pending",
-  "waiver_expired",
   "guardian_signature_missing",
 ]);
 
@@ -58,7 +57,6 @@ export const BLOCKER_ACTIONS: Record<
   waiver_lapsed: { kind: "waiver", target: "trip" },
   waiver_runs_out: { kind: "waiver", target: "trip" },
   waiver_pending: { kind: "waiver", target: "trip" },
-  waiver_expired: { kind: "waiver", target: "trip" },
   // **The diver, not the departure**, since #1252 gave the hold a door: the
   // physician clearance that ends it is recorded on the diver's own record, and
   // it is a fact about the person rather than about Saturday's boat. It pointed

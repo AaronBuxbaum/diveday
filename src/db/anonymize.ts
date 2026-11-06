@@ -85,7 +85,6 @@ import {
   WAIVER_INTEGRITY_VERSION_ERASED,
   waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
 import {
   lockBoardingCertificationEvidence,
@@ -102,6 +101,7 @@ import {
   type ProcessorErasureTargetInput,
   recordProcessorErasureObligations,
 } from "./processor-erasure";
+import { retireRecapLinks } from "./recap-links";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import type { ProcessorErasureObligation } from "./schema";
 import * as schema from "./schema";
@@ -976,13 +976,8 @@ async function scrubWaiverRecords(
         importSourceMedicalDocumentUrl: null,
         medicalClearanceDocumentUrl: null,
         diverMedicalFormUrl: null,
-        // The URL *is* the capability. A live pending link would let its bearer
-        // complete a fresh, un-erased record against this same person after the
-        // erasure, so the hash is rotated to a value no issued token maps to,
-        // the expiry is pulled back to now, and any still-live record is marked
-        // superseded.
-        tokenHash: hashWaiverToken(createWaiverToken()),
-        expiresAt: now,
+        // A still-live record is marked superseded, so nothing reaches it to
+        // sign; the links to the person's releases are deleted below.
         startedAt: null,
         supersededAt: record.supersededAt ?? (record.status === "pending" ? now : null),
         anonymizedAt: now,
@@ -1166,6 +1161,9 @@ async function scrubPersonOnlyRows(
   // carries a non-blank check, so there is nothing to redact it *to*), and
   // something found aboard with their name on it is about their belongings.
   await deleteRegisteredPersonRows(tx, ctx);
+  // A recap link to one of their bookings opens nothing after the erasure
+  // (issue #3982 review F2): the epoch it signed moves on.
+  await retireRecapLinks(tx, { shopId, personId });
   // Every capability that opens something of this person's: their own
   // (courtesy-email unsubscribe) and their interests' (last-minute-list
   // unsubscribe). The interest ones name it by foreign key, so they go here,
@@ -1175,9 +1173,9 @@ async function scrubPersonOnlyRows(
   // that opens this person goes with them (security review of #2710, F1).
   // A staff credential naming them (a calendar feed, `merge: "refuse"`) is
   // revoked by `scrubStandingCredentials` instead, so the record of it stays.
-  // A counter tablet's waiver link (`waiver_link`) names one of their
-  // releases, which stay as evidence: the link goes, so nothing opens the
-  // release again.
+  // A door to one of their releases (`waiver_link`, `party_waiver_link`,
+  // `release_link`) goes too; the releases stay as evidence, and nothing
+  // opens them again.
   await tx.delete(capabilities).where(
     or(
       and(

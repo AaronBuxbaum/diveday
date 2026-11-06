@@ -59,7 +59,7 @@ async function alerted() {
   vi.mocked(getDb).mockResolvedValue(db);
   const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
   if (!issued.ok) throw new Error("expected a waiver link");
-  const signed = await completeWaiver(db, issued.token, {
+  const signed = await completeWaiver(db, issued.key, {
     signerName: person.fullName,
     agreed: true,
     medicalAnswers: clearAnswers,

@@ -115,7 +115,6 @@ export type SignNextCode = Extract<
   | "waiver_lapsed"
   | "waiver_runs_out"
   | "waiver_pending"
-  | "waiver_expired"
   | "waiver_seal_failed"
   | "medical_review"
   | "medical_not_cleared"
@@ -131,7 +130,6 @@ export const SIGN_NEXT_KEYS: Record<SignNextCode, DiverMessageKey> = {
   waiver_lapsed: "thread.next.freshWaiver",
   waiver_runs_out: "thread.next.freshWaiver",
   waiver_pending: "thread.next.signWaiver",
-  waiver_expired: "thread.next.freshWaiver",
   // The release on file changed after signing (issue #3885): the diver signs
   // again on a link only the shop can send, and this page, open to whoever
   // holds the link, never says the record changed.

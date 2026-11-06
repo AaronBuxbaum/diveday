@@ -8,11 +8,11 @@ import {
   isRecapOpen,
   MAX_RECAP_PHOTOS_PER_BOOKING,
 } from "@/db/recap";
+import { openRecapLink } from "@/db/recap-links";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { verifyRecapToken } from "@/lib/recap-links";
 import { clientIp } from "@/lib/request-ip";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 
@@ -58,7 +58,7 @@ export async function uploadRecapPhotos(
   ) {
     redirect(`${back}?photo=error`);
   }
-  const bookingId = verifyRecapToken(token);
+  const bookingId = await openRecapLink(await getDb(), token);
   if (!bookingId) redirect(`${back}?photo=error`);
   if (
     !(

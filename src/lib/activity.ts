@@ -273,7 +273,15 @@ type ActivityParamShapes = {
    * so the stamp was replaced (issue #3987). A stamp the desk never sealed is forged or an
    * older build's; either way the trail says it was there.
    */
-  medical_unsealed_clearance_replaced: { actor: string; diver: string; record?: string };
+  medical_unsealed_clearance_replaced: {
+    actor: string;
+    diver: string;
+    record?: string;
+    /** The replaced stamp's values (issue #3999): who stamped it, the physician, the date. */
+    clearedBy?: string;
+    physician?: string;
+    evaluated?: string;
+  };
   /**
    * A physician's answer was recorded from a letter dated before the referral it
    * answers (issue #2616): the letter's date, the earlier referral it was written
@@ -328,6 +336,12 @@ type ActivityParamShapes = {
    * minor's release before showing its code (issue #3986).
    */
   waiver_counter_guardian_confirmed: { actor: string; diver: string };
+  /**
+   * A staffer took Copy link on a release with no seat (issue #3983): the
+   * URL can sign as the diver, for every seat they hold, so who took it is on
+   * the diver's trail, as a counter QR is.
+   */
+  waiver_link_copied: { actor: string; diver: string };
   /**
    * A staffer read a diver's medical alert for the crew, on a manifest they
    * crew or on the signed record (issue #2960). Never written offline.
@@ -629,6 +643,7 @@ export const ACTIVITY_CODES = [
   "waiver_seal_acknowledged",
   "waiver_counter_code_shown",
   "waiver_counter_guardian_confirmed",
+  "waiver_link_copied",
   "medical_alert_read",
   "medical_alert_saved_offline",
   "medical_alert_printed",

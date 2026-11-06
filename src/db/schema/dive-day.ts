@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigserial,
   boolean,
   check,
@@ -105,6 +106,15 @@ export const rollCallEvents = pgTable(
      */
     clientEventId: uuid("client_event_id"),
     /**
+     * **The event a `cleared` takes back** (issue #3995, ADR
+     * 20260815-an-offline-retraction-names-its-target). Written only after the
+     * writer proved it was the mark the manifest showed at this subject and
+     * checkpoint, so it is what lets an undo of an earlier meeting day's
+     * carried "did not come back" reach that day (`standingByDay`). Null on
+     * every other status and on a bare dock undo.
+     */
+    retractsEventId: uuid("retracts_event_id").references((): AnyPgColumn => rollCallEvents.id),
+    /**
      * Which encrypted snapshot supplied the offline readiness evidence. Seat
      * rows only: crew have no readiness to evidence (nothing gates a crew
      * member at departure), so a crew row leaves it null even though the
@@ -203,6 +213,8 @@ export const rollCallEvents = pgTable(
     // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
     index("roll_call_events_recorded_by_person_id_idx").on(table.recordedByPersonId),
     index("roll_call_events_crew_person_id_idx").on(table.crewPersonId),
+    // The self-reference's probe: a demo shop's ledger delete checks it per row.
+    index("roll_call_events_retracts_event_id_idx").on(table.retractsEventId),
     index("roll_call_events_shop_trip_checkpoint_booking_occurred_idx")
       .on(table.shopId, table.tripId, table.checkpoint, table.bookingId, table.occurredAt)
       .where(sql`${table.subjectKind} = 'seat'`),
@@ -213,6 +225,10 @@ export const rollCallEvents = pgTable(
     check(
       "roll_call_events_subject",
       sql`(${table.subjectKind} = 'seat' and ${table.bookingId} is not null and ${table.crewPersonId} is null) or (${table.subjectKind} = 'crew' and ${table.crewPersonId} is not null and ${table.bookingId} is null)`,
+    ),
+    check(
+      "roll_call_events_retracts_only_cleared",
+      sql`${table.retractsEventId} is null or ${table.status} = 'cleared'`,
     ),
     check(
       "roll_call_events_offline_snapshot_seat_only",

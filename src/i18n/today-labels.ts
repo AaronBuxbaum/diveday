@@ -80,7 +80,6 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   waiver_lapsed: "today.blockerAction.sendWaiver",
   waiver_runs_out: "today.blockerAction.sendWaiver",
   waiver_pending: "today.blockerAction.nudgeWaiver",
-  waiver_expired: "today.blockerAction.reissueWaiver",
   medical_review: "today.blockerAction.reviewMedical",
   // Not "review": there is nothing left to review. What the refusal creates
   // is a conversation about a seat this diver can no longer take, and the
@@ -153,7 +152,6 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   waiver_lapsed: "today.blockerRow.waiverLapsed",
   waiver_runs_out: "today.blockerRow.waiverRunsOut",
   waiver_pending: "today.blockerRow.waiverPending",
-  waiver_expired: "today.blockerRow.waiverExpired",
   medical_review: "today.blockerRow.medicalReview",
   medical_not_cleared: "today.blockerRow.medicalNotCleared",
   waiver_seal_failed: "today.blockerRow.waiverSealFailed",
@@ -200,7 +198,6 @@ const WAIVER_BATCH_LABEL_KEYS = {
   waiver_lapsed: "today.blockerGroup.sendWaivers",
   waiver_runs_out: "today.blockerGroup.sendWaivers",
   waiver_pending: "today.blockerGroup.nudgeWaivers",
-  waiver_expired: "today.blockerGroup.reissueWaivers",
   guardian_signature_missing: "today.blockerGroup.reissueWaivers",
 } as const satisfies Partial<Record<ReadinessBlockerCode, StaffMessageKey>>;
 
@@ -220,7 +217,6 @@ const BLOCKER_ITEM_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   waiver_lapsed: "today.diverItem.waiver",
   waiver_runs_out: "today.diverItem.waiver",
   waiver_pending: "today.diverItem.waiver",
-  waiver_expired: "today.diverItem.waiver",
   waiver_seal_failed: "today.diverItem.waiver",
   guardian_signature_missing: "today.diverItem.guardianSignature",
   course_form_unsigned: "today.diverItem.courseForm",

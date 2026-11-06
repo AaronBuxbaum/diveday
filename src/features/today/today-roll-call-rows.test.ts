@@ -709,8 +709,9 @@ describe("unclosed roll call (DOM-H3)", () => {
         divers: 2,
       });
       await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+      const boardedEvents: string[] = [];
       for (const bookingId of bookingIds) {
-        await recordRollCall(db, {
+        const boarded = await recordRollCall(db, {
           shopId: shop.id,
           tripId: trip.id,
           bookingId,
@@ -718,6 +719,8 @@ describe("unclosed roll call (DOM-H3)", () => {
           status: "boarded",
           checkpoint: "after_dive_1",
         });
+        if (!boarded.ok) throw new Error(boarded.reason);
+        boardedEvents.push(boarded.eventId);
       }
       expect(
         rollCallRows(
@@ -738,6 +741,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         recordedByPersonId: staffId,
         status: "cleared",
         checkpoint: "after_dive_1",
+        retractsEventId: boardedEvents[0],
         occurredAt: new Date(nowMs() + 1000),
       });
 

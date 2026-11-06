@@ -6,6 +6,7 @@ import {
   counterPath,
   createTrip,
   daysFromNow,
+  openCopiedWaiverLink,
   openDiverFileGroup,
   openPaperWaiverForm,
   openRosterDetails,
@@ -70,7 +71,7 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   // `openDiverFileGroup` only opens a door that is shut.
   await openDiverFileGroup(page, "Waiver");
   await page.getByRole("button", { name: "Copy link" }).click();
-  await page.goto(await waiverLinkFromToast(page));
+  await openCopiedWaiverLink(page, await waiverLinkFromToast(page));
 
   // The section the rule adds, and the one thing about it that is not a field:
   // the page's single Sign button now belongs to the guardian's card, so
@@ -124,7 +125,7 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   await page.getByLabel("Guardian’s full name").fill(`Jordan Guardian ${stamp}`);
   await page.getByLabel("Guardian’s email").fill("");
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
 
   // What staff read back: not "Signed" and a date, but who signed it with them.
   await page.goto(record);

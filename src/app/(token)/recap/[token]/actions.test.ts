@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * What the write itself does — one live row per booking, withdrawal, the
  * cancelled-booking refusal — is pinned against a real database in
  * `src/db/recap-pulses.test.ts`. What can only be seen here is the *order*: an
- * IP limit that runs after `verifyRecapToken` throttles abuse of a link
+ * IP limit that runs after `openRecapLink` throttles abuse of a link
  * somebody already has and does nothing at all about somebody spraying guesses
  * at the signature (CR-013), and no database test can tell the two apart.
  */
@@ -55,7 +55,7 @@ vi.mock("@/i18n/request", () => ({
   requestLocale: vi.fn(async () => "en-US"),
 }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
-vi.mock("@/lib/recap-links", () => ({ verifyRecapToken: vi.fn(() => null) }));
+vi.mock("@/db/recap-links", () => ({ openRecapLink: vi.fn(async () => null) }));
 vi.mock("@/lib/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
@@ -67,7 +67,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 
 const { submitRecapPulse } = await import("@/db/recap-pulses");
-const { verifyRecapToken } = await import("@/lib/recap-links");
+const { openRecapLink } = await import("@/db/recap-links");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { startTipCheckout } = await import("@/db/tips");
 const { addRecapPhoto, canAddRecapPhoto, isRecapOpen, unshareRecapPhoto } = await import(
@@ -107,7 +107,7 @@ async function redirectedTo(data: FormData): Promise<string> {
 
 beforeEach(() => {
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
-  vi.mocked(verifyRecapToken).mockReturnValue(BOOKING_ID);
+  vi.mocked(openRecapLink).mockResolvedValue(BOOKING_ID);
   vi.mocked(submitRecapPulse).mockResolvedValue({ ok: true, withdrawn: false });
   vi.mocked(isRecapOpen).mockResolvedValue(true);
 });
@@ -122,7 +122,7 @@ describe("submitRecapPulseAction", () => {
     expect(await redirectedTo(form([["category", "gear"]]))).toBe(`/recap/${TOKEN}?pulse=error`);
     // The point of the ordering: a refused IP costs nothing and reveals nothing
     // about whether the token was real.
-    expect(verifyRecapToken).not.toHaveBeenCalled();
+    expect(openRecapLink).not.toHaveBeenCalled();
     expect(submitRecapPulse).not.toHaveBeenCalled();
   });
 
@@ -135,7 +135,7 @@ describe("submitRecapPulseAction", () => {
   });
 
   it("refuses a token that verifies to nothing", async () => {
-    vi.mocked(verifyRecapToken).mockReturnValue(null);
+    vi.mocked(openRecapLink).mockResolvedValue(null);
     expect(await redirectedTo(form([["category", "gear"]]))).toBe(`/recap/${TOKEN}?pulse=error`);
     expect(submitRecapPulse).not.toHaveBeenCalled();
   });
@@ -364,7 +364,7 @@ describe("unshareRecapPhotoAction", () => {
     expect(await unshareRedirect(form([["photoId", PHOTO_ID]]))).toBe(
       `/recap/${TOKEN}?photo=error`,
     );
-    expect(verifyRecapToken).not.toHaveBeenCalled();
+    expect(openRecapLink).not.toHaveBeenCalled();
     expect(unshareRecapPhoto).not.toHaveBeenCalled();
   });
 
@@ -379,7 +379,7 @@ describe("unshareRecapPhotoAction", () => {
   });
 
   it("refuses a token that verifies to nothing", async () => {
-    vi.mocked(verifyRecapToken).mockReturnValue(null);
+    vi.mocked(openRecapLink).mockResolvedValue(null);
     expect(await unshareRedirect(form([["photoId", PHOTO_ID]]))).toBe(
       `/recap/${TOKEN}?photo=error`,
     );

@@ -50,7 +50,7 @@ both the diver and crew readers build a local result through, the same place `lo
 two halves of one head count cannot disagree about which event a row is showing.
 
 **2. A retraction whose target no longer stands is REFUSED**, as
-`{ ok: false, reason: "retraction_superseded" }`, through one shared `offlineRetractionSuperseded`
+`{ ok: false, reason: "retraction_superseded" }`, through one shared `retractionSuperseded`
 predicate both writers call — mirroring `offlineEventOutOfBounds` beside it.
 
 Refusing is not chosen for sounding conservative; it is chosen because every case it can be wrong
@@ -193,6 +193,20 @@ A crew member can now see a `cleared` come back rejected. After a dive the row k
 back aboard" and switches to "Recorded on another device or on the live manifest — undo it there,
 not here"; at the dock it goes back to awaiting and asks again. The header's rejected count says a
 correction needs attention, and the live manifest remains the authority.
+
+**Amended 2026-11-06 (issue #3995): the live undo names its target too, and the target is
+stored.** The live manifest's `cleared` carries the row id of the mark it takes back
+(`retractsEventId`, from `RollCallRecord.eventId`); the server id is fine here because a live mark
+is never queued. Both writers call the one predicate, now `retractionSuperseded`: live compares the
+named id with the mark the manifest shows (`shownMarkId`, its own day's newest or an earlier day's
+carried "did not come back"), and a bare live `cleared` after a dive is refused as offline is. An
+applied named retraction stores its target in `roll_call_events.retracts_event_id`, offline
+included. That reverses the paragraph below: since
+[20261104-roll-call-by-meeting-day](20261104-roll-call-by-meeting-day.md) a `cleared` can take back a
+mark on an earlier meeting day, so its target is no longer "the row immediately before it", and the
+fold (`standingByDay`) reaches back only for a `cleared` naming that day's "not back". A double tap
+or a retried request names a mark already taken back and is refused, so the carried alarm stays.
+The original paragraph follows.
 
 **What this deliberately does not do.** It records no extra provenance column for whether a
 retraction was checked. The target of an *applied* named retraction is derivable from the trail — the

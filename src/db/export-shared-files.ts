@@ -705,6 +705,7 @@ export const ROLL_CALL_EVENTS_CSV = sharedFile<ShopRow<"rollCallRows">>({
     { header: "checkpoint", in: "both", value: (row) => row.checkpoint },
     { header: "source", in: "shop", value: (row) => row.source },
     { header: "client_event_id", in: "shop", value: (row) => row.clientEventId },
+    { header: "retracts_event_id", in: "shop", value: (row) => row.retractsEventId },
     { header: "offline_snapshot_saved_at", in: "shop", value: (row) => row.offlineSnapshotSavedAt },
     { header: "recorded_by_person_id", in: "shop", value: (row) => row.recordedByPersonId },
     {
@@ -961,7 +962,6 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     // and refusal columns above, so a destination can re-verify them too.
     { header: "medical_answer_seal", in: "shop", value: (row) => row.medicalAnswerSeal },
     { header: "superseded_at", in: "both", value: (row) => row.supersededAt },
-    { header: "expires_at", in: "both", value: (row) => row.expiresAt },
     { header: "imported_from_label", in: "shop", value: (row) => row.importedFromLabel },
     {
       header: "import_source_document_url",
@@ -1867,7 +1867,6 @@ export const DIVE_PACKAGE_ENTITLEMENTS_CSV = sharedFile<ShopRow<"entitlementRows
     { header: "order_id", in: "shop", value: (row) => row.orderId },
     { header: "booking_id", in: "both", value: (row) => row.bookingId },
     { header: "consumed_at", in: "both", value: (row) => row.consumedAt },
-    { header: "expires_at", in: "both", value: (row) => row.expiresAt },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
   shop: {

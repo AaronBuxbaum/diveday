@@ -70,6 +70,35 @@ describe("RollCallButton", () => {
     expect(screen.getByRole("button")).toHaveTextContent("Board");
   });
 
+  /** #3995: an undo names the mark on screen, and says so when it changed first. */
+  it("posts the mark an undo takes back, and words a superseded undo", async () => {
+    const action = mockAction({ ok: false, reason: "superseded" });
+    render(
+      <RollCallButton
+        action={action}
+        subject={{ field: "bookingId", id: "00000000-0000-4000-8000-000000000001" }}
+        status="cleared"
+        retracts="00000000-0000-4000-8000-0000000000e1"
+        label="Undo"
+        pendingLabel="Undoing…"
+        className="btn"
+        copy={{ ...DEFAULT_COPY, superseded: "The mark changed before it could be undone." }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("The mark changed");
+    expect(action.mock.calls[0]?.[1].get("retractsEventId")).toBe(
+      "00000000-0000-4000-8000-0000000000e1",
+    );
+  });
+
+  it("posts no target on a statement", async () => {
+    const action = mockAction({ ok: true });
+    setup(action);
+    await userEvent.click(screen.getByRole("button", { name: "Board" }));
+    expect(action.mock.calls[0]?.[1].get("retractsEventId")).toBeNull();
+  });
+
   it("shows no rollback message and triggers haptic vibration when the board succeeds", async () => {
     const vibrateMock = vi.fn();
     vi.stubGlobal("navigator", { vibrate: vibrateMock });

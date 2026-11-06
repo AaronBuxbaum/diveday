@@ -3,7 +3,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { SELF_DECLARED_AGENCIES, SELF_DECLARED_LEVELS } from "../src/lib/self-registration";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openDiverFileGroup, waiverLinkFromToast } from "./helpers";
+import { openCopiedWaiverLink, openDiverFileGroup, waiverLinkFromToast } from "./helpers";
 
 /**
  * **The counter's QR door** (issue #1236): a diver who has booked nothing puts
@@ -122,7 +122,7 @@ test.describe("a diver whose release already stands", () => {
     await openDiverFileGroup(page, "Waiver");
     const waiverGroup = page.getByRole("region", { name: "Waiver" });
     await waiverGroup.getByRole("button", { name: "Copy link" }).click();
-    await page.goto(await waiverLinkFromToast(page));
+    await openCopiedWaiverLink(page, await waiverLinkFromToast(page));
 
     await page.getByLabel("Type your full name").fill(name);
     await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
@@ -134,8 +134,10 @@ test.describe("a diver whose release already stands", () => {
     // Back on the same URL, not `/ready/`: the release this door issues is
     // **person-scoped**, and a readiness thread belongs to a booking. This
     // diver has no seat yet — that is the whole point of registering before one
-    // exists — so the outcome screen is where signing ends.
-    await expect(page.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
+    // exists — so the outcome screen is where signing ends. The link was copied
+    // from the staff file, so it is a counter handoff: it says only that the
+    // waiver is signed, never "the paperwork done" (#3983).
+    await expect(page.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
 
     // Now the branch: this submission mints nothing and sends nothing.
     await page.goto(REGISTER);

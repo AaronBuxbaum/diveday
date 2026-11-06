@@ -26,9 +26,11 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import type { SeatCounts } from "@/lib/participant-types";
 import {
   boatServiceWindow,
+  firstHeldDayInWindow,
+  HULL_NOT_IN_SHOP,
+  hullHeldSpans,
   type ServiceWindow,
   serviceWindowFrom,
-  serviceWindowTouches,
 } from "@/lib/service-window";
 import {
   summarizeTripDiveSites,
@@ -581,26 +583,32 @@ export async function sellableCapacity(
 }
 
 /**
- * **Whether a hull is in the yard on any of these instants' shop-local days**
- * (loop 5, row 5; issue #3915). The one question every door that puts a
- * departure on a boat asks before it writes: a move, a copy, every week of a
- * series. False for no boat, a boat with no window, or another shop's boat.
+ * **Whether a hull is in the yard on any day these legs hold it** (loop 5,
+ * row 5; issues #3915, #3994). The one question every door that puts a
+ * departure on a boat asks before it writes: a move, a copy. Each leg holds
+ * the hull from the shop-local day it starts through the day it ends
+ * (`hullHeldSpans`). False for no boat or a boat with no window; true for
+ * another shop's boat (`HULL_NOT_IN_SHOP`). Every caller is about to write,
+ * so the window is read under the same share lock the roll takes: a window
+ * saved mid-move waits for the move's commit (attacker review, #3994).
  */
 export async function boatOutOfServiceOn(
   tx: DbExecutor,
   shopId: string,
   boatId: string | null,
-  instants: readonly Date[],
+  legs: readonly { startsAt: Date; endsAt: Date }[],
   timeZone: string,
 ): Promise<boolean> {
   if (!boatId) return false;
-  return serviceWindowTouches(
-    await boatServiceWindowOf(tx, shopId, boatId),
-    instants.map((instant) => calendarDateInTimezone(instant, timeZone)),
-  );
+  const window = await boatServiceWindowOf(tx, shopId, boatId, { lock: true });
+  return firstHeldDayInWindow(window, hullHeldSpans(legs, timeZone)) !== null;
 }
 
-/** A boat's yard window, read once for a caller that asks about many days; null for none. */
+/**
+ * A boat's yard window, read once for a caller that asks about many days;
+ * null for no boat or no window. A boat id this shop does not own reads as
+ * {@link HULL_NOT_IN_SHOP}, always in the yard, so no guard passes it.
+ */
 export async function boatServiceWindowOf(
   tx: DbExecutor,
   shopId: string,
@@ -623,6 +631,7 @@ export async function boatServiceWindowOf(
   // week. A share lock makes the save wait for the roll's commit, and the next
   // roll reads the new window. A read that only answers a question stays unlocked.
   const [boat] = options.lock ? await read.for("share") : await read;
+  if (!boat) return HULL_NOT_IN_SHOP;
   return boatServiceWindow(boat);
 }
 

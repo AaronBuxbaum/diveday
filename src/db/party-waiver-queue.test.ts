@@ -4,8 +4,13 @@ import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { signingDate } from "@/lib/guardian";
 import { fileScopedShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
 import { mintCapability } from "./capabilities";
-import { getPartyWaiverQueue, issuePartyWaiver } from "./party-waiver-queue";
+import {
+  getCounterDoctorReferral,
+  getPartyWaiverQueue,
+  issuePartyWaiver,
+} from "./party-waiver-queue";
 import * as readinessDb from "./readiness";
 import { listTripReadiness } from "./readiness";
 import {
@@ -18,7 +23,7 @@ import {
 } from "./schema";
 import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
-import { completeWaiver, getWaiverForToken } from "./waivers-completion";
+import { completeWaiver, doorNeedsDeskGuardian, getWaiverForToken } from "./waivers-completion";
 import { recordMedicalEvaluation } from "./waivers-medical";
 import { clearAnswers, medicalReferralAnswers, openOnDevice } from "./waivers-test-fixtures";
 
@@ -96,6 +101,34 @@ describe("party release QR handoff", () => {
         leadBookingId: f.lead.bookingId,
       }),
     ).toBeNull();
+  });
+
+  it("shows a solo seat its own counter code: a one-seat queue (issue 3984)", async () => {
+    const f = await family();
+    const solo = await createBooking(f.db, {
+      actor: "staff",
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      fullName: `Solo ${f.stamp}`,
+    });
+    if (!solo.ok) throw new Error("solo seat refused");
+    const input = {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: solo.bookingId,
+    };
+    const queue = await getPartyWaiverQueue(f.db, input);
+    expect(queue?.members.map((member) => member.bookingId)).toEqual([solo.bookingId]);
+    const issued = await issuePartyWaiver(f.db, {
+      ...input,
+      bookingId: solo.bookingId,
+      actorPersonId: f.staff.id,
+    });
+    if (!issued || !("token" in issued)) throw new Error("solo code refused");
+    expect(await opened(f.db, issued.token)).toMatchObject({
+      state: "available",
+      record: { bookingId: solo.bookingId },
+    });
   });
 
   it("records on the diver's trail which staffer showed the code (security S2)", async () => {
@@ -199,6 +232,55 @@ describe("party release QR handoff", () => {
       });
       expect(issued && "token" in issued).toBe(true);
       expect(await guardianLines(f)).toEqual([]);
+    });
+
+    it("asks again at signing: a code shown for an adult signs no minor's release (#4003)", async () => {
+      const f = await family();
+      const issued = await issuePartyWaiver(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+        bookingId: f.third.bookingId,
+        actorPersonId: f.staff.id,
+      });
+      if (!issued || !("token" in issued)) throw new Error("adult code refused");
+      // Under 18, said after the code was shown and before it was signed.
+      await f.db
+        .update(bookings)
+        .set({ minorDeclaredAt: nowDate() })
+        .where(eq(bookings.id, f.third.bookingId));
+      expect(
+        await signAtCounter(f.db, issued.token, {
+          signerName: `Leo ${f.stamp}`,
+          agreed: true,
+          medicalAnswers: clearAnswers,
+          guardian: { name: "Rosa Guardian", relationship: "parent", email: "", agreed: true },
+        }),
+      ).toEqual({ ok: false, reason: "guardian_at_counter" });
+    });
+
+    it("signs a minor's release on a code the desk confirmed a guardian for", async () => {
+      const f = await family();
+      const issued = await issuePartyWaiver(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+        bookingId: f.minor.bookingId,
+        actorPersonId: f.staff.id,
+        guardianPresent: true,
+      });
+      if (!issued || !("token" in issued)) throw new Error("confirmed minor refused");
+      const door = await openOnDevice(f.db, issued.token);
+      if (door?.door !== "counter") throw new Error("code does not open");
+      expect(await doorNeedsDeskGuardian(f.db, door.key)).toBe(false);
+      expect(
+        await signAtCounter(f.db, issued.token, {
+          signerName: `Mia ${f.stamp}`,
+          agreed: true,
+          medicalAnswers: clearAnswers,
+          guardian: { name: "Rosa Guardian", relationship: "parent", email: "", agreed: true },
+        }),
+      ).toMatchObject({ ok: true });
     });
   });
 
@@ -398,6 +480,21 @@ describe("party release QR handoff", () => {
       medicalAnswers: medicalReferralAnswers,
     });
     expect(signed).toMatchObject({ ok: true, status: "medical_review" });
+    // The desk can print the physician form for it (issue #3984), and its
+    // answers never reach the paper.
+    expect(await getCounterDoctorReferral(f.db, input)).toMatchObject({
+      fullName: `Ana ${f.stamp}`,
+      answers: "whole",
+    });
+    expect(
+      await getCounterDoctorReferral(f.db, { ...input, bookingId: f.third.bookingId }),
+    ).toBeNull();
+    expect(
+      await getCounterDoctorReferral(f.db, { ...input, shopId: crypto.randomUUID() }),
+    ).toBeNull();
+    expect(
+      await getCounterDoctorReferral(f.db, { ...input, tripId: crypto.randomUUID() }),
+    ).toBeNull();
     let queue = await getPartyWaiverQueue(f.db, input);
     expect(queue?.members.find((member) => member.bookingId === f.lead.bookingId)).toMatchObject({
       state: "medical_review",
@@ -423,6 +520,8 @@ describe("party release QR handoff", () => {
       state: "medical_not_cleared",
       medicalState: "not_cleared",
     });
+    // A physician's answer is in: nothing left to print.
+    expect(await getCounterDoctorReferral(f.db, input)).toBeNull();
   });
   it("keeps a refusal visible when a fresh waiver is also needed", async () => {
     const f = await family();

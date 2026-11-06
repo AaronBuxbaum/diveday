@@ -1,6 +1,6 @@
 import { and, eq, gt, inArray, isNull, lte } from "drizzle-orm";
 import type { TripRequirement } from "@/db/schema";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { readinessLinkPath, seatAddressIsLeadTyped } from "@/lib/booking-capabilities";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { readLearningMaterials } from "@/lib/courses";
 import { log } from "@/lib/log";
@@ -161,7 +161,7 @@ async function mintReminderLinks(
   seats: ReadonlyArray<{
     row: {
       shop: { id: string };
-      booking: { id: string };
+      booking: { id: string; contactTypedByLeadAt: Date | null; claimedAt: Date | null };
       trip: { id: string };
       person: { id: string; email: string | null; phone: string | null };
     };
@@ -191,6 +191,9 @@ async function mintReminderLinks(
     const phone = smsRecipient(person.phone);
     if (!person.email && !phone) continue;
     if (!person.email && phone && stopped.has(phone) && !whatsAppShopIds.has(shop.id)) continue;
+    // An address the party's lead typed is reminded with no link (issue
+    // #4003): a readiness link would pay, cancel and move the seat.
+    if (seatAddressIsLeadTyped(booking)) continue;
     byShop.set(shop.id, [
       ...(byShop.get(shop.id) ?? []),
       { bookingId: booking.id, personId: person.id, tripId: trip.id },

@@ -11,7 +11,8 @@ const m = (
   checkpoint: string,
   status: DayMark["status"],
   day: number,
-): DayMark => ({ subject, checkpoint, status, day });
+  named: { id?: string; retracts?: string } = {},
+): DayMark => ({ subject, checkpoint, status, day, ...named });
 const states = (view: Map<string, DayMark>) =>
   Object.fromEntries(
     [...view].map(([key, mark]) => [key.replace("\u0000", "@"), `${mark.status}/${mark.day}`]),
@@ -46,10 +47,10 @@ describe("roll-call results read day by day (#2557)", () => {
     ).toEqual({ "ben@after_dive_1": "boarded/1" });
   });
 
-  it("lets a later-day undo take back a day-one mis-tap", () => {
+  it("lets a later-day undo that names it take back a day-one mis-tap", () => {
     const marks = [
-      m("ben", "after_dive_1", "not_boarded", 0),
-      m("ben", "after_dive_1", "cleared", 1),
+      m("ben", "after_dive_1", "not_boarded", 0, { id: "d1" }),
+      m("ben", "after_dive_1", "cleared", 1, { retracts: "d1" }),
     ];
     expect(states(manifestRollCallView(marks, 1))).toEqual({});
     expect(unaccountedSubjects(marks)).toEqual(new Set());
@@ -59,7 +60,7 @@ describe("roll-call results read day by day (#2557)", () => {
   describe("a cleared that takes back its own day's mark stays on its own day (#3981)", () => {
     const dayOneMissing = [
       m("ben", "departure", "boarded", 0),
-      m("ben", "after_dive_1", "not_boarded", 0),
+      m("ben", "after_dive_1", "not_boarded", 0, { id: "d1" }),
     ];
 
     it("keeps day one's missing diver missing when day two re-states them and undoes it", () => {
@@ -122,28 +123,75 @@ describe("roll-call results read day by day (#2557)", () => {
       });
     });
 
-    it("takes back only the newest carried day: day one's word survives a day-three undo of day two's", () => {
-      const marks = [
-        ...dayOneMissing,
-        m("ben", "after_dive_1", "not_boarded", 1),
-        m("ben", "after_dive_1", "cleared", 2),
-      ];
-      expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
-      expect(states(manifestRollCallView(marks, 2))).toEqual({
-        "ben@after_dive_1": "not_boarded/0",
-      });
-    });
-
-    it("still lets an undo of the carried row, as the day's first mark there, take it back", () => {
-      const marks = [...dayOneMissing, m("ben", "after_dive_1", "cleared", 1)];
+    it("lets an undo of the carried row that names it take it back", () => {
+      const marks = [...dayOneMissing, m("ben", "after_dive_1", "cleared", 1, { retracts: "d1" })];
       expect(unaccountedSubjects(marks)).toEqual(new Set());
       expect(states(manifestRollCallView(marks, 1))).toEqual({});
     });
 
     it("never lets a dock undo on day two reach back", () => {
-      const marks = [...dayOneMissing, m("ben", "departure", "cleared", 1)];
+      const marks = [...dayOneMissing, m("ben", "departure", "cleared", 1, { retracts: "d1" })];
       expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
       expect(states(manifestRollCallView(marks, 1))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+  });
+
+  describe("an undo reaches back only to the mark it names (#3995)", () => {
+    const dayOneMissing = [
+      m("ben", "departure", "boarded", 0),
+      m("ben", "after_dive_1", "not_boarded", 0, { id: "d1" }),
+    ];
+
+    it("takes the carried row back after day two re-stated them and undid that", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_1", "not_boarded", 1, { id: "d2" }),
+        m("ben", "after_dive_1", "cleared", 1, { retracts: "d2" }),
+        m("ben", "after_dive_1", "cleared", 1, { retracts: "d1" }),
+      ];
+      expect(unaccountedSubjects(marks)).toEqual(new Set());
+      expect(states(manifestRollCallView(marks, 1))).toEqual({});
+    });
+
+    it("never reaches back with an undo that names nothing, even as the day's first mark", () => {
+      const marks = [...dayOneMissing, m("ben", "after_dive_1", "cleared", 1)];
+      expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
+      expect(states(manifestRollCallView(marks, 1))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+
+    it("never reaches back with a repeated undo of day two's own mark", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_1", "not_boarded", 1, { id: "d2" }),
+        m("ben", "after_dive_1", "cleared", 1, { retracts: "d2" }),
+        m("ben", "after_dive_1", "cleared", 1, { retracts: "d2" }),
+      ];
+      expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
+      expect(states(manifestRollCallView(marks, 1))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+
+    it("never takes back another person's or another checkpoint's mark by its id", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_2", "cleared", 1, { retracts: "d1" }),
+        m("cara", "after_dive_1", "cleared", 1, { retracts: "d1" }),
+      ];
+      expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
+    });
+
+    it("takes back day two's carried word on day three and leaves day one's", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_1", "not_boarded", 1, { id: "d2" }),
+        m("ben", "after_dive_1", "cleared", 2, { retracts: "d2" }),
+      ];
+      expect(states(manifestRollCallView(marks, 2))).toEqual({
         "ben@after_dive_1": "not_boarded/0",
       });
     });

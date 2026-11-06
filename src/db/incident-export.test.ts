@@ -54,7 +54,7 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     // Board one diver the real way: waiver, then the gated roll-call write.
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: first.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: first.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -195,7 +195,7 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     // responses — if either rides into the document, this test catches it.
     const referralAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
     referralAnswers.responses.q3 = true;
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: first.person.fullName,
       agreed: true,
       medicalAnswers: referralAnswers,
@@ -215,7 +215,7 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     if (!first) throw new Error("demo booking missing");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: first.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: first.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -330,10 +330,6 @@ describe("the departure log's roster changes and incident reports", () => {
     if (!unsent) throw new Error("expected a seat with no waiver");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: unsent.bookingId });
     if (!issued.ok) throw new Error("expected waiver link");
-    await db
-      .update(waiverRecords)
-      .set({ expiresAt: minutes(60) })
-      .where(eq(waiverRecords.bookingId, unsent.bookingId));
     const before = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(30));
     const after = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(120));
     const stateOf = (doc: typeof before) =>
@@ -353,7 +349,7 @@ describe("the departure log's roster changes and incident reports", () => {
     if (!unsent) throw new Error("expected a seat with no waiver");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: unsent.bookingId });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: unsent.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -388,7 +384,7 @@ describe("the departure log's roster changes and incident reports", () => {
     if (!unsent) throw new Error("expected a seat with no waiver");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: unsent.bookingId });
     if (!issued.ok) throw new Error("expected waiver link");
-    const done = await completeWaiver(db, issued.token, {
+    const done = await completeWaiver(db, issued.key, {
       signerName: unsent.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -434,7 +430,6 @@ describe("the departure log's roster changes and incident reports", () => {
         templateId: nextTerms.id,
         templateVersion: nextTerms.version,
         templateGeneration: nextTerms.materialGeneration,
-        tokenHash: `${sailedOn.tokenHash}-resigned`,
         signedAt: resignedAt,
         completedAt: resignedAt,
         supersededAt: null,
@@ -472,7 +467,7 @@ describe("the departure log's roster changes and incident reports", () => {
     if (!unsent) throw new Error("expected a seat with no waiver");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: unsent.bookingId });
     if (!issued.ok) throw new Error("expected waiver link");
-    const done = await completeWaiver(db, issued.token, {
+    const done = await completeWaiver(db, issued.key, {
       signerName: unsent.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,

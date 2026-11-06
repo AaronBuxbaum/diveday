@@ -13,7 +13,11 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { readinessLinkPath, readinessWaiverLinkPath } from "@/lib/booking-capabilities";
+import {
+  readinessLinkPath,
+  readinessWaiverLinkPath,
+  seatAddressIsLeadTyped,
+} from "@/lib/booking-capabilities";
 import { nowDate, nowMs } from "@/lib/clock";
 import { readLearningMaterials } from "@/lib/courses";
 import {
@@ -2176,17 +2180,22 @@ async function sendStoredBookingConfirmation(
       // never this mail's: the readiness link below opens only this seat.
       const signs =
         options.signStep?.personId === row.person.id && options.signStep.tripId === row.trip.id;
-      const readinessCapability = origin
-        ? await issueBookingCapability(tx, {
-            shopId,
-            bookingId: row.booking.id,
-            purpose: "readiness",
-            expectedPersonId: observed.person.id,
-            expectedTripId: observed.trip.id,
-            delivered: true,
-          })
-        : null;
-      if (origin && !readinessCapability) return null;
+      // An address the party's lead typed gets no readiness link (issue
+      // #4003): the mail goes without one, and without the Sign step, which
+      // a caller then sends as the seat's waiver-only door.
+      const waiverOnly = seatAddressIsLeadTyped(row.booking);
+      const readinessCapability =
+        origin && !waiverOnly
+          ? await issueBookingCapability(tx, {
+              shopId,
+              bookingId: row.booking.id,
+              purpose: "readiness",
+              expectedPersonId: observed.person.id,
+              expectedTripId: observed.trip.id,
+              delivered: true,
+            })
+          : null;
+      if (origin && !waiverOnly && !readinessCapability) return null;
       const notification: Notification = {
         kind: "booking_confirmation",
         bookingId: row.booking.id,

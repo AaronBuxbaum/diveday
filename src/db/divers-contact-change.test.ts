@@ -15,13 +15,25 @@ import { createDiver, editDiver } from "./divers";
 import { waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { issueAndDeliverPersonWaiver, issueAndDeliverWaiver } from "./waiver-issue";
-import { completeWaiver, getWaiverForToken, recordWaiverDraft } from "./waivers-completion";
-import { attachDiverMedicalForm, doctorPageOpen, revealDoctorReferral } from "./waivers-medical";
+import {
+  completeWaiver,
+  getWaiverForToken,
+  recordWaiverDraft,
+  waiverLinkDoor,
+} from "./waivers-completion";
+import {
+  attachDiverMedicalForm,
+  contactOnFile,
+  doctorPageOpen,
+  revealDoctorReferral,
+} from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
 import {
   clearAnswers,
   medicalReferralAnswers,
+  openOnDevice,
   recordMedicalEvaluationForShop,
+  shopStaffer,
 } from "./waivers-test-fixtures";
 
 /**
@@ -78,7 +90,7 @@ async function seatedDiver(suffix: string) {
     bookingId: booking.bookingId,
     delivered: delivered.token,
     handed: handed.token,
-    waiver: waiver.token,
+    waiver: waiver.key,
   };
 }
 
@@ -141,8 +153,8 @@ describe("changing a diver's contact revokes their delivered links (#3902)", () 
     expect((await getWaiverForToken(db, waiver)).state).toBe("unavailable");
     const again = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now: nowDate() });
     if (!again.ok) throw new Error(`re-send failed: ${again.reason}`);
-    expect(again.token).not.toBe(waiver);
-    expect((await getWaiverForToken(db, again.token)).state).toBe("available");
+    expect(again.key).not.toBe(waiver);
+    expect((await getWaiverForToken(db, again.key)).state).toBe("available");
   });
 
   it("keeps the unsigned waiver when the save leaves the contact alone", async () => {
@@ -261,24 +273,32 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     const mail = fakeEmail();
 
     await issueAndDeliverPersonWaiver(db, shop.id, diver.id, { provider: mail.provider });
-    const copied = await issueAndDeliverPersonWaiver(db, shop.id, diver.id, { channel: "link" });
     const before = urlOf(mail.sent, 0);
-    const oldToken = waiverToken(before.url);
-    if (!oldToken || !copied.ok) throw new Error("no waiver link");
-    // Copy link and the email are one URL (ADR 20260820-waiver-links-are-reused-not-reissued).
-    expect(copied.token).toBe(oldToken);
-    expect((await getWaiverForToken(db, oldToken)).state).toBe("available");
+    const mailed = waiverToken(before.url);
+    if (!mailed) throw new Error("no waiver link");
+    const door = await waiverLinkDoor(db, mailed);
+    if (door?.door !== "release") throw new Error("release door expected");
+    // Copy link is a counter link of its own, and retires the mailed one.
+    const copied = await issueAndDeliverPersonWaiver(db, shop.id, diver.id, {
+      channel: "link",
+      actorPersonId: await shopStaffer(db, shop.id),
+    });
+    if (!copied.ok || !copied.token) throw new Error("no copied link");
+    expect(copied.token).not.toBe(mailed);
+    const counter = await openOnDevice(db, copied.token);
+    if (counter?.door !== "counter") throw new Error("counter door expected");
 
     expect((await fixEmail(diver, "person-resend-fixed@example.com")).ok).toBe(true);
 
-    expect((await getWaiverForToken(db, oldToken)).state).toBe("unavailable");
+    expect(await waiverLinkDoor(db, mailed)).toBeNull();
+    expect(await waiverLinkDoor(db, copied.token)).toBeNull();
     const signing = { signerName: diver.fullName, agreed: true, medicalAnswers: clearAnswers };
-    expect(await completeWaiver(db, oldToken, signing)).toEqual({
+    expect(await completeWaiver(db, counter.key, signing)).toEqual({
       ok: false,
       reason: "unavailable",
     });
     expect(
-      await recordWaiverDraft(db, oldToken, {
+      await recordWaiverDraft(db, counter.key, {
         signerName: diver.fullName,
         acknowledged: true,
         medicalAnswers: medicalReferralAnswers,
@@ -290,18 +310,23 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     expect(after.to).toBe("person-resend-fixed@example.com");
     const newToken = waiverToken(after.url);
     if (!newToken) throw new Error(`not a waiver link: ${after.url}`);
-    expect(newToken).not.toBe(oldToken);
-    expect((await getWaiverForToken(db, newToken)).state).toBe("available");
-    expect((await getWaiverForToken(db, oldToken)).state).toBe("unavailable");
+    expect(newToken).not.toBe(mailed);
+    expect((await waiverLinkDoor(db, newToken))?.door).toBe("release");
+    expect(await waiverLinkDoor(db, mailed)).toBeNull();
   });
 
   it("what the old address typed does not follow the diver to the new link", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const { db, shop, diver } = await seatedDiver("person-draft");
-    const copied = await issueAndDeliverPersonWaiver(db, shop.id, diver.id, { channel: "link" });
-    if (!copied.ok) throw new Error("no waiver link");
+    const copied = await issueAndDeliverPersonWaiver(db, shop.id, diver.id, {
+      channel: "link",
+      actorPersonId: await shopStaffer(db, shop.id),
+    });
+    if (!copied.ok || !copied.token) throw new Error("no waiver link");
+    const door = await openOnDevice(db, copied.token);
+    if (door?.door !== "counter") throw new Error("counter door expected");
     expect(
-      await recordWaiverDraft(db, copied.token, {
+      await recordWaiverDraft(db, door.key, {
         signerName: "Not The Diver",
         acknowledged: true,
         medicalAnswers: medicalReferralAnswers,
@@ -309,9 +334,14 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     ).toBe(true);
 
     await fixEmail(diver, "person-draft-fixed@example.com");
-    const fresh = await issueAndDeliverPersonWaiver(db, shop.id, diver.id, { channel: "link" });
-    if (!fresh.ok) throw new Error("no fresh link");
-    const opened = await getWaiverForToken(db, fresh.token);
+    const fresh = await issueAndDeliverPersonWaiver(db, shop.id, diver.id, {
+      channel: "link",
+      actorPersonId: await shopStaffer(db, shop.id),
+    });
+    if (!fresh.ok || !fresh.token) throw new Error("no fresh link");
+    const freshDoor = await openOnDevice(db, fresh.token);
+    if (freshDoor?.door !== "counter") throw new Error("counter door expected");
+    const opened = await getWaiverForToken(db, freshDoor.key);
     if (opened.state !== "available") throw new Error(`fresh link is ${opened.state}`);
     expect(opened.record.draftSignerName).toBeNull();
     expect(opened.record.draftMedicalAnswers).toBeNull();
@@ -358,22 +388,30 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     const seatLink = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now });
     if (!seatLink.ok) throw new Error("no seat link");
     expect(
-      await completeWaiver(db, seatLink.token, {
+      await completeWaiver(db, seatLink.key, {
         signerName: diver.fullName,
         agreed: true,
         medicalAnswers: medicalReferralAnswers,
         now,
       }),
     ).toMatchObject({ ok: true, status: "medical_review" });
-    const opened = await getWaiverForToken(db, seatLink.token);
+    const opened = await getWaiverForToken(db, seatLink.key);
     if (opened.state !== "completed") throw new Error(`old link is ${opened.state}`);
     expect(await doctorPageOpen(db, opened.record)).toBe(true);
     const forged = "https://storage.example/medical/forged-fit-to-dive.pdf";
-    expect(await attachDiverMedicalForm(db, opened.record, forged)).toBe("sent");
+    expect(
+      await attachDiverMedicalForm(
+        db,
+        opened.record,
+        forged,
+        await contactOnFile(db, opened.record),
+      ),
+    ).toBe("sent");
 
     expect((await fixEmail(diver, "held-doctor-fixed@example.com")).ok).toBe(true);
 
-    expect((await getWaiverForToken(db, seatLink.token)).state).toBe("unavailable");
+    // The thread link that reached it is revoked with every booking link
+    // (above); the slot reopens for the diver on the new one.
     const [row] = await db
       .select()
       .from(waiverRecords)
@@ -384,47 +422,58 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     expect(row).toMatchObject({ status: "medical_review", supersededAt: null });
     if (!row) throw new Error("record missing");
     expect(await doctorPageOpen(db, row)).toBe(true);
-    expect(await attachDiverMedicalForm(db, row, "https://storage.example/medical/real.pdf")).toBe(
-      "sent",
-    );
+    expect(
+      await attachDiverMedicalForm(
+        db,
+        row,
+        "https://storage.example/medical/real.pdf",
+        await contactOnFile(db, row),
+      ),
+    ).toBe("sent");
   });
 
   /**
    * **An upload already in flight cannot land** (security review S1). The
    * doctor's page reads the record from the old link, then spends seconds
-   * storing the file; a contact change in between rotates the link and
+   * storing the file; a contact change in between revokes the link and
    * reopens the slot. The write must still refuse a record read under the
-   * old link, and so must the answers behind the date of birth.
+   * old contact, and so must the answers behind the date of birth.
    */
   it("refuses a form or the answers for a record read under the old link before the change", async () => {
     const { db, shop, diver, bookingId } = await seatedDiver("held-race");
     const now = nowDate();
     const seatLink = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now });
     if (!seatLink.ok) throw new Error("no seat link");
-    await completeWaiver(db, seatLink.token, {
+    await completeWaiver(db, seatLink.key, {
       signerName: diver.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
       now,
     });
-    const opened = await getWaiverForToken(db, seatLink.token);
+    const opened = await getWaiverForToken(db, seatLink.key);
     if (opened.state !== "completed") throw new Error(`old link is ${opened.state}`);
+    const readContact = await contactOnFile(db, opened.record);
 
     expect((await fixEmail(diver, "held-race-fixed@example.com")).ok).toBe(true);
 
     const stale = opened.record;
     expect(
-      await attachDiverMedicalForm(db, stale, "https://storage.example/medical/forged.pdf"),
+      await attachDiverMedicalForm(
+        db,
+        stale,
+        "https://storage.example/medical/forged.pdf",
+        readContact,
+      ),
     ).toBe("closed");
-    expect(await revealDoctorReferral(db, stale, "1990-01-01")).toBeNull();
+    expect(await revealDoctorReferral(db, stale, "1990-01-01", readContact)).toBeNull();
   });
 
   it("a release the physician refused: the old link no longer says so", async () => {
-    const { db, shop, diver, bookingId } = await seatedDiver("held-refused");
+    const { db, shop, diver } = await seatedDiver("held-refused");
     const now = nowDate();
-    const seatLink = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now });
-    if (!seatLink.ok) throw new Error("no seat link");
-    await completeWaiver(db, seatLink.token, {
+    const seatLink = await issueWaiverRequest(db, { shopId: shop.id, personId: diver.id, now });
+    if (!seatLink.ok) throw new Error("no release link");
+    await completeWaiver(db, seatLink.key, {
       signerName: diver.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -441,11 +490,11 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
         physicianName: "Dr. Imani Reyes",
       }),
     ).toMatchObject({ ok: true });
-    expect((await getWaiverForToken(db, seatLink.token)).state).toBe("completed");
+    expect((await getWaiverForToken(db, seatLink.key)).state).toBe("completed");
 
     expect((await fixEmail(diver, "held-refused-fixed@example.com")).ok).toBe(true);
 
-    expect((await getWaiverForToken(db, seatLink.token)).state).toBe("unavailable");
+    expect((await getWaiverForToken(db, seatLink.key)).state).toBe("unavailable");
   });
 
   it("leaves a signed release and a release held for a physician exactly as they were", async () => {
@@ -454,7 +503,7 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     const seatLink = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now });
     if (!seatLink.ok) throw new Error("no seat link");
     expect(
-      await completeWaiver(db, seatLink.token, {
+      await completeWaiver(db, seatLink.key, {
         signerName: diver.fullName,
         agreed: true,
         medicalAnswers: medicalReferralAnswers,
@@ -464,7 +513,7 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     const personLink = await issueWaiverRequest(db, { shopId: shop.id, personId: diver.id, now });
     if (!personLink.ok) throw new Error("no person link");
     expect(
-      await completeWaiver(db, personLink.token, {
+      await completeWaiver(db, personLink.key, {
         signerName: diver.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -481,18 +530,12 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
 
     expect((await fixEmail(diver, "signed-fixed@example.com")).ok).toBe(true);
 
-    // Every column but the bearer link, which moves on every signed release
-    // (final attacker review B3, security review S2): the old link opens
-    // neither the held one nor the clean one's receipt.
-    const withoutLink = (rows: typeof before) =>
-      rows.map(({ tokenHash: _tokenHash, ...row }) => row);
+    // Every column, untouched (final attacker review B3, security review S2):
+    // only the links move. The old release link opens not even the clean
+    // one's receipt.
     const after = await signedRows();
-    expect(withoutLink(after)).toEqual(withoutLink(before));
-    const linkOf = (rows: typeof before, id: string) =>
-      rows.find((row) => row.id === id)?.tokenHash;
-    expect(linkOf(after, seatLink.recordId)).not.toBe(linkOf(before, seatLink.recordId));
-    expect(linkOf(after, personLink.recordId)).not.toBe(linkOf(before, personLink.recordId));
-    expect((await getWaiverForToken(db, personLink.token)).state).toBe("unavailable");
+    expect(after).toEqual(before);
+    expect((await getWaiverForToken(db, personLink.key)).state).toBe("unavailable");
     expect(before.every((row) => row.supersededAt === null)).toBe(true);
   });
 

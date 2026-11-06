@@ -65,7 +65,8 @@ describe("openJoinSignStep and settleJoinWaiverDelivery", () => {
     // The thread reaches exactly that record.
     const key = await threadWaiverKey(db, { shopId: shop.id, bookingId });
     expect(key?.recordId).toBe(step.waiverRecordId);
-    expect((await getWaiverForToken(db, key ?? "")).state).toBe("available");
+    if (!key) throw new Error("no thread key");
+    expect((await getWaiverForToken(db, key)).state).toBe("available");
     // The join rule still holds: a second ask finds the release already out.
     expect(await openJoinSignStep(db, shop.id, bookingId)).toBeNull();
     expect(await issueWaiverOnJoin(db, shop.id, bookingId)).toBeNull();
@@ -85,7 +86,7 @@ describe("openJoinSignStep and settleJoinWaiverDelivery", () => {
     const { db, shop, bookingId } = await seededBooking();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: "Nora Quinn",
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

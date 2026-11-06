@@ -196,7 +196,7 @@ export async function seedOperationalTrust(
     }
     const waiver = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
     if (!waiver.ok) throw new Error(`operational waiver refused: ${waiver.reason}`);
-    const signed = await completeWaiver(db, waiver.token, {
+    const signed = await completeWaiver(db, waiver.key, {
       signerName: fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

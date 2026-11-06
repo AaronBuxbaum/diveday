@@ -371,6 +371,22 @@ describe("handleInboundReplyKeyword — what it refuses", () => {
 });
 
 describe("handleInboundReplyKeyword — what it does", () => {
+  it("offers no cancel to a mailbox a party's lead typed (issue 4003)", async () => {
+    const { db, shop, bookingId, now } = await context();
+    await db.update(bookings).set({ contactTypedByLeadAt: now }).where(eq(bookings.id, bookingId));
+    const messageId = await inbound(db, shop.id, "C", { receivedAt: now });
+
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: messageId,
+        now,
+        provider: acceptingProvider(),
+      }),
+    ).not.toBe("awaiting_confirmation");
+    expect(await statusOf(db, bookingId)).toBe("booked");
+  });
+
   it("names the departure and asks for a code before anything is canceled", async () => {
     const { db, shop, trip, bookingId, now } = await context();
     const provider = acceptingProvider();

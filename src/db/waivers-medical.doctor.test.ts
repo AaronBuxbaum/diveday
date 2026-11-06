@@ -6,6 +6,7 @@ import { bookings, people, trips, waiverRecords } from "./schema";
 import { listStaff } from "./trips";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import {
+  contactOnFile,
   doctorPageOpen,
   getDoctorReferral,
   recordMedicalEvaluation,
@@ -41,13 +42,13 @@ describe("getDoctorReferral", () => {
     await db.update(people).set({ dateOfBirth }).where(eq(people.id, person.id));
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers,
       now,
     });
-    const state = await getWaiverForToken(db, issued.token, now);
+    const state = await getWaiverForToken(db, issued.key, now);
     if (state.state !== "completed") throw new Error("expected a completed record");
     return { ...context, record: state.record };
   }
@@ -62,7 +63,9 @@ describe("getDoctorReferral", () => {
   it("asks for the whole questionnaire when no date of birth is on file to unlock with", async () => {
     const { db, record } = await signed(medicalReferralAnswers, { dateOfBirth: null });
     expect(await getDoctorReferral(db, record)).toMatchObject({ answers: "whole" });
-    expect(await revealDoctorReferral(db, record, "1984-03-09")).toBe("whole");
+    expect(
+      await revealDoctorReferral(db, record, "1984-03-09", await contactOnFile(db, record)),
+    ).toBe("whole");
   });
 
   it("asks for the whole questionnaire on a paper hold, and says unfinished only for an unfinished form", async () => {
@@ -80,9 +83,18 @@ describe("getDoctorReferral", () => {
 
   it("shows the published prompts and the form they came from only for the diver's date of birth", async () => {
     const { db, record } = await signed(medicalReferralAnswers);
-    expect(await revealDoctorReferral(db, record, "1984-03-10")).toBe("mismatch");
-    expect(await revealDoctorReferral(db, record, "not a date")).toBe("mismatch");
-    const shown = await revealDoctorReferral(db, record, "1984-03-09");
+    expect(
+      await revealDoctorReferral(db, record, "1984-03-10", await contactOnFile(db, record)),
+    ).toBe("mismatch");
+    expect(
+      await revealDoctorReferral(db, record, "not a date", await contactOnFile(db, record)),
+    ).toBe("mismatch");
+    const shown = await revealDoctorReferral(
+      db,
+      record,
+      "1984-03-09",
+      await contactOnFile(db, record),
+    );
     if (!shown || typeof shown === "string") throw new Error("expected the answers");
     expect(shown.items).toHaveLength(1);
     expect(shown.items[0]?.ref).toEqual({ kind: "question", number: 3 });
@@ -102,7 +114,15 @@ describe("getDoctorReferral", () => {
     expect(await doctorPageOpen(db, record, duringTrip)).toBe(true);
     expect(await doctorPageOpen(db, record, dayAfter)).toBe(false);
     expect(await getDoctorReferral(db, record, dayAfter)).toBeNull();
-    expect(await revealDoctorReferral(db, record, "1984-03-09", dayAfter)).toBeNull();
+    expect(
+      await revealDoctorReferral(
+        db,
+        record,
+        "1984-03-09",
+        await contactOnFile(db, record),
+        dayAfter,
+      ),
+    ).toBeNull();
   });
 
   it("closes for a canceled seat or a canceled departure", async () => {
@@ -154,8 +174,12 @@ describe("getDoctorReferral", () => {
   it("compares no date when there is nothing to unlock (a paper hold)", async () => {
     const { db, record } = await signed(medicalReferralAnswers);
     const paper = { ...record, medicalAnswers: null };
-    expect(await revealDoctorReferral(db, paper, "1984-03-09")).toBe("whole");
-    expect(await revealDoctorReferral(db, paper, "1990-01-01")).toBe("whole");
+    expect(
+      await revealDoctorReferral(db, paper, "1984-03-09", await contactOnFile(db, paper)),
+    ).toBe("whole");
+    expect(
+      await revealDoctorReferral(db, paper, "1990-01-01", await contactOnFile(db, paper)),
+    ).toBe("whole");
     const [after] = await db
       .select({ failures: waiverRecords.doctorUnlockFailures })
       .from(waiverRecords)
@@ -171,15 +195,43 @@ describe("getDoctorReferral", () => {
       return row;
     };
     // A match spends nothing.
-    expect(await revealDoctorReferral(db, await fresh(), "1984-03-09")).not.toBe("mismatch");
+    expect(
+      await revealDoctorReferral(
+        db,
+        await fresh(),
+        "1984-03-09",
+        await contactOnFile(db, await fresh()),
+      ),
+    ).not.toBe("mismatch");
     expect((await fresh()).doctorUnlockFailures).toBe(0);
     for (let tries = 1; tries < DOCTOR_UNLOCK_FAILURE_LIMIT; tries++) {
-      expect(await revealDoctorReferral(db, await fresh(), "1990-01-01")).toBe("mismatch");
+      expect(
+        await revealDoctorReferral(
+          db,
+          await fresh(),
+          "1990-01-01",
+          await contactOnFile(db, await fresh()),
+        ),
+      ).toBe("mismatch");
     }
     // The last allowed wrong date locks it, and then even the right date shows nothing.
-    expect(await revealDoctorReferral(db, await fresh(), "1990-01-01")).toBe("whole");
+    expect(
+      await revealDoctorReferral(
+        db,
+        await fresh(),
+        "1990-01-01",
+        await contactOnFile(db, await fresh()),
+      ),
+    ).toBe("whole");
     expect((await fresh()).doctorUnlockFailures).toBe(DOCTOR_UNLOCK_FAILURE_LIMIT);
-    expect(await revealDoctorReferral(db, await fresh(), "1984-03-09")).toBe("whole");
+    expect(
+      await revealDoctorReferral(
+        db,
+        await fresh(),
+        "1984-03-09",
+        await contactOnFile(db, await fresh()),
+      ),
+    ).toBe("whole");
     expect(await getDoctorReferral(db, await fresh())).toMatchObject({ answers: "whole" });
   });
 });

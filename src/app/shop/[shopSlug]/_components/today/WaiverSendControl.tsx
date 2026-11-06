@@ -53,7 +53,7 @@ function CopyLink({
     return (
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-medium">{link.name}</span>
-        {resend && link.bookingId ? (
+        {resend && link.bookingId && link.textable ? (
           <WaiverSendControl
             {...resend}
             channel="sms"
@@ -126,6 +126,7 @@ export function reasonCopy(
   }
   if (reason === "no_app_origin") return copy.reasonNoAppOrigin;
   if (reason === "thread_only") return copy.reasonThreadOnly;
+  if (reason === "guardian_needed") return copy.reasonGuardianNeeded;
   return channel === "sms" ? copy.reasonTextUnconfigured : copy.reasonUnconfigured;
 }
 
@@ -155,6 +156,7 @@ function LinkGroups({
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
     link_only: links.filter((link) => link.reason === "link_only"),
     thread_only: links.filter((link) => link.reason === "thread_only"),
+    guardian_needed: links.filter((link) => link.reason === "guardian_needed"),
     no_email: links.filter((link) => link.reason === "no_email"),
     no_phone: links.filter((link) => link.reason === "no_phone"),
     no_app_origin: links.filter((link) => link.reason === "no_app_origin"),

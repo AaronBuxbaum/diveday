@@ -214,10 +214,13 @@ export async function deliverSelfRegistrationWaiver(
       and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
     )
     .limit(1);
+  // Anyone can reach this door, so it never mints over a live link: the
+  // diver may be signing on it at the counter (issue #3983 review).
   await issueAndDeliverPersonWaiver(db, input.shopId, input.personId, {
     now: input.now ?? nowDate(),
     channel: releaseChannel(contact),
     textProviders: input.textProviders,
+    keepLiveLink: true,
   });
 }
 

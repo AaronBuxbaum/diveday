@@ -142,14 +142,6 @@ async function seedHeldDiver(
   // Scenario seeders are also useful independently while building or repairing
   // a demo. The synthetic email is the upstream identity marker: reusing the
   // person and booking lets a retry repair a run that stopped before its waiver.
-  const tokenHash = `seed-${diverSpec.tokenSuffix}-${shopId}`;
-  const [existing] = await db
-    .select({ id: waiverRecords.id })
-    .from(waiverRecords)
-    .where(and(eq(waiverRecords.shopId, shopId), eq(waiverRecords.tokenHash, tokenHash)))
-    .limit(1);
-  if (existing) return;
-
   const [existingDiver] = await db
     .select()
     .from(people)
@@ -211,6 +203,12 @@ async function seedHeldDiver(
         .returning();
   const booking = existingBooking ?? insertedBooking;
   if (!booking) throw new Error("seedMedicalReview: booking insert returned no row");
+  const [existing] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(and(eq(waiverRecords.shopId, shopId), eq(waiverRecords.bookingId, booking.id)))
+    .limit(1);
+  if (existing) return;
 
   const signedAt = at(-1, 10);
   // The refusal is dated after the disclosure it answers, exactly as
@@ -243,8 +241,6 @@ async function seedHeldDiver(
     templateVersion: waiverTemplate.version,
     templateGeneration: waiverTemplate.materialGeneration,
     templateBody: waiverTemplate.body,
-    tokenHash,
-    expiresAt: at(30, 12),
     ...paperRelease(signedAt, reviewerId, diverSpec.fullName),
     status: "medical_review",
     medicalReviewRequired: true,

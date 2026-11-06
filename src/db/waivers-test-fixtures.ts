@@ -1,9 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { type fileScopedShopContext, seededShopContext } from "@/test/db";
 import { mintCapability } from "./capabilities";
 import type { DbExecutor } from "./client";
-import { bookings, shops } from "./schema";
+import { bookings, people, personRoles, shops } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { claimCounterLink, waiverLinkDoor } from "./waivers-completion";
 import { recordMedicalEvaluation as recordMedicalEvaluationInShop } from "./waivers-medical";
@@ -120,4 +120,16 @@ export async function openOnDevice(db: DbExecutor, token: string, now?: Date) {
 /** The secret the phone that opened `token` first keeps (`openOnDevice`), for a page test's cookie. */
 export function claimedDevice(token: string): string | undefined {
   return claimedOnDevice.get(token);
+}
+
+/** A staffer of the shop, for a send that names who asked (Copy link). */
+export async function shopStaffer(db: DbExecutor, shopId: string): Promise<string> {
+  const [staffer] = await db
+    .select({ personId: personRoles.personId })
+    .from(personRoles)
+    .innerJoin(people, eq(people.id, personRoles.personId))
+    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, ["owner", "manager"])))
+    .limit(1);
+  if (!staffer) throw new Error("shop has no staff");
+  return staffer.personId;
 }

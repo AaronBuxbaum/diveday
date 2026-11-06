@@ -56,6 +56,23 @@ export function courseFormsLinkPath(token: string): string {
   return `${readinessLinkPath(token)}/forms`;
 }
 
+/**
+ * **The seat's address is one its party's lead typed** (issue #4003): a seat
+ * the public party form made for someone other than the booker, not yet
+ * claimed by its diver. Nobody has shown that address is the diver's, so
+ * nothing sent to it may pay, cancel or move the seat: it gets the seat's
+ * waiver-only door (`party_waiver_link`) and never a readiness link. A seat
+ * staff seated in a party is stamped claimed as it is made, so this is never
+ * true of one (`createBookingParty`); claiming the seat ends it, and moving
+ * it out of the party does not (`bookings.contact_typed_by_lead_at`).
+ */
+export function seatAddressIsLeadTyped(seat: {
+  contactTypedByLeadAt: Date | null;
+  claimedAt: Date | null;
+}): boolean {
+  return seat.contactTypedByLeadAt !== null && seat.claimedAt === null;
+}
+
 /** The absolute-path seat-claim link for an already-issued `claim` capability token. */
 export function claimLinkPath(token: string): string {
   return `/claim/${token}`;

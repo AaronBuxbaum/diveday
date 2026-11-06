@@ -77,7 +77,7 @@ describe("sendDoctorFormFromReady", () => {
     vi.mocked(storeMedicalClearanceDocument).mockResolvedValue({ status: "stored", url: STORED });
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers,

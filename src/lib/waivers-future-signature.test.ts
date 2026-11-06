@@ -112,7 +112,7 @@ describe("a future-dated signature (issue #3781)", () => {
       now: SIGN_NOW,
     });
     expect(effective?.id).toBe("referral");
-    expect(waiverStanding(effective, SIGN_NOW)).toBe("medical_review");
+    expect(waiverStanding(effective)).toBe("medical_review");
     expect(
       shopWaiverStanding({ personSignedWaivers: records, currentTemplateVersion: 1, now: SIGN_NOW })
         .state,

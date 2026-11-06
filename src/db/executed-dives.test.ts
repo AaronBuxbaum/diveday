@@ -727,7 +727,7 @@ describe("peopleWhoDivedBefore", () => {
     });
     const issued = await issueWaiverRequest(ctx.db, { shopId: ctx.shop.id, bookingId });
     if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
-    const signed = await completeWaiver(ctx.db, issued.token, {
+    const signed = await completeWaiver(ctx.db, issued.key, {
       signerName: "Nadia Twoday",
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -941,6 +941,7 @@ describe("peopleWhoDivedBefore", () => {
       status: "boarded" | "not_boarded" | "cleared",
       checkpoint: "departure" | "after_dive_1" = "after_dive_1",
       minutesAfterStart = 90,
+      retractsEventId?: string,
     ) {
       // After a numbered dive a boarding is a pure headcount and is never
       // refused on readiness, so the seat needs no waiver for this fixture.
@@ -952,8 +953,9 @@ describe("peopleWhoDivedBefore", () => {
         status,
         checkpoint,
         occurredAt: new Date(ctx.before.startsAt.getTime() + minutesAfterStart * MINUTE_MS),
+        retractsEventId,
       });
-      expect(outcome, `the ${status} roll call has to land`).toMatchObject({ ok: true });
+      return outcome.ok ? outcome.eventId : expect.fail(`${status} refused: ${outcome.reason}`);
     }
 
     const cancelSeat = (ctx: Awaited<ReturnType<typeof twoDays>>) =>
@@ -1042,11 +1044,9 @@ describe("peopleWhoDivedBefore", () => {
     });
 
     it("does not count a boarding the rail retracted", async () => {
-      // A newest `cleared` drops the checkpoint out; it never falls back to the
-      // older boarding it undid.
+      // An undo naming the boarding drops the checkpoint out, never back to that boarding.
       const ctx = await twoDays(24, { logDive: false });
-      await callRoll(ctx, "boarded", "after_dive_1", 90);
-      await callRoll(ctx, "cleared", "after_dive_1", 95);
+      await callRoll(ctx, "cleared", "after_dive_1", 95, await callRoll(ctx, "boarded"));
       await cancelDeparture(ctx);
       expect((await ctx.ask()).size).toBe(0);
     });

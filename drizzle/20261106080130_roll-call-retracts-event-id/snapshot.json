@@ -1,0 +1,164 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "104b4908-f110-49a2-a293-e787bad3f1e0",
+  "prevIds": [
+    "2b8abec5-07a4-403a-ae59-9a9489288369"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "retracts_event_id"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.retracts_event_id",
+        "n|col|public.roll_call_events.retracts_event_id",
+        "e|col|public.roll_call_events.retracts_event_id"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "roll_call_events",
+        "roll_call_events_retracts_event_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.roll_call_events_retracts_event_id_idx",
+        "n|idx|public.roll_call_events_retracts_event_id_idx",
+        "e|idx|public.roll_call_events_retracts_event_id_idx",
+        "n|rel|public.roll_call_events_retracts_event_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_events.retracts_event_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_events"
+      ],
+      "writes": [
+        "s|fk|public.roll_call_events.roll_call_events_retracts_event_id_roll_call_events_id_fkey",
+        "n|fk|public.roll_call_events.roll_call_events_retracts_event_id_roll_call_events_id_fkey",
+        "e|fk|public.roll_call_events.roll_call_events_retracts_event_id_roll_call_events_id_fkey",
+        "n|con|public.roll_call_events.roll_call_events_retracts_event_id_roll_call_events_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_events.retracts_event_id",
+        "n|col|public.roll_call_events.id",
+        "e|uniqueness|public.roll_call_events.id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "roll_call_events"
+      ],
+      "writes": [
+        "s|ck|public.roll_call_events.roll_call_events_retracts_only_cleared",
+        "n|ck|public.roll_call_events.roll_call_events_retracts_only_cleared",
+        "e|ck|public.roll_call_events.roll_call_events_retracts_only_cleared",
+        "n|con|public.roll_call_events.roll_call_events_retracts_only_cleared"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_events.retracts_event_id",
+        "n|col|public.roll_call_events.status"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "retracts_event_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "roll_call_events_retracts_event_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "retracts_event_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "roll_call_events_retracts_event_id_roll_call_events_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "retracts_event_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "roll_call_events",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "roll_call_events_retracts_only_cleared",
+        "value": "\"retracts_event_id\" is null or \"status\" = 'cleared'",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

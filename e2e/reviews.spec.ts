@@ -43,7 +43,7 @@ function group(page: Page, name: RegExp) {
 test("a diver's bare rating publishes straight away and reaches the public page", async ({
   page,
 }) => {
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await expect(page.getByRole("heading", { name: "How was your day?" })).toBeVisible();
 
   await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
@@ -52,7 +52,7 @@ test("a diver's bare rating publishes straight away and reaches the public page"
   // No words to moderate, so it counts immediately.
   await expect(page.getByText("Thanks. Your rating is up.")).toBeVisible();
   // Reloading shows the diver what they already said, rather than a blank form.
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await expect(page.getByText("You rated this 5 out of 5.")).toBeVisible();
 
   await page.goto("/s/blue-mantis");
@@ -97,7 +97,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
 }) => {
   const comment = "The crew found us a nurse shark under the ledge.";
   await page.clock.install({ time: E2E_FROZEN_CLOCK });
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await page.getByRole("radio", { name: "4 out of 5 stars" }).check();
   await page.getByLabel("Anything you’d tell another diver?").fill(comment);
   await page.getByRole("button", { name: "Leave my review" }).click();
@@ -289,7 +289,7 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
   // Two reviews waiting: the seeded one, plus one this diver leaves now.
   const comment = "Second tank was the best dive of the trip.";
   await page.clock.install({ time: E2E_FROZEN_CLOCK });
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
   await page.getByLabel("Anything you’d tell another diver?").fill(comment);
   await page.getByRole("button", { name: "Leave my review" }).click();

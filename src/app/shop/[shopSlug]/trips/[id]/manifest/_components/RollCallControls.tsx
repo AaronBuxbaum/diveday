@@ -323,6 +323,7 @@ export function RollCallMarkButton({
         isCrew ? { field: "personId", id: subjectId } : { field: "bookingId", id: subjectId }
       }
       status={boarded ? "cleared" : "boarded"}
+      retracts={rollCall?.eventId}
       label={
         isCrew
           ? boarded
@@ -480,6 +481,9 @@ export function RollCallExceptionControl({
           isCrew ? { field: "personId", id: subjectId } : { field: "bookingId", id: subjectId }
         }
         status={recordedNotBoarded ? "cleared" : "not_boarded"}
+        // The undo names the mark on screen, carried from an earlier day or
+        // not, and lands only while that mark still stands (#3995).
+        retracts={rollCall?.eventId}
         label={
           recordedNotBoarded
             ? isDeparture
@@ -537,7 +541,11 @@ export function RollCallExceptionControl({
           page to leave wrong. Crew rows get it on the same terms; hiding it for
           crew taught the deck that a mis-tap on a divemaster was permanent. */}
       {recordedHere && notBackAboard ? (
-        <p className="mt-2 text-sm text-muted">{t("manifest.tapToUndoNotBackAboard")}</p>
+        <p className="mt-2 text-sm text-muted">
+          {rollCall?.fromEarlierDay
+            ? t("manifest.tapToUndoCarriedNotBackAboard")
+            : t("manifest.tapToUndoNotBackAboard")}
+        </p>
       ) : null}
     </div>
   );

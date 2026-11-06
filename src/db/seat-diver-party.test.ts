@@ -387,7 +387,7 @@ describe("seatParty", () => {
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: kidSeat, now });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
     expect(
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: `Guard Kid ${stamp}`,
         agreed: true,
         medicalAnswers: clearAnswers,

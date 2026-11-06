@@ -437,6 +437,47 @@ describe("a hull in the yard", () => {
     expect(patch.boatId).toBe("boat-1");
   });
 
+  // Issue #3994: held is nights aboard. A night out that comes back after
+  // midnight holds the hull on the morning it returns.
+  it("refuses a night out that comes back on the window's first day", () => {
+    expect(
+      tripDetailsPatch(
+        {
+          ...base,
+          date: "2026-06-08",
+          startTime: "21:00",
+          endTime: "02:00",
+          diveMode: "boat",
+          boatId: "boat-1",
+          boatOutOfService: yard,
+        },
+        shop,
+      ),
+    ).toEqual({ ok: false, reason: "boat_out_of_service", until: "2026-06-12" });
+  });
+
+  it("takes a night dive that ties up at exactly midnight before the window", () => {
+    const patch = ok({
+      date: "2026-06-08",
+      startTime: "20:00",
+      endTime: "00:00",
+      diveMode: "boat",
+      boatId: "boat-1",
+      boatOutOfService: yard,
+    });
+    expect(patch.boatId).toBe("boat-1");
+  });
+
+  // Attacker review, #3994: the trip page's timing section posts no mode, and
+  // its date change must still be asked about the hull it keeps.
+  it("refuses a save that posts no mode but moves a kept hull into the window", () => {
+    expect(tripDetailsPatch({ ...base, boatId: "boat-1", boatOutOfService: yard }, shop)).toEqual({
+      ok: false,
+      reason: "boat_out_of_service",
+      until: "2026-06-12",
+    });
+  });
+
   it("takes the hull on the day after the window ends", () => {
     expect(
       ok({ date: "2026-06-13", diveMode: "boat", boatId: "boat-1", boatOutOfService: yard }).boatId,

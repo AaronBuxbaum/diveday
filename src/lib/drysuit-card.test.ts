@@ -64,7 +64,6 @@ describe("checkDrysuitCard", () => {
       } as unknown as TripRequirement,
       waiver: {
         status: "completed",
-        expiresAt: new Date("2026-09-19T12:00:00.000Z"),
       } as WaiverRecord,
       certifications: [],
       specialtyCertifications: [],

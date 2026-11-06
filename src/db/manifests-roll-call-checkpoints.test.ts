@@ -13,7 +13,7 @@ describe("roll call across checkpoints (in-memory PGlite)", () => {
       bookingId: booking.booking.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,

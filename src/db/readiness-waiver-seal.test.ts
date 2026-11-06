@@ -43,7 +43,7 @@ async function signedOnAWaiverOnlyTrip(answers: typeof clearAnswers) {
   });
   const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
   if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-  const done = await completeWaiver(db, issued.token, {
+  const done = await completeWaiver(db, issued.key, {
     signerName: person.fullName,
     agreed: true,
     medicalAnswers: answers,
@@ -134,7 +134,7 @@ describe("readiness over a release whose seal failed", () => {
       bookingId: ctx.booking.id,
     });
     if (!again.ok) throw new Error(`issue failed: ${again.reason}`);
-    const done = await completeWaiver(ctx.db, again.token, {
+    const done = await completeWaiver(ctx.db, again.key, {
       signerName: ctx.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -345,8 +345,9 @@ describe("readiness over a physician's answer", () => {
       evaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
       physicianName: "Dr. Imani Reyes",
     });
-    // The tampered row is evidence: it is not rewritten, and it still holds.
-    expect(again).toMatchObject({ ok: true, alreadyRecorded: true });
+    // The tampered row is evidence: it is not rewritten, the desk is told the seal
+    // is broken (#3998), and it still holds.
+    expect(again).toMatchObject({ ok: false, reason: "answer_seal_broken" });
     const [row] = await ctx.db
       .select({ evaluatedOn: waiverRecords.medicalClearanceEvaluatedOn })
       .from(waiverRecords)

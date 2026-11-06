@@ -12,9 +12,10 @@ import { getEmergencyContactForBearer, getEmergencyContactForPerson } from "@/db
 import type { DiverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatTimeTz } from "@/lib/format";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { questionnaireForJurisdiction } from "@/lib/medical";
+import { CounterAutosave } from "./CounterAutosave";
 import { EmergencyContactSection } from "./EmergencyContactSection";
 import { GuardianCard } from "./GuardianCard";
 import { MEDICAL_ALERT_ANCHOR, MedicalAlertSection } from "./MedicalAlertSection";
@@ -61,9 +62,10 @@ export async function waiverSigningForm({
   search,
   completeAction,
   saveAction,
-  showLinkExpiry,
+  linkExpiresAt,
   prefillMedical,
   backHref,
+  counter,
 }: {
   db: AppDb;
   record: typeof waiverRecords.$inferSelect;
@@ -73,8 +75,12 @@ export async function waiverSigningForm({
   search: WaiverFormSearch;
   completeAction: (formData: FormData) => Promise<void>;
   saveAction: (formData: FormData) => Promise<void>;
-  /** A waiver link runs out; the thread's release is reopened from the thread. */
-  showLinkExpiry: boolean;
+  /**
+   * When the link this form was opened through stops working: a release link's
+   * week. Null for the thread, which reopens its release itself, and for a
+   * counter link, whose half hour is one sitting at the shop.
+   */
+  linkExpiresAt: Date | null;
   /**
    * Whether the saved medical answers and alert fill the form. Off on a counter
    * QR unless this claimed code saved them itself (security review S2, dock
@@ -84,6 +90,14 @@ export async function waiverSigningForm({
   prefillMedical: boolean;
   /** The thread's way back to its checklist; none on the waiver link. */
   backHref?: string;
+  /**
+   * A counter code (issue #3985): when it closes, and the draft save each
+   * step makes. It replaces "Save and finish later" with the time left.
+   */
+  counter?: {
+    expiresAt: Date;
+    autosaveAction: (formData: FormData) => Promise<"saved" | "skipped" | "closed" | "rate">;
+  };
 }) {
   const { saved, error, field, q, at } = search;
   const shopName = shop.name;
@@ -154,12 +168,29 @@ export async function waiverSigningForm({
         ? t("waiver.linkInactive")
         : error === "rate"
           ? t("waiver.rateLimited")
-          : undefined;
+          : error === "guardian"
+            ? t("waiver.guardianAtCounter")
+            : undefined;
 
   const signBlock = (
     <WaiverSignBlock
       saveAction={saveAction}
-      expiresAt={showLinkExpiry ? formatDateTimeTz(record.expiresAt, locale, shop.timezone) : null}
+      expiresAt={linkExpiresAt ? formatDateTimeTz(linkExpiresAt, locale, shop.timezone) : null}
+      counter={
+        counter ? (
+          <CounterAutosave
+            action={counter.autosaveAction}
+            msLeft={Math.max(counter.expiresAt.getTime() - nowDate().getTime(), 0)}
+            closesAt={formatTimeTz(counter.expiresAt, locale, shop.timezone)}
+            copy={{
+              closesAt: t.raw("waiver.counterClosesAt"),
+              minutesOne: t.raw("waiver.counterMinutesOne"),
+              minutesOther: t.raw("waiver.counterMinutesOther"),
+              saved: t("waiver.counterSaved"),
+            }}
+          />
+        ) : undefined
+      }
       t={t}
     />
   );

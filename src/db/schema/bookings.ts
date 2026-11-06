@@ -362,6 +362,14 @@ export const bookings = pgTable(
      */
     identityUnconfirmedAt: timestamp("identity_unconfirmed_at", { withTimezone: true }),
     /**
+     * **The recap link's epoch** (issue #3982). Every recap link signs it
+     * (`src/lib/recap-links.ts`) and opens only while it still matches
+     * (`openRecapLink`); a change to the diver's email or phone bumps it on all
+     * of their bookings, so a recap link mailed to the old address opens
+     * nothing and the next one carries the new number.
+     */
+    recapLinkEpoch: integer("recap_link_epoch").notNull().default(0),
+    /**
      * The name this booking was made under when that differs from the matched
      * person's, written with `identity_unconfirmed_at` and cleared with it.
      * It is what lets a staffer see the question ("booked as Sam Rivera, on
@@ -456,6 +464,17 @@ export const bookings = pgTable(
      * board: claiming is an upgrade, never a requirement (same ADR).
      */
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    /**
+     * **The public party form's lead typed this seat's contact** (issue
+     * #4003): set on every seat that form or the lead's "Add a seat" made for
+     * someone other than the booker. Until the seat is claimed
+     * (`claimedAt`), nobody has shown that address is the diver's, so no send
+     * to it carries a link that pays, cancels or moves the seat
+     * (`seatAddressIsLeadTyped`). Kept when the seat moves alone and leaves
+     * its party, because the address is still the one the lead typed; cleared
+     * only when a cancelled row is reactivated by a new booking.
+     */
+    contactTypedByLeadAt: timestamp("contact_typed_by_lead_at", { withTimezone: true }),
     /**
      * The partner whose link sent this diver — the slug the embed generator
      * wrote into `utm_campaign` (`partnerLinkUrl`, src/lib/embed-snippets.ts),

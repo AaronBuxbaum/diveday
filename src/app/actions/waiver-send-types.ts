@@ -46,6 +46,11 @@ export type WaiverFallbackLink = {
   /** The seat a null-token row is about, so its "Send by text" knows where to post. */
   bookingId?: string;
   /**
+   * The seat's record holds a number a text can reach. "Send by text" is
+   * offered only then (issue #3984): without one it could only fail.
+   */
+  textable?: boolean;
+  /**
    * The link's own path when it is not the release's: a signed release with
    * course forms still owed hands over `/ready/<token>/forms` (ADR
    * 20261008-course-forms). Absent means `/waivers/<token>` — `waiverLinkPath`.
@@ -58,10 +63,12 @@ export type WaiverFallbackLink = {
    * `link_only` is not a gap at all: it is the staffer having asked for the URL
    * to pass on themselves, so it renders the copy control and no sentence.
    * `thread_only` is a Copy link tap on a booked seat, which has no link to
-   * copy. */
+   * copy. `guardian_needed` is a minor whose address the party's lead typed:
+   * nothing was sent (issue #4003). */
   reason:
     | "link_only"
     | "thread_only"
+    | "guardian_needed"
     | "no_email"
     | "no_phone"
     | "no_app_origin"
@@ -116,6 +123,7 @@ export type WaiverSendCopy = {
   copyFailed: string;
   sendByText: string;
   reasonThreadOnly: string;
+  reasonGuardianNeeded: string;
   reasonNoEmailOne: string;
   reasonNoEmailOther: string;
   reasonNoPhoneOne: string;
@@ -162,6 +170,7 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     copyFailed: t("shared.waiverSend.copyFailed"),
     sendByText: t("shared.waiverSend.sendByText"),
     reasonThreadOnly: t("shared.waiverSend.reasonThreadOnly"),
+    reasonGuardianNeeded: t("shared.waiverSend.reasonGuardianNeeded"),
     reasonNoEmailOne: t("shared.waiverSend.reasonNoEmailOne"),
     reasonNoEmailOther: t.raw("shared.waiverSend.reasonNoEmailOther"),
     reasonNoPhoneOne: t("shared.waiverSend.reasonNoPhoneOne"),

@@ -1,96 +1,71 @@
 /**
- * Waivers: issuing a signing request — minting the bearer link for a booking
- * or a person. Imported through the `./waivers` barrel.
+ * Waivers: opening a release to sign, for a seat or a person. The record
+ * carries no link and no clock: a seat's release is signed on its holder's
+ * thread link or a counter link, and a release with no seat on a counter link
+ * or a release link (`src/lib/capabilities.ts`, issue #3983). Imported through
+ * the `./waivers` barrel.
  */
 import { randomUUID } from "node:crypto";
-import { and, eq, gt, isNull, or } from "drizzle-orm";
-import { capabilityExpiryFor } from "@/lib/booking-capabilities";
+import { and, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { purposesNaming } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
 import { isHeldToMedical } from "@/lib/participant-types";
-import { hashWaiverToken, liveWaiverLinkToken, waiverLinkToken } from "@/lib/waiver-tokens";
 import {
   bookingRecordLapsed,
   isCompletedWaiverCurrent,
   isUnclearedReferral,
-  WAIVER_LINK_TTL_MS,
   waiverClockInstant,
 } from "@/lib/waivers";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
+import { mintCapability } from "./capabilities";
 import type { DbExecutor } from "./client";
 import { isTransactionExecutor } from "./query-helpers";
-import { bookings, people, trips, waiverRecords } from "./schema";
+import { bookings, capabilities, people, trips, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
+import {
+  WAIVER_BOARDING_COLUMNS,
+  withTrustedClearance,
+  withVerifiedClearance,
+} from "./waiver-record-columns";
+import { threadWaiverKey, type WaiverKey, waiverLinkDoor } from "./waivers-completion";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
+
+export type IssueWaiverRefusal = {
+  ok: false;
+  reason:
+    | "booking_not_found"
+    | "booking_unavailable"
+    | "person_not_found"
+    | "template_not_found"
+    | "already_completed"
+    /**
+     * The booking is a held seat (`identity_unconfirmed_at`): whoever holds
+     * the link may not be the matched person, so none is issued until the
+     * desk confirms who it is (issue #2125, mirroring `bookingSigner`).
+     */
+    | "identity_unconfirmed";
+};
+
+/**
+ * A release opened for signing: the record, and whether it was the one already
+ * waiting (`reused`), kept with its draft, rather than a fresh one.
+ */
+export type OpenedRelease = { ok: true; recordId: string; reused: boolean };
 
 export type IssueWaiverOutcome =
   | {
       ok: true;
-      token: string;
-      expiresAt: Date;
       recordId: string;
-      /**
-       * True when this handed back the link the diver already had rather than
-       * minting one. Callers do not branch on it — a reused link and a fresh
-       * one are the same URL to send — but it is what a test asserts, and what
-       * tells you at a glance whether the deployment has a sealing key.
-       */
+      /** The release was the one already waiting, kept with its draft. */
       reused: boolean;
+      /**
+       * A server-side key that signs this release, never a URL: the seat's
+       * thread key, or for a release with no seat a release link's key.
+       */
+      key: WaiverKey;
     }
-  | {
-      ok: false;
-      reason:
-        | "booking_not_found"
-        | "booking_unavailable"
-        | "person_not_found"
-        | "template_not_found"
-        | "already_completed"
-        /**
-         * The booking is a held seat (`identity_unconfirmed_at`): whoever holds
-         * the link may not be the matched person, so none is issued until the
-         * desk confirms who it is (issue #2125, mirroring `bookingSigner`).
-         */
-        | "identity_unconfirmed";
-    };
-
-/**
- * Issue the diver's waiver link — **the same one they already have**, whenever
- * they still have one that works.
- *
- * A shop reaches for this several times in one conversation: copy the link,
- * paste it into their own WhatsApp, then tap "Text waiver" to be sure. Every
- * one of those used to mint a fresh token and supersede the last, so the URL
- * just pasted was dead, and a diver part-way through signing online lost the
- * draft with it. So a live pending link is reused and its clock refreshed
- * (ADR 20260820-waiver-links-are-reused-not-reissued).
- *
- * "Live" is narrow, and each condition is load-bearing:
- *
- * - **Pending and not superseded.** A completed record has nothing to hand out.
- * - **Not expired.** The TTL stays a real bound; a link that already died is
- *   not resurrected, because reviving a months-old URL is exactly what a leak
- *   would want. A fresh one is minted instead.
- * - **Snapshotted from the template that is current now.** A shop that edited
- *   its release since has different terms, and letting the old link stand would
- *   collect a signature against wording the shop has withdrawn.
- * - **Still its derived link.** The token is computed from the record
- *   (`waiverLinkToken`, #3903), and reused only while the stored digest
- *   matches it under the current signing key: a digest rotated by erasure or
- *   an identity repoint, or a key rotated since, mints a fresh one.
- *
- * When none of that holds it does what it always did: mint, supersede whatever
- * was pending, and insert. So an old token still cannot complete later; it just
- * stops being the *usual* outcome of asking twice.
- */
-export async function issueWaiverRequest(
-  db: DbExecutor,
-  input: IssueWaiverInput,
-): Promise<IssueWaiverOutcome> {
-  const outcome = await issueWaiverRecord(db, input, false);
-  if (outcome.ok && outcome.token === null)
-    throw new Error("issueWaiverRequest: a link issue kept a record without its token");
-  return outcome as IssueWaiverOutcome;
-}
+  | IssueWaiverRefusal;
 
 type IssueWaiverInput = {
   shopId: string;
@@ -101,23 +76,48 @@ type IssueWaiverInput = {
   now?: Date;
 };
 
-export type OpenThreadWaiverOutcome =
-  | { ok: true; recordId: string }
-  | Extract<IssueWaiverOutcome, { ok: false }>;
+/**
+ * **Open a release and hand back a key that signs it**, for the fact layer
+ * (`src/db/facts`) and the tests: the diver's side of a release, without a
+ * link anyone was sent. A seat's key is its thread key; a release with no seat
+ * gets a fresh release link (`release_link`), whose key it returns, so the
+ * signature spends it as an emailed link's would. Nothing here returns a token,
+ * and no staff surface calls it: a staffer's link is the counter link
+ * (`issueAndDeliverPersonWaiver`).
+ */
+export async function issueWaiverRequest(
+  db: DbExecutor,
+  input: IssueWaiverInput,
+): Promise<IssueWaiverOutcome> {
+  const opened = await openRelease(db, input);
+  if (!opened.ok) return opened;
+  if (input.bookingId) {
+    const key = await threadWaiverKey(db, { shopId: input.shopId, bookingId: input.bookingId });
+    if (key?.recordId !== opened.recordId) return { ok: false, reason: "booking_not_found" };
+    return { ...opened, key };
+  }
+  const link = await mintCapability(db, {
+    purpose: "release_link",
+    shopId: input.shopId,
+    subjectId: opened.recordId,
+    now: input.now,
+  });
+  const door = await waiverLinkDoor(db, link.token, { now: input.now });
+  if (door?.door !== "release") return { ok: false, reason: "person_not_found" };
+  return { ...opened, key: door.key };
+}
+
+export type OpenThreadWaiverOutcome = { ok: true; recordId: string } | IssueWaiverRefusal;
 
 /**
  * **Open the seat's release in the diver's own thread** (issue #2743).
  *
  * The caller has verified the readiness capability for `bookingId`; the
  * release is then signed on that same link (`/ready/<token>/waiver`), so no
- * waiver link is handed to anyone and the token this mints, when it mints, is
- * never read back.
+ * waiver link is handed to anyone.
  *
- * The same rules as `issueWaiverRequest` decide whether there is anything to
- * sign and on which terms, with one difference: a live record on the current
- * terms is kept **whether or not its link can be handed back**. A thread does
- * not need the token, so it does not supersede the link a staffer already
- * sent, or the draft typed into it.
+ * A live record on the current terms is kept, with its draft; anything else
+ * is superseded by a fresh one (`openRelease`).
  *
  * The booking confirmation opens it too (`openJoinSignStep`), for the
  * readiness link it carries: the mail's Sign step is that link's
@@ -134,27 +134,41 @@ export async function openWaiverInThread(
     now?: Date;
   },
 ): Promise<OpenThreadWaiverOutcome> {
-  const outcome = await issueWaiverRecord(db, input, true);
+  const outcome = await openRelease(db, input);
   return outcome.ok ? { ok: true, recordId: outcome.recordId } : outcome;
 }
 
-async function issueWaiverRecord(
+/**
+ * **Open a release with no seat** (issue #3983): the record a counter link or
+ * a release link will name. The caller mints the link; the record carries
+ * none, and no clock of its own.
+ */
+export async function openPersonRelease(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; now?: Date },
+): Promise<OpenedRelease | IssueWaiverRefusal> {
+  return openRelease(db, { ...input, expectedPersonId: input.personId });
+}
+
+/**
+ * **The one rule for whether there is a release to sign, and on which terms.**
+ *
+ * - A signature that still stands refuses (`already_completed`).
+ * - A pending, unsuperseded record on the shop's current terms is kept, with
+ *   its draft: asking twice never costs a diver what they typed. A record
+ *   carries no expiry of its own; the link that opens it does.
+ * - Anything else is superseded and a fresh record opened on the current
+ *   terms, so a signature is never collected against wording the shop has
+ *   withdrawn.
+ */
+async function openRelease(
   db: DbExecutor,
   input: IssueWaiverInput,
-  keepLiveRecord: boolean,
-): Promise<
-  IssueWaiverOutcome | { ok: true; token: null; expiresAt: Date; recordId: string; reused: true }
-> {
+): Promise<OpenedRelease | IssueWaiverRefusal> {
   if (!input.bookingId && !input.personId) return { ok: false, reason: "person_not_found" };
-  // The new record's id is chosen here so its link can be derived before the insert.
   const recordId = randomUUID();
-  const token = waiverLinkToken(recordId);
 
-  const issue = async (
-    tx: DbExecutor,
-  ): Promise<
-    IssueWaiverOutcome | { ok: true; token: null; expiresAt: Date; recordId: string; reused: true }
-  > => {
+  const issue = async (tx: DbExecutor): Promise<OpenedRelease | IssueWaiverRefusal> => {
     await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
     const candidate = input.bookingId
       ? await tx
@@ -274,7 +288,9 @@ async function issueWaiverRecord(
           isNull(waiverRecords.supersededAt),
         ),
       )
-      .for("update");
+      .for("update")
+      // A clearance counts only while its seal verifies (issue #3998).
+      .then((rows) => rows.map(withVerifiedClearance));
     // An unanswered referral remains evidence after its waiver row is
     // superseded. Include the person's booking referrals only while that seat
     // still belongs to them; a link may have moved with the seat to someone
@@ -282,14 +298,7 @@ async function issueWaiverRecord(
     const personReferrals = booking
       ? []
       : await tx
-          .select({
-            id: waiverRecords.id,
-            status: waiverRecords.status,
-            medicalClearedAt: waiverRecords.medicalClearedAt,
-            signedAt: waiverRecords.signedAt,
-            completedAt: waiverRecords.completedAt,
-            createdAt: waiverRecords.createdAt,
-          })
+          .select(WAIVER_BOARDING_COLUMNS)
           .from(waiverRecords)
           .leftJoin(
             bookings,
@@ -300,11 +309,15 @@ async function issueWaiverRecord(
               eq(waiverRecords.shopId, input.shopId),
               eq(waiverRecords.personId, personId),
               eq(waiverRecords.status, "medical_review"),
-              isNull(waiverRecords.medicalClearedAt),
               or(isNull(waiverRecords.bookingId), eq(bookings.personId, personId)),
             ),
           )
-          .for("update", { of: waiverRecords });
+          .for("update", { of: waiverRecords })
+          // Uncleared once the seal is read: a stamp whose seal does not verify is no answer
+          // (issue #3998).
+          .then((rows) =>
+            rows.map(withTrustedClearance).filter((record) => record.medicalClearedAt === null),
+          );
     const personReferralIds = new Set(personReferrals.map((record) => record.id));
     const standingRecords = booking
       ? current
@@ -312,15 +325,6 @@ async function issueWaiverRecord(
     // A row lock can wait past expiry or a concurrent signature. Re-read the
     // clock and terms only after every current record is locked.
     const now = input.now ?? nowDate();
-    // A record opened for the thread is signed on the readiness link, which
-    // lives until the trip ends plus its grace, so the record lives as long: a
-    // week's expiry on a link nobody was handed would read "link expired" on
-    // day 8 and blame the diver for a deadline the mail never stated. A waiver
-    // link (`keepLiveRecord` false) keeps its own week.
-    const expiresAt =
-      keepLiveRecord && booking
-        ? capabilityExpiryFor(booking.tripEndsAt, now)
-        : new Date(now.getTime() + WAIVER_LINK_TTL_MS);
     const template = await getCurrentWaiverTemplate(tx, input.shopId);
     if (!template) return { ok: false, reason: "template_not_found" };
     // A signature that has lapsed (its year, its physician's year, or terms the
@@ -373,46 +377,17 @@ async function issueWaiverRecord(
       return { ok: false, reason: "already_completed" };
     }
 
-    // The link this diver already holds, if it is still one they can sign.
-    // A thread signs by record, not by token, so it keeps any live record.
+    // The release this diver already has open, kept with its draft, while it
+    // is still on the shop's current terms.
     const live = current.find(
       (record) =>
         record.status === "pending" &&
         record.supersededAt === null &&
-        record.expiresAt > now &&
         record.templateId === template.id &&
         record.templateVersion === template.version &&
         record.templateGeneration === template.materialGeneration,
     );
-    const reusedToken = live ? liveWaiverLinkToken(live.id, live.tokenHash) : null;
-    if (live && keepLiveRecord) {
-      await tx.update(waiverRecords).set({ expiresAt }).where(eq(waiverRecords.id, live.id));
-      return {
-        ok: true,
-        token: null,
-        expiresAt,
-        recordId: live.id,
-        reused: true,
-      };
-    }
-    if (live && reusedToken) {
-      // Same record, same URL, fresh clock: whoever was just handed this link
-      // gets the full window to sign, and the copy already pasted somewhere
-      // keeps working. Nothing is superseded, so a half-filled draft on this
-      // record survives being sent again.
-      const refreshedExpiry = new Date(now.getTime() + WAIVER_LINK_TTL_MS);
-      await tx
-        .update(waiverRecords)
-        .set({ expiresAt: refreshedExpiry })
-        .where(eq(waiverRecords.id, live.id));
-      return {
-        ok: true,
-        token: reusedToken,
-        expiresAt: refreshedExpiry,
-        recordId: live.id,
-        reused: true,
-      };
-    }
+    if (live) return { ok: true, recordId: live.id, reused: true };
 
     if (current.length > 0) {
       await tx
@@ -441,21 +416,20 @@ async function issueWaiverRecord(
         templateVersion: template.version,
         templateGeneration: template.materialGeneration,
         templateBody: template.body,
-        tokenHash: hashWaiverToken(token),
-        expiresAt,
       })
-      .returning();
-    if (!record) throw new Error("issueWaiverRequest: insert returned no row");
-    return { ok: true, token, expiresAt, recordId: record.id, reused: false };
+      .returning({ id: waiverRecords.id });
+    if (!record) throw new Error("openRelease: insert returned no row");
+    return { ok: true, recordId: record.id, reused: false };
   };
   return isTransactionExecutor(db) ? issue(db) : db.transaction(issue);
 }
 
 /**
- * Does this person already have a waiver link with no seat they could sign
- * *right now*? The rescue flow's guard: the bearer of a dead URL learns only
- * that a live link exists, never its token, address or age, and drives no
- * delivery on it.
+ * Does this person already hold a live link to a release with no seat: a
+ * release link or a counter link, unspent, unrevoked and unexpired, on a
+ * release still waiting for its signature? The rescue flow's guard: the bearer
+ * of a dead URL learns only that a live link exists, never its token, address
+ * or age, and drives no delivery on it.
  */
 export async function hasLivePersonWaiverRequest(
   db: DbExecutor,
@@ -464,16 +438,26 @@ export async function hasLivePersonWaiverRequest(
   now: Date = nowDate(),
 ): Promise<boolean> {
   const [live] = await db
-    .select({ id: waiverRecords.id })
-    .from(waiverRecords)
+    .select({ id: capabilities.id })
+    .from(capabilities)
+    .innerJoin(
+      waiverRecords,
+      and(
+        eq(waiverRecords.id, capabilities.waiverRecordId),
+        eq(waiverRecords.shopId, capabilities.shopId),
+      ),
+    )
     .where(
       and(
-        eq(waiverRecords.shopId, shopId),
+        inArray(capabilities.purpose, purposesNaming("waiver_record")),
+        eq(capabilities.shopId, shopId),
+        isNull(capabilities.usedAt),
+        isNull(capabilities.revokedAt),
+        gt(capabilities.expiresAt, now),
         eq(waiverRecords.personId, personId),
         isNull(waiverRecords.bookingId),
         eq(waiverRecords.status, "pending"),
         isNull(waiverRecords.supersededAt),
-        gt(waiverRecords.expiresAt, now),
       ),
     )
     .limit(1);

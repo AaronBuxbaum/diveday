@@ -229,8 +229,6 @@ async function completeWaiverFor(
     templateVersion: template.version,
     templateBody: template.body,
     status: "completed",
-    tokenHash: `hash-${opts.token}`,
-    expiresAt: new Date("2027-01-01T00:00:00Z"),
     signedAt: new Date("2026-06-05T00:00:00Z"),
     completedAt: new Date("2026-06-05T00:00:00Z"),
     supersededAt: opts.superseded ? new Date("2026-06-06T00:00:00Z") : null,
@@ -681,8 +679,6 @@ describe("getMonthlyReport", () => {
       templateVersion: template.version,
       templateBody: template.body,
       status: "completed",
-      tokenHash: "hash-cross-shop",
-      expiresAt: new Date("2027-01-01T00:00:00Z"),
       signedAt: new Date("2026-06-05T00:00:00Z"),
       completedAt: new Date("2026-06-05T00:00:00Z"),
     });

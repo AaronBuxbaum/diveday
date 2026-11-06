@@ -1,8 +1,6 @@
 import { and, eq, getTableColumns, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { capabilityExpiryFor } from "@/lib/booking-capabilities";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { createWaiverToken, hashWaiverToken, waiverLinkToken } from "@/lib/waiver-tokens";
 import { fileScopedShopContext } from "@/test/db";
 import { people, waiverRecords, waiverTemplates } from "./schema";
 import { setTripStatus } from "./trips";
@@ -25,33 +23,24 @@ afterEach(() => {
 });
 
 describe("waiver records (in-memory PGlite)", () => {
-  it("stores only a token hash and rejects a tampered link", async () => {
+  it("keeps no link and no clock on the record", async () => {
     const { db, shop, booking } = await waiverContext();
-    const issued = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
-      now,
-    });
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-
-    const [stored] = await db
-      .select()
-      .from(waiverRecords)
-      .where(eq(waiverRecords.id, issued.recordId));
-    expect(stored?.tokenHash).not.toBe(issued.token);
-    expect(await getWaiverForToken(db, issued.token, now)).toMatchObject({ state: "available" });
-    expect(await getWaiverForToken(db, `${issued.token}tampered`, now)).toEqual({
-      state: "unavailable",
-    });
+    const columns = Object.keys(getTableColumns(waiverRecords));
+    expect(columns).not.toContain("tokenHash");
+    expect(columns).not.toContain("expiresAt");
+    // Weeks on, the release still waits for its signature: the link that
+    // opens it has the clock, not the record.
+    const later = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+    expect(await getWaiverForToken(db, issued.key, later)).toMatchObject({ state: "available" });
   });
 
   /**
-   * The shape a shop actually produces: copy the link, paste it into their own
-   * message, then tap send to be sure. Both taps must hand over the *same* URL,
-   * or the one already pasted is dead (ADR
-   * 20260820-waiver-links-are-reused-not-reissued).
+   * Asking twice never costs a diver what they typed: a second ask keeps the
+   * open release, with its draft, rather than replacing it.
    */
-  it("hands back the same live link instead of minting a second one", async () => {
+  it("keeps the open release on a second ask instead of opening another", async () => {
     const { db, shop, booking } = await waiverContext();
     const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     const later = new Date(now.getTime() + 60_000);
@@ -60,47 +49,19 @@ describe("waiver records (in-memory PGlite)", () => {
       bookingId: booking.id,
       now: later,
     });
-    if (!first.ok || !second.ok) throw new Error("expected both links to issue");
+    if (!first.ok || !second.ok) throw new Error("expected both to open");
 
-    expect(second.token).toBe(first.token);
     expect(second.recordId).toBe(first.recordId);
     expect(first.reused).toBe(false);
     expect(second.reused).toBe(true);
-    // The clock restarts: whoever was just handed this link gets the full
-    // window, rather than whatever was left of the first send's.
-    expect(second.expiresAt.getTime()).toBeGreaterThan(first.expiresAt.getTime());
-    expect(await getWaiverForToken(db, first.token, later)).toMatchObject({ state: "available" });
+    expect(await getWaiverForToken(db, first.key, later)).toMatchObject({ state: "available" });
 
-    // One record, not two, and nothing superseded — so a draft saved against it
-    // survives the second send.
     const records = await db
       .select()
       .from(waiverRecords)
       .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.bookingId, booking.id)));
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({ id: first.recordId, supersededAt: null });
-  });
-
-  it("mints a fresh link when the old one has expired, and does not revive the dead one", async () => {
-    const { db, shop, booking } = await waiverContext();
-    const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!first.ok) throw new Error("expected the first link to issue");
-    // Past the seven-day window. Reviving a link that already died is exactly
-    // what a leaked URL would want, so the TTL stays a real bound.
-    const afterExpiry = new Date(first.expiresAt.getTime() + 1);
-    const second = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
-      now: afterExpiry,
-    });
-    if (!second.ok) throw new Error("expected a fresh link");
-
-    expect(second.token).not.toBe(first.token);
-    expect(second.reused).toBe(false);
-    expect(await getWaiverForToken(db, first.token, afterExpiry)).toEqual({ state: "unavailable" });
-    expect(await getWaiverForToken(db, second.token, afterExpiry)).toMatchObject({
-      state: "available",
-    });
   });
 
   /**
@@ -127,9 +88,9 @@ describe("waiver records (in-memory PGlite)", () => {
     });
     if (!second.ok) throw new Error("expected a fresh link on the new wording");
 
-    expect(second.token).not.toBe(first.token);
+    expect(second.key).not.toBe(first.key);
     expect(second.reused).toBe(false);
-    expect(await getWaiverForToken(db, first.token, later)).toEqual({ state: "unavailable" });
+    expect(await getWaiverForToken(db, first.key, later)).toEqual({ state: "unavailable" });
 
     const records = await db
       .select()
@@ -141,103 +102,6 @@ describe("waiver records (in-memory PGlite)", () => {
         expect.objectContaining({ id: second.recordId, supersededAt: null }),
       ]),
     );
-  });
-
-  /**
-   * **A waiver link is derived from its row** (#3903), as a booking link is
-   * (ADR 20261104-derived-booking-link-tokens): the row keeps a digest and no
-   * openable copy, and no `SECRET_ENCRYPTION_KEY` is needed to hand the same
-   * link over twice.
-   */
-  it("derives the link from its record and stores only the digest", async () => {
-    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
-    const { db, shop, booking } = await waiverContext();
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!issued.ok) throw new Error("expected a link");
-    const [stored] = await db
-      .select()
-      .from(waiverRecords)
-      .where(eq(waiverRecords.id, issued.recordId));
-    expect(issued.token).toBe(waiverLinkToken(issued.recordId));
-    expect(stored?.tokenHash).toBe(hashWaiverToken(issued.token));
-    expect(Object.keys(getTableColumns(waiverRecords))).not.toContain("tokenSealed");
-    expect(JSON.stringify(stored)).not.toContain(issued.token);
-  });
-
-  it("hands back the same live link without SECRET_ENCRYPTION_KEY", async () => {
-    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
-    const { db, shop, booking } = await waiverContext();
-    const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    const second = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
-      now: new Date(now.getTime() + 60_000),
-    });
-    if (!first.ok || !second.ok) throw new Error("expected both links to issue");
-    expect(second.token).toBe(first.token);
-    expect(second.reused).toBe(true);
-  });
-
-  it("mints a fresh link when the record's digest no longer matches its derived link", async () => {
-    // Erasure and the identity repoints retire a link by rotating its digest;
-    // the derived token must not be handed out again over a record like that.
-    const { db, shop, booking } = await waiverContext();
-    const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!first.ok) throw new Error("expected a link");
-    await db
-      .update(waiverRecords)
-      .set({ tokenHash: hashWaiverToken(createWaiverToken()) })
-      .where(eq(waiverRecords.id, first.recordId));
-    const second = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
-      now: new Date(now.getTime() + 60_000),
-    });
-    if (!second.ok) throw new Error("expected a fresh link");
-    expect(second.reused).toBe(false);
-    expect(second.recordId).not.toBe(first.recordId);
-    expect(second.token).not.toBe(first.token);
-    expect(await getWaiverForToken(db, first.token, now)).toEqual({ state: "unavailable" });
-  });
-
-  /**
-   * **A rotation keeps live links** (layer-2 dock review S3). The operator
-   * runbook keeps the old secret as `_PREVIOUS`; a re-send the morning after
-   * must hand back the link the party already shared, draft and all.
-   */
-  it("hands back a live link signed under the previous key after a rotation", async () => {
-    vi.stubEnv("BOOKING_LINK_SECRET", `v2:${"p".repeat(40)}`);
-    const { db, shop, booking } = await waiverContext();
-    const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!first.ok) throw new Error("expected a link");
-    vi.stubEnv("BOOKING_LINK_SECRET", `v3:${"r".repeat(40)}`);
-    vi.stubEnv("BOOKING_LINK_SECRET_PREVIOUS", `v2:${"p".repeat(40)}`);
-    const second = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
-      now: new Date(now.getTime() + 60_000),
-    });
-    if (!second.ok) throw new Error("expected the link back");
-    expect(second.reused).toBe(true);
-    expect(second.token).toBe(first.token);
-  });
-
-  it("never re-sends a link signed under a key this deployment no longer holds", async () => {
-    vi.stubEnv("BOOKING_LINK_SECRET", `v2:${"p".repeat(40)}`);
-    const { db, shop, booking } = await waiverContext();
-    const first = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!first.ok) throw new Error("expected a link");
-    // Two rotations on: v2 is neither current nor previous any more.
-    vi.stubEnv("BOOKING_LINK_SECRET", `v4:${"s".repeat(40)}`);
-    vi.stubEnv("BOOKING_LINK_SECRET_PREVIOUS", `v3:${"r".repeat(40)}`);
-    const second = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
-      now: new Date(now.getTime() + 60_000),
-    });
-    if (!second.ok) throw new Error("expected a fresh link");
-    expect(second.reused).toBe(false);
-    expect(second.token).not.toBe(first.token);
   });
 
   it("does not supersede a booking waiver when issuing a person-scoped waiver", async () => {
@@ -256,7 +120,7 @@ describe("waiver records (in-memory PGlite)", () => {
     });
     if (!independentIssued.ok) throw new Error("expected independent waiver link");
 
-    expect(await getWaiverForToken(db, bookingIssued.token, now)).toMatchObject({
+    expect(await getWaiverForToken(db, bookingIssued.key, now)).toMatchObject({
       state: "available",
     });
 
@@ -287,26 +151,15 @@ describe("waiver records (in-memory PGlite)", () => {
     });
     expect(newer.template.version).toBe(template.version + 1);
 
-    const state = await getWaiverForToken(db, issued.token, now);
+    const state = await getWaiverForToken(db, issued.key, now);
     expect(state).toMatchObject({
       state: "available",
       record: { templateVersion: template.version, templateBody: template.body },
     });
   });
 
-  it("rejects expired links and cross-tenant issue attempts", async () => {
-    const { db, shop, booking } = await waiverContext();
-    const issued = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
-      now,
-    });
-    if (!issued.ok) throw new Error("expected a waiver link");
-    const expiredState = await getWaiverForToken(db, issued.token, issued.expiresAt);
-    // Still carries the record — a dead link's page needs the shop id off of
-    // it to show contact details, not just a bare "expired" flag.
-    expect(expiredState.state).toBe("expired");
-    expect(expiredState.state === "expired" && expiredState.record.shopId).toBe(shop.id);
+  it("refuses a cross-tenant issue attempt", async () => {
+    const { db, booking } = await waiverContext();
     expect(
       await issueWaiverRequest(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
@@ -347,7 +200,7 @@ describe("waiver records (in-memory PGlite)", () => {
         now: later,
       }),
     ).toEqual({ ok: true, recordId: sent.recordId });
-    expect(await getWaiverForToken(db, sent.token, later)).toMatchObject({ state: "available" });
+    expect(await getWaiverForToken(db, sent.key, later)).toMatchObject({ state: "available" });
     const key = await threadWaiverKey(db, { shopId: shop.id, bookingId: booking.id });
     expect(key?.recordId).toBe(sent.recordId);
   });
@@ -372,8 +225,8 @@ describe("waiver records (in-memory PGlite)", () => {
   /**
    * **A release opened for the thread outlives a week** (reviews of #2743, D1
    * and A1): it is signed on the readiness link, which the mail never gave a
-   * deadline. On day 8 it still reads awaiting a signature, not "link expired";
-   * a waiver link issued the ordinary way keeps its week.
+   * deadline. On day 8 it still reads awaiting a signature, and the thread
+   * keeps the same release.
    */
   it("keeps a thread release signable as long as the readiness link lives", async () => {
     const { db, shop, trip, booking, person } = await waiverContext();
@@ -385,14 +238,7 @@ describe("waiver records (in-memory PGlite)", () => {
       now,
     });
     if (!opened.ok) throw new Error(`expected a release: ${opened.reason}`);
-    const [record] = await db
-      .select({ expiresAt: waiverRecords.expiresAt })
-      .from(waiverRecords)
-      .where(eq(waiverRecords.id, opened.recordId));
     const dayEight = new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000);
-    expect(record?.expiresAt.getTime()).toBe(capabilityExpiryFor(trip.endsAt, now).getTime());
-    expect(record?.expiresAt.getTime()).toBeGreaterThan(dayEight.getTime());
-    // Keeping it live refreshes it to the same bound, never down to a week.
     const again = await openWaiverInThread(db, {
       shopId: shop.id,
       bookingId: booking.id,
@@ -420,23 +266,6 @@ describe("waiver records (in-memory PGlite)", () => {
         expectedTripId: crypto.randomUUID(),
       }),
     ).toEqual({ ok: false, reason: "booking_not_found" });
-  });
-
-  it("starts a fresh release for the thread once the old one has run out", async () => {
-    const { db, shop, trip, booking, person } = await waiverContext();
-    const sent = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!sent.ok) throw new Error("expected the link to issue");
-    const muchLater = new Date(sent.expiresAt.getTime() + 1);
-    const opened = await openWaiverInThread(db, {
-      shopId: shop.id,
-      bookingId: booking.id,
-      expectedPersonId: person.id,
-      expectedTripId: trip.id,
-      now: muchLater,
-    });
-    if (!opened.ok) throw new Error(`expected a fresh release: ${opened.reason}`);
-    expect(opened.recordId).not.toBe(sent.recordId);
-    expect(await getWaiverForToken(db, sent.token, muchLater)).toEqual({ state: "unavailable" });
   });
 
   it("reaches the thread's record only through its own seat", async () => {
@@ -560,7 +389,7 @@ describe("who a waiver link may be issued for", () => {
 });
 
 describe("asking whether a live waiver link exists", () => {
-  it("answers for a person with no seat, against the clock, and never for a seat", async () => {
+  it("answers for a person with no seat, against the link's clock, and never for a seat", async () => {
     const { db, shop, booking } = await waiverContext();
     expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, now)).toBe(false);
 
@@ -575,7 +404,8 @@ describe("asking whether a live waiver link exists", () => {
     if (!person.ok) throw new Error("expected the person's link to issue");
     expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, now)).toBe(true);
 
-    const dead = new Date(person.expiresAt.getTime() + 1);
+    // A release link lives a week (`release_link`).
+    const dead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000 + 1);
     expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, dead)).toBe(false);
   });
 
@@ -598,7 +428,7 @@ describe("issuing over a signed release whose seal has been checked", () => {
     const target = scope === "booking" ? { bookingId: booking.id } : { personId: booking.personId };
     const issued = await issueWaiverRequest(db, { shopId: shop.id, ...target, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    const done = await completeWaiver(db, issued.token, {
+    const done = await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

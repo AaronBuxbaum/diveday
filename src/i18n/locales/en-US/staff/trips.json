@@ -687,7 +687,6 @@
     "waiverColumnHeading": "Waiver",
     "waiverLapsed": "Needs signing again",
     "waiverGuardianMissing": "Guardian signature missing",
-    "waiverLinkExpired": "Link expired",
     "waiverMedicalReview": "Medical review",
     "waiverMedicalNotCleared": "Not cleared",
     "waiverResendHint": "Resend",
@@ -785,7 +784,8 @@
   "rollCall": {
     "errorRefusal": "That didn’t save. Recheck your connection or tap again.",
     "stillBlocked": "Diver is still blocked. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again.",
-    "boatFull": "Boat full. See the desk."
+    "boatFull": "Boat full. See the desk.",
+    "undoSuperseded": "The mark changed before it could be undone. Check the row."
   },
   "guests": {
     "demandSignal": "Unmet demand",
@@ -915,6 +915,15 @@
     "medical": "Medical review also needed.",
     "unnamed": "Held seat",
     "review": "Review party waivers",
+    "counter": "Sign at the counter",
+    "titleSolo": "Waiver at the counter",
+    "introSolo": "Show a QR code to sign on the shop’s tablet or the diver’s own phone.",
+    "scanSolo": "Open the code on the shop’s tablet, or let them scan it with their own phone.",
+    "printDoctor": "Print physician form",
+    "doctorTitle": "Physician form",
+    "doctorIntro": "Print this for {name} to take to their doctor. Their answers stay off the paper.",
+    "doctorPrint": "Print",
+    "doctorBack": "Back to waivers",
     "medicalNotCleared": "Waiver signed · not medically cleared",
     "notCleared": "Not medically cleared.",
     "confirmIdentity": "Confirm identity",

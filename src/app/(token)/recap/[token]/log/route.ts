@@ -1,4 +1,6 @@
+import { getDb } from "@/db/client";
 import { recapPageStateCached } from "@/db/recap-cached";
+import { openRecapLink } from "@/db/recap-links";
 import { nowDate } from "@/lib/clock";
 import {
   type DiveLogEntry,
@@ -8,7 +10,6 @@ import {
   diveLogUddf,
 } from "@/lib/dive-log-export";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { verifyRecapToken } from "@/lib/recap-links";
 import { clientIp } from "@/lib/request-ip";
 
 /**
@@ -38,7 +39,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     });
   }
   const format = diveLogFormat(new URL(request.url).searchParams.get("format"));
-  const bookingId = verifyRecapToken(token);
+  const bookingId = await openRecapLink(await getDb(), token);
   const state = format && bookingId ? await recapPageStateCached(bookingId) : null;
   if (!format || state?.kind !== "recap") {
     return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });

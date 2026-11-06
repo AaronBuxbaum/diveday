@@ -106,8 +106,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // A pending "the divers still have the old time" between a move and its
     // notice: in-flight messaging state on this installation, cleared by the
     // send, and a re-imported departure has no divers who were told anything.
-    "divers_told_starts_at",
-    "divers_told_meeting_point",
+    ...["divers_told_starts_at", "divers_told_meeting_point"],
     // A rehearsal never reaches the bundle at all (ADR
     // 20261012-rehearsal-departures): every exported departure is a real one,
     // so this column would read false on every row it could appear on.
@@ -122,6 +121,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
     ...["arrival_trail_after_seq", "seat_reopened_at"], // this database's arrival trail (#2702, #3830)
     "identity_unconfirmed_at", // H-20260724-one-person-per-email review state, not a shop record
+    "recap_link_epoch", // revokes this installation's recap links (#3982), meaningless elsewhere
     "identity_booked_as", // H-20260724-one-person-per-email review state: the name the held booking was made under
     "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
     "reschedule_missed_place", // the same: whether the meeting point moved too
@@ -131,11 +131,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "held_emergency_contact_name",
     "held_emergency_contact_phone",
     "paid_rental_kinds", // held-seat prep state: the order lines already carry what was paid for
-    // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another
-    // booking row's id, which does not survive a re-import — same class as
-    // pending_checkout_intent_id.
+    // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another booking
+    // row's id, which does not survive a re-import, as pending_checkout_intent_id.
     "party_lead_booking_id",
-    "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
+    "claimed_at",
+    "contact_typed_by_lead_at", // claim-flow state, as identity_unconfirmed_at (issue #4003)
   ],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id), both exported.
   buddy_team_members: ["shop_id", "id"],
@@ -709,8 +709,6 @@ describe("full-shop export dataset", () => {
       templateVersion: template.version,
       templateBody: template.body,
       status: "completed",
-      tokenHash: "imported-ida",
-      expiresAt: new Date("2026-01-01T00:00:00Z"),
       signedName: "Imported Ida",
       signatureMethod: "imported",
       consentedAt: new Date("2025-05-01T16:00:00Z"),
@@ -766,8 +764,6 @@ describe("full-shop export dataset", () => {
       templateVersion: template.version,
       templateBody: template.body,
       status: "medical_review",
-      tokenHash: "held-holly",
-      expiresAt: nowDate(),
       signedName: "Held Holly",
       signatureMethod: "typed_consent",
       consentedAt: nowDate(),

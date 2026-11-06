@@ -320,6 +320,12 @@ export const NOTICE_KEYS: DiverNoticeMap = {
     tone: "warning",
     key: "divers.notices.medicalClearanceAnswerRecorded",
   },
+  // The recorded clearance does not check out, so boarding still holds the diver.
+  "medical-clearance-answer-seal-broken": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceAnswerSealBroken",
+  },
 
   // These notices reuse the work-order bundle shared with the ticket page.
   "piece-added": { form: "work-orders", tone: "success", key: "workOrders.notice.pieceAdded" },

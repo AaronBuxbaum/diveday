@@ -116,18 +116,16 @@ describe("what this slice was forbidden to touch", () => {
 /**
  * **A held seat's link names nobody** (issue #2125). The signer hint is the
  * matched person's full name and the guardian section says whether they are a
- * minor, so the held state returns before either is read.
+ * minor, so no key reaches a held seat's release and the thread redirects
+ * before either is read.
  */
 describe("a held seat's release", () => {
-  it("returns its held card before the signer on file is read", () => {
-    // The signer is read only inside the form. The waiver link returns the held
-    // card before it draws it; the thread has no key on a held seat at all and
+  it("draws no form before the signer on file is read", () => {
+    // The signer is read only inside the form. No key reaches a held seat's
+    // release (`getWaiverForToken` answers it as unavailable), and the thread
     // redirects every state but "available" and "completed" before the form.
     expect(FORM).toContain("getWaiverSignerOnFile(");
     expect(FORM).toContain("guardianSignatureRequired(");
-    const held = SOURCE.indexOf('state.state === "held"');
-    expect(held).toBeGreaterThan(-1);
-    expect(held).toBeLessThan(SOURCE.indexOf("waiverSigningForm({"));
     const gate = THREAD.indexOf('state.state !== "available" && state.state !== "completed"');
     expect(gate).toBeGreaterThan(-1);
     expect(gate).toBeLessThan(THREAD.indexOf("waiverSigningForm({"));
@@ -144,10 +142,11 @@ describe("a held seat's release", () => {
  */
 describe("the diver's own locale", () => {
   it("is recorded only after the draft or the signature is taken", () => {
-    const draft = ACTIONS.slice(ACTIONS.indexOf("export async function saveWaiverDraftThrough"));
-    expect(draft.indexOf("if (savedDraft) {")).toBeGreaterThan(-1);
+    // Both draft saves (Save and finish later, and each step's, issue #3985) go through one core.
+    const draft = ACTIONS.slice(ACTIONS.indexOf("async function recordDraftFrom"));
+    expect(draft.indexOf('if (!savedDraft) return { status: "unavailable" };')).toBeGreaterThan(-1);
     expect(draft.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(
-      draft.indexOf("const savedDraft = await recordWaiverDraft("),
+      draft.indexOf('if (!savedDraft) return { status: "unavailable" };'),
     );
     const complete = ACTIONS.slice(ACTIONS.indexOf("export async function completeWaiverThrough"));
     expect(complete.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(

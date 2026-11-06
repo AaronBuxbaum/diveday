@@ -84,30 +84,6 @@ export function ExpiredLink({
 }
 
 /**
- * **A held seat's release link names nobody** (issue #2125). Whoever holds
- * the link may not be the person the seat was matched to, so the page renders
- * no form and asks nothing until the desk confirms who it is: no signer hint
- * (the matched person's full name) and no guardian section (which would say
- * whether that person is a minor). Only the shop's own contact is shown.
- */
-export function HeldWaiverCard({
-  shop,
-  t,
-}: {
-  shop: Pick<Shop, "name" | "contactEmail" | "contactPhone">;
-  t: DiverTranslator;
-}) {
-  return (
-    <ExpiredLinkCard
-      title={t("waiver.heldHeading")}
-      text={t("waiver.heldBody")}
-      shop={shop}
-      t={t}
-    />
-  );
-}
-
-/**
  * The card for a waiver link that resolves no record at all, so names no shop
  * and offers DiveDay's own door (`ExpiredLinkCard`'s shopless branch) rather
  * than ending on a sentence with nothing to tap (UX review 2026-10-10, item 11).
@@ -145,6 +121,20 @@ export function CounterClaimCard({
         </SubmitButton>
       </form>
     </ExpiredLinkCard>
+  );
+}
+
+/**
+ * A minor's release on a door the desk never vouched a guardian for (issue
+ * #4003): said instead of a form that Sign would refuse.
+ */
+export function GuardianAtCounterCard({ t }: { t: DiverTranslator }) {
+  return (
+    <ExpiredLinkCard
+      wordmark
+      title={t("waiver.guardianAtCounterTitle")}
+      text={t("waiver.guardianAtCounter")}
+    />
   );
 }
 

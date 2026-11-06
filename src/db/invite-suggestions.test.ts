@@ -172,8 +172,6 @@ async function fixture() {
       medicalReviewRequired: true,
       signedName: "Referred Diver",
       signatureMethod: "typed",
-      tokenHash: `hash-${crypto.randomUUID()}`,
-      expiresAt: now,
       consentedAt: now,
       signedAt: now,
       medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: { q1: true } },

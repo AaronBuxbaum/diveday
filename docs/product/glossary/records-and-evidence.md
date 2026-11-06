@@ -162,22 +162,42 @@
   weekend's day-one close and day-two open are two days rather than one long rest. The arithmetic is
   the dock-day timeline's own (`betweenDivesMinutes`), so the figure a diver reads before booking is
   the figure their thread reads after.
-- **Counter link** — the QR a staffer shows on a party's waiver panel so one diver signs their own
-  seat's release, scanned with any phone: a `waiver_link` row in `capabilities` naming that
-  release, alive 30 minutes and spent by the signature. It opens on the first phone that claims it
+- **Counter link** — the QR a staffer shows on a party's waiver panel, or on the one-seat queue of
+  a solo seat with no email and no textable number (issue #3984), so one diver signs their own
+  seat's release, scanned with any phone, or the URL Copy link hands staff for a release with no
+  seat (issue #3983): a `waiver_link` row in `capabilities` naming that release, alive 30 minutes
+  and spent by the signature; the form says the time left and saves each step (issue #3985),
+  and a closed one asks the staff for a fresh code. It opens on the first phone that claims it
   and no other, shows only the medical answers saved through that same code, refuses a second
   signature, and its mint is a line on the diver's trail naming the staffer. It carries no
   readiness authority and opens no doctor's page; it dies when the seat changes hands or the
-  release is superseded (ADR
+  release is superseded. A minor's seat signs on it only when the desk confirmed a guardian is
+  there for that very code, asked again at signing (issue #4003) (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
   A minor's code is shown only after the staffer confirms a parent or guardian is present to
   co-sign, and that confirmation is on the minor's trail too.
-- **Party waiver door** — what a party member's join email carries in place of a thread link,
-  because the lead typed the address: a `party_waiver_link` row in `capabilities` naming the
-  member's release, alive two weeks. It opens on `/waivers/<token>` by the **counter link**'s rules
-  and grants nothing else. A release has one live door, so a counter code replaces it. A minor
-  member gets no door: the lead signs that seat on their own link, or the desk does with a guardian
-  present (issue #3986).
+- **Party waiver door** — what every send to a party member's address carries in place of a
+  thread link, because the lead typed that address (`bookings.contact_typed_by_lead_at`, until the
+  member claims the seat; issues #3986, #4003): a `party_waiver_link` row in `capabilities`
+  naming the member's release, alive two weeks. The join email, staff Send waivers, a re-sent
+  confirmation and find-my-booking carry it; reminders and reschedule notices go with no link. It
+  opens on `/waivers/<token>` by the **counter link**'s rules, plus the release's doctor's page on
+  the phone that holds it, and grants nothing else. A dead one offers to mail a fresh door to the
+  address on file. A release has one live door of any kind, so a counter code replaces it. A minor
+  member gets no door, and a door never signs a minor's release: the lead signs that seat on their
+  own link, or the desk does with a guardian present.
+- **Recap link epoch** — the number a recap link signs beside its booking (`bookings.recap_link_epoch`,
+  issue #3982). The link opens only while the booking still holds that number; correcting the
+  diver's email or phone moves it on for all their bookings, so a recap link mailed to the old
+  address opens nothing, and the next one carries the new number.
+- **Release link** — the link an email or a text carries to sign a release with no seat (issue
+  #3983): a `release_link` row in `capabilities` naming that release, alive a week, spent by the
+  signature, sent only to the contact on file and never shown to staff. A release holds one live
+  door of any kind; a contact change revokes it, an erasure deletes it, and a dead one
+  lands on the rescue, which mails a fresh one to the address on file. It never opens a seat's
+  release (ADR
+  [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md),
+  layer 6).
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the
   bargain, and therefore that standing signatures no longer cover it
   (`waiver_materiality_decisions`, ADR

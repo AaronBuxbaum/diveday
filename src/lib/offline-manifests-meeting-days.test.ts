@@ -92,10 +92,15 @@ describe("an offline copy of a course that meets on two days", () => {
     expect(latestOfflineRollCall(copy, events, "blocked", "after_dive_1", DAY_TWO)).toBeUndefined();
   });
 
-  it("lets a retraction on the new day take the earlier day's mis-tap back", () => {
+  it("keeps the earlier day's missing diver under a retraction queued on the new day (#3995)", () => {
+    // The server refuses it: an offline undo is compared with its own day's
+    // marks only, and the earlier day's word is the live manifest's to take back.
     const copy = courseCopy(dockAndDive);
     const events = [event({ bookingId: "blocked", checkpoint: "after_dive_1", status: "cleared" })];
-    expect(latestOfflineRollCall(copy, events, "blocked", "after_dive_1", DAY_TWO)).toBeUndefined();
+    expect(latestOfflineRollCall(copy, events, "blocked", "after_dive_1", DAY_TWO)).toMatchObject({
+      state: "not_boarded",
+      local: false,
+    });
   });
 
   it("reads a mark queued on day two as day two's, and one queued on day one as day one's", () => {

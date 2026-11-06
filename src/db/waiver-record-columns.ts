@@ -30,8 +30,6 @@ import { waiverRecords } from "./schema";
  *   (`src/db/medical-alerts.ts`, behind `canReadMedicalAlert`) and the signed
  *   record through {@link WAIVER_SEALED_COLUMNS}; a roster or readiness pass
  *   that carried it would hand it to every staffer.
- * - `tokenHash` — the bearer link. A status read must never be
- *   able to hand it back out.
  * - `integrityHash`, `medicalAnswerSeal` — only the integrity check reads a
  *   seal, through {@link WAIVER_SEALED_COLUMNS}.
  *
@@ -51,7 +49,6 @@ const {
   draftMedicalAlert: _draftMedicalAlert,
   draftViaLinkId: _draftViaLinkId,
   medicalAlert: _medicalAlert,
-  tokenHash: _tokenHash,
   integrityHash: _integrityHash,
   medicalAnswerSeal: _medicalAnswerSeal,
   ...stateColumns

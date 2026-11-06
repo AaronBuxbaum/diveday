@@ -18,6 +18,12 @@ import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
  * `AUTH_SECRET` can rotate without silently killing every outstanding recap
  * link, and a leaked link doesn't work forever (security review finding,
  * docs/product/archive/specialist-optimization-audit-20260731.md §5).
+ *
+ * **Revocable by epoch** (issue #3982): the payload also carries the booking's
+ * `recap_link_epoch`, and the link opens only while the booking still holds
+ * that number (`openRecapLink`, `src/db/recap-links.ts`, the one door every
+ * recap surface reads through). Correcting the diver's email or phone bumps
+ * it, so a link mailed to the old address opens nothing.
  */
 
 const RECAP_PURPOSE = "recap:";
@@ -38,20 +44,30 @@ function sign(payload: string): string {
   return signPayload(recapSecret(), payload);
 }
 
-/** `<base64url("recap:"+bookingId+":"+issuedAtSeconds)>.<sig>` — opaque, stable, self-verifying, and self-expiring. */
-export function signRecapToken(bookingId: string): string {
+/**
+ * `<base64url("recap:"+bookingId+":"+epoch+":"+issuedAtSeconds)>.<sig>`:
+ * opaque, self-verifying and self-expiring. `epoch` is the booking's
+ * `recap_link_epoch` when the link is minted.
+ */
+export function signRecapToken(bookingId: string, epoch: number): string {
   const issuedAtSeconds = Math.floor(nowMs() / 1000);
-  const payload = Buffer.from(`${RECAP_PURPOSE}${bookingId}:${issuedAtSeconds}`, "utf8").toString(
-    "base64url",
-  );
+  const payload = Buffer.from(
+    `${RECAP_PURPOSE}${bookingId}:${epoch}:${issuedAtSeconds}`,
+    "utf8",
+  ).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
 
+/** What a recap token names: its booking and the epoch it was minted at. */
+export type RecapTokenClaim = { bookingId: string; epoch: number };
+
 /**
- * Returns the booking id iff the signature matches, the recap purpose
- * matches, and the token is within its lifetime; null otherwise.
+ * The booking and epoch iff the signature matches, the recap purpose matches,
+ * and the token is within its lifetime; null otherwise. Whether the epoch is
+ * still the booking's is a database question (`openRecapLink`): a caller that
+ * opens a recap never reads this alone.
  */
-export function verifyRecapToken(token: string): string | null {
+export function verifyRecapToken(token: string): RecapTokenClaim | null {
   const dot = token.indexOf(".");
   if (dot <= 0) return null;
   const payload = token.slice(0, dot);
@@ -59,19 +75,20 @@ export function verifyRecapToken(token: string): string | null {
   if (!tagMatches(signature, () => sign(payload))) return null;
   const decoded = Buffer.from(payload, "base64url").toString("utf8");
   if (!decoded.startsWith(RECAP_PURPOSE)) return null;
-  const rest = decoded.slice(RECAP_PURPOSE.length);
-  // Booking ids are UUIDs and never contain a colon, so the last colon always
-  // separates the id from the issued-at seconds appended after it.
-  const lastColon = rest.lastIndexOf(":");
-  if (lastColon <= 0) return null;
-  const bookingId = rest.slice(0, lastColon);
-  const issuedAtSeconds = Number(rest.slice(lastColon + 1));
-  if (!Number.isFinite(issuedAtSeconds)) return null;
+  // Booking ids are UUIDs and never contain a colon: exactly three fields.
+  const [bookingId, epochText, issuedAtText, ...extra] = decoded
+    .slice(RECAP_PURPOSE.length)
+    .split(":");
+  if (extra.length > 0 || !bookingId || !epochText || !issuedAtText) return null;
+  if (!/^\d+$/.test(epochText) || !/^\d+$/.test(issuedAtText)) return null;
+  const epoch = Number(epochText);
+  const issuedAtSeconds = Number(issuedAtText);
+  if (!Number.isSafeInteger(epoch) || !Number.isSafeInteger(issuedAtSeconds)) return null;
   if (nowMs() - issuedAtSeconds * 1000 > RECAP_TOKEN_MAX_AGE_MS) return null;
-  return isUuid(bookingId) ? bookingId : null;
+  return isUuid(bookingId) ? { bookingId, epoch } : null;
 }
 
-/** The absolute-path recap link for a booking, ready to hand to a diver. */
-export function recapLinkPath(bookingId: string): string {
-  return `/recap/${signRecapToken(bookingId)}`;
+/** The absolute-path recap link for a booking at its current epoch, ready to hand to a diver. */
+export function recapLinkPath(bookingId: string, epoch: number): string {
+  return `/recap/${signRecapToken(bookingId, epoch)}`;
 }

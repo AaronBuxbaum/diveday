@@ -178,12 +178,10 @@ export const waiverRecords = pgTable(
     deliveryProviderStatus: notificationProviderStatus("delivery_provider_status"),
     deliveryProviderStatusAt: timestamp("delivery_provider_status_at", { withTimezone: true }),
     deliveryError: text("delivery_error"),
-    /**
-     * SHA-256 hash — what every lookup matches against, and all that is kept:
-     * the link itself is derived from the record (`waiverLinkToken`, #3903).
-     */
-    tokenHash: text("token_hash").notNull().unique(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    // `token_hash` and `expires_at` are retired (issue #3983): a release
+    // carries no link and no clock of its own; the capability that opens it
+    // does (`release_link`, `waiver_link`). Nullable and undeclared for one
+    // release, dropped in the next.
     startedAt: timestamp("started_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
     draftSignerName: text("draft_signer_name"),

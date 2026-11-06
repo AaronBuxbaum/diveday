@@ -124,7 +124,11 @@ import {
   tripBoatCapacity,
   tripBoatCertifiedPassengers,
 } from "./trips-queries";
-import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
+import {
+  CLEARED_DRAFT_COLUMNS,
+  WAIVER_BOARDING_COLUMNS,
+  withTrustedClearance,
+} from "./waiver-record-columns";
 
 /**
  * A booking names its diver one of two ways: a walk-in supplies a name (and,
@@ -495,7 +499,10 @@ export async function createBookingParty(
             .update(bookings)
             .set({
               partyLeadBookingId: leadBookingId,
-              ...(request.actor === "staff" ? { claimedAt: nowDate() } : {}),
+              // The public form's lead typed this seat's contact (issue #4003).
+              ...(request.actor === "staff"
+                ? { claimedAt: nowDate() }
+                : { contactTypedByLeadAt: nowDate() }),
             })
             .where(eq(bookings.id, outcome.bookingId));
         }
@@ -592,7 +599,7 @@ export async function addPartySeat(
     if (!outcome.ok) return outcome;
     await tx
       .update(bookings)
-      .set({ partyLeadBookingId: lead.id })
+      .set({ partyLeadBookingId: lead.id, contactTypedByLeadAt: nowDate() })
       .where(eq(bookings.id, outcome.bookingId));
     await flushDeclarations(tx, pending);
     // The departure's trail says where the booking came from: the lead, from
@@ -1300,6 +1307,7 @@ async function writeSeat(
         // returns (`createBookingParty`).
         partyLeadBookingId: null,
         claimedAt: null,
+        contactTypedByLeadAt: null,
         // "Running late" (J3) was said about the seat's earlier life.
         runningLateAt: null,
         // Same reasoning as the two lines above: a reactivated row is a *new* booking, so it
@@ -4037,10 +4045,7 @@ export async function splitBookingIdentity(
       // parks a referral commits before this read or waits until the split is
       // done.
       const live = await tx
-        .select({
-          status: waiverRecords.status,
-          medicalClearedAt: waiverRecords.medicalClearedAt,
-        })
+        .select(WAIVER_BOARDING_COLUMNS)
         .from(waiverRecords)
         .where(
           and(
@@ -4049,7 +4054,9 @@ export async function splitBookingIdentity(
             isNull(waiverRecords.supersededAt),
           ),
         )
-        .for("update");
+        .for("update")
+        // A clearance counts only while its seal verifies (issue #3998).
+        .then((rows) => rows.map(withTrustedClearance));
       if (live.some((row) => row.status === "medical_review" && !row.medicalClearedAt)) {
         return { refused: "medical_hold" as const };
       }

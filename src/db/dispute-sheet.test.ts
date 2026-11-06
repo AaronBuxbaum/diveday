@@ -73,7 +73,7 @@ async function signWaiver(seat: Awaited<ReturnType<typeof paidSeat>>) {
     bookingId: seat.entry.booking.id,
   });
   if (!issued.ok) throw new Error("waiver issue failed");
-  await completeWaiver(seat.db, issued.token, {
+  await completeWaiver(seat.db, issued.key, {
     signerName: seat.entry.person.fullName,
     agreed: true,
     medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -91,7 +91,7 @@ describe("getDisputeSheet", () => {
       bookingId: seat.entry.booking.id,
     });
     if (!issued.ok) throw new Error("waiver issue failed");
-    await completeWaiver(seat.db, issued.token, {
+    await completeWaiver(seat.db, issued.key, {
       signerName: seat.entry.person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -135,7 +135,7 @@ describe("getDisputeSheet", () => {
       bookingId: seat.entry.booking.id,
     });
     if (!issued.ok) throw new Error("waiver issue failed");
-    await completeWaiver(seat.db, issued.token, {
+    await completeWaiver(seat.db, issued.key, {
       signerName: seat.entry.person.fullName,
       agreed: true,
       medicalAnswers: referral,
@@ -170,7 +170,7 @@ describe("getDisputeSheet", () => {
       bookingId: seat.entry.booking.id,
     });
     if (!issued.ok) throw new Error("waiver issue failed");
-    await completeWaiver(seat.db, issued.token, {
+    await completeWaiver(seat.db, issued.key, {
       signerName: seat.entry.person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -187,7 +187,7 @@ describe("getDisputeSheet", () => {
       bookingId: seat.entry.booking.id,
     });
     if (!issued.ok) throw new Error("waiver issue failed");
-    await completeWaiver(seat.db, issued.token, {
+    await completeWaiver(seat.db, issued.key, {
       signerName: seat.entry.person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

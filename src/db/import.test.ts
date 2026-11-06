@@ -654,8 +654,6 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
       templateVersion: template.version,
       templateBody: template.body,
       status: "medical_review",
-      tokenHash: `hold-${person.id}`,
-      expiresAt: nowDate(),
       signedName: "Held Hana",
       signatureMethod: "typed_consent",
       consentedAt: nowDate(),

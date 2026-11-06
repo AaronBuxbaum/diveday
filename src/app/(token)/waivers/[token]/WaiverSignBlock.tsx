@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -30,24 +31,41 @@ const labelTextBase = "text-(length:--text-base) leading-6";
 export function WaiverSignBlock({
   saveAction,
   expiresAt,
+  counter,
   t,
 }: {
   /** "Save and finish later", bound to whichever door opened the form. */
   saveAction: (formData: FormData) => Promise<void>;
   /** When the link runs out; null in the thread, whose release is reopened from it. */
   expiresAt: string | null;
+  /**
+   * A counter code's time left and its saving on each step, in place of
+   * "Save and finish later": a counter code has no later (issue #3985).
+   */
+  counter?: ReactNode;
   t: DiverTranslator;
 }) {
+  const sign = (
+    <SubmitButton
+      pendingLabel={t("waiver.signing")}
+      className={buttonClass({
+        className: `mt-6 w-full disabled:opacity-70 ${labelTextBase}`,
+      })}
+    >
+      {t("waiver.signButton")}
+    </SubmitButton>
+  );
+  if (counter) {
+    return (
+      <>
+        {sign}
+        {counter}
+      </>
+    );
+  }
   return (
     <>
-      <SubmitButton
-        pendingLabel={t("waiver.signing")}
-        className={buttonClass({
-          className: `mt-6 w-full disabled:opacity-70 ${labelTextBase}`,
-        })}
-      >
-        {t("waiver.signButton")}
-      </SubmitButton>
+      {sign}
       {/* Two facts on one line from `sm`, split by the dot; stacked below it,
           with no dot. The row used to wrap, and the wrap fell after the dot:
           "Save and finish later ·" on one line at 390, the expiry alone on

@@ -24,7 +24,6 @@ const card = {
 } as unknown as Certification;
 const signed = {
   status: "completed",
-  expiresAt: new Date("2026-07-25T12:00:00.000Z"),
   integrityValid: true,
   integrityCheckedAt: new Date("2026-07-18T03:00:00.000Z"),
 } as WaiverRecord;

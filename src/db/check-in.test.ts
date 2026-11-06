@@ -223,7 +223,7 @@ describe("counter check-in", () => {
     });
     expect(issued.ok).toBe(true);
     if (!issued.ok) return;
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: personName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -252,7 +252,7 @@ describe("counter check-in", () => {
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
     expect(issued.ok).toBe(true);
     if (!issued.ok) return;
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: personName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -291,7 +291,7 @@ describe("counter check-in", () => {
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
     expect(issued.ok).toBe(true);
     if (!issued.ok) return;
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: personName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -425,7 +425,7 @@ describe("counter check-in", () => {
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
     expect(issued.ok).toBe(true);
     if (!issued.ok) return;
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: personName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -555,7 +555,7 @@ describe("the counter check-in recorder must be live staff (defense in depth)", 
       bookingId: base.booking.id,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(base.db, issued.token, {
+    await completeWaiver(base.db, issued.key, {
       signerName: base.personName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -698,7 +698,7 @@ describe("a counter arrival queued with no signal", () => {
       bookingId: ctx.booking.id,
     });
     if (!issued.ok) throw new Error("waiver request refused");
-    await completeWaiver(ctx.db, issued.token, {
+    await completeWaiver(ctx.db, issued.key, {
       signerName: ctx.personName,
       agreed: true,
       medicalAnswers: clearAnswers,

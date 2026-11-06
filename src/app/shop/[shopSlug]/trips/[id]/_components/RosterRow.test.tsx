@@ -395,7 +395,7 @@ describe("blockers and information", () => {
           [
             "b-1",
             {
-              waiver: { status: "pending", expiresAt: new Date("2026-12-01T00:00:00Z") },
+              waiver: { status: "pending" },
             },
           ],
         ]) as WaiverByBooking;
@@ -408,6 +408,58 @@ describe("blockers and information", () => {
     expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible();
     rerender(<RosterRow entry={seat} settled={false} context={waiverContext("waiver_pending")} />);
     expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible();
+  });
+  it("offers a solo seat nobody can reach the counter QR, and a reachable one none (issue 3984)", () => {
+    const unsent = () => {
+      const context = contextFor("blocked");
+      const existing = context.rows.readinessByBooking.get("b-1");
+      if (!existing) throw new Error("missing readiness fixture");
+      context.rows.readinessByBooking = new Map([
+        [
+          "b-1",
+          {
+            ...existing,
+            readiness: { ...existing.readiness, blockers: [{ code: "waiver_not_sent" }] },
+          },
+        ],
+      ]);
+      return context;
+    };
+    const unreachable = {
+      ...seat,
+      person: { ...seat.person, email: null, phone: null } as unknown as RosterEntry["person"],
+    };
+    render(<RosterRow entry={unreachable} settled={false} context={unsent()} />);
+    const counter = screen.getByRole("link", { name: t("trips.partyWaiverQueue.counter") });
+    expect(counter.getAttribute("href")).toMatch(/\/party\/b-1\/waivers$/);
+    cleanup();
+    render(<RosterRow entry={seat} settled={false} context={unsent()} />);
+    expect(screen.queryByRole("link", { name: t("trips.partyWaiverQueue.counter") })).toBeNull();
+    cleanup();
+    // Referred at the counter: the way back to the queue, where the desk
+    // prints the physician form, stays (issue 3984 review).
+    const referred = unsent();
+    const existing = referred.rows.readinessByBooking.get("b-1");
+    if (!existing) throw new Error("missing readiness fixture");
+    referred.rows.readinessByBooking = new Map([
+      [
+        "b-1",
+        {
+          ...existing,
+          readiness: { ...existing.readiness, blockers: [{ code: "medical_review" }] },
+        },
+      ],
+    ]);
+    referred.rows.waiverByBooking = new Map([
+      [
+        "b-1",
+        { waiver: { status: "medical_review", completedAt: new Date("2026-08-28T10:00:00Z") } },
+      ],
+    ]) as WaiverByBooking;
+    render(<RosterRow entry={unreachable} settled={false} context={referred} />);
+    expect(
+      screen.getByRole("link", { name: t("trips.partyWaiverQueue.counter") }).getAttribute("href"),
+    ).toMatch(/\/party\/b-1\/waivers$/);
   });
   it("keeps a certification remedy beside the blocker outside the guest-details fold", () => {
     const { container } = render(

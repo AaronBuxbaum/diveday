@@ -3,12 +3,22 @@
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { emailFreshWaiverLink, type WaiverLinkRescue } from "@/db/waiver-issue";
-import { claimCounterLink, staleWaiverRecordForToken, waiverLinkDoor } from "@/db/waivers";
+import {
+  claimCounterLink,
+  staleWaiverRecordForToken,
+  type WaiverKey,
+  waiverLinkDoor,
+} from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { counterDevice, keepCounterDevice } from "./counter-device";
-import { completeWaiverThrough, type SigningDoor, saveWaiverDraftThrough } from "./signing";
+import {
+  autosaveWaiverDraftThrough,
+  completeWaiverThrough,
+  type SigningDoor,
+  saveWaiverDraftThrough,
+} from "./signing";
 
 /**
  * The one transactional action a dead waiver link still offers: send its owner
@@ -53,8 +63,8 @@ export async function emailFreshWaiverLinkAction(token: string) {
   // it is, so neither a raw bearer token nor a booking id is ever held as a
   // literal key.
   const stale = await staleWaiverRecordForToken(db, token);
-  const inboxKey = stale?.bookingId
-    ? rateLimitKey("waiver-link-resend", "booking", stale.bookingId)
+  const inboxKey = stale
+    ? rateLimitKey("waiver-link-resend", "person", stale.personId)
     : rateLimitKey("waiver-link-resend", "token", token);
   if (!(await checkRateLimit(inboxKey, RATE_LIMITS.waiverLinkResendByBooking)).allowed) {
     redirect(`/waivers/${token}?sent=rate`);
@@ -73,17 +83,64 @@ async function tokenDoor(token: unknown): Promise<SigningDoor> {
   // The bound argument is whatever the browser posts: only a string is a link.
   if (typeof token !== "string") redirect("/");
   const path = `/waivers/${token}`;
-  const ip = await clientIp();
-  if (
-    !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction)).allowed
-  ) {
-    redirect(`${path}?error=rate`);
-  }
-  const door = await waiverLinkDoor(await getDb(), token, { device: await counterDevice() });
+  const opened = await budgetedDoor(token);
+  if (opened === "rate") redirect(`${path}?error=rate`);
   // A counter link on another phone, or not yet opened on this one, signs
   // nothing: the page itself then says which.
-  if (door?.door !== "counter" && door?.door !== "release") redirect(`${path}?error=unavailable`);
-  return { key: door.key, path };
+  if (!opened) redirect(`${path}?error=unavailable`);
+  return { key: opened.key, path };
+}
+
+/**
+ * The door a token opens on this device, behind its throttle (issue #3985).
+ * A phone holding a counter claim spends that claim's own budget, so every
+ * phone on the shop's Wi-Fi no longer shares one. A request carrying a claim
+ * cookie first passes a coarse per-IP guard, before any read, so a forged
+ * cookie buys no unthrottled lookups; the claim is checked against the code
+ * before it counts. Anything else (a release link, no claim, a claim for
+ * another code) spends the per-IP bucket.
+ */
+async function budgetedDoor(
+  token: string,
+  claimBudget: "action" | "autosave" = "action",
+): Promise<{ key: WaiverKey } | "rate" | null> {
+  const device = await counterDevice();
+  const ip = await clientIp();
+  if (
+    device &&
+    !(await checkRateLimit(rateLimitKey("waiver-counter-ip", ip), RATE_LIMITS.counterAddress))
+      .allowed
+  )
+    return "rate";
+  const claimed = device ? await waiverLinkDoor(await getDb(), token, { device }) : null;
+  const allowed =
+    claimed?.door === "counter"
+      ? await checkRateLimit(
+          rateLimitKey(`waiver-${claimBudget}`, "claim", claimed.key.linkId),
+          claimBudget === "autosave" ? RATE_LIMITS.counterAutosave : RATE_LIMITS.capabilityAction,
+        )
+      : await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction);
+  if (!allowed.allowed) return "rate";
+  const door = device ? claimed : await waiverLinkDoor(await getDb(), token, { device });
+  return door?.door === "counter" || door?.door === "release" ? { key: door.key } : null;
+}
+
+/**
+ * **Save the draft without leaving the page** (issue #3985): what the form
+ * calls as the diver finishes each step. Only a code: `closed` tells the
+ * page to reload onto whatever the link now says.
+ */
+export async function autosaveWaiverDraftAction(
+  token: string,
+  formData: FormData,
+): Promise<"saved" | "skipped" | "closed" | "rate"> {
+  if (typeof token !== "string") return "closed";
+  const opened = await budgetedDoor(token, "autosave");
+  if (opened === "rate") return "rate";
+  // Only a counter code saves on each step, as only its form offers it.
+  if (!opened || opened.key.kind !== "counter" || opened.key.purpose !== "waiver_link")
+    return "closed";
+  return autosaveWaiverDraftThrough(opened.key, formData);
 }
 
 /**

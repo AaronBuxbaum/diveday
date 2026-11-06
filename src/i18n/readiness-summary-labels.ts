@@ -17,7 +17,6 @@ export const CHECKLIST_DETAIL_KEYS: Record<ChecklistDetailCode, DiverMessageKey>
   waiver_lapsed: "ready.checklistDetail.waiverLapsed",
   waiver_runs_out: "ready.checklistDetail.waiverRunsOut",
   waiver_pending: "ready.checklistDetail.waiverPending",
-  waiver_expired: "ready.checklistDetail.waiverExpired",
   medical_review: "ready.checklistDetail.medicalReview",
   // **Deliberately the same sentence as the hold above it** (issue #1283). The
   // three surfaces that had to tell a refusal apart from a wait are all staff

@@ -331,19 +331,57 @@ function readFormMedicalAnswers(
  * rate-limited and authorized the request; `door.key` names the record and
  * `door.path` is the page every outcome lands back on.
  */
+/**
+ * What a draft save came to: written (and whether the contact pair was
+ * refused), refused for a named field, or the link no longer takes one.
+ */
+type DraftOutcome =
+  | { status: "saved"; refusedContact: ReturnType<typeof refusedContactField> }
+  | { status: "invalid"; field: ReturnType<typeof firstInvalidWaiverField> }
+  | { status: "unavailable" };
+
 export async function saveWaiverDraftThrough(door: SigningDoor, formData: FormData) {
-  const context = await signingContext(door.key);
-  if (!context) redirect(`${door.path}?error=unavailable`);
+  const outcome = await recordDraftFrom(door.key, formData);
+  if (outcome.status === "invalid") redirect(refusedSubmitPath(door.path, outcome.field));
+  if (outcome.status === "saved" && outcome.refusedContact)
+    redirect(refusedSubmitPath(door.path, outcome.refusedContact));
+  revalidateAndRedirect(
+    door.path,
+    `${door.path}${outcome.status === "saved" ? "?saved=1" : "?error=unavailable"}`,
+  );
+}
+
+/**
+ * **The draft, saved on each step** (issue #3985): the same write as "Save
+ * and finish later", with no navigation, so what a slow signer on a counter
+ * code typed is on the record when the half hour runs out. A partial step is the
+ * point, so a field the form would refuse is simply not saved yet.
+ */
+export async function autosaveWaiverDraftThrough(
+  key: WaiverKey,
+  formData: FormData,
+): Promise<"saved" | "skipped" | "closed"> {
+  const outcome = await recordDraftFrom(key, formData);
+  if (outcome.status === "unavailable") return "closed";
+  return outcome.status === "saved" ? "saved" : "skipped";
+}
+
+/** The draft as the form holds it, written through the door's key. */
+async function recordDraftFrom(key: WaiverKey, formData: FormData): Promise<DraftOutcome> {
+  const context = await signingContext(key);
+  if (!context) return { status: "unavailable" };
   const { record, questionnaire, guardianRequired, shopQuestions } = context;
   const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
   const answers = readFormMedicalAnswers(formData, questionnaire, { allowIncomplete: true });
   const shopAnswers = readFormShopAnswers(formData, shopQuestions);
   if (!parsed.success || !answers) {
-    const invalidField = firstInvalidWaiverField(
-      parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
-      answers,
-    );
-    redirect(refusedSubmitPath(door.path, invalidField));
+    return {
+      status: "invalid",
+      field: firstInvalidWaiverField(
+        parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
+        answers,
+      ),
+    };
   }
   const db = await getDb();
   const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
@@ -353,7 +391,7 @@ export async function saveWaiverDraftThrough(door: SigningDoor, formData: FormDa
         phone: contact.data.emergencyContactPhone,
       })
     : undefined;
-  const savedDraft = await recordWaiverDraft(db, door.key, {
+  const savedDraft = await recordWaiverDraft(db, key, {
     signerName: parsed.data.signerName,
     acknowledged: parsed.data.acknowledged === "on",
     medicalAnswers: answers,
@@ -371,22 +409,18 @@ export async function saveWaiverDraftThrough(door: SigningDoor, formData: FormDa
   // preview also GETs the page, and that bot's `Accept-Language` is nobody's.
   // Only once the writer took the draft: a refused link (held, expired)
   // writes nothing onto the person.
-  if (savedDraft) {
-    await recordDiverOwnLocale(db, {
-      shopId: record.shopId,
-      personId: record.personId,
-      locale: await requestFirstHandLocale(),
-    });
-  }
+  if (!savedDraft) return { status: "unavailable" };
+  await recordDiverOwnLocale(db, {
+    shopId: record.shopId,
+    personId: record.personId,
+    locale: await requestFirstHandLocale(),
+  });
   // Persist the contact now too, so "save and finish later" keeps it — as a
   // pair or not at all. Both blank still keeps what's on file; one box filled
-  // and the other cleared is refused below rather than spliced onto the
-  // stored number. The draft is already written at this point, so the
-  // refusal costs the diver nothing they typed into the rest of the form.
-  const refusedDraftContact = refusedContactField(submittedContact);
-  if (savedDraft && refusedDraftContact)
-    redirect(refusedSubmitPath(door.path, refusedDraftContact));
-  revalidateAndRedirect(door.path, `${door.path}${savedDraft ? "?saved=1" : "?error=unavailable"}`);
+  // and the other cleared is refused rather than spliced onto the stored
+  // number. The draft is already written at this point, so the refusal costs
+  // the diver nothing they typed into the rest of the form.
+  return { status: "saved", refusedContact: refusedContactField(submittedContact) };
 }
 
 /**
@@ -552,6 +586,9 @@ export async function completeWaiverThrough(
     if (outcome.reason === "guardian_required") {
       redirect(refusedSubmitPath(door.path, "guardianName"));
     }
+    // A minor's release on a door the desk never vouched a guardian for
+    // (issue #4003): the staff show a fresh code with the guardian there.
+    if (outcome.reason === "guardian_at_counter") redirect(`${door.path}?error=guardian`);
     // Past the schema above, the one way a guardian section is not a
     // signature is a guardian who typed the diver's own name.
     if (outcome.reason === "guardian_invalid") {

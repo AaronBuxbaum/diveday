@@ -243,12 +243,12 @@ export async function mintCapability<P extends CapabilityPurpose>(
   const columns = subjectColumns(input.purpose, input.subjectId);
   if (policy.reissue === "supersedes") {
     // The invariant (one live link per shop, or per subject, per purpose)
-    // belongs to this module, not to its callers.
+    // belongs to this module, not to its callers. A release holds one live
+    // door whatever its purpose (`capabilities_live_waiver_record_idx`): a
+    // counter link, a party member's door and a mailed release link to the
+    // same release each revoke the others (issues #3983, #3986; whether a
+    // counter link and a mailed one may both stay live is #4008).
     await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
-    // A release has one live door at a time, whichever purpose opened it
-    // (`capabilities_live_waiver_record_idx`): a counter code shown at the desk
-    // takes the place of the door the join email sent, and the reverse
-    // (issue #3986).
     const superseded =
       policy.per === "subject" && policy.subject === "waiver_record"
         ? purposesNaming("waiver_record")
@@ -640,4 +640,42 @@ export async function withdrawUnspentCapabilities(
     )
     .returning({ id: capabilities.id });
   return withdrawn.length;
+}
+
+/**
+ * Turns off every live link to one person's releases (`revoked_at`), whatever
+ * its purpose: the counter link, the party member's door and the release link
+ * (issues #3983, #3986). A
+ * corrected contact calls it, so a link that went to the old address, or was
+ * handed over before the correction, opens nothing: not a form, and not the
+ * receipt of a release it already signed. A revoked row stays, so the page
+ * can still land its bearer on the rescue, which sends only to the new
+ * contact.
+ */
+export async function revokePersonReleaseLinks(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; now?: Date },
+): Promise<void> {
+  await db
+    .update(capabilities)
+    .set({ revokedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        inArray(capabilities.purpose, purposesNaming("waiver_record")),
+        eq(capabilities.shopId, input.shopId),
+        isNull(capabilities.revokedAt),
+        inArray(
+          capabilities.waiverRecordId,
+          db
+            .select({ id: waiverRecords.id })
+            .from(waiverRecords)
+            .where(
+              and(
+                eq(waiverRecords.shopId, input.shopId),
+                eq(waiverRecords.personId, input.personId),
+              ),
+            ),
+        ),
+      ),
+    );
 }

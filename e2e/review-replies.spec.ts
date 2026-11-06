@@ -19,7 +19,7 @@ test("an owner replies under a published review, and the reply reaches the publi
   const reply = "Thank you! Come back for the night dive.";
 
   // A diver's review with words, published by staff, so it leads every list.
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
   await page.getByLabel("Anything you’d tell another diver?").fill(comment);
   await page.getByRole("button", { name: "Leave my review" }).click();

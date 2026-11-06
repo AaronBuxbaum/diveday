@@ -35,8 +35,6 @@ async function answeredDiver(email: string) {
     templateVersion: template.version,
     templateBody: template.body,
     status: "completed",
-    tokenHash: `backup-${email}`,
-    expiresAt: new Date("2030-01-01T00:00:00Z"),
     signedName: diver.fullName,
     signatureMethod: "typed",
     consentedAt: new Date("2026-05-01T16:00:00Z"),

@@ -829,7 +829,6 @@ describe("decideTripAdmission — a release that lapses before the departure", (
       status: "completed",
       signedAt,
       completedAt: signedAt,
-      expiresAt: signedAt,
       supersededAt: null,
     } as WaiverRecord;
     const readinessAt = (now: Date) => {

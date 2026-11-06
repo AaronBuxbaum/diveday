@@ -74,7 +74,7 @@ async function readySeat(db: AppDb) {
     if (!booked.ok) continue;
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booked.bookingId });
     if (issued.ok) {
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: seat.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,

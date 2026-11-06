@@ -747,8 +747,6 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
         templateTitle: "Liability release",
         templateVersion: 1,
         templateBody: "the text as it stood",
-        tokenHash: "erasure-sweep-token-hash",
-        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
         deliveryError: "550 5.1.1 <kwame@example.com>: recipient rejected",
       })
       .returning({ id: waiverRecords.id });

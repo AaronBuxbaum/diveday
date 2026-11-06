@@ -9,6 +9,8 @@ import { recordDiverActivity } from "./operations";
 import { listTripReadiness } from "./readiness";
 import { bookings, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
+import { getWaiverForToken, threadWaiverKey } from "./waivers-completion";
+import { type DoctorReferral, getDoctorReferral } from "./waivers-medical";
 import { openWaiverInThread } from "./waivers-requests";
 
 export type PartyWaiverState =
@@ -32,7 +34,6 @@ const WAIVER_GAPS = new Set([
   "waiver_lapsed",
   "waiver_runs_out",
   "waiver_pending",
-  "waiver_expired",
   "guardian_signature_missing",
 ]);
 
@@ -260,6 +261,8 @@ export async function issuePartyWaiver(
           actorPersonId: input.actorPersonId,
           code: "waiver_counter_guardian_confirmed",
           waiverRecordId: opened.recordId,
+          // Signing asks about this code exactly (issue #4003).
+          linkId: link.id,
         });
         if (!confirmed) throw new PartyWaiverNotRecorded();
       }
@@ -270,6 +273,30 @@ export async function issuePartyWaiver(
       return null;
     throw error;
   }
+}
+
+/**
+ * **The physician form the desk prints for a seat on its counter queue**
+ * (issue #3984): a diver referred at the counter signed on the shop's tablet,
+ * so nothing they hold opens a doctor's page. The seat must be on this
+ * queue, its release waiting on a physician; the referral is the doctor's
+ * page's own read (`getDoctorReferral`). The answers never reach the paper:
+ * a staff print says to go through the whole questionnaire instead.
+ */
+export async function getCounterDoctorReferral(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; leadBookingId: string; bookingId: string; now?: Date },
+): Promise<DoctorReferral | null> {
+  const queue = await getPartyWaiverQueue(db, input);
+  const member = queue?.members.find((entry) => entry.bookingId === input.bookingId);
+  if (member?.state !== "medical_review") return null;
+  const key = await threadWaiverKey(db, { shopId: input.shopId, bookingId: input.bookingId });
+  if (!key) return null;
+  const state = await getWaiverForToken(db, key, input.now);
+  if (state.state !== "completed") return null;
+  const referral = await getDoctorReferral(db, state.record, input.now);
+  if (!referral) return null;
+  return { ...referral, answers: referral.answers === "locked" ? "whole" : referral.answers };
 }
 
 class PartyWaiverTripReturned extends Error {}
