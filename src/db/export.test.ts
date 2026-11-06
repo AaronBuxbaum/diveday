@@ -131,12 +131,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "held_emergency_contact_name",
     "held_emergency_contact_phone",
     "paid_rental_kinds", // held-seat prep state: the order lines already carry what was paid for
-    // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another
-    // booking row's id, which does not survive a re-import — same class as
-    // pending_checkout_intent_id.
+    // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another booking
+    // row's id, which does not survive a re-import, as pending_checkout_intent_id.
     "party_lead_booking_id",
-    "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
-    "contact_typed_by_lead_at", // which address may get a trip link (issue #4003): claim-flow state, as claimed_at
+    "claimed_at",
+    "contact_typed_by_lead_at", // claim-flow state, as identity_unconfirmed_at (issue #4003)
   ],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id), both exported.
   buddy_team_members: ["shop_id", "id"],
