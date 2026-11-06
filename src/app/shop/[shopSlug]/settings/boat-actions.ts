@@ -48,8 +48,8 @@ const emergencyForm = z
  * that records the shore contact agreed to hear, drawn for that address
  * (`shoreAlertConsentFor`; a changed address never inherits the old tick).
  * Either refusal saves nothing, so the reference and the address never
- * half-land. A new or changed address is sent a link to confirm it before any
- * alert goes (`sendShoreAlertConfirmation`); a demo shop sends nothing.
+ * half-land. A new or changed address is sent a link to confirm it
+ * (`sendShoreAlertConfirmation`; alerts go from the save, #4060); a demo shop sends nothing.
  */
 export const saveEmergencyReferenceAction = defineAction({
   gate: [SETTINGS_GATE],
@@ -150,7 +150,7 @@ async function confirmationNotice(
  * inbox has one hourly allowance whichever link the shop sends it (security
  * re-review #4): without them a save-and-resend loop is a branded-mail relay
  * to anybody's inbox. A refused or failed send leaves the address saved and
- * unconfirmed, which sends nothing; the resend control is still there.
+ * unconfirmed, which still receives alerts; the resend control is still there.
  */
 async function sendShoreAlertConfirmation(shop: {
   id: string;

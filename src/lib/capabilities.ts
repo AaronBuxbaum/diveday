@@ -224,8 +224,8 @@ export const CAPABILITY_POLICY = {
     reissue: "adds",
     use: "once",
   },
-  // The one-time link a newly saved shore contact receives before any alert
-  // goes to it (H-20261014-stale-roll-call-recipients review). Opening it sets
+  // The one-time link a newly saved shore contact receives to confirm it
+  // (a badge, not a gate: #4060) (H-20261014-stale-roll-call-recipients review). Opening it sets
   // `shops.shore_alert_confirmed_at` while the shop still names the address it
   // went to. Expires after a week rather than the front desk's three days:
   // the reader is somebody outside the shop, who may not open the mail the day

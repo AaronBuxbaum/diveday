@@ -1129,7 +1129,7 @@
 - **Shore alert contact** — the one person outside the shop's accounts who hears a **stale roll
   call**: an email address on the emergency reference page, beside the free-text shore contact a
   crew reads, saved only with the box that records they agreed (who ticked it, and when), and sent
-  nothing until the address itself confirms by the link DiveDay mails it. Changing the address asks
+  from the save (#4060); the link DiveDay mails it only adds a confirmed badge. Changing the address asks
   for both again; clearing it clears them. Their copy names the shop and its phone, the departure,
   the dive and the counts, in the shop's language, with no names and one link, the one that takes
   the address off the shop (H-20261014-stale-roll-call-recipients, `src/lib/shore-alert-contact.ts`, `src/db/shore-alert-tokens.ts`).
@@ -1139,8 +1139,8 @@
   hourly pass after that, while a started count or a person recorded not back aboard can alert at
   the first pass past the half hour. Once per departure the owners are emailed ("after the boat was
   due back at 4:00 PM EDT") and every device following the manifest is pushed
-  (`sendStaleRollCallAlerts`), and the Today row says when. A confirmed **shore alert contact** is
-  emailed too, under a claim of its own (H-20261014-stale-roll-call-recipients). It informs and never closes or changes the count.
+  (`sendStaleRollCallAlerts`), and the Today row says when. The **shore alert contact** is
+  emailed too, from the save, under a claim of its own (H-20261014-stale-roll-call-recipients). It informs and never closes or changes the count.
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking
