@@ -176,9 +176,13 @@
 - **Party waiver door** — what a party member's join email carries in place of a thread link,
   because the lead typed the address: a `party_waiver_link` row in `capabilities` naming the
   member's release, alive two weeks. It opens on `/waivers/<token>` by the **counter link**'s rules
-  and grants nothing else. A release has one live door of any kind, so a counter code replaces it. A minor
-  member gets no door: the lead signs that seat on their own link, or the desk does with a guardian
-  present (issue #3986).
+  and grants nothing else. A release has one live door of any kind, so a counter code replaces
+  it. A minor member gets no door: the lead signs that seat on their own link, or the desk does
+  with a guardian present (issue #3986).
+- **Recap link epoch** — the number a recap link signs beside its booking (`bookings.recap_link_epoch`,
+  issue #3982). The link opens only while the booking still holds that number; correcting the
+  diver's email or phone moves it on for all their bookings, so a recap link mailed to the old
+  address opens nothing, and the next one carries the new number.
 - **Release link** — the link an email or a text carries to sign a release with no seat (issue
   #3983): a `release_link` row in `capabilities` naming that release, alive a week, spent by the
   signature, sent only to the contact on file and never shown to staff. A release holds one live

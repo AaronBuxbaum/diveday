@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { uploadRecapPhotos } from "@/app/(token)/recap/[token]/photo-upload";
-import { signRecapToken } from "@/lib/recap-links";
+import { getDb } from "@/db/client";
+import { recapTokenFor } from "@/db/recap-links";
 import { bounceTarget, contextFor } from "./action-helpers";
 
 /**
@@ -21,7 +22,10 @@ export async function uploadRecapPhotoFromReadyAction(token: string, formData: F
   const context = await contextFor(token);
   if (!context.ok) redirect(bounceTarget(token, context.reason));
   if (context.data.identityHeld) redirect(bounceTarget(token, "invalid"));
-  await uploadRecapPhotos(signRecapToken(context.bookingId), formData, {
+  // At the booking's current recap epoch (issue #3982).
+  const recapToken = await recapTokenFor(await getDb(), context.bookingId);
+  if (!recapToken) redirect(bounceTarget(token, "invalid"));
+  await uploadRecapPhotos(recapToken, formData, {
     // The sharer's own tick, off unless sent: only the literal "on" a checkbox
     // posts shares a photo with the rest of the boat, and only from a link
     // mailed to the contact on file, never a booking or claim redirect, whose

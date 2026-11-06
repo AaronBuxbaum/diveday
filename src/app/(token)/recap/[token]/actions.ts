@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { isRecapOpen, unshareRecapPhoto } from "@/db/recap";
+import { openRecapLink } from "@/db/recap-links";
 import { parseRecapPulseCategories, submitRecapPulse } from "@/db/recap-pulses";
 import { submitTripReview } from "@/db/reviews";
 import { getTipCurrencyForBooking, startTipCheckout, tipBoundsCents } from "@/db/tips";
@@ -15,7 +16,6 @@ import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { verifyRecapToken } from "@/lib/recap-links";
 import { clientIp } from "@/lib/request-ip";
 import { parseReviewRating } from "@/lib/reviews";
 import { uploadRecapPhotos } from "./photo-upload";
@@ -76,7 +76,7 @@ export async function unshareRecapPhotoAction(token: string, formData: FormData)
   ) {
     redirect(`${back}?photo=error`);
   }
-  const bookingId = verifyRecapToken(token);
+  const bookingId = await openRecapLink(await getDb(), token);
   if (!bookingId) redirect(`${back}?photo=error`);
   if (
     !(
@@ -112,7 +112,7 @@ export async function startTipAction(token: string, formData: FormData) {
   if (!(await checkRateLimit(rateLimitKey("recap-tip-ip", ip), RATE_LIMITS.tipStart)).allowed) {
     redirect(`${back}?tip=error`);
   }
-  const bookingId = verifyRecapToken(token);
+  const bookingId = await openRecapLink(await getDb(), token);
   if (!bookingId) redirect(`${back}?tip=error`);
   if (
     !(await checkRateLimit(rateLimitKey("recap-tip-booking", bookingId), RATE_LIMITS.tipStart))
@@ -186,7 +186,7 @@ export async function submitReviewAction(token: string, formData: FormData) {
   ) {
     redirect(`${back}?review=error`);
   }
-  const bookingId = verifyRecapToken(token);
+  const bookingId = await openRecapLink(await getDb(), token);
   if (!bookingId) redirect(`${back}?review=error`);
   if (
     !(
@@ -257,7 +257,7 @@ export async function submitRecapPulseAction(token: string, formData: FormData) 
   ) {
     redirect(`${back}?pulse=error`);
   }
-  const bookingId = verifyRecapToken(token);
+  const bookingId = await openRecapLink(await getDb(), token);
   if (!bookingId) redirect(`${back}?pulse=error`);
   if (
     !(

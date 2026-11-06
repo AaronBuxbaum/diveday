@@ -15,11 +15,11 @@ afterEach(() => {
 
 describe("recap tokens", () => {
   it("round-trips a booking id through sign/verify", () => {
-    expect(verifyRecapToken(signRecapToken(BOOKING))).toBe(BOOKING);
+    expect(verifyRecapToken(signRecapToken(BOOKING, 0))).toEqual({ bookingId: BOOKING, epoch: 0 });
   });
 
   it("rejects a tampered signature", () => {
-    const token = signRecapToken(BOOKING);
+    const token = signRecapToken(BOOKING, 0);
     expect(verifyRecapToken(`${token}x`)).toBeNull();
   });
 
@@ -32,7 +32,7 @@ describe("recap tokens", () => {
    * isn't available" belongs.
    */
   it("refuses a signature of the right length in the wrong alphabet", () => {
-    const [payload] = signRecapToken(BOOKING).split(".");
+    const [payload] = signRecapToken(BOOKING, 0).split(".");
     const multibyte = `${"a".repeat(42)}\u00e9`;
     expect(multibyte).toHaveLength(43);
     expect(() => verifyRecapToken(`${payload}.${multibyte}`)).not.toThrow();
@@ -50,16 +50,25 @@ describe("recap tokens", () => {
     expect(verifyRecapToken(createBearerToken())).toBeNull();
   });
 
+  it("carries the epoch it was signed at, and refuses one that is not a whole number", () => {
+    expect(verifyRecapToken(signRecapToken(BOOKING, 7))).toEqual({ bookingId: BOOKING, epoch: 7 });
+    expect(verifyRecapToken(signRecapToken(BOOKING, -1))).toBeNull();
+    expect(verifyRecapToken(signRecapToken(BOOKING, 1.5))).toBeNull();
+  });
+
   it("builds an absolute recap path", () => {
-    const path = recapLinkPath(BOOKING);
+    const path = recapLinkPath(BOOKING, 0);
     expect(path.startsWith("/recap/")).toBe(true);
-    expect(verifyRecapToken(path.slice("/recap/".length))).toBe(BOOKING);
+    expect(verifyRecapToken(path.slice("/recap/".length))).toEqual({
+      bookingId: BOOKING,
+      epoch: 0,
+    });
   });
 
   it("rejects a token signed with a dedicated RECAP_LINK_SECRET once that secret changes", () => {
     vi.stubEnv("RECAP_LINK_SECRET", "shop-owner-picked-secret-1");
-    const token = signRecapToken(BOOKING);
-    expect(verifyRecapToken(token)).toBe(BOOKING);
+    const token = signRecapToken(BOOKING, 0);
+    expect(verifyRecapToken(token)).toEqual({ bookingId: BOOKING, epoch: 0 });
 
     vi.stubEnv("RECAP_LINK_SECRET", "shop-owner-picked-secret-2");
     expect(verifyRecapToken(token)).toBeNull();
@@ -79,10 +88,10 @@ describe("recap tokens", () => {
 
   it("verifies a fresh token but rejects one past the 180-day window", () => {
     vi.stubEnv("DIVEDAY_CLOCK", "2026-01-01T00:00:00.000Z");
-    const token = signRecapToken(BOOKING);
+    const token = signRecapToken(BOOKING, 0);
 
     vi.stubEnv("DIVEDAY_CLOCK", "2026-06-29T00:00:00.000Z"); // 179 days later
-    expect(verifyRecapToken(token)).toBe(BOOKING);
+    expect(verifyRecapToken(token)).toEqual({ bookingId: BOOKING, epoch: 0 });
 
     vi.stubEnv("DIVEDAY_CLOCK", "2026-07-02T00:00:00.000Z"); // 182 days later
     expect(verifyRecapToken(token)).toBeNull();

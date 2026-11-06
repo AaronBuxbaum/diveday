@@ -432,6 +432,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Observed species
 - Party waiver door
 - Photo ledger
+- Recap link epoch
 - Release link
 - Safety year
 - Sailed with no crew on record

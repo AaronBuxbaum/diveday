@@ -195,7 +195,7 @@ describe("the dead-link law has two tiers", () => {
    * #1119). Its token is *signed* rather than stored, so there is no
    * `booking_capabilities` row and no revocation, and it collapsed every dead
    * cause into the bare door on the strength of that. What the collapse was
-   * protecting against is a forged token, and `verifyRecapToken` rejects one
+   * protecting against is a forged token, and `openRecapLink` rejects one
    * before any of these branches is reachable — so a dead recap link that gets
    * this far carries DiveDay's own signature, and is owed the shop's hand like
    * the other three. It keeps the bare door for the one case that resolves

@@ -1,0 +1,1 @@
+ALTER TABLE "bookings" ADD COLUMN "recap_link_epoch" integer DEFAULT 0 NOT NULL;

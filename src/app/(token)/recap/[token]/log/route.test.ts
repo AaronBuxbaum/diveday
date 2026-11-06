@@ -12,8 +12,9 @@ vi.mock("@/lib/rate-limit", () => ({
   RATE_LIMITS: { capabilityAction: { limit: 60, windowSeconds: 3600 } },
 }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: async () => "203.0.113.9" }));
-vi.mock("@/lib/recap-links", () => ({
-  verifyRecapToken: (token: string) => (token === "good" ? "booking-1" : null),
+vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
+vi.mock("@/db/recap-links", () => ({
+  openRecapLink: async (_db: unknown, token: string) => (token === "good" ? "booking-1" : null),
 }));
 
 import { GET } from "./route";

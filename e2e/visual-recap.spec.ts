@@ -88,7 +88,7 @@ for (const scheme of ["light", "dark"] as const) {
         await reviewSettingsContext.close();
 
         await seedFacts(request, ["stripeAccount"]);
-        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
         await page.getByRole("heading", { name: /Welcome back/ }).waitFor();
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         // The tip door renders at all only for a shop that can take a tip, and
@@ -118,7 +118,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await seedFacts(request, ["changedDiveSite"]);
-        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         // The "Planned" row is the whole subject: waiting on it is what proves
         // the comparison fired rather than photographing the calm variant
@@ -152,7 +152,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await seedFacts(request, ["observedSpecies"]);
-        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         // Waiting on the line itself, not on the page: photographing the calm
         // variant twice is the failure this exists to avoid.
@@ -172,7 +172,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await seedFacts(request, ["sharedRecapPhoto"]);
-        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         await page
           .getByRole("button", { name: "Stop sharing" })
@@ -189,7 +189,7 @@ for (const scheme of ["light", "dark"] as const) {
         const { secondarySharedPhoto } = await seedFacts(request, ["secondarySharedPhoto"]);
         const { bookingId } = secondarySharedPhoto as { bookingId: string };
         expect(bookingId).not.toBe(DEMO_RECAP_BOOKING_ID);
-        await page.goto(`/recap/${signRecapToken(bookingId)}`);
+        await page.goto(`/recap/${signRecapToken(bookingId, 0)}`);
         await expect(page.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Stop sharing" })).toBeVisible();
         await capture(page, "recap-secondary-demo-shared-photo", scheme);
@@ -209,7 +209,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await seedFacts(request, ["certifiedRecap"]);
-        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         await page.getByTestId(AFTER_STATE_TEST_IDS.certified).filter({ visible: true }).waitFor();
         await capture(page, "recap-certified", scheme);
@@ -234,7 +234,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await seedFacts(request, ["diveTimes"]);
-        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         // Waiting on the line itself, not on the page — see the capture above.
         await page.getByTestId(AFTER_STATE_TEST_IDS.flySafe).filter({ visible: true }).waitFor();
@@ -255,7 +255,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the recap's field guide renders true to the design (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
         await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
         await page.locator("[data-recap-door='field-guide'] summary").click();
         // A species name is what proves the drawer opened *and* that the

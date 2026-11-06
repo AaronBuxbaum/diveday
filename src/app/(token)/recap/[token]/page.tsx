@@ -9,6 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import type { RecapSite } from "@/db/recap";
 import { recapPageStateCached } from "@/db/recap-cached";
+import { openRecapLink } from "@/db/recap-links";
 import { buildAfterStateProps, recapBuddyLinkUrl } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
@@ -17,7 +18,6 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { publicAppUrl } from "@/lib/notifications";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { verifyRecapToken } from "@/lib/recap-links";
 import { openGraphSite } from "@/lib/site-metadata";
 import {
   startTipAction,
@@ -34,8 +34,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { token } = await params;
   const t = diverTranslator(await requestLocale());
-  const bookingId = verifyRecapToken(token);
-  if (bookingId) await connection();
+  // The link's epoch is read from the booking (issue #3982), so this is a
+  // request-time read.
+  await connection();
+  const bookingId = await openRecapLink(await getDb(), token);
   const state = bookingId ? await recapPageStateCached(bookingId) : null;
   const data = state?.kind === "recap" ? state.data : null;
   if (!data) {
@@ -119,7 +121,7 @@ export default async function DiveRecapPage({
   // A dead link resolves no shop, so there is no `shops.default_locale` to fall
   // back to — negotiate from the visitor's own device alone for those branches.
   const anonT = diverTranslator(await requestLocale());
-  const bookingId = verifyRecapToken(token);
+  const bookingId = await openRecapLink(await getDb(), token);
   if (!bookingId) {
     // `DeadLink` with no shop: `EntryDone`'s warm terminal pattern
     // (docs/design/principles.md #4) under DiveDay's wordmark, the `expired`

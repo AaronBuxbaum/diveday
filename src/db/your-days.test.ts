@@ -1,11 +1,12 @@
 // @vitest-environment node
+
 import { eq, inArray } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { verifyRecapToken } from "@/lib/recap-links";
 import { fileScopedShopContext } from "@/test/db";
 import { verifyBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
+import { openRecapLink } from "./recap-links";
 import { bookings, people, priorVisits } from "./schema";
 import { createTrip } from "./trips";
 import { latestDiveDayBooking, listYourDays, planYourDayLink, sendYourDayLink } from "./your-days";
@@ -226,7 +227,7 @@ describe("planYourDayLink and sendYourDayLink", () => {
     const mail = sent.mock.calls[0]?.[0] as { purpose: string; readinessUrl: string };
     expect(mail.purpose).toBe("log_entry");
     const token = new URL(mail.readinessUrl).pathname.split("/").at(-1) ?? "";
-    expect(verifyRecapToken(token)).toBe(first);
+    expect(await openRecapLink(db, token)).toBe(first);
   });
 });
 
