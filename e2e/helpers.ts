@@ -507,9 +507,11 @@ export async function waiverRequestLinkAfterSend(page: Page, row: Locator): Prom
 /**
  * A clear signature on the thread's Sign step lands back on the diver's
  * checklist with the step done (`completeWaiverFromReady`), not on a receipt.
+ * The page strips `?saved=waiver` once it has read it (`FlashParams`), so the
+ * URL may or may not still carry it; the checklist line is the proof.
  */
 export async function expectSignedOnThread(page: Page): Promise<void> {
-  await expect(page).toHaveURL(/\/ready\/[^/?]+\?saved=waiver$/);
+  await expect(page).toHaveURL(/\/ready\/[^/?]+(?:\?saved=waiver)?$/);
   await expect(
     page.getByText(diverTranslator("en-US")("ready.checklistDetail.waiverDone")),
   ).toBeVisible();
