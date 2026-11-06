@@ -2165,19 +2165,21 @@ function offlineRollCallAt(
       result: recordedResult(event),
     });
   }
-  if (savedDay < today) {
-    for (const at of offlineCheckpointOrder(snapshot)) {
-      const saved = savedAt(at);
-      if (saved && !saved.implied) {
-        filed.push({
-          subject,
-          checkpoint: at,
-          status: saved.state,
-          day: savedDay,
-          at: saved.occurredAt,
-          result: saved,
-        });
-      }
+  // Every saved result, filed under the day it was recorded on, not the day the
+  // copy was saved: a copy refreshed on a later day still holds the earlier
+  // day's carried "did not come back", and an undo of today's own mark must
+  // not read as an undo of it (#3981).
+  for (const at of offlineCheckpointOrder(snapshot)) {
+    const saved = savedAt(at);
+    if (saved && !saved.implied) {
+      filed.push({
+        subject,
+        checkpoint: at,
+        status: saved.state,
+        day: rollCallDayOf(starts, new Date(saved.occurredAt)),
+        at: saved.occurredAt,
+        result: saved,
+      });
     }
   }
   // Oldest first, as the fold requires; fixed-width ISO strings compare as time.

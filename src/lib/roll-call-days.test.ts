@@ -56,6 +56,99 @@ describe("roll-call results read day by day (#2557)", () => {
     expect(standingByDay(marks).get(0)?.get("ben\u0000after_dive_1")?.status).toBe("cleared");
   });
 
+  describe("a cleared that takes back its own day's mark stays on its own day (#3981)", () => {
+    const dayOneMissing = [
+      m("ben", "departure", "boarded", 0),
+      m("ben", "after_dive_1", "not_boarded", 0),
+    ];
+
+    it("keeps day one's missing diver missing when day two re-states them and undoes it", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_1", "not_boarded", 1),
+        m("ben", "after_dive_1", "cleared", 1),
+      ];
+      expect(standingByDay(marks).get(0)?.get("ben\u0000after_dive_1")?.status).toBe("not_boarded");
+      expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
+      expect(states(manifestRollCallView(marks, 1))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+
+    it("keeps day one's missing diver missing when a day-two count of them is undone", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_1", "boarded", 1),
+        m("ben", "after_dive_1", "cleared", 1),
+      ];
+      expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
+      expect(states(manifestRollCallView(marks, 1))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+
+    it("keeps day one's missing diver missing on day three after day two's undo", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_1", "not_boarded", 1),
+        m("ben", "after_dive_1", "cleared", 1),
+      ];
+      expect(states(manifestRollCallView(marks, 2))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+
+    it("keeps day one's missing diver missing when a day-two undo is tapped twice", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_1", "not_boarded", 1),
+        m("ben", "after_dive_1", "cleared", 1),
+        m("ben", "after_dive_1", "cleared", 1),
+      ];
+      expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
+      expect(states(manifestRollCallView(marks, 1))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+
+    it("keeps day one's missing diver missing after an undo at another checkpoint on day two", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_2", "not_boarded", 1),
+        m("ben", "after_dive_2", "cleared", 1),
+      ];
+      expect(states(manifestRollCallView(marks, 1))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+
+    it("takes back only the newest carried day: day one's word survives a day-three undo of day two's", () => {
+      const marks = [
+        ...dayOneMissing,
+        m("ben", "after_dive_1", "not_boarded", 1),
+        m("ben", "after_dive_1", "cleared", 2),
+      ];
+      expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
+      expect(states(manifestRollCallView(marks, 2))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+
+    it("still lets an undo of the carried row, as the day's first mark there, take it back", () => {
+      const marks = [...dayOneMissing, m("ben", "after_dive_1", "cleared", 1)];
+      expect(unaccountedSubjects(marks)).toEqual(new Set());
+      expect(states(manifestRollCallView(marks, 1))).toEqual({});
+    });
+
+    it("never lets a dock undo on day two reach back", () => {
+      const marks = [...dayOneMissing, m("ben", "departure", "cleared", 1)];
+      expect(unaccountedSubjects(marks)).toEqual(new Set(["ben"]));
+      expect(states(manifestRollCallView(marks, 1))).toEqual({
+        "ben@after_dive_1": "not_boarded/0",
+      });
+    });
+  });
+
   it("starts a later day empty for everyone accounted for", () => {
     const marks = [m("eve", "departure", "boarded", 0), m("eve", "after_dive_1", "boarded", 0)];
     expect(states(manifestRollCallView(marks, 1))).toEqual({});
