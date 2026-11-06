@@ -6,8 +6,9 @@ const BOOKING = "0b9d6f3e-1c2a-4d4e-8a5b-6c7d8e9f0a1b";
 
 /** Minted by the hand-rolled implementations this file's primitive replaced, at SECRET. */
 const MINTED = {
+  // Re-pinned for issue #3982: the payload now carries the booking's recap epoch.
   recap:
-    "cmVjYXA6MGI5ZDZmM2UtMWMyYS00ZDRlLThhNWItNmM3ZDhlOWYwYTFiOjE3ODQ2NDA2MDA.GYaO7xgfnY3d64o12MpiigGlxJgZigjOSPqkVP56Hxo",
+    "cmVjYXA6MGI5ZDZmM2UtMWMyYS00ZDRlLThhNWItNmM3ZDhlOWYwYTFiOjA6MTc4NDY0MDYwMA.30VSGVOWzikRFWozbVWSrP8Hce0o-hTZJmVZ_DXOmAY",
   buddy: "C51vPhwqTU6KW2x9jp8KGw.mrcKxb4Uzf_4yf8N",
   // v3 (#3777): the gate also signs its notice, its seat and when it was minted.
   gate: "nitrox_missing.tro8w0.OjobgHczkfTQubZaIQbjcl-Sn-BSqiYHCFUvtFA6gJE",
@@ -43,8 +44,8 @@ describe("modules still mint and verify the tokens they always did", () => {
 
   it("recap links", async () => {
     const m = await import("./recap-links");
-    expect(m.signRecapToken(BOOKING)).toBe(MINTED.recap);
-    expect(m.verifyRecapToken(MINTED.recap)).toBe(BOOKING);
+    expect(m.signRecapToken(BOOKING, 0)).toBe(MINTED.recap);
+    expect(m.verifyRecapToken(MINTED.recap)).toEqual({ bookingId: BOOKING, epoch: 0 });
     expect(m.verifyRecapToken(`${MINTED.recap.slice(0, -1)}é`)).toBeNull();
     expect(m.verifyRecapToken(MINTED.recap.slice(0, -1))).toBeNull();
   });

@@ -4,6 +4,7 @@ import { revokeBookingLinksSentToPerson } from "./booking-capabilities";
 import { revokePersonReleaseLinks } from "./capabilities";
 import type { DbExecutor } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
+import { retireRecapLinks } from "./recap-links";
 import { waiverRecords } from "./schema";
 
 /**
@@ -12,12 +13,15 @@ import { waiverRecords } from "./schema";
  * or phone: the staff edit, a diver merge choosing the other record's
  * contact, and a contacts import overwriting one.
  *
- * Two kinds of link went to the address on file:
+ * Every kind of link that went to the address on file:
  *  - a booking link: a delivered one, and a course's forms link, which is
  *    mailed undelivered (#3950); both are revoked
  *    (`revokeBookingLinksSentToPerson`). A seat's release is signed on the
  *    holder's thread link (ADR 20261105-waiver-folds-into-the-thread), so this
  *    is what closes its Sign step;
+ *  - a recap link (issue #3982): a signed booking id that lives 180 days.
+ *    The epoch it signs moves on for every one of the person's bookings
+ *    (`retireRecapLinks`), so the old one opens no recap;
  *  - a link to one of the person's releases: a release link mailed or texted
  *    to the old contact, or a counter link handed over before the
  *    correction (issue #3983). Every one is revoked, so it opens nothing: not
@@ -43,6 +47,7 @@ export async function revokeLinksSentToOldContact(
   const now = input.now ?? nowDate();
   await revokeBookingLinksSentToPerson(tx, { ...input, now });
   await revokePersonReleaseLinks(tx, { ...input, now });
+  await retireRecapLinks(tx, input);
   await tx
     .update(waiverRecords)
     .set({ supersededAt: now })

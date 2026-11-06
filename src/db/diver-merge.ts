@@ -41,6 +41,7 @@ import {
 } from "./boarding-certification-snapshot";
 import { contactChanged, revokeLinksSentToOldContact } from "./contact-change";
 import { refileCourseFormRecords } from "./course-forms";
+import { retireRecapLinks } from "./recap-links";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import { refileWaiverRecords, setAsideImportedOverHold } from "./waiver-refile";
@@ -1285,6 +1286,9 @@ export async function mergeDiverRecords(input: {
           personId: survivor.id,
           now: mergedAt,
         });
+        // The finished seats the merge leaves on the merged-away record carry
+        // recap links too, mailed to its old contact (issue #3982 review F1).
+        await retireRecapLinks(tx, { shopId: input.shopId, personId: source.id });
       }
 
       return { ok: true, survivorId: survivor.id, mergedPersonId: source.id };

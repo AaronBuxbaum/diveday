@@ -158,7 +158,7 @@ export async function getTipCurrencyForBooking(
  *
  * `shopId` is deliberately not a caller-supplied input — the recap flow's
  * only credential is a signed token that resolves to a `bookingId`
- * (`verifyRecapToken`), so shop identity is derived from that booking here,
+ * (`openRecapLink`), so shop identity is derived from that booking here,
  * the same "never trust a client-supplied tenant id" rule the booking
  * capability system already follows.
  */

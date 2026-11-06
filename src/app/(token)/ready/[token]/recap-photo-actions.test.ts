@@ -40,9 +40,9 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
   return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })) };
 });
-vi.mock("@/lib/recap-links", () => ({
-  signRecapToken: vi.fn((bookingId: string) => `recap-for-${bookingId}`),
-  verifyRecapToken: vi.fn((token: string) => token.replace(/^recap-for-/, "")),
+vi.mock("@/db/recap-links", () => ({
+  recapTokenFor: vi.fn(async (_db: unknown, bookingId: string) => `recap-for-${bookingId}`),
+  openRecapLink: vi.fn(async (_db: unknown, token: string) => token.replace(/^recap-for-/, "")),
 }));
 const contextFor = vi.fn();
 vi.mock("./action-helpers", () => ({

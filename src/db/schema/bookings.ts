@@ -362,6 +362,14 @@ export const bookings = pgTable(
      */
     identityUnconfirmedAt: timestamp("identity_unconfirmed_at", { withTimezone: true }),
     /**
+     * **The recap link's epoch** (issue #3982). Every recap link signs it
+     * (`src/lib/recap-links.ts`) and opens only while it still matches
+     * (`openRecapLink`); a change to the diver's email or phone bumps it on all
+     * of their bookings, so a recap link mailed to the old address opens
+     * nothing and the next one carries the new number.
+     */
+    recapLinkEpoch: integer("recap_link_epoch").notNull().default(0),
+    /**
      * The name this booking was made under when that differs from the matched
      * person's, written with `identity_unconfirmed_at` and cleared with it.
      * It is what lets a staffer see the question ("booked as Sam Rivera, on

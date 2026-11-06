@@ -101,6 +101,7 @@ import {
   type ProcessorErasureTargetInput,
   recordProcessorErasureObligations,
 } from "./processor-erasure";
+import { retireRecapLinks } from "./recap-links";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import type { ProcessorErasureObligation } from "./schema";
 import * as schema from "./schema";
@@ -1160,6 +1161,9 @@ async function scrubPersonOnlyRows(
   // carries a non-blank check, so there is nothing to redact it *to*), and
   // something found aboard with their name on it is about their belongings.
   await deleteRegisteredPersonRows(tx, ctx);
+  // A recap link to one of their bookings opens nothing after the erasure
+  // (issue #3982 review F2): the epoch it signed moves on.
+  await retireRecapLinks(tx, { shopId, personId });
   // Every capability that opens something of this person's: their own
   // (courtesy-email unsubscribe) and their interests' (last-minute-list
   // unsubscribe). The interest ones name it by foreign key, so they go here,

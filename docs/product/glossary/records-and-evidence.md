@@ -171,6 +171,10 @@
   readiness authority and opens no doctor's page; it dies when the seat changes hands or the
   release is superseded (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
+- **Recap link epoch** — the number a recap link signs beside its booking (`bookings.recap_link_epoch`,
+  issue #3982). The link opens only while the booking still holds that number; correcting the
+  diver's email or phone moves it on for all their bookings, so a recap link mailed to the old
+  address opens nothing, and the next one carries the new number.
 - **Release link** — the link an email or a text carries to sign a release with no seat (issue
   #3983): a `release_link` row in `capabilities` naming that release, alive a week, spent by the
   signature, sent only to the contact on file and never shown to staff. A release holds one live

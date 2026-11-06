@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "07ba1a2c-2859-4235-b3c1-80b05ea2d3c8",
+  "prevIds": [
+    "714b9880-0a63-4ccf-b857-ea9c70b5e5ba"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "recap_link_epoch"
+      ],
+      "writes": [
+        "s|col|public.bookings.recap_link_epoch",
+        "n|col|public.bookings.recap_link_epoch",
+        "e|col|public.bookings.recap_link_epoch"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "recap_link_epoch",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}
