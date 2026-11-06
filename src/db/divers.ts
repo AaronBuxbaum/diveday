@@ -17,12 +17,14 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
+import { personPurposesThatMerge } from "@/lib/capabilities";
 import { asLevelCard, asNitroxCard, asSpecialtyCard } from "@/lib/card-ledger";
 import { nowDate } from "@/lib/clock";
 import { minorDeclaredOnLiveUpcomingSeat } from "@/lib/guardian";
 import { shopWaiverStanding, waiverClockInstant } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { friendsBroughtBy } from "./buddy-referrals";
+import { revokePersonCapabilities } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { contactChanged, revokeLinksSentToOldContact } from "./contact-change";
 import { diveDay, numberedDiveDay } from "./dive-days";
@@ -328,6 +330,15 @@ export async function deleteDiver(db: AppDb, shopId: string, personId: string) {
     // A staff member who also dives can be deleted here, and a deleted person
     // cannot be the crew member a diver was promised help from.
     await releaseHelpRequestsOfPerson(tx, { shopId, personId, now });
+    // A soft delete keeps the roles, so a staffer's calendar feed would keep serving the shop
+    // schedule. Revoke it in this transaction, as `removeStaffMember` does; an undo does not bring
+    // it back, they subscribe afresh (issue #4011).
+    await revokePersonCapabilities(tx, {
+      purposes: personPurposesThatMerge("refuse"),
+      shopId,
+      personId,
+      now,
+    });
     return true;
   });
 }
