@@ -28,8 +28,8 @@ own device, as the child's parent or guardian.**
    - neither the seat's person nor the lead removed or erased
    - one the page will ask a guardian for (a date of birth saying adult refuses)
    - still claimable
-   - owing a release by readiness's rule (`waiver_not_sent`, `waiver_pending`, `waiver_expired`,
-     `guardian_signature_missing`)
+   - owing a release by readiness's rule (`waiver_not_sent`, `waiver_pending`,
+     `guardian_signature_missing`; `waiver_expired` retired with issue #3983)
 
    Anything else gets one answer. The panel draws the button by the same predicates.
 3. **No waiver token** (amended by 20261105-waiver-folds-into-the-thread): the parent signs on

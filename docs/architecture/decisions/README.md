@@ -294,7 +294,7 @@ script again.
 | 20260820-shop-divemaster-ratio | One advisory diver:divemaster target replaces… |
 | 20260820-shop-handles-plan-changes | ~~The diver's cancel and move…~~ → 20260821-the-diver-may-release-their-own-seat |
 | 20260820-waiver-delivery-is-per-channel | What we know about a… |
-| 20260820-waiver-links-are-reused-not-reissued | A live waiver link is… |
+| 20260820-waiver-links-are-reused-not-reissued | ~~A live waiver link is…~~ → 20261105-waiver-folds-into-the-thread |
 | 20260821-a-card-does-not-expire | Drop the certification expiry date;… |
 | 20260821-currency-is-what-catches-people | `/ready` asks when you last… |
 | 20260821-follow-ups-are-github-issues | File agent follow-ups as GitHub… |

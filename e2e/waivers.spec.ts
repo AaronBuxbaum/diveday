@@ -5,6 +5,7 @@ import {
   expectSignedOnThread,
   HELD_SEND_TIMEOUT_MS,
   manifestRow,
+  openCopiedWaiverLink,
   openCounterFor,
   openDiverFileGroup,
   openFirstRosterRowWith,
@@ -923,33 +924,31 @@ test("a diver without a booking can receive an independent waiver from their rec
   await expect(page.getByRole("button", { name: "Email waiver" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Text waiver" })).toBeVisible();
 
-  // "Copy link" is the one that never depends on a provider: it issues the
-  // private link and puts it straight on the clipboard, with nothing sent. The
-  // URL is never printed on the page — the clipboard is the only way to it,
-  // which is what this now proves. The tap copies immediately (a `Toast`, not
-  // a result strip with a second button inside it — see `waiverLinkFromToast`).
+  // "Copy link" is the one that never depends on a provider: it issues a
+  // counter link and puts it straight on the clipboard, with nothing sent
+  // (issue #3983). The URL is never printed on the page — the clipboard is the
+  // only way to it. The tap copies immediately (a `Toast`, not a result strip
+  // with a second button inside it — see `waiverLinkFromToast`).
   await page.getByRole("button", { name: "Copy link" }).click();
   const firstHref = await waiverLinkFromToast(page);
 
   /**
-   * The whole point of the row: a staffer who copies the link and then sends it
-   * must be handing over one URL, not two of which only the last one works
-   * (ADR 20260820-waiver-links-are-reused-not-reissued). Tapping a *different*
-   * channel is the real shape of the mistake — text it (the e2e fleet
-   * configures no SMS provider, so it fails; the button's own ring and name
-   * say so, never a banner — see WaiverDeliveryActions), then fall back to
-   * the same "Copy link".
+   * A text that fails hands nothing back (the e2e fleet configures no SMS
+   * provider; the button's own ring and name say so, never a banner — see
+   * WaiverDeliveryActions): the week-long link a text carries never reaches
+   * staff. The way to a URL is Copy link again, which is a fresh counter link
+   * and retires the one before.
    */
   await page.getByRole("button", { name: "Text waiver" }).click();
   await expect(page.getByRole("button", { name: /Text waiver.*Not set up/ })).toBeVisible({
     timeout: HELD_SEND_TIMEOUT_MS,
   });
   await page.getByRole("button", { name: "Copy link" }).click();
-  expect(await waiverLinkFromToast(page)).toBe(firstHref);
+  const secondHref = await waiverLinkFromToast(page);
+  expect(secondHref).not.toBe(firstHref);
 
-  // And it is the diver's live link, not a stale echo: it still opens.
-  await page.goto(firstHref);
-  await expect(page.getByLabel("Type your full name")).toBeVisible();
+  // The fresh link opens on this phone, once it says so.
+  await openCopiedWaiverLink(page, secondHref);
 });
 
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {

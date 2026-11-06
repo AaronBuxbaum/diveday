@@ -85,7 +85,6 @@ import {
   WAIVER_INTEGRITY_VERSION_ERASED,
   waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
 import {
   lockBoardingCertificationEvidence,
@@ -976,13 +975,8 @@ async function scrubWaiverRecords(
         importSourceMedicalDocumentUrl: null,
         medicalClearanceDocumentUrl: null,
         diverMedicalFormUrl: null,
-        // The URL *is* the capability. A live pending link would let its bearer
-        // complete a fresh, un-erased record against this same person after the
-        // erasure, so the hash is rotated to a value no issued token maps to,
-        // the expiry is pulled back to now, and any still-live record is marked
-        // superseded.
-        tokenHash: hashWaiverToken(createWaiverToken()),
-        expiresAt: now,
+        // A still-live record is marked superseded, so nothing reaches it to
+        // sign; the links to the person's releases are deleted below.
         startedAt: null,
         supersededAt: record.supersededAt ?? (record.status === "pending" ? now : null),
         anonymizedAt: now,
@@ -1175,9 +1169,9 @@ async function scrubPersonOnlyRows(
   // that opens this person goes with them (security review of #2710, F1).
   // A staff credential naming them (a calendar feed, `merge: "refuse"`) is
   // revoked by `scrubStandingCredentials` instead, so the record of it stays.
-  // A counter tablet's waiver link (`waiver_link`) names one of their
-  // releases, which stay as evidence: the link goes, so nothing opens the
-  // release again.
+  // A door to one of their releases (`waiver_link`, `party_waiver_link`,
+  // `release_link`) goes too; the releases stay as evidence, and nothing
+  // opens them again.
   await tx.delete(capabilities).where(
     or(
       and(

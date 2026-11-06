@@ -13,9 +13,10 @@ import {
   waiverRecords,
 } from "./schema";
 import { listStaff } from "./trips";
-import { completeWaiver, getWaiverForToken } from "./waivers-completion";
+import { completeWaiver, getWaiverForToken, type WaiverKey } from "./waivers-completion";
 import {
   attachDiverMedicalForm,
+  contactOnFile,
   diverMedicalFormOpen,
   getDiverMedicalForm,
   getDiverMedicalFormForHold,
@@ -69,19 +70,19 @@ describe("the doctor's form a diver sends", () => {
     const { db, shop, booking, person } = context;
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers,
       now,
     });
-    const record = await recordFor(db, issued.token);
+    const record = await recordFor(db, issued.key);
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("demo staff missing");
-    return { ...context, token: issued.token, record, staff: staff.person };
+    return { ...context, token: issued.key, record, staff: staff.person };
   }
 
-  async function recordFor(db: Awaited<ReturnType<typeof waiverContext>>["db"], token: string) {
+  async function recordFor(db: Awaited<ReturnType<typeof waiverContext>>["db"], token: WaiverKey) {
     const state = await getWaiverForToken(db, token, now);
     if (state.state !== "completed") throw new Error("expected a completed record");
     return state.record;
@@ -98,7 +99,9 @@ describe("the doctor's form a diver sends", () => {
     expect(await diverMedicalFormOpen(db, record)).toBe("open");
     expect(await getDoctorReferral(db, record)).toMatchObject({ formSent: false });
 
-    expect(await attachDiverMedicalForm(db, record, FORM_URL, later)).toBe("sent");
+    expect(
+      await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later),
+    ).toBe("sent");
 
     const after = await recordFor(db, token);
     expect(after.diverMedicalFormUrl).toBe(FORM_URL);
@@ -109,19 +112,28 @@ describe("the doctor's form a diver sends", () => {
 
   it("never lets a second send replace the first, even from a stale read of the link", async () => {
     const { db, token, record } = await signed();
-    expect(await attachDiverMedicalForm(db, record, FORM_URL, later)).toBe("sent");
+    expect(
+      await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later),
+    ).toBe("sent");
     // The same link again, read before the first send landed: the record the
     // caller holds says nothing was sent, and the write still refuses.
-    expect(await attachDiverMedicalForm(db, record, `${MEDIA}/medical-clearances/other.jpg`)).toBe(
-      "already",
-    );
+    expect(
+      await attachDiverMedicalForm(
+        db,
+        record,
+        `${MEDIA}/medical-clearances/other.jpg`,
+        await contactOnFile(db, record),
+      ),
+    ).toBe("already");
     expect((await recordFor(db, token)).diverMedicalFormUrl).toBe(FORM_URL);
   });
 
   it("takes nothing for a clean release", async () => {
     const { db, record } = await signed(clearAnswers);
     expect(await diverMedicalFormOpen(db, record)).toBe("closed");
-    expect(await attachDiverMedicalForm(db, record, FORM_URL, later)).toBe("closed");
+    expect(
+      await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later),
+    ).toBe("closed");
   });
 
   it("takes nothing once a physician's answer is recorded, either way", async () => {
@@ -139,7 +151,9 @@ describe("the doctor's form a diver sends", () => {
       });
       expect(answered).toMatchObject({ ok: true });
       // The stale record the link resolved before the answer, and a fresh one.
-      expect(await attachDiverMedicalForm(db, record, FORM_URL, later)).toBe("closed");
+      expect(
+        await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later),
+      ).toBe("closed");
       expect(await diverMedicalFormOpen(db, await recordFor(db, token))).toBe("closed");
       await setAside(db, record.id);
     }
@@ -153,7 +167,15 @@ describe("the doctor's form a diver sends", () => {
       .update(waiverRecords)
       .set({ anonymizedAt: later })
       .where(eq(waiverRecords.id, erased.record.id));
-    expect(await attachDiverMedicalForm(erased.db, erased.record, FORM_URL, later)).toBe("closed");
+    expect(
+      await attachDiverMedicalForm(
+        erased.db,
+        erased.record,
+        FORM_URL,
+        await contactOnFile(erased.db, erased.record),
+        later,
+      ),
+    ).toBe("closed");
     await setAside(erased.db, erased.record.id);
 
     const removed = await signed();
@@ -161,9 +183,15 @@ describe("the doctor's form a diver sends", () => {
       .update(people)
       .set({ deletedAt: later })
       .where(eq(people.id, removed.person.id));
-    expect(await attachDiverMedicalForm(removed.db, removed.record, FORM_URL, later)).toBe(
-      "closed",
-    );
+    expect(
+      await attachDiverMedicalForm(
+        removed.db,
+        removed.record,
+        FORM_URL,
+        await contactOnFile(removed.db, removed.record),
+        later,
+      ),
+    ).toBe("closed");
     await removed.db
       .update(people)
       .set({ deletedAt: null })
@@ -172,14 +200,18 @@ describe("the doctor's form a diver sends", () => {
 
     const { db, booking, record } = await signed();
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
-    expect(await attachDiverMedicalForm(db, record, FORM_URL, later)).toBe("closed");
+    expect(
+      await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later),
+    ).toBe("closed");
     await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
     const longAgo = new Date("2020-01-01T12:00:00.000Z");
     await db
       .update(trips)
       .set({ startsAt: new Date(longAgo.getTime() - 3_600_000), endsAt: longAgo })
       .where(eq(trips.id, booking.tripId));
-    expect(await attachDiverMedicalForm(db, record, FORM_URL, later)).toBe("closed");
+    expect(
+      await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later),
+    ).toBe("closed");
   });
 
   it("is refused by the database on a clean release or beside a recorded answer", async () => {
@@ -218,7 +250,7 @@ describe("the doctor's form a diver sends", () => {
 
   it("is read back only by its own shop, and never through an erased record", async () => {
     const { db, shop, person, record } = await signed();
-    await attachDiverMedicalForm(db, record, FORM_URL, later);
+    await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later);
     expect(await getDiverMedicalForm(db, shop.id, record.id)).toEqual({
       url: FORM_URL,
       personId: person.id,
@@ -267,7 +299,7 @@ describe("the doctor's form a diver sends", () => {
 
   it("becomes the evaluation only for a staffer who opened it and typed the physician", async () => {
     const { db, shop, person, staff, token, record } = await signed();
-    await attachDiverMedicalForm(db, record, FORM_URL, later);
+    await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later);
     const answer = (physicianName: string | null) =>
       recordMedicalEvaluation(db, {
         outcome: "cleared",
@@ -313,7 +345,7 @@ describe("the doctor's form a diver sends", () => {
 
   it("does not count an open of an earlier form the staffer turned away", async () => {
     const { db, shop, person, staff, token, record } = await signed();
-    await attachDiverMedicalForm(db, record, FORM_URL, later);
+    await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later);
     await opened(db, shop.id, person.id, staff.id, record.id);
     expect(
       await rejectDiverMedicalForm(db, {
@@ -324,9 +356,15 @@ describe("the doctor's form a diver sends", () => {
       }),
     ).toEqual({ ok: true });
     const resent = new Date("2026-07-22T09:00:00.000Z");
-    expect(await attachDiverMedicalForm(db, await recordFor(db, token), STAFF_URL, resent)).toBe(
-      "sent",
-    );
+    expect(
+      await attachDiverMedicalForm(
+        db,
+        await recordFor(db, token),
+        STAFF_URL,
+        await contactOnFile(db, await recordFor(db, token)),
+        resent,
+      ),
+    ).toBe("sent");
     expect(
       await recordMedicalEvaluation(db, {
         outcome: "cleared",
@@ -344,7 +382,7 @@ describe("the doctor's form a diver sends", () => {
 
   it("can be turned away by staff, which deletes it and lets the diver send again", async () => {
     const { db, shop, person, staff, token, record } = await signed();
-    await attachDiverMedicalForm(db, record, FORM_URL, later);
+    await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later);
     const reject = (input: Partial<Parameters<typeof rejectDiverMedicalForm>[1]>) =>
       rejectDiverMedicalForm(db, {
         shopId: shop.id,
@@ -377,13 +415,15 @@ describe("the doctor's form a diver sends", () => {
     expect(await reject({})).toEqual({ ok: false, reason: "no_form" });
     // The slot is open again, for the link only through the page's own gate.
     expect(await diverMedicalFormOpen(db, after)).toBe("open");
-    expect(await attachDiverMedicalForm(db, after, STAFF_URL, later)).toBe("sent");
+    expect(
+      await attachDiverMedicalForm(db, after, STAFF_URL, await contactOnFile(db, after), later),
+    ).toBe("sent");
   });
 
   it("is deleted when the staffer records the answer with evidence of their own", async () => {
     for (const evidence of [{ physicianName: "Dr. Imani Reyes" }, { documentUrl: STAFF_URL }]) {
       const { db, shop, person, staff, token, record } = await signed();
-      await attachDiverMedicalForm(db, record, FORM_URL, later);
+      await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later);
       const answered = await recordMedicalEvaluation(db, {
         outcome: "not_cleared",
         shopId: shop.id,
@@ -449,7 +489,7 @@ describe("the doctor's form a diver sends", () => {
 
   it("is destroyed when the diver is erased, and the day it arrived stays", async () => {
     const { db, shop, person, staff, record } = await signed();
-    await attachDiverMedicalForm(db, record, FORM_URL, later);
+    await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later);
     await anonymizeDiver(db, { shopId: shop.id, personId: person.id, actorPersonId: staff.id });
     const [after] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
     expect(after?.diverMedicalFormUrl).toBeNull();

@@ -141,7 +141,7 @@ describe("waiver records (in-memory PGlite)", () => {
     const { db, person, shop, booking, template } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -182,7 +182,7 @@ describe("saving the waiver template", () => {
     if (!staff) throw new Error("seed staff missing");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -318,7 +318,7 @@ describe("saving the waiver template", () => {
       now,
     });
     if (!issued.ok) throw new Error(`crew waiver issue failed: ${issued.reason}`);
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: staff.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -525,7 +525,6 @@ describe("saving the waiver template", () => {
       bookingId: null,
       // `token_hash` is unique — the second link is a second link, which is
       // exactly how this state arises in production.
-      tokenHash: `${existing.tokenHash}-second-seat`,
       createdAt: existing.createdAt,
     });
 
@@ -645,7 +644,7 @@ describe("saving the waiver template", () => {
       if (!booking) throw new Error("booking insert failed");
       const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
       if (!issued.ok) throw new Error("expected a waiver link");
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: name,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -703,7 +702,7 @@ describe("saving the waiver template", () => {
     if (!booking) throw new Error("booking insert failed");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: "Blown Out",
       agreed: true,
       medicalAnswers: clearAnswers,

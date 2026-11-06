@@ -346,7 +346,6 @@ describe("calculateReadiness — course forms", () => {
     status: "completed",
     signedAt: now,
     completedAt: now,
-    expiresAt: new Date("2026-10-15T00:00:00.000Z"),
   } as WaiverRecord;
   const base = { requirement, waiver, certifications: [], now, timezone: "America/New_York" };
   const courseForms = (signatures: CourseFormSignature[], required = [release, practices]) => ({

@@ -86,8 +86,6 @@ export async function seedMedicalAlert(db: DbExecutor, shopId: string): Promise<
       templateGeneration: template.materialGeneration,
       templateBody: template.body,
       status: "completed",
-      tokenHash: `seed-waiver-${shopId}-medical-alert`,
-      expiresAt: at(6, 10),
       startedAt: new Date(signedAt.getTime() - 7 * 60_000),
       createdAt: new Date(signedAt.getTime() - 8 * 60_000),
       signedName: seat.fullName,

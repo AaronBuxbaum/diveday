@@ -1050,14 +1050,45 @@ async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date
   return person ?? null;
 }
 
-/** Whether the record still answers to the link it was read through. */
-async function linkStillCurrent(db: DbExecutor, record: HeldRecord): Promise<boolean> {
-  const [current] = await db
-    .select({ tokenHash: waiverRecords.tokenHash })
-    .from(waiverRecords)
-    .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, record.shopId)))
+/**
+ * The diver's email and phone on file, as a doctor's-page request reads them
+ * when it resolves its release (`contactOnFile`) and checks them again before
+ * it acts (`contactStillOnFile`).
+ */
+export type ReadContact = { email: string | null; phone: string | null };
+
+/** The contact on file for a release's diver, read when the request resolved it. */
+export async function contactOnFile(
+  db: DbExecutor,
+  record: Pick<HeldRecord, "shopId" | "personId">,
+): Promise<ReadContact | null> {
+  const [person] = await db
+    .select({ email: people.email, phone: people.phone })
+    .from(people)
+    .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId), livePerson()))
     .limit(1);
-  return current?.tokenHash === record.tokenHash;
+  return person ?? null;
+}
+
+/**
+ * Whether the diver's contact is still the one the request read (security
+ * review S1): a correction since then revoked the link the request came in
+ * on (`revokeLinksSentToOldContact`), and whoever holds the old address reads
+ * and writes nothing. The person row is locked for share, so a correction in
+ * flight is waited for and its address is the one compared.
+ */
+async function contactStillOnFile(
+  db: DbExecutor,
+  record: HeldRecord,
+  read: ReadContact,
+): Promise<boolean> {
+  const [person] = await db
+    .select({ email: people.email, phone: people.phone })
+    .from(people)
+    .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId), livePerson()))
+    .for("share")
+    .limit(1);
+  return person?.email === read.email && person?.phone === read.phone;
 }
 
 /** Whether the held waiver page offers the doctor's page at all. */
@@ -1128,9 +1159,15 @@ export async function attachDiverMedicalForm(
   db: DbExecutor,
   record: HeldRecord,
   url: string,
+  /** The diver's contact as the request read it (`contactOnFile`). */
+  readContact: ReadContact | null,
   now: Date = nowDate(),
 ): Promise<"sent" | "already" | "closed"> {
   if (!(await heldPersonForDoctor(db, record, now))) return "closed";
+  // Still the contact the caller read the record through (security review
+  // S1): a correction while the file was being stored revoked that link and
+  // reopened the slot, and the old address must not fill it.
+  if (!readContact) return "closed";
   const [written] = await db
     .update(waiverRecords)
     .set({ diverMedicalFormUrl: url, diverMedicalFormSentAt: now })
@@ -1144,32 +1181,29 @@ export async function attachDiverMedicalForm(
         isNull(waiverRecords.medicalClearanceDeclinedAt),
         isNull(waiverRecords.anonymizedAt),
         isNull(waiverRecords.diverMedicalFormSentAt),
-        // Still the link the caller read the record through (security review
-        // S1): a contact change while the file was being stored rotated it and
-        // reopened the slot, and the old address must not fill it.
-        eq(waiverRecords.tokenHash, record.tokenHash),
+        // Still the contact the caller read the record through, in the same
+        // statement (security review S1): a correction that commits while the
+        // file was stored revoked that link and reopened the slot, and the old
+        // address must not fill it.
+        sql`exists (select 1 from ${people} where ${people.id} = ${waiverRecords.personId} and ${people.shopId} = ${waiverRecords.shopId} and ${people.email} is not distinct from ${readContact.email} and ${people.phone} is not distinct from ${readContact.phone})`,
       ),
     )
     .returning({ id: waiverRecords.id });
   if (written) return "sent";
+  if (!(await contactStillOnFile(db, record, readContact))) return "closed";
   const [current] = await db
     .select({
       sentAt: waiverRecords.diverMedicalFormSentAt,
       clearedAt: waiverRecords.medicalClearedAt,
       declinedAt: waiverRecords.medicalClearanceDeclinedAt,
       anonymizedAt: waiverRecords.anonymizedAt,
-      tokenHash: waiverRecords.tokenHash,
     })
     .from(waiverRecords)
     .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, record.shopId)))
     .limit(1);
   // "Already" only for a hold still waiting with a form on it; an answered or
   // erased one is closed, whatever it holds.
-  return current?.sentAt &&
-    !current.clearedAt &&
-    !current.declinedAt &&
-    !current.anonymizedAt &&
-    current.tokenHash === record.tokenHash
+  return current?.sentAt && !current.clearedAt && !current.declinedAt && !current.anonymizedAt
     ? "already"
     : "closed";
 }
@@ -1196,13 +1230,16 @@ export async function revealDoctorReferral(
   db: DbExecutor,
   record: HeldRecord,
   enteredBirthdate: string,
+  /** The diver's contact as the request read it (`contactOnFile`). */
+  readContact: ReadContact | null,
   now: Date = nowDate(),
 ): Promise<DoctorReferralAnswers | "mismatch" | "whole" | null> {
   const person = await heldPersonForDoctor(db, record, now);
   if (!person) return null;
-  // Still the link the caller read the record through (security review S1):
-  // a contact change since then rotated it, and the old address reads nothing.
-  if (!(await linkStillCurrent(db, record))) return null;
+  // Still the contact the caller read the record through (security review
+  // S1): a correction since then revoked that link, and the old address reads
+  // nothing.
+  if (!readContact || !(await contactStillOnFile(db, record, readContact))) return null;
   const items = referralItems(record.medicalAnswers);
   if (items.length === 0 || !person.dateOfBirth) return "whole";
   if (record.doctorUnlockFailures >= DOCTOR_UNLOCK_FAILURE_LIMIT) return "whole";

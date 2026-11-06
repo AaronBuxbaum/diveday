@@ -45,6 +45,7 @@ export {
   getEmergencyContactForBearer,
   getEmergencyContactForPerson,
   getWaiverForToken,
+  type LinkWaiverKey,
   recordBookingEmergencyContact,
   recordPersonEmergencyContact,
   recordWaiverDraft,
@@ -72,6 +73,7 @@ export {
 } from "./waivers-in-person";
 export {
   attachDiverMedicalForm,
+  contactOnFile,
   type DoctorReferral,
   type DoctorReferralAnswers,
   diverMedicalFormOpen,
@@ -84,6 +86,7 @@ export {
   hasUnansweredMedicalHold,
   type MedicalEvaluationOutcome,
   type MedicalEvaluationResult,
+  type ReadContact,
   type RejectDiverMedicalFormResult,
   type RetireMedicalRefusalResult,
   recordMedicalEvaluation,
@@ -94,6 +97,7 @@ export {
 export {
   hasLivePersonWaiverRequest,
   type IssueWaiverOutcome,
+  type IssueWaiverRefusal,
   issueWaiverRequest,
   type OpenThreadWaiverOutcome,
   openWaiverInThread,

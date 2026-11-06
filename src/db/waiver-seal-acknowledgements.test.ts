@@ -47,7 +47,7 @@ async function brokenRelease() {
   const { db, shop, booking, person } = ctx;
   const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
   if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-  const done = await completeWaiver(db, issued.token, {
+  const done = await completeWaiver(db, issued.key, {
     signerName: person.fullName,
     agreed: true,
     medicalAnswers: clearAnswers,
@@ -209,7 +209,7 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
     const { db, shop, booking, person } = ctx;
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("issue failed");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,

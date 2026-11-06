@@ -1277,8 +1277,7 @@
       {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
-          "src/db/seat-claims.test.ts": "1047 -> 1094",
-          "src/lib/waivers.test.ts": "1205 -> 1402"
+          "src/db/seat-claims.test.ts": "1047 -> 1094"
         }
       },
       {
@@ -1339,8 +1338,7 @@
       {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
-          "src/db/seat-claims.test.ts": "1047 -> 1094",
-          "src/lib/waivers.test.ts": "1205 -> 1402"
+          "src/db/seat-claims.test.ts": "1047 -> 1094"
         }
       },
       {
@@ -1382,8 +1380,7 @@
       {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
-          "src/db/seat-claims.test.ts": "1047 -> 1094",
-          "src/lib/waivers.test.ts": "1205 -> 1402"
+          "src/db/seat-claims.test.ts": "1047 -> 1094"
         }
       },
       {
@@ -1425,8 +1422,7 @@
       {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
-          "src/db/seat-claims.test.ts": "1047 -> 1094",
-          "src/lib/waivers.test.ts": "1205 -> 1402"
+          "src/db/seat-claims.test.ts": "1047 -> 1094"
         }
       },
       {
@@ -1462,9 +1458,7 @@
       {
         "why": "issue #2722: every card insert now names its kind on the one cards ledger",
         "files": {
-          "src/db/divers.test.ts": "3050 -> 3060",
           "src/db/executed-dives.test.ts": "1084 -> 1085",
-          "src/db/import.test.ts": "1074 -> 1076",
           "src/db/no-show.test.ts": "1156 -> 1158",
           "src/db/seat-claims.test.ts": "1525 -> 1529",
           "src/db/self-declared-cards.test.ts": "1849 -> 1869"
@@ -1484,7 +1478,7 @@
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
-    "src/db/anonymize.test.ts": 1629,
+    "src/db/anonymize.test.ts": 1627,
     "src/db/bookings.test.ts": 3526,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1207,
@@ -1492,23 +1486,23 @@
     "src/db/course-forms.test.ts": 1234,
     "src/db/courses.test.ts": 1713,
     "src/db/dive-sites.test.ts": 1156,
-    "src/db/diver-merge.test.ts": 1162,
-    "src/db/divers.test.ts": 3061,
+    "src/db/diver-merge.test.ts": 1158,
+    "src/db/divers.test.ts": 3056,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1181,
-    "src/db/import.test.ts": 1076,
+    "src/db/export.test.ts": 1177,
+    "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 966,
-    "src/db/manifests.test.ts": 3587,
+    "src/db/manifests.test.ts": 3584,
     "src/db/no-show.test.ts": 1158,
-    "src/db/notifications.test.ts": 1864,
+    "src/db/notifications.test.ts": 1860,
     "src/db/orders.test.ts": 3174,
     "src/db/participant-types.test.ts": 1196,
     "src/db/readiness.test.ts": 1347,
     "src/db/recap.test.ts": 2141,
     "src/db/refunds.test.ts": 1150,
-    "src/db/reminders.test.ts": 981,
+    "src/db/reminders.test.ts": 936,
     "src/db/rental-fit.test.ts": 1237,
-    "src/db/reporting.test.ts": 1384,
+    "src/db/reporting.test.ts": 1380,
     "src/db/retention.test.ts": 1027,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1529,
@@ -1517,7 +1511,7 @@
     "src/db/trips-crew.test.ts": 1430,
     "src/db/trips-queries.test.ts": 1176,
     "src/db/trips-series.test.ts": 1785,
-    "src/db/waiver-issue.test.ts": 1086,
+    "src/db/waiver-issue.test.ts": 1079,
     "src/db/waivers-medical.test.ts": 1001,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
@@ -1532,21 +1526,13 @@
     "src/lib/notifications/email.test.ts": 1095,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2089,
-    "src/lib/readiness.test.ts": 1575,
+    "src/lib/readiness.test.ts": 1555,
     "src/lib/staffing-week.test.ts": 1125,
-    "src/lib/waivers.test.ts": 1402,
+    "src/lib/waivers.test.ts": 1393,
     "src/proxy.test.ts": 1068
   },
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
-    "//absorbed": [
-      {
-        "why": "Merge of main and the lower stack layers; no branch added by hand",
-        "files": {
-          "src/db/seed-more-trips.ts#seedMoreTrips": "624 -> 625"
-        }
-      }
-    ],
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 314,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 396,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
@@ -1556,8 +1542,8 @@
     "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
-    "src/db/seed-history.ts#seedHistory": 634,
-    "src/db/seed-more-trips.ts#seedMoreTrips": 625,
+    "src/db/seed-history.ts#seedHistory": 632,
+    "src/db/seed-more-trips.ts#seedMoreTrips": 623,
     "src/db/seed-trips.ts#seedTrips": 363,
     "src/lib/import.ts#prepareContactImport": 430
   },

@@ -719,9 +719,6 @@ export async function seedMoreTrips(
       templateVersion: ctx.waiverTemplate.version,
       templateGeneration: ctx.waiverTemplate.materialGeneration,
       templateBody: ctx.waiverTemplate.body,
-      tokenHash: `seed-extra-waiver-${shopId}-${index + 1}`,
-      // Comfortably past the furthest trip seeded here (day 56).
-      expiresAt: at(75, 12),
       createdAt,
       ...(signed ? paperRelease(createdAt, instructorId, signedName(booking.personId)) : {}),
     };

@@ -395,7 +395,7 @@ describe("blockers and information", () => {
           [
             "b-1",
             {
-              waiver: { status: "pending", expiresAt: new Date("2026-12-01T00:00:00Z") },
+              waiver: { status: "pending" },
             },
           ],
         ]) as WaiverByBooking;

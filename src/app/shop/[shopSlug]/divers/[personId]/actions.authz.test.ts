@@ -339,8 +339,6 @@ describe("erasing a guardian's email from a diver's releases", () => {
         templateTitle: "Release",
         templateVersion: 1,
         templateBody: "Body",
-        tokenHash: `guardian-erasure-${personId}`,
-        expiresAt: new Date("2026-12-31T00:00:00.000Z"),
         status: "completed",
         guardianName: "Jonas Fischer",
         guardianRelationship: "parent",

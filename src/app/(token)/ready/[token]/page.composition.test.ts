@@ -284,7 +284,7 @@ describe("the sign step's actions", () => {
 
   it("offers a control for every waiver blocker it calls the reader's to fix", () => {
     expect(SOURCE).toMatch(/<SignStepActions\s+token=\{token\}\s+item=\{step\.item\}/);
-    for (const code of ["waiver_pending", "waiver_expired", "guardian_signature_missing"]) {
+    for (const code of ["waiver_pending", "waiver_lapsed", "guardian_signature_missing"]) {
       expect(SIGN_STEP).toContain(`code === "${code}"`);
     }
   });

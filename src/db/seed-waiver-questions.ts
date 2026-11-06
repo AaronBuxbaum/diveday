@@ -120,8 +120,6 @@ export async function seedWaiverQuestions(db: DbExecutor, shopId: string): Promi
       templateGeneration: template.materialGeneration,
       templateBody: template.body,
       status: "completed",
-      tokenHash: `seed-waiver-${shopId}-shop-questions`,
-      expiresAt: at(6, 10),
       startedAt: new Date(signedAt.getTime() - 9 * 60_000),
       createdAt: new Date(signedAt.getTime() - 10 * 60_000),
       signedName: standing.fullName,

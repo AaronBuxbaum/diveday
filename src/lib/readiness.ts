@@ -151,7 +151,6 @@ export type ReadinessBlockerCode =
    */
   | "waiver_runs_out"
   | "waiver_pending"
-  | "waiver_expired"
   | "medical_review"
   | "medical_not_cleared"
   /**
@@ -256,7 +255,6 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   waiver_lapsed: "waiver",
   waiver_runs_out: "waiver",
   waiver_pending: "waiver",
-  waiver_expired: "waiver",
   medical_review: "waiver",
   // The same family as the hold it settles: it is still the release that is not
   // usable, and folding it in keeps a diver from appearing under two headings
@@ -352,7 +350,6 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   waiver_lapsed: "unknown",
   waiver_runs_out: "unknown",
   waiver_pending: "unknown",
-  waiver_expired: "unknown",
   // What the release says is not what the diver signed: no medical declaration
   // the boat can rely on, and nobody aboard can restore it.
   waiver_seal_failed: "unknown",
@@ -1178,7 +1175,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     }
   }
 
-  const rawState = waiverStanding(input.waiver, now);
+  const rawState = waiverStanding(input.waiver);
   // A rider is never held on a medical (H-20261009-rider-snorkeler-medical, issue #2212): a release a
   // referral parked or a physician refused is still the release they signed,
   // and the caller hands in the one `effectiveReleaseForRiderSeat` chose, which
@@ -1236,10 +1233,9 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     if (state === "awaiting_signature") {
       blockers.push({ code: "waiver_pending" });
     }
-    if (state === "link_expired") blockers.push({ code: "waiver_expired" });
     // A signed release a minor gave alone (ADR 20260907-guardian-co-signature).
-    // Only ever raised over a record that *is* signed: an unsigned, expired or
-    // held release already has its own line above, and a second one here
+    // Only ever raised over a record that *is* signed: an unsigned or held
+    // release already has its own line above, and a second one here
     // would tell the crew two things about one fact. Measured on the day the
     // diver signed, in the shop's own zone — never on today's date.
     if (

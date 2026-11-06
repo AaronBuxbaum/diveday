@@ -176,10 +176,10 @@ describe("resendConfirmationWithWaiver", () => {
     if (!sent.ok) throw new Error(`issue failed: ${sent.reason}`);
 
     await resendConfirmationWithWaiver(db, shop.id, bookingId);
-    expect(sentBody()).not.toContain(sent.token);
+    expect(sentBody()).not.toContain(sent.key);
     signStepToken(sentBody());
     // The link in the diver's hands still opens the same, unsigned record.
-    const state = await getWaiverForToken(db, sent.token);
+    const state = await getWaiverForToken(db, sent.key);
     expect(state.state).toBe("available");
     expect(state.state === "available" ? state.record.id : null).toBe(sent.recordId);
   });

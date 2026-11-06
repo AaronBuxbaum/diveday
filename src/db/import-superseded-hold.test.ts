@@ -123,7 +123,6 @@ describe("a superseded hold (issue #3780)", () => {
       templateGeneration: template.materialGeneration,
       templateBody: template.body,
       status: "medical_review" as const,
-      tokenHash: `held-${input.personId}-${input.signedAt.getTime()}-${input.bookingId}`,
       expiresAt: input.signedAt,
       signedName: "Held Diver",
       signatureMethod: "typed_consent" as const,
@@ -156,7 +155,6 @@ describe("a superseded hold (issue #3780)", () => {
         currentTemplateVersion: template?.materialGeneration ?? null,
         now: nowDate(),
       }),
-      nowDate(),
     );
   };
 
@@ -357,8 +355,6 @@ describe("merging a duplicate over a medical hold (issue #3815)", () => {
     templateGeneration: f.template.materialGeneration,
     templateBody: f.template.body,
     status: "medical_review" as const,
-    tokenHash: `refusal-${f.rhea.id}-${ageDays}`,
-    expiresAt: nowDate(),
     signedName: "Rhea Held",
     signatureMethod: "typed_consent" as const,
     consentedAt: new Date(nowDate().getTime() - ageDays * DAY),
@@ -410,7 +406,6 @@ describe("merging a duplicate over a medical hold (issue #3815)", () => {
         currentTemplateVersion: f.template.materialGeneration,
         now: nowDate(),
       }),
-      nowDate(),
     );
   };
 
@@ -578,14 +573,15 @@ describe("merging a duplicate over a medical hold (issue #3815)", () => {
   it("names the records it moved from the rows it locked, never an erased one", async () => {
     const f = await twoRecords("ids@example.com");
     const duplicate = await importDuplicate(f);
+    const erasedId = crypto.randomUUID();
     await f.db
       .insert(waiverRecords)
-      .values({ ...refusal(f, 1), personId: duplicate.id, tokenHash: "erased-one" });
+      .values({ ...refusal(f, 1), id: erasedId, personId: duplicate.id });
     const rows = await f.db
-      .select({ id: waiverRecords.id, tokenHash: waiverRecords.tokenHash })
+      .select({ id: waiverRecords.id })
       .from(waiverRecords)
       .where(eq(waiverRecords.personId, duplicate.id));
-    const erased = rows.find((row) => row.tokenHash === "erased-one");
+    const erased = rows.find((row) => row.id === erasedId);
     await f.db
       .update(waiverRecords)
       .set({ anonymizedAt: nowDate() })

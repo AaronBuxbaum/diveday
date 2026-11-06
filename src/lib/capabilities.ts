@@ -22,8 +22,9 @@ import { SETUP_LINK_TTL_MS } from "./setup-links";
  * sign-in account and no shop, and the setup link, which names a set-up
  * request and no shop, and the staff calendar feeds, which are opened on every
  * poll and never spent (ADR 20261105-capabilities-shop-id-nullable), and the
- * counter tablet's waiver link, which opens one seat's release for one sitting
- * (ADR 20261105-waiver-folds-into-the-thread).
+ * counter tablet's waiver link, which opens one release for one sitting
+ * (ADR 20261105-waiver-folds-into-the-thread), and the release link an email
+ * or a text carries to sign a release with no seat (issue #3983).
  * Purposes still on their own tables (the front desk's confirm link) are the
  * rest of #2710.
  * Booking links stay on `booking_capabilities`: they are derived from their
@@ -50,6 +51,7 @@ export const CAPABILITY_PURPOSES = [
   "calendar_shop_trips",
   "waiver_link",
   "party_waiver_link",
+  "release_link",
 ] as const;
 
 export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
@@ -320,8 +322,10 @@ export const CAPABILITY_POLICY = {
   // readiness authority and opens nothing once the seat changes hands or the
   // terms change. Half an hour is one sitting; signing spends it, and a fresh
   // QR revokes the one before. A diver merge supersedes the unsigned release,
-  // so the link opens nothing after it; an erasure deletes the links to the
-  // person's releases.
+  // so the link opens nothing after it; a contact change revokes it; an
+  // erasure deletes the links to the person's releases. It is also what Copy
+  // link hands staff for a release with no seat (issue #3983): the same half
+  // hour, on the first phone that opens it.
   waiver_link: {
     subject: "waiver_record",
     scope: "shop",
@@ -347,6 +351,23 @@ export const CAPABILITY_POLICY = {
     per: "subject",
     use: "once",
     claim: "first_device",
+  },
+  // The link an email or a text carries to sign a release with no seat (issue
+  // #3983). Signed, that release covers every seat the diver holds, so the link
+  // goes only to the contact on file and its token never comes back to staff:
+  // a staffer who wants a URL to hand over gets a counter link
+  // (`waiver_link`) instead. A week, as the mail says; signing spends it, and
+  // any newer link to the same release, of any of the three purposes, revokes
+  // it (one live link per release, `capabilities_live_waiver_record_idx`). A contact
+  // change revokes it; an erasure deletes it.
+  release_link: {
+    subject: "waiver_record",
+    scope: "shop",
+    lifetime: "expires",
+    ttlMs: 7 * DAY_MS,
+    reissue: "supersedes",
+    per: "subject",
+    use: "once",
   },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;
 

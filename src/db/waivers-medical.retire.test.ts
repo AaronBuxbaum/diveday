@@ -34,7 +34,7 @@ describe("physician medical clearance: retiring a refusal", () => {
     const { db, shop, booking, person } = context;
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -79,7 +79,7 @@ describe("physician medical clearance: retiring a refusal", () => {
         now: earlier,
       });
       if (!standing.ok) throw new Error(`the earlier release was refused: ${standing.reason}`);
-      await completeWaiver(db, standing.token, {
+      await completeWaiver(db, standing.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -87,7 +87,7 @@ describe("physician medical clearance: retiring a refusal", () => {
       });
       const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
       if (!issued.ok) throw new Error("expected a waiver link");
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: medicalReferralAnswers,
@@ -153,7 +153,7 @@ describe("physician medical clearance: retiring a refusal", () => {
         now: later,
       });
       if (!fresh.ok) throw new Error(`the new release was refused: ${fresh.reason}`);
-      await completeWaiver(db, fresh.token, {
+      await completeWaiver(db, fresh.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: medicalReferralAnswers,
@@ -188,7 +188,7 @@ describe("physician medical clearance: retiring a refusal", () => {
       // Every answer "no", after a physician said no: allowed (Aaron,
       // 2026-10-07, issue #2158), and never silent.
       expect(
-        await completeWaiver(db, fresh.token, {
+        await completeWaiver(db, fresh.key, {
           signerName: person.fullName,
           agreed: true,
           medicalAnswers: clearAnswers,

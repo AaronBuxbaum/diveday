@@ -41,7 +41,6 @@ const waiver = {
   status: "completed",
   signedAt: now,
   completedAt: now,
-  expiresAt: new Date("2026-10-15T00:00:00.000Z"),
 } as WaiverRecord;
 
 function signed(form: RequiredCourseForm): CourseFormSignature {

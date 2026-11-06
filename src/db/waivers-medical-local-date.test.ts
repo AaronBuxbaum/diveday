@@ -33,7 +33,7 @@ async function heldContext(signedAt: Date) {
     now: signedAt,
   });
   if (!issued.ok) throw new Error("expected a waiver link");
-  await completeWaiver(db, issued.token, {
+  await completeWaiver(db, issued.key, {
     signerName: person.fullName,
     agreed: true,
     medicalAnswers: medicalReferralAnswers,
@@ -55,7 +55,7 @@ describe("medical dates use the shop-local calendar", () => {
       now: firstReferralAt,
     });
     if (!firstLink.ok) throw new Error("expected the first waiver link");
-    await completeWaiver(db, firstLink.token, {
+    await completeWaiver(db, firstLink.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -85,7 +85,7 @@ describe("medical dates use the shop-local calendar", () => {
       now: laterReferralAt,
     });
     if (!laterReferralLink.ok) throw new Error("expected a fresh referral link");
-    await completeWaiver(db, laterReferralLink.token, {
+    await completeWaiver(db, laterReferralLink.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -99,7 +99,7 @@ describe("medical dates use the shop-local calendar", () => {
       now: standingAt,
     });
     if (!standingLink.ok) throw new Error("expected a fresh clean-signing link");
-    await completeWaiver(db, standingLink.token, {
+    await completeWaiver(db, standingLink.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,

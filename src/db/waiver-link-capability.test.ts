@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
-import { MINUTE_MS, nowDate } from "@/lib/clock";
+import { MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
@@ -17,7 +17,6 @@ import {
   recordWaiverDraft,
   waiverLinkDoor,
 } from "./waivers-completion";
-import { issueWaiverRequest } from "./waivers-requests";
 import {
   clearAnswers,
   issueCounterLink,
@@ -84,20 +83,22 @@ describe("the waiver_link capability", () => {
     }
   });
 
-  it("is not opened by another purpose's token, nor by a seat's own waiver link", async () => {
-    const { db, shop, bookingId, personId } = await counterSeat();
+  it("is not opened by another purpose's token, nor by a release link to a seat", async () => {
+    const { db, shop, personId, recordId } = await counterSeat();
     const other = await issueCapability(db, {
       purpose: "courtesy_email_unsubscribe",
       shopId: shop.id,
       subjectId: personId,
     });
-    // Not a counter link: it is tried as a waiver link, which names no release.
-    const door = await waiverLinkDoor(db, other);
-    expect(door).toEqual({ door: "release", key: other });
-    expect((await getWaiverForToken(db, other)).state).toBe("unavailable");
-    const seatLink = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
-    if (!seatLink.ok) throw new Error("seat link missing");
-    expect(await waiverLinkDoor(db, seatLink.token)).toBeNull();
+    expect(await waiverLinkDoor(db, other)).toBeNull();
+    // A release link is only ever minted for a release with no seat; one that
+    // names a seat's release opens nothing.
+    const forged = await issueCapability(db, {
+      purpose: "release_link",
+      shopId: shop.id,
+      subjectId: recordId,
+    });
+    expect(await waiverLinkDoor(db, forged)).toBeNull();
     expect(await waiverLinkDoor(db, "")).toBeNull();
   });
 
@@ -292,6 +293,7 @@ describe("the waiver_link capability", () => {
       recordId,
       token,
       linkId: crypto.randomUUID(),
+      expiresAt: new Date(nowMs() + 60_000),
     };
     expect(await getWaiverForToken(db, forged)).toEqual({ state: "unavailable" });
   });
@@ -341,7 +343,7 @@ describe("the waiver_link capability", () => {
         .from(capabilities)
         .where(eq(capabilities.tokenHash, hashBearerToken(token))),
     ).toEqual([]);
-    expect(await waiverLinkDoor(db, token)).toMatchObject({ door: "release" });
+    expect(await waiverLinkDoor(db, token)).toBeNull();
     expect(await counterState(token)).toBe("closed");
   });
 });

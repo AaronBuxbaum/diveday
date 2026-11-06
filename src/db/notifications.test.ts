@@ -1518,8 +1518,6 @@ describe("provider-reported delivery events", () => {
         templateTitle: template.title,
         templateVersion: template.version,
         templateBody: template.body,
-        tokenHash: `test-token-${providerMessageId}`,
-        expiresAt: new Date("2027-01-01T00:00:00.000Z"),
         deliveryProviderMessageId: providerMessageId,
       })
       .returning({ id: waiverRecords.id });
@@ -1770,8 +1768,6 @@ describe("provider-reported delivery events", () => {
         templateTitle: otherTemplate.title,
         templateVersion: otherTemplate.version,
         templateBody: otherTemplate.body,
-        tokenHash: "other-shop-token-hash",
-        expiresAt: new Date("2027-01-01T00:00:00.000Z"),
         deliveryProviderMessageId: providerMessageId,
       })
       .returning({ id: waiverRecords.id });

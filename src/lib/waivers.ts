@@ -11,7 +11,7 @@ import { flaggedMedicalPrompts, needsPhysicianReview } from "./medical";
 
 /**
  * **A waiver record as a status decision reads it**: every column but the
- * release text, the unsigned draft, the bearer link and the seal
+ * release text, the unsigned draft and the seal
  * (`WAIVER_STATE_COLUMNS`, src/db/waiver-record-columns.ts). Every rule in
  * this file decides from status, signature and clearance stamps, so each takes
  * this narrower shape: a roster or readiness pass can hand over the light row,
@@ -28,14 +28,11 @@ export type WaiverStateFields = Omit<
   | "draftMedicalAlert"
   | "draftViaLinkId"
   | "medicalAlert"
-  | "tokenHash"
   | "integrityHash"
   | "medicalAnswerSeal"
 >;
 
 type WaiverRecord = WaiverStateFields;
-
-export const WAIVER_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * A neutral starting release so a new shop is never left with a blank waiver.
@@ -72,14 +69,11 @@ export function isSampleRelease(body: string | null | undefined): boolean {
   return body == null || body === DEFAULT_WAIVER_BODY;
 }
 
-// `createWaiverToken` and `hashWaiverToken` used to live here. They are the
-// only two things in this file that need `node:crypto`, and this file is
-// reachable from three client components through `src/lib/readiness.ts` and
-// `src/i18n/readiness-labels.ts` — so that one import put 440 KB of Node
-// polyfills, `eval` and all, into the first-load bundle of the public schedule
-// and the page a diver books on. They now live in `src/lib/waiver-tokens.ts`,
-// which nothing but `src/db` may import; see that file for the whole chain
-// (found by the CSP report-only pass, issue #718).
+// This file is reachable from client components through `src/lib/readiness.ts`
+// and `src/i18n/readiness-labels.ts`, so it imports no `node:crypto`: that one
+// import once put 440 KB of Node polyfills, `eval` and all, into the
+// first-load bundle of the public schedule (the CSP report-only pass, issue
+// #718). A waiver's link is a capability (`src/lib/capabilities.ts`).
 
 /** Any referral-flagged "yes" needs physician review; fails closed (medical.ts). */
 export function needsMedicalReview(answers: MedicalAnswers): boolean {
@@ -668,7 +662,6 @@ export function bookingRecordLapsed(
  *
  * - `none`: nothing stands and no link is out.
  * - `awaiting_signature`: a link is out and unsigned.
- * - `link_expired`: a link went out and ran past its life unsigned.
  * - `signed`: a clean signature (or a cleared referral) that stands.
  * - `lapsed`: signed here before, and the signature no longer stands (aged
  *   out, against changed terms, or replaced by a fresh link). Sign again.
@@ -679,7 +672,6 @@ export function bookingRecordLapsed(
 export type WaiverStanding =
   | "none"
   | "awaiting_signature"
-  | "link_expired"
   | "signed"
   | "lapsed"
   | "guardian_missing"
@@ -809,7 +801,7 @@ export function shopWaiverStanding(input: {
   if (hold) {
     const at = new Date(signatureTime(hold));
     // The word is the record's own standing, read through the one derivation.
-    return waiverStanding(hold, now) === "medical_not_cleared" && hold.medicalClearanceDeclinedAt
+    return waiverStanding(hold) === "medical_not_cleared" && hold.medicalClearanceDeclinedAt
       ? {
           state: "medical_not_cleared",
           at,
@@ -872,24 +864,17 @@ export function shopWaiverStanding(input: {
 /** What {@link waiverStanding} can say of one record, without the diver's other evidence. */
 export type RecordWaiverStanding = Extract<
   WaiverStanding,
-  | "none"
-  | "awaiting_signature"
-  | "link_expired"
-  | "signed"
-  | "medical_review"
-  | "medical_not_cleared"
+  "none" | "awaiting_signature" | "signed" | "medical_review" | "medical_not_cleared"
 >;
 
 /**
  * **One record's standing**, from the record alone (issue #2705). Callers hand
  * in the record a resolver already chose (`effectiveWaiverForBooking`,
- * `effectiveReleaseForRiderSeat`), so currency is not asked again here; an
- * unsigned link fails closed once its life runs out.
+ * `effectiveReleaseForRiderSeat`), so currency is not asked again here. An
+ * unsigned release waits for its signature: it has no clock of its own, the
+ * link that opens it does.
  */
-export function waiverStanding(
-  record: WaiverRecord | null,
-  now: Date = nowDate(),
-): RecordWaiverStanding {
+export function waiverStanding(record: WaiverRecord | null): RecordWaiverStanding {
   if (!record) return "none";
   if (isCleanCompletion(record)) return "signed";
   // A refusal is not a third kind of pending. It blocks exactly as the hold
@@ -899,7 +884,7 @@ export function waiverStanding(
   if (isUnclearedReferral(record)) {
     return record.medicalClearanceDeclinedAt ? "medical_not_cleared" : "medical_review";
   }
-  return record.expiresAt <= now ? "link_expired" : "awaiting_signature";
+  return "awaiting_signature";
 }
 
 /**
@@ -945,21 +930,22 @@ export function seatWaiverStanding(input: {
   ownLapsed: boolean;
   /** Any release of this person failed its seal (`personSealFailed`, issue #3885). */
   sealFailed?: boolean;
-  now?: Date;
 }): SeatWaiverStanding {
-  const now = input.now ?? nowDate();
-  const word = waiverStanding(input.effective, now);
+  const word = waiverStanding(input.effective);
   // A changed release reads as what it is, never "Signed" beside the hold
   // (dock review of #3885). The next step is a fresh link, or the one already
   // out if the desk has sent it.
   if (input.sealFailed || input.effective?.integrityValid === false) {
-    const own = waiverStanding(input.own, now);
-    const sent = own === "awaiting_signature" || own === "link_expired";
-    return { standing: "seal_failed", control: sent ? own : "seal_failed", refusalRetired: false };
+    const own = waiverStanding(input.own);
+    return {
+      standing: "seal_failed",
+      control: own === "awaiting_signature" ? own : "seal_failed",
+      refusalRetired: false,
+    };
   }
   const refusalRetired = word === "medical_not_cleared" && Boolean(input.effective?.supersededAt);
   if (refusalRetired) {
-    const own = waiverStanding(input.own, now);
+    const own = waiverStanding(input.own);
     return {
       standing: word,
       control: own === "signed" && input.ownLapsed ? "lapsed" : own,

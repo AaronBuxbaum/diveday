@@ -79,7 +79,7 @@ export async function boardEveryDiverAndNoCrew(
     // state we want anyway.
     const issued = await issueWaiverRequest(db, { shopId, bookingId: seat.id });
     if (issued.ok) {
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: seat.fullName,
         agreed: true,
         medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

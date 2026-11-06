@@ -727,7 +727,7 @@ describe("peopleWhoDivedBefore", () => {
     });
     const issued = await issueWaiverRequest(ctx.db, { shopId: ctx.shop.id, bookingId });
     if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
-    const signed = await completeWaiver(ctx.db, issued.token, {
+    const signed = await completeWaiver(ctx.db, issued.key, {
       signerName: "Nadia Twoday",
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

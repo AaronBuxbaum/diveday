@@ -49,7 +49,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: FIRST,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers(...first),
@@ -61,7 +61,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: secondAt,
     });
     if (!again.ok) throw new Error("expected a fresh person-scoped link");
-    await completeWaiver(db, again.token, {
+    await completeWaiver(db, again.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers(...second),
@@ -171,7 +171,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: firstAt,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers("q3"),
@@ -185,7 +185,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: secondAt,
     });
     if (!again.ok) throw new Error("expected a fresh person-scoped link");
-    await completeWaiver(db, again.token, {
+    await completeWaiver(db, again.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers("q3"),
@@ -220,7 +220,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: firstAt,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers("q3"),
@@ -234,7 +234,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: secondAt,
     });
     if (!again.ok) throw new Error("expected a fresh person-scoped link");
-    await completeWaiver(db, again.token, {
+    await completeWaiver(db, again.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers("q3"),
@@ -271,7 +271,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: FIRST,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers("q3"),
@@ -298,7 +298,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: SECOND,
     });
     if (!again.ok) throw new Error("expected a fresh person-scoped link");
-    await completeWaiver(db, again.token, {
+    await completeWaiver(db, again.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers("q3"),
@@ -471,7 +471,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: firstAt,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers("q3"),
@@ -485,7 +485,7 @@ describe("a physician's letter that predates a re-signed referral", () => {
       now: secondAt,
     });
     if (!again.ok) throw new Error("expected a fresh person-scoped link");
-    await completeWaiver(db, again.token, {
+    await completeWaiver(db, again.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: answers("q3"),

@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { nowDate } from "@/lib/clock";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { formBuddyTeam } from "./buddy-teams";
@@ -153,7 +152,6 @@ describe("one diver's own record export (issue #726)", () => {
     const template = await getCurrentWaiverTemplate(db, shop.id);
     if (!template) throw new Error("demo shop has no waiver template");
 
-    const token = createWaiverToken();
     await db.insert(waiverRecords).values({
       shopId: shop.id,
       bookingId: follower.bookingId,
@@ -163,8 +161,6 @@ describe("one diver's own record export (issue #726)", () => {
       templateVersion: template.version,
       templateBody: template.body,
       status: "completed",
-      tokenHash: hashWaiverToken(token),
-      expiresAt: new Date(nowDate().getTime() + 60 * 60 * 1000),
       signedName: follower.personName,
       signatureMethod: "typed_consent",
       consentedAt: nowDate(),

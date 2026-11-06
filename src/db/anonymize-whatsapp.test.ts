@@ -162,8 +162,6 @@ describe("anonymizeDiver — WhatsApp (issue #1721)", () => {
         templateTitle: "Liability release",
         templateVersion: 1,
         templateBody: "the text as it stood",
-        tokenHash: "wamid-forget-token-hash",
-        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
         deliveryProviderMessageId: wamid("w"),
       })
       .returning({ id: waiverRecords.id });

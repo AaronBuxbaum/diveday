@@ -91,7 +91,6 @@ describe("roster changes and incident reports on the departure log", () => {
       status: "pending",
       signedAt: null,
       completedAt: null,
-      expiresAt: new Date("2026-08-05T09:00:00.000Z"),
     });
     const at = (generatedAt: Date) =>
       buildIncidentExport(
@@ -112,21 +111,6 @@ describe("roster changes and incident reports on the departure log", () => {
     const after = at(new Date("2026-08-06T20:00:00.000Z"));
     expect(after.contentHash).toBe(before.contentHash);
     expect(after.roster[0]?.waiver?.state).toBe("awaiting_signature");
-    // Lapsed before the boat was due out (12:45): expired, however late it prints.
-    const lapsed = buildIncidentExport(
-      baseInput({
-        diverEvidence: [
-          {
-            bookingId: "b1",
-            certifications: [],
-            specialtyCertifications: [],
-            nitroxCertifications: [],
-            waiver: { ...pending, expiresAt: new Date("2026-08-04T12:44:00.000Z") },
-          },
-        ],
-      }),
-    );
-    expect(lapsed.roster[0]?.waiver?.state).toBe("expired");
   });
 
   it("seals version 4 by default, names it, and never matches an earlier code", () => {

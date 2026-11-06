@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyMedicalAnswers, findQuestionnaireVersion, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
+import { mintCapability } from "./capabilities";
 import { bookings, people, shops, waiverRecords } from "./schema";
 import { listSignedWaiversByPerson } from "./waivers-audit";
 import {
@@ -12,6 +13,7 @@ import {
   recordBookingEmergencyContact,
   recordWaiverDraft,
   staleWaiverRecordForToken,
+  waiverLinkDoor,
 } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import {
@@ -45,12 +47,12 @@ describe("waiver records (in-memory PGlite)", () => {
       medicalAnswers: medicalReferralAnswers,
       now,
     };
-    expect(await completeWaiver(db, issued.token, input)).toEqual({
+    expect(await completeWaiver(db, issued.key, input)).toEqual({
       ok: true,
       status: "medical_review",
       idempotent: false,
     });
-    expect(await completeWaiver(db, issued.token, input)).toEqual({
+    expect(await completeWaiver(db, issued.key, input)).toEqual({
       ok: true,
       status: "medical_review",
       idempotent: true,
@@ -67,7 +69,7 @@ describe("waiver records (in-memory PGlite)", () => {
       medicalAnswers.responses[question.id] = false;
     }
     expect(
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers,
@@ -94,7 +96,7 @@ describe("waiver records (in-memory PGlite)", () => {
     if (!retired) throw new Error("v2 must stay readable for already-signed records");
 
     expect(
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: emptyMedicalAnswers(retired),
@@ -103,10 +105,10 @@ describe("waiver records (in-memory PGlite)", () => {
     ).toEqual({ ok: false, reason: "invalid_medical" });
     // Refused before the record was touched, like every other refusal here:
     // the diver comes back to a link they can still sign under v3.
-    expect(await getWaiverForToken(db, issued.token, now)).toMatchObject({ state: "available" });
+    expect(await getWaiverForToken(db, issued.key, now)).toMatchObject({ state: "available" });
 
     expect(
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -130,7 +132,7 @@ describe("waiver records (in-memory PGlite)", () => {
     if (!issued.ok) throw new Error("expected a waiver link");
 
     expect(
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: "Somebody Else",
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -138,10 +140,10 @@ describe("waiver records (in-memory PGlite)", () => {
       }),
     ).toEqual({ ok: false, reason: "name_mismatch" });
     // Refused before the record was touched: the diver can still sign.
-    expect(await getWaiverForToken(db, issued.token, now)).toMatchObject({ state: "available" });
+    expect(await getWaiverForToken(db, issued.key, now)).toMatchObject({ state: "available" });
 
     expect(
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -161,7 +163,7 @@ describe("waiver records (in-memory PGlite)", () => {
     if (!issued.ok) throw new Error("expected a waiver link");
 
     expect(
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: "  jose diaz ",
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -177,7 +179,7 @@ describe("emergency contact captured with the waiver", () => {
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
 
-    const outcome = await completeWaiver(db, issued.token, {
+    const outcome = await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -203,7 +205,7 @@ describe("emergency contact captured with the waiver", () => {
 
     // The page refuses this shape before it gets here; the writer refuses it
     // again, because a half pair reaching the record is the whole hazard.
-    const outcome = await completeWaiver(db, issued.token, {
+    const outcome = await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -227,7 +229,7 @@ describe("emergency contact captured with the waiver", () => {
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
 
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -494,7 +496,7 @@ describe("an emergency contact on a held seat", () => {
       now,
     });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-    await completeWaiver(ctx.db, issued.token, {
+    await completeWaiver(ctx.db, issued.key, {
       signerName: ctx.person.fullName,
       agreed: true,
       medicalAnswers,
@@ -532,8 +534,8 @@ describe("an emergency contact on a held seat", () => {
   });
 
   it("does not land a contact typed into the waiver onto the matched person", async () => {
-    // A link issued before the seat was held: the signature is refused whole,
-    // contact and all (issue #2125).
+    // A key made before the seat was held: the signature is refused whole,
+    // contact and all (issue #2125), and the release no longer opens.
     const ctx = await waiverContext();
     const issued = await issueWaiverRequest(ctx.db, {
       shopId: ctx.shop.id,
@@ -543,14 +545,14 @@ describe("an emergency contact on a held seat", () => {
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
     const { db, person, booking } = await heldSeat(ctx);
     expect(
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
         emergencyContact: { name: "Someone Else", phone: "555-0123" },
         now,
       }),
-    ).toEqual({ ok: false, reason: "identity_unconfirmed" });
+    ).toEqual({ ok: false, reason: "unavailable" });
     await expect(contactOnFile(db, booking.personId)).resolves.toEqual({
       name: "Kept Contact",
       phone: "555-0099",
@@ -590,9 +592,9 @@ describe("a release on a held seat (issue #2125)", () => {
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
     await hold(db, booking.id);
 
-    expect((await getWaiverForToken(db, issued.token, now)).state).toBe("held");
+    expect((await getWaiverForToken(db, issued.key, now)).state).toBe("unavailable");
     expect(
-      await recordWaiverDraft(db, issued.token, {
+      await recordWaiverDraft(db, issued.key, {
         signerName: person.fullName,
         acknowledged: true,
         medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -600,9 +602,9 @@ describe("a release on a held seat (issue #2125)", () => {
       }),
     ).toBe(false);
     // Even signed under the matched person's own name.
-    expect(await completeWaiver(db, issued.token, signature(person.fullName))).toEqual({
+    expect(await completeWaiver(db, issued.key, signature(person.fullName))).toEqual({
       ok: false,
-      reason: "identity_unconfirmed",
+      reason: "unavailable",
     });
 
     // Confirmed, the same link signs.
@@ -610,7 +612,7 @@ describe("a release on a held seat (issue #2125)", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: null, identityBookedAs: null })
       .where(eq(bookings.id, booking.id));
-    expect(await completeWaiver(db, issued.token, signature(person.fullName))).toMatchObject({
+    expect(await completeWaiver(db, issued.key, signature(person.fullName))).toMatchObject({
       ok: true,
     });
   });
@@ -619,21 +621,27 @@ describe("a release on a held seat (issue #2125)", () => {
 describe("a bearer that names nothing opens nothing", () => {
   it("treats an empty token as unavailable at every door, never as a match", async () => {
     const { db } = await waiverContext();
-    expect(await getWaiverForToken(db, "", now)).toEqual({ state: "unavailable" });
+    expect(await waiverLinkDoor(db, "", { now })).toBeNull();
     expect(await claimCounterLink(db, "", now)).toBeNull();
     expect(await staleWaiverRecordForToken(db, "", now)).toBeNull();
   });
 
-  it("refuses to sign on a token that was never issued, and records nothing", async () => {
-    const { db, person } = await waiverContext();
+  it("refuses to sign on a token that was never issued, or a key this module never made", async () => {
+    const { db, person, shop } = await waiverContext();
+    expect(await waiverLinkDoor(db, "not-a-real-token", { now })).toBeNull();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id, now });
+    if (!issued.ok || issued.key.kind !== "release") throw new Error("expected a release link");
+    // Every id the real key carries, as a server action's arguments would.
+    const forged = { ...issued.key };
     expect(
-      await completeWaiver(db, "not-a-real-token", {
+      await completeWaiver(db, forged, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
         now,
       }),
     ).toEqual({ ok: false, reason: "unavailable" });
+    expect((await getWaiverForToken(db, issued.key, now)).state).toBe("available");
   });
 
   it("refuses a signature that was not agreed to, leaving the release open", async () => {
@@ -641,14 +649,14 @@ describe("a bearer that names nothing opens nothing", () => {
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
     expect(
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: person.fullName,
         agreed: false,
         medicalAnswers: clearAnswers,
         now,
       }),
     ).toEqual({ ok: false, reason: "invalid_signature" });
-    expect((await getWaiverForToken(db, issued.token, now)).state).toBe("available");
+    expect((await getWaiverForToken(db, issued.key, now)).state).toBe("available");
   });
 
   it("refuses a signature on a release whose seat is held until the desk confirms who it is", async () => {
@@ -659,48 +667,51 @@ describe("a bearer that names nothing opens nothing", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: now, identityBookedAs: "Someone else" })
       .where(eq(bookings.id, booking.id));
-    const outcome = await completeWaiver(db, issued.token, {
+    const outcome = await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
       now,
     });
-    expect(outcome).toEqual({ ok: false, reason: "identity_unconfirmed" });
+    expect(outcome).toEqual({ ok: false, reason: "unavailable" });
   });
 
-  it("hands a stale link's context only to the seat's own holder, and never from a previous holder's link", async () => {
-    const { db, shop, booking } = await waiverContext();
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!issued.ok) throw new Error("expected a waiver link");
-    expect((await staleWaiverRecordForToken(db, issued.token, now))?.id).toBe(issued.recordId);
-    const [stranger] = (
-      await db.select({ id: people.id }).from(people).where(eq(people.shopId, shop.id))
-    ).filter((row) => row.id !== booking.personId);
-    if (!stranger) throw new Error("seed people missing");
-    await db.update(bookings).set({ personId: stranger.id }).where(eq(bookings.id, booking.id));
-    expect(await staleWaiverRecordForToken(db, issued.token, now)).toBeNull();
-  });
-
-  it("treats a release with no seat as stale only once superseded or expired, never while live", async () => {
-    const { db, shop, booking } = await waiverContext();
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!issued.ok) throw new Error("expected a waiver link");
-    await db
-      .update(waiverRecords)
-      .set({ bookingId: null })
-      .where(eq(waiverRecords.id, issued.recordId));
-    const [live] = await db
-      .select({ expiresAt: waiverRecords.expiresAt })
-      .from(waiverRecords)
-      .where(eq(waiverRecords.id, issued.recordId));
-    if (!live) throw new Error("record missing");
-    expect(await staleWaiverRecordForToken(db, issued.token, now)).toBeNull();
-    const after = new Date(live.expiresAt.getTime() + 1000);
-    expect((await staleWaiverRecordForToken(db, issued.token, after))?.id).toBe(issued.recordId);
+  it("treats a release link as stale only once revoked, expired or its release superseded", async () => {
+    const { db, shop, person } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id, now });
+    if (!issued.ok || issued.key.kind !== "release") throw new Error("expected a release link");
+    const { token } = issued.key;
+    expect(await staleWaiverRecordForToken(db, token, now)).toBeNull();
+    const after = new Date(issued.key.expiresAt.getTime() + 1000);
+    expect((await staleWaiverRecordForToken(db, token, after))?.id).toBe(issued.recordId);
     await db
       .update(waiverRecords)
       .set({ supersededAt: now })
       .where(eq(waiverRecords.id, issued.recordId));
-    expect((await staleWaiverRecordForToken(db, issued.token, now))?.id).toBe(issued.recordId);
+    expect((await staleWaiverRecordForToken(db, token, now))?.id).toBe(issued.recordId);
+  });
+
+  it("never treats a seat's release, or a signed one, as a stale release link", async () => {
+    const { db, shop, booking, person } = await waiverContext();
+    const opened = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!opened.ok) throw new Error("expected the seat's release");
+    const forged = await mintCapability(db, {
+      purpose: "release_link",
+      shopId: shop.id,
+      subjectId: opened.recordId,
+      now,
+    });
+    const later = new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000);
+    expect(await staleWaiverRecordForToken(db, forged.token, later)).toBeNull();
+
+    const own = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id, now });
+    if (!own.ok || own.key.kind !== "release") throw new Error("expected a release link");
+    await completeWaiver(db, own.key, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+    expect(await staleWaiverRecordForToken(db, own.key.token, later)).toBeNull();
   });
 });

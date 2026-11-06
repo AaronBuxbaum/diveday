@@ -26,7 +26,7 @@ describe("person-scoped waiver requests after booking referrals", () => {
       now: cleanAt,
     });
     if (!first.ok) throw new Error("expected an initial person-scoped link");
-    await completeWaiver(db, first.token, {
+    await completeWaiver(db, first.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -40,7 +40,7 @@ describe("person-scoped waiver requests after booking referrals", () => {
       now: referralAt,
     });
     if (!referral.ok) throw new Error("expected a booking-scoped referral link");
-    await completeWaiver(db, referral.token, {
+    await completeWaiver(db, referral.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -54,7 +54,7 @@ describe("person-scoped waiver requests after booking referrals", () => {
       now: cleanReleaseAt,
     });
     if (!laterRelease.ok) throw new Error("expected a new person-scoped clean-release link");
-    await completeWaiver(db, laterRelease.token, {
+    await completeWaiver(db, laterRelease.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -70,7 +70,7 @@ describe("person-scoped waiver requests after booking referrals", () => {
     const { db, shop, booking, person } = await waiverContext();
     const first = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id, now });
     if (!first.ok) throw new Error("expected an initial person-scoped link");
-    await completeWaiver(db, first.token, {
+    await completeWaiver(db, first.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -84,7 +84,7 @@ describe("person-scoped waiver requests after booking referrals", () => {
       now: referralAt,
     });
     if (!referral.ok) throw new Error("expected a booking-scoped referral link");
-    await completeWaiver(db, referral.token, {
+    await completeWaiver(db, referral.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -120,7 +120,7 @@ describe("person-scoped waiver requests after booking referrals", () => {
     const { db, shop, booking, person } = await waiverContext();
     const first = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id, now });
     if (!first.ok) throw new Error("expected an initial person-scoped link");
-    await completeWaiver(db, first.token, {
+    await completeWaiver(db, first.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -134,7 +134,7 @@ describe("person-scoped waiver requests after booking referrals", () => {
       now: referralAt,
     });
     if (!referral.ok) throw new Error("expected a booking-scoped referral link");
-    await completeWaiver(db, referral.token, {
+    await completeWaiver(db, referral.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,

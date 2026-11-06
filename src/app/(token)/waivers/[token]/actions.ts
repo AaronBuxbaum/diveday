@@ -53,8 +53,8 @@ export async function emailFreshWaiverLinkAction(token: string) {
   // it is, so neither a raw bearer token nor a booking id is ever held as a
   // literal key.
   const stale = await staleWaiverRecordForToken(db, token);
-  const inboxKey = stale?.bookingId
-    ? rateLimitKey("waiver-link-resend", "booking", stale.bookingId)
+  const inboxKey = stale
+    ? rateLimitKey("waiver-link-resend", "person", stale.personId)
     : rateLimitKey("waiver-link-resend", "token", token);
   if (!(await checkRateLimit(inboxKey, RATE_LIMITS.waiverLinkResendByBooking)).allowed) {
     redirect(`/waivers/${token}?sent=rate`);

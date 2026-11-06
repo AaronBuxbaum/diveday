@@ -363,9 +363,7 @@ export async function seedCertGates(
   // everything else — including for the Open Water student, whose one remaining
   // blocker is then exactly the site gate the carve-out let her book past.
   const signedName = await signingNames(db, shopId);
-  let gateWaiverToken = 0;
   const waiverRows = insertedBookings.map((booking) => {
-    gateWaiverToken++;
     const createdAt = nextCreatedAt();
     return {
       shopId,
@@ -376,11 +374,6 @@ export async function seedCertGates(
       templateVersion: ctx.waiverTemplate.version,
       templateGeneration: ctx.waiverTemplate.materialGeneration,
       templateBody: ctx.waiverTemplate.body,
-      // Unique per shop row, so a fleet of minted demo shops never collides on
-      // the table's global tokenHash constraint.
-      tokenHash: `seed-cert-gate-waiver-${shopId}-${gateWaiverToken}`,
-      // Comfortably past the furthest departure seeded here (day 32).
-      expiresAt: at(60, 12),
       createdAt,
       ...paperRelease(createdAt, instructorId, signedName(booking.personId)),
     };
