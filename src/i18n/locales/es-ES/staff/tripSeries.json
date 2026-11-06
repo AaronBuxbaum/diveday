@@ -14,6 +14,8 @@
     "applyDescription": "Copia el título, la descripción, la capacidad, los precios y el plan de inmersión de esta fecha a todas las próximas. Cada fecha conserva su hora, tripulación, listado y condiciones.",
     "applyDescriptionWithCrew": "Copia el título, la descripción, la capacidad, los precios y el plan de inmersión de esta fecha a todas las próximas. Cada fecha conserva su hora, listado y condiciones.",
     "standingCrewLine": "{names} {count, plural, one {tripula} other {tripulan}} todas las fechas.",
+    "yardLeftOff": "Fuera del calendario porque el barco estará fuera de servicio: {dates}.",
+    "yardLeftOffMore": "{count} más",
     "standingCrew": "Asignar a {names} a todas las próximas fechas, y a cada fecha nueva cuando se abra",
     "stopRepeating": "Dejar de repetir",
     "startRepeating": "Volver a repetir",
