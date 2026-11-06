@@ -163,6 +163,41 @@ describe("account tokens (in-memory PGlite)", () => {
     });
   });
 
+  it.each(["active", "disabled"] as const)(
+    "an invite token spent against a %s account sets nothing and stays unspent (issue #3997)",
+    async (status) => {
+      // The invite's whole point is turning an `invited` account into a signed-in one. Against an
+      // account that is already something else it would be a password-setting link, so the claim
+      // refuses it outright and burns nothing.
+      const { db } = ctx;
+      const userAccountId = await seededAccountId(db);
+      await db
+        .update(userAccounts)
+        .set({ status: "invited" })
+        .where(eq(userAccounts.id, userAccountId));
+      const issued = await issueAccountToken(db, { userAccountId, purpose: "invite" });
+      await db.update(userAccounts).set({ status }).where(eq(userAccounts.id, userAccountId));
+
+      expect(await consumeAccountToken(db, { token: issued.token, purpose: "invite" })).toBeNull();
+      expect(await wasAccountTokenConsumed(db, { token: issued.token, purpose: "invite" })).toBe(
+        false,
+      );
+    },
+  );
+
+  it("a reset or verification token still works on an active account", async () => {
+    const { db } = ctx;
+    const userAccountId = await seededAccountId(db);
+    const reset = await issueAccountToken(db, { userAccountId, purpose: "password_reset" });
+    const verify = await issueAccountToken(db, { userAccountId, purpose: "email_verification" });
+    expect(
+      await consumeAccountToken(db, { token: reset.token, purpose: "password_reset" }),
+    ).toEqual({ userAccountId });
+    expect(
+      await consumeAccountToken(db, { token: verify.token, purpose: "email_verification" }),
+    ).toEqual({ userAccountId });
+  });
+
   /**
    * Adversarial, since the tokens moved onto `capabilities` (ADR
    * 20261105-capabilities-shop-id-nullable): every purpose's token is refused

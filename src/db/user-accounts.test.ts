@@ -5,6 +5,7 @@ import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { people, shops, userAccounts } from "./schema";
 import {
+  activateStaffAccount,
   dismissOrientation,
   getAccountContact,
   getAccountIdForPerson,
@@ -96,5 +97,40 @@ describe("account-lifecycle mail language (docs ADR 20260731-per-person-notifica
 
     const contact = await getAccountContact(db, account.id);
     expect(contact?.defaultLocale).toBe("es-ES");
+  });
+});
+
+describe("activateStaffAccount (issue #3997)", () => {
+  async function accountWith(db: AppDb, status: "invited" | "active" | "disabled") {
+    const personId = await seededPersonId(db, DEV_STAFF_LOGINS.captain.email);
+    const [account] = await db
+      .update(userAccounts)
+      .set({ status, hashedPassword: "original-hash" })
+      .where(eq(userAccounts.personId, personId))
+      .returning({ id: userAccounts.id });
+    if (!account) throw new Error("seeded captain account missing");
+    return account.id;
+  }
+
+  async function read(db: AppDb, id: string) {
+    const [row] = await db
+      .select({ status: userAccounts.status, hashedPassword: userAccounts.hashedPassword })
+      .from(userAccounts)
+      .where(eq(userAccounts.id, id));
+    return row;
+  }
+
+  it("sets the password and activates an invited account", async () => {
+    const { db } = ctx;
+    const id = await accountWith(db, "invited");
+    expect(await activateStaffAccount(db, id, "chosen-hash")).toBe(true);
+    expect(await read(db, id)).toEqual({ status: "active", hashedPassword: "chosen-hash" });
+  });
+
+  it.each(["active", "disabled"] as const)("changes nothing on a %s account", async (status) => {
+    const { db } = ctx;
+    const id = await accountWith(db, status);
+    expect(await activateStaffAccount(db, id, "attacker-hash")).toBe(false);
+    expect(await read(db, id)).toEqual({ status, hashedPassword: "original-hash" });
   });
 });
