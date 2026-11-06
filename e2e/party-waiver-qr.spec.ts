@@ -24,9 +24,9 @@ signedInAsOwner();
 
 const diver = diverTranslator("en-US");
 
-/** The first phone to open a counter code says "this one" (attacker review S1). */
+/** A counter code opens straight to its form on any phone (#4064). */
 async function openCounterCode(phone: Page) {
-  await phone.getByRole("button", { name: "Open the waiver here" }).click();
+  await expect(phone.getByLabel("Type your full name")).toBeVisible();
 }
 
 test("a minor scans their own waiver on a signed-out phone and a guardian signs", async ({
@@ -66,16 +66,14 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     });
     await openCounterCode(phone);
     await expect(phone.getByRole("heading", { name: "Parent or guardian" })).toBeVisible();
-    // The code opens on the first phone only (attacker review S1).
+    // Any phone opens the code all departure day, say after a dead battery (#4064).
     const otherPhone = await browser.newContext({
       baseURL: workerBaseURL,
       storageState: { cookies: [], origins: [] },
     });
     const second = makeActivitySafe(await otherPhone.newPage());
     await second.goto(url.pathname);
-    await expect(
-      second.getByRole("heading", { name: "This link is open on another phone" }),
-    ).toBeVisible();
+    await expect(second.getByRole("heading", { name: "Parent or guardian" })).toBeVisible();
     await otherPhone.close();
     await dialog.getByRole("button", { name: "Close" }).click();
     await phone.getByLabel("Type your full name").fill("Sky Lagoon");
