@@ -937,14 +937,15 @@ async function paintWholeDocument(page: Page) {
         // waited on forever, it simply reaches the tripwire at the end of this
         // function, which is the loud failure this all exists to produce.
         let revealStamped = true;
-        if (document.querySelector(`[${revealMarkerAttribute}]`) !== null) {
+        const reveals = Array.from(document.querySelectorAll(`[${revealMarkerAttribute}]`));
+        if (reveals.length > 0) {
           while (
-            !document.documentElement.hasAttribute(revealReadyAttribute) &&
+            reveals.some((element) => !element.hasAttribute(revealReadyAttribute)) &&
             performance.now() < deadline
           ) {
             await settle();
           }
-          revealStamped = document.documentElement.hasAttribute(revealReadyAttribute);
+          revealStamped = reveals.every((element) => element.hasAttribute(revealReadyAttribute));
         }
         await scrollThrough();
 

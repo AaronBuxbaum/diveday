@@ -3,9 +3,11 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { cleanup, render } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MarketingHeroMotion,
+  MarketingReveal,
   MarketingSectionMotion,
   REVEAL_MARKER_ATTRIBUTE,
   REVEAL_READY_ATTRIBUTE,
@@ -78,7 +80,6 @@ function placeSections(tops: number[]) {
 }
 
 beforeEach(() => {
-  document.documentElement.removeAttribute(REVEAL_READY_ATTRIBUTE);
   document.body.innerHTML = "";
   // A 800px viewport, and no reader asking for stillness. Both are read at
   // mount and both change which branch the effect takes.
@@ -92,6 +93,36 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+describe("each reveal's hydration signal", () => {
+  it.each([
+    { name: "wrapper", Reveal: MarketingReveal },
+    { name: "sections", Reveal: MarketingSectionMotion },
+  ])("$name carries its own server marker and stamps only its mounted instance", ({ Reveal }) => {
+    const server = document.createElement("div");
+    server.innerHTML = renderToStaticMarkup(
+      <Reveal>
+        <p>A reef chapter</p>
+      </Reveal>,
+    );
+    document.body.append(server);
+    const waiting = server.querySelector(`[${REVEAL_MARKER_ATTRIBUTE}]`);
+    expect(waiting).not.toBeNull();
+    expect(waiting).not.toHaveAttribute(REVEAL_READY_ATTRIBUTE);
+
+    const { container } = render(
+      <Reveal>
+        <p>Another chapter</p>
+      </Reveal>,
+    );
+    expect(container.querySelector(`[${REVEAL_MARKER_ATTRIBUTE}]`)).toHaveAttribute(
+      REVEAL_READY_ATTRIBUTE,
+      "",
+    );
+    // A previously hydrated reveal cannot release a sibling still waiting for its script.
+    expect(waiting).not.toHaveAttribute(REVEAL_READY_ATTRIBUTE);
+  });
 });
 
 describe("the marketing section reveal", () => {
@@ -267,9 +298,12 @@ describe("the signal the camera waits on", () => {
     stubIntersectionObserver();
     placeSections([1400]);
 
-    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(false);
+    expect(document.querySelector(`[${REVEAL_READY_ATTRIBUTE}]`)).toBeNull();
     render(<MarketingSectionMotion />);
-    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+    expect(document.querySelector(`[${REVEAL_MARKER_ATTRIBUTE}]`)).toHaveAttribute(
+      REVEAL_READY_ATTRIBUTE,
+      "",
+    );
   });
 
   /**
@@ -283,7 +317,10 @@ describe("the signal the camera waits on", () => {
 
     render(<MarketingSectionMotion />);
 
-    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+    expect(document.querySelector(`[${REVEAL_MARKER_ATTRIBUTE}]`)).toHaveAttribute(
+      REVEAL_READY_ATTRIBUTE,
+      "",
+    );
   });
 
   it("says so for a reader who asked for no motion", () => {
@@ -297,7 +334,10 @@ describe("the signal the camera waits on", () => {
 
     render(<MarketingSectionMotion />);
 
-    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+    expect(document.querySelector(`[${REVEAL_MARKER_ATTRIBUTE}]`)).toHaveAttribute(
+      REVEAL_READY_ATTRIBUTE,
+      "",
+    );
   });
 });
 
@@ -308,9 +348,9 @@ describe("the capture waits for that signal, and bounds every pass", () => {
   it("waits for the page to finish deciding before it scrolls past", async () => {
     const spec = await readSpec();
     // Gated on the server-rendered marker, so no other surface pays the wait.
-    expect(spec).toMatch(/document\.querySelector\(`\[\$\{revealMarkerAttribute\}\]`\) !== null/);
+    expect(spec).toContain("document.querySelectorAll(`[${revealMarkerAttribute}]`)");
     expect(spec).toMatch(
-      /!document\.documentElement\.hasAttribute\(revealReadyAttribute\) &&\s*performance\.now\(\) < deadline/,
+      /reveals\.some\(\(element\) => !element\.hasAttribute\(revealReadyAttribute\)\) &&\s*performance\.now\(\) < deadline/,
     );
   });
 
