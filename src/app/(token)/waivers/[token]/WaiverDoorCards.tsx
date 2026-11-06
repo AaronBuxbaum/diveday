@@ -8,7 +8,7 @@ import { noticeRole } from "@/components/ui/tone";
 import type { Shop } from "@/db/schema";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { emailFreshWaiverLinkAction } from "./actions";
+import { claimCounterLinkAction, emailFreshWaiverLinkAction } from "./actions";
 
 /**
  * What the rescue send actually did, as one-word codes on the URL — the
@@ -114,4 +114,37 @@ export function HeldWaiverCard({
  */
 export function UnavailableWaiverLink({ t }: { t: DiverTranslator }) {
   return <DeadLink t={t} />;
+}
+
+/**
+ * **A counter QR not yet opened on any phone** (attacker review S1). The code
+ * opens on one phone only, so the diver says "this one" with a tap; the next
+ * phone to scan it is turned away (`CounterElsewhereCard`).
+ */
+export function CounterClaimCard({ token, t }: { token: string; t: DiverTranslator }) {
+  return (
+    <ExpiredLinkCard
+      wordmark
+      glyph="sent"
+      title={t("waiver.counterClaimTitle")}
+      text={t("waiver.counterClaimBody")}
+    >
+      <form action={claimCounterLinkAction.bind(null, token)}>
+        <SubmitButton pendingLabel={t("words.busy.opening")} className={buttonClass()}>
+          {t("waiver.counterClaimButton")}
+        </SubmitButton>
+      </form>
+    </ExpiredLinkCard>
+  );
+}
+
+/** A counter QR already open on another phone: it opens nothing here. */
+export function CounterElsewhereCard({ t }: { t: DiverTranslator }) {
+  return (
+    <ExpiredLinkCard
+      wordmark
+      title={t("waiver.counterElsewhereTitle")}
+      text={t("waiver.counterElsewhereBody")}
+    />
+  );
 }

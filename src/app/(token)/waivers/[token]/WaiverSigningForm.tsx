@@ -62,6 +62,7 @@ export async function waiverSigningForm({
   completeAction,
   saveAction,
   showLinkExpiry,
+  prefillMedical,
   backHref,
 }: {
   db: AppDb;
@@ -74,6 +75,12 @@ export async function waiverSigningForm({
   saveAction: (formData: FormData) => Promise<void>;
   /** A waiver link runs out; the thread's release is reopened from the thread. */
   showLinkExpiry: boolean;
+  /**
+   * Whether the saved medical answers and alert fill the form. Off on a counter
+   * QR, which any camera can read: the diver answers again on the phone in
+   * their hand (security review S2).
+   */
+  prefillMedical: boolean;
   /** The thread's way back to its checklist; none on the waiver link. */
   backHref?: string;
 }) {
@@ -122,7 +129,7 @@ export async function waiverSigningForm({
   const draftGuardian = record.draftGuardian;
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const { draftResponses, primaryQuestionCount, draftAnsweredFields, draftFollowUpsRemaining } =
-    medicalDraftState(questionnaire, record.draftMedicalAnswers);
+    medicalDraftState(questionnaire, prefillMedical ? record.draftMedicalAnswers : null);
   // The trip this waiver is for (task 42) — named on the page itself so the
   // diver can verify what they're signing for, rather than trusting a link
   // that names only the shop.
@@ -246,7 +253,11 @@ export async function waiverSigningForm({
           {/* Right after the questionnaire, its own heading, optional, and
               not a step on the rail (issue #2960). */}
           <MedicalAlertSection
-            prefill={await medicalAlertPrefill(db, record)}
+            prefill={
+              prefillMedical
+                ? await medicalAlertPrefill(db, record)
+                : { draft: null, earlierAlert: false }
+            }
             minorName={guardianRequired ? (signerOnFile?.fullName ?? null) : null}
             error={
               namedFieldError?.anchor === MEDICAL_ALERT_ANCHOR

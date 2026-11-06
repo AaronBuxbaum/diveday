@@ -3,10 +3,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { people, waiverRecords } from "./schema";
-import { completeWaiver, recordWaiverDraft, waiverLinkDoor } from "./waivers-completion";
+import { completeWaiver, recordWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import * as templates from "./waivers-templates";
-import { clearAnswers, issueCounterLink, waiverContextFor } from "./waivers-test-fixtures";
+import {
+  clearAnswers,
+  issueCounterLink,
+  openOnDevice,
+  waiverContextFor,
+} from "./waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
 const context = waiverContextFor(ctx);
@@ -35,7 +40,7 @@ describe("waiver expiry during validation", () => {
           bookingId: booking.id,
           now: new Date(nowDate().getTime() - 29.5 * MINUTE_MS),
         });
-        const door = await waiverLinkDoor(db, link.token);
+        const door = await openOnDevice(db, link.token);
         if (door?.door !== "counter") throw new Error("counter door missing");
         key = door.key;
         recordId = link.recordId;

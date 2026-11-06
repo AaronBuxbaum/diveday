@@ -1282,6 +1282,12 @@
     "medicalReferralNext": "Your questionnaire requires a physician’s written evaluation before you can dive.",
     "medicalShopReviewNext": "Your medical paperwork still needs review. Contact the shop before you dive.",
     "counterSigned": "Waiver signed",
+    "counterClaimTitle": "Sign your waiver on this phone",
+    "counterClaimBody": "This code opens on one phone only. Once it opens here, no other phone can use it.",
+    "counterClaimButton": "Open the waiver here",
+    "counterElsewhereTitle": "This code is open on another phone",
+    "counterElsewhereBody": "Ask the staff for a fresh code.",
+    "counterAlreadySigned": "This waiver was already signed, so what you just entered was not saved. If an answer has changed, tell the staff.",
     "independentTitle": "Sign your waiver",
     "backToPrep": "Back to your trip prep"
   },

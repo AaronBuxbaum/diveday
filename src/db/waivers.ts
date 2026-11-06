@@ -38,6 +38,7 @@ export {
 export {
   type CompleteWaiverOutcome,
   type CounterWaiverKey,
+  claimCounterLink,
   completeWaiver,
   type EmergencyContactInput,
   type GuardianInput,
@@ -53,6 +54,7 @@ export {
   threadWaiverAwaitsPhysician,
   threadWaiverKey,
   type WaiverKey,
+  type WaiverLinkDoor,
   waiverLinkDoor,
 } from "./waivers-completion";
 export {

@@ -11,13 +11,19 @@ import { bookings, capabilities, people, personRoles, shops, waiverRecords } fro
 import { upcomingTripsWithCounts } from "./trips";
 import {
   type CounterWaiverKey,
+  claimCounterLink,
   completeWaiver,
   getWaiverForToken,
   recordWaiverDraft,
   waiverLinkDoor,
 } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { clearAnswers, issueCounterLink } from "./waivers-test-fixtures";
+import {
+  clearAnswers,
+  issueCounterLink,
+  medicalReferralAnswers,
+  openOnDevice,
+} from "./waivers-test-fixtures";
 
 /**
  * **The counter tablet's waiver link** (`waiver_link`, issue #2743, ADR
@@ -60,8 +66,9 @@ async function counterSeat(fullName = "Dana Counter") {
   return { db, shop, bookingId, personId: seat.personId, fullName, ...link };
 }
 
+/** What the phone that opened the link first sees. */
 async function counterState(token: string, now?: Date) {
-  const door = await waiverLinkDoor(ctx.db, token, now);
+  const door = await openOnDevice(ctx.db, token, now);
   if (door?.door !== "counter") return "closed" as const;
   return (await getWaiverForToken(ctx.db, door.key, now)).state;
 }
@@ -69,7 +76,7 @@ async function counterState(token: string, now?: Date) {
 describe("the waiver_link capability", () => {
   it("opens its seat's release on the counter door, and nothing under any other purpose", async () => {
     const { db, token, recordId } = await counterSeat();
-    const door = await waiverLinkDoor(db, token);
+    const door = await openOnDevice(db, token);
     expect(door).toMatchObject({ door: "counter", key: { kind: "counter", recordId } });
     expect(await counterState(token)).toBe("available");
     for (const purpose of ["courtesy_email_unsubscribe", "shore_alert_confirm"] as const) {
@@ -122,7 +129,7 @@ describe("the waiver_link capability", () => {
 
   it("is spent by the signature: only the receipt, then nothing once it expires", async () => {
     const { db, token, fullName, expiresAt } = await counterSeat();
-    const door = await waiverLinkDoor(db, token);
+    const door = await openOnDevice(db, token);
     if (door?.door !== "counter") throw new Error("counter door missing");
     expect(
       await completeWaiver(db, door.key, {
@@ -137,18 +144,56 @@ describe("the waiver_link capability", () => {
       .where(eq(capabilities.tokenHash, hashBearerToken(token)));
     expect(row?.usedAt).not.toBeNull();
     expect(await counterState(token)).toBe("completed");
-    // The same submit again is the same signature, not a second one.
+    // A second submit is refused, never reported as the first one's signature.
     expect(
       await completeWaiver(db, door.key, {
         signerName: fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
       }),
-    ).toMatchObject({ ok: true, idempotent: true });
+    ).toEqual({ ok: false, reason: "already_signed" });
     expect(
       await recordWaiverDraft(db, door.key, { acknowledged: true, medicalAnswers: clearAnswers }),
     ).toBe(false);
     expect(await counterState(token, expiresAt)).toBe("closed");
+  });
+
+  it("opens on the first phone that claims it and on no other, and that phone can reload (attacker S1)", async () => {
+    const { db, token } = await counterSeat();
+    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_unclaimed" });
+    const device = await claimCounterLink(db, token);
+    if (!device) throw new Error("first claim refused");
+    expect(await claimCounterLink(db, token)).toBeNull();
+    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_elsewhere" });
+    expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toEqual({
+      door: "counter_elsewhere",
+    });
+    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
+    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
+  });
+
+  it("is never claimed once it has expired or been replaced", async () => {
+    const { db, shop, bookingId, token, expiresAt } = await counterSeat();
+    expect(await claimCounterLink(db, token, expiresAt)).toBeNull();
+    await issueCounterLink(db, { shopId: shop.id, bookingId });
+    expect(await claimCounterLink(db, token)).toBeNull();
+    expect(await waiverLinkDoor(db, token)).toBeNull();
+  });
+
+  it("refuses a second signature on a signed release and keeps the first answers (attacker S1)", async () => {
+    const { db, token, fullName, recordId } = await counterSeat();
+    const a = await openOnDevice(db, token);
+    const b = await openOnDevice(db, token);
+    if (a?.door !== "counter" || b?.door !== "counter") throw new Error("counter door missing");
+    const sign = (key: CounterWaiverKey, medicalAnswers: typeof clearAnswers) =>
+      completeWaiver(db, key, { signerName: fullName, agreed: true, medicalAnswers });
+    expect(await sign(a.key, clearAnswers)).toMatchObject({ ok: true, status: "completed" });
+    expect(await sign(b.key, medicalReferralAnswers)).toEqual({
+      ok: false,
+      reason: "already_signed",
+    });
+    const [record] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
+    expect(record?.status).toBe("completed");
   });
 
   it("a spent link on a release still unsigned opens nothing", async () => {
@@ -162,7 +207,7 @@ describe("the waiver_link capability", () => {
 
   it("refuses a signature when the link died between the read and the write, and keeps the release unsigned", async () => {
     const { db, token, fullName, recordId } = await counterSeat();
-    const door = await waiverLinkDoor(db, token);
+    const door = await openOnDevice(db, token);
     if (door?.door !== "counter") throw new Error("counter door missing");
     await db
       .update(capabilities)

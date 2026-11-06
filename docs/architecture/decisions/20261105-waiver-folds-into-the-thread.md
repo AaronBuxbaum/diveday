@@ -29,7 +29,8 @@ readiness credential in a staff clipboard. A party member gets their own thread 
 every act); `party-return.ts` and its cookie are deleted.
 
 **Layer 4 (built): counter tablets sign on a `waiver_link` capability**, a 30-minute once-use row
-naming the release (`waiver_record_id`), spent in the signing transaction. The envelope is deleted.
+naming the release (`waiver_record_id`), spent in the signing transaction. Only the first phone
+to claim it opens it, and a second signature is refused.
 
 **Layer 5 (built): `/waivers/<token>` refuses a seat's release** (`waiverLinkDoor`): no form,
 draft, receipt or doctor's page; its rescue mails the thread link. `/waivers/[token]/doctor` is

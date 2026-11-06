@@ -109,6 +109,16 @@ type CapabilityPolicyFields = SubjectFields & {
    */
   scope: "shop" | "platform";
   /**
+   * `first_device`: the link opens on one device only. The first device that
+   * claims it stores the digest of a secret it keeps in a cookie
+   * (`capabilities.claim_hash`); every other device is refused, the claiming
+   * one can reload. A QR is a URL any camera can read, so this is what keeps a
+   * link shown at a counter to the one phone that scanned it first (attacker
+   * review S1). Absent: the link opens wherever it is carried. The table's
+   * `capabilities_claim_only_when_claimable` check holds every row to it.
+   */
+  claim?: "first_device";
+  /**
    * `never`: the row carries no expiry. An unsubscribe link must keep working
    * for as long as the email it rode in on can be opened, or someone is left
    * unable to stop the mail, silently.
@@ -319,6 +329,7 @@ export const CAPABILITY_POLICY = {
     reissue: "supersedes",
     per: "subject",
     use: "once",
+    claim: "first_device",
   },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;
 
@@ -368,6 +379,11 @@ export function onePerPersonPurposes(): CapabilityPurpose[] {
 
 function purposesWhere(test: (policy: CapabilityPolicy) => boolean): CapabilityPurpose[] {
   return CAPABILITY_PURPOSES.filter((purpose) => test(CAPABILITY_POLICY[purpose]));
+}
+
+/** The purposes the first device to open them claims (`claim: "first_device"`). */
+export function claimablePurposes(): CapabilityPurpose[] {
+  return purposesWhere((policy) => policy.claim === "first_device");
 }
 
 /** The purposes a use spends. */

@@ -497,6 +497,62 @@ export async function spendCapability<P extends CapabilityPurpose>(
 }
 
 /**
+ * Claims a link for the first device that opens it (`claim: "first_device"`):
+ * stores the digest of a fresh secret in one conditional update and returns
+ * the secret, for the device to keep in a cookie, or null for an unknown
+ * token, a wrong purpose, or a link already claimed, spent, revoked or
+ * expired. Two claims at once, one wins.
+ */
+export async function claimCapability(
+  db: DbExecutor,
+  input: { purpose: CapabilityPurpose; token: string; now?: Date },
+): Promise<string | null> {
+  const policy: CapabilityPolicy = CAPABILITY_POLICY[input.purpose];
+  if (policy.claim !== "first_device") throw new Error(`${input.purpose} is not claimed`);
+  const device = createBearerToken();
+  const [row] = await db
+    .update(capabilities)
+    .set({ claimHash: hashBearerToken(device) })
+    .where(
+      and(
+        eq(capabilities.purpose, input.purpose),
+        eq(capabilities.tokenHash, hashBearerToken(input.token)),
+        isNull(capabilities.claimHash),
+        isNull(capabilities.usedAt),
+        unrevokedAndUnexpired(input.now ?? nowDate()),
+      ),
+    )
+    .returning({ id: capabilities.id });
+  return row ? device : null;
+}
+
+/**
+ * Who a claimable link opens for: nobody has claimed it yet (`unclaimed`),
+ * the device holding `device` did (`this_device`), or another one did
+ * (`elsewhere`). Null for a token that names no link of this purpose.
+ */
+export async function capabilityClaim(
+  db: DbExecutor,
+  input: { purpose: CapabilityPurpose; token: string; device: string | undefined },
+): Promise<"unclaimed" | "this_device" | "elsewhere" | null> {
+  const [row] = await db
+    .select({ claimHash: capabilities.claimHash })
+    .from(capabilities)
+    .where(
+      and(
+        eq(capabilities.purpose, input.purpose),
+        eq(capabilities.tokenHash, hashBearerToken(input.token)),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  if (row.claimHash === null) return "unclaimed";
+  return input.device && hashBearerToken(input.device) === row.claimHash
+    ? "this_device"
+    : "elsewhere";
+}
+
+/**
  * Records the shop a spent setup link opened (`spent_by_shop_id`, which the
  * table allows on `shop_setup` only), in the transaction that spent it and
  * created the shop. Returns the request the link was minted for, or null for a

@@ -106,6 +106,7 @@ export default async function PartySeatWaiverPage({
     completeAction: completeMinorWaiver.bind(null, token, seatBookingId, state.record.id),
     saveAction: saveMinorWaiverDraft.bind(null, token, seatBookingId, state.record.id),
     showLinkExpiry: false,
+    prefillMedical: true,
     backHref: panel,
   });
 }

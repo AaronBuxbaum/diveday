@@ -4,7 +4,7 @@ import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
 import { bookingCapabilities, capabilities, people, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { issueCounterLink } from "@/db/waivers-test-fixtures";
+import { claimedDevice, issueCounterLink, openOnDevice } from "@/db/waivers-test-fixtures";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
@@ -64,6 +64,14 @@ const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { issueWaiverRequest } = await import("@/db/waivers");
 const { completeWaiverAction, saveWaiverDraftAction } = await import("./actions");
+
+/** The phone that opened the counter link first, holding its claim cookie. */
+async function onThisPhone(db: Parameters<typeof openOnDevice>[0], token: string) {
+  await openOnDevice(db, token);
+  const device = claimedDevice(token);
+  if (!device) throw new Error("counter link not claimed");
+  cookieJar.set("diveday_counter_device", device);
+}
 
 async function redirectedTo(run: () => Promise<unknown>): Promise<string> {
   try {
@@ -234,6 +242,7 @@ describe("the signing doors", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     const { bookingId } = await bookedSeat("Casey Counter");
     const link = await issueCounterLink(db, { shopId: shop.id, bookingId });
+    await onThisPhone(db, link.token);
     const before = await db
       .select({ id: bookingCapabilities.id })
       .from(bookingCapabilities)
@@ -257,6 +266,10 @@ describe("the signing doors", () => {
     expect(await redirectedTo(() => saveWaiverDraftAction(link.token, form()))).toBe(
       `/waivers/${link.token}?error=unavailable`,
     );
+    // A second Sign is told its answers were not saved (attacker review S1).
+    expect(await redirectedTo(() => completeWaiverAction(link.token, form()))).toBe(
+      `/waivers/${link.token}?error=signed`,
+    );
     const after = await db
       .select({ id: bookingCapabilities.id })
       .from(bookingCapabilities)
@@ -269,6 +282,7 @@ describe("the signing doors", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     const { bookingId } = await bookedSeat("Robin Counter");
     const link = await issueCounterLink(db, { shopId: shop.id, bookingId });
+    await onThisPhone(db, link.token);
     const target = await redirectedTo(() =>
       completeWaiverAction(
         link.token,
@@ -292,6 +306,7 @@ describe("the signing doors", () => {
       vi.mocked(getDb).mockResolvedValue(db);
       const { bookingId, readiness } = await bookedSeat("Taylor Readiness");
       const link = await issueCounterLink(db, { shopId: shop.id, bookingId });
+      await onThisPhone(db, link.token);
       cookieJar.set(cookie, readiness);
       const form = signedForm(shop, { signerName: "Taylor Readiness", acknowledged: "on" });
       form.set(medicalQuestionField("q3"), "yes");

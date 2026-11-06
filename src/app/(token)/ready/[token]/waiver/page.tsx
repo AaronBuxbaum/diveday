@@ -104,6 +104,7 @@ export default async function ThreadWaiverPage({
     completeAction: completeWaiverFromReady.bind(null, token, state.record.id),
     saveAction: saveWaiverDraftFromReady.bind(null, token, state.record.id),
     showLinkExpiry: false,
+    prefillMedical: true,
     backHref: prep,
   });
 }
