@@ -16,7 +16,7 @@ import {
   referralItems,
 } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
-import { medicalAnswerSealFor, waiverIntegrityVerdict } from "@/lib/waiver-integrity";
+import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import {
   awaitsPhysician,
   DOCTOR_UNLOCK_FAILURE_LIMIT,
@@ -38,7 +38,7 @@ import {
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatHeld, seatNotCancelled } from "./trips-queries";
-import { WAIVER_SEALED_COLUMNS } from "./waiver-record-columns";
+import { recheckAnsweredSeal } from "./waiver-seal-checks";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -279,31 +279,6 @@ function unsealedClearanceAsOpen(record: WaiverRecord): WaiverRecord {
     record.medicalAnswerSeal === null
     ? { ...record, medicalClearedAt: null, medicalClearedByPersonId: null }
     : record;
-}
-
-/** Writes a fresh verdict on a just-answered record only when the whole record verifies. */
-async function recheckAnsweredSeal(tx: DbExecutor, recordId: string, now: Date) {
-  const [row] = await tx
-    .select({
-      record: WAIVER_SEALED_COLUMNS,
-      draftShopAnswers: waiverRecords.draftShopAnswers,
-      draftMedicalAlert: waiverRecords.draftMedicalAlert,
-      integrityValid: waiverRecords.integrityValid,
-    })
-    .from(waiverRecords)
-    .where(eq(waiverRecords.id, recordId))
-    .limit(1);
-  if (row?.integrityValid !== false) return;
-  const verdict = waiverIntegrityVerdict(
-    {
-      ...row.record,
-      draftShopAnswers: row.draftShopAnswers,
-      draftMedicalAlert: row.draftMedicalAlert,
-    },
-    now,
-  );
-  if (verdict.integrityValid !== true) return;
-  await tx.update(waiverRecords).set(verdict).where(eq(waiverRecords.id, recordId));
 }
 
 /**
