@@ -59,22 +59,31 @@ async function course(divers = 2) {
     .returning();
   const [staff] = await listStaff(db, shop.id);
   if (!staff) throw new Error("seed staff missing");
-  const say = (
+  /** Writes one mark and answers its id; an undo names the mark it takes back (#3995). */
+  const say = async (
     bookingId: string,
     checkpoint: "departure" | "after_dive_1" | "after_dive_2",
     status: "boarded" | "not_boarded" | "cleared",
     occurredAt: string,
-  ) =>
-    db.insert(rollCallEvents).values({
-      shopId: shop.id,
-      tripId: trip.id,
-      bookingId,
-      recordedByPersonId: staff.person.id,
-      status,
-      checkpoint,
-      source: "live",
-      occurredAt: at(occurredAt),
-    });
+    retractsEventId?: string,
+  ) => {
+    const [row] = await db
+      .insert(rollCallEvents)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staff.person.id,
+        status,
+        checkpoint,
+        source: "live",
+        occurredAt: at(occurredAt),
+        retractsEventId,
+      })
+      .returning({ id: rollCallEvents.id });
+    if (!row) throw new Error("roll call insert failed");
+    return row.id;
+  };
   /** A whole day counted: boarded at the dock and back aboard after both dives. */
   const countDay = async (day: typeof SAT_ONE, ids = rows.map((row) => row.id)) => {
     const base = at(day.start).getTime();
@@ -244,11 +253,16 @@ describe("roll call on a course that meets on two Saturdays", () => {
     const c = await course();
     const [first] = c.bookingIds as [string, string];
     await c.countDay(SAT_ONE);
-    await c.say(first, "after_dive_2", "not_boarded", "2026-08-01T16:40:00.000Z");
+    const missing = await c.say(first, "after_dive_2", "not_boarded", "2026-08-01T16:40:00.000Z");
     expect(await c.gaps("2026-08-10T14:00:00.000Z")).toMatchObject([
       { reason: "missing_diver", dayNumber: 1 },
     ]);
-    await c.say(first, "after_dive_2", "cleared", "2026-08-10T14:05:00.000Z");
+    // An undo that names no mark leaves Saturday's missing diver raised.
+    await c.say(first, "after_dive_2", "cleared", "2026-08-10T14:04:00.000Z");
+    expect(await c.gaps("2026-08-10T14:04:30.000Z")).toMatchObject([
+      { reason: "missing_diver", dayNumber: 1 },
+    ]);
+    await c.say(first, "after_dive_2", "cleared", "2026-08-10T14:05:00.000Z", missing);
     // Taken back, the diver reads as not yet counted there, never as missing.
     expect(await c.gaps("2026-08-10T14:10:00.000Z")).toMatchObject([
       { reason: "after_dive_uncounted", dayNumber: 1, diveNumber: 2, uncounted: 1 },

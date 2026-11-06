@@ -62,20 +62,29 @@ async function course() {
     .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: person.id })
     .returning();
   if (!booking) throw new Error("booking insert failed");
-  const mark = (
+  /** Writes one mark and answers its id; an undo names the mark it takes back (#3995). */
+  const mark = async (
     checkpoint: string,
     status: "boarded" | "not_boarded" | "cleared",
     occurredAt: string,
-  ) =>
-    db.insert(rollCallEvents).values({
-      shopId: shop.id,
-      tripId: trip.id,
-      bookingId: booking.id,
-      recordedByPersonId: staff.person.id,
-      status,
-      checkpoint,
-      occurredAt: new Date(occurredAt),
-    });
+    retractsEventId?: string,
+  ) => {
+    const [row] = await db
+      .insert(rollCallEvents)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.person.id,
+        status,
+        checkpoint,
+        occurredAt: new Date(occurredAt),
+        retractsEventId,
+      })
+      .returning({ id: rollCallEvents.id });
+    if (!row) throw new Error("roll call insert failed");
+    return row.id;
+  };
   return { db, shopId: shop.id, trip, bookingId: booking.id, mark };
 }
 
@@ -124,7 +133,7 @@ describe("the roll call a course's manifest shows on its second Saturday", () =>
   it("keeps a first-Saturday diver not back aboard on the manifest past the cut, until counted or taken back", async () => {
     const { db, shopId, trip, bookingId, mark } = await course();
     await mark("departure", "boarded", "2026-08-01T12:45:00Z");
-    await mark("after_dive_1", "not_boarded", "2026-08-01T15:00:00Z");
+    const missing = await mark("after_dive_1", "not_boarded", "2026-08-01T15:00:00Z");
     const seat = async (checkpoint: "departure" | "after_dive_1") =>
       (await getTripManifest(db, shopId, trip.id, checkpoint))?.divers.find(
         (diver) => diver.bookingId === bookingId,
@@ -133,8 +142,11 @@ describe("the roll call a course's manifest shows on its second Saturday", () =>
     vi.stubEnv("DIVEDAY_CLOCK", "2026-08-10T12:00:00Z");
     expect(await seat("departure")).toBeUndefined();
     expect(await seat("after_dive_1")).toBe("not_boarded");
-    // The crew take the mis-tap back from today's manifest.
-    await mark("after_dive_1", "cleared", "2026-08-10T12:05:00Z");
+    // An undo that names no mark takes back only its own day's: the alarm stays.
+    await mark("after_dive_1", "cleared", "2026-08-10T12:04:00Z");
+    expect(await seat("after_dive_1")).toBe("not_boarded");
+    // The crew take the mis-tap back from today's manifest, naming the carried row.
+    await mark("after_dive_1", "cleared", "2026-08-10T12:05:00Z", missing);
     expect(await seat("after_dive_1")).toBeUndefined();
     expect((await listUnaccountedForByTrip(db, shopId, [trip.id])).get(trip.id)).toBeUndefined();
   });
