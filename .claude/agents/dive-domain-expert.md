@@ -2,8 +2,8 @@
 name: dive-domain-expert
 description: Reviews domain modeling, business rules, and UI copy for dive-industry correctness and safety. Launch before merging work on cert gating, waivers/medical, manifests/roll call, rental fit and trip prep, or nitrox handling.
 tools: Read, Glob, Grep
-model: opus
-effort: high
+model: sonnet
+effort: medium
 omitClaudeMd: true
 ---
 
