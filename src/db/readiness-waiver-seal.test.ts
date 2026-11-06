@@ -345,8 +345,9 @@ describe("readiness over a physician's answer", () => {
       evaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
       physicianName: "Dr. Imani Reyes",
     });
-    // The tampered row is evidence: it is not rewritten, and it still holds.
-    expect(again).toMatchObject({ ok: true, alreadyRecorded: true });
+    // The tampered row is evidence: it is not rewritten, the desk is told the seal
+    // is broken (#3998), and it still holds.
+    expect(again).toMatchObject({ ok: false, reason: "answer_seal_broken" });
     const [row] = await ctx.db
       .select({ evaluatedOn: waiverRecords.medicalClearanceEvaluatedOn })
       .from(waiverRecords)
