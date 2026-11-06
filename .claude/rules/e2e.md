@@ -67,6 +67,8 @@ red run. Each rule names what enforces it; the reasoning and the incidents are i
 - **The clock is frozen at the harness** (`TEST_FROZEN_CLOCK`); never mask moving text.
 - **Visual baselines live in S3 by commit**, rendered on CI's Linux runners (ADR
   20260729-reg-suit-visual-regression); approving a change is saying in the PR why the pixels moved.
+  A capture whose test you rename or delete reads as deleted, not as a lost capture; one whose test
+  still runs but no longer shoots it fails the compare (the ADR's 2026-11-06 amendment).
 - **The critical journeys keep their test**: the table in
   [testing.md](../../docs/engineering/testing.md#critical-journeys), held by
   `pnpm check:critical-journeys`; renaming a journey's test renames its row. Everything else takes

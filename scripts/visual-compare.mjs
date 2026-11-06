@@ -162,6 +162,7 @@ if (fill || expectedReady) {
         allowEmptyExpected: process.env.VISUAL_FRESH_START === "true",
         captureMode: process.env.VISUAL_CAPTURE_MODE ?? "",
         captureManifest: process.env.VISUAL_EXPECTED_CAPTURE_MANIFEST ?? "",
+        expectedTests: process.env.VISUAL_EXPECTED_CAPTURE_TESTS ?? "",
         plan,
       });
       console.log(
@@ -170,8 +171,9 @@ if (fill || expectedReady) {
       );
       if (inventory.retired) {
         console.log(
-          `::warning title=Baseline surfaces retired::main no longer captures ` +
-            `${inventory.retired.length} baseline screenshot(s), reported as deleted: ` +
+          `::warning title=Baseline surfaces retired::this run no longer captures ` +
+            `${inventory.retired.length} baseline screenshot(s) (their tests were renamed or ` +
+            `deleted), reported as deleted: ` +
             inventory.retired.join(", "),
         );
       }
