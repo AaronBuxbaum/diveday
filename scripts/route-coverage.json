@@ -39,8 +39,8 @@
     "visual": ["course-form-sign"]
   },
   "/ready/[token]/waiver": {
-    "e2e": ["booking.spec.ts"],
-    "exempt": "No capture of its own: the page is waiverSigningForm, the same form the waiver link draws and the waiver-active, waiver-rail and waiver-rail-follow-ups captures photograph; only the door differs, and it is held against a real record by src/app/(token)/ready/[token]/waiver-actions.test.ts. Reaching it in the visual suite means booking a seat on the demo shop's open trip, which moves every capture that counts that trip's seats (issue #2743)."
+    "e2e": ["booking.spec.ts", "manifest.spec.ts", "waivers.spec.ts"],
+    "visual": ["waiver-active", "waiver-medical-held", "waiver-rail", "waiver-rail-follow-ups"]
   },
   "/ready/[token]/party/[seatId]/waiver": {
     "exempt": "The same waiverSigningForm the waiver link draws, which the waiver captures photograph with its guardian card; only the door differs. guardian-co-signature.spec.ts reaches this page by the party panel's Sign tap, and src/app/(token)/ready/[token]/party-waiver-actions.test.ts holds the door against a real record (issue #2743)."
@@ -49,7 +49,8 @@
     "exempt": "The same DoctorReferralBody the diver's own doctor's page draws, held against a real record by src/app/(token)/ready/[token]/waiver/doctor/page.test.ts; only the door differs, and that door (the lead's readiness link, the panel's physician door on the seat, the referral gate) is held against a real record by src/app/(token)/ready/[token]/party-waiver-actions.test.ts (issue #2743)."
   },
   "/ready/[token]/waiver/doctor": {
-    "exempt": "The doctor's page since the waiver link's was deleted (issue #2743): src/app/(token)/ready/[token]/waiver/doctor/page.test.ts renders it and src/app/(token)/ready/[token]/waiver-doctor-actions.test.ts sends its form, against a real record. The waiver-doctor capture and the waivers.spec.ts walk reached it through a seat's copied waiver link, which no longer exists, and move onto this door in their own change."
+    "e2e": ["waivers.spec.ts"],
+    "visual": ["waiver-doctor", "waiver-doctor-evaluation"]
   },
   "/s/[shopSlug]/embed/calendar": {
     "e2e": [

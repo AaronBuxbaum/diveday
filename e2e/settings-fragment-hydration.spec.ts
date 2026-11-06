@@ -52,7 +52,7 @@ test.describe("Settings fragment hydration", () => {
 
         // diveday:allow-e2e-hygiene pre-hydration-click: this spec holds the SettingsSelection chunk to reproduce the click during its layout change.
         await browserPage.goto(
-          `${e2eBaseURL(testInfo.workerIndex)}/shop/blue-mantis/settings#data`,
+          `${e2eBaseURL(testInfo.parallelIndex)}/shop/blue-mantis/settings#data`,
           {
             waitUntil: "commit",
           },
@@ -106,7 +106,7 @@ test.describe("Settings fragment hydration", () => {
           await route.fulfill({ response, body });
         });
         // diveday:allow-e2e-hygiene pre-hydration-click: no click here; the spec holds the SettingsSelection chunk and settles by hand.
-        await browserPage.goto(`${e2eBaseURL(testInfo.workerIndex)}/shop/blue-mantis/settings`, {
+        await browserPage.goto(`${e2eBaseURL(testInfo.parallelIndex)}/shop/blue-mantis/settings`, {
           waitUntil: "commit",
         });
         await selectionChunkRequested;
@@ -158,7 +158,7 @@ test.describe("Settings fragment hydration", () => {
         });
         // diveday:allow-e2e-hygiene pre-hydration-click: no click here; the spec holds the disclosure chunk and settles by hand.
         await browserPage.goto(
-          `${e2eBaseURL(testInfo.workerIndex)}/shop/blue-mantis/settings/emergency-reference`,
+          `${e2eBaseURL(testInfo.parallelIndex)}/shop/blue-mantis/settings/emergency-reference`,
           { waitUntil: "commit" },
         );
         await chunkRequested;

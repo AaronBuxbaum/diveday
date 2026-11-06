@@ -10,8 +10,8 @@ import {
   daysFromNow,
   openDiverFileGroup,
   openFirstRosterRowWith,
-  waiverLinkFromResult,
   waiverLinkFromToast,
+  waiverRequestLinkAfterSend,
 } from "./helpers";
 import {
   capture,
@@ -64,12 +64,10 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await staffPage.waitForURL(/\/shop\/blue-mantis\/trips\//);
         await staffPage.waitForURL(/\/trips\/[a-f0-9-]+$/);
-        const diverSection = staffPage.locator("#roster");
         const unsent = await openFirstRosterRowWith(staffPage, "Send waiver");
         await unsent.getByRole("button", { name: "Send waiver", exact: true }).click();
-        const resultNotice = diverSection.getByRole("status");
-        await resultNotice.waitFor();
-        const waiverHref = await waiverLinkFromResult(staffPage, resultNotice);
+        // The seat's Sign step, on the thread link the request carried.
+        const waiverHref = await waiverRequestLinkAfterSend(staffPage, unsent);
         await staffContext.close();
 
         await page.goto(waiverHref);
@@ -81,10 +79,10 @@ for (const scheme of ["light", "dark"] as const) {
          * 3 of 4 with Release, Medical and the shop's Questions settled and Sign still open, the
          * questionnaire's own outcome line under the answers, and Sign as the
          * page's one filled button with saving demoted to the text link beside
-         * the expiry sentence (ADR 20260827-the-divers-thread, decision 5).
+         * the form's foot (ADR 20260827-the-divers-thread, decision 5).
          *
          * It rides on the capture above rather than taking a test of its own:
-         * minting a waiver link is a real staff send on a second context, and
+         * reaching the Sign step is a real staff send on a second context, and
          * answering the form afterwards costs nothing but client-side clicks.
          */
         const noRadios = page.getByRole("radio", { name: "No" });
@@ -149,9 +147,7 @@ for (const scheme of ["light", "dark"] as const) {
         if (!profileHref)
           throw new Error("The waiver roster row did not link to its diver profile");
         await unsent.getByRole("button", { name: "Send waiver", exact: true }).click();
-        const resultNotice = staffPage.locator("#roster").getByRole("status");
-        await resultNotice.waitFor();
-        const waiverHref = await waiverLinkFromResult(staffPage, resultNotice);
+        const waiverHref = await waiverRequestLinkAfterSend(staffPage, unsent);
         await staffContext.close();
 
         await page.goto(waiverHref);

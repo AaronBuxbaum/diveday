@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { clearCourseForms } from "./course-form-only";
 import { decodeQrDataUrl } from "./decode-qr";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
@@ -20,6 +21,8 @@ import {
 // The image itself is a bearer credential; do not retain screenshots or traces.
 test.use({ screenshot: "off", trace: "off" });
 signedInAsOwner();
+
+const diver = diverTranslator("en-US");
 
 /** The first phone to open a counter code says "this one" (attacker review S1). */
 async function openCounterCode(phone: Page) {
@@ -129,17 +132,13 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.reload().catch(() => {
       throw new Error("cancelled waiver reload failed");
     });
-    await expect(phone.getByRole("heading", { name: "Sign your waiver" })).toBeVisible();
-    await expect(phone.getByText("Two-Tank Reef — Molasses & French")).toHaveCount(0);
-    await phone.getByLabel("Type your full name").fill("Chris Lagoon");
-    await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();
-    const thirdNo = phone.getByRole("radio", { name: "No" });
-    await expect(thirdNo).not.toHaveCount(0);
-    for (const radio of await thirdNo.all()) await radio.check();
-    await phone.getByRole("button", { name: "Sign waiver" }).click();
-    await expect(phone.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
-    await expect(phone.locator('a[href^="/ready/"]')).toHaveCount(0);
-    await expect(phone.getByRole("heading", { name: "Your scheduled dive sites" })).toHaveCount(0);
+    // A counter code is the seat's, and a cancelled seat has none to sign
+    // (ADR 20261105-waiver-folds-into-the-thread, layer 4): the open form the
+    // phone held a moment ago becomes the dead-link card, with nothing to sign.
+    await expect(
+      phone.getByRole("heading", { name: diver("common.deadLinkHeading") }),
+    ).toBeVisible();
+    await expect(phone.getByLabel("Type your full name")).toHaveCount(0);
     await expect(page.locator("#roster").getByText("Chris Lagoon")).toHaveCount(0);
   } finally {
     await phoneContext.close();

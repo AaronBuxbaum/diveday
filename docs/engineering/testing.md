@@ -398,8 +398,8 @@ covered. Closing an exemption means writing the missing coverage and deleting it
 same change.
 
 The hand-written half is the part no string shows. A spec sometimes reaches a route by *clicking* —
-`e2e/waivers.spec.ts` gets to `/waivers/[token]` by pressing "Send waiver" and following the link out
-of a toast — and guessing those would invent coverage, so they are named by hand. A path literal
+`e2e/waivers.spec.ts` gets to `/ready/[token]/waiver` by pressing "Send waiver" and following the
+link the request carried — and guessing those would invent coverage, so they are named by hand. A path literal
 that associates a spec with a route needs no edit: the ledger used to list every route's specs by
 hand, and it was the file every feature layer of a stack conflicted on.
 

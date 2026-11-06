@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { type APIRequestContext, expect, type Locator, type Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { diverTranslator } from "../src/i18n/messages";
 import { E2E_FROZEN_CLOCK, E2E_STRIPE_TEST_WEBHOOK_SECRET } from "./servers";
 
 // Better Auth sign-out revokes a database session. The staff storage-state
@@ -423,15 +424,14 @@ export async function createTrip(
 }
 
 /**
- * On the Trip surface, send a waiver to the first diver and return its relative
- * bearer path. With no E2E email provider, the send result offers a private-link
- * copy control; scope to the Trip roster to exclude crew and wait-list rows.
+ * On the Trip surface, send a waiver to the first diver and return the Sign
+ * link their waiver request carried (`waiverRequestLinkAfterSend`). Scoped to
+ * the Trip roster to exclude crew and wait-list rows.
  */
 export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
-  const diverSection = page.locator("#roster").filter({ visible: true });
   const row = await openFirstRosterRowWith(page, "Send waiver");
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
-  return waiverLinkFromResult(page, diverSection.getByRole("status"));
+  return waiverRequestLinkAfterSend(page, row);
 }
 
 /** Open and return the first booking row that offers a currently folded control. */
@@ -442,8 +442,12 @@ export async function openFirstRosterRowWith(page: Page, control: string): Promi
     // visible elements, and the control is folded away until the row opens.
     .filter({ has: page.locator("button", { hasText: new RegExp(`^\\s*${control}\\s*$`) }) })
     .first();
-  await openRosterDetails(row);
-  return row;
+  // Pinned by its id: the control's label changes the moment it is tapped,
+  // and a row found by that label would stop matching under the caller.
+  const id = await row.getAttribute("id");
+  const pinned = page.locator(`#roster li[id="${id}"]`).first();
+  await openRosterDetails(pinned);
+  return pinned;
 }
 
 /** Open one diver's row on the Divers tab, where every fix for their seat waits. */
@@ -473,26 +477,42 @@ export const STAFF_DAY_HEADING = /^[A-Z][a-z]+\s\d{1,2}$/;
 export const HELD_SEND_TIMEOUT_MS = 20_000;
 
 /**
- * Copy the private waiver link from the send result and return its relative
- * `/waivers/<token>` path. The URL is not displayed on the page; wait for
- * “Copied” before reading the permitted clipboard value.
+ * **The link a seat's waiver request carried**, after the caller tapped "Send
+ * waiver" on `row` (a roster `li#booking-<id>`). A seat's release goes to its
+ * holder as their own thread link, `/ready/<token>/waiver`, and never to a
+ * staff clipboard (ADR 20261105-waiver-folds-into-the-thread); e2e has no
+ * email provider, so the test door reads the link the email carries
+ * (`waiverRequestLink`, `src/db/facts/read-the-waiver-request.ts`). Waits out
+ * the held send first: the door refuses a seat nobody has sent to.
  */
-export async function waiverLinkFromResult(page: Page, resultNotice: Locator): Promise<string> {
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-  // Matched on all three of the control's states, not just its resting label: a
-  // "Copy link" tap auto-copies on arrival, so the button may already read
-  // "Copied" — or "Try again", if that first write landed outside a user
-  // gesture. Clicking is right in every one of them, and the settled "Copied"
-  // is what says the write resolved.
-  const copy = resultNotice.getByRole("button", { name: /^(Copy link|Copied|Try again)$/ }).first();
-  await copy.click();
-  await expect(copy).toHaveAccessibleName("Copied");
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
-  const path = copied.startsWith("http") ? new URL(copied).pathname : copied;
-  if (!path.startsWith("/waivers/")) {
-    throw new Error(`expected a /waivers/ bearer link on the clipboard, got ${copied}`);
+export async function waiverRequestLinkAfterSend(page: Page, row: Locator): Promise<string> {
+  const outcome = page
+    .locator("#roster")
+    .filter({ visible: true })
+    .getByRole("status")
+    .filter({ hasText: "send email from this deployment" });
+  await expect(outcome).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
+  const id = (await row.getAttribute("id"))?.replace(/^booking-/, "");
+  if (!id) throw new Error("the waiver send's row names no booking");
+  const response = await page.request.post("/api/test/shop", {
+    data: { facts: [{ name: "waiverRequestLink", bookingId: id }] },
+  });
+  if (!response.ok()) {
+    throw new Error(`waiverRequestLink returned ${response.status()}: ${await response.text()}`);
   }
-  return path;
+  const { values } = await response.json();
+  return values.waiverRequestLink.path;
+}
+
+/**
+ * A clear signature on the thread's Sign step lands back on the diver's
+ * checklist with the step done (`completeWaiverFromReady`), not on a receipt.
+ */
+export async function expectSignedOnThread(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/ready\/[^/?]+\?saved=waiver$/);
+  await expect(
+    page.getByText(diverTranslator("en-US")("ready.checklistDetail.waiverDone")),
+  ).toBeVisible();
 }
 
 /**

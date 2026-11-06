@@ -2,6 +2,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
+  expectSignedOnThread,
   HELD_SEND_TIMEOUT_MS,
   manifestRow,
   openCounterFor,
@@ -11,8 +12,8 @@ import {
   openTripFromBoard,
   openTripTab,
   sendWaiverForFirstDiver,
-  waiverLinkFromResult,
   waiverLinkFromToast,
+  waiverRequestLinkAfterSend,
 } from "./helpers";
 
 /** The seeded charter every waiver flow in this file starts from. */
@@ -131,7 +132,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await expect(resultNotice).toContainText("send email from this deployment yet", {
     timeout: HELD_SEND_TIMEOUT_MS,
   });
-  const waiverHref = await waiverLinkFromResult(page, resultNotice);
+  const waiverHref = await waiverRequestLinkAfterSend(page, firstUnsent);
 
   await page.goto(waiverHref);
   await expect(page.getByRole("heading", { name: "A quick step before the dock" })).toBeVisible();
@@ -139,9 +140,8 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // diver can verify what they're signing for instead of trusting a link
   // that only ever named the shop.
   await expect(page.getByText(/^Two-Tank Reef — Molasses & French · /)).toBeVisible();
-  // The link's own expiry is stated on the page, not just in the email that
-  // sent it (task 51).
-  await expect(page.getByText(/This link works until/)).toBeVisible();
+  // The Sign step lives as long as the diver's readiness link and states no
+  // expiry of its own (ADR 20261105-waiver-folds-into-the-thread).
   // A blank never overwrites a stored contact, so there is no way in the
   // product for a diver to say "there is nobody" — the hint says where to go
   // instead of leaving them guessing (#1399). This branch renders only when a
@@ -204,10 +204,11 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   ).toBeVisible();
   const waiverUrl = page.url();
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  // A standalone waiver signs into its own receipt; trip prep needs its own link.
+  // A referred signer lands on the release's receipt, not the checklist
+  // (`completeWaiverFromReady`), and the receipt leads back to the thread.
+  const threadPath = new URL(waiverUrl).pathname.replace(/\/waiver$/, "");
   await expect(page.getByText(receiptCopy("waiver.signedBody"))).toBeVisible();
-  await expect(page.getByText(receiptCopy("waiver.prepLinkHelp"))).toBeVisible();
-  await expect(page.locator('a[href^="/ready/"]')).toHaveCount(0);
+  await expect(page.locator(`a[href="${threadPath}"]`).first()).toBeVisible();
 
   // Revisiting the same waiver keeps the signed confirmation and referral.
   await page.goto(waiverUrl);
@@ -221,8 +222,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
     "href",
     "mailto:front.desk@mail.example",
   );
-  await expect(page.getByText(receiptCopy("waiver.prepLinkHelp"))).toBeVisible();
-  await expect(page.locator('a[href^="/ready/"]')).toHaveCount(0);
+  await expect(page.locator(`a[href="${threadPath}"]`).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your scheduled dive sites" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Molasses Reef" })).toBeVisible();
   // The rail closes at two, not three. This record is signed and its medical
@@ -415,7 +415,7 @@ test("a contact with one box filled and the other cleared is refused, not splice
   await contactName.fill("Asha Sharma");
   await contactPhone.fill("+1 305 555 0231");
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page.getByText(receiptCopy("waiver.signedBody"))).toBeVisible();
+  await expectSignedOnThread(page);
 });
 
 /**
@@ -491,7 +491,7 @@ test("a waiver signed under someone else's name is refused, and the link stays s
   // middle initial or different casing is not treated as a different person.
   await page.getByLabel("Type your full name").fill("priya  sharma");
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page.getByText(receiptCopy("waiver.signedBody"))).toBeVisible();
+  await expectSignedOnThread(page);
 });
 
 test("an incomplete sign submit is blocked client-side and focuses the missing field", async ({
@@ -519,7 +519,7 @@ test("an incomplete sign submit is blocked client-side and focuses the missing f
     await radio.check();
   }
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page).toHaveURL(/\/waivers\/[^?]+$/);
+  await expect(page).toHaveURL(/\/ready\/[^/?]+\/waiver$/);
   await expect(page.getByLabel("Type your full name")).toBeFocused();
 });
 
@@ -699,12 +699,12 @@ test("a Box opened after a draft reload asks its questions rather than answering
  *
  * The counting rule, walked end to end on the real page: fresh draft 0 of 4,
  * any medical answer 1 of 4, all answered 3 of 4 (the demo shop's own
- * questions are all optional, so their step settles with Medical), and 4 of 4
- * only once `completeWaiver` has taken the signature. The rule itself is pinned without a
+ * questions are all optional, so their step settles with Medical), and never 4
+ * of 4 on a form still being filled in. The rule itself is pinned without a
  * browser in `src/app/(token)/waivers/[token]/WaiverStepRail.test.tsx`; what only this
  * can prove is that the live count is wired to the diver's own radios.
  */
-test("the step rail paces the waiver and reaches 4 of 4 only once it is signed", async ({
+test("the step rail paces the waiver and never reads 4 of 4 before it is signed", async ({
   page,
 }) => {
   // A held send counts eight seconds down before it leaves (ADR
@@ -755,10 +755,9 @@ test("the step rail paces the waiver and reaches 4 of 4 only once it is signed",
   // no JavaScript keeps the answers they came back to finish.
   await expect(page.getByRole("button", { name: "Save and finish later" })).toBeVisible();
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page.getByText(receiptCopy("waiver.signedBody"))).toBeVisible();
-
-  await page.goto(waiverHref ?? "/");
-  await expect(page.getByTestId("waiver-step-rail")).toContainText("4 of 4 done");
+  // Signed, the thread's checklist ticks the step: the release's own receipt,
+  // and its 4 of 4, are drawn only for a release held for a physician.
+  await expectSignedOnThread(page);
 });
 
 /**
@@ -1446,10 +1445,7 @@ test("a shop question is published, answered by the diver and shown on the signe
   const diverName = (await diverLink.innerText()).trim();
   const diverHref = await diverLink.getAttribute("href");
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
-  const waiverHref = await waiverLinkFromResult(
-    page,
-    page.locator("#roster").filter({ visible: true }).getByRole("status"),
-  );
+  const waiverHref = await waiverRequestLinkAfterSend(page, row);
 
   await page.goto(waiverHref);
   const section = page.locator("#shop-questions");
@@ -1474,7 +1470,7 @@ test("a shop question is published, answered by the diver and shown on the signe
   await page.getByLabel("Type your full name").fill(diverName);
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page.getByText(receiptCopy("waiver.signedBody"))).toBeVisible();
+  await expectSignedOnThread(page);
 
   // The diver's own record opens onto the release they just signed: its
   // Waiver row is a door to the signed record.
@@ -1516,10 +1512,7 @@ test("a diver's medical alert for the crew is signed, flagged on the manifest an
   const diverName = (await diverLink.innerText()).trim();
   const diverHref = await diverLink.getAttribute("href");
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
-  const waiverHref = await waiverLinkFromResult(
-    page,
-    page.locator("#roster").filter({ visible: true }).getByRole("status"),
-  );
+  const waiverHref = await waiverRequestLinkAfterSend(page, row);
 
   await page.goto(waiverHref);
   await expect(
@@ -1538,7 +1531,7 @@ test("a diver's medical alert for the crew is signed, flagged on the manifest an
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
   await page.getByRole("button", { name: "Sign waiver" }).click();
   // Signed, never held for review: the alert refers nobody.
-  await expect(page.getByText(receiptCopy("waiver.signedBody"))).toBeVisible();
+  await expectSignedOnThread(page);
 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);

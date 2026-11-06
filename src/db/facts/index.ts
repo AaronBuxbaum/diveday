@@ -59,6 +59,7 @@ import { makeRoomForPartyWaiverCaptures } from "./party-waiver-capacity-state";
 import { putARehearsalOnTomorrow } from "./put-a-rehearsal-on-tomorrow";
 import { putOneUnitOutToday } from "./put-one-unit-out-today";
 import { putTheBenchBehind } from "./put-the-bench-behind";
+import { readTheWaiverRequest, waiverRequestLinkArgs } from "./read-the-waiver-request";
 import {
   certifyTheRecapDiver,
   diveTheRecapSomewhereElse,
@@ -271,6 +272,9 @@ const FACTS = {
     mintAnInterestUnsubscribe(db, shop.id, args),
   ),
   setupLink: ({ db }) => mintASetupLink(db),
+  waiverRequestLink: withArgs(waiverRequestLinkArgs, ({ db, shop, now }, args) =>
+    readTheWaiverRequest(db, shop.id, args, now),
+  ),
   visualLink: withArgs(
     visualLinkArgs,
     ({ db, shop, now }, args) => mintAVisualLink(db, shop, args, now),

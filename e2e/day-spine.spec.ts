@@ -172,8 +172,8 @@ test("the one-tap waiver send works from a station row, without leaving the home
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
 
   // The tap posts the shared server action in place and the outcome renders
-  // inline. The demo shop has no email provider, so the fallback-link path
-  // renders: a private link staff copy and hand over. It must survive the
+  // inline. The demo shop has no email provider, so the undelivered path
+  // renders. It must survive the
   // revalidation the send triggers, which re-renders this row with a *later*
   // blocker code; that is what `rowKey` in `DaySpine.tsx` is for. The eight-second
   // hold (ADR 20260906-before-you-ask, decision 2) stands where the button was,
@@ -183,7 +183,10 @@ test("the one-tap waiver send works from a station row, without leaving the home
   await expect(outcome).toContainText("DiveDay can’t send email from this deployment yet", {
     timeout: HELD_SEND_TIMEOUT_MS,
   });
-  await expect(outcome.getByRole("button", { name: "Copy link" })).toBeVisible();
+  // A booked seat has no link to copy (ADR 20261105-waiver-folds-into-the-thread):
+  // the outcome offers a text to the number on file instead.
+  await expect(outcome.getByRole("button", { name: "Send by text" })).toBeVisible();
+  await expect(outcome.getByRole("button", { name: "Copy link" })).toHaveCount(0);
 
   // Still on the home: the sweep never left it.
   await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
