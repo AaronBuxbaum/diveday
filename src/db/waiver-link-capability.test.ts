@@ -358,6 +358,12 @@ describe("the party_waiver_link capability", () => {
   /** A seat whose release was mailed as a door (it replaces the counter link). */
   async function mailedSeat(fullName = "Theo Mailed") {
     const seat = await counterSeat(fullName);
+    // Only an address the party's lead typed, on a seat not yet claimed, is
+    // sent a door (issue #4003); a claim closes it (issue #2743).
+    await seat.db
+      .update(bookings)
+      .set({ contactTypedByLeadAt: nowDate(), claimedAt: null })
+      .where(eq(bookings.id, seat.bookingId));
     const door = await mintCapability(seat.db, {
       purpose: "party_waiver_link",
       shopId: seat.shop.id,

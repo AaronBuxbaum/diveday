@@ -24,7 +24,11 @@ import {
   withErasureCoordinatedBookingSend,
   withErasureCoordinatedPersonSend,
 } from "./erasure-coordinated-send";
-import { retryBookingConfirmation, sendAndRecordNotification } from "./notifications";
+import {
+  retryBookingConfirmation,
+  sendAndRecordNotification,
+  sendClaimedSeatConfirmation,
+} from "./notifications";
 import { recordDiverActivity } from "./operations";
 import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
@@ -1102,6 +1106,48 @@ export async function resendConfirmationWithWaiver(
     await settleJoinWaiverDelivery(db, { shopId, bookingId, step, confirmationSent: false });
   }
   return delivery;
+}
+
+/**
+ * **A claimed seat's one email** (issue #2743): the claimant's booking
+ * confirmation, carrying the seat's release as its Sign step on the mail's own
+ * readiness link whenever one is owed or still out. A party member's door
+ * closed with the claim (`revokeSeatReleaseLinks`), so a release the door
+ * carried is signed in the thread from here on. When the mail cannot carry
+ * the step, the release goes on its own as the thread link
+ * (`settleJoinWaiverDelivery`); when none is owed, nothing goes.
+ */
+export async function confirmClaimedSeat(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+): Promise<void> {
+  // The confirmation goes whatever the Sign step does: it is the claimant's
+  // only link, and the claim already closed the door (reviews of #2743).
+  const step = await signStepForResend(db, shopId, bookingId).catch((error: unknown) => {
+    log("seat_claim.sign_step_failed", "error", {
+      bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    return null;
+  });
+  let delivery: Awaited<ReturnType<typeof sendClaimedSeatConfirmation>> = null;
+  try {
+    delivery = await sendClaimedSeatConfirmation(db, shopId, bookingId, { signStep: step });
+  } finally {
+    if (!step) {
+      await issueWaiverOnJoin(db, shopId, bookingId);
+    } else {
+      const sent = delivery?.status === "sent" && delivery.carriedSignStep ? delivery : null;
+      await settleJoinWaiverDelivery(db, {
+        shopId,
+        bookingId,
+        step,
+        confirmationSent: sent !== null,
+        confirmationProviderMessageId: sent?.providerMessageId,
+      });
+    }
+  }
 }
 
 /**

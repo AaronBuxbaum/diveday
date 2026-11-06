@@ -675,3 +675,37 @@ export async function revokePersonReleaseLinks(
       ),
     );
 }
+
+/**
+ * Turns off every live link to one seat's releases (`revoked_at`): the
+ * counter code and the party member's door (issue #2743). A claim calls it,
+ * so no link minted while the seat was its placeholder's outlives the claim;
+ * the claimant signs as their thread's Sign step.
+ */
+export async function revokeSeatReleaseLinks(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; now?: Date },
+): Promise<void> {
+  await db
+    .update(capabilities)
+    .set({ revokedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        inArray(capabilities.purpose, purposesNaming("waiver_record")),
+        eq(capabilities.shopId, input.shopId),
+        isNull(capabilities.revokedAt),
+        inArray(
+          capabilities.waiverRecordId,
+          db
+            .select({ id: waiverRecords.id })
+            .from(waiverRecords)
+            .where(
+              and(
+                eq(waiverRecords.shopId, input.shopId),
+                eq(waiverRecords.bookingId, input.bookingId),
+              ),
+            ),
+        ),
+      ),
+    );
+}

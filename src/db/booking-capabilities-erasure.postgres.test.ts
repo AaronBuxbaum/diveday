@@ -646,7 +646,7 @@ describePostgres("capability issuance and erasure serialization", () => {
     }));
 
     const delivery = await sendClaimedSeatConfirmation(pg.db, shop.id, booking.id, {
-      send: provider,
+      provider: { send: provider },
     });
 
     expect(delivery).toEqual({
@@ -713,7 +713,9 @@ describePostgres("capability issuance and erasure serialization", () => {
     let send: ReturnType<typeof sendClaimedSeatConfirmation> | undefined;
     try {
       await repointStarted;
-      send = sendClaimedSeatConfirmation(pg.db, shop.id, booking.id, { send: provider });
+      send = sendClaimedSeatConfirmation(pg.db, shop.id, booking.id, {
+        provider: { send: provider },
+      });
       await waitForLockWaiters(pg.db, 1);
       releaseRepoint();
       await repoint;
@@ -765,7 +767,9 @@ describePostgres("capability issuance and erasure serialization", () => {
     let send: ReturnType<typeof sendClaimedSeatConfirmation> | undefined;
     try {
       await erasureStarted;
-      send = sendClaimedSeatConfirmation(pg.db, shop.id, booking.id, { send: provider });
+      send = sendClaimedSeatConfirmation(pg.db, shop.id, booking.id, {
+        provider: { send: provider },
+      });
       await waitForLockWaiters(pg.db, 1);
       releaseErasure();
       await erasure;

@@ -2062,16 +2062,17 @@ export async function retryBookingConfirmation(
 /**
  * The booking confirmation for a seat someone has just claimed from a party
  * link (#2381): the claimant is shown a page that says to check their email,
- * and this is the email, carrying their own prep link. A first send, not a
+ * and this is the email, carrying their own prep link and, when a release is
+ * owed, its Sign step (`confirmClaimedSeat`, issue #2743). A first send, not a
  * retry. Returns null, and sends nothing, for a booking with no address.
  */
 export async function sendClaimedSeatConfirmation(
   db: AppDb,
   shopId: string,
   bookingId: string,
-  provider?: NotificationProvider,
+  options: { signStep?: ConfirmationSignStep | null; provider?: NotificationProvider } = {},
 ) {
-  return sendStoredBookingConfirmation(db, shopId, bookingId, { provider });
+  return sendStoredBookingConfirmation(db, shopId, bookingId, options);
 }
 
 /**

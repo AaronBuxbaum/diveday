@@ -48,8 +48,16 @@ vi.mock("@/db/notifications", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/notifications")>();
   return {
     ...actual,
-    sendClaimedSeatConfirmation: (db: never, shopId: string, bookingId: string) =>
-      actual.sendClaimedSeatConfirmation(db, shopId, bookingId, mail.current?.provider),
+    sendClaimedSeatConfirmation: (
+      db: never,
+      shopId: string,
+      bookingId: string,
+      options: Parameters<typeof actual.sendClaimedSeatConfirmation>[3],
+    ) =>
+      actual.sendClaimedSeatConfirmation(db, shopId, bookingId, {
+        ...options,
+        provider: mail.current?.provider,
+      }),
   };
 });
 vi.mock("@/db/seat-already-held", async (importOriginal) => {

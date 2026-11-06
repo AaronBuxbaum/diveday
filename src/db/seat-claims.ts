@@ -25,6 +25,7 @@ import {
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { partySeatGoesWithLead, tripAdmissionFor } from "./bookings";
+import { revokeSeatReleaseLinks } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
@@ -46,7 +47,7 @@ import {
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
-import { issueWaiverOnJoin } from "./waiver-issue";
+import { confirmClaimedSeat } from "./waiver-issue";
 import { WAIVER_BOARDING_COLUMNS, withTrustedClearance } from "./waiver-record-columns";
 import { type ThreadWaiverKey, threadWaiverKey } from "./waivers-completion";
 import { openWaiverInThread } from "./waivers-requests";
@@ -317,7 +318,8 @@ export type ClaimSeatResult =
  *   purpose: all live claim links die (one-shot claiming — a second claim of
  *   the same seat fails at verify, first untouched), and any link minted
  *   while the seat was the placeholder's stops granting authority over the
- *   claimant's data.
+ *   claimant's data. So is every link to the seat's releases (the party
+ *   member's door, a counter code): the claimant signs in their own thread.
  *
  * Identity semantics follow the public booking form exactly (H-20260724-one-person-per-email): an email
  * match reuses that person row, and a submitted name that doesn't match the
@@ -527,6 +529,9 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     bookingId: booking.id,
     now,
   });
+  // The links to the seat's releases too: the party member's door and any
+  // counter code. The claimant signs as their thread's Sign step (issue #2743).
+  await revokeSeatReleaseLinks(tx, { shopId: capability.shopId, bookingId: booking.id, now });
 
   return {
     ok: true,
@@ -648,9 +653,10 @@ export async function claimPartySeatRecord(
 
 /**
  * What a committed claim owes, each best-effort so a mail-provider outage can
- * never cost anyone their claim: the claimant's own waiver goes out, the
- * analytics event fires and the trip's activity trail records who claimed
- * (`seatDiver` is the model).
+ * never cost anyone their claim: the claimant's confirmation goes out with
+ * the seat's release as its Sign step (`confirmClaimedSeat`), the analytics
+ * event fires and the trip's activity trail records who claimed (`seatDiver`
+ * is the model).
  */
 export async function settleClaimedSeat(
   db: AppDb,
@@ -665,11 +671,11 @@ export async function settleClaimedSeat(
     });
   }
   try {
-    // The claimant's own waiver, to their own address — idempotent, and a
-    // sign-once diver with a current signature at this shop is skipped.
-    await issueWaiverOnJoin(db, outcome.shopId, outcome.bookingId);
+    // The claimant's confirmation, to their own address, with the seat's
+    // release as its Sign step when one is owed (issue #2743).
+    await confirmClaimedSeat(db, outcome.shopId, outcome.bookingId);
   } catch (error) {
-    log("seat_claim.waiver_failed", "error", {
+    log("seat_claim.confirmation_failed", "error", {
       bookingId: outcome.bookingId,
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });

@@ -301,7 +301,12 @@ describe("party release QR handoff", () => {
       .where(eq(capabilities.tokenHash, hashBearerToken(first.token)));
     if (!link?.recordId) throw new Error("counter link record missing");
     // The emailed door for the same release sits beside the counter code, and
-    // the member's phone opening it is no reason for the desk to stop.
+    // the member's phone opening it is no reason for the desk to stop. A door
+    // goes only to an address the lead typed, on a seat not yet claimed.
+    await f.db
+      .update(bookings)
+      .set({ contactTypedByLeadAt: nowDate(), claimedAt: null })
+      .where(eq(bookings.id, f.third.bookingId));
     const mailed = await mintCapability(f.db, {
       purpose: "party_waiver_link",
       shopId: f.shop.id,

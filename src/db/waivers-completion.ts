@@ -5,6 +5,7 @@
  */
 import { and, desc, eq, getTableColumns, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import { hashBearerToken } from "@/lib/bearer-tokens";
+import { seatAddressIsLeadTyped } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { readEmergencyContact } from "@/lib/contact";
 import {
@@ -238,6 +239,7 @@ async function currentRecordForToken(db: DbExecutor, key: WaiverKey, now = nowDa
   if (!issuedLinkKeys.has(key)) return null;
   const link = await standingLink(db, key, now);
   if (!link) return null;
+  if (key.purpose === "party_waiver_link" && !(await doorSeatUnclaimed(db, key))) return null;
   const record = key.bookingId
     ? await seatRecord(db, { ...key, bookingId: key.bookingId })
     : await seatlessRecord(db, key);
@@ -299,6 +301,28 @@ async function seatRecord(
     )
     .limit(1);
   return record ?? null;
+}
+
+/**
+ * Whether a party member's door still has a seat to open (issue #2743): the
+ * seat's address is still one its party's lead typed. Once the member claims
+ * the seat, the release is their thread's Sign step and the door opens
+ * nothing, whether or not the claim revoked it (`revokeSeatReleaseLinks`).
+ */
+async function doorSeatUnclaimed(
+  db: DbExecutor,
+  door: { shopId: string; bookingId: string | null },
+): Promise<boolean> {
+  if (!door.bookingId) return false;
+  const [seat] = await db
+    .select({
+      contactTypedByLeadAt: bookings.contactTypedByLeadAt,
+      claimedAt: bookings.claimedAt,
+    })
+    .from(bookings)
+    .where(and(eq(bookings.id, door.bookingId), eq(bookings.shopId, door.shopId)))
+    .limit(1);
+  return seat ? seatAddressIsLeadTyped(seat) : false;
 }
 
 /**
@@ -392,6 +416,45 @@ export async function closedCounterCode(
   return closed ? { shopId: link.shopId } : null;
 }
 
+/**
+ * **A party member's door to a seat that has since been claimed** (issue
+ * #2743): the release is signed as the claimant's thread's Sign step now, so
+ * the page names the shop and says where the release went. No record, no
+ * person, no answers. Only when the door's own person holds the claimed seat
+ * and can sign in the thread; null for anything else.
+ */
+export async function claimedSeatDoor(
+  db: DbExecutor,
+  token: string,
+): Promise<{ shopId: string } | null> {
+  if (token.length === 0) return null;
+  const door = await verifyCapability(db, { purpose: "party_waiver_link", token });
+  if (!door) return null;
+  const [seat] = await db
+    .select({ id: bookings.id })
+    .from(waiverRecords)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
+    )
+    .where(
+      and(
+        eq(waiverRecords.id, door.subjectId),
+        eq(waiverRecords.shopId, door.shopId),
+        isNotNull(bookings.claimedAt),
+        // Only the person who holds the seat now, signable in their thread:
+        // a placeholder someone else displaced, a cancelled seat or a held
+        // one is told nothing more than any dead link (reviews of #2743).
+        eq(bookings.personId, waiverRecords.personId),
+        isNull(waiverRecords.supersededAt),
+        seatNotCancelled,
+        isNull(bookings.identityUnconfirmedAt),
+      ),
+    )
+    .limit(1);
+  return seat ? { shopId: door.shopId } : null;
+}
+
 export type WaiverLinkDoor =
   | { door: "counter"; key: CounterWaiverKey }
   /** `via`: a counter QR or Copy link, or the door a party member's join email carried. */
@@ -470,6 +533,13 @@ async function linkWaiverKey(
       bookingId: record.bookingId,
     });
     if (current?.recordId !== record.id) return null;
+    // A party member's door stands only until they claim the seat: from
+    // then on the release is their thread's Sign step (issue #2743).
+    if (
+      link.purpose === "party_waiver_link" &&
+      !(await doorSeatUnclaimed(db, { shopId: link.shopId, bookingId: record.bookingId }))
+    )
+      return null;
   } else if (link.purpose === "party_waiver_link") {
     // A party member's door names their seat's release, never one with no
     // seat, which would cover every seat they hold (issue #3986).
@@ -556,6 +626,9 @@ export async function staleWaiverRecordForToken(
     )
     .limit(1);
   if (record?.status !== "pending" || record.anonymizedAt) return null;
+  // A claimed seat's door is never rescued: its way on is the claimant's
+  // thread link (`claimedSeatDoor`, issue #2743).
+  if (door && !(await doorSeatUnclaimed(db, record))) return null;
   const linkLive = !link.revokedAt && !link.usedAt && link.expiresAt && link.expiresAt > now;
   if (linkLive && !record.supersededAt) {
     // A live door whose release is no longer the seat's own (the shop changed
