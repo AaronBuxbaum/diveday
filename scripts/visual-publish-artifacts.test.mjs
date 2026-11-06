@@ -226,6 +226,68 @@ describe("verifyCompleteScreenshotInventory", () => {
     ).toThrow(/1 of 2 baseline screenshots are missing/u);
   });
 
+  describe("on a complete pull request capture", () => {
+    function pullRequest(baselineTests) {
+      const { root, expectedTests } = fixture();
+      const actualDir = path.join(root, "actual");
+      const expectedDir = path.join(root, "expected");
+      mkdirSync(actualDir);
+      mkdirSync(expectedDir);
+      writeFileSync(path.join(actualDir, "kept.png"), PNG);
+      writeFileSync(path.join(actualDir, "renamed-new.png"), PNG);
+      writeFileSync(path.join(expectedDir, "renamed.png"), PNG);
+      writeFileSync(expectedTests, JSON.stringify({ expectedCaptureTestIds: ["test-kept"] }));
+      const plan = {
+        unchanged: ["kept.png"],
+        filled: [],
+        fetch: ["renamed.png"],
+        ...(baselineTests ? { baselineTests } : {}),
+      };
+      const verify = (overrides = {}) =>
+        verifyCompleteScreenshotInventory({
+          actualDir,
+          expectedDir,
+          requireExpected: true,
+          captureMode: "all",
+          expectedTests,
+          plan,
+          ...overrides,
+        });
+      return { verify };
+    }
+
+    it("retires a baseline surface whose test the change renamed or deleted", () => {
+      const { verify } = pullRequest({ "renamed.png": "test-before-the-rename" });
+
+      expect(verify()).toEqual({ actualCount: 2, expectedCount: 2, retired: ["renamed.png"] });
+    });
+
+    it("retires a surface of a baseline that recorded no tests, since every planned test delivered", () => {
+      const { verify } = pullRequest(null);
+
+      expect(verify()).toEqual({ actualCount: 2, expectedCount: 2, retired: ["renamed.png"] });
+    });
+
+    it("still refuses a lost capture: its test is planned but took no screenshot", () => {
+      const { verify } = pullRequest({ "renamed.png": "test-kept" });
+
+      expect(() => verify()).toThrow(
+        /1 of 2 baseline screenshots are missing; their tests are still planned: renamed\.png \(test test-kept\)/u,
+      );
+    });
+
+    it("refuses any gap without the complete test plan, or on a selective capture", () => {
+      const { verify } = pullRequest({ "renamed.png": "test-before-the-rename" });
+
+      expect(() => verify({ expectedTests: "" })).toThrow(
+        /^visual capture is incomplete: 1 of 2 baseline screenshots are missing$/u,
+      );
+      expect(() => verify({ captureMode: "affected" })).toThrow(
+        /1 of 2 baseline screenshots are missing/u,
+      );
+    });
+  });
+
   it("requires an established baseline inventory for pull request publishing", () => {
     const { root } = fixture();
     const actualDir = path.join(root, "actual");

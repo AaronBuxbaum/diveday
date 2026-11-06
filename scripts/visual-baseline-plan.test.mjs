@@ -72,6 +72,25 @@ describe("planBaselineReuse", () => {
     });
   });
 
+  it("carries main's test for each surface this run did not capture, and no other", () => {
+    const actualTests = {
+      "same.png": "test-same",
+      "gone.png": "test-gone",
+      "skipped.png": "",
+    };
+    for (const selective of [false, true]) {
+      const plan = planBaselineReuse({
+        report: { ...report, actualTests },
+        actualHashes,
+        selective,
+      });
+      expect(plan.baselineTests).toEqual({ "gone.png": "test-gone" });
+    }
+    expect(planBaselineReuse({ report, actualHashes, selective: false })).not.toHaveProperty(
+      "baselineTests",
+    );
+  });
+
   it("gives no plan for a report without usable hashes", () => {
     for (const actualBlobs of [undefined, {}, [], { "same.png": "../etc/passwd" }]) {
       expect(
@@ -132,6 +151,13 @@ describe("readPlan", () => {
       JSON.stringify({ version: 1, unchanged: ["../x.png"], filled: [], fetch: [] }),
     );
     expect(() => readPlan(file)).toThrow(/unexpected shape/u);
+    for (const baselineTests of [[], { "../x.png": "test" }, { "x.png": "" }, { "x.png": 1 }]) {
+      writeFileSync(
+        file,
+        JSON.stringify({ version: 1, unchanged: [], filled: [], fetch: [], baselineTests }),
+      );
+      expect(() => readPlan(file)).toThrow(/unexpected shape/u);
+    }
     writeFileSync(file, "not json");
     expect(() => readPlan(file)).toThrow(/not valid JSON/u);
   });
