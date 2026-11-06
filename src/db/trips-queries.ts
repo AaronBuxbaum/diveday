@@ -605,9 +605,10 @@ export async function boatServiceWindowOf(
   tx: DbExecutor,
   shopId: string,
   boatId: string | null,
+  options: { lock?: boolean } = {},
 ): Promise<ServiceWindow | null> {
   if (!boatId) return null;
-  const [boat] = await tx
+  const read = tx
     .select({
       outOfServiceFrom: boats.outOfServiceFrom,
       outOfServiceUntil: boats.outOfServiceUntil,
@@ -616,6 +617,12 @@ export async function boatServiceWindowOf(
     .from(boats)
     .where(and(eq(boats.id, boatId), eq(boats.shopId, shopId)))
     .limit(1);
+  // **The nightly roll reads the window under a share lock** (issue #3988): it
+  // decides what to put on a hull from this row and then writes, so a window
+  // saved between the read and the insert would leave a departure in a yard
+  // week. A share lock makes the save wait for the roll's commit, and the next
+  // roll reads the new window. A read that only answers a question stays unlocked.
+  const [boat] = options.lock ? await read.for("share") : await read;
   return boatServiceWindow(boat);
 }
 

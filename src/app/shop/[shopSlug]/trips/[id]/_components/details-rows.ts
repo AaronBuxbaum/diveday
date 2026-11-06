@@ -4,7 +4,7 @@ import { lastAtSites } from "@/db/site-history";
 import { openSeatsDebriefText } from "@/i18n/open-seats-labels";
 import { siteHistoryText } from "@/i18n/site-history-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -33,6 +33,8 @@ export function repeatsRowText(
     futureScheduledCount: number;
     /** Who crews every date, by name; empty when the run has no standing crew. */
     standingCrewNames: string[];
+    /** Cadence dates the nightly roll left off because the boat is out of service (issue #3988). */
+    yardDatesLeftOff: CalendarDate[];
   } | null,
 ): string {
   if (!series) return t("trips.about.oneTime");
@@ -51,12 +53,38 @@ export function repeatsRowText(
       : t("tripSeries.panel.summaryAllDone", { summary });
   // The run's standing crew, so a staffer sees it before hand-assigning a date
   // the next apply would overwrite.
-  if (series.standingCrewNames.length === 0) return counted;
-  const crewLine = t("tripSeries.panel.standingCrewLine", {
-    names: cachedListFormat(locale, { type: "conjunction" }).format(series.standingCrewNames),
-    count: series.standingCrewNames.length,
+  const crewLine =
+    series.standingCrewNames.length === 0
+      ? ""
+      : t("tripSeries.panel.standingCrewLine", {
+          names: cachedListFormat(locale, { type: "conjunction" }).format(series.standingCrewNames),
+          count: series.standingCrewNames.length,
+        });
+  return [counted, crewLine, yardLeftOffText(t, locale, series.yardDatesLeftOff)]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** The most yard dates the row names before the rest are counted. */
+const YARD_DATES_SHOWN = 3;
+
+/**
+ * The weeks the nightly roll left off because the boat is out of service,
+ * read from the board and the boat's window as they stand: nothing is stored,
+ * so the line goes when the window moves. Empty when the roll left none off.
+ */
+function yardLeftOffText(
+  t: StaffTranslator,
+  locale: string,
+  dates: readonly CalendarDate[],
+): string {
+  if (dates.length === 0) return "";
+  const named = dates.slice(0, YARD_DATES_SHOWN).map((date) => formatCalendarDate(date, locale));
+  const rest = dates.length - named.length;
+  if (rest > 0) named.push(t("tripSeries.panel.yardLeftOffMore", { count: rest }));
+  return t("tripSeries.panel.yardLeftOff", {
+    dates: cachedListFormat(locale, { type: "conjunction" }).format(named),
   });
-  return `${counted} ${crewLine}`;
 }
 
 /**
