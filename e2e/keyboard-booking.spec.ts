@@ -392,10 +392,8 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   await expect(page.getByLabel("Full name")).toBeFocused();
   await page.keyboard.type(diver);
 
-  // The three fields and the submit are contiguous and in reading order. This
-  // is asserted exactly rather than by another search loop, because a form
-  // whose submit button is not the next stop after its last field is a form
-  // people fail to submit.
+  // The three fields are contiguous and in reading order; the submit follows
+  // the family rows.
   const email = await tab(page);
   expectUsableStop(email, "diver form");
   expect(email.label).toMatch(/Email/);
@@ -405,9 +403,11 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   expectUsableStop(phone, "diver form");
   expect(phone.label).toMatch(/Phone/);
 
-  const submit = await tab(page);
-  expectUsableStop(submit, "diver form");
-  expect(submit.label).toMatch(/Add to trip/);
+  // The family rows (type, date of birth, "Add another person") sit between the
+  // phone and the submit on a boat, so the submit is found rather than assumed
+  // to be the next stop.
+  const submit = await tabUntil(page, /"Add to trip"/, { limit: 12, where: "diver form" });
+  expect(submit.at(-1)?.label).toMatch(/Add to trip/);
 
   await page.keyboard.press("Enter");
 
