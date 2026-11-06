@@ -154,7 +154,12 @@ test.describe("Settings fragment hydration", () => {
             resolveChunk();
             await chunkGate;
           }
-          await route.fulfill({ response, body });
+          // The page may close the request itself while the chunk is held (a
+          // later navigation, the test's own teardown); a route Playwright has
+          // already settled is not a hydration failure.
+          await route.fulfill({ response, body }).catch((error: Error) => {
+            if (!/Route is already handled/.test(error.message)) throw error;
+          });
         });
         // diveday:allow-e2e-hygiene pre-hydration-click: no click here; the spec holds the disclosure chunk and settles by hand.
         await browserPage.goto(
