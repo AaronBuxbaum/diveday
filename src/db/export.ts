@@ -295,6 +295,18 @@ async function readSafetyRecords(tx: AppTransaction, scope: ShopExportScope) {
   return {
     safetyDrillRows: await readScoped(tx, "safetyDrills", scope),
     safetyDrillParticipantRows: await readScoped(tx, "safetyDrillParticipants", scope),
+    ...(await readShopInbox(tx, scope)),
+  };
+}
+
+/** The inbox, the shop's answers, the notes to a departure and the found-items shelf (ADR 20260907-two-way-inbox). */
+async function readShopInbox(tx: AppTransaction, scope: ShopExportScope) {
+  return {
+    inboundMessageRows: await readScoped(tx, "inboundMessages", scope),
+    staffReplyRows: await readScoped(tx, "staffReplies", scope),
+    interestReplyRows: await readScoped(tx, "interestReplies", scope),
+    departureNoteRows: await readScoped(tx, "departureNotes", scope),
+    lostItemRows: await readScoped(tx, "lostItems", scope),
   };
 }
 
@@ -563,13 +575,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   // tickets about them, and what each ticket cost.
   const customerGearItemRows = await readScoped(tx, "customerGearItems", scope);
 
-  // The inbox, the shop's answers and the found-items shelf (ADR 20260907-two-way-inbox).
-  const inboundMessageRows = await readScoped(tx, "inboundMessages", scope);
-  const staffReplyRows = await readScoped(tx, "staffReplies", scope);
-  const interestReplyRows = await readScoped(tx, "interestReplies", scope);
-  const departureNoteRows = await readScoped(tx, "departureNotes", scope);
-  const lostItemRows = await readScoped(tx, "lostItems", scope);
-
   const workOrderRows = await readScoped(tx, "workOrders", scope);
 
   const workOrderItemRows = await readScoped(tx, "workOrderItems", scope);
@@ -723,11 +728,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     gearServiceEventRows,
     gearReservationRows,
     customerGearItemRows,
-    inboundMessageRows,
-    staffReplyRows,
-    interestReplyRows,
-    departureNoteRows,
-    lostItemRows,
     workOrderRows,
     workOrderItemRows,
     workOrderLineRows,

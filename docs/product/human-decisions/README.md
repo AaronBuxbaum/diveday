@@ -219,7 +219,7 @@ and run the command again.
 | H-20261025-may-one-human-hold | Ready | — | May one human hold a login at more than one shop? |
 | H-20261025-name-first-three-pilot | Ready | — | Name the first three pilot shops by name (comprehensive-review-20260802 PROD-C1/HD-2). |
 | H-20261025-paper-day-say-printed | Ready | — | Does the paper day say who printed it? |
-| H-20261025-per-diver-record-export | Implemented | — | A per-diver record export (issue #726 — loadDiverExportBundleInput, src/db/export.ts) ships with waiver_records.csv's medical_answers column… |
+| H-20261025-per-diver-record-export | Implemented | 2026-11-05 | A per-diver record export (issue #726 — loadDiverExportBundleInput, src/db/export.ts) ships with waiver_records.csv's medical_answers column… |
 | H-20261025-product-has-never-had | Ready | — | The product has never had a recorded conversation with a real dive shop. |
 | H-20261025-review-entire-engineering-backlog | Ready | — | This review's entire engineering backlog closed twice in five days (144 files, then 82,… |
 | H-20261025-shop-authored-pre-departure | Ready | — | A shop-authored pre-departure safety checklist (issue #686 — pre_departure_check_events, ADR 20260824-pre-departure-safety-check) ships informs-only: an… |
