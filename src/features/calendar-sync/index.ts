@@ -16,7 +16,6 @@ export {
   issueCalendarFeed,
   listCalendarFeeds,
   revokeCalendarFeeds,
-  revokeFeedsForFormerStaff,
   touchCalendarFeed,
   verifyCalendarFeed,
 } from "./feed-store";

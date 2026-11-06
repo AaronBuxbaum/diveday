@@ -25,7 +25,6 @@ import {
   reviewStaffCredential,
   STAFF_CREDENTIAL_KINDS,
 } from "@/db/staff-credentials";
-import { revokeFeedsForFormerStaff } from "@/features/calendar-sync";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { inviteLinkPath } from "@/lib/account-tokens";
@@ -443,17 +442,6 @@ export async function removeStaffAction(formData: FormData) {
     revalidateAndRedirect(path, noticeUrl(path, result.reason));
     return;
   }
-  // Their calendar subscription dies on its next fetch regardless —
-  // `verifyCalendarFeed` re-derives roles every time — but leaving the row
-  // live means the shop cannot see it is gone. Revoke it now so "removed
-  // from the team" means removed everywhere it is visible. Restoring roles
-  // via undo does not re-issue the old feed link; re-deriving from live
-  // roles on the next fetch is enough to let them subscribe again if needed.
-  //
-  // This coordination lives here, not in `removeStaffMember`: `src/db` may
-  // not import a feature module (ADR 20260730-feature-module-contracts), so
-  // the composition layer is where two features meet.
-  await revokeFeedsForFormerStaff(db, { shopId: session.user.shopId });
   revalidateAndRedirect(
     path,
     noticeUrl(path, "removed", {
