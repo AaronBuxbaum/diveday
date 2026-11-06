@@ -534,12 +534,10 @@ export async function waiverLinkFromToast(page: Page): Promise<string> {
 
 /**
  * Open a copied waiver link on this browser. Copy link hands staff a counter
- * link (issue #3983), which opens on the first phone that claims it, so the
- * page asks first; this is that phone saying "here".
+ * link (issue #3983), which opens straight to its form on any phone (#4064).
  */
 export async function openCopiedWaiverLink(page: Page, path: string): Promise<void> {
   await page.goto(path);
-  await page.getByRole("button", { name: "Open the waiver here" }).click();
   await expect(page.getByLabel("Type your full name")).toBeVisible();
 }
 
