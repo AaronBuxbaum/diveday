@@ -591,6 +591,33 @@ export async function setStaffAccountStatus(
   });
 }
 
+export type RestoreStaffResult =
+  | { ok: true; resendInvite: boolean }
+  | { ok: false; reason: "last_owner" | "not_found" };
+
+/**
+ * The Undo after a removal: puts the roles back and re-enables the account. An invitee who never
+ * accepted keeps the `invited` status, because a re-enable would hand them an account the invite
+ * never opened (issue #3997); they come back on the team with no live link, so the answer says
+ * to resend the invite rather than failing (issue #4013).
+ */
+export async function restoreStaffMember(
+  db: AppDb,
+  input: { shopId: string; personId: string; userAccountId: string; roles: Role[] },
+): Promise<RestoreStaffResult> {
+  const rolesResult = await setStaffRoles(db, input);
+  if (!rolesResult.ok) return rolesResult;
+  const [account] = await db
+    .select({ status: userAccounts.status })
+    .from(userAccounts)
+    .where(
+      and(eq(userAccounts.id, input.userAccountId), eq(userAccounts.personId, input.personId)),
+    );
+  if (account?.status === "invited") return { ok: true, resendInvite: true };
+  const statusResult = await setStaffAccountStatus(db, { ...input, status: "active" });
+  return statusResult.ok ? { ok: true, resendInvite: false } : statusResult;
+}
+
 /**
  * Removes someone from the team: strips every staff role (a `diver` row, if
  * any, is untouched) and disables their account. Never soft-deletes the

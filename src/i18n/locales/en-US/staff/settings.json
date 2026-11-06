@@ -709,6 +709,7 @@
       "disabled": "Account disabled. They can no longer sign in.",
       "removed": "Deleted. They’re off your team and can no longer sign in.",
       "restored": "Team access restored",
+      "restoredResendInvite": "Back on the team. They haven’t joined yet, so resend their invite.",
       "restoreFailed": "Couldn’t restore that person’s access. Check their account first.",
       "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
       "rolesInvalid": "Check at least one role before saving.",

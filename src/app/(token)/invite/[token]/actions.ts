@@ -3,16 +3,13 @@
 import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { consumeAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
-import { activateStaffAccount, getAccountContact } from "@/db/user-accounts";
+import { claimStaffInvite, getAccountContact } from "@/db/user-accounts";
 import { getAuth } from "@/lib/auth";
 import { type PasswordConfirmErrorCode, passwordConfirmSchema } from "@/lib/onboarding";
 import { hashPassword } from "@/lib/password-hashing";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-
-class InviteNotOpen extends Error {}
 
 /**
  * Consumes the invite token and activates the account atomically — a
@@ -42,20 +39,7 @@ export async function acceptStaffInvite(token: string, formData: FormData) {
   // slow, and there's no reason to hold the transaction (and its row locks)
   // open for it.
   const hashedPassword = await hashPassword(parsed.data.password);
-  const claimed = await db
-    .transaction(async (tx) => {
-      const claim = await consumeAccountToken(tx, { token, purpose: "invite" });
-      if (!claim) return null;
-      // Not invited any more: roll the claim back with it rather than burn a link for nothing.
-      if (!(await activateStaffAccount(tx, claim.userAccountId, hashedPassword))) {
-        throw new InviteNotOpen();
-      }
-      return claim;
-    })
-    .catch((error: unknown) => {
-      if (error instanceof InviteNotOpen) return null;
-      throw error;
-    });
+  const claimed = await claimStaffInvite(db, { token, hashedPassword });
   if (!claimed) redirect(base);
 
   const account = await getAccountContact(db, claimed.userAccountId);

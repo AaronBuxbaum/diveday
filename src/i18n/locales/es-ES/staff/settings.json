@@ -709,6 +709,7 @@
       "disabled": "Cuenta deshabilitada. Ya no puede iniciar sesión.",
       "removed": "Eliminado: está fuera de tu equipo y ya no puede iniciar sesión.",
       "restored": "Acceso al equipo restaurado",
+      "restoredResendInvite": "De vuelta en el equipo. Aún no se ha unido, así que reenvía su invitación.",
       "restoreFailed": "No se pudo restaurar el acceso de esa persona. Revisa su cuenta primero.",
       "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
       "rolesInvalid": "Marca al menos un rol antes de guardar.",

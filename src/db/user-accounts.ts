@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import type { DbExecutor } from "./client";
+import { checkAccountToken, consumeAccountToken } from "./account-tokens";
+import type { AppDb, DbExecutor } from "./client";
 import { accountSessions, accountSignInChallenges, people, shops, userAccounts } from "./schema";
 
 export type AccountContact = {
@@ -137,6 +138,43 @@ export async function activateStaffAccount(
       .where(eq(accountSignInChallenges.userAccountId, userAccountId));
     return true;
   });
+}
+
+class InviteNotOpen extends Error {}
+
+/**
+ * Spends an invite and activates its account in one transaction: a failure between the two must
+ * not burn a one-time link while leaving the account stuck `invited`. Null for a link that is
+ * unknown, spent, withdrawn, expired, or whose account is no longer waiting on it.
+ */
+export async function claimStaffInvite(
+  db: AppDb,
+  input: { token: string; hashedPassword: string },
+): Promise<{ userAccountId: string } | null> {
+  try {
+    return await db.transaction(async (tx) => {
+      // The account before the link: a removal locks the account and then withdraws its links, so
+      // taking them the other way round could deadlock and surface as a 500 (issue #4013). Peek
+      // for the account, lock it, then spend, which re-checks every condition under the lock.
+      const open = await checkAccountToken(tx, { token: input.token, purpose: "invite" });
+      if (!open) return null;
+      await tx
+        .select({ id: userAccounts.id })
+        .from(userAccounts)
+        .where(eq(userAccounts.id, open.userAccountId))
+        .for("update");
+      const claim = await consumeAccountToken(tx, { token: input.token, purpose: "invite" });
+      if (!claim) return null;
+      // Not invited any more: roll the claim back with it rather than burn a link for nothing.
+      if (!(await activateStaffAccount(tx, claim.userAccountId, input.hashedPassword))) {
+        throw new InviteNotOpen();
+      }
+      return claim;
+    });
+  } catch (error) {
+    if (error instanceof InviteNotOpen) return null;
+    throw error;
+  }
 }
 
 /**
