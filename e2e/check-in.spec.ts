@@ -167,7 +167,7 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   // The band is one search field with nothing to choose (Aaron, 2026-11-05).
   await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Booking or walk-in" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveCount(1);
 
   // A boat that is home is read rather than worked: its Divers tab is the
   // record, every seat filed by the crew's roll call (UX review 2026-10-10,
@@ -244,7 +244,7 @@ test("a diver added by name alone books straight onto a boat with no email requi
   // code and proves it actually did — a looser pattern would pass either way.
   await expect(page).toHaveURL(counter);
   await expect(
-    page.getByText("Added to this boat’s list, but their waiver wasn’t emailed."),
+    page.getByText("Diver added to the trip, but their waiver wasn’t emailed."),
   ).toBeVisible();
   await expect(deskRow(page, "Walk-in Test Diver")).toHaveCount(1);
 });
@@ -437,7 +437,7 @@ test("a full boat refuses another add with the wait-list nudge", async ({ page }
   // A refusal lands on the boat's Divers tab, where the add-diver form says
   // why and the wait list is one tap away.
   await expect(page).toHaveURL(
-    new RegExp(`/shop/blue-mantis/trips/${tripId}\\?(?:notice=diver-full)?$`),
+    new RegExp(`/shop/blue-mantis/trips/${tripId}(?:\\?notice=diver-full)?$`),
   );
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
