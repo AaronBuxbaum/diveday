@@ -16,7 +16,7 @@ import { textareaClassFor } from "@/components/ui/form";
  */
 export type RollCallResult =
   | { ok: true }
-  | { ok: false; reason: "not_ready" | "boat_full" | "error" }
+  | { ok: false; reason: "not_ready" | "boat_full" | "superseded" | "error" }
   | null;
 
 export type RollCallAction = (prev: RollCallResult, formData: FormData) => Promise<RollCallResult>;
@@ -43,6 +43,12 @@ export type RollCallButtonCopy = {
    * own taps.
    */
   boatFull?: string;
+  /**
+   * An undo whose mark changed before it landed (`superseded`, #3995): the
+   * row has refreshed to what stands, and nothing was taken back. Absent
+   * falls back to `errorRefusal`.
+   */
+  superseded?: string;
 };
 
 /**
@@ -82,8 +88,15 @@ export function RollCallButton({
   copy,
   noteField,
   observabilityAction,
+  retracts,
 }: {
   action: RollCallAction;
+  /**
+   * On an undo (`status="cleared"`): the stored event id of the mark on
+   * screen, posted as `retractsEventId` so the server takes back that mark and
+   * no other (#3995). Ignored on every other status.
+   */
+  retracts?: string;
   /**
    * Who this result is about, as the hidden field the server action parses.
    * A booked diver is `bookingId`; an assigned crew member is `personId` —
@@ -195,6 +208,9 @@ export function RollCallButton({
       <form action={formAction} className={formClassName}>
         <input type="hidden" name={subject.field} value={subject.id} />
         <input type="hidden" name="status" value={status} />
+        {status === "cleared" && retracts ? (
+          <input type="hidden" name="retractsEventId" value={retracts} />
+        ) : null}
         {noteField ? (
           <p className="mb-2">
             <label htmlFor={`${noteField.name}-${subject.id}-${status}`} className="sr-only">
@@ -269,7 +285,9 @@ export function RollCallButton({
             ? copy.blockedMessage
             : result.reason === "boat_full"
               ? (copy.boatFull ?? copy.errorRefusal)
-              : copy.errorRefusal}
+              : result.reason === "superseded"
+                ? (copy.superseded ?? copy.errorRefusal)
+                : copy.errorRefusal}
         </p>
       ) : null}
     </>

@@ -131,6 +131,12 @@ export type RollCallRecord = {
    * stored; a carried-forward (`implied`) result keeps its source event's id.
    */
   eventId?: string;
+  /**
+   * True on an earlier meeting day's "did not come back" carried onto today
+   * (`manifestRollCallView`, #3995): its time and recorder are that day's, so
+   * the row says where it came from.
+   */
+  fromEarlierDay?: boolean;
 };
 
 /**
