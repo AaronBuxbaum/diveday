@@ -303,7 +303,7 @@ describe("Email and text on a release with no seat", () => {
     expect((await waiverLinkDoor(ctx.db, tokenIn(bodies[0]), { now }))?.door).toBe("release");
   });
 
-  it("keeps one live link per release: a resend or a Copy link retires the one before", async () => {
+  it("a resend retires the mailed link before it, and a Copy link leaves it live (#4008)", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const person = await diver();
     const { providers, bodies } = textCapture();
@@ -335,8 +335,47 @@ describe("Email and text on a release with no seat", () => {
       now,
     });
     if (!copied.ok || !copied.token) throw new Error("copy link refused");
-    expect(await waiverLinkDoor(ctx.db, second, { now })).toBeNull();
+    // The diver may sign at the counter or from the text: both stay live.
+    expect((await waiverLinkDoor(ctx.db, second, { now }))?.door).toBe("release");
+    expect((await waiverLinkDoor(ctx.db, copied.token, { now }))?.door).toBe("counter_unclaimed");
     expect(await pendingRelease(person.id)).toMatchObject({ id: record.id });
+
+    // A later text retires the earlier text only, never the counter link.
+    await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
+      channel: "sms",
+      textProviders: providers,
+      now,
+    });
+    expect(await waiverLinkDoor(ctx.db, second, { now })).toBeNull();
+    expect((await waiverLinkDoor(ctx.db, tokenIn(bodies[2]), { now }))?.door).toBe("release");
+    expect((await waiverLinkDoor(ctx.db, copied.token, { now }))?.door).toBe("counter_unclaimed");
+  });
+
+  it("one signature closes the release: the door left over opens neither form nor receipt", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const person = await diver();
+    const { providers, bodies } = textCapture();
+    await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
+      channel: "sms",
+      textProviders: providers,
+      now,
+    });
+    const mailed = tokenIn(bodies[0]);
+    const copied = await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
+      channel: "link",
+      actorPersonId: await shopStaffer(ctx.db, ctx.shop.id),
+      now,
+    });
+    if (!copied.ok || !copied.token) throw new Error("copy link refused");
+    const counter = await openOnDevice(ctx.db, copied.token, now);
+    if (counter?.door !== "counter") throw new Error("counter door expected");
+    expect(
+      await completeWaiver(ctx.db, counter.key, { ...signature(person.fullName), now }),
+    ).toMatchObject({ ok: true, status: "completed" });
+    // The text's link signed nothing, so it opens neither the form nor the receipt.
+    expect(await waiverLinkDoor(ctx.db, mailed, { now })).toBeNull();
+    expect(await staleWaiverRecordForToken(ctx.db, mailed, now)).toBeNull();
+    expect(await hasLivePersonWaiverRequest(ctx.db, ctx.shop.id, person.id, now)).toBe(false);
   });
 });
 
@@ -406,8 +445,8 @@ describe("what a release link never opens", () => {
   });
 });
 
-describe("one live door per release, whatever its purpose", () => {
-  it("a counter link, a party member's door and a release link each revoke the others", async () => {
+describe("one live door per release and purpose (#4008)", () => {
+  it("a mint retires the earlier door of its own purpose only", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const person = await diver();
     const { providers } = textCapture();
@@ -417,6 +456,9 @@ describe("one live door per release, whatever its purpose", () => {
       now,
     });
     const record = await pendingRelease(person.id);
+    const [mailed] = await linksTo(record.id);
+    if (!mailed) throw new Error("mailed link missing");
+    const latest = new Map<string, string>([["release_link", mailed.id]]);
     const order = [
       "waiver_link",
       "party_waiver_link",
@@ -432,9 +474,37 @@ describe("one live door per release, whatever its purpose", () => {
         subjectId: record.id,
         now,
       });
+      latest.set(purpose, minted.id);
       const live = (await linksTo(record.id)).filter((link) => link.revokedAt === null);
-      expect(live.map((link) => link.id)).toEqual([minted.id]);
+      expect(live.map((link) => link.id).sort()).toEqual([...latest.values()].sort());
     }
+  });
+
+  it("the database refuses a second live door of one purpose to a release", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const person = await diver();
+    const { providers } = textCapture();
+    await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
+      channel: "sms",
+      textProviders: providers,
+      now,
+    });
+    const record = await pendingRelease(person.id);
+    const second = {
+      shopId: ctx.shop.id,
+      waiverRecordId: record.id,
+      issuedAt: now,
+      expiresAt: new Date(now.getTime() + DAY_MS),
+    };
+    // Another purpose sits beside it; the same purpose is refused.
+    await ctx.db
+      .insert(capabilities)
+      .values({ ...second, purpose: "waiver_link", tokenHash: `counter-${record.id}` });
+    await expect(
+      ctx.db
+        .insert(capabilities)
+        .values({ ...second, purpose: "release_link", tokenHash: `forged-${record.id}` }),
+    ).rejects.toThrow();
   });
 });
 

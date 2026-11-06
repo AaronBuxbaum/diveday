@@ -244,21 +244,17 @@ export async function mintCapability<P extends CapabilityPurpose>(
   if (policy.reissue === "supersedes") {
     // The invariant (one live link per shop, or per subject, per purpose)
     // belongs to this module, not to its callers. A release holds one live
-    // door whatever its purpose (`capabilities_live_waiver_record_idx`): a
-    // counter link, a party member's door and a mailed release link to the
-    // same release each revoke the others (issues #3983, #3986; whether a
-    // counter link and a mailed one may both stay live is #4008).
+    // door of each purpose (`capabilities_live_waiver_record_idx`): a counter
+    // link, a party member's door and a mailed release link to the same
+    // release stand side by side, and the signature through any one of them
+    // leaves the others opening nothing (issue #4008).
     await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
-    const superseded =
-      policy.per === "subject" && policy.subject === "waiver_record"
-        ? purposesNaming("waiver_record")
-        : [input.purpose];
     await db
       .update(capabilities)
       .set({ revokedAt: now })
       .where(
         and(
-          inArray(capabilities.purpose, superseded),
+          eq(capabilities.purpose, input.purpose),
           policy.per === "shop"
             ? eq(capabilities.shopId, shopId as string)
             : eq(subjectColumn(input.purpose), input.subjectId),

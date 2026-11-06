@@ -183,7 +183,7 @@
   confirmation and find-my-booking carry it; reminders and reschedule notices go with no link. It
   opens on `/waivers/<token>` by the **counter link**'s rules, plus the release's doctor's page on
   the phone that holds it, and grants nothing else. A dead one offers to mail a fresh door to the
-  address on file. A release has one live door of any kind, so a counter code replaces it. A minor
+  address on file. A counter code to the same release stands beside it (issue #4008). A minor
   member gets no door, and a door never signs a minor's release: the lead signs that seat on their
   own link, or the desk does with a guardian present.
 - **Recap link epoch** — the number a recap link signs beside its booking (`bookings.recap_link_epoch`,
@@ -192,8 +192,9 @@
   address opens nothing, and the next one carries the new number.
 - **Release link** — the link an email or a text carries to sign a release with no seat (issue
   #3983): a `release_link` row in `capabilities` naming that release, alive a week, spent by the
-  signature, sent only to the contact on file and never shown to staff. A release holds one live
-  door of any kind; a contact change revokes it, an erasure deletes it, and a dead one
+  signature, sent only to the contact on file and never shown to staff. A newer one replaces it; a
+  counter link to the same release stands beside it (issue #4008). A contact change revokes it, an
+  erasure deletes it, and a dead one
   lands on the rescue, which mails a fresh one to the address on file. It never opens a seat's
   release (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md),

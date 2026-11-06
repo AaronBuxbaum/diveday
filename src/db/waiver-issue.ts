@@ -346,8 +346,8 @@ function emailDelivery(
 
 /**
  * A party member's waiver-only door to the release (issue #3986): first
- * device, spent by the signature, two weeks. Minting it revokes every other
- * live door to the release.
+ * device, spent by the signature, two weeks. Minting it revokes the member's
+ * earlier door; a counter code to the same release stays live (issue #4008).
  */
 async function mintPartyDoor(
   tx: DbExecutor,
@@ -609,7 +609,10 @@ export async function issueAndDeliverWaiver(
  *   contact on file only. Its token never comes back, sent or not; a staffer
  *   who needs a URL to hand over asks for Copy link.
  *
- * A release holds one live link: either mint revokes the one before.
+ * A release holds one live link of each kind: a resend revokes the mailed link
+ * before it, a Copy link the counter link before it, and a counter link and a
+ * mailed one stand side by side (issue #4008). Whichever signs, the other then
+ * opens nothing.
  */
 export async function issueAndDeliverPersonWaiver(
   db: AppDb,

@@ -1,0 +1,58 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "4d2cce10-c824-40db-8aa4-df0b87947e97",
+  "prevIds": [
+    "3a06786a-df6e-45dd-91ee-d0a508c251aa"
+  ],
+  "footprints": [
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "capabilities",
+        "capabilities_live_waiver_record_idx"
+      ],
+      "writes": [
+        "s|idx|public.capabilities_live_waiver_record_idx",
+        "n|idx|public.capabilities_live_waiver_record_idx",
+        "e|idx|public.capabilities_live_waiver_record_idx",
+        "n|rel|public.capabilities_live_waiver_record_idx"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.waiver_record_id",
+        "n|col|public.capabilities.purpose"
+      ],
+      "sharedWrites": [],
+      "sqlHash": "1cf772914e6a06fd"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"capabilities_live_waiver_record_idx\"]",
+      "set": {
+        "columns": [
+          {
+            "value": "waiver_record_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "purpose",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ]
+      }
+    }
+  ]
+}
