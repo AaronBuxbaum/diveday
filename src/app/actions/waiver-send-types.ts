@@ -46,6 +46,11 @@ export type WaiverFallbackLink = {
   /** The seat a null-token row is about, so its "Send by text" knows where to post. */
   bookingId?: string;
   /**
+   * The seat's record holds a number a text can reach. "Send by text" is
+   * offered only then (issue #3984): without one it could only fail.
+   */
+  textable?: boolean;
+  /**
    * The link's own path when it is not the release's: a signed release with
    * course forms still owed hands over `/ready/<token>/forms` (ADR
    * 20261008-course-forms). Absent means `/waivers/<token>` — `waiverLinkPath`.

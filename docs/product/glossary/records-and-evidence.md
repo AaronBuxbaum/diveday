@@ -162,7 +162,8 @@
   weekend's day-one close and day-two open are two days rather than one long rest. The arithmetic is
   the dock-day timeline's own (`betweenDivesMinutes`), so the figure a diver reads before booking is
   the figure their thread reads after.
-- **Counter link** — the QR a staffer shows on a party's waiver panel so one diver signs their own
+- **Counter link** — the QR a staffer shows on a party's waiver panel, or on the one-seat queue of
+  a solo seat with no email and no textable number (issue #3984), so one diver signs their own
   seat's release, scanned with any phone, or the URL Copy link hands staff for a release with no
   seat (issue #3983): a `waiver_link` row in `capabilities` naming that release, alive 30 minutes
   and spent by the signature. It opens on the first phone that claims it

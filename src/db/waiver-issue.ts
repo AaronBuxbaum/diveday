@@ -178,6 +178,12 @@ export type IssueAndDeliverWaiverResult =
        */
       path?: string;
       delivery: WaiverDelivery;
+      /**
+       * A seat's record holds a number a text can reach, so a staffer may try
+       * one where email did not land (issue #3984). False for a minor whose
+       * address the lead typed: a text would carry nothing either.
+       */
+      textable?: boolean;
     }
   | {
       ok: false;
@@ -582,6 +588,7 @@ export async function issueAndDeliverWaiver(
         diverName: ctx.person.fullName,
         token: null,
         delivery: delivered,
+        textable: delivered !== "guardian_needed" && smsRecipient(ctx.person.phone) !== null,
       };
     },
   );
@@ -1192,6 +1199,8 @@ export type WaiverBatchFallbackLink = {
   token: string | null;
   /** The seat, when `token` is null, so its row can offer a text instead. */
   bookingId?: string;
+  /** The seat's record holds a number a text can reach (`IssueAndDeliverWaiverResult`). */
+  textable?: boolean;
   /** Set when the link is not the release's own (`IssueAndDeliverWaiverResult.path`). */
   path?: string;
   reason: WaiverDelivery;
@@ -1260,7 +1269,12 @@ export async function deliverWaiverBatch(
       outcome.links.push({
         name: result.diverName,
         token: result.token,
-        ...(result.token === null && result.bookingId ? { bookingId: result.bookingId } : {}),
+        ...(result.token === null && result.bookingId
+          ? {
+              bookingId: result.bookingId,
+              textable: "textable" in result && result.textable === true,
+            }
+          : {}),
         ...(result.path ? { path: result.path } : {}),
         reason: result.delivery,
       });

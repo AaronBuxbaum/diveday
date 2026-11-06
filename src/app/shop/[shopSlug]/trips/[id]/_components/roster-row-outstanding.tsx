@@ -12,6 +12,7 @@ import type { IssuedCard } from "@/db/agency-processing";
 import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { COURSE_FORMS_BLOCK_BOARDING } from "@/lib/course-forms";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { smsRecipient } from "@/lib/notifications";
 import { isDiver } from "@/lib/participant-types";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { REFERRAL_PAPERS } from "@/lib/referral-student";
@@ -191,15 +192,28 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     blockerTexts.some(
       ({ blocker }) => blocker.code === "medical_review" || blocker.code === "medical_not_cleared",
     );
+  // A solo seat with no email and no textable number can be sent nothing, so
+  // it signs on the counter QR (issue #3984, ADR
+  // 20261105-waiver-folds-into-the-thread): its own one-seat queue. Kept once
+  // the release waits on a physician, where the desk prints the form.
+  const counterSeat =
+    !partyLeadId &&
+    !record &&
+    (Boolean(waiverControl.action) ||
+      blockerTexts.some(({ blocker }) => blocker.code === "medical_review")) &&
+    !identityUnconfirmed &&
+    !person.email &&
+    !smsRecipient(person.phone);
+  const counterLeadId = partyLeadId ?? (counterSeat ? booking.id : null);
   const waiverRemedy =
-    waiverControl.action || (partyLeadId && !record) ? (
+    waiverControl.action || (counterLeadId && !record) ? (
       <div className="mt-3 print:hidden">
-        {partyLeadId && !record ? (
+        {counterLeadId && !record ? (
           <Link
-            href={shopPath(shopSlug, "trips", tripId, "party", partyLeadId, "waivers")}
+            href={shopPath(shopSlug, "trips", tripId, "party", counterLeadId, "waivers")}
             className="me-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline print:hidden"
           >
-            {t("trips.partyWaiverQueue.review")}
+            {partyLeadId ? t("trips.partyWaiverQueue.review") : t("trips.partyWaiverQueue.counter")}
           </Link>
         ) : null}
         {waiverControl.action ? (
@@ -449,7 +463,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
   // Whether the panel's first band has anything in it — every condition
   // `outstanding` draws on, so an empty band never leaves its rule behind.
   const hasWork =
-    Boolean(partyLeadId && !record) ||
+    Boolean(counterLeadId && !record) ||
     Boolean(arrival && identityContact) ||
     deskPrivateLines.length > 0 ||
     Boolean(arrival && booking.reEntryAsk) ||

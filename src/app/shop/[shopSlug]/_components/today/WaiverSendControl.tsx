@@ -53,7 +53,7 @@ function CopyLink({
     return (
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-medium">{link.name}</span>
-        {resend && link.bookingId ? (
+        {resend && link.bookingId && link.textable ? (
           <WaiverSendControl
             {...resend}
             channel="sms"
