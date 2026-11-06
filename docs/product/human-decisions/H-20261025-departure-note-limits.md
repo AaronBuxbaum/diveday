@@ -10,15 +10,15 @@
 ## What shipped, as the recommended default
 
 - **Any staff member** may send one, from the trip's Details tab. The person at the counter at 6 AM is the one who knows the marina lot is closed.
-- **At most 200 characters**, folded onto one line, and **three notes per departure**.
-- **No link of any kind**: a scheme, `www.`, an email address or a bare domain is refused at the box and again at the server. The only link in the message is the diver's own `/ready` link, which DiveDay adds.
+- **At most 500 characters**, folded onto one line, and **three notes per departure**.
+- **Links are allowed** (#4062, approved 2026-11-06 in the defensive-choices audit): "Park here: map link" is the note a marina needs. Protection removed: the box and server no longer refuse a scheme, `www.`, an email address or a bare domain, so a rogue staff login could now put a phishing link in front of every booked diver. What remains: the eight-second Undo, the audit row naming who sent it, the three-note cap and the 500-character cap.
 - **Never to a canceled or sailed departure.** Those have their own messages. A multi-day course has sailed once its last day has, so the desk can still reach students between days (#2393).
 - **A held send**: eight seconds with Undo, and every check runs again when the hold drains.
 - Every note is kept (`departure_notes`, 400 days) with who sent it, how many it went to and how many were delivered, and it writes an activity line.
 
 ## Minimum outcome to record
 
-Whether any staff may send, or only owners, managers and captains (the day weather call's set); whether 200 characters and three per departure are right; whether the link rule should allow the shop's own website.
+Whether any staff may send, or only owners, managers and captains (the day weather call's set); whether 500 characters and three per departure are right.
 
 ## Recommendation
 

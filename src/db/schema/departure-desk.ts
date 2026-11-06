@@ -109,7 +109,7 @@ export const departureNotes = pgTable(
   },
   (table) => [
     index("departure_notes_shop_trip_idx").on(table.shopId, table.tripId, table.sentAt),
-    check("departure_notes_body_length", sql`length(trim(${table.body})) between 1 and 200`),
+    check("departure_notes_body_length", sql`length(trim(${table.body})) between 1 and 500`),
   ],
 );
 
