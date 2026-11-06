@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   BLIND_VERDICTS,
-  baselineCacheKey,
   COMMENT_MARKER,
   changedSetDelta,
   commentIsCurrent,
@@ -476,14 +475,6 @@ describe("publicationReportStatus", () => {
     expect(
       publicationReportStatus({ publicationId: "4102-2", actualDir: "actual" }, "4102-1"),
     ).toBe("unpublished");
-  });
-});
-
-describe("baselineCacheKey", () => {
-  it("keys baseline caches by immutable snapshot version", () => {
-    const version = "a".repeat(64);
-    expect(baselineCacheKey(COMMIT, version)).toBe(`reg-baseline-v2-${COMMIT}-${version}`);
-    expect(() => baselineCacheKey(COMMIT, "legacy")).toThrow(/version/u);
   });
 });
 

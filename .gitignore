@@ -58,6 +58,8 @@ next-env.d.ts
 /.pglite-e2e/
 /.pglite-visual/
 /.reg/
+/.reg-baseline-plan.json
+/.reg-unchanged/
 /.reg-report/
 /infra/dist/
 /cdk.out/

@@ -195,16 +195,8 @@ jobs:
           echo "::error title=Full visual capture required::A fresh baseline must include every light and dark capture. Re-run after the planner detects the fresh-start marker."
           exit 1
 
-      # A commit can have more than one completed capture set after a retry.
-      # Resolve the marker's immutable snapshot version before looking up cache.
-      - name: Restore the baseline images
-        id: baseline-cache
-        if: ${{ env.REG_EXPECTED_KEY != '' && env.REG_EXPECTED_CACHE_KEY != '' }}
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .reg-baseline
-          key: ${{ env.REG_EXPECTED_CACHE_KEY }}
-
+      # Fetches only the baseline images a capture's hash says could differ (main's out.json
+      # names every capture's sha-256); the rest never leave the bucket.
       - name: Prepare expected screenshots without AWS credentials
         run: node scripts/visual-prepare-baseline.mjs
         env:
@@ -212,8 +204,7 @@ jobs:
           REG_SUIT_AWS_REGION: ${{ steps.region.outputs.region }}
           REG_EXPECTED_KEY: ${{ env.REG_EXPECTED_KEY }}
           REG_EXPECTED_VERSION: ${{ env.REG_EXPECTED_VERSION }}
-          VISUAL_BASELINE_DIR: ${{ steps.baseline-cache.outputs.cache-hit == 'true' && '.reg-baseline' || '' }}
-          VISUAL_BASELINE_KEY: ${{ steps.baseline-cache.outputs.cache-primary-key }}
+          VISUAL_FILL_FROM_EXPECTED: ${{ inputs.capture-mode == 'affected' || inputs.capture-mode == 'light' }}
 
       # This job has no id-token permission. Decode and compare the PR-produced
       # images here, then hand only a trusted, precompressed file bundle onward.

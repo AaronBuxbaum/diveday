@@ -234,9 +234,8 @@ available. The publisher still serializes by commit SHA, rejects ownership chang
 content change that claims the same version, and verifies every object before reusing a complete
 version. Old image versions remain covered by the existing whole-prefix pruner.
 
-Baseline caches use both commit and snapshot version. Only reports whose image directories and S3
-marker carry a valid version are eligible baselines. Existing unversioned reports and commit-only
-cache entries are ignored; they are neither migrated nor copied into new versioned snapshots. The
+Baselines are read by commit and snapshot version. Only reports whose image directories and S3
+marker carry a valid version are eligible baselines. Existing unversioned reports are ignored; they are neither migrated nor copied into new versioned snapshots. The
 first versioned publication starts the comparison history from a clean baseline. When the resolver
 finds only unversioned markers, it explicitly marks that run as a fresh start; the report publishes
 the new versioned baseline without a historical comparison, and subsequent runs compare against it.

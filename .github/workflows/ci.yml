@@ -995,7 +995,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@754b5e764d2c9eb5e968441e6d42d1246b9a85cc # immutable commit 754b5e764d2c9eb5e968441e6d42d1246b9a85cc
+    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@3c33684c026ecb49aa000a08a269c5e8cf40306c # immutable commit 3c33684c026ecb49aa000a08a269c5e8cf40306c
     with:
       capture-mode: ${{ needs.visual-plan.outputs.mode }}
       capture-shards: ${{ needs.visual-plan.outputs.shards }}
@@ -1015,24 +1015,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'pull_request' && 'refs/heads/main' || github.sha }}
-
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        if: ${{ needs.visual.result == 'success' && needs.visual-publish.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-        with:
-          pattern: visual-screenshots-*
-          path: e2e
-          merge-multiple: true
-      - name: Keep this commit's images for the runs that compare against it
-        if: ${{ needs.visual.result == 'success' && needs.visual-publish.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-        run: |
-          rm -rf .reg-baseline
-          cp -R e2e/screenshots .reg-baseline
-      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ needs.visual.result == 'success' && needs.visual-publish.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-        continue-on-error: true
-        with:
-          path: .reg-baseline
-          key: reg-baseline-v2-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}
 
       - name: Summarize the visual result on the pull request
         id: summary

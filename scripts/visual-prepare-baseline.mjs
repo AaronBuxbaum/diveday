@@ -1,21 +1,21 @@
 #!/usr/bin/env node
-// Restore the expected screenshots without AWS credentials. Cache entries and
-// public S3 objects are treated as image input and re-encoded before reg-suit.
-import {
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+// Restore the expected screenshots without AWS credentials. Public S3 objects are treated as
+// image input and re-encoded before reg-suit, and only the ones this run's captures could differ
+// from are fetched at all (scripts/visual-baseline-plan.mjs).
+import { createHash } from "node:crypto";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import {
+  BASELINE_PLAN_FILE,
+  clearPlan,
+  hashScreenshots,
+  planBaselineReuse,
+  writePlan,
+} from "./visual-baseline-plan.mjs";
 import { mapConcurrent, reencodePng } from "./visual-publish-artifacts.mjs";
 import {
   actualObjectKey,
-  baselineCacheKey,
   DEFAULT_BUCKET,
   fetchFromBucket,
   snapshotVersionFromReport,
@@ -27,13 +27,6 @@ const SAFE_BASELINE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}$/u;
 const SAFE_SCREENSHOT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}\.png$/u;
 const MAX_SCREENSHOTS = 2_000;
 const MAX_TOTAL_BYTES = 2_000_000_000;
-
-function requireDirectory(directory, label) {
-  const stat = lstatSync(directory);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) {
-    throw new Error(`${label} must be a real directory`);
-  }
-}
 
 function reportNames(report) {
   if (!snapshotVersionFromReport(report) || !Array.isArray(report.actualItems)) {
@@ -57,11 +50,18 @@ function reportNames(report) {
   return screenshots;
 }
 
-async function fetchBaseline({ bucket, key, version, fetchImpl }) {
+/**
+ * Fetch the baseline's report and then the images the compare needs of it.
+ *
+ * `actualDir` is this run's captures, already canonical. When the report carries main's content
+ * hashes, only the captures whose bytes moved are fetched (scripts/visual-baseline-plan.mjs);
+ * otherwise every baseline image is, as it always was.
+ */
+async function fetchBaseline({ bucket, key, version, fetchImpl, actualDir, selective }) {
   const manifest = await fetchFromBucket(bucket, `${key}/out.json`, { fetchImpl });
   if (!manifest.ok) {
     // Private/missing S3 objects can both be 403 when ListBucket is unavailable.
-    if (manifest.status === 403 || manifest.status === 404) return [];
+    if (manifest.status === 403 || manifest.status === 404) return { files: [], plan: null };
     throw new Error(`could not fetch baseline report (HTTP ${manifest.status})`);
   }
 
@@ -77,17 +77,30 @@ async function fetchBaseline({ bucket, key, version, fetchImpl }) {
     throw new Error("baseline report version does not match the published marker");
   }
   const names = reportNames(report);
+  const plan = actualDir
+    ? planBaselineReuse({
+        report: { ...report, actualItems: names },
+        actualHashes: hashScreenshots(actualDir),
+        selective,
+      })
+    : null;
+  const wanted = plan ? plan.fetch : names;
   const files = [];
   let totalBytes = 0;
   // Downloads are I/O bound and re-encoding is CPU bound: keep both busy.
   await mapConcurrent(
-    names,
+    wanted,
     async (name) => {
       const result = await fetchFromBucket(bucket, actualObjectKey(key, report, name), {
         fetchImpl,
       });
       if (!result.ok) {
         throw new Error(`could not fetch baseline screenshot ${name} (HTTP ${result.status})`);
+      }
+      // A content address is a claim until the bytes agree with it.
+      const claimed = report.actualBlobs?.[name];
+      if (claimed && createHash("sha256").update(result.body).digest("hex") !== claimed) {
+        throw new Error(`baseline screenshot ${name} does not match its content hash`);
       }
       const canonical = await reencodePng(result.body, `baseline ${name}`);
       totalBytes += canonical.length;
@@ -98,57 +111,18 @@ async function fetchBaseline({ bucket, key, version, fetchImpl }) {
     },
     8,
   );
-  return files;
+  return { files, plan, baselineCount: names.length };
 }
 
-async function reencodeCachedBaseline(sourceDir) {
-  requireDirectory(sourceDir, "cached baseline");
-  const files = [];
-  let totalBytes = 0;
-  const entries = readdirSync(sourceDir, { withFileTypes: true });
-  if (entries.length > MAX_SCREENSHOTS) {
-    throw new Error("cached baseline has too many entries");
-  }
-  const pngs = [];
-  for (const entry of entries) {
-    const file = path.join(sourceDir, entry.name);
-    const stat = lstatSync(file);
-    if (!entry.isFile() || entry.isSymbolicLink() || !stat.isFile()) {
-      throw new Error("cached baseline contains a non-file entry");
-    }
-    if (stat.size > 20_000_000) {
-      throw new Error("cached baseline exceeds the publisher limits");
-    }
-    // Cache folders may contain metadata files alongside screenshots. They
-    // are never opened or copied; only PNGs are comparison inputs.
-    if (!entry.name.toLowerCase().endsWith(".png")) continue;
-    if (!SAFE_BASELINE_NAME.test(entry.name) || !SAFE_SCREENSHOT.test(entry.name)) {
-      throw new Error("cached baseline contains an unsafe filename");
-    }
-    if (pngs.length >= MAX_SCREENSHOTS) {
-      throw new Error("cached baseline exceeds the publisher limits");
-    }
-    pngs.push({ file, name: entry.name });
-  }
-  await mapConcurrent(pngs, async ({ file, name }) => {
-    const canonical = await reencodePng(readFileSync(file), `cached baseline ${name}`);
-    totalBytes += canonical.length;
-    if (totalBytes > MAX_TOTAL_BYTES) {
-      throw new Error("cached baseline exceeds the publisher limits");
-    }
-    files.push([name, canonical]);
-  });
-  return files;
-}
-
-/** Prepare a canonical expected-image directory from a trusted cache or public bucket. */
+/** Prepare the expected-image directory from the public bucket, and the plan beside it. */
 export async function prepareVisualBaseline({
   bucket = DEFAULT_BUCKET,
   key = "",
   version = "",
-  sourceDir = "",
-  sourceKey = "",
+  actualDir = "",
+  selective = false,
   outputDir,
+  planFile = BASELINE_PLAN_FILE,
   fetchImpl,
 }) {
   if (!outputDir) throw new Error("outputDir is required");
@@ -158,28 +132,47 @@ export async function prepareVisualBaseline({
     throw new Error("baseline snapshot version is invalid");
   }
 
+  // A plan from an earlier run in this checkout must never outlive the images it described.
+  clearPlan(planFile);
   let files = [];
-  const expectedCacheKey = key ? baselineCacheKey(key, version) : "";
-  if (sourceDir && expectedCacheKey && sourceKey === expectedCacheKey && existsSync(sourceDir)) {
-    files = await reencodeCachedBaseline(sourceDir);
-    if (files.length > 0) {
-      console.log(`visual-prepare-baseline: using ${files.length} cached screenshots.`);
-    }
+  let plan = null;
+  let baselineCount = 0;
+  if (key) {
+    ({
+      files,
+      plan,
+      baselineCount = 0,
+    } = await fetchBaseline({
+      bucket,
+      key,
+      version,
+      fetchImpl,
+      actualDir,
+      selective,
+    }));
   }
-  if (files.length === 0 && key) {
-    files = await fetchBaseline({ bucket, key, version, fetchImpl });
-    if (files.length > 0) {
-      console.log(`visual-prepare-baseline: fetched ${files.length} public baseline screenshots.`);
-    }
+  if (plan) {
+    console.log(
+      `visual-prepare-baseline: ${plan.unchanged.length} of ${baselineCount} baseline screenshots ` +
+        `match this run's captures by hash` +
+        (plan.filled.length > 0
+          ? `, ${plan.filled.length} were not captured (selective run)`
+          : "") +
+        `; fetched ${files.length}.`,
+    );
+  } else if (files.length > 0) {
+    console.log(`visual-prepare-baseline: fetched ${files.length} public baseline screenshots.`);
   }
 
   rmSync(outputDir, { recursive: true, force: true });
   mkdirSync(outputDir, { recursive: true });
   for (const [name, bytes] of files)
     writeFileSync(path.join(outputDir, name), bytes, { flag: "wx" });
+  if (plan) writePlan(plan, planFile);
   return {
     count: files.length,
     totalBytes: files.reduce((sum, [, bytes]) => sum + bytes.length, 0),
+    plan,
   };
 }
 
@@ -189,8 +182,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       bucket: process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET,
       key: process.env.REG_EXPECTED_KEY ?? "",
       version: process.env.REG_EXPECTED_VERSION ?? "",
-      sourceDir: process.env.VISUAL_BASELINE_DIR ?? "",
-      sourceKey: process.env.VISUAL_BASELINE_KEY ?? "",
+      actualDir: path.resolve(process.env.VISUAL_ACTUAL_DIR ?? "e2e/screenshots"),
+      selective: process.env.VISUAL_FILL_FROM_EXPECTED === "true",
       outputDir: path.resolve(".reg/expected"),
     });
     console.log(`visual-prepare-baseline: ready with ${result.count} expected screenshots`);

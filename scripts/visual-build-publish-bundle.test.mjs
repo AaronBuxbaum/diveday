@@ -4,7 +4,7 @@ import path from "node:path";
 import { gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { buildVisualPublishBundle } from "./visual-build-publish-bundle.mjs";
+import { buildVisualPublishBundle, heldNames } from "./visual-build-publish-bundle.mjs";
 
 const temps = [];
 
@@ -369,5 +369,66 @@ describe("content-addressed actual images", () => {
       expect(report.actualBlobs["a.png"]).toBe(report.actualBlobs["b.png"]);
       expect(report.actualItems).toEqual(["a.png", "b.png", "c.png"]);
     }
+  });
+
+  it("names an image main already holds instead of carrying it, and still carries a changed one", () => {
+    const { sourceDir, bundleDir } = fixture();
+    for (const dir of ["actual", "expected", "diff"]) mkdirSync(path.join(sourceDir, dir));
+    writeFileSync(path.join(sourceDir, "actual", "held.png"), "held");
+    writeFileSync(path.join(sourceDir, "actual", "moved.png"), "moved");
+    writeFileSync(
+      path.join(sourceDir, "out.json"),
+      JSON.stringify({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+        actualItems: ["held.png", "moved.png"],
+        failedItems: [],
+        deletedItems: [],
+      }),
+    );
+    const { snapshotVersion } = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4103-1",
+      contentAddressedActual: true,
+      referencedActual: ["held.png"],
+    });
+    const lines = readFileSync(path.join(bundleDir, "manifest.tsv"), "utf8")
+      .split("\n")
+      .filter(Boolean);
+    const blobLines = lines.filter((line) => line.startsWith("blobs/"));
+    expect(blobLines.filter((line) => line.endsWith("\tref"))).toHaveLength(1);
+    expect(blobLines.filter((line) => !line.endsWith("\tref"))).toHaveLength(1);
+    const report = JSON.parse(
+      gunzipSync(
+        readFileSync(path.join(bundleDir, "payload", `snapshots/${snapshotVersion}/out.json.gz`)),
+      ).toString("utf8"),
+    );
+    // The report is the same whether or not the bytes travel: both names keep their hash.
+    expect(Object.keys(report.actualBlobs)).toEqual(["held.png", "moved.png"]);
+    const [referenced] = blobLines.filter((line) => line.endsWith("\tref"));
+    const key = referenced.split("\t")[0];
+    expect(key).toBe(`blobs/${report.actualBlobs["held.png"]}.png`);
+    expect(() => readFileSync(path.join(bundleDir, "payload", `${key}.gz`))).toThrow();
+  });
+});
+
+describe("heldNames", () => {
+  it("keeps only the names whose blob the bucket confirms, and carries the rest", async () => {
+    const calls = [];
+    const fetchImpl = async (url, init) => {
+      calls.push([String(url), init.method]);
+      if (String(url).includes("boom")) throw new Error("network");
+      return { status: String(url).includes("gone") ? 404 : 200 };
+    };
+    const held = await heldNames({
+      names: ["a.png", "b.png", "c.png", "d.png"],
+      hashes: { "a.png": "aaa", "b.png": "gone", "c.png": "boom", "d.png": "" },
+      bucket: "diveday-vrt",
+      fetchImpl,
+    });
+    expect(held).toEqual(["a.png"]);
+    expect(calls.every(([, method]) => method === "HEAD")).toBe(true);
   });
 });

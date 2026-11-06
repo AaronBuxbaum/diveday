@@ -47,7 +47,7 @@ describe("reg-suit consumer workflow", () => {
     );
     expect(publisher).not.toContain("reg-suit-publish.yml@refs/heads/main");
     expect(publisher).toContain(
-      "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@754b5e764d2c9eb5e968441e6d42d1246b9a85cc # immutable commit 754b5e764d2c9eb5e968441e6d42d1246b9a85cc",
+      "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@3c33684c026ecb49aa000a08a269c5e8cf40306c # immutable commit 3c33684c026ecb49aa000a08a269c5e8cf40306c",
     );
     expect(publisher).not.toContain("steps:");
     expect(publisher).toContain("capture-mode: ${{ needs.visual-plan.outputs.mode }}");
@@ -65,11 +65,9 @@ describe("reg-suit consumer workflow", () => {
     expect(report).toContain(
       "ref: ${{ github.event_name == 'pull_request' && 'refs/heads/main' || github.sha }}",
     );
-    expect(report).toMatch(/pattern: visual-screenshots-\*\n[ \t]+path: e2e\n/u);
-    expect(report).toContain("cp -R e2e/screenshots .reg-baseline");
-    expect(report).toContain(
-      "key: reg-baseline-v2-${{ github.sha }}-${{ needs.visual-publish.outputs.snapshot_version }}",
-    );
+    // The baseline is main's own manifest and blobs in the bucket; nothing is cached for it.
+    expect(report).not.toContain("actions/cache");
+    expect(report).not.toContain("visual-screenshots-");
     expect(report).not.toContain("id-token: write");
   });
 

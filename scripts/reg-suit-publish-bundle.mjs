@@ -305,12 +305,25 @@ async function validateBundle({
     if (!line) continue;
     if (entries.length >= MAX_FILES) throw new Error("publisher manifest exceeds file-count limit");
     const fields = line.split("\t");
-    if (fields.length !== 2) throw new Error("malformed publisher manifest");
+    if (fields.length !== 2 && !(fields.length === 3 && fields[2] === "ref")) {
+      throw new Error("malformed publisher manifest");
+    }
     const [key, contentType] = fields;
     requireSafePath(key);
     if (keys.has(key)) throw new Error(`publisher manifest contains a duplicate key: ${key}`);
     keys.add(key);
     const kind = classifyKey(key, contentType, snapshotVersion);
+    // Only a push to main stores content-addressed images; a pull request bundle never may.
+    if (kind === "blob" && prNumber) {
+      throw new Error(`a pull request cannot publish a blob: ${key}`);
+    }
+    if (fields.length === 3) {
+      // A reference carries no payload: it asks the publisher to confirm that a blob this
+      // publisher already wrote under that content address is still in the bucket.
+      if (kind !== "blob") throw new Error(`only a blob can be a reference: ${key}`);
+      entries.push({ key, contentType, kind: "blob-ref", blobSha256: BLOB_KEY.exec(key)[1] });
+      continue;
+    }
     const file = path.join(payloadDir, `${key}.gz`);
     const fileStat = lstatSync(file);
     if (!fileStat.isFile() || fileStat.isSymbolicLink()) {
@@ -333,6 +346,7 @@ async function validateBundle({
     throw new Error("publisher manifest must contain exactly one out.json marker");
 
   for (const entry of entries) {
+    if (entry.kind === "blob-ref") continue;
     entry.sha256 = await sha256File(entry.file, signal, (size) =>
       onEvent("preflight-chunk", entry.key, size),
     );
@@ -391,14 +405,16 @@ async function validateBundle({
   const actualKeys = new Set(
     entries.filter((entry) => entry.kind === "snapshot-asset").map((entry) => entry.key),
   );
-  const blobKeys = new Set(entries.filter((entry) => entry.kind === "blob").map((e) => e.key));
+  const blobKeys = new Set(
+    entries.filter((entry) => entry.kind === "blob" || entry.kind === "blob-ref").map((e) => e.key),
+  );
   for (const hash of new Set(Object.values(blobs))) {
     if (!blobKeys.has(`blobs/${hash}.png`)) {
       throw new Error(`out.json names a blob that is missing from the publisher manifest: ${hash}`);
     }
   }
   for (const entry of entries) {
-    if (entry.kind !== "blob") continue;
+    if (entry.kind !== "blob" && entry.kind !== "blob-ref") continue;
     if (!Object.values(blobs).includes(BLOB_KEY.exec(entry.key)[1])) {
       throw new Error(`publisher manifest has a blob no report entry names: ${entry.key}`);
     }
@@ -740,6 +756,88 @@ async function publishBlob(args, onEvent) {
   }
 }
 
+/**
+ * A blob the bundle names without carrying. The key is a content address and only this
+ * publisher writes a blob (with `diveday-blob-sha256` set after hashing the bytes), so an
+ * object that carries that metadata under that key is the right one. A missing or foreign
+ * object fails the publish: there are no bytes here to put in its place. One near the
+ * bucket's expiry is rewritten in place from itself, which restarts the clock without a
+ * transfer.
+ */
+async function publishBlobRef(args, onEvent) {
+  const { client, commands, bucket, entry, signal, timeoutMs } = args;
+  let head;
+  try {
+    head = await send(
+      client,
+      new commands.HeadObjectCommand({ Bucket: bucket, Key: entry.key }),
+      signal,
+      timeoutMs,
+    );
+  } catch (error) {
+    if (!isMissing(error)) throw error;
+    throw new Error(
+      `referenced blob is missing from the bucket: ${entry.key}. The bundle carries no bytes ` +
+        "for it, and the prepare job saw it a moment ago, so it was deleted in between: re-run the workflow.",
+    );
+  }
+  if (
+    head.ContentType !== "image/png" ||
+    head.ContentEncoding !== "gzip" ||
+    head.Metadata?.["diveday-blob-sha256"] !== entry.blobSha256
+  ) {
+    throw new Error(`referenced blob does not carry this publisher's provenance: ${entry.key}`);
+  }
+  const written = head.LastModified ? new Date(head.LastModified).getTime() : 0;
+  if (Date.now() - written < BLOB_REFRESH_MS) {
+    onEvent("reused", entry.key);
+    return;
+  }
+  // Refreshing keeps an object alive for another 60 days, so first see that it is the image
+  // its address names (anything that could write the bucket could have left something else).
+  if (!head.ETag || !(head.ContentLength > 0 && head.ContentLength <= MAX_BLOB_BYTES)) {
+    throw new Error(`referenced blob has no ETag or an unexpected size: ${entry.key}`);
+  }
+  const body = await send(
+    client,
+    new commands.GetObjectCommand({ Bucket: bucket, Key: entry.key, IfMatch: head.ETag }),
+    signal,
+    timeoutMs,
+  );
+  const chunks = [];
+  let received = 0;
+  for await (const chunk of body.Body) {
+    received += chunk.length;
+    if (received > MAX_BLOB_BYTES) throw new Error(`referenced blob is too large: ${entry.key}`);
+    chunks.push(chunk);
+  }
+  let png;
+  try {
+    png = gunzipSync(Buffer.concat(chunks), { maxOutputLength: MAX_BLOB_BYTES });
+  } catch {
+    throw new Error(`referenced blob is not a bounded gzip image: ${entry.key}`);
+  }
+  if (createHash("sha256").update(png).digest("hex") !== entry.blobSha256) {
+    throw new Error(`referenced blob does not match its content address: ${entry.key}`);
+  }
+  await send(
+    client,
+    new commands.CopyObjectCommand({
+      Bucket: bucket,
+      Key: entry.key,
+      CopySource: `${bucket}/${entry.key}`,
+      CopySourceIfMatch: head.ETag,
+      MetadataDirective: "REPLACE",
+      ContentType: head.ContentType,
+      ContentEncoding: head.ContentEncoding,
+      Metadata: head.Metadata,
+    }),
+    signal,
+    timeoutMs,
+  );
+  onEvent("uploaded", entry.key);
+}
+
 async function verifyBundle({
   client,
   commands,
@@ -754,7 +852,7 @@ async function verifyBundle({
   await pool(
     entries,
     async (entry, poolSignal) => {
-      if (entry.kind === "blob") {
+      if (entry.kind === "blob" || entry.kind === "blob-ref") {
         const head = await headObject({
           client,
           commands,
@@ -921,6 +1019,7 @@ export async function publishBundle({
         timeoutMs: requestTimeoutMs,
       };
       if (entry.kind === "blob") await publishBlob(args, onEvent);
+      else if (entry.kind === "blob-ref") await publishBlobRef(args, onEvent);
       else await publishImmutableAsset(args, onEvent);
     },
     signal,
@@ -950,9 +1049,8 @@ async function main() {
   const region = process.env.REG_SUIT_AWS_REGION;
   const prNumber = process.env.PR_NUMBER ?? "";
   if (!region) throw new Error("missing AWS region");
-  const { S3Client, HeadObjectCommand, GetObjectCommand, PutObjectCommand } = await import(
-    "@aws-sdk/client-s3"
-  );
+  const { S3Client, HeadObjectCommand, GetObjectCommand, PutObjectCommand, CopyObjectCommand } =
+    await import("@aws-sdk/client-s3");
   const client = new S3Client({ region, maxAttempts: 3 });
   const controller = new AbortController();
   const abort = (signal) => controller.abort(new Error(`publisher interrupted by ${signal}`));
@@ -961,7 +1059,7 @@ async function main() {
   try {
     const result = await publishBundle({
       client,
-      commands: { HeadObjectCommand, GetObjectCommand, PutObjectCommand },
+      commands: { HeadObjectCommand, GetObjectCommand, PutObjectCommand, CopyObjectCommand },
       bundle,
       actualKey,
       snapshotVersion,

@@ -247,14 +247,6 @@ export function publicationReportStatus(report, expectedPublicationId) {
   return report.publicationId === expectedPublicationId ? "current" : "unpublished";
 }
 
-/** Baseline caches are isolated by their immutable snapshot version. */
-export function baselineCacheKey(commit, version) {
-  if (typeof version !== "string" || !/^[0-9a-f]{64}$/u.test(version)) {
-    throw new Error("baseline snapshot version is invalid");
-  }
-  return `reg-baseline-v2-${commit}-${version}`;
-}
-
 // Node's global fetch has intermittently crashed in Undici's HTTP parser while
 // S3 closed a response stream. Use node:https for the bounded CI read instead;
 // it returns stored gzip bytes, while injected fetch clients may already decode
