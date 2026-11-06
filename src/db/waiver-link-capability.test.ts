@@ -111,21 +111,22 @@ describe("the waiver_link capability", () => {
     expect(await counterState(token, expiresAt)).toBe("closed");
   });
 
-  it("a fresh QR for the same release revokes the one before", async () => {
+  it("a fresh QR for the same release leaves the one before open", async () => {
     const { db, shop, bookingId, token } = await counterSeat();
+    // The diver's phone has the first code open.
+    const device = await claimCounterLink(db, token);
+    if (!device) throw new Error("first claim refused");
     const next = await issueCounterLink(db, { shopId: shop.id, bookingId });
-    expect(await counterState(token)).toBe("closed");
+    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
     expect(await counterState(next.token)).toBe("available");
-    // The table's backstop: never two live links for one release.
-    await expect(
-      db.insert(capabilities).values({
-        purpose: "waiver_link",
-        shopId: shop.id,
-        waiverRecordId: next.recordId,
-        tokenHash: hashBearerToken("a-second-live-link"),
-        expiresAt: next.expiresAt,
-      }),
-    ).rejects.toThrow();
+    // The table lets two live codes to one release stand.
+    await db.insert(capabilities).values({
+      purpose: "waiver_link",
+      shopId: shop.id,
+      waiverRecordId: next.recordId,
+      tokenHash: hashBearerToken("a-third-live-link"),
+      expiresAt: next.expiresAt,
+    });
   });
 
   it("is spent by the signature: only the receipt, then nothing once it expires", async () => {
@@ -173,12 +174,10 @@ describe("the waiver_link capability", () => {
     expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
   });
 
-  it("is never claimed once it has expired or been replaced", async () => {
-    const { db, shop, bookingId, token, expiresAt } = await counterSeat();
+  it("is never claimed once it has expired", async () => {
+    const { db, token, expiresAt } = await counterSeat();
     expect(await claimCounterLink(db, token, expiresAt)).toBeNull();
-    await issueCounterLink(db, { shopId: shop.id, bookingId });
-    expect(await claimCounterLink(db, token)).toBeNull();
-    expect(await waiverLinkDoor(db, token)).toBeNull();
+    expect(await waiverLinkDoor(db, token, { now: expiresAt })).toBeNull();
   });
 
   it("refuses a second signature on a signed release and keeps the first answers (attacker S1)", async () => {
@@ -226,7 +225,7 @@ describe("the waiver_link capability", () => {
   });
 
   it("opens nothing for another shop's link, and is never minted over another shop's release", async () => {
-    const { db, recordId, token } = await counterSeat();
+    const { db, recordId } = await counterSeat();
     const [otherShop] = await db
       .insert(shops)
       .values({
@@ -240,11 +239,7 @@ describe("the waiver_link capability", () => {
       mintCapability(db, { purpose: "waiver_link", shopId: otherShop.id, subjectId: recordId }),
     ).rejects.toThrow(/outside its shop/);
     // A live row that names this shop's release under another shop, however
-    // it got there (the real link revoked first: one live link per release and purpose).
-    await db
-      .update(capabilities)
-      .set({ revokedAt: nowDate() })
-      .where(eq(capabilities.tokenHash, hashBearerToken(token)));
+    // it got there.
     await db.insert(capabilities).values({
       purpose: "waiver_link",
       shopId: otherShop.id,

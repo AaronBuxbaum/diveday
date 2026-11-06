@@ -901,8 +901,6 @@
     "close": "Cerrar",
     "loading": "Preparando el código…",
     "failed": "Esta exención ya no está disponible aquí. Actualiza y revisa la plaza.",
-    "openOnPhone": "Su exención está abierta en su teléfono ahora mismo. Un código nuevo la cierra.",
-    "replace": "Mostrar un código nuevo",
     "guardianCheck": "¿Está en el mostrador su padre, madre o tutor legal para cofirmar?",
     "guardianConfirm": "Sí, mostrar el código",
     "needed": "Falta la exención",

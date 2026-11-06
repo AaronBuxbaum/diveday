@@ -39,13 +39,6 @@ export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
 export const RETURNING_DIVER_RECEIPT_LOCK_TIMEOUT = "250ms";
 export const RETURNING_DIVER_RECEIPT_STATEMENT_TIMEOUT = "400ms";
 
-/**
- * A live row with less than this left is rotated (revoked, then a new one
- * minted) rather than handed out again, so no send carries a link that dies
- * on arrival (security review of #2711, finding 2).
- */
-export const CAPABILITY_ROTATE_WITHIN_MS = DAY_MS;
-
 export type IssuedReturningDiverReceipt = {
   receiptId: string;
   receiptOrder: string;
@@ -62,8 +55,10 @@ export type IssuedReturningDiverReceipt = {
  * erasure takes, so a mint either precedes erasure and is revoked by it, or
  * follows it and sees no subject). The live row is handed back with its expiry
  * moved to what the trip asks for today, so a rescheduled departure carries
- * its links with it. A row with under a day left, or one whose key this
- * deployment no longer holds, is revoked and replaced. A `handoff` is never
+ * its links with it, and never less than a day out, so no send carries a
+ * link that dies on arrival and a resend never closes the link a diver holds.
+ * A row past its expiry, or one not under this deployment's signing key, is
+ * revoked and replaced. A `handoff` is never
  * reused: each call revokes the last one and mints anew, because re-arming a
  * ten-minute credential that pre-fills a diver's details would extend it.
  */
@@ -221,7 +216,8 @@ async function getOrCreateLiveLinks(
       // Only a row under the signing key is handed out again: re-sending (and
       // extending) an older version would keep it alive after rotation.
       row.keyVersion === signingVersion &&
-      row.expiresAt.getTime() - now.getTime() >= CAPABILITY_ROTATE_WITHIN_MS;
+      // An expired row is never revived: a forwarded old link stays dead.
+      row.expiresAt.getTime() > now.getTime();
     if (row && reusable && row.keyVersion !== null) {
       if (row.expiresAt.getTime() !== seat.expiresAt.getTime()) {
         const ids = moveExpiry.get(seat.expiresAt.getTime()) ?? [];

@@ -301,7 +301,7 @@ describe("Email and text on a release with no seat", () => {
     expect((await waiverLinkDoor(ctx.db, tokenIn(bodies[0]), { now }))?.door).toBe("release");
   });
 
-  it("a resend retires the mailed link before it, and a Copy link leaves it live (#4008)", async () => {
+  it("a resend leaves the link the diver is signing on live, draft and all", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const person = await diver();
     const { providers, bodies } = textCapture();
@@ -310,43 +310,76 @@ describe("Email and text on a release with no seat", () => {
       textProviders: providers,
       now,
     });
+    const first = tokenIn(bodies[0]);
+    const open = await waiverLinkDoor(ctx.db, first, { now });
+    if (open?.door !== "release") throw new Error("release door expected");
+    // Half-way through the form on their phone.
+    expect(
+      await recordWaiverDraft(ctx.db, open.key, {
+        signerName: person.fullName,
+        acknowledged: true,
+        medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+        now,
+      }),
+    ).toBe(true);
+
     await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
       channel: "sms",
       textProviders: providers,
       now,
     });
-    const [first, second] = [tokenIn(bodies[0]), tokenIn(bodies[1])];
-    expect(first).not.toBe(second);
-    expect(await waiverLinkDoor(ctx.db, first, { now })).toBeNull();
+    const second = tokenIn(bodies[1]);
+    expect(second).not.toBe(first);
+    // Both open the same release, and the draft stays with the door that typed it.
+    const kept = await waiverLinkDoor(ctx.db, first, { now });
+    if (kept?.door !== "release") throw new Error("the first link must stay open");
     expect((await waiverLinkDoor(ctx.db, second, { now }))?.door).toBe("release");
-
-    // The draft survives: both links named the same release.
     const record = await pendingRelease(person.id);
-    expect((await linksTo(record.id)).map((link) => link.purpose)).toEqual([
-      "release_link",
-      "release_link",
-    ]);
+    expect(record.draftViaLinkId).toBe(kept.key.linkId);
+    expect(record.draftSignerName).toBe(person.fullName);
 
+    // A Copy link stands beside both.
     const copied = await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
       channel: "link",
       actorPersonId: await shopStaffer(ctx.db, ctx.shop.id),
       now,
     });
     if (!copied.ok || !copied.token) throw new Error("copy link refused");
-    // The diver may sign at the counter or from the text: both stay live.
-    expect((await waiverLinkDoor(ctx.db, second, { now }))?.door).toBe("release");
+    expect((await waiverLinkDoor(ctx.db, first, { now }))?.door).toBe("release");
     expect((await waiverLinkDoor(ctx.db, copied.token, { now }))?.door).toBe("counter_unclaimed");
-    expect(await pendingRelease(person.id)).toMatchObject({ id: record.id });
 
-    // A later text retires the earlier text only, never the counter link.
+    // Signing through the first link closes every other door to the release.
+    expect(
+      await completeWaiver(ctx.db, kept.key, { ...signature(person.fullName), now }),
+    ).toMatchObject({ ok: true, status: "completed" });
+    expect(await waiverLinkDoor(ctx.db, second, { now })).toBeNull();
+    expect(await waiverLinkDoor(ctx.db, copied.token, { now })).toBeNull();
+  });
+
+  it("a failed resend leaves the live link untouched", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const person = await diver();
+    const { providers, bodies } = textCapture();
     await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
       channel: "sms",
       textProviders: providers,
       now,
     });
-    expect(await waiverLinkDoor(ctx.db, second, { now })).toBeNull();
-    expect((await waiverLinkDoor(ctx.db, tokenIn(bodies[2]), { now }))?.door).toBe("release");
-    expect((await waiverLinkDoor(ctx.db, copied.token, { now }))?.door).toBe("counter_unclaimed");
+    const live = tokenIn(bodies[0]);
+    const failing: NotificationProvider = {
+      async send() {
+        return { status: "failed", errorCode: "rejected" };
+      },
+    };
+    expect(
+      await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
+        channel: "email",
+        provider: failing,
+        now,
+      }),
+    ).toMatchObject({ ok: true, delivery: "failed", token: null });
+    expect((await waiverLinkDoor(ctx.db, live, { now }))?.door).toBe("release");
+    expect(await hasLivePersonWaiverRequest(ctx.db, ctx.shop.id, person.id, now)).toBe(true);
   });
 
   it("one signature closes the release: the door left over opens neither form nor receipt", async () => {
@@ -419,8 +452,8 @@ describe("what a release link never opens", () => {
   });
 });
 
-describe("one live door per release and purpose (#4008)", () => {
-  it("a mint retires the earlier door of its own purpose only", async () => {
+describe("several live links to one release", () => {
+  it("a mint retires no earlier link, of either purpose", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const person = await diver();
     const { providers } = textCapture();
@@ -430,47 +463,30 @@ describe("one live door per release and purpose (#4008)", () => {
       now,
     });
     const record = await pendingRelease(person.id);
-    const [mailed] = await linksTo(record.id);
-    if (!mailed) throw new Error("mailed link missing");
-    const latest = new Map<string, string>([["release_link", mailed.id]]);
-    const order = ["waiver_link", "release_link", "waiver_link", "release_link"] as const;
-    for (const purpose of order) {
-      const minted = await mintCapability(ctx.db, {
-        purpose,
-        shopId: ctx.shop.id,
-        subjectId: record.id,
-        now,
-      });
-      latest.set(purpose, minted.id);
-      const live = (await linksTo(record.id)).filter((link) => link.revokedAt === null);
-      expect(live.map((link) => link.id).sort()).toEqual([...latest.values()].sort());
+    for (const purpose of ["waiver_link", "release_link", "waiver_link", "release_link"] as const) {
+      await mintCapability(ctx.db, { purpose, shopId: ctx.shop.id, subjectId: record.id, now });
     }
+    const links = await linksTo(record.id);
+    expect(links).toHaveLength(5);
+    expect(links.every((link) => link.revokedAt === null)).toBe(true);
   });
 
-  it("the database refuses a second live door of one purpose to a release", async () => {
-    vi.stubEnv("APP_HOST", "https://diveday.example");
+  it("a mint names a release of its own shop only", async () => {
     const person = await diver();
-    const { providers } = textCapture();
-    await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
-      channel: "sms",
-      textProviders: providers,
+    const opened = await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
+      channel: "link",
+      actorPersonId: await shopStaffer(ctx.db, ctx.shop.id),
       now,
     });
+    if (!opened.ok) throw new Error("release refused");
     const record = await pendingRelease(person.id);
-    const second = {
-      shopId: ctx.shop.id,
-      waiverRecordId: record.id,
-      issuedAt: now,
-      expiresAt: new Date(now.getTime() + DAY_MS),
-    };
-    // Another purpose sits beside it; the same purpose is refused.
-    await ctx.db
-      .insert(capabilities)
-      .values({ ...second, purpose: "waiver_link", tokenHash: `counter-${record.id}` });
     await expect(
-      ctx.db
-        .insert(capabilities)
-        .values({ ...second, purpose: "release_link", tokenHash: `forged-${record.id}` }),
+      mintCapability(ctx.db, {
+        purpose: "release_link",
+        shopId: crypto.randomUUID(),
+        subjectId: record.id,
+        now,
+      }),
     ).rejects.toThrow();
   });
 });
@@ -584,11 +600,15 @@ describe("a dead release link", () => {
     const later = new Date(now.getTime() + 8 * DAY_MS);
     expect(await emailFreshWaiverLink(ctx.db, old, later)).toBe("sent");
     const record = await pendingRelease(person.id);
+    // The expired link is left to its clock; the fresh one is live beside it.
     const links = await linksTo(record.id);
-    expect(links.map((link) => [link.purpose, link.revokedAt === null])).toEqual([
+    expect(
+      links.map((link) => [link.purpose, (link.expiresAt?.getTime() ?? 0) > later.getTime()]),
+    ).toEqual([
       ["release_link", false],
       ["release_link", true],
     ]);
+    expect(links.every((link) => link.revokedAt === null)).toBe(true);
     // The fresh link went to the address on file; the dead URL still lands on
     // the rescue card, which now says a newer link is live.
     expect(await staleWaiverRecordForToken(ctx.db, old, later)).toMatchObject({ id: record.id });

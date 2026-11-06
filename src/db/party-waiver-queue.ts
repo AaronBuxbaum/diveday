@@ -3,7 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { guardianSignatureMissing, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { hasReturned } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
-import { hasLiveClaimedCapability, mintCapability } from "./capabilities";
+import { mintCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
 import { listTripReadiness } from "./readiness";
@@ -142,7 +142,7 @@ export async function getPartyWaiverQueue(
  * party seats, opens the seat's release the way its thread does
  * (`openWaiverInThread`: a live record and its draft are kept), and mints a
  * `waiver_link` capability naming that release: half an hour, spent by the
- * signature, revoking the seat's previous counter link. Nothing here reads or
+ * signature, leaving any earlier counter link working. Nothing here reads or
  * hands on the release's own waiver link or the seat's readiness link.
  *
  * The QR can sign as the diver from any phone that scans it first, so the
@@ -158,15 +158,11 @@ export async function issuePartyWaiver(
     bookingId: string;
     /** The staffer showing the QR. */
     actorPersonId: string;
-    /** The desk confirmed: replace a code already open on the diver's phone. */
-    replace?: boolean;
     /** The desk confirmed a parent or guardian is here to co-sign a minor's release. */
     guardianPresent?: boolean;
     now?: Date;
   },
-): Promise<
-  { token: string; expiresAt: Date } | { openOnPhone: true } | { guardianCheck: true } | null
-> {
+): Promise<{ token: string; expiresAt: Date } | { guardianCheck: true } | null> {
   try {
     return await db.transaction(async (tx) => {
       await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
@@ -219,20 +215,7 @@ export async function issuePartyWaiver(
         now: input.now,
       });
       if (!opened.ok) return null;
-      // A code the diver's phone already opened is kept unless the desk
-      // confirms a new one: a mint would revoke it under their typing (dock
-      // review S2). The door a party member's join email carried stays live
-      // beside it (issue #4008), so it is no reason to ask.
-      if (
-        !input.replace &&
-        (await hasLiveClaimedCapability(tx, {
-          purpose: "waiver_link",
-          shopId: input.shopId,
-          subjectId: opened.recordId,
-          now: input.now,
-        }))
-      )
-        return { openOnPhone: true as const };
+      // A fresh code leaves any code already open on a phone working.
       const link = await mintCapability(tx, {
         purpose: "waiver_link",
         shopId: input.shopId,

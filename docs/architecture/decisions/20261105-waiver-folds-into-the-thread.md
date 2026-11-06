@@ -32,7 +32,8 @@ ever to the holder's contact on file. Every other release link is a capability.
    spends it, a contact change revokes it, an erasure deletes it; a dead one lands on a rescue
    that mails the address on file. The record carries no link and no clock.
 
-**One live door per release and purpose** (Aaron, #4008): once one signs, the others open nothing.
+**A resend keeps the live link** (Aaron, 2026-11-06): a send revokes no link already out; once one
+signs, the others open nothing.
 
 ## Alternatives considered
 
@@ -48,6 +49,6 @@ ever to the holder's contact on file. Every other release link is a capability.
   moves and adds seats until the trip ends plus its grace. Accepted for the holder's own seat
   (security review, S1).
 - A seat with no email or textable number is signed at the counter or on paper.
-- A counter link dies on a merge, a holder, contact or terms change, or a new code. A failed
-  email or text hands staff nothing.
+- A counter link dies on a merge, a holder, contact or terms change. A failed email or text
+  hands staff nothing.
 - A link only prefills the medical answers saved through itself.

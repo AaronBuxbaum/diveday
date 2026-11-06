@@ -320,7 +320,8 @@ export const CAPABILITY_POLICY = {
   // shop's device. It names the release, not the person, so it carries no
   // readiness authority and opens nothing once the seat changes hands or the
   // terms change. Half an hour is one sitting; signing spends it, and a fresh
-  // QR revokes the one before. A diver merge supersedes the unsigned release,
+  // QR leaves the one before working (a phone may be half-way through it).
+  // A diver merge supersedes the unsigned release,
   // so the link opens nothing after it; a contact change revokes it; an
   // erasure deletes the links to the person's releases. It is also what Copy
   // link hands staff for a release with no seat (issue #3983): the same half
@@ -330,8 +331,7 @@ export const CAPABILITY_POLICY = {
     scope: "shop",
     lifetime: "expires",
     ttlMs: 30 * MINUTE_MS,
-    reissue: "supersedes",
-    per: "subject",
+    reissue: "adds",
     use: "once",
     claim: "first_device",
   },
@@ -339,18 +339,16 @@ export const CAPABILITY_POLICY = {
   // #3983). Signed, that release covers every seat the diver holds, so the link
   // goes only to the contact on file and its token never comes back to staff:
   // a staffer who wants a URL to hand over gets a counter link
-  // (`waiver_link`) instead. A week, as the mail says; signing spends it, and
-  // a newer release link to the same release revokes it. A counter link to the
-  // same release stands beside it (one live link per release and purpose,
-  // `capabilities_live_waiver_record_idx`, issue #4008); whichever signs, the
-  // other opens nothing after. A contact change revokes it; an erasure deletes it.
+  // (`waiver_link`) instead. A week, as the mail says; signing spends it. A
+  // resend adds a link and leaves the earlier ones working, counter links
+  // included: whichever signs, the others open nothing after. A contact change
+  // revokes it; an erasure deletes it.
   release_link: {
     subject: "waiver_record",
     scope: "shop",
     lifetime: "expires",
     ttlMs: 7 * DAY_MS,
-    reissue: "supersedes",
-    per: "subject",
+    reissue: "adds",
     use: "once",
   },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;

@@ -241,12 +241,6 @@ export type WaiverDeliveryOptions = {
    */
   actorPersonId?: string | null;
   /**
-   * Leave a live link alone instead of minting over it (issue #3983 review):
-   * a door anyone can reach (self-registration) must not revoke the link a
-   * diver is signing on. Reports `sent` without sending.
-   */
-  keepLiveLink?: boolean;
-  /**
    * Copy link on a release with no seat: the desk confirmed a parent or legal
    * guardian is at the counter to co-sign a minor's release (issue #4019).
    */
@@ -590,10 +584,10 @@ export async function issueAndDeliverWaiver(
  *   contact on file only. Its token never comes back, sent or not; a staffer
  *   who needs a URL to hand over asks for Copy link.
  *
- * A release holds one live link of each kind: a resend revokes the mailed link
- * before it, a Copy link the counter link before it, and a counter link and a
- * mailed one stand side by side (issue #4008). Whichever signs, the other then
- * opens nothing.
+ * A send never closes a link already out (ux-over-hardening): a resend adds a
+ * link beside the one the diver may be half-way through, and a send that
+ * reaches nobody withdraws only the link it minted. Whichever link signs, the
+ * others then open nothing.
  */
 export async function issueAndDeliverPersonWaiver(
   db: AppDb,
@@ -643,18 +637,6 @@ export async function issueAndDeliverPersonWaiver(
           bookingId: null,
           diverName: ctx.person.fullName,
           reason: "error" as const,
-        };
-      }
-      if (
-        options.keepLiveLink &&
-        (await hasLivePersonWaiverRequest(tx, shopId, personId, options.now ?? nowDate()))
-      ) {
-        return {
-          ok: true as const,
-          bookingId: null,
-          diverName: ctx.person.fullName,
-          token: null,
-          delivery: "sent" as const,
         };
       }
       // A minor's release, by the date of birth on file or "Under 18" on any
@@ -771,8 +753,9 @@ export async function issueAndDeliverPersonWaiver(
         providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
         delivery = emailDelivery(result);
       }
-      // A link that reached nobody is withdrawn: nobody holds it, and a live
-      // one would turn the diver's own rescue away (`current_link_live`).
+      // The link this send minted reached nobody, so it is withdrawn: nobody
+      // holds it, and a live one would turn the diver's own rescue away
+      // (`current_link_live`). Every link already out is left as it was.
       if (minted && delivery !== "sent") {
         await tx
           .update(capabilities)
@@ -1128,7 +1111,7 @@ export type WaiverLinkRescue =
 
 /**
  * A diver's self-serve rescue for a release link that no longer opens its
- * release (expired, replaced, or closed by a contact change): issue a fresh
+ * release (expired, or closed by a contact change): issue a fresh
  * one and mail it to the address on the person's record.
  *
  * The security shape matters more than the mechanics. A waiver URL *is* its
@@ -1141,9 +1124,9 @@ export type WaiverLinkRescue =
  * which is exactly the affordance staff already had and no more.
  *
  * `hasLivePersonWaiverRequest` is the guard: when the person already holds a
- * live release link (a counter link stands beside it, issue #4008), this reports
- * `current_link_live` and issues nothing, so whoever holds a *dead* URL never
- * drives a delivery on the live one. `staleWaiverRecordForToken` keeps
+ * live release link (a counter link does not count), this reports
+ * `current_link_live` and sends nothing, since the diver already has a link
+ * that works. `staleWaiverRecordForToken` keeps
  * resolving the original token after a send, so a second tap on a link whose
  * replacement has since aged out replaces it again rather than failing.
  *
@@ -1160,10 +1143,7 @@ export async function emailFreshWaiverLink(
   if (await hasLivePersonWaiverRequest(db, stale.shopId, stale.personId, now)) {
     return "current_link_live";
   }
-  const outcome = await issueAndDeliverPersonWaiver(db, stale.shopId, stale.personId, {
-    now,
-    keepLiveLink: true,
-  });
+  const outcome = await issueAndDeliverPersonWaiver(db, stale.shopId, stale.personId, { now });
   if (!outcome.ok) return outcome.reason === "already_completed" ? "already_signed" : "unavailable";
   if (outcome.delivery === "sent") return "sent";
   if (outcome.delivery === "no_email") return "no_email";

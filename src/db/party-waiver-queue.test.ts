@@ -283,7 +283,7 @@ describe("party release QR handoff", () => {
     });
   });
 
-  it("replaces a counter code, and asks only about an open code (#4008)", async () => {
+  it("a fresh counter code leaves the one open on the diver's phone working", async () => {
     const f = await family();
     const input = {
       shopId: f.shop.id,
@@ -294,22 +294,22 @@ describe("party release QR handoff", () => {
     };
     const first = await issuePartyWaiver(f.db, input);
     if (!first || !("token" in first)) throw new Error("counter code missing");
+    // The diver's phone opens it, then the desk shows the code again.
+    expect((await opened(f.db, first.token)).state).toBe("available");
     const second = await issuePartyWaiver(f.db, input);
     if (!second || !("token" in second)) throw new Error("second code missing");
-    expect((await opened(f.db, first.token)).state).toBe("unavailable");
+    expect(second.token).not.toBe(first.token);
+    expect((await opened(f.db, first.token)).state).toBe("available");
     expect((await opened(f.db, second.token)).state).toBe("available");
-    // A code open on a phone is not replaced without the desk saying so.
-    expect(await issuePartyWaiver(f.db, input)).toEqual({ openOnPhone: true });
-    const replaced = await issuePartyWaiver(f.db, { ...input, replace: true });
-    if (!replaced || !("token" in replaced)) throw new Error("replacement missing");
-    expect((await opened(f.db, second.token)).state).toBe("unavailable");
+    // Whichever signs, the other then opens nothing.
     expect(
-      await signAtCounter(f.db, replaced.token, {
+      await signAtCounter(f.db, first.token, {
         signerName: `Leo ${f.stamp}`,
         agreed: true,
         medicalAnswers: clearAnswers,
       }),
     ).toMatchObject({ ok: true });
+    expect((await opened(f.db, second.token)).state).toBe("unavailable");
   });
 
   it("refuses to issue after a seat is held or cancelled", async () => {
@@ -344,32 +344,7 @@ describe("party release QR handoff", () => {
     // A cancelled seat has no release to sign, on the counter as in the thread.
     expect((await opened(f.db, existing.token)).state).toBe("unavailable");
   });
-  it("keeps a code open on a diver's phone unless the desk asks for a new one (dock S2)", async () => {
-    const f = await family();
-    const input = {
-      shopId: f.shop.id,
-      tripId: f.trip.id,
-      leadBookingId: f.lead.bookingId,
-      bookingId: f.third.bookingId,
-      actorPersonId: f.staff.id,
-    };
-    const shown = await issuePartyWaiver(f.db, input);
-    if (!shown || !("token" in shown)) throw new Error("link missing");
-    // Nobody scanned it yet: showing it again just shows a fresh one.
-    const reshown = await issuePartyWaiver(f.db, input);
-    if (!reshown || !("token" in reshown)) throw new Error("re-shown link missing");
-    expect((await opened(f.db, shown.token)).state).toBe("unavailable");
-    // The diver's phone opens it: a second tap keeps it and says so.
-    expect((await opened(f.db, reshown.token)).state).toBe("available");
-    expect(await issuePartyWaiver(f.db, input)).toEqual({ openOnPhone: true });
-    expect((await opened(f.db, reshown.token)).state).toBe("available");
-    // The desk confirms: the open code is replaced.
-    const replaced = await issuePartyWaiver(f.db, { ...input, replace: true });
-    if (!replaced || !("token" in replaced)) throw new Error("replacement missing");
-    expect((await opened(f.db, reshown.token)).state).toBe("unavailable");
-  });
-
-  it("never revives an expired, replaced or superseded QR and issues a fresh one", async () => {
+  it("never revives an expired or superseded QR and issues a fresh one", async () => {
     const f = await family();
     const input = {
       shopId: f.shop.id,
@@ -383,12 +358,10 @@ describe("party release QR handoff", () => {
     expect(first.expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(30 * 60_000);
     expect((await opened(f.db, first.token)).state).toBe("available");
     expect((await opened(f.db, first.token, first.expiresAt)).state).toBe("unavailable");
-    // The first is open on a phone, so the desk confirms the new one.
-    const next = await issuePartyWaiver(f.db, { ...input, replace: true });
-    if (!next || !("token" in next)) throw new Error("replacement link missing");
+    const next = await issuePartyWaiver(f.db, input);
+    if (!next || !("token" in next)) throw new Error("fresh link missing");
     expect(next.token).not.toBe(first.token);
-    // A fresh QR revokes the one before it.
-    expect(await opened(f.db, first.token)).toEqual({ state: "unavailable" });
+    expect((await opened(f.db, first.token, first.expiresAt)).state).toBe("unavailable");
     expect((await opened(f.db, next.token)).state).toBe("available");
     await f.db
       .update(waiverRecords)

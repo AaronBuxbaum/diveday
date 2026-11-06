@@ -416,8 +416,8 @@ async function openRelease(
 /**
  * Does this person already hold a live release link to a release with no
  * seat: unspent, unrevoked and unexpired, on a release still waiting for its
- * signature? A counter link does not count: it stands beside a mailed one
- * (issue #4008), so a fresh mail never revokes it. The rescue flow's guard: the bearer
+ * signature? A counter link does not count: it is the desk's, not a link in
+ * the diver's inbox. The rescue flow's guard: the bearer
  * of a dead URL learns only that a live link exists, never its token, address
  * or age, and drives no delivery on it.
  */

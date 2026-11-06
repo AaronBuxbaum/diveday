@@ -170,8 +170,8 @@
   and a closed one asks the staff for a fresh code. It opens on the first phone that claims it
   and no other, shows only the medical answers saved through that same code, refuses a second
   signature, and its mint is a line on the diver's trail naming the staffer. It carries no
-  readiness authority and opens no doctor's page; it dies when the seat changes hands or the
-  release is superseded. A minor signs on it only when the desk confirmed a guardian is there
+  readiness authority and opens no doctor's page; a fresh code leaves an earlier one working, and
+  it dies when the seat changes hands or the release is superseded. A minor signs on it only when the desk confirmed a guardian is there
   for that very code, asked again at signing: on a seat's code (issue #4003), and on Copy link
   for a release with no seat, a minor by date of birth or "Under 18" on a seat still ahead (issue
   #4019) (ADR
@@ -184,8 +184,9 @@
   address opens nothing, and the next one carries the new number.
 - **Release link** — the link an email or a text carries to sign a release with no seat (issue
   #3983): a `release_link` row in `capabilities` naming that release, alive a week, spent by the
-  signature, sent only to the contact on file and never shown to staff. A newer one replaces it; a
-  counter link to the same release stands beside it (issue #4008). A contact change revokes it, an
+  signature, sent only to the contact on file and never shown to staff. A resend adds a link and
+  closes none, so the one a diver is part-way through keeps working, and a failed send leaves the
+  live one alone; once any link signs, the rest open nothing. A contact change revokes it, an
   erasure deletes it, and a dead one
   lands on the rescue, which mails a fresh one to the address on file. A minor whose contact a
   party's lead typed is sent none (issue #4019). It never opens a seat's release (ADR

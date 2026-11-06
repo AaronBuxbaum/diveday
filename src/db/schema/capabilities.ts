@@ -103,7 +103,7 @@ export const capabilities = pgTable(
     usedAt: timestamp("used_at", { withTimezone: true }),
     /** Set on exactly the purposes that expire (`CAPABILITY_POLICY[purpose].lifetime`). */
     expiresAt: timestamp("expires_at", { withTimezone: true }),
-    /** A newer link of the same purpose superseded this one; it opens nothing. */
+    /** The link was turned off (superseded, or its contact changed); it opens nothing. */
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     /**
      * A reusable purpose's last successful use (a calendar client's fetch), so
@@ -134,14 +134,6 @@ export const capabilities = pgTable(
     index("capabilities_user_account_idx").on(table.userAccountId),
     index("capabilities_setup_request_idx").on(table.setupRequestId),
     index("capabilities_waiver_record_idx").on(table.waiverRecordId),
-    // One live link per release and purpose: a counter link and a mailed one
-    // to the same release may both stand (issue #4008). The mint's revoke
-    // under the record-row lock is the rule, this is its backstop.
-    uniqueIndex("capabilities_live_waiver_record_idx")
-      .on(table.waiverRecordId, table.purpose)
-      .where(
-        sql`${table.waiverRecordId} is not null and ${table.usedAt} is null and ${table.revokedAt} is null`,
-      ),
     // One live link per person and purpose where the policy says so (the
     // calendar feeds): the mint's revoke under the person-row lock is the rule,
     // this is its backstop.

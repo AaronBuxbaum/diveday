@@ -1,0 +1,1 @@
+DROP INDEX "capabilities_live_waiver_record_idx";

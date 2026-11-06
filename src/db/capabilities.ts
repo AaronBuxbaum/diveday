@@ -208,23 +208,30 @@ async function lockForSupersede(
         .where(eq(people.id, subjectId))
         .for("no key update");
       return;
-    case "waiver_record": {
-      // The release itself, and only in the shop the link names: the record
-      // has no composite key with the row's shop, so a release of another
-      // shop is refused here. The signing writer takes this row after the
-      // person and the seat, as the mint's caller has.
-      if (!shopId) throw new Error(`${purpose} names no shop`);
-      const [record] = await db
-        .select({ id: waiverRecords.id })
-        .from(waiverRecords)
-        .where(and(eq(waiverRecords.id, subjectId), eq(waiverRecords.shopId, shopId)))
-        .for("no key update");
-      if (!record) throw new Error(`${purpose} names a release outside its shop`);
-      return;
-    }
     default:
       throw new Error(`${purpose} supersedes per subject, which has no row to lock`);
   }
+}
+
+/**
+ * A link to a release names a release of its own shop: the record has no
+ * composite key with the row's shop, so a release of another shop is refused
+ * here. The signing writer takes this row after the person and the seat, as
+ * the mint's caller has.
+ */
+async function lockReleaseInShop(
+  db: DbExecutor,
+  purpose: CapabilityPurpose,
+  shopId: string | null,
+  recordId: string,
+): Promise<void> {
+  if (!shopId) throw new Error(`${purpose} names no shop`);
+  const [record] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(and(eq(waiverRecords.id, recordId), eq(waiverRecords.shopId, shopId)))
+    .for("no key update");
+  if (!record) throw new Error(`${purpose} names a release outside its shop`);
 }
 
 /** `issueCapability`, also returning the row's id (a delivery records which link it carried). */
@@ -241,12 +248,14 @@ export async function mintCapability<P extends CapabilityPurpose>(
   const now = input.now ?? nowDate();
   const expiresAt = capabilityExpiry(input.purpose, now);
   const columns = subjectColumns(input.purpose, input.subjectId);
+  if (capabilitySubject(input.purpose) === "waiver_record") {
+    // A release's links add (a resend never closes the one a diver is signing
+    // on); the signature through any one leaves the others opening nothing.
+    await lockReleaseInShop(db, input.purpose, shopId, input.subjectId);
+  }
   if (policy.reissue === "supersedes") {
     // The invariant (one live link per shop, or per subject, per purpose)
-    // belongs to this module, not to its callers. A release holds one live
-    // door of each purpose (`capabilities_live_waiver_record_idx`): a counter
-    // link and a mailed release link to the same release stand side by side, and the signature through any one of them
-    // leaves the others opening nothing (issue #4008).
+    // belongs to this module, not to its callers.
     await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
     await db
       .update(capabilities)
@@ -292,7 +301,7 @@ export type VerifiedCapability<P extends CapabilityPurpose = CapabilityPurpose> 
   usedAt: Date | null;
   /** A purpose that expires: its deadline. Null for one that never does. */
   expiresAt: Date | null;
-  /** When a newer link superseded this one. */
+  /** When the link was turned off (a newer one superseded it, a contact changed). */
   revokedAt: Date | null;
 };
 
@@ -523,32 +532,6 @@ export async function claimCapability(
     )
     .returning({ id: capabilities.id });
   return row ? device : null;
-}
-
-/**
- * Whether a subject's live link of a claimable purpose is open on a device:
- * claimed, not spent, not revoked, not expired. A new mint would revoke it
- * under whoever is typing into it, so the minting surface asks first.
- */
-export async function hasLiveClaimedCapability(
-  db: DbExecutor,
-  input: { purpose: CapabilityPurpose; shopId: string; subjectId: string; now?: Date },
-): Promise<boolean> {
-  const [row] = await db
-    .select({ id: capabilities.id })
-    .from(capabilities)
-    .where(
-      and(
-        eq(capabilities.purpose, input.purpose),
-        eq(capabilities.shopId, input.shopId),
-        eq(subjectColumn(input.purpose), input.subjectId),
-        isNotNull(capabilities.claimHash),
-        isNull(capabilities.usedAt),
-        unrevokedAndUnexpired(input.now ?? nowDate()),
-      ),
-    )
-    .limit(1);
-  return Boolean(row);
 }
 
 /**

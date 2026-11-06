@@ -7,8 +7,8 @@ import { buttonClass } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/layer";
 import { fill } from "@/i18n/fill";
 
-type QrResult = { ok: true; qr: string } | { ok: false; openOnPhone?: true; guardianCheck?: true };
-type ShowOptions = { replace?: boolean; guardianPresent?: boolean };
+type QrResult = { ok: true; qr: string } | { ok: false; guardianCheck?: true };
+type ShowOptions = { guardianPresent?: boolean };
 type Copy = {
   show: string;
   showFor: string;
@@ -17,9 +17,6 @@ type Copy = {
   close: string;
   loading: string;
   failed: string;
-  /** A code already open on the person's phone, and the desk's way to replace it. */
-  openOnPhone?: string;
-  replace?: string;
   /** A minor's code waits on the desk saying a guardian is here to co-sign (#3986). */
   guardianCheck?: string;
   guardianConfirm?: string;
@@ -38,11 +35,11 @@ export function CourseFormsQrProvider({
   copy,
 }: {
   children: ReactNode;
-  action: (bookingId: string, replace?: boolean, guardianPresent?: boolean) => Promise<QrResult>;
+  action: (bookingId: string, guardianPresent?: boolean) => Promise<QrResult>;
   copy: Copy;
 }) {
   const [selected, setSelected] = useState<Selection | null>(null);
-  // What the desk already confirmed for the person shown, kept for a replace.
+  // What the desk already confirmed for the person shown, kept for a fresh code.
   const confirmed = useRef<ShowOptions>({});
   const [result, setResult] = useState<QrResult | null>(null);
   const [monitoring, setMonitoring] = useState(false);
@@ -64,7 +61,7 @@ export function CourseFormsQrProvider({
     confirmed.current = { ...confirmed.current, ...options };
     setSelected(selection);
     setResult(null);
-    void action(selection.bookingId, options.replace === true, confirmed.current.guardianPresent)
+    void action(selection.bookingId, confirmed.current.guardianPresent)
       .then((next) => {
         if (generation.current === current) {
           setResult(next);
@@ -85,7 +82,6 @@ export function CourseFormsQrProvider({
           result={result}
           copy={copy}
           onClose={close}
-          onReplace={() => show(selected, { replace: true })}
           onGuardianConfirmed={() => show(selected, { guardianPresent: true })}
         />
       ) : null}
@@ -98,14 +94,12 @@ function CourseFormsQrDialog({
   result,
   copy,
   onClose,
-  onReplace,
   onGuardianConfirmed,
 }: {
   selected: Selection;
   result: QrResult | null;
   copy: Copy;
   onClose: () => void;
-  onReplace: () => void;
   onGuardianConfirmed: () => void;
 }) {
   const router = useRouter();
@@ -140,18 +134,6 @@ function CourseFormsQrDialog({
             className={buttonClass({ variant: "secondary", className: "mt-3" })}
           >
             {copy.guardianConfirm}
-          </button>
-        </div>
-      ) : result.openOnPhone && copy.openOnPhone && copy.replace ? (
-        // Never a silent replace: the person may be halfway through (dock review S2).
-        <div className="mt-4">
-          <p role="status">{copy.openOnPhone}</p>
-          <button
-            type="button"
-            onClick={onReplace}
-            className={buttonClass({ variant: "secondary", className: "mt-3" })}
-          >
-            {copy.replace}
           </button>
         </div>
       ) : (
