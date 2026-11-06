@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AfterState } from "./AfterState";
 import { props } from "./after-state-test-fixtures";
 import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";
+
+// The logbook sheet is drawn under the screen for the printer (issue #2745) and
+// carries the same facts, so a screen assertion leaves it out; it has its own tests.
+vi.mock("./DiveRecordSheet", () => ({ DiveRecordSheet: () => null }));
 
 /**
  * The rules ADR 20260827-the-divers-thread's decision 4 states about the
