@@ -26,7 +26,7 @@ import { shopDayBounds } from "@/lib/zoned";
 import { friendsBroughtBy } from "./buddy-referrals";
 import { revokePersonCapabilities } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
-import { contactChanged, revokeLinksSentToOldContact } from "./contact-change";
+import { contactReplaced, revokeLinksSentToOldContact } from "./contact-change";
 import { diveDay, numberedDiveDay } from "./dive-days";
 import { releaseHelpRequestsOfPerson } from "./help-requests";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -287,8 +287,9 @@ export async function editDiver(
         .where(and(editable, livePerson()))
         .returning();
       if (!person) return { ok: false, reason: "not_found" };
-      // A corrected address takes the links sent to the old one with it (#3902).
-      if (contactChanged(current, person)) {
+      // A replaced address takes the links sent to the old one with it (#3902);
+      // an added one takes nothing (#4057).
+      if (contactReplaced(current, person)) {
         await revokeLinksSentToOldContact(tx, { shopId: input.shopId, personId: input.personId });
       }
       const adultAnswerUnused =

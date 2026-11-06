@@ -45,7 +45,7 @@ audience, with the tag checked before any row is read.
   guard); #3901 dropped them. Waiver links are #3903.
 - In the deploy window an old instance's link inserts fail the new CHECK and index.
 - Dropping a version from both variables kills its links. Versions stop at 9.
-- A contact change revokes links sent to the old one (#3902, #3950; `revokeLinksSentToOldContact`).
+- Replacing a contact revokes links sent to the old one; adding one does not (#3902, #4057; `revokeLinksSentToOldContact`).
 
 ## Amendment 2026-11-05 (#3954)
 

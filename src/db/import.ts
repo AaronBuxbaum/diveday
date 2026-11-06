@@ -47,7 +47,7 @@ import { isCompletedWaiverCurrent, isUnclearedReferral } from "@/lib/waivers";
 import { readActiveStaffRoles } from "./authz";
 import { specialtyCardSpecialty } from "./card-columns";
 import type { AppDb } from "./client";
-import { revokeLinksSentToOldContact } from "./contact-change";
+import { contactReplaced, revokeLinksSentToOldContact } from "./contact-change";
 import { createPerson } from "./people";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
@@ -512,9 +512,13 @@ export async function commitContactImport(
             ...(row.diveInsurance ? { diveInsurance: row.diveInsurance } : {}),
           })
           .where(and(eq(people.id, id), eq(people.shopId, shopId)));
-        // A file that changes a diver's phone takes the links texted to the
-        // old number with it, as a staff edit does (#3902).
-        if (before && before.phone !== phone) {
+        // A file that replaces a diver's phone takes the links texted to the
+        // old number with it, as a staff edit does (#3902); filling a missing
+        // one takes nothing (#4057).
+        if (
+          before &&
+          contactReplaced({ email: null, phone: before.phone }, { email: null, phone })
+        ) {
           await revokeLinksSentToOldContact(tx, { shopId, personId: id, now });
         }
       };
