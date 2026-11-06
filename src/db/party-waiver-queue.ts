@@ -5,6 +5,7 @@ import { hasReturned } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { mintCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
+import { recordDiverActivity } from "./operations";
 import { listTripReadiness } from "./readiness";
 import { bookings, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -142,10 +143,22 @@ export async function getPartyWaiverQueue(
  * `waiver_link` capability naming that release: half an hour, spent by the
  * signature, revoking the seat's previous counter link. Nothing here reads or
  * hands on the release's own waiver link or the seat's readiness link.
+ *
+ * The QR can sign as the diver from any phone that scans it first, so the
+ * staffer who showed it is written on the diver's trail in the same
+ * transaction (security review S2); no trail line, no link.
  */
 export async function issuePartyWaiver(
   db: AppDb,
-  input: { shopId: string; tripId: string; leadBookingId: string; bookingId: string; now?: Date },
+  input: {
+    shopId: string;
+    tripId: string;
+    leadBookingId: string;
+    bookingId: string;
+    /** The staffer showing the QR. */
+    actorPersonId: string;
+    now?: Date;
+  },
 ): Promise<{ token: string; expiresAt: Date } | null> {
   try {
     return await db.transaction(async (tx) => {
@@ -202,12 +215,22 @@ export async function issuePartyWaiver(
       // issuance back instead of exposing or leaving a freshly minted link.
       if (hasReturned(trip.endsAt, input.now ?? nowDate())) throw new PartyWaiverTripReturned();
       if (!link.expiresAt) throw new Error("waiver_link minted without an expiry");
+      const recorded = await recordDiverActivity(tx, {
+        shopId: input.shopId,
+        personId: seat.personId,
+        actorPersonId: input.actorPersonId,
+        code: "waiver_counter_code_shown",
+        waiverRecordId: opened.recordId,
+      });
+      if (!recorded) throw new PartyWaiverNotRecorded();
       return { token: link.token, expiresAt: link.expiresAt };
     });
   } catch (error) {
-    if (error instanceof PartyWaiverTripReturned) return null;
+    if (error instanceof PartyWaiverTripReturned || error instanceof PartyWaiverNotRecorded)
+      return null;
     throw error;
   }
 }
 
 class PartyWaiverTripReturned extends Error {}
+class PartyWaiverNotRecorded extends Error {}
