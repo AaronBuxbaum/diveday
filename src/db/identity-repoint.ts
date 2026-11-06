@@ -18,7 +18,11 @@ import {
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
-import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
+import {
+  CLEARED_DRAFT_COLUMNS,
+  WAIVER_BOARDING_COLUMNS,
+  withTrustedClearance,
+} from "./waiver-record-columns";
 
 /**
  * **The third answer to a held seat: it is another diver already on file**
@@ -367,10 +371,7 @@ async function repointInTransaction(
 
   // The split's own medical refusal, read the same way and under lock.
   const live = await tx
-    .select({
-      status: waiverRecords.status,
-      medicalClearedAt: waiverRecords.medicalClearedAt,
-    })
+    .select(WAIVER_BOARDING_COLUMNS)
     .from(waiverRecords)
     .where(
       and(
@@ -379,7 +380,9 @@ async function repointInTransaction(
         isNull(waiverRecords.supersededAt),
       ),
     )
-    .for("update");
+    .for("update")
+    // A clearance counts only while its seal verifies (issue #3998).
+    .then((rows) => rows.map(withTrustedClearance));
   if (live.some((row) => row.status === "medical_review" && !row.medicalClearedAt)) {
     return { refused: "medical_hold" };
   }
