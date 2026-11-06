@@ -1,7 +1,7 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { decodeQrDataUrl } from "./decode-qr";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { walkInFormPath } from "./helpers";
+import { addDiverFormPath } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   capture,
@@ -30,7 +30,7 @@ for (const scheme of ["light", "dark"] as const) {
         };
         const tripId = body.partyWaiverCapacity?.tripId;
         if (!tripId) throw new Error("the fact found no party waiver departure");
-        await page.goto(walkInFormPath("blue-mantis", tripId));
+        await page.goto(addDiverFormPath("blue-mantis", tripId));
         await page.getByRole("button", { name: "Add another person" }).click();
         const child = page.getByRole("group", { name: "Person 2" });
         const childName = scheme === "light" ? "Sky Light" : "Sky Dark";
@@ -39,7 +39,7 @@ for (const scheme of ["light", "dark"] as const) {
         const leadName = scheme === "light" ? "Alex Light" : "Alex Dark";
         await page.getByLabel("Full name").first().fill(leadName);
         await expect(page.getByLabel("Full name").first()).toHaveValue(leadName);
-        await page.getByRole("button", { name: "Add to boat" }).click();
+        await page.getByRole("button", { name: "Add to trip" }).click();
         await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers$/);
         await expect(page.getByText(childName, { exact: true })).toBeVisible();
         // No QR is opened: the screenshot never contains a live bearer credential.
@@ -57,7 +57,7 @@ for (const scheme of ["light", "dark"] as const) {
         };
         const tripId = body.partyWaiverCapacity?.tripId;
         if (!tripId) throw new Error("the fact found no party waiver departure");
-        await page.goto(walkInFormPath("blue-mantis", tripId));
+        await page.goto(addDiverFormPath("blue-mantis", tripId));
         await page.getByRole("button", { name: "Add another person" }).click();
         await page
           .getByRole("group", { name: "Person 2" })
@@ -65,10 +65,10 @@ for (const scheme of ["light", "dark"] as const) {
           .fill("Zoe Bennet");
         const leadName = scheme === "light" ? "Avery Light" : "Avery Dark";
         await page.getByLabel("Full name").first().fill(leadName);
-        await page.getByRole("button", { name: "Add to boat" }).click();
+        await page.getByRole("button", { name: "Add to trip" }).click();
         await expect(page.getByText(t("divers.page.partyOnFile"))).toBeVisible();
         await page.getByRole("radio", { name: /Use the record on file/ }).check();
-        await page.getByRole("button", { name: "Add to boat" }).click();
+        await page.getByRole("button", { name: "Add to trip" }).click();
         await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers$/);
         await expect(page.getByText("Identity needs confirmation")).toBeVisible();
         await page.getByRole("button", { name: `Show waiver QR code for ${leadName}` }).click();

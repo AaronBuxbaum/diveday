@@ -17,7 +17,7 @@ import { liveTrip, notRehearsal } from "./trips-live";
  * departure and nothing about who bought them.
  *
  * - **A seat the diver bought.** A seat a staffer put on the boat (the trail's
- *   `seat_added`, `seat_added_walk_in`, `rider_added_at_dock`,
+ *   `seat_added`, `rider_added_at_dock`,
  *   `seat_moved_here`) is not news to the desk. A cancelled seat is not a
  *   sale, so the pass counts seats that hold at the moment it runs.
  * - **Exactly once.** `shops.seat_sold_alerted_through` is the cursor: the
@@ -32,12 +32,7 @@ const HOUR_MS = 60 * 60 * 1000;
 export const LOOK_BACK_MS = 3 * HOUR_MS;
 const SHOWN_DEPARTURES = 40;
 
-const STAFF_SEATED_CODES = [
-  "seat_added",
-  "seat_added_walk_in",
-  "rider_added_at_dock",
-  "seat_moved_here",
-] as const;
+const STAFF_SEATED_CODES = ["seat_added", "rider_added_at_dock", "seat_moved_here"] as const;
 
 export type SeatSoldSummary = { shops: number; sent: number; failed: number; seats: number };
 

@@ -79,8 +79,6 @@ export function newDiverHref(
     email?: string;
     phone?: string;
     surface?: string;
-    /** The departure door's counter mode: a walk-in on a boat that has not left. */
-    walkIn?: boolean;
     tripId?: string;
     waitlist?: boolean;
     request?: string;
@@ -98,7 +96,6 @@ export function newDiverHref(
   if (params?.email) search.set("email", params.email);
   if (params?.phone) search.set("phone", params.phone);
   if (params?.surface) search.set("surface", params.surface);
-  if (params?.walkIn) search.set("walkIn", "true");
   if (params?.tripId) search.set("tripId", params.tripId);
   if (params?.waitlist) search.set("waitlist", "true");
   if (params?.request) search.set("request", params.request);

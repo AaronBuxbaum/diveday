@@ -32,7 +32,7 @@ it("leaves the existing link and draft intact when QR sealing is unavailable", a
     shopId: shop.id,
     tripId: trip.id,
     actorPersonId: staff.id,
-    entry: "walk_in",
+    entry: "roster",
     refusals: "specific",
     members: [{ fullName: `Sealing Test ${crypto.randomUUID()}`, minor: false }],
   });

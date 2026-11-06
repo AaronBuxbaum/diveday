@@ -99,17 +99,13 @@
   (retention, backups, integrations, the daily retry drain) stay UTC routes of their own. A scan
   that fails is isolated, logged as `cron_shop_tick.scan_failed` with its name, and turns the
   `diveday-shop-tick` monitor to error.
-- **Walk-in** — a seat made at the counter for a boat that has not left, seated from the
-  departure door in walk-in mode. Inside the counter window every add without a date request is one,
-  so a same-day phone booking files as a walk-in too (Aaron, 2026-11-05) (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
-  The mode is a claim from the client and holds only while the boat's **counter window** is open;
-  in it a name is enough (the email is optional) and the seat is told as a walk-in. Every gate is
-  the departure door's own: readiness, admission, waiver and capacity. The old
-  `/trips/[id]/walk-in` page is gone and redirects to the door.
-- **Counter window** — when the counter may still seat a walk-in on a departure
-  (`walkInDoorOpen`, `src/lib/departure-clock.ts`): it starts inside the arrivals window and has
-  not sailed (the one departure buffer). The staffer's door and the seat action both ask it, so a
-  typed URL or a stale page cannot seat someone on a boat that has gone.
+- **Walk-in** — a person who turns up at the desk. DiveDay has no separate walk-in seat, door or
+  activity line (Aaron, 2026-11-05): adding a diver to a boat is one act whether they phoned,
+  emailed or stand at the counter. A name is enough; email and phone are optional (the wait list
+  alone asks for an email, to reach someone when a seat opens), and a diver who comes back is
+  matched to their record by whatever the shop has. Every gate is the departure door's own:
+  readiness, admission, waiver and capacity. A seat with no address is not mailed a confirmation,
+  and the desk is told the waiver wasn't emailed.
 - **Counter payment hold** — Cash or Card machine tapped on an open order's Record payment row: a
   **held send** of kind `counter_payment` (`src/db/counter-payment-hold.ts`) that records the
   order's balance only when its eight seconds run out, or as soon as the screen leaves (closed,
@@ -119,7 +115,7 @@
   hold is the same hold. A hold that finds the order no longer open records nothing and writes a
   line in the shop's log (issue #3030, H-20261024-counter-payment-undo-hold).
 - **Walk-in party** — several people seated in one counter submission: the first person's own
-  fields plus further rows (`member-<n>-…`, `src/lib/walk-in-party.ts`), each seated by the
+  fields plus further rows (`member-<n>-…`, `src/lib/seat-party.ts`), each seated by the
   walk-in door with every gate its own. A name that reads like someone on file is settled row by
   row (the record, or a new person) before anyone is seated. Staff can open the party's waiver
   queue after seating or from the roster. Each person scans only their own code and signs on their

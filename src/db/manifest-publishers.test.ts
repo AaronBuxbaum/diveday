@@ -60,7 +60,7 @@ describe("writes that announce a manifest change", () => {
       tripId: trip.id,
       actorPersonId: staffId,
       diver: { fullName: "Walk-In Wanda", email: "wanda@example.com" },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
     expect(outcome.ok).toBe(true);

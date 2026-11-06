@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SeatDiverRefusal } from "@/db/seat-diver";
-import {
-  SEAT_SURFACES,
-  type SeatLanding,
-  type SeatSurfaceId,
-  seatSurfaceFor,
-} from "./seat-diver-surfaces";
+import { SEAT_SURFACES, type SeatLanding, type SeatSurfaceId } from "./seat-diver-surfaces";
 
 /**
  * A `SeatLanding` is built from raw form fields precisely when zod *failed* —
@@ -176,7 +171,6 @@ describe("every refusal keeps its own code on both doors", () => {
         surface.seatedWaiverUndeliveredNotice,
         surface.seatedIdentityUnconfirmedNotice,
         surface.seatedConfirmationSentNotice,
-        ...Object.values(surface.walkIn ?? {}).filter((value) => value.length > 0),
       ]);
       for (const reason of refusals) {
         const code = surface.refusalNotice[reason];
@@ -191,57 +185,4 @@ describe("every refusal keeps its own code on both doors", () => {
       expect(surface.refusalNotice.trip_full).not.toBe(surface.refusalNotice.course_ratio_full);
     });
   }
-
-  it("the departure door has no second refusal vocabulary for the counter", () => {
-    const counter = seatSurfaceFor(SEAT_SURFACES.departure, {
-      shopSlug: "blue-mantis",
-      tripId: "11111111-1111-4111-8111-111111111111",
-      personId: "",
-      walkIn: true,
-    });
-    expect(counter.refusalNotice).toBe(SEAT_SURFACES.departure.refusalNotice);
-    expect(counter.refusals).toBe("specific");
-  });
-});
-
-/**
- * The counter is a mode of the departure door, asked for per submission. It
- * changes how the seat is recorded and worded and nothing about who may take
- * it: the same refusals, the same gate scope, the same landing.
- */
-describe("the departure door's counter mode", () => {
-  const landing: SeatLanding = {
-    shopSlug: "blue-mantis",
-    tripId: "11111111-1111-4111-8111-111111111111",
-    personId: "",
-  };
-
-  it("records a walk-in and words it as one", () => {
-    const counter = seatSurfaceFor(SEAT_SURFACES.departure, { ...landing, walkIn: true });
-    expect(counter.entry).toBe("walk_in");
-    expect(counter.seatedNotice).toBe("walkin-added");
-    expect(counter.seatedIdentityUnconfirmedNotice).toBe("walkin-added-identity-unconfirmed");
-    expect(counter.seatedWaiverUndeliveredNotice).toBe("walkin-added-waiver-undelivered");
-    expect(counter.seatedConfirmationSentNotice).toBe("walkin-added-confirmed");
-  });
-
-  it("is an ordinary roster seat when it was not asked for", () => {
-    expect(seatSurfaceFor(SEAT_SURFACES.departure, landing).entry).toBe("roster");
-    expect(seatSurfaceFor(SEAT_SURFACES.departure, { ...landing, walkIn: false }).entry).toBe(
-      "roster",
-    );
-  });
-
-  it("is not a thing a diver's record can be asked for", () => {
-    const door = seatSurfaceFor(SEAT_SURFACES.diver, { ...landing, walkIn: true });
-    expect(door).toBe(SEAT_SURFACES.diver);
-    expect(door.entry).toBe("roster");
-  });
-
-  it("changes neither the landing nor what the gate signature binds to", () => {
-    const counter = seatSurfaceFor(SEAT_SURFACES.departure, { ...landing, walkIn: true });
-    expect(counter.seatedPath(landing)).toBe(SEAT_SURFACES.departure.seatedPath(landing));
-    expect(counter.refusedPath(landing)).toBe(SEAT_SURFACES.departure.refusedPath(landing));
-    expect(counter.gateScope(landing)).toEqual(SEAT_SURFACES.departure.gateScope(landing));
-  });
 });

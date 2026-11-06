@@ -1,6 +1,7 @@
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 import {
+  addDiverFormPath,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -8,7 +9,6 @@ import {
   openTripAboutRow,
   openTripTab,
   seededTripId,
-  walkInFormPath,
 } from "./helpers";
 
 /**
@@ -273,10 +273,10 @@ test.describe("as owner", () => {
 
     // The counter is a mode of the departure door: the diver is typed on the
     // walk-in form, and the refusal speaks the boat's one vocabulary.
-    await page.goto(walkInFormPath("blue-mantis", tripId));
+    await page.goto(addDiverFormPath("blue-mantis", tripId));
     // Diego Alvarez is carded at Open Water, so he fails an Advanced Open Water gate.
     await page.getByLabel("Full name").fill("Diego Alvarez");
-    await page.getByRole("button", { name: "Add to boat" }).click();
+    await page.getByRole("button", { name: "Add to trip" }).click();
     await page.getByRole("button", { name: "Diego Alvarez" }).click();
 
     // The structured detail rides a signed `?gate=` bound to the departure in

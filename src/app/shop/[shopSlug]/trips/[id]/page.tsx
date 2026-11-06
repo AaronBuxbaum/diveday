@@ -413,7 +413,6 @@ export default async function ManageTripPage({
                 arrival: desk?.arrival,
                 record,
                 inWaterCrew: overview.crew.inWaterCrew,
-                walkInOpen: desk?.walkInOpen,
                 addBand: await addBandFor(db, { shop, shopSlug, tripId, t }, { ...rest, diverq }),
                 acceptsDivers,
                 guests,

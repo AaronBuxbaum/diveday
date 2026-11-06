@@ -221,8 +221,6 @@ type ActivityParamShapes = {
   missing_diver_found: { actor: string };
   /** A staffer seated a diver. */
   seat_added: { actor: string; diver: string };
-  /** …as a walk-in, which is the same act with a different story behind it. */
-  seat_added_walk_in: { actor: string; diver: string };
   /** …by a diver, for a friend, from their own trip link (the actor is the lead). */
   seat_added_from_trip_link: { actor: string; diver: string };
   /** A staffer emailed a diver an invitation to this departure (the counter's "another day"). */
@@ -588,7 +586,6 @@ export const ACTIVITY_CODES = [
   "missing_diver_alert_raised",
   "missing_diver_found",
   "seat_added",
-  "seat_added_walk_in",
   "seat_added_from_trip_link",
   "departure_offered",
   "rider_added_at_dock",
@@ -779,7 +776,6 @@ export function isDeskOnlyCode(value: string): value is DeskOnlyCode {
 const TRAIL_DESK_KINDS = {
   counter_check_in: "arrival",
   seat_added: "seat_taken",
-  seat_added_walk_in: "seat_taken",
   rider_added_at_dock: "seat_taken",
   seat_moved_here: "seat_taken",
 } as const satisfies Partial<Record<ActivityCode, CatchUpKind>>;

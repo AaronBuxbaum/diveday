@@ -62,7 +62,7 @@ export async function seatSomebodyOffTheNamePrompt(
     tripId: departure.id,
     actorPersonId,
     diver: { personId: diver.id, fromNameMatch: { typedName: "Zoe Bennet" } },
-    entry: "walk_in",
+    entry: "roster",
     refusals: "coarse",
   });
   if (!seated.ok || !seated.identityUnconfirmed) return null;

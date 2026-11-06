@@ -1,7 +1,7 @@
 import type { Browser, Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, makeActivitySafe } from "./fixtures";
-import { signInAs, walkInFormPath } from "./helpers";
+import { addDiverFormPath, signInAs } from "./helpers";
 
 /** One staffer reads Today, another seats a walk-in, then the reader returns. */
 export async function todayCatchUpScenario(browser: Browser, owner: Page, workerBaseURL: string) {
@@ -29,7 +29,7 @@ export async function todayCatchUpScenario(browser: Browser, owner: Page, worker
         response.request().method() === "GET" &&
         new URL(response.url()).pathname === "/api/staff-activity",
     );
-    await owner.goto(walkInFormPath("blue-mantis", tripId));
+    await owner.goto(addDiverFormPath("blue-mantis", tripId));
     expect((await confirmed).status()).toBe(200);
     await expect(owner.getByRole("alertdialog", { name: "Session paused" })).toHaveCount(0);
     // A submit sent while the page hydrates can land without posting the seating, so the
@@ -51,7 +51,7 @@ export async function todayCatchUpScenario(browser: Browser, owner: Page, worker
         new URL(response.url()).pathname === "/shop/blue-mantis/divers" &&
         response.headers()["x-action-redirect"]?.includes(`/trips/${tripId}`) === true,
     );
-    await owner.getByRole("button", { name: "Add to boat" }).click();
+    await owner.getByRole("button", { name: "Add to trip" }).click();
     const seatResponse = await seated;
     expect(seatResponse.status()).toBe(200);
     const redirect = seatResponse.headers()["x-action-redirect"]?.split(";")[0];

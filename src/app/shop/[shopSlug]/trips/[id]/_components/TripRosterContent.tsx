@@ -26,7 +26,6 @@ import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection, type SeatRequestContext } from "./AddDiverSection";
-import { addBandMode, addBandSeatActions } from "./add-band-mode";
 import { carryTargetLabel } from "./carry-target-label";
 import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
@@ -48,8 +47,6 @@ type FormAction = (formData: FormData) => void | Promise<void>;
 export type TripRosterActions = {
   addBookingAction: FormAction;
   addExistingDiverAction: FormAction;
-  walkInAddBookingAction: FormAction;
-  walkInAddExistingDiverAction: FormAction;
   addToWaitlistAction: FormAction;
   addKnownToWaitlistAction: FormAction;
   createDirectTripInvitationAction: FormAction;
@@ -132,11 +129,6 @@ export type TripRosterContentContext = {
   arrival?: RosterArrival;
   /** The departure is finished: the ledger is its record (`RosterRecord`). */
   record?: RosterRecord;
-  /**
-   * The counter can still seat a walk-in (the arrivals window): the band is
-   * then the counter (`addBandMode`) unless it answers a date request.
-   */
-  walkInOpen?: boolean;
   /**
    * What the URL asked of the add band. `open` (`?add=1`): it takes the
    * cursor once the page is drawn (`OpenAddBand`). `request` (`?request=`): the date request
@@ -479,11 +471,6 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
   const picked = seatRequest?.search ?? context.addBand?.person;
   const diverQuery = picked?.query ?? guests.diverQuery;
   const diverCandidates = picked?.candidates ?? guests.diverCandidates;
-  const mode = addBandMode({
-    walkInWindow: context.walkInOpen ?? false,
-    hasRequest: Boolean(seatRequest),
-  });
-  const seatActions = addBandSeatActions(mode, actions);
 
   return (
     <div className="flex flex-col gap-4">
@@ -509,10 +496,10 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
           candidates: diverCandidates,
           recentInviteDates: guests.recentInvites,
           tripId: trip.id,
-          addBookingAction: seatActions.addBookingAction,
+          addBookingAction: actions.addBookingAction,
           addToWaitlistAction: actions.addToWaitlistAction,
           addKnownToWaitlistAction: actions.addKnownToWaitlistAction,
-          addExistingDiverAction: seatActions.addExistingDiverAction,
+          addExistingDiverAction: actions.addExistingDiverAction,
           offerAction: actions.createDirectTripInvitationAction,
           status: noticeForForm(tripNotice, "add-diver"),
           locale,
@@ -522,7 +509,6 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
           confirmPhone,
           confirmMatches,
           shopRentalItems,
-          mode,
           request: seatRequest?.context,
         }}
       />

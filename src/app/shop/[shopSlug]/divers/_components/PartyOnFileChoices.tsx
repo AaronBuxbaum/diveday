@@ -3,7 +3,7 @@ import { legendClass, radioClass, radioRingClass } from "@/components/ui/form";
 import type { SimilarDiver } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
-import { WALK_IN_NEW_PERSON, walkInMemberField } from "@/lib/walk-in-party";
+import { PARTY_NEW_PERSON, partyMemberField } from "@/lib/seat-party-form";
 
 /** One party row the on-file check stopped on: the name typed, and who it reads like. */
 export type PartyOnFileRow = { row: number; typedName: string; matches: SimilarDiver[] };
@@ -31,7 +31,7 @@ export function PartyOnFileChoices({
   return (
     <div className="col-span-full grid gap-4 rounded-lg border border-warning/25 bg-warning/10 p-4">
       {rows.map(({ row, typedName, matches }) => {
-        const name = walkInMemberField(row, "match");
+        const name = partyMemberField(row, "match");
         const sayNoDiveDay = noDiveDayNeedsSaying(matches);
         return (
           <fieldset key={row} className="grid gap-2">
@@ -69,7 +69,7 @@ export function PartyOnFileChoices({
               <input
                 type="radio"
                 name={name}
-                value={WALK_IN_NEW_PERSON}
+                value={PARTY_NEW_PERSON}
                 required
                 className={radioClass}
               />

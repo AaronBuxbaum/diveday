@@ -643,7 +643,6 @@ export type IncidentRosterChangeInput = {
  */
 const ROSTER_CHANGE_BY_CODE = {
   seat_added: "added",
-  seat_added_walk_in: "added",
   seat_added_from_trip_link: "added",
   rider_added_at_dock: "added",
   booking_restored: "added",

@@ -116,7 +116,7 @@ describe("a desk line read back from the table", () => {
     expect(deskCodesFeeding("running_late")).toEqual(["desk_running_late"]);
     expect(deskCodesFeeding("help_request")).toEqual(["desk_help_request"]);
     expect(deskCodesFeeding("seat_taken").sort()).toEqual(
-      ["rider_added_at_dock", "seat_added", "seat_added_walk_in", "seat_moved_here"].sort(),
+      ["rider_added_at_dock", "seat_added", "seat_moved_here"].sort(),
     );
   });
 });

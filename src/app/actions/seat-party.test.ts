@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { WALK_IN_PARTY_MAX, walkInMemberField } from "@/lib/walk-in-party";
+import { PARTY_MAX, partyMemberField } from "@/lib/seat-party-form";
 
 /**
- * **A walk-in family at the counter** (fifth loop, item 9; review fixes): the
+ * **A family seated in one pass** (fifth loop, item 9; review fixes): the
  * on-file check names the rows that matched, a per-row choice settles each
  * one, an overlong party is refused rather than trimmed, and a seated party
  * leaves no draft of the lead's details behind.
@@ -11,7 +11,6 @@ import { WALK_IN_PARTY_MAX, walkInMemberField } from "@/lib/walk-in-party";
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
 vi.mock("@/db/divers", () => ({ findSimilarDivers: vi.fn(async () => []) }));
 vi.mock("@/db/seat-diver", () => ({ seatDiver: vi.fn(), seatParty: vi.fn() }));
-vi.mock("@/db/trips", () => ({ getTripWithBooked: vi.fn() }));
 vi.mock("@/db/form-drafts", () => ({ discardFormDraft: vi.fn(async () => {}) }));
 vi.mock("@/lib/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
@@ -22,11 +21,9 @@ vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { findSimilarDivers } = await import("@/db/divers");
 const { seatParty } = await import("@/db/seat-diver");
-const { getTripWithBooked } = await import("@/db/trips");
-const { HOUR_MS, nowMs } = await import("@/lib/clock");
 const { discardFormDraft } = await import("@/db/form-drafts");
 const { requireShopSurface } = await import("@/lib/session");
-const { seatWalkInPartyAction } = await import("./seat-diver");
+const { seatPartyAction } = await import("./seat-diver");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";
 const TRIP_ID = "33333333-3333-4333-8333-333333333333";
@@ -38,17 +35,17 @@ function form(extra: [string, string][] = []): FormData {
   data.set("tripId", TRIP_ID);
   data.set("fullName", "Ana Lopez");
   data.set("participantType", "diver");
-  data.set(walkInMemberField(1, "name"), "Mia Lopez");
-  data.set(walkInMemberField(1, "minor"), "true");
-  data.set(walkInMemberField(1, "type"), "snorkeler");
-  data.set(walkInMemberField(2, "name"), "Leo Lopez");
+  data.set(partyMemberField(1, "name"), "Mia Lopez");
+  data.set(partyMemberField(1, "minor"), "true");
+  data.set(partyMemberField(1, "type"), "snorkeler");
+  data.set(partyMemberField(2, "name"), "Leo Lopez");
   for (const [name, value] of extra) data.set(name, value);
   return data;
 }
 
 async function landing(data: FormData): Promise<string> {
   try {
-    await seatWalkInPartyAction("blue-mantis", data);
+    await seatPartyAction("blue-mantis", data);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
@@ -57,12 +54,7 @@ async function landing(data: FormData): Promise<string> {
   throw new Error("the action neither redirected nor threw");
 }
 
-function boatAt(hours: number, status = "scheduled") {
-  return { id: TRIP_ID, status, startsAt: new Date(nowMs() + hours * HOUR_MS) } as never;
-}
-
 beforeEach(() => {
-  vi.mocked(getTripWithBooked).mockResolvedValue(boatAt(2));
   vi.mocked(requireShopSurface).mockResolvedValue({
     session: { user: { shopId: SHOP_ID, personId: "staff" } },
   } as never);
@@ -75,7 +67,7 @@ beforeEach(() => {
 
 afterEach(() => vi.clearAllMocks());
 
-describe("seatWalkInPartyAction", () => {
+describe("seatPartyAction", () => {
   it("names the rows that read like somebody on file, and seats nobody", async () => {
     vi.mocked(findSimilarDivers).mockImplementation(async (_db, _shop, name) =>
       name === "Leo Lopez" ? ([{ id: LEO_ON_FILE }] as never) : [],
@@ -91,9 +83,9 @@ describe("seatWalkInPartyAction", () => {
     vi.mocked(findSimilarDivers).mockResolvedValue([{ id: LEO_ON_FILE }] as never);
     await landing(
       form([
-        [walkInMemberField(0, "match"), "new"],
-        [walkInMemberField(1, "match"), "new"],
-        [walkInMemberField(2, "match"), LEO_ON_FILE],
+        [partyMemberField(0, "match"), "new"],
+        [partyMemberField(1, "match"), "new"],
+        [partyMemberField(2, "match"), LEO_ON_FILE],
       ]),
     );
     expect(vi.mocked(seatParty).mock.calls[0]?.[1].members).toEqual([
@@ -109,9 +101,9 @@ describe("seatWalkInPartyAction", () => {
     const to = new URL(
       await landing(
         form([
-          [walkInMemberField(0, "match"), "new"],
-          [walkInMemberField(1, "match"), "new"],
-          [walkInMemberField(2, "match"), stranger],
+          [partyMemberField(0, "match"), "new"],
+          [partyMemberField(1, "match"), "new"],
+          [partyMemberField(2, "match"), stranger],
         ]),
       ),
       "http://x",
@@ -123,7 +115,7 @@ describe("seatWalkInPartyAction", () => {
   it("still asks about a row the staffer has not settled", async () => {
     vi.mocked(findSimilarDivers).mockResolvedValue([{ id: LEO_ON_FILE }] as never);
     const to = new URL(
-      await landing(form([[walkInMemberField(2, "match"), LEO_ON_FILE]])),
+      await landing(form([[partyMemberField(2, "match"), LEO_ON_FILE]])),
       "http://x",
     );
     expect(to.searchParams.get("onFile-0")).toBe("Ana Lopez");
@@ -132,8 +124,8 @@ describe("seatWalkInPartyAction", () => {
   });
 
   it("refuses a party over the limit instead of seating it with somebody left off", async () => {
-    const extra: [string, string][] = Array.from({ length: WALK_IN_PARTY_MAX }, (_, index) => [
-      walkInMemberField(index + 3, "name"),
+    const extra: [string, string][] = Array.from({ length: PARTY_MAX }, (_, index) => [
+      partyMemberField(index + 3, "name"),
       `Extra ${index}`,
     ]);
     const to = new URL(await landing(form(extra)), "http://x");
@@ -144,8 +136,8 @@ describe("seatWalkInPartyAction", () => {
   it("gives the first person their own tick, and a date of birth beside it", async () => {
     await landing(
       form([
-        [walkInMemberField(0, "minor"), "true"],
-        [walkInMemberField(0, "dob"), "2010-05-06"],
+        [partyMemberField(0, "minor"), "true"],
+        [partyMemberField(0, "dob"), "2010-05-06"],
       ]),
     );
     expect(vi.mocked(seatParty).mock.calls[0]?.[1].members[0]).toMatchObject({
@@ -161,25 +153,18 @@ describe("seatWalkInPartyAction", () => {
     expect(discardFormDraft).toHaveBeenCalledWith(expect.anything(), SHOP_ID, "staff", "new_diver");
   });
 
-  it.each([
-    ["a boat that has sailed", boatAt(-2)],
-    ["a boat out of the counter's reach", boatAt(24 * 4)],
-    ["a cancelled boat", boatAt(2, "cancelled")],
-    ["a boat that is not there", null],
-  ])("seats nobody on %s, and keeps the form", async (_name, trip) => {
-    vi.mocked(getTripWithBooked).mockResolvedValue(trip as never);
+  it("keeps the form when the boat takes nobody", async () => {
+    vi.mocked(seatParty).mockResolvedValue({ ok: false, reason: "trip_unavailable" } as never);
     const to = new URL(await landing(form()), "http://x");
     expect(to.searchParams.get("notice")).toBe("diver-unavailable");
     expect(to.searchParams.get("surface")).toBe("departure");
-    expect(to.searchParams.get("walkIn")).toBe("true");
-    expect(seatParty).not.toHaveBeenCalled();
     expect(discardFormDraft).not.toHaveBeenCalled();
   });
 
-  it("records the party as walk-ins", async () => {
+  it("records the party as ordinary roster seats", async () => {
     await landing(form());
     expect(vi.mocked(seatParty).mock.calls[0]?.[1]).toMatchObject({
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
     });
   });
