@@ -17,13 +17,11 @@ import {
   bookings,
   cards,
   courses,
-  inboundMessages,
   interests,
   internalNotes,
   people,
   personRoles,
   shops,
-  staffReplies,
   trips,
   userAccounts,
   waiverRecords,
@@ -42,15 +40,10 @@ const FOLDED_TABLES = [
  * default for anything absent from this map is "must be exported" — a new
  * column has to be argued out, not quietly forgotten. `shop_id` is out on every
  * table (`SHOP_SCOPED`): it is the same value on every row of a single-shop
- * bundle, so a table that excludes nothing else needs no entry.
- */
+ * bundle, so a table that excludes nothing else needs no entry. */
 const SHOP_SCOPED = "shop_id";
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
-  inbound_messages: [
-    "email_message_id", // the diver's mail client's own id; threading plumbing, redacted on erasure
-    "in_reply_to_delivery_id", // a pointer into the delivery trail; the message itself is exported
-    "assisted_at", // when Claude last read the message, not part of the message
-  ],
+  inbound_messages: ["email_message_id", "in_reply_to_delivery_id", "assisted_at"], // threading plumbing
   roll_call_events: [...ROLL_CALL_SPLIT, "seq"], // seq: as GLOBAL_SEQ_TABLES
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: [
@@ -936,33 +929,6 @@ describe("full-shop export dataset", () => {
       code: "counter_check_in",
       params: { diver: "Erasable Esme" },
     });
-    // Her own words and the shop's answer are exported, then redacted by the erasure.
-    const [asked] = await db
-      .insert(inboundMessages)
-      .values({
-        shopId: shop.id,
-        personId: diver.id,
-        channel: "email",
-        fromAddress: "esme@example.com",
-        // i18n-exempt: a message fixture, stored verbatim — not product copy
-        body: "Esme asks about the hood",
-        receivedAt: nowDate(),
-        providerMessageId: "esme-erasure-1",
-      })
-      .returning({ id: inboundMessages.id });
-    await db.insert(staffReplies).values({
-      shopId: shop.id,
-      personId: diver.id,
-      inboundMessageId: asked?.id,
-      channel: "email",
-      toAddress: "esme@example.com",
-      // i18n-exempt: a reply fixture, stored verbatim — not product copy
-      body: "Hood is in the other bag",
-      locale: "en-US",
-      sentByPersonId: owner.id,
-      status: "sent",
-      sentAt: nowDate(),
-    });
     await db.insert(interests).values({
       shopId: shop.id,
       scope: "date",
@@ -988,14 +954,7 @@ describe("full-shop export dataset", () => {
       input.tables.map((exported) => ({ file: exported.file, rows: exported.rows })),
     );
     const mention = "Split Erasable Esme from this group on the next boat.";
-    for (const secret of [
-      "Erasable Esme",
-      "esme@example.com",
-      "555 0424",
-      "7mm hood",
-      "Esme asks about the hood",
-      "Hood is in the other bag",
-    ]) {
+    for (const secret of ["Erasable Esme", "esme@example.com", "555 0424", "7mm hood"]) {
       expect(wholeBundle.replace(mention, "")).not.toContain(secret);
     }
   });

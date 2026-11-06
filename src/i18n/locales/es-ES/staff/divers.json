@@ -266,7 +266,6 @@
     "shopPaymentFallback": "Pago del centro"
   },
   "remove": {
-    "removePersonSummary": "Eliminar a {name}",
     "removeDiver": "Eliminar buceador",
     "consequence": "Quita a {name} de la lista, los selectores de reserva, los manifiestos y la preparación. Sus exenciones, salidas y pagos se conservan, y puedes restaurarlo.",
     "staffWarning": "También trabaja aquí. Al eliminarlo sale del equipo y ya no podrá iniciar sesión."
@@ -568,10 +567,12 @@
     "lastDiveFuture": "Ese día todavía no ha llegado.",
     "lastDiveSavedLaterKnown": "Guardado. Ha buceado en una de tus salidas después de ese día, así que la ficha muestra esa fecha más reciente."
   },
+  "record": {
+    "menuLabel": "Acciones del registro"
+  },
   "export": {
     "downloadButton": {
-      "idle": "Descargar registro",
-      "acknowledged": "En camino, revisa tus descargas"
+      "idle": "Descargar registro"
     }
   },
   "status": {

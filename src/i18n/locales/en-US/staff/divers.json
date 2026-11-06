@@ -266,7 +266,6 @@
     "shopPaymentFallback": "Shop payment"
   },
   "remove": {
-    "removePersonSummary": "Delete {name}",
     "removeDiver": "Delete diver",
     "consequence": "Takes {name} off the diver list, the booking pickers, manifests, and trip prep. Their waivers, trips, and payments stay on file, and you can restore them.",
     "staffWarning": "They also work here. Deleting them takes them off the team, and they can no longer sign in."
@@ -568,10 +567,12 @@
     "lastDiveFuture": "That day hasn’t come yet.",
     "lastDiveSavedLaterKnown": "Saved. They’ve dived with you since then, so the row shows that later day."
   },
+  "record": {
+    "menuLabel": "Record actions"
+  },
   "export": {
     "downloadButton": {
-      "idle": "Download record",
-      "acknowledged": "On its way, check your downloads"
+      "idle": "Download record"
     }
   },
   "status": {
