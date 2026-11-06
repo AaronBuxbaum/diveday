@@ -292,9 +292,8 @@ describe("the waiver_link capability", () => {
     expect(await getWaiverForToken(db, forged)).toEqual({ state: "unavailable" });
   });
 
-  it("opens nothing after a diver merge, which supersedes the unsigned release it names", async () => {
-    const { db, shop, bookingId, token, personId, fullName, recordId } =
-      await counterSeat("Jules Merge");
+  it("opens nothing after a diver merge that replaces the contact, and the release waits for a fresh code (issue 4057)", async () => {
+    const { db, shop, bookingId, token, personId, fullName } = await counterSeat("Jules Merge");
     const [survivor] = await db
       .insert(people)
       .values({
@@ -313,14 +312,16 @@ describe("the waiver_link capability", () => {
       actorPersonId: await owner(),
     });
     expect(merged.ok).toBe(true);
-    const [record] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
-    expect(record?.supersededAt).not.toBeNull();
-    // Authority never follows a merge: the tablet's link is dead, and a fresh
-    // QR opens the kept holder's own release.
+    // Authority never follows a merge: the tablet's link is dead. The unsigned
+    // release and its draft stay, and a fresh QR opens it for the kept holder.
     expect(await counterState(token)).toBe("closed");
     const fresh = await issueCounterLink(db, { shopId: shop.id, bookingId });
-    expect(fresh.recordId).not.toBe(recordId);
     expect(await counterState(fresh.token)).toBe("available");
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, fresh.recordId));
+    expect(record?.personId).toBe(survivor.id);
   });
 
   it("goes with the person on erasure: the row is deleted and the release opens nothing", async () => {
