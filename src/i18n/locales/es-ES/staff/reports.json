@@ -149,11 +149,11 @@
     "saved": "Guardado. Los archivos salen el día 2.",
     "cleared": "Desactivado. No se enviarán archivos de fin de mes.",
     "invalid": "Eso no es un correo electrónico. Revísalo y guarda de nuevo.",
-    "confirmationSent": "Guardado. Enviamos un enlace de confirmación a esa dirección; no se envía nada hasta que se use.",
+    "confirmationSent": "Guardado. Los archivos de fin de mes irán allí desde el próximo día 2. Enviamos un enlace a esa dirección para que el contador confirme.",
     "confirmationNotSent": "Guardado, pero el enlace de confirmación no se pudo enviar ahora. Guarda de nuevo más tarde para reenviarlo.",
     "setBy": "Puesto por {name}, {date}.",
     "setByGone": "Puesto el {date} por alguien que ya no está en el equipo.",
-    "waiting": "Esperando a que {email} confirme; no se envía nada hasta entonces.",
+    "waiting": "Aún sin confirmar por {email}. Los archivos le llegan igualmente.",
     "setterLapsed": "Esa persona ya no puede exportar los datos del centro, así que no se envía nada. Guarda la dirección de nuevo para mantenerla, o cámbiala.",
     "bounced": "Los últimos archivos de fin de mes a {email} rebotaron. Revisa la dirección y guárdala."
   },

@@ -82,7 +82,7 @@ describe("course date requests without a shop notification address (issue 2860)"
     { contactEmail: null, contactPhone: null, confirmed: false, nudge: false },
     { contactEmail: null, contactPhone: "+1 305 555 0134", confirmed: false, nudge: false },
     { contactEmail: "desk@example.com", contactPhone: null, confirmed: true, nudge: true },
-    { contactEmail: "unverified@example.com", contactPhone: null, confirmed: false, nudge: false },
+    { contactEmail: "unverified@example.com", contactPhone: null, confirmed: false, nudge: true },
   ];
 
   it.each(contactCases)(

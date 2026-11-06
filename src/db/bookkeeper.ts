@@ -19,9 +19,9 @@ import { activityEvents, people, shops } from "./schema";
 /**
  * **The bookkeeper's address and the month-end claim** (fifth loop, item 35;
  * ADR 20261016-bookkeeper-month-end-email). The address lives on the shop with
- * who set it and when; nothing is sent to it until the bookkeeper opens the
- * confirm link it receives (`bookkeeper_confirmed_at`, security review B1, on
- * the shore contact's model, H-20261014-stale-roll-call-recipients); `bookkeeper_sent_month` is the claim the
+ * who set it and when; the bookkeeper may open the
+ * confirm link it receives (`bookkeeper_confirmed_at`, a badge, not a gate:
+ * files go from the save, #4061); `bookkeeper_sent_month` is the claim the
  * daily pass moves forward before it sends, minting the stop link that
  * month's email carries (second-pass N1), a `bookkeeper_stop` capability
  * bound to the address (issue #3721).
@@ -100,7 +100,7 @@ export const BOOKKEEPER_CLEARED = {
  * on what changed.
  *
  * A new address is unconfirmed: the confirmation and any outstanding link are
- * cleared with the old one, so nothing is sent until the new inbox confirms.
+ * cleared with the old one. Files go to it from the save all the same.
  * It also counts the month already due as sent (`bookkeeperMonthOnSet`), so
  * its first email is the next 2nd's. Saving the address already on file moves
  * who set it and when, and takes back a bounce warning, never the claim or
@@ -248,9 +248,8 @@ export async function isBookkeeperToken(
 /**
  * Consumes the link: stamps the address confirmed only while the link is
  * live, so a link whose address was changed (which cleared its hash),
- * replaced, used or expired confirms nothing. The month due at confirmation
- * counts as sent, so the first files are the next 2nd's however long the
- * link waited (second-pass N2), and the owners hear the inbox said yes.
+ * replaced, used or expired confirms nothing. Confirming is a badge (#4061):
+ * it touches no claim, and the owners hear the inbox said yes.
  */
 export async function consumeBookkeeperConfirmation(
   db: AppDb,
@@ -260,22 +259,13 @@ export async function consumeBookkeeperConfirmation(
     const [row] = await tx
       .select({
         id: shops.id,
-        timezone: shops.timezone,
         email: shops.bookkeeperEmail,
-        sentMonth: shops.bookkeeperSentMonth,
       })
       .from(shops)
       .where(liveLink(input.token, input.now))
       .for("no key update");
     if (!row?.email) return null;
-    const due = bookkeeperMonthOnSet(input.now, row.timezone);
-    await tx
-      .update(shops)
-      .set({
-        bookkeeperConfirmedAt: input.now,
-        bookkeeperSentMonth: row.sentMonth !== null && row.sentMonth > due ? row.sentMonth : due,
-      })
-      .where(eq(shops.id, row.id));
+    await tx.update(shops).set({ bookkeeperConfirmedAt: input.now }).where(eq(shops.id, row.id));
     return { shopId: row.id, email: row.email };
   });
   if (!confirmed) return null;
@@ -314,13 +304,7 @@ export async function listBookkeeperShops(db: DbExecutor) {
       sentMonth: shops.bookkeeperSentMonth,
     })
     .from(shops)
-    .where(
-      and(
-        eq(shops.isDemo, false),
-        isNotNull(shops.bookkeeperEmail),
-        isNotNull(shops.bookkeeperConfirmedAt),
-      ),
-    );
+    .where(and(eq(shops.isDemo, false), isNotNull(shops.bookkeeperEmail)));
 }
 
 /**
@@ -337,7 +321,7 @@ export async function listBookkeeperShops(db: DbExecutor) {
 export async function claimBookkeeperMonth(
   db: AppDb,
   input: { shopId: string; email: string; setByPersonId: string; month: string },
-): Promise<{ stopToken: string; confirmedAt: Date } | null> {
+): Promise<{ stopToken: string; claimedUnder: Date } | null> {
   return db.transaction(async (tx) => {
     const [claimed] = await tx
       .update(shops)
@@ -347,18 +331,17 @@ export async function claimBookkeeperMonth(
           eq(shops.id, input.shopId),
           eq(shops.bookkeeperEmail, input.email),
           eq(shops.bookkeeperEmailSetByPersonId, input.setByPersonId),
-          isNotNull(shops.bookkeeperConfirmedAt),
           or(isNull(shops.bookkeeperSentMonth), lt(shops.bookkeeperSentMonth, input.month)),
         ),
       )
-      .returning({ confirmedAt: shops.bookkeeperConfirmedAt });
-    if (!claimed?.confirmedAt) return null;
+      .returning({ claimedUnder: shops.bookkeeperEmailSetAt });
+    if (!claimed?.claimedUnder) return null;
     const stopToken = await issueCapability(tx, {
       purpose: "bookkeeper_stop",
       shopId: input.shopId,
       subjectId: input.email,
     });
-    return { stopToken, confirmedAt: claimed.confirmedAt };
+    return { stopToken, claimedUnder: claimed.claimedUnder };
   });
 }
 
@@ -378,8 +361,8 @@ export async function releaseBookkeeperMonth(
     month: string;
     /** The address the claim was won for. */
     email: string;
-    /** The confirmation the claim was won under, from {@link claimBookkeeperMonth}. */
-    confirmedAt: Date;
+    /** When the address was last saved, from {@link claimBookkeeperMonth}. */
+    claimedUnder: Date;
     previous: string | null;
   },
 ): Promise<void> {
@@ -391,7 +374,7 @@ export async function releaseBookkeeperMonth(
         eq(shops.id, input.shopId),
         eq(shops.bookkeeperSentMonth, input.month),
         eq(shops.bookkeeperEmail, input.email),
-        eq(shops.bookkeeperConfirmedAt, input.confirmedAt),
+        eq(shops.bookkeeperEmailSetAt, input.claimedUnder),
       ),
     );
 }
@@ -405,7 +388,7 @@ export async function releaseBookkeeperMonth(
  */
 export async function bookkeeperClaimStands(
   db: DbExecutor,
-  input: { shopId: string; month: string; email: string; confirmedAt: Date },
+  input: { shopId: string; month: string; email: string; claimedUnder: Date },
 ): Promise<boolean> {
   const [row] = await db
     .select({ id: shops.id })
@@ -415,7 +398,7 @@ export async function bookkeeperClaimStands(
         eq(shops.id, input.shopId),
         eq(shops.bookkeeperSentMonth, input.month),
         eq(shops.bookkeeperEmail, input.email),
-        eq(shops.bookkeeperConfirmedAt, input.confirmedAt),
+        eq(shops.bookkeeperEmailSetAt, input.claimedUnder),
       ),
     )
     .limit(1);
@@ -630,11 +613,11 @@ export async function bookkeeperNoticeRecipients(
   );
   if (managers.length > 0) return managers;
   const [shop] = await db
-    .select({ email: shops.contactEmail, confirmedAt: shops.contactEmailConfirmedAt })
+    .select({ email: shops.contactEmail })
     .from(shops)
     .where(eq(shops.id, input.shopId))
     .limit(1);
-  if (!shop?.email || !shop.confirmedAt) return [];
+  if (!shop?.email) return [];
   return [{ personId: null, fullName: null, email: shop.email, locale: null }];
 }
 
