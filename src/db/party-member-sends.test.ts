@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
 import { createBookingParty } from "./bookings";
-import { verifyCapability } from "./capabilities";
+import { mintCapability, verifyCapability } from "./capabilities";
 import { sendFindMyBookingLinks } from "./find-my-booking";
 import { sendDueReminders } from "./reminders";
 import { bookingCapabilities, bookings, capabilities, people } from "./schema";
@@ -295,6 +295,27 @@ describe("a dead party door's rescue (issue 4003)", () => {
     const fresh = body.match(DOOR)?.[1];
     expect(fresh).toBeDefined();
     expect(fresh).not.toBe(token);
+  });
+
+  it("mails a fresh door beside a live counter code, and leaves the code live (#4008)", async () => {
+    const { db, shop, token } = await doorToken();
+    const later = new Date(nowDate().getTime() + 15 * DAY_MS);
+    const stale = await staleWaiverRecordForToken(db, token, later);
+    if (!stale) throw new Error("dead door expected");
+    const counter = await mintCapability(db, {
+      purpose: "waiver_link",
+      shopId: shop.id,
+      subjectId: stale.id,
+      now: later,
+    });
+
+    expect(await emailFreshWaiverLink(db, token, later)).toBe("sent");
+    expect(mailTo(MEMBER)[0]?.match(DOOR)?.[1]).toBeDefined();
+    const [row] = await db
+      .select({ revokedAt: capabilities.revokedAt })
+      .from(capabilities)
+      .where(eq(capabilities.id, counter.id));
+    expect(row?.revokedAt).toBeNull();
   });
 
   it("issues nothing while a newer door still stands", async () => {

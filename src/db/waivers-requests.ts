@@ -6,8 +6,7 @@
  * the `./waivers` barrel.
  */
 import { randomUUID } from "node:crypto";
-import { and, eq, gt, inArray, isNull, or } from "drizzle-orm";
-import { purposesNaming } from "@/lib/capabilities";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
 import { isHeldToMedical } from "@/lib/participant-types";
@@ -425,9 +424,10 @@ async function openRelease(
 }
 
 /**
- * Does this person already hold a live link to a release with no seat: a
- * release link or a counter link, unspent, unrevoked and unexpired, on a
- * release still waiting for its signature? The rescue flow's guard: the bearer
+ * Does this person already hold a live release link to a release with no
+ * seat: unspent, unrevoked and unexpired, on a release still waiting for its
+ * signature? A counter link does not count: it stands beside a mailed one
+ * (issue #4008), so a fresh mail never revokes it. The rescue flow's guard: the bearer
  * of a dead URL learns only that a live link exists, never its token, address
  * or age, and drives no delivery on it.
  */
@@ -449,7 +449,7 @@ export async function hasLivePersonWaiverRequest(
     )
     .where(
       and(
-        inArray(capabilities.purpose, purposesNaming("waiver_record")),
+        eq(capabilities.purpose, "release_link"),
         eq(capabilities.shopId, shopId),
         isNull(capabilities.usedAt),
         isNull(capabilities.revokedAt),
