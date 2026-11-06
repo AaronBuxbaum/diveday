@@ -15,6 +15,7 @@ import {
   completeWaiver,
   getWaiverForToken,
   recordWaiverDraft,
+  threadWaiverKey,
   waiverLinkDoor,
 } from "./waivers-completion";
 import {
@@ -406,6 +407,27 @@ describe("the party_waiver_link capability", () => {
       .where(eq(capabilities.tokenHash, hashBearerToken(token)));
     expect(row?.usedAt).not.toBeNull();
     expect(await sign()).toEqual({ ok: false, reason: "already_signed" });
+  });
+
+  it("shows no receipt of a release signed by another route, claimed or not (security review)", async () => {
+    const { db, shop, bookingId, token, counterToken, fullName } = await mailedSeat();
+    const claimed = await openOnDevice(db, token);
+    if (claimed?.door !== "counter") throw new Error("door missing");
+    const thread = await threadWaiverKey(db, { shopId: shop.id, bookingId });
+    if (!thread) throw new Error("thread key missing");
+    expect(
+      await completeWaiver(db, thread, {
+        signerName: fullName,
+        agreed: true,
+        medicalAnswers: medicalReferralAnswers,
+      }),
+    ).toMatchObject({ ok: true });
+    // The phone that claimed the door, and any other, see nothing of the
+    // medical outcome the diver signed on their own link.
+    expect(await counterState(token)).toBe("closed");
+    expect(await getWaiverForToken(db, claimed.key)).toEqual({ state: "unavailable" });
+    expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toBeNull();
+    expect(await waiverLinkDoor(db, counterToken)).toBeNull();
   });
 
   it("opens nothing once the seat changes hands or is cancelled", async () => {

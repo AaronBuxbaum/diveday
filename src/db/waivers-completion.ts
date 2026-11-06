@@ -241,7 +241,8 @@ async function currentRecordForToken(db: DbExecutor, key: WaiverKey, now = nowDa
   const record = key.bookingId
     ? await seatRecord(db, { ...key, bookingId: key.bookingId })
     : await seatlessRecord(db, key);
-  if (!record || (link.usedAt && record.status === "pending")) return null;
+  if (!record || (link.usedAt ? record.status === "pending" : record.status !== "pending"))
+    return null;
   return record;
 }
 
@@ -438,7 +439,10 @@ async function linkWaiverKey(
     .where(and(eq(waiverRecords.id, link.subjectId), eq(waiverRecords.shopId, link.shopId)))
     .limit(1);
   if (!record || record.supersededAt) return null;
-  if (link.usedAt && record.status === "pending") return null;
+  // A link opens the receipt of the signature that spent it and of no other:
+  // a release signed by another route (the thread, the desk, a newer door)
+  // shows nothing to a door that did not sign it (security review).
+  if (link.usedAt ? record.status === "pending" : record.status !== "pending") return null;
   if (record.bookingId) {
     // Still the seat's current release, for the person who holds it now, on
     // the shop's current terms: the thread's own rule.
