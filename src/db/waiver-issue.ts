@@ -430,7 +430,7 @@ export async function issueAndDeliverWaiver(
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
     .limit(1);
-  if (!observed) {
+  if (!observed || (options.expectedPersonId && observed.person.id !== options.expectedPersonId)) {
     return { ok: false, bookingId, diverName: null, reason: "error" };
   }
 
@@ -965,8 +965,13 @@ export async function emailFreshWaiverLink(
   } else if (await hasLivePersonWaiverRequest(db, stale.shopId, stale.personId, now)) {
     return "current_link_live";
   }
+  // The send is pinned to the person the stale link was issued to, so a seat
+  // that changed hands since the read above sends nothing (security review S1).
   const outcome = stale.bookingId
-    ? await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId, { now })
+    ? await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId, {
+        now,
+        expectedPersonId: stale.personId,
+      })
     : await issueAndDeliverPersonWaiver(db, stale.shopId, stale.personId, { now });
   if (!outcome.ok) return outcome.reason === "already_completed" ? "already_signed" : "unavailable";
   if (outcome.delivery === "sent") return "sent";

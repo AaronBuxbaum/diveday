@@ -399,8 +399,18 @@ export async function staleWaiverRecordForToken(
     .limit(1);
   if (record?.status !== "pending") return null;
   // A seat's waiver link is dead by decision (`waiverLinkDoor`), whatever its
-  // own expiry says: its owner's way on is their thread link, sent fresh.
-  if (record.bookingId) return record;
+  // own expiry says: its owner's way on is their thread link, sent fresh. Its
+  // owner is the person it was issued to, and only while they still hold the
+  // seat: a previous holder's link sends nothing to the new holder and tells
+  // nothing about their seat (security review S1).
+  if (record.bookingId) {
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.id, record.bookingId), eq(bookings.shopId, record.shopId)))
+      .limit(1);
+    return seat?.personId === record.personId ? record : null;
+  }
   if (!record.supersededAt && record.expiresAt > now) return null;
   return record;
 }
