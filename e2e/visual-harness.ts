@@ -925,28 +925,26 @@ async function paintWholeDocument(page: Page) {
         };
 
         // **Let the page finish deciding what to hide, before scrolling past
-        // it.** `MarketingSectionMotion` withholds its below-fold sections in a
-        // layout effect, so nothing is withheld until React hydrates, and the
-        // scroll-through below is what gives them back. Racing those two is the
-        // whole of issue #1910: the sweep passed an unmarked page, hydration
-        // then hid every chapter, and nothing scrolled again before the shutter.
+        // it.** `MarketingSectionMotion` and every `MarketingReveal` wrapper
+        // withhold their below-fold chapters in a layout effect, so nothing is
+        // withheld until React hydrates, and the scroll-through below is what
+        // gives them back. Racing those two is the whole of issue #1910: the
+        // sweep passed an unmarked page, hydration then hid every chapter, and
+        // nothing scrolled again before the shutter. #3932 was the same race on
+        // `/`, whose wrappers used to carry no marker, so this wait was skipped.
         //
-        // The marker is server-rendered, so its absence is an answer rather than
-        // a page that has not got there yet — every surface without a reveal on
-        // it pays one `querySelector` and moves on. Bounded by the same scroll
-        // deadline as everything else here: a page that never stamps is not
-        // waited on forever, it simply reaches the tripwire at the end of this
-        // function, which is the loud failure this all exists to produce.
-        let revealStamped = true;
-        if (document.querySelector(`[${revealMarkerAttribute}]`) !== null) {
-          while (
-            !document.documentElement.hasAttribute(revealReadyAttribute) &&
-            performance.now() < deadline
-          ) {
-            await settle();
-          }
-          revealStamped = document.documentElement.hasAttribute(revealReadyAttribute);
+        // Each reveal stamps its own server-rendered marker, so the wait is for
+        // *every* marker, not the first: a page holds one wrapper per chapter.
+        // A page with no marker matches nothing and pays one `querySelector`.
+        // Bounded by the same scroll deadline as everything else here: a page
+        // that never stamps is not waited on forever, it simply reaches the
+        // tripwire at the end of this function, which is the loud failure this
+        // all exists to produce.
+        const undecided = `[${revealMarkerAttribute}]:not([${revealReadyAttribute}])`;
+        while (document.querySelector(undecided) !== null && performance.now() < deadline) {
+          await settle();
         }
+        const revealStamped = document.querySelector(undecided) === null;
         await scrollThrough();
 
         const imageDeadline = performance.now() + imageSettleMs;
@@ -1017,11 +1015,12 @@ async function paintWholeDocument(page: Page) {
 
         // **A section that never revealed photographs as nothing at all.**
         //
-        // `MarketingSectionMotion` (src/components/MarketingReveal.tsx) marks
-        // every below-fold `main section` `.marketing-reveal-pending` —
+        // `MarketingSectionMotion` and `MarketingReveal`
+        // (src/components/MarketingReveal.tsx) mark every below-fold chapter
+        // `.marketing-reveal-pending` —
         // `opacity: 0` in its base style, globals.css — and clears it from an
         // IntersectionObserver as the reader arrives. The scroll-through above
-        // *is* that arrival, so the two race: it marks them in a **layout
+        // *is* that arrival, so the two race: they mark them in a **layout
         // effect**, so nothing is marked until the page hydrates, and the scroll
         // wins only if hydration got there first. When it does not, the sweep
         // passes an unmarked page, hydration then hides every chapter, and
@@ -1126,7 +1125,7 @@ async function paintWholeDocument(page: Page) {
   }
   if (!revealStamped) {
     console.warn(
-      `visual: ${page.url()} carries the marketing reveal but never stamped ` +
+      `visual: ${page.url()} carries the marketing reveal but not every marker was stamped ` +
         `\`${REVEAL_READY_ATTRIBUTE}\` within the scroll budget — its sections were scrolled past ` +
         "before the page had finished deciding what to hide, which is the race of issue #1910. The " +
         "corrective sweep and the tripwire below still speak for the result; this names the cause.",
@@ -1193,7 +1192,8 @@ async function paintWholeDocument(page: Page) {
         `\`${PENDING_REVEAL_SELECTOR}\` after ${revealPasses + 1} scroll-through(s). They hold ` +
         "`opacity: 0` and would photograph as blank bands — see issue #1910, where exactly that " +
         "became the `product-dark-vw-390` baseline. The reveal is driven by an " +
-        "IntersectionObserver that `MarketingSectionMotion` sets up in a layout effect; if this " +
+        "IntersectionObserver that `MarketingSectionMotion` or `MarketingReveal` sets up in a layout " +
+        "effect, after the page stamps every `data-marketing-reveal` marker; if this " +
         "fires, find what is keeping it from running rather than raising the pass count.",
     );
   }

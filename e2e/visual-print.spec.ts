@@ -79,8 +79,10 @@ test.describe("print", () => {
   }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.goto("/product");
-    await expect(page.locator("[data-marketing-reveal]")).toBeAttached();
-    await expect(page.locator("html")).toHaveAttribute("data-marketing-reveal-ready", "");
+    await expect(page.locator("[data-marketing-reveal]").first()).toBeAttached();
+    await expect(
+      page.locator("[data-marketing-reveal]:not([data-marketing-reveal-ready])"),
+    ).toHaveCount(0);
     const pending = page.locator("main section.marketing-reveal-pending").first();
     await expect(pending).toHaveCSS("opacity", "0");
     expect(
