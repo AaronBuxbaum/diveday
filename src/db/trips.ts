@@ -44,7 +44,9 @@ export {
 } from "./trips-clashes";
 export {
   createTrip,
+  createTripOrRefusal,
   type NewTrip,
+  type TripBoatOutOfService,
   type TripDiveDraft,
   type TripScheduleDayInput,
 } from "./trips-create";

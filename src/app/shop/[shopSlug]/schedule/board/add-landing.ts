@@ -83,10 +83,6 @@ export function addRefusalLanding(refusal: Exclude<TripDetailsResult, { ok: true
   outcome: "invalid" | "capacity_above_certificate" | "end_before_start";
 } | null {
   switch (refusal.reason) {
-    case "boat_out_of_service":
-      // Loop 5, row 5: the builder refuses a hull in the yard, naming the
-      // first yard day (issue #4026).
-      return { builder: `boat-out-of-service&on=${refusal.on}`, outcome: "invalid" };
     case "capacity_above_certificate":
       return {
         builder: `capacity-above-certificate&count=${refusal.limit}`,
