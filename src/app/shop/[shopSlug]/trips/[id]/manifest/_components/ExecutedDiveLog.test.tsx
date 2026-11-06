@@ -99,7 +99,8 @@ type ExecutedDiveLogRow = {
   actualSite: { id: string; name: string } | null;
 };
 
-describe("the executed-dive record is collapsed, and paper still carries it", () => {
+// Paper carries the summary line on the Boat tab's sheet (`BoatTabSheet.test.tsx`).
+describe("the executed-dive record is collapsed", () => {
   it("shows the summary line at rest and keeps the form behind a tap", () => {
     const { container } = renderLog("Dive 1 — not recorded yet");
 
@@ -114,18 +115,6 @@ describe("the executed-dive record is collapsed, and paper still carries it", ()
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
     expect(disclosure?.contains(form as Node)).toBe(true);
-  });
-
-  it("restates the summary outside the disclosure, where print can reach it", () => {
-    const { container } = renderLog("Dive 1 — Molasses Reef, 18 m, 8:05 – 8:47");
-
-    const disclosure = container.querySelector("details");
-    // A closed `<details>` prints nothing, so what paper carried here was a
-    // blank form. The line outside is what it carries instead.
-    const printed = [...container.querySelectorAll<HTMLElement>("p")].find(
-      (node) => node.className.includes("print:block") && !disclosure?.contains(node),
-    );
-    expect(printed?.textContent).toBe("Dive 1 — Molasses Reef, 18 m, 8:05 – 8:47");
   });
 
   it("renders only the dive the crew is standing at", () => {

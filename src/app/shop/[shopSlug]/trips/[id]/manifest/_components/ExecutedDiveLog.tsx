@@ -185,7 +185,7 @@ export function ExecutedDiveLog({
                   head and the shop has no signal. What changes is that it no
                   longer claims the screen while a crew is counting bodies. The
                   same treatment `PreDepartureCheckList` took in slice 5a. */}
-              <details className="group/dive print:hidden">
+              <details className="group/dive">
                 <summary
                   className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}
                 >
@@ -210,11 +210,8 @@ export function ExecutedDiveLog({
                   depthUnit={depthUnit}
                 />
               </details>
-              {/* A closed `<details>` contributes nothing to print, so what
-                  paper carried here was a blank form. It carries the state
-                  instead, restated outside the disclosure the same way the
-                  checklist's lines are. */}
-              <p className="hidden px-4 py-3 text-base print:block">{summaryLine}</p>
+              {/* Paper states the dive's summary line on the Boat tab's sheet
+                  (`BoatTabSheet`), never this closed form. */}
             </div>
           ))}
       </div>

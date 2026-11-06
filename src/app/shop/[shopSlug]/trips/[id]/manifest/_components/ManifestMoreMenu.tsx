@@ -56,7 +56,7 @@ export function ManifestMoreMenu({
 
   if (variant === "header") {
     return (
-      <div className="relative print:hidden lg:hidden">
+      <div className="relative lg:hidden">
         <button
           ref={triggerRef}
           type="button"
@@ -124,7 +124,7 @@ export function ManifestMoreMenu({
   // border, 0px under it, its 5px focus ring drawn inside the card. `mt-3` is
   // 12px of box and the flush ghost's 12px of air above its words.
   return (
-    <div className="mt-3 hidden print:hidden lg:block">
+    <div className="mt-3 hidden lg:block">
       <button
         ref={triggerRef}
         type="button"

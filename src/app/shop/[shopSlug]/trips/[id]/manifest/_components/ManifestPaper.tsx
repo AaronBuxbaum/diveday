@@ -55,7 +55,12 @@ export function ManifestPaper({
     // tokens), and Boat mode's palette is for a screen held at the rail.
     <div>
       <CancelledRollCallBanner state={cancelled} t={t} />
-      <PrintedSoulsOnBoard manifest={manifest} vesselName={vesselName} t={t} />
+      <PrintedSoulsOnBoard
+        manifest={manifest}
+        vesselName={vesselName}
+        isDeparture={rollCall.divers.isDeparture}
+        t={t}
+      />
       <div className="mt-5 space-y-10">
         <PrintedStage {...stage} />
         {boatSafety ? <BoatSafetyNotices {...boatSafety} /> : null}

@@ -74,7 +74,7 @@ export function CheckpointGapGuard({
     >
       {children}
       {prompt ? (
-        <div className={`mt-3 ${TONE_PANEL_CLASS} border-danger/60 bg-surface print:hidden`}>
+        <div className={`mt-3 ${TONE_PANEL_CLASS} border-danger/60 bg-surface`}>
           <p ref={lineRef} tabIndex={-1} role="alert" className="text-base font-bold text-danger">
             {prompt.line}
           </p>

@@ -1,7 +1,7 @@
 import { RollCallMark } from "@/components/RollCallMark";
 import { rollCallRowTone } from "@/components/row-tones";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
-import { diverRowId } from "@/lib/element-id";
+import { diverRowId, scopedId } from "@/lib/element-id";
 import { rollCallLabel, type TripManifest } from "@/lib/manifests";
 import { diverCapsule, diverTypeBadge } from "./DiverRowCapsule";
 import { DiverRowPanel } from "./DiverRowPanel";
@@ -142,7 +142,7 @@ export function DiverRollCallRow({
   if (context.paper) {
     return (
       <li
-        id={diverRowId(diver.bookingId)}
+        id={scopedId(context.idPrefix, diverRowId(diver.bookingId))}
         data-print-critical={recordedTone === "notBackAboard" || blockedAtDock ? "" : undefined}
         className={`${ROLL_CALL_ROW_CLASS} ${paperRowTone(recordedTone, blockedAtDock)}`}
       >
