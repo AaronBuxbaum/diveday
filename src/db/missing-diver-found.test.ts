@@ -22,7 +22,13 @@ import {
   secondSeat,
   stateOf,
 } from "./missing-diver-test-fixtures";
-import { activityEvents, incidentReports, rollCallEvents, tripAssignments } from "./schema";
+import {
+  activityEvents,
+  incidentReports,
+  rollCallEvents,
+  tripAssignments,
+  tripScheduleDays,
+} from "./schema";
 
 // The boat's followers are pushed by the alert; counted here, never sent.
 const push = vi.hoisted(() => ({ calls: 0 }));
@@ -277,6 +283,61 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
     });
     expect(sent.length).toBeGreaterThan(0);
     expect((await stateOf(db, raised.reportId)).sentAt).toBeInstanceOf(Date);
+  });
+
+  it("is refused for a diver carried missing from day one after day two's count of them is undone (#4017)", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const raised = await raiseMissingDiverAlert(db, {
+      ...input,
+      actorPersonId: f.crew.id,
+      provider: recorder().provider,
+    });
+    if (!raised.ok || !raised.reportId) throw new Error("raise refused");
+    // A course: the mark sits on day one, and day two began a minute ago.
+    const minute = 60_000;
+    await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, input.tripId));
+    await db.insert(tripScheduleDays).values([
+      {
+        tripId: input.tripId,
+        dayNumber: 1,
+        startsAt: new Date(MARKED_AT.getTime() - 120 * minute),
+        endsAt: new Date(MARKED_AT.getTime() + minute),
+      },
+      {
+        tripId: input.tripId,
+        dayNumber: 2,
+        startsAt: new Date(MARKED_AT.getTime() + 3 * minute),
+        endsAt: new Date(MARKED_AT.getTime() + 180 * minute),
+      },
+    ]);
+    const say = async (status: "boarded" | "cleared", at: number, retractsEventId?: string) => {
+      const [row] = await db
+        .insert(rollCallEvents)
+        .values({
+          shopId: input.shopId,
+          tripId: input.tripId,
+          bookingId: f.seat.booking.id,
+          recordedByPersonId: f.crew.id,
+          status,
+          checkpoint: "after_dive_1",
+          source: "live",
+          occurredAt: new Date(MARKED_AT.getTime() + at * minute),
+          retractsEventId,
+        })
+        .returning({ id: rollCallEvents.id });
+      return row?.id;
+    };
+    await say("cleared", 4, await say("boarded", 3.5));
+    const { provider, sent } = recorder();
+    expect(
+      await markMissingDiverFound(db, {
+        ...input,
+        reportId: raised.reportId,
+        actorPersonId: f.owner.id,
+        provider,
+      }),
+    ).toEqual({ ok: false, reason: "still_missing" });
+    expect(sent).toEqual([]);
   });
 
   it("sends no all-clear for an alarm that never went, and says so", async () => {

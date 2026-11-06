@@ -1,8 +1,10 @@
 import { and, eq, ne } from "drizzle-orm";
+import { backAboardNow, notBackAboardSince, type TimedDayMark } from "@/lib/roll-call-days";
 import type { DbExecutor } from "./client";
 import { oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import { bookings, incidentReportPeople, people, rollCallEvents, tripAssignments } from "./schema";
+import { rollCallCurrentDayIndex, rollCallDayIndex } from "./trip-meeting-windows";
 
 /**
  * **Who is missing, as the roll call says** (issue #2694): the subject of a
@@ -18,88 +20,64 @@ export type MissingSubject =
   | { kind: "crew"; personId: string };
 
 /**
- * When a standing "not back aboard" began, from one subject's after-dive
- * roll-call events oldest first: per checkpoint, the first `not_boarded` of
- * the unbroken run that ends with the checkpoint's latest event; across
- * checkpoints, the earliest. Null when no checkpoint stands that way now
- * (never marked, or marked back aboard or cleared since).
+ * When the subject's standing "not back aboard" began, as the live manifest
+ * shows it now, carried earlier meeting days included (`notBackAboardSince`,
+ * #4017); null when it shows them nowhere red after a dive.
  *
  * The earliest, not the newest (domain review 2026-10-16): an offline copy of
  * the same alarm synced seven minutes later, or the same diver still missing
  * at the next count, is the same disappearance, and an insurer reads the
  * first time the crew said so. The dock's `not_boarded` is "never left",
- * never a missing diver, so the caller leaves the departure checkpoint out.
+ * never a missing diver, so the reader leaves the departure checkpoint out.
  */
-export function standingNotBackAboardSince(
-  events: readonly { checkpoint: string; status: string; occurredAt: Date }[],
-): Date | null {
-  const runStart = new Map<string, Date | null>();
-  for (const event of events) {
-    if (event.status !== "not_boarded") runStart.set(event.checkpoint, null);
-    else if (!runStart.get(event.checkpoint)) runStart.set(event.checkpoint, event.occurredAt);
-  }
-  let since: Date | null = null;
-  for (const start of runStart.values()) {
-    if (start && (!since || start < since)) since = start;
-  }
-  return since;
+export function standingNotBackAboardSince(events: readonly AfterDiveEvent[]): Date | null {
+  return notBackAboardSince(events, events[0]?.currentDay ?? 0);
 }
 
 /**
  * Whether these after-dive events (oldest first) say the person is back
- * aboard: the latest event is `boarded` and no checkpoint still stands "not
- * back aboard". A `cleared` undo is not "back": it takes the mark away
- * without saying anyone came aboard (review 2026-10-17), and no marks at all
- * is not back either.
+ * aboard (`backAboardNow`): the latest is `boarded` and the manifest shows
+ * them nowhere red. A `cleared` undo is not "back" (review 2026-10-17).
  */
-export function backAboard(
-  events: readonly { checkpoint: string; status: string; occurredAt: Date }[],
-): boolean {
-  return events.at(-1)?.status === "boarded" && standingNotBackAboardSince(events) === null;
+export function backAboard(events: readonly AfterDiveEvent[]): boolean {
+  return backAboardNow(events, events[0]?.currentDay ?? 0);
 }
 
-/** The subject's after-dive roll-call events on this departure, oldest first. */
+/** One after-dive roll-call event of one subject, filed under its meeting day. */
+type AfterDiveEvent = TimedDayMark & { currentDay: number };
+
+/**
+ * The subject's after-dive roll-call events on this departure, oldest first,
+ * each filed under its meeting day with the id a later undo may name (#4017).
+ */
 export async function afterDiveEvents(
   tx: DbExecutor,
   input: { shopId: string; tripId: string; subject: MissingSubject },
-) {
+): Promise<AfterDiveEvent[]> {
   const { subject } = input;
-  if (subject.kind === "diver") {
-    return tx
-      .select({
-        checkpoint: rollCallEvents.checkpoint,
-        status: rollCallEvents.status,
-        occurredAt: rollCallEvents.occurredAt,
-      })
-      .from(rollCallEvents)
-      .where(
-        and(
-          eq(rollCallEvents.shopId, input.shopId),
-          seatMarks(),
-          eq(rollCallEvents.tripId, input.tripId),
-          eq(rollCallEvents.bookingId, subject.bookingId),
-          ne(rollCallEvents.checkpoint, "departure"),
-        ),
-      )
-      .orderBy(...oldestMarkFirst());
-  }
-  return tx
+  const rows = await tx
     .select({
+      id: rollCallEvents.id,
+      retracts: rollCallEvents.retractsEventId,
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
       occurredAt: rollCallEvents.occurredAt,
+      day: rollCallDayIndex(),
+      currentDay: rollCallCurrentDayIndex(),
     })
     .from(rollCallEvents)
     .where(
       and(
         eq(rollCallEvents.shopId, input.shopId),
-        crewMarks(),
         eq(rollCallEvents.tripId, input.tripId),
-        eq(rollCallEvents.crewPersonId, subject.personId),
+        subject.kind === "diver"
+          ? and(seatMarks(), eq(rollCallEvents.bookingId, subject.bookingId))
+          : and(crewMarks(), eq(rollCallEvents.crewPersonId, subject.personId)),
         ne(rollCallEvents.checkpoint, "departure"),
       ),
     )
     .orderBy(...oldestMarkFirst());
+  return rows.map((row) => ({ ...row, subject: "subject" }));
 }
 
 /** Whether the subject is on this departure: a seat booked on it, or its crew. */
