@@ -1074,7 +1074,7 @@ export type WaiverLinkRescue =
  * which is exactly the affordance staff already had and no more.
  *
  * `hasLivePersonWaiverRequest` is the guard: when the person already holds a
- * live link (a release link, or a counter link open at the shop), this reports
+ * live release link (a counter link stands beside it, issue #4008), this reports
  * `current_link_live` and issues nothing, so whoever holds a *dead* URL never
  * drives a delivery on the live one. `staleWaiverRecordForToken` keeps
  * resolving the original token after a send, so a second tap on a link whose
@@ -1115,8 +1115,9 @@ export async function emailFreshWaiverLink(
 }
 
 /**
- * Whether any door to the seat's current release still stands: a party
- * member's door or a counter code, unspent, unrevoked and unexpired.
+ * Whether a party member's door to the seat's current release still stands:
+ * unspent, unrevoked and unexpired. A counter code does not count: it stands
+ * beside the door (issue #4008), so a fresh door never revokes it.
  */
 export async function hasLiveSeatDoor(
   db: DbExecutor,
@@ -1132,6 +1133,7 @@ export async function hasLiveSeatDoor(
     .from(capabilities)
     .where(
       and(
+        eq(capabilities.purpose, "party_waiver_link"),
         eq(capabilities.shopId, shopId),
         eq(capabilities.waiverRecordId, current.recordId),
         isNull(capabilities.usedAt),
@@ -1145,7 +1147,7 @@ export async function hasLiveSeatDoor(
 
 /**
  * **A party member's seat, sent its door again** (issue #4003): a dead door's
- * rescue, and find-my-booking for an address the lead typed. While any door to
+ * rescue, and find-my-booking for an address the lead typed. While a door to
  * the release still stands nothing is sent, so a stranger's request never
  * revokes a live one. The seat must still be this diver's and its address
  * still the one the lead typed: a claimed seat's own links are its holder's

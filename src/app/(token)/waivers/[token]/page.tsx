@@ -19,6 +19,7 @@ import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { autosaveWaiverDraftAction, completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { completedMedicalState } from "./completed-medical-state";
 import { counterDevice } from "./counter-device";
+import { recordForDoor } from "./door-draft";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
 import {
   CounterClaimCard,
@@ -169,7 +170,8 @@ export default async function WaiverPage({
 
   return waiverSigningForm({
     db,
-    record: state.record,
+    // Only the draft saved through this door comes back to it (issue #4008).
+    record: recordForDoor(state.record, door?.key.linkId ?? null),
     shop,
     locale,
     t,

@@ -584,15 +584,19 @@ describe("a dead release link", () => {
     const stale = await staleWaiverRecordForToken(ctx.db, old, later);
     expect(stale).toMatchObject({ personId: person.id, bookingId: null });
 
-    // A live counter link counts as a live request too.
+    // A live counter link stands beside a mailed one (#4008), so it is no
+    // reason to turn the rescue away, and the rescue leaves it live.
     const copied = await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
       channel: "link",
       actorPersonId: await shopStaffer(ctx.db, ctx.shop.id),
       now: later,
     });
-    if (!copied.ok) throw new Error("copy link refused");
-    expect(await hasLivePersonWaiverRequest(ctx.db, ctx.shop.id, person.id, later)).toBe(true);
-    expect(await emailFreshWaiverLink(ctx.db, old, later)).toBe("current_link_live");
+    if (!copied.ok || !copied.token) throw new Error("copy link refused");
+    expect(await hasLivePersonWaiverRequest(ctx.db, ctx.shop.id, person.id, later)).toBe(false);
+    expect(await emailFreshWaiverLink(ctx.db, old, later)).not.toBe("current_link_live");
+    expect((await waiverLinkDoor(ctx.db, copied.token, { now: later }))?.door).toBe(
+      "counter_unclaimed",
+    );
   });
 
   it("a rescue issues a fresh release link and keeps the dead URL on the rescue card", async () => {
