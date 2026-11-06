@@ -228,7 +228,6 @@
       "identityUnconfirmed": "Matched to this record on a guess: confirm who this is on the Divers tab before boarding.",
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
-      "waiverExpired": "Waiver link expired; issue a fresh link.",
       "waiverLapsed": "Signed waiver lapsed; send a fresh link.",
       "waiverRunsOut": "Waiver runs out before the trip; send a fresh link.",
       "medicalReview": "A medical answer needs a doctor’s sign-off before this diver dives.",

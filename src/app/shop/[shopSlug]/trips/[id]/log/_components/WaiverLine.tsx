@@ -92,9 +92,6 @@ export function WaiverLine({
   if (waiver.state === "awaiting_signature") {
     return <>{t("incidentExport.waiverPending")}</>;
   }
-  if (waiver.state === "expired") {
-    return <>{t("incidentExport.waiverExpired")}</>;
-  }
   return <>{t("incidentExport.waiverNotSigned")}</>;
 }
 

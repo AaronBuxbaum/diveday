@@ -1,0 +1,192 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "5f4aef0c-55f9-4201-987b-fd7a519c9e71",
+  "prevIds": [
+    "a85254e1-7f6c-4bdb-943c-489c4804195d",
+    "a41c37d3-6aa2-4598-883c-9c248da7ddbd",
+    "b4e56f80-cd5a-471c-9c78-e82441b66c4b"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "capability_purpose"
+      ],
+      "writes": [
+        "s|enum|public.capability_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "token_hash"
+      ],
+      "writes": [
+        "s|colprop|public.waiver_records.token_hash.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public",
+        "n|col|public.waiver_records.token_hash"
+      ],
+      "sqlHash": "8e8384c0b875751a"
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "expires_at"
+      ],
+      "writes": [
+        "s|colprop|public.waiver_records.expires_at.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public",
+        "n|col|public.waiver_records.expires_at"
+      ],
+      "sqlHash": "3c3bd2b569cee773"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_subject_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.purpose",
+        "n|col|public.capabilities.interest_id",
+        "n|col|public.capabilities.person_id",
+        "n|col|public.capabilities.sent_to",
+        "n|col|public.capabilities.user_account_id",
+        "n|col|public.capabilities.setup_request_id",
+        "n|col|public.capabilities.waiver_record_id",
+        "e|col|public.capabilities.purpose",
+        "e|col|public.capabilities.interest_id",
+        "e|col|public.capabilities.person_id",
+        "e|col|public.capabilities.sent_to",
+        "e|col|public.capabilities.user_account_id",
+        "e|col|public.capabilities.setup_request_id",
+        "e|col|public.capabilities.waiver_record_id"
+      ],
+      "sqlHash": "0b9ceb1275ffb8a2"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_used_only_when_spent"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.used_at",
+        "n|col|public.capabilities.purpose",
+        "e|col|public.capabilities.used_at",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sqlHash": "a11f92328887a47c"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_expiry_by_purpose"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.expires_at",
+        "n|col|public.capabilities.purpose",
+        "e|col|public.capabilities.expires_at",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sqlHash": "63771025f4a80bde"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"capability_purpose\"]",
+      "set": {
+        "values": [
+          "interest_unsubscribe",
+          "courtesy_email_unsubscribe",
+          "weekly_digest_unsubscribe",
+          "shore_alert_stop",
+          "bookkeeper_stop",
+          "shore_alert_confirm",
+          "email_verification",
+          "password_reset",
+          "invite",
+          "shop_setup",
+          "calendar_assignments",
+          "calendar_shop_trips",
+          "waiver_link",
+          "release_link"
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"token_hash\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"expires_at\"]",
+      "set": {
+        "notNull": false
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_subject_by_purpose\"]",
+      "set": {
+        "value": "(\"purpose\"::text in ('interest_unsubscribe') and \"interest_id\" is not null and \"person_id\" is null and \"sent_to\" is null and \"user_account_id\" is null and \"setup_request_id\" is null and \"waiver_record_id\" is null)\n        or (\"purpose\"::text in ('courtesy_email_unsubscribe', 'weekly_digest_unsubscribe', 'calendar_assignments', 'calendar_shop_trips') and \"person_id\" is not null and \"interest_id\" is null and \"sent_to\" is null and \"user_account_id\" is null and \"setup_request_id\" is null and \"waiver_record_id\" is null)\n        or (\"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop', 'shore_alert_confirm') and \"sent_to\" is not null and \"sent_to\" = lower(\"sent_to\") and \"person_id\" is null and \"interest_id\" is null and \"user_account_id\" is null and \"setup_request_id\" is null and \"waiver_record_id\" is null)\n        or (\"purpose\"::text in ('email_verification', 'password_reset', 'invite') and \"user_account_id\" is not null and \"person_id\" is null and \"interest_id\" is null and \"sent_to\" is null and \"setup_request_id\" is null and \"waiver_record_id\" is null)\n        or (\"purpose\"::text in ('shop_setup') and \"setup_request_id\" is not null and \"person_id\" is null and \"interest_id\" is null and \"sent_to\" is null and \"user_account_id\" is null and \"waiver_record_id\" is null)\n        or (\"purpose\"::text in ('waiver_link', 'release_link') and \"waiver_record_id\" is not null and \"person_id\" is null and \"interest_id\" is null and \"sent_to\" is null and \"user_account_id\" is null and \"setup_request_id\" is null)"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_used_only_when_spent\"]",
+      "set": {
+        "value": "\"used_at\" is null or \"purpose\"::text in ('shore_alert_stop', 'bookkeeper_stop', 'shore_alert_confirm', 'email_verification', 'password_reset', 'invite', 'shop_setup', 'waiver_link', 'release_link')"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"capabilities\",\"capabilities_expiry_by_purpose\"]",
+      "set": {
+        "value": "(\"expires_at\" is not null) = (\"purpose\"::text in ('shore_alert_confirm', 'email_verification', 'password_reset', 'invite', 'shop_setup', 'waiver_link', 'release_link'))"
+      }
+    }
+  ]
+}

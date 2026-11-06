@@ -63,8 +63,6 @@ async function signedRelease(email: string, withAnswers: boolean) {
     templateVersion: template.version,
     templateBody: template.body,
     status: "completed",
-    tokenHash: `export-${email}`,
-    expiresAt: new Date("2030-01-01T00:00:00Z"),
     signedName: diver.fullName,
     signatureMethod: "typed",
     consentedAt: new Date("2026-05-01T16:00:00Z"),

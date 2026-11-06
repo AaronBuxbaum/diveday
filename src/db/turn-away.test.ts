@@ -125,7 +125,7 @@ async function signWaiver(ctx: Ctx) {
     bookingId: ctx.bookingId,
   });
   if (!issued.ok) throw new Error("waiver request refused");
-  await completeWaiver(ctx.db, issued.token, {
+  await completeWaiver(ctx.db, issued.key, {
     signerName: ctx.personName,
     agreed: true,
     medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

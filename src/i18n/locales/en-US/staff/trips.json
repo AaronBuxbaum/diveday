@@ -687,7 +687,6 @@
     "waiverColumnHeading": "Waiver",
     "waiverLapsed": "Needs signing again",
     "waiverGuardianMissing": "Guardian signature missing",
-    "waiverLinkExpired": "Link expired",
     "waiverMedicalReview": "Medical review",
     "waiverMedicalNotCleared": "Not cleared",
     "waiverResendHint": "Resend",

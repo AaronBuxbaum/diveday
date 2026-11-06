@@ -38,7 +38,6 @@ function record(overrides: Partial<WaiverRecord> = {}): WaiverRecord {
     signedAt,
     completedAt: signedAt,
     supersededAt: null,
-    expiresAt: new Date(NOW.getTime() + DAY),
     createdAt: new Date(signedAt.getTime() - 60_000),
     guardianSignedAt: null,
     medicalClearedAt: null,
@@ -70,7 +69,6 @@ function seat(input: {
       effective && input.signer && guardianSignatureMissing(effective, input.signer),
     ),
     ownLapsed: input.own ? bookingRecordLapsed(input.own, generation, NOW, true) : false,
-    now: NOW,
   });
 }
 
@@ -102,16 +100,8 @@ describe("a lapsed release", () => {
       status: "pending",
       completedAt: null,
       signedAt: null,
-      expiresAt: new Date(NOW.getTime() + DAY),
     });
     expect(seat({ own: sent, signed: [old] }).standing).toBe("awaiting_signature");
-    const expired = record({
-      status: "pending",
-      completedAt: null,
-      signedAt: null,
-      expiresAt: new Date(NOW.getTime() - DAY),
-    });
-    expect(seat({ own: expired, signed: [old] }).standing).toBe("link_expired");
   });
 });
 
@@ -153,7 +143,6 @@ describe("a retired refusal", () => {
       status: "pending",
       completedAt: null,
       signedAt: null,
-      expiresAt: new Date(NOW.getTime() + DAY),
     });
     expect(seat({ own: sent, signed: [refused] })).toEqual({
       standing: "medical_not_cleared",

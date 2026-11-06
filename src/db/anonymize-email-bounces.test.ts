@@ -148,7 +148,7 @@ describe("anonymizeDiver — a minor's guardian address", () => {
       .returning({ id: people.id });
     if (!minor) throw new Error("fixture insert failed");
     await db.insert(personRoles).values({ personId: minor.id, role: "diver" });
-    for (const [index, guardianEmail] of guardianEmails.entries()) {
+    for (const [_index, guardianEmail] of guardianEmails.entries()) {
       await db.insert(waiverRecords).values({
         shopId: shop.id,
         personId: minor.id,
@@ -156,8 +156,6 @@ describe("anonymizeDiver — a minor's guardian address", () => {
         templateTitle: "Liability release",
         templateVersion: 1,
         templateBody: "the text as it stood",
-        tokenHash: `guardian-sweep-${minor.id}-${index}`,
-        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
         guardianName: guardianEmail ? "Jordan Fischer" : null,
         guardianEmail,
       });

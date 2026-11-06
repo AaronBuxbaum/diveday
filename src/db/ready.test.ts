@@ -754,7 +754,7 @@ describe("getBookedCard", () => {
     const { db, shop, open, bookingId } = await unpaidBooking();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
     if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
-    const signed = await completeWaiver(db, issued.token, {
+    const signed = await completeWaiver(db, issued.key, {
       signerName: "Nora Quinn",
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

@@ -85,7 +85,6 @@ import {
   WAIVER_INTEGRITY_VERSION_ERASED,
   waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
 import {
   lockBoardingCertificationEvidence,
@@ -976,13 +975,8 @@ async function scrubWaiverRecords(
         importSourceMedicalDocumentUrl: null,
         medicalClearanceDocumentUrl: null,
         diverMedicalFormUrl: null,
-        // The URL *is* the capability. A live pending link would let its bearer
-        // complete a fresh, un-erased record against this same person after the
-        // erasure, so the hash is rotated to a value no issued token maps to,
-        // the expiry is pulled back to now, and any still-live record is marked
-        // superseded.
-        tokenHash: hashWaiverToken(createWaiverToken()),
-        expiresAt: now,
+        // A still-live record is marked superseded, so nothing reaches it to
+        // sign; the links to the person's releases are deleted below.
         startedAt: null,
         supersededAt: record.supersededAt ?? (record.status === "pending" ? now : null),
         anonymizedAt: now,

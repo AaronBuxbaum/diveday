@@ -11,16 +11,13 @@ import { PhysicianDoor } from "./PhysicianDoor";
  *
  * **The release signs here, on this link** (issue #2743): `openWaiverFromReady`
  * keeps the seat's release while it can still be signed, or starts a fresh one,
- * and opens it at `/ready/<token>/waiver`. No second link is handed over. An
- * expired release needs the same act as a pending one, so the only difference
- * is what the button promises.
- * Naming it matters: "Sign your waiver" on a link the diver already knows is
- * dead reads as the page not having noticed. `guardian_signature_missing`
- * belongs here for the same reason `waiver_expired` does: its own detail line
- * tells the family to "grab a fresh link and sign it together", and
- * `issueWaiverRequest` is ready for it (`alreadyStanding` excludes a
- * guardian-missing record, so signing from here supersedes the solo signature
- * and mints a link that asks for both).
+ * and opens it at `/ready/<token>/waiver`. No second link is handed over. A
+ * lapsed release needs the same act as a pending one, so the only difference
+ * is what the button promises. `guardian_signature_missing` belongs here too:
+ * its own detail line tells the family to "grab a fresh link and sign it
+ * together", and `openWaiverInThread` is ready for it (`alreadyStanding`
+ * excludes a guardian-missing record, so signing from here supersedes the
+ * solo signature and opens a release that asks for both).
  *
  * The release's code is read off every blocker the diver can act on in this
  * step rather than only its headline: a course form owed beside an unsigned
@@ -51,7 +48,6 @@ export function SignStepActions({
     .find(
       (code) =>
         code === "waiver_pending" ||
-        code === "waiver_expired" ||
         code === "waiver_lapsed" ||
         code === "waiver_runs_out" ||
         code === "guardian_signature_missing",

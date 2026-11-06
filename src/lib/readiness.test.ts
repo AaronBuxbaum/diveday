@@ -32,7 +32,6 @@ const requirement = {
 } as unknown as TripRequirement;
 const signedWaiver = {
   status: "completed",
-  expiresAt: new Date("2026-07-25T12:00:00.000Z"),
 } as WaiverRecord;
 
 function certification(overrides: Partial<Certification> = {}): Certification {
@@ -719,14 +718,6 @@ describe("calculateReadiness — the guardian co-signature", () => {
     const cases: Array<[WaiverRecord | null, string]> = [
       [null, "waiver_not_sent"],
       [{ ...minorsSoloWaiver, status: "pending" } as WaiverRecord, "waiver_pending"],
-      [
-        {
-          ...minorsSoloWaiver,
-          status: "pending",
-          expiresAt: new Date("2026-07-01"),
-        } as WaiverRecord,
-        "waiver_expired",
-      ],
       [{ ...minorsSoloWaiver, status: "medical_review" } as WaiverRecord, "medical_review"],
     ];
     for (const [waiver, expected] of cases) {
@@ -964,7 +955,6 @@ describe("aboardBlockerKind", () => {
   it.each([
     "waiver_not_sent",
     "waiver_pending",
-    "waiver_expired",
     "identity_unconfirmed",
     "readiness_unavailable",
     "requirements_not_configured",
@@ -1234,8 +1224,7 @@ describe("the medical block on a departure that does not require the waiver", ()
 
   it.each([
     ["no release at all", null],
-    ["an unsigned link", { status: "pending", expiresAt: new Date("2026-07-30T00:00:00.000Z") }],
-    ["a lapsed link", { status: "pending", expiresAt: new Date("2026-07-20T00:00:00.000Z") }],
+    ["an unsigned release", { status: "pending" }],
   ] as const)("still asks nothing of the release itself with %s", (_label, waiver) => {
     const result = calculateReadiness({
       timezone: "UTC",
@@ -1445,16 +1434,7 @@ describe("calculateReadiness — the medical by participant type (H-20261009-rid
 
   it.each([
     ["no release", null, "waiver_not_sent"],
-    [
-      "an unsigned link",
-      { status: "pending", expiresAt: new Date("2026-07-30T00:00:00.000Z") },
-      "waiver_pending",
-    ],
-    [
-      "a lapsed link",
-      { status: "pending", expiresAt: new Date("2026-07-10T00:00:00.000Z") },
-      "waiver_expired",
-    ],
+    ["an unsigned release", { status: "pending" }, "waiver_pending"],
   ] as const)("still asks a rider for the release with %s", (_label, waiver, code) => {
     const result = calculateReadiness({
       timezone: "UTC",

@@ -41,7 +41,7 @@ async function context() {
 async function clear(db: (typeof ctx)["db"], shopId: string, bookingId: string, name: string) {
   const issued = await issueWaiverRequest(db, { shopId, bookingId });
   if (!issued.ok) throw new Error("waiver request refused");
-  await completeWaiver(db, issued.token, {
+  await completeWaiver(db, issued.key, {
     signerName: name,
     agreed: true,
     medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

@@ -532,12 +532,6 @@ const WAIVER_CONTROL_KEYS: Record<WaiverStanding, WaiverControlKeys> = {
     action: "resend",
     confirm: true,
   },
-  link_expired: {
-    labelKey: "trips.roster.waiverLinkExpired",
-    variant: "danger",
-    action: "resend",
-    confirm: false,
-  },
   signed: {
     labelKey: "trips.roster.waiverSigned",
     action: null,

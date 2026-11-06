@@ -105,15 +105,8 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // No email claim: in a no-email deployment the link was issued but never
   // sent, and on the readiness page the release is signed in place.
   waiver_pending: "action",
-  // "action", because the diver can clear this one themselves now: the
-  // readiness page opens a fresh release in place (issue #2743), and the
-  // expired waiver page mails a link to the address on the booking. It read "waiting"
-  // (and told the diver to go ask the shop) only while there was genuinely
-  // nothing on this end for them to tap — a dead end for a link that ages out
-  // in a week on a booking made months ahead.
-  waiver_expired: "action",
-  // "action", like `waiver_expired`: the diver signed once and signs again
-  // in place on the readiness page.
+  // "action": the diver signed once and signs again in place on the
+  // readiness page (issue #2743).
   waiver_lapsed: "action",
   // "action", like `waiver_lapsed`: the diver signs again in place on the
   // readiness page, today, while the old release still stands.
@@ -126,7 +119,7 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // "waiting": a release changed after signing is the shop's to investigate
   // (issue #3885); nothing on the diver's page fixes it.
   waiver_seal_failed: "waiting",
-  // "action", like `waiver_expired`: the fix is a fresh release the readiness
+  // "action", like `waiver_lapsed`: the fix is a fresh release the readiness
   // page opens in place, and the parent holding this page is the person
   // who has to sign it (ADR 20260907-guardian-co-signature).
   guardian_signature_missing: "action",
@@ -289,22 +282,17 @@ export function buildDiverChecklist(
  * `reminderActionCodeSchema` from this same array, so the type-level and
  * Zod-level lists can't drift apart.
  *
- * `waiver_expired` sits here alongside `waiver_pending` (product-owner
- * decision, 2026-08-03): a link that aged out on a booking made months ahead
- * leaves the diver exactly as unsigned as one that never arrived, so it earns
- * the same proactive cadence rather than silence until the dock. It is safe to
- * name here *because a reminder never carries a waiver token* — the only link
- * either channel sends is `readinessUrl`, a `readiness` capability minted fresh
- * at send time (`src/db/reminders.ts`), whose page mints a replacement signing
- * link on tap. Any future change that embeds a waiver link in a reminder must
- * reissue it first or drop this code again; mailing a diver the very link we
- * are telling them is dead is the failure mode this note exists to prevent.
+ * Every code here is safe to name *because a reminder never carries a waiver
+ * token*: the only link either channel sends is `readinessUrl`, a `readiness`
+ * capability minted fresh at send time (`src/db/reminders.ts`), whose page
+ * opens the release in place. Any future change that embeds a waiver link in a
+ * reminder must mint it fresh; mailing a diver a link that already opens
+ * nothing is the failure mode this note exists to prevent.
  */
 export const REMINDER_ACTION_CODES = [
   "waiver_pending",
-  "waiver_expired",
-  // As `waiver_expired`: the reminder links the readiness page, never a
-  // waiver token, and that page mints the fresh link.
+  // The reminder links the readiness page, never a waiver token, and that
+  // page opens the fresh release.
   "waiver_lapsed",
   "waiver_runs_out",
   // Signed on the readiness page the reminder links to; no token of its own

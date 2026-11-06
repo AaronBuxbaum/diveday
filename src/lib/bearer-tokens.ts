@@ -37,13 +37,9 @@ import { createHash, randomBytes } from "node:crypto";
  * promises is: enough entropy that the token cannot be guessed, and a
  * stored form that cannot be replayed by whoever reads the database.
  *
- * A waiver link has to be handed over the same twice (a shop that copies a
- * link and then texts it must not be handing out two URLs of which only the
- * second works), so it is derived from its record (`waiverLinkToken` in
- * `src/lib/waiver-tokens.ts`, #3903) and the digest of that is what is
- * stored and matched. If you add a bearer surface, start from hash-only; when
- * the surface genuinely has to hand the *same* credential over twice, derive
- * it from the row as booking and waiver links do, and write down why.
+ * If you add a bearer surface, start from hash-only (a `capabilities`
+ * purpose); when the surface genuinely has to hand the *same* credential over
+ * twice, derive it from the row as booking links do, and write down why.
  *
  * 256 bits from a CSPRNG, base64url so it survives a URL path segment
  * untouched. The digest is all this module ever asks you to store: a database reader — a backup, a

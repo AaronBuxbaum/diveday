@@ -105,7 +105,7 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
     if (!card) throw new Error("card missing");
     const issued = await issueWaiverRequest(pg.db, { shopId: shop.id, bookingId: seat.booking.id });
     if (!issued.ok) throw new Error("waiver missing");
-    await completeWaiver(pg.db, issued.token, {
+    await completeWaiver(pg.db, issued.key, {
       signerName: seat.person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -178,7 +178,7 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
     if (!card) throw new Error("card missing");
     const issued = await issueWaiverRequest(pg.db, { shopId: shop.id, bookingId: seat.booking.id });
     if (!issued.ok) throw new Error("waiver missing");
-    await completeWaiver(pg.db, issued.token, {
+    await completeWaiver(pg.db, issued.key, {
       signerName: seat.person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -254,7 +254,7 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
     });
     const issued = await issueWaiverRequest(pg.db, { shopId: shop.id, bookingId: seat.booking.id });
     if (!issued.ok) throw new Error("waiver missing");
-    await completeWaiver(pg.db, issued.token, {
+    await completeWaiver(pg.db, issued.key, {
       signerName: seat.person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -327,7 +327,7 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
     });
     const issued = await issueWaiverRequest(pg.db, { shopId: shop.id, bookingId: seat.booking.id });
     if (!issued.ok) throw new Error("waiver missing");
-    await completeWaiver(pg.db, issued.token, {
+    await completeWaiver(pg.db, issued.key, {
       signerName: seat.person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

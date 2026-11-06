@@ -5,7 +5,12 @@ import { restoreDraftShopAnswers, type ShopQuestion } from "@/lib/waiver-questio
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { people, personRoles, waiverRecords } from "./schema";
-import { completeWaiver, getWaiverForToken, recordWaiverDraft } from "./waivers-completion";
+import {
+  completeWaiver,
+  getWaiverForToken,
+  recordWaiverDraft,
+  type WaiverKey,
+} from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
 import {
@@ -70,10 +75,10 @@ describe("shop questions on the waiver", () => {
     });
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    return { ...context, token: issued.token };
+    return { ...context, token: issued.key };
   }
 
-  async function recordFor(db: Awaited<ReturnType<typeof waiverContext>>["db"], token: string) {
+  async function recordFor(db: Awaited<ReturnType<typeof waiverContext>>["db"], token: WaiverKey) {
     const state = await getWaiverForToken(db, token, now);
     if (state.state === "unavailable") throw new Error("record missing");
     const [row] = await db

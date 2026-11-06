@@ -51,7 +51,7 @@ describe("physician medical clearance", () => {
     const { db, shop, booking, person } = context;
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -123,7 +123,7 @@ describe("physician medical clearance", () => {
       now: later,
     });
     if (!again.ok) throw new Error("expected a fresh person-scoped link");
-    await completeWaiver(db, again.token, {
+    await completeWaiver(db, again.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -327,7 +327,7 @@ describe("physician medical clearance", () => {
     const staff = await staffPerson(db, shop.id);
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -519,7 +519,7 @@ describe("physician medical clearance", () => {
     });
     expect(isUnresolvedMedicalHold(record)).toBe(true);
     expect(isCleanCompletion(record)).toBe(false);
-    expect(waiverStanding(record, declinedAt)).toBe("medical_not_cleared");
+    expect(waiverStanding(record)).toBe("medical_not_cleared");
 
     // Fail-closed end to end: readiness still refuses to board them, and the
     // blocker it raises is the one that says why.
@@ -794,7 +794,7 @@ describe("physician medical clearance", () => {
       now: later,
     });
     if (!issued.ok) throw new Error(`the new seat's release was refused: ${issued.reason}`);
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -892,7 +892,7 @@ describe("physician medical clearance", () => {
     // The rider signs the fresh link clean: the referral it stands over was
     // answered by a physician, so no seat warns that it stood over one.
     const signedAt = new Date(now.getTime() + 120_000);
-    await completeWaiver(db, fresh.token, {
+    await completeWaiver(db, fresh.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -937,7 +937,7 @@ describe("physician medical clearance", () => {
     const later = new Date(now.getTime() + 60 * 60 * 1000);
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: other.id, now });
     if (!issued.ok) throw new Error(`the second link was refused: ${issued.reason}`);
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,

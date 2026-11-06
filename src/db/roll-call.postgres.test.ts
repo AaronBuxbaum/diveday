@@ -90,7 +90,7 @@ async function readyDiverAtTheDock(db: AppDb) {
     if ((await getBookingReadiness(db, shop.id, seat.booking.id))?.status !== "ready") {
       const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: seat.booking.id });
       if (!issued.ok) continue;
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: seat.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,

@@ -7,6 +7,7 @@ import {
   capabilityExpiry,
   capabilitySubject,
   onePerPersonPurposes,
+  purposesNaming,
   reusablePurposes,
 } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
@@ -242,14 +243,20 @@ export async function mintCapability<P extends CapabilityPurpose>(
   const columns = subjectColumns(input.purpose, input.subjectId);
   if (policy.reissue === "supersedes") {
     // The invariant (one live link per shop, or per subject, per purpose)
-    // belongs to this module, not to its callers.
+    // belongs to this module, not to its callers. A release holds one live
+    // link whatever its purpose (`capabilities_live_waiver_record_idx`): a
+    // counter link and a release link to the same release supersede each
+    // other.
     await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
+    const subject = capabilitySubject(input.purpose);
     await db
       .update(capabilities)
       .set({ revokedAt: now })
       .where(
         and(
-          eq(capabilities.purpose, input.purpose),
+          subject === "waiver_record" && policy.per === "subject"
+            ? inArray(capabilities.purpose, purposesNaming("waiver_record"))
+            : eq(capabilities.purpose, input.purpose),
           policy.per === "shop"
             ? eq(capabilities.shopId, shopId as string)
             : eq(subjectColumn(input.purpose), input.subjectId),
@@ -636,4 +643,41 @@ export async function withdrawUnspentCapabilities(
     )
     .returning({ id: capabilities.id });
   return withdrawn.length;
+}
+
+/**
+ * Turns off every live link to one person's releases (`revoked_at`), whatever
+ * its purpose: the counter link and the release link (issue #3983). A
+ * corrected contact calls it, so a link that went to the old address, or was
+ * handed over before the correction, opens nothing: not a form, and not the
+ * receipt of a release it already signed. A revoked row stays, so the page
+ * can still land its bearer on the rescue, which sends only to the new
+ * contact.
+ */
+export async function revokePersonReleaseLinks(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; now?: Date },
+): Promise<void> {
+  await db
+    .update(capabilities)
+    .set({ revokedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        inArray(capabilities.purpose, purposesNaming("waiver_record")),
+        eq(capabilities.shopId, input.shopId),
+        isNull(capabilities.revokedAt),
+        inArray(
+          capabilities.waiverRecordId,
+          db
+            .select({ id: waiverRecords.id })
+            .from(waiverRecords)
+            .where(
+              and(
+                eq(waiverRecords.shopId, input.shopId),
+                eq(waiverRecords.personId, input.personId),
+              ),
+            ),
+        ),
+      ),
+    );
 }

@@ -60,7 +60,7 @@ describe("staff records a paper / in-person signature", () => {
     const staff = await staffPerson(db, shop.id);
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -95,7 +95,7 @@ describe("staff records a paper / in-person signature", () => {
       medicalAttested: true,
       now,
     });
-    expect(await getWaiverForToken(db, issued.token, now)).toEqual({ state: "unavailable" });
+    expect(await getWaiverForToken(db, issued.key, now)).toEqual({ state: "unavailable" });
   });
 
   it("refuses a recorder who is not shop staff, failing closed", async () => {
@@ -381,7 +381,7 @@ describe("the in-person attestor must be live staff (defense in depth)", () => {
       }),
     ).toEqual({ ok: false, reason: "staff_not_found" });
 
-    expect(await getWaiverForToken(db, issued.token, now)).toMatchObject({ state: "available" });
+    expect(await getWaiverForToken(db, issued.key, now)).toMatchObject({ state: "available" });
     expect((await recordsFor(db, booking.id)).map((row) => row.status)).toEqual(["pending"]);
   });
 });

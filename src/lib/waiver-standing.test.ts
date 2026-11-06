@@ -34,34 +34,31 @@ function everyRecord(): WaiverRecord[] {
         for (const superseded of [false, true])
           for (const agedOut of [false, true])
             for (const generation of [1, 2])
-              for (const linkRunOut of [false, true])
-                for (const hoursAgo of [2, 6]) {
-                  n += 1;
-                  const signedAt = new Date(
-                    NOW.getTime() -
-                      (agedOut ? WAIVER_SIGNATURE_VALIDITY_MS + HOUR : hoursAgo * HOUR),
-                  );
-                  const signed = status !== "pending";
-                  records.push({
-                    id: `record-${n}`,
-                    bookingId: `booking-${n}`,
-                    personId: "person-1",
-                    status,
-                    templateVersion: generation,
-                    templateGeneration: generation,
-                    signatureMethod: null,
-                    signedAt: signed ? signedAt : null,
-                    completedAt: signed ? signedAt : null,
-                    createdAt: new Date(signedAt.getTime() - HOUR),
-                    expiresAt: new Date(NOW.getTime() + (linkRunOut ? -HOUR : HOUR)),
-                    supersededAt: superseded ? new Date(NOW.getTime() - HOUR / 2) : null,
-                    medicalClearedAt: cleared ? new Date(NOW.getTime() - HOUR) : null,
-                    medicalClearanceEvaluatedOn: cleared ? "2026-07-17" : null,
-                    medicalClearanceDeclinedAt: declined ? new Date(NOW.getTime() - HOUR) : null,
-                    medicalClearanceDocumentUrl: null,
-                    medicalClearanceDocumentFromDiver: false,
-                  } as unknown as WaiverRecord);
-                }
+              for (const hoursAgo of [2, 6]) {
+                n += 1;
+                const signedAt = new Date(
+                  NOW.getTime() - (agedOut ? WAIVER_SIGNATURE_VALIDITY_MS + HOUR : hoursAgo * HOUR),
+                );
+                const signed = status !== "pending";
+                records.push({
+                  id: `record-${n}`,
+                  bookingId: `booking-${n}`,
+                  personId: "person-1",
+                  status,
+                  templateVersion: generation,
+                  templateGeneration: generation,
+                  signatureMethod: null,
+                  signedAt: signed ? signedAt : null,
+                  completedAt: signed ? signedAt : null,
+                  createdAt: new Date(signedAt.getTime() - HOUR),
+                  supersededAt: superseded ? new Date(NOW.getTime() - HOUR / 2) : null,
+                  medicalClearedAt: cleared ? new Date(NOW.getTime() - HOUR) : null,
+                  medicalClearanceEvaluatedOn: cleared ? "2026-07-17" : null,
+                  medicalClearanceDeclinedAt: declined ? new Date(NOW.getTime() - HOUR) : null,
+                  medicalClearanceDocumentUrl: null,
+                  medicalClearanceDocumentFromDiver: false,
+                } as unknown as WaiverRecord);
+              }
   return records;
 }
 
@@ -80,7 +77,6 @@ const WAIVER_BLOCKERS: ReadonlySet<ReadinessBlockerCode> = new Set([
   "waiver_lapsed",
   "waiver_runs_out",
   "waiver_pending",
-  "waiver_expired",
   "medical_review",
   "medical_not_cleared",
   "guardian_signature_missing",
@@ -114,17 +110,17 @@ function expectedWord(record: WaiverRecord): string {
     if (record.medicalClearedAt) return "signed";
     return record.medicalClearanceDeclinedAt ? "medical_not_cleared" : "medical_review";
   }
-  return record.expiresAt.getTime() <= NOW.getTime() ? "link_expired" : "awaiting_signature";
+  return "awaiting_signature";
 }
 
 describe("one record's standing", () => {
   it("reads every record shape as exactly the word its columns imply", () => {
     for (const record of RECORDS) {
-      expect(waiverStanding(record, NOW), record.id).toBe(expectedWord(record));
+      expect(waiverStanding(record), record.id).toBe(expectedWord(record));
       // The shared primitive agrees with the literal oracle too.
       expect(isCleanCompletion(record), record.id).toBe(expectedWord(record) === "signed");
     }
-    expect(waiverStanding(null, NOW)).toBe("none");
+    expect(waiverStanding(null)).toBe("none");
   });
 
   it("never calls a live medical hold anything but a hold", () => {
@@ -135,20 +131,20 @@ describe("one record's standing", () => {
     for (const record of held) {
       expect(isUnresolvedMedicalHold(record), record.id).toBe(true);
       expect(["medical_review", "medical_not_cleared"], record.id).toContain(
-        waiverStanding(record, NOW),
+        waiverStanding(record),
       );
     }
   });
 
   it("never calls an unsigned link signed, however its stamps read", () => {
     for (const record of RECORDS.filter((r) => r.status === "pending")) {
-      expect(waiverStanding(record, NOW), record.id).not.toBe("signed");
+      expect(waiverStanding(record), record.id).not.toBe("signed");
     }
   });
 
   it("raises no waiver blocker for a diver exactly when the word is signed", () => {
     for (const record of RECORDS) {
-      const standing = waiverStanding(record, NOW);
+      const standing = waiverStanding(record);
       const blockers = waiverBlockers(record, "diver");
       expect(blockers.length === 0, `${record.id} ${standing} ${blockers}`).toBe(
         expectedWord(record) === "signed",
@@ -159,7 +155,7 @@ describe("one record's standing", () => {
 
   it("holds a rider to the release and to nothing in its medical", () => {
     for (const record of RECORDS) {
-      const standing = waiverStanding(record, NOW);
+      const standing = waiverStanding(record);
       const blockers = waiverBlockers(record, "rider");
       expect(blockers.length === 0, `${record.id} ${standing} ${blockers}`).toBe(
         standing === "signed" ||
@@ -183,7 +179,7 @@ describe("the diver's standing at the shop agrees with every seat's", () => {
           const seat = effectiveWaiverForBooking({ ...input, bookingWaiver: null });
           const label = `${first.id}+${second.id} v${currentTemplateVersion}: ${shop.state}`;
           if (seat) {
-            expect(shop.state, label).toBe(waiverStanding(seat, NOW));
+            expect(shop.state, label).toBe(waiverStanding(seat));
             if (shop.state === "signed") expect(shop.recordId, label).toBe(seat.id);
           } else {
             const lapsed = releaseLapsedForBooking({ ...input, bookingWaiver: null });
@@ -223,7 +219,7 @@ describe("a seat's own live referral", () => {
       now: NOW,
     });
     expect(seat?.id).toBe(referral.id);
-    expect(waiverStanding(seat, NOW)).toBe("medical_review");
+    expect(waiverStanding(seat)).toBe("medical_review");
     expect(waiverBlockers(seat as WaiverRecord | null, "diver")).toContain("medical_review");
   });
 });

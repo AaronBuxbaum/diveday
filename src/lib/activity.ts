@@ -318,6 +318,12 @@ type ActivityParamShapes = {
    */
   waiver_counter_code_shown: { actor: string; diver: string };
   /**
+   * A staffer took Copy link on a release with no seat (issue #3983): the
+   * URL can sign as the diver, for every seat they hold, so who took it is on
+   * the diver's trail, as a counter QR is.
+   */
+  waiver_link_copied: { actor: string; diver: string };
+  /**
    * A staffer read a diver's medical alert for the crew, on a manifest they
    * crew or on the signed record (issue #2960). Never written offline.
    */
@@ -616,6 +622,7 @@ export const ACTIVITY_CODES = [
   "scheduled_backup_holds_medical_answers",
   "waiver_seal_acknowledged",
   "waiver_counter_code_shown",
+  "waiver_link_copied",
   "medical_alert_read",
   "medical_alert_saved_offline",
   "medical_alert_printed",

@@ -105,7 +105,7 @@ export default async function PartySeatWaiverPage({
     // The drawn release's id pins the signature to these words; it grants nothing.
     completeAction: completeMinorWaiver.bind(null, token, seatBookingId, state.record.id),
     saveAction: saveMinorWaiverDraft.bind(null, token, seatBookingId, state.record.id),
-    showLinkExpiry: false,
+    linkExpiresAt: null,
     prefillMedical: true,
     backHref: panel,
   });

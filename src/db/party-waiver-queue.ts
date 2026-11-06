@@ -32,7 +32,6 @@ const WAIVER_GAPS = new Set([
   "waiver_lapsed",
   "waiver_runs_out",
   "waiver_pending",
-  "waiver_expired",
   "guardian_signature_missing",
 ]);
 

@@ -103,7 +103,7 @@ export default async function ThreadWaiverPage({
     // The drawn release's id pins the signature to these words; it grants nothing.
     completeAction: completeWaiverFromReady.bind(null, token, state.record.id),
     saveAction: saveWaiverDraftFromReady.bind(null, token, state.record.id),
-    showLinkExpiry: false,
+    linkExpiresAt: null,
     prefillMedical: true,
     backHref: prep,
   });

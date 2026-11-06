@@ -16,7 +16,6 @@ import {
   CounterClaimCard,
   CounterElsewhereCard,
   ExpiredLink,
-  HeldWaiverCard,
   UnavailableWaiverLink,
 } from "./WaiverDoorCards";
 import { waiverSigningForm } from "./WaiverSigningForm";
@@ -63,9 +62,9 @@ export default async function WaiverPage({
   // `shops.default_locale` to fall back to — negotiate from the visitor's own
   // device alone for those branches.
   const anonT = diverTranslator(await requestLocale());
-  // A counter tablet's link, or a release with no seat. A seat's own waiver
-  // link opens nothing (issue #2743): its release is signed in the holder's
-  // thread, so it lands on the card below that sends them their thread link.
+  // A counter link (a seat's QR, or Copy link on a release with no seat), or
+  // a release link mailed for a release with no seat (issue #3983). Nothing
+  // else opens here: a seat's release is signed in its holder's thread.
   const door = await waiverLinkDoor(db, token, { device: await counterDevice() });
   // A counter QR opens on the first phone that taps "open here", and on no
   // other (attacker review S1).
@@ -75,12 +74,12 @@ export default async function WaiverPage({
   const counter = door?.door === "counter";
 
   if (state.state === "unavailable") {
-    // A rescue send supersedes the very record that asked for it, so this
-    // token stops resolving through `getWaiverForToken` the moment the diver
-    // uses the button below — as does an old link a staff reissue replaced.
-    // Resolve the stale record so the redirect back here (and every later
-    // refresh of the same URL) lands on the rescue card with its confirmation,
-    // rather than a dead end that reads as if the tap broke the link.
+    // A release link that expired, or that a newer link or a corrected
+    // contact revoked, opens nothing; so does one whose release was replaced.
+    // Resolve the stale record so this URL (and every later refresh of it,
+    // after the rescue below has sent a fresh link) lands on the rescue card
+    // with its confirmation, rather than a dead end that reads as if the tap
+    // broke the link.
     const stale = await staleWaiverRecordForToken(db, token);
     const staleShop = stale ? await getShopById(db, stale.shopId) : null;
     if (staleShop) {
@@ -95,19 +94,13 @@ export default async function WaiverPage({
   }
 
   // Every remaining state carries a real record, so the shop it belongs to
-  // is always resolvable from here on — including "expired", which used to
-  // bail out before the shop (and so its contact info) was ever loaded.
+  // is always resolvable from here on.
   const shop = await getShopById(db, state.record.shopId);
   if (!shop) {
     return <UnavailableWaiverLink t={anonT} />;
   }
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
-
-  if (state.state === "expired") {
-    return <ExpiredLink token={token} shop={shop} t={t} sent={sent} />;
-  }
-  if (state.state === "held") return <HeldWaiverCard shop={shop} t={t} />;
 
   if (state.state === "completed") {
     // A diver revisiting their own still-live link after a physician cleared
@@ -152,12 +145,15 @@ export default async function WaiverPage({
     search: { saved, error, field, q, at },
     completeAction: completeWaiverAction.bind(null, token),
     saveAction: saveWaiverDraftAction.bind(null, token),
-    // A counter link's half hour is not the release's own expiry.
-    showLinkExpiry: !counter,
+    // A release link says how long it works; a counter link's half hour is
+    // one sitting at the shop.
+    linkExpiresAt: door?.door === "release" ? door.key.expiresAt : null,
     // The counter QR can be read by any camera, so it never shows the medical
     // answers the diver saved in their own thread (security review S2); it
     // shows only what this claimed code saved, so a refused Sign or a Save
     // never blanks the questionnaire on the phone that typed it (dock B1).
-    prefillMedical: door?.door !== "counter" || state.record.draftViaLinkId === door.key.linkId,
+    // A release link likewise prefills only what was saved through itself:
+    // never a counter phone's answers, and never an old link's (issue #3983).
+    prefillMedical: door !== null && state.record.draftViaLinkId === door.key.linkId,
   });
 }

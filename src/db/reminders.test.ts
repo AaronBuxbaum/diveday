@@ -21,7 +21,6 @@ import {
   people,
   shops,
   trips,
-  waiverRecords,
 } from "./schema";
 import { setShopDockDayRhythm } from "./shops";
 import { recordSmsKeyword } from "./sms-opt-outs";
@@ -336,50 +335,6 @@ describe("sendDueReminders", () => {
       expect(gone in reminder, gone).toBe(false);
     }
     expect(reminder.open).toBeGreaterThanOrEqual(0);
-  });
-
-  it("nudges an expired waiver link, and never sends the dead link back", async () => {
-    const { db, shop, bookingId, personId, inWeekBucket } = await reminderContext();
-    await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
-    const issued = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId,
-      now: inWeekBucket,
-    });
-    if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
-    // Age the signing link out. This is the ordinary case, not an edge one: a
-    // link lives a week, and a booking is often made months ahead.
-    await db
-      .update(waiverRecords)
-      .set({ expiresAt: new Date(inWeekBucket.getTime() - 1000) })
-      .where(eq(waiverRecords.id, issued.recordId));
-
-    const email = fakeEmail();
-    const sms = fakeSms();
-    await sendDueReminders(db, {
-      now: inWeekBucket,
-      emailProvider: email.provider,
-      smsProvider: sms.provider,
-      appOrigin: ORIGIN,
-    });
-
-    const [reminder] = emailsFor(email, bookingId);
-    expect(reminder.kind).toBe("trip_reminder_7d");
-    if (reminder.kind !== "trip_reminder_7d") return;
-    // Enrolled in the cadence: an aged-out link leaves the diver as unsigned as
-    // one that never arrived, so it earns the same nudge (2026-08-03).
-    // (This diver also has no cert card on file, so the list is not a
-    // singleton — the point is that the expired waiver is now *in* it.)
-    expect(reminder.open).toBeGreaterThanOrEqual(1);
-    // Never a dead link: the only URL either channel carries is a `readiness`
-    // capability minted on this run, whose page mints a replacement signing
-    // link on tap. The expired waiver token must appear in neither.
-    expect(reminder.readinessUrl).toMatch(new RegExp(`^${ORIGIN}/ready/`));
-    expect(reminder.readinessUrl).not.toContain(issued.token);
-    const [text] = sms.sent.filter((m) => m.to === PHONE);
-    expect(text.body).toContain("Your waiver link expired");
-    expect(text.body).not.toContain(issued.token);
-    expect(text.body).not.toContain("/waivers/");
   });
 
   it("texts the night-before conditions and contact; the email leaves them to the thread", async () => {
@@ -762,7 +717,7 @@ describe("sendDueReminders and the reminder rhythm", () => {
     const { db, shop, bookingId, personId } = ctx;
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
     if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
-    const signed = await completeWaiver(db, issued.token, {
+    const signed = await completeWaiver(db, issued.key, {
       signerName: "Pat Party",
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

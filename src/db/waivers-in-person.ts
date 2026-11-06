@@ -20,7 +20,6 @@ import {
   WAIVER_INTEGRITY_VERSION_SIGNED,
   waiverIntegrityVerdict,
 } from "@/lib/waiver-integrity";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import {
   bookingRecordLapsed,
   isCompletedWaiverCurrent,
@@ -500,10 +499,6 @@ export async function recordInPersonWaiver(
         templateGeneration: template.materialGeneration,
         templateBody: template.body,
         status: "completed",
-        // No link is ever handed out for a paper record; a random unusable hash
-        // keeps the unique token column satisfied without granting bearer access.
-        tokenHash: hashWaiverToken(createWaiverToken()),
-        expiresAt: now,
         signedName: evidence.signerName,
         signatureMethod: evidence.method,
         recordedByPersonId: attestedBy,

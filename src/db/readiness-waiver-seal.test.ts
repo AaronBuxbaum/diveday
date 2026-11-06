@@ -43,7 +43,7 @@ async function signedOnAWaiverOnlyTrip(answers: typeof clearAnswers) {
   });
   const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
   if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-  const done = await completeWaiver(db, issued.token, {
+  const done = await completeWaiver(db, issued.key, {
     signerName: person.fullName,
     agreed: true,
     medicalAnswers: answers,
@@ -134,7 +134,7 @@ describe("readiness over a release whose seal failed", () => {
       bookingId: ctx.booking.id,
     });
     if (!again.ok) throw new Error(`issue failed: ${again.reason}`);
-    const done = await completeWaiver(ctx.db, again.token, {
+    const done = await completeWaiver(ctx.db, again.key, {
       signerName: ctx.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,

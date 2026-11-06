@@ -13,7 +13,6 @@ import {
   rollCallCompleteness,
 } from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { markArrived } from "@/test/arrivals";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { checkInBooking, undoCheckInBooking } from "./check-in";
@@ -104,7 +103,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       bookingId: booking.booking.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -145,7 +144,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -190,7 +189,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -230,7 +229,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -371,7 +370,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -412,7 +411,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -497,7 +496,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       bookingId: booking.booking.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -543,7 +542,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       bookingId: booking.booking.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -584,7 +583,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       bookingId: booking.booking.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -1161,8 +1160,6 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       templateVersion: template.version,
       templateBody: template.body,
       status: "completed",
-      tokenHash: hashWaiverToken(createWaiverToken()),
-      expiresAt: now,
       signedName: booking.person.fullName,
       signatureMethod: "imported",
       consentedAt: now,
@@ -1246,7 +1243,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       bookingId: booking.booking.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -1325,7 +1322,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       bookingId: booking.booking.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -1394,7 +1391,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       bookingId: booking.booking.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -1594,7 +1591,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       bookingId: booking.booking.id,
     });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: booking.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,

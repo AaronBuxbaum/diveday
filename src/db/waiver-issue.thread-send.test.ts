@@ -187,7 +187,7 @@ describe("staff Send waiver for a seat hands over the thread link", () => {
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
 
     expect(result).toMatchObject({ ok: true, delivery: "sent" });
-    const opened = await getWaiverForToken(db, earlier.token);
+    const opened = await getWaiverForToken(db, earlier.key);
     expect(opened.state).toBe("available");
     expect("record" in opened ? opened.record.id : null).toBe(earlier.recordId);
     const [row] = await db

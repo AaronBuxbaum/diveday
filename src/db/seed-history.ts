@@ -770,8 +770,6 @@ export async function seedHistory(
         templateVersion: template.version,
         templateGeneration: template.materialGeneration,
         templateBody: template.body,
-        tokenHash: `hist-waiver-${shopId}-${i + 1}`,
-        expiresAt: at(365, 12),
         ...paperRelease(signedAt, createdByPersonId, signedName(plan.personId)),
         createdAt: signedAt,
       };

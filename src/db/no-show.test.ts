@@ -131,7 +131,7 @@ async function checkInAtTheDesk(ctx: Awaited<ReturnType<typeof context>>): Promi
     bookingId: ctx.bookingId,
   });
   if (!issued.ok) throw new Error("waiver request refused");
-  await completeWaiver(ctx.db, issued.token, {
+  await completeWaiver(ctx.db, issued.key, {
     signerName: ctx.personName,
     agreed: true,
     medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -376,7 +376,7 @@ describe("markBookingNoShow", () => {
     // boarded-diver cases.
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
     if (!issued.ok) throw new Error("waiver request refused");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: personName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

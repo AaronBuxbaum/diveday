@@ -162,7 +162,7 @@ describe("which reviewer a diff needs", () => {
       "src/db/schema/accounts.ts",
       "src/features/backup-export/index.ts",
       "src/db/waivers.ts",
-      "src/lib/waiver-tokens.ts",
+      "src/db/waivers-requests.ts",
       "src/lib/payments/checkout.ts",
       "src/app/api/webhooks/stripe/route.ts",
       "src/app/api/webhooks/sms/route.ts",

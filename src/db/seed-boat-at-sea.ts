@@ -339,7 +339,7 @@ async function seatTheDivers(
   // once, rather than one whole-roster readiness read per seat (it ran on
   // every e2e reset). The probe seats come out again and only the cleared
   // divers are seated, in seat order.
-  const probe = await writeSeats(db, shopId, trip, plan, recorderId, template, candidates, "probe");
+  const probe = await writeSeats(db, shopId, trip, plan, recorderId, template, candidates);
   const readiness = await listTripReadiness(db, shopId, trip.id);
   const ready = new Set(
     readiness.flatMap((row) => (row.readiness.status === "ready" ? [row.booking.id] : [])),
@@ -353,7 +353,7 @@ async function seatTheDivers(
     await db.delete(waiverRecords).where(inArray(waiverRecords.bookingId, probeIds));
     await db.delete(bookings).where(inArray(bookings.id, probeIds));
   }
-  return writeSeats(db, shopId, trip, plan, recorderId, template, cleared, "seat");
+  return writeSeats(db, shopId, trip, plan, recorderId, template, cleared);
 }
 
 /**
@@ -370,7 +370,6 @@ async function writeSeats(
   recorderId: string,
   template: NonNullable<Awaited<ReturnType<typeof getCurrentWaiverTemplate>>>,
   divers: readonly { personId: string; fullName: string }[],
-  tokenKind: "probe" | "seat",
 ): Promise<Diver[]> {
   if (divers.length === 0) return [];
   const bookedAt = divers.map(
@@ -435,11 +434,6 @@ async function writeSeats(
         templateVersion: template.version,
         templateGeneration: template.materialGeneration,
         templateBody: template.body,
-        tokenHash:
-          tokenKind === "seat"
-            ? `seed-at-sea-waiver-${shopId}-${row.seat + 1}`
-            : `seed-at-sea-probe-${shopId}-${row.seat + 1}`,
-        expiresAt: new Date(plan.startsAt.getTime() + 60 * 24 * 60 * 60_000),
         createdAt: signedAt,
         ...paperRelease(signedAt, recorderId, row.fullName),
       };

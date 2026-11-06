@@ -37,7 +37,7 @@ async function soloSigner(email: string) {
   const bookingId = party.bookings[0].bookingId;
   const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
   if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
-  const done = await completeWaiver(db, issued.token, {
+  const done = await completeWaiver(db, issued.key, {
     signerName: "Kit Young",
     agreed: true,
     medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

@@ -3,7 +3,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { SELF_DECLARED_AGENCIES, SELF_DECLARED_LEVELS } from "../src/lib/self-registration";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openDiverFileGroup, waiverLinkFromToast } from "./helpers";
+import { openCopiedWaiverLink, openDiverFileGroup, waiverLinkFromToast } from "./helpers";
 
 /**
  * **The counter's QR door** (issue #1236): a diver who has booked nothing puts
@@ -122,7 +122,7 @@ test.describe("a diver whose release already stands", () => {
     await openDiverFileGroup(page, "Waiver");
     const waiverGroup = page.getByRole("region", { name: "Waiver" });
     await waiverGroup.getByRole("button", { name: "Copy link" }).click();
-    await page.goto(await waiverLinkFromToast(page));
+    await openCopiedWaiverLink(page, await waiverLinkFromToast(page));
 
     await page.getByLabel("Type your full name").fill(name);
     await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();

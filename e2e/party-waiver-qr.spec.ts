@@ -72,7 +72,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     const second = makeActivitySafe(await otherPhone.newPage());
     await second.goto(url.pathname);
     await expect(
-      second.getByRole("heading", { name: "This code is open on another phone" }),
+      second.getByRole("heading", { name: "This link is open on another phone" }),
     ).toBeVisible();
     await otherPhone.close();
     await dialog.getByRole("button", { name: "Close" }).click();

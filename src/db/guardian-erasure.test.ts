@@ -89,7 +89,7 @@ async function coSignedRelease(
   await db.update(people).set({ dateOfBirth: MINOR_DOB }).where(eq(people.id, seat.person.id));
   const issued = await issueWaiverRequest(db, { shopId, bookingId: seat.booking.id, now });
   if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-  const completed = await completeWaiver(db, issued.token, {
+  const completed = await completeWaiver(db, issued.key, {
     signerName: seat.person.fullName,
     agreed: true,
     medicalAnswers,
@@ -204,7 +204,7 @@ describe("eraseGuardianEmail", () => {
       now,
     });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-    await recordWaiverDraft(db, issued.token, {
+    await recordWaiverDraft(db, issued.key, {
       acknowledged: false,
       medicalAnswers: clearAnswers,
       guardian: {

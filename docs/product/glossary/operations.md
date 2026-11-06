@@ -1669,8 +1669,8 @@
   recorded against it — until then it never does. A signature that stops being current has
   **lapsed**: aged past its year (or a physician clearance's own year), or signed against terms the
   shop has since changed. The seat is blocked as surely as one with no release, under its own code,
-  `waiver_lapsed` ("Signed waiver lapsed"), never `waiver_not_sent` ("Not sent yet") or
-  `waiver_expired` (a link that expired unsigned), and the fix is a fresh link the diver signs again
+  `waiver_lapsed` ("Signed waiver lapsed"), never `waiver_not_sent` ("Not sent yet"), and the fix
+  is a fresh link the diver signs again
   (`releaseLapsedForBooking`). **A seat's release is measured at the end of its trip while the
   trip has not started** (issue #2611, decided 2026-10-16; `waiverClockInstant`): the later of now
   and the trip's `endsAt`, both clocks (the signature's year and a physician clearance's year), for
@@ -1684,7 +1684,7 @@
   keep their own instants, and admission still never refuses a seat for it. See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
 - **Waiver standing** — the one word for where a release stands, read from its signature and
   clearance stamps by one derivation (`waiverStanding` for a record, `shopWaiverStanding` for the
-  diver at the shop, issue #2705): `none`, `awaiting_signature`, `link_expired`, `signed`,
+  diver at the shop, issue #2705): `none`, `awaiting_signature`, `signed`,
   `lapsed`, `guardian_missing`, `medical_review` or `medical_not_cleared`. Readiness, the roster,
   the diver record and the counter all speak this one list. The roster still reads a seat's one
   record where the diver record reads the diver, so a lapsed release or a minor's solo signature can

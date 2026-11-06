@@ -69,14 +69,15 @@ async function signed(answers: typeof clearAnswers = medicalReferralAnswers) {
     personId: fixture.booking.personId,
     now,
   });
-  if (!issued.ok) throw new Error("expected live waiver");
-  await completeWaiver(fixture.db, issued.token, {
+  if (!issued.ok || issued.key.kind !== "release") throw new Error("expected a release link");
+  const { token } = issued.key;
+  await completeWaiver(fixture.db, issued.key, {
     signerName: fixture.person.fullName,
     agreed: true,
     medicalAnswers: answers,
     now,
   });
-  const render = async () => renderToken(issued.token);
+  const render = async () => renderToken(token);
   const where = and(
     eq(waiverRecords.id, issued.recordId),
     eq(waiverRecords.shopId, fixture.shop.id),
@@ -202,37 +203,6 @@ describe("the actual completed waiver branch", () => {
       .where(eq(bookingCapabilities.bookingId, booking.id));
     expect(after).toHaveLength(before.length);
   });
-  it("a seat's own waiver link opens no form and no receipt, only its rescue (issue #2743)", async () => {
-    const { db, shop, booking, person } = await context();
-    vi.mocked(getDb).mockResolvedValue(db);
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
-    if (!issued.ok) throw new Error("seat link missing");
-    const pending = await renderToken(issued.token);
-    expect(pending).not.toContain(t("waiver.signButton"));
-    expect(pending).toContain(t("waiver.emailFreshLink"));
-    expect(pending).not.toContain("/ready/");
-    expect(
-      (
-        await completeWaiver(db, issued.token, {
-          signerName: person.fullName,
-          agreed: true,
-          medicalAnswers: clearAnswers,
-          now,
-        })
-      ).ok,
-    ).toBe(true);
-    const done = await renderToken(issued.token);
-    expect(done).not.toContain(t("waiver.signedBody"));
-    expect(done).not.toContain(t("waiver.emailFreshLink"));
-    expect(done).not.toContain("data-medical-next=");
-  });
-  it("keeps an expired signed waiver's receipt without issuing trip prep", async () => {
-    const { db, where, render } = await signed(clearAnswers);
-    await db.update(waiverRecords).set({ expiresAt: nowDate() }).where(where);
-    const html = await render();
-    expect(html).toContain(t("waiver.signedBody"));
-    expect(html).not.toContain("/ready/");
-  });
   it("a counter receipt shows no doctor's page or readiness, and closes at expiry, a fresh QR or supersession", async () => {
     const { db, shop, booking, person } = await context();
     vi.mocked(getDb).mockResolvedValue(db);
@@ -352,7 +322,7 @@ describe("the actual completed waiver branch", () => {
     const earlier = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id, now });
     if (!earlier.ok) throw new Error("earlier release missing");
     expect(
-      await completeWaiver(db, earlier.token, {
+      await completeWaiver(db, earlier.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,

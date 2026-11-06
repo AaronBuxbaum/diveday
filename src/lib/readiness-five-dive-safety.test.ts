@@ -4,7 +4,6 @@ import { calculateReadiness } from "./readiness";
 
 const waiver = {
   status: "completed",
-  expiresAt: new Date("2026-07-25T12:00:00.000Z"),
 } as WaiverRecord;
 const openWater = { status: "verified", level: "open_water" } as Certification;
 const tripRequirement = {

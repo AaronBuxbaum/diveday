@@ -63,7 +63,6 @@ const REASON_FOR_BLOCKER: Record<ReadinessBlockerCode, TurnAwayReason | null> = 
   waiver_lapsed: "waiver",
   waiver_runs_out: "waiver",
   waiver_pending: "waiver",
-  waiver_expired: "waiver",
   guardian_signature_missing: "waiver",
   course_form_unsigned: "waiver",
   course_form_guardian_missing: "waiver",

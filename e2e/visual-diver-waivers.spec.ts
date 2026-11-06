@@ -8,6 +8,7 @@ import { RSTC_QUESTIONNAIRE } from "../src/lib/medical";
 import { expect, makeActivitySafe, test } from "./fixtures";
 import {
   daysFromNow,
+  openCopiedWaiverLink,
   openDiverFileGroup,
   openFirstRosterRowWith,
   waiverLinkFromToast,
@@ -256,7 +257,7 @@ for (const scheme of ["light", "dark"] as const) {
         const waiverHref = await waiverLinkFromToast(staffPage);
         await staffContext.close();
 
-        await page.goto(waiverHref);
+        await openCopiedWaiverLink(page, waiverHref);
         await page.getByRole("heading", { name: "Parent or guardian" }).waitFor();
         await capture(page, "waiver-guardian", scheme);
       });

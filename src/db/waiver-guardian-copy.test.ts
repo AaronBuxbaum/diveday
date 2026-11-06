@@ -71,7 +71,7 @@ async function signOnline(
     now,
   });
   if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-  const outcome = await completeWaiver(ctx.db, issued.token, {
+  const outcome = await completeWaiver(ctx.db, issued.key, {
     signerName: ctx.person.fullName,
     agreed: true,
     medicalAnswers: clearAnswers,
@@ -106,7 +106,7 @@ async function signOnlineNeedingAPhysician(
   // questionnaire, not to this test.
   const referral = RSTC_QUESTIONNAIRE.questions.find((question) => question.referral);
   if (!referral) throw new Error("questionnaire has no referral question");
-  const outcome = await completeWaiver(ctx.db, issued.token, {
+  const outcome = await completeWaiver(ctx.db, issued.key, {
     signerName: ctx.person.fullName,
     agreed: true,
     medicalAnswers: {

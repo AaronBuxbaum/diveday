@@ -89,7 +89,7 @@ describe("the doctor's page", () => {
     await db.update(people).set({ dateOfBirth }).where(eq(people.id, person.id));
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers,

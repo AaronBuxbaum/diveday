@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { activityEvents, shops, waiverRecords } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { completeWaiver } from "@/db/waivers-completion";
-import { attachDiverMedicalForm, recordMedicalEvaluation } from "@/db/waivers-medical";
+import {
+  attachDiverMedicalForm,
+  contactOnFile,
+  recordMedicalEvaluation,
+} from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import { medicalReferralAnswers, now, waiverContextFor } from "@/db/waivers-test-fixtures";
 import { fileScopedShopContext } from "@/test/db";
@@ -69,7 +73,7 @@ describe("GET /api/medical-clearances/[recordId]/diver-form", () => {
     vi.mocked(getDb).mockResolvedValue(db);
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -82,7 +86,9 @@ describe("GET /api/medical-clearances/[recordId]/diver-form", () => {
         and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
       );
     if (!record) throw new Error("expected the held release");
-    expect(await attachDiverMedicalForm(db, record, FORM_URL, later)).toBe("sent");
+    expect(
+      await attachDiverMedicalForm(db, record, FORM_URL, await contactOnFile(db, record), later),
+    ).toBe("sent");
     const staff = await listStaff(db, shop.id);
     // A crew member who is neither owner nor manager: the widening this route exists for.
     const crew = staff.find(
@@ -231,7 +237,7 @@ describe("GET /api/medical-clearances/[recordId]/diver-form", () => {
     const { booking, person } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a fresh waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -239,7 +245,9 @@ describe("GET /api/medical-clearances/[recordId]/diver-form", () => {
     });
     const latest = await latestHeld(db, booking.id);
     if (!latest) throw new Error("expected the new held release");
-    expect(await attachDiverMedicalForm(db, latest, FORM_URL, later)).toBe("sent");
+    expect(
+      await attachDiverMedicalForm(db, latest, FORM_URL, await contactOnFile(db, latest), later),
+    ).toBe("sent");
     return latest.id;
   }
 
