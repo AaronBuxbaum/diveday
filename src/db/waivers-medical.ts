@@ -38,6 +38,7 @@ import {
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatHeld, seatNotCancelled } from "./trips-queries";
+import { withVerifiedClearance } from "./waiver-record-columns";
 import { recheckAnsweredSeal } from "./waiver-seal-checks";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
@@ -91,6 +92,13 @@ export type MedicalEvaluationResult =
          * new hold that can be cleared on its own terms.
          */
         | "answer_already_recorded"
+        /**
+         * The record carries a clearance whose seal does not match its answer
+         * (tampering): boarding holds the diver, so "already recorded" would
+         * be false. The stamp stays as evidence and nothing is written
+         * (issue #3998).
+         */
+        | "answer_seal_broken"
         /**
          * The diver-sent form was ticked as the evidence with no physician's
          * name typed from it (issue #2797, domain review 1): a tick alone
@@ -439,6 +447,9 @@ export async function recordMedicalEvaluation(
     const open = openReferral(held);
     if (!open) {
       if (!answered) return { ok: false, reason: "no_medical_hold" };
+      if (withVerifiedClearance(answered).medicalClearedAt !== answered.medicalClearedAt) {
+        return { ok: false, reason: "answer_seal_broken" };
+      }
       const standing: MedicalEvaluationOutcome = answered.medicalClearedAt
         ? "cleared"
         : "not_cleared";
@@ -1026,7 +1037,8 @@ export type DoctorReferralAnswers = {
  * layer r5-3, F3).
  */
 async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date) {
-  if (!awaitsPhysician(record) || !record.bookingId) return null;
+  // A stamp whose seal does not verify is no answer: the page holds, as boarding does (issue #3998).
+  if (!awaitsPhysician(withVerifiedClearance(record)) || !record.bookingId) return null;
   const [seat] = await db
     .select({ tripEndsAt: trips.endsAt })
     .from(bookings)
@@ -1177,6 +1189,8 @@ export async function attachDiverMedicalForm(
         eq(waiverRecords.shopId, record.shopId),
         eq(waiverRecords.status, "medical_review"),
         isNull(waiverRecords.supersededAt),
+        // No stamp at all: a form beside a stamp that does not verify would sit where no desk
+        // reader looks, so that diver's upload is refused and queued for deletion (issue #3998).
         isNull(waiverRecords.medicalClearedAt),
         isNull(waiverRecords.medicalClearanceDeclinedAt),
         isNull(waiverRecords.anonymizedAt),

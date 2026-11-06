@@ -124,7 +124,11 @@ import {
   tripBoatCapacity,
   tripBoatCertifiedPassengers,
 } from "./trips-queries";
-import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
+import {
+  CLEARED_DRAFT_COLUMNS,
+  WAIVER_BOARDING_COLUMNS,
+  withTrustedClearance,
+} from "./waiver-record-columns";
 
 /**
  * A booking names its diver one of two ways: a walk-in supplies a name (and,
@@ -4037,10 +4041,7 @@ export async function splitBookingIdentity(
       // parks a referral commits before this read or waits until the split is
       // done.
       const live = await tx
-        .select({
-          status: waiverRecords.status,
-          medicalClearedAt: waiverRecords.medicalClearedAt,
-        })
+        .select(WAIVER_BOARDING_COLUMNS)
         .from(waiverRecords)
         .where(
           and(
@@ -4049,7 +4050,9 @@ export async function splitBookingIdentity(
             isNull(waiverRecords.supersededAt),
           ),
         )
-        .for("update");
+        .for("update")
+        // A clearance counts only while its seal verifies (issue #3998).
+        .then((rows) => rows.map(withTrustedClearance));
       if (live.some((row) => row.status === "medical_review" && !row.medicalClearedAt)) {
         return { refused: "medical_hold" as const };
       }
