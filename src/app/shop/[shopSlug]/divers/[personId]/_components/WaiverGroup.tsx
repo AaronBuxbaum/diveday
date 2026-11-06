@@ -212,14 +212,14 @@ export function WaiverGroup({
   // whose own line underneath said the diver had signed it that morning.
   const hasSigned = diver.waiver.state === "signed" || diver.waiver.state === "guardian_missing";
   // **A release changed after signing is not "Signed"** (issue #3953): the
-  // departure's blocker says so, and the door takes the same word.
-  const sealFailed = [
-    gap?.sentence,
-    ...(gap?.alsoBlockers ?? []).map((blocker) => ({ blocker })),
-  ].some(
-    (sentence) =>
-      sentence && "blocker" in sentence && sentence.blocker.code === "waiver_seal_failed",
-  );
+  // departure's blocker says so, and the door takes the same word; with no
+  // seat ahead, the person's own seal verdict does (final dock review N2).
+  const sealFailed =
+    diver.waiverSealFailed ||
+    [gap?.sentence, ...(gap?.alsoBlockers ?? []).map((blocker) => ({ blocker }))].some(
+      (sentence) =>
+        sentence && "blocker" in sentence && sentence.blocker.code === "waiver_seal_failed",
+    );
   const state: WaiverRowState = sealFailed
     ? "seal_failed"
     : diver.waiverRequest === "failed" && !hasSigned

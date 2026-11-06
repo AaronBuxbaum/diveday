@@ -58,12 +58,13 @@ const eventSchema = z
      * from the dive".
      *
      * Honest and updated, and that is the whole of it: because the field is
-     * optional (below), a caller that simply omits it still gets the old
-     * newest-wins write. This is a correctness guard against staleness, **not an
-     * authorization boundary**, and nothing downstream may treat it as one
-     * (security review, 2026-08-15). Nobody gains anything by omitting it — the
-     * caller is already live staff of this shop, who can issue the identical
-     * `cleared` from the live manifest one tab away.
+     * optional (below), a caller that omits it at `departure` still gets the
+     * old newest-wins write; after a dive it is refused (below). This is a
+     * correctness guard against staleness, **not an authorization boundary**,
+     * and nothing downstream may treat it as one (security review, 2026-08-15).
+     * At `departure` nobody gains anything by omitting it — the caller is
+     * already live staff of this shop, who can issue the identical `cleared`
+     * from the live manifest one tab away.
      *
      * **Optional, and what its absence means depends on the checkpoint.** An
      * event with no `retractsClientEventId` was queued by a build that
