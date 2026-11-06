@@ -76,6 +76,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   diver_medical_form_opened: "safety",
   medical_diver_form_accepted: "safety",
   medical_diver_form_not_used: "safety",
+  medical_unsealed_clearance_replaced: "safety",
   medical_answered_by_earlier_letter: "safety",
   medical_answers_read: "safety",
   scheduled_backup_medical_answers: "safety",

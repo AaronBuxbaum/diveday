@@ -223,6 +223,7 @@ export type DiverActivityCode =
   | "diver_medical_form_opened"
   | "medical_diver_form_accepted"
   | "medical_diver_form_not_used"
+  | "medical_unsealed_clearance_replaced"
   | "medical_answers_read"
   | "medical_alert_read"
   | "medical_alert_saved_offline"

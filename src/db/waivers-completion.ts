@@ -38,6 +38,7 @@ import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
 import { bookings, capabilities, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
+import { withVerifiedClearance } from "./waiver-record-columns";
 import { seatMinorDeclared } from "./waiver-signing";
 import { doctorPageOpen } from "./waivers-medical";
 import {
@@ -404,7 +405,11 @@ export async function getWaiverForToken(
 ): Promise<TokenWaiverState> {
   const record = await currentRecordForToken(db, token, now);
   if (!record) return { state: "unavailable" };
-  if (record.status !== "pending") return { state: "completed", record };
+  // A clearance counts only while its seal verifies (issue #3987): the record this hands the token
+  // page and the thread never shows a bare stamp as an answer.
+  if (record.status !== "pending") {
+    return { state: "completed", record: withVerifiedClearance(record) };
+  }
   if (record.expiresAt <= now) return { state: "expired", record };
   if (record.bookingId) {
     const [booking] = await db

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { DownloadAcknowledgmentLink } from "./DownloadAcknowledgmentLink";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, SectionCard } from "@/components/ui/card";
@@ -15,6 +14,7 @@ import { requireShopSurface } from "@/lib/session";
 import { utcToWallTime } from "@/lib/zoned";
 import { DataTabs } from "../_components/DataTabs";
 import { settingsPaneClass } from "../_components/settings-pane";
+import { DownloadAcknowledgmentLink } from "./DownloadAcknowledgmentLink";
 import { EXPORT_PURPOSE_KEYS } from "./file-index";
 
 // `instant = true` asserts that navigating *into* this page paints

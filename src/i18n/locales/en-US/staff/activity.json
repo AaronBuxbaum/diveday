@@ -52,6 +52,7 @@
     "diver_medical_form_opened": "{actor} opened the signed doctor’s form {diver} sent",
     "medical_diver_form_accepted": "{actor} accepted the doctor’s form {diver} sent as the physician’s evaluation",
     "medical_diver_form_not_used": "{actor} didn’t use the doctor’s form {diver} sent, and it was deleted",
+    "medical_unsealed_clearance_replaced": "{actor} recorded the physician’s answer for {diver} again, replacing a clearance that was never sealed",
     "medical_answers_read": "{actor} read {diver}’s medical answers",
     "scheduled_backup_medical_answers": "This week’s backup sent medical answers to the shop’s storage (divers: {count})",
     "scheduled_backup_holds_medical_answers": "The weekly backup to the shop’s storage now holds {diver}’s medical answers",

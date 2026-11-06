@@ -33,6 +33,7 @@ import { publishManifestEventsForPerson } from "./manifest-events";
 import { peopleMinorDeclared } from "./minor-declared";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
+import { withVerifiedClearance } from "./waiver-record-columns";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
 export type InPersonWaiverOutcome =
@@ -289,12 +290,14 @@ async function standingWaiverRecord(
         isNull(waiverRecords.supersededAt),
       ),
     );
-  return held.find(
-    (record) =>
-      isUnresolvedMedicalHold(record) ||
-      (isCompletedWaiverCurrent(record, input.templateGeneration, input.now) &&
-        !guardianSignatureMissing(record, input.signer)),
-  );
+  return held
+    .map(withVerifiedClearance)
+    .find(
+      (record) =>
+        isUnresolvedMedicalHold(record) ||
+        (isCompletedWaiverCurrent(record, input.templateGeneration, input.now) &&
+          !guardianSignatureMissing(record, input.signer)),
+    );
 }
 
 /**

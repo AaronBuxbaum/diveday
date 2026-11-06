@@ -35,6 +35,16 @@ async function personByEmail(db: AppDb, shopId: string, email: string) {
   return row ?? null;
 }
 
+/** A record with its physician answer sealed as the desk seals one: an unsealed stamp is no clearance. */
+async function insertSealed(db: AppDb, values: typeof waiverRecords.$inferInsert) {
+  const [row] = await db.insert(waiverRecords).values(values).returning();
+  if (!row) throw new Error("fixture insert failed");
+  await db
+    .update(waiverRecords)
+    .set({ medicalAnswerSeal: medicalAnswerSealFor(row) })
+    .where(eq(waiverRecords.id, row.id));
+}
+
 async function accountPersonId(db: AppDb, email: string) {
   const [account] = await db
     .select({ personId: userAccounts.personId })
@@ -263,7 +273,7 @@ describe("a superseded hold (issue #3780)", () => {
       "Cleared Cal",
     );
     const signedAt = new Date(nowDate().getTime() - 60 * 60 * 1000);
-    await db.insert(waiverRecords).values({
+    await insertSealed(db, {
       ...heldRecord({
         shopId: shop.id,
         personId: person.id,
@@ -291,7 +301,7 @@ describe("a superseded hold (issue #3780)", () => {
       "Cleared Cleo",
     );
     const signedAt = new Date(nowDate().getTime() - 60 * 60 * 1000);
-    await db.insert(waiverRecords).values({
+    await insertSealed(db, {
       ...heldRecord({ shopId: shop.id, personId: person.id, bookingId: null, template, signedAt }),
       supersededAt: null,
       medicalClearedAt: signedAt,
