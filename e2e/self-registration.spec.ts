@@ -134,8 +134,10 @@ test.describe("a diver whose release already stands", () => {
     // Back on the same URL, not `/ready/`: the release this door issues is
     // **person-scoped**, and a readiness thread belongs to a booking. This
     // diver has no seat yet — that is the whole point of registering before one
-    // exists — so the outcome screen is where signing ends.
-    await expect(page.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
+    // exists — so the outcome screen is where signing ends. The link was copied
+    // from the staff file, so it is a counter handoff: it says only that the
+    // waiver is signed, never "the paperwork done" (#3983).
+    await expect(page.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
 
     // Now the branch: this submission mints nothing and sends nothing.
     await page.goto(REGISTER);
