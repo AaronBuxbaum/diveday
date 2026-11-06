@@ -38,6 +38,10 @@
 //      marker is the nine-hour loop AGENTS.md was written around, and the
 //      surest way not to write one again is to have nothing to wait for.
 //
+// The walk checks `out.json` alone. A snapshot it settles on that turns out to be missing an
+// image is handed over again, to the nearest main-owned snapshot before it, by the prepare step
+// (`prepareNearestBaseline` in scripts/visual-prepare-baseline.mjs, issue #3968).
+//
 // It needs no AWS credentials: the bucket serves these objects publicly, which
 // is the same door `scripts/visual-report.mjs` and the sticky PR comment use.
 import { appendFileSync } from "node:fs";

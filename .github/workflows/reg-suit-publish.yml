@@ -196,7 +196,9 @@ jobs:
           exit 1
 
       # Fetches only the baseline images a capture's hash says could differ (main's out.json
-      # names every capture's sha-256); the rest never leave the bucket.
+      # names every capture's sha-256); the rest never leave the bucket. A snapshot missing its
+      # report or an image hands over to the nearest main-owned one before it, and the step
+      # exports the baseline it used; it never waits, and a missing one never fails it (#3968).
       - name: Prepare expected screenshots without AWS credentials
         run: node scripts/visual-prepare-baseline.mjs
         env:
