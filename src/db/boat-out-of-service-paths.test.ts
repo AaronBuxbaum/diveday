@@ -4,7 +4,7 @@ import { weekdaySetFrom } from "@/lib/recurrence";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
-import { boats, tripSeriesSkips, trips } from "./schema";
+import { boats, shops, tripSeriesSkips, trips } from "./schema";
 import {
   createTrip,
   createTripSeriesOrRefusal,
@@ -26,6 +26,7 @@ const ctx = fileScopedShopContext();
 const TZ = "America/New_York";
 const SAT = 6;
 const WED = 3;
+const MON = 1;
 const morning = (month: number, day: number, hour = 8) =>
   wallTimeToUtc({ year: 2030, month, day, hour, minute: 0 }, TZ);
 
@@ -52,6 +53,21 @@ async function hullInTheYard() {
   return { db, shop, boat, trip };
 }
 
+/** Sunday 08:00 to Tuesday 17:00 on hull B, one span with no named days. */
+async function liveaboardOn(boatId: string) {
+  const { db, shop } = ctx;
+  const trip = await createTrip(db, {
+    shopId: shop.id,
+    title: "Liveaboard on Hull B",
+    startsAt: morning(12, 1),
+    endsAt: morning(12, 3, 17),
+    capacity: 8,
+    boatId,
+  });
+  if (!trip) throw new Error("liveaboard missing");
+  return trip;
+}
+
 async function startOf(db: typeof ctx.db, tripId: string) {
   const [row] = await db
     .select({ startsAt: trips.startsAt })
@@ -72,11 +88,19 @@ describe("moveTrip onto a hull in the yard", () => {
     expect(await startOf(db, trip.id)).toEqual(trip.startsAt);
   });
 
-  it("reads the day in the shop's zone: 22:00 local on the 9th is the 9th", async () => {
+  it("reads the day in the shop's zone: 19:00 to 23:00 local on the 9th is the 9th", async () => {
     const { db, shop, trip } = await hullInTheYard();
-    // 03:00Z on the 10th, still the evening of the 9th in New York.
-    const outcome = await moveTrip(db, shop.id, trip.id, morning(12, 9, 22));
+    // 00:00Z to 04:00Z on the 10th, still the evening of the 9th in New York.
+    const outcome = await moveTrip(db, shop.id, trip.id, morning(12, 9, 19));
     expect(outcome.ok).toBe(true);
+  });
+
+  it("refuses a four-hour run that leaves at 22:00 the night before and is out past midnight", async () => {
+    const { db, shop, trip } = await hullInTheYard();
+    expect(await moveTrip(db, shop.id, trip.id, morning(12, 9, 22))).toEqual({
+      ok: false,
+      reason: "boat_out_of_service",
+    });
   });
 
   it("moves freely the day after the window ends", async () => {
@@ -106,6 +130,43 @@ describe("moveTrip onto a hull in the yard", () => {
     });
   });
 
+  // Issue #3994: held is nights aboard, so a departure holds the hull from
+  // its start through its end, not only on the day it leaves.
+  it("refuses a liveaboard that leaves before the window and is still out in it", async () => {
+    const { db, shop, boat } = await hullInTheYard();
+    const trip = await liveaboardOn(boat.id);
+    // Sunday the 8th to Tuesday the 10th: back on the yard's first day.
+    expect(await moveTrip(db, shop.id, trip.id, morning(12, 8))).toEqual({
+      ok: false,
+      reason: "boat_out_of_service",
+    });
+    expect(await startOf(db, trip.id)).toEqual(trip.startsAt);
+  });
+
+  it("moves a liveaboard that is back the day before the window opens", async () => {
+    const { db, shop, boat } = await hullInTheYard();
+    const trip = await liveaboardOn(boat.id);
+    // Saturday the 7th to Monday the 9th.
+    expect((await moveTrip(db, shop.id, trip.id, morning(12, 7))).ok).toBe(true);
+  });
+
+  // Attacker review: a row holding another shop's hull reads no window, and
+  // the guard must not take that for a clear one.
+  it("refuses to move a departure whose hull this shop does not own", async () => {
+    const { db, shop, trip } = await hullInTheYard();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef-out-of-service", timezone: TZ })
+      .returning();
+    if (!other) throw new Error("other shop insert failed");
+    const foreign = await createBoat(db, other.id, "Their hull", 12);
+    await db.update(trips).set({ boatId: foreign.id }).where(eq(trips.id, trip.id));
+    expect(await moveTrip(db, shop.id, trip.id, morning(12, 20))).toEqual({
+      ok: false,
+      reason: "boat_out_of_service",
+    });
+  });
+
   it("leaves a departure with no boat alone", async () => {
     const { db, shop } = ctx;
     const trip = await createTrip(db, {
@@ -130,6 +191,14 @@ describe("duplicateTrip onto a hull in the yard", () => {
       .from(trips)
       .where(and(eq(trips.boatId, boat.id), isNull(trips.deletedAt)));
     expect(onHull.map((row) => row.id)).toEqual([trip.id]);
+  });
+
+  it("refuses a liveaboard copy that is still out on the window's first day", async () => {
+    const { db, shop, boat } = await hullInTheYard();
+    const trip = await liveaboardOn(boat.id);
+    expect(await duplicateTripOrRefusal(db, shop.id, trip.id, morning(12, 8))).toBe(
+      DUPLICATE_BOAT_OUT_OF_SERVICE,
+    );
   });
 
   it("copies onto a day outside the window", async () => {
@@ -170,6 +239,32 @@ describe("createTripSeries on a hull in the yard", () => {
       .from(trips)
       .where(and(eq(trips.boatId, boat.id), isNull(trips.deletedAt)));
     expect(onHull).toHaveLength(1);
+  });
+
+  it("refuses a series of three-day runs whose second run is out in the window, naming its first yard day", async () => {
+    const { db, shop, boat } = await hullInTheYard();
+    // Mondays from 2030-12-02, Monday to Wednesday: the second run leaves on
+    // the 9th, before the yard, and is at sea on the 10th and 11th.
+    const input = weekly(shop.id, boat.id, MON, "2030-12-02");
+    const start = input.template.startsAt;
+    const result = await createTripSeriesOrRefusal(db, {
+      ...input,
+      template: { startsAt: start, endsAt: new Date(start.getTime() + 57 * 3_600_000) },
+    });
+    expect(result).toEqual({ refusal: "boat_out_of_service", firstDay: "2030-12-10" });
+  });
+
+  it("refuses a series on another shop's hull as a bad form, not a yard day", async () => {
+    const { db, shop } = ctx;
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef-series-hull", timezone: TZ })
+      .returning();
+    if (!other) throw new Error("other shop insert failed");
+    const foreign = await createBoat(db, other.id, "Their hull", 12);
+    expect(
+      await createTripSeriesOrRefusal(db, weekly(shop.id, foreign.id, WED, "2030-12-04")),
+    ).toBeNull();
   });
 
   it("creates a series whose every week misses the window", async () => {

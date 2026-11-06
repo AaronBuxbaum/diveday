@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { weekdaySetFrom } from "@/lib/recurrence";
@@ -21,6 +21,7 @@ import { createTripSeriesOrRefusal, isSeriesBoatOutOfService, rollSeriesForward 
 const ctx = fileScopedShopContext();
 const TZ = "America/New_York";
 const WED = 3;
+const FRI = 5;
 const SAT = 6;
 const at = (year: number, month: number, day: number, hour = 8, minute = 0) =>
   wallTimeToUtc({ year, month, day, hour, minute }, TZ);
@@ -68,6 +69,17 @@ async function seriesOnHull(input: {
       .set({ outOfServiceFrom: from, outOfServiceUntil: until, outOfServiceReason: "Survey" })
       .where(eq(boats.id, boat.id));
   const roll = () => rollSeriesForward(db, shop.id, series.series.id, rollNight);
+  // The newest departure on the hull: the one the roll copies forward.
+  const template = async () => {
+    const [newest] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.boatId, boat.id), isNull(trips.deletedAt)))
+      .orderBy(desc(trips.startsAt))
+      .limit(1);
+    if (!newest) throw new Error("no departure to template from");
+    return newest.id;
+  };
   const departures = async () =>
     (
       await db
@@ -75,7 +87,7 @@ async function seriesOnHull(input: {
         .from(trips)
         .where(and(eq(trips.boatId, boat.id), isNull(trips.deletedAt)))
     ).map((row) => row.startsAt.toISOString());
-  return { yard, roll, departures };
+  return { db, yard, roll, departures, template };
 }
 
 const wednesdayMornings = () =>
@@ -176,5 +188,80 @@ describe("rollSeriesForward at the edges of a yard window", () => {
     await yard("2031-01-07", "2031-01-07");
     await roll();
     expect(await departures()).toContain(inAuckland(1, 8).toISOString());
+  });
+});
+
+/**
+ * **A departure holds its hull every day from a leg's start through its end**
+ * (issue #3994, Aaron's decision of 2026-11-06: held is nights aboard). A
+ * liveaboard that leaves on Friday is at sea on Saturday; a night leg that
+ * comes back after midnight still has the hull on Sunday.
+ */
+describe("rollSeriesForward on the days a departure holds the hull", () => {
+  const liveaboard = () =>
+    seriesOnHull({
+      weekday: FRI,
+      anchorDate: "2030-08-09",
+      legs: [{ startsAt: at(2030, 8, 9), endsAt: at(2030, 8, 11, 17) }],
+    });
+
+  it("leaves off a Friday-to-Sunday liveaboard whose Saturday is in the yard", async () => {
+    const { yard, roll, departures } = await liveaboard();
+    await yard("2031-01-11", "2031-01-11");
+    expect((await roll())?.inTheYard).toEqual(["2031-01-10"]);
+    const onHull = await departures();
+    expect(onHull).not.toContain(at(2031, 1, 10).toISOString());
+    expect(onHull).toContain(at(2031, 1, 3).toISOString());
+    expect(onHull).toContain(at(2031, 1, 17).toISOString());
+  });
+
+  it("sails a liveaboard that is back the day before the yard opens", async () => {
+    const { yard, roll, departures } = await liveaboard();
+    await yard("2031-01-13", "2031-01-13");
+    await roll();
+    expect(await departures()).toContain(at(2031, 1, 10).toISOString());
+  });
+
+  it("leaves off a weekend whose second leg runs past midnight into a yard day", async () => {
+    const { yard, roll, departures } = await seriesOnHull({
+      weekday: FRI,
+      anchorDate: "2030-08-09",
+      legs: [
+        { startsAt: at(2030, 8, 9), endsAt: at(2030, 8, 9, 12) },
+        { startsAt: at(2030, 8, 10, 20), endsAt: at(2030, 8, 11, 2) },
+      ],
+    });
+    await yard("2031-01-12", "2031-01-12");
+    await roll();
+    const onHull = await departures();
+    expect(onHull).not.toContain(at(2031, 1, 10).toISOString());
+    expect(onHull).toContain(at(2031, 1, 17).toISOString());
+  });
+});
+
+/**
+ * **A hull the shop does not own is never clear** (issue #3994, attacker
+ * review). `trips.boat_id` can point at any shop's boat, so a template that
+ * carried one would read no window and roll on; the roll leaves it off.
+ */
+describe("rollSeriesForward on a template holding another shop's hull", () => {
+  it("rolls nothing onto it", async () => {
+    const { db, roll, template } = await wednesdayMornings();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef-yard-edges", timezone: TZ })
+      .returning();
+    if (!other) throw new Error("other shop insert failed");
+    const foreign = await createBoat(db, other.id, "Their hull", 12);
+    await db
+      .update(trips)
+      .set({ boatId: foreign.id })
+      .where(eq(trips.id, await template()));
+    await roll();
+    const onForeign = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.boatId, foreign.id));
+    expect(onForeign).toHaveLength(1);
   });
 });

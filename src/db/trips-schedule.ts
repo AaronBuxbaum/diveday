@@ -86,7 +86,21 @@ export function tripShiftPlan(existingStartsAt: Date, newStartsAt: Date, timeZon
   return (date: Date) => shiftInstantByWallTimeDelta(date, deltaMs, timeZone);
 }
 
-/** {@link duplicateTrip}'s refusal: the copy's hull is in the yard on a day it would meet. */
+/**
+ * The legs a departure holds its hull on once shifted: each named day, or the
+ * departure's own span when it has none (issue #3994). What a move and a copy
+ * ask the yard window about, through `hullHeldSpans`.
+ */
+function movedLegs(
+  days: readonly { startsAt: Date; endsAt: Date }[],
+  trip: { startsAt: Date; endsAt: Date },
+  shift: (instant: Date) => Date,
+): { startsAt: Date; endsAt: Date }[] {
+  const legs = days.length > 0 ? days : [trip];
+  return legs.map((leg) => ({ startsAt: shift(leg.startsAt), endsAt: shift(leg.endsAt) }));
+}
+
+/** {@link duplicateTrip}'s refusal: the copy's hull is in the yard on a day it would hold it. */
 export const DUPLICATE_BOAT_OUT_OF_SERVICE = "boat_out_of_service" as const;
 
 export type MoveTripOutcome =
@@ -225,11 +239,11 @@ export async function moveTrip(
       .limit(1);
     if (!shop) return { ok: false, reason: "not_found" };
     const shift = tripShiftPlan(existing.startsAt, startsAt, shop.timezone);
-    // **A hull in the yard sails nothing** (issue #3915): every day the moved
-    // departure would meet on, read in the shop's zone, against the window of
-    // the boat it keeps.
-    const meetingStarts = await tx
-      .select({ startsAt: tripScheduleDays.startsAt })
+    // **A hull in the yard sails nothing** (issues #3915, #3994): every day
+    // the moved departure would hold the boat it keeps, each leg from its
+    // start through its end, read in the shop's zone.
+    const meetingDays = await tx
+      .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
       .from(tripScheduleDays)
       .where(eq(tripScheduleDays.tripId, tripId));
     if (
@@ -237,7 +251,7 @@ export async function moveTrip(
         tx,
         shopId,
         existing.boatId,
-        [startsAt, ...meetingStarts.map((day) => shift(day.startsAt))],
+        movedLegs(meetingDays, existing, shift),
         shop.timezone,
       )
     ) {
@@ -490,13 +504,7 @@ export async function duplicateTripOrRefusal(
     // cross-tenant row becomes a season of them.
     const boatId = (await validateBoat(tx, shopId, source.boatId)) ? source.boatId : null;
     if (
-      await boatOutOfServiceOn(
-        tx,
-        shopId,
-        boatId,
-        [startsAt, ...days.map((day) => shift(day.startsAt))],
-        shop.timezone,
-      )
+      await boatOutOfServiceOn(tx, shopId, boatId, movedLegs(days, source, shift), shop.timezone)
     ) {
       return DUPLICATE_BOAT_OUT_OF_SERVICE;
     }

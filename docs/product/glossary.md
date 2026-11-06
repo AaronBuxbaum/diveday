@@ -265,6 +265,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Feature coverage
 - Fill rate
 - Held
+- Holds the hull
 - Horizon
 - Hotel pickup
 - Implausible-station advisory

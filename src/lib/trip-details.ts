@@ -1,7 +1,7 @@
 import { isValidCalendarDate } from "./calendar-date";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "./money";
 import { paymentGateIsUnclearable } from "./readiness";
-import { type ServiceWindow, serviceWindowTouches } from "./service-window";
+import { firstHeldDayInWindow, hullHeldSpans, type ServiceWindow } from "./service-window";
 import { type MeetingDayHours, meetingDaysFor, wallWindowEnd } from "./trip-days";
 import { parseWallTime, wallTimeToUtc } from "./zoned";
 
@@ -274,26 +274,19 @@ export function tripDetailsPatch(
     patch.boatId = diveMode === "boat" ? (fields.boatId ?? null) : null;
   }
 
-  // **A hull in the yard sails nothing** (loop 5, row 5). Asked of every
-  // meeting day by its shop-local date, the day the window is written in.
-  if (
-    patch.boatId &&
-    fields.boatOutOfService &&
-    serviceWindowTouches(
-      fields.boatOutOfService,
-      meetingDays.days.map(({ start }) => wallDate(start)),
-    )
-  ) {
-    return { ok: false, reason: "boat_out_of_service", until: fields.boatOutOfService.until };
+  // **A hull in the yard sails nothing** (loop 5, row 5; issue #3994). Asked
+  // of every shop-local day a meeting day holds the hull, from its start
+  // through its end, in the calendar the window is written in. The hull is
+  // the one the departure will sail on: the patch's when this save chooses
+  // the mode, else the caller's, so a save that only moves the dates (the
+  // trip page's timing section) is asked too (attacker review, #3994).
+  const hull = fields.diveMode !== undefined ? patch.boatId : fields.boatId;
+  const yard = fields.boatOutOfService ?? null;
+  if (hull && yard && firstHeldDayInWindow(yard, hullHeldSpans(scheduleDays, shop.timezone))) {
+    return { ok: false, reason: "boat_out_of_service", until: yard.until };
   }
 
   return { ok: true, patch };
-}
-
-/** A wall time's calendar day, as an ISO date. */
-function wallDate(wall: { year: number; month: number; day: number }): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${wall.year}-${pad(wall.month)}-${pad(wall.day)}`;
 }
 
 export function shopOffersDiveMode(
