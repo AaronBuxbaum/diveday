@@ -309,6 +309,7 @@ async function runHeldSend(db: AppDb, row: HeldSendRow): Promise<HeldSendOutcome
         bookingIds: payload.bookingIds,
         personId: payload.personId,
         channel: payload.channel,
+        actorPersonId: row.actorPersonId,
       });
       return { kind: "waiver_send", ...outcome };
     }

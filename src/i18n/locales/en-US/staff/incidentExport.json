@@ -106,7 +106,6 @@
   "waiverComplete": "Waiver “{title}”, version {version}, signed {date}.",
   "waiverCompleteAttested": "Recorded by staff from an in-person signature.",
   "waiverCompleteImported": "Imported acceptance from a prior system, not signed through this shop’s own release.",
-  "waiverExpired": "The waiver was opened for signing and lapsed unsigned.",
   "waiverMedicalReview": "Medical review flagged as required. Status only; the questionnaire’s answers are not part of this document.",
   "waiverNotSigned": "No current signed waiver on record.",
   "waiverPaperMarkedBy": "Recorded by {name} from an in-person signature.",

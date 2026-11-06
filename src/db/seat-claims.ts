@@ -1078,7 +1078,6 @@ async function seatPersonIsThisBookings(
 const PARENT_SIGNABLE_BLOCKERS = new Set([
   "waiver_not_sent",
   "waiver_pending",
-  "waiver_expired",
   "guardian_signature_missing",
 ]);
 

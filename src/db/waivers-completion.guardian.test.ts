@@ -69,7 +69,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     const issued = await liveLink(ctx);
 
     expect(
-      await completeWaiver(ctx.db, issued.token, {
+      await completeWaiver(ctx.db, issued.key, {
         signerName: ctx.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -78,7 +78,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     ).toEqual({ ok: false, reason: "guardian_required" });
 
     // A family that missed the section keeps the link they were sent.
-    expect(await getWaiverForToken(ctx.db, issued.token, now)).toMatchObject({
+    expect(await getWaiverForToken(ctx.db, issued.key, now)).toMatchObject({
       state: "available",
     });
   });
@@ -108,7 +108,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     // A middle initial is dropped, so this is still the diver's own name.
     const initial = await liveLink(ctx);
     expect(
-      await completeWaiver(ctx.db, initial.token, {
+      await completeWaiver(ctx.db, initial.key, {
         signerName: "John Smith",
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -120,7 +120,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     // The other parent: the cheapest way through, and the one the error now
     // offers first. Nothing has to be typed differently from the truth.
     expect(
-      await completeWaiver(ctx.db, initial.token, {
+      await completeWaiver(ctx.db, initial.key, {
         signerName: "John Smith",
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -151,7 +151,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     const issued = await liveLink(ctx);
 
     expect(
-      await completeWaiver(ctx.db, issued.token, {
+      await completeWaiver(ctx.db, issued.key, {
         signerName: "John Smith",
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -185,7 +185,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     ]) {
       const issued = await liveLink(ctx);
       expect(
-        await completeWaiver(ctx.db, issued.token, {
+        await completeWaiver(ctx.db, issued.key, {
           signerName: ctx.person.fullName,
           agreed: true,
           medicalAnswers: clearAnswers,
@@ -193,7 +193,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
           now,
         }),
       ).toEqual({ ok: false, reason: "guardian_invalid" });
-      expect(await getWaiverForToken(ctx.db, issued.token, now)).toMatchObject({
+      expect(await getWaiverForToken(ctx.db, issued.key, now)).toMatchObject({
         state: "available",
       });
     }
@@ -216,7 +216,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     const issued = await liveLink(ctx);
 
     expect(
-      await completeWaiver(ctx.db, issued.token, {
+      await completeWaiver(ctx.db, issued.key, {
         signerName: ctx.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -248,7 +248,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     const issued = await liveLink(ctx);
 
     expect(
-      await completeWaiver(ctx.db, issued.token, {
+      await completeWaiver(ctx.db, issued.key, {
         signerName: ctx.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -294,7 +294,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     await makeMinor(ctx.db, ctx.person.id, dateOfBirth);
     const issued = await liveLink(ctx);
     expect(
-      await completeWaiver(ctx.db, issued.token, {
+      await completeWaiver(ctx.db, issued.key, {
         signerName: ctx.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -324,7 +324,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     const ctx = await waiverContext();
     const issued = await liveLink(ctx);
     expect(
-      await completeWaiver(ctx.db, issued.token, {
+      await completeWaiver(ctx.db, issued.key, {
         signerName: ctx.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -574,7 +574,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     const issued = await liveLink(ctx);
 
     expect(
-      await completeWaiver(ctx.db, issued.token, {
+      await completeWaiver(ctx.db, issued.key, {
         signerName: ctx.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -592,7 +592,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     ).toEqual({ ok: false, reason: "guardian_invalid" });
 
     // Nothing was written, and the link is still the one the family holds.
-    expect(await getWaiverForToken(ctx.db, issued.token, now)).toMatchObject({
+    expect(await getWaiverForToken(ctx.db, issued.key, now)).toMatchObject({
       state: "available",
     });
   });
@@ -601,7 +601,7 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     const ctx = await waiverContext();
     await makeMinor(ctx.db, ctx.person.id);
     const issued = await liveLink(ctx);
-    await completeWaiver(ctx.db, issued.token, {
+    await completeWaiver(ctx.db, issued.key, {
       signerName: ctx.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -667,7 +667,7 @@ describe("a seat marked Under 18 by its booker", () => {
     });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
     const sign = (extra: { guardian?: typeof guardian }) =>
-      completeWaiver(ctx.db, issued.token, {
+      completeWaiver(ctx.db, issued.key, {
         signerName: ctx.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,

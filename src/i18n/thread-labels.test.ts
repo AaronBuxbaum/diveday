@@ -58,8 +58,8 @@ describe("threadNextKey", () => {
     expect(next("es-ES", "sign", "guardian_signature_missing")).toBe(
       "Siguiente: tu madre, padre o tutor firma la exención",
     );
-    expect(next("en-US", "sign", "waiver_expired")).toBe("Next: sign a fresh waiver");
-    expect(next("es-ES", "sign", "waiver_expired")).toBe("Siguiente: firma una exención nueva");
+    expect(next("en-US", "sign", "waiver_lapsed")).toBe("Next: sign a fresh waiver");
+    expect(next("es-ES", "sign", "waiver_lapsed")).toBe("Siguiente: firma una exención nueva");
   });
 
   it.each([
@@ -138,7 +138,6 @@ describe("threadNextKey", () => {
     waiver_lapsed: ["Next: sign a fresh waiver", "Siguiente: firma una exención nueva"],
     waiver_runs_out: ["Next: sign a fresh waiver", "Siguiente: firma una exención nueva"],
     waiver_pending: ["Next: sign your waiver", "Siguiente: firma tu exención"],
-    waiver_expired: ["Next: sign a fresh waiver", "Siguiente: firma una exención nueva"],
     // Changed after signing (#3885): a new release comes from the shop, and
     // the sentence never says the record changed.
     waiver_seal_failed: [

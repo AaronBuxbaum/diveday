@@ -14,7 +14,7 @@ import {
   waiverRecords,
 } from "./schema";
 import type { Cast } from "./seed-cast";
-import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt } from "./seed-clock";
+import { DEMO_SHOP_TIMEZONE, nextCreatedAt } from "./seed-clock";
 import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 import { commonsImage } from "./seed-images";
 import { paperRelease, signingNames } from "./seed-paper-release";
@@ -382,11 +382,9 @@ export async function seedBookings(
   };
 
   const signedName = await signingNames(db, shopId);
-  let upcomingWaiverToken = 0;
   const upcomingWaiverRows = bookingRows_
     .filter((booking) => booking.id !== recapBookingId)
     .map((booking) => {
-      upcomingWaiverToken++;
       const createdAt = nextCreatedAt();
       const signed = signedWaiverBookingIds.has(booking.id);
       return {
@@ -398,13 +396,6 @@ export async function seedBookings(
         templateVersion: waiverTemplate.version,
         templateGeneration: waiverTemplate.materialGeneration,
         templateBody: waiverTemplate.body,
-        // Never a real bearer token (nobody is meant to sign these seeded
-        // links), but unique per shop row so a fleet of minted demo shops
-        // can never collide on the table's global tokenHash constraint.
-        tokenHash: `seed-waiver-${shopId}-${upcomingWaiverToken}`,
-        // Comfortably past every seeded upcoming trip (furthest is ~21 days
-        // out) so a fresh demo never opens with an already-expired link.
-        expiresAt: at(30, 12),
         createdAt,
         ...(signed
           ? {

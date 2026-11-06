@@ -41,7 +41,7 @@ async function signedWith(medicalAlert: string) {
   const { db, shop, booking, person } = context;
   const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
   if (!issued.ok) throw new Error("expected a waiver link");
-  const signed = await completeWaiver(db, issued.token, {
+  const signed = await completeWaiver(db, issued.key, {
     signerName: person.fullName,
     agreed: true,
     medicalAnswers: clearAnswers,
@@ -125,7 +125,7 @@ describe("the medical alert on the boat (issue #2960)", () => {
     });
     const again = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!again.ok) throw new Error("expected a fresh link");
-    await completeWaiver(db, again.token, {
+    await completeWaiver(db, again.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -168,8 +168,6 @@ describe("medicalAlertPrefill", () => {
         templateGeneration: signed.templateGeneration,
         templateBody: signed.templateBody,
         status: "pending",
-        tokenHash: `prefill-${seq}-${signed.id}`,
-        expiresAt: signed.expiresAt,
       })
       .returning();
     if (!record) throw new Error("fresh record missing");
@@ -213,7 +211,7 @@ describe("medicalAlertPrefill", () => {
     });
     const again = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!again.ok) throw new Error("expected a fresh link");
-    const cleared = await completeWaiver(db, again.token, {
+    const cleared = await completeWaiver(db, again.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,

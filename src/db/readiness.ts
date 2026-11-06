@@ -1996,7 +1996,6 @@ export async function listTripsReadiness(
         }),
         ownLapsed,
         sealFailed: row.personSealFailed,
-        now,
       }),
       // Carried on the row because the manifest needs it and only this function
       // holds both halves — the governing record and the diver's whole signed

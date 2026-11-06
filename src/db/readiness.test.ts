@@ -122,7 +122,7 @@ describe("trip readiness (in-memory PGlite)", () => {
       bookingId: rosterEntry.booking.id,
     });
     if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
-    const completion = await completeWaiver(db, issued.token, {
+    const completion = await completeWaiver(db, issued.key, {
       signerName: rosterEntry.person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

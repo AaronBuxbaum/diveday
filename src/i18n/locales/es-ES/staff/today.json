@@ -373,7 +373,6 @@
     "identityUnconfirmed": "Reserva asociada a una ficha por suposición. Confirma quién es antes de enviar la exención.",
     "waiverNotSent": "{count, plural, one {Exención sin firmar, aún sin enviar} other {# exenciones sin firmar, aún sin enviar}}",
     "waiverPending": "{count, plural, one {Exención sin firmar, enlace enviado} other {# exenciones sin firmar, enlaces enviados}}",
-    "waiverExpired": "{count, plural, one {El enlace de la exención caducó.} other {# enlaces de exención caducados}}",
     "waiverLapsed": "{count, plural, one {Exención firmada caducada} other {# exenciones firmadas caducadas}}",
     "waiverRunsOut": "{count, plural, one {Una exención caduca antes de la salida.} other {# exenciones caducan antes de la salida.}}",
     "medicalReview": "Una respuesta médica necesita el visto bueno de un médico.",

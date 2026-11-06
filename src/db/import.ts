@@ -43,7 +43,6 @@ import { phoneForStorage } from "@/lib/phone";
 import { NOTHING_RENTED } from "@/lib/rentals";
 import { storeImportReceiptDocument, storeImportWaiverDocument } from "@/lib/storage";
 import { ingestImageUrl } from "@/lib/storage/ingest-url";
-import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { isCompletedWaiverCurrent, isUnclearedReferral } from "@/lib/waivers";
 import { readActiveStaffRoles } from "./authz";
 import { specialtyCardSpecialty } from "./card-columns";
@@ -939,11 +938,6 @@ async function writeEvidence(
           templateGeneration: template.materialGeneration,
           templateBody: template.body,
           status: "completed",
-          // No link is ever handed out for an imported record; a random
-          // unusable hash keeps the unique token column satisfied without
-          // granting bearer access (mirrors recordInPersonWaiver).
-          tokenHash: hashWaiverToken(createWaiverToken()),
-          expiresAt: now,
           signedName: row.fullName,
           signatureMethod: "imported",
           recordedByPersonId: importedByPersonId,

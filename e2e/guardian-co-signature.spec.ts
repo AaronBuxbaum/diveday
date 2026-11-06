@@ -6,6 +6,7 @@ import {
   counterPath,
   createTrip,
   daysFromNow,
+  openCopiedWaiverLink,
   openDiverFileGroup,
   openPaperWaiverForm,
   openRosterDetails,
@@ -70,7 +71,7 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   // `openDiverFileGroup` only opens a door that is shut.
   await openDiverFileGroup(page, "Waiver");
   await page.getByRole("button", { name: "Copy link" }).click();
-  await page.goto(await waiverLinkFromToast(page));
+  await openCopiedWaiverLink(page, await waiverLinkFromToast(page));
 
   // The section the rule adds, and the one thing about it that is not a field:
   // the page's single Sign button now belongs to the guardian's card, so

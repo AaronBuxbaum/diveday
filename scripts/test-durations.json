@@ -2334,7 +2334,6 @@
   "src/lib/waiver-departure-status.test.ts": 11,
   "src/lib/waiver-integrity.test.ts": 80,
   "src/lib/waiver-questions.test.ts": 78,
-  "src/lib/waiver-tokens.test.ts": 11,
   "src/lib/waivers-medical-local-date.test.ts": 9,
   "src/lib/waivers.as-of.test.ts": 16,
   "src/lib/waivers.doctor.test.ts": 9,

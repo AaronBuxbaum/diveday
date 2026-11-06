@@ -106,7 +106,6 @@
   "waiverComplete": "Exención “{title}”, versión {version}, firmada el {date}.",
   "waiverCompleteAttested": "Registrado por el personal a partir de una firma en persona.",
   "waiverCompleteImported": "Aceptación importada de un sistema anterior, no firmada con la exención propia de este centro.",
-  "waiverExpired": "La exención se abrió para firmar y venció sin firmarse.",
   "waiverMedicalReview": "Revisión médica marcada como necesaria. Solo el estado; las respuestas del cuestionario no forman parte de este documento.",
   "waiverNotSigned": "Sin exención firmada vigente en los registros.",
   "waiverPaperMarkedBy": "Marcado en papel por {name}.",

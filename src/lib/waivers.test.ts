@@ -76,12 +76,11 @@ describe("waiver domain rules", () => {
     });
   });
 
-  it("treats a pending past-deadline record as expired rather than ready", () => {
+  it("reads an unsigned release as awaiting its signature: it has no clock of its own", () => {
     const record = {
       status: "pending",
-      expiresAt: new Date("2026-07-18T00:00:00.000Z"),
     } as Parameters<typeof waiverStanding>[0];
-    expect(waiverStanding(record, new Date("2026-07-18T00:00:01.000Z"))).toBe("link_expired");
+    expect(waiverStanding(record)).toBe("awaiting_signature");
   });
 });
 
@@ -261,7 +260,7 @@ describe("effective waiver (sign once per diver)", () => {
     const carried = completedWaiver({ bookingId: "other-booking" });
     const effective = effectiveWaiverForBooking(args({ personSignedWaivers: [carried] }));
     expect(effective).toBe(carried);
-    expect(waiverStanding(effective, SIGN_NOW)).toBe("signed");
+    expect(waiverStanding(effective)).toBe("signed");
   });
 
   it("does not carry a stale or wrong-version release — the booking still needs one", () => {
@@ -273,10 +272,7 @@ describe("effective waiver (sign once per diver)", () => {
     expect(effectiveWaiverForBooking(args({ personSignedWaivers: [staleVersion] }))).toBeNull();
     // Falls through to none, so staff are prompted to send a fresh link.
     expect(
-      waiverStanding(
-        effectiveWaiverForBooking(args({ personSignedWaivers: [staleVersion] })),
-        SIGN_NOW,
-      ),
+      waiverStanding(effectiveWaiverForBooking(args({ personSignedWaivers: [staleVersion] }))),
     ).toBe("none");
   });
 
@@ -287,13 +283,12 @@ describe("effective waiver (sign once per diver)", () => {
       args({ bookingWaiver: ownReview, personSignedWaivers: [carried] }),
     );
     expect(effective).toBe(ownReview);
-    expect(waiverStanding(effective, SIGN_NOW)).toBe("medical_review");
+    expect(waiverStanding(effective)).toBe("medical_review");
   });
 
   it("satisfies a booking whose own link is still pending once a valid release exists", () => {
     const pending = {
       status: "pending",
-      expiresAt: new Date(SIGN_NOW.getTime() + 1000),
     } as WaiverRecord;
     const carried = completedWaiver({ bookingId: "other" });
     const effective = effectiveWaiverForBooking(
@@ -329,7 +324,7 @@ describe("effective waiver (sign once per diver)", () => {
     // carry, but the unresolved June hold is newer, so it must block instead.
     const effective = effectiveWaiverForBooking(args({ personSignedWaivers: [cleanJan, holdJun] }));
     expect(effective?.id).toBe("hold-jun");
-    expect(waiverStanding(effective, SIGN_NOW)).toBe("medical_review");
+    expect(waiverStanding(effective)).toBe("medical_review");
   });
 
   it("lets a clean signature made after a hold supersede it", () => {
@@ -424,7 +419,6 @@ describe("releaseLapsedForBooking", () => {
       status: "pending",
       signedAt: null,
       completedAt: null,
-      expiresAt: new Date(SIGN_NOW.getTime() + 60_000),
     });
     expect(resolve({ bookingWaiver: fresh, personSignedWaivers: [lapsed] })).toBe(false);
   });
@@ -572,7 +566,7 @@ describe("shop-level waiver standing", () => {
     expect(isUnresolvedMedicalHold(refused)).toBe(true);
     expect(isCleanCompletion(refused)).toBe(false);
     expect(isCompletedWaiverCurrent(refused, 1, SIGN_NOW)).toBe(false);
-    expect(waiverStanding(refused, SIGN_NOW)).toBe("medical_not_cleared");
+    expect(waiverStanding(refused)).toBe("medical_not_cleared");
   });
 
   it("keeps a refusal out of the mark a manifest reads", () => {
@@ -689,10 +683,8 @@ describe("physician clearance", () => {
   });
 
   it("reads the record as complete rather than held", () => {
-    expect(waiverStanding(cleared(), SIGN_NOW)).toBe("signed");
-    expect(waiverStanding(completedWaiver({ status: "medical_review" }), SIGN_NOW)).toBe(
-      "medical_review",
-    );
+    expect(waiverStanding(cleared())).toBe("signed");
+    expect(waiverStanding(completedWaiver({ status: "medical_review" }))).toBe("medical_review");
   });
 
   it("stops the booking's own hold from blocking once it is cleared", () => {
@@ -703,7 +695,7 @@ describe("physician clearance", () => {
       currentTemplateVersion: 1,
       now: SIGN_NOW,
     });
-    expect(waiverStanding(effective, SIGN_NOW)).toBe("signed");
+    expect(waiverStanding(effective)).toBe("signed");
   });
 
   it("stops a carried hold from failing a clean signature closed", () => {
@@ -722,7 +714,7 @@ describe("physician clearance", () => {
       currentTemplateVersion: 1,
       now: SIGN_NOW,
     });
-    expect(waiverStanding(effective, SIGN_NOW)).toBe("signed");
+    expect(waiverStanding(effective)).toBe("signed");
   });
 
   it("leaves the shop standing current rather than in review", () => {
@@ -1287,17 +1279,16 @@ describe("effectiveReleaseForRiderSeat", () => {
     expect(effectiveReleaseForRiderSeat(args({ bookingWaiver: pending }))).toBe(pending);
   });
 
-  it("hands back a lapsed unsigned link too, so the desk reads expired, as for a diver's seat", () => {
+  it("hands back an unsigned release too, so the desk reads it as for a diver's seat", () => {
     const lapsed = completedWaiver({
       status: "pending",
       signedAt: null,
       completedAt: null,
-      expiresAt: new Date(SIGN_NOW.getTime() - 1),
     });
     const rider = effectiveReleaseForRiderSeat(args({ bookingWaiver: lapsed }));
     expect(rider).toBe(lapsed);
     expect(rider).toBe(effectiveWaiverForBooking(args({ bookingWaiver: lapsed })));
-    expect(waiverStanding(rider, SIGN_NOW)).toBe("link_expired");
+    expect(waiverStanding(rider)).toBe("awaiting_signature");
   });
 });
 

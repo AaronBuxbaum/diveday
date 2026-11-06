@@ -107,7 +107,6 @@ export type IncidentCertificationEvidence = {
 export type IncidentWaiverState =
   | "not_sent"
   | "awaiting_signature"
-  | "expired"
   | "complete"
   | "medical_review"
   | "medical_not_cleared";
@@ -115,7 +114,6 @@ export type IncidentWaiverState =
 const INCIDENT_WAIVER_CODES: Record<RecordWaiverStanding, IncidentWaiverState> = {
   none: "not_sent",
   awaiting_signature: "awaiting_signature",
-  link_expired: "expired",
   signed: "complete",
   medical_review: "medical_review",
   medical_not_cleared: "medical_not_cleared",
@@ -843,7 +841,6 @@ function certificationEvidence(input: IncidentDiverEvidenceInput): IncidentCerti
 
 function waiverStatus(
   record: WaiverStateFields | null,
-  now: Date,
   recordedByName: string | null | undefined,
   medicalClearedByName: string | null | undefined,
   medicalClearanceDeclinedByName: string | null | undefined,
@@ -863,7 +860,7 @@ function waiverStatus(
   const state =
     record?.supersededAt && !isUnclearedReferral(record)
       ? "not_sent"
-      : INCIDENT_WAIVER_CODES[waiverStanding(record, now)];
+      : INCIDENT_WAIVER_CODES[waiverStanding(record)];
   if (!record || state === "not_sent") return NOT_SENT_WAIVER;
   return {
     state,
@@ -999,11 +996,6 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
   const departure = input.manifests[0];
   if (!departure) throw new Error("buildIncidentExport: no departure manifest");
   const evidenceByBooking = new Map(input.diverEvidence.map((entry) => [entry.bookingId, entry]));
-  // Evidence that lapses with time (a waiver link) is stated as it stood when
-  // the boat was due out, never as of the printing (domain re-review
-  // 2026-10-16, item 3): the log is built as it is read, and a code that moved
-  // with the print date would reproduce nothing.
-  const departureAt = new Date(rosterCutoff(departure.trip, input.events));
 
   // Teams number from their own list order, 1-based, and every surface on this
   // document reads the number off the same map — so the roster, the crew
@@ -1114,7 +1106,6 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         certificationsAtCapture: evidence?.certificationsAtCapture ?? null,
         waiver: waiverStatus(
           evidence?.waiver ?? null,
-          departureAt,
           evidence?.waiverRecordedByName,
           evidence?.waiverMedicalClearedByName,
           evidence?.waiverMedicalClearanceDeclinedByName,

@@ -64,7 +64,7 @@ describe("primaryBlocker", () => {
   });
 
   it("keeps the first blocker when severity ties", () => {
-    const chosen = primaryBlocker([blocker("waiver_pending"), blocker("waiver_expired")]);
+    const chosen = primaryBlocker([blocker("waiver_pending"), blocker("waiver_lapsed")]);
     expect(chosen?.code).toBe("waiver_pending");
   });
 });

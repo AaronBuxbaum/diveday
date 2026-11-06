@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
+import { issueCapability } from "@/db/capabilities";
 import { bookingCapabilities, capabilities, people, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { claimedDevice, issueCounterLink, openOnDevice } from "@/db/waivers-test-fixtures";
@@ -96,7 +97,8 @@ async function openLink() {
   if (!person) throw new Error("seeded shop has no person without a date of birth");
   const issued = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id });
   if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
-  return { db, shop, person, token: issued.token, recordId: issued.recordId };
+  if (issued.key.kind !== "release") throw new Error("expected a release link");
+  return { db, shop, person, token: issued.key.token, recordId: issued.recordId };
 }
 
 /** A booked seat on an upcoming trip, with its holder's readiness link. */
@@ -216,18 +218,23 @@ describe("the signing doors", () => {
     expect(record?.status).not.toBe("pending");
   });
 
-  it("refuses to sign or draft a seat's release through its waiver link (issue #2743)", async () => {
+  it("refuses to sign or draft a seat's release through a release link (issue #3983)", async () => {
     const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     const { bookingId } = await bookedSeat("Morgan Waiver");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
     if (!issued.ok) throw new Error("waiver request refused");
+    const forged = await issueCapability(db, {
+      purpose: "release_link",
+      shopId: shop.id,
+      subjectId: issued.recordId,
+    });
     const form = () => signedForm(shop, { signerName: "Morgan Waiver", acknowledged: "on" });
-    expect(await redirectedTo(() => completeWaiverAction(issued.token, form()))).toBe(
-      `/waivers/${issued.token}?error=unavailable`,
+    expect(await redirectedTo(() => completeWaiverAction(forged, form()))).toBe(
+      `/waivers/${forged}?error=unavailable`,
     );
-    expect(await redirectedTo(() => saveWaiverDraftAction(issued.token, form()))).toBe(
-      `/waivers/${issued.token}?error=unavailable`,
+    expect(await redirectedTo(() => saveWaiverDraftAction(forged, form()))).toBe(
+      `/waivers/${forged}?error=unavailable`,
     );
     const [record] = await db
       .select()

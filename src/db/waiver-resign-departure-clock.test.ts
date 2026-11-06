@@ -47,7 +47,7 @@ async function seat(kind: "diver" | "rider" = "diver") {
   }
   const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: entry.booking.id });
   if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
-  const done = await completeWaiver(db, issued.token, {
+  const done = await completeWaiver(db, issued.key, {
     signerName: entry.person.fullName,
     agreed: true,
     medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
@@ -98,7 +98,7 @@ describe.each(["diver", "rider"] as const)(
       expect(issued.ok).toBe(true);
       if (!issued.ok) return;
 
-      const done = await completeWaiver(s.db, issued.token, {
+      const done = await completeWaiver(s.db, issued.key, {
         signerName: s.entry.person.fullName,
         agreed: true,
         medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

@@ -12,7 +12,7 @@ import {
 } from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
-import { hasLiveDeliveredReadinessLink, issueBookingCapability } from "./booking-capabilities";
+import { issueBookingCapability } from "./booking-capabilities";
 import { mintCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { getCourseFormsForBooking } from "./course-forms";
@@ -21,26 +21,26 @@ import {
   withErasureCoordinatedPersonSend,
 } from "./erasure-coordinated-send";
 import { retryBookingConfirmation, sendAndRecordNotification } from "./notifications";
+import { recordDiverActivity } from "./operations";
 import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
-import { bookings, people, shops, trips, waiverRecords } from "./schema";
+import { bookings, capabilities, people, shops, trips, waiverRecords } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
-import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import {
   hasLivePersonWaiverRequest,
-  issueWaiverRequest,
   openWaiverInThread,
   recordWaiverDelivery,
   staleWaiverRecordForToken,
 } from "./waivers";
+import { openPersonRelease } from "./waivers-requests";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**
  * The one place that issues a waiver link *and* delivers it. Both the trip
  * roster and the Today/Blockers one-tap sends call this so a waiver is never
  * issued by a different rule in two places (the transaction lives in
- * `issueWaiverRequest`; this wraps it with delivery and the context a notice
+ * `openWaiverInThread` and `openPersonRelease`; this wraps them with delivery and the context a notice
  * needs). It is self-contained — given a shop and a booking it fetches the
  * diver, trip, and shop names itself — so a caller never threads snapshots
  * through hidden form fields.
@@ -179,8 +179,14 @@ export type IssueAndDeliverWaiverResult =
 export type PersonWaiverResult =
   | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: true }>, "bookingId" | "token"> & {
       bookingId: null;
-      /** A bookingless release keeps its waiver link (ADR 20261105). */
-      token: string;
+      /**
+       * The counter link Copy link asked for (`waiver_link`: half an hour, the
+       * first phone to open it), and only that: a release with no seat covers
+       * every seat the diver holds once signed, so the week-long release link
+       * an email or a text carries never comes back to staff, sent or not
+       * (issue #3983).
+       */
+      token: string | null;
     })
   | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: false }>, "bookingId"> & { bookingId: null });
 
@@ -193,7 +199,7 @@ export type WaiverDeliveryOptions = {
   /** Provider seam for booking-bound confirmation and waiver emails. */
   provider?: NotificationProvider;
   /**
-   * The instant to issue against, threaded down to `issueWaiverRequest`.
+   * The instant to issue against, threaded down to the release it opens.
    *
    * It matters now that a live link is reused rather than replaced: whether the
    * diver already holds a signable link is a question about a moment, and a
@@ -202,6 +208,17 @@ export type WaiverDeliveryOptions = {
    * against a different one. Defaults to the clock, which is every other caller.
    */
   now?: Date;
+  /**
+   * The staffer asking. Copy link on a release with no seat refuses without
+   * one: the URL can sign as the diver, so who took it goes on their trail.
+   */
+  actorPersonId?: string | null;
+  /**
+   * Leave a live link alone instead of minting over it (issue #3983 review):
+   * a door anyone can reach (self-registration) must not revoke the link a
+   * diver is signing on. Reports `sent` without sending.
+   */
+  keepLiveLink?: boolean;
   /** Identity read before a booking-bound send; stale assignments are refused. */
   expectedPersonId?: string;
   expectedTripId?: string;
@@ -509,8 +526,20 @@ export async function issueAndDeliverWaiver(
 }
 
 /**
- * The same, for a diver directly, with no booking or schedule required — so two
- * sends from their record hand over one link rather than two.
+ * The same, for a diver directly, with no booking or schedule required: one
+ * release, kept open across sends, so two sends from their record hand over
+ * the same release and its draft rather than two.
+ *
+ * Which link opens it depends on who it is for (issue #3983). Signed, a
+ * release with no seat covers every seat the diver holds, so:
+ *
+ * - **Copy link** (`link`) mints a counter link (`waiver_link`): half an hour,
+ *   and only on the first phone that opens it. That is the URL staff get.
+ * - **Email and text** mint a release link (`release_link`): a week, to the
+ *   contact on file only. Its token never comes back, sent or not; a staffer
+ *   who needs a URL to hand over asks for Copy link.
+ *
+ * A release holds one live link: either mint revokes the one before.
  */
 export async function issueAndDeliverPersonWaiver(
   db: AppDb,
@@ -541,12 +570,7 @@ export async function issueAndDeliverPersonWaiver(
         .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
         .limit(1);
       if (!ctx) return null;
-      const outcome = await issueWaiverRequest(tx, {
-        shopId,
-        personId,
-        expectedPersonId: personId,
-        now: options.now,
-      });
+      const outcome = await openPersonRelease(tx, { shopId, personId, now: options.now });
       if (!outcome.ok) {
         return {
           ok: false as const,
@@ -558,32 +582,76 @@ export async function issueAndDeliverPersonWaiver(
               : ("error" as const),
         };
       }
-      const origin = publicAppUrl();
       const channel = options.channel ?? "email";
-      const completionUrl = origin
-        ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
-        : null;
-      let delivery: WaiverDelivery = "no_app_origin";
+      if (channel === "link" && !options.actorPersonId) {
+        return {
+          ok: false as const,
+          bookingId: null,
+          diverName: ctx.person.fullName,
+          reason: "error" as const,
+        };
+      }
+      if (
+        options.keepLiveLink &&
+        (await hasLivePersonWaiverRequest(tx, shopId, personId, options.now ?? nowDate()))
+      ) {
+        return {
+          ok: true as const,
+          bookingId: null,
+          diverName: ctx.person.fullName,
+          token: null,
+          delivery: "sent" as const,
+        };
+      }
+      const origin = publicAppUrl();
+      const mint = (purpose: "waiver_link" | "release_link") =>
+        mintCapability(tx, { purpose, shopId, subjectId: outcome.recordId, now: options.now });
+      const urlFor = (token: string) => new URL(`/waivers/${token}`, `${origin}/`).toString();
+      let token: string | null = null;
+      let delivery: WaiverDelivery;
       let providerMessageId: string | undefined;
-      if (!completionUrl) {
-        delivery = "no_app_origin";
-      } else if (channel === "link") {
-        delivery = "link_only";
-      } else if (channel === "sms") {
-        const result = await textWaiverLink(tx, {
+      let minted: { id: string } | null = null;
+      if (channel === "link") {
+        // The URL staff asked for is a counter link, whether or not this
+        // deployment knows its own origin, and who took it is on the diver's
+        // trail in the same transaction: no trail line, no link.
+        const link = await mint("waiver_link");
+        const recorded = await recordDiverActivity(tx, {
           shopId,
-          phone: ctx.person.phone,
-          shopName: ctx.shop.name,
-          locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
-          completionUrl,
-          providers: options.textProviders,
-          signal: notificationProviderSignal(),
+          personId,
+          actorPersonId: options.actorPersonId as string,
+          code: "waiver_link_copied",
+          waiverRecordId: outcome.recordId,
         });
-        delivery = result.delivery;
-        providerMessageId = result.providerMessageId;
+        if (!recorded) throw new CopyLinkNotRecorded();
+        token = link.token;
+        delivery = origin ? "link_only" : "no_app_origin";
+      } else if (!origin) {
+        delivery = "no_app_origin";
+      } else if (channel === "sms") {
+        if (!smsRecipient(ctx.person.phone)) {
+          delivery = "no_phone";
+        } else {
+          const link = await mint("release_link");
+          minted = link;
+          const result = await textWaiverLink(tx, {
+            shopId,
+            phone: ctx.person.phone,
+            shopName: ctx.shop.name,
+            locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
+            completionUrl: urlFor(link.token),
+            providers: options.textProviders,
+            signal: notificationProviderSignal(),
+          });
+          delivery = result.delivery;
+          providerMessageId = result.providerMessageId;
+        }
       } else if (!ctx.person.email) {
         delivery = "no_email";
       } else {
+        const link = await mint("release_link");
+        minted = link;
+        if (!link.expiresAt) throw new Error("release_link minted without an expiry");
         const result = await sendAndRecordNotification(
           tx,
           {
@@ -594,14 +662,22 @@ export async function issueAndDeliverPersonWaiver(
             locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
             diverName: ctx.person.fullName,
             shopName: ctx.shop.name,
-            completionUrl,
-            expiresAt: outcome.expiresAt,
+            completionUrl: urlFor(link.token),
+            expiresAt: link.expiresAt,
             timezone: ctx.shop.timezone,
           },
           { provider: options.provider, signal: notificationProviderSignal() },
         );
         providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
         delivery = emailDelivery(result);
+      }
+      // A link that reached nobody is withdrawn: nobody holds it, and a live
+      // one would turn the diver's own rescue away (`current_link_live`).
+      if (minted && delivery !== "sent") {
+        await tx
+          .update(capabilities)
+          .set({ revokedAt: options.now ?? nowDate() })
+          .where(eq(capabilities.id, minted.id));
       }
       await recordWaiverDelivery(tx, {
         shopId,
@@ -614,7 +690,7 @@ export async function issueAndDeliverPersonWaiver(
         ok: true as const,
         bookingId: null,
         diverName: ctx.person.fullName,
-        token: outcome.token,
+        token,
         delivery,
       };
     },
@@ -623,6 +699,8 @@ export async function issueAndDeliverPersonWaiver(
     fenced ?? { ok: false, bookingId: null, diverName: observed.person.fullName, reason: "error" }
   );
 }
+
+class CopyLinkNotRecorded extends Error {}
 
 /**
  * Send a waiver the moment a diver joins a dive — but only when one is actually
@@ -818,7 +896,7 @@ async function joinWaiverOwed(db: DbExecutor, shopId: string, bookingId: string)
   );
   if (!needsWaiver) return false;
   // A held seat is owed nothing yet: its link would open on a record that may
-  // be somebody else's, so `issueWaiverRequest` refuses it. Nothing to report
+  // be somebody else’s, so `openWaiverInThread` refuses it. Nothing to report
   // as a failure; confirming the seat sends it (issue #2125).
   const [seat] = await db
     .select({ identityUnconfirmedAt: bookings.identityUnconfirmedAt })
@@ -1062,40 +1140,29 @@ export type WaiverLinkRescue =
   | "failed";
 
 /**
- * A diver's self-serve rescue for a waiver link that aged out: issue a fresh
- * one and mail it to the address already on their booking or person record.
+ * A diver's self-serve rescue for a release link that no longer opens its
+ * release (expired, replaced, or closed by a contact change): issue a fresh
+ * one and mail it to the address on the person's record.
  *
  * The security shape matters more than the mechanics. A waiver URL *is* its
  * capability, so a stale one that leaked (a forwarded email, a shared screen)
- * must never be tradeable for fresh access. Two rules keep that true:
- * the fresh token goes only to the address on file — never to the caller, and
- * never displayed or confirmed back on the page — and the return value is a
- * bare outcome code carrying no address, no token, and no booking detail. What
- * a bearer of a dead link can do here is *trigger a delivery to its owner*,
+ * must never be tradeable for fresh access. Two rules keep that true: the
+ * fresh link goes only to the address on file, never to the caller, and is
+ * never displayed or confirmed back on the page; and the return value is a
+ * bare outcome code carrying no address, no token and no record detail. What a
+ * bearer of a dead link can do here is *trigger a delivery to its owner*,
  * which is exactly the affordance staff already had and no more.
  *
- * Repeat taps are safe by construction, and by one explicit refusal.
- * `hasLivePersonWaiverRequest` is the guard: when the person already has a
- * signable link, this reports `current_link_live` and issues nothing.
+ * `hasLivePersonWaiverRequest` is the guard: when the person already holds a
+ * live link (a release link, or a counter link open at the shop), this reports
+ * `current_link_live` and issues nothing, so whoever holds a *dead* URL never
+ * drives a delivery on the live one. `staleWaiverRecordForToken` keeps
+ * resolving the original token after a send, so a second tap on a link whose
+ * replacement has since aged out replaces it again rather than failing.
  *
- * That guard used to be load-bearing for a second reason that no longer holds
- * — issuing superseded every pending record, so a rescue fired against a live
- * link was a remote "wipe this diver's half-filled waiver" button. Reuse ended
- * that (ADR 20260820-waiver-links-are-reused-not-reissued): a live link is now
- * handed back rather than replaced. The refusal stays on the narrower argument
- * it always also had, which is enough on its own: whoever holds a *dead* URL
- * should not be able to drive a delivery on the live one, however harmless the
- * issuing side has become. Otherwise `staleWaiverRecordForToken`
- * keeps resolving the original token after a send, so a second tap on a link
- * whose replacement has since aged out replaces it again rather than failing.
- * A cancelled booking or a sailed trip is refused by the same issuing
- * transaction the staff path uses, and a booking already covered by a signature
- * reports `already_signed` rather than mailing a pointless link.
- *
- * A seat's waiver link is dead by decision (issue #2743): its rescue sends the
- * holder their thread link, to the contact on file, unless the seat already
- * holds a delivered, live one (`hasLiveDeliveredReadinessLink`, the readiness
- * rescue's own guard).
+ * Only a release link with no seat reaches here (issue #3983): a seat's
+ * release is signed on its holder's thread link, and a counter link's way on
+ * is a fresh code from the staff.
  */
 export async function emailFreshWaiverLink(
   db: AppDb,
@@ -1104,57 +1171,19 @@ export async function emailFreshWaiverLink(
 ): Promise<WaiverLinkRescue> {
   const stale = await staleWaiverRecordForToken(db, token, now);
   if (!stale) return "unavailable";
-  if (stale.bookingId) {
-    // A seat's waiver link opens nothing any more (issue #2743): what goes out
-    // is the holder's own thread link (`issueAndDeliverWaiver`). The seat and
-    // its departure are checked first, so "your link still works" is never
-    // said about a seat or a trip that is gone (issue #850); a dead URL then
-    // never drives a delivery on a thread link already in the holder's mail.
-    if (!(await seatStillSails(db, stale.shopId, stale.bookingId))) return "unavailable";
-    if (
-      await hasLiveDeliveredReadinessLink(db, {
-        shopId: stale.shopId,
-        bookingId: stale.bookingId,
-        now,
-      })
-    )
-      return "current_link_live";
-  } else if (await hasLivePersonWaiverRequest(db, stale.shopId, stale.personId, now)) {
+  if (await hasLivePersonWaiverRequest(db, stale.shopId, stale.personId, now)) {
     return "current_link_live";
   }
-  // The send is pinned to the person the stale link was issued to, so a seat
-  // that changed hands since the read above sends nothing (security review S1).
-  const outcome = stale.bookingId
-    ? await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId, {
-        now,
-        expectedPersonId: stale.personId,
-      })
-    : await issueAndDeliverPersonWaiver(db, stale.shopId, stale.personId, { now });
+  const outcome = await issueAndDeliverPersonWaiver(db, stale.shopId, stale.personId, {
+    now,
+    keepLiveLink: true,
+  });
   if (!outcome.ok) return outcome.reason === "already_completed" ? "already_signed" : "unavailable";
   if (outcome.delivery === "sent") return "sent";
   if (outcome.delivery === "no_email") return "no_email";
   // Issued, but nothing left the building — an unconfigured provider, a
   // rejected recipient, a provider error. Never claim mail is on its way.
   return "failed";
-}
-
-/** The seat is held and its departure still scheduled. */
-async function seatStillSails(db: DbExecutor, shopId: string, bookingId: string) {
-  const [seat] = await db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
-    .where(
-      and(
-        eq(bookings.id, bookingId),
-        eq(bookings.shopId, shopId),
-        seatNotCancelled,
-        liveTrip(),
-        eq(trips.status, "scheduled"),
-      ),
-    )
-    .limit(1);
-  return Boolean(seat);
 }
 
 export type WaiverBatchFallbackLink = {
@@ -1190,7 +1219,13 @@ export type WaiverBatchOutcome = {
 export async function deliverWaiverBatch(
   db: AppDb,
   shopId: string,
-  input: { bookingIds: string[]; personId?: string; channel: WaiverSendChannel },
+  input: {
+    bookingIds: string[];
+    personId?: string;
+    channel: WaiverSendChannel;
+    /** The staffer sending; Copy link on a release with no seat needs one. */
+    actorPersonId?: string | null;
+  },
 ): Promise<WaiverBatchOutcome> {
   const outcome: WaiverBatchOutcome = {
     channel: input.channel,
@@ -1208,6 +1243,7 @@ export async function deliverWaiverBatch(
       target.kind === "person"
         ? await issueAndDeliverPersonWaiver(db, shopId, target.personId, {
             channel: input.channel,
+            actorPersonId: input.actorPersonId,
           })
         : await issueAndDeliverWaiver(db, shopId, target.bookingId, { channel: input.channel });
     if (!result.ok) {

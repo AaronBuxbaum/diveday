@@ -214,7 +214,7 @@ describe("self-registration", () => {
     // Sign the release the registration issued.
     const issued = await issueWaiverRequest(db, { shopId: shop.id, personId, now });
     const token = issued.ok
-      ? issued.token
+      ? issued.key
       : (() => {
           throw new Error("expected the registration's own pending link to be reusable");
         })();
@@ -283,7 +283,7 @@ describe("self-registration", () => {
     await deliverSelfRegistrationWaiver(db, { shopId: shop.id, personId, now });
     const issued = await issueWaiverRequest(db, { shopId: shop.id, personId, now });
     if (!issued.ok) throw new Error("expected the registration's own pending link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: "Ines Oyelaran",
       agreed: true,
       medicalAnswers: referralAnswers,
@@ -297,7 +297,7 @@ describe("self-registration", () => {
     expect(record.status).toBe("medical_review");
     // And the token still resolves for the diver themselves, so nothing about
     // the block reaches them as a refusal.
-    expect(await getWaiverForToken(db, issued.token, now)).not.toEqual({ state: "unavailable" });
+    expect(await getWaiverForToken(db, issued.key, now)).not.toEqual({ state: "unavailable" });
   });
 
   it("survives a shop with no waiver template rather than losing the diver", async () => {

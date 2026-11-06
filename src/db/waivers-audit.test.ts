@@ -113,8 +113,6 @@ describe("listWaiverIntegrityAudit search and views", () => {
         templateVersion: template.version,
         templateBody: template.body,
         status: "completed",
-        tokenHash: `imported-${fullName}`,
-        expiresAt: now,
         signedAt: now,
         importedFromLabel: "Prior shop system",
       })
@@ -190,7 +188,7 @@ describe("listWaiverIntegrityAudit search and views", () => {
     const { db, shop, booking, person } = ctx;
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-    const done = await completeWaiver(db, issued.token, {
+    const done = await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -221,7 +219,7 @@ describe("listWaiverIntegrityAudit search and views", () => {
     const { db, person, shop, booking } = ctx;
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -260,8 +258,6 @@ describe("listWaiverIntegrityAudit search and views", () => {
         status: "medical_review",
         medicalReviewRequired: true,
         medicalAnswers: null,
-        tokenHash: `held-${fullName}`,
-        expiresAt: now,
         signedAt: now,
         ...(outcome === "cleared"
           ? { ...answered, medicalClearedAt: now, medicalClearedByPersonId: diver.id }
@@ -358,7 +354,7 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
     const { db, person, shop, trip, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    const outcome = await completeWaiver(db, issued.token, {
+    const outcome = await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -399,7 +395,7 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
       now,
     });
     if (!cleanIssued.ok) throw new Error("expected a second waiver link");
-    await completeWaiver(db2, cleanIssued.token, {
+    await completeWaiver(db2, cleanIssued.key, {
       signerName: person2.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -426,8 +422,6 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
       templateVersion: template.version,
       templateBody: template.body,
       status: "completed",
-      tokenHash: "imported-record-token-hash",
-      expiresAt: now,
       signedAt: now,
       importedFromLabel: "Prior shop system",
     });
@@ -467,8 +461,6 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
         templateVersion: rivalTemplate.version,
         templateBody: rivalTemplate.body,
         status: "completed",
-        tokenHash: "rival-record-token-hash",
-        expiresAt: now,
         signedAt: now,
       })
       .returning();
@@ -524,7 +516,7 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
     const { db, person, shop, trip, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -571,7 +563,7 @@ describe("signed waivers after a diver is erased", () => {
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
     if (options.completeIt) {
-      const done = await completeWaiver(db, issued.token, {
+      const done = await completeWaiver(db, issued.key, {
         signerName: person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -663,7 +655,7 @@ describe("signed waivers after a diver is erased", () => {
     // The token was never revealed to anyone but the fixture, and it is now
     // dead: the stored hash no longer matches it, and the record is expired
     // and superseded besides.
-    expect(await getWaiverForToken(db, issued.token, now)).toEqual({ state: "unavailable" });
+    expect(await getWaiverForToken(db, issued.key, now)).toEqual({ state: "unavailable" });
     const [record] = await db
       .select()
       .from(waiverRecords)
@@ -678,7 +670,7 @@ describe("signed waivers after a diver is erased", () => {
 
   it("cannot complete an erased diver's waiver even with the original token", async () => {
     const { db, person, issued } = await erasedContext({ completeIt: false });
-    const attempt = await completeWaiver(db, issued.token, {
+    const attempt = await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -717,7 +709,7 @@ describe("listSignedWaiversByPerson with superseded clean signatures", () => {
     const { db, shop, booking, person } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -765,7 +757,7 @@ describe("listSignedWaiversByPerson with superseded uncleared referrals", () => 
     const { db, shop, booking, person } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,

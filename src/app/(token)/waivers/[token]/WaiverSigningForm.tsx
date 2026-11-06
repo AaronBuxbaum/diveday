@@ -61,7 +61,7 @@ export async function waiverSigningForm({
   search,
   completeAction,
   saveAction,
-  showLinkExpiry,
+  linkExpiresAt,
   prefillMedical,
   backHref,
 }: {
@@ -73,8 +73,12 @@ export async function waiverSigningForm({
   search: WaiverFormSearch;
   completeAction: (formData: FormData) => Promise<void>;
   saveAction: (formData: FormData) => Promise<void>;
-  /** A waiver link runs out; the thread's release is reopened from the thread. */
-  showLinkExpiry: boolean;
+  /**
+   * When the link this form was opened through stops working: a release link's
+   * week. Null for the thread, which reopens its release itself, and for a
+   * counter link, whose half hour is one sitting at the shop.
+   */
+  linkExpiresAt: Date | null;
   /**
    * Whether the saved medical answers and alert fill the form. Off on a counter
    * QR unless this claimed code saved them itself (security review S2, dock
@@ -159,7 +163,7 @@ export async function waiverSigningForm({
   const signBlock = (
     <WaiverSignBlock
       saveAction={saveAction}
-      expiresAt={showLinkExpiry ? formatDateTimeTz(record.expiresAt, locale, shop.timezone) : null}
+      expiresAt={linkExpiresAt ? formatDateTimeTz(linkExpiresAt, locale, shop.timezone) : null}
       t={t}
     />
   );

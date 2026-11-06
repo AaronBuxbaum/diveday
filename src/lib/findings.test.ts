@@ -152,7 +152,6 @@ describe("calculateReadiness", () => {
     } as unknown as TripRequirement,
     waiver: {
       status: "completed",
-      expiresAt: new Date("2026-07-25T12:00:00.000Z"),
     } as WaiverRecord,
     certifications: [{ status: "verified", level: "advanced_open_water" } as Certification],
     participantType: "diver",

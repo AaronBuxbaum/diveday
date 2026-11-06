@@ -121,8 +121,6 @@ async function signedRelease(
       status: "completed",
       signedName,
       signatureMethod: "typed",
-      tokenHash: `hash-${crypto.randomUUID()}`,
-      expiresAt: signedAt,
       consentedAt: signedAt,
       signedAt,
       completedAt: signedAt,

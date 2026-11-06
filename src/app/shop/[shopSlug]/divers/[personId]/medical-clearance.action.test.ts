@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { recordDiverActivity } from "@/db/operations";
 import { waiverRecords } from "@/db/schema";
 import { completeWaiver } from "@/db/waivers-completion";
-import { attachDiverMedicalForm } from "@/db/waivers-medical";
+import { attachDiverMedicalForm, contactOnFile } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import { clearAnswers, waiverContextFor } from "@/db/waivers-test-fixtures";
 import { DAY_MS, nowMs } from "@/lib/clock";
@@ -67,7 +67,7 @@ async function reSignedDiver() {
     now: first,
   });
   if (!issued.ok) throw new Error("expected a waiver link");
-  await completeWaiver(db, issued.token, {
+  await completeWaiver(db, issued.key, {
     signerName: person.fullName,
     agreed: true,
     medicalAnswers: referral,
@@ -75,7 +75,7 @@ async function reSignedDiver() {
   });
   const again = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id, now: second });
   if (!again.ok) throw new Error("expected a fresh link");
-  await completeWaiver(db, again.token, {
+  await completeWaiver(db, again.key, {
     signerName: person.fullName,
     agreed: true,
     medicalAnswers: referral,
@@ -138,7 +138,7 @@ describe("recording with the form the diver sent", () => {
       now: signedAt,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: person.fullName,
       agreed: true,
       medicalAnswers: referral,
@@ -152,7 +152,15 @@ describe("recording with the form the diver sent", () => {
       );
     if (!record) throw new Error("expected the held release");
     const url = "https://media.example.com/medical-clearances/sent.jpg";
-    expect(await attachDiverMedicalForm(db, record, url, new Date(nowMs() - DAY_MS))).toBe("sent");
+    expect(
+      await attachDiverMedicalForm(
+        db,
+        record,
+        url,
+        await contactOnFile(db, record),
+        new Date(nowMs() - DAY_MS),
+      ),
+    ).toBe("sent");
     return { ...context, record, url };
   }
 

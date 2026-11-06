@@ -536,7 +536,7 @@ describe("counterRentalWaiverStandings", () => {
       now: new Date(t0),
     });
     if (!first.ok) throw new Error(`link refused: ${first.reason}`);
-    await completeWaiver(db, first.token, {
+    await completeWaiver(db, first.key, {
       signerName: "Rafa Referred",
       agreed: true,
       medicalAnswers: referral,
@@ -564,7 +564,7 @@ describe("counterRentalWaiverStandings", () => {
       now: new Date(t0 + 120_000),
     });
     if (!fresh.ok) throw new Error(`fresh link refused: ${fresh.reason}`);
-    await completeWaiver(db, fresh.token, {
+    await completeWaiver(db, fresh.key, {
       signerName: "Rafa Referred",
       agreed: true,
       medicalAnswers: clear,

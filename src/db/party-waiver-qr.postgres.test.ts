@@ -6,7 +6,7 @@ import { raceShop } from "@/test/postgres-shop";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { issuePartyWaiver } from "./party-waiver-queue";
 import { bookings, people, tripRequirements, trips, waiverRecords } from "./schema";
-import { completeWaiver, getWaiverForToken, recordWaiverDraft } from "./waivers-completion";
+import { completeWaiver, recordWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
 import { clearAnswers } from "./waivers-test-fixtures";
@@ -84,27 +84,8 @@ async function updateAndHold(
 }
 
 describePostgres("counter waiver locking", () => {
-  it("does not revive a waiver that expired while issuance waited", async () => {
-    const f = await fixture();
-    const gate = await updateAndHold(f.pg, async (tx) => {
-      await tx
-        .update(waiverRecords)
-        .set({ expiresAt: new Date(nowDate().getTime() - 1000) })
-        .where(eq(waiverRecords.id, f.issued.recordId));
-    });
-    const next = issueWaiverRequest(f.pg.connect(), { shopId: f.shop.id, bookingId: f.booking.id });
-    try {
-      await waitForLockWaiters(f.pg.db, 1);
-    } finally {
-      await gate.release();
-    }
-    const result = await next;
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.token).not.toBe(f.issued.token);
-    expect(await getWaiverForToken(f.pg.db, f.issued.token)).toEqual({ state: "unavailable" });
-  });
   it.each(["sign", "draft"] as const)(
-    "refuses %s and contact after the token is superseded while waiting",
+    "refuses %s and contact after the release is superseded while waiting",
     async (operation) => {
       const f = await fixture();
       const gate = await updateAndHold(f.pg, async (tx) => {
@@ -115,13 +96,13 @@ describePostgres("counter waiver locking", () => {
       });
       const action =
         operation === "sign"
-          ? completeWaiver(f.pg.connect(), f.issued.token, {
+          ? completeWaiver(f.pg.connect(), f.issued.key, {
               signerName: "Alex Lagoon",
               agreed: true,
               medicalAnswers: clearAnswers,
               emergencyContact: { name: "Jordan", phone: "1234567890" },
             })
-          : recordWaiverDraft(f.pg.connect(), f.issued.token, {
+          : recordWaiverDraft(f.pg.connect(), f.issued.key, {
               acknowledged: true,
               medicalAnswers: clearAnswers,
               emergencyContact: { name: "Jordan", phone: "1234567890" },
@@ -143,41 +124,6 @@ describePostgres("counter waiver locking", () => {
       expect(record?.draftAcknowledged).not.toBe(true);
     },
   );
-  it.each(["sign", "draft"] as const)(
-    "refuses %s and contact after expiry while waiting",
-    async (operation) => {
-      const f = await fixture();
-      const gate = await updateAndHold(f.pg, async (tx) => {
-        await tx
-          .update(waiverRecords)
-          .set({ expiresAt: new Date(nowDate().getTime() - 1000) })
-          .where(eq(waiverRecords.id, f.issued.recordId));
-      });
-      const action =
-        operation === "sign"
-          ? completeWaiver(f.pg.connect(), f.issued.token, {
-              signerName: "Alex Lagoon",
-              agreed: true,
-              medicalAnswers: clearAnswers,
-              emergencyContact: { name: "Jordan", phone: "1234567890" },
-            })
-          : recordWaiverDraft(f.pg.connect(), f.issued.token, {
-              acknowledged: true,
-              medicalAnswers: clearAnswers,
-              emergencyContact: { name: "Jordan", phone: "1234567890" },
-            });
-      try {
-        await waitForLockWaiters(f.pg.db, 1);
-      } finally {
-        await gate.release();
-      }
-      const result = await action;
-      if (operation === "sign") expect(result).toEqual({ ok: false, reason: "expired" });
-      else expect(result).toBe(false);
-      const [person] = await f.pg.db.select().from(people).where(eq(people.id, f.person.id));
-      expect(person?.emergencyContactName).toBeNull();
-    },
-  );
   it.each([
     ["guardian", { minorDeclaredAt: nowDate() }],
     ["held", { identityUnconfirmedAt: nowDate() }],
@@ -186,7 +132,7 @@ describePostgres("counter waiver locking", () => {
     const gate = await updateAndHold(f.pg, async (tx) => {
       await tx.update(bookings).set(patch).where(eq(bookings.id, f.booking.id));
     });
-    const action = completeWaiver(f.pg.connect(), f.issued.token, {
+    const action = completeWaiver(f.pg.connect(), f.issued.key, {
       signerName: "Alex Lagoon",
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -249,12 +195,12 @@ describePostgres("counter waiver locking", () => {
       await waitForLockWaiters(f.pg.db, 1);
       const write =
         operation === "sign"
-          ? completeWaiver(f.pg.connect(), f.issued.token, {
+          ? completeWaiver(f.pg.connect(), f.issued.key, {
               signerName: "Alex Lagoon",
               agreed: true,
               medicalAnswers: clearAnswers,
             })
-          : recordWaiverDraft(f.pg.connect(), f.issued.token, {
+          : recordWaiverDraft(f.pg.connect(), f.issued.key, {
               acknowledged: true,
               medicalAnswers: clearAnswers,
             });
@@ -265,7 +211,7 @@ describePostgres("counter waiver locking", () => {
       }
       const replacement = await issuance;
       expect(replacement.ok).toBe(true);
-      if (replacement.ok) expect(replacement.token).not.toBe(f.issued.token);
+      if (replacement.ok) expect(replacement.key).not.toBe(f.issued.key);
       const outcome = await write;
       if (operation === "sign") expect(outcome).toMatchObject({ ok: false });
       else expect(outcome).toBe(false);
@@ -280,7 +226,7 @@ describePostgres("counter waiver locking", () => {
         .set({ anonymizedAt: nowDate(), deletedAt: nowDate() })
         .where(eq(people.id, f.person.id));
     });
-    const action = completeWaiver(f.pg.connect(), f.issued.token, {
+    const action = completeWaiver(f.pg.connect(), f.issued.key, {
       signerName: "Alex Lagoon",
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -298,7 +244,7 @@ describePostgres("counter waiver locking", () => {
       f.pg,
       sql`select id from bookings where id = ${f.booking.id} for update`,
     );
-    const action = completeWaiver(f.pg.connect(), f.issued.token, {
+    const action = completeWaiver(f.pg.connect(), f.issued.key, {
       signerName: "Alex Lagoon",
       agreed: true,
       medicalAnswers: clearAnswers,

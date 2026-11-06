@@ -164,7 +164,7 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: entry.booking.id });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: entry.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -189,7 +189,7 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: entry.booking.id });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: entry.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -353,7 +353,7 @@ describe("today's work queue (in-memory PGlite)", () => {
       // Not every seat needs one — a diver the seed already has signed is
       // refused a second link, and that is the state we want anyway.
       if (!issued.ok) continue;
-      await completeWaiver(db, issued.token, {
+      await completeWaiver(db, issued.key, {
         signerName: entry.person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -434,7 +434,7 @@ describe("today's work queue (in-memory PGlite)", () => {
       bookingId: blockedEntry.booking.id,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: blockedEntry.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -538,7 +538,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     // (same setup as the "counts a boarded diver" test above).
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: entry.booking.id });
     if (!issued.ok) throw new Error("expected a waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: entry.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,

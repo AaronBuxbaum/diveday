@@ -116,18 +116,16 @@ describe("what this slice was forbidden to touch", () => {
 /**
  * **A held seat's link names nobody** (issue #2125). The signer hint is the
  * matched person's full name and the guardian section says whether they are a
- * minor, so the held state returns before either is read.
+ * minor, so no key reaches a held seat's release and the thread redirects
+ * before either is read.
  */
 describe("a held seat's release", () => {
-  it("returns its held card before the signer on file is read", () => {
-    // The signer is read only inside the form. The waiver link returns the held
-    // card before it draws it; the thread has no key on a held seat at all and
+  it("draws no form before the signer on file is read", () => {
+    // The signer is read only inside the form. No key reaches a held seat's
+    // release (`getWaiverForToken` answers it as unavailable), and the thread
     // redirects every state but "available" and "completed" before the form.
     expect(FORM).toContain("getWaiverSignerOnFile(");
     expect(FORM).toContain("guardianSignatureRequired(");
-    const held = SOURCE.indexOf('state.state === "held"');
-    expect(held).toBeGreaterThan(-1);
-    expect(held).toBeLessThan(SOURCE.indexOf("waiverSigningForm({"));
     const gate = THREAD.indexOf('state.state !== "available" && state.state !== "completed"');
     expect(gate).toBeGreaterThan(-1);
     expect(gate).toBeLessThan(THREAD.indexOf("waiverSigningForm({"));

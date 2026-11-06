@@ -32,14 +32,14 @@ async function referral() {
   const { db, shop, booking, person } = ctx;
   const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
   if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-  const done = await completeWaiver(db, issued.token, {
+  const done = await completeWaiver(db, issued.key, {
     signerName: person.fullName,
     agreed: true,
     medicalAnswers: medicalReferralAnswers,
   });
   if (!done.ok) throw new Error("completion failed");
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
-  return { ...ctx, owner, token: issued.token, recordId: issued.recordId };
+  return { ...ctx, owner, token: issued.key, recordId: issued.recordId };
 }
 
 /** The forgery: a clearance stamp with the seal the desk would have written missing. */

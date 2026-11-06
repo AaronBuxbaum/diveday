@@ -16,7 +16,6 @@ const REMINDER_ACTION_KEYS: Record<ReminderActionCode, DiverMessageKey> = {
   // ignores that reads as the shop not having noticed. The fresh link lives one
   // tap away on the readiness page the same message links to — never in the
   // reminder itself (see `REMINDER_ACTION_CODES`).
-  waiver_expired: "notifications.reminderAction.waiverExpired",
   waiver_lapsed: "notifications.reminderAction.waiverLapsed",
   waiver_runs_out: "notifications.reminderAction.waiverRunsOut",
   course_form_unsigned: "notifications.reminderAction.courseFormUnsigned",

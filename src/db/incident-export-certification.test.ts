@@ -84,7 +84,7 @@ describe("departure-log certification captures", () => {
     });
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: first.booking.id });
     if (!issued.ok) throw new Error("expected waiver link");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: first.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -301,7 +301,7 @@ describe("departure-log certification captures", () => {
     ).toMatchObject({ ok: true });
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: first.booking.id });
     if (!issued.ok) throw new Error("waiver missing");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: first.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -376,7 +376,7 @@ describe("departure-log certification captures", () => {
     });
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: first.booking.id });
     if (!issued.ok) throw new Error("waiver missing");
-    await completeWaiver(db, issued.token, {
+    await completeWaiver(db, issued.key, {
       signerName: first.person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,

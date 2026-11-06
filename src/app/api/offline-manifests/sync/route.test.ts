@@ -769,7 +769,7 @@ describe("POST /api/offline-manifests/sync — queued arrivals", () => {
       bookingId: row.booking.id,
     });
     if (!issued.ok) throw new Error("waiver request refused");
-    await completeWaiver(ctx.db, issued.token, {
+    await completeWaiver(ctx.db, issued.key, {
       signerName: row.person.fullName,
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

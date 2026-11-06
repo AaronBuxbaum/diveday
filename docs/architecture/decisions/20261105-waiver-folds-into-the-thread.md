@@ -1,9 +1,10 @@
 # 20261105-waiver-folds-into-the-thread — Hand a seat's release over as its thread link
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-11-06** (issue #3983, layer 6)
 - **Date:** 2026-11-05
 - **Decided by:** Aaron, 2026-11-05 on issue #2743 ("do it"), the full idea that
-  [20261103-waiver-signs-in-the-thread](20261103-waiver-signs-in-the-thread.md) rejected.
+  [20261103-waiver-signs-in-the-thread](20261103-waiver-signs-in-the-thread.md) rejected; layer 6
+  by Aaron on issue #3983, 2026-11-06.
 
 ## Context
 
@@ -13,31 +14,27 @@ everything else. Issue #2743 asks for one credential per seat, and `waiver_recor
 
 ## Decision
 
-**A seat's release is handed over as the holder's thread link**, `readinessWaiverLinkPath` on the
-seat's delivered readiness capability, only ever to the holder's contact on file. A waiver link
-remains only for a release with no seat; a counter tablet gets its own capability.
+**A seat's release is handed over as the holder's thread link** (`readinessWaiverLinkPath`), only
+ever to the holder's contact on file. Every other release link is a capability.
 
-**Layer 1 (built): the booking confirmation** carries the Sign step on its own readiness link
-(`openJoinSignStep`, `openWaiverInThread`).
+1. **The booking confirmation** carries the Sign step on its readiness link (`openJoinSignStep`).
+2. **Every other send of a seat's release** goes through `deliverThreadLink`. No Copy link for a
+   seat (`thread_only`): it would put the whole readiness credential in a staff clipboard. A party
+   member gets a `party_waiver_link` door (#3986).
+3. **A party lead signs a minor's seat on their own link** (`partySeatWaiverKey`).
+4. **Counter tablets sign on a `waiver_link`**: 30 minutes, once, on the first phone to claim it.
+5. **`/waivers/<token>` refuses a seat's release** (`waiverLinkDoor`); the doctor's page is the
+   thread's.
+6. **A release with no seat signs on a capability too.** Signed, it covers every seat the diver
+   holds. Copy link mints a counter link, with the staffer on the diver's trail; email and text
+   mint a `release_link` (a week, the contact on file only, never returned to staff). Signing
+   spends it, a contact change revokes it, an erasure deletes it; a dead one lands on a rescue
+   that mails the address on file. The record carries no link and no clock. `token_hash` and
+   `expires_at` are undeclared for one release, dropped in the next.
 
-**Layer 2 (built): every other send of a seat's release** goes through `deliverThreadLink`. **No
-"Copy link" for a seat** (`thread_only`): a copied thread link would put the holder's whole
-readiness credential in a staff clipboard. A party member gets a `party_waiver_link` door (#3986).
+**A release holds one live door**: minting a `waiver_link`, `party_waiver_link` or `release_link`
+revokes the others (#4008).
 
-**Layer 3 (built): a party lead signs a minor's seat on their own link**,
-`/ready/<token>/party/<seat>/waiver`, keyed by `partySeatWaiverKey` (the panel's door, re-read on
-every act); `party-return.ts` and its cookie are deleted.
-
-**Layer 4 (built): counter tablets sign on a `waiver_link` capability**, a 30-minute once-use row
-naming the release (`waiver_record_id`), spent in the signing transaction. Only the first phone
-to claim it opens it, and a second signature is refused.
-
-**Layer 5 (built): `/waivers/<token>` refuses a seat's release** (`waiverLinkDoor`): no form,
-draft, receipt or doctor's page; its rescue mails the thread link. `/waivers/[token]/doctor` is
-deleted; the doctor's page is the thread's.
-
-**Next:** bookingless releases move to `waiver_link`, and `waiver_records` drops `token_hash` and
-`expires_at`.
 ## Alternatives considered
 
 - **Drop the columns first.** Rejected: senders would mint a capability the next layer deletes.
@@ -47,13 +44,11 @@ deleted; the doctor's page is the thread's.
 
 ## Consequences
 
-- The Sign step lasts as long as the readiness link and states no expiry. A record opened for the
-  thread carries that link's expiry (`capabilityExpiryFor`). Keeping a waiver link a staffer already
-  sent lengthens it to the same bound until the columns go.
+- The Sign step lasts as long as the readiness link; the record has no clock of its own.
 - **Authority.** The Sign step runs on the whole readiness capability, which also pays, cancels,
-  moves and adds seats until the trip ends plus its grace. Forwarding the mail forwards all of
-  that. Accepted for the holder's own seat (security review, S1).
-- A seat with no email or textable number, or on a rehearsal, is signed at the counter or on paper.
-- A counter link dies on a merge, a holder change or a new QR; staff show a fresh one.
-- `openWaiverInThread` requires the holder and departure the caller read (S3); a confirmation
-  records the release as emailed only when it `carriedSignStep` (A2).
+  moves and adds seats until the trip ends plus its grace. Accepted for the holder's own seat
+  (security review, S1).
+- A seat with no email or textable number is signed at the counter or on paper.
+- A counter link dies on a merge, a holder change, a contact change or a new link; staff show a
+  fresh one. A failed email or text hands staff nothing: the way to a URL is Copy link.
+- A link only prefills the medical answers saved through itself.
