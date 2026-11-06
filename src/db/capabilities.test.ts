@@ -18,6 +18,7 @@ import {
   spendCapability,
   touchCapability,
   verifyCapability,
+  withdrawUnspentCapabilities,
 } from "./capabilities";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { mergeDiverRecords } from "./diver-merge";
@@ -794,5 +795,27 @@ describe("a reusable purpose", () => {
           .where(eq(capabilities.id, courtesy.id));
       }),
     ).rejects.toThrow();
+  });
+});
+
+/**
+ * **An empty name withdraws nothing** (security review of rda-3950, N2): an
+ * `only` or `except` of "" read as absent, so the call withdrew every unspent
+ * link of the purpose at the shop. It is refused instead.
+ */
+describe("withdrawUnspentCapabilities", () => {
+  it("refuses an empty only or except, and withdraws nothing", async () => {
+    const { db, shop } = ctx;
+    const token = await issueCapability(db, {
+      purpose: "bookkeeper_stop",
+      shopId: shop.id,
+      subjectId: ADDRESS,
+    });
+    for (const named of [{ only: "" }, { except: "" }]) {
+      await expect(
+        withdrawUnspentCapabilities(db, { purpose: "bookkeeper_stop", shopId: shop.id, ...named }),
+      ).rejects.toThrow();
+    }
+    expect(await verifyCapability(db, { purpose: "bookkeeper_stop", token })).not.toBeNull();
   });
 });

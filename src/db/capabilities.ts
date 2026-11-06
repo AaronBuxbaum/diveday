@@ -510,6 +510,11 @@ export async function withdrawUnspentCapabilities(
   db: DbExecutor,
   input: { purpose: CapabilityPurpose; shopId: string; except?: string; only?: string },
 ): Promise<number> {
+  // An empty name read as no name, and withdrew every link of the purpose
+  // (security review of rda-3950, N2).
+  if (input.only === "" || input.except === "") {
+    throw new Error("withdrawUnspentCapabilities: an empty link names nothing");
+  }
   const withdrawn = await db
     .delete(capabilities)
     .where(
@@ -517,8 +522,12 @@ export async function withdrawUnspentCapabilities(
         eq(capabilities.purpose, input.purpose),
         eq(capabilities.shopId, input.shopId),
         isNull(capabilities.usedAt),
-        input.except ? ne(capabilities.tokenHash, hashBearerToken(input.except)) : undefined,
-        input.only ? eq(capabilities.tokenHash, hashBearerToken(input.only)) : undefined,
+        input.except !== undefined
+          ? ne(capabilities.tokenHash, hashBearerToken(input.except))
+          : undefined,
+        input.only !== undefined
+          ? eq(capabilities.tokenHash, hashBearerToken(input.only))
+          : undefined,
       ),
     )
     .returning({ id: capabilities.id });
