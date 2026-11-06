@@ -1287,6 +1287,10 @@
     "counterClaimButton": "Open the waiver here",
     "counterElsewhereTitle": "This code is open on another phone",
     "counterElsewhereBody": "Ask the staff for a fresh code.",
+    "doorClaimTitle": "Sign your waiver on this device",
+    "doorClaimBody": "This link opens on one device only. Once it opens here, no other device can use it.",
+    "doorElsewhereTitle": "This link is open on another device",
+    "doorElsewhereBody": "Finish your waiver there, or ask the shop for help.",
     "counterAlreadySigned": "This waiver was already signed, so what you just entered was not saved. If an answer has changed, tell the staff.",
     "independentTitle": "Sign your waiver",
     "backToPrep": "Back to your trip prep"

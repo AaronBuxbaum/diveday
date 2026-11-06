@@ -49,6 +49,7 @@ export const CAPABILITY_PURPOSES = [
   "calendar_assignments",
   "calendar_shop_trips",
   "waiver_link",
+  "party_waiver_link",
 ] as const;
 
 export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
@@ -326,6 +327,22 @@ export const CAPABILITY_POLICY = {
     scope: "shop",
     lifetime: "expires",
     ttlMs: 30 * MINUTE_MS,
+    reissue: "supersedes",
+    per: "subject",
+    use: "once",
+    claim: "first_device",
+  },
+  // A party member's waiver-only door (issue #3986): the join email sends it
+  // to the address the lead typed for them, so it opens that seat's release
+  // and nothing else, never the member's readiness link (which pays, cancels
+  // and moves the seat). Opened on the first device that claims it, spent by
+  // the signature, and dead after two weeks or once the seat changes hands
+  // or the terms change, as the counter link is.
+  party_waiver_link: {
+    subject: "waiver_record",
+    scope: "shop",
+    lifetime: "expires",
+    ttlMs: 14 * DAY_MS,
     reissue: "supersedes",
     per: "subject",
     use: "once",

@@ -22,6 +22,10 @@ export async function keepCounterDevice(token: string, device: string): Promise<
     secure: runtimeMode().secureCookies,
     sameSite: "lax",
     path: `/waivers/${token}`,
-    maxAge: CAPABILITY_POLICY.waiver_link.ttlMs / 1000,
+    // The longer of the two doors' lives (a counter QR, a party member's
+    // emailed door); the link's own expiry still decides what opens.
+    maxAge:
+      Math.max(CAPABILITY_POLICY.waiver_link.ttlMs, CAPABILITY_POLICY.party_waiver_link.ttlMs) /
+      1000,
   });
 }

@@ -170,6 +170,14 @@
   readiness authority and opens no doctor's page; it dies when the seat changes hands or the
   release is superseded (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
+  A minor's code is shown only after the staffer confirms a parent or guardian is present to
+  co-sign, and that confirmation is on the minor's trail too.
+- **Party waiver door** — what a party member's join email carries in place of a thread link,
+  because the lead typed the address: a `party_waiver_link` row in `capabilities` naming the
+  member's release, alive two weeks. It opens on `/waivers/<token>` by the **counter link**'s rules
+  and grants nothing else. A release has one live door, so a counter code replaces it. A minor
+  member gets no door: the lead signs that seat on their own link, or the desk does with a guardian
+  present (issue #3986).
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the
   bargain, and therefore that standing signatures no longer cover it
   (`waiver_materiality_decisions`, ADR

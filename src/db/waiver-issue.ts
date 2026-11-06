@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { courseFormsLinkPath, readinessWaiverLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
+import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { log } from "@/lib/log";
 import {
   type NotificationProvider,
@@ -12,6 +13,7 @@ import {
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
 import { hasLiveDeliveredReadinessLink, issueBookingCapability } from "./booking-capabilities";
+import { mintCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { getCourseFormsForBooking } from "./course-forms";
 import {
@@ -642,6 +644,161 @@ export async function issueWaiverOnJoin(
 ): Promise<IssueAndDeliverWaiverResult | null> {
   if (!(await joinWaiverOwed(db, shopId, bookingId))) return null;
   return issueAndDeliverWaiver(db, shopId, bookingId, identity);
+}
+
+/**
+ * **A party member's release, sent as a waiver-only door** (issue #3986,
+ * decision 2026-11-06). The lead typed this member's address, so what goes to
+ * it opens the member's own release and nothing else: a `party_waiver_link`
+ * (`/waivers/<token>`), never the seat's readiness link, which also pays,
+ * cancels and moves the seat. Owed by the same rule as `issueWaiverOnJoin`;
+ * email only, and nothing on a rehearsal. The token never comes back to the
+ * caller. Null when nothing is owed. A minor's seat gets no door at all
+ * (`thread_only`): their release needs a guardian the address cannot prove.
+ */
+export async function issuePartyMemberWaiverOnJoin(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  identity: { expectedPersonId?: string; expectedTripId?: string } = {},
+): Promise<IssueAndDeliverWaiverResult | null> {
+  if (!(await joinWaiverOwed(db, shopId, bookingId))) return null;
+  const [observed] = await db
+    .select({ person: people, trip: trips })
+    .from(bookings)
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
+    .limit(1);
+  if (
+    !observed ||
+    (identity.expectedPersonId && observed.person.id !== identity.expectedPersonId) ||
+    (identity.expectedTripId && observed.trip.id !== identity.expectedTripId)
+  ) {
+    return { ok: false, bookingId, diverName: null, reason: "error" };
+  }
+  const fenced = await withErasureCoordinatedBookingSend<IssueAndDeliverWaiverResult | null>(
+    db,
+    {
+      shopId,
+      bookingId,
+      expectedPersonId: observed.person.id,
+      expectedTripId: observed.trip.id,
+      expectedEmail: observed.person.email,
+      expectedPhone: observed.person.phone,
+    },
+    async (tx) => {
+      const [ctx] = await tx
+        .select({
+          person: people,
+          trip: trips,
+          shop: shops,
+          minorDeclaredAt: bookings.minorDeclaredAt,
+        })
+        .from(bookings)
+        .innerJoin(
+          people,
+          and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)),
+        )
+        .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+        .innerJoin(shops, eq(shops.id, bookings.shopId))
+        .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
+        .limit(1);
+      if (!ctx) return null;
+      // A minor's release needs a parent or legal guardian, and whoever reads
+      // this address could type both names. No door goes: the lead signs the
+      // seat on their own link (`partySeatWaiverKey`), or the desk does with a
+      // guardian present (issue #3986 reviews).
+      if (
+        guardianSignatureRequired(
+          ctx.person.dateOfBirth,
+          signingDate(nowDate(), ctx.shop.timezone),
+          ctx.minorDeclaredAt !== null,
+        )
+      ) {
+        return {
+          ok: true,
+          bookingId,
+          diverName: ctx.person.fullName,
+          token: null,
+          delivery: "thread_only",
+        };
+      }
+      const opened = await openWaiverInThread(tx, {
+        shopId,
+        bookingId,
+        expectedPersonId: observed.person.id,
+        expectedTripId: observed.trip.id,
+      });
+      if (!opened.ok) {
+        return {
+          ok: false,
+          bookingId,
+          diverName: ctx.person.fullName,
+          reason: opened.reason === "already_completed" ? "already_completed" : "error",
+        };
+      }
+      const record = async (delivery: WaiverDelivery, providerMessageId?: string) => {
+        await recordWaiverDelivery(tx, {
+          shopId,
+          waiverRecordId: opened.recordId,
+          channel: "email",
+          delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
+        });
+        return {
+          ok: true as const,
+          bookingId,
+          diverName: ctx.person.fullName,
+          token: null,
+          delivery,
+        };
+      };
+      // A rehearsal sends nothing (ADR 20261012-rehearsal-departures): the
+      // member signs at the counter, as a seat with no address does.
+      if (ctx.trip.isRehearsal) {
+        return {
+          ok: true,
+          bookingId,
+          diverName: ctx.person.fullName,
+          token: null,
+          delivery: "thread_only",
+        };
+      }
+      const origin = publicAppUrl();
+      if (!origin) return record("no_app_origin");
+      const email = ctx.person.email;
+      if (!email) return record("no_email");
+      const door = await mintCapability(tx, {
+        purpose: "party_waiver_link",
+        shopId,
+        subjectId: opened.recordId,
+      });
+      if (!door.expiresAt) throw new Error("party_waiver_link minted without an expiry");
+      const mailed = await sendAndRecordNotification(
+        tx,
+        {
+          kind: "waiver_request",
+          waiverRecordId: opened.recordId,
+          bookingId,
+          shopId,
+          to: email,
+          locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
+          diverName: ctx.person.fullName,
+          shopName: ctx.shop.name,
+          tripTitle: ctx.trip.title,
+          completionUrl: new URL(`/waivers/${door.token}`, `${origin}/`).toString(),
+          expiresAt: door.expiresAt,
+          timezone: ctx.shop.timezone,
+        },
+        { signal: notificationProviderSignal() },
+      );
+      return record(
+        emailDelivery(mailed),
+        mailed.status === "sent" ? mailed.providerMessageId : undefined,
+      );
+    },
+  );
+  return fenced ?? { ok: false, bookingId, diverName: null, reason: "error" };
 }
 
 /**

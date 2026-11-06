@@ -30,6 +30,7 @@ describe("party waiver QR action", () => {
       bookingId,
       actorPersonId: "staffer",
       replace: false,
+      guardianPresent: false,
     });
     expect(result).toMatchObject({
       ok: true,
@@ -54,6 +55,22 @@ describe("party waiver QR action", () => {
     expect(issuePartyWaiver).toHaveBeenLastCalledWith(
       expect.anything(),
       expect.objectContaining({ replace: true }),
+    );
+    // A minor's code waits on the desk; only a literal `true` says a guardian is here (#3986).
+    vi.mocked(issuePartyWaiver).mockResolvedValue({ guardianCheck: true } as never);
+    expect(await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId)).toEqual({
+      ok: false,
+      guardianCheck: true,
+    });
+    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, false, "true");
+    expect(issuePartyWaiver).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ guardianPresent: false }),
+    );
+    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, false, true);
+    expect(issuePartyWaiver).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ guardianPresent: true }),
     );
     vi.mocked(issuePartyWaiver).mockResolvedValue(null);
     expect(await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId)).toEqual({
