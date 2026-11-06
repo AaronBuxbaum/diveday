@@ -3,10 +3,11 @@ import { CAPABILITY_POLICY } from "@/lib/capabilities";
 import { runtimeMode } from "@/lib/runtime-mode";
 
 /**
- * **The phone a counter link opened on** (attacker review S1). The first phone
- * to open a counter QR claims it (`claimCounterLink`) and keeps the secret in
- * this cookie, scoped to that one link's path, so the same phone can reload and
- * no other phone opens it. HttpOnly: no script on the page ever reads it.
+ * **The phone a counter link was saved on** (issue #4064). Any phone opens a
+ * counter QR; the first to save a step through it claims it
+ * (`claimCounterLink`) and keeps the secret in this cookie, scoped to that one
+ * link's path, so only that phone is shown the medical answers it saved.
+ * HttpOnly: no script on the page ever reads it.
  */
 const COUNTER_DEVICE_COOKIE = "diveday_counter_device";
 

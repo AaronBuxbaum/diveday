@@ -23,7 +23,7 @@ ever to the holder's contact on file. Every other release link is a capability.
    adult party member's address gets the normal links; a minor's the lead typed gets none
    (#4003; door retired 2026-11-06, ux-over-hardening).
 3. **A party lead signs a minor's seat on their own link** (`partySeatWaiverKey`).
-4. **Counter tablets sign on a `waiver_link`**: 30 minutes, once, on the first phone to claim it.
+4. **Counter tablets sign on a `waiver_link`**: to the end of the departure day, once, on any phone (#4064).
    A minor signs only on a code the desk vouched a guardian for (#4003, #4019).
 5. **`/waivers/<token>` refuses a seat's release** (`waiverLinkDoor`).
 6. **A release with no seat signs on a capability too.** Signed, it covers every seat the diver

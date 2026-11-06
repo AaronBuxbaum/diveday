@@ -165,10 +165,11 @@
 - **Counter link** — the QR a staffer shows on a party's waiver panel, or on the one-seat queue of
   a solo seat with no email and no textable number (issue #3984), so one diver signs their own
   seat's release, scanned with any phone, or the URL Copy link hands staff for a release with no
-  seat (issue #3983): a `waiver_link` row in `capabilities` naming that release, alive 30 minutes
-  and spent by the signature; the form says the time left and saves each step (issue #3985),
-  and a closed one asks the staff for a fresh code. It opens on the first phone that claims it
-  and no other, shows only the medical answers saved through that same code, refuses a second
+  seat (issue #3983): a `waiver_link` row in `capabilities` naming that release, alive to the end
+  of the departure day (or of the day it was copied) and spent by the signature (issue #4064); the
+  form says the time left in its last hour and saves each step (issue #3985), and a closed one
+  asks the staff for a fresh code. It opens on any phone, shows the medical answers saved
+  through that same code only on the phone that saved them, refuses a second
   signature, and its mint is a line on the diver's trail naming the staffer. It carries no
   readiness authority and opens no doctor's page; a fresh code leaves an earlier one working, and
   it dies when the seat changes hands or the release is superseded. A minor signs on it only when the desk confirmed a guardian is there

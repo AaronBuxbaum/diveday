@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureMissing, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { hasReturned } from "@/lib/trips";
+import { endOfLocalDay } from "@/lib/zoned";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { mintCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
@@ -141,11 +142,11 @@ export async function getPartyWaiverQueue(
  * 20261105-waiver-folds-into-the-thread). Locks the live departure and both
  * party seats, opens the seat's release the way its thread does
  * (`openWaiverInThread`: a live record and its draft are kept), and mints a
- * `waiver_link` capability naming that release: half an hour, spent by the
- * signature, leaving any earlier counter link working. Nothing here reads or
+ * `waiver_link` capability naming that release: to the end of the departure
+ * day, on any phone (issue #4064), spent by the signature, leaving any earlier counter link working. Nothing here reads or
  * hands on the release's own waiver link or the seat's readiness link.
  *
- * The QR can sign as the diver from any phone that scans it first, so the
+ * The QR can sign as the diver from any phone that scans it, so the
  * staffer who showed it is written on the diver's trail in the same
  * transaction (security review S2); no trail line, no link.
  */
@@ -167,8 +168,9 @@ export async function issuePartyWaiver(
     return await db.transaction(async (tx) => {
       await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
       const [trip] = await tx
-        .select({ endsAt: trips.endsAt })
+        .select({ startsAt: trips.startsAt, endsAt: trips.endsAt, timezone: shops.timezone })
         .from(trips)
+        .innerJoin(shops, eq(shops.id, trips.shopId))
         .where(
           and(
             eq(trips.id, input.tripId),
@@ -215,12 +217,17 @@ export async function issuePartyWaiver(
         now: input.now,
       });
       if (!opened.ok) return null;
-      // A fresh code leaves any code already open on a phone working.
+      // A fresh code leaves any code already open on a phone working. It
+      // lasts to the end of the departure day (#4064); shown on a later day
+      // of a multi-day trip, to the end of that day.
+      const now = input.now ?? nowDate();
+      const day = trip.startsAt > now ? trip.startsAt : now;
       const link = await mintCapability(tx, {
         purpose: "waiver_link",
         shopId: input.shopId,
         subjectId: opened.recordId,
         now: input.now,
+        expiresAt: endOfLocalDay(day, trip.timezone),
       });
       // The waiver's own lock may also have waited past return. Roll the whole
       // issuance back instead of exposing or leaving a freshly minted link.

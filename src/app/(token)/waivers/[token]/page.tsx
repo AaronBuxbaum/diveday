@@ -20,13 +20,7 @@ import { completedMedicalState } from "./completed-medical-state";
 import { counterDevice } from "./counter-device";
 import { recordForDoor } from "./door-draft";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
-import {
-  CounterClaimCard,
-  CounterElsewhereCard,
-  ExpiredLink,
-  GuardianAtCounterCard,
-  UnavailableWaiverLink,
-} from "./WaiverDoorCards";
+import { ExpiredLink, GuardianAtCounterCard, UnavailableWaiverLink } from "./WaiverDoorCards";
 import { waiverSigningForm } from "./WaiverSigningForm";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -75,10 +69,6 @@ export default async function WaiverPage({
   // a release link mailed for a release with no seat (issue #3983). Nothing
   // else opens here: a seat's release is signed in its holder's thread.
   const door = await waiverLinkDoor(db, token, { device: await counterDevice() });
-  // A counter QR opens on the first phone that taps "open here", and on no
-  // other (attacker review S1).
-  if (door?.door === "counter_unclaimed") return <CounterClaimCard token={token} t={anonT} />;
-  if (door?.door === "counter_elsewhere") return <CounterElsewhereCard t={anonT} />;
   const state = door ? await getWaiverForToken(db, door.key) : { state: "unavailable" as const };
   const counter = door?.door === "counter";
 
@@ -173,17 +163,21 @@ export default async function WaiverPage({
     search: { saved, error, field, q, at },
     completeAction: completeWaiverAction.bind(null, token),
     saveAction: saveWaiverDraftAction.bind(null, token),
-    // A release link says how long it works; a counter link's half hour is
-    // one sitting at the shop.
+    // A release link says how long it works; a counter link lasts the day
+    // and says its time only in its last hour (issue #4064).
     linkExpiresAt: door?.door === "release" ? door.key.expiresAt : null,
     // The counter QR can be read by any camera, so it never shows the medical
     // answers the diver saved in their own thread (security review S2); it
-    // shows only what this claimed code saved, so a refused Sign or a Save
-    // never blanks the questionnaire on the phone that typed it (dock B1).
+    // shows only what this code saved, and only on the phone that saved it
+    // (issue #4064: any phone opens it), so a refused Sign or a Save never
+    // blanks the questionnaire on the phone that typed it (dock B1).
     // A release link likewise prefills only what was saved through itself:
     // never a counter phone's answers, and never an old link's (issue #3983).
-    prefillMedical: door !== null && state.record.draftViaLinkId === door.key.linkId,
-    // A counter QR's half hour, said on screen, and its answers saved on each
+    prefillMedical:
+      door !== null &&
+      (door.door !== "counter" || door.ownDevice) &&
+      state.record.draftViaLinkId === door.key.linkId,
+    // A counter QR's time left, said in its last hour, and its answers saved on each
     // step, so the record holds them when it runs out (issue #3985); a fresh
     // code never shows the medical answers saved through this one (S2).
     counter:

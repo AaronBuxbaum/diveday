@@ -47,6 +47,14 @@ describe("CounterAutosave", () => {
     );
   });
 
+  it("says nothing about time while the code has hours left (issue 4064)", () => {
+    renderForm(
+      vi.fn(async () => "saved" as const),
+      6 * 60,
+    );
+    expect(screen.getByTestId("counter-time-left").textContent).toBe("");
+  });
+
   it("saves the draft when focus leaves a step, and says it did", async () => {
     const action = vi.fn(async (_formData: FormData) => "saved" as const);
     const { container } = renderForm(action);

@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { DAY_MS, MINUTE_MS } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import type { NotificationProvider } from "@/lib/notifications";
@@ -25,8 +26,8 @@ import { openOnDevice, shopStaffer } from "./waivers-test-fixtures";
 /**
  * **A release with no seat, and the two links that open it** (issue #3983).
  * Once signed it covers every seat the diver holds, so its link is bounded the
- * way a seat's is: Copy link is a counter link (half an hour, the first phone
- * only), and an email or a text carries a week's release link that goes only
+ * way a seat's is: Copy link is a counter link (to the end of the day, any
+ * phone), and an email or a text carries a week's release link that goes only
  * to the contact on file and never comes back to staff.
  */
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
@@ -121,7 +122,7 @@ async function pendingRelease(personId: string) {
 }
 
 describe("Copy link on a release with no seat", () => {
-  it("mints a counter link: half an hour, the first phone only", async () => {
+  it("mints a counter link: to the end of the shop's day, on any phone (issue 4064)", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const person = await diver();
     const copied = await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
@@ -135,19 +136,19 @@ describe("Copy link on a release with no seat", () => {
     const record = await pendingRelease(person.id);
     const [link] = await linksTo(record.id);
     expect(link).toMatchObject({ purpose: "waiver_link", shopId: ctx.shop.id });
-    expect(link?.expiresAt?.getTime()).toBe(now.getTime() + 30 * MINUTE_MS);
+    if (!link?.expiresAt) throw new Error("counter link without expiry");
+    const tz = ctx.shop.timezone;
+    const today = calendarDateInTimezone(now, tz);
+    expect(calendarDateInTimezone(new Date(link.expiresAt.getTime() - 1), tz)).toBe(today);
+    expect(calendarDateInTimezone(link.expiresAt, tz)).toBe(shiftCalendarDate(today, 1));
 
-    // Not yet opened on any phone: it opens nothing until one claims it.
-    expect(await waiverLinkDoor(ctx.db, copied.token, { now })).toEqual({
-      door: "counter_unclaimed",
-    });
     const door = await openOnDevice(ctx.db, copied.token, now);
     if (door?.door !== "counter") throw new Error(`counter door expected, got ${door?.door}`);
     expect(door.key).toMatchObject({ bookingId: null, recordId: record.id });
-    // A second phone holding the same URL is turned away.
-    expect(await waiverLinkDoor(ctx.db, copied.token, { device: "another-phone", now })).toEqual({
-      door: "counter_elsewhere",
-    });
+    // A second phone holding the same URL opens it too.
+    expect(
+      await waiverLinkDoor(ctx.db, copied.token, { device: "another-phone", now }),
+    ).toMatchObject({ door: "counter" });
 
     expect(await completeWaiver(ctx.db, door.key, { ...signature(person.fullName), now })).toEqual({
       ok: true,
@@ -158,7 +159,7 @@ describe("Copy link on a release with no seat", () => {
     expect(spent?.usedAt).not.toBeNull();
   });
 
-  it("opens nothing after its half hour, and leaves no expired release behind", async () => {
+  it("opens nothing after its day, and leaves no expired release behind", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const person = await diver();
     const copied = await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
@@ -169,9 +170,9 @@ describe("Copy link on a release with no seat", () => {
     if (!copied.ok || !copied.token) throw new Error("copy link refused");
     const door = await openOnDevice(ctx.db, copied.token, now);
     if (door?.door !== "counter") throw new Error("counter door expected");
-    const later = new Date(now.getTime() + 31 * MINUTE_MS);
+    const later = new Date(now.getTime() + DAY_MS + MINUTE_MS);
     expect(await waiverLinkDoor(ctx.db, copied.token, { now: later })).toBeNull();
-    // The key made inside the half hour signs nothing after it.
+    // The key made inside the day signs nothing after it.
     expect(
       await completeWaiver(ctx.db, door.key, { ...signature(person.fullName), now: later }),
     ).toEqual({ ok: false, reason: "unavailable" });
@@ -346,7 +347,7 @@ describe("Email and text on a release with no seat", () => {
     });
     if (!copied.ok || !copied.token) throw new Error("copy link refused");
     expect((await waiverLinkDoor(ctx.db, first, { now }))?.door).toBe("release");
-    expect((await waiverLinkDoor(ctx.db, copied.token, { now }))?.door).toBe("counter_unclaimed");
+    expect((await waiverLinkDoor(ctx.db, copied.token, { now }))?.door).toBe("counter");
 
     // Signing through the first link closes every other door to the release.
     expect(
@@ -444,9 +445,9 @@ describe("what a release link never opens", () => {
       now,
     });
     if (!copied.ok || !copied.token) throw new Error("copy link refused");
-    // Unclaimed, the counter link is not a release link by another name.
-    expect(await waiverLinkDoor(ctx.db, copied.token, { now })).toEqual({
-      door: "counter_unclaimed",
+    // The counter link is not a release link by another name.
+    expect(await waiverLinkDoor(ctx.db, copied.token, { now })).toMatchObject({
+      door: "counter",
     });
     expect(await staleWaiverRecordForToken(ctx.db, copied.token, now)).toBeNull();
   });
@@ -577,9 +578,7 @@ describe("a dead release link", () => {
     if (!copied.ok || !copied.token) throw new Error("copy link refused");
     expect(await hasLivePersonWaiverRequest(ctx.db, ctx.shop.id, person.id, later)).toBe(false);
     expect(await emailFreshWaiverLink(ctx.db, old, later)).not.toBe("current_link_live");
-    expect((await waiverLinkDoor(ctx.db, copied.token, { now: later }))?.door).toBe(
-      "counter_unclaimed",
-    );
+    expect((await waiverLinkDoor(ctx.db, copied.token, { now: later }))?.door).toBe("counter");
   });
 
   it("a rescue issues a fresh release link and keeps the dead URL on the rescue card", async () => {

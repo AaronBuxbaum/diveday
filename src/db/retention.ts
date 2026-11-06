@@ -364,8 +364,8 @@ export const PRUNE_ARMS = {
     extraWhere: inArray(capabilities.purpose, [
       ...purposesNaming("shop_address"),
       ...purposesNaming("user_account"),
-      // A counter link lived half an hour, a party member's emailed door two
-      // weeks; each row is a digest and timestamps, kept the table's window
+      // A counter link lives a day, a release link a
+      // week; each row is a digest and timestamps, kept the table's window
       // from its mint.
       ...purposesNaming("waiver_record"),
       "weekly_digest_unsubscribe",

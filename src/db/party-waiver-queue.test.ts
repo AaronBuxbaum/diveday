@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { signingDate } from "@/lib/guardian";
 import { fileScopedShopContext } from "@/test/db";
@@ -128,6 +129,22 @@ describe("party release QR handoff", () => {
       state: "available",
       record: { bookingId: solo.bookingId },
     });
+  });
+
+  it("keeps the code open to the end of the departure day, in the shop's own day (issue 4064)", async () => {
+    const f = await family();
+    const issued = await issuePartyWaiver(f.db, {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
+    });
+    if (!issued || !("expiresAt" in issued)) throw new Error("code refused");
+    const tz = f.shop.timezone;
+    const departureDay = calendarDateInTimezone(f.trip.startsAt, tz);
+    expect(calendarDateInTimezone(new Date(issued.expiresAt.getTime() - 1), tz)).toBe(departureDay);
+    expect(calendarDateInTimezone(issued.expiresAt, tz)).toBe(shiftCalendarDate(departureDay, 1));
   });
 
   it("records on the diver's trail which staffer showed the code (security S2)", async () => {
@@ -355,7 +372,6 @@ describe("party release QR handoff", () => {
     };
     const first = await issuePartyWaiver(f.db, input);
     if (!first || !("token" in first)) throw new Error("first link missing");
-    expect(first.expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(30 * 60_000);
     expect((await opened(f.db, first.token)).state).toBe("available");
     expect((await opened(f.db, first.token, first.expiresAt)).state).toBe("unavailable");
     const next = await issuePartyWaiver(f.db, input);

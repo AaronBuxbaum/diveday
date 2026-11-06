@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
-import { MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
+import { DAY_MS, MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
@@ -102,13 +102,35 @@ describe("the waiver_link capability", () => {
     expect(await waiverLinkDoor(db, "")).toBeNull();
   });
 
-  it("lives half an hour from its mint, and opens nothing at its deadline", async () => {
+  it("lives no longer than two weeks from its mint, and opens nothing at its deadline", async () => {
     const { token, expiresAt } = await counterSeat();
     const minted = await verifyCapability(ctx.db, { purpose: "waiver_link", token });
     expect(minted?.expiresAt?.getTime()).toBe(expiresAt.getTime());
-    expect(expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(30 * MINUTE_MS);
+    expect(expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(14 * DAY_MS);
     expect(await counterState(token, new Date(expiresAt.getTime() - 1))).toBe("available");
     expect(await counterState(token, expiresAt)).toBe("closed");
+  });
+
+  it("takes the end of the day its caller names, never past two weeks (issue 4064)", async () => {
+    const { db, shop, recordId } = await counterSeat();
+    const now = nowDate();
+    const tonight = new Date(now.getTime() + 5 * 60 * MINUTE_MS);
+    const link = await mintCapability(db, {
+      purpose: "waiver_link",
+      shopId: shop.id,
+      subjectId: recordId,
+      now,
+      expiresAt: tonight,
+    });
+    expect(link.expiresAt).toEqual(tonight);
+    const far = await mintCapability(db, {
+      purpose: "waiver_link",
+      shopId: shop.id,
+      subjectId: recordId,
+      now,
+      expiresAt: new Date(now.getTime() + 30 * DAY_MS),
+    });
+    expect(far.expiresAt).toEqual(new Date(now.getTime() + 14 * DAY_MS));
   });
 
   it("a fresh QR for the same release leaves the one before open", async () => {
@@ -160,18 +182,22 @@ describe("the waiver_link capability", () => {
     expect(await counterState(token, expiresAt)).toBe("closed");
   });
 
-  it("opens on the first phone that claims it and on no other, and that phone can reload (attacker S1)", async () => {
+  it("opens on any phone, and only the phone that saved through it is its own (issue 4064)", async () => {
     const { db, token } = await counterSeat();
-    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_unclaimed" });
+    expect(await waiverLinkDoor(db, token)).toMatchObject({ door: "counter", ownDevice: false });
     const device = await claimCounterLink(db, token);
     if (!device) throw new Error("first claim refused");
     expect(await claimCounterLink(db, token)).toBeNull();
-    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_elsewhere" });
-    expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toEqual({
-      door: "counter_elsewhere",
+    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({
+      door: "counter",
+      ownDevice: true,
     });
-    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
-    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
+    // A second phone, after a dead battery, still opens and signs it, but is
+    // not shown the first phone's saved answers.
+    expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toMatchObject({
+      door: "counter",
+      ownDevice: false,
+    });
   });
 
   it("is never claimed once it has expired", async () => {

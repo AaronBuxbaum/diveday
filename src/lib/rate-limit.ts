@@ -705,12 +705,12 @@ export const RATE_LIMITS = {
   /**
    * The shop's own counter, per IP (issue #3985): every phone signing a
    * counter code on the shop's Wi-Fi shares one address, so this only stops
-   * a flood before any read; each claimed phone then spends its own
-   * `capabilityAction` budget, keyed by its claim.
+   * a flood before any read; each live counter code then spends its own
+   * `capabilityAction` budget, keyed by the code (issue #4064).
    */
   counterAddress: perHour(600),
   /**
-   * A counter form saving its draft on each step (issue #3985), per claim:
+   * A counter form saving its draft on each step (issue #3985), per code:
    * its own bucket, so a long questionnaire never spends the budget the
    * signature needs.
    */

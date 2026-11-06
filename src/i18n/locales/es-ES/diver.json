@@ -1287,11 +1287,6 @@
     "medicalReferralNext": "Tu cuestionario requiere una evaluación médica por escrito antes de que puedas bucear.",
     "medicalShopReviewNext": "Tu documentación médica aún necesita revisión. Contacta al centro antes de bucear.",
     "counterSigned": "Exención firmada",
-    "counterClaimTitle": "Firma tu exención en este teléfono",
-    "counterClaimBody": "Este enlace se abre en un solo teléfono. Cuando se abra aquí, ningún otro teléfono podrá usarlo.",
-    "counterClaimButton": "Abrir la exención aquí",
-    "counterElsewhereTitle": "Este enlace está abierto en otro teléfono",
-    "counterElsewhereBody": "Pide al centro un enlace nuevo.",
     "counterAlreadySigned": "Esta exención ya estaba firmada, así que lo que acabas de escribir no se guardó. Si alguna respuesta cambió, díselo al personal.",
     "independentTitle": "Firma tu exención",
     "backToPrep": "Volver a tu preparación"

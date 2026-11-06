@@ -8,7 +8,7 @@ import { uuidParam } from "@/lib/uuid";
 
 /**
  * The counter tablet's QR for one seat's release: a `waiver_link` capability
- * (half an hour, spent by the signature; a code shown before keeps working), returned only as the locally encoded
+ * (to the end of the departure day, spent by the signature; a code shown before keeps working), returned only as the locally encoded
  * image, never as a URL a staffer could copy.
  */
 export async function issuePartyWaiverQrAction(

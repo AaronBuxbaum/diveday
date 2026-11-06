@@ -16,6 +16,7 @@ import {
 } from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
+import { endOfLocalDay } from "@/lib/zoned";
 import { issueBookingCapability } from "./booking-capabilities";
 import { mintCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
@@ -207,8 +208,8 @@ export type PersonWaiverResult =
   | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: true }>, "bookingId" | "token"> & {
       bookingId: null;
       /**
-       * The counter link Copy link asked for (`waiver_link`: half an hour, the
-       * first phone to open it), and only that: a release with no seat covers
+       * The counter link Copy link asked for (`waiver_link`: to the end of the
+       * shop's day, on any phone), and only that: a release with no seat covers
        * every seat the diver holds once signed, so the week-long release link
        * an email or a text carries never comes back to staff, sent or not
        * (issue #3983).
@@ -578,8 +579,8 @@ export async function issueAndDeliverWaiver(
  * Which link opens it depends on who it is for (issue #3983). Signed, a
  * release with no seat covers every seat the diver holds, so:
  *
- * - **Copy link** (`link`) mints a counter link (`waiver_link`): half an hour,
- *   and only on the first phone that opens it. That is the URL staff get.
+ * - **Copy link** (`link`) mints a counter link (`waiver_link`): to the end of
+ *   the shop's day, on any phone (#4064). That is the URL staff get.
  * - **Email and text** mint a release link (`release_link`): a week, to the
  *   contact on file only. Its token never comes back, sent or not; a staffer
  *   who needs a URL to hand over asks for Copy link.
@@ -674,8 +675,17 @@ export async function issueAndDeliverPersonWaiver(
         };
       }
       const origin = publicAppUrl();
+      // A counter link lasts to the end of the shop's day (#4064).
       const mint = (purpose: "waiver_link" | "release_link") =>
-        mintCapability(tx, { purpose, shopId, subjectId: outcome.recordId, now: options.now });
+        mintCapability(tx, {
+          purpose,
+          shopId,
+          subjectId: outcome.recordId,
+          now: options.now,
+          ...(purpose === "waiver_link"
+            ? { expiresAt: endOfLocalDay(options.now ?? nowDate(), ctx.shop.timezone) }
+            : {}),
+        });
       const urlFor = (token: string) => new URL(`/waivers/${token}`, `${origin}/`).toString();
       let token: string | null = null;
       let delivery: WaiverDelivery;

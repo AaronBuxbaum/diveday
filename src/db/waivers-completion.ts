@@ -325,9 +325,10 @@ async function standingLink(db: DbExecutor, key: LinkWaiverKey, now: Date) {
  * owner can be sent a fresh one of. Every action of the page goes through
  * this, never a raw token.
  *
- * A counter link opens on one phone only (attacker review S1): the first one
- * to claim it (`claimCounterLink`) keeps the secret as `device`. Until then it
- * is `counter_unclaimed`; to any other phone it is `counter_elsewhere`.
+ * A counter link opens on any phone (issue #4064). The first phone to save a
+ * step through it claims it (`claimCounterLink`) and keeps the secret as
+ * `device`; only that phone is `ownDevice`, and only it is shown the medical
+ * answers saved through the code.
  */
 export async function waiverLinkDoor(
   db: DbExecutor,
@@ -345,9 +346,7 @@ export async function waiverLinkDoor(
       token,
       device: options.device,
     });
-    if (claim === "unclaimed") return { door: "counter_unclaimed" };
-    if (claim !== "this_device") return { door: "counter_elsewhere" };
-    return { door: "counter", key: key as CounterWaiverKey };
+    return { door: "counter", key: key as CounterWaiverKey, ownDevice: claim === "this_device" };
   }
   const release = await verifyCapability(db, { purpose: "release_link", token });
   if (!release) return null;
@@ -382,9 +381,8 @@ export async function closedCounterCode(
 }
 
 export type WaiverLinkDoor =
-  | { door: "counter"; key: CounterWaiverKey }
-  | { door: "counter_unclaimed" }
-  | { door: "counter_elsewhere" }
+  /** `ownDevice`: this phone saved through the code first, so it may see what it saved. */
+  | { door: "counter"; key: CounterWaiverKey; ownDevice: boolean }
   | { door: "release"; key: LinkWaiverKey }
   | null;
 
@@ -398,9 +396,10 @@ async function verifiedCounterDoor(
 }
 
 /**
- * The first phone to open a counter link claims it: the secret it keeps in a
- * cookie, or null when the link is already claimed or opens nothing (expired,
- * replaced, spent, or its release no longer the one it was opened for).
+ * The first phone to save a step through a counter link claims it: the
+ * secret it keeps in a cookie, or null when the link is already claimed or
+ * opens nothing (expired, spent, or its release no longer the one it was
+ * opened for).
  */
 export async function claimCounterLink(
   db: DbExecutor,

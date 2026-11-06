@@ -1,5 +1,5 @@
 import { EMAIL_VERIFICATION_TTL_MS, INVITE_TTL_MS, PASSWORD_RESET_TTL_MS } from "./account-tokens";
-import { DAY_MS, MINUTE_MS } from "./clock";
+import { DAY_MS } from "./clock";
 import { SETUP_LINK_TTL_MS } from "./setup-links";
 
 /**
@@ -319,18 +319,20 @@ export const CAPABILITY_POLICY = {
   // party's waiver panel, and the diver signs their own seat's release on the
   // shop's device. It names the release, not the person, so it carries no
   // readiness authority and opens nothing once the seat changes hands or the
-  // terms change. Half an hour is one sitting; signing spends it, and a fresh
-  // QR leaves the one before working (a phone may be half-way through it).
-  // A diver merge supersedes the unsigned release,
-  // so the link opens nothing after it; a contact change revokes it; an
-  // erasure deletes the links to the person's releases. It is also what Copy
-  // link hands staff for a release with no seat (issue #3983): the same half
-  // hour, on the first phone that opens it.
+  // terms change. It lasts to the end of the departure day and opens on any
+  // phone (issue #4064): the minting caller names the day's end, and two weeks
+  // are only a ceiling. The first phone to save a step claims it, and only that
+  // phone is shown the medical answers saved through it. Signing spends it, and
+  // a fresh QR leaves the one before working (a phone may be half-way through
+  // it). A diver merge supersedes the unsigned release, so the link opens
+  // nothing after it; a replaced contact revokes it; an erasure deletes the
+  // links to the person's releases. It is also what Copy link hands staff for
+  // a release with no seat (issue #3983), until the end of that day.
   waiver_link: {
     subject: "waiver_record",
     scope: "shop",
     lifetime: "expires",
-    ttlMs: 30 * MINUTE_MS,
+    ttlMs: 14 * DAY_MS,
     reissue: "adds",
     use: "once",
     claim: "first_device",

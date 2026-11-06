@@ -52,6 +52,7 @@ vi.mock("next/headers", () => ({
       const value = cookieJar.get(name);
       return value === undefined ? undefined : { name, value };
     },
+    set: (name: string, value: string) => cookieJar.set(name, value),
     delete: ({ name }: { name: string }) => cookieJar.delete(name),
   })),
 }));
@@ -108,7 +109,7 @@ describe("saving a counter draft on each step (issue 3985)", () => {
     expect(record?.draftMedicalAnswers).not.toBeNull();
   });
 
-  it("spends the claimed phone's budget, not the shop Wi-Fi's", async () => {
+  it("spends the code's own budget, not the shop Wi-Fi's", async () => {
     const { shop, token } = await counterSeat();
 
     await autosaveWaiverDraftAction(token, firstStep(shop));
@@ -129,11 +130,29 @@ describe("saving a counter draft on each step (issue 3985)", () => {
     await autosaveWaiverDraftAction(token, firstStep(shop));
 
     const keys = vi.mocked(checkRateLimit).mock.calls.map(([key]) => key);
-    expect(keys).toContain(rateLimitKey("waiver-autosave", "claim", link.id));
-    expect(keys).not.toContain(rateLimitKey("waiver-action", "claim", link.id));
+    expect(keys).toContain(rateLimitKey("waiver-autosave", "code", link.id));
+    expect(keys).not.toContain(rateLimitKey("waiver-action", "code", link.id));
   });
 
-  it("stops a flood of forged claim cookies before any read", async () => {
+  it("saves from any phone, and the first phone to save keeps the code's claim (issue 4064)", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded shop has no upcoming trip");
+    const party = await createBookingParty(db, [
+      { actor: "staff", shopId: shop.id, tripId: trip.id, fullName: "Fresh Phone" },
+    ]);
+    if (!party.ok || !party.bookings[0]) throw new Error("booking failed");
+    const link = await issueCounterLink(db, {
+      shopId: shop.id,
+      bookingId: party.bookings[0].bookingId,
+    });
+
+    expect(await autosaveWaiverDraftAction(link.token, firstStep(shop))).toBe("saved");
+    expect(cookieJar.get("diveday_counter_device")).toBeTruthy();
+  });
+
+  it("stops a flood from one address before any read", async () => {
     const { shop, token } = await counterSeat();
     cookieJar.set("diveday_counter_device", "forged");
     vi.mocked(checkRateLimit).mockResolvedValueOnce({ allowed: false, retryAfterMs: 1_000 });
@@ -153,9 +172,9 @@ describe("saving a counter draft on each step (issue 3985)", () => {
   });
 
   it("names the shop behind a counter code that has closed, and nothing behind a live one", async () => {
-    const { db, shop, token } = await counterSeat();
+    const { db, shop, token, expiresAt } = await counterSeat();
     expect(await closedCounterCode(db, token)).toBeNull();
-    const later = new Date(nowDate().getTime() + 31 * 60 * 1000);
+    const later = new Date(expiresAt.getTime() + 1);
     expect(await closedCounterCode(db, token, later)).toEqual({ shopId: shop.id });
     expect(await closedCounterCode(db, "not-a-real-token", later)).toBeNull();
   });

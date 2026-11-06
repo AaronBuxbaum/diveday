@@ -172,6 +172,12 @@ export type IssueCapabilityInput<P extends CapabilityPurpose> = {
   shopId: CapabilityShop<P>;
   subjectId: string;
   now?: Date;
+  /**
+   * An earlier end than the policy's `ttlMs`, for a link that is about one
+   * day (a counter QR lasts to the end of its departure day, issue #4064).
+   * Never later: the policy's ceiling stays.
+   */
+  expiresAt?: Date;
 };
 
 /**
@@ -246,7 +252,9 @@ export async function mintCapability<P extends CapabilityPurpose>(
     throw new Error(`${input.purpose} is a ${policy.scope} purpose`);
   }
   const now = input.now ?? nowDate();
-  const expiresAt = capabilityExpiry(input.purpose, now);
+  const ceiling = capabilityExpiry(input.purpose, now);
+  const expiresAt =
+    ceiling && input.expiresAt && input.expiresAt < ceiling ? input.expiresAt : ceiling;
   const columns = subjectColumns(input.purpose, input.subjectId);
   if (capabilitySubject(input.purpose) === "waiver_record") {
     // A release's links add (a resend never closes the one a diver is signing
