@@ -72,12 +72,62 @@ export function serviceWindowCovers(window: ServiceWindow | null, day: CalendarD
   return window !== null && window.from <= day && day <= window.until;
 }
 
-/** Whether any of a departure's shop-local days falls inside the window. */
-export function serviceWindowTouches(
+/**
+ * **The window a hull this shop does not own reads as** (issue #3994, attacker
+ * review): every day. `trips.boat_id` can name any shop's boat, so a row that
+ * carried another shop's hull would read no window and every yard guard would
+ * pass it. Read as always in the yard, each guard refuses it instead.
+ */
+export const HULL_NOT_IN_SHOP: ServiceWindow = {
+  from: "0001-01-01",
+  until: "9999-12-31",
+  reason: null,
+};
+
+/** A run of shop-local days one meeting day holds its hull, both ends inclusive. */
+export type HullHeldSpan = { from: CalendarDate; until: CalendarDate };
+
+/**
+ * **The shop-local days a departure holds its hull** (issue #3994, Aaron's
+ * decision of 2026-11-06; glossary "Holds the hull"): held is nights aboard,
+ * so each meeting day holds every calendar day from the one it leaves the dock
+ * through the one it ties up, both inclusive, in the shop's zone. A liveaboard
+ * that leaves on Friday and is back on Sunday holds Saturday; a night dive
+ * back at 02:00 holds the morning it returns; one back at exactly 00:00 tied
+ * up before that day began and does not hold it. Days between meeting days
+ * are not held. A departure with no meeting-day rows is one, its own span.
+ * Returned as spans, not listed day by day, so a corrupt row a century long
+ * costs what a morning boat does.
+ */
+export function hullHeldSpans(
+  legs: readonly { startsAt: Date; endsAt: Date }[],
+  timeZone: string,
+): HullHeldSpan[] {
+  return legs.map((leg) => {
+    const from = calendarDateInTimezone(leg.startsAt, timeZone);
+    const lastInstant =
+      leg.endsAt > leg.startsAt ? new Date(leg.endsAt.getTime() - 1) : leg.startsAt;
+    const until = calendarDateInTimezone(lastInstant, timeZone);
+    return { from, until: until < from ? from : until };
+  });
+}
+
+/**
+ * The earliest day the window holds that these spans hold the hull, or null
+ * when they miss it: the one question every yard guard asks (issue #3994).
+ */
+export function firstHeldDayInWindow(
   window: ServiceWindow | null,
-  days: readonly CalendarDate[],
-): boolean {
-  return days.some((day) => serviceWindowCovers(window, day));
+  spans: readonly HullHeldSpan[],
+): CalendarDate | null {
+  if (!window) return null;
+  let first: CalendarDate | null = null;
+  for (const span of spans) {
+    if (span.from > window.until || span.until < window.from) continue;
+    const day = span.from > window.from ? span.from : window.from;
+    if (first === null || day < first) first = day;
+  }
+  return first;
 }
 
 /**
@@ -91,13 +141,4 @@ export function serviceWindowCoversInstant(
   timeZone: string,
 ): boolean {
   return serviceWindowCovers(window, calendarDateInTimezone(at, timeZone));
-}
-
-/** The earliest of these shop-local days the window holds, or null when it holds none. */
-export function firstDayInWindow(
-  window: ServiceWindow | null,
-  days: readonly CalendarDate[],
-): CalendarDate | null {
-  const inside = days.filter((day) => serviceWindowCovers(window, day)).sort();
-  return inside[0] ?? null;
 }
