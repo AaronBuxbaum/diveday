@@ -187,7 +187,9 @@
   the phone that holds it, and grants nothing else. A dead one offers to mail a fresh door to the
   address on file. A counter code to the same release stands beside it (issue #4008). A minor
   member gets no door, and a door never signs a minor's release: the lead signs that seat on their
-  own link, or the desk does with a guardian present.
+  own link, or the desk does with a guardian present. Claiming the seat closes the door, and any
+  counter code to the seat's release: the claimant's confirmation carries the release as its Sign
+  step, and the dead door says so instead of offering a fresh one (issue #2743).
 - **Recap link epoch** — the number a recap link signs beside its booking (`bookings.recap_link_epoch`,
   issue #3982). The link opens only while the booking still holds that number; correcting the
   diver's email or phone moves it on for all their bookings, so a recap link mailed to the old

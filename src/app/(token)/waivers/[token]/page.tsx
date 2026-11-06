@@ -5,6 +5,7 @@ import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId } from "@/db/waiver-signing";
 import {
+  claimedSeatDoor,
   closedCounterCode,
   doctorPageOpen,
   doorNeedsDeskGuardian,
@@ -104,6 +105,14 @@ export default async function WaiverPage({
     if (closedShop) {
       const closedT = diverTranslator(await requestLocale(closedShop.defaultLocale));
       return <DeadLink t={closedT} next={closedT("waiver.counterClosedNext")} shop={closedShop} />;
+    }
+    // A party member's door to a seat since claimed: the release is signed
+    // on the trip link the claimant's confirmation carried (issue #2743).
+    const claimed = await claimedSeatDoor(db, token);
+    const claimedShop = claimed ? await getShopById(db, claimed.shopId) : null;
+    if (claimedShop) {
+      const claimedT = diverTranslator(await requestLocale(claimedShop.defaultLocale));
+      return <DeadLink t={claimedT} next={claimedT("waiver.doorClaimedNext")} shop={claimedShop} />;
     }
     // No record at all reached through this token (garbage, or a completed
     // link long since replaced) — there is no shop to attribute it to

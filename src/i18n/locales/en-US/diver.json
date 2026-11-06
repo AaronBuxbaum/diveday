@@ -1228,6 +1228,7 @@
     "counterMinutesOther": "{count} minutes left on this code, until {time}.",
     "counterSaved": "Saved.",
     "counterClosedNext": "This code has closed. Ask the staff for a fresh one.",
+    "doorClaimedNext": "This link has closed. Sign from the link in your booking confirmation email, or ask the shop.",
     "answerYes": "Yes",
     "answerNo": "No",
     "yesReassurance": "A yes means a doctor should confirm you’re fit to dive. It doesn’t cancel your trip.",
