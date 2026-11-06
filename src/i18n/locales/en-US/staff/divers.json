@@ -514,6 +514,7 @@
     "diverFormGone": "That form is no longer on file.",
     "medicalClearanceOutcomeRequired": "Say what the physician decided.",
     "medicalClearanceAnswerRecorded": "A physician’s answer is already on this record. Seat them on a departure and send a new release from there.",
+    "medicalClearanceAnswerSealBroken": "The physician’s answer on this record does not check out, so the diver is still held. Seat them on a departure and send a new release from there.",
     "medicalClearanceNoHold": "Nothing of this diver’s is waiting on medical review here.",
     "medicalClearanceRecorded": "Physician clearance recorded. This diver is no longer held for medical review.",
     "medicalNotClearedRecorded": "Recorded. The physician did not clear this diver, and the medical hold stands.",
