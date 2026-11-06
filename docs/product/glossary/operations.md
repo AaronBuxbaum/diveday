@@ -2305,9 +2305,9 @@
   refused. See [20260726-staff-invite-accounts](../../architecture/decisions/20260726-staff-invite-accounts.md).
 - **Your days** — a diver's other bookings with the shop, listed on one booking's page as "Your
   days with {shop}": upcoming seats, and the six newest past dive days numbered as the recap
-  stamps them (`diveDayOrdinal`, so two boats on one date carry one number). A row is a send,
-  never a door: "Email me the link" mails that day's own page (a fresh readiness link, or a recap
-  link for a past day) to the address on file, so one link still opens one booking (H-20261014-other-days-send-fresh).
+  stamps them (`diveDayOrdinal`, so two boats on one date carry one number). A row's "Open"
+  takes the diver to that day's own page: its delivered readiness link, or a recap link for a past
+  day (#4059, superseding the mailed send of H-20261014-other-days-send-fresh).
   **Drawn only on a delivered link** (security review of layer r5-4, F1): a readiness link DiveDay
   mailed to the contact on file (`booking_capabilities.delivered`), never the one a booking or a
   seat claim redirects its browser to, because that browser proved only that it typed a name and

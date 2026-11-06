@@ -135,7 +135,7 @@ export default async function ReadyTokenPage({
    * `getBookedCard`), and a held diver reads the hold in the thread under it.
    */
   const found = justBooked
-    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId, delivered })
+    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId })
     : null;
   const card =
     found && !found.bookingCancelled && !found.departureCancelled && !theBoatIsHome(found.trip)

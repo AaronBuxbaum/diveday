@@ -23,9 +23,9 @@ import { seatNotCancelled } from "./trips-queries";
  * **A regular's other days with the shop, from one booking's page** (fifth-loop
  * ideas, item 38; decision H-20261014-other-days-send-fresh; ADR 20261016-fresh-link-per-booking-row).
  *
- * Each row is a day, never a door: what a row does is mail that day's own link
- * to the address on file. No URL on this page opens another booking, so a
- * forwarded or leaked link still reaches one booking and nothing else.
+ * On a link mailed to the contact on file, each row opens that day's own page
+ * (#4059); the link a booking or a claim redirects to lists none. Find my
+ * booking mails a past day's link (`planLogEntryLink`, `sendYourDayLink`).
  *
  * `src/lib` returns codes; this returns facts and the page words them.
  */
@@ -152,27 +152,40 @@ export type YourDayLinkPlan =
   | { ok: false; reason: Exclude<YourDayLinkOutcome, "sent"> };
 
 /**
- * Decide whether `targetBookingId` is one of the rows `fromBookingId`'s page
- * lists, from reads alone, so a refusal spends no inbox budget.
+ * **Open one of the rows `fromBookingId`'s page lists** (#4059): the path to
+ * that day's own page, an upcoming day's delivered trip-prep link or a past
+ * day's recap link, or null.
  *
  * **The target is only ever accepted from the list.** Same shop, same person,
  * the same rules that drew the row: a hand-made post naming any other booking,
- * another diver's included, is `unavailable` and sends nothing.
+ * another diver's included, opens nothing. The caller has verified a
+ * delivered link for `fromBookingId`, so the day's link is delivered too:
+ * `issueBookingCapability` hands back its one live delivered link, the same
+ * URL a send would mail.
  */
-export async function planYourDayLink(
+export async function openYourDay(
   db: AppDb,
   input: { shopId: string; fromBookingId: string; targetBookingId: string; now?: Date },
-): Promise<YourDayLinkPlan> {
+): Promise<string | null> {
   const days = await listYourDays(db, {
     shopId: input.shopId,
     bookingId: input.fromBookingId,
     now: input.now,
   });
-  const upcoming = days.upcoming.find((day) => day.bookingId === input.targetBookingId);
-  const past = days.past.find((day) => day.bookingId === input.targetBookingId);
-  const day = upcoming ?? past;
-  if (!day) return { ok: false, reason: "unavailable" };
-  return planForDay(db, input.shopId, day, upcoming ? "upcoming" : "past");
+  if (days.past.some((day) => day.bookingId === input.targetBookingId)) {
+    // At the booking's current recap epoch (issue #3982).
+    const recapToken = await recapTokenFor(db, input.targetBookingId);
+    return recapToken ? `/recap/${recapToken}` : null;
+  }
+  if (!days.upcoming.some((day) => day.bookingId === input.targetBookingId)) return null;
+  const issued = await issueBookingCapability(db, {
+    shopId: input.shopId,
+    bookingId: input.targetBookingId,
+    purpose: "readiness",
+    now: input.now,
+    delivered: true,
+  });
+  return issued ? readinessLinkPath(issued.token) : null;
 }
 
 /**

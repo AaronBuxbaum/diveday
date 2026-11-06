@@ -4469,15 +4469,12 @@
   },
   "yourDays": {
     "heading": "Your days with {shopName}",
-    "note": "Each link goes to the email on file.",
     "comingUp": "Coming up",
     "logbook": "Your log",
     "upcomingRow": "{date} · {title}, {time}",
     "pastRow": "{ordinal} dive day · {title} · {date}",
-    "send": "Email me the link",
-    "sent": "Sent to the email on file",
-    "rateLimited": "That’s a lot of links at once. Try again in a little while.",
-    "failed": "That didn’t send. Try again in a moment.",
+    "open": "Open",
+    "rateLimited": "That’s a lot at once. Try again in a little while.",
     "unavailable": "That day isn’t available anymore."
   },
   "bookkeeperConfirm": {
