@@ -245,8 +245,7 @@ export async function mintCapability<P extends CapabilityPurpose>(
     // The invariant (one live link per shop, or per subject, per purpose)
     // belongs to this module, not to its callers. A release holds one live
     // door of each purpose (`capabilities_live_waiver_record_idx`): a counter
-    // link, a party member's door and a mailed release link to the same
-    // release stand side by side, and the signature through any one of them
+    // link and a mailed release link to the same release stand side by side, and the signature through any one of them
     // leaves the others opening nothing (issue #4008).
     await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
     await db
@@ -640,8 +639,7 @@ export async function withdrawUnspentCapabilities(
 
 /**
  * Turns off every live link to one person's releases (`revoked_at`), whatever
- * its purpose: the counter link, the party member's door and the release link
- * (issues #3983, #3986). A
+ * its purpose: the counter link and the release link (issue #3983). A
  * corrected contact calls it, so a link that went to the old address, or was
  * handed over before the correction, opens nothing: not a form, and not the
  * receipt of a release it already signed. A revoked row stays, so the page
@@ -669,40 +667,6 @@ export async function revokePersonReleaseLinks(
               and(
                 eq(waiverRecords.shopId, input.shopId),
                 eq(waiverRecords.personId, input.personId),
-              ),
-            ),
-        ),
-      ),
-    );
-}
-
-/**
- * Turns off every live link to one seat's releases (`revoked_at`): the
- * counter code and the party member's door (issue #2743). A claim calls it,
- * so no link minted while the seat was its placeholder's outlives the claim;
- * the claimant signs as their thread's Sign step.
- */
-export async function revokeSeatReleaseLinks(
-  db: DbExecutor,
-  input: { shopId: string; bookingId: string; now?: Date },
-): Promise<void> {
-  await db
-    .update(capabilities)
-    .set({ revokedAt: input.now ?? nowDate() })
-    .where(
-      and(
-        inArray(capabilities.purpose, purposesNaming("waiver_record")),
-        eq(capabilities.shopId, input.shopId),
-        isNull(capabilities.revokedAt),
-        inArray(
-          capabilities.waiverRecordId,
-          db
-            .select({ id: waiverRecords.id })
-            .from(waiverRecords)
-            .where(
-              and(
-                eq(waiverRecords.shopId, input.shopId),
-                eq(waiverRecords.bookingId, input.bookingId),
               ),
             ),
         ),

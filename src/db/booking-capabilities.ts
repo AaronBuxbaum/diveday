@@ -149,10 +149,9 @@ export async function issueBookingCapability(
 }
 
 /**
- * **No readiness link goes to an address a party's lead typed** (issue
- * #4003). A delivered readiness link pays, cancels and moves the seat, and
- * nobody has shown that address is the diver's (`seatAddressIsLeadTyped`):
- * a send to it carries the seat's waiver-only door, or no link. Refused here,
+ * **No readiness link goes to a minor's address a party's lead typed** (issue
+ * #4003). It would open the minor's release, and that address cannot prove a
+ * guardian (`seatAddressIsLeadTyped`): a send to it carries no link. Refused here,
  * under the booking lock, so a reminder, find-my-booking, a reschedule notice
  * or a rescue cannot mint one by a path of its own. A link a page hands over
  * (`delivered: false`, the lead's own party panel) is the lead's, and goes on.

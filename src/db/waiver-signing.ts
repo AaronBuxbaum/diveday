@@ -47,9 +47,9 @@ export async function seatMinorDeclared(
 }
 
 /**
- * Whether any seat of the person ever carried an address the party's lead
- * typed that the member never claimed (`seatAddressIsLeadTyped`, issue
- * #4003), whatever became of the seat or its departure: the contact on file
+ * Whether any seat of the person was declared Under 18 with an address the
+ * party's lead typed that the member never claimed (`seatAddressIsLeadTyped`,
+ * issue #4003), whatever became of the seat or its departure: the contact on file
  * may still be that typed one, which cannot prove a guardian (issue #4019).
  * Read only for a minor, so counting old seats fails closed.
  */

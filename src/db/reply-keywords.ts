@@ -165,8 +165,8 @@ async function cancellableBookings(
         eq(bookings.status, "booked"),
         // Not a seat the desk has checked in (the trail, issue #2702).
         not(seatCheckedIn),
-        // Not a seat whose contact a party's lead typed: that mailbox may not
-        // cancel it (issue #4003, `seatAddressIsLeadTyped`).
+        // Not a minor's seat whose contact a party's lead typed: that mailbox
+        // may not cancel it (issue #4003, `seatAddressIsLeadTyped`).
         or(isNull(bookings.contactTypedByLeadAt), isNotNull(bookings.claimedAt)),
         liveTrip(),
       ),

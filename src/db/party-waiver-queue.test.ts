@@ -5,7 +5,6 @@ import { nowDate } from "@/lib/clock";
 import { signingDate } from "@/lib/guardian";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { mintCapability } from "./capabilities";
 import {
   getCounterDoctorReferral,
   getPartyWaiverQueue,
@@ -284,7 +283,7 @@ describe("party release QR handoff", () => {
     });
   });
 
-  it("leaves the emailed door live beside a counter code, and asks only about an open code (#4008)", async () => {
+  it("replaces a counter code, and asks only about an open code (#4008)", async () => {
     const f = await family();
     const input = {
       shopId: f.shop.id,
@@ -295,36 +294,15 @@ describe("party release QR handoff", () => {
     };
     const first = await issuePartyWaiver(f.db, input);
     if (!first || !("token" in first)) throw new Error("counter code missing");
-    const [link] = await f.db
-      .select({ recordId: capabilities.waiverRecordId })
-      .from(capabilities)
-      .where(eq(capabilities.tokenHash, hashBearerToken(first.token)));
-    if (!link?.recordId) throw new Error("counter link record missing");
-    // The emailed door for the same release sits beside the counter code, and
-    // the member's phone opening it is no reason for the desk to stop. A door
-    // goes only to an address the lead typed, on a seat not yet claimed.
-    await f.db
-      .update(bookings)
-      .set({ contactTypedByLeadAt: nowDate(), claimedAt: null })
-      .where(eq(bookings.id, f.third.bookingId));
-    const mailed = await mintCapability(f.db, {
-      purpose: "party_waiver_link",
-      shopId: f.shop.id,
-      subjectId: link.recordId,
-    });
-    expect((await opened(f.db, mailed.token)).state).toBe("available");
     const second = await issuePartyWaiver(f.db, input);
     if (!second || !("token" in second)) throw new Error("second code missing");
     expect((await opened(f.db, first.token)).state).toBe("unavailable");
     expect((await opened(f.db, second.token)).state).toBe("available");
-    expect((await opened(f.db, mailed.token)).state).toBe("available");
     // A code open on a phone is not replaced without the desk saying so.
     expect(await issuePartyWaiver(f.db, input)).toEqual({ openOnPhone: true });
     const replaced = await issuePartyWaiver(f.db, { ...input, replace: true });
     if (!replaced || !("token" in replaced)) throw new Error("replacement missing");
     expect((await opened(f.db, second.token)).state).toBe("unavailable");
-    expect((await opened(f.db, mailed.token)).state).toBe("available");
-    // One signature closes the release: the door that did not sign opens nothing.
     expect(
       await signAtCounter(f.db, replaced.token, {
         signerName: `Leo ${f.stamp}`,
@@ -332,7 +310,6 @@ describe("party release QR handoff", () => {
         medicalAnswers: clearAnswers,
       }),
     ).toMatchObject({ ok: true });
-    expect((await opened(f.db, mailed.token)).state).toBe("unavailable");
   });
 
   it("refuses to issue after a seat is held or cancelled", async () => {

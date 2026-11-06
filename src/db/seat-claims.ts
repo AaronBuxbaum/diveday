@@ -25,7 +25,6 @@ import {
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { partySeatGoesWithLead, tripAdmissionFor } from "./bookings";
-import { revokeSeatReleaseLinks } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
@@ -318,8 +317,7 @@ export type ClaimSeatResult =
  *   purpose: all live claim links die (one-shot claiming — a second claim of
  *   the same seat fails at verify, first untouched), and any link minted
  *   while the seat was the placeholder's stops granting authority over the
- *   claimant's data. So is every link to the seat's releases (the party
- *   member's door, a counter code): the claimant signs in their own thread.
+ *   claimant's data.
  *
  * Identity semantics follow the public booking form exactly (H-20260724-one-person-per-email): an email
  * match reuses that person row, and a submitted name that doesn't match the
@@ -529,9 +527,6 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     bookingId: booking.id,
     now,
   });
-  // The links to the seat's releases too: the party member's door and any
-  // counter code. The claimant signs as their thread's Sign step (issue #2743).
-  await revokeSeatReleaseLinks(tx, { shopId: capability.shopId, bookingId: booking.id, now });
 
   return {
     ok: true,

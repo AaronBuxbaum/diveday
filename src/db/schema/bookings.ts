@@ -465,14 +465,13 @@ export const bookings = pgTable(
      */
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
     /**
-     * **The public party form's lead typed this seat's contact** (issue
-     * #4003): set on every seat that form or the lead's "Add a seat" made for
-     * someone other than the booker. Until the seat is claimed
-     * (`claimedAt`), nobody has shown that address is the diver's, so no send
-     * to it carries a link that pays, cancels or moves the seat
-     * (`seatAddressIsLeadTyped`). Kept when the seat moves alone and leaves
-     * its party, because the address is still the one the lead typed; cleared
-     * only when a cancelled row is reactivated by a new booking.
+     * **The public party form's lead typed the contact of a seat they
+     * declared Under 18** (issue #4003). Until the seat is claimed
+     * (`claimedAt`), that address cannot prove a guardian, so nothing sent to
+     * it carries a readiness or release link (`seatAddressIsLeadTyped`); an
+     * adult member's seat is never stamped and gets the links any booker
+     * gets. Kept when the seat moves alone and leaves its party; cleared only
+     * when a cancelled row is reactivated by a new booking.
      */
     contactTypedByLeadAt: timestamp("contact_typed_by_lead_at", { withTimezone: true }),
     /**

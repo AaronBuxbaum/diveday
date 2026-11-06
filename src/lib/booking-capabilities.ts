@@ -57,14 +57,13 @@ export function courseFormsLinkPath(token: string): string {
 }
 
 /**
- * **The seat's address is one its party's lead typed** (issue #4003): a seat
- * the public party form made for someone other than the booker, not yet
- * claimed by its diver. Nobody has shown that address is the diver's, so
- * nothing sent to it may pay, cancel or move the seat: it gets the seat's
- * waiver-only door (`party_waiver_link`) and never a readiness link. A seat
- * staff seated in a party is stamped claimed as it is made, so this is never
- * true of one (`createBookingParty`); claiming the seat ends it, and moving
- * it out of the party does not (`bookings.contact_typed_by_lead_at`).
+ * **A minor's seat whose address its party's lead typed** (issue #4003): a
+ * seat the public party form made for someone the lead declared Under 18,
+ * not yet claimed by its diver. That address cannot prove a guardian, so it
+ * is sent no readiness link and no release link: the lead signs the release
+ * on their own link, or the desk does with a guardian present. An adult
+ * member's seat is never stamped (`createBookingParty`), nor is a seat staff
+ * seated; claiming the seat ends it (`bookings.contact_typed_by_lead_at`).
  */
 export function seatAddressIsLeadTyped(seat: {
   contactTypedByLeadAt: Date | null;

@@ -1228,7 +1228,6 @@
     "counterMinutesOther": "Quedan {count} minutos en este código, hasta las {time}.",
     "counterSaved": "Guardado.",
     "counterClosedNext": "Este código se cerró. Pide uno nuevo al personal.",
-    "doorClaimedNext": "Este enlace se cerró. Firma desde el enlace del correo de confirmación de tu reserva o pregunta al centro.",
     "answerYes": "Sí",
     "answerNo": "No",
     "yesReassurance": "Un “sí” significa que un médico debería confirmar que estás en condiciones de bucear. No cancela tu salida.",
@@ -1293,10 +1292,6 @@
     "counterClaimButton": "Abrir la exención aquí",
     "counterElsewhereTitle": "Este enlace está abierto en otro teléfono",
     "counterElsewhereBody": "Pide al centro un enlace nuevo.",
-    "doorClaimTitle": "Firma tu exención en este dispositivo",
-    "doorClaimBody": "Este enlace se abre en un solo dispositivo. Cuando se abra aquí, ningún otro dispositivo podrá usarlo.",
-    "doorElsewhereTitle": "Este enlace está abierto en otro dispositivo",
-    "doorElsewhereBody": "Termina tu exención allí o pide ayuda al centro.",
     "counterAlreadySigned": "Esta exención ya estaba firmada, así que lo que acabas de escribir no se guardó. Si alguna respuesta cambió, díselo al personal.",
     "independentTitle": "Firma tu exención",
     "backToPrep": "Volver a tu preparación"

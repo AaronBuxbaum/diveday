@@ -138,8 +138,7 @@ export async function autosaveWaiverDraftAction(
   const opened = await budgetedDoor(token, "autosave");
   if (opened === "rate") return "rate";
   // Only a counter code saves on each step, as only its form offers it.
-  if (!opened || opened.key.kind !== "counter" || opened.key.purpose !== "waiver_link")
-    return "closed";
+  if (opened?.key.kind !== "counter") return "closed";
   return autosaveWaiverDraftThrough(opened.key, formData);
 }
 

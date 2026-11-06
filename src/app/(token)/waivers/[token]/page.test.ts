@@ -2,10 +2,9 @@ import { and, eq, ne } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
-import { mintCapability } from "@/db/capabilities";
 import { bookingCapabilities, bookings, trips, waiverRecords } from "@/db/schema";
 import { listStaff } from "@/db/trips";
-import { completeWaiver, recordWaiverDraft, threadWaiverKey } from "@/db/waivers-completion";
+import { completeWaiver, recordWaiverDraft } from "@/db/waivers-completion";
 import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import {
@@ -215,32 +214,6 @@ describe("the actual completed waiver branch", () => {
     const closed = await renderToken(link.token);
     vi.unstubAllEnvs();
     expect(closed).toContain(t("waiver.counterClosedNext"));
-  });
-
-  it("a party door to a seat since claimed opens nothing and points to the trip link (issue 2743)", async () => {
-    const { db, shop, booking } = await context();
-    vi.mocked(getDb).mockResolvedValue(db);
-    await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
-    const key = await threadWaiverKey(db, { shopId: shop.id, bookingId: booking.id });
-    if (!key) throw new Error("no release on the seat");
-    await db
-      .update(bookings)
-      .set({ contactTypedByLeadAt: nowDate(), claimedAt: null })
-      .where(eq(bookings.id, booking.id));
-    const door = await mintCapability(db, {
-      purpose: "party_waiver_link",
-      shopId: shop.id,
-      subjectId: key.recordId,
-    });
-    const { html: form } = await renderOnDevice(db, door.token);
-    expect(form).not.toContain(t("waiver.doorClaimedNext"));
-
-    await db.update(bookings).set({ claimedAt: nowDate() }).where(eq(bookings.id, booking.id));
-    const claimed = await renderToken(door.token);
-    expect(claimed).toContain(t("waiver.doorClaimedNext"));
-    expect(claimed).toContain(shop.name);
-    expect(claimed).not.toContain(booking.id);
-    expect(claimed).not.toContain(t("waiver.emailFreshLink"));
   });
 
   it("a counter receipt shows no doctor's page or readiness, and closes at expiry, a fresh QR or supersession", async () => {

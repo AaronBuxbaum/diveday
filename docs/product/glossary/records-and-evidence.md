@@ -178,18 +178,6 @@
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
   A minor's code is shown only after the staffer confirms a parent or guardian is present to
   co-sign, and that confirmation is on the minor's trail too.
-- **Party waiver door** — what every send to a party member's address carries in place of a
-  thread link, because the lead typed that address (`bookings.contact_typed_by_lead_at`, until the
-  member claims the seat; issues #3986, #4003): a `party_waiver_link` row in `capabilities`
-  naming the member's release, alive two weeks. The join email, staff Send waivers, a re-sent
-  confirmation and find-my-booking carry it; reminders and reschedule notices go with no link. It
-  opens on `/waivers/<token>` by the **counter link**'s rules, plus the release's doctor's page on
-  the phone that holds it, and grants nothing else. A dead one offers to mail a fresh door to the
-  address on file. A counter code to the same release stands beside it (issue #4008). A minor
-  member gets no door, and a door never signs a minor's release: the lead signs that seat on their
-  own link, or the desk does with a guardian present. Claiming the seat closes the door, and any
-  counter code to the seat's release: the claimant's confirmation carries the release as its Sign
-  step, and the dead door says so instead of offering a fresh one (issue #2743).
 - **Recap link epoch** — the number a recap link signs beside its booking (`bookings.recap_link_epoch`,
   issue #3982). The link opens only while the booking still holds that number; correcting the
   diver's email or phone moves it on for all their bookings, so a recap link mailed to the old

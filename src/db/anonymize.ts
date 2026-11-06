@@ -1173,7 +1173,7 @@ async function scrubPersonOnlyRows(
   // that opens this person goes with them (security review of #2710, F1).
   // A staff credential naming them (a calendar feed, `merge: "refuse"`) is
   // revoked by `scrubStandingCredentials` instead, so the record of it stays.
-  // A door to one of their releases (`waiver_link`, `party_waiver_link`,
+  // A door to one of their releases (`waiver_link` or
   // `release_link`) goes too; the releases stay as evidence, and nothing
   // opens them again.
   await tx.delete(capabilities).where(

@@ -1,6 +1,6 @@
 # 20261105-waiver-folds-into-the-thread — Hand a seat's release over as its thread link
 
-- **Status:** Accepted, **amended 2026-11-06** (#3983, #4003, #4008)
+- **Status:** Accepted, **amended 2026-11-06** (#3983, #4003, #4008; party door retired)
 - **Date:** 2026-11-05
 - **Decided by:** Aaron, 2026-11-05 on issue #2743 ("do it"), the full idea that
   [20261103-waiver-signs-in-the-thread](20261103-waiver-signs-in-the-thread.md) rejected; layer 6
@@ -20,8 +20,8 @@ ever to the holder's contact on file. Every other release link is a capability.
 1. **The booking confirmation** carries the Sign step on its readiness link (`openJoinSignStep`).
 2. **Every other send of a seat's release** goes through `deliverThreadLink`. No Copy link for a
    seat (`thread_only`): it would put the whole readiness credential in a staff clipboard. An
-   address a party's lead typed gets only a `party_waiver_link` door, from every sender, until
-   the member claims the seat (#3986, #4003).
+   adult party member's address gets the normal links; a minor's the lead typed gets none
+   (#4003; door retired 2026-11-06, ux-over-hardening).
 3. **A party lead signs a minor's seat on their own link** (`partySeatWaiverKey`).
 4. **Counter tablets sign on a `waiver_link`**: 30 minutes, once, on the first phone to claim it.
    A minor signs only on a code the desk vouched a guardian for (#4003, #4019).

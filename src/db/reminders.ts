@@ -191,8 +191,8 @@ async function mintReminderLinks(
     const phone = smsRecipient(person.phone);
     if (!person.email && !phone) continue;
     if (!person.email && phone && stopped.has(phone) && !whatsAppShopIds.has(shop.id)) continue;
-    // An address the party's lead typed is reminded with no link (issue
-    // #4003): a readiness link would pay, cancel and move the seat.
+    // A minor's seat whose address the party's lead typed is reminded with
+    // no link (issue #4003): that inbox cannot prove a guardian.
     if (seatAddressIsLeadTyped(booking)) continue;
     byShop.set(shop.id, [
       ...(byShop.get(shop.id) ?? []),

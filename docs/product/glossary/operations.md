@@ -1728,7 +1728,7 @@
   whole questionnaire. It opens only while the release waits on a physician (`awaitsPhysician`)
   on a held seat whose departure has not ended plus a day, and prints without the browser's
   URL header and footer. DiveDay decides nothing from it; staff record the **physician clearance**.
-  It opens from the diver's thread link or a party member's emailed door (issue #4003); a diver
+  It opens from the diver's thread link; a diver
   referred on the counter QR gets the same sheet printed at the desk, from the seat on the counter
   queue, with the answers left off (issue #3984).
 - **Diver-sent doctor's form** — the signed physician's form a referred diver sends from the

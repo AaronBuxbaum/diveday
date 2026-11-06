@@ -29,8 +29,8 @@ function emailUrl(path: string): string | undefined {
  * Send the just-booked party's confirmation and any releases safely. The
  * lead's own release rides in the confirmation as the thread's Sign step, on
  * the readiness link it carries (issue #2743); every other seat's goes to
- * the address the lead typed for that member as a waiver-only door, never a
- * thread link (issues #3986, #4003).
+ * the address the lead typed for that member as that seat's own thread link,
+ * except a seat declared Under 18, whose address is sent nothing (issue #4003).
  */
 export async function sendJoinMail(
   db: AppDb,
@@ -144,9 +144,8 @@ export async function sendJoinMail(
         }
         // The lead's own seat, when its confirmation could not carry the Sign
         // step, gets its thread link at the lead's own address. Every other
-        // seat's address is one the lead typed: the send itself gives it a
-        // waiver-only door, never a link that pays, cancels or moves the seat
-        // (issues #3986, #4003).
+        // seat gets its own thread link at the address the lead typed, unless
+        // it was declared Under 18 (issue #4003).
         await issueWaiverOnJoin(db, shop.id, bookingId, {
           expectedPersonId: personId,
           expectedTripId: trip?.id,

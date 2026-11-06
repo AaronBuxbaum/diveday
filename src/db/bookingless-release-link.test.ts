@@ -140,7 +140,6 @@ describe("Copy link on a release with no seat", () => {
     // Not yet opened on any phone: it opens nothing until one claims it.
     expect(await waiverLinkDoor(ctx.db, copied.token, { now })).toEqual({
       door: "counter_unclaimed",
-      via: "counter",
     });
     const door = await openOnDevice(ctx.db, copied.token, now);
     if (door?.door !== "counter") throw new Error(`counter door expected, got ${door?.door}`);
@@ -148,7 +147,6 @@ describe("Copy link on a release with no seat", () => {
     // A second phone holding the same URL is turned away.
     expect(await waiverLinkDoor(ctx.db, copied.token, { device: "another-phone", now })).toEqual({
       door: "counter_elsewhere",
-      via: "counter",
     });
 
     expect(await completeWaiver(ctx.db, door.key, { ...signature(person.fullName), now })).toEqual({
@@ -416,32 +414,8 @@ describe("what a release link never opens", () => {
     // Unclaimed, the counter link is not a release link by another name.
     expect(await waiverLinkDoor(ctx.db, copied.token, { now })).toEqual({
       door: "counter_unclaimed",
-      via: "counter",
     });
     expect(await staleWaiverRecordForToken(ctx.db, copied.token, now)).toBeNull();
-  });
-
-  it("a party member's door that names a release with no seat opens nothing", async () => {
-    vi.stubEnv("APP_HOST", "https://diveday.example");
-    const person = await diver();
-    const { providers } = textCapture();
-    await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
-      channel: "sms",
-      textProviders: providers,
-      now,
-    });
-    const record = await pendingRelease(person.id);
-    // Signed, this release covers every seat the diver holds; the join email's
-    // door is for one seat's release only (issue #3986).
-    const forged = await mintCapability(ctx.db, {
-      purpose: "party_waiver_link",
-      shopId: ctx.shop.id,
-      subjectId: record.id,
-      now,
-    });
-    expect(await waiverLinkDoor(ctx.db, forged.token, { now })).toBeNull();
-    expect(await openOnDevice(ctx.db, forged.token, now)).toBeNull();
-    expect(await staleWaiverRecordForToken(ctx.db, forged.token, now)).toBeNull();
   });
 });
 
@@ -459,14 +433,7 @@ describe("one live door per release and purpose (#4008)", () => {
     const [mailed] = await linksTo(record.id);
     if (!mailed) throw new Error("mailed link missing");
     const latest = new Map<string, string>([["release_link", mailed.id]]);
-    const order = [
-      "waiver_link",
-      "party_waiver_link",
-      "release_link",
-      "party_waiver_link",
-      "waiver_link",
-      "release_link",
-    ] as const;
+    const order = ["waiver_link", "release_link", "waiver_link", "release_link"] as const;
     for (const purpose of order) {
       const minted = await mintCapability(ctx.db, {
         purpose,

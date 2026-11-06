@@ -2181,9 +2181,9 @@ async function sendStoredBookingConfirmation(
       // never this mail's: the readiness link below opens only this seat.
       const signs =
         options.signStep?.personId === row.person.id && options.signStep.tripId === row.trip.id;
-      // An address the party's lead typed gets no readiness link (issue
-      // #4003): the mail goes without one, and without the Sign step, which
-      // a caller then sends as the seat's waiver-only door.
+      // A minor's seat whose address the party's lead typed gets no
+      // readiness link (issue #4003): the mail goes without one, and without
+      // the Sign step, which the lead or the desk signs with a guardian.
       const waiverOnly = seatAddressIsLeadTyped(row.booking);
       const readinessCapability =
         origin && !waiverOnly

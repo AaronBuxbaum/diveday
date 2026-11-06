@@ -97,23 +97,13 @@ export function UnavailableWaiverLink({ t }: { t: DiverTranslator }) {
  * opens on one phone only, so the diver says "this one" with a tap; the next
  * phone to scan it is turned away (`CounterElsewhereCard`).
  */
-export function CounterClaimCard({
-  token,
-  t,
-  via = "counter",
-}: {
-  token: string;
-  t: DiverTranslator;
-  /** A counter QR, or the waiver-only door a party member's join email carried (#3986). */
-  via?: "counter" | "mail";
-}) {
-  const mail = via === "mail";
+export function CounterClaimCard({ token, t }: { token: string; t: DiverTranslator }) {
   return (
     <ExpiredLinkCard
       wordmark
       glyph="sent"
-      title={t(mail ? "waiver.doorClaimTitle" : "waiver.counterClaimTitle")}
-      text={t(mail ? "waiver.doorClaimBody" : "waiver.counterClaimBody")}
+      title={t("waiver.counterClaimTitle")}
+      text={t("waiver.counterClaimBody")}
     >
       <form action={claimCounterLinkAction.bind(null, token)}>
         <SubmitButton pendingLabel={t("words.busy.opening")} className={buttonClass()}>
@@ -138,20 +128,13 @@ export function GuardianAtCounterCard({ t }: { t: DiverTranslator }) {
   );
 }
 
-/** A counter QR, or an emailed door, already open on another device: it opens nothing here. */
-export function CounterElsewhereCard({
-  t,
-  via = "counter",
-}: {
-  t: DiverTranslator;
-  via?: "counter" | "mail";
-}) {
-  const mail = via === "mail";
+/** A counter QR already open on another device: it opens nothing here. */
+export function CounterElsewhereCard({ t }: { t: DiverTranslator }) {
   return (
     <ExpiredLinkCard
       wordmark
-      title={t(mail ? "waiver.doorElsewhereTitle" : "waiver.counterElsewhereTitle")}
-      text={t(mail ? "waiver.doorElsewhereBody" : "waiver.counterElsewhereBody")}
+      title={t("waiver.counterElsewhereTitle")}
+      text={t("waiver.counterElsewhereBody")}
     />
   );
 }
