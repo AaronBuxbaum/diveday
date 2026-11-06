@@ -117,7 +117,9 @@ for (const width of [390, 1280]) {
       await expect(email).toHaveValue("avery@gmial.com");
       const box = await correction.boundingBox();
       if (!box) throw new Error("Email correction is missing");
-      expect(box.height).toBeGreaterThanOrEqual(44);
+      // Chromium lays out in 1/64px units; measure at that precision, as the
+      // summary target above does, so a 43.99997px read is not a real shortfall.
+      expect(Math.round(box.height * 64) / 64).toBeGreaterThanOrEqual(44);
       await correction.click();
       await expect(email).toHaveValue("avery@gmail.com");
     });
