@@ -125,7 +125,7 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   await page.getByLabel("Guardian’s full name").fill(`Jordan Guardian ${stamp}`);
   await page.getByLabel("Guardian’s email").fill("");
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
 
   // What staff read back: not "Signed" and a date, but who signed it with them.
   await page.goto(record);
