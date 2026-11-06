@@ -142,10 +142,11 @@ describe("a held seat's release", () => {
  */
 describe("the diver's own locale", () => {
   it("is recorded only after the draft or the signature is taken", () => {
-    const draft = ACTIONS.slice(ACTIONS.indexOf("export async function saveWaiverDraftThrough"));
-    expect(draft.indexOf("if (savedDraft) {")).toBeGreaterThan(-1);
+    // Both draft saves (Save and finish later, and each step's, issue #3985) go through one core.
+    const draft = ACTIONS.slice(ACTIONS.indexOf("async function recordDraftFrom"));
+    expect(draft.indexOf('if (!savedDraft) return { status: "unavailable" };')).toBeGreaterThan(-1);
     expect(draft.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(
-      draft.indexOf("const savedDraft = await recordWaiverDraft("),
+      draft.indexOf('if (!savedDraft) return { status: "unavailable" };'),
     );
     const complete = ACTIONS.slice(ACTIONS.indexOf("export async function completeWaiverThrough"));
     expect(complete.indexOf("recordDiverOwnLocale(")).toBeGreaterThan(

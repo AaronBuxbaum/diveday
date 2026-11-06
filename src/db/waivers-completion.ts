@@ -373,6 +373,25 @@ export async function waiverLinkDoor(
   return { door: "release", key };
 }
 
+/**
+ * **A counter code that has closed** (issue #3985): a `waiver_link` that ran
+ * out, or that a newer code replaced, before it was signed. Its way on is a
+ * fresh code from the staff, so the page names the shop and nothing else: no
+ * record, no person, no answers. Null for a live or spent code, and for
+ * anything that is not a counter code.
+ */
+export async function closedCounterCode(
+  db: DbExecutor,
+  token: string,
+  now: Date = nowDate(),
+): Promise<{ shopId: string } | null> {
+  if (token.length === 0) return null;
+  const link = await verifyCapability(db, { purpose: "waiver_link", token });
+  if (!link || link.usedAt) return null;
+  const closed = link.revokedAt !== null || !link.expiresAt || link.expiresAt <= now;
+  return closed ? { shopId: link.shopId } : null;
+}
+
 export type WaiverLinkDoor =
   | { door: "counter"; key: CounterWaiverKey }
   /** `via`: a counter QR or Copy link, or the door a party member's join email carried. */

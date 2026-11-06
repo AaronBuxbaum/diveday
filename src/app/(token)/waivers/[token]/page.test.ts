@@ -203,6 +203,19 @@ describe("the actual completed waiver branch", () => {
       .where(eq(bookingCapabilities.bookingId, booking.id));
     expect(after).toHaveLength(before.length);
   });
+  it("a counter form says how long the code has, and a closed code asks the staff for a fresh one (issue 3985)", async () => {
+    const { db, shop, booking } = await context();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
+    const { html: form } = await renderOnDevice(db, link.token);
+    expect(form).toContain('data-testid="counter-time-left"');
+    expect(form).not.toContain(t("waiver.saveForLater"));
+    vi.stubEnv("DIVEDAY_CLOCK", new Date(link.expiresAt.getTime() + 60_000).toISOString());
+    const closed = await renderToken(link.token);
+    vi.unstubAllEnvs();
+    expect(closed).toContain(t("waiver.counterClosedNext"));
+  });
+
   it("a counter receipt shows no doctor's page or readiness, and closes at expiry, a fresh QR or supersession", async () => {
     const { db, shop, booking, person } = await context();
     vi.mocked(getDb).mockResolvedValue(db);

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { DeadLink } from "@/components/DeadLink";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId } from "@/db/waiver-signing";
 import {
+  closedCounterCode,
   doctorPageOpen,
   doorNeedsDeskGuardian,
   getWaiverForToken,
@@ -14,7 +16,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
-import { completeWaiverAction, saveWaiverDraftAction } from "./actions";
+import { autosaveWaiverDraftAction, completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { completedMedicalState } from "./completed-medical-state";
 import { counterDevice } from "./counter-device";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
@@ -93,6 +95,14 @@ export default async function WaiverPage({
     if (staleShop) {
       const staleT = diverTranslator(await requestLocale(staleShop.defaultLocale));
       return <ExpiredLink token={token} shop={staleShop} t={staleT} sent={sent} />;
+    }
+    // A counter code that ran out or was replaced: its way on is a fresh code
+    // from the staff, so the card says that and names the shop (issue #3985).
+    const closed = await closedCounterCode(db, token);
+    const closedShop = closed ? await getShopById(db, closed.shopId) : null;
+    if (closedShop) {
+      const closedT = diverTranslator(await requestLocale(closedShop.defaultLocale));
+      return <DeadLink t={closedT} next={closedT("waiver.counterClosedNext")} shop={closedShop} />;
     }
     // No record at all reached through this token (garbage, or a completed
     // link long since replaced) — there is no shop to attribute it to
@@ -176,5 +186,15 @@ export default async function WaiverPage({
     // A release link likewise prefills only what was saved through itself:
     // never a counter phone's answers, and never an old link's (issue #3983).
     prefillMedical: door !== null && state.record.draftViaLinkId === door.key.linkId,
+    // A counter QR's half hour, said on screen, and its answers saved on each
+    // step, so the record holds them when it runs out (issue #3985); a fresh
+    // code never shows the medical answers saved through this one (S2).
+    counter:
+      door?.door === "counter" && door.key.purpose === "waiver_link"
+        ? {
+            expiresAt: door.key.expiresAt,
+            autosaveAction: autosaveWaiverDraftAction.bind(null, token),
+          }
+        : undefined,
   });
 }

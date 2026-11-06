@@ -703,6 +703,19 @@ export const RATE_LIMITS = {
    */
   capabilityAction: perHour(60),
   /**
+   * The shop's own counter, per IP (issue #3985): every phone signing a
+   * counter code on the shop's Wi-Fi shares one address, so this only stops
+   * a flood before any read; each claimed phone then spends its own
+   * `capabilityAction` budget, keyed by its claim.
+   */
+  counterAddress: perHour(600),
+  /**
+   * A counter form saving its draft on each step (issue #3985), per claim:
+   * its own bucket, so a long questionnaire never spends the budget the
+   * signature needs.
+   */
+  counterAutosave: perHour(240),
+  /**
    * Emailing a fresh waiver link from a dead one, per **booking** rather than
    * per IP or per token. The per-IP `capabilityAction` bucket above still
    * applies, but on its own it would let anyone holding a leaked stale URL
