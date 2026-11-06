@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -11,7 +11,7 @@ import { splitBookingIdentity } from "./bookings";
 import { repointHeldBooking } from "./identity-repoint";
 import { physicianReferrals } from "./invite-suggestions";
 import { createPerson } from "./people";
-import { activityEvents, bookings, waiverRecords } from "./schema";
+import { activityEvents, bookings, mediaDeletionAttempts, people, waiverRecords } from "./schema";
 import { listWaiverIntegrityAudit } from "./waivers-audit";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { attachDiverMedicalForm, contactOnFile, hasUnansweredMedicalHold } from "./waivers-medical";
@@ -191,6 +191,44 @@ describe("recording the answer again over an unsealed stamp", () => {
       subjectPersonId: ctx.person.id,
       params: expect.objectContaining({ record: ctx.recordId }),
     });
+  });
+
+  it("keeps the replaced stamp's values in the line, whoever and whatever they were", async () => {
+    const ctx = await referral();
+    await forgeStamp(ctx);
+    await clearAtTheDesk(ctx);
+    const [line] = await trail(ctx);
+    const [owner] = await ctx.db.select().from(people).where(eq(people.id, ctx.owner));
+    expect(line?.params).toMatchObject({
+      record: ctx.recordId,
+      clearedBy: owner?.fullName,
+      physician: "Dr. Forged",
+      evaluated: "2026-06-01",
+    });
+  });
+
+  it("queues the replaced stamp's evaluation file for deletion, and no other", async () => {
+    vi.stubEnv("MEDIA_PUBLIC_URL_BASE", "https://media.example.com");
+    try {
+      const ctx = await referral();
+      const forgedFile = "https://media.example.com/medical-clearances/forged.pdf";
+      await forgeStamp(ctx);
+      await ctx.db
+        .update(waiverRecords)
+        .set({ medicalClearanceDocumentUrl: forgedFile })
+        .where(eq(waiverRecords.id, ctx.recordId));
+      const queued = () =>
+        ctx.db
+          .select()
+          .from(mediaDeletionAttempts)
+          .where(eq(mediaDeletionAttempts.shopId, ctx.shop.id));
+      expect(await queued()).toHaveLength(0);
+
+      await clearAtTheDesk(ctx);
+      expect(await queued()).toMatchObject([{ kind: "waiver_document", url: forgedFile }]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("writes none for an ordinary first answer", async () => {

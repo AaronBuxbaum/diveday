@@ -505,6 +505,10 @@ export async function recordMedicalEvaluation(
         clearedAt: waiverRecords.medicalClearedAt,
         declinedAt: waiverRecords.medicalClearanceDeclinedAt,
         seal: waiverRecords.medicalAnswerSeal,
+        clearedBy: waiverRecords.medicalClearedByPersonId,
+        physician: waiverRecords.medicalClearancePhysicianName,
+        evaluated: waiverRecords.medicalClearanceEvaluatedOn,
+        document: waiverRecords.medicalClearanceDocumentUrl,
       })
       .from(waiverRecords)
       .where(eq(waiverRecords.id, open.id))
@@ -536,6 +540,11 @@ export async function recordMedicalEvaluation(
           actorPersonId: recordedBy,
           code: "medical_unsealed_clearance_replaced",
           waiverRecordId: open.id,
+          replacedStamp: {
+            clearedByPersonId: locked.clearedBy,
+            physician: locked.physician,
+            evaluated: locked.evaluated,
+          },
         }))
       ) {
         throw new Error("recordMedicalEvaluation: the replaced stamp was not recorded");
@@ -595,6 +604,22 @@ export async function recordMedicalEvaluation(
     // again now, whole, and only a verdict that it is intact is written:
     // anything else on the row stays broken, and its old verdict stands.
     await recheckAnsweredSeal(tx, open.id, now);
+    // The write above overwrote the file the replaced stamp named; queued so it is not
+    // orphaned outside erasure's reach (issue #3999).
+    if (
+      locked &&
+      locked.clearedAt !== null &&
+      locked.declinedAt === null &&
+      locked.seal === null &&
+      locked.document &&
+      locked.document !== evidenceUrl
+    ) {
+      await queueMediaDeletion(tx, {
+        shopId: input.shopId,
+        kind: "waiver_document",
+        url: locked.document,
+      });
+    }
     // A form used from another of the diver's holds moves: one column, one
     // file. A form on this row the staffer did not use is not evidence of
     // anything now, so it is queued for deletion rather than kept.
