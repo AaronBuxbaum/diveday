@@ -94,7 +94,7 @@ and run the command again.
 | H-20260803-booking-form-succeed-fail | Chosen | 2026-08-20 | Even after the 2026-08-03 copy fix, the public booking form's succeed/fail signal is a… |
 | H-20260803-booking-time-trip-admission | Chosen | 2026-08-21 | The booking-time trip admission gate (DOM-M6, ADR 20260803-trip-admission-at-booking) is inverted relative to risk: it… |
 | H-20260803-twitter-x-card-policy | Ready | 2026-08-07 | Twitter/X card policy for the marketing pages — the last unresolved item of HD-25's… |
-| H-20260806-orders-csv-carries-hosted | Ready | 2026-08-06 | orders.csv carries hosted_invoice_url and invoice_pdf_url — unauthenticated, long-lived, publicly reachable Stripe-hosted pages rendering a… |
+| H-20260806-orders-csv-carries-hosted | Chosen | 2026-11-06 | orders.csv carries hosted_invoice_url and invoice_pdf_url — unauthenticated, long-lived, publicly reachable Stripe-hosted pages rendering a… |
 | H-20260806-real-postgres-ci-job | Ready | 2026-08-06 | The real-Postgres CI job shipped 2026-08-06 on a nightly-plus-src/db/-path-gated cadence rather than per-PR, an… |
 | H-20260814-may-sight-card | Chosen | 2026-08-20 | Who may sight a card? |
 | H-20260814-production-database-disposable | Chosen | 2026-08-14 | Is the production database disposable? |
