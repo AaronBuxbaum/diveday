@@ -4464,15 +4464,12 @@
   },
   "yourDays": {
     "heading": "Tus días con {shopName}",
-    "note": "Cada enlace llega al correo que tenemos registrado.",
     "comingUp": "Próximos",
     "logbook": "Tu bitácora",
     "upcomingRow": "{date} · {title}, {time}",
     "pastRow": "{ordinal} día de buceo · {title} · {date}",
-    "send": "Envíame el enlace",
-    "sent": "Lo enviamos al correo registrado.",
-    "rateLimited": "Son muchos enlaces a la vez. Inténtalo de nuevo en un rato.",
-    "failed": "No se pudo enviar. Inténtalo de nuevo en un momento.",
+    "open": "Abrir",
+    "rateLimited": "Es mucho a la vez. Inténtalo de nuevo en un rato.",
     "unavailable": "Ese día ya no está disponible."
   },
   "bookkeeperConfirm": {

@@ -475,9 +475,9 @@ export async function buildAfterStateProps(input: {
             time: formatTime(firstBooked.startsAt, locale, shop.timezone),
           }
         : null,
-    // The readiness link's upload is the one that verifies a revocable token,
-    // and shares only from a delivered one (second pass, N-a).
-    canShareWithBoat: personWide,
+    // The readiness link's upload is the one that verifies a revocable token;
+    // any readiness link shares, the page right after booking too (#4059).
+    canShareWithBoat: input.mintHandoff,
     actions,
   };
 }

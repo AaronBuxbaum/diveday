@@ -9,13 +9,12 @@ import type { AppDb } from "./client";
 import { openRecapLink } from "./recap-links";
 import { bookings, people, priorVisits } from "./schema";
 import { createTrip } from "./trips";
-import { latestDiveDayBooking, listYourDays, planYourDayLink, sendYourDayLink } from "./your-days";
+import { latestDiveDayBooking, listYourDays, openYourDay } from "./your-days";
 
 /**
  * **A regular's other days, from one booking's page** (H-20261014-other-days-send-fresh, ADR
  * 20261016-fresh-link-per-booking-row). What matters most is the refusal: a
- * page reaches only its own person's days in its own shop, and a send mails a
- * link to the address on file, never back to the caller.
+ * page reaches only its own person's days in its own shop.
  */
 
 const APP_ORIGIN = "https://diveday.test";
@@ -150,13 +149,13 @@ describe("listYourDays", () => {
     // person's numbers up (security review r5-4, second pass, N-b).
     expect(days.past.map((d) => [d.bookingId, d.dayNumber])).toEqual([[second, 1]]);
     expect(
-      await planYourDayLink(db, {
+      await openYourDay(db, {
         shopId: shop.id,
         fromBookingId: here,
         targetBookingId: sooner,
         now: NOW,
       }),
-    ).toEqual({ ok: false, reason: "unavailable" });
+    ).toBeNull();
   });
 
   it("lists nothing for a person with no email on file", async () => {
@@ -169,7 +168,7 @@ describe("listYourDays", () => {
   });
 });
 
-describe("planYourDayLink and sendYourDayLink", () => {
+describe("openYourDay (#4059)", () => {
   it("refuses a booking that is not on this page's list, another diver's included", async () => {
     const { db, shop, here } = await regular();
     const stranger = await seat(
@@ -181,52 +180,41 @@ describe("planYourDayLink and sendYourDayLink", () => {
     );
     for (const target of [stranger, here]) {
       expect(
-        await planYourDayLink(db, {
+        await openYourDay(db, {
           shopId: shop.id,
           fromBookingId: here,
           targetBookingId: target,
           now: NOW,
         }),
-      ).toEqual({ ok: false, reason: "unavailable" });
+      ).toBeNull();
     }
-    expect(sent).not.toHaveBeenCalled();
   });
 
-  it("mails an upcoming day a fresh trip-prep link for that booking, to the address on file", async () => {
-    const { db, shop, here, later, email } = await regular();
-    const plan = await planYourDayLink(db, {
+  it("opens an upcoming day on that booking's own delivered trip-prep link, mailing nothing", async () => {
+    const { db, shop, here, later } = await regular();
+    const path = await openYourDay(db, {
       shopId: shop.id,
       fromBookingId: here,
       targetBookingId: later,
       now: NOW,
     });
-    if (!plan.ok) throw new Error("expected a plan");
-    expect(await sendYourDayLink(db, plan, NOW)).toBe("sent");
-    const mail = sent.mock.calls[0]?.[0] as {
-      to: string;
-      purpose: string;
-      readinessUrl: string;
-      bookingId: string;
-    };
-    expect(mail).toMatchObject({ to: email, purpose: "other_day", bookingId: later });
-    const token = new URL(mail.readinessUrl).pathname.split("/").at(-1) ?? "";
+    const token = path?.split("/").at(-1) ?? "";
+    expect(path).toBe(`/ready/${token}`);
     const capability = await verifyBookingCapability(db, { token, purpose: "readiness", now: NOW });
-    expect(capability?.bookingId).toBe(later);
+    expect(capability).toMatchObject({ bookingId: later, delivered: true });
+    expect(sent).not.toHaveBeenCalled();
   });
 
-  it("mails a past day its recap link", async () => {
+  it("opens a past day on its recap link", async () => {
     const { db, shop, here, first } = await regular();
-    const plan = await planYourDayLink(db, {
+    const path = await openYourDay(db, {
       shopId: shop.id,
       fromBookingId: here,
       targetBookingId: first,
       now: NOW,
     });
-    if (!plan.ok) throw new Error("expected a plan");
-    expect(await sendYourDayLink(db, plan, NOW)).toBe("sent");
-    const mail = sent.mock.calls[0]?.[0] as { purpose: string; readinessUrl: string };
-    expect(mail.purpose).toBe("log_entry");
-    const token = new URL(mail.readinessUrl).pathname.split("/").at(-1) ?? "";
+    const token = path?.split("/").at(-1) ?? "";
+    expect(path).toBe(`/recap/${token}`);
     expect(await openRecapLink(db, token)).toBe(first);
   });
 });

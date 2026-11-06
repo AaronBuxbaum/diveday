@@ -170,7 +170,7 @@ and run the command again.
 | H-20261014-demo-wears-visitor-shop | Implemented | 2026-10-16 | May the demo wear the visitor's own shop name? |
 | H-20261014-no-mid-thread-model | Implemented | 2026-10-14 | Never switch a live thread's model? |
 | H-20261014-one-to-one-invite | Implemented | 2026-10-14 | May staff invite one past diver to a named departure? |
-| H-20261014-other-days-send-fresh | Implemented | 2026-10-14 | How does one booking's page lead to the diver's other days with the shop? |
+| H-20261014-other-days-send-fresh | Implemented | 2026-11-06 | How does one booking's page lead to the diver's other days with the shop? |
 | H-20261014-package-dive-is-a | Implemented | 2026-10-14 | What is one "dive" in a dive package: a tank or a trip? |
 | H-20261014-padi-divechek | Implemented (amended 2026-10-15, confirmed by Aaron Buxbaum 2026-10-15; amended by Aaron Buxbaum 2026-10-23) | 2026-10-23 | May the extension check a PADI card on DiveChek, behind the shop's own PADI sign-in? |
 | H-20261014-paid-mark-amount-and | Implemented | 2026-10-14 | Who may mark a seat paid, and with how much? |
