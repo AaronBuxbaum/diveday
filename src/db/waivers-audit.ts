@@ -14,9 +14,10 @@ import { offsetPage, PAGE_SIZE } from "./paging";
 import { personSearchMatch } from "./person-search";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import {
+  WAIVER_BOARDING_COLUMNS,
   WAIVER_SEALED_COLUMNS,
-  WAIVER_STATE_COLUMNS,
   type WaiverStateRecord,
+  withTrustedClearance,
 } from "./waiver-record-columns";
 
 const recorder = alias(people, "waiver_recorder");
@@ -427,7 +428,9 @@ export async function listSignedWaiversByPerson(
   const byPerson = new Map<string, WaiverStateRecord[]>();
   if (personIds.length === 0) return byPerson;
   const rows = await db
-    .select({ record: WAIVER_STATE_COLUMNS })
+    // A clearance whose seal does not verify is taken off before any rule
+    // reads it (final attacker review B1).
+    .select({ record: WAIVER_BOARDING_COLUMNS })
     .from(waiverRecords)
     .leftJoin(
       bookings,
@@ -474,7 +477,7 @@ export async function listSignedWaiversByPerson(
         ),
       ),
     )
-    .then((joined) => joined.map((row) => row.record));
+    .then((joined) => joined.map((row) => withTrustedClearance(row.record)));
   for (const row of rows) {
     const list = byPerson.get(row.personId) ?? [];
     list.push(row);

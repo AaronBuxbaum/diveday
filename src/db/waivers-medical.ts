@@ -16,7 +16,7 @@ import {
   referralItems,
 } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
-import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
+import { medicalAnswerSealFor, waiverIntegrityVerdict } from "@/lib/waiver-integrity";
 import {
   awaitsPhysician,
   DOCTOR_UNLOCK_FAILURE_LIMIT,
@@ -38,6 +38,7 @@ import {
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatHeld, seatNotCancelled } from "./trips-queries";
+import { WAIVER_SEALED_COLUMNS } from "./waiver-record-columns";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -260,7 +261,49 @@ async function heldReferrals(db: DbExecutor, shopId: string, personId: string) {
         isNull(waiverRecords.anonymizedAt),
       ),
     )
-    .orderBy(desc(waiverRecords.completedAt));
+    .orderBy(desc(waiverRecords.completedAt))
+    .then((rows) => rows.map(unsealedClearanceAsOpen));
+}
+
+/**
+ * **A clearance stamp with no seal at all is no answer** (glossary *Physician
+ * answer seal*; final attacker review B2, dock review S1): boarding reads it as
+ * none, so the desk must be able to record the physician's answer again,
+ * which seals it. The honest way to get one is an answer an older build wrote
+ * while the deploy that added the seal rolled out. A seal that is present and
+ * wrong is tampering: that row stays answered, as evidence, and holds.
+ */
+function unsealedClearanceAsOpen(record: WaiverRecord): WaiverRecord {
+  return record.medicalClearedAt !== null &&
+    record.medicalClearanceDeclinedAt === null &&
+    record.medicalAnswerSeal === null
+    ? { ...record, medicalClearedAt: null, medicalClearedByPersonId: null }
+    : record;
+}
+
+/** Writes a fresh verdict on a just-answered record only when the whole record verifies. */
+async function recheckAnsweredSeal(tx: DbExecutor, recordId: string, now: Date) {
+  const [row] = await tx
+    .select({
+      record: WAIVER_SEALED_COLUMNS,
+      draftShopAnswers: waiverRecords.draftShopAnswers,
+      draftMedicalAlert: waiverRecords.draftMedicalAlert,
+      integrityValid: waiverRecords.integrityValid,
+    })
+    .from(waiverRecords)
+    .where(eq(waiverRecords.id, recordId))
+    .limit(1);
+  if (row?.integrityValid !== false) return;
+  const verdict = waiverIntegrityVerdict(
+    {
+      ...row.record,
+      draftShopAnswers: row.draftShopAnswers,
+      draftMedicalAlert: row.draftMedicalAlert,
+    },
+    now,
+  );
+  if (verdict.integrityValid !== true) return;
+  await tx.update(waiverRecords).set(verdict).where(eq(waiverRecords.id, recordId));
 }
 
 /**
@@ -515,8 +558,10 @@ export async function recordMedicalEvaluation(
       .where(
         and(
           eq(waiverRecords.id, open.id),
-          isNull(waiverRecords.medicalClearedAt),
           isNull(waiverRecords.medicalClearanceDeclinedAt),
+          // An unsealed clearance is open to be recorded again
+          // (`unsealedClearanceAsOpen`); a sealed one never is.
+          or(isNull(waiverRecords.medicalClearedAt), isNull(waiverRecords.medicalAnswerSeal)),
         ),
       )
       .returning({ id: waiverRecords.id });
@@ -534,6 +579,11 @@ export async function recordMedicalEvaluation(
         ? { ok: true, recordId: open.id, outcome: standing, alreadyRecorded: true }
         : { ok: false, reason: "answer_already_recorded" };
     }
+    // The nightly check may already have read the unsealed stamp as broken
+    // and held the person on it (`personSealFailed`). The record is checked
+    // again now, whole, and only a verdict that it is intact is written:
+    // anything else on the row stays broken, and its old verdict stands.
+    await recheckAnsweredSeal(tx, open.id, now);
     // A form used from another of the diver's holds moves: one column, one
     // file. A form on this row the staffer did not use is not evidence of
     // anything now, so it is queued for deletion rather than kept.
