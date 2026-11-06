@@ -163,9 +163,13 @@ export default async function WaiverPage({
     );
   }
 
-  // A minor's seat on a door the desk never vouched a guardian for: Sign
-  // would refuse, so the page says why before anyone fills it in (#4003).
-  if (door?.door === "counter" && (await doorNeedsDeskGuardian(db, door.key)))
+  // A minor on a door the desk never vouched a guardian for (#4003), or on a
+  // mailed link to a contact a party's lead typed (#4019): Sign would refuse,
+  // so the page says why before anyone fills it in.
+  if (
+    (door?.door === "counter" || door?.door === "release") &&
+    (await doorNeedsDeskGuardian(db, door.key))
+  )
     return <GuardianAtCounterCard t={t} />;
 
   return waiverSigningForm({

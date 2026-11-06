@@ -173,7 +173,7 @@
   readiness authority and opens no doctor's page; it dies when the seat changes hands or the
   release is superseded. A minor signs on it only when the desk confirmed a guardian is there
   for that very code, asked again at signing: on a seat's code (issue #4003), and on Copy link
-  for a release with no seat, a minor by date of birth or "Under 18" on any live seat (issue
+  for a release with no seat, a minor by date of birth or "Under 18" on a seat still ahead (issue
   #4019) (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
   A minor's code is shown only after the staffer confirms a parent or guardian is present to

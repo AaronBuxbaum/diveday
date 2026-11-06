@@ -38,7 +38,7 @@ import type { DraftGuardian, MedicalAnswers } from "./schema";
 import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 import { withVerifiedClearance } from "./waiver-record-columns";
-import { seatMinorDeclared } from "./waiver-signing";
+import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
 import { doctorPageOpen } from "./waivers-medical";
 import {
   getCurrentWaiverTemplate,
@@ -1102,7 +1102,7 @@ async function completeWaiverLocked(
     signingDate(now, timezone),
     // The booker's "Under 18" on this release's seat, read where the page
     // reads it, so the two can never disagree about asking.
-    await seatMinorDeclared(db, state.record),
+    await seatMinorDeclared(db, state.record, now),
   );
   let guardian: ReturnType<typeof guardianEvidence> | null = null;
   // A minor's release signed on a counter door needs the desk's word that a
@@ -1111,6 +1111,11 @@ async function completeWaiverLocked(
   // arrived after the code was shown is asked again here, and a party
   // member's emailed door never carries that word.
   if (minor && isCounterKey(token) && !(await deskSawGuardian(db, token, state.record.personId)))
+    return { ok: false, reason: "guardian_at_counter" };
+  // A mailed release link to a minor whose contact a party's lead typed: that
+  // inbox cannot prove a guardian, so whoever holds it signs nothing, however
+  // the diver came to read as a minor after it was sent (issue #4019).
+  if (minor && (await releaseKeyLeadTyped(db, token, state.record.personId)))
     return { ok: false, reason: "guardian_at_counter" };
   if (minor) {
     if (!input.guardian) return { ok: false, reason: "guardian_required" };
@@ -1302,14 +1307,29 @@ async function deskSawGuardian(
 }
 
 /**
+ * A mailed release link (`release_link`) whose diver's contact a party's lead
+ * typed (`personContactLeadTyped`, issue #4019): for a minor, that inbox
+ * cannot prove a guardian.
+ */
+async function releaseKeyLeadTyped(
+  db: DbExecutor,
+  key: WaiverKey,
+  personId: string,
+): Promise<boolean> {
+  if (key.kind !== "release" || key.bookingId !== null) return false;
+  return personContactLeadTyped(db, key.shopId, personId);
+}
+
+/**
  * **A door that cannot sign this minor's release, said before the form**
  * (issue #4003 reviews): the diver reads as under 18 today and the desk never
- * vouched a guardian for this code, so the page shows why instead of a form
- * the family would fill in only to be refused at Sign.
+ * vouched a guardian for this code, or the door is a mailed release link to a
+ * contact a party's lead typed (issue #4019), so the page shows why instead of
+ * a form the family would fill in only to be refused at Sign.
  */
 export async function doorNeedsDeskGuardian(
   db: DbExecutor,
-  key: CounterWaiverKey,
+  key: LinkWaiverKey,
   now: Date = nowDate(),
 ): Promise<boolean> {
   const [signer] = await db
@@ -1322,13 +1342,15 @@ export async function doorNeedsDeskGuardian(
   const minor = guardianSignatureRequired(
     signer.dateOfBirth,
     signingDate(now, await shopTimezone(db, key.shopId)),
-    await seatMinorDeclared(db, {
-      shopId: key.shopId,
-      personId: signer.personId,
-      bookingId: key.bookingId,
-    }),
+    await seatMinorDeclared(
+      db,
+      { shopId: key.shopId, personId: signer.personId, bookingId: key.bookingId },
+      now,
+    ),
   );
-  return minor && !(await deskSawGuardian(db, key, signer.personId));
+  if (!minor) return false;
+  if (isCounterKey(key)) return !(await deskSawGuardian(db, key, signer.personId));
+  return releaseKeyLeadTyped(db, key, signer.personId);
 }
 
 function isCounterKey(token: WaiverKey): token is CounterWaiverKey {

@@ -7,7 +7,7 @@ import { mintCapability } from "./capabilities";
 import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { deliverWaiverBatch, issueAndDeliverPersonWaiver } from "./waiver-issue";
-import { completeWaiver, doorNeedsDeskGuardian } from "./waivers-completion";
+import { completeWaiver, doorNeedsDeskGuardian, waiverLinkDoor } from "./waivers-completion";
 import { clearAnswers, openOnDevice, shopStaffer } from "./waivers-test-fixtures";
 
 /**
@@ -40,8 +40,8 @@ async function diver(input: { dateOfBirth: string | null; email?: string }) {
 
 /** Moves a seeded seat to `personId`, marked as the booker set it up. */
 async function seatFor(personId: string, seat: { under18?: boolean; leadTyped?: boolean }) {
-  const trips = await upcomingTripsWithCounts(ctx.db, ctx.shop.id, new Date(0));
-  for (const trip of trips) {
+  const trips = await upcomingTripsWithCounts(ctx.db, ctx.shop.id, now);
+  for (const trip of trips.filter((row) => row.status === "scheduled")) {
     const roster = await getTripRoster(ctx.db, ctx.shop.id, trip.id);
     const row = roster.find((entry) => entry.booking.status !== "cancelled");
     if (!row) continue;
@@ -139,6 +139,20 @@ describe("Copy link on a minor's release with no seat (#4019)", () => {
     expect(await copyLink(minor.id)).toMatchObject({ ok: true, delivery: "guardian_check" });
   });
 
+  it("reads nothing from an Under 18 on a seat whose trip is back (#2553)", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const grown = await diver({ dateOfBirth: null });
+    await seatFor(grown.id, { under18: true });
+    const years = new Date("2031-01-01T12:00:00.000Z");
+    expect(
+      await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, grown.id, {
+        channel: "link",
+        actorPersonId: await shopStaffer(ctx.db, ctx.shop.id),
+        now: years,
+      }),
+    ).toMatchObject({ ok: true, delivery: "link_only" });
+  });
+
   it("asks an adult nothing", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const adult = await diver({ dateOfBirth: "1990-03-04" });
@@ -221,6 +235,48 @@ describe("a mailed release link to a minor's address the lead typed (#4019)", ()
     expect(
       await ctx.db.select().from(capabilities).where(eq(capabilities.waiverRecordId, record.id)),
     ).toEqual([]);
+  });
+
+  it("still sends nothing once that seat is cancelled: the typed contact stays on file", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const minor = await diver({ dateOfBirth: "2012-03-04" });
+    const seat = await seatFor(minor.id, { leadTyped: true });
+    await ctx.db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, seat));
+    const { providers } = textCapture();
+    expect(
+      await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, minor.id, {
+        channel: "sms",
+        textProviders: providers,
+        now,
+      }),
+    ).toMatchObject({ ok: true, delivery: "guardian_needed" });
+  });
+
+  it("refuses the signature on a link sent before the diver read as a minor", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const diverNow = await diver({ dateOfBirth: null });
+    await seatFor(diverNow.id, { leadTyped: true });
+    const { providers, bodies } = textCapture();
+    expect(
+      await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, diverNow.id, {
+        channel: "sms",
+        textProviders: providers,
+        now,
+      }),
+    ).toMatchObject({ ok: true, delivery: "sent" });
+    const token = bodies[0]?.match(/\/waivers\/([A-Za-z0-9_-]+)/)?.[1];
+    if (!token) throw new Error("no link texted");
+    await ctx.db
+      .update(people)
+      .set({ dateOfBirth: "2012-03-04" })
+      .where(eq(people.id, diverNow.id));
+    const door = await waiverLinkDoor(ctx.db, token, { now });
+    if (door?.door !== "release") throw new Error("release door expected");
+    expect(await doorNeedsDeskGuardian(ctx.db, door.key, now)).toBe(true);
+    expect(await completeWaiver(ctx.db, door.key, { ...sign(diverNow.fullName), now })).toEqual({
+      ok: false,
+      reason: "guardian_at_counter",
+    });
   });
 
   it("still mails an adult whose address the lead typed, and a minor whose own address it is", async () => {
