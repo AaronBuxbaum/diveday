@@ -44,7 +44,7 @@ import { TripContactLine } from "./_components/TripContactLine";
 import { dayCoverPhoto, dayProfileFacts } from "./_components/TripDayPlan";
 import { TripItinerary, TripSupportingDetails } from "./_components/TripDaySections";
 import { TripBoatPhoto, TripHero } from "./_components/TripHero";
-import { TripPaperFacts, TripPaperIdentity } from "./_components/TripPaperDocument";
+import { TripPaperSheet } from "./_components/TripPaperSheet";
 import { pitchOpensOnDoor } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
@@ -220,7 +220,6 @@ export default async function TripDetailPage({
   // paid, and found out at the dock (DOM-M6). A trip's requirement is a
   // property of the trip: it discloses nothing about any person, so it belongs
   // above the form.
-  // (Both read in the wave above.)
   // Course sessions are left out on purpose: a course states its own admission
   // rule on its own page, and its itinerary's gate is deliberately *not* a
   // booking gate (src/lib/trip-admission.ts) — repeating the site's demand here
@@ -255,7 +254,7 @@ export default async function TripDetailPage({
     ? null
     : departureJsonLd(shop, trip, perDiverPriceCents, reviewAggregate);
 
-  const conditionsLine = (
+  const conditions = (paper: boolean) => (
     <ConditionsLine
       shop={shop}
       trip={trip}
@@ -264,9 +263,11 @@ export default async function TripDetailPage({
       crewLanguages={crewLanguagesLine}
       locale={locale}
       readerUnits={readerUnits}
+      paper={paper}
     />
   );
-
+  const conditionsLine = conditions(false);
+  const profile = dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth);
   const dayPlan = (
     <TripItinerary
       embed={isEmbed}
@@ -276,7 +277,7 @@ export default async function TripDetailPage({
       siteReviews={briefing.siteReviews}
       shop={shop}
       locale={locale}
-      profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
+      profile={profile}
     >
       {!isEmbed ? <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} /> : null}
     </TripItinerary>
@@ -285,14 +286,28 @@ export default async function TripDetailPage({
   return (
     <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={TRIP_PAGE_NAMESPACES}>
       <main
-        data-public-trip-paper
         className={
           isEmbed
             ? "w-full flex-1 px-3 py-4"
             : "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl"
         }
       >
-        <TripPaperIdentity shop={shop} trip={trip} locale={locale} now={now} />
+        {/* On paper the page is this sheet alone, framed or not (#2745). */}
+        <TripPaperSheet
+          shop={shop}
+          trip={trip}
+          meetingDays={meetingDays}
+          locale={locale}
+          t={t}
+          now={now}
+          status={inPast ? "sailed" : full ? "full" : null}
+          minimumSeats={minimumSeats}
+          conditionsLine={conditions(true)}
+          requirementSentence={requirementSentence}
+          briefings={diveBriefings}
+          profile={profile}
+          bearer={Boolean(bookingToken || interestId || handoffParam)}
+        />
         {structuredData ? <JsonLd data={structuredData} /> : null}
         <FlashParams params={["error", "pay"]} />
         {/* **Two columns from `lg` up.** At 1280 the column was 528px wide and
@@ -305,10 +320,7 @@ export default async function TripDetailPage({
             than the reading stretches that row rather than the gaps between
             sections. A phone reads the compact itinerary before the booking fields;
             supporting wildlife and site prose stay below (public audit P2, #3140). */}
-        <div
-          data-public-trip-layout
-          className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10"
-        >
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           <TripHero
             shop={shop}
             trip={trip}
@@ -325,7 +337,7 @@ export default async function TripDetailPage({
           {/* The selected departure’s next action, after the compact day plan. */}
           <div
             id={confirmed || waitlistConfirmation ? undefined : "book"}
-            className={`mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1 ${confirmed || waitlistConfirmation ? "" : "print:hidden"}`}
+            className="mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1"
           >
             {confirmed ? null : conditionsLine}
             {confirmed && bookingToken ? (
@@ -394,19 +406,7 @@ export default async function TripDetailPage({
             )}
             <TripContactLine shop={shop} t={t} />
           </div>
-          {!confirmed && !waitlistConfirmation ? (
-            <TripPaperFacts
-              shop={shop}
-              trip={trip}
-              locale={locale}
-              t={t}
-              inPast={inPast}
-              full={full}
-              conditionsLine={conditionsLine}
-              requirementSentence={requirementSentence}
-            />
-          ) : null}
-          <div data-public-trip-reading className="mt-10 space-y-10 lg:contents lg:space-y-0">
+          <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
             {isEmbed ? dayPlan : null}
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
                 route, the rest of the field guide, the shop's

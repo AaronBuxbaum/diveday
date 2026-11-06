@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
-import { diverTranslator } from "@/i18n/messages";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { DIVER_PARTICIPANT_TYPE_KEYS } from "@/i18n/participant-labels";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyScanned, formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -9,6 +9,32 @@ import { toShopCurrency } from "@/lib/money";
 import { offeredParticipantTypes, participantPriceCents } from "@/lib/participant-types";
 import { publicCoursePath } from "@/lib/public-routes";
 import type { Shop, Trip, TripMeetingDay } from "./types";
+
+/**
+ * A snorkeler's and a rider's own prices, said once under the diver's figure,
+ * so a family deciding who comes reads every price before the form (ADR
+ * 20261007-participant-types). Empty on a dive-only departure. The hero and
+ * the departure's sheet both say them.
+ */
+export function otherSeatPriceLines(
+  trip: Trip,
+  currency: string,
+  locale: string,
+  t: DiverTranslator,
+) {
+  return offeredParticipantTypes(trip).flatMap((type) => {
+    const cents = participantPriceCents(trip, type);
+    if (type === "diver" || cents === null) return [];
+    const price =
+      cents === 0 ? t("participants.free") : formatMoneyScanned(cents, currency, locale);
+    return [
+      {
+        type,
+        line: t("participants.priceLine", { type: t(DIVER_PARTICIPANT_TYPE_KEYS[type]), price }),
+      },
+    ];
+  });
+}
 
 /**
  * The masthead answers exactly what a diver arrives with — when is it, what is
@@ -73,13 +99,7 @@ export function TripHeader({
   // the diver reached the form.
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const multiDay = meetingDays.length > 1;
-  // A snorkeler's and a rider's own prices, said once under the diver's
-  // figure, so a family deciding who comes reads every price before the form
-  // (ADR 20261007-participant-types). Empty on a dive-only departure.
-  const otherSeatPrices = offeredParticipantTypes(trip).flatMap((type) => {
-    const cents = participantPriceCents(trip, type);
-    return type === "diver" || cents === null ? [] : [{ type, cents }];
-  });
+  const otherSeatPrices = otherSeatPriceLines(trip, currency, locale, t);
   // The header opens the column, with no margin of its own above it: the page
   // stands in the public pages' frame, and the staff preview bar keeps its own
   // `mb-6`. A wrapping `mt-4` put the eyebrow 84px under the chrome's rule
@@ -189,16 +209,8 @@ export function TripHeader({
           ) : null}
           {otherSeatPrices.length > 0 ? (
             <p className="mt-1 flex flex-wrap gap-x-3 text-sm text-muted tabular-nums">
-              {otherSeatPrices.map(({ type, cents }) => (
-                <span key={type}>
-                  {t("participants.priceLine", {
-                    type: t(DIVER_PARTICIPANT_TYPE_KEYS[type]),
-                    price:
-                      cents === 0
-                        ? t("participants.free")
-                        : formatMoneyScanned(cents, currency, locale),
-                  })}
-                </span>
+              {otherSeatPrices.map(({ type, line }) => (
+                <span key={type}>{line}</span>
               ))}
             </p>
           ) : null}

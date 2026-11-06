@@ -71,7 +71,11 @@ test.describe("print", () => {
     await expect(map).not.toBeVisible();
     await expect(cancel).not.toBeVisible();
     await expect(late).not.toBeVisible();
-    const sheet = page.locator(".paper-sheet");
+    // The trip page this flow booked on can stay mounted, hidden, beside the
+    // thread (cacheComponents): the day sheet is the one that says where to go.
+    const sheet = page.locator(".paper-sheet", {
+      hasText: diverTranslator("en-US")("trip.arrivalHeading"),
+    });
     await expect(sheet).toBeVisible();
     await expect(sheet).toContainText(addressText);
     await page.emulateMedia({ media: "screen" });
@@ -260,6 +264,26 @@ test.describe("print", () => {
     await assertCrewPdfPixels(pdf, labels, testInfo.outputPath("crew-rendered-pages"));
     await testInfo.attach("crew-multipage", { path: pdf, contentType: "application/pdf" });
   });
+
+  // The public trip and its embed print one departure sheet, never the
+  // screen (#2745); `capturePrint` audits it for ink.
+  for (const [name, path] of [
+    ["public-trip-sheet", "trips"],
+    ["public-trip-embed-sheet", "embed/trip"],
+  ] as const) {
+    test(`${name} prints as the departure's sheet`, async ({ page }) => {
+      const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+      await page.goto(`/s/blue-mantis/${path}/${id}`);
+      await page.getByRole("heading", { level: 1 }).first().waitFor();
+      const sheet = page.locator(".paper-sheet");
+      await expect(sheet).not.toBeVisible();
+      await page.emulateMedia({ media: "print" });
+      await expect(sheet).toBeVisible();
+      await expect(page.locator("#book")).not.toBeVisible();
+      await page.emulateMedia({ media: "screen" });
+      await capturePrint(page, name);
+    });
+  }
 
   test("a public course prints complete FAQ answers", async ({ page }) => {
     await page.goto("/s/blue-mantis/courses/discover-scuba-diving");

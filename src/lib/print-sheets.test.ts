@@ -33,7 +33,11 @@ describe("a page opened by a bearer link, on paper", () => {
     const rule = capabilityPagePrintRule();
     expect(rule).toMatch(/@page\{margin:0;/);
     expect(rule).toContain("@bottom-right{content:none}");
-    expect(rule).toContain(`@media print{body{padding:${CAPABILITY_PAGE_PRINT_MARGIN_MM}mm}}`);
+    expect(rule).toContain(`@media print{body{padding:${CAPABILITY_PAGE_PRINT_MARGIN_MM}mm}`);
+  });
+
+  it("lets no named page bring a margin back, even one a kept-alive route still declares", () => {
+    expect(capabilityPagePrintRule()).toContain("body,[data-departure-paper]{page:auto!important}");
   });
 });
 

@@ -1015,7 +1015,8 @@ select:not([multiple]):not([size]):dir(rtl) {
  * A diver's logbook page is the after-state's paper state the same way
  * (`RecordPaper.tsx`), reached by its Print and by the browser's own, and
  * the readiness thread before the dive prints its day sheet
- * (`ReadyDaySheet.tsx`), drawn print-only under the screen. A
+ * (`ReadyDaySheet.tsx`), drawn print-only under the screen, as the public
+ * trip page and its embed print the departure's (`TripPaperSheet.tsx`). A
  * sheet is the shop's paper rather than a screen, and three things make it so:
  *
  * 1. **It wears its own face, on screen and on paper alike.** Inside
@@ -1230,45 +1231,6 @@ select:not([multiple]):not([size]):dir(rtl) {
     break-inside: avoid;
   }
 
-  /* A diver's departure briefing reads in one column on paper. */
-  body:has([data-public-trip-paper]) {
-    page: departure-public-trip;
-  }
-
-  body:has([data-public-trip-paper]) [data-public-print-identity] {
-    display: none;
-  }
-
-  [data-public-trip-paper] {
-    page: departure-public-trip;
-    max-width: none;
-    padding: 0;
-  }
-
-  [data-public-trip-layout] {
-    display: block;
-  }
-
-  [data-public-trip-layout] > * + * {
-    margin-top: 1rem;
-  }
-
-  [data-public-trip-terms] a {
-    color: var(--foreground);
-  }
-
-  /* A closed screen disclosure still belongs in the printed briefing. */
-  [data-public-trip-reading] details::details-content {
-    content-visibility: visible !important;
-    display: block;
-    height: auto;
-    opacity: 1;
-    overflow: visible;
-  }
-
-  [data-public-trip-reading] details summary svg {
-    display: none;
-  }
   /*
    * **A submit button is an act, never a fact.** Its words only ever say what
    * a tap would do — Remove, Send waiver, Request, Save — and on paper each one
