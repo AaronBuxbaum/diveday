@@ -99,11 +99,23 @@ export function carriedMissing<M extends DayMark>(
   currentDay: number,
 ): Map<string, M> {
   const carried = new Map<string, M>();
+  for (const mark of stillOpenEarlier(standing, currentDay)) {
+    carried.set(keyOf(mark.subject, mark.checkpoint), mark);
+  }
+  return carried;
+}
+
+/** {@link carriedMissing}'s marks, every earlier day's, oldest day first. */
+function stillOpenEarlier<M extends DayMark>(
+  standing: ReadonlyMap<number, ReadonlyMap<string, M>>,
+  currentDay: number,
+): M[] {
+  const open: M[] = [];
   const days = [...standing.keys()].filter((day) => day < currentDay).sort((a, b) => a - b);
   for (const day of days) {
     const marks = standing.get(day);
     if (!marks) continue;
-    for (const [key, mark] of marks) {
+    for (const mark of marks.values()) {
       if (mark.status !== "not_boarded" || !isAfterDive(mark.checkpoint)) continue;
       const dive = ordinalOf(mark.checkpoint);
       const settledThatDay = [...marks.values()].some(
@@ -114,10 +126,10 @@ export function carriedMissing<M extends DayMark>(
           ordinalOf(other.checkpoint) > dive,
       );
       if (settledThatDay || seenAfter(standing, mark.subject, day)) continue;
-      carried.set(key, mark);
+      open.push(mark);
     }
   }
-  return carried;
+  return open;
 }
 
 /**
@@ -141,6 +153,72 @@ export function manifestRollCallView<M extends DayMark>(
     if (mark.status !== "cleared") view.set(key, mark);
   }
   return view;
+}
+
+/** A mark with the time it was taken, as the missing-diver gate reads it. */
+export type TimedDayMark = DayMark & { occurredAt: Date };
+
+/**
+ * **When one person's standing "not back aboard" began**, as the manifest
+ * shows it on `currentDay` (#4017): null when the manifest shows them nowhere
+ * red after a dive. Gates the missing-diver report and alert, and Found.
+ *
+ * Marks are one subject's, **oldest first**. A red row is today's standing
+ * `not_boarded` after a dive, or an earlier day's still open
+ * ({@link carriedMissing}); every earlier day's open mark counts, even where
+ * today has re-stated the same checkpoint, so the disappearance keeps its
+ * first day. Each mark dates from the first `not_boarded` of the unbroken run
+ * ending in it on its own day and checkpoint (an offline copy synced later is
+ * the same alarm); the earliest wins, the time an insurer reads. A mark filed
+ * on a day the server clock has not reached yet (a fast tablet) may add red
+ * but never settles or takes back anything.
+ */
+export function notBackAboardSince<M extends TimedDayMark>(
+  marks: readonly M[],
+  currentDay: number,
+): Date | null {
+  // Marks up to today read as the manifest does. A mark from a day the server
+  // has not reached yet (a fast tablet) can add red but settles nothing.
+  const standing = standingByDay(marks.filter((mark) => mark.day <= currentDay));
+  const red = stillOpenEarlier(standing, currentDay);
+  const ahead = standingByDay(marks.filter((mark) => mark.day > currentDay));
+  for (const marksOfDay of [standing.get(currentDay), ...ahead.values()]) {
+    for (const mark of marksOfDay?.values() ?? []) {
+      if (mark.status === "not_boarded" && isAfterDive(mark.checkpoint)) red.push(mark);
+    }
+  }
+  let since: Date | null = null;
+  for (const mark of red) {
+    const start = runStart(marks, mark);
+    if (!since || start < since) since = start;
+  }
+  return since;
+}
+
+/** The first `not_boarded` of the unbroken run that ends in `mark`, on its day and checkpoint. */
+function runStart<M extends TimedDayMark>(marks: readonly M[], mark: M): Date {
+  let start = mark.occurredAt;
+  for (let i = marks.indexOf(mark) - 1; i >= 0; i--) {
+    const earlier = marks[i];
+    if (!earlier || earlier.day !== mark.day) continue;
+    if (earlier.subject !== mark.subject || earlier.checkpoint !== mark.checkpoint) continue;
+    if (earlier.status !== "not_boarded") break;
+    start = earlier.occurredAt;
+  }
+  return start;
+}
+
+/**
+ * Whether one person's marks (oldest first) say they are back aboard: the
+ * newest is `boarded` and the manifest shows them nowhere red after a dive
+ * ({@link notBackAboardSince}). An undo is not "back": it takes a mark away
+ * without saying anyone came aboard, and no marks at all is not back either.
+ */
+export function backAboardNow<M extends TimedDayMark>(
+  marks: readonly M[],
+  currentDay: number,
+): boolean {
+  return marks.at(-1)?.status === "boarded" && notBackAboardSince(marks, currentDay) === null;
 }
 
 /**

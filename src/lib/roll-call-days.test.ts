@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  backAboardNow,
   type DayMark,
   manifestRollCallView,
+  notBackAboardSince,
   standingByDay,
   unaccountedSubjects,
 } from "./roll-call-days";
@@ -194,6 +196,100 @@ describe("roll-call results read day by day (#2557)", () => {
       expect(states(manifestRollCallView(marks, 2))).toEqual({
         "ben@after_dive_1": "not_boarded/0",
       });
+    });
+  });
+
+  describe("the missing-diver gate reads what the manifest shows (#4017)", () => {
+    // One person's after-dive marks, oldest first, each with the time it was taken.
+    const t = (minute: number) => new Date(Date.UTC(2026, 7, 1, 14, minute));
+    const at = (
+      checkpoint: string,
+      status: DayMark["status"],
+      day: number,
+      minute: number,
+      named: { id?: string; retracts?: string } = {},
+    ) => ({ ...m("ben", checkpoint, status, day, named), occurredAt: t(minute) });
+    const dayOneMissing = [at("after_dive_1", "not_boarded", 0, 0, { id: "d1" })];
+
+    it("keeps day one's missing diver missing after a day-two count of them is undone", () => {
+      const marks = [
+        ...dayOneMissing,
+        at("after_dive_1", "boarded", 1, 10, { id: "b2" }),
+        at("after_dive_1", "cleared", 1, 11, { retracts: "b2" }),
+      ];
+      expect(notBackAboardSince(marks, 1)).toEqual(t(0));
+      expect(backAboardNow(marks, 1)).toBe(false);
+    });
+
+    it("keeps them missing after a day-two undo that names nothing, or another checkpoint's mark", () => {
+      for (const undo of [
+        at("after_dive_1", "cleared", 1, 10),
+        at("after_dive_2", "cleared", 1, 10, { retracts: "d1" }),
+        at("departure", "cleared", 1, 10, { retracts: "d1" }),
+      ]) {
+        expect(notBackAboardSince([...dayOneMissing, undo], 1)).toEqual(t(0));
+      }
+    });
+
+    it("dates the disappearance from day one when day two re-states it, before and after an undo", () => {
+      const restated = [...dayOneMissing, at("after_dive_1", "not_boarded", 1, 10, { id: "d2" })];
+      expect(notBackAboardSince(restated, 1)).toEqual(t(0));
+      const undoneAndRestated = [
+        ...restated,
+        at("after_dive_1", "cleared", 1, 11, { retracts: "d2" }),
+        at("after_dive_1", "not_boarded", 1, 12),
+      ];
+      expect(notBackAboardSince(undoneAndRestated, 1)).toEqual(t(0));
+      expect(notBackAboardSince(undoneAndRestated, 2)).toEqual(t(0));
+    });
+
+    it("dates it from the first tap of an unbroken run, not an offline copy synced later", () => {
+      const marks = [...dayOneMissing, at("after_dive_1", "not_boarded", 0, 7)];
+      expect(notBackAboardSince(marks, 0)).toEqual(t(0));
+      expect(notBackAboardSince(marks, 1)).toEqual(t(0));
+    });
+
+    it("lets go only when the manifest does: a named undo of the carried mark, or a later-day count", () => {
+      expect(
+        notBackAboardSince(
+          [...dayOneMissing, at("after_dive_1", "cleared", 1, 10, { retracts: "d1" })],
+          1,
+        ),
+      ).toBeNull();
+      const counted = [...dayOneMissing, at("after_dive_2", "boarded", 1, 10)];
+      expect(notBackAboardSince(counted, 1)).toBeNull();
+      expect(backAboardNow(counted, 1)).toBe(true);
+    });
+
+    it("keeps today's rule: a missing mark today stands beside a later dive's back aboard", () => {
+      const marks = [...dayOneMissing, at("after_dive_2", "boarded", 0, 30)];
+      expect(notBackAboardSince(marks, 0)).toEqual(t(0));
+      expect(backAboardNow(marks, 0)).toBe(false);
+    });
+
+    it("never reads an undo as back aboard, and never reads a mark taken back on its own day", () => {
+      const undone = [...dayOneMissing, at("after_dive_1", "cleared", 0, 1, { retracts: "d1" })];
+      expect(notBackAboardSince(undone, 0)).toBeNull();
+      expect(backAboardNow(undone, 0)).toBe(false);
+      expect(backAboardNow([], 0)).toBe(false);
+    });
+
+    it("lets a mark from a day the server has not reached add red but settle nothing", () => {
+      expect(notBackAboardSince([at("after_dive_1", "not_boarded", 1, 0)], 0)).toEqual(t(0));
+      for (const ahead of [
+        at("after_dive_2", "boarded", 1, 30),
+        at("after_dive_1", "boarded", 1, 30),
+        at("after_dive_1", "cleared", 1, 30, { retracts: "d1" }),
+      ]) {
+        const marks = [...dayOneMissing, ahead];
+        expect(notBackAboardSince(marks, 0)).toEqual(t(0));
+        expect(backAboardNow(marks, 0)).toBe(false);
+      }
+    });
+
+    it("never reads the dock's 'not boarded' as missing", () => {
+      expect(notBackAboardSince([at("departure", "not_boarded", 0, 0)], 0)).toBeNull();
+      expect(notBackAboardSince([at("departure", "not_boarded", 0, 0)], 1)).toBeNull();
     });
   });
 
