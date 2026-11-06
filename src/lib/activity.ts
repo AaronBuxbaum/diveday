@@ -273,7 +273,15 @@ type ActivityParamShapes = {
    * so the stamp was replaced (issue #3987). A stamp the desk never sealed is forged or an
    * older build's; either way the trail says it was there.
    */
-  medical_unsealed_clearance_replaced: { actor: string; diver: string; record?: string };
+  medical_unsealed_clearance_replaced: {
+    actor: string;
+    diver: string;
+    record?: string;
+    /** The replaced stamp's values (issue #3999): who stamped it, the physician, the date. */
+    clearedBy?: string;
+    physician?: string;
+    evaluated?: string;
+  };
   /**
    * A physician's answer was recorded from a letter dated before the referral it
    * answers (issue #2616): the letter's date, the earlier referral it was written
