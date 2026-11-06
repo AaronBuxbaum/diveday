@@ -1396,10 +1396,9 @@ jobs:
   real-postgres:
     name: Real Postgres (migrations + concurrency)
     needs: changes
-    # Two independent reasons to run, and the `always()` is what lets the second
-    # one work: `needs:` on a skipped job would otherwise skip this one too, and
-    # `changes` is deliberately skipped on the nightly.
-    if: ${{ always() && (github.event_name == 'schedule' || needs.changes.outputs.db == 'true') }}
+    # The status function lets the nightly run despite its skipped `changes` dependency.
+    # Unlike always(), !cancelled() also stops obsolete tests when the run is canceled.
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || needs.changes.outputs.db == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -1485,7 +1484,8 @@ jobs:
   # the live head/base/merge candidate before returning success.
   ci-result:
     name: CI result
-    if: always() && github.event_name != 'schedule' && needs.stack-gate.outputs.run != 'false'
+    # Failed or skipped dependencies still need a verdict; a canceled run needs no new job.
+    if: ${{ !cancelled() && github.event_name != 'schedule' && needs.stack-gate.outputs.run != 'false' }}
     needs:
       - stack-gate
       - repo-safeguards

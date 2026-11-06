@@ -26,8 +26,7 @@ const filled = ({ dock = "", security = "" }) =>
   TEMPLATE.replace(
     "- `dive-domain-expert` (dock operator):",
     `- \`dive-domain-expert\` (dock operator): ${dock}`,
-  )
-    .replace("- `security-reviewer`:", `- \`security-reviewer\`: ${security}`);
+  ).replace("- `security-reviewer`:", `- \`security-reviewer\`: ${security}`);
 
 describe("which reviewer a diff needs", () => {
   it("asks dive-domain-expert for manifests, roll call, readiness, certs, medical and erasure", () => {
