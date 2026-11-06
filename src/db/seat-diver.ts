@@ -409,8 +409,10 @@ async function seatConsequences(
   let confirmation: SeatDiverConfirmation = "not_needed";
   const takeWaiver = (issued: IssueAndDeliverWaiverResult | null) => {
     waiver = waiverOutcome(issued);
+    // A seat's own release has no token to hand over (its link is the
+    // holder's thread link, issue #2743): the counter QR is the way to sign it.
     if (issued?.ok && issued.delivery !== "sent") {
-      waiverPath = issued.path ?? `/waivers/${issued.token}`;
+      waiverPath = issued.path ?? (issued.token ? `/waivers/${issued.token}` : undefined);
     }
   };
 

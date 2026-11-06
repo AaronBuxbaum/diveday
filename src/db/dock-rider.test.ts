@@ -22,6 +22,7 @@ import {
 import { recordTripStage } from "./trip-stages";
 import { createTrip, heldSeatCounts, setTripStatus } from "./trips";
 import { completeWaiver } from "./waivers";
+import { issueCounterLink, openOnDevice } from "./waivers-test-fixtures";
 
 /**
  * **A rider added at the boat goes through the one seating path** (batch 4,
@@ -337,7 +338,7 @@ describe("addDockRider", () => {
     const result = await addDockRider(db, rider(shop.id, trip.id, actor));
     if (!result.ok) throw new Error(`refused: ${result.reason}`);
     expect(result.owes).toEqual(["release"]);
-    expect(result.waiverPath).toMatch(/^\/waivers\//);
+    expect(result.waiverPath).toBeUndefined();
     expect((await getBookingReadiness(db, shop.id, result.bookingId))?.status).toBe("blocked");
     const board = () =>
       recordRollCall(db, {
@@ -350,8 +351,10 @@ describe("addDockRider", () => {
       });
     expect(await board()).toMatchObject({ ok: false, reason: "not_ready" });
 
-    const token = result.waiverPath?.replace("/waivers/", "") ?? "";
-    await completeWaiver(db, token, {
+    const { token } = await issueCounterLink(db, { shopId: shop.id, bookingId: result.bookingId });
+    const door = await openOnDevice(db, token);
+    if (door?.door !== "counter") throw new Error("counter door missing");
+    await completeWaiver(db, door.key, {
       signerName: "Sam Rider",
       agreed: true,
       medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),

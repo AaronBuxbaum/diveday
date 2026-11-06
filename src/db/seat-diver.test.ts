@@ -578,7 +578,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
 
     expect(result).toMatchObject({ ok: true, confirmation: "not_sent", waiver: "not_delivered" });
     if (!result.ok) throw new Error("expected the diver to be seated");
-    expect(result.waiverPath).toMatch(/^\/waivers\//);
+    expect(result.waiverPath).toBeUndefined();
     expect(send).not.toHaveBeenCalled();
   });
 });
