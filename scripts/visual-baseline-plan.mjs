@@ -60,10 +60,14 @@ export function hashScreenshots(dir) {
  * - `fetch`: baseline images reg-suit needs, because the capture differs, has no recorded hash,
  *   or (on a full capture) main no longer takes it and the report shows its last image as deleted.
  *
+ * The plan names the baseline it was drawn from (`key`, `version`), and `readPlan` refuses it for
+ * any other: a leftover or foreign plan would otherwise skip captures against hashes that are not
+ * the baseline this run compares with.
+ *
  * `report.actualItems` is trusted only as far as the callers already trust it; names outside the
  * safe screenshot pattern are left to the caller's own validation.
  */
-export function planBaselineReuse({ report, actualHashes, selective }) {
+export function planBaselineReuse({ report, actualHashes, selective, key, version }) {
   const blobs = report?.actualBlobs;
   if (!blobs || typeof blobs !== "object" || Array.isArray(blobs)) return null;
   if (!Array.isArray(report.actualItems)) return null;
@@ -89,6 +93,8 @@ export function planBaselineReuse({ report, actualHashes, selective }) {
   }
   return {
     version: 1,
+    baselineKey: key,
+    baselineVersion: version,
     selective: Boolean(selective),
     unchanged: unchanged.sort(byName),
     filled: filled.sort(byName),
@@ -104,8 +110,11 @@ export function clearPlan(file = BASELINE_PLAN_FILE) {
   rmSync(file, { force: true });
 }
 
-/** The plan the prepare step wrote, or null when it fell back to fetching everything. */
-export function readPlan(file = BASELINE_PLAN_FILE) {
+/**
+ * The plan the prepare step wrote, or null when it fell back to fetching everything. `expected` is
+ * the baseline this run compares with (`{ key, version }`); a plan drawn from another is refused.
+ */
+export function readPlan(file = BASELINE_PLAN_FILE, expected = {}) {
   if (!existsSync(file)) return null;
   let plan;
   try {
@@ -121,6 +130,12 @@ export function readPlan(file = BASELINE_PLAN_FILE) {
     )
   ) {
     throw new Error("the baseline plan has an unexpected shape");
+  }
+  if (plan.baselineKey !== expected.key || plan.baselineVersion !== expected.version) {
+    throw new Error(
+      "the baseline plan was drawn from a different baseline than this run compares with; " +
+        `delete ${file} and re-run the prepare step`,
+    );
   }
   return plan;
 }

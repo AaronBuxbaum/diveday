@@ -122,7 +122,12 @@ const compareOnly = process.env.REG_SUIT_COMPARE_ONLY === "true";
 if (fill || expectedReady) {
   const expectedDir = path.join(repoRoot, ".reg", "expected");
   const actualDir = path.join(repoRoot, "e2e", "screenshots");
-  const plan = expectedReady ? readPlan(path.join(repoRoot, BASELINE_PLAN_FILE)) : null;
+  const plan = expectedReady
+    ? readPlan(path.join(repoRoot, BASELINE_PLAN_FILE), {
+        key: resolved.expectedKey,
+        version: process.env.REG_EXPECTED_VERSION ?? "",
+      })
+    : null;
   const stages = [
     ...(expectedReady ? [] : [["sync-expected"]]),
     ...(fill ? [["fill"]] : []),

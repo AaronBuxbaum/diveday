@@ -26,7 +26,7 @@ describe("baselineEnvironment", () => {
 });
 
 /** A fake bucket: `objects` is the set of keys a HEAD finds, and nothing else exists. */
-function bucketWith({ objects = [], versions = {} }) {
+function bucketWith({ objects = [], versions = {}, owners = {} }) {
   const state = { heads: 0 };
   const present = new Set(objects);
   const fetchImpl = async (url) => {
@@ -36,7 +36,10 @@ function bucketWith({ objects = [], versions = {} }) {
     return {
       ok: present.has(key),
       status: present.has(key) ? 200 : 404,
-      headers: new Headers(version ? { "x-amz-meta-diveday-snapshot-version": version } : {}),
+      headers: new Headers({
+        ...(version ? { "x-amz-meta-diveday-snapshot-version": version } : {}),
+        ...(owners[key] ? { "x-amz-meta-diveday-pr-number": owners[key] } : {}),
+      }),
     };
   };
   return { state, fetchImpl };
@@ -84,6 +87,55 @@ describe("nearestPublishedAncestor", () => {
       fetchImpl: fixture.fetchImpl,
     });
     expect(found).toEqual({ key: B, skipped: 2, version: VERSION });
+  });
+
+  it("walks past a pull request's marker at the key and at an ancestor", async () => {
+    const fixture = bucketWith({
+      objects: [`${KEY}/out.json`, `${A}/out.json`, `${B}/out.json`],
+      versions: {
+        [`${KEY}/out.json`]: VERSION,
+        [`${A}/out.json`]: VERSION,
+        [`${B}/out.json`]: "b".repeat(64),
+      },
+      owners: { [`${KEY}/out.json`]: "4021", [`${A}/out.json`]: "4022" },
+    });
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: `${A}\n${B}\n` }),
+      fetchImpl: fixture.fetchImpl,
+    });
+    expect(found).toEqual({ key: B, skipped: 2, version: "b".repeat(64) });
+  });
+
+  it("finds no baseline when only pull request markers exist, and does not call it a fresh start", async () => {
+    const fixture = bucketWith({
+      objects: [`${KEY}/out.json`],
+      versions: { [`${KEY}/out.json`]: VERSION },
+      owners: { [`${KEY}/out.json`]: "4021" },
+    });
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: git({ [revList]: "" }),
+      fetchImpl: fixture.fetchImpl,
+    });
+    expect(found).toBeNull();
+  });
+
+  it("treats the literal None owner as main's", async () => {
+    const fixture = bucketWith({
+      objects: [`${KEY}/out.json`],
+      versions: { [`${KEY}/out.json`]: VERSION },
+      owners: { [`${KEY}/out.json`]: "None" },
+    });
+    const found = await nearestPublishedAncestor({
+      bucket: BUCKET,
+      key: KEY,
+      git: () => "",
+      fetchImpl: fixture.fetchImpl,
+    });
+    expect(found).toEqual({ key: KEY, skipped: 0, version: VERSION });
   });
 
   it("ignores old markers without a version and finds the first versioned baseline", async () => {
