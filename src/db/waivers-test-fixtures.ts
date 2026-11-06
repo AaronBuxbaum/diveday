@@ -1,9 +1,13 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { type fileScopedShopContext, seededShopContext } from "@/test/db";
-import { shops } from "./schema";
+import { mintCapability } from "./capabilities";
+import type { DbExecutor } from "./client";
+import { bookings, shops } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { claimCounterLink, waiverLinkDoor } from "./waivers-completion";
 import { recordMedicalEvaluation as recordMedicalEvaluationInShop } from "./waivers-medical";
+import { openWaiverInThread } from "./waivers-requests";
 import { getCurrentWaiverTemplate } from "./waivers-templates";
 
 /**
@@ -62,4 +66,58 @@ export function waiverContextFor(fileCtx: ReturnType<typeof fileScopedShopContex
       template,
     };
   };
+}
+
+/**
+ * A counter tablet's link for one seat (`waiver_link`), the way
+ * `issuePartyWaiver` makes it without the party: the seat's release opened as
+ * its thread opens it, and a capability naming that release, minted at `now`.
+ */
+export async function issueCounterLink(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; now?: Date },
+) {
+  const [seat] = await db
+    .select({ personId: bookings.personId, tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+  if (!seat) throw new Error("counter link seat missing");
+  const opened = await openWaiverInThread(db, {
+    shopId: input.shopId,
+    bookingId: input.bookingId,
+    expectedPersonId: seat.personId,
+    expectedTripId: seat.tripId,
+    now: input.now,
+  });
+  if (!opened.ok) throw new Error(`counter link release refused: ${opened.reason}`);
+  const link = await mintCapability(db, {
+    purpose: "waiver_link",
+    shopId: input.shopId,
+    subjectId: opened.recordId,
+    now: input.now,
+  });
+  if (!link.expiresAt) throw new Error("counter link without expiry");
+  return { token: link.token, expiresAt: link.expiresAt, recordId: opened.recordId };
+}
+
+/** The secret each counter link's first phone keeps, by token (`claimCounterLink`). */
+const claimedOnDevice = new Map<string, string>();
+
+/**
+ * What `/waivers/<token>` opens on the phone that opened the link first: the
+ * first call for a token claims it, as the page's "open here" button does, and
+ * every later call is that same phone reloading.
+ */
+export async function openOnDevice(db: DbExecutor, token: string, now?: Date) {
+  let device = claimedOnDevice.get(token);
+  if (!device) {
+    device = (await claimCounterLink(db, token, now)) ?? undefined;
+    if (device) claimedOnDevice.set(token, device);
+  }
+  return waiverLinkDoor(db, token, { device, now });
+}
+
+/** The secret the phone that opened `token` first keeps (`openOnDevice`), for a page test's cookie. */
+export function claimedDevice(token: string): string | undefined {
+  return claimedOnDevice.get(token);
 }

@@ -6,6 +6,7 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MarketingHeroMotion,
+  MarketingReveal,
   MarketingSectionMotion,
   REVEAL_MARKER_ATTRIBUTE,
   REVEAL_READY_ATTRIBUTE,
@@ -78,7 +79,6 @@ function placeSections(tops: number[]) {
 }
 
 beforeEach(() => {
-  document.documentElement.removeAttribute(REVEAL_READY_ATTRIBUTE);
   document.body.innerHTML = "";
   // A 800px viewport, and no reader asking for stillness. Both are read at
   // mount and both change which branch the effect takes.
@@ -253,6 +253,10 @@ describe("the capture's own guard against a blank chapter", () => {
  * `data-hash-landed`.
  */
 describe("the signal the camera waits on", () => {
+  /** The stamp lands on the component's own marker, never on `<html>`. */
+  const stampOf = (container: HTMLElement) =>
+    container.querySelector(`[${REVEAL_MARKER_ATTRIBUTE}]`)?.hasAttribute(REVEAL_READY_ATTRIBUTE);
+
   it("marks the page as one that runs a reveal, before any script does", () => {
     stubIntersectionObserver();
     const { container } = render(<MarketingSectionMotion />);
@@ -267,9 +271,9 @@ describe("the signal the camera waits on", () => {
     stubIntersectionObserver();
     placeSections([1400]);
 
-    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(false);
-    render(<MarketingSectionMotion />);
-    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+    const { container } = render(<MarketingSectionMotion />);
+
+    expect(stampOf(container)).toBe(true);
   });
 
   /**
@@ -281,9 +285,9 @@ describe("the signal the camera waits on", () => {
     stubIntersectionObserver();
     placeSections([200]); // every section already above the fold
 
-    render(<MarketingSectionMotion />);
+    const { container } = render(<MarketingSectionMotion />);
 
-    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+    expect(stampOf(container)).toBe(true);
   });
 
   it("says so for a reader who asked for no motion", () => {
@@ -295,9 +299,55 @@ describe("the signal the camera waits on", () => {
     );
     placeSections([1400]);
 
-    render(<MarketingSectionMotion />);
+    const { container } = render(<MarketingSectionMotion />);
 
-    expect(document.documentElement.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+    expect(stampOf(container)).toBe(true);
+  });
+
+  /**
+   * **The landing page's flake (issue #3932).** `/` and the feature pages
+   * withhold their chapters through the `MarketingReveal` wrapper, not
+   * `MarketingSectionMotion`, and the wrapper used to carry neither the marker
+   * nor the stamp. So the camera read "nothing to decide" off a page that was
+   * about to hide three chapters, swept it before hydration, and the tripwire
+   * then found all three still pending. Every wrapper is its own decision,
+   * stamped on itself, so one wrapper hydrating cannot speak for another.
+   */
+  it("marks a wrapped chapter as a reveal, before any script does", () => {
+    stubIntersectionObserver();
+    const { container } = render(
+      <MarketingReveal>
+        <section>Roll call</section>
+      </MarketingReveal>,
+    );
+
+    expect(container.firstElementChild?.hasAttribute(REVEAL_MARKER_ATTRIBUTE)).toBe(true);
+  });
+
+  it("stamps a wrapped chapter once it has decided, withheld or not", () => {
+    stubIntersectionObserver();
+    const below = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.textContent === "Below" ? ({ top: 1400 } as DOMRect) : below.call(this);
+    });
+
+    const { container } = render(
+      <>
+        <MarketingReveal>
+          <section>Above</section>
+        </MarketingReveal>
+        <MarketingReveal>
+          <section>Below</section>
+        </MarketingReveal>
+      </>,
+    );
+
+    const [above, withheld] = [...container.children];
+    expect(withheld?.className).toContain("marketing-reveal-pending");
+    expect(above?.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
+    expect(withheld?.hasAttribute(REVEAL_READY_ATTRIBUTE)).toBe(true);
   });
 });
 
@@ -308,9 +358,10 @@ describe("the capture waits for that signal, and bounds every pass", () => {
   it("waits for the page to finish deciding before it scrolls past", async () => {
     const spec = await readSpec();
     // Gated on the server-rendered marker, so no other surface pays the wait.
-    expect(spec).toMatch(/document\.querySelector\(`\[\$\{revealMarkerAttribute\}\]`\) !== null/);
+    // Every marker, not the first: a page carries one per wrapped chapter.
+    expect(spec).toContain("`[${revealMarkerAttribute}]:not([${revealReadyAttribute}])`");
     expect(spec).toMatch(
-      /!document\.documentElement\.hasAttribute\(revealReadyAttribute\) &&\s*performance\.now\(\) < deadline/,
+      /document\.querySelector\(undecided\) !== null &&\s*performance\.now\(\) < deadline/,
     );
   });
 

@@ -2,7 +2,6 @@ import { and, eq, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
-import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
 import { shopPath } from "@/lib/staff-notices";
 import {
   issueCapability,
@@ -51,14 +50,13 @@ export async function issueShoreAlertConfirmation(
       .from(shops)
       .where(eq(shops.id, input.shopId))
       .for("no key update");
-    const expiresAt = new Date(now.getTime() + SHORE_ALERT_CONFIRMATION_TTL_MS);
-    const { token, id } = await mintCapability(tx, {
+    const { token, id, expiresAt } = await mintCapability(tx, {
       purpose: "shore_alert_confirm",
       shopId: input.shopId,
       subjectId: input.email,
-      expiresAt,
       now,
     });
+    if (!expiresAt) throw new Error("shore_alert_confirm must expire");
     return { token, tokenId: id, expiresAt };
   });
 }

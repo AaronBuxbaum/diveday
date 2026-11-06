@@ -1,5 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { courseFormsLinkPath } from "@/lib/booking-capabilities";
+import { courseFormsLinkPath, readinessWaiverLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
-import { issueBookingCapability } from "./booking-capabilities";
+import { hasLiveDeliveredReadinessLink, issueBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { getCourseFormsForBooking } from "./course-forms";
 import {
@@ -23,10 +23,10 @@ import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips, waiverRecords } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
+import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import {
   hasLivePersonWaiverRequest,
-  hasLiveWaiverRequest,
   issueWaiverRequest,
   openWaiverInThread,
   recordWaiverDelivery,
@@ -70,7 +70,12 @@ export type WaiverDelivery =
   | "test_recipient"
   | "failed"
   /** The `link` channel: issued on purpose with nothing sent, so staff can pass it on. */
-  | "link_only";
+  | "link_only"
+  /**
+   * The `link` channel on a seat: refused. A seat's release is its holder's
+   * thread link, which only ever goes to the contact on file (issue #2743).
+   */
+  | "thread_only";
 
 /**
  * The shop's own text senders, resolved once per send.
@@ -146,8 +151,12 @@ export type IssueAndDeliverWaiverResult =
       ok: true;
       bookingId: string;
       diverName: string;
-      /** The bearer link (token path) to hand over when delivery was not `sent`. */
-      token: string;
+      /**
+       * The bearer link (token path) to hand over when delivery was not `sent`.
+       * Null for a seat's release: its link is the holder's thread link and
+       * never comes back to staff (issue #2743).
+       */
+      token: string | null;
       /**
        * The link's path when it is not `/waivers/<token>`: the release was
        * already signed and the course's forms were not, so what went out (or
@@ -166,7 +175,11 @@ export type IssueAndDeliverWaiverResult =
     };
 
 export type PersonWaiverResult =
-  | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: true }>, "bookingId"> & { bookingId: null })
+  | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: true }>, "bookingId" | "token"> & {
+      bookingId: null;
+      /** A bookingless release keeps its waiver link (ADR 20261105). */
+      token: string;
+    })
   | (Omit<Extract<IssueAndDeliverWaiverResult, { ok: false }>, "bookingId"> & { bookingId: null });
 
 /** Which channel to hand the link over on, plus test seams for the text one. */
@@ -274,14 +287,7 @@ async function deliverCourseFormsLink(
       },
       { provider: options.provider, signal: notificationProviderSignal() },
     );
-    delivery =
-      result.status === "sent"
-        ? "sent"
-        : result.status === "not_configured"
-          ? "unconfigured"
-          : result.errorCode === "invalid_test_recipient"
-            ? "test_recipient"
-            : "failed";
+    delivery = emailDelivery(result);
   }
   return {
     ok: true,
@@ -293,13 +299,122 @@ async function deliverCourseFormsLink(
   };
 }
 
+/** What an email send came to, in the words a waiver send reports. */
+function emailDelivery(
+  result: Awaited<ReturnType<typeof sendAndRecordNotification>>,
+): WaiverDelivery {
+  if (result.status === "sent") return "sent";
+  if (result.status === "not_configured") return "unconfigured";
+  return result.errorCode === "invalid_test_recipient" ? "test_recipient" : "failed";
+}
+
 /**
- * Get this booking's waiver link — the one the diver already holds when it is
- * still live, a fresh one otherwise (`issueWaiverRequest`) — and hand it over on
- * the asked-for channel. Delivery is best-effort: a missing address or number,
- * missing app origin, or a failed/disabled provider all resolve to a non-`sent`
- * delivery so the caller surfaces the private link instead of pretending
- * anything went out.
+ * **Hand a seat's release to its holder as their thread link** (issue #2743,
+ * ADR 20261105-waiver-folds-into-the-thread). The link is
+ * `/ready/<token>/waiver` on the seat's delivered readiness capability: the
+ * one the booking confirmation carried, so a second send is the same URL.
+ *
+ * That capability also pays, cancels and moves the seat, so it goes only to
+ * the address or number on file, and is minted only once there is one to
+ * send to. It never comes back to the caller: there is no Copy link for a
+ * seat (`thread_only`), and a send that did not land hands staff nothing to
+ * pass on (security review of layer 1, "Copy link"). Null when the
+ * capability is refused (the holder was erased or the seat moved under it).
+ */
+async function deliverThreadLink(
+  tx: DbExecutor,
+  input: {
+    ctx: {
+      person: typeof people.$inferSelect;
+      trip: typeof trips.$inferSelect;
+      shop: typeof shops.$inferSelect;
+    };
+    bookingId: string;
+    waiverRecordId: string;
+    expectedPersonId: string;
+    expectedTripId: string;
+    options: WaiverDeliveryOptions;
+  },
+): Promise<WaiverDelivery | null> {
+  const { ctx, options } = input;
+  const shopId = ctx.shop.id;
+  // A rehearsal sends nothing (ADR 20261012-rehearsal-departures), and a
+  // seat's link is never one a staffer copies: the counter tablet or paper
+  // is how a diver standing there signs.
+  const channel = ctx.trip.isRehearsal ? "link" : (options.channel ?? "email");
+  if (channel === "link") return "thread_only";
+  const origin = publicAppUrl();
+  const locale = recipientLocale(ctx.person.locale, ctx.shop.defaultLocale);
+  const record = async (delivery: WaiverDelivery, providerMessageId?: string) => {
+    await recordWaiverDelivery(tx, {
+      shopId,
+      waiverRecordId: input.waiverRecordId,
+      channel,
+      delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
+      now: options.now,
+    });
+    return delivery;
+  };
+  if (!origin) return record("no_app_origin");
+  if (channel === "sms" && !smsRecipient(ctx.person.phone)) return record("no_phone");
+  const email = ctx.person.email;
+  if (channel === "email" && !email) return record("no_email");
+  const issued = await issueBookingCapability(tx, {
+    shopId,
+    bookingId: input.bookingId,
+    purpose: "readiness",
+    expectedPersonId: input.expectedPersonId,
+    expectedTripId: input.expectedTripId,
+    now: options.now,
+    delivered: true,
+  });
+  if (!issued) return null;
+  const url = new URL(readinessWaiverLinkPath(issued.token), `${origin}/`).toString();
+  if (channel === "sms") {
+    const texted = await textWaiverLink(tx, {
+      shopId,
+      phone: ctx.person.phone,
+      shopName: ctx.shop.name,
+      tripTitle: ctx.trip.title,
+      locale,
+      completionUrl: url,
+      providers: options.textProviders,
+      signal: notificationProviderSignal(),
+    });
+    return record(texted.delivery, texted.providerMessageId);
+  }
+  if (!email) return record("no_email");
+  const mailed = await sendAndRecordNotification(
+    tx,
+    {
+      kind: "waiver_request",
+      waiverRecordId: input.waiverRecordId,
+      bookingId: input.bookingId,
+      shopId,
+      to: email,
+      locale,
+      diverName: ctx.person.fullName,
+      shopName: ctx.shop.name,
+      tripTitle: ctx.trip.title,
+      completionUrl: url,
+      expiresAt: issued.expiresAt,
+      timezone: ctx.shop.timezone,
+    },
+    { provider: options.provider, signal: notificationProviderSignal() },
+  );
+  return record(
+    emailDelivery(mailed),
+    mailed.status === "sent" ? mailed.providerMessageId : undefined,
+  );
+}
+
+/**
+ * Hand a seat's release over: opened for the holder's thread
+ * (`openWaiverInThread`) and sent as their thread link on the asked-for
+ * channel (`deliverThreadLink`); the course's forms link when the release is
+ * already signed. Delivery is best-effort: a missing address or number,
+ * missing app origin, or a failed/disabled provider all resolve to a
+ * non-`sent` delivery, and no seat's link comes back to hand over.
  */
 export async function issueAndDeliverWaiver(
   db: DbExecutor,
@@ -315,7 +430,7 @@ export async function issueAndDeliverWaiver(
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))
     .limit(1);
-  if (!observed) {
+  if (!observed || (options.expectedPersonId && observed.person.id !== options.expectedPersonId)) {
     return { ok: false, bookingId, diverName: null, reason: "error" };
   }
 
@@ -343,109 +458,49 @@ export async function issueAndDeliverWaiver(
         .limit(1);
       if (!ctx) return null;
 
-      const outcome = await issueWaiverRequest(tx, {
+      const expectedPersonId = options.expectedPersonId ?? observed.person.id;
+      const expectedTripId = options.expectedTripId ?? observed.trip.id;
+      // The seat's release is opened for its holder's thread (issue #2743):
+      // a live record is kept, so a waiver link a staffer sent earlier and the
+      // draft typed into it survive this send.
+      const opened = await openWaiverInThread(tx, {
         shopId,
         bookingId,
-        expectedPersonId: options.expectedPersonId ?? observed.person.id,
-        expectedTripId: options.expectedTripId ?? observed.trip.id,
+        expectedPersonId,
+        expectedTripId,
         now: options.now,
       });
-      if (!outcome.ok && outcome.reason === "already_completed") {
+      if (!opened.ok && opened.reason === "already_completed") {
         // The release is signed. A course may still ask for its own forms, and the
         // shop's one "send the waiver" act covers them too — so it hands over the
         // student's forms page instead of reporting nothing to send.
         const forms = await deliverCourseFormsLink(tx, ctx, bookingId, options, observed.trip.id);
         if (forms) return forms;
       }
-      if (!outcome.ok) {
+      if (!opened.ok) {
         return {
           ok: false,
           bookingId,
           diverName: ctx.person.fullName,
-          reason: outcome.reason === "already_completed" ? "already_completed" : "error",
+          reason: opened.reason === "already_completed" ? "already_completed" : "error",
         };
       }
-
-      // `issueWaiverRequest` already validated the booking, so `ctx` is present in
-      // every real path; guard only so a race that cancels mid-issue degrades to the
-      // link rather than throwing.
-      const diverName = ctx.person.fullName;
-      const email = ctx.person.email;
-      const origin = publicAppUrl();
-      // A rehearsal sends nothing (ADR 20261012-rehearsal-departures): the link is
-      // still issued, for the staffer to hand over in person.
-      const channel = ctx.trip.isRehearsal ? "link" : (options.channel ?? "email");
-      const completionUrl = origin
-        ? new URL(`/waivers/${outcome.token}`, `${origin}/`).toString()
-        : null;
-
-      // Two different "we could not send this" states that used to collapse into
-      // one. `unconfigured` means no provider; `no_app_origin` means the
-      // provider may be fine but `APP_HOST` is unset, so there is no origin to
-      // build the diver's link on and nothing is attempted. Telling a shop "no
-      // email provider configured" when the actual gap is a missing APP_HOST sends
-      // them to look at the wrong setting.
-      let delivery: WaiverDelivery = "no_app_origin";
-      let providerMessageId: string | undefined;
-      if (channel === "link") {
-        delivery = completionUrl ? "link_only" : "no_app_origin";
-      } else if (channel === "sms") {
-        if (!completionUrl) {
-          delivery = "no_app_origin";
-        } else {
-          const result = await textWaiverLink(tx, {
-            shopId,
-            phone: ctx.person.phone,
-            shopName: ctx.shop.name,
-            tripTitle: ctx.trip.title,
-            locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
-            completionUrl,
-            providers: options.textProviders,
-            signal: notificationProviderSignal(),
-          });
-          delivery = result.delivery;
-          providerMessageId = result.providerMessageId;
-        }
-      } else if (!email) {
-        delivery = "no_email";
-      } else if (completionUrl && ctx) {
-        const result = await sendAndRecordNotification(
-          tx,
-          {
-            kind: "waiver_request",
-            waiverRecordId: outcome.recordId,
-            bookingId,
-            shopId,
-            to: email,
-            locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
-            diverName: ctx.person.fullName,
-            shopName: ctx.shop.name,
-            tripTitle: ctx.trip.title,
-            completionUrl,
-            expiresAt: outcome.expiresAt,
-            timezone: ctx.shop.timezone,
-          },
-          { provider: options.provider, signal: notificationProviderSignal() },
-        );
-        providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
-        delivery =
-          result.status === "sent"
-            ? "sent"
-            : result.status === "not_configured"
-              ? "unconfigured"
-              : result.errorCode === "invalid_test_recipient"
-                ? "test_recipient"
-                : "failed";
-      }
-      await recordWaiverDelivery(tx, {
-        shopId,
-        waiverRecordId: outcome.recordId,
-        channel,
-        delivery: { status: recordedDeliveryStatus(delivery), providerMessageId },
-        now: options.now,
+      const delivered = await deliverThreadLink(tx, {
+        ctx,
+        bookingId,
+        waiverRecordId: opened.recordId,
+        expectedPersonId,
+        expectedTripId,
+        options,
       });
-
-      return { ok: true, bookingId, diverName, token: outcome.token, delivery };
+      if (!delivered) return null;
+      return {
+        ok: true,
+        bookingId,
+        diverName: ctx.person.fullName,
+        token: null,
+        delivery: delivered,
+      };
     },
   );
   return fenced ?? { ok: false, bookingId, diverName: null, reason: "error" };
@@ -544,14 +599,7 @@ export async function issueAndDeliverPersonWaiver(
           { provider: options.provider, signal: notificationProviderSignal() },
         );
         providerMessageId = result.status === "sent" ? result.providerMessageId : undefined;
-        delivery =
-          result.status === "sent"
-            ? "sent"
-            : result.status === "not_configured"
-              ? "unconfigured"
-              : result.errorCode === "invalid_test_recipient"
-                ? "test_recipient"
-                : "failed";
+        delivery = emailDelivery(result);
       }
       await recordWaiverDelivery(tx, {
         shopId,
@@ -870,8 +918,8 @@ export type WaiverLinkRescue =
  * which is exactly the affordance staff already had and no more.
  *
  * Repeat taps are safe by construction, and by one explicit refusal.
- * `hasLiveWaiverRequest` is the guard: when the booking already has a signable
- * link, this reports `current_link_live` and issues nothing.
+ * `hasLivePersonWaiverRequest` is the guard: when the person already has a
+ * signable link, this reports `current_link_live` and issues nothing.
  *
  * That guard used to be load-bearing for a second reason that no longer holds
  * — issuing superseded every pending record, so a rescue fired against a live
@@ -886,6 +934,11 @@ export type WaiverLinkRescue =
  * A cancelled booking or a sailed trip is refused by the same issuing
  * transaction the staff path uses, and a booking already covered by a signature
  * reports `already_signed` rather than mailing a pointless link.
+ *
+ * A seat's waiver link is dead by decision (issue #2743): its rescue sends the
+ * holder their thread link, to the contact on file, unless the seat already
+ * holds a delivered, live one (`hasLiveDeliveredReadinessLink`, the readiness
+ * rescue's own guard).
  */
 export async function emailFreshWaiverLink(
   db: AppDb,
@@ -895,12 +948,30 @@ export async function emailFreshWaiverLink(
   const stale = await staleWaiverRecordForToken(db, token, now);
   if (!stale) return "unavailable";
   if (stale.bookingId) {
-    if (await hasLiveWaiverRequest(db, stale.bookingId, now)) return "current_link_live";
+    // A seat's waiver link opens nothing any more (issue #2743): what goes out
+    // is the holder's own thread link (`issueAndDeliverWaiver`). The seat and
+    // its departure are checked first, so "your link still works" is never
+    // said about a seat or a trip that is gone (issue #850); a dead URL then
+    // never drives a delivery on a thread link already in the holder's mail.
+    if (!(await seatStillSails(db, stale.shopId, stale.bookingId))) return "unavailable";
+    if (
+      await hasLiveDeliveredReadinessLink(db, {
+        shopId: stale.shopId,
+        bookingId: stale.bookingId,
+        now,
+      })
+    )
+      return "current_link_live";
   } else if (await hasLivePersonWaiverRequest(db, stale.shopId, stale.personId, now)) {
     return "current_link_live";
   }
+  // The send is pinned to the person the stale link was issued to, so a seat
+  // that changed hands since the read above sends nothing (security review S1).
   const outcome = stale.bookingId
-    ? await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId, { now })
+    ? await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId, {
+        now,
+        expectedPersonId: stale.personId,
+      })
     : await issueAndDeliverPersonWaiver(db, stale.shopId, stale.personId, { now });
   if (!outcome.ok) return outcome.reason === "already_completed" ? "already_signed" : "unavailable";
   if (outcome.delivery === "sent") return "sent";
@@ -910,9 +981,31 @@ export async function emailFreshWaiverLink(
   return "failed";
 }
 
+/** The seat is held and its departure still scheduled. */
+async function seatStillSails(db: DbExecutor, shopId: string, bookingId: string) {
+  const [seat] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        seatNotCancelled,
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+      ),
+    )
+    .limit(1);
+  return Boolean(seat);
+}
+
 export type WaiverBatchFallbackLink = {
   name: string;
-  token: string;
+  /** Null for a seat: nothing to hand over, only the reason (`deliverThreadLink`). */
+  token: string | null;
+  /** The seat, when `token` is null, so its row can offer a text instead. */
+  bookingId?: string;
   /** Set when the link is not the release's own (`IssueAndDeliverWaiverResult.path`). */
   path?: string;
   reason: WaiverDelivery;
@@ -974,6 +1067,7 @@ export async function deliverWaiverBatch(
       outcome.links.push({
         name: result.diverName,
         token: result.token,
+        ...(result.token === null && result.bookingId ? { bookingId: result.bookingId } : {}),
         ...(result.path ? { path: result.path } : {}),
         reason: result.delivery,
       });

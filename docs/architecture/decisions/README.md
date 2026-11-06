@@ -451,6 +451,7 @@ script again.
 | 20261104-move-a-party-as-one | A party moves between departures… |
 | 20261104-roll-call-by-meeting-day | Roll call and "the boat… |
 | 20261104-seed-is-one-context-and-named-sets | Seed the demo from one… |
+| 20261105-capabilities-shop-id-nullable | Move account tokens, setup links… |
 | 20261105-ci-runs-on-the-top-of-the-stack | Only the top layer of… |
 | 20261105-gh-stack-is-the-stack | Stacks are made and moved… |
 | 20261105-waiver-folds-into-the-thread | Hand a seat's release over… |

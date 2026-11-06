@@ -61,10 +61,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "prior_visits",
   "prior_gear_assignments",
   "imported_payment_history",
-  // The request's single-use setup link (ADR 20261009-single-use-setup-links):
-  // a hash, an expiry and a spent instant, one per request, deleted with it.
-  // Its own clock is the expiry, which closes it; there is nothing left in it to age out.
-  "shop_setup_links",
   "internal_notes",
   "staff_credentials",
   "staff_credential_history", // credential change history is retained with the staff credential, not age-pruned
@@ -165,8 +161,9 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "dive_package_entitlements",
   // Credentials that live and die with the thing they open: revoked, spent, or
   // deleted with their parent. The token tables that are *not* here
-  // (`account_tokens`, `account_sessions`, `shop_contact_email_confirmation_tokens`,
-  // `integration_oauth_states`, `booking_capabilities`) are the ones whose
+  // (`capabilities`, for the account tokens; `account_sessions`,
+  // `shop_contact_email_confirmation_tokens`, `integration_oauth_states`,
+  // `booking_capabilities`) are the ones whose
   // already-dead rows are kept on purpose for an incident review — which is
   // what a window is for, and why they have one.
   "user_accounts",
@@ -174,7 +171,6 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "account_step_ups",
   "auth_provider_accounts",
   "auth_verifications",
-  "calendar_feeds",
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
   "notification_rate_limit_state",

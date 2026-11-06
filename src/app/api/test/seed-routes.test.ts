@@ -336,6 +336,7 @@ const FACT_SAMPLES: Record<string, Record<string, unknown>> = {
   courtesyEmailUnsubscribe: { email: EMAIL },
   interestUnsubscribe: { email: EMAIL },
   visualLink: { family: "digest" },
+  waiverRequestLink: { bookingId: "00000000-0000-4000-8000-000000000001" },
   claudeAssists: { review: true },
 };
 

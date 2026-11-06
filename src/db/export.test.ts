@@ -137,8 +137,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "party_lead_booking_id",
     "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
   ],
-  // The member row's surrogate id says nothing beyond (pair_id, booking_id),
-  // which are both exported.
+  // The member row's surrogate id says nothing beyond (pair_id, booking_id), both exported.
   buddy_team_members: ["shop_id", "id"],
   waiver_seal_acknowledgements: ["shop_id", "state_digest"], // keyed with this installation's seal key
   waiver_records: [
@@ -151,6 +150,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_guardian", // the guardian section as typed, same class as the three above
     "draft_shop_answers", // the shop questions as typed before signing, same class
     "draft_medical_alert", // the medical alert as typed before signing, same class
+    "draft_via_link_id", // which counter link saved the draft; a destination issues its own links
     // Delivery plumbing is provider state: a destination issues its own link and delivery.
     "delivery_status",
     "delivery_provider_message_id",

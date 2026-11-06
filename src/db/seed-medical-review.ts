@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { demoEmail } from "@/lib/simulator-email";
+import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { bookings, cards, people, personRoles, type trips, waiverRecords } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
@@ -217,12 +218,23 @@ async function seedHeldDiver(
   // the diver disclosed cannot have answered them.
   const evaluatedOn = calendarDateInTimezone(at(-1, 12), DEMO_SHOP_TIMEZONE);
   const declined = diverSpec.outcome === "not_cleared";
+  // Pinned on the canonical demo shop, a fresh id everywhere else. See
+  // HELD_DIVER_WAIVER_IDS above: these two rows tie on `signedAt`, so a random
+  // id is what decides their order — and a literal one can exist only once per
+  // database, so a second shop must not reuse it. Chosen here rather than by
+  // the database, because the physician's answer is sealed to it.
+  const recordId = canonical ? HELD_DIVER_WAIVER_IDS[diverSpec.tokenSuffix] : crypto.randomUUID();
+  const answer = {
+    medicalClearedAt: null,
+    medicalClearedByPersonId: null,
+    medicalClearanceDeclinedAt: declined ? at(0, 9) : null,
+    medicalClearanceDeclinedByPersonId: declined ? reviewerId : null,
+    medicalClearanceEvaluatedOn: declined ? evaluatedOn : null,
+    medicalClearancePhysicianName: declined ? "Dr. Imani Reyes" : null,
+    medicalClearanceDocumentFromDiver: false,
+  };
   await db.insert(waiverRecords).values({
-    // Pinned on the canonical demo shop, `defaultRandom()` everywhere else. See
-    // HELD_DIVER_WAIVER_IDS above: these two rows tie on `signedAt`, so a random
-    // id is what decides their order — and a literal one can exist only once per
-    // database, so a second shop must not reuse it.
-    ...(canonical ? { id: HELD_DIVER_WAIVER_IDS[diverSpec.tokenSuffix] } : {}),
+    id: recordId,
     shopId,
     bookingId: booking.id,
     personId: diver.id,
@@ -237,11 +249,10 @@ async function seedHeldDiver(
     status: "medical_review",
     medicalReviewRequired: true,
     // Never a clearance stamp on either row: the held diver has no answer, and
-    // the refused one has an answer that lifts nothing (issue #1283).
-    medicalClearanceDeclinedAt: declined ? at(0, 9) : null,
-    medicalClearanceDeclinedByPersonId: declined ? reviewerId : null,
-    medicalClearanceEvaluatedOn: declined ? evaluatedOn : null,
-    medicalClearancePhysicianName: declined ? "Dr. Imani Reyes" : null,
+    // the refused one has an answer that lifts nothing (issue #1283). The
+    // refusal is sealed as the desk seals one (issue #3949).
+    ...answer,
+    medicalAnswerSeal: declined ? medicalAnswerSealFor({ id: recordId, shopId, ...answer }) : null,
     createdAt: signedAt,
   });
 }

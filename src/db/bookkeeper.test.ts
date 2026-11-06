@@ -379,8 +379,8 @@ describe("the stop link (second-pass N1)", () => {
       shopName: "books-stop-old",
       alreadyStopped: false,
     });
-    // A failed send keeps the last delivered email's link, and its own (the
-    // email may still have arrived).
+    // Giving a month back keeps every link; the caller withdraws the claim's own
+    // when nothing was sent (`withdrawBookkeeperClaimStop`, issue #3947).
     const december = await claim(db, shopId, "2026-12");
     if (!december) throw new Error("no claim");
     await releaseBookkeeperMonth(db, {

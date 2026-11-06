@@ -236,3 +236,28 @@ export function personSealFailed(shopId: SQLWrapper, personId: SQLWrapper) {
       and clean.integrity_valid = true
       and clean.signed_at > failed.integrity_checked_at))`.mapWith(Boolean);
 }
+
+/** Writes a fresh verdict on a just-answered record only when the whole record verifies. */
+export async function recheckAnsweredSeal(tx: DbExecutor, recordId: string, now: Date) {
+  const [row] = await tx
+    .select({
+      record: WAIVER_SEALED_COLUMNS,
+      draftShopAnswers: waiverRecords.draftShopAnswers,
+      draftMedicalAlert: waiverRecords.draftMedicalAlert,
+      integrityValid: waiverRecords.integrityValid,
+    })
+    .from(waiverRecords)
+    .where(eq(waiverRecords.id, recordId))
+    .limit(1);
+  if (row?.integrityValid !== false) return;
+  const verdict = waiverIntegrityVerdict(
+    {
+      ...row.record,
+      draftShopAnswers: row.draftShopAnswers,
+      draftMedicalAlert: row.draftMedicalAlert,
+    },
+    now,
+  );
+  if (verdict.integrityValid !== true) return;
+  await tx.update(waiverRecords).set(verdict).where(eq(waiverRecords.id, recordId));
+}

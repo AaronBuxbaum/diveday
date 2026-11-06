@@ -1,6 +1,6 @@
 # 20260726-staff-invite-accounts — Owner/manager-issued staff invites over the existing account-token seam
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-11-05** by [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md)
 - **Date:** 2026-07-26
 
 ## Context
@@ -102,3 +102,7 @@ support incident ever makes that too permissive, narrowing it is an `authz.ts` p
 not a schema change. The last-owner guard is narrow by design — it does not protect against a
 shop disabling its entire staff down to zero, only against losing every `owner`; broadening it is
 future work if a real incident calls for it.
+
+## Amendment 2026-11-05 (#3721)
+
+The invite token is a `capabilities` row (purpose `invite`, subject `user_account_id`, no shop), and `account_tokens` is dropped. Its seven days, superseding per account and once-use are unchanged. See [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md).

@@ -1,20 +1,45 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
-import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { signingDate } from "@/lib/guardian";
 import { fileScopedShopContext } from "@/test/db";
 import { getPartyWaiverQueue, issuePartyWaiver } from "./party-waiver-queue";
 import * as readinessDb from "./readiness";
 import { listTripReadiness } from "./readiness";
-import { bookings, people, personRoles, waiverRecords } from "./schema";
+import {
+  activityEvents,
+  bookings,
+  capabilities,
+  people,
+  personRoles,
+  waiverRecords,
+} from "./schema";
 import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { recordMedicalEvaluation } from "./waivers-medical";
-import { clearAnswers, medicalReferralAnswers } from "./waivers-test-fixtures";
+import { clearAnswers, medicalReferralAnswers, openOnDevice } from "./waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
+
+/** What `/waivers/<token>` opens for a counter link: its state, or unavailable. */
+async function opened(db: typeof ctx.db, token: string, now?: Date) {
+  const door = await openOnDevice(db, token, now);
+  if (door?.door !== "counter") return { state: "unavailable" as const };
+  return getWaiverForToken(db, door.key, now);
+}
+
+/** Sign through the counter link, as the tablet's form does. */
+async function signAtCounter(
+  db: typeof ctx.db,
+  token: string,
+  input: Parameters<typeof completeWaiver>[2],
+) {
+  const door = await openOnDevice(db, token);
+  if (door?.door !== "counter") return { ok: false as const, reason: "no_door" as const };
+  return completeWaiver(db, door.key, input);
+}
 
 async function family() {
   const { db, shop } = ctx;
@@ -72,6 +97,28 @@ describe("party release QR handoff", () => {
     ).toBeNull();
   });
 
+  it("records on the diver's trail which staffer showed the code (security S2)", async () => {
+    const f = await family();
+    const issued = await issuePartyWaiver(f.db, {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
+    });
+    if (!issued || !("token" in issued)) throw new Error("link missing");
+    const lines = await f.db
+      .select({ actor: activityEvents.actorPersonId, subject: activityEvents.subjectPersonId })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.shopId, f.shop.id),
+          eq(activityEvents.code, "waiver_counter_code_shown"),
+        ),
+      );
+    expect(lines).toEqual([{ actor: f.staff.id, subject: f.third.personId }]);
+  });
+
   it("issues only the clicked seat's link and keeps guardian consent required", async () => {
     const f = await family();
     const input = {
@@ -79,13 +126,14 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.minor.bookingId,
+      actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
-    if (!issued) throw new Error("eligible minor refused");
-    const state = await getWaiverForToken(f.db, issued.token);
+    if (!issued || !("token" in issued)) throw new Error("eligible minor refused");
+    const state = await opened(f.db, issued.token);
     expect(state).toMatchObject({ state: "available", record: { bookingId: f.minor.bookingId } });
     expect(
-      await completeWaiver(f.db, issued.token, {
+      await signAtCounter(f.db, issued.token, {
         signerName: `Mia ${f.stamp}`,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -105,15 +153,17 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.minor.bookingId,
+      actorPersonId: f.staff.id,
     };
     const existing = await issuePartyWaiver(f.db, input);
-    if (!existing) throw new Error("link missing");
+    if (!existing || !("token" in existing)) throw new Error("link missing");
     await f.db
       .update(bookings)
       .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Mia" })
       .where(eq(bookings.id, f.minor.bookingId));
     expect(await issuePartyWaiver(f.db, input)).toBeNull();
-    expect((await getWaiverForToken(f.db, existing.token)).state).toBe("held");
+    // A held seat's counter link opens nothing, as its thread does not.
+    expect((await opened(f.db, existing.token)).state).toBe("unavailable");
     const queue = await getPartyWaiverQueue(f.db, input);
     expect(queue?.members.find((member) => member.bookingId === f.minor.bookingId)).toMatchObject({
       state: "held",
@@ -124,33 +174,60 @@ describe("party release QR handoff", () => {
       .set({ identityUnconfirmedAt: null, status: "cancelled" })
       .where(eq(bookings.id, f.minor.bookingId));
     expect(await issuePartyWaiver(f.db, input)).toBeNull();
-    // Existing waiver links intentionally retain their current cancellation policy.
-    expect((await getWaiverForToken(f.db, existing.token)).state).toBe("available");
+    // A cancelled seat has no release to sign, on the counter as in the thread.
+    expect((await opened(f.db, existing.token)).state).toBe("unavailable");
   });
-  it("never revives an expired or superseded QR and issues a fresh one", async () => {
+  it("keeps a code open on a diver's phone unless the desk asks for a new one (dock S2)", async () => {
     const f = await family();
     const input = {
       shopId: f.shop.id,
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
+    };
+    const shown = await issuePartyWaiver(f.db, input);
+    if (!shown || !("token" in shown)) throw new Error("link missing");
+    // Nobody scanned it yet: showing it again just shows a fresh one.
+    const reshown = await issuePartyWaiver(f.db, input);
+    if (!reshown || !("token" in reshown)) throw new Error("re-shown link missing");
+    expect((await opened(f.db, shown.token)).state).toBe("unavailable");
+    // The diver's phone opens it: a second tap keeps it and says so.
+    expect((await opened(f.db, reshown.token)).state).toBe("available");
+    expect(await issuePartyWaiver(f.db, input)).toEqual({ openOnPhone: true });
+    expect((await opened(f.db, reshown.token)).state).toBe("available");
+    // The desk confirms: the open code is replaced.
+    const replaced = await issuePartyWaiver(f.db, { ...input, replace: true });
+    if (!replaced || !("token" in replaced)) throw new Error("replacement missing");
+    expect((await opened(f.db, reshown.token)).state).toBe("unavailable");
+  });
+
+  it("never revives an expired, replaced or superseded QR and issues a fresh one", async () => {
+    const f = await family();
+    const input = {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
     };
     const first = await issuePartyWaiver(f.db, input);
-    if (!first) throw new Error("first link missing");
-    await f.db
-      .update(waiverRecords)
-      .set({ expiresAt: new Date(nowDate().getTime() - 1000) })
-      .where(eq(waiverRecords.bookingId, f.third.bookingId));
-    expect((await getWaiverForToken(f.db, first.token)).state).toBe("expired");
-    const next = await issuePartyWaiver(f.db, input);
-    if (!next) throw new Error("replacement link missing");
+    if (!first || !("token" in first)) throw new Error("first link missing");
+    expect(first.expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(30 * 60_000);
+    expect((await opened(f.db, first.token)).state).toBe("available");
+    expect((await opened(f.db, first.token, first.expiresAt)).state).toBe("unavailable");
+    // The first is open on a phone, so the desk confirms the new one.
+    const next = await issuePartyWaiver(f.db, { ...input, replace: true });
+    if (!next || !("token" in next)) throw new Error("replacement link missing");
     expect(next.token).not.toBe(first.token);
-    expect(await getWaiverForToken(f.db, first.token)).toEqual({ state: "unavailable" });
+    // A fresh QR revokes the one before it.
+    expect(await opened(f.db, first.token)).toEqual({ state: "unavailable" });
+    expect((await opened(f.db, next.token)).state).toBe("available");
     await f.db
       .update(waiverRecords)
       .set({ supersededAt: nowDate() })
       .where(eq(waiverRecords.bookingId, f.third.bookingId));
-    expect(await getWaiverForToken(f.db, next.token)).toEqual({ state: "unavailable" });
+    expect(await opened(f.db, next.token)).toEqual({ state: "unavailable" });
   });
   it("reports the waiver signed without claiming other readiness blockers are clear", async () => {
     const f = await family();
@@ -159,10 +236,11 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
-    if (!issued) throw new Error("link missing");
-    const result = await completeWaiver(f.db, issued.token, {
+    if (!issued || !("token" in issued)) throw new Error("link missing");
+    const result = await signAtCounter(f.db, issued.token, {
       signerName: `Leo ${f.stamp}`,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -178,41 +256,41 @@ describe("party release QR handoff", () => {
       rows.find((row) => row.booking.id === f.third.bookingId)?.readiness.blockers.length,
     ).toBeGreaterThan(0);
   });
-  it("keeps a waiver-only envelope scoped and expiring after the lead signs", async () => {
+  it("spends the counter link on signing and keeps only its receipt until it expires", async () => {
     const f = await family();
     const input = {
       shopId: f.shop.id,
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.lead.bookingId,
+      actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
-    if (!issued) throw new Error("link missing");
-    const envelope = sealCounterWaiverToken(issued.token, issued.expiresAt);
-    if (!envelope) throw new Error("envelope missing");
-    expect(envelope).not.toContain(issued.token);
-    expect((await getWaiverForToken(f.db, envelope)).state).toBe("available");
+    if (!issued || !("token" in issued)) throw new Error("link missing");
+    expect((await opened(f.db, issued.token)).state).toBe("available");
     expect(
       (
-        await completeWaiver(f.db, envelope, {
+        await signAtCounter(f.db, issued.token, {
           signerName: `Ana ${f.stamp}`,
           agreed: true,
           medicalAnswers: clearAnswers,
         })
       ).ok,
     ).toBe(true);
-    expect((await getWaiverForToken(f.db, envelope)).state).toBe("completed");
-    expect(
-      (await getWaiverForToken(f.db, envelope, new Date(issued.expiresAt.getTime() + 1))).state,
-    ).toBe("unavailable");
-    expect(
-      (await getWaiverForToken(f.db, issued.token, new Date(issued.expiresAt.getTime() + 1))).state,
-    ).toBe("completed");
+    const [link] = await f.db
+      .select({ usedAt: capabilities.usedAt })
+      .from(capabilities)
+      .where(eq(capabilities.tokenHash, hashBearerToken(issued.token)));
+    expect(link?.usedAt).not.toBeNull();
+    expect((await opened(f.db, issued.token)).state).toBe("completed");
+    expect((await opened(f.db, issued.token, new Date(issued.expiresAt.getTime() + 1))).state).toBe(
+      "unavailable",
+    );
     await f.db
       .update(waiverRecords)
       .set({ supersededAt: nowDate() })
       .where(eq(waiverRecords.bookingId, f.lead.bookingId));
-    expect((await getWaiverForToken(f.db, envelope)).state).toBe("unavailable");
+    expect((await opened(f.db, issued.token)).state).toBe("unavailable");
   });
   it("distinguishes a pending medical review from a physician's refusal", async () => {
     const f = await family();
@@ -221,10 +299,11 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.lead.bookingId,
+      actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
-    if (!issued) throw new Error("link missing");
-    const signed = await completeWaiver(f.db, issued.token, {
+    if (!issued || !("token" in issued)) throw new Error("link missing");
+    const signed = await signAtCounter(f.db, issued.token, {
       signerName: `Ana ${f.stamp}`,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,
@@ -285,6 +364,56 @@ describe("party release QR handoff", () => {
         state: "needed",
         medicalState: "not_cleared",
       });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("names a held seat only by what was booked, and orders the party lead-first whatever order readiness returns", async () => {
+    const f = await family();
+    await f.db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: null })
+      .where(eq(bookings.id, f.third.bookingId));
+    const rows = await listTripReadiness(f.db, f.shop.id, f.trip.id, nowDate());
+    const reversed = [...rows].reverse();
+    const spy = vi.spyOn(readinessDb, "listTripReadiness").mockResolvedValue(reversed);
+    try {
+      const queue = await getPartyWaiverQueue(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+      });
+      expect(queue?.members[0]?.bookingId).toBe(f.lead.bookingId);
+      expect(queue?.members.find((m) => m.bookingId === f.third.bookingId)).toMatchObject({
+        state: "held",
+        name: null,
+      });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("never calls a seat signed when its requirement is unknown, and says plainly when none is needed", async () => {
+    const f = await family();
+    const rows = await listTripReadiness(f.db, f.shop.id, f.trip.id, nowDate());
+    const changed = rows.map((row) => {
+      if (row.booking.id === f.minor.bookingId) return { ...row, requirement: null };
+      if (row.booking.id === f.third.bookingId && row.requirement)
+        return { ...row, requirement: { ...row.requirement, requiresWaiver: false } };
+      return row;
+    });
+    const spy = vi.spyOn(readinessDb, "listTripReadiness").mockResolvedValue(changed);
+    try {
+      const queue = await getPartyWaiverQueue(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+      });
+      expect(queue?.members.find((m) => m.bookingId === f.minor.bookingId)?.state).toBe("unknown");
+      expect(queue?.members.find((m) => m.bookingId === f.third.bookingId)?.state).toBe(
+        "not_required",
+      );
     } finally {
       spy.mockRestore();
     }

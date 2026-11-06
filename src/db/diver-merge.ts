@@ -22,6 +22,7 @@ import {
   waiverRecords,
 } from "@/db/schema";
 import { forgetTrainingPlanPeople } from "@/db/training-plan-privacy";
+import { personPurposesThatMerge } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import {
   type DiverDuplicateReason,
@@ -186,6 +187,27 @@ async function hasPersonRow(
   // still asked about rather than queried under the wrong one.
   const result = await db.execute(
     sql`select 1 from ${sql.raw(quotedTable(refused.table))} where "shop_id" = ${shopId} and ${sql.raw(quotedTable(refused.column))} = ${personId} limit 1`,
+  );
+  return result.rows.length > 0;
+}
+
+/** `"purpose" in (...)` over the person purposes a merge treats as `merge` says. */
+function mergePurposes(merge: "follows" | "refuse") {
+  return sql.join(
+    personPurposesThatMerge(merge).map((purpose) => sql`${purpose}`),
+    sql`, `,
+  );
+}
+
+/**
+ * Whether a person holds a capability that is a staff credential (a calendar
+ * feed: `merge: "refuse"` in `CAPABILITY_POLICY`). `capabilities.person_id`
+ * moves on a merge for the purposes that follow one; these refuse it instead,
+ * as `staff_record`, revoked or live: authority never follows a merge.
+ */
+async function holdsStaffCapability(db: DbExecutor, shopId: string, personId: string) {
+  const result = await db.execute(
+    sql`select 1 from "capabilities" where "shop_id" = ${shopId} and "person_id" = ${personId} and "purpose" in (${mergePurposes("refuse")}) limit 1`,
   );
   return result.rows.length > 0;
 }
@@ -611,6 +633,12 @@ async function assessMerge(
     ) {
       return refuse("staff_record");
     }
+  }
+  if (
+    (await holdsStaffCapability(db, shopId, source.id)) ||
+    (await holdsStaffCapability(db, shopId, survivor.id))
+  ) {
+    return refuse("staff_record");
   }
 
   const warnings: DiverMergeWarning[] = [];
@@ -1198,8 +1226,14 @@ export async function mergeDiverRecords(input: {
           tableName === "cards"
             ? sql`, "deletion_kind" = case when "deleted_at" is not null then 'system'::card_deletion_kind else "deletion_kind" end`
             : sql``;
+        // Only a capability whose purpose follows a merge moves; a staff
+        // credential one refused the merge above, and never reaches here.
+        const followsOnly =
+          tableName === "capabilities"
+            ? sql` and "purpose" in (${mergePurposes("follows")})`
+            : sql``;
         await tx.execute(
-          sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id}${systemArchive} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}${leftBehind}`,
+          sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id}${systemArchive} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}${leftBehind}${followsOnly}`,
         );
       }
 

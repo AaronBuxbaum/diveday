@@ -42,7 +42,7 @@ import {
  *
  * **Scope is the foreign-key graph, not the `shop_id` column.** It used to be
  * the column, and that left the tables reached through a parent's id list —
- * `user_accounts`, `account_tokens`, `person_roles`, `trip_assignments` —
+ * `user_accounts`, `person_roles`, `trip_assignments` —
  * invisible to the guard whose whole job is finding tables nobody deletes.
  * `auth_provider_accounts` is what made the cost visible: it reaches a shop
  * only as `user_account_id` -> `person_id` -> `shop_id`, so it sat with no
@@ -237,8 +237,6 @@ const RESET_KEEPS: Record<string, string> = {
   stripe_webhook_events: "provider delivery ledger, pruned by retention, not by a reset",
   email_bounces:
     "DiveDay's record of mail SES bounced, pruned by retention, not by a reset; a demo mails only the simulator's success address",
-  shop_setup_links:
-    "the platform's record of which set-up request opened the shop; a demo is never opened by one, and a reset keeps the shop",
   shop_whatsapp_accounts: "shop settings, outside the resettable schedule",
   shop_subscriptions:
     "what the shop pays DiveDay, set by a person or Stripe's webhook — never by a demo visitor, so nothing for a reset to restore",
@@ -322,7 +320,6 @@ const RESET_KEEPS: Record<string, string> = {
  */
 const RESET_PERSON_SCOPED: Record<string, string> = {
   staff_shifts: "seeded once with the permanent staff; a purged person’s shifts go with them",
-  calendar_feeds: "a stable staffer's subscription must survive a schedule reset",
   account_sessions:
     "a purged person’s session goes with their login; stable staff sessions survive",
   processor_erasure_obligations: "names the erased person and whoever discharged it",
@@ -360,8 +357,6 @@ const CASCADE_KEEPS: Record<string, string> = {
   shop_milestones: "ON DELETE CASCADE from shops clears it",
   customer_gear_notices: "ON DELETE CASCADE from work orders and customer gear clears it",
   customer_gear_reminder_settings: "ON DELETE CASCADE from customer gear clears it",
-  shop_setup_links:
-    "ON DELETE SET NULL from shops clears its spent_by_shop_id; the row is the set-up request's, and goes with it",
 };
 
 describe("shop-scoped delete-path coverage", () => {

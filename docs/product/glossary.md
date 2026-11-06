@@ -318,6 +318,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Party / Came together
 - Payment event
 - Per-trip crew role
+- Physician answer seal
 - Physician clearance
 - Post-trip recap
 - Pre-departure checklist
@@ -418,6 +419,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 
 [glossary/records-and-evidence.md](glossary/records-and-evidence.md)
 
+- Counter link
 - Coverage denominator
 - Day profile
 - Dispute sheet

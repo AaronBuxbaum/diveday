@@ -47,8 +47,9 @@ import {
 import { livePerson, liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import { issueWaiverOnJoin } from "./waiver-issue";
-import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
-import { issueWaiverRequest } from "./waivers-requests";
+import { WAIVER_BOARDING_COLUMNS, withTrustedClearance } from "./waiver-record-columns";
+import { type ThreadWaiverKey, threadWaiverKey } from "./waivers-completion";
+import { openWaiverInThread } from "./waivers-requests";
 
 /**
  * Seat claims (docs ADR 20260804-seat-claim-links): one organizer books a
@@ -832,7 +833,8 @@ export async function issuePartySeatClaims(
         snorkelerPriceCents: trips.snorkelerPriceCents,
         riderPriceCents: trips.riderPriceCents,
       },
-      waiver: WAIVER_STATE_COLUMNS,
+      // A clearance whose seal does not verify reads as none (final attacker review B1).
+      waiver: WAIVER_BOARDING_COLUMNS,
       // The shop's current material terms, in the same statement
       // (`getCurrentWaiverGeneration`'s read): no extra round trip on a page
       // the render-cost ratchet counts.
@@ -932,7 +934,7 @@ export async function issuePartySeatClaims(
       // changed is one the diver signs again (dive-domain-expert run 4, D3).
       waiverSigned: row.waiver
         ? isCompletedWaiverCurrent(
-            row.waiver,
+            withTrustedClearance(row.waiver),
             row.generation === null ? null : Number(row.generation),
             // The roster's instant for this seat (issue #2611): a release that
             // runs out before the trip is one the diver signs again.
@@ -1131,25 +1133,14 @@ async function minorSeatDoor(
 }
 
 /**
- * **A parent signs a child's release from their own page** (H-20261014-parent-signs-minor-release, ADR
- * 20261014-parent-signs-minor-release). The lead's verified `readiness`
- * capability is the authority, as it is for the claim links this panel hands
- * out; the seat must be one this lead booked, in this shop, and one the panel
- * would offer (`minorSeatSignable` and a waiver still owed), all re-read here
- * rather than trusted from the form.
- *
- * Opens the seat's own booking-scoped release: the live link when there is
- * one (ADR 20260820-waiver-links-are-reused-not-reissued), a fresh one when
- * not. That page asks for the guardian's card beside the diver's signature,
- * because the seat is declared a minor, so the parent signs as the guardian
- * on their own device. Nothing about the seat changes hands: it stays the
- * lead's, and a later claim supersedes the release as any claim does.
+ * A seat in this lead's party, with the door the lead's panel would offer on
+ * it (`minorSeatDoor`), every fact re-read rather than trusted from a form.
+ * Null when the seat is not this lead's, in this shop, live and not cancelled.
  */
-export async function openMinorSeatWaiver(
+async function minorSeatForLead(
   db: AppDb,
-  input: { shopId: string; leadBookingId: string; seatBookingId: string; now?: Date },
-): Promise<{ ok: true; token: string } | { ok: false }> {
-  const now = input.now ?? nowDate();
+  input: { shopId: string; leadBookingId: string; seatBookingId: string; now: Date },
+) {
   const [row] = await db
     .select({ booking: bookings, trip: trips, person: people })
     .from(bookings)
@@ -1175,45 +1166,71 @@ export async function openMinorSeatWaiver(
       ),
     )
     .limit(1);
-  if (!row) return { ok: false };
+  if (!row) return null;
   const lead = await leadSigningContext(db, input.shopId, input.leadBookingId);
-  if (!lead) return { ok: false };
-  const claimable = claimableNow(row.booking, row.trip, now);
-  if ((await minorSeatDoor(db, input.shopId, lead, row, { now, claimable })) !== "sign") {
-    return { ok: false };
-  }
-  const issued = await issueWaiverRequest(db, {
-    shopId: input.shopId,
-    bookingId: row.booking.id,
-    now,
-  });
-  return issued.ok ? { ok: true, token: issued.token } : { ok: false };
+  if (!lead) return null;
+  const claimable = claimableNow(row.booking, row.trip, input.now);
+  const door = await minorSeatDoor(db, input.shopId, lead, row, { now: input.now, claimable });
+  return { row, door };
 }
 
 /**
- * **Back to the parent's own page after a child's release** (dive-domain
- * review F6 of layer r4-1). `signMinorWaiverAction` hands the lead's own
- * readiness token to the waiver page in a cookie scoped to that one waiver
- * link; once it is signed, this returns the token only when it is a live
- * readiness link for the seat's own party lead, in this shop. Anything else
- * is null and the signer lands where every signer does. Nothing is minted:
- * whoever holds the cookie already held the lead's link.
+ * **A parent signs a child's release from their own page** (H-20261014-parent-signs-minor-release, ADR
+ * 20261014-parent-signs-minor-release). The lead's verified `readiness`
+ * capability is the authority, as it is for the claim links this panel hands
+ * out; the seat must be one this lead booked, in this shop, and one the panel
+ * would offer (`minorSeatSignable` and a waiver still owed), all re-read here
+ * rather than trusted from the form.
+ *
+ * Opens the seat's own booking-scoped release for signing in the lead's
+ * thread (issue #2743): kept when it is live on the current terms, fresh
+ * otherwise, and no waiver link is handed to anyone. The page that signs it,
+ * `/ready/<lead token>/party/<seat>/waiver`, reaches the record only through
+ * `partySeatWaiverKey`. It asks for the guardian's card beside the diver's
+ * signature, because the seat is declared a minor, so the parent signs as the
+ * guardian on their own device. Nothing about the seat changes hands: it
+ * stays the lead's, and a later claim supersedes the release as any claim does.
  */
-export async function partyLeadReturnToken(
+export async function openMinorSeatWaiver(
   db: AppDb,
-  input: { shopId: string; seatBookingId: string; leadToken: string },
-): Promise<string | null> {
-  const capability = await verifyBookingCapability(db, {
-    token: input.leadToken,
-    purpose: "readiness",
+  input: { shopId: string; leadBookingId: string; seatBookingId: string; now?: Date },
+): Promise<{ ok: true; recordId: string } | { ok: false }> {
+  const now = input.now ?? nowDate();
+  const seat = await minorSeatForLead(db, { ...input, now });
+  if (seat?.door !== "sign") return { ok: false };
+  const opened = await openWaiverInThread(db, {
+    shopId: input.shopId,
+    bookingId: seat.row.booking.id,
+    // The holder and departure just read: a seat moved since refuses.
+    expectedPersonId: seat.row.person.id,
+    expectedTripId: seat.row.trip.id,
+    now,
   });
-  if (!capability || capability.shopId !== input.shopId) return null;
-  const [seat] = await db
-    .select({ partyLeadBookingId: bookings.partyLeadBookingId })
-    .from(bookings)
-    .where(and(eq(bookings.id, input.seatBookingId), eq(bookings.shopId, input.shopId)))
-    .limit(1);
-  return seat?.partyLeadBookingId === capability.bookingId ? input.leadToken : null;
+  return opened.ok ? { ok: true, recordId: opened.recordId } : { ok: false };
+}
+
+/**
+ * **The lead's key to a child's release, on the lead's own link** (issue
+ * #2743). For a caller that has verified the lead's `readiness` capability
+ * for `leadBookingId`: the seat's current release (`threadWaiverKey`), only
+ * while the panel's door on that seat is open, re-read on every render and
+ * every act. `sign` while a release is owed and the parent may sign it;
+ * `physician` once the parent's signature sent it to a physician, which opens
+ * only the receipt and the doctor's page, never a second signature. Null for
+ * anything else: another lead's seat, an adult's, a claimed or held one, a
+ * seat whose person staff removed, merged or erased, or one already signed.
+ */
+export async function partySeatWaiverKey(
+  db: AppDb,
+  input: { shopId: string; leadBookingId: string; seatBookingId: string; now?: Date },
+): Promise<{ door: "sign" | "physician"; key: ThreadWaiverKey } | null> {
+  const seat = await minorSeatForLead(db, { ...input, now: input.now ?? nowDate() });
+  if (!seat || (seat.door !== "sign" && seat.door !== "physician")) return null;
+  const key = await threadWaiverKey(db, {
+    shopId: input.shopId,
+    bookingId: seat.row.booking.id,
+  });
+  return key ? { door: seat.door, key } : null;
 }
 
 /**

@@ -121,6 +121,8 @@ function waiverSummary(
   earlierRefusal: { recordId: string; at: Date } | null,
 ): string {
   const text = waiverRowStateText(t, state);
+  // A changed release is one plain fact; its dates would say "Signed" again.
+  if (state === "seal_failed") return text;
   const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
   if (diver.waiver.state === "signed") {
     const dated = `${text} · ${t(
@@ -209,12 +211,25 @@ export function WaiverGroup({
   // a stale pending link overwrite its word read "Not signed" over a record
   // whose own line underneath said the diver had signed it that morning.
   const hasSigned = diver.waiver.state === "signed" || diver.waiver.state === "guardian_missing";
-  const state: WaiverRowState =
-    diver.waiverRequest === "failed" && !hasSigned ? "failed" : diver.waiver.state;
+  // **A release changed after signing is not "Signed"** (issue #3953): the
+  // departure's blocker says so, and the door takes the same word; with no
+  // seat ahead, the person's own seal verdict does (final dock review N2).
+  const sealFailed =
+    diver.waiverSealFailed ||
+    [gap?.sentence, ...(gap?.alsoBlockers ?? []).map((blocker) => ({ blocker }))].some(
+      (sentence) =>
+        sentence && "blocker" in sentence && sentence.blocker.code === "waiver_seal_failed",
+    );
+  const state: WaiverRowState = sealFailed
+    ? "seal_failed"
+    : diver.waiverRequest === "failed" && !hasSigned
+      ? "failed"
+      : diver.waiver.state;
   const needsAction =
     diver.waiver.state === "none" ||
     diver.waiver.state === "lapsed" ||
     diver.waiver.state === "guardian_missing" ||
+    sealFailed ||
     (diver.waiver.state === "signed" && diver.waiver.runsOutBeforeTrip);
   // A physician's evaluation is the only way to clear this booking's own hold.
   // H-20261007-after-physician-says-no separately allows a newer person-scoped clean release to stand for

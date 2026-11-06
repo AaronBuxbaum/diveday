@@ -36,7 +36,6 @@ import {
   bookingPayments,
   bookings,
   buddyTeamEvents,
-  calendarFeeds,
   capabilities,
   cards,
   courses,
@@ -1431,10 +1430,11 @@ describe("diver erasure", () => {
         nextAttemptAt: erasureNow,
       },
     ]);
-    await db.insert(calendarFeeds).values({
+    await db.insert(capabilities).values({
       shopId: shop.id,
       personId: diver.id,
-      scope: "assignments",
+      purpose: "calendar_assignments",
+      oneLive: true,
       tokenHash: "elena-feed-hash",
     });
     await db.insert(bookingCapabilities).values({
@@ -1588,12 +1588,12 @@ describe("diver erasure", () => {
       await db.select().from(internalNotes).where(eq(internalNotes.personId, diver.id)),
     ).toHaveLength(0);
     expect(await db.select().from(interests).where(eq(interests.personId, diver.id))).toEqual([]);
-    expect(await db.select().from(capabilities)).toHaveLength(0);
+    // Every link that opens something of hers goes; her calendar feed, a staff
+    // credential, is revoked and stays as the record of it (asserted below).
+    const linksLeft = await db.select({ purpose: capabilities.purpose }).from(capabilities);
+    expect(linksLeft).toEqual([{ purpose: "calendar_assignments" }]);
     // Who a deal went to is the departure row it was copied onto, deleted whole
     // with the diver (the interests assertion above): no address is kept anywhere on it.
-    expect(
-      await db.select().from(capabilities).where(eq(capabilities.personId, diver.id)),
-    ).toHaveLength(0);
     expect(
       await db.select().from(recapPhotos).where(eq(recapPhotos.bookingId, bookingId)),
     ).toHaveLength(0);
@@ -1667,10 +1667,7 @@ describe("diver erasure", () => {
       .where(eq(notificationSendQueue.shopId, shop.id));
     expect(queued.map((row) => row.idempotencyKey)).toEqual(["erasure-someone-else-entirely"]);
 
-    const [feed] = await db
-      .select()
-      .from(calendarFeeds)
-      .where(eq(calendarFeeds.personId, diver.id));
+    const [feed] = await db.select().from(capabilities).where(eq(capabilities.personId, diver.id));
     expect(feed?.revokedAt).toBeInstanceOf(Date);
 
     const [capability] = await db

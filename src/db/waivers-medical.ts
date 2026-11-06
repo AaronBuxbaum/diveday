@@ -16,6 +16,7 @@ import {
   referralItems,
 } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
+import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import {
   awaitsPhysician,
   DOCTOR_UNLOCK_FAILURE_LIMIT,
@@ -37,6 +38,7 @@ import {
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatHeld, seatNotCancelled } from "./trips-queries";
+import { recheckAnsweredSeal } from "./waiver-seal-checks";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -259,7 +261,24 @@ async function heldReferrals(db: DbExecutor, shopId: string, personId: string) {
         isNull(waiverRecords.anonymizedAt),
       ),
     )
-    .orderBy(desc(waiverRecords.completedAt));
+    .orderBy(desc(waiverRecords.completedAt))
+    .then((rows) => rows.map(unsealedClearanceAsOpen));
+}
+
+/**
+ * **A clearance stamp with no seal at all is no answer** (glossary *Physician
+ * answer seal*; final attacker review B2, dock review S1): boarding reads it as
+ * none, so the desk must be able to record the physician's answer again,
+ * which seals it. The honest way to get one is an answer an older build wrote
+ * while the deploy that added the seal rolled out. A seal that is present and
+ * wrong is tampering: that row stays answered, as evidence, and holds.
+ */
+function unsealedClearanceAsOpen(record: WaiverRecord): WaiverRecord {
+  return record.medicalClearedAt !== null &&
+    record.medicalClearanceDeclinedAt === null &&
+    record.medicalAnswerSeal === null
+    ? { ...record, medicalClearedAt: null, medicalClearedByPersonId: null }
+    : record;
 }
 
 /**
@@ -488,17 +507,23 @@ export async function recordMedicalEvaluation(
     }
 
     const cleared = input.outcome === "cleared";
+    const answer = {
+      medicalClearedAt: cleared ? now : null,
+      medicalClearedByPersonId: cleared ? recordedBy : null,
+      medicalClearanceDeclinedAt: cleared ? null : now,
+      medicalClearanceDeclinedByPersonId: cleared ? null : recordedBy,
+      medicalClearanceEvaluatedOn: input.evaluatedOn,
+      medicalClearancePhysicianName: physicianName,
+      medicalClearanceDocumentFromDiver: usedForm !== null,
+    };
     const [written] = await tx
       .update(waiverRecords)
       .set({
-        medicalClearedAt: cleared ? now : null,
-        medicalClearedByPersonId: cleared ? recordedBy : null,
-        medicalClearanceDeclinedAt: cleared ? null : now,
-        medicalClearanceDeclinedByPersonId: cleared ? null : recordedBy,
-        medicalClearanceEvaluatedOn: input.evaluatedOn,
-        medicalClearancePhysicianName: physicianName,
+        ...answer,
+        // Sealed in the same guarded write, never afterwards (issue #3949):
+        // the stamp lifts a hold, so a stamp without this seal reads as forged.
+        medicalAnswerSeal: medicalAnswerSealFor({ id: open.id, shopId: input.shopId, ...answer }),
         medicalClearanceDocumentUrl: evidenceUrl,
-        medicalClearanceDocumentFromDiver: usedForm !== null,
         diverMedicalFormUrl: null,
       })
       // Both stamps are in the guard, not just the one being written: two
@@ -508,8 +533,10 @@ export async function recordMedicalEvaluation(
       .where(
         and(
           eq(waiverRecords.id, open.id),
-          isNull(waiverRecords.medicalClearedAt),
           isNull(waiverRecords.medicalClearanceDeclinedAt),
+          // An unsealed clearance is open to be recorded again
+          // (`unsealedClearanceAsOpen`); a sealed one never is.
+          or(isNull(waiverRecords.medicalClearedAt), isNull(waiverRecords.medicalAnswerSeal)),
         ),
       )
       .returning({ id: waiverRecords.id });
@@ -527,6 +554,11 @@ export async function recordMedicalEvaluation(
         ? { ok: true, recordId: open.id, outcome: standing, alreadyRecorded: true }
         : { ok: false, reason: "answer_already_recorded" };
     }
+    // The nightly check may already have read the unsealed stamp as broken
+    // and held the person on it (`personSealFailed`). The record is checked
+    // again now, whole, and only a verdict that it is intact is written:
+    // anything else on the row stays broken, and its old verdict stands.
+    await recheckAnsweredSeal(tx, open.id, now);
     // A form used from another of the diver's holds moves: one column, one
     // file. A form on this row the staffer did not use is not evidence of
     // anything now, so it is queued for deletion rather than kept.
@@ -993,6 +1025,16 @@ async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date
   return person ?? null;
 }
 
+/** Whether the record still answers to the link it was read through. */
+async function linkStillCurrent(db: DbExecutor, record: HeldRecord): Promise<boolean> {
+  const [current] = await db
+    .select({ tokenHash: waiverRecords.tokenHash })
+    .from(waiverRecords)
+    .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, record.shopId)))
+    .limit(1);
+  return current?.tokenHash === record.tokenHash;
+}
+
 /** Whether the held waiver page offers the doctor's page at all. */
 export async function doctorPageOpen(
   db: DbExecutor,
@@ -1077,6 +1119,10 @@ export async function attachDiverMedicalForm(
         isNull(waiverRecords.medicalClearanceDeclinedAt),
         isNull(waiverRecords.anonymizedAt),
         isNull(waiverRecords.diverMedicalFormSentAt),
+        // Still the link the caller read the record through (security review
+        // S1): a contact change while the file was being stored rotated it and
+        // reopened the slot, and the old address must not fill it.
+        eq(waiverRecords.tokenHash, record.tokenHash),
       ),
     )
     .returning({ id: waiverRecords.id });
@@ -1087,13 +1133,18 @@ export async function attachDiverMedicalForm(
       clearedAt: waiverRecords.medicalClearedAt,
       declinedAt: waiverRecords.medicalClearanceDeclinedAt,
       anonymizedAt: waiverRecords.anonymizedAt,
+      tokenHash: waiverRecords.tokenHash,
     })
     .from(waiverRecords)
     .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, record.shopId)))
     .limit(1);
   // "Already" only for a hold still waiting with a form on it; an answered or
   // erased one is closed, whatever it holds.
-  return current?.sentAt && !current.clearedAt && !current.declinedAt && !current.anonymizedAt
+  return current?.sentAt &&
+    !current.clearedAt &&
+    !current.declinedAt &&
+    !current.anonymizedAt &&
+    current.tokenHash === record.tokenHash
     ? "already"
     : "closed";
 }
@@ -1124,6 +1175,9 @@ export async function revealDoctorReferral(
 ): Promise<DoctorReferralAnswers | "mismatch" | "whole" | null> {
   const person = await heldPersonForDoctor(db, record, now);
   if (!person) return null;
+  // Still the link the caller read the record through (security review S1):
+  // a contact change since then rotated it, and the old address reads nothing.
+  if (!(await linkStillCurrent(db, record))) return null;
   const items = referralItems(record.medicalAnswers);
   if (items.length === 0 || !person.dateOfBirth) return "whole";
   if (record.doctorUnlockFailures >= DOCTOR_UNLOCK_FAILURE_LIMIT) return "whole";

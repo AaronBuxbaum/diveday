@@ -192,6 +192,20 @@ describe("GET /api/cron/trip-series — reporting", () => {
     expect(summaryLine()).toEqual(expect.objectContaining({ reopensCleared: 3 }));
   });
 
+  it("counts the dates a hull in the yard kept off the board", async () => {
+    vi.mocked(rollAllSeriesForward).mockResolvedValue({
+      seriesConsidered: 2,
+      seriesExtended: 1,
+      tripsCreated: 3,
+      failures: 0,
+      deferred: 0,
+      yardDatesLeftOff: 2,
+    });
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(200);
+    expect(summaryLine()).toEqual(expect.objectContaining({ yardDatesLeftOff: 2 }));
+  });
+
   // A pass with nothing to add is the *normal* case — the horizon only needs
   // widening on the days a cadence crosses its far edge. It must still be
   // distinguishable from a pass that stopped running.

@@ -956,6 +956,9 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     { header: "guardian_signed_at", in: "both", value: (row) => row.guardianSignedAt },
     { header: "integrity_hash", in: "shop", value: (row) => row.integrityHash },
     { header: "integrity_version", in: "shop", value: (row) => row.integrityVersion },
+    // The physician's answer's own seal (issue #3949), over the clearance
+    // and refusal columns above, so a destination can re-verify them too.
+    { header: "medical_answer_seal", in: "shop", value: (row) => row.medicalAnswerSeal },
     { header: "superseded_at", in: "both", value: (row) => row.supersededAt },
     { header: "expires_at", in: "both", value: (row) => row.expiresAt },
     { header: "imported_from_label", in: "shop", value: (row) => row.importedFromLabel },

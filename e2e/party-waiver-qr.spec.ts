@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { clearCourseForms } from "./course-form-only";
 import { decodeQrDataUrl } from "./decode-qr";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
@@ -19,6 +21,13 @@ import {
 // The image itself is a bearer credential; do not retain screenshots or traces.
 test.use({ screenshot: "off", trace: "off" });
 signedInAsOwner();
+
+const diver = diverTranslator("en-US");
+
+/** The first phone to open a counter code says "this one" (attacker review S1). */
+async function openCounterCode(phone: Page) {
+  await phone.getByRole("button", { name: "Open the waiver here" }).click();
+}
 
 test("a minor scans their own waiver on a signed-out phone and a guardian signs", async ({
   page,
@@ -53,7 +62,19 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.goto(url.pathname).catch(() => {
       throw new Error("minor waiver navigation failed");
     });
+    await openCounterCode(phone);
     await expect(phone.getByRole("heading", { name: "Parent or guardian" })).toBeVisible();
+    // The code opens on the first phone only (attacker review S1).
+    const otherPhone = await browser.newContext({
+      baseURL: workerBaseURL,
+      storageState: { cookies: [], origins: [] },
+    });
+    const second = makeActivitySafe(await otherPhone.newPage());
+    await second.goto(url.pathname);
+    await expect(
+      second.getByRole("heading", { name: "This code is open on another phone" }),
+    ).toBeVisible();
+    await otherPhone.close();
     await dialog.getByRole("button", { name: "Close" }).click();
     await phone.getByLabel("Type your full name").fill("Sky Lagoon");
     await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();
@@ -73,6 +94,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.goto(leadPath).catch(() => {
       throw new Error("lead waiver navigation failed");
     });
+    await openCounterCode(phone);
     await leadDialog.getByRole("button", { name: "Close" }).click();
     await phone.getByLabel("Type your full name").fill("Alex Lagoon");
     await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();
@@ -81,7 +103,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     for (const radio of await leadNo.all()) await radio.check();
     await phone.getByRole("button", { name: "Sign waiver" }).click();
     await expect(phone.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
-    expect(new URL(phone.url()).pathname.startsWith("/waivers/counter_")).toBe(true);
+    expect(new URL(phone.url()).pathname.startsWith("/waivers/")).toBe(true);
     await expect(phone.locator('a[href^="/ready/"]')).toHaveCount(0);
     await phone.reload().catch(() => {
       throw new Error("lead waiver reload failed");
@@ -97,6 +119,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.goto(thirdPath).catch(() => {
       throw new Error("third waiver navigation failed");
     });
+    await openCounterCode(phone);
     await expect(phone.getByLabel("Type your full name")).toBeVisible();
     await thirdDialog.getByRole("button", { name: "Close" }).click();
     await page.getByRole("link", { name: "Back to departure" }).click();
@@ -109,17 +132,13 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.reload().catch(() => {
       throw new Error("cancelled waiver reload failed");
     });
-    await expect(phone.getByRole("heading", { name: "Sign your waiver" })).toBeVisible();
-    await expect(phone.getByText("Two-Tank Reef — Molasses & French")).toHaveCount(0);
-    await phone.getByLabel("Type your full name").fill("Chris Lagoon");
-    await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();
-    const thirdNo = phone.getByRole("radio", { name: "No" });
-    await expect(thirdNo).not.toHaveCount(0);
-    for (const radio of await thirdNo.all()) await radio.check();
-    await phone.getByRole("button", { name: "Sign waiver" }).click();
-    await expect(phone.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
-    await expect(phone.locator('a[href^="/ready/"]')).toHaveCount(0);
-    await expect(phone.getByRole("heading", { name: "Your scheduled dive sites" })).toHaveCount(0);
+    // A counter code is the seat's, and a cancelled seat has none to sign
+    // (ADR 20261105-waiver-folds-into-the-thread, layer 4): the open form the
+    // phone held a moment ago becomes the dead-link card, with nothing to sign.
+    await expect(
+      phone.getByRole("heading", { name: diver("common.deadLinkHeading") }),
+    ).toBeVisible();
+    await expect(phone.getByLabel("Type your full name")).toHaveCount(0);
     await expect(page.locator("#roster").getByText("Chris Lagoon")).toHaveCount(0);
   } finally {
     await phoneContext.close();
@@ -185,6 +204,7 @@ test("a counter waiver receipt stays scoped when course forms are still outstand
     await phone.goto(new URL(decoded).pathname).catch(() => {
       throw new Error("course waiver navigation failed");
     });
+    await openCounterCode(phone);
     await dialog.getByRole("button", { name: "Close" }).click();
     await phone.getByLabel("Type your full name").fill("Alex Course");
     await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();

@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { and, eq, isNull } from "drizzle-orm";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   consumeBookkeeperConfirmation,
   issueBookkeeperConfirmation,
@@ -8,12 +8,34 @@ import {
   resolveBookkeeperStopToken,
   setBookkeeper,
 } from "@/db/bookkeeper";
-import { people, personRoles, shops, userAccounts } from "@/db/schema";
+import { capabilities, people, personRoles, shops, userAccounts } from "@/db/schema";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { messageFor } from "@/lib/notifications/render";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { sendDueMonthEndEmails } from "./month-end-pass";
+
+// The window between the claim and the send is the files being built, so a
+// test reaches into it there: the real builder runs, then the hook does what an
+// owner or the bookkeeper does in those seconds.
+const afterFilesBuilt = vi.hoisted(() => ({ run: null as null | (() => Promise<void>) }));
+vi.mock("../../../shop/[shopSlug]/reports/download/month-end-files", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("../../../shop/[shopSlug]/reports/download/month-end-files")
+    >();
+  return {
+    ...actual,
+    monthEndFiles: async (...args: Parameters<typeof actual.monthEndFiles>) => {
+      const files = await actual.monthEndFiles(...args);
+      await afterFilesBuilt.run?.();
+      return files;
+    },
+  };
+});
+beforeEach(() => {
+  afterFilesBuilt.run = null;
+});
 
 /**
  * The month-end pass (fifth loop, item 35): one email per shop per month, with
@@ -167,6 +189,132 @@ describe("sendDueMonthEndEmails", () => {
       origin: ORIGIN,
     });
     expect(retry.sent).toBe(1);
+  });
+
+  /**
+   * **A send that never went out leaves no link of its own** (issue #3947).
+   * The claim mints a stop link; when nothing can have been delivered the
+   * pass withdraws that one, and only that one: the earlier month's email is
+   * still in the bookkeeper's inbox. **A send that may have arrived keeps
+   * its link** (final attacker review S2): a provider can accept a message
+   * and still answer with an error, and the stranger at a mistyped address
+   * who got the shop's files must be able to stop them.
+   */
+  async function failedNovember(how: "files" | "refused" | "throw" | "server_error") {
+    const { db } = await shopWithBookkeeper();
+    const first = capturing();
+    await sendDueMonthEndEmails(db, { now: SECOND, provider: first.provider, origin: ORIGIN });
+    const linkOf = (email: Notification | undefined) =>
+      (email as Extract<Notification, { kind: "bookkeeper_month_end" }>).stopUrl.split(
+        "/unsubscribe/",
+      )[1] ?? "";
+    const october = linkOf(ofKind(first.sent, "bookkeeper_month_end")[0]);
+
+    const attempted: Notification[] = [];
+    let november = "";
+    if (how === "files") {
+      afterFilesBuilt.run = async () => {
+        throw new Error("files could not be built");
+      };
+    }
+    const provider: NotificationProvider = {
+      async send(notification) {
+        attempted.push(notification);
+        if (how === "throw") throw new Error("provider down");
+        if (how === "refused") {
+          return { status: "failed", retryable: false, httpStatus: 400, errorCode: "invalid" };
+        }
+        return { status: "failed", retryable: true, httpStatus: 503, errorCode: "boom" };
+      },
+    };
+    const summary = await sendDueMonthEndEmails(db, {
+      now: new Date("2026-12-02T15:00:00Z"),
+      provider,
+      origin: ORIGIN,
+    });
+    expect(summary).toMatchObject({ sent: 0, failed: 1 });
+    if (how !== "files") {
+      november = linkOf(ofKind(attempted, "bookkeeper_month_end")[0]);
+      expect(november).not.toBe("");
+    }
+    expect(await resolveBookkeeperStopToken(db, october)).toMatchObject({ alreadyStopped: false });
+    // Live stop links for this shop: October's, and November's only if kept.
+    const live = await db
+      .select({ id: capabilities.id })
+      .from(capabilities)
+      .where(
+        and(
+          eq(capabilities.shopId, ctx.shop.id),
+          eq(capabilities.purpose, "bookkeeper_stop"),
+          isNull(capabilities.revokedAt),
+          isNull(capabilities.usedAt),
+        ),
+      );
+    return { db, november, live: live.length };
+  }
+
+  describe.each([
+    ["files that could not be built", "files"],
+    ["a delivery the provider refused outright", "refused"],
+  ] as const)("%s", (_name, how) => {
+    it("withdraws the claim's own stop link and keeps the earlier month's", async () => {
+      const { db, november, live } = await failedNovember(how);
+      expect(live).toBe(1);
+      if (november) expect(await resolveBookkeeperStopToken(db, november)).toBeNull();
+    });
+  });
+
+  describe.each([
+    ["a send that throws", "throw"],
+    ["a provider error after which the email may have arrived", "server_error"],
+  ] as const)("%s", (_name, how) => {
+    it("keeps the claim's own stop link working, and the earlier month's", async () => {
+      const { db, november, live } = await failedNovember(how);
+      expect(live).toBe(2);
+      expect(await resolveBookkeeperStopToken(db, november)).toMatchObject({
+        alreadyStopped: false,
+      });
+    });
+  });
+
+  it("sends nothing when the address is cleared between the claim and the send (issue #3952)", async () => {
+    const { db, shopId, owner } = await shopWithBookkeeper();
+    const { sent, provider } = capturing();
+    afterFilesBuilt.run = async () => {
+      await setBookkeeper(db, {
+        shopId,
+        timeZone: "America/New_York",
+        email: null,
+        personId: owner,
+        now: SECOND,
+      });
+    };
+    const summary = await sendDueMonthEndEmails(db, { now: SECOND, provider, origin: ORIGIN });
+    expect(summary).toMatchObject({ due: 1, sent: 0, failed: 0, skipped: 1 });
+    expect(sent).toEqual([]);
+    const [row] = await db.select().from(shops).where(eq(shops.id, shopId));
+    expect(row?.bookkeeperEmail).toBeNull();
+  });
+
+  it("sends nothing to the old address when it is changed between the claim and the send", async () => {
+    const { db, shopId, owner } = await shopWithBookkeeper();
+    const { sent, provider } = capturing();
+    afterFilesBuilt.run = async () => {
+      await setBookkeeper(db, {
+        shopId,
+        timeZone: "America/New_York",
+        email: "new@example.com",
+        personId: owner,
+        now: SECOND,
+      });
+    };
+    expect(
+      await sendDueMonthEndEmails(db, { now: SECOND, provider, origin: ORIGIN }),
+    ).toMatchObject({ sent: 0, failed: 0, skipped: 1 });
+    expect(sent).toEqual([]);
+    // The new address keeps what it was given: unconfirmed, month counted.
+    const [row] = await db.select().from(shops).where(eq(shops.id, shopId));
+    expect(row?.bookkeeperEmail).toBe("new@example.com");
   });
 
   it("sends nothing, and claims nothing, without an origin to build the stop link from", async () => {

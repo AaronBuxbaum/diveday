@@ -128,6 +128,16 @@ export const WAIVER_SEALED_FIELDS = [
   "guardianEmailErasedByPersonId",
   "integrityHash",
   "integrityVersion",
+  // The physician's answer and its own seal (issue #3949): see
+  // `medicalAnswerSealFor`.
+  "medicalClearedAt",
+  "medicalClearedByPersonId",
+  "medicalClearanceDeclinedAt",
+  "medicalClearanceDeclinedByPersonId",
+  "medicalClearanceEvaluatedOn",
+  "medicalClearancePhysicianName",
+  "medicalClearanceDocumentFromDiver",
+  "medicalAnswerSeal",
 ] as const satisfies readonly (keyof WaiverRecord)[];
 
 export type WaiverSealedField = (typeof WAIVER_SEALED_FIELDS)[number];
@@ -149,25 +159,21 @@ export function signedIntegrityVersionFor(
  *
  * The field set is the diver's own signed evidence: who signed, when, against
  * which template body, with which answers. A later act *by the shop* on the
- * same row is outside it, and always has been — `superseded_at` lifts a medical
- * hold and is not sealed, the delivery columns move for months afterwards.
+ * same row is outside it — `superseded_at` moves a hold off a seat, the
+ * delivery columns move for months afterwards.
  *
- * The physician clearance (issue #1252) joins that set for the same reason and
- * is called out here because it is the one with teeth: `medical_cleared_at`
- * decides whether a diver may board, and `verifyWaiverIntegrity` answers
- * `valid` over a row where somebody with database write access has set it. So
- * the seal's honest meaning is "the *signed* half of this release is what was
- * recorded", and the departure log prints the clearance as the shop's own act
- * rather than as sealed evidence.
+ * The physician's answer (issue #1252, #1283) is a later act by the shop too,
+ * and the one with teeth: `medical_cleared_at` decides whether a diver may
+ * board. So it has a seal of its own, `medical_answer_seal`
+ * ({@link medicalAnswerSealFor}, issue #3949), checked by
+ * {@link verifyWaiverIntegrity} beside this one: recording an answer never
+ * re-seals the signature, and a forged stamp reads `invalid`.
+ * `superseded_at` stays unsealed: superseding answers nothing, and a referral
+ * keeps holding by time whether or not it is superseded (`isUnclearedReferral`).
  *
  * `anonymized_at` is inside version 2 for the opposite reason: erasure
  * *destroys* fields this set covers, so without it every erased release would
  * read as tampered rather than as erased.
- *
- * If a future change wants the clearance covered, it is a version 3 over this
- * set plus the clearance columns, re-sealed inside `recordMedicalClearance`'s
- * transaction, with the two fields that survive erasure added to
- * `erasedMetadata` as well (security review M4).
  *
  * **One conditional key: `shopAnswers`** (glossary *Shop question*). The
  * shop's own questions, as asked, with the diver's answers, join this set
@@ -362,6 +368,78 @@ export function computeWaiverIntegrityHash(
   return integrityDigest(waiverIntegrityMetadata(record, version));
 }
 
+/** The fields a physician's answer seal covers, and the record it is bound to. */
+export type MedicalAnswerFields = Pick<
+  WaiverRecord,
+  | "id"
+  | "shopId"
+  | "medicalClearedAt"
+  | "medicalClearedByPersonId"
+  | "medicalClearanceDeclinedAt"
+  | "medicalClearanceDeclinedByPersonId"
+  | "medicalClearanceEvaluatedOn"
+  | "medicalClearancePhysicianName"
+  | "medicalClearanceDocumentFromDiver"
+>;
+
+/**
+ * **The physician's answer seal** (glossary *Physician answer seal*, issue
+ * #3949): the keyed digest `recordMedicalEvaluation` writes to
+ * `medical_answer_seal` in the same guarded update as the answer.
+ *
+ * It covers which way the physician answered and every fact recorded with it,
+ * bound to the record's id and shop so an answer sealed on one release cannot
+ * be copied onto another. It is separate from `integrity_hash` on purpose: an
+ * answer is final for its record, so this is written once and never re-sealed,
+ * and the signature's seal is never re-written to take an answer in. Every
+ * field it covers survives a move, a guardian redaction and an erasure, so
+ * none of those re-seals touches it. The evaluation's document URL is outside
+ * it: erasure destroys the file, and a swapped link lifts nothing.
+ *
+ * The `kind` key separates it from every release and course form digest.
+ */
+export function medicalAnswerSealFor(record: MedicalAnswerFields): string {
+  return integrityDigest({
+    kind: "medical_answer",
+    id: record.id,
+    shopId: record.shopId,
+    clearedAt: dateValue(record.medicalClearedAt),
+    clearedByPersonId: record.medicalClearedByPersonId,
+    declinedAt: dateValue(record.medicalClearanceDeclinedAt),
+    declinedByPersonId: record.medicalClearanceDeclinedByPersonId,
+    evaluatedOn: record.medicalClearanceEvaluatedOn,
+    physicianName: record.medicalClearancePhysicianName,
+    documentFromDiver: record.medicalClearanceDocumentFromDiver,
+  });
+}
+
+/**
+ * **Whether a clearance stamp is one the desk sealed** (final attacker
+ * review B1): checked on every read that decides boarding, never left to the
+ * nightly pass, which reaches a row every few nights at most. A stamp whose
+ * seal is missing or does not match is no clearance, so the referral holds.
+ */
+export function physicianClearanceSealed(
+  record: MedicalAnswerFields & { medicalAnswerSeal: string | null },
+): boolean {
+  return (
+    record.medicalClearedAt !== null && record.medicalAnswerSeal === medicalAnswerSealFor(record)
+  );
+}
+
+/**
+ * Whether the physician's answer on a record is the one that was sealed. A
+ * record with neither stamp holds no answer and must carry no seal (an answer
+ * taken off reads as tampered, not as never given); a record with either
+ * stamp must carry the seal of exactly that answer. Fails closed: a stamp
+ * with no seal is a forgery, whoever wrote it.
+ */
+function medicalAnswerIntact(record: WaiverSealedFields): boolean {
+  const answered = record.medicalClearedAt !== null || record.medicalClearanceDeclinedAt !== null;
+  if (!answered) return record.medicalAnswerSeal === null;
+  return record.medicalAnswerSeal === medicalAnswerSealFor(record);
+}
+
 export function verifyWaiverIntegrity(
   record: WaiverSealedFields & {
     /**
@@ -373,6 +451,10 @@ export function verifyWaiverIntegrity(
     draftMedicalAlert?: string | null;
   },
 ): WaiverIntegrityState {
+  // The physician's answer is checked first and on every record, sealed or
+  // not: a clearance lifts a hold whatever the signature's seal says
+  // (issue #3949).
+  if (!medicalAnswerIntact(record)) return "invalid";
   if (!record.integrityHash || !record.integrityVersion) return "unsealed";
   if (!isWaiverIntegrityVersion(record.integrityVersion)) return "invalid";
   // A version 2 seal means "erased", and erasure destroys the shop's

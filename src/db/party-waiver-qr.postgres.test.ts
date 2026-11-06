@@ -219,6 +219,7 @@ describePostgres("counter waiver locking", () => {
       tripId: f.trip.id,
       leadBookingId: f.booking.id,
       bookingId: f.booking.id,
+      actorPersonId: f.person.id,
     });
     try {
       await waitForLockWaiters(f.pg.db, 1);

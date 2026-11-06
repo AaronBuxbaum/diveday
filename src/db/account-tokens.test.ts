@@ -1,12 +1,18 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { PASSWORD_RESET_TTL_MS } from "@/lib/account-tokens";
+import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { checkAccountToken, consumeAccountToken, issueAccountToken } from "./account-tokens";
+import {
+  checkAccountToken,
+  consumeAccountToken,
+  issueAccountToken,
+  wasAccountTokenConsumed,
+} from "./account-tokens";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { userAccounts } from "./schema";
+import { capabilities, userAccounts } from "./schema";
 
 async function seededAccountId(db: AppDb): Promise<string> {
   const [account] = await db
@@ -154,6 +160,98 @@ describe("account tokens (in-memory PGlite)", () => {
 
     expect(await consumeAccountToken(db, { token: issued.token, purpose: "invite" })).toEqual({
       userAccountId,
+    });
+  });
+
+  /**
+   * Adversarial, since the tokens moved onto `capabilities` (ADR
+   * 20261105-capabilities-shop-id-nullable): every purpose's token is refused
+   * under every other, a superseded or revoked one consumes nothing, and the
+   * row names the account and no shop.
+   */
+  it("never resolves a token under any purpose but its own", async () => {
+    const { db } = ctx;
+    const userAccountId = await seededAccountId(db);
+    const purposes = ["email_verification", "password_reset", "invite"] as const;
+    for (const purpose of purposes) {
+      const issued = await issueAccountToken(db, { userAccountId, purpose });
+      for (const other of purposes.filter((p) => p !== purpose)) {
+        expect(await checkAccountToken(db, { token: issued.token, purpose: other })).toBeNull();
+        expect(await consumeAccountToken(db, { token: issued.token, purpose: other })).toBeNull();
+      }
+      expect(await checkAccountToken(db, { token: issued.token, purpose })).toEqual({
+        userAccountId,
+      });
+    }
+  });
+
+  it("a superseded token consumes nothing, and neither does a revoked one", async () => {
+    const { db } = ctx;
+    const userAccountId = await seededAccountId(db);
+    const first = await issueAccountToken(db, { userAccountId, purpose: "invite" });
+    const second = await issueAccountToken(db, { userAccountId, purpose: "invite" });
+    expect(await consumeAccountToken(db, { token: first.token, purpose: "invite" })).toBeNull();
+
+    await db
+      .update(capabilities)
+      .set({ revokedAt: nowDate() })
+      .where(eq(capabilities.tokenHash, hashBearerToken(second.token)));
+    expect(await checkAccountToken(db, { token: second.token, purpose: "invite" })).toBeNull();
+    expect(await consumeAccountToken(db, { token: second.token, purpose: "invite" })).toBeNull();
+  });
+
+  it("a disabled account's refused consume leaves the token unspent, so re-enabling the account does not need a new link", async () => {
+    const { db } = ctx;
+    const userAccountId = await seededAccountId(db);
+    const issued = await issueAccountToken(db, { userAccountId, purpose: "email_verification" });
+    await db
+      .update(userAccounts)
+      .set({ status: "disabled" })
+      .where(eq(userAccounts.id, userAccountId));
+    expect(
+      await consumeAccountToken(db, { token: issued.token, purpose: "email_verification" }),
+    ).toBeNull();
+    expect(
+      await wasAccountTokenConsumed(db, { token: issued.token, purpose: "email_verification" }),
+    ).toBe(false);
+
+    await db
+      .update(userAccounts)
+      .set({ status: "active" })
+      .where(eq(userAccounts.id, userAccountId));
+    expect(
+      await consumeAccountToken(db, { token: issued.token, purpose: "email_verification" }),
+    ).toEqual({ userAccountId });
+  });
+
+  it("reports consumed only for the exact token that was spent, under its own purpose", async () => {
+    const { db } = ctx;
+    const userAccountId = await seededAccountId(db);
+    const issued = await issueAccountToken(db, { userAccountId, purpose: "email_verification" });
+    const input = { token: issued.token, purpose: "email_verification" } as const;
+    expect(await wasAccountTokenConsumed(db, input)).toBe(false);
+    await consumeAccountToken(db, input);
+    expect(await wasAccountTokenConsumed(db, input)).toBe(true);
+    expect(
+      await wasAccountTokenConsumed(db, { token: issued.token, purpose: "password_reset" }),
+    ).toBe(false);
+    expect(
+      await wasAccountTokenConsumed(db, { token: "garbage", purpose: "email_verification" }),
+    ).toBe(false);
+  });
+
+  it("stores a platform row: the account, no shop, and only the digest", async () => {
+    const { db } = ctx;
+    const userAccountId = await seededAccountId(db);
+    const issued = await issueAccountToken(db, { userAccountId, purpose: "password_reset" });
+    const [row] = await db.select().from(capabilities).where(eq(capabilities.id, issued.tokenId));
+    expect(row).toMatchObject({
+      purpose: "password_reset",
+      shopId: null,
+      userAccountId,
+      personId: null,
+      tokenHash: hashBearerToken(issued.token),
+      expiresAt: issued.expiresAt,
     });
   });
 });

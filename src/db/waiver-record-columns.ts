@@ -1,5 +1,9 @@
 import { getTableColumns } from "drizzle-orm";
-import { WAIVER_SEALED_FIELDS, type WaiverSealedField } from "@/lib/waiver-integrity";
+import {
+  physicianClearanceSealed,
+  WAIVER_SEALED_FIELDS,
+  type WaiverSealedField,
+} from "@/lib/waiver-integrity";
 import type { WaiverStateFields } from "@/lib/waivers";
 import { waiverRecords } from "./schema";
 
@@ -14,7 +18,7 @@ import { waiverRecords } from "./schema";
  *   integrity audit read it through {@link WAIVER_SEALED_COLUMNS}, because
  *   the seal covers it.
  * - `draftSignerName`, `draftMedicalAnswers`, `draftGuardian`,
- *   `draftShopAnswers`, `draftMedicalAlert` — what a bearer typed before
+ *   `draftShopAnswers`, `draftMedicalAlert`, `draftViaLinkId` — what a bearer typed before
  *   signing. Nothing about readiness reads an unsigned draft.
  * - `shopAnswers` — the shop's own questions as answered. They inform and
  *   never gate, so no status read, roster or manifest has a use for them; the
@@ -27,8 +31,8 @@ import { waiverRecords } from "./schema";
  *   that carried it would hand it to every staffer.
  * - `tokenHash` — the bearer link. A status read must never be
  *   able to hand it back out.
- * - `integrityHash` — only the integrity check reads the seal, through
- *   {@link WAIVER_SEALED_COLUMNS}.
+ * - `integrityHash`, `medicalAnswerSeal` — only the integrity check reads a
+ *   seal, through {@link WAIVER_SEALED_COLUMNS}.
  *
  * `medicalAnswers` stays: the roster's medical-hold summary
  * (`flaggedMedicalPrompts`) reads it on a `medical_review` record.
@@ -44,13 +48,43 @@ const {
   draftShopAnswers: _draftShopAnswers,
   shopAnswers: _shopAnswers,
   draftMedicalAlert: _draftMedicalAlert,
+  draftViaLinkId: _draftViaLinkId,
   medicalAlert: _medicalAlert,
   tokenHash: _tokenHash,
   integrityHash: _integrityHash,
+  medicalAnswerSeal: _medicalAnswerSeal,
   ...stateColumns
 } = getTableColumns(waiverRecords);
 
 export const WAIVER_STATE_COLUMNS = stateColumns;
+
+const allColumnsForState = getTableColumns(waiverRecords);
+
+/**
+ * {@link WAIVER_STATE_COLUMNS} plus the physician's answer seal, for a read
+ * that decides boarding. Hand each row to {@link withTrustedClearance} before
+ * any rule sees it; the seal never leaves this file.
+ */
+export const WAIVER_BOARDING_COLUMNS = {
+  ...stateColumns,
+  medicalAnswerSeal: allColumnsForState.medicalAnswerSeal,
+};
+
+/**
+ * **A clearance counts only while its seal verifies** (final attacker review
+ * B1, glossary *Physician answer seal*): the record a boarding read hands to
+ * the rules, with a clearance stamp whose seal is missing or wrong taken off,
+ * so the referral holds as unanswered. Checked here, at read time, because the
+ * nightly pass reaches a row every few nights at most.
+ */
+export function withTrustedClearance(
+  row: WaiverStateRecord & { medicalAnswerSeal: string | null },
+): WaiverStateRecord {
+  const { medicalAnswerSeal, ...record } = row;
+  if (record.medicalClearedAt === null) return record;
+  if (physicianClearanceSealed({ ...record, medicalAnswerSeal })) return record;
+  return { ...record, medicalClearedAt: null, medicalClearedByPersonId: null };
+}
 
 /**
  * One waiver record read through {@link WAIVER_STATE_COLUMNS} — the shape the
@@ -90,6 +124,7 @@ export const CLEARED_DRAFT_COLUMNS = {
   draftGuardian: null,
   draftShopAnswers: null,
   draftMedicalAlert: null,
+  draftViaLinkId: null,
 } as const satisfies {
   [Column in keyof typeof allColumns as Column extends `draft${string}` ? Column : never]:
     | null

@@ -1,11 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
-import { bookingCapabilities, people, waiverRecords } from "@/db/schema";
+import { bookingCapabilities, capabilities, people, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { diverTranslator } from "@/i18n/messages";
+import { claimedDevice, issueCounterLink, openOnDevice } from "@/db/waivers-test-fixtures";
+import { hashBearerToken } from "@/lib/bearer-tokens";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 
@@ -64,7 +64,14 @@ const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { issueWaiverRequest } = await import("@/db/waivers");
 const { completeWaiverAction, saveWaiverDraftAction } = await import("./actions");
-const { default: WaiverPage } = await import("./page");
+
+/** The phone that opened the counter link first, holding its claim cookie. */
+async function onThisPhone(db: Parameters<typeof openOnDevice>[0], token: string) {
+  await openOnDevice(db, token);
+  const device = claimedDevice(token);
+  if (!device) throw new Error("counter link not claimed");
+  cookieJar.set("diveday_counter_device", device);
+}
 
 async function redirectedTo(run: () => Promise<unknown>): Promise<string> {
   try {
@@ -90,6 +97,35 @@ async function openLink() {
   const issued = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id });
   if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
   return { db, shop, person, token: issued.token, recordId: issued.recordId };
+}
+
+/** A booked seat on an upcoming trip, with its holder's readiness link. */
+async function bookedSeat(fullName: string) {
+  const { db, shop } = ctx;
+  const [trip] = await upcomingTripsWithCounts(db, shop.id);
+  if (!trip) throw new Error("seeded shop has no upcoming trip");
+  const slug = `${fullName.toLowerCase().replace(/\W+/g, ".")}.${crypto.randomUUID().slice(0, 6)}`;
+  const party = await createBookingParty(db, [
+    { actor: "public", shopId: shop.id, tripId: trip.id, fullName, email: `${slug}@example.com` },
+  ]);
+  if (!party.ok || !party.bookings[0]) throw new Error("booking failed");
+  const bookingId = party.bookings[0].bookingId;
+  const readiness = await issueBookingCapability(db, {
+    shopId: shop.id,
+    bookingId,
+    purpose: "readiness",
+  });
+  if (!readiness) throw new Error("readiness link missing");
+  return { bookingId, readiness: readiness.token };
+}
+
+/** When the counter link was spent, or null while it is not. */
+async function linkUsedAt(token: string) {
+  const [row] = await ctx.db
+    .select({ usedAt: capabilities.usedAt })
+    .from(capabilities)
+    .where(eq(capabilities.tokenHash, hashBearerToken(token)));
+  return row?.usedAt ?? null;
 }
 
 /** Every primary question answered "no", which needs no physician. */
@@ -180,219 +216,103 @@ describe("the signing doors", () => {
     expect(record?.status).not.toBe("pending");
   });
 
-  it("keeps a standalone signed waiver on its receipt without granting trip prep", async () => {
+  it("refuses to sign or draft a seat's release through its waiver link (issue #2743)", async () => {
     const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
-    const [trip] = await upcomingTripsWithCounts(db, shop.id);
-    if (!trip) throw new Error("seeded shop has no upcoming trip");
-    const party = await createBookingParty(db, [
-      {
-        actor: "public",
-        shopId: shop.id,
-        tripId: trip.id,
-        fullName: "Morgan Waiver",
-        email: "morgan.waiver@example.com",
-      },
-    ]);
-    if (!party.ok || !party.bookings[0]) throw new Error("booking failed");
-    const issued = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: party.bookings[0].bookingId,
-    });
+    const { bookingId } = await bookedSeat("Morgan Waiver");
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
     if (!issued.ok) throw new Error("waiver request refused");
+    const form = () => signedForm(shop, { signerName: "Morgan Waiver", acknowledged: "on" });
+    expect(await redirectedTo(() => completeWaiverAction(issued.token, form()))).toBe(
+      `/waivers/${issued.token}?error=unavailable`,
+    );
+    expect(await redirectedTo(() => saveWaiverDraftAction(issued.token, form()))).toBe(
+      `/waivers/${issued.token}?error=unavailable`,
+    );
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(record?.status).toBe("pending");
+    expect(record?.draftSignerName).toBeNull();
+  });
+
+  it("signs a seat on its counter link, spends it, and grants no trip prep", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const { bookingId } = await bookedSeat("Casey Counter");
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId });
+    await onThisPhone(db, link.token);
     const before = await db
       .select({ id: bookingCapabilities.id })
       .from(bookingCapabilities)
-      .where(eq(bookingCapabilities.bookingId, party.bookings[0].bookingId));
-    expect(
-      await redirectedTo(() =>
-        completeWaiverAction(
-          issued.token,
-          signedForm(shop, { signerName: "Morgan Waiver", acknowledged: "on" }),
-        ),
-      ),
-    ).toBe(`/waivers/${issued.token}`);
+      .where(eq(bookingCapabilities.bookingId, bookingId));
+    const form = () => signedForm(shop, { signerName: "Casey Counter", acknowledged: "on" });
+    expect(await redirectedTo(() => saveWaiverDraftAction(link.token, form()))).toBe(
+      `/waivers/${link.token}?saved=1`,
+    );
+    // A draft spends nothing.
+    expect(await linkUsedAt(link.token)).toBeNull();
+    expect(await redirectedTo(() => completeWaiverAction(link.token, form()))).toBe(
+      `/waivers/${link.token}`,
+    );
     const [record] = await db
       .select()
       .from(waiverRecords)
-      .where(eq(waiverRecords.id, issued.recordId));
+      .where(eq(waiverRecords.id, link.recordId));
     expect(record?.status).toBe("completed");
+    expect(await linkUsedAt(link.token)).not.toBeNull();
+    // Spent: no second draft or signature lands, and the receipt is all it shows.
+    expect(await redirectedTo(() => saveWaiverDraftAction(link.token, form()))).toBe(
+      `/waivers/${link.token}?error=unavailable`,
+    );
+    // A second Sign is told its answers were not saved (attacker review S1).
+    expect(await redirectedTo(() => completeWaiverAction(link.token, form()))).toBe(
+      `/waivers/${link.token}?error=signed`,
+    );
     const after = await db
       .select({ id: bookingCapabilities.id })
       .from(bookingCapabilities)
-      .where(eq(bookingCapabilities.bookingId, party.bookings[0].bookingId));
+      .where(eq(bookingCapabilities.bookingId, bookingId));
     expect(after).toHaveLength(before.length);
   });
 
-  it("never returns a signer to a readiness link they only carried in a cookie (issue #2743)", async () => {
+  it("refuses a counter signature under another name without spending the link", async () => {
     const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
-    const [trip] = await upcomingTripsWithCounts(db, shop.id);
-    if (!trip) throw new Error("seeded shop has no upcoming trip");
-    const party = await createBookingParty(db, [
-      {
-        actor: "public",
-        shopId: shop.id,
-        tripId: trip.id,
-        fullName: "Taylor Readiness",
-        email: "taylor.readiness@example.com",
-      },
-    ]);
-    if (!party.ok || !party.bookings[0]) throw new Error("booking failed");
-    const bookingId = party.bookings[0].bookingId;
-    const readiness = await issueBookingCapability(db, {
-      shopId: shop.id,
-      bookingId,
-      purpose: "readiness",
-    });
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
-    if (!issued.ok || !readiness) throw new Error("links unavailable");
-    cookieJar.set("diveday_waiver_return", readiness.token);
+    const { bookingId } = await bookedSeat("Robin Counter");
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId });
+    await onThisPhone(db, link.token);
     const target = await redirectedTo(() =>
       completeWaiverAction(
-        issued.token,
-        signedForm(shop, { signerName: "Taylor Readiness", acknowledged: "on" }),
+        link.token,
+        signedForm(shop, { signerName: "Somebody Else Entirely", acknowledged: "on" }),
       ),
     );
-    // The thread signs its own release in place now; a waiver link names no
-    // other door, so nothing a browser carries can route it to one.
-    expect(target === `/waivers/${issued.token}`).toBe(true);
-  });
-
-  it("shows a referred signer the waiver receipt", async () => {
-    const { db, shop } = ctx;
-    vi.mocked(getDb).mockResolvedValue(db);
-    const [trip] = await upcomingTripsWithCounts(db, shop.id);
-    if (!trip) throw new Error("seeded shop has no upcoming trip");
-    const party = await createBookingParty(db, [
-      {
-        actor: "public",
-        shopId: shop.id,
-        tripId: trip.id,
-        fullName: "Sam Referral",
-        email: "sam.referral@example.com",
-      },
-    ]);
-    if (!party.ok || !party.bookings[0]) throw new Error("booking failed");
-    const bookingId = party.bookings[0].bookingId;
-    const readiness = await issueBookingCapability(db, {
-      shopId: shop.id,
-      bookingId,
-      purpose: "readiness",
-    });
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
-    if (!issued.ok || !readiness) throw new Error("links unavailable");
-    const form = signedForm(shop, { signerName: "Sam Referral", acknowledged: "on" });
-    form.set(medicalQuestionField("q3"), "yes");
-    const target = await redirectedTo(() => completeWaiverAction(issued.token, form));
-    expect(target === `/waivers/${issued.token}`).toBe(true);
+    expect(target).toMatch(
+      new RegExp(`^/waivers/${link.token}\\?error=invalid&field=signerNameMismatch&at=\\w+#`),
+    );
+    expect(await linkUsedAt(link.token)).toBeNull();
   });
 
   /**
-   * Dive-domain review F6 of layer r4-1: a parent who opened this from their
-   * party panel lands back on it; a link that is not the seat's lead is
-   * ignored, and the signer lands where every signer does.
+   * Issue #2743: a counter link signs its own seat and returns to its own
+   * receipt, whatever a cookie carries; a referral lands there too.
    */
-  it("send a parent who came from the party panel back to it", async () => {
-    const { db, shop } = ctx;
-    vi.mocked(getDb).mockResolvedValue(db);
-    const [trip] = await upcomingTripsWithCounts(db, shop.id);
-    if (!trip) throw new Error("seeded shop has no upcoming trip");
-    const party = await createBookingParty(db, [
-      {
-        actor: "public",
-        shopId: shop.id,
-        tripId: trip.id,
-        fullName: "Rae Returner",
-        email: "rae.returner@example.com",
-      },
-      { actor: "public", shopId: shop.id, tripId: trip.id, fullName: "Sol Seat" },
-    ]);
-    if (!party.ok) throw new Error(`party booking failed: ${party.reason}`);
-    const [lead, seat] = party.bookings;
-    if (!lead || !seat) throw new Error("party incomplete");
-    const leadLink = await issueBookingCapability(db, {
-      shopId: shop.id,
-      bookingId: lead.bookingId,
-      purpose: "readiness",
-    });
-    if (!leadLink) throw new Error("expected a readiness link");
-    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: seat.bookingId });
-    if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
-    cookieJar.set("diveday_party_return", leadLink.token);
-    expect(
-      await redirectedTo(() =>
-        completeWaiverAction(
-          issued.token,
-          signedForm(shop, { signerName: "Sol Seat", acknowledged: "on" }),
-        ),
-      ),
-    ).toBe(`/ready/${leadLink.token}#party-seats`);
-    expect(cookieJar.has("diveday_party_return")).toBe(false);
-  });
-
-  it("shows a parent the referral instructions before returning to the party", async () => {
-    const { db, shop } = ctx;
-    vi.mocked(getDb).mockResolvedValue(db);
-    const [trip] = await upcomingTripsWithCounts(db, shop.id);
-    if (!trip) throw new Error("seeded shop has no upcoming trip");
-    const party = await createBookingParty(db, [
-      {
-        actor: "public",
-        shopId: shop.id,
-        tripId: trip.id,
-        fullName: "Rae Family",
-        email: "rae.family@example.com",
-      },
-      {
-        actor: "public",
-        shopId: shop.id,
-        tripId: trip.id,
-        fullName: "Sol Family",
-        minorDeclared: true,
-      },
-    ]);
-    if (!party.ok || !party.bookings[0] || !party.bookings[1]) throw new Error("party incomplete");
-    await db
-      .update(people)
-      .set({ dateOfBirth: "2014-05-01" })
-      .where(eq(people.id, party.bookings[1].personId));
-    const readiness = await issueBookingCapability(db, {
-      shopId: shop.id,
-      bookingId: party.bookings[0].bookingId,
-      purpose: "readiness",
-    });
-    const issued = await issueWaiverRequest(db, {
-      shopId: shop.id,
-      bookingId: party.bookings[1].bookingId,
-    });
-    if (!issued.ok || !readiness) throw new Error("links unavailable");
-    cookieJar.set("diveday_party_return", readiness.token);
-    const form = signedForm(shop, {
-      signerName: "Sol Family",
-      acknowledged: "on",
-      guardianName: "Rae Family",
-      guardianRelationship: "parent",
-      guardianAcknowledged: "on",
-    });
-    form.set(medicalQuestionField("q3"), "yes");
-    const target = await redirectedTo(() => completeWaiverAction(issued.token, form));
-    expect(target === `/waivers/${issued.token}`).toBe(true);
-    expect(cookieJar.has("diveday_party_return")).toBe(true);
-    const [record] = await db
-      .select()
-      .from(waiverRecords)
-      .where(eq(waiverRecords.id, issued.recordId));
-    expect(record).toMatchObject({ status: "medical_review", guardianName: "Rae Family" });
-    const html = renderToStaticMarkup(
-      await WaiverPage({
-        params: Promise.resolve({ token: issued.token }),
-        searchParams: Promise.resolve({}),
-      }),
-    );
-    const t = diverTranslator("en-US");
-    expect(html).toContain(t("waiver.medicalReferralNext"));
-    expect(html).toContain(t("waiver.doctor.open"));
-    expect(html.includes(`/ready/${readiness.token}#party-seats`)).toBe(true);
-  });
+  it.each(["diveday_waiver_return", "diveday_party_return"])(
+    "never sends a counter signer to a readiness link carried in %s",
+    async (cookie) => {
+      const { db, shop } = ctx;
+      vi.mocked(getDb).mockResolvedValue(db);
+      const { bookingId, readiness } = await bookedSeat("Taylor Readiness");
+      const link = await issueCounterLink(db, { shopId: shop.id, bookingId });
+      await onThisPhone(db, link.token);
+      cookieJar.set(cookie, readiness);
+      const form = signedForm(shop, { signerName: "Taylor Readiness", acknowledged: "on" });
+      form.set(medicalQuestionField("q3"), "yes");
+      expect(await redirectedTo(() => completeWaiverAction(link.token, form))).toBe(
+        `/waivers/${link.token}`,
+      );
+    },
+  );
 });

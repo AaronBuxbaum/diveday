@@ -98,6 +98,8 @@ const EDGE_EXEMPT = new Map<string, string>(
     "/invite/[token]",
     "/ready/[token]",
     "/ready/[token]/forms",
+    "/ready/[token]/party/[seatId]/waiver",
+    "/ready/[token]/party/[seatId]/waiver/doctor",
     "/ready/[token]/waiver",
     "/ready/[token]/waiver/doctor",
     "/recap/[token]",
@@ -105,7 +107,6 @@ const EDGE_EXEMPT = new Map<string, string>(
     "/unsubscribe/[token]",
     "/verify/[token]",
     "/waivers/[token]",
-    "/waivers/[token]/doctor",
   ].map((route) => [
     route,
     "a bearer-token route: the token is a row question, and the page is noindex",

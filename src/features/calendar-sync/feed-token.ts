@@ -1,13 +1,8 @@
-import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
-
 /**
- * The credential half of a calendar subscription. Pure and framework-free so
- * the token shape can be tested without a database or a request.
+ * The URL half of a calendar subscription. Pure and framework-free so the
+ * shape can be tested without a database or a request. The token itself is a
+ * `capabilities` row's (`src/db/capabilities.ts` mints and hashes it).
  */
-
-export const createFeedToken = createBearerToken;
-
-export const hashFeedToken = hashBearerToken;
 
 /**
  * How often a subscribing client is *asked* to re-poll. Advisory only — Google

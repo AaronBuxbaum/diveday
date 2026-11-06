@@ -314,6 +314,12 @@ type ActivityParamShapes = {
    */
   waiver_seal_acknowledged: { actor: string; diver: string };
   /**
+   * A staffer showed a counter QR for the diver's release (security review
+   * S2, attacker review S2): the code can sign as the diver, so who showed it
+   * is on the diver's trail.
+   */
+  waiver_counter_code_shown: { actor: string; diver: string };
+  /**
    * A staffer read a diver's medical alert for the crew, on a manifest they
    * crew or on the signed record (issue #2960). Never written offline.
    */
@@ -612,6 +618,7 @@ export const ACTIVITY_CODES = [
   "scheduled_backup_medical_answers",
   "scheduled_backup_holds_medical_answers",
   "waiver_seal_acknowledged",
+  "waiver_counter_code_shown",
   "medical_alert_read",
   "medical_alert_saved_offline",
   "medical_alert_printed",

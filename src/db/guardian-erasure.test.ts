@@ -1,5 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import {
   verifyWaiverIntegrity,
@@ -27,6 +29,7 @@ import {
   issueWaiverRequest,
   recordWaiverDraft,
 } from "./waivers";
+import { medicalReferralAnswers, recordMedicalEvaluationForShop } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -81,6 +84,7 @@ async function coSignedRelease(
   shopId: string,
   seat: { booking: { id: string }; person: { id: string; fullName: string } },
   email: string,
+  medicalAnswers: typeof clearAnswers = clearAnswers,
 ) {
   await db.update(people).set({ dateOfBirth: MINOR_DOB }).where(eq(people.id, seat.person.id));
   const issued = await issueWaiverRequest(db, { shopId, bookingId: seat.booking.id, now });
@@ -88,7 +92,7 @@ async function coSignedRelease(
   const completed = await completeWaiver(db, issued.token, {
     signerName: seat.person.fullName,
     agreed: true,
-    medicalAnswers: clearAnswers,
+    medicalAnswers,
     guardian: { name: "Jonas Fischer", relationship: "parent", email, agreed: true },
     now,
   });
@@ -403,5 +407,88 @@ describe("eraseGuardianEmail", () => {
     const after = await readRecord(db, id);
     expect(after.integrityVersion).toBe(WAIVER_INTEGRITY_VERSION_ERASED);
     expect(verifyWaiverIntegrity(after)).toBe("valid");
+  });
+
+  // The physician's answer seal (issue #3949) is written once and never
+  // re-sealed, so every act that re-seals the signature must leave the answer
+  // it covers exactly as the desk recorded it.
+  it("keeps a physician's clearance verifying through a redaction, a refile and an erasure", async () => {
+    const { db, shop, roster, owner } = await fixtures();
+    const [first, second] = roster;
+    if (!first || !second) throw new Error("seats missing");
+    const id = await coSignedRelease(
+      db,
+      shop.id,
+      first,
+      "jonas@example.com",
+      medicalReferralAnswers,
+    );
+    expect((await readRecord(db, id)).status).toBe("medical_review");
+    const cleared = await recordMedicalEvaluationForShop(db, {
+      outcome: "cleared",
+      shopId: shop.id,
+      personId: first.person.id,
+      recordedByPersonId: owner,
+      evaluatedOn: calendarDateInTimezone(nowDate(), shop.timezone),
+      physicianName: "Dr. Imani Reyes",
+    });
+    expect(cleared).toMatchObject({ ok: true, alreadyRecorded: false });
+    const answered = await readRecord(db, id);
+    expect(answered.medicalClearedAt).not.toBeNull();
+    expect(answered.medicalAnswerSeal).not.toBeNull();
+    expect(verifyWaiverIntegrity(answered)).toBe("valid");
+    const answer = {
+      medicalClearedAt: answered.medicalClearedAt,
+      medicalClearedByPersonId: answered.medicalClearedByPersonId,
+      medicalClearanceEvaluatedOn: answered.medicalClearanceEvaluatedOn,
+      medicalClearancePhysicianName: answered.medicalClearancePhysicianName,
+      medicalAnswerSeal: answered.medicalAnswerSeal,
+    };
+
+    await eraseGuardianEmail(db, {
+      shopId: shop.id,
+      personId: first.person.id,
+      email: "jonas@example.com",
+      actorPersonId: owner,
+    });
+    const redacted = await readRecord(db, id);
+    expect(redacted.integrityVersion).toBe(WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED);
+    expect(redacted).toMatchObject(answer);
+    expect(verifyWaiverIntegrity(redacted)).toBe("valid");
+    expect(redacted.integrityValid).toBe(true);
+
+    await db.transaction((tx) =>
+      refileWaiverRecords(tx, {
+        shopId: shop.id,
+        fromPersonId: first.person.id,
+        toPersonId: second.person.id,
+        actorPersonId: owner,
+        now,
+      }),
+    );
+    const moved = await readRecord(db, id);
+    expect(moved.personId).toBe(second.person.id);
+    expect(moved).toMatchObject(answer);
+    expect(verifyWaiverIntegrity(moved)).toBe("valid");
+    expect(moved.integrityValid).toBe(true);
+
+    await db.update(people).set({ deletedAt: now }).where(eq(people.id, second.person.id));
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: second.person.id,
+      actorPersonId: owner,
+    });
+    expect(erased.ok).toBe(true);
+    const after = await readRecord(db, id);
+    expect(after.integrityVersion).toBe(WAIVER_INTEGRITY_VERSION_ERASED);
+    expect(after).toMatchObject(answer);
+    expect(verifyWaiverIntegrity(after)).toBe("valid");
+    expect(after.integrityValid).toBe(true);
+
+    // And the seal still bites after all three: a stamp re-dated on the
+    // erased record reads as tampered.
+    expect(verifyWaiverIntegrity({ ...after, medicalClearanceEvaluatedOn: "2099-01-01" })).toBe(
+      "invalid",
+    );
   });
 });

@@ -452,40 +452,11 @@ async function issueWaiverRecord(
 }
 
 /**
- * Does this booking already have a waiver link a diver could sign *right now*?
- *
- * The rescue flow's guard rail. Issuing supersedes every non-superseded record
- * for the booking, and a superseded record takes the diver's saved draft
- * (`draftMedicalAnswers`, emergency contact answers, half-filled medical
- * questionnaire) out of reach with it. So a stale token whose booking has since
- * been given a *fresher, still-live* link must never trigger another issue: the
- * bearer of the dead URL would be silently killing the link the diver is
- * actually working in, and wiping what they had typed.
- *
- * Deliberately a bare boolean — the caller learns only that a live link exists,
- * never its token, its address, or when it was issued.
+ * Does this person already have a waiver link with no seat they could sign
+ * *right now*? The rescue flow's guard: the bearer of a dead URL learns only
+ * that a live link exists, never its token, address or age, and drives no
+ * delivery on it.
  */
-export async function hasLiveWaiverRequest(
-  db: DbExecutor,
-  bookingId: string,
-  now: Date = nowDate(),
-): Promise<boolean> {
-  const [live] = await db
-    .select({ id: waiverRecords.id })
-    .from(waiverRecords)
-    .where(
-      and(
-        eq(waiverRecords.bookingId, bookingId),
-        eq(waiverRecords.status, "pending"),
-        isNull(waiverRecords.supersededAt),
-        gt(waiverRecords.expiresAt, now),
-      ),
-    )
-    .limit(1);
-  return Boolean(live);
-}
-
-/** The schedule-free counterpart used when a waiver belongs to the person. */
 export async function hasLivePersonWaiverRequest(
   db: DbExecutor,
   shopId: string,

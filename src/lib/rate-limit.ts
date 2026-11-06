@@ -774,7 +774,7 @@ export const RATE_LIMITS = {
    */
   yourDayLinkByPerson: perHour(5),
   /**
-   * Unlocking the answers on the doctor's page (`/waivers/[token]/doctor`) by
+   * Unlocking the answers on the doctor's page (`/ready/[token]/waiver/doctor`) by
    * typing the diver's date of birth, per **diver** (the held release's
    * person) rather than per IP or per record, so neither rotating addresses
    * nor a reissued link buys a fresh budget. Five a quarter hour is plenty for
@@ -789,7 +789,7 @@ export const RATE_LIMITS = {
   doctorAnswersByPerson: per15Min(5),
   /**
    * Sending the signed doctor's form from the doctor's page
-   * (`/waivers/[token]/doctor`, issue #2797), per **diver**, for the same
+   * (`/ready/[token]/waiver/doctor`, issue #2797), per **diver**, for the same
    * reason as `doctorAnswersByPerson`: neither rotating addresses nor a
    * reissued link buys a fresh budget. A release takes one form and the write
    * refuses a second, so this paces the tries that fail (a file too big, not

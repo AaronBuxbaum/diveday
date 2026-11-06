@@ -12,8 +12,6 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("@/db/seat-claims", () => ({ openMinorSeatWaiver: vi.fn() }));
-const jar = { set: vi.fn() };
-vi.mock("next/headers", () => ({ cookies: vi.fn(async () => jar) }));
 vi.mock("./action-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./action-helpers")>();
   return { ...actual, contextFor: vi.fn() };
@@ -53,7 +51,7 @@ function withLead(identityHeld = false) {
 
 beforeEach(() => {
   withLead();
-  vi.mocked(openMinorSeatWaiver).mockResolvedValue({ ok: true, token: "waiver-token" });
+  vi.mocked(openMinorSeatWaiver).mockResolvedValue({ ok: true, recordId: "record-1" });
 });
 
 afterEach(() => {
@@ -61,34 +59,13 @@ afterEach(() => {
 });
 
 describe("signMinorWaiverAction", () => {
-  it("opens the seat's release, with this link's booking as the lead", async () => {
-    await expect(redirectedTo()).resolves.toBe("/waivers/waiver-token");
+  // Issue #2743: the parent signs on their own link, never a waiver link.
+  it("opens the seat's release on this link's own page for it", async () => {
+    await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}/party/${SEAT}/waiver`);
     expect(openMinorSeatWaiver).toHaveBeenCalledWith(
       {},
       { shopId: "shop-1", leadBookingId: LEAD, seatBookingId: SEAT },
     );
-  });
-
-  // Dive-domain review F6 of layer r4-1: the release knows where to send the
-  // parent back to, by a cookie on its own path only, never in the URL.
-  it("hands the release this link to return to, on that release's path only", async () => {
-    await redirectedTo();
-    expect(jar.set).toHaveBeenCalledWith(
-      "diveday_party_return",
-      TOKEN,
-      expect.objectContaining({
-        path: "/waivers/waiver-token",
-        httpOnly: true,
-        sameSite: "lax",
-        secure: false,
-      }),
-    );
-  });
-
-  it("hands nothing over when the seat cannot be opened", async () => {
-    vi.mocked(openMinorSeatWaiver).mockResolvedValue({ ok: false });
-    await redirectedTo();
-    expect(jar.set).not.toHaveBeenCalled();
   });
 
   it("says one thing when the seat cannot be opened", async () => {

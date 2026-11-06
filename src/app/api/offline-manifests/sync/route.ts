@@ -58,21 +58,23 @@ const eventSchema = z
      * from the dive".
      *
      * Honest and updated, and that is the whole of it: because the field is
-     * optional (below), a caller that simply omits it still gets the old
-     * newest-wins write. This is a correctness guard against staleness, **not an
-     * authorization boundary**, and nothing downstream may treat it as one
-     * (security review, 2026-08-15). Nobody gains anything by omitting it — the
-     * caller is already live staff of this shop, who can issue the identical
-     * `cleared` from the live manifest one tab away.
+     * optional (below), a caller that omits it at `departure` still gets the
+     * old newest-wins write; after a dive it is refused (below). This is a
+     * correctness guard against staleness, **not an authorization boundary**,
+     * and nothing downstream may treat it as one (security review, 2026-08-15).
+     * At `departure` nobody gains anything by omitting it — the caller is
+     * already live staff of this shop, who can issue the identical `cleared`
+     * from the live manifest one tab away.
      *
-     * **Optional, and its absence is not a loosening to be tidied up later.**
-     * An event with no `retractsClientEventId` was queued by a build that
-     * predates the field — a phone in a dry bag on a boat, which is the whole
-     * reason this route exists — and it takes exactly the path it took before,
-     * scoped on the device to that device's own statement
-     * (`OfflineRollCallResult.local`). Refusing those would throw away roll call
-     * a crew member really recorded, which is the one thing this route is built
-     * never to do.
+     * **Optional, and what its absence means depends on the checkpoint.** An
+     * event with no `retractsClientEventId` was queued by a build that
+     * predates the field, or forged. At `departure` it takes the path it took
+     * before, scoped on the device to that device's own statement
+     * (`OfflineRollCallResult.local`). After a dive it is refused as
+     * `retraction_superseded` (issue #3951): there a `cleared` reaches back to
+     * an earlier meeting day's missing diver, and a retraction that names
+     * nothing must not take back an alarm it never named
+     * (`offlineRetractionSuperseded`, src/db/manifests.ts).
      *
      * A uuid because the device mints it with `crypto.randomUUID()`. Unlike
      * `clientEventId` above it never reaches Postgres — it is compared in

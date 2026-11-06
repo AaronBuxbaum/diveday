@@ -46,10 +46,9 @@ test("a captain adds a rider at the dock, who counts at once and only once", asy
       { exact: false },
     ),
   ).toBeVisible();
-  await expect(form.getByRole("link", { name: "open the release on this phone" })).toHaveAttribute(
-    "href",
-    /^\/waivers\//,
-  );
+  // A seat's release has no link of its own to hand over: it lives on the
+  // rider's thread (ADR 20261105-waiver-folds-into-the-thread).
+  await expect(form.getByRole("link", { name: "open the release on this phone" })).toHaveCount(0);
   await expect(manifestRow(page, "Sam Rider")).toBeVisible();
 
   // The same name again is a second tap, not a second rider.

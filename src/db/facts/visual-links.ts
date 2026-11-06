@@ -14,7 +14,7 @@ import { issueShoreAlertConfirmation, issueShoreAlertStopToken } from "@/db/shor
 import { issueWeeklyDigestUnsubscribeToken } from "@/db/weekly-digest";
 import { BOOKKEEPER_CONFIRMATION_TTL_MS, bookkeeperMonthOnSet } from "@/lib/bookkeeper";
 import { addMonths, monthKey, parseMonthKey } from "@/lib/calendar";
-import { SHORE_ALERT_CONFIRMATION_TTL_MS } from "@/lib/shore-alert-contact";
+import { CAPABILITY_POLICY } from "@/lib/capabilities";
 import { digestWeeks } from "@/lib/weekly-digest";
 import { FactRefused } from "./refusal";
 
@@ -87,7 +87,9 @@ export async function mintAVisualLink(
         shopId: shop.id,
         email,
         now:
-          state === "expired" ? new Date(now.getTime() - SHORE_ALERT_CONFIRMATION_TTL_MS - 1) : now,
+          state === "expired"
+            ? new Date(now.getTime() - CAPABILITY_POLICY.shore_alert_confirm.ttlMs - 1)
+            : now,
       });
       token = issued.token;
     }

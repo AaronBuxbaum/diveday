@@ -6,6 +6,44 @@ import { useLayoutEffect, useRef, useState } from "react";
 type RevealState = "ready" | "pending" | "visible";
 
 /**
+ * The attribute each reveal sets on its own marker element once it has decided
+ * what to withhold — including the branches that withhold nothing.
+ *
+ * **A reader never needs it; the camera does.** The withholding happens in a
+ * layout effect, so it cannot happen before hydration, and anything that wants
+ * to know whether a page is finished hiding things has otherwise only a guess
+ * about when React got there. `e2e/visual-harness.ts` waits until no marker is
+ * left unstamped before its scroll-through, which is the pass that reveals the
+ * sections again — without it the two race, and the race is what put a hero,
+ * nine thousand blank pixels and a footer into the `product-dark-vw-390`
+ * baseline (issue #1910), and what left three blank chapters on `/` (#3932).
+ *
+ * Stamped per element, not once on `<html>`: a page carries one
+ * `MarketingReveal` per chapter, each decides in its own layout effect, and a
+ * page-wide stamp would let the first one to hydrate speak for the rest.
+ *
+ * Same contract as `ScrollToHash`'s `data-hash-landed` and
+ * `PreserveFormScroll`'s `SCROLL_SETTLED_ATTRIBUTE`: set in **every** branch
+ * the effect can return through, so a reader waiting on it is never left
+ * waiting by the case that had nothing to do.
+ */
+export const REVEAL_READY_ATTRIBUTE = "data-marketing-reveal-ready";
+
+/**
+ * The marker in the server HTML that says "a reveal decides something here".
+ *
+ * It has to be server-rendered, because its whole job is to be readable
+ * *before* hydration: that is what lets the camera tell "this page will decide
+ * something" from "this page has nothing to decide" without waiting on a
+ * signal that is never coming. Every reveal carries it — the
+ * `MarketingReveal` wrapper on itself, `MarketingSectionMotion` on a hidden
+ * span — and every other page carries none and pays one `querySelector` for
+ * the distinction. A reveal without it is invisible to the camera, which is
+ * exactly how `/` came to be swept before it hydrated (#3932).
+ */
+export const REVEAL_MARKER_ATTRIBUTE = "data-marketing-reveal";
+
+/**
  * A below-the-fold marketing section may enter gently once, but the first
  * screen must be useful before JavaScript has run. The server therefore sends
  * the section in its normal visible state; only a section whose measured top
@@ -23,7 +61,12 @@ export function MarketingReveal({
 
   useLayoutEffect(() => {
     const element = elementRef.current;
-    if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!element) return;
+    // Stamped before deciding, and safe to: the `setState` below re-renders
+    // synchronously inside this same layout effect, so no script outside React
+    // can read the stamp before the pending class is on the element.
+    element.setAttribute(REVEAL_READY_ATTRIBUTE, "");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (element.getBoundingClientRect().top <= window.innerHeight) return;
 
     setState("pending");
@@ -43,6 +86,7 @@ export function MarketingReveal({
     <div
       ref={elementRef}
       className={`marketing-reveal marketing-reveal-${state} ${className}`.trim()}
+      {...{ [REVEAL_MARKER_ATTRIBUTE]: "" }}
     >
       {children}
     </div>
@@ -88,42 +132,14 @@ export function MarketingHeroMotion({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * The attribute this component sets on `<html>` once it has decided which
- * sections to withhold — including the branches that withhold none.
- *
- * **A reader never needs it; the camera does.** The withholding happens in a
- * layout effect, so it cannot happen before hydration, and anything that wants
- * to know whether a page is finished hiding things has otherwise only a guess
- * about when React got there. `e2e/visual-harness.ts` waits for this before its
- * scroll-through, which is the pass that reveals the sections again — without
- * it the two race, and the race is what put a hero, nine thousand blank pixels
- * and a footer into the `product-dark-vw-390` baseline (issue #1910).
- *
- * Same contract as `ScrollToHash`'s `data-hash-landed` and
- * `PreserveFormScroll`'s `SCROLL_SETTLED_ATTRIBUTE`: set in **every** branch
- * the effect can return through, so a reader waiting on it is never left
- * waiting by the case that had nothing to do.
- */
-export const REVEAL_READY_ATTRIBUTE = "data-marketing-reveal-ready";
-
-/**
- * The marker in the server HTML that says this page runs the reveal at all.
- *
- * It has to be server-rendered, because its whole job is to be readable
- * *before* hydration: that is what lets the camera tell "this page will decide
- * something" from "this page has nothing to decide" without waiting on a
- * signal that is never coming. Every other page in the app carries neither the
- * marker nor the stamp and pays one `querySelector` for the distinction.
- */
-export const REVEAL_MARKER_ATTRIBUTE = "data-marketing-reveal";
-
 /** Applies the same one-time reveal to native `<section>` elements on a marketing page. */
 export function MarketingSectionMotion() {
+  const markerRef = useRef<HTMLSpanElement>(null);
+
   useLayoutEffect(() => {
-    // Stamped first and unconditionally: every branch below is a decision, and
-    // the ones that decide to withhold nothing are decisions too.
-    const landed = () => document.documentElement.setAttribute(REVEAL_READY_ATTRIBUTE, "");
+    // Stamped in every branch: each is a decision, and the ones that decide
+    // to withhold nothing are decisions too.
+    const landed = () => markerRef.current?.setAttribute(REVEAL_READY_ATTRIBUTE, "");
     const sections = [...document.querySelectorAll<HTMLElement>("main section")];
     const pending = sections.filter(
       (section) => section.getBoundingClientRect().top > window.innerHeight,
@@ -155,5 +171,5 @@ export function MarketingSectionMotion() {
   // something from one that simply has no reveal on it — see
   // `REVEAL_MARKER_ATTRIBUTE`. `hidden` keeps it out of layout and out of the
   // accessibility tree.
-  return <span hidden {...{ [REVEAL_MARKER_ATTRIBUTE]: "" }} />;
+  return <span ref={markerRef} hidden {...{ [REVEAL_MARKER_ATTRIBUTE]: "" }} />;
 }

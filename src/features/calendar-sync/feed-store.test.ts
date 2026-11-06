@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { calendarFeeds, people, personRoles, userAccounts } from "@/db/schema";
+import { issueCapability } from "@/db/capabilities";
+import { capabilities, people, personRoles, userAccounts } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
@@ -36,11 +37,15 @@ describe("issueCalendarFeed", () => {
     expect(issued).not.toBeNull();
 
     const [row] = await db
-      .select({ tokenHash: calendarFeeds.tokenHash })
-      .from(calendarFeeds)
-      .where(eq(calendarFeeds.personId, personId));
+      .select()
+      .from(capabilities)
+      .where(
+        and(eq(capabilities.personId, personId), eq(capabilities.purpose, "calendar_assignments")),
+      );
     expect(row.tokenHash).not.toBe(issued?.token);
     expect(row.tokenHash).toMatch(/^[0-9a-f]{64}$/);
+    // A standing credential: no expiry, never spent.
+    expect(row).toMatchObject({ shopId: shop.id, expiresAt: null, usedAt: null });
   });
 
   it("rotating supersedes the old link immediately, so a leaked URL stops working", async () => {
@@ -86,10 +91,11 @@ describe("issueCalendarFeed", () => {
     // previous one. Writing the second row directly is the only way to reach
     // that state here, since PGlite serializes connections.
     await expect(
-      db.insert(calendarFeeds).values({
+      db.insert(capabilities).values({
         shopId: shop.id,
         personId,
-        scope: "assignments",
+        purpose: "calendar_assignments",
+        oneLive: true,
         tokenHash: "a".repeat(64),
       }),
     ).rejects.toThrow();
@@ -153,6 +159,22 @@ describe("issueCalendarFeed", () => {
 });
 
 describe("verifyCalendarFeed", () => {
+  it("never opens a feed with another purpose's token for the same staffer", async () => {
+    const { db, shop, personId } = await staffWithRole("owner");
+    const unsubscribe = await issueCapability(db, {
+      purpose: "courtesy_email_unsubscribe",
+      shopId: shop.id,
+      subjectId: personId,
+    });
+    expect(await verifyCalendarFeed(db, { token: unsubscribe })).toBeNull();
+    const feed = await issueCalendarFeed(db, { shopId: shop.id, personId, scope: "shop_trips" });
+    if (!feed) throw new Error("issue failed");
+    expect(await verifyCalendarFeed(db, { token: feed.token })).toMatchObject({
+      personId,
+      scope: "shop_trips",
+    });
+  });
+
   it("returns null for an unknown token rather than leaking that it is unknown", async () => {
     const { db } = ctx;
     expect(await verifyCalendarFeed(db, { token: "not-a-real-token" })).toBeNull();
@@ -332,9 +354,9 @@ describe("feed housekeeping", () => {
     // Revoked, not deleted: the row stays as the audit trail of a credential
     // that once existed.
     const [leaverRow] = await db
-      .select({ revokedAt: calendarFeeds.revokedAt })
-      .from(calendarFeeds)
-      .where(and(eq(calendarFeeds.shopId, shop.id), eq(calendarFeeds.personId, leaver.person.id)));
+      .select({ revokedAt: capabilities.revokedAt })
+      .from(capabilities)
+      .where(and(eq(capabilities.shopId, shop.id), eq(capabilities.personId, leaver.person.id)));
     expect(leaverRow.revokedAt).not.toBeNull();
   });
 });

@@ -11,6 +11,7 @@ import { OFFLINE_MANIFEST_SHELL_VERSION } from "../src/lib/offline-manifests";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
+  expectSignedOnThread,
   manifestRow,
   offlineCopySaved,
   openBoatCheck,
@@ -22,7 +23,7 @@ import {
   openTripFromBoard,
   openTripTab,
   tripPathByTitle,
-  waiverLinkFromResult,
+  waiverRequestLinkAfterSend,
 } from "./helpers";
 
 const staff = staffTranslator("en-US");
@@ -1660,10 +1661,9 @@ test("an instructor off the crew opens a medical alert in an emergency today, an
   const row = await openFirstRosterRowWith(page, "Send waiver");
   const diverName = (await row.locator('a[href*="/divers/"]').first().innerText()).trim();
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
-  const waiverHref = await waiverLinkFromResult(
-    page,
-    page.locator("#roster").filter({ visible: true }).getByRole("status"),
-  );
+  // The diver signs on the thread link the request carried (issue #2743); the
+  // helper waits out the held send before it reads the link.
+  const waiverHref = await waiverRequestLinkAfterSend(page, row);
   await page.goto(waiverHref);
   const medicalNo = page.locator("#medical-questionnaire").getByRole("radio", { name: "No" });
   await medicalNo.first().waitFor();
@@ -1673,7 +1673,7 @@ test("an instructor off the crew opens a medical alert in an emergency today, an
   await page.getByLabel("Type your full name").fill(diverName);
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
   await page.getByRole("button", { name: "Sign waiver" }).click();
-  await expect(page.getByText(diver("waiver.signedBody"))).toBeVisible();
+  await expectSignedOnThread(page);
 
   const instructorContext = await browser.newContext({
     baseURL: workerBaseURL,

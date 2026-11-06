@@ -226,11 +226,9 @@ export const waiverRecords = pgTable(
      * every record that has not been cleared, including every record that never
      * needed to be.
      *
-     * Outside the integrity seal, like `superseded_at` and the delivery
-     * columns: `signedMetadata` seals the diver's signed evidence, and a
-     * clearance is a later act by the shop rather than part of what the diver
-     * agreed to. `anonymized_at` is inside the v2 seal only because erasure
-     * *destroys* sealed fields and would otherwise read as tampering.
+     * Outside the signature's seal, because a clearance is a later act by the
+     * shop rather than part of what the diver agreed to, and inside a seal of
+     * its own: `medical_answer_seal` below (issue #3949).
      */
     medicalClearedAt: timestamp("medical_cleared_at", { withTimezone: true }),
     /** The staff member who recorded the clearance — the accountable person, as `recorded_by_person_id` is for a paper signature. */
@@ -323,6 +321,24 @@ export const waiverRecords = pgTable(
     medicalClearanceDeclinedByPersonId: uuid("medical_clearance_declined_by_person_id").references(
       () => people.id,
     ),
+    /**
+     * **The physician's answer seal** (glossary *Physician answer seal*, issue
+     * #3949): a keyed digest over the answer this record holds — which stamp,
+     * who recorded it and when, the evaluation date, the physician and whether
+     * the form came from the diver — bound to this record's id and shop.
+     * Written once, by `recordMedicalEvaluation`, in the same guarded update as
+     * the answer; a recorded answer is final, so it is never re-sealed.
+     *
+     * The clearance stamp is what lifts a referral, so it cannot ride outside
+     * every seal: `verifyWaiverIntegrity` reads a record whose answer does not
+     * match this, or which carries this with no answer, as `invalid`, and the
+     * nightly check holds its diver (`waiver_seal_failed`). Kept apart from
+     * `integrity_hash` so recording an answer never re-seals the signed
+     * release, and a move, a guardian redaction or an erasure re-seals the
+     * signature without touching it: every field it covers survives all three.
+     * The evaluation's document URL is outside it, because erasure destroys it.
+     */
+    medicalAnswerSeal: text("medical_answer_seal"),
     /**
      * **The guardian's half of a minor's release** (ADR
      * 20260907-guardian-co-signature). A diver under the age of majority on
@@ -423,6 +439,16 @@ export const waiverRecords = pgTable(
      * move and by erasure (`CLEARED_DRAFT_COLUMNS`).
      */
     draftMedicalAlert: text("draft_medical_alert"),
+    /**
+     * The counter link (`capabilities.id`, a `waiver_link`) the drafts were
+     * last saved through, or null when they were saved through any other
+     * door. A counter form pre-fills the medical drafts only when this is its
+     * own claimed link, so a fresh QR never shows answers typed earlier
+     * (security review S2) while the phone that typed them gets them back
+     * after a refusal (dock review B1). No foreign key: it is only ever
+     * compared with a live link's id, and a deleted link matches nothing.
+     */
+    draftViaLinkId: uuid("draft_via_link_id"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),

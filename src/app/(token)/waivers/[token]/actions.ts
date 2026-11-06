@@ -1,16 +1,13 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { emailFreshWaiverLink, type WaiverLinkRescue } from "@/db/waiver-issue";
-import { staleWaiverRecordForToken } from "@/db/waivers";
-import { isCounterWaiverToken } from "@/lib/counter-waiver-token";
+import { claimCounterLink, staleWaiverRecordForToken, waiverLinkDoor } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { PARTY_RETURN_COOKIE, partyReturnCookiePath } from "@/lib/party-return";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-import { waiverReturnPath } from "./return-path";
+import { counterDevice, keepCounterDevice } from "./counter-device";
 import { completeWaiverThrough, type SigningDoor, saveWaiverDraftThrough } from "./signing";
 
 /**
@@ -67,17 +64,45 @@ export async function emailFreshWaiverLinkAction(token: string) {
   redirect(`/waivers/${token}?sent=${RESCUE_PARAM[outcome]}`);
 }
 
-/** The waiver link's own door: the per-IP waiver bucket, then the token is the authority. */
+/**
+ * The waiver link's own door: the per-IP waiver bucket, then what the token
+ * opens (`waiverLinkDoor`): a counter tablet's link, or a release with no seat.
+ * A seat's own waiver link signs nothing (issue #2743).
+ */
 async function tokenDoor(token: unknown): Promise<SigningDoor> {
   // The bound argument is whatever the browser posts: only a string is a link.
   if (typeof token !== "string") redirect("/");
+  const path = `/waivers/${token}`;
   const ip = await clientIp();
   if (
     !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction)).allowed
   ) {
-    redirect(`/waivers/${token}?error=rate`);
+    redirect(`${path}?error=rate`);
   }
-  return { key: token, path: `/waivers/${token}` };
+  const door = await waiverLinkDoor(await getDb(), token, { device: await counterDevice() });
+  // A counter link on another phone, or not yet opened on this one, signs
+  // nothing: the page itself then says which.
+  if (door?.door !== "counter" && door?.door !== "release") redirect(`${path}?error=unavailable`);
+  return { key: door.key, path };
+}
+
+/**
+ * **Open a counter link on this phone** (attacker review S1): the first phone
+ * to tap claims the link and keeps the claim in a cookie; any later phone is
+ * told the code is open elsewhere. Same per-IP bucket as the page's other acts.
+ */
+export async function claimCounterLinkAction(token: string) {
+  if (typeof token !== "string") redirect("/");
+  const path = `/waivers/${token}`;
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction)).allowed
+  ) {
+    redirect(`${path}?error=rate`);
+  }
+  const device = await claimCounterLink(await getDb(), token);
+  if (device) await keepCounterDevice(token, device);
+  redirect(path);
 }
 
 export async function saveWaiverDraftAction(token: string, formData: FormData) {
@@ -85,24 +110,10 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
 }
 
 export async function completeWaiverAction(token: string, formData: FormData) {
-  const { record, status } = await completeWaiverThrough(await tokenDoor(token), formData);
-  // A waiver link is authority to sign that waiver, not to issue trip prep access.
-  if (isCounterWaiverToken(token)) revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
-  // Show the mandatory physician instructions on the waiver receipt first.
-  if (status === "medical_review") revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
-  // A parent who opened this from their party panel goes back to it, so the
-  // next child's release is one tap away (dive-domain review F6).
-  const jar = await cookies();
-  const partyToken = jar.get(PARTY_RETURN_COOKIE)?.value;
-  if (partyToken) jar.delete({ name: PARTY_RETURN_COOKIE, path: partyReturnCookiePath(token) });
-  const returnPath =
-    record.bookingId && partyToken
-      ? await waiverReturnPath(await getDb(), {
-          shopId: record.shopId,
-          bookingId: record.bookingId,
-          partyToken,
-        })
-      : null;
-  if (returnPath) revalidateAndRedirect(`/waivers/${token}`, returnPath);
+  await completeWaiverThrough(await tokenDoor(token), formData);
+  // Always the receipt, which carries the physician instructions when
+  // referred: a waiver link is authority to sign that waiver, not to open trip
+  // prep. A parent signing a child's seat signs on their own link instead
+  // (`completeMinorWaiver`, issue #2743), so there is nowhere else to return.
   revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
 }

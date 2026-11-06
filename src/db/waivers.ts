@@ -37,6 +37,8 @@ export {
 } from "./waivers-audit";
 export {
   type CompleteWaiverOutcome,
+  type CounterWaiverKey,
+  claimCounterLink,
   completeWaiver,
   type EmergencyContactInput,
   type GuardianInput,
@@ -52,6 +54,8 @@ export {
   threadWaiverAwaitsPhysician,
   threadWaiverKey,
   type WaiverKey,
+  type WaiverLinkDoor,
+  waiverLinkDoor,
 } from "./waivers-completion";
 export {
   type DiverWaiverRequestStatus,
@@ -89,7 +93,6 @@ export {
 } from "./waivers-medical";
 export {
   hasLivePersonWaiverRequest,
-  hasLiveWaiverRequest,
   type IssueWaiverOutcome,
   issueWaiverRequest,
   type OpenThreadWaiverOutcome,

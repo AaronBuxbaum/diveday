@@ -85,6 +85,8 @@ for (const scheme of ["light", "dark"] as const) {
             throw new Error("waiver navigation failed");
           });
           await dialog.getByRole("button", { name: "Close" }).click();
+          // A counter code asks the first phone to say "this one".
+          await phone.getByRole("button", { name: "Open the waiver here" }).click();
           await phone.getByLabel("Type your full name").fill(leadName);
           await phone
             .getByLabel("I have read this waiver, understand it, and agree to it.")

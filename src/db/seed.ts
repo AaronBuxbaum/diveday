@@ -1,6 +1,7 @@
 import { hash } from "bcryptjs";
-import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, notInArray, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { reusablePurposes } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import { crewPublicNameToStore } from "@/lib/crew-public-name";
 import { shopDefaults } from "@/lib/curated-defaults";
@@ -17,7 +18,6 @@ import {
   accountSecurity,
   accountSessions,
   accountStepUps,
-  accountTokens,
   activityEvents,
   authProviderAccounts,
   authVerifications,
@@ -31,7 +31,6 @@ import {
   bookings,
   buddyTeamEvents,
   buddyTeamMembers,
-  calendarFeeds,
   capabilities,
   cards,
   courseFormRecords,
@@ -1068,7 +1067,13 @@ export async function clearDemoSchedule(
   // every `/api/test/reset` throw 23503 mid-run and leave the demo shop
   // half-reset — the e2e fleet then failed in whichever spec happened to read
   // the wreckage next, which is why the flake moved around between runs.
-  await db.delete(capabilities).where(eq(capabilities.shopId, shopId));
+  // A stable staffer's calendar feed (a reusable capability) survives the
+  // reset; a purged person's goes with them below.
+  await db
+    .delete(capabilities)
+    .where(
+      and(eq(capabilities.shopId, shopId), notInArray(capabilities.purpose, reusablePurposes())),
+    );
   await db.delete(interests).where(eq(interests.shopId, shopId));
   // References trips (last-minute-deal blasts) and the interests that carry a deal's
   // `promo_id`, so it goes after them and before the trips/people deletes below
@@ -1179,7 +1184,7 @@ export async function clearDemoSchedule(
     // purge does take staff: e2e/staff-invite.spec.ts invites and accepts a
     // new instructor, who is not one of the stable four.
     await db.delete(staffShifts).where(inArray(staffShifts.personId, purgeIds));
-    await db.delete(calendarFeeds).where(inArray(calendarFeeds.personId, purgeIds));
+    await db.delete(capabilities).where(inArray(capabilities.personId, purgeIds));
     // Login rows reference people (user_accounts.person_id), so they must go
     // before the people they belong to or the delete below FK-violates (23503),
     // aborts the whole reset mid-run, and leaks the churned schedule into the
@@ -1198,7 +1203,7 @@ export async function clearDemoSchedule(
       .where(inArray(userAccounts.personId, purgeIds));
     const purgeAccountIds = purgeAccounts.map((row) => row.id);
     if (purgeAccountIds.length > 0) {
-      await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, purgeAccountIds));
+      await db.delete(capabilities).where(inArray(capabilities.userAccountId, purgeAccountIds));
       // A provider login references the account row and carries no cascade, so
       // it must go before user_accounts for the same reason the tokens above
       // do. Nothing writes this table yet — no OAuth provider is configured —

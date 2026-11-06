@@ -813,7 +813,7 @@ describePostgres("capability issuance and erasure serialization", () => {
     expect(provider.mock.calls[0]?.[0]).toMatchObject({
       kind: "waiver_request",
       to: person.email,
-      completionUrl: expect.stringContaining("/waivers/"),
+      completionUrl: expect.stringContaining("/ready/"),
     });
     expect(
       await pg.db

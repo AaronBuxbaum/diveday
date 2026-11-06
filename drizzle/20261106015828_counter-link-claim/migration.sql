@@ -1,0 +1,2 @@
+ALTER TABLE "capabilities" ADD COLUMN "claim_hash" text;--> statement-breakpoint
+ALTER TABLE "capabilities" ADD CONSTRAINT "capabilities_claim_only_when_claimable" CHECK ("claim_hash" is null or "purpose"::text in ('waiver_link'));

@@ -3,17 +3,22 @@ import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId } from "@/db/waiver-signing";
-import { doctorPageOpen, getWaiverForToken, staleWaiverRecordForToken } from "@/db/waivers";
+import { getWaiverForToken, staleWaiverRecordForToken, waiverLinkDoor } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { isCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { completedMedicalState } from "./completed-medical-state";
-import { waiverReturnForReceipt } from "./return-path";
+import { counterDevice } from "./counter-device";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
-import { ExpiredLink, HeldWaiverCard, UnavailableWaiverLink } from "./WaiverDoorCards";
+import {
+  CounterClaimCard,
+  CounterElsewhereCard,
+  ExpiredLink,
+  HeldWaiverCard,
+  UnavailableWaiverLink,
+} from "./WaiverDoorCards";
 import { waiverSigningForm } from "./WaiverSigningForm";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -58,7 +63,16 @@ export default async function WaiverPage({
   // `shops.default_locale` to fall back to — negotiate from the visitor's own
   // device alone for those branches.
   const anonT = diverTranslator(await requestLocale());
-  const state = await getWaiverForToken(db, token);
+  // A counter tablet's link, or a release with no seat. A seat's own waiver
+  // link opens nothing (issue #2743): its release is signed in the holder's
+  // thread, so it lands on the card below that sends them their thread link.
+  const door = await waiverLinkDoor(db, token, { device: await counterDevice() });
+  // A counter QR opens on the first phone that taps "open here", and on no
+  // other (attacker review S1).
+  if (door?.door === "counter_unclaimed") return <CounterClaimCard token={token} t={anonT} />;
+  if (door?.door === "counter_elsewhere") return <CounterElsewhereCard t={anonT} />;
+  const state = door ? await getWaiverForToken(db, door.key) : { state: "unavailable" as const };
+  const counter = door?.door === "counter";
 
   if (state.state === "unavailable") {
     // A rescue send supersedes the very record that asked for it, so this
@@ -107,25 +121,22 @@ export default async function WaiverPage({
 
     const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
-    // A referred signer needs the physician instructions on this receipt first.
-    // A return door exists only for a separately held, still-valid readiness link.
-    const readyPath = needsReview
-      ? await waiverReturnForReceipt(db, { shopId: state.record.shopId, bookingId, token })
-      : null;
-
-    // The same gate the doctor's page opens on, so the door never leads to a redirect.
-    const doctorDoor = needsReview && (await doctorPageOpen(db, state.record));
     const signedRail = completedWaiverRail(needsReview, !!state.record.shopAnswers);
     return (
       <WaiverCompleted
         shop={shop}
         t={t}
         locale={locale}
-        waiverOnly={isCounterWaiverToken(token)}
+        waiverOnly={counter}
+        // A counter submit that found its release already signed: what was
+        // just entered was not saved, and the receipt says so.
+        notSaved={counter && error === "signed"}
         medicalState={completedMedicalState(state.record)}
-        showPrepHelp={!readyPath && Boolean(bookingTripId) && !isCounterWaiverToken(token)}
-        readyPath={readyPath}
-        doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
+        // A waiver link opens no thread and no doctor's page (issue #2743): a
+        // seat's release, and its doctor's page, are on the holder's own link.
+        showPrepHelp={false}
+        readyPath={null}
+        doctorPath={null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}
       />
@@ -141,6 +152,12 @@ export default async function WaiverPage({
     search: { saved, error, field, q, at },
     completeAction: completeWaiverAction.bind(null, token),
     saveAction: saveWaiverDraftAction.bind(null, token),
-    showLinkExpiry: true,
+    // A counter link's half hour is not the release's own expiry.
+    showLinkExpiry: !counter,
+    // The counter QR can be read by any camera, so it never shows the medical
+    // answers the diver saved in their own thread (security review S2); it
+    // shows only what this claimed code saved, so a refused Sign or a Save
+    // never blanks the questionnaire on the phone that typed it (dock B1).
+    prefillMedical: door?.door !== "counter" || state.record.draftViaLinkId === door.key.linkId,
   });
 }

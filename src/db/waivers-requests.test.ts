@@ -9,7 +9,6 @@ import { setTripStatus } from "./trips";
 import { completeWaiver, getWaiverForToken, threadWaiverKey } from "./waivers-completion";
 import {
   hasLivePersonWaiverRequest,
-  hasLiveWaiverRequest,
   issueWaiverRequest,
   openWaiverInThread,
 } from "./waivers-requests";
@@ -561,23 +560,22 @@ describe("who a waiver link may be issued for", () => {
 });
 
 describe("asking whether a live waiver link exists", () => {
-  it("answers for a seat, and for a person with no seat, against the clock", async () => {
+  it("answers for a person with no seat, against the clock, and never for a seat", async () => {
     const { db, shop, booking } = await waiverContext();
-    expect(await hasLiveWaiverRequest(db, booking.id, now)).toBe(false);
     expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, now)).toBe(false);
 
     const seat = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!seat.ok) throw new Error("expected the seat's link to issue");
+    expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, now)).toBe(false);
     const person = await issueWaiverRequest(db, {
       shopId: shop.id,
       personId: booking.personId,
       now,
     });
-    if (!seat.ok || !person.ok) throw new Error("expected both links to issue");
-    expect(await hasLiveWaiverRequest(db, booking.id, now)).toBe(true);
+    if (!person.ok) throw new Error("expected the person's link to issue");
     expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, now)).toBe(true);
 
-    const dead = new Date(seat.expiresAt.getTime() + 1);
-    expect(await hasLiveWaiverRequest(db, booking.id, dead)).toBe(false);
+    const dead = new Date(person.expiresAt.getTime() + 1);
     expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId, dead)).toBe(false);
   });
 
@@ -586,9 +584,7 @@ describe("asking whether a live waiver link exists", () => {
     try {
       vi.setSystemTime(now);
       const { db, shop, booking } = await waiverContext();
-      await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
       await issueWaiverRequest(db, { shopId: shop.id, personId: booking.personId, now });
-      expect(await hasLiveWaiverRequest(db, booking.id)).toBe(true);
       expect(await hasLivePersonWaiverRequest(db, shop.id, booking.personId)).toBe(true);
     } finally {
       vi.useRealTimers();

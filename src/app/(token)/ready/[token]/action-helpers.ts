@@ -28,6 +28,10 @@ import { clientIp } from "@/lib/request-ip";
 
 export const base = (token: string) => `/ready/${token}`;
 
+/** Where a party lead signs a child's release, on the lead's own link (issue #2743). */
+export const partySeatWaiverPath = (token: string, seatBookingId: string) =>
+  `${base(token)}/party/${seatBookingId}/waiver`;
+
 /** Where a resolved action redirects when it can't proceed — a query param the page can turn into a real notice, never silence. */
 export function bounceTarget(token: string, reason: "rate_limited" | "invalid"): string {
   return reason === "rate_limited" ? `${base(token)}?error=rate` : base(token);

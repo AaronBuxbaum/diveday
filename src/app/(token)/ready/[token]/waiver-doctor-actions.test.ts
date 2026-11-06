@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { issueBookingCapability } from "@/db/booking-capabilities";
 import { people, waiverRecords } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { completeWaiver } from "@/db/waivers-completion";
@@ -22,6 +23,10 @@ const waiverContext = waiverContextFor(fileCtx);
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
+});
+vi.mock("@/i18n/request", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/i18n/request")>();
+  return { ...actual, requestFirstHandLocale: vi.fn(async () => null) };
 });
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
@@ -49,7 +54,7 @@ const { checkRateLimit, checkRateLimitFailClosed, RATE_LIMITS, rateLimitKey } = 
 );
 const { storeMedicalClearanceDocument } = await import("@/lib/storage");
 const { queueAndAttemptMediaDeletion } = await import("@/db/media-deletions");
-const { sendDoctorFormAction } = await import("./actions");
+const { sendDoctorFormFromReady } = await import("./waiver-actions");
 
 const STORED = "https://media.example.com/medical-clearances/abc.jpg";
 
@@ -61,11 +66,11 @@ afterEach(() => {
 
 /**
  * **Sending the signed doctor's form from the doctor's page** (issue #2797,
- * ADR 20261024-diver-sent-doctors-form), against a real database. The waiver
- * link is the whole authority; every refusal happens before a byte is stored,
+ * ADR 20261024-diver-sent-doctors-form), against a real database, on the
+ * diver's own thread link (issue #2743). That link is the whole authority; every refusal happens before a byte is stored,
  * and a file the write refuses anyway is queued for deletion.
  */
-describe("sendDoctorFormAction", () => {
+describe("sendDoctorFormFromReady", () => {
   async function signedLink(medicalAnswers: typeof clearAnswers = medicalReferralAnswers) {
     const { db, shop, booking, person } = await waiverContext();
     vi.mocked(getDb).mockResolvedValue(db);
@@ -80,7 +85,14 @@ describe("sendDoctorFormAction", () => {
     });
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("demo staff missing");
-    return { db, token: issued.token, person, shop, staff: staff.person };
+    // The seat's own readiness link: the only door to its doctor's page (issue #2743).
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "readiness",
+    });
+    if (!readiness) throw new Error("expected a readiness link");
+    return { db, token: readiness.token, person, shop, staff: staff.person };
   }
 
   const photo = (bytes = 64, type = "image/jpeg") =>
@@ -89,7 +101,7 @@ describe("sendDoctorFormAction", () => {
   const send = (token: string, file: File | string | null = photo()) => {
     const form = new FormData();
     if (file !== null) form.set("doctorForm", file);
-    return sendDoctorFormAction(token, { status: "idle" }, form);
+    return sendDoctorFormFromReady(token, { status: "idle" }, form);
   };
 
   async function formOn(db: Awaited<ReturnType<typeof waiverContext>>["db"], personId: string) {
@@ -119,7 +131,7 @@ describe("sendDoctorFormAction", () => {
     const { token, person } = await signedLink();
     await send(token);
     expect(vi.mocked(checkRateLimit).mock.calls.map((call) => call.slice(0, 2))).toEqual([
-      [rateLimitKey("waiver-token", "203.0.113.7"), RATE_LIMITS.capabilityAction],
+      [rateLimitKey("readiness-token", "203.0.113.7"), RATE_LIMITS.capabilityAction],
     ]);
     expect(vi.mocked(checkRateLimitFailClosed).mock.calls.map((call) => call.slice(0, 2))).toEqual([
       [rateLimitKey("doctor-form", person.id), RATE_LIMITS.doctorFormByPerson],
