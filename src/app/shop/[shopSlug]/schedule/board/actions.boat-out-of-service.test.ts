@@ -110,6 +110,8 @@ describe("a hull in the yard, at every builder door", () => {
       ),
     );
     expect(to).toContain("builder=boat-out-of-service");
+    // Issue #4026: the notice names the yard day.
+    expect(to).toContain(`on=${dayFromNow(shop.timezone, 18)}`);
     expect(await departuresOn(db, boat.id)).toEqual([{ id: trip.id, startsAt: trip.startsAt }]);
   });
 

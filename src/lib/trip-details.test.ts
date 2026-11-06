@@ -395,16 +395,17 @@ describe("a price against a payment gate", () => {
 });
 
 // Loop 5, row 5: the builder and the trip's details refuse a hull in the yard
-// for any day of the departure, and say until when.
+// for any day of the departure, and name the first day it would sail into
+// the yard (issue #4026).
 describe("a hull in the yard", () => {
   const yard = { from: "2026-06-09", until: "2026-06-12", reason: "Hull repaint" };
 
-  it("refuses a boat departure on a day inside the window, naming its last day", () => {
+  it("refuses a boat departure on a day inside the window, naming that day", () => {
     const result = tripDetailsPatch(
       { ...base, diveMode: "boat", boatId: "boat-1", boatOutOfService: yard },
       shop,
     );
-    expect(result).toEqual({ ok: false, reason: "boat_out_of_service", until: "2026-06-12" });
+    expect(result).toEqual({ ok: false, reason: "boat_out_of_service", on: "2026-06-10" });
   });
 
   it("refuses a multi-day run whose later day lands in the window", () => {
@@ -421,7 +422,7 @@ describe("a hull in the yard", () => {
         },
         shop,
       ),
-    ).toMatchObject({ ok: false, reason: "boat_out_of_service" });
+    ).toEqual({ ok: false, reason: "boat_out_of_service", on: "2026-06-10" });
   });
 
   it("reads the shop's own day, not UTC's, at the window's edge", () => {
@@ -453,7 +454,7 @@ describe("a hull in the yard", () => {
         },
         shop,
       ),
-    ).toEqual({ ok: false, reason: "boat_out_of_service", until: "2026-06-12" });
+    ).toEqual({ ok: false, reason: "boat_out_of_service", on: "2026-06-09" });
   });
 
   it("takes a night dive that ties up at exactly midnight before the window", () => {
@@ -474,7 +475,7 @@ describe("a hull in the yard", () => {
     expect(tripDetailsPatch({ ...base, boatId: "boat-1", boatOutOfService: yard }, shop)).toEqual({
       ok: false,
       reason: "boat_out_of_service",
-      until: "2026-06-12",
+      on: "2026-06-10",
     });
   });
 

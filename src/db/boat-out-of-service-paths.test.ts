@@ -86,7 +86,7 @@ describe("moveTrip onto a hull in the yard", () => {
   ])("refuses a move onto %s, and leaves the departure where it was", async (_label, day) => {
     const { db, shop, trip } = await hullInTheYard();
     const outcome = await moveTrip(db, shop.id, trip.id, morning(12, day));
-    expect(outcome).toEqual({ ok: false, reason: "boat_out_of_service" });
+    expect(outcome).toEqual({ ok: false, reason: "boat_out_of_service", on: `2030-12-${day}` });
     expect(await startOf(db, trip.id)).toEqual(trip.startsAt);
   });
 
@@ -102,6 +102,7 @@ describe("moveTrip onto a hull in the yard", () => {
     expect(await moveTrip(db, shop.id, trip.id, morning(12, 9, 22))).toEqual({
       ok: false,
       reason: "boat_out_of_service",
+      on: "2030-12-10",
     });
   });
 
@@ -129,6 +130,7 @@ describe("moveTrip onto a hull in the yard", () => {
     expect(await moveTrip(db, shop.id, course.id, morning(12, 9))).toEqual({
       ok: false,
       reason: "boat_out_of_service",
+      on: "2030-12-10",
     });
   });
 
@@ -141,6 +143,7 @@ describe("moveTrip onto a hull in the yard", () => {
     expect(await moveTrip(db, shop.id, trip.id, morning(12, 8))).toEqual({
       ok: false,
       reason: "boat_out_of_service",
+      on: "2030-12-10",
     });
     expect(await startOf(db, trip.id)).toEqual(trip.startsAt);
   });
@@ -166,6 +169,7 @@ describe("moveTrip onto a hull in the yard", () => {
     expect(await moveTrip(db, shop.id, trip.id, morning(12, 20))).toEqual({
       ok: false,
       reason: "boat_out_of_service",
+      on: "2030-12-20",
     });
   });
 

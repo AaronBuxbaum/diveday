@@ -806,7 +806,8 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   );
   if (!outcome.ok) {
     await trackEvent({ name: "schedule_builder_action", action: "move", outcome: outcome.reason });
-    redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}`);
+    const on = outcome.reason === "boat_out_of_service" ? `&on=${outcome.on}` : ""; // #4026
+    redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}${on}`);
   }
   await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "ok" });
   await recordShopActivity(db, {

@@ -265,4 +265,13 @@ describe("a reinstatement refused for the yard (issue #4027)", () => {
     expect(resolve("reinstate-boat-out-of-service")?.text).toBe(plain);
     expect(resolve("reinstate-boat-out-of-service", { on: "2031-02-30" })?.text).toBe(plain);
   });
+
+  // Issue #4026: a details save names its first yard day, beside its own form.
+  it("names the yard day on a details save refusal", () => {
+    expect(resolve("boat-out-of-service", { form: "boat", on: "2031-01-18" })).toEqual({
+      form: "boat",
+      tone: "danger",
+      text: "That boat is in the yard on Jan 18, 2031, a day this departure would sail. Pick another boat or another day.",
+    });
+  });
 });
