@@ -1252,7 +1252,9 @@
   **refused**: after a dive the mark stays up and the row says to undo it where it was made, and at
   the dock — where "not boarded" means *never left*, an accounted-for state that carries forward —
   the row goes back to awaiting rather than closing every later checkpoint on a statement the server
-  has moved past. Asserting **aboard over a stated "not back aboard"** takes a
+  has moved past. The live manifest's undo names its statement the same way, which is how it can
+  take back a "not back aboard" carried from an earlier meeting day and nothing else. Asserting
+  **aboard over a stated "not back aboard"** takes a
   confirming second tap that names the person, on a separate control, so a wet thumb on a rolling
   boat cannot turn the loudest row in the product green by bouncing.
 - **Held** — a roll-call *mark*, not a roll-call event: the dashed ring a diver's row wears when

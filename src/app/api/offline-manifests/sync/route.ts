@@ -74,12 +74,12 @@ const eventSchema = z
      * `retraction_superseded` (issue #3951): there a `cleared` reaches back to
      * an earlier meeting day's missing diver, and a retraction that names
      * nothing must not take back an alarm it never named
-     * (`offlineRetractionSuperseded`, src/db/manifests.ts).
+     * (`retractionSuperseded`, src/db/manifests.ts).
      *
      * A uuid because the device mints it with `crypto.randomUUID()`. Unlike
      * `clientEventId` above it never reaches Postgres — it is compared in
      * JavaScript, case-folded, against the newest row's `client_event_id`
-     * (`offlineRetractionSuperseded`, src/db/manifests.ts) — so this rule is
+     * (`retractionSuperseded`, src/db/manifests.ts) — so this rule is
      * shape validation and nothing more. Say so plainly, because the hazard
      * inverts if the comparison ever moves into SQL.
      */

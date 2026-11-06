@@ -250,8 +250,8 @@ export type OpenRollCall = {
  * earlier one. The trip still gets at most one diver row, one crew row and
  * one dock row **per begun meeting day** (#2557 review M1), newest day first,
  * so an old "not back" never hides a later day's open count; `oneRowPerHalf`
- * folds them for a reader drawn per departure. A later day's `cleared` takes an
- * earlier day's "not back" back (`standingByDay`). A one-day trip is one day
+ * folds them for a reader drawn per departure. A later day's `cleared` that
+ * names an earlier day's "not back" takes it back (`standingByDay`). A one-day trip is one day
  * over its whole record, exactly as before.
  *
  * **`historical`: the record of named boats, not Today's queue** (issue
@@ -331,6 +331,8 @@ export async function listRollCallGaps(
         checkpoint: rollCallEvents.checkpoint,
         status: rollCallEvents.status,
         occurredAt: rollCallEvents.occurredAt,
+        id: rollCallEvents.id,
+        retracts: rollCallEvents.retractsEventId,
       })
       .from(rollCallEvents)
       // Same guard `boardedCountsByTrip` applies: a booking cancelled after the
@@ -356,6 +358,8 @@ export async function listRollCallGaps(
         checkpoint: rollCallEvents.checkpoint,
         status: rollCallEvents.status,
         occurredAt: rollCallEvents.occurredAt,
+        id: rollCallEvents.id,
+        retracts: rollCallEvents.retractsEventId,
       })
       .from(rollCallEvents)
       // The crew counterpart of the cancelled-booking guard above: a person
@@ -420,7 +424,7 @@ export async function listRollCallGaps(
   // Each trip's results filed by meeting day, oldest first, folded by the one
   // rule every roll-call reader shares (`standingByDay`, src/lib/roll-call-days.ts):
   // the newest word per person, checkpoint and day stands, and a later day's
-  // `cleared` takes an earlier day's "not back" back.
+  // `cleared` that names an earlier day's "not back" takes it back.
   type DiverMark = (typeof events)[number] & DayMark;
   type CrewMark = (typeof crewEvents)[number] & DayMark;
   const diverMarksByTrip = new Map<string, DiverMark[]>();

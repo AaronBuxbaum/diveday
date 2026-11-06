@@ -245,6 +245,7 @@
   "notBackAboardActive": "Sin regresar a bordo",
   "markNotBackAboard": "Marcar sin regresar a bordo",
   "tapToUndoNotBackAboard": "Toca de nuevo “Sin regresar a bordo” para deshacer.",
+  "tapToUndoCarriedNotBackAboard": "Registrado en un día anterior. Si está aquí, márcalo de vuelta a bordo. Toca “Sin regresar a bordo” solo para deshacer un toque por error.",
   "diverFactsSummary": "Contacto y equipo",
   "notBackAboardListLabel": "Quién no ha vuelto a bordo",
   "rollCallNoteLabel": "Qué pasó (opcional)",

@@ -13,12 +13,13 @@
  *   checkpoint that day and no `boarded` anywhere on a later day, is still
  *   open on every later day ({@link carriedMissing}); the manifest keeps
  *   showing it, and Today keeps raising it.
- * - **An undo reaches back, only past its own day.** A `cleared` on a later
- *   day at the checkpoint where an earlier day's `not_boarded` stands, with
- *   nothing standing before it on its own day, is the crew taking that carried
- *   tap back, so it clears the earlier day's word too (the person reads as not
- *   yet counted there, never as missing). A `cleared` that follows its own
- *   day's mark there takes back that mark and nothing earlier (#3981).
+ * - **An undo reaches back only to the mark it names.** A `cleared` on a
+ *   later day that names an earlier day's standing `not_boarded` at the same
+ *   checkpoint (`retracts`, written only after the write proved that mark was
+ *   the one the manifest showed) is the crew taking that carried tap back, so
+ *   it clears the earlier day's word too (the person reads as not yet counted
+ *   there, never as missing). Any other `cleared` takes back its own day's
+ *   mark and nothing earlier (#3981, #3995).
  */
 
 export type RollCallStatus = "boarded" | "not_boarded" | "cleared";
@@ -29,6 +30,10 @@ export type DayMark = {
   checkpoint: string;
   status: RollCallStatus;
   day: number;
+  /** The stored event's id, which a later `cleared` may name. */
+  id?: string;
+  /** On a `cleared`: the id of the event it takes back (`retracts_event_id`). */
+  retracts?: string | null;
 };
 
 const keyOf = (subject: string, checkpoint: string) => `${subject}\u0000${checkpoint}`;
@@ -42,34 +47,26 @@ const ordinalOf = (checkpoint: string) => {
 /**
  * Each day's standing result per subject and checkpoint, from marks **oldest
  * first**: the newest mark on a day wins, a newest `cleared` stands as
- * `cleared` (the caller reads it as nothing), and a `cleared` with no mark of
- * its own day before it reaches back to the newest earlier day's standing
- * `not_boarded` at the same checkpoint, and no further.
+ * `cleared` (the caller reads it as nothing), and a `cleared` after a dive
+ * that names an earlier day's standing `not_boarded` at the same checkpoint
+ * takes that one back too, and no other.
  */
 export function standingByDay<M extends DayMark>(marks: readonly M[]): Map<number, Map<string, M>> {
   const byDay = new Map<number, Map<string, M>>();
   for (const mark of marks) {
     const key = keyOf(mark.subject, mark.checkpoint);
     const day = byDay.get(mark.day) ?? new Map<string, M>();
-    const sameDay = day.get(key);
     day.set(key, mark);
     byDay.set(mark.day, day);
-    if (mark.status !== "cleared" || !isAfterDive(mark.checkpoint)) continue;
-    // A `cleared` takes back the mark standing just before it at this
-    // checkpoint (ADR 20260815-an-offline-retraction-names-its-target). When
-    // its own day has any mark there already, the undo is about that day
-    // only, and an earlier day's "did not come back" stays (#3981). A live
-    // undo names no target, so a repeated tap after a same-day undo is not
-    // read as aimed at the carried row: missing stays missing.
-    if (sameDay) continue;
-    // It reaches back to the one carried row the manifest shows, the newest
-    // earlier day's stated missing person (`carriedMissing`), and no further.
-    const earlierDays = [...byDay.keys()].filter((d) => d < mark.day).sort((a, b) => b - a);
-    for (const earlier of earlierDays) {
-      const standing = byDay.get(earlier);
-      if (standing?.get(key)?.status !== "not_boarded") continue;
-      standing.set(key, mark);
-      break;
+    // A `cleared` takes back the mark standing just before it on its own day.
+    // It reaches an earlier day only by naming that day's "did not come back"
+    // (ADR 20260815-an-offline-retraction-names-its-target, #3995): a repeated
+    // tap, or one that names its own day's mark, leaves the alarm standing.
+    if (mark.status !== "cleared" || !isAfterDive(mark.checkpoint) || !mark.retracts) continue;
+    for (const [earlier, standing] of byDay) {
+      if (earlier >= mark.day) continue;
+      const target = standing.get(key);
+      if (target?.status === "not_boarded" && target.id === mark.retracts) standing.set(key, mark);
     }
   }
   return byDay;
@@ -129,7 +126,7 @@ export function carriedMissing<M extends DayMark>(
  * nothing at that checkpoint, an earlier day's stated missing still open. A
  * search that runs past the day boundary keeps its red row on the manifest
  * until the person is counted again, and a `cleared` tapped now takes an
- * earlier day's mis-tap back. Marks oldest first; `cleared` never comes back.
+ * earlier day's mis-tap back when it names it. Marks oldest first; `cleared` never comes back.
  */
 export function manifestRollCallView<M extends DayMark>(
   marks: readonly M[],

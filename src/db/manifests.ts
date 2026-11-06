@@ -240,12 +240,14 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
         subject: row.event.crewPersonId ?? "",
         checkpoint: row.event.checkpoint,
         status: row.event.status,
+        id: row.event.id,
+        retracts: row.event.retractsEventId,
       }))
       .reverse(),
     rows[0]?.currentDay ?? 0,
   );
   const latest = new Map<string, RollCallRecord>();
-  for (const { event, recorder } of view.values()) {
+  for (const { event, recorder, day, currentDay } of view.values()) {
     if (event.status === "cleared") continue;
     latest.set(`${event.checkpoint}\u0000${event.crewPersonId}`, {
       state: event.status,
@@ -253,6 +255,7 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
       recordedByName: recorder.fullName,
       note: event.note,
       eventId: event.id,
+      ...(day < currentDay ? { fromEarlierDay: true } : {}),
     });
   }
   return latest;
@@ -275,6 +278,7 @@ async function listLatestRollCallsByCheckpoint(
     recordedByName: string;
     note: string | null;
     eventId: string;
+    fromEarlierDay?: true;
   };
   const byCheckpoint = new Map<RollCallCheckpoint, Map<string, Latest>>(
     checkpoints.map((checkpoint) => [checkpoint, new Map<string, Latest>()]),
@@ -300,7 +304,7 @@ async function listLatestRollCallsByCheckpoint(
   // The newest result per booking and checkpoint on the meeting day being
   // counted (#2557): a course's later day starts empty, except that an
   // earlier day's stated missing diver stays on screen until counted again,
-  // and a `cleared` tapped now takes an earlier mis-tap back
+  // and a `cleared` that names it takes an earlier mis-tap back
   // (`manifestRollCallView`). A standing `cleared` reads as awaiting.
   const view = manifestRollCallView(
     rows
@@ -309,11 +313,13 @@ async function listLatestRollCallsByCheckpoint(
         subject: row.event.bookingId ?? "",
         checkpoint: row.event.checkpoint,
         status: row.event.status,
+        id: row.event.id,
+        retracts: row.event.retractsEventId,
       }))
       .reverse(),
     rows[0]?.currentDay ?? 0,
   );
-  for (const { event: row, recorder } of view.values()) {
+  for (const { event: row, recorder, day, currentDay } of view.values()) {
     const event = asSeatMark(row);
     if (event.status === "cleared") continue;
     byCheckpoint.get(event.checkpoint as RollCallCheckpoint)?.set(event.bookingId, {
@@ -322,6 +328,9 @@ async function listLatestRollCallsByCheckpoint(
       recordedByName: recorder.fullName,
       note: event.note,
       eventId: event.id,
+      // A carried "did not come back" keeps its own day's recorder and time;
+      // the row says it came over, so the time does not read as a failed undo.
+      ...(day < currentDay ? { fromEarlierDay: true as const } : {}),
     });
   }
   return checkpoints.map((checkpoint) => byCheckpoint.get(checkpoint) ?? new Map<string, Latest>());
@@ -525,6 +534,9 @@ type AfterDiveRow = {
   status: (typeof rollCallEvents.$inferSelect)["status"];
   /** The meeting day the mark belongs to (0-based, `rollCallDayIndex`, #2557). */
   day: number;
+  id: string;
+  /** The event a `cleared` names (#3995), or null. */
+  retracts: string | null;
 };
 
 /**
@@ -546,6 +558,8 @@ async function afterDiveRollCallRows(
       checkpoint: rollCallEvents.checkpoint,
       status: rollCallEvents.status,
       day: rollCallDayIndex(),
+      id: rollCallEvents.id,
+      retracts: rollCallEvents.retractsEventId,
     })
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
@@ -664,6 +678,8 @@ function foldUnaccountedByTrip(rows: readonly AfterDiveRow[]): Map<string, Set<s
       checkpoint: `after_dive_${ordinal}`,
       status: row.status,
       day: row.day,
+      id: row.id,
+      retracts: row.retracts,
     });
     marksByTrip.set(row.tripId, marks);
   }
@@ -1486,19 +1502,32 @@ export async function getTripManifest(
  * missing-diver alarm lives at the dock. Refusing it would only cost an old
  * build's honest dock correction.
  *
+ * **The live manifest's undo is held to the same rule** (issue #3995). It names
+ * the stored event it takes back (`retractsEventId`, the row id the manifest
+ * rendered), and applies only while that event is the mark the manifest shows
+ * for this subject and checkpoint ({@link shownMarkId}): its own day's newest,
+ * or, when its own day has nothing standing there, an earlier day's carried
+ * "did not come back". So a double tap or a lost response repeats an undo of a
+ * mark already taken back, and is refused instead of reaching the carried
+ * alarm; and an undo of the carried row is written naming it, which is what
+ * lets it reach that earlier day (`standingByDay`). Live and offline compare
+ * different ids (a row id, a device id) through this one predicate.
+ *
  * Read only for `cleared`. An event carrying the field with any other status is
  * a device bug, and it is *ignored* rather than refused: refusing would cost the
  * whole batch (the route answers non-2xx and the device keeps every event
  * pending) to punish a claim that grants no authority.
  */
-function offlineRetractionSuperseded(input: {
+function retractionSuperseded(input: {
   status: RollCallEventStatus;
   checkpoint: RollCallCheckpoint;
-  retractsClientEventId: string | undefined;
-  newest: { clientEventId: string | null } | undefined;
+  /** The id the retraction names: a `client_event_id` offline, a row id live. */
+  named: string | undefined;
+  /** The same kind of id, of the statement standing now; undefined when nothing stands. */
+  standing: string | null | undefined;
 }): boolean {
   if (input.status !== "cleared") return false;
-  if (!input.retractsClientEventId) return input.checkpoint !== "departure";
+  if (!input.named) return input.checkpoint !== "departure";
   // Case-folded on both sides, because the sibling dedup lookup a few lines
   // above compares the same value *inside* Postgres against a `uuid` column,
   // where `AAAA…` and `aaaa…` are one value. Compared here as raw JavaScript
@@ -1508,10 +1537,81 @@ function offlineRetractionSuperseded(input: {
   // 2026-08-15). No producer sends uppercase today (`crypto.randomUUID()` is
   // lowercase); this is so the next client is not the one that finds out.
   //
-  // `newest` undefined — nothing at all recorded here — mismatches too: the
+  // `standing` undefined — nothing recorded here — mismatches too: the
   // statement this retraction is about is not standing, so there is nothing
   // for it to take back.
-  return input.newest?.clientEventId?.toLowerCase() !== input.retractsClientEventId.toLowerCase();
+  return input.standing?.toLowerCase() !== input.named.toLowerCase();
+}
+
+/**
+ * The id of the mark the live manifest shows for one person at one checkpoint
+ * on the meeting day of `at` (`manifestRollCallView`, the fold the manifest
+ * reads through), or undefined when it shows nothing. What a live undo is
+ * compared with ({@link retractionSuperseded}). Read under the writer's lock on
+ * the subject (the seat, or the trip for crew), so no other mark lands between
+ * this read and the insert.
+ */
+async function shownMarkId(
+  tx: AppTransaction,
+  keys: { shopId: string; tripId: string; checkpoint: RollCallCheckpoint; at: Date } & (
+    | { bookingId: string }
+    | { personId: string }
+  ),
+): Promise<string | undefined> {
+  const rows = await tx
+    .select({
+      id: rollCallEvents.id,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      retracts: rollCallEvents.retractsEventId,
+      day: rollCallDayIndex(),
+      currentDay: rollCallCurrentDayIndex(keys.at),
+    })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, keys.shopId),
+        eq(rollCallEvents.tripId, keys.tripId),
+        "bookingId" in keys
+          ? and(seatMarks(), eq(rollCallEvents.bookingId, keys.bookingId))
+          : and(crewMarks(), eq(rollCallEvents.crewPersonId, keys.personId)),
+      ),
+    )
+    .orderBy(...newestMarkFirst());
+  const view = manifestRollCallView(
+    rows.map((row) => ({ ...row, subject: "subject" })).reverse(),
+    rows[0]?.currentDay ?? 0,
+  );
+  return [...view.values()].find((mark) => mark.checkpoint === keys.checkpoint)?.id;
+}
+
+/**
+ * The live undo's compare-and-set (#3995), shared by both writers: the event
+ * a live `cleared` names must be the mark the manifest shows. Answers the
+ * target to store (undefined on any other status, or a bare dock undo), or
+ * {@link RETRACTION_SUPERSEDED}. Call under the writer's lock on the subject.
+ */
+async function liveRetraction(
+  tx: AppTransaction,
+  input: { shopId: string; tripId: string; status: RollCallEventStatus; retractsEventId?: string },
+  subject: { bookingId: string } | { personId: string },
+  checkpoint: RollCallCheckpoint,
+  at: Date,
+): Promise<string | undefined | typeof RETRACTION_SUPERSEDED> {
+  if (input.status !== "cleared") return undefined;
+  const named = input.retractsEventId?.toLowerCase();
+  const standing = named
+    ? await shownMarkId(tx, {
+        shopId: input.shopId,
+        tripId: input.tripId,
+        checkpoint,
+        at,
+        ...subject,
+      })
+    : undefined;
+  return retractionSuperseded({ status: input.status, checkpoint, named, standing })
+    ? RETRACTION_SUPERSEDED
+    : named;
 }
 
 /** Count offline retraction outcomes without putting person data in logs. */
@@ -1564,7 +1664,7 @@ export type RecordRollCallOutcome =
         | "newer_event_exists"
         /**
          * The statement being retracted no longer stands — see
-         * {@link offlineRetractionSuperseded}. Spelled through
+         * {@link retractionSuperseded}. Spelled through
          * {@link RETRACTION_SUPERSEDED} at the two `return`s, because the
          * device reads this exact code back and reads a row down to awaiting
          * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
@@ -1969,8 +2069,10 @@ export async function recordRollCall(
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;
-    /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
+    /** The `clientEventId` an offline `cleared` undoes — see {@link retractionSuperseded}. */
     retractsClientEventId?: string;
+    /** The stored event id a live `cleared` undoes — see {@link retractionSuperseded}. */
+    retractsEventId?: string;
     offlineSnapshotSavedAt?: Date;
     offlineSnapshotId?: string;
     offlineErasureEpochToken?: string;
@@ -2116,6 +2218,8 @@ async function writeRollCall(
     return refuse("invalid_checkpoint");
   }
 
+  /** The event a `cleared` takes back, once proved standing (`retracts_event_id`). */
+  let retractsEventId: string | undefined;
   if (source === "offline") {
     if (
       offlineEventOutOfBounds({
@@ -2129,6 +2233,7 @@ async function writeRollCall(
     }
     const [newest] = await tx
       .select({
+        id: rollCallEvents.id,
         occurredAt: rollCallEvents.occurredAt,
         clientEventId: rollCallEvents.clientEventId,
       })
@@ -2155,15 +2260,21 @@ async function writeRollCall(
     // a refusal into an alarm that stays on screen rather than one that
     // quietly clears (ADR 20260815-a-rejected-correction-may-not-silence-a-missing-diver).
     if (
-      offlineRetractionSuperseded({
+      retractionSuperseded({
         status: input.status,
         checkpoint,
-        retractsClientEventId: input.retractsClientEventId,
-        newest,
+        named: input.retractsClientEventId,
+        standing: newest?.clientEventId,
       })
     ) {
       return refuse(RETRACTION_SUPERSEDED);
     }
+    if (input.status === "cleared" && input.retractsClientEventId) retractsEventId = newest?.id;
+  } else {
+    // Under the seat lock taken above.
+    const live = await liveRetraction(tx, input, { bookingId: booking.id }, checkpoint, occurredAt);
+    if (live === RETRACTION_SUPERSEDED) return refuse(RETRACTION_SUPERSEDED);
+    retractsEventId = live;
   }
 
   // Readiness gates boarding at departure only. An after-dive checkpoint is a
@@ -2226,6 +2337,7 @@ async function writeRollCall(
       checkpoint,
       source,
       clientEventId: source === "offline" ? input.clientEventId : null,
+      retractsEventId: retractsEventId ?? null,
       offlineSnapshotSavedAt: source === "offline" ? input.offlineSnapshotSavedAt : null,
       note: await acceptedRollCallNote(noteInput, checkpoint, input.status, () =>
         standingDiverRollCall(tx, {
@@ -2311,7 +2423,7 @@ export type RecordCrewRollCallOutcome =
         | "newer_event_exists"
         /**
          * The statement being retracted no longer stands — see
-         * {@link offlineRetractionSuperseded}. Spelled through
+         * {@link retractionSuperseded}. Spelled through
          * {@link RETRACTION_SUPERSEDED} at the two `return`s, because the
          * device reads this exact code back and reads a row down to awaiting
          * on it (`explicitResultAt`, src/lib/offline-manifests.ts).
@@ -2364,8 +2476,10 @@ export async function recordCrewRollCall(
     checkpoint?: RollCallCheckpoint;
     source?: "live" | "offline";
     clientEventId?: string;
-    /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
+    /** The `clientEventId` an offline `cleared` undoes — see {@link retractionSuperseded}. */
     retractsClientEventId?: string;
+    /** The stored event id a live `cleared` undoes — see {@link retractionSuperseded}. */
+    retractsEventId?: string;
     offlineSnapshotSavedAt?: Date;
     offlineSnapshotId?: string;
     offlineErasureEpochToken?: string;
@@ -2533,6 +2647,8 @@ export async function recordCrewRollCall(
           .limit(1);
         if (!assigned) return refuse("crew_not_assigned");
 
+        /** The event a `cleared` takes back, once proved standing (`retracts_event_id`). */
+        let retractsEventId: string | undefined;
         if (source === "offline") {
           if (
             offlineEventOutOfBounds({
@@ -2546,6 +2662,7 @@ export async function recordCrewRollCall(
           }
           const [newest] = await tx
             .select({
+              id: rollCallEvents.id,
               occurredAt: rollCallEvents.occurredAt,
               clientEventId: rollCallEvents.clientEventId,
             })
@@ -2570,15 +2687,23 @@ export async function recordCrewRollCall(
           // the statement standing is how the two halves of one head count start
           // disagreeing about whether a divemaster is still in the water.
           if (
-            offlineRetractionSuperseded({
+            retractionSuperseded({
               status: input.status,
               checkpoint,
-              retractsClientEventId: input.retractsClientEventId,
-              newest,
+              named: input.retractsClientEventId,
+              standing: newest?.clientEventId,
             })
           ) {
             return refuse(RETRACTION_SUPERSEDED);
           }
+          if (input.status === "cleared" && input.retractsClientEventId)
+            retractsEventId = newest?.id;
+        } else {
+          // Under the trip lock every crew mark takes.
+          const subject = { personId: assigned.personId };
+          const live = await liveRetraction(tx, input, subject, checkpoint, occurredAt);
+          if (live === RETRACTION_SUPERSEDED) return refuse(RETRACTION_SUPERSEDED);
+          retractsEventId = live;
         }
 
         // **The other half of the head count takes the seat back too**
@@ -2675,6 +2800,7 @@ export async function recordCrewRollCall(
             checkpoint,
             source,
             clientEventId: source === "offline" ? input.clientEventId : null,
+            retractsEventId: retractsEventId ?? null,
             // No `offlineSnapshotSavedAt`: a seat row keeps it as evidence of
             // which snapshot supplied the *readiness* it boarded on, and a crew
             // member has no readiness to evidence
