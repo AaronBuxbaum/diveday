@@ -1013,7 +1013,9 @@ select:not([multiple]):not([size]):dir(rtl) {
  * offline manifest's saved copy is the one drawn on the device, with no
  * server: a `PaperSheet` in the page's own paper state (`ManifestSheet.tsx`).
  * A diver's logbook page is the after-state's paper state the same way
- * (`RecordPaper.tsx`), reached by its Print and by the browser's own. A
+ * (`RecordPaper.tsx`), reached by its Print and by the browser's own, and
+ * the readiness thread before the dive prints its day sheet
+ * (`ReadyDaySheet.tsx`), drawn print-only under the screen. A
  * sheet is the shop's paper rather than a screen, and three things make it so:
  *
  * 1. **It wears its own face, on screen and on paper alike.** Inside

@@ -44,7 +44,7 @@ test.describe("print", () => {
   signedInAsOwner();
   test.use({ viewport: { width: 816, height: 1056 } });
 
-  test("the arrival address prints without the live map frame", async ({ page }) => {
+  test("the diver's day prints as its sheet, with the address and no map", async ({ page }) => {
     for (const probe of ARRIVAL_MAP_PROBES) {
       await page.route(probe, (route) =>
         route.fulfill({
@@ -65,12 +65,17 @@ test.describe("print", () => {
     await expect(cancel).toBeVisible();
     const late = page.getByRole("button", { name: "Running late", exact: true });
     await expect(late).toBeVisible();
+    const addressText = await address.innerText();
     await page.emulateMedia({ media: "print" });
+    // On paper the thread is its day sheet alone (#2745): no map, no control.
     await expect(map).not.toBeVisible();
     await expect(cancel).not.toBeVisible();
     await expect(late).not.toBeVisible();
-    await expect(address).toBeVisible();
+    const sheet = page.locator(".paper-sheet");
+    await expect(sheet).toBeVisible();
+    await expect(sheet).toContainText(addressText);
     await page.emulateMedia({ media: "screen" });
+    await expect(sheet).not.toBeVisible();
     await capturePrint(page, "ready-arrival-address");
   });
 

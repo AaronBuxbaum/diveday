@@ -64,47 +64,40 @@ export function SignStepActions({
   );
   if (!waiverCode && !formsOwed && !awaitsPhysician) return null;
   return (
-    <>
-      {formsOwed ? (
-        <p className="hidden text-sm print:block">{t("ready.courseFormsNeedSigning")}</p>
+    <div className="flex flex-wrap items-center gap-3">
+      {waiverCode ? (
+        <form action={openWaiverFromReady.bind(null, token)}>
+          <SubmitButton pendingLabel={t("words.busy.opening")} className={actionButton}>
+            {t(
+              waiverCode === "waiver_pending"
+                ? "ready.signWaiver"
+                : // Expired, lapsed and guardian-missing all end in the same act, and
+                  // "Sign a fresh waiver" is what each one’s own copy has
+                  // already told the reader to do.
+                  "ready.freshWaiverLink",
+            )}
+          </SubmitButton>
+        </form>
       ) : null}
-      <div className="flex flex-wrap items-center gap-3 print:hidden">
-        {waiverCode ? (
-          <form action={openWaiverFromReady.bind(null, token)}>
-            <SubmitButton pendingLabel={t("words.busy.opening")} className={actionButton}>
-              {t(
-                waiverCode === "waiver_pending"
-                  ? "ready.signWaiver"
-                  : // Expired, lapsed and guardian-missing all end in the same act, and
-                    // "Sign a fresh waiver" is what each one’s own copy has
-                    // already told the reader to do.
-                    "ready.freshWaiverLink",
-              )}
-            </SubmitButton>
-          </form>
-        ) : null}
-        {/* A referred release's receipt carries the physician instructions and
+      {/* A referred release's receipt carries the physician instructions and
           the doctor's page; the thread is where the diver signed it, so it is
           where they find it again. */}
-        {awaitsPhysician && !waiverCode ? (
-          <PhysicianDoor token={token} className={actionButton} t={t} />
-        ) : null}
-        {/* The course's forms are signed on this link's own sub-page: they
+      {awaitsPhysician && !waiverCode ? (
+        <PhysicianDoor token={token} className={actionButton} t={t} />
+      ) : null}
+      {/* The course's forms are signed on this link's own sub-page: they
           belong to this enrollment, which is exactly what the readiness link
           proves. Second to the release when both are owed — the release is
           the one the shop leads with. */}
-        {formsOwed ? (
-          <Link
-            href={`/ready/${token}/forms`}
-            prefetch={false}
-            className={
-              waiverCode ? buttonClass({ variant: "secondary", size: "sm" }) : actionButton
-            }
-          >
-            {t("ready.signCourseForms")}
-          </Link>
-        ) : null}
-      </div>
-    </>
+      {formsOwed ? (
+        <Link
+          href={`/ready/${token}/forms`}
+          prefetch={false}
+          className={waiverCode ? buttonClass({ variant: "secondary", size: "sm" }) : actionButton}
+        >
+          {t("ready.signCourseForms")}
+        </Link>
+      ) : null}
+    </div>
   );
 }

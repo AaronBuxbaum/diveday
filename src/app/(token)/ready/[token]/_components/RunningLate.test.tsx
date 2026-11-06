@@ -23,14 +23,14 @@ const data = (saidAt: Date | null) =>
     pickupTime: null,
   }) as unknown as ReadyPageData;
 
-describe("RunningLate on paper", () => {
-  it("omits the unsent action", () => {
+describe("RunningLate", () => {
+  it("offers the unsent action", () => {
     render(<RunningLate token="tok" data={data(null)} locale="en-US" t={t} />);
     const action = screen.getByRole("button", { name: t("ready.lateButton") });
-    expect(action.closest('[class~="print:hidden"]')).not.toBeNull();
+    expect(action).toBeInTheDocument();
   });
 
-  it("preserves the submitted late notice and hides its undo action", () => {
+  it("states the submitted late notice beside its undo", () => {
     const { container } = render(
       <RunningLate
         token="tok"
@@ -40,8 +40,7 @@ describe("RunningLate on paper", () => {
       />,
     );
     expect(container.querySelector("p")?.textContent).toContain("7:42");
-    expect(container.querySelector("p")?.closest('[class~="print:hidden"]')).toBeNull();
     const undo = screen.getByRole("button", { name: t("ready.lateUndo") });
-    expect(undo.closest('[class~="print:hidden"]')).not.toBeNull();
+    expect(undo).toBeInTheDocument();
   });
 });

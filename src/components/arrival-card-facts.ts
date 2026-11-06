@@ -28,6 +28,35 @@ export type ArrivalCardTrip = {
   arrivalPhotoUrl: string | null;
 };
 
+/** A shop row as the arrival card reads it: its name, zone, contact and address. */
+export function arrivalCardShopOf(shop: {
+  name: string;
+  slug: string;
+  timezone: string;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  addressStreet: string | null;
+  addressLocality: string | null;
+  addressRegion: string | null;
+  addressPostalCode: string | null;
+  addressCountry: string | null;
+}): ArrivalCardShop {
+  return {
+    name: shop.name,
+    slug: shop.slug,
+    timezone: shop.timezone,
+    contactPhone: shop.contactPhone,
+    contactEmail: shop.contactEmail,
+    address: {
+      street: shop.addressStreet,
+      locality: shop.addressLocality,
+      region: shop.addressRegion,
+      postalCode: shop.addressPostalCode,
+      country: shop.addressCountry,
+    },
+  };
+}
+
 function clean(value: string | null | undefined): string | null {
   return value?.trim() || null;
 }

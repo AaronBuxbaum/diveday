@@ -1,5 +1,9 @@
-import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
+import {
+  PackingLists,
+  PackingSection,
+} from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { TripCrewLine } from "@/app/s/[shopSlug]/trips/[id]/_components/TripCrewLine";
+import { arrivalCardShopOf } from "@/components/arrival-card-facts";
 import { LogEntryPreview } from "@/components/LogEntryPreview";
 import { TripArrivalCard } from "@/components/TripArrivalCard";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
@@ -13,6 +17,7 @@ import type { listTripChangeEvents } from "@/db/trip-change-events";
 import type { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { nowDate } from "@/lib/clock";
 import { type PlannedFlySafe, plannedFlySafeMessageKey } from "@/lib/fly-safe";
 import { formatPlannedDateTimeTz, formatShortDate } from "@/lib/format";
 import { type NitroxMod, nitroxPlanningLines } from "@/lib/nitrox-mod";
@@ -31,6 +36,8 @@ import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
 import { MoveAsk } from "./MoveAsk";
 import { PartyCancelPlan, partyCancelSeats } from "./PartyCancelPlan";
 import { PartySection, partyClaimSeats } from "./PartySection";
+import { ReadyDaySheet } from "./ReadyDaySheet";
+import { readyMastheadFacts } from "./ReadyMasthead";
 import { RunningLate } from "./RunningLate";
 import { SessionDayPlan } from "./SessionDayPlan";
 
@@ -73,7 +80,8 @@ export function readyNitroxPlan(data: ReadyPageData): NitroxMod[] {
  * The readiness thread under its spine: running late, where to go, the crew,
  * what changed, course materials, the party's section, the packing list, the
  * log entry it turns into, and last the diver's own cancel door. One `space-y-10` run, so no section
- * carries a top margin of its own (K-233).
+ * carries a top margin of its own (K-233). Under the run, the page's paper
+ * (`ReadyDaySheet`): on a printer the thread is that sheet and nothing else.
  */
 export function ThreadSections({ context }: { context: ReadyThreadSectionsContext }) {
   const {
@@ -101,6 +109,9 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
   // site, then site to site (ADR 20260815-per-leg-travel-minutes). The morning
   // of a dive is when a long second leg matters most.
   const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
+  const siteNames = tripDives
+    .map(({ diveSite }) => diveSite?.name)
+    .filter((name): name is string => Boolean(name));
 
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
   // A lead's cancel takes their unclaimed seats with it; the confirm says
@@ -118,20 +129,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
         <RunningLate token={token} data={data} locale={locale} t={t} />
         {fullShop && fullTrip ? (
           <TripArrivalCard
-            shop={{
-              name: fullShop.name,
-              slug: fullShop.slug,
-              timezone: fullShop.timezone,
-              contactPhone: fullShop.contactPhone,
-              contactEmail: fullShop.contactEmail,
-              address: {
-                street: fullShop.addressStreet,
-                locality: fullShop.addressLocality,
-                region: fullShop.addressRegion,
-                postalCode: fullShop.addressPostalCode,
-                country: fullShop.addressCountry,
-              },
-            }}
+            shop={arrivalCardShopOf(fullShop)}
             trip={fullTrip}
             locale={locale}
             // Where the day is planned to go, in the order it runs them. No
@@ -139,9 +137,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             // "Planned sites" in words. A site change is written to this
             // diver's change ledger (issue #3060), so "What changed" below
             // says when the list moved and who moved it.
-            sites={tripDives
-              .map(({ diveSite }) => diveSite?.name)
-              .filter((name): name is string => Boolean(name))}
+            sites={siteNames}
             downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
               token,
             )}`}
@@ -242,9 +238,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           fill
           line={t("ready.logEntryWaiting")}
           date={formatShortDate(detail.trip.startsAt, locale, detail.shop.timezone)}
-          siteNames={tripDives
-            .map(({ diveSite }) => diveSite?.name)
-            .filter((name): name is string => Boolean(name))}
+          siteNames={siteNames}
           isCourse={Boolean(fullTrip?.course)}
           t={t}
         />
@@ -275,7 +269,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             {cancelPreviewKey ? (
               <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
             ) : null}
-            <form action={cancelMyBookingAction.bind(null, token)} className="print:hidden">
+            <form action={cancelMyBookingAction.bind(null, token)}>
               {/* The refund preview is repeated inside the confirm rather than
                       left further up the page: the diver reads what it costs at the
                       moment of commitment, not once on the way past. */}
@@ -309,6 +303,26 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           </section>
         ) : null}
       </div>
+      {/* The thread's paper: on a printer this page is this sheet alone. */}
+      {fullShop && fullTrip ? (
+        <ReadyDaySheet
+          t={t}
+          locale={locale}
+          facts={readyMastheadFacts(data)}
+          arrival={{ shop: arrivalCardShopOf(fullShop), trip: fullTrip }}
+          sites={siteNames}
+          packing={
+            <PackingLists
+              shop={fullShop}
+              trip={fullTrip}
+              rentalFit={data.rentalFit}
+              holdsCertification={data.holdsCertification}
+              locale={locale}
+            />
+          }
+          asOf={nowDate()}
+        />
+      ) : null}
     </>
   );
 }

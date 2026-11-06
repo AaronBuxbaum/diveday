@@ -19,8 +19,6 @@ import { publicTripPath } from "@/lib/public-routes";
  * telling the diver a fact about this departure or it has no business being on
  * a keepsake, and the props it takes carry nothing that could grow into a
  * ranking a reader has to take on trust.
- *
- * `print:hidden` like everything else outside the record.
  */
 export function NextDiveCard({
   t,
@@ -51,7 +49,7 @@ export function NextDiveCard({
   if (!pick) return null;
 
   return (
-    <SectionCard padding="lg" className="mt-10 print:hidden" title={t("recap.nextDiveHeading")}>
+    <SectionCard padding="lg" className="mt-10" title={t("recap.nextDiveHeading")}>
       {/* The departure's own name, not a heading: `SectionCard` already owns the
           only heading on this card, and a second one would give a keepsake two
           titles a screen reader reads in a row. Weighted rather than ramped for
