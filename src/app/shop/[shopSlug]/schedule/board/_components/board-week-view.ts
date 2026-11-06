@@ -26,7 +26,7 @@ import {
 } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
-import { type ServiceWindow, serviceWindowCovers } from "@/lib/service-window";
+import { type HullHeldSpan, type ServiceWindow, serviceWindowCovers } from "@/lib/service-window";
 import {
   shiftWeek,
   weekDates,
@@ -105,6 +105,11 @@ export function boatWarningFor(
  * saying so about a departure already planned, and about one going to a site
  * the shop has closed. It warns and changes nothing: the departure, its seats
  * and its readiness are untouched. Asked with the column's shop-local day.
+ *
+ * The hull is asked of every day a departure holds it (issue #4025, glossary
+ * "Holds the hull"): a liveaboard's middle day, a course bar's later meeting
+ * day, the morning a night dive comes back. A window set after the departure
+ * was booked has no refusal, so this is the one thing the desk sees.
  */
 export function closureWarningFor(
   {
@@ -121,22 +126,23 @@ export function closureWarningFor(
   },
   dayIso: string,
   dayTrips: ReadonlyArray<{
-    diveMode?: "boat" | "shore" | "pool" | null;
-    boatId?: string | null;
     diveSiteName?: string | null;
     diveSiteClosure?: ServiceWindow | null;
   }>,
+  /** Every hull the week's departures hold, with the days (`weekBoard`'s `held`). */
+  held: ReadonlyArray<{ boatId: string; spans: readonly HullHeldSpan[] }>,
 ): string | null {
   const list = cachedListFormat(locale, { style: "long", type: "conjunction" });
   const boats = new Set<string>();
   const sites = new Set<string>();
-  for (const trip of dayTrips) {
-    if ((trip.diveMode ?? "boat") === "boat" && trip.boatId) {
-      const name = boatMap.get(trip.boatId);
-      if (name && serviceWindowCovers(yardWindows.get(trip.boatId) ?? null, dayIso)) {
-        boats.add(name);
-      }
+  for (const hold of held) {
+    const name = boatMap.get(hold.boatId);
+    const heldToday = hold.spans.some((span) => span.from <= dayIso && dayIso <= span.until);
+    if (name && heldToday && serviceWindowCovers(yardWindows.get(hold.boatId) ?? null, dayIso)) {
+      boats.add(name);
     }
+  }
+  for (const trip of dayTrips) {
     if (trip.diveSiteName && serviceWindowCovers(trip.diveSiteClosure ?? null, dayIso)) {
       sites.add(trip.diveSiteName);
     }
@@ -327,7 +333,12 @@ export function boardWeekView({
             { hasBoatDiving: shop.hasBoatDiving, boatCount, boatMap, locale, st },
             weekRows.days[iso] ?? [],
           ),
-          closureWarningFor({ yardWindows, boatMap, locale, st }, iso, weekRows.days[iso] ?? []),
+          closureWarningFor(
+            { yardWindows, boatMap, locale, st },
+            iso,
+            weekRows.days[iso] ?? [],
+            weekRows.held ?? [],
+          ),
         ]
           .filter((line): line is string => line !== null)
           .join(" ") || null,

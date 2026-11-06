@@ -93,29 +93,68 @@ describe("closureWarningFor", () => {
     st,
   };
 
+  const onTheDay = [{ boatId: "b1", spans: [{ from: "2026-07-21", until: "2026-07-21" }] }];
+  const yardWarning = st("boats.outOfServiceWarning", { boats: "Reef Runner", count: 1 });
+
   it("names the hull in the yard and the closed site on that day", () => {
-    const warning = closureWarningFor(context, "2026-07-21", [
-      departure({ diveSiteClosure: { from: "2026-07-21", until: "2026-07-21", reason: null } }),
-    ] as never);
+    const warning = closureWarningFor(
+      context,
+      "2026-07-21",
+      [departure({ diveSiteClosure: { from: "2026-07-21", until: "2026-07-21", reason: null } })],
+      onTheDay,
+    );
     expect(warning).toBe(
-      `${st("boats.outOfServiceWarning", { boats: "Reef Runner", count: 1 })} ${st(
-        "schedule.week.siteClosedWarning",
-        { sites: "Molasses", count: 1 },
-      )}`,
+      `${yardWarning} ${st("schedule.week.siteClosedWarning", { sites: "Molasses", count: 1 })}`,
     );
   });
 
-  it("says nothing the day after the window, or for a shore dive", () => {
-    expect(closureWarningFor(context, "2026-07-23", [departure({})] as never)).toBeNull();
-    expect(
-      closureWarningFor(context, "2026-07-21", [departure({ diveMode: "shore" })] as never),
-    ).toBeNull();
+  it("says nothing the day after the window, or for a day the hull is not held", () => {
+    expect(closureWarningFor(context, "2026-07-23", [], onTheDay)).toBeNull();
+    expect(closureWarningFor(context, "2026-07-22", [], onTheDay)).toBeNull();
+  });
+
+  // Issue #4025: every day a departure holds the hull warns, not only the day
+  // it leaves.
+  it("warns on the middle day of a liveaboard whose only yard day is that one", () => {
+    const saturday = {
+      ...context,
+      yardWindows: new Map([["b1", { ...yard, from: "2026-07-25", until: "2026-07-25" }]]),
+    };
+    const liveaboard = [{ boatId: "b1", spans: [{ from: "2026-07-24", until: "2026-07-26" }] }];
+    expect(closureWarningFor(saturday, "2026-07-24", [], liveaboard)).toBeNull();
+    expect(closureWarningFor(saturday, "2026-07-25", [], liveaboard)).toBe(yardWarning);
+    expect(closureWarningFor(saturday, "2026-07-26", [], liveaboard)).toBeNull();
+  });
+
+  it("warns on the morning a night dive comes back", () => {
+    const sunday = {
+      ...context,
+      yardWindows: new Map([["b1", { ...yard, from: "2026-07-26", until: "2026-07-26" }]]),
+    };
+    const nightDive = [{ boatId: "b1", spans: [{ from: "2026-07-25", until: "2026-07-26" }] }];
+    expect(closureWarningFor(sunday, "2026-07-25", [], nightDive)).toBeNull();
+    expect(closureWarningFor(sunday, "2026-07-26", [], nightDive)).toBe(yardWarning);
   });
 });
 
 describe("boardWeekView", () => {
   it("is null while the board has nothing upcoming", () => {
     expect(boardWeekView(input({ hasUpcoming: false }))).toBeNull();
+  });
+
+  it("warns on the column a course bar holds a hull in the yard (issue #4025)", () => {
+    const week = boardWeekView(
+      input({
+        weekRows: {
+          days: {},
+          spans: [],
+          held: [{ boatId: "b1", spans: [{ from: "2026-07-22", until: "2026-07-24" }] }],
+        } as unknown as Input["weekRows"],
+        yardWindows: new Map([["b1", { from: "2026-07-23", until: "2026-07-23", reason: null }]]),
+      }),
+    );
+    const warned = week?.days.filter((day) => day.boatWarning).map((day) => day.dateIso);
+    expect(warned).toEqual(["2026-07-23"]);
   });
 
   it("draws seven columns, today marked, with the departure in its day", () => {

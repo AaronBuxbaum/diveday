@@ -28,6 +28,7 @@ import {
   boatServiceWindow,
   firstHeldDayInWindow,
   HULL_NOT_IN_SHOP,
+  type HullHeldSpan,
   hullHeldSpans,
   type ServiceWindow,
   serviceWindowFrom,
@@ -1326,6 +1327,15 @@ export type WeekBoardSpan = {
 };
 
 /**
+ * **A hull a departure on this week's board holds, and the days it holds it**
+ * (issue #4025; glossary "Holds the hull"). Every boat departure that touches
+ * the week, one-day entries and spans alike, and one that left the night
+ * before the week and ties up inside it: what the yard warning reads, column
+ * by column.
+ */
+export type WeekBoardHold = { boatId: string; spans: HullHeldSpan[] };
+
+/**
  * One week of the staff board, as seven day buckets and the spans that cross
  * them — the desktop reading of the same rows the cursor stream pages
  * (ADR 20260827-clearwater-surface-language, decision 5).
@@ -1349,7 +1359,11 @@ export async function weekBoard(
   weekStartIso: CalendarDate,
   timeZone: string,
   now: Date = nowDate(),
-): Promise<{ days: Record<CalendarDate, WeekBoardEntry[]>; spans: WeekBoardSpan[] }> {
+): Promise<{
+  days: Record<CalendarDate, WeekBoardEntry[]>;
+  spans: WeekBoardSpan[];
+  held: WeekBoardHold[];
+}> {
   const dayIsos = weekDates(weekStartIso);
   const from = wallTimeToUtc({ ...midnightOf(weekStartIso), hour: 0, minute: 0 }, timeZone);
   const to = wallTimeToUtc(
@@ -1405,7 +1419,7 @@ export async function weekBoard(
     .groupBy(trips.id, diveSites.id, courses.id)
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
-  if (overlapping.length === 0) return { days, spans: [] };
+  if (overlapping.length === 0) return { days, spans: [], held: [] };
 
   const tripIds = overlapping.map((row) => row.trip.id);
   // Every meeting window of every trip that touched the week, not just the
@@ -1416,16 +1430,30 @@ export async function weekBoard(
       tripId: tripScheduleDays.tripId,
       dayNumber: tripScheduleDays.dayNumber,
       startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
     })
     .from(tripScheduleDays)
     .where(inArray(tripScheduleDays.tripId, tripIds))
     .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
-  const windowsByTrip = new Map<string, Date[]>();
+  const legsByTrip = new Map<string, { startsAt: Date; endsAt: Date }[]>();
   for (const row of dayRows) {
-    const list = windowsByTrip.get(row.tripId) ?? [];
-    list.push(row.startsAt);
-    windowsByTrip.set(row.tripId, list);
+    const list = legsByTrip.get(row.tripId) ?? [];
+    list.push(row);
+    legsByTrip.set(row.tripId, list);
   }
+  const windowsByTrip = new Map(
+    [...legsByTrip].map(([tripId, legs]) => [tripId, legs.map((leg) => leg.startsAt)]),
+  );
+  const held: WeekBoardHold[] = overlapping.flatMap(({ trip }) =>
+    trip.diveMode === "boat" && trip.boatId
+      ? [
+          {
+            boatId: trip.boatId,
+            spans: hullHeldSpans(legsByTrip.get(trip.id) ?? [trip], timeZone),
+          },
+        ]
+      : [],
+  );
 
   const spans: WeekBoardSpan[] = [];
   const sailedBefore = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
@@ -1521,7 +1549,7 @@ export async function weekBoard(
     }
   }
 
-  return { days, spans };
+  return { days, spans, held };
 }
 
 /** A calendar date as the wall-clock parts `wallTimeToUtc` reads — midnight, shop-local. */
