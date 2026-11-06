@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { consumeAccountToken, issueAccountToken } from "./account-tokens";
 import type { AppDb } from "./client";
-import { capabilities, people, shops, userAccounts } from "./schema";
+import { capabilities, people, personRoles, shops, userAccounts } from "./schema";
 
 /**
  * One-time account tokens under genuine contention (A§4 item 8).
@@ -26,7 +26,7 @@ import { capabilities, people, shops, userAccounts } from "./schema";
  * from the issue leaves more than one live token.
  */
 
-async function account(db: AppDb) {
+async function account(db: AppDb, status: "active" | "invited" = "active") {
   const suffix = randomBytes(4).toString("hex");
   const [shop] = await db
     .insert(shops)
@@ -39,9 +39,11 @@ async function account(db: AppDb) {
     .values({ shopId: shop.id, fullName: "Token Holder", email })
     .returning();
   if (!person) throw new Error("person insert returned no row");
+  // An invite is only minted for someone who holds a staff role (issue #3997).
+  await db.insert(personRoles).values({ personId: person.id, role: "instructor" });
   const [row] = await db
     .insert(userAccounts)
-    .values({ personId: person.id, email, hashedPassword: "x", status: "active" })
+    .values({ personId: person.id, email, hashedPassword: "x", status })
     .returning();
   if (!row) throw new Error("account insert returned no row");
   return row.id;
@@ -52,7 +54,8 @@ describePostgres("account tokens under real concurrency", () => {
     "lets exactly one of two simultaneous taps spend one %s token",
     async (purpose) => {
       const pg = await postgresTestDb();
-      const userAccountId = await account(pg.db);
+      // An invite is spent only on an account still waiting to accept it (issue #3997).
+      const userAccountId = await account(pg.db, purpose === "invite" ? "invited" : "active");
       const issued = await issueAccountToken(pg.db, { userAccountId, purpose });
 
       const gate = await holdRowLock(
