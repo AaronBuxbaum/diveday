@@ -13,7 +13,12 @@ import { sendNotification } from "@/db/notifications";
 import { bookkeeperMonthDue } from "@/lib/bookkeeper";
 import { monthKey } from "@/lib/calendar";
 import { log } from "@/lib/log";
-import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import {
+  type NotificationDelivery,
+  type NotificationProvider,
+  publicAppUrl,
+  recipientLocale,
+} from "@/lib/notifications";
 import { monthEndFiles } from "../../../shop/[shopSlug]/reports/download/month-end-files";
 
 export type MonthEndPassSummary = {
@@ -47,8 +52,9 @@ export type MonthEndPassSummary = {
  * day's pass tries again. A send the provider accepted but answered with an
  * error is given back too, so the bookkeeper may get that month twice (review
  * N1): a duplicate to the right inbox is the cheaper failure. A claim that
- * sent nothing takes back its own stop link and no other, so a retry does not
- * pile up links and an earlier month's email keeps its own (issue #3947). Logs carry the
+ * certainly sent nothing takes back its own stop link and no other, so a retry
+ * does not pile up links and an earlier month's email keeps its own (issue
+ * #3947); one that may have arrived keeps it (`neverDelivered`). Logs carry the
  * shop and the month, never the address or the files.
  *
  * Building the files takes seconds, and the bookkeeper or an owner can stop
@@ -107,7 +113,9 @@ export async function sendDueMonthEndEmails(
       });
     const withdrawStop = () =>
       withdrawBookkeeperClaimStop(db, { shopId: shop.id, stopToken: claim.stopToken });
-    let mailed = false;
+    // Set the moment the send is handed to the provider: from then on the
+    // email may be in the inbox, and its stop link must keep working.
+    let handedOver = false;
     try {
       const locale = recipientLocale(null, shop.defaultLocale);
       const files = await monthEndFiles(db, shop, due, options.now, locale);
@@ -124,6 +132,7 @@ export async function sendDueMonthEndEmails(
         log("bookkeeper.address_changed", "info", { shopId: shop.id, month });
         continue;
       }
+      handedOver = true;
       const delivery = await sendNotification(
         db,
         {
@@ -139,7 +148,6 @@ export async function sendDueMonthEndEmails(
         options.provider,
       );
       if (delivery.status === "sent") {
-        mailed = true;
         summary.sent += 1;
         await keepOnlyNewestBookkeeperStop(db, { shopId: shop.id, stopToken: claim.stopToken });
         await tellOwnersAboutBookkeeper(db, {
@@ -151,15 +159,14 @@ export async function sendDueMonthEndEmails(
         });
       } else {
         summary.failed += 1;
-        await withdrawStop();
+        if (neverDelivered(delivery)) await withdrawStop();
         await release();
         log("bookkeeper.send_failed", "warn", { shopId: shop.id, month, status: delivery.status });
       }
     } catch (error) {
       summary.failed += 1;
-      // Only a send that never went out gives its link back: after a delivery
-      // the email is in the inbox and its link must keep working.
-      if (!mailed) await withdrawStop();
+      // Only a send that never reached the provider gives its link back.
+      if (!handedOver) await withdrawStop();
       await release();
       log("bookkeeper.shop_failed", "error", {
         shopId: shop.id,
@@ -169,4 +176,18 @@ export async function sendDueMonthEndEmails(
     }
   }
   return summary;
+}
+
+/**
+ * **A send the provider certainly did not deliver** (final attacker review
+ * S2): nothing configured to send with, or a refusal of the request itself
+ * (4xx, not a timeout) that was not queued to try again. Anything else, a 5xx,
+ * a timeout or a queued retry, may have reached the inbox, so its stop link
+ * stays; the next delivered month keeps only its own (`keepOnlyNewestBookkeeperStop`).
+ */
+function neverDelivered(delivery: NotificationDelivery): boolean {
+  if (delivery.status === "not_configured") return true;
+  if (delivery.status !== "failed" || delivery.retryQueued) return false;
+  const status = delivery.httpStatus;
+  return status !== undefined && status >= 400 && status < 500 && status !== 408;
 }

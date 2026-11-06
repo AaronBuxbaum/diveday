@@ -51,6 +51,7 @@ import {
 } from "./schema";
 import { livePerson } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
+import { personSealFailed } from "./waiver-seal-checks";
 import {
   earlierReferralForOpenHold,
   getCurrentWaiverGeneration,
@@ -864,6 +865,9 @@ export async function getDiverProfile(
       clearedByName: clearedBy.fullName,
       adultAttestedByName: attestedBy.fullName,
       drysuitExperienceSeenByName: drysuitSeenBy.fullName,
+      // Any release of the person failed its seal (issue #3885), on the read
+      // that is already here: the release's door says so with no seat ahead.
+      waiverSealFailed: personSealFailed(people.shopId, people.id),
     })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
@@ -1155,6 +1159,12 @@ export async function getDiverProfile(
      */
     diverMedicalForm,
     waiverRequest,
+    /**
+     * Some release of this diver's failed its seal check and no clean
+     * signature since replaced it (`personSealFailed`): the release's door
+     * reads "Changed after signing" whether or not a seat is ahead.
+     */
+    waiverSealFailed: personRow.waiverSealFailed,
     /**
      * What we know about each way of handing this diver's outstanding link
      * over, so the delivery buttons can wear their own last outcome instead of

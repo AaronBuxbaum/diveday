@@ -26,6 +26,7 @@ function diver(overrides: {
   waiver?: DiverProfile["waiver"];
   waiverRequest?: DiverProfile["waiverRequest"];
   waiverChannels?: Partial<DiverProfile["waiverChannels"]>;
+  waiverSealFailed?: boolean;
 }): DiverProfile {
   return {
     person: {
@@ -36,6 +37,7 @@ function diver(overrides: {
     },
     waiver: overrides.waiver ?? { state: "none" },
     waiverRequest: overrides.waiverRequest ?? "not_sent",
+    waiverSealFailed: overrides.waiverSealFailed ?? false,
     waiverChannels: {
       email: "unknown",
       sms: "unknown",
@@ -233,6 +235,24 @@ describe("the waiver group", () => {
     expect(screen.queryByText("Signed")).toBeNull();
     expect(row).not.toHaveTextContent("Good until");
     expect(screen.getByRole("button", { name: "Email waiver" })).toBeVisible();
+  });
+
+  // Final dock review N2: no seat ahead, so no departure blocker to read the
+  // word from; the person's own seal verdict says it.
+  it("reads a failed seal as Changed after signing with no seat ahead", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiverSealFailed: true,
+        waiver: {
+          state: "signed",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+        } as DiverProfile["waiver"],
+      }),
+    );
+    expect(screen.getAllByText("Changed after signing").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Signed")).toBeNull();
   });
 
   it("says only Not signed when nothing has been sent", () => {
