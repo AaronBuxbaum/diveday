@@ -29,8 +29,10 @@ describe("shoreAlertRecipient", () => {
     expect(shoreAlertRecipient(ON_FILE)).toBe("shore@example.com");
   });
 
-  it("is nobody until the address is confirmed by its link (H-20261014-stale-roll-call-recipients review)", () => {
-    expect(shoreAlertRecipient({ ...ON_FILE, confirmedAt: null })).toBeNull();
+  it("is the address from the moment it is saved with consent, confirmed or not (#4060)", () => {
+    expect(shoreAlertRecipient({ email: ON_FILE.email, consentAt: ON_FILE.consentAt })).toBe(
+      "shore@example.com",
+    );
   });
 
   it("is nobody without a consent, whatever the address", () => {

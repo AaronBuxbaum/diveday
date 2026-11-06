@@ -54,8 +54,8 @@ import { liveTrip, notRehearsal } from "./trips-live";
  * link to the manifest, behind its sign-in. A demo shop and a rehearsal never
  * alert.
  *
- * **The shore contact hears too** (H-20261014-stale-roll-call-recipients, decided 2026-10-15), once the shop
- * recorded their consent and their inbox confirmed it (`shoreAlertRecipient`):
+ * **The shore contact hears too** (H-20261014-stale-roll-call-recipients, decided 2026-10-15), from the
+ * save, once the shop recorded their consent (`shoreAlertRecipient`, #4060):
  * one email per departure, in the shop's default language, naming the shop and
  * its phone, the departure, the dive, the counts and when it was sent, with
  * one link, the one that stops these alerts (`roll_call_stale_shore`). Its
@@ -229,7 +229,7 @@ export async function sendStaleRollCallAlerts(
           // The shore copy is owed only where there is somebody to send it to.
           and(
             or(isNull(trips.rollCallShoreAlertedAt), lt(trips.rollCallShoreAlertedAt, dueTo)),
-            isNotNull(shops.shoreAlertConfirmedAt),
+            isNotNull(shops.shoreAlertEmail),
           ),
         ),
         or(
@@ -279,7 +279,6 @@ export async function sendStaleRollCallAlerts(
         timezone: shops.timezone,
         shoreAlertEmail: shops.shoreAlertEmail,
         shoreAlertConsentAt: shops.shoreAlertConsentAt,
-        shoreAlertConfirmedAt: shops.shoreAlertConfirmedAt,
       })
       .from(shops)
       .where(eq(shops.id, shopId))
@@ -289,7 +288,6 @@ export async function sendStaleRollCallAlerts(
     const shore = shoreAlertRecipient({
       email: shop.shoreAlertEmail,
       consentAt: shop.shoreAlertConsentAt,
-      confirmedAt: shop.shoreAlertConfirmedAt,
     });
     for (const [tripId, gap] of open) {
       const ownersClaim = await claimAlert(db, "owners", shopId, tripId, now, gap.endsAt);
