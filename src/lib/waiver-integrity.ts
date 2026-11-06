@@ -414,6 +414,20 @@ export function medicalAnswerSealFor(record: MedicalAnswerFields): string {
 }
 
 /**
+ * **Whether a clearance stamp is one the desk sealed** (final attacker
+ * review B1): checked on every read that decides boarding, never left to the
+ * nightly pass, which reaches a row every few nights at most. A stamp whose
+ * seal is missing or does not match is no clearance, so the referral holds.
+ */
+export function physicianClearanceSealed(
+  record: MedicalAnswerFields & { medicalAnswerSeal: string | null },
+): boolean {
+  return (
+    record.medicalClearedAt !== null && record.medicalAnswerSeal === medicalAnswerSealFor(record)
+  );
+}
+
+/**
  * Whether the physician's answer on a record is the one that was sealed. A
  * record with neither stamp holds no answer and must carry no seal (an answer
  * taken off reads as tampered, not as never given); a record with either

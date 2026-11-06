@@ -1,5 +1,9 @@
 import { getTableColumns } from "drizzle-orm";
-import { WAIVER_SEALED_FIELDS, type WaiverSealedField } from "@/lib/waiver-integrity";
+import {
+  physicianClearanceSealed,
+  WAIVER_SEALED_FIELDS,
+  type WaiverSealedField,
+} from "@/lib/waiver-integrity";
 import type { WaiverStateFields } from "@/lib/waivers";
 import { waiverRecords } from "./schema";
 
@@ -52,6 +56,34 @@ const {
 } = getTableColumns(waiverRecords);
 
 export const WAIVER_STATE_COLUMNS = stateColumns;
+
+const allColumnsForState = getTableColumns(waiverRecords);
+
+/**
+ * {@link WAIVER_STATE_COLUMNS} plus the physician's answer seal, for a read
+ * that decides boarding. Hand each row to {@link withTrustedClearance} before
+ * any rule sees it; the seal never leaves this file.
+ */
+export const WAIVER_BOARDING_COLUMNS = {
+  ...stateColumns,
+  medicalAnswerSeal: allColumnsForState.medicalAnswerSeal,
+};
+
+/**
+ * **A clearance counts only while its seal verifies** (final attacker review
+ * B1, glossary *Physician answer seal*): the record a boarding read hands to
+ * the rules, with a clearance stamp whose seal is missing or wrong taken off,
+ * so the referral holds as unanswered. Checked here, at read time, because the
+ * nightly pass reaches a row every few nights at most.
+ */
+export function withTrustedClearance(
+  row: WaiverStateRecord & { medicalAnswerSeal: string | null },
+): WaiverStateRecord {
+  const { medicalAnswerSeal, ...record } = row;
+  if (record.medicalClearedAt === null) return record;
+  if (physicianClearanceSealed({ ...record, medicalAnswerSeal })) return record;
+  return { ...record, medicalClearedAt: null, medicalClearedByPersonId: null };
+}
 
 /**
  * One waiver record read through {@link WAIVER_STATE_COLUMNS} — the shape the

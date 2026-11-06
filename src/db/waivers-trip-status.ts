@@ -6,7 +6,7 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
-import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
+import { WAIVER_BOARDING_COLUMNS, withTrustedClearance } from "./waiver-record-columns";
 import { personSealFailed } from "./waiver-seal-checks";
 
 /**
@@ -50,11 +50,13 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
  */
 export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {
   if (tripIds.length === 0) return [];
-  return db
+  const rows = await db
     .select({
       booking: bookings,
       person: people,
-      waiver: WAIVER_STATE_COLUMNS,
+      // A clearance whose seal does not verify is taken off before any rule
+      // reads it (final attacker review B1).
+      waiver: WAIVER_BOARDING_COLUMNS,
       // Any release of the person failed its seal (issue #3885, review B1).
       personSealFailed: personSealFailed(bookings.shopId, people.id),
     })
@@ -66,4 +68,8 @@ export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tr
     )
     .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled))
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+  return rows.map((row) => ({
+    ...row,
+    waiver: row.waiver ? withTrustedClearance(row.waiver) : null,
+  }));
 }

@@ -1814,10 +1814,18 @@
   what the diver signed, so recording one never re-seals the signature, and a refile, a guardian
   redaction or an erasure re-seals the signature without touching it (every field it covers
   survives all three; the evaluation's document link does not, so it is outside). The clearance
-  stamp is what lifts a referral, so the check fails closed: a stamp with no matching seal, a seal
-  with no answer, or a seal copied from another record reads `invalid`, and the nightly check holds
-  the diver with `waiver_seal_failed` like any other changed release. `superseded_at` stays outside
-  both seals: superseding answers nothing, and a superseded referral still holds by time.
+  stamp is what lifts a referral, so the check fails closed, at read time: every read that decides
+  boarding (readiness, the roster, the manifest, check-in) verifies the seal and reads a clearance
+  whose seal is missing or wrong as no clearance, so the referral holds; the nightly pass is defence
+  in depth, not the gate. There it reads a stamp with no matching seal, a seal with no answer, or a
+  seal copied from another record as `invalid`, and holds the diver with `waiver_seal_failed` like
+  any other changed release. An unsealed clearance (a stamp and no seal at all: an answer an older
+  build wrote while the seal's deploy rolled out, or a forgery that never touched the seal) is no
+  answer, never backfilled and never trusted: the desk records the physician's answer again, which
+  seals it and lifts a nightly hold the stamp alone caused. A seal that is present but wrong is
+  tampering: that row stays as evidence, and the way out is a fresh signature. The
+  `superseded_at` column stays outside both seals: superseding answers nothing, and a superseded
+  referral still holds by time.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded

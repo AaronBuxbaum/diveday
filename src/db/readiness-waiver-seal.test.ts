@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { getBookingReadiness, listTripReadiness, upsertTripRequirements } from "./readiness";
@@ -235,21 +236,123 @@ describe("readiness over a physician's answer", () => {
     expect((await seatCodes(ctx)).codes).toContain("waiver_seal_failed");
   });
 
-  // A row from before the seal existed would look like this: a real answer
-  // and no seal. There is no such legacy row (H-20260815-no-legacy), so it
-  // reads as stripped, and fails closed.
-  it("holds a diver whose real clearance had its seal stripped", async () => {
+  /**
+   * **Read time, not the nightly check, decides** (final attacker review B1).
+   * The nightly pass reaches one row every few nights at most, so a stamp
+   * written after last night's check must hold the diver on the very next
+   * read. None of these runs the nightly check after the edit.
+   */
+  it("holds a diver stamped cleared in the database before any nightly check reads it", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
+    // Last night's check found the referral intact.
+    expect((await recheckWaiverSeals(ctx.db, { now: nightly })).invalid).toBe(0);
+    const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);
+    await ctx.db
+      .update(waiverRecords)
+      .set({
+        medicalClearedAt: nowDate(),
+        medicalClearedByPersonId: owner,
+        medicalClearanceEvaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
+        medicalClearancePhysicianName: "Dr. Nobody",
+      })
+      .where(eq(waiverRecords.id, ctx.recordId));
+    const seat = await seatCodes(ctx);
+    expect(seat.status).toBe("blocked");
+    expect(seat.codes).toContain("medical_review");
+  });
+
+  it("holds a diver whose forged clearance carries a seal made for another release", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
+    const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);
+    const answer = {
+      medicalClearedAt: nowDate(),
+      medicalClearedByPersonId: owner,
+      medicalClearanceDeclinedAt: null,
+      medicalClearanceDeclinedByPersonId: null,
+      medicalClearanceEvaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
+      medicalClearancePhysicianName: "Dr. Imani Reyes",
+      medicalClearanceDocumentFromDiver: false,
+    };
+    // A real seal over exactly this answer, lifted from another release.
+    const elsewhere = medicalAnswerSealFor({
+      id: crypto.randomUUID(),
+      shopId: ctx.shop.id,
+      ...answer,
+    });
+    await ctx.db
+      .update(waiverRecords)
+      .set({ ...answer, medicalAnswerSeal: elsewhere })
+      .where(eq(waiverRecords.id, ctx.recordId));
+    expect((await seatCodes(ctx)).codes).toContain("medical_review");
+  });
+
+  it("holds a diver whose real clearance was re-dated, before the nightly check", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
+    await clearAtTheDesk(ctx);
+    expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
+    await ctx.db
+      .update(waiverRecords)
+      .set({ medicalClearanceEvaluatedOn: "2099-01-01" })
+      .where(eq(waiverRecords.id, ctx.recordId));
+    expect((await seatCodes(ctx)).codes).toContain("medical_review");
+  });
+
+  /**
+   * **A clearance with no seal is no clearance, and the desk can record it
+   * again** (final attacker review B2, dock review S1). The one honest way to
+   * get this row is a desk answer an older build wrote during the deploy that
+   * added the seal; a forgery that never touched the seal looks the same.
+   * Either way it lifts nothing, and the desk's fresh answer, with its
+   * evidence, seals it: nothing is backfilled, and nothing is laundered.
+   */
+  it("holds a diver whose clearance has no seal until the desk records it again", async () => {
     const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
     await clearAtTheDesk(ctx);
     await ctx.db
       .update(waiverRecords)
       .set({ medicalAnswerSeal: null })
       .where(eq(waiverRecords.id, ctx.recordId));
+    // Held at once, before any check.
+    expect((await seatCodes(ctx)).codes).toContain("medical_review");
+    // The nightly check reads the stamp as unsealed.
     const summary = await recheckWaiverSeals(ctx.db, { now: nightly });
     expect(summary.newlyInvalid).toBeGreaterThanOrEqual(1);
-    const seat = await seatCodes(ctx);
-    expect(seat.status).toBe("blocked");
-    expect(seat.codes).toContain("waiver_seal_failed");
+    expect((await seatCodes(ctx)).codes).toContain("waiver_seal_failed");
+    // The desk records the physician's letter again: the diver boards, and the
+    // next check agrees.
+    await clearAtTheDesk(ctx);
+    expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
+    const later = await recheckWaiverSeals(ctx.db, {
+      now: new Date(nightly.getTime() + 86_400_000),
+    });
+    expect(later.invalid).toBe(0);
+    expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
+  });
+
+  it("never lets the desk overwrite a clearance whose seal is present but wrong", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
+    await clearAtTheDesk(ctx);
+    await ctx.db
+      .update(waiverRecords)
+      .set({ medicalClearanceEvaluatedOn: "2099-01-01" })
+      .where(eq(waiverRecords.id, ctx.recordId));
+    const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);
+    const again = await recordMedicalEvaluationForShop(ctx.db, {
+      outcome: "cleared",
+      shopId: ctx.shop.id,
+      personId: ctx.person.id,
+      recordedByPersonId: owner,
+      evaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
+      physicianName: "Dr. Imani Reyes",
+    });
+    // The tampered row is evidence: it is not rewritten, and it still holds.
+    expect(again).toMatchObject({ ok: true, alreadyRecorded: true });
+    const [row] = await ctx.db
+      .select({ evaluatedOn: waiverRecords.medicalClearanceEvaluatedOn })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, ctx.recordId));
+    expect(row?.evaluatedOn).toBe("2099-01-01");
+    expect((await seatCodes(ctx)).codes).toContain("medical_review");
   });
 
   it("holds a diver whose physician's no was turned into a yes", async () => {

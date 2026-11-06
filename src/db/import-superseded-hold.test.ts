@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import { effectiveWaiverForBooking, waiverStanding } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
@@ -467,12 +468,17 @@ describe("merging a duplicate over a medical hold (issue #3815)", () => {
     const f = await twoRecords("cleared@example.com");
     const cleared = {
       ...refusal(f),
+      id: crypto.randomUUID(),
       medicalClearanceDeclinedAt: null,
       medicalClearanceDeclinedByPersonId: null,
       medicalClearedAt: new Date(nowDate().getTime() - DAY),
       medicalClearedByPersonId: f.importer,
+      medicalClearanceDocumentFromDiver: false,
     };
-    await f.db.insert(waiverRecords).values(cleared);
+    // Sealed as the desk seals one: an unsealed stamp is no clearance.
+    await f.db
+      .insert(waiverRecords)
+      .values({ ...cleared, medicalAnswerSeal: medicalAnswerSealFor(cleared) });
     const duplicate = await importDuplicate(f);
     expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
     expect(await standing(f, f.rhea.id)).toBe("signed");
