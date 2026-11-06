@@ -64,8 +64,8 @@ const WAIVER_SURFACES = {
 /** The security reviewer's waiver modules (their tests are not security surfaces). */
 const WAIVER_MODULES = /^src\/(db|lib)\/waivers?[^/]*\.ts$/;
 
-/** The two framings of a safety review, each named on its own "Reviews launched" line. */
-export const SAFETY_FRAMINGS = ["dock operator", "attacker"];
+/** The framing of a safety review, named on its "Reviews launched" line (one run, not two: experience over speculative hardening, 2026-11-06). */
+export const SAFETY_FRAMINGS = ["dock operator"];
 
 /**
  * The paths each reviewer owns, from AGENTS.md's hard rules and the reviewer agents' own
