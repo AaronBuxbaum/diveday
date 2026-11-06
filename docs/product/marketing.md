@@ -164,7 +164,7 @@ funnel's opinion of which one leads, so leaving it on the trial was the pair's o
 in the one place a reader can see from anywhere on the page. The **`/onboard` footer** offers the demo
 alone as a link-weight submit of the demo action, tagged `onboard-demo` (issue #1956; until
 2026-10-06 it was a link to `/` under the demo's own label), because the reader is already standing
-in the trial — and the nav is hidden entirely on that page (`hideCta`) for the same reason, so the
+in the trial — and the page is a wordmark door with no nav (`EntryShell wordmark`) for the same reason, so the
 demo is not pitched twice.
 
 This was recorded because nothing held the funnel's shape and it had already drifted: `/` led with

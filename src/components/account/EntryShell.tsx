@@ -15,8 +15,8 @@ import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
  *
  *  1. **Identity** — the DiveDay wordmark on chrome-less token pages
  *     (`wordmark`), or a small uppercase `eyebrow` (a shop's name, "Founding
- *     shop") where the sender matters more than the platform. Pages that
- *     already render `MarketingNav` above pass neither.
+ *     shop") where the sender matters more than the platform. Pages inside the
+ *     marketing group, under its bar, pass neither.
  *  2. **The question** — a centered title, with an optional one-line muted
  *     description under it.
  *  3. **The action** — `children`. Forms sit in a panel that is *nothing at
