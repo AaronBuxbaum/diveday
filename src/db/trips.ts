@@ -76,7 +76,8 @@ export {
   listMinimumNotMetRecipients,
   MINIMUM_SEATS_SWEEP_LIMIT,
   type MinimumSeatsSweepResult,
-  reinstateTripClearingMinimum,
+  type ReinstateTripOutcome,
+  reinstateTrip,
   type SweptDeparture,
 } from "./trips-minimum";
 export {

@@ -583,25 +583,26 @@ export async function sellableCapacity(
 }
 
 /**
- * **Whether a hull is in the yard on any day these legs hold it** (loop 5,
- * row 5; issues #3915, #3994). The one question every door that puts a
- * departure on a boat asks before it writes: a move, a copy. Each leg holds
- * the hull from the shop-local day it starts through the day it ends
- * (`hullHeldSpans`). False for no boat or a boat with no window; true for
- * another shop's boat (`HULL_NOT_IN_SHOP`). Every caller is about to write,
- * so the window is read under the same share lock the roll takes: a window
- * saved mid-move waits for the move's commit (attacker review, #3994).
+ * **The first day a hull is in the yard that these legs hold it** (loop 5,
+ * row 5; issues #3915, #3994, #4027), or null when the yard misses them all.
+ * The one question every door that puts a departure on a boat asks before it
+ * writes: a move, a copy, a reinstatement. Each leg holds the hull from the
+ * shop-local day it starts through the day it ends (`hullHeldSpans`). Null
+ * for no boat or a boat with no window; a day for another shop's boat
+ * (`HULL_NOT_IN_SHOP`). Every caller is about to write, so the window is read
+ * under the same share lock the roll takes: a window saved mid-move waits for
+ * the move's commit (attacker review, #3994).
  */
-export async function boatOutOfServiceOn(
+export async function firstYardDayOn(
   tx: DbExecutor,
   shopId: string,
   boatId: string | null,
   legs: readonly { startsAt: Date; endsAt: Date }[],
   timeZone: string,
-): Promise<boolean> {
-  if (!boatId) return false;
+): Promise<CalendarDate | null> {
+  if (!boatId) return null;
   const window = await boatServiceWindowOf(tx, shopId, boatId, { lock: true });
-  return firstHeldDayInWindow(window, hullHeldSpans(legs, timeZone)) !== null;
+  return firstHeldDayInWindow(window, hullHeldSpans(legs, timeZone));
 }
 
 /**

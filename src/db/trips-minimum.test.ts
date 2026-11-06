@@ -13,7 +13,7 @@ import {
   cancelDeparturesBelowMinimum,
   listDeparturesAwaitingMinimumDecision,
   listMinimumNotMetRecipients,
-  reinstateTripClearingMinimum,
+  reinstateTrip,
 } from "./trips-minimum";
 
 /**
@@ -331,7 +331,7 @@ describe("cancelDeparturesBelowMinimum", () => {
     const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Run it anyway" });
     await cancelDeparturesBelowMinimum(db, { now: NOW });
 
-    await reinstateTripClearingMinimum(db, shop.id, trip.id);
+    await reinstateTrip(db, shop.id, trip.id);
 
     const again = await cancelDeparturesBelowMinimum(db, { now: NOW });
     expect(again.cancelled.map((row) => row.tripId)).not.toContain(trip.id);

@@ -23,6 +23,7 @@ import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode } from "./trip-promos";
 import { editTrip, getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { reinstateTrip } from "./trips-minimum";
 import { listUnfinished, type UnfinishedOptions } from "./unfinished";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -942,11 +943,10 @@ describe("owed shop-cancellation refunds", () => {
   });
 
   it("clears the stamp when a canceled departure is put back on the board", async () => {
-    // A stale date on a sailing trip would tell the queue it had been owed since
-    // the day the shop changed its mind.
+    // A stale date on a sailing trip would tell the queue it was owed since then.
     const { db, shop, reef } = await cancelledDepartureContext();
-    const restored = await setTripStatus(db, shop.id, reef.id, "scheduled");
-    expect(restored?.cancelledAt).toBeNull();
+    const restored = await reinstateTrip(db, shop.id, reef.id);
+    expect(restored.ok && restored.trip.cancelledAt).toBeNull();
     expect(await listUnfinished(db, shop.id, "shop_cancellation_refund")).toEqual([]);
   });
 

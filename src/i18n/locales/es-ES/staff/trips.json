@@ -77,6 +77,8 @@
     "cancelled": "Salida cancelada. Ya no aparece en el calendario público.",
     "cancelUnderway": "Esta salida está en curso o ya zarpó, así que no se canceló.",
     "reinstated": "La salida vuelve a estar en el calendario.",
+    "reinstateBoatOutOfService": "Sigue cancelada: su barco está en el astillero un día en que saldría. Mueve la salida o elige otro barco primero.",
+    "reinstateBoatOutOfServiceOn": "Sigue cancelada: su barco está en el astillero el {date}. Mueve la salida o elige otro barco primero.",
     "crew": "Tripulación actualizada",
     "crewConflict": "No se cambió la tripulación. Alguien ya está asignado en este horario, o el curso quedaría por debajo de su ratio de enseñanza.",
     "noteAdded": "Nota privada del personal agregada",

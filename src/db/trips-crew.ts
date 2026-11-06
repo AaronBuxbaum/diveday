@@ -212,7 +212,7 @@ export type CrewClash = {
  *    divemaster. Its Move panel warns first.
  * 2. **`updateTripRecord`** (src/db/trips-record.ts): About -> Details writes
  *    `starts_at`/`ends_at` and replaces `trip_schedule_days` with no crew read.
- * 3. **`setTripStatus(..., "scheduled")`**: reinstating a called-off departure
+ * 3. **`reinstateTrip`**: reinstating a called-off departure
  *    whose crew were rostered elsewhere meanwhile (`trips-crew.test.ts`).
  *
  * Doors 2 and 3 redirect with a `?notice=` that re-opens About, so this read

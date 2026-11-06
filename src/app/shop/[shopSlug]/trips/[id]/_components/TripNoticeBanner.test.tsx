@@ -15,7 +15,7 @@ const OTHER_TRIP = "22222222-2222-4222-8222-222222222222";
 
 function resolve(
   notice?: string,
-  extra: Pick<TripNoticeInput, "gate" | "form" | "bid" | "roster"> = {},
+  extra: Pick<TripNoticeInput, "gate" | "form" | "bid" | "roster" | "on"> = {},
 ) {
   return resolveTripNotice({ notice, tripId: TRIP, locale: "en-US", ...extra });
 }
@@ -246,5 +246,23 @@ describe("resolveTripNotice", () => {
       text: "Nobody counted Hugo Marsh at the dock, so the boat may have carried them. If they didn’t come, mark them Not boarded on the manifest, then remove the booking.",
     });
     expect(resolve("booking-remove-uncounted", { bid: "seat-2", roster })).toBeUndefined();
+  });
+});
+
+describe("a reinstatement refused for the yard (issue #4027)", () => {
+  it("names the yard day the URL carries, beside the lifecycle controls", () => {
+    expect(resolve("reinstate-boat-out-of-service", { on: "2031-01-11" })).toEqual({
+      form: "lifecycle",
+      tone: "danger",
+      // One date is one unit, bound by U+00A0 (src/lib/date-parts.ts).
+      text: "Still canceled: its boat is in the yard on Jan 11, 2031. Move the trip or pick another boat first.",
+    });
+  });
+
+  it("says the plain sentence when the day is missing or not a real date", () => {
+    const plain =
+      "Still canceled: its boat is in the yard on a day it would sail. Move the trip or pick another boat first.";
+    expect(resolve("reinstate-boat-out-of-service")?.text).toBe(plain);
+    expect(resolve("reinstate-boat-out-of-service", { on: "2031-02-30" })?.text).toBe(plain);
   });
 });

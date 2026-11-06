@@ -88,9 +88,7 @@ export default async function ManageTripPage({
       notice,
       bid,
       diverq,
-      count,
       form,
-      gate,
       noteId,
       confirmName,
       confirmEmail,
@@ -144,10 +142,10 @@ export default async function ManageTripPage({
   // departure holds no hull, and `boatClashes` answers nothing for one anyway.
 
   const { tripNotice, lifecycleStatus, rootPageNotice, rosterPageNotice } = tripPageNotices({
+    // `count`, `gate` and the yard day `on` ride in `rest`.
+    ...rest,
     notice,
-    count,
     form,
-    gate,
     tripId,
     locale,
     bid,

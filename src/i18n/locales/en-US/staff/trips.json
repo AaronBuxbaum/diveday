@@ -77,6 +77,8 @@
     "cancelled": "Trip canceled. It’s off the public schedule.",
     "cancelUnderway": "This departure is underway or has left, so it wasn’t canceled.",
     "reinstated": "The trip is back on the schedule.",
+    "reinstateBoatOutOfService": "Still canceled: its boat is in the yard on a day it would sail. Move the trip or pick another boat first.",
+    "reinstateBoatOutOfServiceOn": "Still canceled: its boat is in the yard on {date}. Move the trip or pick another boat first.",
     "crew": "Crew updated",
     "crewConflict": "Crew wasn’t changed. Someone is already assigned during this time, or the course would fall below its teaching ratio.",
     "noteAdded": "Private staff note added",

@@ -23,6 +23,7 @@ import {
   listUpcomingSessionsForCourse,
   offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
+  reinstateTrip,
   rollSeriesForward,
   setTripStatus,
 } from "./trips";
@@ -366,7 +367,7 @@ describe("each path that writes a departure from another ends unable to sell abo
     const boat = await certifiedBoat(db, shop.id, LIMIT);
     const trip = await overLimitTrip(db, shop.id, boat.id);
     await setTripStatus(db, shop.id, trip.id, "cancelled");
-    await setTripStatus(db, shop.id, trip.id, "scheduled");
+    await reinstateTrip(db, shop.id, trip.id);
 
     await fillToCertificate(db, shop.id, trip.id);
     expect(await book(db, shop.id, trip.id)).toMatchObject({ ok: false, reason: "trip_full" });

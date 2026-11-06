@@ -37,7 +37,7 @@ import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { copiedRequirement, insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
 import { liveTrip } from "./trips-live";
-import { boatCertifiedPassengers, boatOutOfServiceOn } from "./trips-queries";
+import { boatCertifiedPassengers, firstYardDayOn } from "./trips-queries";
 import { recordSeriesSkip } from "./trips-series";
 
 /**
@@ -247,7 +247,7 @@ export async function moveTrip(
       .from(tripScheduleDays)
       .where(eq(tripScheduleDays.tripId, tripId));
     if (
-      await boatOutOfServiceOn(
+      await firstYardDayOn(
         tx,
         shopId,
         existing.boatId,
@@ -503,9 +503,7 @@ export async function duplicateTripOrRefusal(
     // existed would otherwise propagate on every copy, which is how one
     // cross-tenant row becomes a season of them.
     const boatId = (await validateBoat(tx, shopId, source.boatId)) ? source.boatId : null;
-    if (
-      await boatOutOfServiceOn(tx, shopId, boatId, movedLegs(days, source, shift), shop.timezone)
-    ) {
+    if (await firstYardDayOn(tx, shopId, boatId, movedLegs(days, source, shift), shop.timezone)) {
       return DUPLICATE_BOAT_OUT_OF_SERVICE;
     }
     // **A copy starts inside the certificate** (H-20261009-certificate-caps-seats). The source may predate
