@@ -39,6 +39,7 @@ export {
   type CompleteWaiverOutcome,
   type CounterWaiverKey,
   claimCounterLink,
+  closedCounterCode,
   completeWaiver,
   doorNeedsDeskGuardian,
   type EmergencyContactInput,
