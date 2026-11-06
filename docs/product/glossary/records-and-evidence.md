@@ -162,6 +162,11 @@
   weekend's day-one close and day-two open are two days rather than one long rest. The arithmetic is
   the dock-day timeline's own (`betweenDivesMinutes`), so the figure a diver reads before booking is
   the figure their thread reads after.
+- **Counter link** — the QR a staffer shows on a party's waiver panel so one diver signs their own
+  seat's release on the shop's tablet: a `waiver_link` row in `capabilities` naming that release,
+  alive 30 minutes and spent by the signature. It carries no readiness authority and opens no
+  doctor's page; it dies when the seat changes hands or the release is superseded (ADR
+  [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the
   bargain, and therefore that standing signatures no longer cover it
   (`waiver_materiality_decisions`, ADR

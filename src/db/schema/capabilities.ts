@@ -26,6 +26,7 @@ import { appNowTimestamp } from "./columns";
 import { people, shops, userAccounts } from "./core";
 import { setupRequests } from "./funnel";
 import { interests } from "./interests";
+import { waiverRecords } from "./waivers";
 
 /**
  * Mirrors `CapabilityPurpose` in `src/lib/capabilities.ts`, which is its only
@@ -85,6 +86,13 @@ export const capabilities = pgTable(
      * the spend stands. Only ever on `shop_setup`.
      */
     spentByShopId: uuid("spent_by_shop_id").references(() => shops.id, { onDelete: "set null" }),
+    /**
+     * A `waiver_record` purpose's subject: the one release a counter link
+     * opens. The link goes with its record.
+     */
+    waiverRecordId: uuid("waiver_record_id").references(() => waiverRecords.id, {
+      onDelete: "cascade",
+    }),
     // Bound to the row's own shop by the composite key below, not a bare id.
     interestId: uuid("interest_id"),
     /** A `shop_address` purpose's subject: the lower-cased address the link was mailed to. */
@@ -117,6 +125,14 @@ export const capabilities = pgTable(
     index("capabilities_interest_idx").on(table.interestId),
     index("capabilities_user_account_idx").on(table.userAccountId),
     index("capabilities_setup_request_idx").on(table.setupRequestId),
+    index("capabilities_waiver_record_idx").on(table.waiverRecordId),
+    // One live link per release (the counter link): the mint's revoke under
+    // the record-row lock is the rule, this is its backstop.
+    uniqueIndex("capabilities_live_waiver_record_idx")
+      .on(table.waiverRecordId)
+      .where(
+        sql`${table.waiverRecordId} is not null and ${table.usedAt} is null and ${table.revokedAt} is null`,
+      ),
     // One live link per person and purpose where the policy says so (the
     // calendar feeds): the mint's revoke under the person-row lock is the rule,
     // this is its backstop.
@@ -140,11 +156,12 @@ export const capabilities = pgTable(
     }),
     check(
       "capabilities_subject_by_purpose",
-      sql`(${table.purpose}::text in (${naming("interest")}) and ${table.interestId} is not null and ${table.personId} is null and ${table.sentTo} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null)
-        or (${table.purpose}::text in (${naming("person")}) and ${table.personId} is not null and ${table.interestId} is null and ${table.sentTo} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null)
-        or (${table.purpose}::text in (${naming("shop_address")}) and ${table.sentTo} is not null and ${table.sentTo} = lower(${table.sentTo}) and ${table.personId} is null and ${table.interestId} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null)
-        or (${table.purpose}::text in (${naming("user_account")}) and ${table.userAccountId} is not null and ${table.personId} is null and ${table.interestId} is null and ${table.sentTo} is null and ${table.setupRequestId} is null)
-        or (${table.purpose}::text in (${naming("setup_request")}) and ${table.setupRequestId} is not null and ${table.personId} is null and ${table.interestId} is null and ${table.sentTo} is null and ${table.userAccountId} is null)`,
+      sql`(${table.purpose}::text in (${naming("interest")}) and ${table.interestId} is not null and ${table.personId} is null and ${table.sentTo} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null and ${table.waiverRecordId} is null)
+        or (${table.purpose}::text in (${naming("person")}) and ${table.personId} is not null and ${table.interestId} is null and ${table.sentTo} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null and ${table.waiverRecordId} is null)
+        or (${table.purpose}::text in (${naming("shop_address")}) and ${table.sentTo} is not null and ${table.sentTo} = lower(${table.sentTo}) and ${table.personId} is null and ${table.interestId} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null and ${table.waiverRecordId} is null)
+        or (${table.purpose}::text in (${naming("user_account")}) and ${table.userAccountId} is not null and ${table.personId} is null and ${table.interestId} is null and ${table.sentTo} is null and ${table.setupRequestId} is null and ${table.waiverRecordId} is null)
+        or (${table.purpose}::text in (${naming("setup_request")}) and ${table.setupRequestId} is not null and ${table.personId} is null and ${table.interestId} is null and ${table.sentTo} is null and ${table.userAccountId} is null and ${table.waiverRecordId} is null)
+        or (${table.purpose}::text in (${naming("waiver_record")}) and ${table.waiverRecordId} is not null and ${table.personId} is null and ${table.interestId} is null and ${table.sentTo} is null and ${table.userAccountId} is null and ${table.setupRequestId} is null)`,
     ),
     // A platform purpose names no shop, and every other purpose names one.
     check(

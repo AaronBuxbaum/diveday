@@ -1,20 +1,38 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
-import { sealCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { signingDate } from "@/lib/guardian";
 import { fileScopedShopContext } from "@/test/db";
 import { getPartyWaiverQueue, issuePartyWaiver } from "./party-waiver-queue";
 import * as readinessDb from "./readiness";
 import { listTripReadiness } from "./readiness";
-import { bookings, people, personRoles, waiverRecords } from "./schema";
+import { bookings, capabilities, people, personRoles, waiverRecords } from "./schema";
 import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
-import { completeWaiver, getWaiverForToken } from "./waivers-completion";
+import { completeWaiver, getWaiverForToken, waiverLinkDoor } from "./waivers-completion";
 import { recordMedicalEvaluation } from "./waivers-medical";
 import { clearAnswers, medicalReferralAnswers } from "./waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
+
+/** What `/waivers/<token>` opens for a counter link: its state, or unavailable. */
+async function opened(db: typeof ctx.db, token: string, now?: Date) {
+  const door = await waiverLinkDoor(db, token, now);
+  if (door?.door !== "counter") return { state: "unavailable" as const };
+  return getWaiverForToken(db, door.key, now);
+}
+
+/** Sign through the counter link, as the tablet's form does. */
+async function signAtCounter(
+  db: typeof ctx.db,
+  token: string,
+  input: Parameters<typeof completeWaiver>[2],
+) {
+  const door = await waiverLinkDoor(db, token);
+  if (door?.door !== "counter") return { ok: false as const, reason: "no_door" as const };
+  return completeWaiver(db, door.key, input);
+}
 
 async function family() {
   const { db, shop } = ctx;
@@ -82,10 +100,10 @@ describe("party release QR handoff", () => {
     };
     const issued = await issuePartyWaiver(f.db, input);
     if (!issued) throw new Error("eligible minor refused");
-    const state = await getWaiverForToken(f.db, issued.token);
+    const state = await opened(f.db, issued.token);
     expect(state).toMatchObject({ state: "available", record: { bookingId: f.minor.bookingId } });
     expect(
-      await completeWaiver(f.db, issued.token, {
+      await signAtCounter(f.db, issued.token, {
         signerName: `Mia ${f.stamp}`,
         agreed: true,
         medicalAnswers: clearAnswers,
@@ -113,7 +131,8 @@ describe("party release QR handoff", () => {
       .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Mia" })
       .where(eq(bookings.id, f.minor.bookingId));
     expect(await issuePartyWaiver(f.db, input)).toBeNull();
-    expect((await getWaiverForToken(f.db, existing.token)).state).toBe("held");
+    // A held seat's counter link opens nothing, as its thread does not.
+    expect((await opened(f.db, existing.token)).state).toBe("unavailable");
     const queue = await getPartyWaiverQueue(f.db, input);
     expect(queue?.members.find((member) => member.bookingId === f.minor.bookingId)).toMatchObject({
       state: "held",
@@ -124,10 +143,10 @@ describe("party release QR handoff", () => {
       .set({ identityUnconfirmedAt: null, status: "cancelled" })
       .where(eq(bookings.id, f.minor.bookingId));
     expect(await issuePartyWaiver(f.db, input)).toBeNull();
-    // Existing waiver links intentionally retain their current cancellation policy.
-    expect((await getWaiverForToken(f.db, existing.token)).state).toBe("available");
+    // A cancelled seat has no release to sign, on the counter as in the thread.
+    expect((await opened(f.db, existing.token)).state).toBe("unavailable");
   });
-  it("never revives an expired or superseded QR and issues a fresh one", async () => {
+  it("never revives an expired, replaced or superseded QR and issues a fresh one", async () => {
     const f = await family();
     const input = {
       shopId: f.shop.id,
@@ -137,20 +156,20 @@ describe("party release QR handoff", () => {
     };
     const first = await issuePartyWaiver(f.db, input);
     if (!first) throw new Error("first link missing");
-    await f.db
-      .update(waiverRecords)
-      .set({ expiresAt: new Date(nowDate().getTime() - 1000) })
-      .where(eq(waiverRecords.bookingId, f.third.bookingId));
-    expect((await getWaiverForToken(f.db, first.token)).state).toBe("expired");
+    expect(first.expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(30 * 60_000);
+    expect((await opened(f.db, first.token)).state).toBe("available");
+    expect((await opened(f.db, first.token, first.expiresAt)).state).toBe("unavailable");
     const next = await issuePartyWaiver(f.db, input);
     if (!next) throw new Error("replacement link missing");
     expect(next.token).not.toBe(first.token);
-    expect(await getWaiverForToken(f.db, first.token)).toEqual({ state: "unavailable" });
+    // A fresh QR revokes the one before it.
+    expect(await opened(f.db, first.token)).toEqual({ state: "unavailable" });
+    expect((await opened(f.db, next.token)).state).toBe("available");
     await f.db
       .update(waiverRecords)
       .set({ supersededAt: nowDate() })
       .where(eq(waiverRecords.bookingId, f.third.bookingId));
-    expect(await getWaiverForToken(f.db, next.token)).toEqual({ state: "unavailable" });
+    expect(await opened(f.db, next.token)).toEqual({ state: "unavailable" });
   });
   it("reports the waiver signed without claiming other readiness blockers are clear", async () => {
     const f = await family();
@@ -162,7 +181,7 @@ describe("party release QR handoff", () => {
     };
     const issued = await issuePartyWaiver(f.db, input);
     if (!issued) throw new Error("link missing");
-    const result = await completeWaiver(f.db, issued.token, {
+    const result = await signAtCounter(f.db, issued.token, {
       signerName: `Leo ${f.stamp}`,
       agreed: true,
       medicalAnswers: clearAnswers,
@@ -178,7 +197,7 @@ describe("party release QR handoff", () => {
       rows.find((row) => row.booking.id === f.third.bookingId)?.readiness.blockers.length,
     ).toBeGreaterThan(0);
   });
-  it("keeps a waiver-only envelope scoped and expiring after the lead signs", async () => {
+  it("spends the counter link on signing and keeps only its receipt until it expires", async () => {
     const f = await family();
     const input = {
       shopId: f.shop.id,
@@ -188,31 +207,30 @@ describe("party release QR handoff", () => {
     };
     const issued = await issuePartyWaiver(f.db, input);
     if (!issued) throw new Error("link missing");
-    const envelope = sealCounterWaiverToken(issued.token, issued.expiresAt);
-    if (!envelope) throw new Error("envelope missing");
-    expect(envelope).not.toContain(issued.token);
-    expect((await getWaiverForToken(f.db, envelope)).state).toBe("available");
+    expect((await opened(f.db, issued.token)).state).toBe("available");
     expect(
       (
-        await completeWaiver(f.db, envelope, {
+        await signAtCounter(f.db, issued.token, {
           signerName: `Ana ${f.stamp}`,
           agreed: true,
           medicalAnswers: clearAnswers,
         })
       ).ok,
     ).toBe(true);
-    expect((await getWaiverForToken(f.db, envelope)).state).toBe("completed");
-    expect(
-      (await getWaiverForToken(f.db, envelope, new Date(issued.expiresAt.getTime() + 1))).state,
-    ).toBe("unavailable");
-    expect(
-      (await getWaiverForToken(f.db, issued.token, new Date(issued.expiresAt.getTime() + 1))).state,
-    ).toBe("completed");
+    const [link] = await f.db
+      .select({ usedAt: capabilities.usedAt })
+      .from(capabilities)
+      .where(eq(capabilities.tokenHash, hashBearerToken(issued.token)));
+    expect(link?.usedAt).not.toBeNull();
+    expect((await opened(f.db, issued.token)).state).toBe("completed");
+    expect((await opened(f.db, issued.token, new Date(issued.expiresAt.getTime() + 1))).state).toBe(
+      "unavailable",
+    );
     await f.db
       .update(waiverRecords)
       .set({ supersededAt: nowDate() })
       .where(eq(waiverRecords.bookingId, f.lead.bookingId));
-    expect((await getWaiverForToken(f.db, envelope)).state).toBe("unavailable");
+    expect((await opened(f.db, issued.token)).state).toBe("unavailable");
   });
   it("distinguishes a pending medical review from a physician's refusal", async () => {
     const f = await family();
@@ -224,7 +242,7 @@ describe("party release QR handoff", () => {
     };
     const issued = await issuePartyWaiver(f.db, input);
     if (!issued) throw new Error("link missing");
-    const signed = await completeWaiver(f.db, issued.token, {
+    const signed = await signAtCounter(f.db, issued.token, {
       signerName: `Ana ${f.stamp}`,
       agreed: true,
       medicalAnswers: medicalReferralAnswers,

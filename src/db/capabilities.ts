@@ -11,7 +11,7 @@ import {
 } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { capabilities, people, shops, userAccounts } from "./schema";
+import { capabilities, people, shops, userAccounts, waiverRecords } from "./schema";
 
 /**
  * The `capabilities` table's rows and the transitions on them (issue #2710):
@@ -45,6 +45,7 @@ function subjectColumns(purpose: CapabilityPurpose, subjectId: string) {
     sentTo: null,
     userAccountId: null,
     setupRequestId: null,
+    waiverRecordId: null,
   };
   switch (capabilitySubject(purpose)) {
     case "interest":
@@ -57,6 +58,8 @@ function subjectColumns(purpose: CapabilityPurpose, subjectId: string) {
       return { ...none, userAccountId: subjectId };
     case "setup_request":
       return { ...none, setupRequestId: subjectId };
+    case "waiver_record":
+      return { ...none, waiverRecordId: subjectId };
   }
 }
 
@@ -73,6 +76,8 @@ function subjectColumn(purpose: CapabilityPurpose) {
       return capabilities.userAccountId;
     case "setup_request":
       return capabilities.setupRequestId;
+    case "waiver_record":
+      return capabilities.waiverRecordId;
   }
 }
 
@@ -84,6 +89,7 @@ type CapabilityRow = {
   sentTo: string | null;
   userAccountId: string | null;
   setupRequestId: string | null;
+  waiverRecordId: string | null;
   usedAt: Date | null;
   expiresAt: Date | null;
   revokedAt: Date | null;
@@ -97,6 +103,7 @@ const ROW = {
   sentTo: capabilities.sentTo,
   userAccountId: capabilities.userAccountId,
   setupRequestId: capabilities.setupRequestId,
+  waiverRecordId: capabilities.waiverRecordId,
   usedAt: capabilities.usedAt,
   expiresAt: capabilities.expiresAt,
   revokedAt: capabilities.revokedAt,
@@ -112,6 +119,7 @@ function verified<P extends CapabilityPurpose>(
     shop_address: row.sentTo,
     user_account: row.userAccountId,
     setup_request: row.setupRequestId,
+    waiver_record: row.waiverRecordId,
   }[capabilitySubject(purpose)];
   // The table's checks make both unreachable; a null subject must still never
   // be handed on as an id, nor a shop purpose's row as one with no shop.
@@ -199,6 +207,20 @@ async function lockForSupersede(
         .where(eq(people.id, subjectId))
         .for("no key update");
       return;
+    case "waiver_record": {
+      // The release itself, and only in the shop the link names: the record
+      // has no composite key with the row's shop, so a release of another
+      // shop is refused here. The signing writer takes this row after the
+      // person and the seat, as the mint's caller has.
+      if (!shopId) throw new Error(`${purpose} names no shop`);
+      const [record] = await db
+        .select({ id: waiverRecords.id })
+        .from(waiverRecords)
+        .where(and(eq(waiverRecords.id, subjectId), eq(waiverRecords.shopId, shopId)))
+        .for("no key update");
+      if (!record) throw new Error(`${purpose} names a release outside its shop`);
+      return;
+    }
     default:
       throw new Error(`${purpose} supersedes per subject, which has no row to lock`);
   }

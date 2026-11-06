@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { issueBookingCapability } from "@/db/booking-capabilities";
 import { bookings, people, trips, waiverRecords } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { completeWaiver } from "@/db/waivers-completion";
@@ -30,9 +31,10 @@ vi.mock("next/navigation", () => ({
     throw new Error("NOT_FOUND");
   }),
 }));
-vi.mock("@/lib/observability/render-connection", () => ({
-  connectionForRoute: vi.fn(async () => undefined),
-}));
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, connection: vi.fn(async () => undefined) };
+});
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
@@ -56,7 +58,7 @@ const { checkRateLimit, checkRateLimitFailClosed, RATE_LIMITS, rateLimitKey } = 
   "@/lib/rate-limit"
 );
 const { default: DoctorReferralPage } = await import("./page");
-const { revealDoctorAnswersAction } = await import("./actions");
+const { revealDoctorAnswersFromReady } = await import("../../waiver-actions");
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -66,14 +68,16 @@ afterEach(() => {
 
 /**
  * **The doctor's page, against a real database** (fifth-loop ideas, item 17;
- * H-20261014-physician-form-for-referral, ADR 20261016-doctor-referral-page). The waiver link is its whole
- * authority, so every case is the link's record deciding what renders.
+ * H-20261014-physician-form-for-referral, ADR 20261016-doctor-referral-page). The diver's readiness link is
+ * its whole authority (issue #2743), so every case is the seat's record deciding
+ * what renders.
  */
 /**
  * **The doctor's page, against a real database** (fifth-loop ideas, item 17;
  * H-20261014-physician-form-for-referral and ADR 20261016-doctor-referral-page, amended by the layer r5-3
- * reviews). The waiver link is its whole authority for the page; the answers
- * need the diver's date of birth as well.
+ * reviews), on the diver's own thread link (issue #2743). The readiness link is
+ * its whole authority for the page; the answers need the diver's date of birth
+ * as well.
  */
 describe("the doctor's page", () => {
   async function signedLink(
@@ -91,7 +95,14 @@ describe("the doctor's page", () => {
       medicalAnswers,
       now,
     });
-    return { db, token: issued.token, person, shop, booking };
+    // The seat's own readiness link: the only door to its doctor's page (issue #2743).
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      purpose: "readiness",
+    });
+    if (!readiness) throw new Error("expected a readiness link");
+    return { db, token: readiness.token, person, shop, booking };
   }
 
   const render = async (token: string) =>
@@ -100,7 +111,7 @@ describe("the doctor's page", () => {
   const reveal = (token: string, birthdate: string) => {
     const form = new FormData();
     form.set("birthdate", birthdate);
-    return revealDoctorAnswersAction(token, { status: "locked" }, form);
+    return revealDoctorAnswersFromReady(token, { status: "locked" }, form);
   };
 
   it("prints the name and the official form, and keeps the birthdate and answers off the page", async () => {
@@ -188,7 +199,7 @@ describe("the doctor's page", () => {
     const sheet = sheetOf(await render(token));
     expect(sheet).not.toContain(token);
     expect(sheet).not.toContain(encodeURIComponent(token));
-    expect(sheet).not.toContain("/waivers/");
+    expect(sheet).not.toContain("/ready/");
     expect(sheet).not.toContain("1984");
     expect(sheet).not.toContain("Question 3");
     expect(sheet).not.toContain("moderate exercise");
@@ -238,7 +249,7 @@ describe("the doctor's page", () => {
     const { token, person } = await signedLink(medicalReferralAnswers);
     await reveal(token, "1984-03-09");
     expect(vi.mocked(checkRateLimit).mock.calls.map((call) => call.slice(0, 2))).toEqual([
-      [rateLimitKey("waiver-token", "203.0.113.7"), RATE_LIMITS.capabilityAction],
+      [rateLimitKey("readiness-token", "203.0.113.7"), RATE_LIMITS.capabilityAction],
     ]);
     // Keyed by the diver, never the token, the record or the address: neither
     // rotating addresses nor a reissued link buys a fresh budget.
@@ -265,13 +276,12 @@ describe("the doctor's page", () => {
 
   it("sends a clean release back to its waiver page", async () => {
     const { token } = await signedLink(clearAnswers);
-    await expect(render(token)).rejects.toThrow(`REDIRECT:/waivers/${token}`);
+    await expect(render(token)).rejects.toThrow(`REDIRECT:/ready/${token}/waiver`);
   });
 
-  it("sends a link it cannot read back to the waiver page, encoded", async () => {
+  it("sends a link it cannot read back to the thread", async () => {
     vi.mocked(getDb).mockResolvedValue(fileCtx.db);
-    await expect(render("not-a-real-token")).rejects.toThrow("REDIRECT:/waivers/not-a-real-token");
-    await expect(render("a/../b")).rejects.toThrow("REDIRECT:/waivers/a%2F..%2Fb");
+    await expect(render("not-a-real-token")).rejects.toThrow("REDIRECT:/ready/not-a-real-token");
   });
 
   it.each(["declined", "erased", "anonymized"] as const)(
@@ -302,14 +312,14 @@ describe("the doctor's page", () => {
           .set({ anonymizedAt: at })
           .where(eq(waiverRecords.personId, person.id));
       }
-      await expect(render(token)).rejects.toThrow(`REDIRECT:/waivers/${token}`);
+      await expect(render(token)).rejects.toThrow(`REDIRECT:/ready/${token}`);
     },
   );
 
   it("sends a canceled seat or a departure long over back to the waiver page", async () => {
     const { db, token, booking } = await signedLink(medicalReferralAnswers);
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
-    await expect(render(token)).rejects.toThrow(`REDIRECT:/waivers/${token}`);
+    await expect(render(token)).rejects.toThrow(`REDIRECT:/ready/${token}`);
     expect(await reveal(token, "1984-03-09")).toEqual({ status: "closed" });
     await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, booking.id));
     const longAgo = new Date("2020-01-01T12:00:00.000Z");
@@ -317,6 +327,6 @@ describe("the doctor's page", () => {
       .update(trips)
       .set({ startsAt: new Date(longAgo.getTime() - 3_600_000), endsAt: longAgo })
       .where(eq(trips.id, booking.tripId));
-    await expect(render(token)).rejects.toThrow(`REDIRECT:/waivers/${token}`);
+    await expect(render(token)).rejects.toThrow(`REDIRECT:/ready/${token}`);
   });
 });

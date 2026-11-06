@@ -26,6 +26,7 @@ import { recordSetupRequest } from "./funnel";
 import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
 import { capabilities, people, personRoles, shops, userAccounts } from "./schema";
+import { issueWaiverRequest } from "./waivers-requests";
 
 /**
  * Issue #2710, security-sensitive (bearer tokens): one table, one verify, the
@@ -65,11 +66,14 @@ async function subjects() {
     source: "pricing",
     locale: "en-US",
   });
+  const release = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id });
+  if (!release.ok) throw new Error("release missing");
   return {
     personId: person.id,
     interestId: joined.interestId,
     userAccountId: account.id,
     setupRequestId: request.id,
+    waiverRecordId: release.recordId,
   };
 }
 
@@ -94,6 +98,8 @@ function subjectFor(purpose: CapabilityPurpose, ids: Subjects): string {
       return ids.userAccountId;
     case "setup_request":
       return ids.setupRequestId;
+    case "waiver_record":
+      return ids.waiverRecordId;
   }
 }
 
@@ -140,6 +146,7 @@ describe("issueCapability and verifyCapability", () => {
         sentTo: null,
         userAccountId: null,
         setupRequestId: null,
+        waiverRecordId: null,
       };
       const expected = {
         interest: { ...none, interestId: ids.interestId },
@@ -147,6 +154,7 @@ describe("issueCapability and verifyCapability", () => {
         shop_address: { ...none, sentTo: ADDRESS },
         user_account: { ...none, userAccountId: ids.userAccountId },
         setup_request: { ...none, setupRequestId: ids.setupRequestId },
+        waiver_record: { ...none, waiverRecordId: ids.waiverRecordId },
       }[CAPABILITY_POLICY[purpose].subject];
       expect(row).toMatchObject({ ...expected, shopId: shopFor(purpose), usedAt: null });
     },
@@ -339,6 +347,7 @@ describe("capabilities_subject_by_purpose", () => {
       sentTo: null,
       userAccountId: null,
       setupRequestId: null,
+      waiverRecordId: null,
     };
     const bad: {
       purpose: CapabilityPurpose;
@@ -347,6 +356,7 @@ describe("capabilities_subject_by_purpose", () => {
       sentTo: string | null;
       userAccountId?: string | null;
       setupRequestId?: string | null;
+      waiverRecordId?: string | null;
       usedAt?: Date;
     }[] = [
       { purpose: "interest_unsubscribe", ...none, personId: ids.personId },
@@ -389,6 +399,22 @@ describe("capabilities_subject_by_purpose", () => {
         personId: ids.personId,
       },
       { purpose: "password_reset", ...none, setupRequestId: ids.setupRequestId },
+      // A counter link names its release and nothing else, and no other
+      // purpose names a release.
+      { purpose: "waiver_link", ...none },
+      { purpose: "waiver_link", ...none, personId: ids.personId },
+      {
+        purpose: "waiver_link",
+        ...none,
+        waiverRecordId: ids.waiverRecordId,
+        personId: ids.personId,
+      },
+      {
+        purpose: "courtesy_email_unsubscribe",
+        ...none,
+        personId: ids.personId,
+        waiverRecordId: ids.waiverRecordId,
+      },
       // Only a purpose a use spends is ever marked used.
       {
         purpose: "courtesy_email_unsubscribe",

@@ -1118,7 +1118,8 @@ export async function staleReadinessBookingForResend(
  * be using — the one its emails carry?
  *
  * The guard that stops a *dead* URL driving a delivery on the live one. Same
- * shape and same argument as `hasLiveWaiverRequest` on the waiver side.
+ * shape and same argument as `hasLivePersonWaiverRequest` on the waiver side;
+ * a seat's dead waiver link asks this one too (`emailFreshWaiverLink`).
  *
  * **Delivered only** (security review of #2711, finding 1). The browser's
  * undelivered link is the booking form's, not the diver's inbox: a booking

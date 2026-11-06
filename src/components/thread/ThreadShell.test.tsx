@@ -33,7 +33,7 @@ const THREAD_PAGES = [
   "app/(token)/recap/[token]/page.tsx",
   "app/(token)/claim/[token]/page.tsx",
   "app/(token)/ready/[token]/forms/page.tsx",
-  "app/(token)/waivers/[token]/doctor/page.tsx",
+  "app/(token)/ready/[token]/waiver/doctor/page.tsx",
 ] as const;
 
 const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "loading.tsx"));
@@ -51,13 +51,13 @@ const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "load
  */
 /**
  * Pages whose shell lives in an extracted module: the readiness masthead, and
- * the waiver form and doctor's page that both the waiver link and the diver's
- * own thread draw (issue #2743).
+ * the waiver form the waiver link and the diver's own thread both draw, and
+ * the doctor's page on the thread (issue #2743).
  */
 const SHELL_OWNER: Record<string, string> = {
   "app/(token)/ready/[token]/page.tsx": "app/(token)/ready/[token]/_components/ReadyMasthead.tsx",
   "app/(token)/waivers/[token]/page.tsx": "app/(token)/waivers/[token]/WaiverSigningForm.tsx",
-  "app/(token)/waivers/[token]/doctor/page.tsx":
+  "app/(token)/ready/[token]/waiver/doctor/page.tsx":
     "app/(token)/waivers/[token]/doctor/DoctorReferralBody.tsx",
 };
 

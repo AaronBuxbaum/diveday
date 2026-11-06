@@ -3,10 +3,10 @@
  * guardian's co-signature, emergency contacts, and completing the release.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, getTableColumns, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, isNotNull, isNull } from "drizzle-orm";
+import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { readEmergencyContact } from "@/lib/contact";
-import { isCounterWaiverToken, openCounterWaiverToken } from "@/lib/counter-waiver-token";
 import {
   type GuardianRelationship,
   guardianSignatureRequired,
@@ -26,10 +26,11 @@ import { buildShopAnswers, draftShopAnswersFrom } from "@/lib/waiver-questions";
 import { hashWaiverToken } from "@/lib/waiver-tokens";
 import { isUnresolvedMedicalHold, needsMedicalReview } from "@/lib/waivers";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
+import { spendCapability, type VerifiedCapability, verifyCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
-import { bookings, people, waiverRecords } from "./schema";
+import { bookings, capabilities, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 import { seatMinorDeclared } from "./waiver-signing";
 import { doctorPageOpen } from "./waivers-medical";
@@ -56,11 +57,31 @@ export type TokenWaiverState =
   | { state: "completed"; record: typeof waiverRecords.$inferSelect };
 
 /**
- * **Which record a signing request is about.** Either the waiver link's own
- * bearer token (a counter token is opened to the one inside it), or the record
- * the diver's readiness link resolved for its own seat (`ThreadWaiverKey`).
+ * **Which record a signing request is about.** The waiver link's own bearer
+ * token (a release with no seat: the `/waivers/<token>` door refuses a seat's,
+ * `waiverLinkDoor`), the record the diver's readiness link resolved for its own
+ * seat (`ThreadWaiverKey`), or the release a counter tablet's link names
+ * (`CounterWaiverKey`).
  */
-export type WaiverKey = string | ThreadWaiverKey;
+export type WaiverKey = string | ThreadWaiverKey | CounterWaiverKey;
+
+/**
+ * **A seat's release, signed on the shop's counter tablet** (issue #2743): the
+ * one record a live `waiver_link` capability names, while it is still that
+ * seat's current release. Only `waiverLinkDoor` makes one, from the link
+ * itself; the link is re-checked on every read (revoked, expired, or spent on
+ * a release still unsigned opens nothing) and spent in the transaction that
+ * records the signature (`completeWaiver`). It carries no readiness authority:
+ * the tablet never holds the diver's thread link.
+ */
+export type CounterWaiverKey = {
+  readonly kind: "counter";
+  readonly shopId: string;
+  readonly bookingId: string;
+  readonly recordId: string;
+  /** The counter link itself, spent by the signature. */
+  readonly token: string;
+};
 
 /**
  * **The release signed in the diver's own thread** (issue #2743): the seat's
@@ -85,6 +106,9 @@ export type ThreadWaiverKey = {
  * module made (security review of #2743, F1).
  */
 const issuedThreadKeys = new WeakSet<ThreadWaiverKey>();
+
+/** Every counter key `waiverLinkDoor` handed out, by identity, for the same reason. */
+const issuedCounterKeys = new WeakSet<CounterWaiverKey>();
 
 /**
  * The seat's own current release, for a caller holding a verified readiness
@@ -182,44 +206,149 @@ export async function threadWaiverAwaitsPhysician(
  */
 async function currentRecordForToken(db: DbExecutor, key: WaiverKey, now = nowDate()) {
   if (typeof key !== "string") {
+    if (key.kind === "counter") {
+      if (!issuedCounterKeys.has(key)) return null;
+      const link = await standingCounterLink(db, key, now);
+      if (!link) return null;
+      const record = await seatRecord(db, key);
+      // A spent link is the receipt of the signature that spent it, never a
+      // second form.
+      if (!record || (link.usedAt && record.status === "pending")) return null;
+      return record;
+    }
     if (!issuedThreadKeys.has(key)) return null;
-    // Re-read inside the lock too: the seat must still be this person's and
-    // not cancelled, as it was when the key was made.
-    const [record] = await db
-      .select(getTableColumns(waiverRecords))
-      .from(waiverRecords)
-      .innerJoin(
-        bookings,
-        and(
-          eq(bookings.id, waiverRecords.bookingId),
-          eq(bookings.shopId, waiverRecords.shopId),
-          eq(bookings.personId, waiverRecords.personId),
-        ),
-      )
-      .where(
-        and(
-          eq(waiverRecords.id, key.recordId),
-          eq(waiverRecords.shopId, key.shopId),
-          eq(waiverRecords.bookingId, key.bookingId),
-          isNull(waiverRecords.supersededAt),
-          seatNotCancelled,
-          isNull(bookings.identityUnconfirmedAt),
-        ),
-      )
-      .limit(1);
-    return record ?? null;
+    return seatRecord(db, key);
   }
   if (key.length === 0) return null;
-  const raw = isCounterWaiverToken(key) ? openCounterWaiverToken(key, now) : key;
-  if (!raw) return null;
   const [record] = await db
     .select()
     .from(waiverRecords)
     .where(
-      and(eq(waiverRecords.tokenHash, hashWaiverToken(raw)), isNull(waiverRecords.supersededAt)),
+      and(eq(waiverRecords.tokenHash, hashWaiverToken(key)), isNull(waiverRecords.supersededAt)),
     )
     .limit(1);
   return record ?? null;
+}
+
+/**
+ * The record a seat key pins, re-read (inside the lock too): the seat must
+ * still be this person's, not cancelled and not held, as it was when the key
+ * was made.
+ */
+async function seatRecord(
+  db: DbExecutor,
+  key: { shopId: string; bookingId: string; recordId: string },
+) {
+  const [record] = await db
+    .select(getTableColumns(waiverRecords))
+    .from(waiverRecords)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.id, waiverRecords.bookingId),
+        eq(bookings.shopId, waiverRecords.shopId),
+        eq(bookings.personId, waiverRecords.personId),
+      ),
+    )
+    .where(
+      and(
+        eq(waiverRecords.id, key.recordId),
+        eq(waiverRecords.shopId, key.shopId),
+        eq(waiverRecords.bookingId, key.bookingId),
+        isNull(waiverRecords.supersededAt),
+        seatNotCancelled,
+        isNull(bookings.identityUnconfirmedAt),
+      ),
+    )
+    .limit(1);
+  return record ?? null;
+}
+
+/**
+ * The counter link behind a key while it still stands: this purpose, this
+ * release, this shop, not revoked and not expired. A spent one stands too
+ * (`usedAt`), for the receipt; the caller decides what a spent link opens.
+ */
+async function standingCounterLink(db: DbExecutor, key: CounterWaiverKey, now: Date) {
+  const [link] = await db
+    .select({ usedAt: capabilities.usedAt })
+    .from(capabilities)
+    .where(
+      and(
+        eq(capabilities.purpose, "waiver_link"),
+        eq(capabilities.tokenHash, hashBearerToken(key.token)),
+        eq(capabilities.shopId, key.shopId),
+        eq(capabilities.waiverRecordId, key.recordId),
+        isNull(capabilities.revokedAt),
+        gt(capabilities.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  return link ?? null;
+}
+
+/**
+ * **What `/waivers/<token>` opens** (issue #2743, ADR
+ * 20261105-waiver-folds-into-the-thread). A counter tablet's link
+ * (`waiver_link`) opens its seat's release while the link stands and the
+ * release is still that seat's current one; a waiver link opens its release
+ * only when the release has no seat. A seat's own waiver link opens nothing:
+ * that release is signed in its holder's thread, or at the counter. Null for
+ * those and for a dead counter link; a token that names nothing at all comes
+ * back as itself, for the page's dead-link card. Every action of the page and
+ * of its doctor's page goes through this, never a raw token.
+ */
+export async function waiverLinkDoor(
+  db: DbExecutor,
+  token: string,
+  now: Date = nowDate(),
+): Promise<{ door: "counter"; key: CounterWaiverKey } | { door: "release"; key: string } | null> {
+  if (token.length === 0) return null;
+  const link = await verifyCapability(db, { purpose: "waiver_link", token });
+  if (link) {
+    const key = await counterWaiverKey(db, link, token, now);
+    return key ? { door: "counter", key } : null;
+  }
+  const [record] = await db
+    .select({ bookingId: waiverRecords.bookingId })
+    .from(waiverRecords)
+    .where(eq(waiverRecords.tokenHash, hashWaiverToken(token)))
+    .limit(1);
+  if (record?.bookingId) return null;
+  return { door: "release", key: token };
+}
+
+async function counterWaiverKey(
+  db: DbExecutor,
+  link: VerifiedCapability<"waiver_link">,
+  token: string,
+  now: Date,
+): Promise<CounterWaiverKey | null> {
+  if (link.revokedAt || !link.expiresAt || link.expiresAt <= now) return null;
+  const [record] = await db
+    .select({
+      id: waiverRecords.id,
+      bookingId: waiverRecords.bookingId,
+      status: waiverRecords.status,
+    })
+    .from(waiverRecords)
+    .where(and(eq(waiverRecords.id, link.subjectId), eq(waiverRecords.shopId, link.shopId)))
+    .limit(1);
+  if (!record?.bookingId) return null;
+  if (link.usedAt && record.status === "pending") return null;
+  // Still the seat's current release, for the person who holds it now, on
+  // the shop's current terms: the thread's own rule.
+  const current = await threadWaiverKey(db, { shopId: link.shopId, bookingId: record.bookingId });
+  if (current?.recordId !== record.id) return null;
+  const key: CounterWaiverKey = Object.freeze({
+    kind: "counter",
+    shopId: link.shopId,
+    bookingId: record.bookingId,
+    recordId: record.id,
+    token,
+  });
+  issuedCounterKeys.add(key);
+  return key;
 }
 
 /** A bearer token reveals only its own record and is rejected on expiry/supersession. */
@@ -262,14 +391,16 @@ export async function staleWaiverRecordForToken(
   token: string,
   now: Date = nowDate(),
 ): Promise<typeof waiverRecords.$inferSelect | null> {
-  const raw = isCounterWaiverToken(token) ? openCounterWaiverToken(token, now) : token;
-  if (!raw) return null;
+  if (token.length === 0) return null;
   const [record] = await db
     .select()
     .from(waiverRecords)
-    .where(eq(waiverRecords.tokenHash, hashWaiverToken(raw)))
+    .where(eq(waiverRecords.tokenHash, hashWaiverToken(token)))
     .limit(1);
   if (record?.status !== "pending") return null;
+  // A seat's waiver link is dead by decision (`waiverLinkDoor`), whatever its
+  // own expiry says: its owner's way on is their thread link, sent fresh.
+  if (record.bookingId) return record;
   if (!record.supersededAt && record.expiresAt > now) return null;
   return record;
 }
@@ -853,6 +984,21 @@ async function completeWaiverLocked(
   if (atWrite.state === "held") return { ok: false, reason: "identity_unconfirmed" };
   if (atWrite.state === "completed")
     return { ok: true, status: completedStatus(atWrite.record.status), idempotent: true };
+  // A counter link is spent by the signature it carries, in this transaction:
+  // a refusal below rolls the spend back, and a link spent, revoked or expired
+  // since the read above signs nothing.
+  if (typeof token !== "string" && token.kind === "counter") {
+    const spent = await spendCapability(db, {
+      purpose: "waiver_link",
+      token: token.token,
+      now: input.now ?? nowDate(),
+      alsoRequire: and(
+        eq(capabilities.shopId, token.shopId),
+        eq(capabilities.waiverRecordId, token.recordId),
+      ),
+    });
+    if (!spent) return { ok: false, reason: "unavailable" };
+  }
   const [saved] = await db
     .update(waiverRecords)
     .set({

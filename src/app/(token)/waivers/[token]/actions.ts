@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { emailFreshWaiverLink, type WaiverLinkRescue } from "@/db/waiver-issue";
-import { staleWaiverRecordForToken } from "@/db/waivers";
+import { staleWaiverRecordForToken, waiverLinkDoor } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -63,17 +63,24 @@ export async function emailFreshWaiverLinkAction(token: string) {
   redirect(`/waivers/${token}?sent=${RESCUE_PARAM[outcome]}`);
 }
 
-/** The waiver link's own door: the per-IP waiver bucket, then the token is the authority. */
+/**
+ * The waiver link's own door: the per-IP waiver bucket, then what the token
+ * opens (`waiverLinkDoor`): a counter tablet's link, or a release with no seat.
+ * A seat's own waiver link signs nothing (issue #2743).
+ */
 async function tokenDoor(token: unknown): Promise<SigningDoor> {
   // The bound argument is whatever the browser posts: only a string is a link.
   if (typeof token !== "string") redirect("/");
+  const path = `/waivers/${token}`;
   const ip = await clientIp();
   if (
     !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction)).allowed
   ) {
-    redirect(`/waivers/${token}?error=rate`);
+    redirect(`${path}?error=rate`);
   }
-  return { key: token, path: `/waivers/${token}` };
+  const door = await waiverLinkDoor(await getDb(), token);
+  if (!door) redirect(`${path}?error=unavailable`);
+  return { key: door.key, path };
 }
 
 export async function saveWaiverDraftAction(token: string, formData: FormData) {

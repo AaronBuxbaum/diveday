@@ -21,11 +21,11 @@ export const instant = true;
 
 /**
  * **Take this to your doctor**, from the diver's own thread (issue #2743): the
- * waiver link's doctor's page (`/waivers/[token]/doctor`), for a release
- * signed as the thread's Sign step. The readiness link is the authority, the
- * record is the seat's own (`threadWaiverKey`), and it opens on exactly the
- * gate the waiver link's does (`getDoctorReferral`); anything else goes back
- * to the release's receipt, which says each state honestly.
+ * one doctor's page a seat's release has, since a seat's waiver link opens
+ * nothing. The readiness link is the authority, the record is the seat's own
+ * (`threadWaiverKey`), and it opens only while the release waits on a
+ * physician and its departure has not ended (`getDoctorReferral`); anything
+ * else goes back to the release's receipt, which says each state honestly.
  */
 export default async function ThreadDoctorReferralPage({
   params,
