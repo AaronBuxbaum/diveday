@@ -116,6 +116,7 @@ export const STAFF_ROUTES = {
   "trips/[id]/log": {},
   "trips/[id]/manifest": { face: true },
   "trips/[id]/party/[leadId]/waivers": {},
+  "trips/[id]/party/[leadId]/waivers/[bookingId]/doctor": {},
   "trips/[id]/prep": { face: true },
   waivers: { parent: SETTINGS },
   "waivers/print": {},
