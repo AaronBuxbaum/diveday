@@ -1187,7 +1187,7 @@
       "back": "Volver a tu exención",
       "formHeading": "El formulario del médico",
       "formBody": "Lleva el formulario oficial completo <form>{title}</form> ({product}, versión {version}). Tu médico completa y firma la página {page}.",
-      "formMinor": "{name} es menor de 18 años, así que un padre, una madre o un tutor legal también firma el cuestionario.",
+      "formMinor": "{name} es menor de edad, así que un padre, una madre o un tutor legal también firma el cuestionario del participante.",
       "formLink": "Abrir el PDF médico oficial",
       "nameLabel": "Nombre del participante",
       "answersHeading": "Tus respuestas para el médico",
