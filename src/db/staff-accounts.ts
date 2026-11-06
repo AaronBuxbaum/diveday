@@ -1,12 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
+import { personPurposesThatMerge } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import { crewPublicNameToStore } from "@/lib/crew-public-name";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
 import { withdrawAccountTokens } from "./account-tokens";
+import { revokePersonCapabilities } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { lockDemoShopIdentityChanges } from "./demo-account-guard";
 import { releaseHelpRequestsOfPerson } from "./help-requests";
@@ -568,6 +570,14 @@ export async function removeStaffMember(
     if (await isLastOwner(tx, input.shopId, input.personId)) {
       return { ok: false, reason: "last_owner" };
     }
+    // Serialise with `issueCalendarFeed`, which locks this row before it reads roles: a rotation
+    // in flight would otherwise mint a live feed after the revoke below has run (issue #3996).
+    await tx
+      .select({ id: people.id })
+      .from(people)
+      // diveday:allow-deleted-people: a lock on the leaver's own row, whatever its state.
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .for("no key update");
     // A leaver cannot be the crew member a diver was promised help from.
     await releaseHelpRequestsOfPerson(tx, { shopId: input.shopId, personId: input.personId });
     await tx
@@ -603,6 +613,16 @@ export async function removeStaffMember(
           eq(pushSubscriptions.personId, input.personId),
         ),
       );
+    // And their calendar feeds, which are keyed by the person and so outlive the account: a
+    // staff credential is exactly a `person` purpose a diver merge refuses
+    // (`personPurposesThatMerge("refuse")`). Inside this transaction, not after it: a throw
+    // between the commit and a separate revoke left the links live for an Undo to restore
+    // (issue #3996). Restoring the roles does not bring a feed back; they subscribe afresh.
+    await revokePersonCapabilities(tx, {
+      purposes: personPurposesThatMerge("refuse"),
+      shopId: input.shopId,
+      personId: input.personId,
+    });
     // And withdraw their agreement to be named to divers (issue #1181), for the
     // same reason and one step further: a removed person has no login, so there
     // is no path left by which *they* can withdraw it. Leaving the stamp makes

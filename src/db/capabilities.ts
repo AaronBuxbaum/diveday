@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNotNull, isNull, ne, notInArray, or, type SQL } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, ne, or, type SQL } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import {
   CAPABILITY_POLICY,
@@ -435,8 +435,7 @@ export async function livePersonCapabilities<P extends CapabilityPurpose>(
 
 /**
  * Turns off the live links of these purposes in one shop (`revoked_at`),
- * without minting replacements: one person's (`personId`), or everybody's but
- * the people named in `keepPersonIds`. A revoked row stays, so the fact that it
+ * without minting replacements, for one person (`personId`). A revoked row stays, so the fact that it
  * was turned off stays on record. A `person` purpose's rows only.
  */
 export async function revokePersonCapabilities(
@@ -444,8 +443,7 @@ export async function revokePersonCapabilities(
   input: {
     purposes: readonly CapabilityPurpose[];
     shopId: string;
-    personId?: string;
-    keepPersonIds?: readonly string[];
+    personId: string;
     now?: Date;
   },
 ): Promise<void> {
@@ -461,10 +459,7 @@ export async function revokePersonCapabilities(
         inArray(capabilities.purpose, [...input.purposes]),
         eq(capabilities.shopId, input.shopId),
         isNull(capabilities.revokedAt),
-        input.personId ? eq(capabilities.personId, input.personId) : undefined,
-        input.keepPersonIds && input.keepPersonIds.length > 0
-          ? notInArray(capabilities.personId, [...input.keepPersonIds])
-          : undefined,
+        eq(capabilities.personId, input.personId),
       ),
     );
 }
