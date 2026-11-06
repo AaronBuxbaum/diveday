@@ -119,7 +119,11 @@ export function passCodePayload(bookingId: string): string {
  * lives.
  */
 export function storefrontAddress(shopSlug: string, origin: string | null): string {
-  const path = publicSchedulePath(shopSlug);
+  return paperAddress(publicSchedulePath(shopSlug), origin);
+}
+
+/** Any public page's address as a sheet prints it, by the same rule. */
+export function paperAddress(path: string, origin: string | null): string {
   if (!origin) return path;
   return `${origin.replace(/^https?:\/\//, "").replace(/\/+$/, "")}${path}`;
 }

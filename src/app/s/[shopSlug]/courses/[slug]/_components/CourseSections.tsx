@@ -88,17 +88,9 @@ export function CourseHero({
   return (
     // Facts lead the reading order; the retained photo supports them at a
     // width its source can supply (public visual audit P1, issue #3140).
-    <SectionCard
-      as="div"
-      padding="none"
-      className="overflow-hidden print:overflow-visible print:rounded-none print:border-0"
-    >
-      <div
-        className={
-          course.heroImageUrl ? "md:grid md:grid-cols-2 md:items-start print:block" : undefined
-        }
-      >
-        <div className="min-w-0 p-6 sm:p-8 print:p-0">
+    <SectionCard as="div" padding="none" className="overflow-hidden">
+      <div className={course.heroImageUrl ? "md:grid md:grid-cols-2 md:items-start" : undefined}>
+        <div className="min-w-0 p-6 sm:p-8">
           <ShopPageHeader
             eyebrow={t("course.agencyCourse", {
               // The bare code, deliberately: this eyebrow spent a while expanding
@@ -155,14 +147,14 @@ export function CourseHero({
               course.heroImageAlt,
               t("course.photoAltFallback", { course: course.title, n: 1 }),
             )}
-            className="h-44 w-full sm:h-56 md:h-80 print:hidden"
+            className="h-44 w-full sm:h-56 md:h-80"
             sizes="(min-width: 1152px) 552px, (min-width: 768px) 48vw, 100vw"
             priority
           />
         ) : null}
       </div>
       {admission || nextDate ? (
-        <div className="px-6 pb-6 sm:px-8 sm:pb-8 print:px-0 print:pb-0">
+        <div className="px-6 pb-6 sm:px-8 sm:pb-8">
           {admission}
           {nextDate ? (
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
@@ -207,7 +199,7 @@ export function CourseAdmission({
   t: DiverTranslator;
 }) {
   return (
-    <section aria-labelledby="who-can-enroll" className="mt-8 max-w-2xl print:mt-4">
+    <section aria-labelledby="who-can-enroll" className="mt-8 max-w-2xl">
       <h2 id="who-can-enroll" className={groupLabelClass()}>
         {t("course.whoCanEnroll")}
       </h2>
@@ -240,11 +232,7 @@ export function CourseAdmission({
 export function CourseOverview({ overview, t }: { overview: string | null; t: DiverTranslator }) {
   if (!overview?.trim()) return null;
   return (
-    <section
-      id="about"
-      aria-labelledby="about-heading"
-      className="mt-12 max-w-2xl scroll-mt-8 print:mt-5"
-    >
+    <section id="about" aria-labelledby="about-heading" className="mt-12 max-w-2xl scroll-mt-8">
       <h2 id="about-heading" className={LEAD_TITLE_CLASS}>
         {t("course.aboutHeading")}
       </h2>
@@ -287,7 +275,7 @@ export function CourseSchedule({
 }) {
   if (days.length === 0 && !groupSize) return null;
   return (
-    <section id="how-it-runs" className="mt-14 scroll-mt-8 print:mt-5">
+    <section id="how-it-runs" className="mt-14 scroll-mt-8">
       <h2 className={LEAD_TITLE_CLASS}>{t("course.howItRunsHeading")}</h2>
       {groupSize ? (
         <dl className="mt-4">
@@ -313,7 +301,7 @@ export function CourseSchedule({
                     At `top-1.5` it rode 2px high (K-562). */}
                   <span
                     aria-hidden="true"
-                    className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface print:border print:border-foreground"
+                    className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
                   />
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <h3 className={ITEM_TITLE_CLASS}>{day.title}</h3>
@@ -347,7 +335,7 @@ export function CourseIncludes({
 }) {
   if (includes.length === 0 && excludes.length === 0) return null;
   return (
-    <section id="included" className="mt-14 scroll-mt-8 print:mt-5 print:break-inside-avoid">
+    <section id="included" className="mt-14 scroll-mt-8">
       <h2 className={LEAD_TITLE_CLASS}>{t("course.feeCovers")}</h2>
       {/* Two quiet columns, no boxes — the ✓ and – glyphs carry the split, and
           the muted ink on the right keeps "not included" from competing with
@@ -396,7 +384,7 @@ export function CourseGallery({
 }) {
   if (photos.length === 0) return null;
   return (
-    <section className="mt-12 print:hidden">
+    <section className="mt-12">
       <h2 className="sr-only">{t("course.galleryHeading", { course: title })}</h2>
       {/* One scroll-snap row (visual review 2026-10-24, B34): on a phone the
           tiles run past the edge and the row's own padding lets the last one
@@ -428,7 +416,7 @@ export function CourseGallery({
 }
 
 /** What a session row reads off the schedule. */
-type CourseSession = {
+export type CourseSession = {
   id: string;
   title: string;
   startsAt: Date;
@@ -442,7 +430,11 @@ type CourseSession = {
 };
 
 /** Instructor and site text stay within the row's single link (visual review 2026-10-24, B42). */
-function sessionLead(session: CourseSession, locale: string, t: DiverTranslator): string | null {
+export function sessionLead(
+  session: CourseSession,
+  locale: string,
+  t: DiverTranslator,
+): string | null {
   const names = session.instructors ?? [];
   const parts = [
     names.length > 0
@@ -537,10 +529,10 @@ export function CourseSessions({
   const later = sessions.filter((session) => session !== next);
   const nextIsSoonest = next === sessions[0];
   return (
-    <section id="dates" className="mt-14 scroll-mt-8 print:mt-5">
+    <section id="dates" className="mt-14 scroll-mt-8">
       {/* The panel rung, like the hero panel above it: this was `rounded-3xl`,
           24px, a corner the ladder does not have (K-378). */}
-      <div className="rounded-panel border border-primary/15 bg-primary/5 p-6 sm:p-8 print:rounded-none print:border-x-0 print:border-b-0 print:border-border print:px-0 print:py-3">
+      <div className="rounded-panel border border-primary/15 bg-primary/5 p-6 sm:p-8">
         <h2 className={LEAD_TITLE_CLASS}>{t("course.datesHeading")}</h2>
         {!next ? (
           <p className="mt-4 max-w-2xl text-muted">
@@ -583,10 +575,7 @@ export function CourseSessions({
                   </div>
                   <Link
                     href={publicTripPath(shopSlug, next.id)}
-                    className={buttonClass({
-                      variant: full ? "secondary" : "primary",
-                      className: "print:hidden",
-                    })}
+                    className={buttonClass({ variant: full ? "secondary" : "primary" })}
                   >
                     {full ? fullLabel : t("course.bookThisDate")}
                   </Link>
@@ -619,13 +608,7 @@ export function CourseSessions({
                               <span className="mt-0.5 block text-sm text-muted">{lead}</span>
                             ) : null}
                           </span>
-                          <span
-                            className={buttonClass({
-                              variant: "secondary",
-                              size: "sm",
-                              className: "print:hidden",
-                            })}
-                          >
+                          <span className={buttonClass({ variant: "secondary", size: "sm" })}>
                             {full ? fullLabel : t("course.bookThisDate")}
                           </span>
                         </Link>
@@ -645,16 +628,16 @@ export function CourseSessions({
 export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator }) {
   if (faqs.length === 0) return null;
   return (
-    <section id="faqs" className="mt-14 max-w-3xl scroll-mt-8 print:mt-5">
+    <section id="faqs" className="mt-14 max-w-3xl scroll-mt-8">
       <h2 className={LEAD_TITLE_CLASS}>{t("course.faqsHeading")}</h2>
       {/* Quiet disclosures on hairlines — a question list is a list, not a
           stack of cards; the borders that survive are the ones that separate.
           The chevron is the diver pages' one disclosure face, turning over
           open (visual review 2026-10-24, B35); it was a "+" that turned to
           an "×", which read as "add" and "remove". */}
-      <div className="mt-4 divide-y divide-border border-y border-border print:hidden">
+      <div className="mt-4 divide-y divide-border border-y border-border">
         {faqs.map((faq) => (
-          <details key={faq.question} className="group print:hidden">
+          <details key={faq.question} className="group">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 font-medium [&::-webkit-details-marker]:hidden">
               {faq.question}
               <DisclosureCaret
@@ -664,16 +647,6 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
             </summary>
             <p className="pb-4 leading-relaxed text-muted">{faq.answer}</p>
           </details>
-        ))}
-      </div>
-      {/* Closed native details omit their answers from a PDF. Paper gets
-          complete answers while the screen keeps its disclosure interaction. */}
-      <div className="mt-4 hidden divide-y divide-border border-y border-border print:block">
-        {faqs.map((faq) => (
-          <div key={faq.question} className="py-3 print:break-inside-avoid" data-print-faq>
-            <h3 className="font-medium">{faq.question}</h3>
-            <p className="mt-2 leading-relaxed text-muted">{faq.answer}</p>
-          </div>
         ))}
       </div>
     </section>

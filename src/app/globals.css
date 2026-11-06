@@ -1016,7 +1016,8 @@ select:not([multiple]):not([size]):dir(rtl) {
  * (`RecordPaper.tsx`), reached by its Print and by the browser's own, and
  * the readiness thread before the dive prints its day sheet
  * (`ReadyDaySheet.tsx`), drawn print-only under the screen, as the public
- * trip page and its embed print the departure's (`TripPaperSheet.tsx`). A
+ * trip, course and schedule pages, framed or not, print theirs
+ * (`PublicPaperSheet.tsx`). A
  * sheet is the shop's paper rather than a screen, and three things make it so:
  *
  * 1. **It wears its own face, on screen and on paper alike.** Inside
@@ -1164,11 +1165,14 @@ select:not([multiple]):not([size]):dir(rtl) {
   color: var(--sheet-muted);
 }
 
-/* The fold line: the print date and the storefront's address, on every sheet. */
+/* The fold line: the print date and the storefront's address, on every sheet.
+   Two halves too long for one line stack rather than wrap beside each other,
+   so a long address is never read interleaved with the date. */
 .paper-sheet-fold {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.125rem 1rem;
   border-top: 1px solid var(--sheet-rule);
   padding: 0.5rem 1.25rem;
   color: var(--sheet-muted);

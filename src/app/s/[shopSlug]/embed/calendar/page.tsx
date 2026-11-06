@@ -10,7 +10,7 @@ import { nowDate } from "@/lib/clock";
 import { toShopCurrency } from "@/lib/money";
 import { EmbedChromeCollapse } from "../../_components/EmbedChromeCollapse";
 import { EmbedFooter } from "../../_components/EmbedFooter";
-import { PublicDocumentMain } from "../../_components/PublicDocumentMain";
+import { SchedulePaperSheet } from "../../_components/SchedulePaperSheet";
 import { readSchedulePage } from "../../_components/schedule-reads";
 import { weekLedgerRows } from "../../_components/schedule-rows";
 import { scheduleDayWords } from "../../_components/schedule-view";
@@ -112,12 +112,18 @@ export default async function EmbeddedSchedulePage({
   return (
     <>
       <EmbedChromeCollapse />
-      <PublicDocumentMain
-        kind="schedule"
-        shopName={shop.name}
-        title={t("schedule.title")}
-        className="w-full flex-1 px-3 py-4 print:[&_.text-primary]:text-foreground"
-      >
+      <main className="w-full flex-1 px-3 py-4">
+        {/* On paper the frame is the schedule's sheet alone (#2745). */}
+        <SchedulePaperSheet
+          shop={shop}
+          shopSlug={shopSlug}
+          rows={rows}
+          lead={[zoneNote]}
+          empty={t("schedule.noTrips")}
+          locale={locale}
+          t={t}
+          now={now}
+        />
         <div id="schedule">
           {rows.length > 0 ? (
             <WeekLedger rows={rows} listLabel={t("schedule.tripListLabel")} stickyTop="top-0" />
@@ -139,7 +145,7 @@ export default async function EmbeddedSchedulePage({
           zoneNote={zoneNote}
           t={t}
         />
-      </PublicDocumentMain>
+      </main>
     </>
   );
 }

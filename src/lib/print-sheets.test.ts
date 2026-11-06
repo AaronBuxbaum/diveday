@@ -4,6 +4,7 @@ import {
   capabilityPagePrintRule,
   PAPER_PASS_PAPER,
   PRINT_SHEET_BOX_MM,
+  paperAddress,
   paperPassPath,
   passCodePayload,
   printSheetPageRule,
@@ -63,6 +64,13 @@ describe("the fold line's address", () => {
     // A sheet saying `https://undefined/s/blue-mantis` is worse than one saying
     // where the page lives and nothing about the host.
     expect(storefrontAddress("blue-mantis", null)).toBe("/s/blue-mantis");
+  });
+
+  it("prints any diver page's address by the same rule", () => {
+    expect(paperAddress("/s/blue-mantis/courses/owd", "https://dive.day/")).toBe(
+      "dive.day/s/blue-mantis/courses/owd",
+    );
+    expect(paperAddress("/s/blue-mantis/courses/owd", null)).toBe("/s/blue-mantis/courses/owd");
   });
 });
 
