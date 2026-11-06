@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import {
   livePersonCapabilities,
   mintCapability,
@@ -232,34 +232,6 @@ export async function revokeCalendarFeeds(
     purposes: input.scope ? [FEED_PURPOSE[input.scope]] : FEED_PURPOSES,
     shopId: input.shopId,
     personId: input.personId,
-    now: input.now,
-  });
-}
-
-/**
- * Revokes every live feed held by people who no longer have any staff role at
- * the shop. `verifyCalendarFeed` already fails closed for them on the next
- * fetch; this is the cleanup that stops the rows accumulating.
- */
-export async function revokeFeedsForFormerStaff(
-  db: AppDb,
-  input: { shopId: string; now?: Date },
-): Promise<void> {
-  const staff = await db
-    .selectDistinct({ personId: people.id })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(
-      and(
-        eq(people.shopId, input.shopId),
-        inArray(personRoles.role, [...STAFF_ROLES]),
-        isNull(people.deletedAt),
-      ),
-    );
-  await revokePersonCapabilities(db, {
-    purposes: FEED_PURPOSES,
-    shopId: input.shopId,
-    keepPersonIds: staff.map((row) => row.personId),
     now: input.now,
   });
 }

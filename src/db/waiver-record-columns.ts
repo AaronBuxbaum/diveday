@@ -1,5 +1,6 @@
 import { getTableColumns } from "drizzle-orm";
 import {
+  type MedicalAnswerFields,
   physicianClearanceSealed,
   WAIVER_SEALED_FIELDS,
   type WaiverSealedField,
@@ -77,13 +78,21 @@ export const WAIVER_BOARDING_COLUMNS = {
  * so the referral holds as unanswered. Checked here, at read time, because the
  * nightly pass reaches a row every few nights at most.
  */
-export function withTrustedClearance(
-  row: WaiverStateRecord & { medicalAnswerSeal: string | null },
-): WaiverStateRecord {
-  const { medicalAnswerSeal, ...record } = row;
-  if (record.medicalClearedAt === null) return record;
-  if (physicianClearanceSealed({ ...record, medicalAnswerSeal })) return record;
-  return { ...record, medicalClearedAt: null, medicalClearedByPersonId: null };
+export function withTrustedClearance<R extends WithSeal>(row: R): Omit<R, "medicalAnswerSeal"> {
+  const { medicalAnswerSeal: _seal, ...record } = withVerifiedClearance(row);
+  return record;
+}
+
+type WithSeal = MedicalAnswerFields & { medicalAnswerSeal: string | null };
+
+/**
+ * {@link withTrustedClearance} for a reader that keeps the whole row, seal included (the token
+ * page's completed record, the signature log, the import's hold check): the same rule, a stamp
+ * whose seal is missing or wrong taken off, and nothing else touched.
+ */
+export function withVerifiedClearance<R extends WithSeal>(row: R): R {
+  if (row.medicalClearedAt === null || physicianClearanceSealed(row)) return row;
+  return { ...row, medicalClearedAt: null, medicalClearedByPersonId: null };
 }
 
 /**

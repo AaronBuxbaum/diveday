@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { DownloadAcknowledgmentLink } from "@/components/DownloadAcknowledgmentLink";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { getDiverRecord } from "@/db/diver-record";
@@ -20,12 +19,14 @@ import { BookActivity } from "./_components/BookActivity";
 import { DiverFile } from "./_components/DiverFile";
 import { DiverHeader } from "./_components/DiverHeader";
 import { DiverRecordFoot } from "./_components/DiverRecordFoot";
+import { DiverRecordMenu } from "./_components/DiverRecordMenu";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
 import { FoundItemLine } from "./_components/FoundItemLine";
-import { NoticeBanner } from "./_components/NoticeBanner";
+import { DiverFormStatus, NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { bookingPageNumber, DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
+import { deletePersonAction } from "./record-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -206,15 +207,36 @@ export default async function DiverDetailPage({
         locale={locale}
         packages={packages}
         status={cleared ? undefined : detailsStatus}
-        download={
-          canExport ? (
-            <DownloadAcknowledgmentLink
-              href={`/shop/${shopSlug}/divers/${personId}/export`}
-              idleLabel={t("divers.export.downloadButton.idle")}
-              acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
-              variant="secondary"
+        menu={
+          <>
+            <DiverRecordMenu
+              label={t("divers.record.menuLabel")}
+              download={
+                canExport
+                  ? {
+                      href: `/shop/${shopSlug}/divers/${personId}/export`,
+                      label: t("divers.export.downloadButton.idle"),
+                    }
+                  : undefined
+              }
+              remove={
+                canDelete && !removed
+                  ? {
+                      action: deletePersonAction.bind(null, shopSlug, personId),
+                      label: t("divers.remove.removeDiver"),
+                      pendingLabel: t("words.busy.deleting"),
+                      confirmMessage: [
+                        t("divers.remove.consequence", { name: diver.person.fullName }),
+                        diver.holdsStaffRole ? t("divers.remove.staffWarning") : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" "),
+                    }
+                  : undefined
+              }
             />
-          ) : null
+            <DiverFormStatus status={noticeForForm(diverNotice, "remove")} />
+          </>
         }
         moment={
           cleared ? (
@@ -325,7 +347,6 @@ export default async function DiverDetailPage({
         mergeCandidates={canMerge && !removed ? mergeCandidates : []}
         guardianEmails={canErase ? guardianEmails : null}
         canErase={canErase}
-        canDelete={canDelete}
       />
     </StaffPage>
   );

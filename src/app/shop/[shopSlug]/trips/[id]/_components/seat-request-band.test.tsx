@@ -142,7 +142,7 @@ describe("addBandFor", () => {
   it("keeps the page when the request is gone, and says so in place of the card", async () => {
     vi.mocked(readSeatRequest).mockResolvedValue("gone");
     const band = await addBandFor(db, where, { add: "1", request: ROW.id });
-    expect(band).toMatchObject({ open: true, counter: false });
+    expect(band).toMatchObject({ open: true });
     expect(band.request).toBeUndefined();
     render(<div>{band.requestGone}</div>);
     expect(screen.getByText(t("trips.addDiver.requestGone"))).toBeInTheDocument();
@@ -154,16 +154,5 @@ describe("addBandFor", () => {
     expect(band.request).toBeUndefined();
     render(<div>{band.requestGone}</div>);
     expect(screen.getByText(t("trips.addDiver.requestNotOffered"))).toBeInTheDocument();
-  });
-
-  it("is the counter only when the desk chose it, and the counter answers no request", async () => {
-    vi.mocked(readSeatRequest).mockClear();
-    expect(await addBandFor(db, where, { add: "1" })).toMatchObject({ counter: false });
-    const counter = await addBandFor(db, where, { counter: "1", request: ROW.id });
-    expect(counter).toEqual({ open: false, counter: true });
-    expect(readSeatRequest).not.toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ request: ROW.id }),
-    );
   });
 });

@@ -234,6 +234,70 @@ describe("an offline copy of a course that meets on two days", () => {
     });
   });
 
+  describe("an undo of a new day's own mark leaves the earlier day's missing diver missing (#3981)", () => {
+    const restateAndUndo = (status: "boarded" | "not_boarded", day: string) => [
+      event({
+        clientEventId: "r1",
+        bookingId: "blocked",
+        checkpoint: "after_dive_1",
+        status,
+        occurredAt: `${day}T13:00:00.000Z`,
+      }),
+      event({
+        clientEventId: "r2",
+        bookingId: "blocked",
+        checkpoint: "after_dive_1",
+        status: "cleared",
+        retractsClientEventId: "r1",
+        occurredAt: `${day}T13:05:00.000Z`,
+      }),
+    ];
+
+    it("on a copy saved on day one", () => {
+      const copy = courseCopy(dockAndDive);
+      for (const status of ["boarded", "not_boarded"] as const) {
+        expect(
+          latestOfflineRollCall(
+            copy,
+            restateAndUndo(status, "2026-07-21"),
+            "blocked",
+            "after_dive_1",
+            DAY_TWO,
+          ),
+        ).toMatchObject({ state: "not_boarded", local: false });
+      }
+    });
+
+    it("on a copy refreshed on day two that brought day one's word home", () => {
+      const copy = courseCopy(dockAndDive);
+      copy.savedAt = "2026-07-21T07:00:00.000Z";
+      expect(
+        latestOfflineRollCall(
+          copy,
+          restateAndUndo("not_boarded", "2026-07-21"),
+          "blocked",
+          "after_dive_1",
+          DAY_TWO,
+        ),
+      ).toMatchObject({ state: "not_boarded", local: false });
+    });
+
+    it("on day three, after day two's undo, on a copy saved on day two", () => {
+      const copy = courseCopy(dockAndDive);
+      copy.savedAt = "2026-07-21T07:00:00.000Z";
+      copy.rollCallDayBoundaries = [BOUNDARY, "2026-07-22T00:00:00.000Z"];
+      expect(
+        latestOfflineRollCall(
+          copy,
+          restateAndUndo("not_boarded", "2026-07-21"),
+          "blocked",
+          "after_dive_1",
+          new Date("2026-07-22T14:00:00.000Z"),
+        ),
+      ).toMatchObject({ state: "not_boarded", local: false });
+    });
+  });
+
   it("clears day one's missing diver on day three once day two counted them, as the server does", () => {
     const copy = courseCopy(dockAndDive);
     copy.rollCallDayBoundaries = [BOUNDARY, "2026-07-22T00:00:00.000Z"];

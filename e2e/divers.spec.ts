@@ -504,7 +504,8 @@ test("staff delete a diver, find them again in the Deleted view, and restore the
   const recordUrl = page.url().split("?")[0] ?? "";
 
   // Delete them from their own record.
-  await page.getByText(`Delete ${diverName}`).click();
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "Record actions" }).click();
   await page.getByRole("button", { name: "Delete diver" }).click();
   // The land-then-undo toast, the app's one undo affordance — deliberately
   // left alone from here: the point of this spec is the path that still works
@@ -562,13 +563,11 @@ test("erase is absent on a live diver's record and appears once they are deleted
   await page.getByRole("button", { name: "Add diver", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
 
-  // Live: the destructive tail is Delete alone. The delete section carries no
-  // heading of its own — "Delete" above a disclosure reading "Delete <name>"
-  // named the same act twice (issue #779) — so the disclosure is the anchor.
-  await expect(page.getByText(`Delete ${diverName}`)).toBeVisible();
+  // Live: Delete is the only destructive act, and it sits in the record menu.
   await expect(page.getByRole("heading", { name: "Erase personal data" })).toBeHidden();
 
-  await page.getByText(`Delete ${diverName}`).click();
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "Record actions" }).click();
   await page.getByRole("button", { name: "Delete diver" }).click();
   await expect(page.getByText("Diver deleted")).toBeVisible();
 

@@ -8,11 +8,10 @@ import type { TripAdmissionGateScope } from "@/lib/trip-admission-gate";
  *
  * There are two staff doors, named for where the staffer starts: **from a
  * departure** ("who is joining this boat" — the roster's Add diver, the
- * counter's walk-in, the global Add booking once it has a boat) and **from a
+ * global Add booking once it has a boat) and **from a
  * diver** ("put this person on a boat" — the diver's own record). What
  * legitimately differs between them is *presentation*: where the staffer lands
- * afterwards, which words their page already speaks, and whether a name typed at
- * the desk must come with an email. Those live here as data, one row per door,
+ * afterwards and which words their page already speaks. Those live here as data, one row per door,
  * so a reviewer can read the whole matrix at once instead of diffing action
  * files. Kept out of the `"use server"`
  * module beside it — such a module may only export async functions — the same
@@ -32,40 +31,16 @@ export const SEAT_BUSY_NOTICE = "seat-busy";
 
 export type SeatSurfaceId = "departure" | "diver";
 
-/**
- * The departure door's counter mode: the diver is standing at the desk for a
- * boat that has not left. It is one door with its own entry and success words,
- * not a third door, and it is open only while `walkInDoorOpen`
- * (src/lib/operational-window.ts) says so — the seat action asks again.
- */
-export type SeatWalkInMode = {
-  entry: SeatDiverEntry;
-  seatedNotice: string;
-  seatedWaiverUndeliveredNotice: string;
-  seatedIdentityUnconfirmedNotice: string;
-  seatedConfirmationSentNotice: string;
-};
-
 /** Everything a settle path can be built from. */
 export type SeatLanding = {
   shopSlug: string;
   tripId: string;
   personId: string;
-  /** The staffer came through the departure door's counter mode. */
-  walkIn?: boolean;
 };
 
 export type SeatSurface = {
   entry: SeatDiverEntry;
   refusals: SeatDiverRefusalDetail;
-  /**
-   * Whether hand entry demands an email address. A diver added from a
-   * departure is usually being set up for a waiver and a confirmation, so that
-   * door asks for one, except in walk-in mode: the counter's rule is that a
-   * name is enough (`people.email` is nullable precisely for the diver who
-   * just walked up). The diver's own record never asks.
-   */
-  email: "required" | "optional";
   /** Where a seated diver lands. */
   seatedPath: (landing: SeatLanding) => string;
   /** Where a refusal or an unparseable submission lands. */
@@ -81,20 +56,15 @@ export type SeatSurface = {
   gateScope: (landing: SeatLanding) => TripAdmissionGateScope | null;
   seatedNotice: string;
   /**
-   * What the counter's mode of this door says and records instead
-   * ({@link SeatWalkInMode}); absent on a door with no counter.
-   */
-  walkIn?: SeatWalkInMode;
-  /**
    * The same seating, when the waiver it triggered could not be emailed —
    * `SeatDiverWaiver`'s `not_delivered` / `failed` (src/db/seat-diver.ts). The
    * diver is seated either way, so this is still a success notice; what it adds
    * is the one fact `seatedNotice` would otherwise hide, that nothing went out
    * and the link has to be handed over from the diver's row.
    *
-   * Every door needs one. The counter walk-in is not the edge case here — it is
-   * the *common* case, since the counter deliberately takes a diver on a name
-   * alone and `no_email` is what that produces.
+   * Every door needs one. It is not the edge case here: a diver is added on a
+   * name alone whenever the shop has no address, and `no_email` is what that
+   * produces.
    *
    * A separate notice code rather than a token in the URL: a waiver link is its
    * own capability, and a redirect query is exactly where one must never go
@@ -163,8 +133,8 @@ const tripPath = ({ shopSlug, tripId }: SeatLanding) => shopPath(shopSlug, "trip
 
 /**
  * The one refusal vocabulary a boat's page speaks — one distinct notice per
- * gate, for the roster's Add diver and the counter's walk-in alike (the
- * counter once kept a second, parallel map of the same twelve refusals).
+ * gate, for every add on a boat (the counter once kept a second, parallel
+ * map of the same twelve refusals).
  */
 const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
   trip_full: "diver-full",
@@ -190,21 +160,17 @@ const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
 export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
   /**
    * **From a departure**: the roster's hand entry and returning-diver picker,
-   * the global Add booking once a boat is chosen, and the counter's walk-in.
+   * and the global Add booking once a boat is chosen.
    * Seated or refused, the staffer lands on that boat's Divers tab, where the
    * add-diver form and the signed `?gate=` sentence both live.
    *
-   * The counter is a mode of this door: a name on its own is enough (so the
-   * email is optional in walk-in mode, `people.email` being nullable for the
-   * diver who just walked up), and the seat is told as a walk-in. It used to
-   * be a page of its own, and before that spoke a deliberately blunt three-code
-   * vocabulary (`refusals: "coarse"`); naming the reason ("This boat is full")
-   * is both shorter and useful, and now there is one place that words it.
+   * A name on its own is enough: email and phone are optional everywhere but
+   * the wait list (Aaron, 2026-11-05), `people.email` being nullable. A diver
+   * who comes back is matched to their record by whatever the shop has.
    */
   departure: {
     entry: "roster",
     refusals: "specific",
-    email: "required",
     seatedPath: tripPath,
     refusedPath: tripPath,
     gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
@@ -212,13 +178,6 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
     seatedIdentityUnconfirmedNotice: "diver-added-identity-unconfirmed",
     seatedConfirmationSentNotice: "diver-added-confirmed",
-    walkIn: {
-      entry: "walk_in",
-      seatedNotice: "walkin-added",
-      seatedWaiverUndeliveredNotice: "walkin-added-waiver-undelivered",
-      seatedIdentityUnconfirmedNotice: "walkin-added-identity-unconfirmed",
-      seatedConfirmationSentNotice: "walkin-added-confirmed",
-    },
     carriesBookingId: true,
     invalidNotice: "diver-seat-invalid",
     refusalNotice: TRIP_REFUSAL_NOTICE,
@@ -231,7 +190,6 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
   diver: {
     entry: "roster",
     refusals: "specific",
-    email: "optional",
     seatedPath: ({ shopSlug, personId }) => shopPath(shopSlug, "divers", personId),
     refusedPath: ({ shopSlug, personId }) => shopPath(shopSlug, "divers", personId),
     // The one door with no departure in its landing URL: it binds the
@@ -262,11 +220,3 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     },
   },
 };
-
-/**
- * The door as the staffer came through it: the counter's entry and words when
- * they asked for the counter on a door that has one, the door's own otherwise.
- */
-export function seatSurfaceFor(surface: SeatSurface, landing: SeatLanding): SeatSurface {
-  return landing.walkIn && surface.walkIn ? { ...surface, ...surface.walkIn } : surface;
-}

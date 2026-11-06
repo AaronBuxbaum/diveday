@@ -18,6 +18,7 @@ import {
   WAIVER_SEALED_COLUMNS,
   type WaiverStateRecord,
   withTrustedClearance,
+  withVerifiedClearance,
 } from "./waiver-record-columns";
 
 const recorder = alias(people, "waiver_recorder");
@@ -82,7 +83,7 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
      * the sealed columns: the physician's answer has a seal of its own
      * (`medical_answer_seal`, issue #3949), checked by `integrity` above.
      */
-    medicalClearedAt: row.record.medicalClearedAt,
+    medicalClearedAt: withVerifiedClearance(row.record).medicalClearedAt,
     medicalClearanceDeclinedAt: row.record.medicalClearanceDeclinedAt,
     flaggedPrompts:
       row.record.status === "medical_review" && row.record.medicalAnswers

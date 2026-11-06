@@ -62,6 +62,7 @@ import {
   shops,
   waiverRecords,
 } from "./schema";
+import { withVerifiedClearance } from "./waiver-record-columns";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 export type ImportSummary = {
@@ -913,7 +914,8 @@ async function writeEvidence(
             ),
           ),
         )
-        .then((rows) => rows.map((joined) => joined.record));
+        // A clearance counts only while its seal verifies, here as at boarding (issue #3987).
+        .then((rows) => rows.map((joined) => withVerifiedClearance(joined.record)));
       const liveRecords = existingRecords.filter((r) => !r.supersededAt);
       // A cleared referral keeps its status but is not a hold (glossary "Medical hold").
       const hasActiveHold = existingRecords.some(isUnclearedReferral);

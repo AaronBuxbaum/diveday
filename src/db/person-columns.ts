@@ -409,8 +409,7 @@ const rows = [
   {
     table: "inbound_messages",
     column: "person_id",
-    export: "withheld",
-    exportWhy: "neither bundle has a file for a conversation yet (#3862)",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -419,8 +418,7 @@ const rows = [
   {
     table: "staff_replies",
     column: "person_id",
-    export: "withheld",
-    exportWhy: "neither bundle has a file for a conversation yet (#3862)",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "scrub",
@@ -431,9 +429,7 @@ const rows = [
   {
     table: "lost_items",
     column: "person_id",
-    export: "withheld",
-    exportWhy:
-      "a shelf the shop holds for somebody, pruned 90 days after it goes home; neither bundle carries it",
+    export: "own",
     kind: "subject",
     merge: "move",
     erase: "delete",
@@ -1312,13 +1308,6 @@ const rows = [
     merge: "leave",
     erase: "keep",
     why: "a crew member who took part in a drill; the insurer's record keeps who drilled",
-  },
-  {
-    table: "deck_counts",
-    column: "recorded_by_person_id",
-    kind: "actor",
-    merge: "leave",
-    why: "who counted the heads on deck",
   },
   {
     table: "customer_gear_notices",

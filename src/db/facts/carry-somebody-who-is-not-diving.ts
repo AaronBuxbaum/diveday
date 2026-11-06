@@ -78,7 +78,7 @@ export async function carrySomebodyWhoIsNotDiving(
         tripId: reef.id,
         actorPersonId,
         diver: { fullName: guest.fullName },
-        entry: "walk_in",
+        entry: "roster",
         refusals: "coarse",
         participantType: guest.participantType,
       });

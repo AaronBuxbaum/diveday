@@ -3,9 +3,9 @@
 import { useId, useState } from "react";
 import { choiceClass, controlClass, DateField } from "@/components/ui/form";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
-import { walkInMemberField } from "@/lib/walk-in-party";
+import { partyMemberField } from "@/lib/seat-party-form";
 
-export type WalkInExtrasCopy = {
+export type ExtrasCopy = {
   /** "Coming as" */
   comingAs: string;
   /** "Diver", "Snorkeler", "Rider" */
@@ -29,7 +29,7 @@ export type WalkInExtrasCopy = {
  * courses they may join. The date field is always in the form and shown only
  * once the box is ticked, so a refused form can put a typed date back.
  */
-export function WalkInPersonExtras({
+export function PersonExtras({
   row,
   typeField,
   copy,
@@ -38,7 +38,7 @@ export function WalkInPersonExtras({
   row: number;
   /** The form field "Coming as" posts under: the first person's own `participantType`, or the row's. */
   typeField: string;
-  copy: WalkInExtrasCopy;
+  copy: ExtrasCopy;
   /** The latest plausible date of birth (`maxPlausibleBirthDate`). */
   dobMax: string;
 }) {
@@ -59,7 +59,7 @@ export function WalkInPersonExtras({
       <label className="flex min-h-11 items-center gap-2 text-sm">
         <input
           type="checkbox"
-          name={walkInMemberField(row, "minor")}
+          name={partyMemberField(row, "minor")}
           value="true"
           onChange={(event) => setMinor(event.currentTarget.checked)}
           className={choiceClass}
@@ -79,7 +79,7 @@ export function WalkInPersonExtras({
         <DateField
           id={dobId}
           aria-describedby={`${dobId}-hint`}
-          name={walkInMemberField(row, "dob")}
+          name={partyMemberField(row, "dob")}
           max={dobMax}
         />
       </div>

@@ -9,6 +9,7 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { weekStartOf } from "../src/lib/week-board";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  addDiverFormPath,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -19,7 +20,6 @@ import {
   publicTripUrl,
   seededTripId,
   tripPathByTitle,
-  walkInFormPath,
 } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
@@ -212,13 +212,12 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-reschedule-hold", scheme);
       });
 
-      // The counter's mode of the departure door: the new-diver form for a walk-in
-      // on a boat's Divers tab, no required email at the desk. The boat is the
-      // form's own `tripId`, so there is no picker. The boat's Divers tab (its
-      // search and "Add as a walk-in") is the departure capture's.
+      // The new-diver form for a boat's Divers tab, no required email. The boat
+      // is the form's own `tripId`, so there is no picker. The boat's Divers tab
+      // (its search and "Add diver") is the departure capture's.
       const openWalkInForm = async (page: Page) => {
         const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
-        await page.goto(walkInFormPath("blue-mantis", tripId));
+        await page.goto(addDiverFormPath("blue-mantis", tripId));
         await page.getByRole("heading", { name: "Add a diver", level: 2 }).waitFor();
       };
 
@@ -258,7 +257,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("group", { name: "Person 3" })
           .getByLabel("Full name")
           .fill("Leo Brightwater");
-        await capture(page, "trip-walk-in-party", scheme);
+        await capture(page, "trip-seat-party", scheme);
       });
 
       // "Add a booking" with no boat chosen (#2737): the shop home's panel,

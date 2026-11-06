@@ -34,3 +34,11 @@ Most upper layers read only their own delta. A layer whose base commit was never
 run cancelled by a newer push) still reads the cumulative diff, and the comment says which baseline
 it used. The top layer no longer shows the whole stack's delta; the bottom layer's report and each
 layer's own add up to it. Revisit if lower-layer snapshots turn out to be rarely published.
+
+## Amendment (2026-11-06, #3968)
+
+The layer below's baseline is that layer's pull request marker, so this path accepts a marker
+owned by a pull request. The expected key and the ancestor walk do not: they take only a marker
+main published (no `diveday-pr-number`), and skip any other like an absent one. The baseline plan
+the prepare step writes names the key and snapshot version it was drawn from, and every later step
+refuses a plan drawn from another.

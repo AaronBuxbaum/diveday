@@ -40,10 +40,10 @@ const FOLDED_TABLES = [
  * default for anything absent from this map is "must be exported" — a new
  * column has to be argued out, not quietly forgotten. `shop_id` is out on every
  * table (`SHOP_SCOPED`): it is the same value on every row of a single-shop
- * bundle, so a table that excludes nothing else needs no entry.
- */
+ * bundle, so a table that excludes nothing else needs no entry. */
 const SHOP_SCOPED = "shop_id";
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
+  inbound_messages: ["email_message_id", "in_reply_to_delivery_id", "assisted_at"], // threading plumbing
   roll_call_events: [...ROLL_CALL_SPLIT, "seq"], // seq: as GLOBAL_SEQ_TABLES
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: [
@@ -911,7 +911,7 @@ describe("full-shop export dataset", () => {
       shopId: shop.id,
       personId: diver.id,
       // i18n-exempt: a staff note fixture, stored verbatim — not product copy
-      body: "Esme prefers the 5mm suit; ask before the second tank.",
+      body: "Esme prefers the 7mm hood; ask before the second tank.",
       createdByPersonId: owner.id,
     });
     // Filed under somebody else and naming her: survives (owner, 2026-11-01).
@@ -954,7 +954,7 @@ describe("full-shop export dataset", () => {
       input.tables.map((exported) => ({ file: exported.file, rows: exported.rows })),
     );
     const mention = "Split Erasable Esme from this group on the next boat.";
-    for (const secret of ["Erasable Esme", "esme@example.com", "555 0424", "5mm suit"]) {
+    for (const secret of ["Erasable Esme", "esme@example.com", "555 0424", "7mm hood"]) {
       expect(wholeBundle.replace(mention, "")).not.toContain(secret);
     }
   });

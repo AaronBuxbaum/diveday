@@ -13,7 +13,6 @@ import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
 import { FieldActions } from "@/components/ui/form";
 import { ShopNotice } from "@/components/ui/outcome";
-import { isOpenDateRequestWithoutEmail } from "@/db/interest-dates";
 import { getNewDiverPage } from "@/db/new-diver-page";
 import { staffParticipantTypeLabel } from "@/i18n/participant-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -22,15 +21,15 @@ import { maxPlausibleBirthDate } from "@/lib/age";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { diverSearchPrefill } from "@/lib/person-fields";
+import { PARTY_FIRST_ROW, PARTY_FORM, PARTY_MAX } from "@/lib/seat-party-form";
 import type { ShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { WALK_IN_FIRST_ROW, WALK_IN_PARTY_FORM, WALK_IN_PARTY_MAX } from "@/lib/walk-in-party";
 import { createDiverFormAction } from "../add-diver-actions";
 import { NOTICES } from "./add-diver-notices";
 import { PartyOnFileChoices } from "./PartyOnFileChoices";
-import { WalkInPartyRows } from "./WalkInPartyRows";
-import { type WalkInExtrasCopy, WalkInPersonExtras } from "./WalkInPersonExtras";
+import { PartyRows } from "./PartyRows";
+import { type ExtrasCopy, PersonExtras } from "./PersonExtras";
 
 /** What the roster's URL carries into its add panel (`/divers?add=1`). */
 export type AddDiverSearch = {
@@ -40,8 +39,6 @@ export type AddDiverSearch = {
   email?: string;
   phone?: string;
   surface?: string;
-  /** `true`: the departure door's counter mode (a walk-in on a boat that has not left). */
-  walkIn?: string;
   tripId?: string;
   waitlist?: string;
   request?: string;
@@ -58,7 +55,6 @@ const ADD_DIVER_KEYS = [
   "email",
   "phone",
   "surface",
-  "walkIn",
   "tripId",
   "waitlist",
   "request",
@@ -107,7 +103,6 @@ export async function AddDiverPanel({
     email,
     phone,
     surface: surfaceParam,
-    walkIn: walkInParam,
     tripId: tripIdParam,
     waitlist: waitlistParam,
     request: requestParam,
@@ -126,7 +121,10 @@ export async function AddDiverPanel({
       : null;
   const isWaitlist = waitlistParam === "true";
   const tripId = tripIdParam?.trim() || null;
-  const walkIn = walkInParam === "true" && surface === "departure" && tripId !== null;
+  // The rest of a party can be typed on the form for a boat, but not for a date
+  // request's one seat or a wait-list entry.
+  const party =
+    surface === "departure" && tripId !== null && !isWaitlist && !uuidParam(requestParam ?? "");
   // What this person had typed here when they were last interrupted (ADR
   // 20260906-before-you-ask, decision 3), applied by `FormDraft` below; who a
   // name being confirmed reads like; and each party row the on-file check
@@ -138,7 +136,7 @@ export async function AddDiverPanel({
     {
       confirmName,
       onFile:
-        walkIn && notice === "party-on-file"
+        party && notice === "party-on-file"
           ? Object.entries(rest)
               .flatMap(([key, value]) => {
                 const row = /^onFile-(\d{1,4})$/.exec(key)?.[1];
@@ -147,7 +145,7 @@ export async function AddDiverPanel({
                   : [];
               })
               .sort((a, b) => a.row - b.row)
-              .slice(0, WALK_IN_PARTY_MAX)
+              .slice(0, PARTY_MAX)
           : [],
     },
   );
@@ -167,20 +165,18 @@ export async function AddDiverPanel({
   const submitLabel =
     surface === "departure" && isWaitlist
       ? t("divers.page.addToWaitlistButton")
-      : walkIn
-        ? t("divers.page.addToBoatButton")
-        : surface === "departure"
-          ? t("divers.page.addToTripButton")
-          : t("divers.page.addDiver");
+      : surface === "departure"
+        ? t("divers.page.addToTripButton")
+        : t("divers.page.addDiver");
 
   const banner = noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;
   const noticeIsError = banner?.tone === "danger";
-  const extrasCopy: WalkInExtrasCopy = {
+  const extrasCopy: ExtrasCopy = {
     comingAs: t("participants.roster.typeLabel"),
     types: Object.fromEntries(
       PARTICIPANT_TYPES.map((type) => [type, staffParticipantTypeLabel(t, type)]),
-    ) as WalkInExtrasCopy["types"],
+    ) as ExtrasCopy["types"],
     under18: t("divers.page.party.under18"),
     under18Hint: t("divers.page.party.under18Hint"),
     dob: t("divers.page.party.dob"),
@@ -188,22 +184,9 @@ export async function AddDiverPanel({
   };
   const dobMax = maxPlausibleBirthDate();
 
-  // A wait-list entry is the one departure form that needs a way to reach the
-  // diver when the seat opens.
-  // The departure door waives the email for a date request that has none itself
-  // (issue #3743); the action reads the same row, so this only spares the browser
-  // from refusing a form the server accepts.
-  const requestId = requestParam ? uuidParam(requestParam) : undefined;
-  const requestHasNoEmail =
-    surface === "departure" &&
-    !isWaitlist &&
-    !walkIn &&
-    requestId !== undefined &&
-    (await isOpenDateRequestWithoutEmail(db, shop.id, requestId));
-  const emailRequired = Boolean(
-    isWaitlist ||
-      (surface && !walkIn && SEAT_SURFACES[surface].email === "required" && !requestHasNoEmail),
-  );
+  // A wait-list entry is the one form that needs a way to reach the diver when
+  // the seat opens; every other add is a name at least (Aaron, 2026-11-05).
+  const emailRequired = isWaitlist;
 
   return (
     <div className="space-y-6">
@@ -230,11 +213,7 @@ export async function AddDiverPanel({
                       action={
                         isWaitlist
                           ? addToWaitlistAction.bind(null, shopSlug, tripId)
-                          : seatExistingDiverAction.bind(
-                              null,
-                              walkIn ? "walk-in" : surface,
-                              shopSlug,
-                            )
+                          : seatExistingDiverAction.bind(null, surface, shopSlug)
                       }
                       className="inline"
                     >
@@ -296,7 +275,6 @@ export async function AddDiverPanel({
               <input type="hidden" name="email" value={confirmEmail ?? ""} />
               <input type="hidden" name="phone" value={confirmPhone ?? ""} />
               <input type="hidden" name="surface" value={surfaceParam ?? ""} />
-              <input type="hidden" name="walkIn" value={walkInParam ?? ""} />
               <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
               <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
               <input type="hidden" name="request" value={requestParam ?? ""} />
@@ -339,22 +317,17 @@ export async function AddDiverPanel({
           copy={formDraftCopy(t)}
         />
         <input type="hidden" name="surface" value={surfaceParam ?? ""} />
-        <input type="hidden" name="walkIn" value={walkInParam ?? ""} />
         <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
         <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
         <input type="hidden" name="request" value={requestParam ?? ""} />
-        {/* **The rest of a walk-in family** (fifth loop, item 9): only at
-              the counter, where the party is standing at the desk. */}
-        {walkIn ? (
+        {/* **The rest of a family** (fifth loop, item 9): on any add to a boat
+              that is not a date request's seat. */}
+        {party ? (
           <>
-            <KeepTypedOnRefusal
-              form={WALK_IN_PARTY_FORM}
-              scope={keptScope}
-              restore={noticeIsError}
-            />
+            <KeepTypedOnRefusal form={PARTY_FORM} scope={keptScope} restore={noticeIsError} />
             <div className="col-span-full">
-              <WalkInPersonExtras
-                row={WALK_IN_FIRST_ROW}
+              <PersonExtras
+                row={PARTY_FIRST_ROW}
                 typeField="participantType"
                 copy={extrasCopy}
                 dobMax={dobMax}
@@ -368,7 +341,7 @@ export async function AddDiverPanel({
                 timeZone={shop.timezone}
               />
             ) : null}
-            <WalkInPartyRows
+            <PartyRows
               keptScope={keptScope}
               restore={noticeIsError}
               dobMax={dobMax}

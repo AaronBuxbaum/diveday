@@ -314,7 +314,12 @@ export async function heldNames({ names, hashes, bucket, fetchImpl = fetch, limi
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     const onMain = process.env.GITHUB_EVENT_NAME !== "pull_request";
-    const unchanged = onMain ? (readPlan()?.unchanged ?? []) : [];
+    const unchanged = onMain
+      ? (readPlan(undefined, {
+          key: process.env.REG_EXPECTED_KEY ?? "",
+          version: process.env.REG_EXPECTED_VERSION ?? "",
+        })?.unchanged ?? [])
+      : [];
     const referencedActual =
       unchanged.length > 0
         ? await heldNames({

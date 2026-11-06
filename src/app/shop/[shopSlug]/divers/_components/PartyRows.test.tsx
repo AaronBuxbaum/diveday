@@ -3,8 +3,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { keptTypedKey } from "@/components/KeepTypedOnRefusal";
-import { WALK_IN_PARTY_FORM, walkInMemberField } from "@/lib/walk-in-party";
-import { WalkInPartyRows } from "./WalkInPartyRows";
+import { PARTY_FORM, partyMemberField } from "@/lib/seat-party-form";
+import { PartyRows } from "./PartyRows";
 
 const SCOPE = "blue-mantis.p-desk";
 
@@ -27,7 +27,7 @@ const COPY = {
 function renderRows(restore: boolean) {
   return render(
     <form>
-      <WalkInPartyRows copy={COPY} keptScope={SCOPE} restore={restore} dobMax="2026-10-17" />
+      <PartyRows copy={COPY} keptScope={SCOPE} restore={restore} dobMax="2026-10-17" />
     </form>,
   );
 }
@@ -37,7 +37,7 @@ afterEach(() => {
   window.sessionStorage.clear();
 });
 
-describe("WalkInPartyRows", () => {
+describe("PartyRows", () => {
   it("asks each person what they are coming as, defaulting to Diver", async () => {
     renderRows(false);
     await userEvent.click(screen.getByRole("button", { name: "Add another person" }));
@@ -56,15 +56,15 @@ describe("WalkInPartyRows", () => {
 
   it("puts each tick and type back on the same name after a refusal", async () => {
     window.sessionStorage.setItem(
-      keptTypedKey(WALK_IN_PARTY_FORM, SCOPE),
+      keptTypedKey(PARTY_FORM, SCOPE),
       JSON.stringify({
         at: Date.now(),
         fields: {
-          [walkInMemberField(1, "name")]: "Mia Lopez",
-          [walkInMemberField(1, "type")]: "snorkeler",
-          [walkInMemberField(3, "name")]: "Leo Lopez",
-          [walkInMemberField(3, "minor")]: "true",
-          [walkInMemberField(3, "dob")]: "2014-05-06",
+          [partyMemberField(1, "name")]: "Mia Lopez",
+          [partyMemberField(1, "type")]: "snorkeler",
+          [partyMemberField(3, "name")]: "Leo Lopez",
+          [partyMemberField(3, "minor")]: "true",
+          [partyMemberField(3, "dob")]: "2014-05-06",
         },
       }),
     );
@@ -76,12 +76,12 @@ describe("WalkInPartyRows", () => {
     );
     const field = (name: string) =>
       container.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`);
-    expect(field(walkInMemberField(1, "name"))?.value).toBe("Mia Lopez");
-    expect((field(walkInMemberField(1, "minor")) as HTMLInputElement).checked).toBe(false);
-    expect(field(walkInMemberField(1, "type"))?.value).toBe("snorkeler");
-    expect((field(walkInMemberField(3, "minor")) as HTMLInputElement).checked).toBe(true);
-    expect(field(walkInMemberField(3, "dob"))?.value).toBe("2014-05-06");
-    expect(field(walkInMemberField(3, "dob"))).toBeVisible();
-    expect(field(walkInMemberField(3, "type"))?.value).toBe("diver");
+    expect(field(partyMemberField(1, "name"))?.value).toBe("Mia Lopez");
+    expect((field(partyMemberField(1, "minor")) as HTMLInputElement).checked).toBe(false);
+    expect(field(partyMemberField(1, "type"))?.value).toBe("snorkeler");
+    expect((field(partyMemberField(3, "minor")) as HTMLInputElement).checked).toBe(true);
+    expect(field(partyMemberField(3, "dob"))?.value).toBe("2014-05-06");
+    expect(field(partyMemberField(3, "dob"))).toBeVisible();
+    expect(field(partyMemberField(3, "type"))?.value).toBe("diver");
   });
 });

@@ -4,6 +4,7 @@ import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { signingDate } from "@/lib/guardian";
 import { fileScopedShopContext } from "@/test/db";
+import { mintCapability } from "./capabilities";
 import { getPartyWaiverQueue, issuePartyWaiver } from "./party-waiver-queue";
 import * as readinessDb from "./readiness";
 import { listTripReadiness } from "./readiness";
@@ -57,7 +58,7 @@ async function family() {
     shopId: shop.id,
     tripId: trip.id,
     actorPersonId: staff.id,
-    entry: "walk_in",
+    entry: "roster",
     refusals: "specific",
     members: [
       { fullName: `Ana ${stamp}`, minor: false },
@@ -127,6 +128,7 @@ describe("party release QR handoff", () => {
       leadBookingId: f.lead.bookingId,
       bookingId: f.minor.bookingId,
       actorPersonId: f.staff.id,
+      guardianPresent: true,
     };
     const issued = await issuePartyWaiver(f.db, input);
     if (!issued || !("token" in issued)) throw new Error("eligible minor refused");
@@ -146,6 +148,92 @@ describe("party release QR handoff", () => {
     expect(await issuePartyWaiver(f.db, { ...input, shopId: crypto.randomUUID() })).toBeNull();
   });
 
+  describe("a minor at the counter needs a staff check that a guardian is here (#3986)", () => {
+    const guardianLines = (f: Awaited<ReturnType<typeof family>>) =>
+      f.db
+        .select({ actor: activityEvents.actorPersonId, subject: activityEvents.subjectPersonId })
+        .from(activityEvents)
+        .where(
+          and(
+            eq(activityEvents.shopId, f.shop.id),
+            eq(activityEvents.code, "waiver_counter_guardian_confirmed"),
+          ),
+        );
+
+    it("shows no code for a minor until the desk confirms a guardian is present", async () => {
+      const f = await family();
+      const input = {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+        bookingId: f.minor.bookingId,
+        actorPersonId: f.staff.id,
+      };
+      for (const guardianPresent of [undefined, false]) {
+        expect(await issuePartyWaiver(f.db, { ...input, guardianPresent })).toEqual({
+          guardianCheck: true,
+        });
+      }
+      const minted = await f.db
+        .select({ id: capabilities.id })
+        .from(capabilities)
+        .innerJoin(waiverRecords, eq(waiverRecords.id, capabilities.waiverRecordId))
+        .where(eq(waiverRecords.bookingId, f.minor.bookingId));
+      expect(minted).toEqual([]);
+      expect(await guardianLines(f)).toEqual([]);
+
+      const issued = await issuePartyWaiver(f.db, { ...input, guardianPresent: true });
+      if (!issued || !("token" in issued)) throw new Error("confirmed minor refused");
+      // Who confirmed it is on the minor's trail, beside who showed the code.
+      expect(await guardianLines(f)).toEqual([{ actor: f.staff.id, subject: f.minor.personId }]);
+    });
+
+    it("asks nothing of an adult's code", async () => {
+      const f = await family();
+      const issued = await issuePartyWaiver(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+        bookingId: f.third.bookingId,
+        actorPersonId: f.staff.id,
+      });
+      expect(issued && "token" in issued).toBe(true);
+      expect(await guardianLines(f)).toEqual([]);
+    });
+  });
+
+  it("keeps one live door per release: a counter code replaces the emailed door, and asks first when it is open (#3986)", async () => {
+    const f = await family();
+    const input = {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
+    };
+    const counter = await issuePartyWaiver(f.db, input);
+    if (!counter || !("token" in counter)) throw new Error("counter code missing");
+    const [link] = await f.db
+      .select({ recordId: capabilities.waiverRecordId })
+      .from(capabilities)
+      .where(eq(capabilities.tokenHash, hashBearerToken(counter.token)));
+    if (!link?.recordId) throw new Error("counter link record missing");
+    // The emailed door for the same release takes the counter code's place…
+    const mailed = await mintCapability(f.db, {
+      purpose: "party_waiver_link",
+      shopId: f.shop.id,
+      subjectId: link.recordId,
+    });
+    expect((await opened(f.db, counter.token)).state).toBe("unavailable");
+    expect((await opened(f.db, mailed.token)).state).toBe("available");
+    // …and, open on the member's phone, is not replaced without the desk saying so.
+    expect(await issuePartyWaiver(f.db, input)).toEqual({ openOnPhone: true });
+    const replaced = await issuePartyWaiver(f.db, { ...input, replace: true });
+    if (!replaced || !("token" in replaced)) throw new Error("replacement missing");
+    expect((await opened(f.db, mailed.token)).state).toBe("unavailable");
+    expect((await opened(f.db, replaced.token)).state).toBe("available");
+  });
+
   it("refuses to issue after a seat is held or cancelled", async () => {
     const f = await family();
     const input = {
@@ -154,6 +242,7 @@ describe("party release QR handoff", () => {
       leadBookingId: f.lead.bookingId,
       bookingId: f.minor.bookingId,
       actorPersonId: f.staff.id,
+      guardianPresent: true,
     };
     const existing = await issuePartyWaiver(f.db, input);
     if (!existing || !("token" in existing)) throw new Error("link missing");

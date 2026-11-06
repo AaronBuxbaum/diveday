@@ -2,11 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import {
-  refuseClosedWalkIn,
-  seatNewDiverAction,
-  seatWalkInPartyAction,
-} from "@/app/actions/seat-diver";
+import { seatNewDiverAction, seatPartyAction } from "@/app/actions/seat-diver";
 import type { SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { getDb } from "@/db/client";
@@ -20,14 +16,12 @@ import {
   blankableDiverNameSchema,
   diverPhoneSchema,
 } from "@/lib/person-fields";
+import { readParty } from "@/lib/seat-party-form";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
-import { readWalkInParty } from "@/lib/walk-in-party";
 
 const newDiverContextForm = z.object({
   surface: z.string().optional(),
-  // `true`: the departure door's counter mode.
-  walkIn: z.string().optional(),
   tripId: z.string().optional(),
   waitlist: z.string().optional(),
   // The date request a booking door was opened from; carried back so the seat
@@ -65,7 +59,6 @@ export async function createDiverFormAction(formData: FormData) {
   const context = opened.ok ? opened.data : {};
   const activeSurface = (context.surface ?? null) as SeatSurfaceId | null;
   const activeTripId = context.tripId ? context.tripId : null;
-  const activeWalkIn = context.walkIn === "true";
   const activeWaitlist = context.waitlist === "true";
   const force = context.force === "true";
 
@@ -76,32 +69,27 @@ export async function createDiverFormAction(formData: FormData) {
   if (!parsed.ok) {
     const search: Record<string, string> = { notice: "invalid" };
     if (activeSurface) search.surface = activeSurface;
-    if (activeWalkIn) search.walkIn = "true";
     if (activeTripId) search.tripId = activeTripId;
     if (activeWaitlist) search.waitlist = "true";
     redirect(buildNewDiverUrl(search));
   }
 
-  // **A walk-in family** (fifth loop, item 9): party rows, or a first person
+  // **A family or group** (fifth loop, item 9): party rows, or a first person
   // ticked "Under 18" or settled on the party's on-file prompt, send the whole
   // form to the party seating, which runs its own on-file check over every
   // name. A malformed party goes there too, to be refused rather than trimmed.
-  const party = readWalkInParty(formData.entries());
+  const party = readParty(formData.entries());
   if (
     activeSurface === "departure" &&
-    activeWalkIn &&
     !activeWaitlist &&
+    // A date request seats its own party one seat at a time and closes it; the
+    // party form ignores the request, so a forged post never reaches it.
+    !context.request &&
     activeTripId &&
     (party.rows.length > 0 || party.first.minor || party.first.match !== undefined || party.invalid)
   ) {
-    await seatWalkInPartyAction(staff.user.shopSlug, formData);
+    await seatPartyAction(staff.user.shopSlug, formData);
     return;
-  }
-
-  // A counter walk-in on a boat the counter can no longer seat is refused
-  // before any name lookup, by the door that owns the refusal.
-  if (activeSurface === "departure" && activeWalkIn && !activeWaitlist && activeTripId) {
-    await refuseClosedWalkIn(staff.user.shopSlug, formData);
   }
 
   if (!force) {
@@ -113,7 +101,6 @@ export async function createDiverFormAction(formData: FormData) {
       if (parsed.data.email) search.confirmEmail = parsed.data.email;
       if (parsed.data.phone) search.confirmPhone = parsed.data.phone;
       if (activeSurface) search.surface = activeSurface;
-      if (activeWalkIn) search.walkIn = "true";
       if (activeTripId) search.tripId = activeTripId;
       if (activeWaitlist) search.waitlist = "true";
       if (context.request) search.request = context.request;
@@ -126,11 +113,7 @@ export async function createDiverFormAction(formData: FormData) {
   if (activeSurface === "departure" && activeWaitlist && activeTripId) {
     await addToWaitlistAction(staff.user.shopSlug, activeTripId, formData);
   } else if (activeSurface === "departure" && activeTripId) {
-    await seatNewDiverAction(
-      activeWalkIn ? "walk-in" : activeSurface,
-      staff.user.shopSlug,
-      formData,
-    );
+    await seatNewDiverAction(activeSurface, staff.user.shopSlug, formData);
   } else {
     const diver = await createDiver(activeDb, {
       shopId: staff.user.shopId,

@@ -51,6 +51,8 @@ export default async function PartyWaiversPage({
     failed: t("trips.partyWaiverQueue.failed"),
     openOnPhone: t("trips.partyWaiverQueue.openOnPhone"),
     replace: t("trips.partyWaiverQueue.replace"),
+    guardianCheck: t("trips.partyWaiverQueue.guardianCheck"),
+    guardianConfirm: t("trips.partyWaiverQueue.guardianConfirm"),
   };
   return (
     <StaffPage width="reading">

@@ -148,7 +148,6 @@
     "noticeDeleted": "Diver deleted",
     "noticeRestored": "Diver restored",
     "noticeRestoreRefused": "Couldn’t restore that diver, because an active diver now uses their email. Change that email, then try again.",
-    "noticeDownloadTooLarge": "This list has more than 5,000 divers. Narrow your search or choose a filter, then download again.",
     "removedToast": "Diver deleted",
     "noticeErased": "Personal data erased. The signed release, the trips, and the payments stay on file with the diver’s details gone. This cannot be undone.",
     "noticeErasedProcessorOwed": "Personal data erased here, but something at Stripe isn’t finished. Open Settings to see what’s left and clear it. Until then this diver isn’t fully erased.",
@@ -159,7 +158,6 @@
     "addDiverWithName": "Add diver",
     "addToWaitlistButton": "Add to who’s waiting",
     "addToTripButton": "Add to trip",
-    "addToBoatButton": "Add to boat",
     "fullNameLabel": "Full name",
     "emailLabel": "Email",
     "phoneLabel": "Phone",
@@ -225,8 +223,7 @@
     "sortLabel": "Sort:",
     "sortName": "Name",
     "sortLastDived": "Last dived",
-    "sortAriaLabel": "Diver order",
-    "downloadList": "Download this list (CSV)"
+    "sortAriaLabel": "Diver order"
   },
   "header": {
     "noContactDetails": "No contact details yet",
@@ -269,7 +266,6 @@
     "shopPaymentFallback": "Shop payment"
   },
   "remove": {
-    "removePersonSummary": "Delete {name}",
     "removeDiver": "Delete diver",
     "consequence": "Takes {name} off the diver list, the booking pickers, manifests, and trip prep. Their waivers, trips, and payments stay on file, and you can restore them.",
     "staffWarning": "They also work here. Deleting them takes them off the team, and they can no longer sign in."
@@ -571,10 +567,12 @@
     "lastDiveFuture": "That day hasn’t come yet.",
     "lastDiveSavedLaterKnown": "Saved. They’ve dived with you since then, so the row shows that later day."
   },
+  "record": {
+    "menuLabel": "Record actions"
+  },
   "export": {
     "downloadButton": {
-      "idle": "Download record",
-      "acknowledged": "On its way, check your downloads"
+      "idle": "Download record"
     }
   },
   "status": {

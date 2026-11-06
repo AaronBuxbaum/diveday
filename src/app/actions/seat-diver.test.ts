@@ -10,11 +10,7 @@ import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
 vi.mock("@/db/divers", () => ({ findSimilarDivers: vi.fn(async () => []) }));
-vi.mock("@/db/interest-dates", () => ({
-  isOpenDateRequestWithoutEmail: vi.fn(async () => false),
-}));
 vi.mock("@/db/seat-diver", () => ({ seatDiver: vi.fn() }));
-vi.mock("@/db/trips", () => ({ getTripWithBooked: vi.fn() }));
 vi.mock("@/lib/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
@@ -24,13 +20,9 @@ vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { seatDiver } = await import("@/db/seat-diver");
 const { findSimilarDivers } = await import("@/db/divers");
-const { isOpenDateRequestWithoutEmail } = await import("@/db/interest-dates");
-const { getTripWithBooked } = await import("@/db/trips");
-const { HOUR_MS, nowMs } = await import("@/lib/clock");
 const { verifyTripAdmissionGate } = await import("@/lib/trip-admission-gate");
 const { requireShopSurface } = await import("@/lib/session");
 const { seatExistingDiverAction, seatNewDiverAction } = await import("./seat-diver");
-const { SEAT_SURFACES } = await import("./seat-diver-surfaces");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";
 const TRIP_ID = "33333333-3333-4333-8333-333333333333";
@@ -47,7 +39,7 @@ function form(extra: Record<string, string> = {}): FormData {
 /** Where the action sent the staffer. */
 async function landing(
   data: FormData = form(),
-  door: "departure" | "diver" | "walk-in" = "departure",
+  door: "departure" | "diver" = "departure",
 ): Promise<string> {
   try {
     await seatExistingDiverAction(door, "blue-mantis", data);
@@ -67,13 +59,7 @@ function lockWaitRefusal(): Error {
   return new Error("Failed query: insert into bookings", { cause: driver });
 }
 
-/** A scheduled departure `hours` from the frozen clock. */
-function boatAt(hours: number, status = "scheduled") {
-  return { id: TRIP_ID, status, startsAt: new Date(nowMs() + hours * HOUR_MS) } as never;
-}
-
 beforeEach(() => {
-  vi.mocked(getTripWithBooked).mockResolvedValue(boatAt(2));
   vi.mocked(requireShopSurface).mockResolvedValue({
     session: { user: { shopId: SHOP_ID, personId: "staff" } },
   } as never);
@@ -119,16 +105,6 @@ describe("every refusal lands on the boat with its own words", () => {
     expect(await landing()).toBe(`/shop/blue-mantis/trips/${TRIP_ID}?notice=${notice}`);
   });
 
-  it.each(refusals)(
-    "%s answers the counter in the same words, still at the counter",
-    async (reason, notice) => {
-      vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason } as never);
-      expect(await landing(form(), "walk-in")).toBe(
-        `/shop/blue-mantis/trips/${TRIP_ID}?notice=${notice}&counter=1`,
-      );
-    },
-  );
-
   it("carries the boat's certification refusal as a gate signed for this departure only", async () => {
     const refusal = [
       levelShort("advanced_open_water", "open_water"),
@@ -140,7 +116,7 @@ describe("every refusal lands on the boat with its own words", () => {
       reason: "trip_prerequisite",
       refusal,
     } as never);
-    const to = new URL(await landing(form(), "walk-in"), "http://x");
+    const to = new URL(await landing(form()), "http://x");
     expect(to.pathname).toBe(`/shop/blue-mantis/trips/${TRIP_ID}`);
     expect(to.searchParams.get("notice")).toBe("diver-trip-prerequisite");
     const gate = to.searchParams.get("gate");
@@ -192,7 +168,7 @@ describe("every refusal lands on the boat with its own words", () => {
 });
 
 /**
- * **A held seat is told as held**, on both doors and in the counter's mode: the
+ * **A held seat is told as held**, on both doors: the
  * identity-unconfirmed hold (H-20260724-one-person-per-email) outranks every other success sentence, so a
  * staffer never reads a plain "Added" for a seat the boarding gate will refuse.
  */
@@ -208,7 +184,6 @@ describe("a held seat is announced as held", () => {
 
   it.each([
     ["departure", {}, "diver-added-identity-unconfirmed"],
-    ["walk-in", {}, "walkin-added-identity-unconfirmed"],
     ["diver", {}, "booked-identity-unconfirmed"],
   ] as const)("%s %j says %s", async (door, extra, notice) => {
     vi.mocked(seatDiver).mockResolvedValue(held);
@@ -217,40 +192,9 @@ describe("a held seat is announced as held", () => {
   });
 });
 
-/**
- * **The counter is for boats the counter can still seat.** `walkIn=true` is a
- * claim from the client; the boat is read again and a sailed, cancelled, held
- * or out-of-reach departure takes nobody and writes nothing.
- */
-describe("a walk-in is refused on a boat the counter cannot seat", () => {
-  const closed: Array<[string, unknown]> = [
-    ["a boat that sailed an hour ago", boatAt(-1)],
-    ["a boat that sailed this morning", boatAt(-5)],
-    ["a boat days away", boatAt(24 * 5)],
-    ["a cancelled boat", boatAt(2, "cancelled")],
-    ["a boat that does not exist", null],
-  ];
-
-  it.each(closed)("%s", async (_name, trip) => {
-    vi.mocked(getTripWithBooked).mockResolvedValue(trip as never);
-    expect(await landing(form(), "walk-in")).toBe(
-      `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable&counter=1`,
-    );
-    expect(seatDiver).not.toHaveBeenCalled();
-  });
-
-  it("refuses a hand-entered walk-in the same way, before any name check", async () => {
-    vi.mocked(getTripWithBooked).mockResolvedValue(boatAt(-3));
-    const data = new FormData();
-    data.set("tripId", TRIP_ID);
-    data.set("fullName", "Dana Walker");
-    await expect(seatNewDiverAction("walk-in", "blue-mantis", data)).rejects.toThrow(
-      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable&counter=1`,
-    );
-    expect(seatDiver).not.toHaveBeenCalled();
-  });
-
-  it("seats a walk-in on an open boat as a walk-in, with no email required", async () => {
+/** A name is enough: email and phone are optional on a boat (Aaron, 2026-11-05). */
+describe("adding a diver to a boat", () => {
+  it("seats a diver typed with a name alone, as an ordinary add", async () => {
     vi.mocked(seatDiver).mockResolvedValue({
       ok: true,
       personId: DIVER_ID,
@@ -262,12 +206,16 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     const data = new FormData();
     data.set("tripId", TRIP_ID);
     data.set("fullName", "Dana Walker");
-    await expect(seatNewDiverAction("walk-in", "blue-mantis", data)).rejects.toThrow(
-      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=walkin-added&bid=`,
+    await expect(seatNewDiverAction("departure", "blue-mantis", data)).rejects.toThrow(
+      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-added&bid=`,
     );
     expect(seatDiver).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ entry: "walk_in", refusals: "specific" }),
+      expect.objectContaining({
+        entry: "roster",
+        refusals: "specific",
+        diver: expect.objectContaining({ fullName: "Dana Walker", email: undefined }),
+      }),
     );
   });
 
@@ -314,38 +262,6 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
       );
     },
   );
-
-  it("never links a walk-in to a request, and keeps the counter for the next one", async () => {
-    const bookingId = "55555555-5555-4555-8555-555555555555";
-    const requestId = "66666666-6666-4666-8666-666666666666";
-    vi.mocked(seatDiver).mockResolvedValue({
-      ok: true,
-      personId: DIVER_ID,
-      bookingId,
-      identityUnconfirmed: false,
-      waiver: "not_needed",
-      confirmation: "skipped",
-    } as never);
-    await expect(landing(form({ request: requestId }), "walk-in")).resolves.toBe(
-      `/shop/blue-mantis/trips/${TRIP_ID}?notice=walkin-added&bid=${bookingId}&counter=1`,
-    );
-    expect(seatDiver).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ entry: "walk_in", dateRequestInterestId: undefined }),
-    );
-  });
-
-  it("answers a walk-in's name prompt at the counter, with no request", async () => {
-    const requestId = "66666666-6666-4666-8666-666666666666";
-    vi.mocked(findSimilarDivers).mockResolvedValueOnce([{ id: DIVER_ID }] as never);
-    const data = new FormData();
-    data.set("tripId", TRIP_ID);
-    data.set("fullName", "Dana Walker");
-    data.set("request", requestId);
-    await expect(seatNewDiverAction("walk-in", "blue-mantis", data)).rejects.toThrow(
-      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?confirmName=Dana+Walker&counter=1#hand-entry`,
-    );
-  });
 
   it("returns to the trip after the last requested party member is seated", async () => {
     const bookingId = "55555555-5555-4555-8555-555555555555";
@@ -420,127 +336,6 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     expect(seatDiver).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ dateRequestInterestId: undefined }),
-    );
-  });
-
-  it("still asks a roster hand entry for an email when it is not a walk-in", async () => {
-    const data = new FormData();
-    data.set("tripId", TRIP_ID);
-    data.set("fullName", "Dana Walker");
-    await expect(seatNewDiverAction("departure", "blue-mantis", data)).rejects.toThrow(
-      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-seat-invalid`,
-    );
-    expect(seatDiver).not.toHaveBeenCalled();
-  });
-
-  /**
-   * Issue #3743: a date request may carry no email. The departure door waives
-   * its email rule for exactly that request, read in the session's shop, and
-   * for nothing else. The seat stays a regular booking, never a walk-in.
-   */
-  describe("a hand entry for a date request that has no email", () => {
-    const requestId = "66666666-6666-4666-8666-666666666666";
-    const bandForm = (extra: Record<string, string | undefined> = {}) => {
-      const data = new FormData();
-      data.set("tripId", TRIP_ID);
-      data.set("fullName", "Dana Walker");
-      for (const [key, value] of Object.entries(extra)) {
-        if (value !== undefined) data.set(key, value);
-      }
-      return data;
-    };
-
-    it("seats without an email as a regular booking, after reading the request in this shop", async () => {
-      vi.mocked(isOpenDateRequestWithoutEmail).mockResolvedValueOnce(true);
-      vi.mocked(seatDiver).mockResolvedValue({
-        ok: true,
-        personId: DIVER_ID,
-        bookingId: "55555555-5555-4555-8555-555555555555",
-        identityUnconfirmed: false,
-        waiver: "not_delivered",
-        confirmation: "skipped",
-      } as never);
-      await expect(
-        seatNewDiverAction("departure", "blue-mantis", bandForm({ request: requestId })),
-      ).rejects.toThrow(/^REDIRECT:/);
-      expect(isOpenDateRequestWithoutEmail).toHaveBeenCalledWith(
-        expect.anything(),
-        SHOP_ID,
-        requestId,
-      );
-      expect(seatDiver).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          entry: "roster",
-          diver: expect.objectContaining({ fullName: "Dana Walker", email: undefined }),
-          dateRequestInterestId: requestId,
-        }),
-      );
-    });
-
-    it("still requires an email when the request has one, or is not this shop's", async () => {
-      // The read answers false for a request with an email, a closed one and another shop's.
-      vi.mocked(isOpenDateRequestWithoutEmail).mockResolvedValue(false);
-      await expect(
-        seatNewDiverAction("departure", "blue-mantis", bandForm({ request: requestId })),
-      ).rejects.toThrow(
-        `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-seat-invalid&add=1&request=${requestId}`,
-      );
-      expect(seatDiver).not.toHaveBeenCalled();
-    });
-
-    it("never reads a request when the form names none, or a junk one", async () => {
-      for (const extra of [{}, { request: "not-a-uuid" }] as Record<string, string>[]) {
-        await expect(
-          seatNewDiverAction("departure", "blue-mantis", bandForm(extra)),
-        ).rejects.toThrow(`REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-seat-invalid`);
-      }
-      expect(isOpenDateRequestWithoutEmail).not.toHaveBeenCalled();
-      expect(seatDiver).not.toHaveBeenCalled();
-    });
-
-    it("does not read the request when an email was typed", async () => {
-      vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason: "trip_full" } as never);
-      await expect(
-        seatNewDiverAction(
-          "departure",
-          "blue-mantis",
-          bandForm({ request: requestId, email: "dana@example.com" }),
-        ),
-      ).rejects.toThrow(/^REDIRECT:/);
-      expect(isOpenDateRequestWithoutEmail).not.toHaveBeenCalled();
-    });
-  });
-
-  it("does not read a posted walkIn field: the mode is the bound door's alone", async () => {
-    vi.mocked(getTripWithBooked).mockResolvedValue(boatAt(-3));
-    vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason: "trip_unavailable" } as never);
-    await landing(form({ walkIn: "true" }));
-    expect(getTripWithBooked).not.toHaveBeenCalled();
-    expect(seatDiver).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ entry: "roster" }),
-    );
-  });
-
-  it("does not read the claim on a roster seat, which has no counter to close", async () => {
-    vi.mocked(getTripWithBooked).mockResolvedValue(boatAt(-3));
-    vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason: "trip_unavailable" } as never);
-    await landing();
-    expect(getTripWithBooked).not.toHaveBeenCalled();
-    expect(seatDiver).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ entry: "roster" }),
-    );
-  });
-
-  it("ignores walkIn on a diver's record, which has no counter", async () => {
-    vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason: "trip_full" } as never);
-    await landing(form({ walkIn: "true" }), "diver");
-    expect(getTripWithBooked).not.toHaveBeenCalled();
-    expect(seatDiver).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ entry: SEAT_SURFACES.diver.entry }),
     );
   });
 });

@@ -1,19 +1,15 @@
-import Link from "next/link";
 import { HandEntryPrompt } from "@/components/seat-diver/HandEntryPrompt";
 import { NameMatchPrompt } from "@/components/seat-diver/NameMatchPrompt";
 import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
-import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { newDiverHref } from "@/lib/person-fields";
-import { type FormNotice, shopPath } from "@/lib/staff-notices";
-import type { AddBandMode } from "./add-band-mode";
+import type { FormNotice } from "@/lib/staff-notices";
 
 /** The date request a band was opened from, reduced to what the forms carry. */
 export type SeatRequestContext = {
@@ -58,16 +54,6 @@ export type AddDiverContext = {
    */
   shopRentalItems?: readonly string[];
   /**
-   * Set while the departure's arrivals are open and it has not sailed
-   * (`addBandMode`): the desk chooses on the band between a booking and the
-   * counter. At the counter the band is one search field, its picks are
-   * walk-ins and its door for someone new is "Add as a walk-in" (UX audit
-   * 2026-10-07, item 24). A booking is the default: the window reaches a day
-   * and a half ahead, and a booking for tomorrow is not a walk-in. Unset, there
-   * is nothing to choose.
-   */
-  mode?: AddBandMode;
-  /**
    * The shop keeps a wait list (the Features page). Off, a full boat says it
    * is full and offers no one a place on a list.
    */
@@ -76,7 +62,8 @@ export type AddDiverContext = {
    * The date request the band was opened from (`?request=`). Each booking seat
    * it makes posts the id and says so on its button, so the seat closes the
    * request; a search keeps it; a request from somebody not on file prefills
-   * the new diver. A walk-in never carries it.
+   * the new diver. The counter never carries it: a band answering a request
+   * books.
    */
   request?: SeatRequestContext;
   className?: string;
@@ -125,13 +112,11 @@ export function AddDiverSection({
     confirmPhone,
     confirmMatches,
     shopRentalItems,
-    mode,
     waitlistOn = true,
     request,
   } = context;
   const t = staffTranslator(locale);
   const searched = query.length > 0;
-  const walkInOpen = mode === "counter";
   // What every door for someone new carries from the request: its id, and the
   // name, email and phone they asked with when they are not on file.
   const fromRequest = request
@@ -143,26 +128,15 @@ export function AddDiverSection({
       }
     : {};
   // What a search must carry so the next render is the same band: the
-  // desk's counter choice (`add` is a flash param and does not survive), or
-  // the request. Never both: the counter answers no request.
-  const searchFields: Record<string, string> | undefined = walkInOpen
-    ? { counter: "1" }
-    : request
-      ? { request: request.id }
-      : undefined;
+  // request (`add` is a flash param and does not survive). A band with a
+  // request never counters, so the two never meet.
   const requestFields = request ? { request: request.id } : undefined;
+  const searchFields = requestFields;
   const bookNewDiver = newDiverHref(shopSlug, {
     query,
     surface: "departure",
     tripId,
     ...fromRequest,
-  });
-  // Someone at the counter is not the request's party (dock review F2).
-  const walkInNewDiver = newDiverHref(shopSlug, {
-    query,
-    surface: "departure",
-    walkIn: true,
-    tripId,
   });
   const waitNewDiver = newDiverHref(shopSlug, {
     query,
@@ -173,39 +147,16 @@ export function AddDiverSection({
   });
   // A door for someone new that carries the request says so, as a pick does:
   // its label and its payload agree (round-2 domain review, finding 1).
-  const forRequest = Boolean(request) && !walkInOpen;
+  const forRequest = Boolean(request);
   const bookLabel = forRequest
     ? t("trips.addDiver.addForRequest")
     : t("trips.addDiver.addNewDiverAction", { query });
-  const walkInLabel = t("trips.addDiver.addAsWalkIn");
-  const tripPath = shopPath(shopSlug, "trips", tripId);
   // An empty result carries the doors for someone new itself, so the search
   // draws none beside it then: one "Add diver" on the band at a time.
   const noMatch = searched && candidates.length === 0;
   return (
     <div className={`flex flex-col gap-4 ${className}`.trim()}>
       <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
-
-      {mode && !full ? (
-        <SegmentedControl
-          ariaLabel={t("trips.addDiver.modeLabel")}
-          currentKey={mode}
-          ariaCurrentValue="true"
-          scroll={false}
-          items={[
-            {
-              key: "booking",
-              label: t("trips.addDiver.modeBooking"),
-              href: `${tripPath}?add=1${request ? `&request=${encodeURIComponent(request.id)}` : ""}`,
-            },
-            {
-              key: "counter",
-              label: t("trips.addDiver.modeWalkIn"),
-              href: `${tripPath}?add=1&counter=1`,
-            },
-          ]}
-        />
-      ) : null}
 
       {waitlistOn || !full ? (
         <NameMatchPrompt
@@ -218,7 +169,7 @@ export function AddDiverSection({
           // refused.
           seatKnownAction={full ? addKnownToWaitlistAction : addExistingDiverAction}
           seatNewAction={full ? addToWaitlistAction : addBookingAction}
-          hiddenFields={walkInOpen ? undefined : requestFields}
+          hiddenFields={requestFields}
           t={t}
           locale={locale}
           timeZone={timeZone}
@@ -279,126 +230,85 @@ export function AddDiverSection({
             placeholder={t("trips.addDiver.findPlaceholder")}
             // At the counter the band is one field: someone new is offered by
             // the search's own result, never a second door beside it.
-            addDiverHref={walkInOpen || noMatch ? undefined : bookNewDiver}
+            addDiverHref={noMatch ? undefined : bookNewDiver}
             addDiverLabel={
-              walkInOpen
-                ? undefined
-                : forRequest
-                  ? t("trips.addDiver.addForRequest")
-                  : t("trips.addDiver.addDiver")
+              forRequest ? t("trips.addDiver.addForRequest") : t("trips.addDiver.addDiver")
             }
           />
 
           {searched ? (
             candidates.length > 0 ? (
-              <>
-                <PersonCandidateList
-                  context={{
-                    candidates,
-                    tripId,
-                    seatAction: addExistingDiverAction,
-                    requestId: walkInOpen ? undefined : request?.id,
-                    invite: offerAction
-                      ? {
-                          action: offerAction,
-                          label: t("trips.addDiver.offerSeat"),
-                          pendingLabel: t("trips.addDiver.offerSeating"),
-                          personAriaLabel: (name) => t("trips.addDiver.offerSeatAria", { name }),
-                        }
-                      : undefined,
-                    personHref: (personId) => `/shop/${shopSlug}/divers/${personId}`,
-                    // "Same as last time": the fit already on file carries onto the
-                    // trip, so staff confirm rather than re-enter.
-                    extraLine: ({ person, rentalFit }) => {
-                      const invitedAt = offerAction ? recentInviteDates?.get(person.id) : undefined;
-                      const days = invitedAt
-                        ? Math.max(
-                            0,
-                            Math.floor((nowDate().getTime() - invitedAt.getTime()) / DAY_MS),
-                          )
-                        : null;
-                      return (
-                        <>
+              <PersonCandidateList
+                context={{
+                  candidates,
+                  tripId,
+                  seatAction: addExistingDiverAction,
+                  requestId: request?.id,
+                  invite: offerAction
+                    ? {
+                        action: offerAction,
+                        label: t("trips.addDiver.offerSeat"),
+                        pendingLabel: t("trips.addDiver.offerSeating"),
+                        personAriaLabel: (name) => t("trips.addDiver.offerSeatAria", { name }),
+                      }
+                    : undefined,
+                  personHref: (personId) => `/shop/${shopSlug}/divers/${personId}`,
+                  // "Same as last time": the fit already on file carries onto the
+                  // trip, so staff confirm rather than re-enter.
+                  extraLine: ({ person, rentalFit }) => {
+                    const invitedAt = offerAction ? recentInviteDates?.get(person.id) : undefined;
+                    const days = invitedAt
+                      ? Math.max(
+                          0,
+                          Math.floor((nowDate().getTime() - invitedAt.getTime()) / DAY_MS),
+                        )
+                      : null;
+                    return (
+                      <>
+                        <p className="mt-0.5 text-xs text-muted">
+                          {rentalFit
+                            ? t("trips.addDiver.rentalFitOnFile", {
+                                fit: rentalFitLineText(
+                                  t,
+                                  locale,
+                                  rentalFitLine(rentalFit, shopRentalItems),
+                                ),
+                              })
+                            : t("trips.addDiver.noRentalFitYet")}
+                        </p>
+                        {days === null ? null : (
                           <p className="mt-0.5 text-xs text-muted">
-                            {rentalFit
-                              ? t("trips.addDiver.rentalFitOnFile", {
-                                  fit: rentalFitLineText(
-                                    t,
-                                    locale,
-                                    rentalFitLine(rentalFit, shopRentalItems),
-                                  ),
-                                })
-                              : t("trips.addDiver.noRentalFitYet")}
+                            {days === 0
+                              ? t("trips.addDiver.invitedToday")
+                              : t("trips.addDiver.invitedDaysAgo", { days })}
                           </p>
-                          {days === null ? null : (
-                            <p className="mt-0.5 text-xs text-muted">
-                              {days === 0
-                                ? t("trips.addDiver.invitedToday")
-                                : t("trips.addDiver.invitedDaysAgo", { days })}
-                            </p>
-                          )}
-                        </>
-                      );
-                    },
-                    // A pick that answers the request says so, seat by seat:
-                    // the search also finds people who are not the party.
-                    addLabel: t(
-                      request && !walkInOpen
-                        ? "trips.addDiver.addForRequest"
-                        : "trips.addDiver.addToTrip",
+                        )}
+                      </>
+                    );
+                  },
+                  // A pick that answers the request says so, seat by seat:
+                  // the search also finds people who are not the party.
+                  addLabel: t(
+                    request ? "trips.addDiver.addForRequest" : "trips.addDiver.addToTrip",
+                  ),
+                  pendingLabel: t("words.busy.adding"),
+                  addPersonAriaLabel: (name) =>
+                    t(
+                      request
+                        ? "trips.addDiver.addPersonForRequestAria"
+                        : "trips.addDiver.addPersonAriaLabel",
+                      { name },
                     ),
-                    pendingLabel: t("words.busy.adding"),
-                    addPersonAriaLabel: (name) =>
-                      t(
-                        request && !walkInOpen
-                          ? "trips.addDiver.addPersonForRequestAria"
-                          : "trips.addDiver.addPersonAriaLabel",
-                        { name },
-                      ),
-                    noEmailOnFile: t("trips.addDiver.noEmailOnFile"),
-                  }}
-                  rowClassName="bg-surface"
-                />
-                {/* The match list can miss the person at the desk (another Sam);
-                  the doors for someone new stay one tap away under it. */}
-                {/* The mode's own door leads: a booking books first, and the
-                    counter walks in first (round-2 domain review, finding 2). */}
-                {mode ? (
-                  <div className="flex flex-wrap gap-x-4">
-                    {(walkInOpen
-                      ? [
-                          { href: walkInNewDiver, label: walkInLabel },
-                          { href: bookNewDiver, label: bookLabel },
-                        ]
-                      : [
-                          { href: bookNewDiver, label: bookLabel },
-                          { href: walkInNewDiver, label: walkInLabel },
-                        ]
-                    ).map((door) => (
-                      <Link
-                        key={door.href}
-                        href={door.href}
-                        className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
-                      >
-                        {door.label}
-                      </Link>
-                    ))}
-                  </div>
-                ) : null}
-              </>
+                  noEmailOnFile: t("trips.addDiver.noEmailOnFile"),
+                }}
+                rowClassName="bg-surface"
+              />
             ) : (
               <HandEntryPrompt
                 heading={t("trips.addDiver.noMatchesHeading")}
                 body={t("trips.addDiver.noMatches", { query })}
-                actionLabel={walkInOpen ? walkInLabel : bookLabel}
-                href={walkInOpen ? walkInNewDiver : bookNewDiver}
-                secondary={
-                  walkInOpen
-                    ? { label: bookLabel, href: bookNewDiver }
-                    : mode
-                      ? { label: walkInLabel, href: walkInNewDiver }
-                      : undefined
-                }
+                actionLabel={bookLabel}
+                href={bookNewDiver}
               />
             )
           ) : null}

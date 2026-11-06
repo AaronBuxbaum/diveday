@@ -159,9 +159,13 @@ export async function issuePartyWaiver(
     actorPersonId: string;
     /** The desk confirmed: replace a code already open on the diver's phone. */
     replace?: boolean;
+    /** The desk confirmed a parent or guardian is here to co-sign a minor's release. */
+    guardianPresent?: boolean;
     now?: Date;
   },
-): Promise<{ token: string; expiresAt: Date } | { openOnPhone: true } | null> {
+): Promise<
+  { token: string; expiresAt: Date } | { openOnPhone: true } | { guardianCheck: true } | null
+> {
   try {
     return await db.transaction(async (tx) => {
       await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
@@ -197,8 +201,15 @@ export async function issuePartyWaiver(
       if (!seat) return null;
       if (hasReturned(trip.endsAt, input.now ?? nowDate())) return null;
       const queue = await getPartyWaiverQueue(tx, input);
-      if (queue?.members.find((member) => member.bookingId === input.bookingId)?.state !== "needed")
-        return null;
+      const member = queue?.members.find((entry) => entry.bookingId === input.bookingId);
+      if (member?.state !== "needed") return null;
+      // A minor signs at the counter only once the desk says a parent or
+      // guardian is here to co-sign (issue #3986): the form asks for a
+      // guardian's name, and nobody else at the counter can say whether the
+      // person typing it is one. Asked before anything is opened or minted.
+      if (member.guardianRequired && input.guardianPresent !== true) {
+        return { guardianCheck: true as const };
+      }
       const opened = await openWaiverInThread(tx, {
         shopId: input.shopId,
         bookingId: input.bookingId,
@@ -209,17 +220,21 @@ export async function issuePartyWaiver(
       if (!opened.ok) return null;
       // A code the diver's phone already opened is kept unless the desk
       // confirms a new one: a mint would revoke it under their typing (dock
-      // review S2).
-      if (
-        !input.replace &&
-        (await hasLiveClaimedCapability(tx, {
-          purpose: "waiver_link",
-          shopId: input.shopId,
-          subjectId: opened.recordId,
-          now: input.now,
-        }))
-      )
-        return { openOnPhone: true as const };
+      // review S2). The door a party member's join email carried counts too:
+      // a release has one live door, and this mint revokes it (issue #3986).
+      if (!input.replace) {
+        for (const purpose of ["waiver_link", "party_waiver_link"] as const) {
+          if (
+            await hasLiveClaimedCapability(tx, {
+              purpose,
+              shopId: input.shopId,
+              subjectId: opened.recordId,
+              now: input.now,
+            })
+          )
+            return { openOnPhone: true as const };
+        }
+      }
       const link = await mintCapability(tx, {
         purpose: "waiver_link",
         shopId: input.shopId,
@@ -238,6 +253,16 @@ export async function issuePartyWaiver(
         waiverRecordId: opened.recordId,
       });
       if (!recorded) throw new PartyWaiverNotRecorded();
+      if (member.guardianRequired) {
+        const confirmed = await recordDiverActivity(tx, {
+          shopId: input.shopId,
+          personId: seat.personId,
+          actorPersonId: input.actorPersonId,
+          code: "waiver_counter_guardian_confirmed",
+          waiverRecordId: opened.recordId,
+        });
+        if (!confirmed) throw new PartyWaiverNotRecorded();
+      }
       return { token: link.token, expiresAt: link.expiresAt };
     });
   } catch (error) {

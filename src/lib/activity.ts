@@ -221,8 +221,6 @@ type ActivityParamShapes = {
   missing_diver_found: { actor: string };
   /** A staffer seated a diver. */
   seat_added: { actor: string; diver: string };
-  /** …as a walk-in, which is the same act with a different story behind it. */
-  seat_added_walk_in: { actor: string; diver: string };
   /** …by a diver, for a friend, from their own trip link (the actor is the lead). */
   seat_added_from_trip_link: { actor: string; diver: string };
   /** A staffer emailed a diver an invitation to this departure (the counter's "another day"). */
@@ -270,6 +268,12 @@ type ActivityParamShapes = {
   medical_diver_form_accepted: { actor: string; diver: string; record?: string };
   /** A staffer did not use the form a diver sent, and it was deleted (issue #2797). */
   medical_diver_form_not_used: { actor: string; diver: string; record?: string };
+  /**
+   * A staffer recorded the physician's answer again over a clearance stamp that carried no seal,
+   * so the stamp was replaced (issue #3987). A stamp the desk never sealed is forged or an
+   * older build's; either way the trail says it was there.
+   */
+  medical_unsealed_clearance_replaced: { actor: string; diver: string; record?: string };
   /**
    * A physician's answer was recorded from a letter dated before the referral it
    * answers (issue #2616): the letter's date, the earlier referral it was written
@@ -319,6 +323,11 @@ type ActivityParamShapes = {
    * is on the diver's trail.
    */
   waiver_counter_code_shown: { actor: string; diver: string };
+  /**
+   * A staffer confirmed a parent or guardian was at the counter to co-sign a
+   * minor's release before showing its code (issue #3986).
+   */
+  waiver_counter_guardian_confirmed: { actor: string; diver: string };
   /**
    * A staffer read a diver's medical alert for the crew, on a manifest they
    * crew or on the signed record (issue #2960). Never written offline.
@@ -594,7 +603,6 @@ export const ACTIVITY_CODES = [
   "missing_diver_alert_raised",
   "missing_diver_found",
   "seat_added",
-  "seat_added_walk_in",
   "seat_added_from_trip_link",
   "departure_offered",
   "rider_added_at_dock",
@@ -613,12 +621,14 @@ export const ACTIVITY_CODES = [
   "diver_medical_form_opened",
   "medical_diver_form_accepted",
   "medical_diver_form_not_used",
+  "medical_unsealed_clearance_replaced",
   "medical_answered_by_earlier_letter",
   "medical_answers_read",
   "scheduled_backup_medical_answers",
   "scheduled_backup_holds_medical_answers",
   "waiver_seal_acknowledged",
   "waiver_counter_code_shown",
+  "waiver_counter_guardian_confirmed",
   "medical_alert_read",
   "medical_alert_saved_offline",
   "medical_alert_printed",
@@ -786,7 +796,6 @@ export function isDeskOnlyCode(value: string): value is DeskOnlyCode {
 const TRAIL_DESK_KINDS = {
   counter_check_in: "arrival",
   seat_added: "seat_taken",
-  seat_added_walk_in: "seat_taken",
   rider_added_at_dock: "seat_taken",
   seat_moved_here: "seat_taken",
 } as const satisfies Partial<Record<ActivityCode, CatchUpKind>>;

@@ -83,8 +83,9 @@ larger one.
   stays out. This is asserted by a test, not just intended: it is the constraint most likely to be
   eroded by a well-meaning "show me who's booked" request, and that request should be answered by
   the manifest, behind the session gate.
-- Losing a staff role kills the feed on the next fetch with no cleanup step. `revokeFeedsForFormerStaff`
-  exists to tidy the rows, but correctness does not depend on anyone calling it.
+- Losing a staff role kills the feed on the next fetch with no cleanup step. `removeStaffMember`
+  also revokes the leaver's feed rows in its own transaction (issue #3996), so the shop can see they
+  are gone; correctness does not depend on it.
 - Feed responses are `no-store` and `X-Robots-Tag: noindex`. They are credentialed and per-person,
   so no shared cache may hold one.
 - The window is bounded (14 days back, 180 forward) so a subscription does not re-send years of

@@ -3,13 +3,11 @@ import { describe, expect, it } from "vitest";
 import { issueCapability } from "@/db/capabilities";
 import { capabilities, people, personRoles, userAccounts } from "@/db/schema";
 import { listStaff } from "@/db/trips";
-import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
   issueCalendarFeed,
   listCalendarFeeds,
   revokeCalendarFeeds,
-  revokeFeedsForFormerStaff,
   touchCalendarFeed,
   verifyCalendarFeed,
 } from "./feed-store";
@@ -295,68 +293,5 @@ describe("feed housekeeping", () => {
 
     const [after] = await listCalendarFeeds(db, { shopId: shop.id, personId });
     expect(after.lastAccessedAt?.toISOString()).toBe(fetchedAt.toISOString());
-  });
-
-  it("revokes the feed of a removed staff member who still holds a staff role", async () => {
-    // Removal stamps `deleted_at` and leaves the roles, so the role list alone
-    // kept a removed staffer's calendar URL working.
-    const { db, shop } = ctx;
-    const staff = await listStaff(db, shop.id);
-    const removed = staff.find((entry) => entry.roles.includes("captain")) ?? staff[1];
-    if (!removed) throw new Error("seeded shop needs a second staff member");
-    await issueCalendarFeed(db, {
-      shopId: shop.id,
-      personId: removed.person.id,
-      scope: "assignments",
-    });
-    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, removed.person.id));
-    await revokeFeedsForFormerStaff(db, { shopId: shop.id });
-    expect(
-      await listCalendarFeeds(db, { shopId: shop.id, personId: removed.person.id }),
-    ).toHaveLength(0);
-    expect(
-      await issueCalendarFeed(db, {
-        shopId: shop.id,
-        personId: removed.person.id,
-        scope: "assignments",
-      }),
-    ).toBeNull();
-  });
-
-  it("cleans up feeds held by people who no longer have any staff role", async () => {
-    const { db, shop } = ctx;
-    const staff = await listStaff(db, shop.id);
-    const leaver = staff.find((entry) => entry.roles.includes("owner"));
-    const stayer = staff.find((entry) => entry.person.id !== leaver?.person.id);
-    if (!leaver || !stayer) throw new Error("seeded shop needs two staff");
-
-    await issueCalendarFeed(db, {
-      shopId: shop.id,
-      personId: leaver.person.id,
-      scope: "assignments",
-    });
-    await issueCalendarFeed(db, {
-      shopId: shop.id,
-      personId: stayer.person.id,
-      scope: "assignments",
-    });
-
-    await db.delete(personRoles).where(eq(personRoles.personId, leaver.person.id));
-    await revokeFeedsForFormerStaff(db, { shopId: shop.id });
-
-    expect(
-      await listCalendarFeeds(db, { shopId: shop.id, personId: leaver.person.id }),
-    ).toHaveLength(0);
-    expect(
-      await listCalendarFeeds(db, { shopId: shop.id, personId: stayer.person.id }),
-    ).toHaveLength(1);
-
-    // Revoked, not deleted: the row stays as the audit trail of a credential
-    // that once existed.
-    const [leaverRow] = await db
-      .select({ revokedAt: capabilities.revokedAt })
-      .from(capabilities)
-      .where(and(eq(capabilities.shopId, shop.id), eq(capabilities.personId, leaver.person.id)));
-    expect(leaverRow.revokedAt).not.toBeNull();
   });
 });

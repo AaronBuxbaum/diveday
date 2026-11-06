@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { holdClientChunk } from "./hold-client-chunk";
 import {
   CATALOG_MAP_SITE_COUNT,
   capture,
@@ -42,6 +43,72 @@ test.describe("capture harness", () => {
   test("runner keeps failure screenshots and traces for responsive pages", () => {
     expect(test.info().project.use.screenshot).toBe("only-on-failure");
     expect(test.info().project.use.trace).toBe("retain-on-failure");
+  });
+
+  test.describe("marketing reveal hydration", () => {
+    test.use({ serviceWorkers: "block" });
+
+    test("capture waits for every reveal before scrolling past it", async ({ page }) => {
+      const chunk = await holdClientChunk(page, "marketing-reveal-pending");
+      let paintingStarted!: () => void;
+      const painting = new Promise<void>((resolve) => {
+        paintingStarted = resolve;
+      });
+      const evaluate = page.evaluate;
+      let capturing: Promise<void> | undefined;
+      try {
+        await page.goto("/", { waitUntil: "domcontentloaded" });
+        await chunk.requested;
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        const reveals = page.locator("[data-marketing-reveal]");
+        await expect(reveals).not.toHaveCount(0);
+        await expect(page.locator("[data-marketing-reveal-ready]")).toHaveCount(0);
+        await page.evaluate(() => {
+          const scroll = window.scrollTo;
+          document.documentElement.dataset.captureScrolls = "0";
+          window.scrollTo = (...args: unknown[]) => {
+            const root = document.documentElement;
+            root.dataset.captureScrolls = String(Number(root.dataset.captureScrolls) + 1);
+            Reflect.apply(scroll, window, args);
+          };
+        });
+        // Observe entry to the actual paint pass, then query its first yield.
+        // No elapsed-time assertion: hydration must hold that pass before its first scroll.
+        Object.defineProperty(page, "evaluate", {
+          configurable: true,
+          value: (...args: unknown[]) => {
+            const work = Reflect.apply(evaluate, page, args);
+            if (String(args[0]).includes("scrollBudgetMs")) paintingStarted();
+            return work;
+          },
+        });
+        capturing = capture(page, "delayed-marketing-reveal", "dark", {
+          beforeScreenshot: async () => {
+            await expect(
+              page.locator("[data-marketing-reveal]:not([data-marketing-reveal-ready])"),
+            ).toHaveCount(0);
+            throw new Error("Reveal readiness checked before the shutter");
+          },
+        });
+        void capturing.catch(() => undefined);
+        await painting;
+        expect(await page.evaluate(() => document.documentElement.dataset.captureScrolls)).toBe(
+          "0",
+        );
+        chunk.release();
+        // No new baseline: reaching the shutter with real revealed content is the assertion.
+        await expect(capturing).rejects.toThrow("Reveal readiness checked before the shutter");
+      } finally {
+        chunk.release();
+        await capturing?.catch(() => undefined);
+        Object.defineProperty(page, "evaluate", {
+          configurable: true,
+          writable: true,
+          value: evaluate,
+        });
+        await page.unrouteAll({ behavior: "wait" });
+      }
+    });
   });
 
   test.describe("lazy site maps", () => {

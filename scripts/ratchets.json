@@ -1016,7 +1016,7 @@
       "CLAUDE.md": 45,
       "AGENTS.md": 1042,
       ".claude/rules/*.md (without paths: frontmatter)": 0,
-      ".claude/skills/*/SKILL.md (description lines)": 775,
+      ".claude/skills/*/SKILL.md (description lines)": 770,
       ".claude/agents/*.md (description lines)": 130
     },
     "raises": [
@@ -1550,9 +1550,9 @@
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 314,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 396,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
-    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 307,
+    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 306,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 302,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 338,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 337,
     "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
@@ -1629,7 +1629,7 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 578,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 458
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 457
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

@@ -19,6 +19,7 @@ import {
   restoreUnchanged,
   setAsideUnchanged,
   withPassedItems,
+  writePlan,
 } from "./visual-baseline-plan.mjs";
 import { verifyCompleteScreenshotInventory } from "./visual-publish-artifacts.mjs";
 
@@ -87,6 +88,37 @@ describe("planBaselineReuse", () => {
     });
     expect(plan.unchanged).toEqual(["ok.png"]);
     expect(plan.fetch).toEqual([]);
+  });
+});
+
+describe("a plan is bound to its baseline", () => {
+  const key = "a".repeat(40);
+  const version = "b".repeat(64);
+  const report = {
+    actualItems: ["same.png"],
+    actualBlobs: { "same.png": sha("same") },
+  };
+  const draw = () =>
+    planBaselineReuse({
+      report,
+      actualHashes: { "same.png": sha("same") },
+      selective: false,
+      key,
+      version,
+    });
+
+  it("records the baseline it was drawn from", () => {
+    expect(draw()).toMatchObject({ baselineKey: key, baselineVersion: version });
+  });
+
+  it("is refused for another key or version, and for none", () => {
+    const { root } = workspace();
+    const file = path.join(root, "plan.json");
+    writePlan(draw(), file);
+    expect(readPlan(file, { key, version })).toMatchObject({ unchanged: ["same.png"] });
+    expect(() => readPlan(file, { key: "c".repeat(40), version })).toThrow(/different baseline/u);
+    expect(() => readPlan(file, { key, version: "d".repeat(64) })).toThrow(/different baseline/u);
+    expect(() => readPlan(file)).toThrow(/different baseline/u);
   });
 });
 

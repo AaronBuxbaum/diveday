@@ -158,7 +158,9 @@ export async function hasUnansweredMedicalHold(
         // Superseded or not: a referral keeps holding after its seat takes a
         // fresh link (`isUnclearedReferral`), so it stays answerable.
         isNull(waiverRecords.anonymizedAt),
-        isNull(waiverRecords.medicalClearedAt),
+        // A stamp with no seal is no answer (`unsealedClearanceAsOpen`), so the desk can record
+        // the physician's answer again (issue #3987).
+        or(isNull(waiverRecords.medicalClearedAt), isNull(waiverRecords.medicalAnswerSeal)),
         isNull(waiverRecords.medicalClearanceDeclinedAt),
       ),
     )
@@ -487,7 +489,12 @@ export async function recordMedicalEvaluation(
     // by `attachDiverMedicalForm`'s own guard. Never left on an answered row
     // (`waiver_records_diver_medical_form_held`).
     const [locked] = await tx
-      .select({ form: waiverRecords.diverMedicalFormUrl })
+      .select({
+        form: waiverRecords.diverMedicalFormUrl,
+        clearedAt: waiverRecords.medicalClearedAt,
+        declinedAt: waiverRecords.medicalClearanceDeclinedAt,
+        seal: waiverRecords.medicalAnswerSeal,
+      })
       .from(waiverRecords)
       .where(eq(waiverRecords.id, open.id))
       .for("update");
@@ -503,6 +510,24 @@ export async function recordMedicalEvaluation(
       if (!physicianName) return { ok: false, reason: "diver_form_physician_required" };
       if (!(await staffOpenedDiverForm(tx, input.shopId, input.personId, recordedBy, usedForm))) {
         return { ok: false, reason: "diver_form_not_opened" };
+      }
+    }
+
+    // **A stamp the desk never sealed is overwritten with a line on the trail** (issue #3987): the
+    // record is open to be answered again (`unsealedClearanceAsOpen`), and the write below replaces
+    // whatever stamp was there, forged or an older build's. The row is locked, so this is the
+    // stamp the write replaces, and the same condition as its guard.
+    if (locked && locked.clearedAt !== null && locked.declinedAt === null && locked.seal === null) {
+      if (
+        !(await recordDiverActivity(tx, {
+          shopId: input.shopId,
+          personId: input.personId,
+          actorPersonId: recordedBy,
+          code: "medical_unsealed_clearance_replaced",
+          waiverRecordId: open.id,
+        }))
+      ) {
+        throw new Error("recordMedicalEvaluation: the replaced stamp was not recorded");
       }
     }
 

@@ -13,7 +13,6 @@ import {
   rungOffsetMs,
   rungTime,
   stageIsStale,
-  walkInDoorOpen,
 } from "./departure-clock";
 
 // UTC instants: an offset in hours from a stored instant reads the same in every zone.
@@ -199,15 +198,5 @@ describe("the arrivals desk", () => {
     expect(onArrivalsDesk(window.to, now)).toBe(true);
     expect(onArrivalsDesk(at(window.from, -1), now)).toBe(false);
     expect(onArrivalsDesk(at(window.to, 1), now)).toBe(false);
-  });
-
-  it("opens the walk-in door on the desk until the boat has sailed, and not a millisecond after", () => {
-    expect(walkInDoorOpen(at(now, 36 * HOUR_MS), now)).toBe(true);
-    expect(walkInDoorOpen(at(now, 36 * HOUR_MS + 1), now)).toBe(false);
-    expect(walkInDoorOpen(at(now, -HOUR_MS + 1), now)).toBe(true);
-    expect(walkInDoorOpen(at(now, -HOUR_MS), now)).toBe(false);
-    // Still on the desk, gone from the door: a boat that left this morning.
-    expect(onArrivalsDesk(at(now, -3 * HOUR_MS), now)).toBe(true);
-    expect(walkInDoorOpen(at(now, -3 * HOUR_MS), now)).toBe(false);
   });
 });

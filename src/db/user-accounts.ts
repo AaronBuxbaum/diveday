@@ -117,12 +117,16 @@ export async function activateStaffAccount(
   userAccountId: string,
   hashedPassword: string,
   now: Date = nowDate(),
-): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    // Only an account still waiting on its invite: set against an active one this would be a
+    // password write with no proof of ownership (issue #3997).
+    const activated = await tx
       .update(userAccounts)
       .set({ hashedPassword, status: "active", emailVerifiedAt: now, emailVerified: true })
-      .where(eq(userAccounts.id, userAccountId));
+      .where(and(eq(userAccounts.id, userAccountId), eq(userAccounts.status, "invited")))
+      .returning({ id: userAccounts.id });
+    if (activated.length === 0) return false;
     // An `invited` account can never have signed in (verifyCredentials refuses
     // anything but `active`), so there is nothing to revoke in practice today —
     // kept for the same reason setAccountPassword now does it: consistent with
@@ -131,6 +135,7 @@ export async function activateStaffAccount(
     await tx
       .delete(accountSignInChallenges)
       .where(eq(accountSignInChallenges.userAccountId, userAccountId));
+    return true;
   });
 }
 

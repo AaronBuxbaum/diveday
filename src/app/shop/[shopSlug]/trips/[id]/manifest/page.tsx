@@ -21,7 +21,6 @@ import { CancelledRollCallBanner } from "./_components/CancelledRollCallBanner";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CheckpointSwitch } from "./_components/CheckpointSwitch";
 import { CrewRollCall } from "./_components/CrewRollCall";
-import { DeckCount } from "./_components/DeckCount";
 import { DiverRollCall } from "./_components/DiverRollCall";
 import { DockDesk } from "./_components/DockDesk";
 import { ExecutedDiveLog } from "./_components/ExecutedDiveLog";
@@ -38,7 +37,6 @@ import { readManifestView } from "./_components/manifest-view";
 import { offlineManifestPayload } from "./_components/offline-payload";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { PrintedBoatPaper } from "./_components/PrintedBoatProcedure";
-import { PrintedDeckCount } from "./_components/PrintedDeckCount";
 import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
@@ -126,9 +124,6 @@ export default async function TripManifestPage({
     checklistProps,
     stage,
     dockDesk,
-    deckCount,
-    deckCounts,
-    printedDeckCount,
     paperIdentity,
   } = view;
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
@@ -222,15 +217,7 @@ export default async function TripManifestPage({
           2, Budget rule 4. Under the head count: the same question asked of
           the boat, tapped at the rail. A safety surface: no drawing, no coral,
           no motion (`StageStrip`). */}
-        {/* **The deck count** (loop 5, row 1): the heads the captain counts on
-          deck, held against the marks the panel above sums. Right under the
-          count it checks; it informs and never gates. Gone with the roll call
-          on a cancelled departure nobody was counted on. */}
-        {cancelled === "closed" ? null : <DeckCount {...deckCount} />}
-
         <StageStrip action={actions.setTripStage} {...stage} />
-        {/* The same count on the printed sheet: a line per checkpoint (issue #3897). */}
-        {cancelled === "closed" ? null : <PrintedDeckCount {...printedDeckCount} />}
 
         <CheckpointSwitch
           manifests={completeManifests}
@@ -341,7 +328,6 @@ export default async function TripManifestPage({
               ...boatCheck,
               boatSafety,
               meetingWindows: view.stageStrip.meetingWindows,
-              deckCounts,
               locale,
               t,
             })}

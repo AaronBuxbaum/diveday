@@ -417,7 +417,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         allowEmptyExpected: process.env.VISUAL_FRESH_START === "true",
         captureMode: process.env.VISUAL_CAPTURE_MODE ?? "",
         captureManifest: process.env.VISUAL_EXPECTED_CAPTURE_MANIFEST ?? "",
-        plan: readPlan(),
+        plan: readPlan(undefined, {
+          key: process.env.REG_EXPECTED_KEY ?? "",
+          version: process.env.REG_EXPECTED_VERSION ?? "",
+        }),
       });
       console.log(
         `visual-publish-artifacts: verified ${result.actualCount} captures against ` +

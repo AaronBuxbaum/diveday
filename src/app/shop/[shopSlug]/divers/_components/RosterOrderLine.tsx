@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { MoreMenu } from "@/components/MoreMenu";
 import { buttonClass } from "@/components/ui/button";
-import { menuRowClass } from "@/components/ui/menu";
 import type { DiverFilter, DiverSort } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
  * The roster's URL for a search, a view and an order: one builder for the
- * sort links, the CSV link and the pager, so none of them drops the others.
+ * sort links and the pager, so none of them drops the others.
  */
 export function rosterHref(
   base: string,
@@ -22,26 +20,20 @@ export function rosterHref(
 }
 
 /**
- * **"Sort: Name · Last dived"** and **"Download this list (CSV)"** (fourth UX
- * review, item 27): the order a shop calls its lapsed divers in, and the list
- * it calls them from, under whatever view and search are on.
- *
- * The download shows only to a staffer with the people-export permission
- * (`canExportShopData`, owner or manager); the route re-checks it.
+ * **"Sort: Name · Last dived"** (fourth UX review, item 27): the order a shop
+ * calls its lapsed divers in, under whatever view and search are on.
  */
 export function RosterOrderLine({
   roster,
   query,
   filter,
   sort,
-  canDownload,
   t,
 }: {
   roster: string;
   query: string;
   filter: DiverFilter;
   sort: DiverSort;
-  canDownload: boolean;
   t: StaffTranslator;
 }) {
   const link = buttonClass({ variant: "link", size: "sm", flush: true });
@@ -69,16 +61,6 @@ export function RosterOrderLine({
         </span>
         {order("last_dived", t("divers.list.sortLastDived"))}
       </nav>
-      {canDownload ? (
-        <MoreMenu label={t("shared.shopSections.more")} size="sm">
-          <a
-            href={rosterHref(`${roster}/download`, { query, filter, sort })}
-            className={menuRowClass("quiet", { gutter: false })}
-          >
-            {t("divers.list.downloadList")}
-          </a>
-        </MoreMenu>
-      ) : null}
     </div>
   );
 }

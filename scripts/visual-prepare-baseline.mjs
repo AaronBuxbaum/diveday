@@ -82,6 +82,8 @@ async function fetchBaseline({ bucket, key, version, fetchImpl, actualDir, selec
         report: { ...report, actualItems: names },
         actualHashes: hashScreenshots(actualDir),
         selective,
+        key,
+        version: reportVersion,
       })
     : null;
   const wanted = plan ? plan.fetch : names;

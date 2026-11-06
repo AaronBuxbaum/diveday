@@ -75,12 +75,29 @@ async function publishedSnapshot(bucket, key, { fetchImpl }) {
     if (!/^[0-9a-f]{64}$/u.test(metadataVersion)) {
       return { kind: "malformed" };
     }
-    return { kind: "versioned", version: metadataVersion };
+    // Who published it. A marker on main carries no pull request number (reg-suit-publish-bundle
+    // writes `diveday-pr-number` only for a pull request's own run).
+    const prNumber = res.headers?.get("x-amz-meta-diveday-pr-number");
+    const owner =
+      prNumber === null || prNumber === undefined || prNumber === "None" ? "main" : "pr";
+    return { kind: "versioned", version: metadataVersion, owner };
   } catch (error) {
     return { kind: "unavailable", error };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * The ancestor walk and the expected key take a baseline from main's own publications only. A
+ * pull request's marker carries `actualBlobs` hashes the prepare step trusts to pass captures
+ * unseen, so one found where main's snapshot should be is skipped like an absent one. (A stacked
+ * layer's baseline is its lower layer's pull request marker by design; `layerBelowBaseline` takes
+ * that on its own terms.)
+ */
+function mainOwned(published) {
+  if (published.kind !== "versioned" || published.owner === "main") return published;
+  return { kind: "foreign" };
 }
 
 /** How far back the ancestor walk looks before giving up. Forty first-parent
@@ -110,7 +127,7 @@ export async function nearestPublishedAncestor({
   maxAncestors = DEFAULT_MAX_ANCESTORS,
   fetchImpl = fetch,
 }) {
-  const current = await publishedSnapshot(bucket, `${key}/out.json`, { fetchImpl });
+  const current = mainOwned(await publishedSnapshot(bucket, `${key}/out.json`, { fetchImpl }));
   if (current.kind === "versioned") return { key, skipped: 0, version: current.version };
   let legacyFound = current.kind === "legacy";
   let unresolvedFound = current.kind === "malformed" || current.kind === "unavailable";
@@ -124,7 +141,7 @@ export async function nearestPublishedAncestor({
     return null;
   }
   for (const [index, sha] of ancestors.entries()) {
-    const published = await publishedSnapshot(bucket, `${sha}/out.json`, { fetchImpl });
+    const published = mainOwned(await publishedSnapshot(bucket, `${sha}/out.json`, { fetchImpl }));
     if (published.kind === "versioned") {
       return { key: sha, skipped: index + 1, version: published.version };
     }

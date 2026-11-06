@@ -1,8 +1,10 @@
-import { and, eq, exists, ne, sql } from "drizzle-orm";
+import { and, eq, exists, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { AccountTokenPurpose } from "@/lib/account-tokens";
+import { STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { mintCapability, openCapability, spendCapability, verifyCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
-import { capabilities, userAccounts } from "./schema";
+import { capabilities, personRoles, userAccounts } from "./schema";
 
 /**
  * The account tokens (verify, reset, invite) as `capabilities` rows naming a
@@ -12,7 +14,25 @@ import { capabilities, userAccounts } from "./schema";
  * account token means on top of it.
  */
 
+/** A token was asked for an account that is disabled: none is minted. */
+export class DisabledAccountError extends Error {
+  constructor() {
+    super("account is disabled");
+    this.name = "DisabledAccountError";
+  }
+}
+
 export type IssuedAccountToken = { token: string; tokenId: string; expiresAt: Date };
+
+async function holdsStaffRole(db: DbExecutor, userAccountId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ one: sql`1` })
+    .from(userAccounts)
+    .innerJoin(personRoles, eq(personRoles.personId, userAccounts.personId))
+    .where(and(eq(userAccounts.id, userAccountId), inArray(personRoles.role, [...STAFF_ROLES])))
+    .limit(1);
+  return Boolean(row);
+}
 
 /**
  * Mints a fresh, purpose-bound token for an account, superseding any prior
@@ -27,6 +47,19 @@ export async function issueAccountToken(
   input: { userAccountId: string; purpose: AccountTokenPurpose; now?: Date },
 ): Promise<IssuedAccountToken> {
   return db.transaction(async (tx) => {
+    // The mint below locks this row too, so a removal that commits first is seen here: a link
+    // minted just after it would be live again on a re-enable (issue #3989, security review).
+    const [account] = await tx
+      .select({ status: userAccounts.status })
+      .from(userAccounts)
+      .where(eq(userAccounts.id, input.userAccountId))
+      .for("update");
+    if (account?.status === "disabled") throw new DisabledAccountError();
+    // A removal leaves an invitee `invited` with no staff role (issue #3997): an invite minted
+    // after it would open a login for someone no longer on the team.
+    if (input.purpose === "invite" && !(await holdsStaffRole(tx, input.userAccountId))) {
+      throw new DisabledAccountError();
+    }
     const minted = await mintCapability(tx, {
       purpose: input.purpose,
       shopId: null,
@@ -74,9 +107,10 @@ export async function wasAccountTokenConsumed(
  * disabled, not just that it wasn't disabled when the token was requested —
  * so two concurrent submits of the same link can never both succeed, and a
  * disabled account's outstanding tokens stop working immediately.
- * Deliberately "not disabled" rather than "active": an `invite` token's
- * account starts life `invited`, not `active` (20260726-staff-invite-accounts),
- * and still needs to be consumable. The sole gate a mutating action may rely
+ * Deliberately "not disabled" rather than "active" for a reset or verification link, and
+ * "invited" for an invite (20260726-staff-invite-accounts): an invite is the only token that
+ * sets a password for someone who has none, so it is refused on any account that already
+ * accepted or was disabled. The sole gate a mutating action may rely
  * on. Accepts a transaction so the caller can claim the token and perform its
  * protected mutation (marking an account verified, setting a new password)
  * atomically — a failure between the two must not burn a one-time link for
@@ -93,9 +127,45 @@ export async function consumeAccountToken(
         .select({ one: sql`1` })
         .from(userAccounts)
         .where(
-          and(eq(userAccounts.id, capabilities.userAccountId), ne(userAccounts.status, "disabled")),
+          and(
+            eq(userAccounts.id, capabilities.userAccountId),
+            // An invite sets a password, so it is spent only on the account it was mailed for
+            // while that account still waits to accept it (issue #3997).
+            input.purpose === "invite"
+              ? eq(userAccounts.status, "invited")
+              : ne(userAccounts.status, "disabled"),
+          ),
         ),
     ),
   });
   return spent ? { userAccountId: spent.subjectId } : null;
+}
+
+const ACCOUNT_TOKEN_PURPOSES: readonly AccountTokenPurpose[] = [
+  "email_verification",
+  "password_reset",
+  "invite",
+];
+
+/**
+ * Turns off every unspent account token an account holds (`revoked_at`), without minting a
+ * replacement. Spending already refuses a disabled account, but that refusal lifts on re-enable;
+ * a removal calls this so a link mailed before it does not come back to life (issue #3989). The
+ * rows stay, so the fact that they were withdrawn stays on record.
+ */
+export async function withdrawAccountTokens(
+  db: DbExecutor,
+  input: { userAccountId: string; now?: Date },
+): Promise<void> {
+  await db
+    .update(capabilities)
+    .set({ revokedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        eq(capabilities.userAccountId, input.userAccountId),
+        inArray(capabilities.purpose, [...ACCOUNT_TOKEN_PURPOSES]),
+        isNull(capabilities.usedAt),
+        isNull(capabilities.revokedAt),
+      ),
+    );
 }

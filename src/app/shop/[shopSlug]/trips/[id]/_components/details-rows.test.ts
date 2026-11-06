@@ -52,6 +52,7 @@ const run = {
   weekdayMask: SATURDAYS as never,
   endsOn: null,
   futureScheduledCount: 4,
+  yardDatesLeftOff: [],
 };
 
 describe("repeatsRowText: a run's standing crew", () => {
@@ -81,5 +82,44 @@ describe("repeatsRowText: a run's standing crew", () => {
       standingCrewNames: [],
     });
     expect(text).not.toMatch(/crew/i);
+  });
+});
+
+describe("repeatsRowText: the yard weeks the roll left off", () => {
+  const withYard = (yardDatesLeftOff: string[]) => ({
+    ...run,
+    standingCrewNames: [],
+    yardDatesLeftOff: yardDatesLeftOff as never,
+  });
+
+  it("says nothing when the roll left no week off", () => {
+    expect(repeatsRowText(staffTranslator("en-US"), "en-US", withYard([]))).not.toContain(
+      "out of service",
+    );
+  });
+
+  it("names the dates the boat's window kept off the board", () => {
+    const text = repeatsRowText(
+      staffTranslator("en-US"),
+      "en-US",
+      withYard(["2031-01-08", "2031-01-15"]),
+    );
+    expect(text).toMatch(
+      /Left off the board, the boat is out of service then: Jan\s8,\s2031 and Jan\s15,\s2031\./,
+    );
+  });
+
+  it("names the first three and counts the rest", () => {
+    const text = repeatsRowText(
+      staffTranslator("en-US"),
+      "en-US",
+      withYard(["2031-01-08", "2031-01-15", "2031-01-22", "2031-01-29", "2031-02-05"]),
+    );
+    expect(text).toMatch(/Jan\s22,\s2031, and 2 more\./);
+  });
+
+  it("says it in Spanish", () => {
+    const text = repeatsRowText(staffTranslator("es-ES"), "es-ES", withYard(["2031-01-08"]));
+    expect(text).toContain("Fuera del calendario porque el barco estará fuera de servicio:");
   });
 });

@@ -46,7 +46,7 @@ export async function putARehearsalOnTomorrow(
     tripId: trip.id,
     actorPersonId,
     diver: { fullName: "Test Diver" },
-    entry: "walk_in",
+    entry: "roster",
     refusals: "coarse",
   });
   return { tripId: trip.id };

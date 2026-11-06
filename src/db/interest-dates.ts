@@ -265,33 +265,6 @@ export async function listDateInterestsByIds(
 }
 
 /**
- * Whether `requestId` is an open date request in this shop that carries no email
- * of its own (a name alone is allowed, issue #3743). Read under the shop scope:
- * another shop's id, a closed request, junk and a request with an email all
- * answer false, so a form flag can never stand in for the row.
- */
-export async function isOpenDateRequestWithoutEmail(
-  db: DbExecutor,
-  shopId: string,
-  requestId: string,
-): Promise<boolean> {
-  const [row] = await db
-    .select({ id: interests.id })
-    .from(interests)
-    .where(
-      and(
-        eq(interests.id, requestId),
-        eq(interests.shopId, shopId),
-        eq(interests.scope, "date"),
-        isNull(interests.closedAt),
-        or(isNull(interests.email), eq(interests.email, "")),
-      ),
-    )
-    .limit(1);
-  return Boolean(row);
-}
-
-/**
  * Open date interests that named one of the supplied calendar dates. Callers may
  * pass a small expanded window so flexible interests can be filtered with
  * `dateRequestMatchFor` using the same rules as the Requests page.

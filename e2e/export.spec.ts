@@ -203,6 +203,7 @@ test.describe("one diver's own record export", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
     const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Record actions" }).click();
     await page.getByRole("link", { name: "Download record" }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(

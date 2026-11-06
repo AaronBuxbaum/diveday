@@ -17,6 +17,44 @@ vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
   };
 });
 
+// Wrappers that call the real function until a test queues a fault, so the
+// best-effort catch blocks of `seatConsequences` run against a real seat.
+const { mailFaults } = vi.hoisted(() => ({
+  mailFaults: {
+    confirmation: [] as unknown[],
+    waiverOnJoin: [] as unknown[],
+    courseSeat: [] as unknown[],
+  },
+}));
+vi.mock("./notifications", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./notifications")>();
+  return {
+    ...actual,
+    sendStaffSeatingConfirmation: (
+      ...args: Parameters<typeof actual.sendStaffSeatingConfirmation>
+    ) => {
+      if (mailFaults.confirmation.length > 0)
+        return Promise.reject(mailFaults.confirmation.shift());
+      return actual.sendStaffSeatingConfirmation(...args);
+    },
+    sendCourseSeatConfirmation: (...args: Parameters<typeof actual.sendCourseSeatConfirmation>) => {
+      if (mailFaults.courseSeat.length > 0) return Promise.reject(mailFaults.courseSeat.shift());
+      return actual.sendCourseSeatConfirmation(...args);
+    },
+  };
+});
+vi.mock("./waiver-issue", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./waiver-issue")>();
+  return {
+    ...actual,
+    issueWaiverOnJoin: (...args: Parameters<typeof actual.issueWaiverOnJoin>) => {
+      if (mailFaults.waiverOnJoin.length > 0)
+        return Promise.reject(mailFaults.waiverOnJoin.shift());
+      return actual.issueWaiverOnJoin(...args);
+    },
+  };
+});
+
 import { levelShort } from "@/test/admission-refusals";
 import {
   activityEvents,
@@ -117,6 +155,9 @@ const ctx = fileScopedShopContext({ realShop: true });
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  mailFaults.confirmation.length = 0;
+  mailFaults.waiverOnJoin.length = 0;
+  mailFaults.courseSeat.length = 0;
 });
 
 describe("seatDiver (the one consequence path behind every staff door)", () => {
@@ -195,16 +236,16 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
     });
   });
 
-  it("says a walk-in was a walk-in on the trail, and takes a diver with no email", async () => {
+  it("takes a diver with no email, and says so on the trail", async () => {
     const { db, shop, open, actorPersonId } = await context();
 
     const result = await seatDiver(db, {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      // The counter's shape: a name and nothing else.
+      // A name and nothing else.
       diver: { fullName: "Counter Cass" },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -213,7 +254,7 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
     // `waiver: "issued"` and was pinning the bug it was meant to catch.
     expect(result).toMatchObject({ ok: true, personName: "Counter Cass", waiver: "not_delivered" });
     expect(await activityLines(db, open.id)).toContainEqual({
-      code: "seat_added_walk_in",
+      code: "seat_added",
       params: expect.objectContaining({ diver: "Counter Cass" }),
     });
   });
@@ -227,13 +268,13 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { personId: diver.id },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
     expect(result).toMatchObject({ ok: true, personName: diver.fullName });
     expect(await activityLines(db, open.id)).toContainEqual({
-      code: "seat_added_walk_in",
+      code: "seat_added",
       params: expect.objectContaining({ diver: diver.fullName }),
     });
   });
@@ -325,7 +366,7 @@ describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { fullName: "No Email Nell" },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -463,7 +504,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
     expect(sentBodies(send)[0]).not.toMatch(/\/ready\/[A-Za-z0-9._-]+\/waiver/);
   });
 
-  it("keeps the counter's path for today's boat: the waiver alone, no confirmation", async () => {
+  it("confirms the counter seat on today's boat, the waiver riding in it", async () => {
     const { db, shop, open, actorPersonId } = await context();
     const send = deliverableEmailEnv();
     // The frozen test clock is 09:30 in the shop's zone; this boat leaves at 11:30.
@@ -478,49 +519,19 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { fullName: "Counter Cleo", email: DELIVERABLE_EMAIL },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
-    expect(result).toMatchObject({ ok: true, confirmation: "not_needed", waiver: "sent" });
+    expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
     expect(send).toHaveBeenCalledOnce();
-  });
-
-  it("seats a returning diver picked at the counter as a walk-in: trail code and no confirmation owed", async () => {
-    const { db, shop, open, actorPersonId } = await context();
-    const send = deliverableEmailEnv();
-    const startsAt = new Date(nowDate().getTime() + 2 * 60 * 60 * 1000);
-    await db
-      .update(tripsTable)
-      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
-      .where(eq(tripsTable.id, open.id));
-    const diver = await bookableDiver(db, shop.id, open.id);
-
-    const result = await seatDiver(db, {
-      shopId: shop.id,
-      tripId: open.id,
-      actorPersonId,
-      diver: { personId: diver.id },
-      entry: "walk_in",
-      refusals: "specific",
-    });
-
-    expect(result).toMatchObject({ ok: true, confirmation: "not_needed" });
-    expect(await activityLines(db, open.id)).toContainEqual({
-      code: "seat_added_walk_in",
-      params: expect.objectContaining({ diver: diver.fullName }),
-    });
-    // The booking confirmation is the one email a walk-in is not owed.
-    for (const call of send.mock.calls) {
-      expect(JSON.stringify(call)).not.toMatch(/confirm/i);
-    }
   });
 
   /**
    * Dive-domain review F2 of layer r4-1: "Can you get me on the 1:30?" at
-   * 9 AM is the commonest phone booking a shop takes. Only the walk-in counter
-   * knows the diver is standing there; every other door confirms any
-   * departure that has not sailed.
+   * 9 AM is the commonest phone booking a shop takes. The counter cannot tell
+   * it from a diver at the desk, so every door confirms any departure that has
+   * not sailed.
    */
   it("confirms a phoned-in seat on today's boat", async () => {
     const { db, shop, open, actorPersonId } = await context();
@@ -546,7 +557,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
     expect(sentBodies(send)[0]).not.toContain("/waivers/");
   });
 
-  it("confirms a counter seat on a later day's boat", async () => {
+  it("confirms a counter seat on a boat that has not sailed", async () => {
     const { db, shop, open, actorPersonId } = await context();
     const send = deliverableEmailEnv();
 
@@ -555,7 +566,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { fullName: "Counter Cato", email: DELIVERABLE_EMAIL },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -607,7 +618,7 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
       // actually typed. A different human under a similar spelling is the case
       // the flag exists for.
       diver: { personId: diver.id, fromNameMatch: { typedName: "Someone Else Entirely" } },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
     });
 
@@ -665,7 +676,7 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
       // What the counter's "divers not booked today" seat link submits: the
       // row's id and nothing else.
       diver: { personId: diver.id },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -728,7 +739,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { personId: UNKNOWN_ID },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
     const unknownTrip = await seatDiver(db, {
@@ -736,7 +747,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: UNKNOWN_ID,
       actorPersonId,
       diver: { fullName: "Nobody Home" },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -759,7 +770,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { personId: diver.id },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -768,7 +779,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { personId: diver.id },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
     const onFullBoat = await seatDiver(db, {
@@ -776,7 +787,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: fullTrip.id,
       actorPersonId,
       diver: { fullName: "Counter Cass" },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -862,7 +873,7 @@ describe("seatDiver trip admission (the boat's own cert gate reaches every staff
         tripId: open.id,
         actorPersonId,
         diver: { personId: diver.id },
-        entry: "walk_in",
+        entry: "roster",
         refusals: "coarse",
       }),
       // `toEqual`, not `toMatchObject`: the collapse must also drop the
@@ -883,9 +894,75 @@ describe("seatDiver trip admission (the boat's own cert gate reaches every staff
         tripId: open.id,
         actorPersonId,
         diver: { fullName: "Counter Cass" },
-        entry: "walk_in",
+        entry: "roster",
         refusals: "coarse",
       }),
     ).resolves.toMatchObject({ ok: true, personName: "Counter Cass" });
+  });
+});
+
+/**
+ * **A failing mail never unseats a diver.** Every consequence after the seat
+ * commits is best-effort, and what the door may claim is what actually
+ * happened: a confirmation that threw is `not_sent`, a waiver that could not be
+ * issued is `failed`. A thrown value that is not an `Error` is logged as
+ * unknown, never rethrown.
+ */
+describe("seatDiver consequence failures (the seat stands, the door says so)", () => {
+  const heldSeat = async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    return await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // A held seat owes no confirmation, so it takes the waiver-on-join path.
+      diver: { personId: diver.id, fromNameMatch: { typedName: "Someone Else Entirely" } },
+      entry: "roster",
+      refusals: "specific",
+    });
+  };
+
+  it.each([
+    ["an Error", new Error("ses down")],
+    ["a thrown string", "ses down"],
+  ])("reports not_sent and failed when the confirmation throws %s", async (_label, fault) => {
+    const { db, shop, open, actorPersonId } = await context();
+    deliverableEmailEnv();
+    mailFaults.confirmation.push(fault);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Fault Fay", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "not_sent", waiver: "failed" });
+  });
+
+  it.each([
+    ["an Error", new Error("template gone")],
+    ["a thrown string", "template gone"],
+  ])("reports failed when a held seat's waiver throws %s", async (_label, fault) => {
+    mailFaults.waiverOnJoin.push(fault);
+
+    expect(await heldSeat()).toMatchObject({
+      ok: true,
+      identityUnconfirmed: true,
+      waiver: "failed",
+    });
+  });
+
+  it.each([
+    ["an Error", new Error("materials mail down")],
+    ["a thrown string", "materials mail down"],
+  ])("still seats a held diver when the course materials mail throws %s", async (_label, fault) => {
+    mailFaults.courseSeat.push(fault);
+
+    expect(await heldSeat()).toMatchObject({ ok: true, identityUnconfirmed: true });
+    expect(mailFaults.courseSeat).toHaveLength(0);
   });
 });

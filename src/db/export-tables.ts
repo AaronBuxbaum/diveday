@@ -37,8 +37,8 @@ import {
   customerGearReminderSettings,
   dateRequestOfferBookings,
   deals,
-  deckCounts,
   departureBoatSafetySnapshots,
+  departureNotes,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -48,11 +48,14 @@ import {
   gearReservations,
   gearServiceEvents,
   importedPaymentHistory,
+  inboundMessages,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
+  interestReplies,
   interests,
   internalNotes,
+  lostItems,
   notificationDeliveries,
   orderLineItems,
   orders,
@@ -68,6 +71,7 @@ import {
   shopTextTranslations,
   staffCredentialHistory,
   staffCredentials,
+  staffReplies,
   tripChangeEvents,
   tripHelpRequests,
   tripLenses,
@@ -254,11 +258,6 @@ export const EXPORT_TABLES = {
     table: safetyDrillParticipants,
     order: [asc(safetyDrillParticipants.drillId), asc(safetyDrillParticipants.id)],
     scope: { shopColumn: safetyDrillParticipants.shopId },
-  },
-  deckCounts: {
-    table: deckCounts,
-    order: [asc(deckCounts.recordedAt), asc(deckCounts.seq), asc(deckCounts.id)],
-    scope: { shopColumn: deckCounts.shopId },
   },
   tripStageEvents: {
     table: tripStageEvents,
@@ -508,6 +507,35 @@ export const EXPORT_TABLES = {
     table: customerGearItems,
     order: [asc(customerGearItems.createdAt), asc(customerGearItems.id)],
     scope: { shopColumn: customerGearItems.shopId, personColumn: customerGearItems.personId },
+  },
+  // The inbox (ADR 20260907-two-way-inbox): what a diver sent the shop, what
+  // the shop sent back, and the shelf of found items. The first three are the
+  // diver's own by their person id; the date-request reply and the note to a
+  // whole departure name no diver, so only the shop's bundle reads them.
+  inboundMessages: {
+    table: inboundMessages,
+    order: [asc(inboundMessages.receivedAt), asc(inboundMessages.id)],
+    scope: { shopColumn: inboundMessages.shopId, personColumn: inboundMessages.personId },
+  },
+  staffReplies: {
+    table: staffReplies,
+    order: [asc(staffReplies.sentAt), asc(staffReplies.id)],
+    scope: { shopColumn: staffReplies.shopId, personColumn: staffReplies.personId },
+  },
+  interestReplies: {
+    table: interestReplies,
+    order: [asc(interestReplies.sentAt), asc(interestReplies.id)],
+    scope: { shopColumn: interestReplies.shopId },
+  },
+  departureNotes: {
+    table: departureNotes,
+    order: [asc(departureNotes.sentAt), asc(departureNotes.id)],
+    scope: { shopColumn: departureNotes.shopId },
+  },
+  lostItems: {
+    table: lostItems,
+    order: [asc(lostItems.createdAt), asc(lostItems.id)],
+    scope: { shopColumn: lostItems.shopId, personColumn: lostItems.personId },
   },
   workOrders: {
     table: workOrders,

@@ -22,7 +22,7 @@ remains only for a release with no seat; a counter tablet gets its own capabilit
 
 **Layer 2 (built): every other send of a seat's release** goes through `deliverThreadLink`. **No
 "Copy link" for a seat** (`thread_only`): a copied thread link would put the holder's whole
-readiness credential in a staff clipboard. A party member gets their own thread link.
+readiness credential in a staff clipboard. A party member gets a `party_waiver_link` door (#3986).
 
 **Layer 3 (built): a party lead signs a minor's seat on their own link**,
 `/ready/<token>/party/<seat>/waiver`, keyed by `partySeatWaiverKey` (the panel's door, re-read on
@@ -38,7 +38,6 @@ deleted; the doctor's page is the thread's.
 
 **Next:** bookingless releases move to `waiver_link`, and `waiver_records` drops `token_hash` and
 `expires_at`.
-
 ## Alternatives considered
 
 - **Drop the columns first.** Rejected: senders would mint a capability the next layer deletes.

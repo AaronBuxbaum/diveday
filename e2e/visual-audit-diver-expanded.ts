@@ -134,16 +134,17 @@ export function registerDiverExpandedAuditCaptures(capture: AuditCapture) {
       await capture(page, "diver-notes-editor-open", "light");
     });
 
-    test("the diver's delete disclosure exposes its confirmation without deleting", async ({
+    test("the diver's record menu offers download and delete without deleting", async ({
       page,
     }) => {
       await openRecord(page);
-      const remove = page.locator("#remove");
-      await openIfClosed(remove.locator("details"));
-      await remove
+      await page
+        .getByRole("button", { name: copy("divers.record.menuLabel"), exact: true })
+        .click();
+      await page
         .getByRole("button", { name: copy("divers.remove.removeDiver"), exact: true })
         .waitFor();
-      await capture(page, "diver-delete-confirmation-open", "light");
+      await capture(page, "diver-record-menu-open", "light");
     });
 
     test("the guardian-email erasure disclosure asks for the address without erasing it", async ({

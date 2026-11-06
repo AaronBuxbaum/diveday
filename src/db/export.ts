@@ -290,12 +290,23 @@ async function loadCardExportRows(tx: AppTransaction, scope: ShopExportScope | D
   return { cardRows, juniorReviewRows, ...splitCardsByKind(cardRows) };
 }
 
-/** The deck counts and the drill log: the safety records a shop keeps beside its roll call (loop 5). */
+/** The drill log: the safety records a shop keeps beside its roll call (loop 5). */
 async function readSafetyRecords(tx: AppTransaction, scope: ShopExportScope) {
   return {
-    deckCountRows: await readScoped(tx, "deckCounts", scope),
     safetyDrillRows: await readScoped(tx, "safetyDrills", scope),
     safetyDrillParticipantRows: await readScoped(tx, "safetyDrillParticipants", scope),
+    ...(await readShopInbox(tx, scope)),
+  };
+}
+
+/** The inbox, the shop's answers, the notes to a departure and the found-items shelf (ADR 20260907-two-way-inbox). */
+async function readShopInbox(tx: AppTransaction, scope: ShopExportScope) {
+  return {
+    inboundMessageRows: await readScoped(tx, "inboundMessages", scope),
+    staffReplyRows: await readScoped(tx, "staffReplies", scope),
+    interestReplyRows: await readScoped(tx, "interestReplies", scope),
+    departureNoteRows: await readScoped(tx, "departureNotes", scope),
+    lostItemRows: await readScoped(tx, "lostItems", scope),
   };
 }
 
@@ -812,18 +823,11 @@ export type ShopExportContext = NonNullable<Awaited<ReturnType<typeof loadShopEx
  *
  * ## What is included but incomplete on purpose
  *
- * `waiver_records.csv` **omits `medical_answers`.** The shop-wide export's own
- * comment on that column doesn't apply the other way: whether a subject access
- * request should receive the diver's own medical answers is a real question,
- * not an engineering default, and it belongs with H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit's legal review —
- * see `docs/product/human-decisions/README.md`. Every other column of a diver's own
- * signed evidence (status, signature, timestamps, template text) ships now.
- * The same hold extends to `photoUrls`: an imported record's
- * `importSourceMedicalDocumentUrl` (a re-stored scan of the same medical
- * intake form) is never bundled, while `importSourceDocumentUrl` (the general
- * signed release) is — a scanned document is medical evidence with a file
- * extension rather than a JSON key, and the JSON column being withheld does
- * not by itself withhold the document it came with.
+ * `waiver_records.csv` **carries `medical_answers` and `medical_alert`**, and
+ * `photoUrls` carries an imported record's scanned medical intake form. Aaron
+ * decided on 2026-11-05 that medical text is not treated specially in an
+ * export (H-20261025-per-diver-record-export); the one open item is a legal
+ * conversation as the product scales (issue filed with that decision).
  *
  * ## Tenant + subject scoping
  *
@@ -1119,6 +1123,12 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   // ticket's pieces and lines (ADR 20261008-gear-work-orders).
   const customerGearItemRows = await readScoped(tx, "customerGearItems", scope);
 
+  // What this diver sent the shop, what the shop sent back, and anything
+  // found aboard with their name on it.
+  const inboundMessageRows = await readScoped(tx, "inboundMessages", scope);
+  const staffReplyRows = await readScoped(tx, "staffReplies", scope);
+  const lostItemRows = await readScoped(tx, "lostItems", scope);
+
   const workOrderRows = await readScoped(tx, "workOrders", scope);
 
   const diverWorkOrderIds = workOrderRows.map((row) => row.id);
@@ -1168,16 +1178,13 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   const photoUrls = [
     ...recapPhotoRows.map((row) => row.imageUrl),
-    // importSourceDocumentUrl only — never importSourceMedicalDocumentUrl.
-    // A re-stored scanned intake form is medical evidence with a
-    // file extension rather than a JSON key, and bundling it here would
-    // hand a diver's medical document out from underneath H-20261025-per-diver-record-export's still-open
-    // question of whether they should have it — the same withholding
-    // medical_answers gets above, extended to the form the medical answers
-    // actually shipped on when the waiver was imported.
-    ...waiverRows.flatMap((row) =>
-      row.importSourceDocumentUrl ? [row.importSourceDocumentUrl] : [],
-    ),
+    // The imported signed release and its scanned medical intake form: the
+    // medical answers ship (H-20261025-per-diver-record-export, answered
+    // 2026-11-05), so the form they came on ships with them.
+    ...waiverRows.flatMap((row) => [
+      ...(row.importSourceDocumentUrl ? [row.importSourceDocumentUrl] : []),
+      ...(row.importSourceMedicalDocumentUrl ? [row.importSourceMedicalDocumentUrl] : []),
+    ]),
     ...importedPaymentHistoryRows.map((row) => row.receiptDocumentUrl),
   ].filter((url): url is string => Boolean(url));
 
@@ -1212,6 +1219,9 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     rolesText,
     gearReservationRows,
     customerGearItemRows,
+    inboundMessageRows,
+    staffReplyRows,
+    lostItemRows,
     workOrderRows,
     workOrderLineRows,
     workOrderCareRows,
@@ -1280,7 +1290,6 @@ export async function loadShopExportCounts(
     ),
     "trip_change_events.csv": await countShopScoped(db, "tripChangeEvents", shopId),
     "trip_stage_events.csv": await countShopScoped(db, "tripStageEvents", shopId),
-    "deck_counts.csv": await countShopScoped(db, "deckCounts", shopId),
     "safety_drills.csv": await countShopScoped(db, "safetyDrills", shopId),
     "safety_drill_participants.csv": await countShopScoped(db, "safetyDrillParticipants", shopId),
     "trip_series.csv": await countShopScoped(db, "tripSeries", shopId),
@@ -1377,6 +1386,11 @@ export async function loadShopExportCounts(
     "gear_service_events.csv": await countShopScoped(db, "gearServiceEvents", shopId),
     "gear_reservations.csv": await countShopScoped(db, "gearReservations", shopId),
     "customer_gear_items.csv": await countShopScoped(db, "customerGearItems", shopId),
+    "inbound_messages.csv": await countShopScoped(db, "inboundMessages", shopId),
+    "staff_replies.csv": await countShopScoped(db, "staffReplies", shopId),
+    "interest_replies.csv": await countShopScoped(db, "interestReplies", shopId),
+    "departure_notes.csv": await countShopScoped(db, "departureNotes", shopId),
+    "lost_items.csv": await countShopScoped(db, "lostItems", shopId),
     "work_orders.csv": await countShopScoped(db, "workOrders", shopId),
     "work_order_items.csv": await countShopScoped(db, "workOrderItems", shopId),
     "work_order_lines.csv": await countShopScoped(db, "workOrderLines", shopId),

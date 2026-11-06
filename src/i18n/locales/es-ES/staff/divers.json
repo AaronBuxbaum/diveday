@@ -148,7 +148,6 @@
     "noticeDeleted": "Buceador eliminado",
     "noticeRestored": "Buceador restaurado",
     "noticeRestoreRefused": "No se pudo restaurar a ese buceador, porque un buceador activo usa ahora su correo. Cambia ese correo e inténtalo de nuevo.",
-    "noticeDownloadTooLarge": "Esta lista tiene más de 5.000 buceadores. Limita la búsqueda o elige un filtro y vuelve a descargarla.",
     "removedToast": "Buceador eliminado",
     "noticeErased": "Datos personales borrados. La exención firmada, las salidas y los pagos quedan registrados sin los datos del buceador. Esto no se puede deshacer.",
     "noticeErasedProcessorOwed": "Datos personales borrados aquí, pero algo en Stripe quedó sin terminar. Abre Ajustes para ver qué falta y resolverlo. Hasta entonces este buceador no está borrado del todo.",
@@ -159,7 +158,6 @@
     "addDiverWithName": "Agregar buceador",
     "addToWaitlistButton": "Agregar a quienes esperan",
     "addToTripButton": "Agregar a la salida",
-    "addToBoatButton": "Agregar al barco",
     "fullNameLabel": "Nombre completo",
     "emailLabel": "Correo electrónico",
     "phoneLabel": "Teléfono",
@@ -225,8 +223,7 @@
     "sortLabel": "Ordenar:",
     "sortName": "Nombre",
     "sortLastDived": "Última inmersión",
-    "sortAriaLabel": "Orden del registro",
-    "downloadList": "Descargar esta lista (CSV)"
+    "sortAriaLabel": "Orden del registro"
   },
   "header": {
     "noContactDetails": "Aún sin datos de contacto",
@@ -269,7 +266,6 @@
     "shopPaymentFallback": "Pago del centro"
   },
   "remove": {
-    "removePersonSummary": "Eliminar a {name}",
     "removeDiver": "Eliminar buceador",
     "consequence": "Quita a {name} de la lista, los selectores de reserva, los manifiestos y la preparación. Sus exenciones, salidas y pagos se conservan, y puedes restaurarlo.",
     "staffWarning": "También trabaja aquí. Al eliminarlo sale del equipo y ya no podrá iniciar sesión."
@@ -571,10 +567,12 @@
     "lastDiveFuture": "Ese día todavía no ha llegado.",
     "lastDiveSavedLaterKnown": "Guardado. Ha buceado en una de tus salidas después de ese día, así que la ficha muestra esa fecha más reciente."
   },
+  "record": {
+    "menuLabel": "Acciones del registro"
+  },
   "export": {
     "downloadButton": {
-      "idle": "Descargar registro",
-      "acknowledged": "En camino, revisa tus descargas"
+      "idle": "Descargar registro"
     }
   },
   "status": {

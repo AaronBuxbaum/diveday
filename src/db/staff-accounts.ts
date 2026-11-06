@@ -1,11 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
+import { personPurposesThatMerge } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
 import { crewPublicNameToStore } from "@/lib/crew-public-name";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
+import { withdrawAccountTokens } from "./account-tokens";
+import { revokePersonCapabilities } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { lockDemoShopIdentityChanges } from "./demo-account-guard";
 import { releaseHelpRequestsOfPerson } from "./help-requests";
@@ -518,10 +521,15 @@ export async function setStaffAccountStatus(
     if (input.status === "disabled" && (await isLastOwner(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "last_owner" };
     }
-    await tx
+    // Only between `active` and `disabled`: an invitee who never accepted has no password of
+    // their own, so a re-enable (the Undo after a removal included) would hand them an active
+    // account the invite never opened (issue #3997). Their way in is a resent invite.
+    const changed = await tx
       .update(userAccounts)
       .set({ status: input.status })
-      .where(eq(userAccounts.id, input.userAccountId));
+      .where(and(eq(userAccounts.id, input.userAccountId), ne(userAccounts.status, "invited")))
+      .returning({ id: userAccounts.id });
+    if (changed.length === 0) return { ok: false, reason: "not_found" };
     await tx
       .delete(accountSignInChallenges)
       .where(eq(accountSignInChallenges.userAccountId, input.userAccountId));
@@ -567,6 +575,14 @@ export async function removeStaffMember(
     if (await isLastOwner(tx, input.shopId, input.personId)) {
       return { ok: false, reason: "last_owner" };
     }
+    // Serialise with `issueCalendarFeed`, which locks this row before it reads roles: a rotation
+    // in flight would otherwise mint a live feed after the revoke below has run (issue #3996).
+    await tx
+      .select({ id: people.id })
+      .from(people)
+      // diveday:allow-deleted-people: a lock on the leaver's own row, whatever its state.
+      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+      .for("no key update");
     // A leaver cannot be the crew member a diver was promised help from.
     await releaseHelpRequestsOfPerson(tx, { shopId: input.shopId, personId: input.personId });
     await tx
@@ -574,16 +590,22 @@ export async function removeStaffMember(
       .where(
         and(eq(personRoles.personId, input.personId), inArray(personRoles.role, [...STAFF_ROLES])),
       );
+    // An invitee who never accepted stays `invited`: disabling it would let the Undo's re-enable
+    // skip the invite (issue #3997). Its links are withdrawn below and it holds no role.
     await tx
       .update(userAccounts)
       .set({ status: "disabled" })
-      .where(eq(userAccounts.id, input.userAccountId));
+      .where(and(eq(userAccounts.id, input.userAccountId), ne(userAccounts.status, "invited")));
     await tx
       .delete(accountSignInChallenges)
       .where(eq(accountSignInChallenges.userAccountId, input.userAccountId));
     // Revoke any session issued before this instant, same reasoning as
     // setStaffAccountStatus above.
     await tx.delete(accountSessions).where(eq(accountSessions.userAccountId, input.userAccountId));
+    // And the reset, invite and verification links mailed before it. Only the disabled status
+    // refuses them, and a re-enable lifts that (issue #3989). Not done by a temporary disable, for
+    // the reason the consent below is not: that person is still here to use their own link.
+    await withdrawAccountTokens(tx, { userAccountId: input.userAccountId });
     // Revoke this person's push subscriptions in the same transaction (ADR
     // 20260804-manifest-web-push). Disabling the account does not reach them:
     // the `people` row deliberately survives, so the row's ON DELETE CASCADE
@@ -598,6 +620,16 @@ export async function removeStaffMember(
           eq(pushSubscriptions.personId, input.personId),
         ),
       );
+    // And their calendar feeds, which are keyed by the person and so outlive the account: a
+    // staff credential is exactly a `person` purpose a diver merge refuses
+    // (`personPurposesThatMerge("refuse")`). Inside this transaction, not after it: a throw
+    // between the commit and a separate revoke left the links live for an Undo to restore
+    // (issue #3996). Restoring the roles does not bring a feed back; they subscribe afresh.
+    await revokePersonCapabilities(tx, {
+      purposes: personPurposesThatMerge("refuse"),
+      shopId: input.shopId,
+      personId: input.personId,
+    });
     // And withdraw their agreement to be named to divers (issue #1181), for the
     // same reason and one step further: a removed person has no login, so there
     // is no path left by which *they* can withdraw it. Leaving the stamp makes

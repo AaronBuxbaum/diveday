@@ -66,10 +66,44 @@ describe("course forms QR", () => {
     await act(async () => {});
     expect(screen.getByRole("dialog")).toHaveTextContent("Open on their phone");
     expect(screen.queryByRole("img")).toBeNull();
-    expect(action).toHaveBeenLastCalledWith("a", false);
+    expect(action).toHaveBeenLastCalledWith("a", false, undefined);
     fireEvent.click(screen.getByRole("button", { name: "Show a new code" }));
     await act(async () => {});
-    expect(action).toHaveBeenLastCalledWith("a", true);
+    expect(action).toHaveBeenLastCalledWith("a", true, undefined);
+    expect(screen.getByRole("img")).toHaveAttribute("src", "data:image/png;base64,Qg==");
+  });
+
+  it("shows a minor's code only after the desk confirms a guardian is here, and keeps that on a replace (issue 3986)", async () => {
+    const action = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, guardianCheck: true })
+      .mockResolvedValueOnce({ ok: false, openOnPhone: true })
+      .mockResolvedValueOnce({ ok: true, qr: "data:image/png;base64,Qg==" });
+    render(
+      <CourseFormsQrProvider
+        action={action}
+        copy={{
+          ...copy,
+          openOnPhone: "Open on their phone",
+          replace: "Show a new code",
+          guardianCheck: "Is a guardian here?",
+          guardianConfirm: "Yes, show the code",
+        }}
+      >
+        <CourseFormsQrButton bookingId="m" name="Mia" />
+      </CourseFormsQrProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Show QR code for Mia" }));
+    await act(async () => {});
+    expect(screen.getByRole("dialog")).toHaveTextContent("Is a guardian here?");
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(action).toHaveBeenLastCalledWith("m", false, undefined);
+    fireEvent.click(screen.getByRole("button", { name: "Yes, show the code" }));
+    await act(async () => {});
+    expect(action).toHaveBeenLastCalledWith("m", false, true);
+    fireEvent.click(screen.getByRole("button", { name: "Show a new code" }));
+    await act(async () => {});
+    expect(action).toHaveBeenLastCalledWith("m", true, true);
     expect(screen.getByRole("img")).toHaveAttribute("src", "data:image/png;base64,Qg==");
   });
 });

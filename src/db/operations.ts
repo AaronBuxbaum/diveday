@@ -223,6 +223,7 @@ export type DiverActivityCode =
   | "diver_medical_form_opened"
   | "medical_diver_form_accepted"
   | "medical_diver_form_not_used"
+  | "medical_unsealed_clearance_replaced"
   | "medical_answers_read"
   | "medical_alert_read"
   | "medical_alert_saved_offline"
@@ -233,7 +234,8 @@ export type DiverActivityCode =
   | "dispute_sheet_printed"
   | "running_late_from_message"
   | "waiver_seal_acknowledged"
-  | "waiver_counter_code_shown";
+  | "waiver_counter_code_shown"
+  | "waiver_counter_guardian_confirmed";
 
 /**
  * One line on the diver-record trail, subject-only — the same shape

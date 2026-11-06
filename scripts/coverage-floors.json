@@ -64,6 +64,12 @@
       "files": {
         "src/db/bookings.ts": "89.47 -> 89.43"
       }
+    },
+    {
+      "why": "The walk-in branches left src/db/seat-diver.ts with the walk-in door (the entry case and the owes-confirmation entry check were both covered), so the same untested remainder is a larger share. No branch was added untested. Measured by CI on #3972; the coverage artifact cannot be downloaded from an agent session, so the value is copied from the job log",
+      "files": {
+        "src/db/seat-diver.ts": "79.59 -> 79.38"
+      }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
@@ -106,7 +112,7 @@
   "src/db/schema/erasure.ts": 100,
   "src/db/schema/offline-manifests.ts": 100,
   "src/db/schema/waivers.ts": 100,
-  "src/db/seat-diver.ts": 79.59,
+  "src/db/seat-diver.ts": 79.38,
   "src/db/signed-waiver-page.ts": 100,
   "src/db/standing-sailed-roll-call.ts": 100,
   "src/db/trips-manifest.ts": 100,

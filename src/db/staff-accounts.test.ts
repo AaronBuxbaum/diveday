@@ -4,9 +4,18 @@ import { upcomingTripsWithCounts } from "@/db/trips";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { consumeAccountToken, issueAccountToken } from "./account-tokens";
+import { issueCapability } from "./capabilities";
 import type { AppDb } from "./client";
 import { recordPushSubscription } from "./push-subscriptions";
-import { people, personRoles, pushSubscriptions, shops, userAccounts } from "./schema";
+import {
+  capabilities,
+  people,
+  personRoles,
+  pushSubscriptions,
+  shops,
+  userAccounts,
+} from "./schema";
 import {
   inviteStaffMember,
   listShopSpokenLanguages,
@@ -325,6 +334,85 @@ describe("setStaffAccountStatus", () => {
 });
 
 describe("removeStaffMember", () => {
+  /** The `revoked_at` of a person's capability links, by purpose, in one read. */
+  async function feedRevocations(db: AppDb, personId: string) {
+    return db
+      .select({ purpose: capabilities.purpose, revokedAt: capabilities.revokedAt })
+      .from(capabilities)
+      .where(eq(capabilities.personId, personId))
+      .orderBy(capabilities.purpose);
+  }
+
+  it("revokes the leaver's calendar feeds in the removal's own transaction (issue #3996)", async () => {
+    // The feed links are keyed by person and the `people` row survives a removal, so only an
+    // explicit revoke reaches them. Done after the commit, a throw in between left them live
+    // and an Undo restored them; inside the transaction they go or the removal does not.
+    const { db, shop } = ctx;
+    const staff = await makeStaff(db, shop.id, ["crew"]);
+    const bystander = await makeStaff(db, shop.id, ["crew"]);
+    for (const purpose of ["calendar_assignments", "calendar_shop_trips"] as const) {
+      await issueCapability(db, { purpose, shopId: shop.id, subjectId: staff.personId });
+      await issueCapability(db, { purpose, shopId: shop.id, subjectId: bystander.personId });
+    }
+
+    await removeStaffMember(db, {
+      shopId: shop.id,
+      personId: staff.personId,
+      userAccountId: staff.userAccountId,
+    });
+
+    const leaver = await feedRevocations(db, staff.personId);
+    expect(leaver.map((row) => row.purpose)).toEqual([
+      "calendar_assignments",
+      "calendar_shop_trips",
+    ]);
+    expect(leaver.every((row) => row.revokedAt instanceof Date)).toBe(true);
+    // A colleague's feed is not the leaver's to take down.
+    const kept = await feedRevocations(db, bystander.personId);
+    expect(kept).toHaveLength(2);
+    expect(kept.every((row) => row.revokedAt === null)).toBe(true);
+  });
+
+  it("leaves the leaver's feeds live when the removal is refused", async () => {
+    const { db, shop } = ctx;
+    const owner = await makeStaff(db, shop.id, ["owner"]);
+    await stripOtherOwners(db, shop.id, owner.personId);
+    await issueCapability(db, {
+      purpose: "calendar_shop_trips",
+      shopId: shop.id,
+      subjectId: owner.personId,
+    });
+
+    const result = await removeStaffMember(db, {
+      shopId: shop.id,
+      personId: owner.personId,
+      userAccountId: owner.userAccountId,
+    });
+
+    expect(result).toEqual({ ok: false, reason: "last_owner" });
+    expect((await feedRevocations(db, owner.personId))[0]?.revokedAt).toBeNull();
+  });
+
+  it("does not revoke a link of another purpose the person holds", async () => {
+    // Only staff credentials (`merge: "refuse"`) go; a courtesy-email unsubscribe link is a diver
+    // convenience the `people` row keeps.
+    const { db, shop } = ctx;
+    const staff = await makeStaff(db, shop.id, ["crew"]);
+    await issueCapability(db, {
+      purpose: "courtesy_email_unsubscribe",
+      shopId: shop.id,
+      subjectId: staff.personId,
+    });
+
+    await removeStaffMember(db, {
+      shopId: shop.id,
+      personId: staff.personId,
+      userAccountId: staff.userAccountId,
+    });
+
+    expect((await feedRevocations(db, staff.personId))[0]?.revokedAt).toBeNull();
+  });
+
   it("revokes the leaver's push subscriptions, which a disabled account does not reach", async () => {
     // The `people` row deliberately survives a removal, so the subscription's
     // ON DELETE CASCADE never fires, and the send path filters on shop and trip
@@ -442,6 +530,54 @@ describe("removeStaffMember", () => {
       .from(userAccounts)
       .where(eq(userAccounts.id, staff.userAccountId));
     expect(account?.status).toBe("disabled");
+  });
+
+  it("leaves a never-accepted invitee invited, so an Undo cannot skip the invite (issue #3997)", async () => {
+    const { db, shop } = ctx;
+    const invitee = await makeStaff(db, shop.id, ["crew"], { status: "invited" });
+
+    expect(
+      await removeStaffMember(db, {
+        shopId: shop.id,
+        personId: invitee.personId,
+        userAccountId: invitee.userAccountId,
+      }),
+    ).toEqual({ ok: true });
+    // The Undo banner's re-enable is refused: nobody chose a password for this account.
+    expect(
+      await setStaffAccountStatus(db, {
+        shopId: shop.id,
+        personId: invitee.personId,
+        userAccountId: invitee.userAccountId,
+        status: "active",
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+
+    const [account] = await db
+      .select({ status: userAccounts.status })
+      .from(userAccounts)
+      .where(eq(userAccounts.id, invitee.userAccountId));
+    expect(account?.status).toBe("invited");
+  });
+
+  it("leaves a removed invitee no live invite, and mints none afterwards (issue #3997)", async () => {
+    const { db, shop } = ctx;
+    const invitee = await makeStaff(db, shop.id, ["crew"], { status: "invited" });
+    const issued = await issueAccountToken(db, {
+      userAccountId: invitee.userAccountId,
+      purpose: "invite",
+    });
+
+    await removeStaffMember(db, {
+      shopId: shop.id,
+      personId: invitee.personId,
+      userAccountId: invitee.userAccountId,
+    });
+
+    expect(await consumeAccountToken(db, { token: issued.token, purpose: "invite" })).toBeNull();
+    await expect(
+      issueAccountToken(db, { userAccountId: invitee.userAccountId, purpose: "invite" }),
+    ).rejects.toThrow();
   });
 
   it("refuses to remove the shop's last owner", async () => {

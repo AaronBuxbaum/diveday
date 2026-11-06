@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openCounterFor, openDiverFileGroup, openRosterRow, walkInFormPath } from "./helpers";
+import { addDiverFormPath, openCounterFor, openDiverFileGroup, openRosterRow } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 for (const width of [390, 1280]) {
@@ -9,7 +9,7 @@ for (const width of [390, 1280]) {
 
     test("the walk-in name and its remove action share a control size", async ({ page }) => {
       const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
-      await page.goto(walkInFormPath("blue-mantis", tripId));
+      await page.goto(addDiverFormPath("blue-mantis", tripId));
       await page.getByRole("button", { name: "Add another person" }).click();
       const person = page.getByRole("group", { name: "Person 2" });
       const input = person.getByLabel("Full name");
@@ -117,7 +117,9 @@ for (const width of [390, 1280]) {
       await expect(email).toHaveValue("avery@gmial.com");
       const box = await correction.boundingBox();
       if (!box) throw new Error("Email correction is missing");
-      expect(box.height).toBeGreaterThanOrEqual(44);
+      // Chromium lays out in 1/64px units; measure at that precision, as the
+      // summary target above does, so a 43.99997px read is not a real shortfall.
+      expect(Math.round(box.height * 64) / 64).toBeGreaterThanOrEqual(44);
       await correction.click();
       await expect(email).toHaveValue("avery@gmail.com");
     });

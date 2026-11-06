@@ -5,12 +5,11 @@ import { ErasePersonalData } from "./ErasePersonalData";
 import { GuardianEmailErasure } from "./GuardianEmailErasure";
 import { MergeDiver } from "./MergeDiver";
 import type { DiverNotice } from "./NoticeBanner";
-import { RemoveDiver } from "./RemoveDiver";
 import type { DiverProfile } from "./shared";
 
 /**
- * The foot of a diver's record: merge, the guardian's address, delete
- * and erase, each present only for a staffer the page has already cleared for
+ * The foot of a diver's record: merge, the guardian's address and erase,
+ * each present only for a staffer the page has already cleared for
  * it. Moved out of the route file whole, so the page reads as the record and
  * this reads as what you do *to* it.
  */
@@ -25,7 +24,6 @@ export function DiverRecordFoot({
   mergeCandidates,
   guardianEmails,
   canErase,
-  canDelete,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -39,13 +37,12 @@ export function DiverRecordFoot({
   /** Null unless this staffer may erase. */
   guardianEmails: string[] | null;
   canErase: boolean;
-  canDelete: boolean;
 }) {
   // **The quiet foot** — the things you do *to* a record rather than with
   // it. No rule of its own: the file's last hairline already closes the
   // record above it, and a second one 48px lower read as a stray line.
   // Nothing here is primary-weight, and reaching the two destructive ones
-  // costs a scroll on purpose (ADR 20260802-diver-data-erasure).
+  // costs a deleted record on purpose (ADR 20260802-diver-data-erasure).
   return (
     <div className="mt-10 space-y-6 print:hidden">
       {mergeCandidates.length > 0 ? (
@@ -66,20 +63,8 @@ export function DiverRecordFoot({
           status={noticeForForm(notice, "guardian-email")}
         />
       ) : null}
-      {/* Delete on a line of its own. "Download record" moved to the
-          header's action row (visual review 2026-10-24, A12), so it is no
-          longer one slip from this red one (UX review 2026-10-10, item 37).
-          Nothing to delete twice: a removed diver gets the Restore panel at
-          the top of the record instead. */}
-      {canDelete && !removed ? (
-        <RemoveDiver
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          t={t}
-          status={noticeForForm(notice, "remove")}
-        />
-      ) : null}
+      {/* Delete and "Download record" live in the header's "⋯"
+          (`DiverRecordMenu`), not here. */}
       {/* **Erasure is offered on a deleted record and nowhere else.** It is
           the one control in the product with no undo, and it used to sit at
           the foot of every diver's record — including the diver a staffer

@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNotNull, isNull, ne, notInArray, or, type SQL } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, ne, or, type SQL } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import {
   CAPABILITY_POLICY,
@@ -7,6 +7,7 @@ import {
   capabilityExpiry,
   capabilitySubject,
   onePerPersonPurposes,
+  purposesNaming,
   reusablePurposes,
 } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
@@ -244,12 +245,20 @@ export async function mintCapability<P extends CapabilityPurpose>(
     // The invariant (one live link per shop, or per subject, per purpose)
     // belongs to this module, not to its callers.
     await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
+    // A release has one live door at a time, whichever purpose opened it
+    // (`capabilities_live_waiver_record_idx`): a counter code shown at the desk
+    // takes the place of the door the join email sent, and the reverse
+    // (issue #3986).
+    const superseded =
+      policy.per === "subject" && policy.subject === "waiver_record"
+        ? purposesNaming("waiver_record")
+        : [input.purpose];
     await db
       .update(capabilities)
       .set({ revokedAt: now })
       .where(
         and(
-          eq(capabilities.purpose, input.purpose),
+          inArray(capabilities.purpose, superseded),
           policy.per === "shop"
             ? eq(capabilities.shopId, shopId as string)
             : eq(subjectColumn(input.purpose), input.subjectId),
@@ -426,8 +435,7 @@ export async function livePersonCapabilities<P extends CapabilityPurpose>(
 
 /**
  * Turns off the live links of these purposes in one shop (`revoked_at`),
- * without minting replacements: one person's (`personId`), or everybody's but
- * the people named in `keepPersonIds`. A revoked row stays, so the fact that it
+ * without minting replacements, for one person (`personId`). A revoked row stays, so the fact that it
  * was turned off stays on record. A `person` purpose's rows only.
  */
 export async function revokePersonCapabilities(
@@ -435,8 +443,7 @@ export async function revokePersonCapabilities(
   input: {
     purposes: readonly CapabilityPurpose[];
     shopId: string;
-    personId?: string;
-    keepPersonIds?: readonly string[];
+    personId: string;
     now?: Date;
   },
 ): Promise<void> {
@@ -452,10 +459,7 @@ export async function revokePersonCapabilities(
         inArray(capabilities.purpose, [...input.purposes]),
         eq(capabilities.shopId, input.shopId),
         isNull(capabilities.revokedAt),
-        input.personId ? eq(capabilities.personId, input.personId) : undefined,
-        input.keepPersonIds && input.keepPersonIds.length > 0
-          ? notInArray(capabilities.personId, [...input.keepPersonIds])
-          : undefined,
+        eq(capabilities.personId, input.personId),
       ),
     );
 }

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
-import { issueAccountToken } from "@/db/account-tokens";
+import { DisabledAccountError, issueAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { findActiveAccountByEmail } from "@/db/user-accounts";
@@ -55,7 +55,12 @@ export async function requestPasswordReset(formData: FormData) {
       const issued = await issueAccountToken(db, {
         userAccountId: account.id,
         purpose: "password_reset",
+      }).catch((error: unknown) => {
+        // Disabled between the lookup and here: the page said "sent" either way, so send nothing.
+        if (error instanceof DisabledAccountError) return null;
+        throw error;
       });
+      if (!issued) return;
       await sendNotification(db, {
         kind: "password_reset_request",
         userAccountId: account.id,

@@ -360,7 +360,7 @@ describe("deleteDemoShopCascade", () => {
     await db.insert(activityEvents).values({
       shopId: shop.id,
       actorPersonId: person.id,
-      code: "seat_added_walk_in",
+      code: "seat_added",
       params: { actor: person.fullName, diver: person.fullName },
     });
 

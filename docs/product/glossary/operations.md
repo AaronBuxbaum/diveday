@@ -99,16 +99,13 @@
   (retention, backups, integrations, the daily retry drain) stay UTC routes of their own. A scan
   that fails is isolated, logged as `cron_shop_tick.scan_failed` with its name, and turns the
   `diveday-shop-tick` monitor to error.
-- **Walk-in** — a person who turns up at the counter for a boat that has not left, seated from the
-  departure door in walk-in mode (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
-  The mode is a claim from the client and holds only while the boat's **counter window** is open;
-  in it a name is enough (the email is optional) and the seat is told as a walk-in. Every gate is
-  the departure door's own: readiness, admission, waiver and capacity. The old
-  `/trips/[id]/walk-in` page is gone and redirects to the door.
-- **Counter window** — when the counter may still seat a walk-in on a departure
-  (`walkInDoorOpen`, `src/lib/departure-clock.ts`): it starts inside the arrivals window and has
-  not sailed (the one departure buffer). The staffer's door and the seat action both ask it, so a
-  typed URL or a stale page cannot seat someone on a boat that has gone.
+- **Walk-in** — a person who turns up at the desk. DiveDay has no separate walk-in seat, door or
+  activity line (Aaron, 2026-11-05): adding a diver to a boat is one act whether they phoned,
+  emailed or stand at the counter. A name is enough; email and phone are optional (the wait list
+  alone asks for an email, to reach someone when a seat opens), and a returning diver is matched by the name or email typed (phone is not matched), so a name-only
+  add may create a second record the shop merges later. Every gate is the departure door's own:
+  readiness, admission, waiver and capacity. A seat with no address is not mailed a confirmation,
+  and the desk is told the waiver wasn't emailed.
 - **Counter payment hold** — Cash or Card machine tapped on an open order's Record payment row: a
   **held send** of kind `counter_payment` (`src/db/counter-payment-hold.ts`) that records the
   order's balance only when its eight seconds run out, or as soon as the screen leaves (closed,
@@ -118,7 +115,7 @@
   hold is the same hold. A hold that finds the order no longer open records nothing and writes a
   line in the shop's log (issue #3030, H-20261024-counter-payment-undo-hold).
 - **Walk-in party** — several people seated in one counter submission: the first person's own
-  fields plus further rows (`member-<n>-…`, `src/lib/walk-in-party.ts`), each seated by the
+  fields plus further rows (`member-<n>-…`, `src/lib/seat-party-form.ts`), each seated by the
   walk-in door with every gate its own. A name that reads like someone on file is settled row by
   row (the record, or a new person) before anyone is seated. Staff can open the party's waiver
   queue after seating or from the roster. Each person scans only their own code and signs on their
@@ -1433,18 +1430,6 @@
   not say a diver **sailed**, that everyone is back, or that a day has **settled**; those are read
   off roll-call evidence. A new window measured from a departure is a rung here, not an offset of
   its own.
-- **Deck count** — the heads the captain counted on deck at one **roll-call checkpoint**, typed as
-  one number on the Boat tab (`deck_counts`, newest per checkpoint stands; loop 5, row 1). The roll
-  call's own head count is the sum of per-person marks, so a mark made against the wrong name still
-  reads as a full boat; the deck count is the second, independent count that catches it. It is held
-  against the passengers that checkpoint expects aboard (never crew) and the page agrees or names
-  the gap: "You count 11. The manifest says 12.", who has no mark, and when more people are marked
-  aboard than counted, that a mark may be on the wrong person. **It informs and never gates**:
-  nothing closes, opens or refuses anything on it, and a checkpoint stays complete or open by the
-  marks alone. The printed manifest carries a blank "Deck count: ___ at ___" line per checkpoint, or
-  the last count where one exists (a count older than the checkpoint's newest mark says to count
-  again, and an earlier day's names its date), and the saved offline copy shows the newest count read-only;
-  neither records one. Rule in `src/lib/deck-count.ts`, writer and reader in `src/db/deck-counts.ts`.
 - **Roll-call checkpoint** — one independent roll call: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite
@@ -1813,16 +1798,21 @@
   from the **integrity-sealed waiver**'s seal on purpose: the answer is the shop's later act, not
   what the diver signed, so recording one never re-seals the signature, and a refile, a guardian
   redaction or an erasure re-seals the signature without touching it (every field it covers
-  survives all three; the evaluation's document link does not, so it is outside). The clearance
+  survives all three; the evaluation's document link does not, so it is outside, and stays
+  outside by decision of issue #3987: erasure and media deletion rewrite the link, so sealing it
+  would break the seal on a legitimate act, and a swapped link lifts nothing, because the stamps
+  do. Catching a swapped letter needs the document's own hash, not the link). The clearance
   stamp is what lifts a referral, so the check fails closed, at read time: every read that decides
-  boarding (readiness, the roster, the manifest, check-in) verifies the seal and reads a clearance
+  boarding (readiness, the roster, the manifest, check-in), and every one that does not (the
+  import's hold check, the token page's completed record, the signature log), verifies the seal and reads a clearance
   whose seal is missing or wrong as no clearance, so the referral holds; the nightly pass is defence
   in depth, not the gate. There it reads a stamp with no matching seal, a seal with no answer, or a
   seal copied from another record as `invalid`, and holds the diver with `waiver_seal_failed` like
   any other changed release. An unsealed clearance (a stamp and no seal at all: an answer an older
   build wrote while the seal's deploy rolled out, or a forgery that never touched the seal) is no
   answer, never backfilled and never trusted: the desk records the physician's answer again, which
-  seals it and lifts a nightly hold the stamp alone caused. A seal that is present but wrong is
+  seals it and lifts a nightly hold the stamp alone caused, after writing a line on the diver's
+  trail (`medical_unsealed_clearance_replaced`) that a stamp was replaced. A seal that is present but wrong is
   tampering: that row stays as evidence, and the way out is a fresh signature. The
   `superseded_at` column stays outside both seals: superseding answers nothing, and a superseded
   referral still holds by time.
@@ -2406,7 +2396,7 @@
 
 - **Crew thanks** — the optional line a diver leaves under their review for one crew member of that departure ("Keiko made my first wreck easy"), on the recap's review form (loop 5, row 6). It is `trip_reviews.crew_thanks` with `crew_thanks_person_id`, both or neither, at most 200 characters, and it is never published: only that crew member (on their Today, beside the tips line, newest two of the last 14 days, without the diver's name) and the shop's owners and managers (the people who may reply to reviews) see it, on the reviews ledger too. A person not on the departure's crew is dropped at the write. An owner or manager can hide one from the ⋯ menu on the review row (`crew_thanks_hidden_at`, with who did it in `crew_thanks_hidden_by_person_id`; the words stay for the shop); the hide stays through any revision the diver makes, and only an owner or manager showing it lifts it. A diver's erasure clears it with their review. The words are the diver's, not the crew member's: erasing the crew member a line names keeps the line and its pointer, as erasure keeps a person's name in other people's words (Aaron, 2026-11-05, #3913). The recap's menu sends a `crewThanksChoice` (`src/lib/crew-thanks-choice.ts`), a digest of the departure and the crew member, never their person id; the writer resolves it against that departure's crew (#3912). `src/db/crew-thanks.ts`.
 - **Seat-sold alert** — one email an hour, at most, to a shop's owners and managers while seats are selling (loop 5, row 8): "3 seats sold in the last hour" with a line per departure, never a diver or an amount. It is a Features switch, `seatSoldAlerts`, and the one that starts **off** for a new shop (owner decision 2026-11-05); a seat a staffer put on the boat is not news to the desk, and a cancelled seat is not a sale. The hourly `seat-sold-alerts` scan claims `shops.seat_sold_alerted_through` with a compare-and-set so a batch is sent once, and gives it back if nobody could be reached. `src/db/seat-sold-alerts.ts`.
-- **Out of service** — a boat in the yard: one window of shop-local calendar days, both ends inclusive, with the shop's own one-line reason ("Hull repaint", at most 120 characters), set on the boat's papers under Settings → Boats (loop 5, row 5). Every path that puts a departure on that hull refuses it when a meeting day touches the window: the builder's add and the pattern's second departure, a trip's details save (`boat_out_of_service` in `tripDetailsPatch`), a move (`moveTrip`), a copy (`duplicateTrip`; Copy last year's week leaves that departure off), and a series, which is refused whole when any week it would put on the board lands in the window (#3915). The week board still warns on any day where a departure holds it, as for a window set after the departure was. It is `boats.out_of_service_from` / `_until` / `_reason`, both dates or neither. It is not readiness, admission or the manifest. `src/lib/service-window.ts`.
+- **Out of service** — a boat in the yard: one window of shop-local calendar days, both ends inclusive, with the shop's own one-line reason ("Hull repaint", at most 120 characters), set on the boat's papers under Settings → Boats (loop 5, row 5). Every path that puts a departure on that hull refuses it when a meeting day touches the window: the builder's add and the pattern's second departure, a trip's details save (`boat_out_of_service` in `tripDetailsPatch`), a move (`moveTrip`), a copy (`duplicateTrip`; Copy last year's week leaves that departure off), and a series, which is refused whole when any week it would put on the board lands in the window (#3915). The nightly roll leaves a yard week off the board without storing a skip, so the week returns on the first roll after the window moves; a trip's Repeats row names those weeks, read when the page is drawn (#3948, #3988), and the roll reads the window under a share lock. The week board still warns on any day where a departure holds it, as for a window set after the departure was. It is `boats.out_of_service_from` / `_until` / `_reason`, both dates or neither. It is not readiness, admission or the manifest. `src/lib/service-window.ts`.
 - **Site closure** — a dive site closed for a window of shop-local calendar days with a reason (a marine-park closure, a storm-damaged mooring; loop 5, row 5), set on the site's page under Dive sites. While the shop's own day is inside it, the public site page answers not found, the sitemap leaves it out and a departure's day plan drops the link; the week board warns on a departure that visits it. It is `dive_sites.closed_from` / `closed_until` / `closure_reason`; the window is never read by readiness or the manifest. `src/db/dive-site-closures.ts`.
 - **Referral student** — a course seat whose diver finished theory and pool with another instructor and comes here for the open-water dives (loop 5, row 10). Marked on the course roster; the desk then collects the referral form and the other instructor's training record, each stamped with who collected it and when (`bookings.referred_in_at`, `referral_form_at`, `referral_record_at`, each with its staffer). Only on a course departure. What is still owed shows on the seat until both are in. `src/lib/referral-student.ts`, `src/db/referral-students.ts`.
 - **Charter inquiry** — a date request that asks for the whole boat for a group (loop 5, row 11): a box on the date-request form when the shop dives from a boat and the `privateCharters` Features switch is on, never on a course ask (`interests.charter`). Staff answer it from Date requests with a reply that can open with a whole-boat quote in the shop's currency, written in the diver's language, from an owner or manager only (`canQuoteCharter`), and counted in the reply's 1,000 characters; the quote is recorded on the request (`charter_quote_cents`, `_currency`, `_quoted_at`, `_quoted_by_person_id`) only once the reply went. A departure built from it is private, whatever the Private box said, and the builder's brief says so; the builder's brief shows the quote under that request, above the price box, and the staffer sets the price (#3917). Inquiry to quote to booking, with the booking itself the ordinary private departure. `src/lib/charter-quote.ts`, `src/db/interest-replies.ts`.

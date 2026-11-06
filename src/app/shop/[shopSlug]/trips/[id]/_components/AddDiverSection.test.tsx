@@ -72,7 +72,7 @@ describe("AddDiverSection", () => {
     );
   });
 
-  it("is one search field at the counter, whose empty result offers the walk-in (UX audit item 24)", () => {
+  it("offers one door for someone new, beside the search and again on an empty result", () => {
     const props = {
       shopSlug: "blue-mantis",
       tripId: "trip-1",
@@ -84,118 +84,12 @@ describe("AddDiverSection", () => {
       addExistingDiverAction: action,
       locale: "en-US",
       timeZone: "America/Cancun",
-      mode: "counter" as const,
     };
     const { rerender } = render(<AddDiverSection context={{ ...props, query: "" }} />);
-    expect(screen.getByRole("searchbox")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Add as a walk-in" })).toBeNull();
-    // The choice rides the search, which `add` (a flash param) does not.
-    const search = screen.getByRole("searchbox").closest("form");
-    expect(search?.querySelector('input[type="hidden"][name="counter"]')).toHaveValue("1");
-
-    rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
-    expect(screen.getByRole("link", { name: "Add as a walk-in" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&walkIn=true&tripId=trip-1",
-    );
-    // A phone booking for tomorrow is not a walk-in: its door stays beside.
-    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&tripId=trip-1",
-    );
-  });
-
-  /**
-   * **Inside the arrivals window a door that means a booking makes one** (desk
-   * review F1): the band is a booking until the desk picks "Walk-in" on it.
-   */
-  it("is a booking inside the window until the desk picks the counter on the band", () => {
-    const props = {
-      shopSlug: "blue-mantis",
-      tripId: "trip-1",
-      full: false,
-      candidates: [],
-      addBookingAction: action,
-      addToWaitlistAction: action,
-      addKnownToWaitlistAction: action,
-      addExistingDiverAction: action,
-      locale: "en-US",
-      timeZone: "America/Cancun",
-      mode: "booking" as const,
-    };
-    const { container, rerender } = render(<AddDiverSection context={{ ...props, query: "" }} />);
-    const choice = screen.getByRole("navigation", { name: "Booking or walk-in" });
-    expect(choice).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Walk-in" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/trips/trip-1?add=1&counter=1",
-    );
-    expect(container.querySelector('input[name="counter"]')).toBeNull();
-
-    // Before a search, the search's own door is the one way to someone new.
     expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
-
     rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
-    // Someone new is a booking first; the walk-in stays one explicit tap away.
-    // An empty result carries both doors, so the search's own is not drawn
-    // beside it as a second "Add diver" (visual triage, #2737).
-    const links = screen.getAllByRole("link", { name: /^(Add diver|Add as a walk-in)$/ });
-    expect(links.map((link) => link.textContent)).toEqual(["Add diver", "Add as a walk-in"]);
-  });
-
-  /** Round-2 review, finding 2: under a results list, Booking books first. */
-  it("offers a booking first under a results list in Booking mode", () => {
-    const candidate = {
-      person: { id: "person-1", fullName: "Avery Diaz", email: "avery@example.com" },
-      rentalFit: null,
-    } as unknown as BookableDiver;
-    render(
-      <AddDiverSection
-        context={{
-          shopSlug: "blue-mantis",
-          tripId: "trip-1",
-          full: false,
-          query: "Avery",
-          candidates: [candidate],
-          addBookingAction: action,
-          addToWaitlistAction: action,
-          addKnownToWaitlistAction: action,
-          addExistingDiverAction: action,
-          locale: "en-US",
-          timeZone: "America/Cancun",
-          mode: "booking",
-        }}
-      />,
-    );
-    // The search's own "Add diver", then under the list: book, then walk in.
-    const links = screen.getAllByRole("link", { name: /^(Add diver|Add as a walk-in)$/ });
-    expect(links.map((link) => link.textContent)).toEqual([
-      "Add diver",
-      "Add diver",
-      "Add as a walk-in",
-    ]);
-  });
-
-  it("draws no choice outside the window", () => {
-    render(
-      <AddDiverSection
-        context={{
-          shopSlug: "blue-mantis",
-          tripId: "trip-1",
-          full: false,
-          query: "",
-          candidates: [],
-          addBookingAction: action,
-          addToWaitlistAction: action,
-          addKnownToWaitlistAction: action,
-          addExistingDiverAction: action,
-          locale: "en-US",
-          timeZone: "America/Cancun",
-        }}
-      />,
-    );
-    expect(screen.queryByRole("navigation", { name: "Booking or walk-in" })).toBeNull();
+    // An empty result carries the door itself, so the search draws none beside it.
+    expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
   });
 
   it("offers waitlist addition directly when trip is full", () => {
@@ -716,30 +610,6 @@ describe("AddDiverSection opened from a date request", () => {
     ).toBeInTheDocument();
   });
 
-  /** Dock review F2: an open request never hides the counter's door. */
-  it("keeps the walk-in door beside a request, carrying none of it", () => {
-    render(
-      <AddDiverSection
-        context={{
-          ...base,
-          mode: "booking",
-          query: "Sam Counter",
-          candidates: [],
-          request: { id: REQUEST, prefill: { fullName: "Imani Okafor" } },
-        }}
-      />,
-    );
-    const walkIn = screen.getByRole("link", { name: "Add as a walk-in" }).getAttribute("href");
-    const query = new URL(walkIn ?? "", "https://diveday.test").searchParams;
-    expect(query.get("walkIn")).toBe("true");
-    expect(query.get("request")).toBeNull();
-    expect(query.get("name")).toBe("Sam Counter");
-    expect(screen.getByRole("link", { name: "Walk-in" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/trips/trip-1?add=1&counter=1",
-    );
-  });
-
   /**
    * Round-2 review, finding 1: a door for someone new that carries the
    * request says so, exactly like a pick. Label and payload agree.
@@ -749,7 +619,6 @@ describe("AddDiverSection opened from a date request", () => {
       <AddDiverSection
         context={{
           ...base,
-          mode: "booking",
           query: "Sam New",
           candidates: [],
           request: { id: REQUEST },
@@ -769,20 +638,6 @@ describe("AddDiverSection opened from a date request", () => {
       const query = new URL(href, "https://diveday.test").searchParams;
       if (query.get("request")) expect(link).toHaveAccessibleName("Add for this request");
     }
-  });
-
-  it("keeps the request on the Booking choice", () => {
-    render(
-      <AddDiverSection
-        context={{ ...base, mode: "booking", query: "", candidates: [], request: { id: REQUEST } }}
-      />,
-    );
-    const nav = screen.getByRole("navigation", { name: "Booking or walk-in" });
-    const booking = Array.from(nav.querySelectorAll("a, [aria-current]")).find((el) =>
-      el.textContent?.includes("Booking"),
-    );
-    const href = booking?.getAttribute("href");
-    if (href) expect(href).toBe(`/shop/blue-mantis/trips/trip-1?add=1&request=${REQUEST}`);
   });
 
   it("carries no request field when the band was not opened from one", () => {

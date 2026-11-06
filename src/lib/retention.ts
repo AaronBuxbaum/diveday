@@ -34,12 +34,6 @@
  * The requested-erasure sweep handles person references and matching
  * denormalized names (`src/db/anonymize.ts`; ADR 20260804-buddy-teams).
  *
- * **`deck_counts` is deliberately unbounded.** The heads a captain counted on
- * deck at each checkpoint sit beside the roll-call marks they were held
- * against, and an incident review reads the two together; a window that took
- * one and left the other would leave half the evidence (loop 5, row 1,
- * decided 2026-11-02, issue #3648).
- *
  * **`safety_drills` and `safety_drill_participants` are deliberately
  * unbounded.** The drill log is what an insurer renewal reads: when the shop
  * last drilled oxygen, a missing diver, a person overboard or a fire, and who
@@ -154,7 +148,6 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "trip_stage_events",
   "buddy_team_events",
   "roll_call_events",
-  "deck_counts",
   "safety_drills",
   "safety_drill_participants",
   "booking_arrival_events",
