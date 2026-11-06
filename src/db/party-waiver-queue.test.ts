@@ -368,4 +368,54 @@ describe("party release QR handoff", () => {
       spy.mockRestore();
     }
   });
+
+  it("names a held seat only by what was booked, and orders the party lead-first whatever order readiness returns", async () => {
+    const f = await family();
+    await f.db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: null })
+      .where(eq(bookings.id, f.third.bookingId));
+    const rows = await listTripReadiness(f.db, f.shop.id, f.trip.id, nowDate());
+    const reversed = [...rows].reverse();
+    const spy = vi.spyOn(readinessDb, "listTripReadiness").mockResolvedValue(reversed);
+    try {
+      const queue = await getPartyWaiverQueue(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+      });
+      expect(queue?.members[0]?.bookingId).toBe(f.lead.bookingId);
+      expect(queue?.members.find((m) => m.bookingId === f.third.bookingId)).toMatchObject({
+        state: "held",
+        name: null,
+      });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("never calls a seat signed when its requirement is unknown, and says plainly when none is needed", async () => {
+    const f = await family();
+    const rows = await listTripReadiness(f.db, f.shop.id, f.trip.id, nowDate());
+    const changed = rows.map((row) => {
+      if (row.booking.id === f.minor.bookingId) return { ...row, requirement: null };
+      if (row.booking.id === f.third.bookingId && row.requirement)
+        return { ...row, requirement: { ...row.requirement, requiresWaiver: false } };
+      return row;
+    });
+    const spy = vi.spyOn(readinessDb, "listTripReadiness").mockResolvedValue(changed);
+    try {
+      const queue = await getPartyWaiverQueue(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+      });
+      expect(queue?.members.find((m) => m.bookingId === f.minor.bookingId)?.state).toBe("unknown");
+      expect(queue?.members.find((m) => m.bookingId === f.third.bookingId)?.state).toBe(
+        "not_required",
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
