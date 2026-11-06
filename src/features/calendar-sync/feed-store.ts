@@ -162,8 +162,9 @@ export async function verifyCalendarFeed(
     // Left, not inner: a staff member can exist without a sign-in account at
     // all, and that is not a reason to refuse their feed.
     .leftJoin(userAccounts, eq(userAccounts.personId, people.id))
-    // diveday:allow-deleted-people: a by-id read of the feed's own staffer; the role check below is the gate, and a removed person holds no live role.
-    .where(eq(people.id, feed.subjectId))
+    // A person deleted from their diver record keeps their roles (a soft delete), so the roles
+    // check below is not enough: the delete is a door of its own (issue #4011).
+    .where(and(eq(people.id, feed.subjectId), isNull(people.deletedAt)))
     .limit(1);
   if (!row) return null;
   const scope = SCOPE_OF[feed.purpose];

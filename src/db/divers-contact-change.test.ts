@@ -42,6 +42,10 @@ import {
  * contact (a typo fixed), whoever holds the old address must not keep a live
  * link. The next send mints a fresh one to the new address. A link the
  * browser was handed (undelivered) is not about the address and stays.
+ *
+ * **Adding a contact revokes nothing** (#4057): no link went to an address
+ * the diver did not have. A replacement takes only the links; what the diver
+ * typed and the form a physician signed stay for the next link.
  */
 const ctx = fileScopedShopContext();
 
@@ -139,9 +143,10 @@ describe("changing a diver's contact revokes their delivered links (#3902)", () 
     expect(await live(delivered)).toBe(true);
   });
 
-  it("supersedes the unsigned waiver sent to the old address, so a re-send is a new link", async () => {
-    const { db, shop, diver, bookingId, waiver } = await seatedDiver("waiver");
-    expect((await getWaiverForToken(db, waiver)).state).toBe("available");
+  it("closes the thread link that carries the unsigned release, and keeps the release for the next one", async () => {
+    const { db, shop, diver, bookingId, delivered, waiver } = await seatedDiver("waiver");
+    const opened = await getWaiverForToken(db, waiver);
+    if (opened.state !== "available") throw new Error(`release is ${opened.state}`);
     const result = await editDiver(db, {
       shopId: shop.id,
       personId: diver.id,
@@ -150,11 +155,55 @@ describe("changing a diver's contact revokes their delivered links (#3902)", () 
       phone: "+1 305 555 0170",
     });
     expect(result.ok).toBe(true);
-    expect((await getWaiverForToken(db, waiver)).state).toBe("unavailable");
+    expect(await live(delivered)).toBe(false);
     const again = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now: nowDate() });
     if (!again.ok) throw new Error(`re-send failed: ${again.reason}`);
-    expect(again.key).not.toBe(waiver);
+    expect(again.recordId).toBe(opened.record.id);
     expect((await getWaiverForToken(db, again.key)).state).toBe("available");
+  });
+
+  it("adding a phone to an email-only diver keeps every link and the unsigned waiver", async () => {
+    const { db, shop } = ctx;
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Contact Change Add",
+      email: "contact-change-add@example.com",
+    });
+    if (!diver) throw new Error("diver insert failed");
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (candidate) => !candidate.course && candidate.capacity > candidate.booked,
+    );
+    if (!trip) throw new Error("open trip missing");
+    const booking = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: diver.id,
+    });
+    if (!booking.ok) throw new Error(`booking failed: ${booking.reason}`);
+    const delivered = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booking.bookingId,
+      purpose: "readiness",
+      delivered: true,
+    });
+    const waiver = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.bookingId,
+      now: nowDate(),
+    });
+    if (!delivered || !waiver.ok) throw new Error("links missing");
+
+    const result = await editDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: diver.fullName,
+      email: "contact-change-add@example.com",
+      phone: "+1 305 555 0172",
+    });
+    expect(result.ok).toBe(true);
+    expect(await live(delivered.token)).toBe(true);
+    expect((await getWaiverForToken(db, waiver.key)).state).toBe("available");
   });
 
   it("keeps the unsigned waiver when the save leaves the contact alone", async () => {
@@ -172,7 +221,7 @@ describe("changing a diver's contact revokes their delivered links (#3902)", () 
 
 describe("other writes that change a diver's contact revoke the same links (#3902)", () => {
   it("a merge that takes the other record's email", async () => {
-    const { db, shop, diver, delivered, waiver } = await seatedDiver("merge-survivor");
+    const { db, shop, diver, delivered } = await seatedDiver("merge-survivor");
     const source = await createDiver(db, {
       shopId: shop.id,
       fullName: diver.fullName,
@@ -190,17 +239,36 @@ describe("other writes that change a diver's contact revoke the same links (#390
     });
     expect(result.ok).toBe(true);
     expect(await live(delivered)).toBe(false);
-    expect((await getWaiverForToken(db, waiver)).state).toBe("unavailable");
   });
 
   it("a contacts import that overwrites the phone", async () => {
-    const { db, shop, diver, delivered, waiver } = await seatedDiver("import");
+    const { db, shop, diver, delivered } = await seatedDiver("import");
     const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
     const csv = `full_name,email,phone\n${diver.fullName},${diver.email},+1 305 555 0179\n`;
     const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), owner);
     expect(summary.peopleUpdated).toBe(1);
     expect(await live(delivered)).toBe(false);
-    expect((await getWaiverForToken(db, waiver)).state).toBe("unavailable");
+  });
+
+  it("a contacts import that fills a missing phone leaves the links alone", async () => {
+    const { db, shop } = ctx;
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Contact Change Import Add",
+      email: "contact-change-import-add@example.com",
+    });
+    if (!diver) throw new Error("diver insert failed");
+    const link = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      now: nowDate(),
+    });
+    if (!link.ok) throw new Error("no release link");
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const csv = `full_name,email,phone\n${diver.fullName},${diver.email},+1 305 555 0178\n`;
+    const summary = await commitContactImport(db, shop.id, prepareContactImport(csv), owner);
+    expect(summary.peopleUpdated).toBe(1);
+    expect((await getWaiverForToken(db, link.key)).state).toBe("available");
   });
 
   it("a contacts import that carries the same phone leaves the links alone", async () => {
@@ -315,7 +383,7 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     expect(await waiverLinkDoor(db, mailed)).toBeNull();
   });
 
-  it("what the old address typed does not follow the diver to the new link", async () => {
+  it("what the diver typed follows them to the new link", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const { db, shop, diver } = await seatedDiver("person-draft");
     const copied = await issueAndDeliverPersonWaiver(db, shop.id, diver.id, {
@@ -334,6 +402,7 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     ).toBe(true);
 
     await fixEmail(diver, "person-draft-fixed@example.com");
+    expect(await waiverLinkDoor(db, copied.token)).toBeNull();
     const fresh = await issueAndDeliverPersonWaiver(db, shop.id, diver.id, {
       channel: "link",
       actorPersonId: await shopStaffer(db, shop.id),
@@ -343,8 +412,8 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     if (freshDoor?.door !== "counter") throw new Error("counter door expected");
     const opened = await getWaiverForToken(db, freshDoor.key);
     if (opened.state !== "available") throw new Error(`fresh link is ${opened.state}`);
-    expect(opened.record.draftSignerName).toBeNull();
-    expect(opened.record.draftMedicalAnswers).toBeNull();
+    expect(opened.record.draftSignerName).toBe("Not The Diver");
+    expect(opened.record.draftMedicalAnswers).toEqual(medicalReferralAnswers);
   });
 
   it("a course's forms link, which the waiver send mails undelivered, dies with the old address", async () => {
@@ -377,13 +446,12 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
   /**
    * **The old link loses the doctor's door** (final attacker review B3). A
    * signed release held for a physician still opened on its waiver link, and
-   * that link serves the doctor's page: the diver's name, the conditions
-   * behind a date of birth, and the one form upload. Whoever holds the old
-   * address must lose all three, and a form they sent before the change is
-   * not evidence: the slot reopens for the diver.
+   * that link serves the doctor's page. The link goes with the old address;
+   * the form already sent stays for staff to review (#4057): the boarding
+   * gate still reads the release, and only staff clear it.
    */
-  it("a release held for a physician: the old link no longer opens the doctor's page or takes a form", async () => {
-    const { db, shop, diver, bookingId } = await seatedDiver("held-doctor");
+  it("a release held for a physician: the old link closes, the form already sent stays", async () => {
+    const { db, shop, diver, bookingId, delivered } = await seatedDiver("held-doctor");
     const now = nowDate();
     const seatLink = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now });
     if (!seatLink.ok) throw new Error("no seat link");
@@ -410,26 +478,18 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
 
     expect((await fixEmail(diver, "held-doctor-fixed@example.com")).ok).toBe(true);
 
-    // The thread link that reached it is revoked with every booking link
-    // (above); the slot reopens for the diver on the new one.
+    expect(await live(delivered)).toBe(false);
     const [row] = await db
       .select()
       .from(waiverRecords)
       .where(inArray(waiverRecords.id, [seatLink.recordId]));
-    expect(row?.diverMedicalFormUrl).toBeNull();
-    expect(row?.diverMedicalFormSentAt).toBeNull();
-    // Still the diver's hold, and still signed evidence: only the link moved.
-    expect(row).toMatchObject({ status: "medical_review", supersededAt: null });
-    if (!row) throw new Error("record missing");
-    expect(await doctorPageOpen(db, row)).toBe(true);
-    expect(
-      await attachDiverMedicalForm(
-        db,
-        row,
-        "https://storage.example/medical/real.pdf",
-        await contactOnFile(db, row),
-      ),
-    ).toBe("sent");
+    // Still the diver's hold, and the form waits for staff: only the link moved.
+    expect(row).toMatchObject({
+      status: "medical_review",
+      supersededAt: null,
+      diverMedicalFormUrl: forged,
+    });
+    expect(row?.diverMedicalFormSentAt).not.toBeNull();
   });
 
   /**
@@ -540,12 +600,12 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
   });
 
   it("touches no other diver's link", async () => {
-    const { db, diver, waiver } = await seatedDiver("bystander-a");
+    const { db, diver, delivered } = await seatedDiver("bystander-a");
     const other = await seatedDiver("bystander-b");
 
     expect((await fixEmail(diver, "bystander-a-fixed@example.com")).ok).toBe(true);
 
-    expect((await getWaiverForToken(db, waiver)).state).toBe("unavailable");
+    expect(await live(delivered)).toBe(false);
     expect((await getWaiverForToken(db, other.waiver)).state).toBe("available");
     expect(await live(other.delivered)).toBe(true);
   });

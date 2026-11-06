@@ -7,7 +7,7 @@ import { DIVER_EMAIL_MAX } from "./person-fields";
  * roll call is still open after the boat was due back
  * (`sendStaleRollCallAlerts`, `src/db/roll-call-alerts.ts`).
  *
- * Two things stand between an address and the first alert:
+ * One thing stands between an address and the first alert (#4060):
  *
  * 1. **The shop's consent tick.** The staff member who saves the address ticks
  *    that the shore contact agreed to receive these alerts, and the row keeps
@@ -17,10 +17,12 @@ import { DIVER_EMAIL_MAX } from "./person-fields";
  *    tick. The same address saved again keeps the consent it already has; an
  *    empty address clears everything. `shops_shore_alert_consent` holds the
  *    address and its consent together in the table.
- * 2. **The inbox's own confirmation.** Saving a new or changed address sends a
- *    link to it (`src/db/shore-alert-tokens.ts`); until it is opened,
- *    `confirmedAt` is null and nothing is sent. Every alert carries a link that
- *    takes the address off the shop.
+ *
+ * The inbox's own confirmation is a badge, not a gate. Saving a new or changed
+ * address sends a link (`src/db/shore-alert-tokens.ts`); opening it sets
+ * `confirmedAt`, which the settings page shows. Alerts go from the save, so a
+ * shop is never believed covered while it is not, and every alert carries a
+ * link that takes the address off the shop.
  *
  * Beside the free-text `emergencyReference.shoreContact`, never instead of
  * it: that is a name and a number a crew reads in an emergency, and DiveDay
@@ -51,16 +53,13 @@ const shoreEmail = z.email().max(DIVER_EMAIL_MAX);
 
 const sameAddress = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-/** Who a stale roll call reaches ashore: the address, only with its consent and confirmation on file. */
+/** Who a stale roll call reaches ashore: the address, from the moment it is saved with its consent. */
 export function shoreAlertRecipient(contact: {
   email: string | null;
   consentAt: Date | null;
-  confirmedAt: Date | null;
 }): string | null {
   const email = contact.email?.trim() ?? "";
-  if (email.length === 0 || contact.consentAt === null || contact.confirmedAt === null) {
-    return null;
-  }
+  if (email.length === 0 || contact.consentAt === null) return null;
   return email;
 }
 

@@ -4,7 +4,6 @@ import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { people, shops, waiverRecords, waiverTemplates } from "./schema";
 import {
-  recheckAnsweredSeal,
   recheckWaiverSeals,
   WAIVER_SEALING_SHIPPED_AT,
   waiverSealPassHealthy,
@@ -414,42 +413,5 @@ describe("a broken seal stays broken through the shop's own acts", () => {
     expect(after.valid).toBe(true);
     expect(after.hash).not.toBe(before.hash);
     expect(await inUncheckedView(db, shop.id, recordId)).toBe(false);
-  });
-});
-
-describe("recheckAnsweredSeal", () => {
-  it("does nothing for a record that does not exist", async () => {
-    const { db } = await signedRelease();
-    await expect(
-      recheckAnsweredSeal(db, "00000000-0000-4000-8000-000000000000", later),
-    ).resolves.toBeUndefined();
-  });
-
-  it("leaves a record whose last verdict was valid alone, even when it has since been edited", async () => {
-    const { db, recordId } = await signedRelease();
-    await tamper(db, recordId);
-    await recheckAnsweredSeal(db, recordId, later);
-    expect(await verdictOf(db, recordId)).toMatchObject({ valid: true, checkedAt: now });
-  });
-
-  it("never clears a failed verdict while the record still fails its seal", async () => {
-    const { db, recordId } = await signedRelease();
-    await tamper(db, recordId);
-    await db
-      .update(waiverRecords)
-      .set({ integrityValid: false, integrityCheckedAt: now })
-      .where(eq(waiverRecords.id, recordId));
-    await recheckAnsweredSeal(db, recordId, later);
-    expect(await verdictOf(db, recordId)).toMatchObject({ valid: false, checkedAt: now });
-  });
-
-  it("clears a failed verdict only once the whole record verifies, stamping the new check", async () => {
-    const { db, recordId } = await signedRelease();
-    await db
-      .update(waiverRecords)
-      .set({ integrityValid: false, integrityCheckedAt: now })
-      .where(eq(waiverRecords.id, recordId));
-    await recheckAnsweredSeal(db, recordId, later);
-    expect(await verdictOf(db, recordId)).toMatchObject({ valid: true, checkedAt: later });
   });
 });

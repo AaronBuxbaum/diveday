@@ -43,6 +43,8 @@ vi.mock("@/db/orders", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
+const { hasRequiredStepUp } = await import("@/db/step-up");
+const { stepUpChallengeUrl } = await import("@/lib/security-step-up");
 const { requireStaffSession } = await import("@/lib/session");
 const { refreshOrderStatus, refundOrder, voidOrder } = await import("@/db/orders");
 const { refreshAction, refundAction, voidAction } = await import("./actions");
@@ -102,6 +104,18 @@ describe("refunding", () => {
     expect(
       await redirectedTo(() => refundAction(form({ orderId: ORDER_ID, amountMajor: "ten" }))),
     ).toBe(noticeUrl(back, "refund-invalid-amount"));
+    expect(refundOrder).not.toHaveBeenCalled();
+  });
+
+  it("comes back from the step-up with the amount the staffer typed (issue 4063)", async () => {
+    const { back } = await as(SEEDED_OWNER_EMAIL, { demo: false });
+    vi.mocked(hasRequiredStepUp).mockResolvedValueOnce(false);
+    await redirectedTo(() => refundAction(form({ orderId: ORDER_ID, amountMajor: "12.50" })));
+    expect(stepUpChallengeUrl).toHaveBeenCalledWith(
+      expect.any(String),
+      "money",
+      `${back}?refundAmount=12.50`,
+    );
     expect(refundOrder).not.toHaveBeenCalled();
   });
 

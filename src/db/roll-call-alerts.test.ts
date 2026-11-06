@@ -24,7 +24,6 @@ afterEach(() => {
 
 import {
   bookings,
-  capabilities,
   people,
   personRoles,
   rollCallEvents,
@@ -384,16 +383,40 @@ describe("sendStaleRollCallAlerts", () => {
       expect(toShore(sent)).toEqual([]);
     });
 
-    // Security review on H-20261014-stale-roll-call-recipients: nothing goes to an address its inbox has not confirmed.
-    it("sends nothing to an address its inbox has not confirmed", async () => {
+    // #4060: the confirmation link is a badge, not a gate; the consent tick is the gate.
+    it("emails an address saved with consent before its inbox has confirmed it, with the stop link", async () => {
       await consentedShore(false);
+      const { db, trip } = await departure(2 * HOUR);
+      const { sent, provider } = recorder();
+      expect(
+        await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider }),
+      ).toMatchObject({ shoreEmails: 1 });
+      const [message] = toShore(sent);
+      if (message?.kind !== "roll_call_stale_shore") throw new Error("expected the shore alert");
+      expect(message.to).toBe(SHORE);
+      expect(
+        await resolveShoreAlertStopToken(
+          db,
+          message.stopUrl.slice(`${ORIGIN}/unsubscribe/`.length),
+        ),
+      ).toMatchObject({ shopId: ctx.shop.id, alreadyStopped: false });
+      expect((await claims(trip.id))?.shore).toEqual(NOW);
+    });
+
+    it("sends nothing when no address is on file", async () => {
+      await consentedShore(false);
+      await ctx.db
+        .update(shops)
+        .set({
+          shoreAlertEmail: null,
+          shoreAlertConsentAt: null,
+          shoreAlertConsentByPersonId: null,
+        })
+        .where(eq(shops.id, ctx.shop.id));
       const { db } = await departure(2 * HOUR);
       const { sent, provider } = recorder();
       await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider });
       expect(toShore(sent)).toEqual([]);
-      expect(
-        await db.select().from(capabilities).where(eq(capabilities.purpose, "shore_alert_stop")),
-      ).toEqual([]);
     });
 
     it("cannot hold an address without its consent, or a confirmation without an address", async () => {

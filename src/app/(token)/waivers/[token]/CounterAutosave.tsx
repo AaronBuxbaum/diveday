@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { fill, pluralForm } from "@/i18n/fill";
-import { MINUTE_MS, nowMs } from "@/lib/clock";
+import { HOUR_MS, MINUTE_MS, nowMs } from "@/lib/clock";
 import { reloadPage } from "./reload-page";
 
 type AutosaveOutcome = "saved" | "skipped" | "closed" | "rate";
@@ -91,8 +91,11 @@ export function CounterAutosave({
     };
   }, [action]);
 
-  const left =
-    minutes === null
+  // A code that lasts the day says nothing until its last hour (#4064).
+  const nearEnd = minutes === null ? msLeft <= HOUR_MS : minutes <= 60;
+  const left = !nearEnd
+    ? null
+    : minutes === null
       ? fill(copy.closesAt, { time: closesAt })
       : fill(pluralForm(minutes, { one: copy.minutesOne, other: copy.minutesOther }), {
           count: minutes,
@@ -100,7 +103,7 @@ export function CounterAutosave({
         });
   return (
     <div ref={ref} className="mt-1 text-sm text-muted" data-testid="counter-time-left">
-      <span>{left}</span>
+      {left ? <span>{left}</span> : null}
       {saved ? (
         <span role="status" className="ms-2">
           {copy.saved}

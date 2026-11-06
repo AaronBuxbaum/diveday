@@ -371,7 +371,7 @@ describe("handleInboundReplyKeyword — what it refuses", () => {
 });
 
 describe("handleInboundReplyKeyword — what it does", () => {
-  it("offers no cancel to a mailbox a party's lead typed (issue 4003)", async () => {
+  it("offers no cancel to a minor's mailbox a party's lead typed (issue 4003)", async () => {
     const { db, shop, bookingId, now } = await context();
     await db.update(bookings).set({ contactTypedByLeadAt: now }).where(eq(bookings.id, bookingId));
     const messageId = await inbound(db, shop.id, "C", { receivedAt: now });

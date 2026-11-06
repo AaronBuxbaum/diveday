@@ -29,7 +29,6 @@ describe("party waiver QR action", () => {
       leadBookingId: leadId,
       bookingId,
       actorPersonId: "staffer",
-      replace: false,
       guardianPresent: false,
     });
     expect(result).toMatchObject({
@@ -40,34 +39,18 @@ describe("party waiver QR action", () => {
     expect(await issuePartyWaiverQrAction("shop", tripId, leadId, "invalid")).toEqual({
       ok: false,
     });
-    // A code open on the diver's phone is kept, and replaced only on a confirmed `true`.
-    vi.mocked(issuePartyWaiver).mockResolvedValue({ openOnPhone: true } as never);
-    expect(await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId)).toEqual({
-      ok: false,
-      openOnPhone: true,
-    });
-    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, "true");
-    expect(issuePartyWaiver).toHaveBeenLastCalledWith(
-      expect.anything(),
-      expect.objectContaining({ replace: false }),
-    );
-    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, true);
-    expect(issuePartyWaiver).toHaveBeenLastCalledWith(
-      expect.anything(),
-      expect.objectContaining({ replace: true }),
-    );
     // A minor's code waits on the desk; only a literal `true` says a guardian is here (#3986).
     vi.mocked(issuePartyWaiver).mockResolvedValue({ guardianCheck: true } as never);
     expect(await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId)).toEqual({
       ok: false,
       guardianCheck: true,
     });
-    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, false, "true");
+    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, "true");
     expect(issuePartyWaiver).toHaveBeenLastCalledWith(
       expect.anything(),
       expect.objectContaining({ guardianPresent: false }),
     );
-    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, false, true);
+    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, true);
     expect(issuePartyWaiver).toHaveBeenLastCalledWith(
       expect.anything(),
       expect.objectContaining({ guardianPresent: true }),

@@ -70,7 +70,7 @@ Fourth UX review, items 18 and 19. Two gaps in "money the shop took":
   collection to carry either none of the ids or all three, never a PaymentIntent (migration
   `20261014220545_counter-settled-invoice`), and `recordOrderPaymentIntent` only ever writes to a
   `stripe_invoice` row. `stripeInvoiceOf` still refuses every Stripe operation on it. Any active
-  staff member may record it, behind the money step-up, as any counter money, and the shop's
+  staff member may record it, with no step-up (#4063), as any counter money, and the shop's
   activity log names who did (`order_paid_cash` / `order_paid_card_machine`).
 - **Why the claim comes before Stripe** (security review of layer r4-3). The mark sends back an
   `invoice.paid` that can arrive before the mark's own call returns. Marked first and written
@@ -119,7 +119,7 @@ monthly. `order_collection` gains `room_charge`, and an order charged to a room 
 `orders.room_number` (required with `room_charge`, and only with it:
 `orders_room_charge_names_room`) and `orders.room_hotel` (optional, for a shop serving more than
 one hotel; `orders_room_hotel_only_on_room_charge`). It is a third way to settle an **open
-invoice** from the order page (`recordPaymentOnOpenOrder`), behind the same money step-up, the
+invoice** from the order page (`recordPaymentOnOpenOrder`), with no step-up, the
 same claim, and the same out-of-band mark to Stripe, so the diver is not asked twice; the claim
 writes the room with the method and a released claim clears both. Counter rentals and bench
 tickets stay cash and card machine. The activity log says `order_paid_room_charge`; the Orders
@@ -158,7 +158,7 @@ the app), records it through `recordPaymentOnOpenOrder` (or the demo writer) wit
 naming who tapped it (`src/db/counter-payment-hold.ts`). The hourly sweep is only the fallback for
 a screen that could not say it was leaving. Every path stamps `paid_at` with the tap's time, which
 the hold carries, so a 23:55 tap is that day's money. A second tap inside the hold is the same
-hold. The money step-up is asked at the tap, and again for Undo or an early release. A hold that
+hold. No step-up is asked at the tap, for Undo or for an early release (#4063). A hold that
 finds the order no longer open (the diver paid online inside it) records nothing and writes
 `counter_payment_not_recorded_paid_online` to the shop's log under the tapper's name. An order left
 with a stale claim can be held again. The room charge keeps its form and records on its confirm.

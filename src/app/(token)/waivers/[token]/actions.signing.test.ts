@@ -57,6 +57,7 @@ vi.mock("next/headers", () => ({
       const value = cookieJar.get(name);
       return value === undefined ? undefined : { name, value };
     },
+    set: (name: string, value: string) => cookieJar.set(name, value),
     delete: ({ name }: { name: string }) => cookieJar.delete(name),
   })),
 }));

@@ -1,9 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  DeparturePaperIdentity,
-  formatPaperDateTime,
-} from "@/app/shop/[shopSlug]/trips/[id]/_components/DeparturePaperIdentity";
-import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
+import { formatPaperDateTime } from "@/app/shop/[shopSlug]/trips/[id]/_components/DeparturePaperIdentity";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { courseDepthFormat, diveSiteDepthText } from "@/i18n/unit-labels";
@@ -16,26 +12,13 @@ import {
 } from "@/lib/format";
 import type { MinimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
-import { publicAppUrl } from "@/lib/notifications";
-import { capabilityPagePrintRule, PACKET_PAPER } from "@/lib/print-sheets";
 import { publicTripPath } from "@/lib/public-routes";
+import { PublicPaperSheet, PaperRule as Rule } from "../../../_components/PublicPaperSheet";
 import { CourseAdmission } from "../../../courses/[slug]/_components/CourseSections";
 import { CoursePlan, courseDayPlan, type DayProfileFacts, dayRhythmLine } from "./TripDayPlan";
 import { otherSeatPriceLines } from "./TripHeader";
 import { TripTerms } from "./TripTerms";
 import type { DiveBriefing, Shop, Trip, TripMeetingDay } from "./types";
-
-/** The departure's own address as paper prints it: no scheme, no query. */
-function departureAddress(shopSlug: string, tripId: string): string {
-  const path = publicTripPath(shopSlug, tripId);
-  const origin = publicAppUrl();
-  if (!origin) return path;
-  return `${origin.replace(/^https?:\/\//, "").replace(/\/+$/, "")}${path}`;
-}
-
-function Rule({ children }: { children: ReactNode }) {
-  return <div className="mt-5 border-t border-border pt-3">{children}</div>;
-}
 
 /**
  * **A departure on paper** (issue #2745): what the public trip page prints,
@@ -53,10 +36,8 @@ function Rule({ children }: { children: ReactNode }) {
  *
  * **Never what the page keeps for a booked diver**: the meeting point stays
  * off, as it does on the screen (`TripHeader`'s `showMeetingPoint`), and no
- * booking, wait-list or handoff state is drawn. A page opened by one of those
- * links (`bearer`) prints with no margin, so the browser has nowhere to write
- * the link (`capabilityPagePrintRule`); every other page names its departure
- * in the margin of every page it runs to (`DeparturePaperIdentity`).
+ * booking, wait-list or handoff state is drawn, and a page opened by one of
+ * those links (`bearer`) prints with no margin (`PublicPaperSheet`).
  */
 export function TripPaperSheet({
   shop,
@@ -98,25 +79,23 @@ export function TripPaperSheet({
     : null;
   const coursePlan = courseDayPlan(profile.course, t, profile.depthUnit, profile.dayCount);
   const rhythm = dayRhythmLine(profile, briefings, t, locale, zone);
-  const contact = [shop.contactPhone, shop.contactEmail].filter(Boolean).join(" · ");
   // A boat that sailed says so and nothing live: no hold, no cancellation window.
   const sailed = status === "sailed";
   const hold = trip.conditionsHold && !sailed;
-  // Paper outlives the week: the stamp carries the year and names its zone.
-  const asOf = t("ready.sheetAsOf", {
-    when: `${formatPaperDateTime(now, locale, zone)} · ${zone}`,
-  });
-  const sheet = (
-    <PaperSheet
-      paper={PACKET_PAPER}
-      band={
-        <>
-          <SheetMark name={shop.name} size="sm" />
-          <span className="font-brand-display text-sm font-bold">{shop.name}</span>
-        </>
-      }
-      foldLeft={asOf}
-      foldRight={departureAddress(shop.slug, trip.id)}
+  return (
+    <PublicPaperSheet
+      shop={shop}
+      pageName="departure-public-trip"
+      identity={[
+        shop.name,
+        trip.title,
+        `${formatPaperDateTime(trip.startsAt, locale, zone)} · ${zone}`,
+      ]}
+      path={publicTripPath(shop.slug, trip.id)}
+      locale={locale}
+      t={t}
+      now={now}
+      bearer={bearer}
     >
       <h1 className="font-brand-display text-xl leading-tight font-extrabold">{trip.title}</h1>
       {meetingDays.length > 1 ? (
@@ -229,38 +208,6 @@ export function TripPaperSheet({
         {conditionsLine}
         {sailed ? null : <TripTerms shop={shop} trip={trip} locale={locale} />}
       </Rule>
-      {contact ? (
-        <Rule>
-          <p className="text-sm">
-            {t("trip.questionsContact")} {contact}
-          </p>
-        </Rule>
-      ) : null}
-    </PaperSheet>
-  );
-  return (
-    <div className="paper-sheet-frame" data-paper-print-only="">
-      <div>
-        {bearer ? (
-          <>
-            <style data-capability-print="">{capabilityPagePrintRule()}</style>
-            {sheet}
-          </>
-        ) : (
-          <DeparturePaperIdentity
-            pageName="departure-public-trip"
-            identity={[
-              shop.name,
-              trip.title,
-              `${formatPaperDateTime(trip.startsAt, locale, zone)} · ${zone}`,
-            ]}
-            // The fold already says when; the margin says which departure.
-            printed=""
-          >
-            {sheet}
-          </DeparturePaperIdentity>
-        )}
-      </div>
-    </div>
+    </PublicPaperSheet>
   );
 }

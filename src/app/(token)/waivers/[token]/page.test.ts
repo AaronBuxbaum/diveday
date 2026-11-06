@@ -2,10 +2,9 @@ import { and, eq, ne } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
-import { mintCapability } from "@/db/capabilities";
 import { bookingCapabilities, bookings, trips, waiverRecords } from "@/db/schema";
 import { listStaff } from "@/db/trips";
-import { completeWaiver, recordWaiverDraft, threadWaiverKey } from "@/db/waivers-completion";
+import { completeWaiver, recordWaiverDraft } from "@/db/waivers-completion";
 import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import {
@@ -217,32 +216,6 @@ describe("the actual completed waiver branch", () => {
     expect(closed).toContain(t("waiver.counterClosedNext"));
   });
 
-  it("a party door to a seat since claimed opens nothing and points to the trip link (issue 2743)", async () => {
-    const { db, shop, booking } = await context();
-    vi.mocked(getDb).mockResolvedValue(db);
-    await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
-    const key = await threadWaiverKey(db, { shopId: shop.id, bookingId: booking.id });
-    if (!key) throw new Error("no release on the seat");
-    await db
-      .update(bookings)
-      .set({ contactTypedByLeadAt: nowDate(), claimedAt: null })
-      .where(eq(bookings.id, booking.id));
-    const door = await mintCapability(db, {
-      purpose: "party_waiver_link",
-      shopId: shop.id,
-      subjectId: key.recordId,
-    });
-    const { html: form } = await renderOnDevice(db, door.token);
-    expect(form).not.toContain(t("waiver.doorClaimedNext"));
-
-    await db.update(bookings).set({ claimedAt: nowDate() }).where(eq(bookings.id, booking.id));
-    const claimed = await renderToken(door.token);
-    expect(claimed).toContain(t("waiver.doorClaimedNext"));
-    expect(claimed).toContain(shop.name);
-    expect(claimed).not.toContain(booking.id);
-    expect(claimed).not.toContain(t("waiver.emailFreshLink"));
-  });
-
   it("a counter receipt shows no doctor's page or readiness, and closes at expiry, a fresh QR or supersession", async () => {
     const { db, shop, booking, person } = await context();
     vi.mocked(getDb).mockResolvedValue(db);
@@ -304,18 +277,13 @@ describe("the actual completed waiver branch", () => {
     expect(seat).not.toContain(t("waiver.signButton"));
     expect(seat).not.toContain(t("waiver.emailFreshLink"));
   });
-  it("a counter QR opens on the first phone that taps, and tells any other phone it is open elsewhere (attacker S1)", async () => {
+  it("a counter QR opens the form on any phone, with no claim step (issue 4064)", async () => {
     const { db, shop, booking } = await context();
     vi.mocked(getDb).mockResolvedValue(db);
     const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
-    const unclaimed = await renderToken(link.token);
-    expect(unclaimed).toContain(t("waiver.counterClaimButton"));
-    expect(unclaimed).not.toContain(t("waiver.signButton"));
+    expect(await renderToken(link.token)).toContain(t("waiver.signButton"));
     await openOnDevice(db, link.token);
-    const elsewhere = await renderToken(link.token);
-    expect(elsewhere).toContain(t("waiver.counterElsewhereTitle"));
-    expect(elsewhere).not.toContain(t("waiver.signButton"));
-    expect(elsewhere).not.toContain(t("waiver.counterClaimButton"));
+    expect(await renderToken(link.token)).toContain(t("waiver.signButton"));
   });
   it("a counter form never shows the medical answers or alert the diver saved in their thread (security S2)", async () => {
     const { db, shop, booking } = await context();
@@ -349,6 +317,11 @@ describe("the actual completed waiver branch", () => {
     expect(html).toMatch(/value="yes"[^>]*checked=""|checked=""[^>]*value="yes"/);
     expect(html).toContain("Stent placed in June");
     cookieJar.clear();
+    // Another phone on the same code opens the form, without those answers (issue 4064).
+    const elsewhere = await renderToken(link.token);
+    expect(elsewhere).toContain(t("waiver.signButton"));
+    expect(elsewhere).not.toMatch(/value="yes"[^>]*checked=""|checked=""[^>]*value="yes"/);
+    expect(elsewhere).not.toContain("Stent placed in June");
     const fresh = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
     const { html: bystander } = await renderOnDevice(db, fresh.token);
     expect(bystander).toContain(t("waiver.signButton"));

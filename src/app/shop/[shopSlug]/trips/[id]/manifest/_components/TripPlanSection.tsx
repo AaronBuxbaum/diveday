@@ -18,9 +18,8 @@ import { scopedId } from "@/lib/element-id";
  * provenance chip either: the canvas draws one beside each planned site, and
  * that is D51, which lands in slice 16g.
  *
- * **`print:hidden`, like the catch-up strip above it.** The printed trip packet
- * renders this whole manifest *and* its own `PacketDives` list, so without this
- * the sheet a crew carries to the boat prints the dive plan twice.
+ * **Never on paper.** The Boat tab prints its sheet (`BoatTabSheet`) and the
+ * packet its own `PacketDives` list; neither draws this section.
  *
  * **No door to the dive log under it** (UX audit 2026-10-07, item 3). "Changed
  * the plan? Say why in the dive log after each dive." sat under the plan at the
@@ -53,7 +52,7 @@ export function TripPlanSection({
 }) {
   if (dives.length === 0 && !meeting) return null;
   return (
-    <section className="print:hidden" aria-labelledby={scopedId(idPrefix, "trip-plan-heading")}>
+    <section aria-labelledby={scopedId(idPrefix, "trip-plan-heading")}>
       <h2 id={scopedId(idPrefix, "trip-plan-heading")} className={SECTION_TITLE_CLASS}>
         {heading}
       </h2>

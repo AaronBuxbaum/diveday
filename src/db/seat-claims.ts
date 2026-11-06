@@ -25,7 +25,6 @@ import {
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { partySeatGoesWithLead, tripAdmissionFor } from "./bookings";
-import { revokeSeatReleaseLinks } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
@@ -48,7 +47,7 @@ import {
 import { livePerson, liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import { confirmClaimedSeat } from "./waiver-issue";
-import { WAIVER_BOARDING_COLUMNS, withTrustedClearance } from "./waiver-record-columns";
+import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 import { type ThreadWaiverKey, threadWaiverKey } from "./waivers-completion";
 import { openWaiverInThread } from "./waivers-requests";
 
@@ -318,8 +317,7 @@ export type ClaimSeatResult =
  *   purpose: all live claim links die (one-shot claiming — a second claim of
  *   the same seat fails at verify, first untouched), and any link minted
  *   while the seat was the placeholder's stops granting authority over the
- *   claimant's data. So is every link to the seat's releases (the party
- *   member's door, a counter code): the claimant signs in their own thread.
+ *   claimant's data.
  *
  * Identity semantics follow the public booking form exactly (H-20260724-one-person-per-email): an email
  * match reuses that person row, and a submitted name that doesn't match the
@@ -529,9 +527,6 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     bookingId: booking.id,
     now,
   });
-  // The links to the seat's releases too: the party member's door and any
-  // counter code. The claimant signs as their thread's Sign step (issue #2743).
-  await revokeSeatReleaseLinks(tx, { shopId: capability.shopId, bookingId: booking.id, now });
 
   return {
     ok: true,
@@ -839,8 +834,7 @@ export async function issuePartySeatClaims(
         snorkelerPriceCents: trips.snorkelerPriceCents,
         riderPriceCents: trips.riderPriceCents,
       },
-      // A clearance whose seal does not verify reads as none (final attacker review B1).
-      waiver: WAIVER_BOARDING_COLUMNS,
+      waiver: WAIVER_STATE_COLUMNS,
       // The shop's current material terms, in the same statement
       // (`getCurrentWaiverGeneration`'s read): no extra round trip on a page
       // the render-cost ratchet counts.
@@ -940,7 +934,7 @@ export async function issuePartySeatClaims(
       // changed is one the diver signs again (dive-domain-expert run 4, D3).
       waiverSigned: row.waiver
         ? isCompletedWaiverCurrent(
-            withTrustedClearance(row.waiver),
+            row.waiver,
             row.generation === null ? null : Number(row.generation),
             // The roster's instant for this seat (issue #2611): a release that
             // runs out before the trip is one the diver signs again.

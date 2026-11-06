@@ -1,8 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { issueCapability } from "@/db/capabilities";
+import { deleteDiver, restoreDiver } from "@/db/divers";
 import { capabilities, people, personRoles, userAccounts } from "@/db/schema";
 import { listStaff } from "@/db/trips";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
   issueCalendarFeed,
@@ -227,6 +229,42 @@ describe("verifyCalendarFeed", () => {
       .update(userAccounts)
       .set({ status: "disabled" })
       .where(eq(userAccounts.personId, personId));
+
+    expect(await verifyCalendarFeed(db, { token: issued.token })).toBeNull();
+  });
+
+  it("stops serving a staffer deleted from their diver record, and a restore does not revive it", async () => {
+    const { db, shop, personId } = await staffWithRole("owner");
+    const shopTrips = await issueCalendarFeed(db, {
+      shopId: shop.id,
+      personId,
+      scope: "shop_trips",
+    });
+    const assignments = await issueCalendarFeed(db, {
+      shopId: shop.id,
+      personId,
+      scope: "assignments",
+    });
+    if (!shopTrips || !assignments) throw new Error("issue failed");
+
+    expect(await deleteDiver(db, shop.id, personId)).toBe(true);
+
+    expect(await verifyCalendarFeed(db, { token: shopTrips.token })).toBeNull();
+    expect(await verifyCalendarFeed(db, { token: assignments.token })).toBeNull();
+    expect(await listCalendarFeeds(db, { shopId: shop.id, personId })).toEqual([]);
+
+    // The roles survive a soft delete, so the undo must not bring the old URLs back.
+    expect(await restoreDiver(db, shop.id, personId)).toBe(true);
+    expect(await verifyCalendarFeed(db, { token: shopTrips.token })).toBeNull();
+    expect(await verifyCalendarFeed(db, { token: assignments.token })).toBeNull();
+  });
+
+  it("refuses a feed whose person is deleted even if the row was never revoked", async () => {
+    const { db, shop, personId } = await staffWithRole("owner");
+    const issued = await issueCalendarFeed(db, { shopId: shop.id, personId, scope: "assignments" });
+    if (!issued) throw new Error("issue failed");
+
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, personId));
 
     expect(await verifyCalendarFeed(db, { token: issued.token })).toBeNull();
   });

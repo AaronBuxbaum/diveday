@@ -39,7 +39,7 @@ import {
 import { tripPrimarySiteId, tripVisitsSite } from "./trip-primary-site";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
-import { WAIVER_BOARDING_COLUMNS, withTrustedClearance } from "./waiver-record-columns";
+import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 
 /**
  * **Past divers worth inviting to a departure** (fifth-loop ideas, item 44;
@@ -318,7 +318,7 @@ export async function physicianReferrals(
 ): Promise<Set<string>> {
   if (personIds.length === 0) return new Set();
   const rows = await db
-    .select(WAIVER_BOARDING_COLUMNS)
+    .select(WAIVER_STATE_COLUMNS)
     .from(waiverRecords)
     .where(
       and(
@@ -327,9 +327,7 @@ export async function physicianReferrals(
         eq(waiverRecords.status, "medical_review"),
         isNull(waiverRecords.supersededAt),
       ),
-    )
-    // A clearance counts only while its seal verifies (issue #3998).
-    .then((found) => found.map(withTrustedClearance));
+    );
   return new Set(rows.filter((row) => row.medicalClearedAt === null).map((row) => row.personId));
 }
 

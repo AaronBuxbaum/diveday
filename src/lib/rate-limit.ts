@@ -705,12 +705,12 @@ export const RATE_LIMITS = {
   /**
    * The shop's own counter, per IP (issue #3985): every phone signing a
    * counter code on the shop's Wi-Fi shares one address, so this only stops
-   * a flood before any read; each claimed phone then spends its own
-   * `capabilityAction` budget, keyed by its claim.
+   * a flood before any read; each live counter code then spends its own
+   * `capabilityAction` budget, keyed by the code (issue #4064).
    */
   counterAddress: perHour(600),
   /**
-   * A counter form saving its draft on each step (issue #3985), per claim:
+   * A counter form saving its draft on each step (issue #3985), per code:
    * its own bucket, so a long questionnaire never spends the budget the
    * signature needs.
    */
@@ -779,13 +779,6 @@ export const RATE_LIMITS = {
    * because the first was made would read as the feature being broken.
    */
   readinessLinkResendByBooking: perHour(5),
-  /**
-   * "Your days" sends, per *person* (security review of layer r5-4, N1). The
-   * per-target bucket above is one booking's; a regular holds a dozen rows, so
-   * without this one inbox could be sent five mails an hour per row. Every row
-   * mails the same person, so the person is the budget.
-   */
-  yourDayLinkByPerson: perHour(5),
   /**
    * Unlocking the answers on the doctor's page (`/ready/[token]/waiver/doctor`) by
    * typing the diver's date of birth, per **diver** (the held release's

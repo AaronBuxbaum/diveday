@@ -94,7 +94,7 @@ and run the command again.
 | H-20260803-booking-form-succeed-fail | Chosen | 2026-08-20 | Even after the 2026-08-03 copy fix, the public booking form's succeed/fail signal is a… |
 | H-20260803-booking-time-trip-admission | Chosen | 2026-08-21 | The booking-time trip admission gate (DOM-M6, ADR 20260803-trip-admission-at-booking) is inverted relative to risk: it… |
 | H-20260803-twitter-x-card-policy | Ready | 2026-08-07 | Twitter/X card policy for the marketing pages — the last unresolved item of HD-25's… |
-| H-20260806-orders-csv-carries-hosted | Ready | 2026-08-06 | orders.csv carries hosted_invoice_url and invoice_pdf_url — unauthenticated, long-lived, publicly reachable Stripe-hosted pages rendering a… |
+| H-20260806-orders-csv-carries-hosted | Chosen | 2026-11-06 | orders.csv carries hosted_invoice_url and invoice_pdf_url — unauthenticated, long-lived, publicly reachable Stripe-hosted pages rendering a… |
 | H-20260806-real-postgres-ci-job | Ready | 2026-08-06 | The real-Postgres CI job shipped 2026-08-06 on a nightly-plus-src/db/-path-gated cadence rather than per-PR, an… |
 | H-20260814-may-sight-card | Chosen | 2026-08-20 | Who may sight a card? |
 | H-20260814-production-database-disposable | Chosen | 2026-08-14 | Is the production database disposable? |
@@ -170,7 +170,7 @@ and run the command again.
 | H-20261014-demo-wears-visitor-shop | Implemented | 2026-10-16 | May the demo wear the visitor's own shop name? |
 | H-20261014-no-mid-thread-model | Implemented | 2026-10-14 | Never switch a live thread's model? |
 | H-20261014-one-to-one-invite | Implemented | 2026-10-14 | May staff invite one past diver to a named departure? |
-| H-20261014-other-days-send-fresh | Implemented | 2026-10-14 | How does one booking's page lead to the diver's other days with the shop? |
+| H-20261014-other-days-send-fresh | Implemented | 2026-11-06 | How does one booking's page lead to the diver's other days with the shop? |
 | H-20261014-package-dive-is-a | Implemented | 2026-10-14 | What is one "dive" in a dive package: a tank or a trip? |
 | H-20261014-padi-divechek | Implemented (amended 2026-10-15, confirmed by Aaron Buxbaum 2026-10-15; amended by Aaron Buxbaum 2026-10-23) | 2026-10-23 | May the extension check a PADI card on DiveChek, behind the shop's own PADI sign-in? |
 | H-20261014-paid-mark-amount-and | Implemented | 2026-10-14 | Who may mark a seat paid, and with how much? |
@@ -211,7 +211,7 @@ and run the command again.
 | H-20261025-built-order-website-priced | Ready | — | How is the built-to-order website priced, and what may the pages promise about it? |
 | H-20261025-crew-now-both-counted | Open | — | Crew are now both counted (per-checkpoint attestation) and named (per-person roll call, roll_call_crew_events) —… |
 | H-20261025-dema-seasonality-posture-meetings | Ready | — | DEMA/seasonality posture — meetings-only or a booth — has no gate row at all… |
-| H-20261025-departure-note-limits | Ready | — | Who may send a note to everyone on a departure, and how much may it say? |
+| H-20261025-departure-note-limits | Ready | 2026-11-06 | Who may send a note to everyone on a departure, and how much may it say? |
 | H-20261025-every-alert-path-terminates | Ready | — | Every alert path terminates at alerts@dive.day, one mailbox, one person (comprehensive-review-20260802 HD-23). |
 | H-20261025-ga-migration-budget-pre | Ready | — | GA migration budget for the pre-release stack running the whole critical path simultaneously —… |
 | H-20261025-invoice-snapshot-erasure-obligation | Open | — | The invoice-snapshot erasure obligation (processor_erasure_obligations) has no API behind it and is never auto-retried… |

@@ -152,11 +152,13 @@ describe("sendDueMonthEndEmails", () => {
     expect(await resolveBookkeeperStopToken(db, november)).toMatchObject({ alreadyStopped: false });
   });
 
-  it("sends nothing to an address whose inbox has not confirmed", async () => {
+  it("sends to an address whose inbox has not confirmed, with the stop link", async () => {
     const { db } = await shopWithBookkeeper({ confirm: false });
     const { sent, provider } = capturing();
-    expect(await sendDueMonthEndEmails(db, { now: SECOND, provider })).toMatchObject({ due: 0 });
-    expect(sent).toEqual([]);
+    expect(
+      await sendDueMonthEndEmails(db, { now: SECOND, provider, origin: ORIGIN }),
+    ).toMatchObject({ due: 1, sent: 1 });
+    expect(sent.some((notification) => notification.to === BOOKS)).toBe(true);
   });
 
   it("holds the files when whoever set the address can no longer export the shop's data", async () => {

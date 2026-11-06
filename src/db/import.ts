@@ -47,7 +47,7 @@ import { isCompletedWaiverCurrent, isUnclearedReferral } from "@/lib/waivers";
 import { readActiveStaffRoles } from "./authz";
 import { specialtyCardSpecialty } from "./card-columns";
 import type { AppDb } from "./client";
-import { revokeLinksSentToOldContact } from "./contact-change";
+import { contactReplaced, revokeLinksSentToOldContact } from "./contact-change";
 import { createPerson } from "./people";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
@@ -61,7 +61,6 @@ import {
   shops,
   waiverRecords,
 } from "./schema";
-import { withVerifiedClearance } from "./waiver-record-columns";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 export type ImportSummary = {
@@ -513,9 +512,13 @@ export async function commitContactImport(
             ...(row.diveInsurance ? { diveInsurance: row.diveInsurance } : {}),
           })
           .where(and(eq(people.id, id), eq(people.shopId, shopId)));
-        // A file that changes a diver's phone takes the links texted to the
-        // old number with it, as a staff edit does (#3902).
-        if (before && before.phone !== phone) {
+        // A file that replaces a diver's phone takes the links texted to the
+        // old number with it, as a staff edit does (#3902); filling a missing
+        // one takes nothing (#4057).
+        if (
+          before &&
+          contactReplaced({ email: null, phone: before.phone }, { email: null, phone })
+        ) {
           await revokeLinksSentToOldContact(tx, { shopId, personId: id, now });
         }
       };
@@ -913,8 +916,7 @@ async function writeEvidence(
             ),
           ),
         )
-        // A clearance counts only while its seal verifies, here as at boarding (issue #3987).
-        .then((rows) => rows.map((joined) => withVerifiedClearance(joined.record)));
+        .then((rows) => rows.map((joined) => joined.record));
       const liveRecords = existingRecords.filter((r) => !r.supersededAt);
       // A cleared referral keeps its status but is not a hold (glossary "Medical hold").
       const hasActiveHold = existingRecords.some(isUnclearedReferral);

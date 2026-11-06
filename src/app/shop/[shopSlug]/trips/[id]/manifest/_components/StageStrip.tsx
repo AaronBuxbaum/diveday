@@ -76,26 +76,15 @@ export function StageStrip({
   const [result, formAction, isPending] = useActionState(action, null);
   const [confirmingHome, setConfirmingHome] = useState(false);
   const homeConfirm = current === "home" ? undefined : copy.homeConfirm;
-  const currentLabel = copy.taps.find((tap) => tap.stage === current)?.label;
   // The server reports it with the tap and the page says it from its own read;
   // either is enough, so the warning does not wait on the re-render.
   const homeward =
     (current !== null && isHomewardStage(current)) || (result?.ok && result.rollCallOpen);
   const rollCallOpen = homeward ? copy.rollCallOpen : undefined;
   return (
-    // With no stage said there is no word to print, and the heading alone
-    // printed over nothing (the day packet's eyebrow sat on the checklist
-    // card): on paper the section appears only with its answer (K-141).
-    <section aria-label={copy.legend} className={currentLabel ? "mt-4" : "mt-4 print:hidden"}>
+    // Paper says the stage in a word, on the Boat tab's sheet (`PrintedStage`).
+    <section aria-label={copy.legend} className="mt-4">
       <h2 className={groupLabelClass()}>{copy.legend}</h2>
-      {/* **Paper says the stage in a word; the buttons stay on screen.** The
-          pressed button was the only statement of the stage, and it is a
-          primary fill that print strips: the manifest printed a white label on
-          white paper, a hole the width of "Boarding", and the packets, which
-          hide every button, printed the eyebrow over nothing (K-141). The
-          word is the crew's own, the pressed tap's label, and it prints only
-          when somebody has said one; until then the whole strip stays on
-          screen. */}
       {/* **One row of five, the checkpoint switch's own control** (visual
           review 2026-10-24, B06; `boat-segments.ts`). The words used to wrap
           3 + 2 as outline buttons above a differently drawn Dock / Dive 1 /
@@ -131,7 +120,7 @@ export function StageStrip({
         ))}
       </div>
       {homeConfirm && confirmingHome ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 print:hidden">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <p role="alert" className="text-base font-bold text-danger">
             {homeConfirm.question}
           </p>
@@ -154,9 +143,6 @@ export function StageStrip({
           </button>
         </div>
       ) : null}
-      {currentLabel ? (
-        <p className="mt-2 hidden text-base font-semibold print:block">{currentLabel}</p>
-      ) : null}
       {copy.homeNotCounted && current === "home" ? (
         <p className="mt-2 text-sm font-semibold text-danger">{copy.homeNotCounted}</p>
       ) : null}
@@ -164,7 +150,7 @@ export function StageStrip({
         <p className="mt-2 text-sm text-muted tabular-nums">{copy.recordedLine}</p>
       ) : null}
       {rollCallOpen ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 print:hidden">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <p role="status" className="text-base font-bold text-danger">
             {rollCallOpen.line}
           </p>

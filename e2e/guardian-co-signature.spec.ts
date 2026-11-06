@@ -71,6 +71,12 @@ test("a minor's release asks for a parent, refuses without one, and names who co
   // `openDiverFileGroup` only opens a door that is shut.
   await openDiverFileGroup(page, "Waiver");
   await page.getByRole("button", { name: "Copy link" }).click();
+  // A minor's release with no seat waits on the desk's word that a parent is
+  // at the counter (#4019).
+  await expect(page.getByRole("status")).toHaveText(
+    "Is their parent or legal guardian at the counter to co-sign?",
+  );
+  await page.getByRole("button", { name: "Yes, copy the link" }).click();
   await openCopiedWaiverLink(page, await waiverLinkFromToast(page));
 
   // The section the rule adds, and the one thing about it that is not a field:

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { callTripBlowout, getTripBlowout } from "@/db/blowouts";
 import { createTrip } from "@/db/trips";
-import { reinstateTripClearingMinimum } from "@/db/trips-minimum";
+import { reinstateTrip } from "@/db/trips-minimum";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -30,8 +30,8 @@ describe("the cancellation record heading and metadata title", () => {
       provider: fakeEmail().provider,
     });
     expect(called.ok).toBe(true);
-    const reinstated = await reinstateTripClearingMinimum(db, shop.id, trip.id);
-    expect(reinstated?.status).toBe("scheduled");
+    const reinstated = await reinstateTrip(db, shop.id, trip.id);
+    expect(reinstated.ok && reinstated.trip.status).toBe("scheduled");
     const record = await getTripBlowout(db, shop.id, trip.id);
     expect(record?.cause).toBe("weather");
     if (!record) throw new Error("retained record missing");

@@ -225,8 +225,8 @@ export const waiverRecords = pgTable(
      * needed to be.
      *
      * Outside the signature's seal, because a clearance is a later act by the
-     * shop rather than part of what the diver agreed to, and inside a seal of
-     * its own: `medical_answer_seal` below (issue #3949).
+     * shop rather than part of what the diver agreed to. It carries no seal of
+     * its own: the stamp names who recorded it and when, and that record counts.
      */
     medicalClearedAt: timestamp("medical_cleared_at", { withTimezone: true }),
     /** The staff member who recorded the clearance — the accountable person, as `recorded_by_person_id` is for a paper signature. */
@@ -319,24 +319,9 @@ export const waiverRecords = pgTable(
     medicalClearanceDeclinedByPersonId: uuid("medical_clearance_declined_by_person_id").references(
       () => people.id,
     ),
-    /**
-     * **The physician's answer seal** (glossary *Physician answer seal*, issue
-     * #3949): a keyed digest over the answer this record holds — which stamp,
-     * who recorded it and when, the evaluation date, the physician and whether
-     * the form came from the diver — bound to this record's id and shop.
-     * Written once, by `recordMedicalEvaluation`, in the same guarded update as
-     * the answer; a recorded answer is final, so it is never re-sealed.
-     *
-     * The clearance stamp is what lifts a referral, so it cannot ride outside
-     * every seal: `verifyWaiverIntegrity` reads a record whose answer does not
-     * match this, or which carries this with no answer, as `invalid`, and the
-     * nightly check holds its diver (`waiver_seal_failed`). Kept apart from
-     * `integrity_hash` so recording an answer never re-seals the signed
-     * release, and a move, a guardian redaction or an erasure re-seals the
-     * signature without touching it: every field it covers survives all three.
-     * The evaluation's document URL is outside it, because erasure destroys it.
-     */
-    medicalAnswerSeal: text("medical_answer_seal"),
+    // `medical_answer_seal` is retired (Aaron, 2026-11-06): a recorded
+    // clearance counts, with no seal of its own. Undeclared for one release,
+    // dropped in the next.
     /**
      * **The guardian's half of a minor's release** (ADR
      * 20260907-guardian-co-signature). A diver under the age of majority on

@@ -13,7 +13,6 @@ import type { HoldDepartureNoteResult } from "../departure-note-actions";
 export type DepartureNoteRefusalCopy = {
   empty: string;
   too_long: string;
-  link: string;
   cancelled: string;
   past: string;
   limit: string;
@@ -50,8 +49,8 @@ function refusalText(copy: DepartureNoteFormCopy, reason: string): string {
  * The box and the button behind "Note to everyone" (batch 4, J4): a held send
  * like every other message a staffer can take back, so the tap shows
  * "Sending…" with Undo for eight seconds before anything leaves. The rules
- * the server enforces are checked here too, as the staffer types, so a link
- * or a long note is caught before the tap rather than after it.
+ * the server enforces are checked here too, as the staffer types, so a long
+ * note is caught before the tap rather than after it.
  */
 export function DepartureNoteForm({
   hold,

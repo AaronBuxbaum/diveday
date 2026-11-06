@@ -90,7 +90,7 @@ describe("buildAfterStateProps", () => {
     expect(props.sheet.signable).toBe(false);
   });
 
-  it("offers the share-with-the-boat tick from a delivered readiness link only (security review r5-4, F3 and N-a)", async () => {
+  it("offers the share-with-the-boat tick from any readiness link, never the forwardable recap (issue 4059)", async () => {
     const { data, bookingId } = await recapData();
     const build = (mintHandoff: boolean, delivered: boolean) =>
       buildAfterStateProps({
@@ -105,7 +105,7 @@ describe("buildAfterStateProps", () => {
         delivered,
       });
     expect((await build(true, true)).canShareWithBoat).toBe(true);
-    expect((await build(true, false)).canShareWithBoat).toBe(false);
+    expect((await build(true, false)).canShareWithBoat).toBe(true);
     expect((await build(false, false)).canShareWithBoat).toBe(false);
   });
 

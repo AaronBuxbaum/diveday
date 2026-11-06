@@ -1,4 +1,4 @@
-import { DAY_MS, HOUR_MS } from "@/lib/clock";
+import { DAY_MS } from "@/lib/clock";
 
 /**
  * Bearer tokens proving control of a user account's own address — one purpose
@@ -17,15 +17,18 @@ export type AccountTokenPurpose = "email_verification" | "password_reset" | "inv
 /** Low stakes — only confirms the address works, so a generous window. */
 export const EMAIL_VERIFICATION_TTL_MS = 3 * DAY_MS;
 
-/** A live credential over account takeover, so kept short — industry norm. */
-export const PASSWORD_RESET_TTL_MS = HOUR_MS;
+/**
+ * A live credential over account takeover, but single-use and superseded by a
+ * resend, so a reset opened after the morning boat still works (#4065).
+ */
+export const PASSWORD_RESET_TTL_MS = DAY_MS;
 
 /**
- * A new hire may not open their inbox the day they're invited, so this is
- * more generous than email verification, but still a hard expiry rather than
- * a link that works forever.
+ * An off-season hire may not open their inbox for weeks, so this is the most
+ * generous of the three, but still a hard expiry rather than a link that works
+ * forever. Single-use and superseded by a resend (#4065).
  */
-export const INVITE_TTL_MS = 7 * DAY_MS;
+export const INVITE_TTL_MS = 30 * DAY_MS;
 
 export function verifyAccountLinkPath(token: string): string {
   return `/verify/${token}`;

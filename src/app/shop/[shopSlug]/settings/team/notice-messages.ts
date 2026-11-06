@@ -12,6 +12,10 @@ export function noticeMessages(t: StaffTranslator): NoticeMessages {
     disabled: { tone: "success", text: t("settings.team.notice.disabled") },
     removed: { tone: "success", text: t("settings.team.notice.removed") },
     restored: { tone: "success", text: t("settings.team.notice.restored") },
+    "restored-resend-invite": {
+      tone: "success",
+      text: t("settings.team.notice.restoredResendInvite"),
+    },
     "restore-failed": { tone: "danger", text: t("settings.team.notice.restoreFailed") },
     "invite-invalid": { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
     "send-limit": { tone: "warning", text: sayWords(t, sendLimitWords("invites")) },

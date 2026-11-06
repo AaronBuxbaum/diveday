@@ -103,10 +103,10 @@ describe("uploadRecapPhotoFromReadyAction", () => {
     expect(vi.mocked(addRecapPhoto).mock.calls[0]?.[1]).toMatchObject({ shareWithBoat: false });
   });
 
-  it("keeps the photo on this recap alone from an undelivered link, ticked or not (second pass, N-a)", async () => {
+  it("shares from the link a booking redirected to as well (issue 4059)", async () => {
     contextFor.mockResolvedValueOnce(context(false, false));
     expect(await landing(photoForm(true))).toBe(`/recap/recap-for-${BOOKING_ID}?photo=added`);
-    expect(vi.mocked(addRecapPhoto).mock.calls[0]?.[1]).toMatchObject({ shareWithBoat: false });
+    expect(vi.mocked(addRecapPhoto).mock.calls[0]?.[1]).toMatchObject({ shareWithBoat: true });
   });
 
   it("stores nothing for a link that does not verify", async () => {

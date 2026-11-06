@@ -947,7 +947,7 @@ test("a diver without a booking can receive an independent waiver from their rec
   const secondHref = await waiverLinkFromToast(page);
   expect(secondHref).not.toBe(firstHref);
 
-  // The fresh link opens on this phone, once it says so.
+  // The fresh link opens straight to its form (#4064).
   await openCopiedWaiverLink(page, secondHref);
 });
 

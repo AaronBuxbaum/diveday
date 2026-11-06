@@ -11,9 +11,11 @@ import { describe, expect, it } from "vitest";
  *
  * Read off the source because this is a server page: there is no render to
  * inspect without a database, a request and a shop. The paper copy lives in
- * `PrintedBoatPaper`, which the page renders once.
+ * `PrintedBoatPaper`, which the page's sheet (`BoatTabPaper`) renders once.
  */
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const PAGE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SHEET = readFileSync(join(__dirname, "_components", "BoatTabPaper.tsx"), "utf8");
+const SOURCE = `${PAGE}${SHEET}`;
 const PAPER = readFileSync(join(__dirname, "_components", "PrintedBoatProcedure.tsx"), "utf8");
 
 const CARDS = `${SOURCE}${PAPER}`

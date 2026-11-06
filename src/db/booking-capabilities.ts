@@ -39,13 +39,6 @@ export const RETURNING_DIVER_MEMORY_MS = 30 * DAY_MS;
 export const RETURNING_DIVER_RECEIPT_LOCK_TIMEOUT = "250ms";
 export const RETURNING_DIVER_RECEIPT_STATEMENT_TIMEOUT = "400ms";
 
-/**
- * A live row with less than this left is rotated (revoked, then a new one
- * minted) rather than handed out again, so no send carries a link that dies
- * on arrival (security review of #2711, finding 2).
- */
-export const CAPABILITY_ROTATE_WITHIN_MS = DAY_MS;
-
 export type IssuedReturningDiverReceipt = {
   receiptId: string;
   receiptOrder: string;
@@ -62,8 +55,10 @@ export type IssuedReturningDiverReceipt = {
  * erasure takes, so a mint either precedes erasure and is revoked by it, or
  * follows it and sees no subject). The live row is handed back with its expiry
  * moved to what the trip asks for today, so a rescheduled departure carries
- * its links with it. A row with under a day left, or one whose key this
- * deployment no longer holds, is revoked and replaced. A `handoff` is never
+ * its links with it, and never less than a day out, so no send carries a
+ * link that dies on arrival and a resend never closes the link a diver holds.
+ * A row past its expiry, or one not under this deployment's signing key, is
+ * revoked and replaced. A `handoff` is never
  * reused: each call revokes the last one and mints anew, because re-arming a
  * ten-minute credential that pre-fills a diver's details would extend it.
  */
@@ -149,10 +144,9 @@ export async function issueBookingCapability(
 }
 
 /**
- * **No readiness link goes to an address a party's lead typed** (issue
- * #4003). A delivered readiness link pays, cancels and moves the seat, and
- * nobody has shown that address is the diver's (`seatAddressIsLeadTyped`):
- * a send to it carries the seat's waiver-only door, or no link. Refused here,
+ * **No readiness link goes to a minor's address a party's lead typed** (issue
+ * #4003). It would open the minor's release, and that address cannot prove a
+ * guardian (`seatAddressIsLeadTyped`): a send to it carries no link. Refused here,
  * under the booking lock, so a reminder, find-my-booking, a reschedule notice
  * or a rescue cannot mint one by a path of its own. A link a page hands over
  * (`delivered: false`, the lead's own party panel) is the lead's, and goes on.
@@ -222,7 +216,8 @@ async function getOrCreateLiveLinks(
       // Only a row under the signing key is handed out again: re-sending (and
       // extending) an older version would keep it alive after rotation.
       row.keyVersion === signingVersion &&
-      row.expiresAt.getTime() - now.getTime() >= CAPABILITY_ROTATE_WITHIN_MS;
+      // An expired row is never revived: a forwarded old link stays dead.
+      row.expiresAt.getTime() > now.getTime();
     if (row && reusable && row.keyVersion !== null) {
       if (row.expiresAt.getTime() !== seat.expiresAt.getTime()) {
         const ids = moveExpiry.get(seat.expiresAt.getTime()) ?? [];

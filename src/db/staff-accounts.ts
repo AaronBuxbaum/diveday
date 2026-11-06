@@ -465,6 +465,23 @@ export async function getStaffRoles(
   return rows.map((row) => row.role as Role);
 }
 
+/**
+ * Locks a staff member's `people` row so it serialises with `issueCalendarFeed`, which takes the
+ * same lock before it reads roles: a rotation in flight would otherwise mint a live feed after a
+ * revoke has run (issues #3996, #4012).
+ */
+async function lockStaffPersonRow(
+  tx: DbExecutor,
+  input: { shopId: string; personId: string },
+): Promise<void> {
+  await tx
+    .select({ id: people.id })
+    .from(people)
+    // diveday:allow-deleted-people: a lock on the staffer's own row, whatever its state.
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .for("no key update");
+}
+
 export type StaffMutationResult = { ok: true } | { ok: false; reason: "last_owner" | "not_found" };
 
 /**
@@ -485,11 +502,29 @@ export async function setStaffRoles(
     if (!input.roles.includes("owner") && (await isLastOwner(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "last_owner" };
     }
+    // Before anything else writes this person, in the order `removeStaffMember` and `deleteDiver`
+    // take their locks.
+    await lockStaffPersonRow(tx, input);
     // Someone left with no staff role cannot be the crew member a diver was
     // promised help from: their acknowledged requests go back to the desk.
     if (!input.roles.some((role) => STAFF_ROLES.includes(role))) {
       await releaseHelpRequestsOfPerson(tx, { shopId: input.shopId, personId: input.personId });
     }
+    // A feed is a staff credential. Losing the role that earned it ends the link for good: a
+    // re-promotion would otherwise revive a URL that may have leaked while the role was gone
+    // (issue #4012). Serialised with `issueCalendarFeed` by the row lock, so a rotation in flight
+    // cannot mint one after this revoke.
+    const keepsShopFeed = input.roles.some((role) => role === "owner" || role === "manager");
+    const keepsAnyStaffRole = input.roles.some((role) => STAFF_ROLES.includes(role));
+    await revokePersonCapabilities(tx, {
+      purposes: keepsAnyStaffRole
+        ? keepsShopFeed
+          ? []
+          : ["calendar_shop_trips"]
+        : personPurposesThatMerge("refuse"),
+      shopId: input.shopId,
+      personId: input.personId,
+    });
     await tx
       .delete(personRoles)
       .where(
@@ -556,6 +591,33 @@ export async function setStaffAccountStatus(
   });
 }
 
+export type RestoreStaffResult =
+  | { ok: true; resendInvite: boolean }
+  | { ok: false; reason: "last_owner" | "not_found" };
+
+/**
+ * The Undo after a removal: puts the roles back and re-enables the account. An invitee who never
+ * accepted keeps the `invited` status, because a re-enable would hand them an account the invite
+ * never opened (issue #3997); they come back on the team with no live link, so the answer says
+ * to resend the invite rather than failing (issue #4013).
+ */
+export async function restoreStaffMember(
+  db: AppDb,
+  input: { shopId: string; personId: string; userAccountId: string; roles: Role[] },
+): Promise<RestoreStaffResult> {
+  const rolesResult = await setStaffRoles(db, input);
+  if (!rolesResult.ok) return rolesResult;
+  const [account] = await db
+    .select({ status: userAccounts.status })
+    .from(userAccounts)
+    .where(
+      and(eq(userAccounts.id, input.userAccountId), eq(userAccounts.personId, input.personId)),
+    );
+  if (account?.status === "invited") return { ok: true, resendInvite: true };
+  const statusResult = await setStaffAccountStatus(db, { ...input, status: "active" });
+  return statusResult.ok ? { ok: true, resendInvite: false } : statusResult;
+}
+
 /**
  * Removes someone from the team: strips every staff role (a `diver` row, if
  * any, is untouched) and disables their account. Never soft-deletes the
@@ -575,14 +637,7 @@ export async function removeStaffMember(
     if (await isLastOwner(tx, input.shopId, input.personId)) {
       return { ok: false, reason: "last_owner" };
     }
-    // Serialise with `issueCalendarFeed`, which locks this row before it reads roles: a rotation
-    // in flight would otherwise mint a live feed after the revoke below has run (issue #3996).
-    await tx
-      .select({ id: people.id })
-      .from(people)
-      // diveday:allow-deleted-people: a lock on the leaver's own row, whatever its state.
-      .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
-      .for("no key update");
+    await lockStaffPersonRow(tx, input);
     // A leaver cannot be the crew member a diver was promised help from.
     await releaseHelpRequestsOfPerson(tx, { shopId: input.shopId, personId: input.personId });
     await tx

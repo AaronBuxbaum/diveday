@@ -1,10 +1,5 @@
 import { getTableColumns } from "drizzle-orm";
-import {
-  type MedicalAnswerFields,
-  physicianClearanceSealed,
-  WAIVER_SEALED_FIELDS,
-  type WaiverSealedField,
-} from "@/lib/waiver-integrity";
+import { WAIVER_SEALED_FIELDS, type WaiverSealedField } from "@/lib/waiver-integrity";
 import type { WaiverStateFields } from "@/lib/waivers";
 import { waiverRecords } from "./schema";
 
@@ -30,8 +25,8 @@ import { waiverRecords } from "./schema";
  *   (`src/db/medical-alerts.ts`, behind `canReadMedicalAlert`) and the signed
  *   record through {@link WAIVER_SEALED_COLUMNS}; a roster or readiness pass
  *   that carried it would hand it to every staffer.
- * - `integrityHash`, `medicalAnswerSeal` — only the integrity check reads a
- *   seal, through {@link WAIVER_SEALED_COLUMNS}.
+ * - `integrityHash` — only the integrity check reads the seal, through
+ *   {@link WAIVER_SEALED_COLUMNS}.
  *
  * `medicalAnswers` stays: the roster's medical-hold summary
  * (`flaggedMedicalPrompts`) reads it on a `medical_review` record.
@@ -50,47 +45,10 @@ const {
   draftViaLinkId: _draftViaLinkId,
   medicalAlert: _medicalAlert,
   integrityHash: _integrityHash,
-  medicalAnswerSeal: _medicalAnswerSeal,
   ...stateColumns
 } = getTableColumns(waiverRecords);
 
 export const WAIVER_STATE_COLUMNS = stateColumns;
-
-const allColumnsForState = getTableColumns(waiverRecords);
-
-/**
- * {@link WAIVER_STATE_COLUMNS} plus the physician's answer seal, for a read
- * that decides boarding. Hand each row to {@link withTrustedClearance} before
- * any rule sees it; the seal never leaves this file.
- */
-export const WAIVER_BOARDING_COLUMNS = {
-  ...stateColumns,
-  medicalAnswerSeal: allColumnsForState.medicalAnswerSeal,
-};
-
-/**
- * **A clearance counts only while its seal verifies** (final attacker review
- * B1, glossary *Physician answer seal*): the record a boarding read hands to
- * the rules, with a clearance stamp whose seal is missing or wrong taken off,
- * so the referral holds as unanswered. Checked here, at read time, because the
- * nightly pass reaches a row every few nights at most.
- */
-export function withTrustedClearance<R extends WithSeal>(row: R): Omit<R, "medicalAnswerSeal"> {
-  const { medicalAnswerSeal: _seal, ...record } = withVerifiedClearance(row);
-  return record;
-}
-
-type WithSeal = MedicalAnswerFields & { medicalAnswerSeal: string | null };
-
-/**
- * {@link withTrustedClearance} for a reader that keeps the whole row, seal included (the token
- * page's completed record, the signature log, the import's hold check): the same rule, a stamp
- * whose seal is missing or wrong taken off, and nothing else touched.
- */
-export function withVerifiedClearance<R extends WithSeal>(row: R): R {
-  if (row.medicalClearedAt === null || physicianClearanceSealed(row)) return row;
-  return { ...row, medicalClearedAt: null, medicalClearedByPersonId: null };
-}
 
 /**
  * One waiver record read through {@link WAIVER_STATE_COLUMNS} — the shape the

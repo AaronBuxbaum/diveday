@@ -44,7 +44,9 @@ export {
 } from "./trips-clashes";
 export {
   createTrip,
+  createTripOrRefusal,
   type NewTrip,
+  type TripBoatOutOfService,
   type TripDiveDraft,
   type TripScheduleDayInput,
 } from "./trips-create";
@@ -76,7 +78,8 @@ export {
   listMinimumNotMetRecipients,
   MINIMUM_SEATS_SWEEP_LIMIT,
   type MinimumSeatsSweepResult,
-  reinstateTripClearingMinimum,
+  type ReinstateTripOutcome,
+  reinstateTrip,
   type SweptDeparture,
 } from "./trips-minimum";
 export {
@@ -168,6 +171,7 @@ export {
   type SeriesDetailApplyResult,
   type SeriesRollResult,
   type SeriesSweepResult,
+  type SeriesYardLine,
   setSeriesRepeat,
   setSeriesStandingCrew,
 } from "./trips-series";

@@ -49,7 +49,7 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
     >
       {/* The checklist above folds when the checkpoint changes; this keeps the
           list where the crew's thumb was instead of letting it jump. */}
-      <HoldPlace holdKey={checkpoint} />
+      {context.paper ? null : <HoldPlace holdKey={checkpoint} />}
       {/* **"Skip to roll call" lands here, below the pinned count card**
           (pixel-craft class 9). With no scroll margin the section landed on
           the chrome bar, under the sticky card — 113px tall at 1280, 173 at
@@ -137,7 +137,7 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
         ))}
       </ul>
       {/* The words for a press the touch guard refused, crew rows included (issue #2328). */}
-      <RollCallTouchCue message={t("manifest.touchRefused")} />
+      {context.paper ? null : <RollCallTouchCue message={t("manifest.touchRefused")} />}
     </section>
   );
 }

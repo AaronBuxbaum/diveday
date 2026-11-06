@@ -62,8 +62,13 @@ describe("departureNoteProblem", () => {
     expect(departureNoteProblem("a".repeat(DEPARTURE_NOTE_MAX + 1))).toBe("too_long");
   });
 
-  it("refuses a link", () => {
-    expect(departureNoteProblem("Park at elks.org")).toBe("link");
+  it("runs to 500 characters", () => {
+    expect(DEPARTURE_NOTE_MAX).toBe(500);
+  });
+
+  it("lets a link, a map link or an address through", () => {
+    expect(departureNoteProblem("Park here: https://maps.app.goo.gl/abc123")).toBeNull();
+    expect(departureNoteProblem("Park at elks.org, call captain@shop.example")).toBeNull();
   });
 
   it("allows a plain transactional note", () => {

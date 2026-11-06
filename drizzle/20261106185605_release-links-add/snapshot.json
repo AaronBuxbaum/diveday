@@ -1,0 +1,40 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "1d84abe1-442d-4b9a-88dc-f0d86c1d7d06",
+  "prevIds": [
+    "23ade63a-f5f7-4c5d-bdb5-b3dc58a9d6bb",
+    "278b82e6-dd8d-4079-806e-c832ea790c8d"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "capabilities",
+        "capabilities_live_waiver_record_idx"
+      ],
+      "writes": [
+        "s|idx|public.capabilities_live_waiver_record_idx",
+        "n|idx|public.capabilities_live_waiver_record_idx",
+        "e|idx|public.capabilities_live_waiver_record_idx",
+        "n|rel|public.capabilities_live_waiver_record_idx"
+      ],
+      "reads": [
+        "e|tbl|public.capabilities",
+        "n|sch|public",
+        "e|col|public.capabilities.waiver_record_id",
+        "e|col|public.capabilities.purpose"
+      ],
+      "sharedWrites": []
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "indexes\u0000[\"public\",\"capabilities_live_waiver_record_idx\"]"
+    }
+  ]
+}

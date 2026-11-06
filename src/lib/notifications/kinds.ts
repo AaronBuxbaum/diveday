@@ -1953,7 +1953,7 @@ const incidentMissingDiverFoundSchema = z.object({
  * the owners' copy: no person, no link behind a staff sign-in, and no name of
  * anybody aboard. The shop and its phone, the departure, the dive, the two
  * counts, when the boat was due back and when this was sent. Sent only to an
- * address with a recorded consent that its inbox confirmed
+ * address with a recorded consent, from the save (#4060)
  * (`shoreAlertRecipient`, `src/lib/shore-alert-contact.ts`).
  *
  * `stopUrl` is the one link: `/unsubscribe/<token>`, which takes the address

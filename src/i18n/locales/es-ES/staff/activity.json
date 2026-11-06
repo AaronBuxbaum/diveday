@@ -52,7 +52,6 @@
     "diver_medical_form_opened": "{actor} abrió el formulario médico firmado que envió {diver}",
     "medical_diver_form_accepted": "{actor} aceptó como evaluación médica el formulario que envió {diver}",
     "medical_diver_form_not_used": "{actor} no usó el formulario médico que envió {diver}, y se eliminó",
-    "medical_unsealed_clearance_replaced": "{actor} volvió a registrar la respuesta del médico de {diver} y sustituyó una autorización que nunca se selló",
     "medical_answers_read": "{actor} leyó las respuestas médicas de {diver}",
     "scheduled_backup_medical_answers": "El respaldo de esta semana envió respuestas médicas al almacenamiento del centro (buceadores: {count})",
     "scheduled_backup_holds_medical_answers": "El respaldo semanal al almacenamiento del centro ya guarda las respuestas médicas de {diver}",

@@ -2,11 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import {
-  medicalAnswerSealFor,
-  verifyWaiverIntegrity,
-  WAIVER_INTEGRITY_VERSION_ERASED,
-} from "@/lib/waiver-integrity";
+import { verifyWaiverIntegrity, WAIVER_INTEGRITY_VERSION_ERASED } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { bookings, people, shops, waiverRecords, waiverTemplates } from "./schema";
@@ -272,13 +268,6 @@ describe("listWaiverIntegrityAudit search and views", () => {
       })
       .returning();
     if (!record) throw new Error("record insert failed");
-    // Sealed as the desk seals an answer: an unsealed stamp is no clearance (issue #3987).
-    if (outcome !== "open") {
-      await db
-        .update(waiverRecords)
-        .set({ medicalAnswerSeal: medicalAnswerSealFor(record) })
-        .where(eq(waiverRecords.id, record.id));
-    }
     return record.id;
   }
 

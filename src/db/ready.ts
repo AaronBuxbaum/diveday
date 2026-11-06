@@ -95,16 +95,7 @@ export type BookedCard = {
 
 export async function getBookedCard(
   db: AppDb,
-  {
-    shopId,
-    bookingId,
-    delivered,
-  }: {
-    shopId: string;
-    bookingId: string;
-    /** The link was mailed to the contact on file; only then is a count said. */
-    delivered: boolean;
-  },
+  { shopId, bookingId }: { shopId: string; bookingId: string },
 ): Promise<BookedCard | null> {
   const [row] = await db
     .select({
@@ -136,12 +127,11 @@ export async function getBookedCard(
   if (!row || row.status === "no_show") return null;
   const identityHeld = row.identityUnconfirmedAt !== null;
   // A held seat speaks for a record staff have not matched to whoever booked
-  // (#2082), and a booking redirect proved only a typed name and address
-  // (security review r5-4, second pass, N-c): neither is told a count.
-  const milestone =
-    identityHeld || !delivered
-      ? null
-      : diveDayMilestone(await diveDayCountForSeat(db, shopId, bookingId));
+  // (#2082): it is told no count. Every other link is, the page right after
+  // booking included (#4059).
+  const milestone = identityHeld
+    ? null
+    : diveDayMilestone(await diveDayCountForSeat(db, shopId, bookingId));
   return {
     shop: {
       name: row.shopName,

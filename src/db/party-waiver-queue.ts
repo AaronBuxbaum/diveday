@@ -2,8 +2,9 @@ import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureMissing, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { hasReturned } from "@/lib/trips";
+import { endOfLocalDay } from "@/lib/zoned";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
-import { hasLiveClaimedCapability, mintCapability } from "./capabilities";
+import { mintCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
 import { listTripReadiness } from "./readiness";
@@ -141,11 +142,11 @@ export async function getPartyWaiverQueue(
  * 20261105-waiver-folds-into-the-thread). Locks the live departure and both
  * party seats, opens the seat's release the way its thread does
  * (`openWaiverInThread`: a live record and its draft are kept), and mints a
- * `waiver_link` capability naming that release: half an hour, spent by the
- * signature, revoking the seat's previous counter link. Nothing here reads or
+ * `waiver_link` capability naming that release: to the end of the departure
+ * day, on any phone (issue #4064), spent by the signature, leaving any earlier counter link working. Nothing here reads or
  * hands on the release's own waiver link or the seat's readiness link.
  *
- * The QR can sign as the diver from any phone that scans it first, so the
+ * The QR can sign as the diver from any phone that scans it, so the
  * staffer who showed it is written on the diver's trail in the same
  * transaction (security review S2); no trail line, no link.
  */
@@ -158,21 +159,18 @@ export async function issuePartyWaiver(
     bookingId: string;
     /** The staffer showing the QR. */
     actorPersonId: string;
-    /** The desk confirmed: replace a code already open on the diver's phone. */
-    replace?: boolean;
     /** The desk confirmed a parent or guardian is here to co-sign a minor's release. */
     guardianPresent?: boolean;
     now?: Date;
   },
-): Promise<
-  { token: string; expiresAt: Date } | { openOnPhone: true } | { guardianCheck: true } | null
-> {
+): Promise<{ token: string; expiresAt: Date } | { guardianCheck: true } | null> {
   try {
     return await db.transaction(async (tx) => {
       await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
       const [trip] = await tx
-        .select({ endsAt: trips.endsAt })
+        .select({ startsAt: trips.startsAt, endsAt: trips.endsAt, timezone: shops.timezone })
         .from(trips)
+        .innerJoin(shops, eq(shops.id, trips.shopId))
         .where(
           and(
             eq(trips.id, input.tripId),
@@ -197,10 +195,8 @@ export async function issuePartyWaiver(
         )
         .orderBy(asc(bookings.id))
         .for("update");
-      if (locked.length !== ids.length) return null;
       const seat = locked.find((row) => row.id === input.bookingId);
-      if (!seat) return null;
-      if (hasReturned(trip.endsAt, input.now ?? nowDate())) return null;
+      if (!seat || !locked.some((row) => row.id === input.leadBookingId)) return null;
       const queue = await getPartyWaiverQueue(tx, input);
       const member = queue?.members.find((entry) => entry.bookingId === input.bookingId);
       if (member?.state !== "needed") return null;
@@ -219,25 +215,17 @@ export async function issuePartyWaiver(
         now: input.now,
       });
       if (!opened.ok) return null;
-      // A code the diver's phone already opened is kept unless the desk
-      // confirms a new one: a mint would revoke it under their typing (dock
-      // review S2). The door a party member's join email carried stays live
-      // beside it (issue #4008), so it is no reason to ask.
-      if (
-        !input.replace &&
-        (await hasLiveClaimedCapability(tx, {
-          purpose: "waiver_link",
-          shopId: input.shopId,
-          subjectId: opened.recordId,
-          now: input.now,
-        }))
-      )
-        return { openOnPhone: true as const };
+      // A fresh code leaves any code already open on a phone working. It
+      // lasts to the end of the departure day (#4064); shown on a later day
+      // of a multi-day trip, to the end of that day.
+      const now = input.now ?? nowDate();
+      const day = trip.startsAt > now ? trip.startsAt : now;
       const link = await mintCapability(tx, {
         purpose: "waiver_link",
         shopId: input.shopId,
         subjectId: opened.recordId,
         now: input.now,
+        expiresAt: endOfLocalDay(day, trip.timezone),
       });
       // The waiver's own lock may also have waited past return. Roll the whole
       // issuance back instead of exposing or leaving a freshly minted link.

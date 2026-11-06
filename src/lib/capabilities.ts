@@ -1,5 +1,5 @@
 import { EMAIL_VERIFICATION_TTL_MS, INVITE_TTL_MS, PASSWORD_RESET_TTL_MS } from "./account-tokens";
-import { DAY_MS, MINUTE_MS } from "./clock";
+import { DAY_MS } from "./clock";
 import { SETUP_LINK_TTL_MS } from "./setup-links";
 
 /**
@@ -50,7 +50,6 @@ export const CAPABILITY_PURPOSES = [
   "calendar_assignments",
   "calendar_shop_trips",
   "waiver_link",
-  "party_waiver_link",
   "release_link",
 ] as const;
 
@@ -224,8 +223,8 @@ export const CAPABILITY_POLICY = {
     reissue: "adds",
     use: "once",
   },
-  // The one-time link a newly saved shore contact receives before any alert
-  // goes to it (H-20261014-stale-roll-call-recipients review). Opening it sets
+  // The one-time link a newly saved shore contact receives to confirm it
+  // (a badge, not a gate: #4060) (H-20261014-stale-roll-call-recipients review). Opening it sets
   // `shops.shore_alert_confirmed_at` while the shop still names the address it
   // went to. Expires after a week rather than the front desk's three days:
   // the reader is somebody outside the shop, who may not open the mail the day
@@ -320,35 +319,21 @@ export const CAPABILITY_POLICY = {
   // party's waiver panel, and the diver signs their own seat's release on the
   // shop's device. It names the release, not the person, so it carries no
   // readiness authority and opens nothing once the seat changes hands or the
-  // terms change. Half an hour is one sitting; signing spends it, and a fresh
-  // QR revokes the one before. A diver merge supersedes the unsigned release,
-  // so the link opens nothing after it; a contact change revokes it; an
-  // erasure deletes the links to the person's releases. It is also what Copy
-  // link hands staff for a release with no seat (issue #3983): the same half
-  // hour, on the first phone that opens it.
+  // terms change. It lasts to the end of the departure day and opens on any
+  // phone (issue #4064): the minting caller names the day's end, and two weeks
+  // are only a ceiling. The first phone to save a step claims it, and only that
+  // phone is shown the medical answers saved through it. Signing spends it, and
+  // a fresh QR leaves the one before working (a phone may be half-way through
+  // it). A diver merge supersedes the unsigned release, so the link opens
+  // nothing after it; a replaced contact revokes it; an erasure deletes the
+  // links to the person's releases. It is also what Copy link hands staff for
+  // a release with no seat (issue #3983), until the end of that day.
   waiver_link: {
     subject: "waiver_record",
     scope: "shop",
     lifetime: "expires",
-    ttlMs: 30 * MINUTE_MS,
-    reissue: "supersedes",
-    per: "subject",
-    use: "once",
-    claim: "first_device",
-  },
-  // A party member's waiver-only door (issue #3986): the join email sends it
-  // to the address the lead typed for them, so it opens that seat's release
-  // and nothing else, never the member's readiness link (which pays, cancels
-  // and moves the seat). Opened on the first device that claims it, spent by
-  // the signature, and dead after two weeks or once the seat changes hands
-  // or the terms change, as the counter link is.
-  party_waiver_link: {
-    subject: "waiver_record",
-    scope: "shop",
-    lifetime: "expires",
     ttlMs: 14 * DAY_MS,
-    reissue: "supersedes",
-    per: "subject",
+    reissue: "adds",
     use: "once",
     claim: "first_device",
   },
@@ -356,18 +341,16 @@ export const CAPABILITY_POLICY = {
   // #3983). Signed, that release covers every seat the diver holds, so the link
   // goes only to the contact on file and its token never comes back to staff:
   // a staffer who wants a URL to hand over gets a counter link
-  // (`waiver_link`) instead. A week, as the mail says; signing spends it, and
-  // a newer release link to the same release revokes it. A counter link to the
-  // same release stands beside it (one live link per release and purpose,
-  // `capabilities_live_waiver_record_idx`, issue #4008); whichever signs, the
-  // other opens nothing after. A contact change revokes it; an erasure deletes it.
+  // (`waiver_link`) instead. A week, as the mail says; signing spends it. A
+  // resend adds a link and leaves the earlier ones working, counter links
+  // included: whichever signs, the others open nothing after. A contact change
+  // revokes it; an erasure deletes it.
   release_link: {
     subject: "waiver_record",
     scope: "shop",
     lifetime: "expires",
     ttlMs: 7 * DAY_MS,
-    reissue: "supersedes",
-    per: "subject",
+    reissue: "adds",
     use: "once",
   },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;

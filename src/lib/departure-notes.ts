@@ -4,15 +4,17 @@ import { hasSailed } from "./trips";
  * **A note to everyone on a departure** (batch 4, J4): "Marina lot closed,
  * park at the Elks", sent once to every booked seat by its usual channel.
  *
- * Transactional, so it is held to what a transactional message is: short,
- * about this departure, and carrying no link but the diver's own `/ready`
- * page, which DiveDay adds. The rules here are the whole check; the send
+ * Transactional, so it is held to what a transactional message is: short and
+ * about this departure. It may carry links ("Park here: <map link>", #4062);
+ * what stands between a rogue staff login and the divers is the eight-second
+ * Undo and the activity row, and the cap of three notes. The rules here are
+ * the whole check; the send
  * (`src/db/departure-notes.ts`) runs them at the hold and again when the hold
  * drains, so a departure cancelled during the eight seconds is not messaged.
  */
 
 /** The longest note, in characters, after whitespace is folded. */
-export const DEPARTURE_NOTE_MAX = 200;
+export const DEPARTURE_NOTE_MAX = 500;
 
 /**
  * How many notes one departure may carry. A note goes to everyone; a fourth
@@ -21,7 +23,7 @@ export const DEPARTURE_NOTE_MAX = 200;
  */
 export const DEPARTURE_NOTES_PER_DEPARTURE = 3;
 
-export type DepartureNoteProblem = "empty" | "too_long" | "link";
+export type DepartureNoteProblem = "empty" | "too_long";
 
 /** One line: every run of whitespace, newlines included, becomes one space. */
 export function foldDepartureNote(body: string): string {
@@ -29,7 +31,8 @@ export function foldDepartureNote(body: string): string {
 }
 
 /**
- * Whether text carries anything a reader's phone would turn into a link: a
+ * Whether text carries anything a reader's phone would turn into a link (the
+ * lost-and-found description is still held to it, `src/db/lost-items.ts`): a
  * scheme, a `www.`, an address, or a bare domain (`elks.org`, `bit.ly/x`). A
  * dot between two letter runs is enough, so "park at the Elks.Meet" is refused
  * too; the fix is the space the sentence wanted anyway. "a.m." and "e.g."
@@ -55,7 +58,6 @@ export function departureNoteProblem(body: string): DepartureNoteProblem | null 
   const folded = foldDepartureNote(body);
   if (folded.length === 0) return "empty";
   if (folded.length > DEPARTURE_NOTE_MAX) return "too_long";
-  if (containsLink(folded)) return "link";
   return null;
 }
 

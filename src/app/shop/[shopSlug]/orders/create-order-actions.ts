@@ -6,7 +6,6 @@ import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createOrder, type NewOrderLineItem } from "@/db/orders";
 import { orderLineItemKind } from "@/db/schema";
-import { hasRequiredStepUp } from "@/db/step-up";
 import { getShopCurrency, getShopTaxEnabled } from "@/db/stripe-accounts";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { addPanelHref } from "@/lib/add-panel";
@@ -15,7 +14,6 @@ import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { customerAddressFromForm } from "@/lib/payments/customer-address-form";
 import type { InvoiceCustomerAddress } from "@/lib/payments/invoicing";
-import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
@@ -80,9 +78,7 @@ export async function createOrderAction(formData: FormData) {
   if (!(await canPersonManageOrders(db, session.user.shopId, session.user.personId))) {
     revalidateAndRedirect(orders, noticeUrl(orders, "not-authorized"));
   }
-  if (!(await hasRequiredStepUp(db, session, "money"))) {
-    redirect(stepUpChallengeUrl(session.user.shopSlug, "money", newOrder));
-  }
+  // Billing is money coming in: no step-up (#4063).
 
   // Refusals keep the actual route target, using only bounded UUID prefills.
   // These fields restore display context; the person/booking billing gates remain below.

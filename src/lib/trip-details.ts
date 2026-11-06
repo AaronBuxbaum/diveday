@@ -1,7 +1,6 @@
 import { isValidCalendarDate } from "./calendar-date";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "./money";
 import { paymentGateIsUnclearable } from "./readiness";
-import { firstHeldDayInWindow, hullHeldSpans, type ServiceWindow } from "./service-window";
 import { type MeetingDayHours, meetingDaysFor, wallWindowEnd } from "./trip-days";
 import { parseWallTime, wallTimeToUtc } from "./zoned";
 
@@ -98,12 +97,6 @@ export type TripDetailsFields = {
    * before H-20261009-certificate-caps-seats can still carry seats above its certificate.
    */
   boatCertifiedPassengers?: number | null;
-  /**
-   * The assigned hull's out-of-service window (loop 5, row 5), or null when it
-   * is in service. A boat departure on any shop-local day inside it is refused:
-   * the hull is in the yard.
-   */
-  boatOutOfService?: ServiceWindow | null;
 };
 
 export type TripDetailsShop = {
@@ -125,8 +118,7 @@ export type TripDetailsRefusal =
   | "days_out_of_order"
   | "capacity_above_boat"
   | "capacity_above_certificate"
-  | "price_required_by_gate"
-  | "boat_out_of_service";
+  | "price_required_by_gate";
 
 export type TripDetailsPatch = {
   startsAt: Date;
@@ -151,10 +143,7 @@ export type TripDetailsResult =
   | { ok: false; reason: "capacity_above_certificate"; limit: number }
   // Clearing the price off a departure that demands payment. See
   // `paymentGateIsUnclearable` — the gate would then be one nobody can clear.
-  | { ok: false; reason: "price_required_by_gate" }
-  // Loop 5, row 5: the hull is in the yard on a day of this departure; `until`
-  // is the window's last day, so the notice can say when it is back.
-  | { ok: false; reason: "boat_out_of_service"; until: string };
+  | { ok: false; reason: "price_required_by_gate" };
 
 export function tripDetailsPatch(
   fields: TripDetailsFields,
@@ -274,18 +263,9 @@ export function tripDetailsPatch(
     patch.boatId = diveMode === "boat" ? (fields.boatId ?? null) : null;
   }
 
-  // **A hull in the yard sails nothing** (loop 5, row 5; issue #3994). Asked
-  // of every shop-local day a meeting day holds the hull, from its start
-  // through its end, in the calendar the window is written in. The hull is
-  // the one the departure will sail on: the patch's when this save chooses
-  // the mode, else the caller's, so a save that only moves the dates (the
-  // trip page's timing section) is asked too (attacker review, #3994).
-  const hull = fields.diveMode !== undefined ? patch.boatId : fields.boatId;
-  const yard = fields.boatOutOfService ?? null;
-  if (hull && yard && firstHeldDayInWindow(yard, hullHeldSpans(scheduleDays, shop.timezone))) {
-    return { ok: false, reason: "boat_out_of_service", until: yard.until };
-  }
-
+  // A hull in the yard is not asked here: the write that puts the departure
+  // on it asks, under the window's lock (`createTripOrRefusal`,
+  // `updateTripRecord`; issue #4009).
   return { ok: true, patch };
 }
 

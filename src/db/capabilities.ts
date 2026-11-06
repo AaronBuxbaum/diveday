@@ -172,6 +172,12 @@ export type IssueCapabilityInput<P extends CapabilityPurpose> = {
   shopId: CapabilityShop<P>;
   subjectId: string;
   now?: Date;
+  /**
+   * An earlier end than the policy's `ttlMs`, for a link that is about one
+   * day (a counter QR lasts to the end of its departure day, issue #4064).
+   * Never later: the policy's ceiling stays.
+   */
+  expiresAt?: Date;
 };
 
 /**
@@ -208,23 +214,30 @@ async function lockForSupersede(
         .where(eq(people.id, subjectId))
         .for("no key update");
       return;
-    case "waiver_record": {
-      // The release itself, and only in the shop the link names: the record
-      // has no composite key with the row's shop, so a release of another
-      // shop is refused here. The signing writer takes this row after the
-      // person and the seat, as the mint's caller has.
-      if (!shopId) throw new Error(`${purpose} names no shop`);
-      const [record] = await db
-        .select({ id: waiverRecords.id })
-        .from(waiverRecords)
-        .where(and(eq(waiverRecords.id, subjectId), eq(waiverRecords.shopId, shopId)))
-        .for("no key update");
-      if (!record) throw new Error(`${purpose} names a release outside its shop`);
-      return;
-    }
     default:
       throw new Error(`${purpose} supersedes per subject, which has no row to lock`);
   }
+}
+
+/**
+ * A link to a release names a release of its own shop: the record has no
+ * composite key with the row's shop, so a release of another shop is refused
+ * here. The signing writer takes this row after the person and the seat, as
+ * the mint's caller has.
+ */
+async function lockReleaseInShop(
+  db: DbExecutor,
+  purpose: CapabilityPurpose,
+  shopId: string | null,
+  recordId: string,
+): Promise<void> {
+  if (!shopId) throw new Error(`${purpose} names no shop`);
+  const [record] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(and(eq(waiverRecords.id, recordId), eq(waiverRecords.shopId, shopId)))
+    .for("no key update");
+  if (!record) throw new Error(`${purpose} names a release outside its shop`);
 }
 
 /** `issueCapability`, also returning the row's id (a delivery records which link it carried). */
@@ -239,15 +252,18 @@ export async function mintCapability<P extends CapabilityPurpose>(
     throw new Error(`${input.purpose} is a ${policy.scope} purpose`);
   }
   const now = input.now ?? nowDate();
-  const expiresAt = capabilityExpiry(input.purpose, now);
+  const ceiling = capabilityExpiry(input.purpose, now);
+  const expiresAt =
+    ceiling && input.expiresAt && input.expiresAt < ceiling ? input.expiresAt : ceiling;
   const columns = subjectColumns(input.purpose, input.subjectId);
+  if (capabilitySubject(input.purpose) === "waiver_record") {
+    // A release's links add (a resend never closes the one a diver is signing
+    // on); the signature through any one leaves the others opening nothing.
+    await lockReleaseInShop(db, input.purpose, shopId, input.subjectId);
+  }
   if (policy.reissue === "supersedes") {
     // The invariant (one live link per shop, or per subject, per purpose)
-    // belongs to this module, not to its callers. A release holds one live
-    // door of each purpose (`capabilities_live_waiver_record_idx`): a counter
-    // link, a party member's door and a mailed release link to the same
-    // release stand side by side, and the signature through any one of them
-    // leaves the others opening nothing (issue #4008).
+    // belongs to this module, not to its callers.
     await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
     await db
       .update(capabilities)
@@ -293,7 +309,7 @@ export type VerifiedCapability<P extends CapabilityPurpose = CapabilityPurpose> 
   usedAt: Date | null;
   /** A purpose that expires: its deadline. Null for one that never does. */
   expiresAt: Date | null;
-  /** When a newer link superseded this one. */
+  /** When the link was turned off (a newer one superseded it, a contact changed). */
   revokedAt: Date | null;
 };
 
@@ -527,32 +543,6 @@ export async function claimCapability(
 }
 
 /**
- * Whether a subject's live link of a claimable purpose is open on a device:
- * claimed, not spent, not revoked, not expired. A new mint would revoke it
- * under whoever is typing into it, so the minting surface asks first.
- */
-export async function hasLiveClaimedCapability(
-  db: DbExecutor,
-  input: { purpose: CapabilityPurpose; shopId: string; subjectId: string; now?: Date },
-): Promise<boolean> {
-  const [row] = await db
-    .select({ id: capabilities.id })
-    .from(capabilities)
-    .where(
-      and(
-        eq(capabilities.purpose, input.purpose),
-        eq(capabilities.shopId, input.shopId),
-        eq(subjectColumn(input.purpose), input.subjectId),
-        isNotNull(capabilities.claimHash),
-        isNull(capabilities.usedAt),
-        unrevokedAndUnexpired(input.now ?? nowDate()),
-      ),
-    )
-    .limit(1);
-  return Boolean(row);
-}
-
-/**
  * Who a claimable link opens for: nobody has claimed it yet (`unclaimed`),
  * the device holding `device` did (`this_device`), or another one did
  * (`elsewhere`). Null for a token that names no link of this purpose.
@@ -640,8 +630,7 @@ export async function withdrawUnspentCapabilities(
 
 /**
  * Turns off every live link to one person's releases (`revoked_at`), whatever
- * its purpose: the counter link, the party member's door and the release link
- * (issues #3983, #3986). A
+ * its purpose: the counter link and the release link (issue #3983). A
  * corrected contact calls it, so a link that went to the old address, or was
  * handed over before the correction, opens nothing: not a form, and not the
  * receipt of a release it already signed. A revoked row stays, so the page
@@ -669,40 +658,6 @@ export async function revokePersonReleaseLinks(
               and(
                 eq(waiverRecords.shopId, input.shopId),
                 eq(waiverRecords.personId, input.personId),
-              ),
-            ),
-        ),
-      ),
-    );
-}
-
-/**
- * Turns off every live link to one seat's releases (`revoked_at`): the
- * counter code and the party member's door (issue #2743). A claim calls it,
- * so no link minted while the seat was its placeholder's outlives the claim;
- * the claimant signs as their thread's Sign step.
- */
-export async function revokeSeatReleaseLinks(
-  db: DbExecutor,
-  input: { shopId: string; bookingId: string; now?: Date },
-): Promise<void> {
-  await db
-    .update(capabilities)
-    .set({ revokedAt: input.now ?? nowDate() })
-    .where(
-      and(
-        inArray(capabilities.purpose, purposesNaming("waiver_record")),
-        eq(capabilities.shopId, input.shopId),
-        isNull(capabilities.revokedAt),
-        inArray(
-          capabilities.waiverRecordId,
-          db
-            .select({ id: waiverRecords.id })
-            .from(waiverRecords)
-            .where(
-              and(
-                eq(waiverRecords.shopId, input.shopId),
-                eq(waiverRecords.bookingId, input.bookingId),
               ),
             ),
         ),

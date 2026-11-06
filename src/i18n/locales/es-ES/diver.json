@@ -550,7 +550,7 @@
     "submit": "Dejar de recibir estos avisos",
     "submitting": "Guardando…",
     "confirmedTitle": "Avisos del pase de lista desactivados",
-    "confirmedText": "{shopName} ya no te enviará avisos del pase de lista. Si el centro vuelve a agregarte, se te pedirá que lo confirmes antes."
+    "confirmedText": "{shopName} ya no te enviará avisos del pase de lista. Si el centro vuelve a agregarte, empezarán de nuevo hasta que los canceles."
   },
   "contactConfirm": {
     "title": "¿Confirmar esta dirección para {shopName}?",
@@ -563,7 +563,7 @@
   "shoreConfirm": {
     "title": "¿Ser el contacto en tierra de {shopName}?",
     "description": "{shopName} escribirá a {email} cuando el pase de lista de un barco siga abierto pasada su hora de regreso. Cada aviso lleva un enlace para dejar de recibirlos.",
-    "submit": "Sí, enviadme estos avisos",
+    "submit": "Sí, me ha llegado",
     "confirmedTitle": "Eres el contacto en tierra de {shopName}",
     "confirmedText": "Si un pase de lista sigue abierto pasada la hora de regreso de un barco, {shopName} te escribirá. Cada aviso lleva un enlace para dejar de recibirlos.",
     "unavailableText": "Pide al centro que te envíe uno nuevo."
@@ -1228,7 +1228,6 @@
     "counterMinutesOther": "Quedan {count} minutos en este código, hasta las {time}.",
     "counterSaved": "Guardado.",
     "counterClosedNext": "Este código se cerró. Pide uno nuevo al personal.",
-    "doorClaimedNext": "Este enlace se cerró. Firma desde el enlace del correo de confirmación de tu reserva o pregunta al centro.",
     "answerYes": "Sí",
     "answerNo": "No",
     "yesReassurance": "Un “sí” significa que un médico debería confirmar que estás en condiciones de bucear. No cancela tu salida.",
@@ -1288,15 +1287,6 @@
     "medicalReferralNext": "Tu cuestionario requiere una evaluación médica por escrito antes de que puedas bucear.",
     "medicalShopReviewNext": "Tu documentación médica aún necesita revisión. Contacta al centro antes de bucear.",
     "counterSigned": "Exención firmada",
-    "counterClaimTitle": "Firma tu exención en este teléfono",
-    "counterClaimBody": "Este enlace se abre en un solo teléfono. Cuando se abra aquí, ningún otro teléfono podrá usarlo.",
-    "counterClaimButton": "Abrir la exención aquí",
-    "counterElsewhereTitle": "Este enlace está abierto en otro teléfono",
-    "counterElsewhereBody": "Pide al centro un enlace nuevo.",
-    "doorClaimTitle": "Firma tu exención en este dispositivo",
-    "doorClaimBody": "Este enlace se abre en un solo dispositivo. Cuando se abra aquí, ningún otro dispositivo podrá usarlo.",
-    "doorElsewhereTitle": "Este enlace está abierto en otro dispositivo",
-    "doorElsewhereBody": "Termina tu exención allí o pide ayuda al centro.",
     "counterAlreadySigned": "Esta exención ya estaba firmada, así que lo que acabas de escribir no se guardó. Si alguna respuesta cambió, díselo al personal.",
     "independentTitle": "Firma tu exención",
     "backToPrep": "Volver a tu preparación"
@@ -4246,7 +4236,7 @@
       "shoreCall": "Llama primero a {shopName}.",
       "shoreCallPhone": "Llama primero a {shopName}, al {phone}.",
       "shoreSent": "Enviado: {when}. Es el único mensaje que recibirás sobre esta salida. DiveDay no envía ningún aviso de que todo está en orden; pregunta a {shopName}.",
-      "shoreWhy": "Recibes este aviso porque {shopName} te tiene como su contacto en tierra para los avisos del pase de lista, y lo confirmaste.",
+      "shoreWhy": "Recibes este aviso porque {shopName} te tiene como su contacto en tierra para los avisos del pase de lista.",
       "shoreStop": "Dejar de recibir estos avisos"
     },
     "incidentMissingDiver": {
@@ -4262,14 +4252,14 @@
     },
     "shoreAlertStopped": {
       "subject": "{shopName}: el contacto en tierra dejó los avisos del pase de lista",
-      "body": "Tu contacto en tierra usó el enlace de un aviso del pase de lista para dejar de recibirlos. DiveDay no volverá a escribirle salvo que guardes su dirección y la confirme de nuevo.",
+      "body": "Tu contacto en tierra usó el enlace de un aviso del pase de lista para dejar de recibirlos. DiveDay no volverá a escribirle salvo que guardes su dirección otra vez.",
       "open": "Abrir la referencia de emergencia"
     },
     "shoreAlertConfirmation": {
       "subject": "{shopName} te pide ser su contacto en tierra",
-      "body": "{shopName} quiere escribirte cuando el pase de lista de un barco siga abierto pasada su hora de regreso, porque puede que alguien no haya vuelto a bordo. Confirma para recibir estos avisos. Cada uno lleva un enlace para dejar de recibirlos.",
-      "confirm": "Sí, enviadme estos avisos",
-      "expiry": "Este enlace caduca el {expiresAt}. Si no aceptaste esto, ignora este correo y no se te enviará nada."
+      "body": "{shopName} quiere escribirte cuando el pase de lista de un barco siga abierto pasada su hora de regreso, porque puede que alguien no haya vuelto a bordo. Lo hará desde ahora. Confirmar le dice que te llegó. Cada aviso lleva un enlace para dejar de recibirlos.",
+      "confirm": "Sí, me ha llegado",
+      "expiry": "Este enlace caduca el {expiresAt}. Si no es para ti, díselo al centro para que corrija la dirección."
     },
     "smsWorkOrder": {
       "ready": "{shopName}: ya puedes recoger tu equipo de la orden #{number} ({pieces}).",
@@ -4379,14 +4369,14 @@
         "confirmed": "{shopName}: {email} confirmó los archivos de fin de mes",
         "bounced": "{shopName}: los archivos de fin de mes a {email} rebotaron"
       },
-      "set": "{actor} puso {email} como correo del contador. Cuando esa bandeja lo confirme, el informe, los pedidos y la hoja de tripulación del mes anterior se enviarán allí el día 2 de cada mes.",
-      "changed": "{actor} cambió el correo del contador a {email}. No se envía nada hasta que esa bandeja lo confirme.",
+      "set": "{actor} puso {email} como correo del contador. El informe, los pedidos y la hoja de tripulación del mes anterior se enviarán allí el día 2 de cada mes.",
+      "changed": "{actor} cambió el correo del contador a {email}. Los archivos de fin de mes irán allí desde el próximo día 2.",
       "cleared": "{actor} quitó el correo del contador. No se enviarán archivos de fin de mes.",
       "sent": "Archivos de fin de mes de {month} enviados a {email}.",
       "open": "Abrir Informes",
       "vouched": "{actor} volvió a confirmar {email} como correo del contador. Los archivos de fin de mes vuelven a enviarse allí el día 2 de cada mes.",
       "confirmed": "{email} confirmó que quiere recibir los archivos de fin de mes. Los primeros llegarán allí el próximo día 2 del mes.",
-      "clearedByRecipient": "{email} usó el enlace de un correo de fin de mes para dejar de recibirlos. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección y se confirme.",
+      "clearedByRecipient": "{email} usó el enlace de un correo de fin de mes para dejar de recibirlos. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección.",
       "clearedByErasure": "Se quitó el correo del contador al borrar los datos de esa persona a petición suya. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección.",
       "bounced": "Los archivos de fin de mes a {email} rebotaron, así que el contador no los recibió. Revisa la dirección en Ajustes y guárdala de nuevo o cámbiala."
     }
@@ -4469,15 +4459,12 @@
   },
   "yourDays": {
     "heading": "Tus días con {shopName}",
-    "note": "Cada enlace llega al correo que tenemos registrado.",
     "comingUp": "Próximos",
     "logbook": "Tu bitácora",
     "upcomingRow": "{date} · {title}, {time}",
     "pastRow": "{ordinal} día de buceo · {title} · {date}",
-    "send": "Envíame el enlace",
-    "sent": "Lo enviamos al correo registrado.",
-    "rateLimited": "Son muchos enlaces a la vez. Inténtalo de nuevo en un rato.",
-    "failed": "No se pudo enviar. Inténtalo de nuevo en un momento.",
+    "open": "Abrir",
+    "rateLimited": "Es mucho a la vez. Inténtalo de nuevo en un rato.",
     "unavailable": "Ese día ya no está disponible."
   },
   "bookkeeperConfirm": {
@@ -4494,6 +4481,6 @@
     "submit": "Dejar de recibir estos correos",
     "submitting": "Guardando…",
     "confirmedTitle": "Archivos de fin de mes desactivados",
-    "confirmedText": "{shopName} ya no te enviará archivos de fin de mes. Si el centro vuelve a agregarte, se te pedirá que lo confirmes antes."
+    "confirmedText": "{shopName} ya no te enviará archivos de fin de mes. Si el centro vuelve a agregarte, empezarán de nuevo hasta que los canceles."
   }
 }

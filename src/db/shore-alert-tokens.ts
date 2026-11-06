@@ -21,7 +21,7 @@ import { activityEvents, shops } from "./schema";
  * review), both `capabilities` rows bound to the address they were mailed to
  * (issue #3721): `shore_alert_confirm` and `shore_alert_stop`.
  *
- * `confirm` proves the inbox is the shore contact's and that they agreed: the
+ * `confirm` proves the inbox is the shore contact's (a badge, not a gate, #4060): the
  * link goes to the address the shop saved and nowhere else, and consuming it
  * sets `shops.shore_alert_confirmed_at` only while the shop still names that
  * address -- the shape `src/db/shop-contact-email.ts` gives the front desk's

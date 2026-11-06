@@ -162,7 +162,7 @@ describe("issuing is get-or-create", () => {
     expect(row?.expiresAt).toEqual(capabilityExpiryFor(later, now));
   });
 
-  it("rotates a row with under a day left: a new token, and the old one revoked", async () => {
+  it("re-sends a row with under a day left as the same link, its expiry moved out", async () => {
     const { db, shop } = fileCtx;
     const { bookingId } = await seatFor(db, shop.id);
     const first = await issueBookingCapability(db, {
@@ -172,18 +172,40 @@ describe("issuing is get-or-create", () => {
     });
     if (!first) throw new Error("expected a link");
     const nearEnd = new Date(first.expiresAt.getTime() - 12 * HOUR_MS);
-    const rotated = await issueBookingCapability(db, {
+    const again = await issueBookingCapability(db, {
       shopId: shop.id,
       bookingId,
       purpose: "confirm",
       now: nearEnd,
     });
-    expect(rotated?.token).not.toBe(first.token);
-    expect(rotated?.expiresAt.getTime()).toBeGreaterThanOrEqual(nearEnd.getTime() + DAY_MS);
+    expect(again?.token).toBe(first.token);
+    expect(again?.expiresAt.getTime()).toBeGreaterThanOrEqual(nearEnd.getTime() + DAY_MS);
     expect(
       await verifyBookingCapability(db, { token: first.token, purpose: "confirm", now: nearEnd }),
-    ).toBeNull();
+    ).not.toBeNull();
     expect(await liveRows(db, bookingId)).toHaveLength(1);
+  });
+
+  it("never revives an expired row: a send after it mints a fresh link", async () => {
+    const { db, shop } = fileCtx;
+    const { bookingId } = await seatFor(db, shop.id);
+    const first = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "confirm",
+    });
+    if (!first) throw new Error("expected a link");
+    const after = new Date(first.expiresAt.getTime() + HOUR_MS);
+    const fresh = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "confirm",
+      now: after,
+    });
+    expect(fresh?.token).not.toBe(first.token);
+    expect(
+      await verifyBookingCapability(db, { token: first.token, purpose: "confirm", now: after }),
+    ).toBeNull();
   });
 
   it("never reuses a handoff: each issue mints anew and revokes the last", async () => {

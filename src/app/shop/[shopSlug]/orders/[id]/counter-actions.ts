@@ -56,8 +56,8 @@ export async function voidCounterAction(formData: FormData) {
  * one tap with an eight-second Undo hold, H-20260906-diveday-fill-already-knows). The tap holds the payment;
  * nothing is recorded until the hold runs out (`releaseHeldSendAction`, or the
  * hourly sweep for a screen that went elsewhere), and Undo leaves the order
- * as it was. Any active staff member, as any counter money is; behind the
- * money step-up, as Void is, asked here at the tap. A second tap on the same
+ * as it was. Any active staff member, as any counter money is, with no
+ * step-up: money coming in is not money going out (#4063). A second tap on the same
  * order inside the hold is the same hold (`holdCounterPayment`).
  *
  * On a demo shop the release records locally (market sheet 2026-10-22, item
@@ -78,12 +78,6 @@ export async function holdCounterPaymentAction(
   const back = shopPath(session.user.shopSlug, "orders", orderId);
   const failed = { ok: false, redirectTo: noticeUrl(back, "payment-record-failed") } as const;
   if (!orderId || (collection !== "cash" && collection !== "card_machine")) return failed;
-  if (!(await hasRequiredStepUp(db, session, "money"))) {
-    return {
-      ok: false,
-      redirectTo: stepUpChallengeUrl(session.user.shopSlug, "money", back),
-    };
-  }
   const held = await holdCounterPayment(db, {
     shopId: session.user.shopId,
     orderId,
@@ -125,9 +119,6 @@ export async function recordRoomChargeAction(formData: FormData) {
   if (postedCollection(formData) !== "room_charge") {
     revalidateAndRedirect(back, noticeUrl(back, "payment-record-failed"));
     return;
-  }
-  if (!(await hasRequiredStepUp(db, session, "money"))) {
-    revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
   }
   const outcome: RecordPaymentOnOrderOutcome | null = orderId
     ? await recordPaymentOnOpenOrder(db, {

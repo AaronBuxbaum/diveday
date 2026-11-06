@@ -1,11 +1,14 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
+import * as clockLib from "@/lib/clock";
 import { nowDate } from "@/lib/clock";
 import { signingDate } from "@/lib/guardian";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { mintCapability } from "./capabilities";
+import * as capabilitiesDb from "./capabilities";
+import * as operationsDb from "./operations";
 import {
   getCounterDoctorReferral,
   getPartyWaiverQueue,
@@ -23,11 +26,18 @@ import {
 } from "./schema";
 import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
+import * as completionDb from "./waivers-completion";
 import { completeWaiver, doorNeedsDeskGuardian, getWaiverForToken } from "./waivers-completion";
+import * as medicalDb from "./waivers-medical";
 import { recordMedicalEvaluation } from "./waivers-medical";
+import * as requestsDb from "./waivers-requests";
 import { clearAnswers, medicalReferralAnswers, openOnDevice } from "./waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 /** What `/waivers/<token>` opens for a counter link: its state, or unavailable. */
 async function opened(db: typeof ctx.db, token: string, now?: Date) {
@@ -129,6 +139,22 @@ describe("party release QR handoff", () => {
       state: "available",
       record: { bookingId: solo.bookingId },
     });
+  });
+
+  it("keeps the code open to the end of the departure day, in the shop's own day (issue 4064)", async () => {
+    const f = await family();
+    const issued = await issuePartyWaiver(f.db, {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
+    });
+    if (!issued || !("expiresAt" in issued)) throw new Error("code refused");
+    const tz = f.shop.timezone;
+    const departureDay = calendarDateInTimezone(f.trip.startsAt, tz);
+    expect(calendarDateInTimezone(new Date(issued.expiresAt.getTime() - 1), tz)).toBe(departureDay);
+    expect(calendarDateInTimezone(issued.expiresAt, tz)).toBe(shiftCalendarDate(departureDay, 1));
   });
 
   it("records on the diver's trail which staffer showed the code (security S2)", async () => {
@@ -284,7 +310,7 @@ describe("party release QR handoff", () => {
     });
   });
 
-  it("leaves the emailed door live beside a counter code, and asks only about an open code (#4008)", async () => {
+  it("a fresh counter code leaves the one open on the diver's phone working", async () => {
     const f = await family();
     const input = {
       shopId: f.shop.id,
@@ -295,44 +321,22 @@ describe("party release QR handoff", () => {
     };
     const first = await issuePartyWaiver(f.db, input);
     if (!first || !("token" in first)) throw new Error("counter code missing");
-    const [link] = await f.db
-      .select({ recordId: capabilities.waiverRecordId })
-      .from(capabilities)
-      .where(eq(capabilities.tokenHash, hashBearerToken(first.token)));
-    if (!link?.recordId) throw new Error("counter link record missing");
-    // The emailed door for the same release sits beside the counter code, and
-    // the member's phone opening it is no reason for the desk to stop. A door
-    // goes only to an address the lead typed, on a seat not yet claimed.
-    await f.db
-      .update(bookings)
-      .set({ contactTypedByLeadAt: nowDate(), claimedAt: null })
-      .where(eq(bookings.id, f.third.bookingId));
-    const mailed = await mintCapability(f.db, {
-      purpose: "party_waiver_link",
-      shopId: f.shop.id,
-      subjectId: link.recordId,
-    });
-    expect((await opened(f.db, mailed.token)).state).toBe("available");
+    // The diver's phone opens it, then the desk shows the code again.
+    expect((await opened(f.db, first.token)).state).toBe("available");
     const second = await issuePartyWaiver(f.db, input);
     if (!second || !("token" in second)) throw new Error("second code missing");
-    expect((await opened(f.db, first.token)).state).toBe("unavailable");
+    expect(second.token).not.toBe(first.token);
+    expect((await opened(f.db, first.token)).state).toBe("available");
     expect((await opened(f.db, second.token)).state).toBe("available");
-    expect((await opened(f.db, mailed.token)).state).toBe("available");
-    // A code open on a phone is not replaced without the desk saying so.
-    expect(await issuePartyWaiver(f.db, input)).toEqual({ openOnPhone: true });
-    const replaced = await issuePartyWaiver(f.db, { ...input, replace: true });
-    if (!replaced || !("token" in replaced)) throw new Error("replacement missing");
-    expect((await opened(f.db, second.token)).state).toBe("unavailable");
-    expect((await opened(f.db, mailed.token)).state).toBe("available");
-    // One signature closes the release: the door that did not sign opens nothing.
+    // Whichever signs, the other then opens nothing.
     expect(
-      await signAtCounter(f.db, replaced.token, {
+      await signAtCounter(f.db, first.token, {
         signerName: `Leo ${f.stamp}`,
         agreed: true,
         medicalAnswers: clearAnswers,
       }),
     ).toMatchObject({ ok: true });
-    expect((await opened(f.db, mailed.token)).state).toBe("unavailable");
+    expect((await opened(f.db, second.token)).state).toBe("unavailable");
   });
 
   it("refuses to issue after a seat is held or cancelled", async () => {
@@ -367,32 +371,7 @@ describe("party release QR handoff", () => {
     // A cancelled seat has no release to sign, on the counter as in the thread.
     expect((await opened(f.db, existing.token)).state).toBe("unavailable");
   });
-  it("keeps a code open on a diver's phone unless the desk asks for a new one (dock S2)", async () => {
-    const f = await family();
-    const input = {
-      shopId: f.shop.id,
-      tripId: f.trip.id,
-      leadBookingId: f.lead.bookingId,
-      bookingId: f.third.bookingId,
-      actorPersonId: f.staff.id,
-    };
-    const shown = await issuePartyWaiver(f.db, input);
-    if (!shown || !("token" in shown)) throw new Error("link missing");
-    // Nobody scanned it yet: showing it again just shows a fresh one.
-    const reshown = await issuePartyWaiver(f.db, input);
-    if (!reshown || !("token" in reshown)) throw new Error("re-shown link missing");
-    expect((await opened(f.db, shown.token)).state).toBe("unavailable");
-    // The diver's phone opens it: a second tap keeps it and says so.
-    expect((await opened(f.db, reshown.token)).state).toBe("available");
-    expect(await issuePartyWaiver(f.db, input)).toEqual({ openOnPhone: true });
-    expect((await opened(f.db, reshown.token)).state).toBe("available");
-    // The desk confirms: the open code is replaced.
-    const replaced = await issuePartyWaiver(f.db, { ...input, replace: true });
-    if (!replaced || !("token" in replaced)) throw new Error("replacement missing");
-    expect((await opened(f.db, reshown.token)).state).toBe("unavailable");
-  });
-
-  it("never revives an expired, replaced or superseded QR and issues a fresh one", async () => {
+  it("never revives an expired or superseded QR and issues a fresh one", async () => {
     const f = await family();
     const input = {
       shopId: f.shop.id,
@@ -403,15 +382,12 @@ describe("party release QR handoff", () => {
     };
     const first = await issuePartyWaiver(f.db, input);
     if (!first || !("token" in first)) throw new Error("first link missing");
-    expect(first.expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(30 * 60_000);
     expect((await opened(f.db, first.token)).state).toBe("available");
     expect((await opened(f.db, first.token, first.expiresAt)).state).toBe("unavailable");
-    // The first is open on a phone, so the desk confirms the new one.
-    const next = await issuePartyWaiver(f.db, { ...input, replace: true });
-    if (!next || !("token" in next)) throw new Error("replacement link missing");
+    const next = await issuePartyWaiver(f.db, input);
+    if (!next || !("token" in next)) throw new Error("fresh link missing");
     expect(next.token).not.toBe(first.token);
-    // A fresh QR revokes the one before it.
-    expect(await opened(f.db, first.token)).toEqual({ state: "unavailable" });
+    expect((await opened(f.db, first.token, first.expiresAt)).state).toBe("unavailable");
     expect((await opened(f.db, next.token)).state).toBe("available");
     await f.db
       .update(waiverRecords)
@@ -624,5 +600,176 @@ describe("party release QR handoff", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+  describe("failure paths: nothing is left behind when an issuance cannot finish", () => {
+    const issueInput = (f: Awaited<ReturnType<typeof family>>) => ({
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
+    });
+    const linksFor = (f: Awaited<ReturnType<typeof family>>) =>
+      f.db
+        .select({ id: capabilities.id })
+        .from(capabilities)
+        .innerJoin(waiverRecords, eq(waiverRecords.id, capabilities.waiverRecordId))
+        .where(eq(waiverRecords.bookingId, f.third.bookingId));
+
+    it("refuses a seat that is not on the trip, and a lead that is not", async () => {
+      const f = await family();
+      expect(
+        await issuePartyWaiver(f.db, { ...issueInput(f), bookingId: crypto.randomUUID() }),
+      ).toBeNull();
+      expect(
+        await issuePartyWaiver(f.db, { ...issueInput(f), leadBookingId: crypto.randomUUID() }),
+      ).toBeNull();
+    });
+
+    it("shows no code once the departure has returned", async () => {
+      const f = await family();
+      expect(
+        await issuePartyWaiver(f.db, {
+          ...issueInput(f),
+          now: new Date(f.trip.endsAt.getTime() + 3 * 3_600_000),
+        }),
+      ).toBeNull();
+      expect(await linksFor(f)).toEqual([]);
+    });
+
+    it("lasts to the end of the day it is shown on, once the trip has started", async () => {
+      const f = await family();
+      const now = new Date(f.trip.startsAt.getTime() + 60_000);
+      const issued = await issuePartyWaiver(f.db, { ...issueInput(f), now });
+      if (!issued || !("expiresAt" in issued)) throw new Error("code refused");
+      const tz = f.shop.timezone;
+      const day = calendarDateInTimezone(now, tz);
+      expect(calendarDateInTimezone(new Date(issued.expiresAt.getTime() - 1), tz)).toBe(day);
+      expect(calendarDateInTimezone(issued.expiresAt, tz)).toBe(shiftCalendarDate(day, 1));
+    });
+
+    it("mints nothing when the release cannot be opened", async () => {
+      const f = await family();
+      vi.spyOn(requestsDb, "openWaiverInThread").mockResolvedValue({
+        ok: false,
+        reason: "already_completed",
+      });
+      expect(await issuePartyWaiver(f.db, issueInput(f))).toBeNull();
+      expect(await linksFor(f)).toEqual([]);
+    });
+
+    it("rolls the code back when the departure returns while it is being issued", async () => {
+      const f = await family();
+      const real = capabilitiesDb.mintCapability;
+      let returned = false;
+      vi.spyOn(capabilitiesDb, "mintCapability").mockImplementation(async (...args) => {
+        const link = await real(...args);
+        returned = true;
+        return link;
+      });
+      const realNow = clockLib.nowDate;
+      vi.spyOn(clockLib, "nowDate").mockImplementation(() =>
+        returned ? new Date(f.trip.endsAt.getTime() + 3 * 3_600_000) : realNow(),
+      );
+      expect(await issuePartyWaiver(f.db, issueInput(f))).toBeNull();
+      vi.restoreAllMocks();
+      expect(await linksFor(f)).toEqual([]);
+    });
+
+    it("shows no code when the staffer cannot be written on the diver's trail", async () => {
+      const f = await family();
+      expect(
+        await issuePartyWaiver(f.db, { ...issueInput(f), actorPersonId: crypto.randomUUID() }),
+      ).toBeNull();
+      expect(await linksFor(f)).toEqual([]);
+    });
+
+    it("shows a minor's code only if the guardian check is on the trail too", async () => {
+      const f = await family();
+      const real = operationsDb.recordDiverActivity;
+      vi.spyOn(operationsDb, "recordDiverActivity").mockImplementation(async (db, input) =>
+        input.code === "waiver_counter_guardian_confirmed" ? false : real(db, input),
+      );
+      expect(
+        await issuePartyWaiver(f.db, {
+          ...issueInput(f),
+          bookingId: f.minor.bookingId,
+          guardianPresent: true,
+        }),
+      ).toBeNull();
+      const shown = await f.db
+        .select({ id: activityEvents.id })
+        .from(activityEvents)
+        .where(eq(activityEvents.code, "waiver_counter_code_shown"));
+      expect(shown).toEqual([]);
+    });
+
+    it("lets an unexpected failure through instead of calling it a refusal", async () => {
+      const f = await family();
+      vi.spyOn(capabilitiesDb, "mintCapability").mockResolvedValue({
+        token: "t",
+        id: crypto.randomUUID(),
+        expiresAt: null,
+      });
+      await expect(issuePartyWaiver(f.db, issueInput(f))).rejects.toThrow(
+        "waiver_link minted without an expiry",
+      );
+      vi.restoreAllMocks();
+      expect(await linksFor(f)).toEqual([]);
+    });
+  });
+
+  describe("the counter physician form", () => {
+    async function referred() {
+      const f = await family();
+      const [booking] = await f.db
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .where(eq(bookings.id, f.lead.bookingId));
+      if (!booking) throw new Error("booking missing");
+      await f.db
+        .update(people)
+        .set({ dateOfBirth: "1985-04-02" })
+        .where(eq(people.id, booking.personId));
+      const input = {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+        bookingId: f.lead.bookingId,
+      };
+      const issued = await issuePartyWaiver(f.db, { ...input, actorPersonId: f.staff.id });
+      if (!issued || !("token" in issued)) throw new Error("link missing");
+      const signed = await signAtCounter(f.db, issued.token, {
+        signerName: `Ana ${f.stamp}`,
+        agreed: true,
+        medicalAnswers: medicalReferralAnswers,
+      });
+      expect(signed).toMatchObject({ ok: true, status: "medical_review" });
+      return { f, input };
+    }
+
+    it("never hands the desk a locked answer: the paper is the whole questionnaire", async () => {
+      const { f, input } = await referred();
+      const real = medicalDb.getDoctorReferral;
+      let read: Awaited<ReturnType<typeof real>> = null;
+      vi.spyOn(medicalDb, "getDoctorReferral").mockImplementation(async (...args) => {
+        read = await real(...args);
+        return read;
+      });
+      expect(await getCounterDoctorReferral(f.db, input)).toMatchObject({ answers: "whole" });
+      expect(read).toMatchObject({ answers: "locked" });
+    });
+
+    it("prints nothing when the release has no key, is not signed, or has no doctor's page", async () => {
+      const { f, input } = await referred();
+      const key = vi.spyOn(completionDb, "threadWaiverKey").mockResolvedValueOnce(null);
+      expect(await getCounterDoctorReferral(f.db, input)).toBeNull();
+      key.mockRestore();
+      vi.spyOn(completionDb, "getWaiverForToken").mockResolvedValueOnce({ state: "unavailable" });
+      expect(await getCounterDoctorReferral(f.db, input)).toBeNull();
+      vi.restoreAllMocks();
+      vi.spyOn(medicalDb, "getDoctorReferral").mockResolvedValueOnce(null);
+      expect(await getCounterDoctorReferral(f.db, input)).toBeNull();
+    });
   });
 });

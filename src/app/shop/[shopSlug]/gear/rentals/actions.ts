@@ -19,7 +19,6 @@ import {
 import { createOrder, type NewOrderLineItem, recordCounterOrder } from "@/db/orders";
 import { certificationAgency, certificationLevel } from "@/db/schema";
 import { getShopById } from "@/db/shops";
-import { hasRequiredStepUp } from "@/db/step-up";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { requestLocale } from "@/i18n/request";
@@ -43,7 +42,6 @@ import {
   blankableDiverNameSchema,
   diverPhoneSchema,
 } from "@/lib/person-fields";
-import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
@@ -62,7 +60,7 @@ import {
  * 2026-10-08). Gear is any-staff work (H-20260724-initial-gear-policy-sizing), so renting a unit out is open to
  * every staff member; sending the invoice beside it is billing, which stays
  * owner/manager work behind the same gates as the new-order form (H-20260724-staff-role-reach,
- * money step-up, a connected Stripe account) — re-checked here, not trusted
+ * a connected Stripe account) — re-checked here, not trusted
  * from what the form rendered.
  */
 
@@ -127,9 +125,6 @@ export async function createCounterRentalAction(formData: FormData) {
   if (wantsInvoice) {
     if (!(await canPersonManageOrders(db, shop.id, session.user.personId))) {
       redirect(noticeUrl(form, "not-authorized"));
-    }
-    if (!(await hasRequiredStepUp(db, session, "money"))) {
-      redirect(stepUpChallengeUrl(slug, "money", form));
     }
     if (!canAcceptPayments(await getShopStripeAccount(db, shop.id))) {
       redirect(noticeUrl(form, "payment-not-connected"));

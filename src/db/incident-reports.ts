@@ -119,7 +119,6 @@ export async function loadIncidentViewer(
 }
 
 export type { MissingSubject } from "./missing-subject";
-export { standingNotBackAboardSince } from "./missing-subject";
 
 export type IncidentWriteRefusal =
   | "not_found"

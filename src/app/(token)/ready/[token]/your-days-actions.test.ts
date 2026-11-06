@@ -4,70 +4,70 @@ import type { ReadyPageData } from "@/db/ready";
 /**
  * The server's half of the Your days gate (security review of layer r5-4,
  * F1): a hand-made post from the link a booking or a seat claim redirected to
- * plans and sends nothing, whatever booking it names.
+ * opens nothing, whatever booking it names. A delivered link opens the day
+ * directly (#4059).
  */
 
-const planYourDayLink = vi.fn();
-const sendYourDayLink = vi.fn();
-vi.mock("@/db/your-days", () => ({ planYourDayLink, sendYourDayLink }));
-vi.mock("@/lib/rate-limit", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
-  return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })) };
-});
+const openYourDay = vi.fn();
+vi.mock("@/db/your-days", () => ({ openYourDay }));
+vi.mock("next/navigation", () => ({
+  redirect: (to: string) => {
+    throw new Error(`REDIRECT:${to}`);
+  },
+}));
 const contextFor = vi.fn();
 vi.mock("./action-helpers", () => ({ contextFor }));
 
-const { checkRateLimit, rateLimitKey } = await import("@/lib/rate-limit");
-const { sendYourDayLinkAction } = await import("./your-days-actions");
+const { openYourDayAction } = await import("./your-days-actions");
 
 const TARGET = "00000000-0000-4000-8000-0000000000aa";
 
-function post() {
+function context(delivered: boolean) {
+  return {
+    ok: true,
+    db: {},
+    bookingId: "00000000-0000-4000-8000-000000000001",
+    data: { identityHeld: false, shop: { id: "shop" } } as unknown as ReadyPageData,
+    ownLocale: null,
+    delivered,
+  };
+}
+
+async function post() {
   const form = new FormData();
   form.set("bookingId", TARGET);
-  return sendYourDayLinkAction("token", { bookingId: null, outcome: null }, form);
+  try {
+    return await openYourDayAction("token", { bookingId: null, outcome: null }, form);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
+    throw error;
+  }
 }
 
 afterEach(() => vi.clearAllMocks());
 
-describe("sendYourDayLinkAction", () => {
-  it("refuses an undelivered link before planning anything", async () => {
-    contextFor.mockResolvedValueOnce({
-      ok: true,
-      db: {},
-      bookingId: "00000000-0000-4000-8000-000000000001",
-      data: { identityHeld: false, shop: { id: "shop" } } as unknown as ReadyPageData,
-      ownLocale: null,
-      delivered: false,
-    });
-
+describe("openYourDayAction", () => {
+  it("refuses an undelivered link before reading anything", async () => {
+    contextFor.mockResolvedValueOnce(context(false));
     expect(await post()).toEqual({ bookingId: TARGET, outcome: "unavailable" });
-    expect(planYourDayLink).not.toHaveBeenCalled();
-    expect(sendYourDayLink).not.toHaveBeenCalled();
+    expect(openYourDay).not.toHaveBeenCalled();
   });
 
-  it("spends a budget per person, so a regular's many rows cannot flood one inbox", async () => {
-    contextFor.mockResolvedValueOnce({
-      ok: true,
-      db: {},
-      bookingId: "00000000-0000-4000-8000-000000000001",
-      data: {
-        identityHeld: false,
-        shop: { id: "shop" },
-        person: { id: "person-1" },
-      } as unknown as ReadyPageData,
-      ownLocale: null,
-      delivered: true,
+  it("opens the day from a delivered link", async () => {
+    contextFor.mockResolvedValueOnce(context(true));
+    openYourDay.mockResolvedValueOnce("/ready/other-day");
+    expect(await post()).toBe("/ready/other-day");
+    expect(openYourDay.mock.calls[0]?.[1]).toMatchObject({
+      shopId: "shop",
+      fromBookingId: "00000000-0000-4000-8000-000000000001",
+      targetBookingId: TARGET,
     });
-    planYourDayLink.mockResolvedValueOnce({ ok: true, bookingId: TARGET });
-    vi.mocked(checkRateLimit)
-      .mockResolvedValueOnce({ allowed: true, retryAfterMs: 0 })
-      .mockResolvedValueOnce({ allowed: false, retryAfterMs: 1_000 });
+  });
 
-    expect(await post()).toEqual({ bookingId: TARGET, outcome: "rate_limited" });
-    expect(vi.mocked(checkRateLimit).mock.calls[1]?.[0]).toBe(
-      rateLimitKey("your-day-link", "person", "person-1"),
-    );
-    expect(sendYourDayLink).not.toHaveBeenCalled();
+  it("says the day is gone when it is no longer on the list", async () => {
+    contextFor.mockResolvedValueOnce(context(true));
+    openYourDay.mockResolvedValueOnce(null);
+    expect(await post()).toEqual({ bookingId: TARGET, outcome: "unavailable" });
   });
 });

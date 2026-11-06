@@ -25,6 +25,34 @@ describe("PrintedSoulsOnBoard", () => {
     expect(line).toHaveTextContent(t("manifest.soulsOnBoardCrewToConfirm", { count: 1 }));
   });
 
+  it("never offers the overlap as a reason after a dive, or once the crew member is tapped", () => {
+    // Adversarial review (#2745): a divemaster also rostered elsewhere and
+    // marked not back aboard after dive 2 sat under "confirm who sails".
+    const clash = crewMember({ clashes: [{ tripId: "other" }] as never });
+    const sentence = t("manifest.soulsOnBoardCrewToConfirm", { count: 1 });
+    const afterDive = render(
+      <PrintedSoulsOnBoard
+        manifest={tripManifest({ crew: [clash] })}
+        vesselName={null}
+        isDeparture={false}
+        t={t}
+      />,
+    );
+    expect(afterDive.container).not.toHaveTextContent(sentence);
+    cleanup();
+    const tapped = render(
+      <PrintedSoulsOnBoard
+        manifest={tripManifest({
+          crew: [{ ...clash, rollCall: { state: "boarded" } } as never],
+        })}
+        vesselName={null}
+        isDeparture
+        t={t}
+      />,
+    );
+    expect(tapped.container).not.toHaveTextContent(sentence);
+  });
+
   it("says nothing more when no crew member is claimed twice", () => {
     render(
       <PrintedSoulsOnBoard

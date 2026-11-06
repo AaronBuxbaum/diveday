@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat } from "./boats";
+import { createBoat, deleteBoat } from "./boats";
 import { boats, shops, tripSeriesSkips, trips } from "./schema";
 import {
   createTrip,
@@ -12,7 +12,9 @@ import {
   duplicateTripOrRefusal,
   isSeriesBoatOutOfService,
   moveTrip,
+  reinstateTrip,
   rollSeriesForward,
+  setTripStatus,
 } from "./trips";
 
 /**
@@ -84,7 +86,7 @@ describe("moveTrip onto a hull in the yard", () => {
   ])("refuses a move onto %s, and leaves the departure where it was", async (_label, day) => {
     const { db, shop, trip } = await hullInTheYard();
     const outcome = await moveTrip(db, shop.id, trip.id, morning(12, day));
-    expect(outcome).toEqual({ ok: false, reason: "boat_out_of_service" });
+    expect(outcome).toEqual({ ok: false, reason: "boat_out_of_service", on: `2030-12-${day}` });
     expect(await startOf(db, trip.id)).toEqual(trip.startsAt);
   });
 
@@ -100,6 +102,7 @@ describe("moveTrip onto a hull in the yard", () => {
     expect(await moveTrip(db, shop.id, trip.id, morning(12, 9, 22))).toEqual({
       ok: false,
       reason: "boat_out_of_service",
+      on: "2030-12-10",
     });
   });
 
@@ -127,6 +130,7 @@ describe("moveTrip onto a hull in the yard", () => {
     expect(await moveTrip(db, shop.id, course.id, morning(12, 9))).toEqual({
       ok: false,
       reason: "boat_out_of_service",
+      on: "2030-12-10",
     });
   });
 
@@ -139,6 +143,7 @@ describe("moveTrip onto a hull in the yard", () => {
     expect(await moveTrip(db, shop.id, trip.id, morning(12, 8))).toEqual({
       ok: false,
       reason: "boat_out_of_service",
+      on: "2030-12-10",
     });
     expect(await startOf(db, trip.id)).toEqual(trip.startsAt);
   });
@@ -164,6 +169,7 @@ describe("moveTrip onto a hull in the yard", () => {
     expect(await moveTrip(db, shop.id, trip.id, morning(12, 20))).toEqual({
       ok: false,
       reason: "boat_out_of_service",
+      on: "2030-12-20",
     });
   });
 
@@ -420,5 +426,152 @@ describe("rollSeriesForward on a hull booked into the yard later", () => {
     const rolled = await rollSeriesForward(db, shop.id, seriesId, morning(12, 4, 3));
     expect(rolled?.created).toBeGreaterThan(0);
     expect(rolled?.inTheYard).toEqual([]);
+  });
+});
+
+/**
+ * **Reinstating is a door onto the water too** (issue #4027, dock review of
+ * #3994). A liveaboard called off for weather, then a storm-repair window set
+ * on its hull, must not come back onto the board in the yard.
+ */
+describe("reinstateTrip onto a hull now in the yard", () => {
+  async function calledOff(tripId: string) {
+    const { db, shop } = ctx;
+    await setTripStatus(db, shop.id, tripId, "cancelled");
+  }
+  async function statusOf(tripId: string) {
+    const [row] = await ctx.db
+      .select({ status: trips.status, cancelledAt: trips.cancelledAt })
+      .from(trips)
+      .where(eq(trips.id, tripId));
+    return row;
+  }
+
+  it("refuses a departure whose one day is now in the yard, naming the day, and leaves it called off", async () => {
+    const { db, shop, boat } = await hullInTheYard();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Morning on Hull B",
+      startsAt: morning(12, 13),
+      endsAt: morning(12, 13, 12),
+      capacity: 10,
+      boatId: boat.id,
+    });
+    if (!trip) throw new Error("trip missing");
+    await calledOff(trip.id);
+    await db.update(boats).set({ outOfServiceUntil: "2030-12-13" }).where(eq(boats.id, boat.id));
+    expect(await reinstateTrip(db, shop.id, trip.id)).toEqual({
+      ok: false,
+      reason: "boat_out_of_service",
+      on: "2030-12-13",
+    });
+    expect((await statusOf(trip.id))?.status).toBe("cancelled");
+  });
+
+  it("refuses a liveaboard that is still out on the yard's first day", async () => {
+    const { db, shop, boat } = await hullInTheYard();
+    // Sunday the 8th to Tuesday the 10th: one span, back on the yard's first day.
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Liveaboard on Hull B",
+      startsAt: morning(12, 8),
+      endsAt: morning(12, 10, 17),
+      capacity: 8,
+      boatId: boat.id,
+    });
+    if (!trip) throw new Error("liveaboard missing");
+    await calledOff(trip.id);
+    expect(await reinstateTrip(db, shop.id, trip.id)).toEqual({
+      ok: false,
+      reason: "boat_out_of_service",
+      on: "2030-12-10",
+    });
+  });
+
+  it("refuses a course whose later meeting day is in the yard", async () => {
+    const { db, shop, boat } = await hullInTheYard();
+    const course = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two Saturdays on Hull B",
+      startsAt: morning(12, 7),
+      endsAt: morning(12, 14, 16),
+      capacity: 6,
+      boatId: boat.id,
+      scheduleDays: [
+        { dayNumber: 1, startsAt: morning(12, 7), endsAt: morning(12, 7, 16) },
+        { dayNumber: 2, startsAt: morning(12, 14), endsAt: morning(12, 14, 16) },
+      ],
+    });
+    if (!course) throw new Error("course missing");
+    await calledOff(course.id);
+    // The window grows over the second Saturday only.
+    await db.update(boats).set({ outOfServiceUntil: "2030-12-14" }).where(eq(boats.id, boat.id));
+    expect(await reinstateTrip(db, shop.id, course.id)).toEqual({
+      ok: false,
+      reason: "boat_out_of_service",
+      on: "2030-12-14",
+    });
+  });
+
+  it("puts back a departure the yard misses, and clears the call-off date", async () => {
+    const { db, shop, trip } = await hullInTheYard();
+    await calledOff(trip.id);
+    const outcome = await reinstateTrip(db, shop.id, trip.id);
+    expect(outcome.ok).toBe(true);
+    expect(await statusOf(trip.id)).toEqual({ status: "scheduled", cancelledAt: null });
+  });
+
+  it("answers a second tap on a departure already back without asking the yard", async () => {
+    const { db, shop, boat, trip } = await hullInTheYard();
+    await db.update(boats).set({ outOfServiceFrom: "2030-12-03" }).where(eq(boats.id, boat.id));
+    const outcome = await reinstateTrip(db, shop.id, trip.id);
+    expect(outcome.ok).toBe(true);
+    expect((await statusOf(trip.id))?.status).toBe("scheduled");
+  });
+});
+
+/**
+ * **A retired hull takes no new departure** (issue #4027, attacker review of
+ * #3994). The builder reads its boats live, but a stale add panel or the
+ * pattern's second departure can still post a deleted hull's id.
+ */
+describe("a soft-deleted hull", () => {
+  it("is refused for a single add", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Retired hull", 12);
+    await deleteBoat(db, shop.id, boat.id);
+    expect(
+      await createTrip(db, {
+        shopId: shop.id,
+        title: "On a retired hull",
+        startsAt: morning(12, 20),
+        endsAt: morning(12, 20, 12),
+        capacity: 10,
+        boatId: boat.id,
+      }),
+    ).toBeNull();
+  });
+
+  it("is refused for a series", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Retired hull", 12);
+    await deleteBoat(db, shop.id, boat.id);
+    const start = morning(12, 4);
+    expect(
+      await createTripSeriesOrRefusal(db, {
+        shopId: shop.id,
+        title: "Weekly on a retired hull",
+        capacity: 10,
+        plannedDives: 2,
+        frequency: "weekly" as const,
+        intervalWeeks: 1,
+        weekdays: weekdaySetFrom([WED]),
+        anchorDate: "2030-12-04",
+        endsOn: null,
+        timeZone: TZ,
+        boatId: boat.id,
+        template: { startsAt: start, endsAt: new Date(start.getTime() + 4 * 3_600_000) },
+      }),
+    ).toBeNull();
   });
 });

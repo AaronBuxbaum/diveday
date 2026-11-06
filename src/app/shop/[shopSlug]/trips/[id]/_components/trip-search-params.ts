@@ -10,6 +10,8 @@ export type TripPageSearchParams = {
   count?: string;
   /** Which form on this page the notice answers — see `resolveTripNotice`. */
   form?: string;
+  /** The shop-local day a notice names, a hull's yard day — see `resolveTripNotice`. */
+  on?: string;
   /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
   gate?: string | string[];
   rf?: string;
@@ -69,6 +71,7 @@ export const TRIP_FLASH_PARAMS = [
   "add",
   "count",
   "form",
+  "on",
   "bid",
   "diverq",
   "person",

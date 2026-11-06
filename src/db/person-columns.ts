@@ -1400,7 +1400,7 @@ const rows = [
     column: "medical_clearance_declined_by_person_id",
     kind: "actor",
     merge: "leave",
-    why: "who declined the clearance; inside the physician answer seal, so never repointed",
+    why: "who declined the clearance; the accountable staffer as recorded, so never repointed",
   },
   {
     table: "waiver_records",
@@ -1414,7 +1414,7 @@ const rows = [
     column: "medical_cleared_by_person_id",
     kind: "actor",
     merge: "leave",
-    why: "who cleared the medical answer; inside the physician answer seal, so never repointed",
+    why: "who cleared the medical answer; the accountable staffer as recorded, so never repointed",
   },
   {
     table: "waiver_records",

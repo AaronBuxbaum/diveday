@@ -29,7 +29,6 @@ export type WaiverStateFields = Omit<
   | "draftViaLinkId"
   | "medicalAlert"
   | "integrityHash"
-  | "medicalAnswerSeal"
 >;
 
 type WaiverRecord = WaiverStateFields;

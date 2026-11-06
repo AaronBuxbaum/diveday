@@ -1,31 +1,26 @@
 "use server";
 
-import { planYourDayLink, sendYourDayLink, type YourDayLinkOutcome } from "@/db/your-days";
-import { log } from "@/lib/log";
-import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { redirect } from "next/navigation";
+import { openYourDay } from "@/db/your-days";
 import { isUuid } from "@/lib/uuid";
 import { contextFor } from "./action-helpers";
 
-/** What one row's send answers: the row it was, and a code the row words. */
+/** What one row answers when it cannot open: the row it was, and a code the row words. */
 export type YourDayLinkState = {
   bookingId: string | null;
-  outcome: YourDayLinkOutcome | "rate_limited" | null;
+  outcome: "unavailable" | "rate_limited" | null;
 };
 
 /**
- * **"Email me the link" on one of the diver's other days** (H-20261014-other-days-send-fresh, ADR
+ * **Open one of the diver's other days** (#4059; ADR
  * 20261016-fresh-link-per-booking-row).
  *
  * Authorized like every action on this page: the verified readiness token
- * names one booking, and `planYourDayLink` accepts a target only from that
- * booking's own list (same shop, same person). The link goes to the address on
- * file and only a code comes back, so nothing here opens another booking.
- *
- * Three budgets: the per-IP one inside `contextFor`, one per *target*
- * booking, and one per person, the last two spent only once the plan says a
- * send will happen, so a refused post costs the diver nothing.
+ * names one booking, and `openYourDay` accepts a target only from that
+ * booking's own list (same shop, same person). Success redirects to that
+ * day's own page.
  */
-export async function sendYourDayLinkAction(
+export async function openYourDayAction(
   token: string,
   _previous: YourDayLinkState,
   formData: FormData,
@@ -49,30 +44,11 @@ export async function sendYourDayLinkAction(
     return { bookingId: targetBookingId, outcome: "unavailable" };
   }
 
-  const plan = await planYourDayLink(context.db, {
+  const path = await openYourDay(context.db, {
     shopId: context.data.shop.id,
     fromBookingId: context.bookingId,
     targetBookingId,
   });
-  if (!plan.ok) return { bookingId: targetBookingId, outcome: plan.reason };
-
-  const inboxKey = rateLimitKey("your-day-link", "booking", plan.bookingId);
-  if (!(await checkRateLimit(inboxKey, RATE_LIMITS.readinessLinkResendByBooking)).allowed) {
-    return { bookingId: targetBookingId, outcome: "rate_limited" };
-  }
-  // Every row mails the same person, so the person is a budget too (N1).
-  const personKey = rateLimitKey("your-day-link", "person", context.data.person.id);
-  if (!(await checkRateLimit(personKey, RATE_LIMITS.yourDayLinkByPerson)).allowed) {
-    return { bookingId: targetBookingId, outcome: "rate_limited" };
-  }
-
-  try {
-    return { bookingId: targetBookingId, outcome: await sendYourDayLink(context.db, plan) };
-  } catch (error) {
-    log("ready.your_day_link_failed", "error", {
-      bookingId: plan.bookingId,
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-    return { bookingId: targetBookingId, outcome: "failed" };
-  }
+  if (!path) return { bookingId: targetBookingId, outcome: "unavailable" };
+  redirect(path);
 }

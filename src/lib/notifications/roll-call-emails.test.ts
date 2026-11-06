@@ -284,12 +284,12 @@ describe("the shore_alert_confirmation kind", () => {
     timezone: "America/New_York",
   };
 
-  it("says what agreeing means, links the confirm page and says how to ignore it", () => {
+  it("says what agreeing means, links the confirm page and says who to tell if it is wrong", () => {
     const email = shoreAlertConfirmationEmail(input);
     expect(email.subject).toBe("Blue <Mantis> asks you to be its shore contact");
     expect(email.text).toContain(input.confirmUrl);
     expect(email.text).toContain("roll call");
-    expect(email.text).toContain("ignore");
+    expect(email.text).toContain("fix the address");
     expect(email.html).toContain("Blue &lt;Mantis&gt;");
     expect(shoreAlertConfirmationEmail({ ...input, locale: "es-ES" }).subject).toBe(
       "Blue <Mantis> te pide ser su contacto en tierra",
@@ -325,7 +325,7 @@ describe("the shore_alert_stopped kind", () => {
     const email = shoreAlertStoppedEmail(input);
     expect(email.subject).toBe("Blue <Mantis>: the shore contact stopped roll-call alerts");
     expect(email.text).toContain("Hi Ana");
-    expect(email.text).toContain("confirm it again");
+    expect(email.text).toContain("save their address again");
     expect(email.text).toContain(input.settingsUrl);
     expect(shoreAlertStoppedEmail({ ...input, locale: "es-ES" }).subject).toBe(
       "Blue <Mantis>: el contacto en tierra dejó los avisos del pase de lista",

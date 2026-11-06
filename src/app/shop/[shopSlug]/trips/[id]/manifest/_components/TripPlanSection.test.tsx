@@ -54,16 +54,6 @@ describe("TripPlanSection", () => {
     expect(bare.container.querySelectorAll("li")).toHaveLength(1);
   });
 
-  it("keeps the plan off the printed sheet", () => {
-    // The printed trip packet renders this whole manifest *and* its own
-    // `PacketDives` list, so without `print:hidden` the sheet a crew carries to
-    // the boat prints the dive plan twice. Caught by e2e/trips.spec.ts's packet
-    // test, which found two "Dive 1 ·" on one page; pinned here so the next
-    // reader does not have to learn it from a strict-mode violation.
-    const { container } = plan();
-    expect(container.querySelector("section")?.className).toContain("print:hidden");
-  });
-
   it("carries no door and no sentence about the dive log", () => {
     // "Changed the plan? Say why in the dive log after each dive." stood under
     // the plan at the dock (UX audit 2026-10-07, item 3); the log is on the

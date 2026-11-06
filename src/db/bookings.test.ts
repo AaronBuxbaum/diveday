@@ -53,6 +53,7 @@ import {
   createTrip,
   getTripRoster,
   listStaff,
+  reinstateTrip,
   setTripCrew,
   setTripStatus,
   upcomingTripsWithCounts,
@@ -1204,11 +1205,10 @@ describe("restoreBooking (undo of a roster removal)", () => {
     // Stood down, so the undo has nowhere to land...
     await setTripStatus(db, shop.id, open.id, "cancelled");
     expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_cancelled");
-
     // ...and back on, so it does. This is the whole reason the refusal is
     // allowed to be a refusal: the notice tells the crew to reinstate the trip
     // first, and that instruction has to actually work.
-    await setTripStatus(db, shop.id, open.id, "scheduled");
+    await reinstateTrip(db, shop.id, open.id);
     expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("restored");
     const roster = await getTripRoster(db, shop.id, open.id);
     expect(roster.map((r) => r.person.fullName)).toContain(visitor.fullName);

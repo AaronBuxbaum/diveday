@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
-import { MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
+import { DAY_MS, MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
@@ -15,7 +15,6 @@ import {
   completeWaiver,
   getWaiverForToken,
   recordWaiverDraft,
-  threadWaiverKey,
   waiverLinkDoor,
 } from "./waivers-completion";
 import {
@@ -103,30 +102,53 @@ describe("the waiver_link capability", () => {
     expect(await waiverLinkDoor(db, "")).toBeNull();
   });
 
-  it("lives half an hour from its mint, and opens nothing at its deadline", async () => {
+  it("lives no longer than two weeks from its mint, and opens nothing at its deadline", async () => {
     const { token, expiresAt } = await counterSeat();
     const minted = await verifyCapability(ctx.db, { purpose: "waiver_link", token });
     expect(minted?.expiresAt?.getTime()).toBe(expiresAt.getTime());
-    expect(expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(30 * MINUTE_MS);
+    expect(expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(14 * DAY_MS);
     expect(await counterState(token, new Date(expiresAt.getTime() - 1))).toBe("available");
     expect(await counterState(token, expiresAt)).toBe("closed");
   });
 
-  it("a fresh QR for the same release revokes the one before", async () => {
+  it("takes the end of the day its caller names, never past two weeks (issue 4064)", async () => {
+    const { db, shop, recordId } = await counterSeat();
+    const now = nowDate();
+    const tonight = new Date(now.getTime() + 5 * 60 * MINUTE_MS);
+    const link = await mintCapability(db, {
+      purpose: "waiver_link",
+      shopId: shop.id,
+      subjectId: recordId,
+      now,
+      expiresAt: tonight,
+    });
+    expect(link.expiresAt).toEqual(tonight);
+    const far = await mintCapability(db, {
+      purpose: "waiver_link",
+      shopId: shop.id,
+      subjectId: recordId,
+      now,
+      expiresAt: new Date(now.getTime() + 30 * DAY_MS),
+    });
+    expect(far.expiresAt).toEqual(new Date(now.getTime() + 14 * DAY_MS));
+  });
+
+  it("a fresh QR for the same release leaves the one before open", async () => {
     const { db, shop, bookingId, token } = await counterSeat();
+    // The diver's phone has the first code open.
+    const device = await claimCounterLink(db, token);
+    if (!device) throw new Error("first claim refused");
     const next = await issueCounterLink(db, { shopId: shop.id, bookingId });
-    expect(await counterState(token)).toBe("closed");
+    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
     expect(await counterState(next.token)).toBe("available");
-    // The table's backstop: never two live links for one release.
-    await expect(
-      db.insert(capabilities).values({
-        purpose: "waiver_link",
-        shopId: shop.id,
-        waiverRecordId: next.recordId,
-        tokenHash: hashBearerToken("a-second-live-link"),
-        expiresAt: next.expiresAt,
-      }),
-    ).rejects.toThrow();
+    // The table lets two live codes to one release stand.
+    await db.insert(capabilities).values({
+      purpose: "waiver_link",
+      shopId: shop.id,
+      waiverRecordId: next.recordId,
+      tokenHash: hashBearerToken("a-third-live-link"),
+      expiresAt: next.expiresAt,
+    });
   });
 
   it("is spent by the signature: only the receipt, then nothing once it expires", async () => {
@@ -160,27 +182,28 @@ describe("the waiver_link capability", () => {
     expect(await counterState(token, expiresAt)).toBe("closed");
   });
 
-  it("opens on the first phone that claims it and on no other, and that phone can reload (attacker S1)", async () => {
+  it("opens on any phone, and only the phone that saved through it is its own (issue 4064)", async () => {
     const { db, token } = await counterSeat();
-    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_unclaimed", via: "counter" });
+    expect(await waiverLinkDoor(db, token)).toMatchObject({ door: "counter", ownDevice: false });
     const device = await claimCounterLink(db, token);
     if (!device) throw new Error("first claim refused");
     expect(await claimCounterLink(db, token)).toBeNull();
-    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_elsewhere", via: "counter" });
-    expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toEqual({
-      door: "counter_elsewhere",
-      via: "counter",
+    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({
+      door: "counter",
+      ownDevice: true,
     });
-    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
-    expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
+    // A second phone, after a dead battery, still opens and signs it, but is
+    // not shown the first phone's saved answers.
+    expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toMatchObject({
+      door: "counter",
+      ownDevice: false,
+    });
   });
 
-  it("is never claimed once it has expired or been replaced", async () => {
-    const { db, shop, bookingId, token, expiresAt } = await counterSeat();
+  it("is never claimed once it has expired", async () => {
+    const { db, token, expiresAt } = await counterSeat();
     expect(await claimCounterLink(db, token, expiresAt)).toBeNull();
-    await issueCounterLink(db, { shopId: shop.id, bookingId });
-    expect(await claimCounterLink(db, token)).toBeNull();
-    expect(await waiverLinkDoor(db, token)).toBeNull();
+    expect(await waiverLinkDoor(db, token, { now: expiresAt })).toBeNull();
   });
 
   it("refuses a second signature on a signed release and keeps the first answers (attacker S1)", async () => {
@@ -228,7 +251,7 @@ describe("the waiver_link capability", () => {
   });
 
   it("opens nothing for another shop's link, and is never minted over another shop's release", async () => {
-    const { db, recordId, token } = await counterSeat();
+    const { db, recordId } = await counterSeat();
     const [otherShop] = await db
       .insert(shops)
       .values({
@@ -242,11 +265,7 @@ describe("the waiver_link capability", () => {
       mintCapability(db, { purpose: "waiver_link", shopId: otherShop.id, subjectId: recordId }),
     ).rejects.toThrow(/outside its shop/);
     // A live row that names this shop's release under another shop, however
-    // it got there (the real link revoked first: one live link per release and purpose).
-    await db
-      .update(capabilities)
-      .set({ revokedAt: nowDate() })
-      .where(eq(capabilities.tokenHash, hashBearerToken(token)));
+    // it got there.
     await db.insert(capabilities).values({
       purpose: "waiver_link",
       shopId: otherShop.id,
@@ -299,9 +318,8 @@ describe("the waiver_link capability", () => {
     expect(await getWaiverForToken(db, forged)).toEqual({ state: "unavailable" });
   });
 
-  it("opens nothing after a diver merge, which supersedes the unsigned release it names", async () => {
-    const { db, shop, bookingId, token, personId, fullName, recordId } =
-      await counterSeat("Jules Merge");
+  it("opens nothing after a diver merge that replaces the contact, and the release waits for a fresh code (issue 4057)", async () => {
+    const { db, shop, bookingId, token, personId, fullName } = await counterSeat("Jules Merge");
     const [survivor] = await db
       .insert(people)
       .values({
@@ -320,14 +338,16 @@ describe("the waiver_link capability", () => {
       actorPersonId: await owner(),
     });
     expect(merged.ok).toBe(true);
-    const [record] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
-    expect(record?.supersededAt).not.toBeNull();
-    // Authority never follows a merge: the tablet's link is dead, and a fresh
-    // QR opens the kept holder's own release.
+    // Authority never follows a merge: the tablet's link is dead. The unsigned
+    // release and its draft stay, and a fresh QR opens it for the kept holder.
     expect(await counterState(token)).toBe("closed");
     const fresh = await issueCounterLink(db, { shopId: shop.id, bookingId });
-    expect(fresh.recordId).not.toBe(recordId);
     expect(await counterState(fresh.token)).toBe("available");
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, fresh.recordId));
+    expect(record?.personId).toBe(survivor.id);
   });
 
   it("goes with the person on erasure: the row is deleted and the release opens nothing", async () => {
@@ -345,125 +365,6 @@ describe("the waiver_link capability", () => {
         .where(eq(capabilities.tokenHash, hashBearerToken(token))),
     ).toEqual([]);
     expect(await waiverLinkDoor(db, token)).toBeNull();
-    expect(await counterState(token)).toBe("closed");
-  });
-});
-
-/**
- * **A party member's emailed door** (`party_waiver_link`, issue #3986): the
- * same release-only door as the counter's, minted for the address the lead
- * typed. Adversarial on the same terms.
- */
-describe("the party_waiver_link capability", () => {
-  /** A seat whose release was mailed as a door (it replaces the counter link). */
-  async function mailedSeat(fullName = "Theo Mailed") {
-    const seat = await counterSeat(fullName);
-    // Only an address the party's lead typed, on a seat not yet claimed, is
-    // sent a door (issue #4003); a claim closes it (issue #2743).
-    await seat.db
-      .update(bookings)
-      .set({ contactTypedByLeadAt: nowDate(), claimedAt: null })
-      .where(eq(bookings.id, seat.bookingId));
-    const door = await mintCapability(seat.db, {
-      purpose: "party_waiver_link",
-      shopId: seat.shop.id,
-      subjectId: seat.recordId,
-    });
-    if (!door.expiresAt) throw new Error("door without expiry");
-    return { ...seat, counterToken: seat.token, token: door.token, expiresAt: door.expiresAt };
-  }
-
-  it("opens only its seat's release, says it came by mail, and leaves the counter code live (#4008)", async () => {
-    const { db, token, recordId, counterToken } = await mailedSeat();
-    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_unclaimed", via: "mail" });
-    expect(await openOnDevice(db, token)).toMatchObject({
-      door: "counter",
-      key: { purpose: "party_waiver_link", recordId },
-    });
-    // The counter code to the same release stands beside it, a door of its own.
-    expect(await counterState(counterToken)).toBe("available");
-    expect(await verifyCapability(db, { purpose: "waiver_link", token })).toBeNull();
-    expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toEqual({
-      door: "counter_elsewhere",
-      via: "mail",
-    });
-  });
-
-  it("lives two weeks, and opens nothing at its deadline", async () => {
-    const { token, expiresAt } = await mailedSeat();
-    expect(expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(14 * 24 * 60 * MINUTE_MS);
-    expect(expiresAt.getTime() - nowDate().getTime()).toBeGreaterThan(13 * 24 * 60 * MINUTE_MS);
-    expect(await counterState(token, new Date(expiresAt.getTime() - 1))).toBe("available");
-    expect(await counterState(token, expiresAt)).toBe("closed");
-  });
-
-  it("is spent by the signature and refuses a second one", async () => {
-    const { db, token, fullName } = await mailedSeat();
-    const door = await openOnDevice(db, token);
-    if (door?.door !== "counter") throw new Error("door missing");
-    const sign = () =>
-      completeWaiver(db, door.key, {
-        signerName: fullName,
-        agreed: true,
-        medicalAnswers: clearAnswers,
-      });
-    expect(await sign()).toMatchObject({ ok: true, idempotent: false });
-    const [row] = await db
-      .select({ usedAt: capabilities.usedAt })
-      .from(capabilities)
-      .where(eq(capabilities.tokenHash, hashBearerToken(token)));
-    expect(row?.usedAt).not.toBeNull();
-    expect(await sign()).toEqual({ ok: false, reason: "already_signed" });
-  });
-
-  it("shows no receipt of a release signed by another route, claimed or not (security review)", async () => {
-    const { db, shop, bookingId, token, counterToken, fullName } = await mailedSeat();
-    const claimed = await openOnDevice(db, token);
-    if (claimed?.door !== "counter") throw new Error("door missing");
-    const thread = await threadWaiverKey(db, { shopId: shop.id, bookingId });
-    if (!thread) throw new Error("thread key missing");
-    expect(
-      await completeWaiver(db, thread, {
-        signerName: fullName,
-        agreed: true,
-        medicalAnswers: medicalReferralAnswers,
-      }),
-    ).toMatchObject({ ok: true });
-    // The phone that claimed the door, and any other, see nothing of the
-    // medical outcome the diver signed on their own link.
-    expect(await counterState(token)).toBe("closed");
-    expect(await getWaiverForToken(db, claimed.key)).toEqual({ state: "unavailable" });
-    expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toBeNull();
-    expect(await waiverLinkDoor(db, counterToken)).toBeNull();
-  });
-
-  it("opens nothing once the seat changes hands or is cancelled", async () => {
-    const { db, shop, bookingId, token } = await mailedSeat();
-    const [other] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Someone Else", email: null })
-      .returning({ id: people.id });
-    if (!other) throw new Error("another diver missing");
-    await db.update(bookings).set({ personId: other.id }).where(eq(bookings.id, bookingId));
-    expect(await counterState(token)).toBe("closed");
-    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
-    expect(await counterState(token)).toBe("closed");
-  });
-
-  it("goes with the person on erasure", async () => {
-    const { db, shop, token, personId } = await mailedSeat("Ivy Erase");
-    const erased = await anonymizeDiver(db, {
-      shopId: shop.id,
-      personId,
-      actorPersonId: await owner(),
-    });
-    expect(erased.ok).toBe(true);
-    expect(
-      await db
-        .select()
-        .from(capabilities)
-        .where(eq(capabilities.tokenHash, hashBearerToken(token))),
-    ).toEqual([]);
     expect(await counterState(token)).toBe("closed");
   });
 });

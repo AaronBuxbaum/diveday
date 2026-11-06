@@ -223,7 +223,6 @@ export type DiverActivityCode =
   | "diver_medical_form_opened"
   | "medical_diver_form_accepted"
   | "medical_diver_form_not_used"
-  | "medical_unsealed_clearance_replaced"
   | "medical_answers_read"
   | "medical_alert_read"
   | "medical_alert_saved_offline"
@@ -266,16 +265,6 @@ export async function recordDiverActivity(
      */
     waiverRecordId?: string;
     /**
-     * The clearance stamp a re-recorded answer overwrites (issue #3999): who stamped it, the
-     * physician and the evaluation date it named, kept in the line's params because the write
-     * replaces them. Only `medical_unsealed_clearance_replaced` takes it.
-     */
-    replacedStamp?: {
-      clearedByPersonId: string | null;
-      physician: string | null;
-      evaluated: string | null;
-    };
-    /**
      * The counter code a desk's guardian check was given for (issue #4003),
      * so signing asks about that code and no other.
      */
@@ -294,16 +283,6 @@ export async function recordDiverActivity(
     .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()))
     .limit(1);
   if (!diver || !actor) return false;
-  const stamp = input.replacedStamp;
-  const stamper = stamp?.clearedByPersonId
-    ? await db
-        .select({ name: people.fullName })
-        .from(people)
-        // diveday:allow-deleted-people: the name of whoever stamped a clearance, kept on the line after they leave.
-        .where(and(eq(people.id, stamp.clearedByPersonId), eq(people.shopId, input.shopId)))
-        .limit(1)
-        .then(([row]) => row?.name ?? null)
-    : null;
   await db.insert(activityEvents).values({
     shopId: input.shopId,
     tripId: null,
@@ -316,9 +295,6 @@ export async function recordDiverActivity(
       diver: diver.name,
       ...(input.departureId ? { departure: input.departureId } : {}),
       ...(input.waiverRecordId ? { record: input.waiverRecordId } : {}),
-      ...(stamper ? { clearedBy: stamper } : {}),
-      ...(stamp?.physician ? { physician: stamp.physician } : {}),
-      ...(stamp?.evaluated ? { evaluated: stamp.evaluated } : {}),
       ...(input.linkId ? { link: input.linkId } : {}),
     },
     occurredAt: nowDate(),

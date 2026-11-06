@@ -82,7 +82,6 @@ export async function DepartureNoteSection({
               refusals: {
                 empty: t("desk.departureNote.refusals.empty"),
                 too_long: t("desk.departureNote.refusals.tooLong"),
-                link: t("desk.departureNote.refusals.link"),
                 cancelled: t("desk.departureNote.refusals.cancelled"),
                 past: t("desk.departureNote.refusals.past"),
                 limit,

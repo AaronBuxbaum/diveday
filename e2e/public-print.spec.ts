@@ -51,28 +51,28 @@ test("the homepage print hero fits before the first paper break", async ({ page 
   await capturePrintPdfs(page, "public-home-hero");
 });
 
-test("the public schedule prints dates without duplicate jump and paging controls", async ({
-  page,
-}) => {
+test("the public schedule prints its sheet and none of its controls", async ({ page }) => {
   await page.goto("/s/blue-mantis");
   const jump = page.locator('a[href^="#day-"]').first();
   await expect(jump).toBeVisible();
   const monthNext = page.getByRole("link", { name: /next month/i });
   await expect(monthNext).toBeVisible();
   await page.emulateMedia({ media: "print" });
-  await expect(page.locator("main img").filter({ visible: true })).toHaveCount(0);
-  const contexts = page.locator("[data-print-departure-context]");
-  await expect(contexts.first()).toBeVisible();
-  for (const context of await contexts.all()) {
-    await expect(context).toHaveText(/\S.*(?:EDT|EST)/);
+  await expect(page.locator("img").filter({ visible: true })).toHaveCount(0);
+  const sheet = page.locator(".paper-sheet");
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("heading", { level: 1 })).toHaveText("Schedule");
+  // Each departure names its own zone: the list can cross a clock change.
+  for (const row of await sheet.locator("li").all()) {
+    await expect(row).toHaveText(/E[DS]T/);
   }
   await expect(page.getByRole("heading", { name: "Our year", exact: true })).toBeHidden();
   await expect(page.locator("#more-ways-heading")).toBeHidden();
-  await expect(page.locator("footer")).toContainText("100 Ocean Drive");
+  await expect(page.locator("footer")).toBeHidden();
+  await expect(sheet).toContainText("100 Ocean Drive");
   await expect(jump).not.toBeVisible();
   await expect(monthNext).not.toBeVisible();
-  await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
-  await capturePrintPdfs(page, "public-schedule-controls");
+  await capturePrintPdfs(page, "public-schedule-sheet");
 });
 
 for (const route of ["/get-set-up", "/s/blue-mantis/reviews"]) {

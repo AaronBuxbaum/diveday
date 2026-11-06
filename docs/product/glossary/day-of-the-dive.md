@@ -54,7 +54,10 @@
   sailed, hold or head-count state, the requirement, the day's dives and species, conditions,
   cancellation window, the shop's number) with its public address in the fold. Never the
   meeting point, a booking, a wait-list or handoff state, or a link; a page opened by one of
-  those links prints with no margin (issue #2745).
+  those links prints with no margin (issue #2745). The public course page and the schedule
+  (storefront or framed) print their own sheet on the same terms: the course with every date,
+  seat count and answered question, the schedule with each listed departure's date, year and
+  zone and whatever narrowed the list.
 - **Change ledger** — the chronological, diver-visible record of material meeting-point,
   conditions and site changes (a site change, `site_change`, is the day's run of sites as the
   diver reads it, by public name, written in the transaction that changed the dives; issue

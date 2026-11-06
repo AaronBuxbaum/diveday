@@ -5,9 +5,7 @@ import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId } from "@/db/waiver-signing";
 import {
-  claimedSeatDoor,
   closedCounterCode,
-  doctorPageOpen,
   doorNeedsDeskGuardian,
   getWaiverForToken,
   staleWaiverRecordForToken,
@@ -22,13 +20,7 @@ import { completedMedicalState } from "./completed-medical-state";
 import { counterDevice } from "./counter-device";
 import { recordForDoor } from "./door-draft";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
-import {
-  CounterClaimCard,
-  CounterElsewhereCard,
-  ExpiredLink,
-  GuardianAtCounterCard,
-  UnavailableWaiverLink,
-} from "./WaiverDoorCards";
+import { ExpiredLink, GuardianAtCounterCard, UnavailableWaiverLink } from "./WaiverDoorCards";
 import { waiverSigningForm } from "./WaiverSigningForm";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -77,11 +69,6 @@ export default async function WaiverPage({
   // a release link mailed for a release with no seat (issue #3983). Nothing
   // else opens here: a seat's release is signed in its holder's thread.
   const door = await waiverLinkDoor(db, token, { device: await counterDevice() });
-  // A counter QR opens on the first phone that taps "open here", and on no
-  // other (attacker review S1).
-  if (door?.door === "counter_unclaimed")
-    return <CounterClaimCard token={token} t={anonT} via={door.via} />;
-  if (door?.door === "counter_elsewhere") return <CounterElsewhereCard t={anonT} via={door.via} />;
   const state = door ? await getWaiverForToken(db, door.key) : { state: "unavailable" as const };
   const counter = door?.door === "counter";
 
@@ -105,14 +92,6 @@ export default async function WaiverPage({
     if (closedShop) {
       const closedT = diverTranslator(await requestLocale(closedShop.defaultLocale));
       return <DeadLink t={closedT} next={closedT("waiver.counterClosedNext")} shop={closedShop} />;
-    }
-    // A party member's door to a seat since claimed: the release is signed
-    // on the trip link the claimant's confirmation carried (issue #2743).
-    const claimed = await claimedSeatDoor(db, token);
-    const claimedShop = claimed ? await getShopById(db, claimed.shopId) : null;
-    if (claimedShop) {
-      const claimedT = diverTranslator(await requestLocale(claimedShop.defaultLocale));
-      return <DeadLink t={claimedT} next={claimedT("waiver.doorClaimedNext")} shop={claimedShop} />;
     }
     // No record at all reached through this token (garbage, or a completed
     // link long since replaced) — there is no shop to attribute it to
@@ -143,13 +122,6 @@ export default async function WaiverPage({
     const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
     const signedRail = completedWaiverRail(needsReview, !!state.record.shopAnswers);
-    // A party member's door is the one door they hold, so their doctor's page
-    // is on it (issue #4003); a counter QR's is printed at the desk.
-    const doctorDoor =
-      needsReview &&
-      door?.door === "counter" &&
-      door.key.purpose === "party_waiver_link" &&
-      (await doctorPageOpen(db, state.record));
     return (
       <WaiverCompleted
         shop={shop}
@@ -161,11 +133,11 @@ export default async function WaiverPage({
         notSaved={counter && error === "signed"}
         medicalState={completedMedicalState(state.record)}
         // A waiver link opens no thread (issue #2743): a seat's release is on
-        // the holder's own link, and so is its doctor's page, unless the
-        // holder is a party member whose only door this is.
+        // the holder's own link, and so is its doctor's page; a counter QR's
+        // is printed at the desk.
         showPrepHelp={false}
         readyPath={null}
-        doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
+        doctorPath={null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}
       />
@@ -191,21 +163,25 @@ export default async function WaiverPage({
     search: { saved, error, field, q, at },
     completeAction: completeWaiverAction.bind(null, token),
     saveAction: saveWaiverDraftAction.bind(null, token),
-    // A release link says how long it works; a counter link's half hour is
-    // one sitting at the shop.
+    // A release link says how long it works; a counter link lasts the day
+    // and says its time only in its last hour (issue #4064).
     linkExpiresAt: door?.door === "release" ? door.key.expiresAt : null,
     // The counter QR can be read by any camera, so it never shows the medical
     // answers the diver saved in their own thread (security review S2); it
-    // shows only what this claimed code saved, so a refused Sign or a Save
-    // never blanks the questionnaire on the phone that typed it (dock B1).
+    // shows only what this code saved, and only on the phone that saved it
+    // (issue #4064: any phone opens it), so a refused Sign or a Save never
+    // blanks the questionnaire on the phone that typed it (dock B1).
     // A release link likewise prefills only what was saved through itself:
     // never a counter phone's answers, and never an old link's (issue #3983).
-    prefillMedical: door !== null && state.record.draftViaLinkId === door.key.linkId,
-    // A counter QR's half hour, said on screen, and its answers saved on each
+    prefillMedical:
+      door !== null &&
+      (door.door !== "counter" || door.ownDevice) &&
+      state.record.draftViaLinkId === door.key.linkId,
+    // A counter QR's time left, said in its last hour, and its answers saved on each
     // step, so the record holds them when it runs out (issue #3985); a fresh
     // code never shows the medical answers saved through this one (S2).
     counter:
-      door?.door === "counter" && door.key.purpose === "waiver_link"
+      door?.door === "counter"
         ? {
             expiresAt: door.key.expiresAt,
             autosaveAction: autosaveWaiverDraftAction.bind(null, token),

@@ -38,7 +38,7 @@
   },
   "departureNote": {
     "heading": "Aviso a todos",
-    "description": "Un mensaje breve a todas las personas reservadas en esta salida, por correo o mensaje de texto. Sin enlaces: cada persona recibe el enlace de su propia reserva.",
+    "description": "Un mensaje breve a todas las personas reservadas en esta salida, por correo o mensaje de texto. Puedes incluir un enlace, como la ubicación en el mapa.",
     "label": "Aviso",
     "left": "Quedan {left}",
     "submit": "Enviar a todos los reservados",
@@ -47,8 +47,7 @@
     "someone": "Personal",
     "refusals": {
       "empty": "Escribe el aviso primero.",
-      "tooLong": "Máximo 200 caracteres.",
-      "link": "Quita el enlace. Cada persona recibe el enlace de su propia reserva.",
+      "tooLong": "Máximo 500 caracteres.",
       "cancelled": "Esta salida está cancelada.",
       "past": "Esta salida ya zarpó.",
       "limit": "Esta salida ya tuvo {max, plural, one {su # aviso} other {sus # avisos}}.",

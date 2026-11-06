@@ -85,43 +85,43 @@ async function tokenDoor(token: unknown): Promise<SigningDoor> {
   const path = `/waivers/${token}`;
   const opened = await budgetedDoor(token);
   if (opened === "rate") redirect(`${path}?error=rate`);
-  // A counter link on another phone, or not yet opened on this one, signs
-  // nothing: the page itself then says which.
+  // A dead link signs nothing: the page itself then says so.
   if (!opened) redirect(`${path}?error=unavailable`);
   return { key: opened.key, path };
 }
 
 /**
  * The door a token opens on this device, behind its throttle (issue #3985).
- * A phone holding a counter claim spends that claim's own budget, so every
- * phone on the shop's Wi-Fi no longer shares one. A request carrying a claim
- * cookie first passes a coarse per-IP guard, before any read, so a forged
- * cookie buys no unthrottled lookups; the claim is checked against the code
- * before it counts. Anything else (a release link, no claim, a claim for
- * another code) spends the per-IP bucket.
+ * Every request first passes a coarse per-IP guard, before any read. A live
+ * counter code then spends that code's own budget, so every phone on the
+ * shop's Wi-Fi does not share one (issue #4064: any phone opens it). Anything
+ * else (a release link, a dead code) spends the per-IP bucket. The first
+ * phone to act through a counter code claims it, so only that phone is shown
+ * the medical answers it saved.
  */
 async function budgetedDoor(
   token: string,
-  claimBudget: "action" | "autosave" = "action",
+  budget: "action" | "autosave" = "action",
 ): Promise<{ key: WaiverKey } | "rate" | null> {
-  const device = await counterDevice();
   const ip = await clientIp();
   if (
-    device &&
     !(await checkRateLimit(rateLimitKey("waiver-counter-ip", ip), RATE_LIMITS.counterAddress))
       .allowed
   )
     return "rate";
-  const claimed = device ? await waiverLinkDoor(await getDb(), token, { device }) : null;
+  const door = await waiverLinkDoor(await getDb(), token, { device: await counterDevice() });
   const allowed =
-    claimed?.door === "counter"
+    door?.door === "counter"
       ? await checkRateLimit(
-          rateLimitKey(`waiver-${claimBudget}`, "claim", claimed.key.linkId),
-          claimBudget === "autosave" ? RATE_LIMITS.counterAutosave : RATE_LIMITS.capabilityAction,
+          rateLimitKey(`waiver-${budget}`, "code", door.key.linkId),
+          budget === "autosave" ? RATE_LIMITS.counterAutosave : RATE_LIMITS.capabilityAction,
         )
       : await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction);
   if (!allowed.allowed) return "rate";
-  const door = device ? claimed : await waiverLinkDoor(await getDb(), token, { device });
+  if (door?.door === "counter" && !door.ownDevice) {
+    const device = await claimCounterLink(await getDb(), token);
+    if (device) await keepCounterDevice(token, device);
+  }
   return door?.door === "counter" || door?.door === "release" ? { key: door.key } : null;
 }
 
@@ -138,28 +138,8 @@ export async function autosaveWaiverDraftAction(
   const opened = await budgetedDoor(token, "autosave");
   if (opened === "rate") return "rate";
   // Only a counter code saves on each step, as only its form offers it.
-  if (!opened || opened.key.kind !== "counter" || opened.key.purpose !== "waiver_link")
-    return "closed";
+  if (opened?.key.kind !== "counter") return "closed";
   return autosaveWaiverDraftThrough(opened.key, formData);
-}
-
-/**
- * **Open a counter link on this phone** (attacker review S1): the first phone
- * to tap claims the link and keeps the claim in a cookie; any later phone is
- * told the code is open elsewhere. Same per-IP bucket as the page's other acts.
- */
-export async function claimCounterLinkAction(token: string) {
-  if (typeof token !== "string") redirect("/");
-  const path = `/waivers/${token}`;
-  const ip = await clientIp();
-  if (
-    !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction)).allowed
-  ) {
-    redirect(`${path}?error=rate`);
-  }
-  const device = await claimCounterLink(await getDb(), token);
-  if (device) await keepCounterDevice(token, device);
-  redirect(path);
 }
 
 export async function saveWaiverDraftAction(token: string, formData: FormData) {

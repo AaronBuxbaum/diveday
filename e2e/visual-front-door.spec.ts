@@ -1000,8 +1000,8 @@ for (const scheme of ["light", "dark"] as const) {
      * Its own `test.describe` because `signedInAsOwner()` is a describe-scoped
      * `storageState`; the sibling "public" block must stay anonymous.
      *
-     * Shot on `/onboard` rather than the landing page because it is the
-     * shortest marketing surface (one sentence and a mail), so the duplicated
+     * Shot on `/find-your-booking` rather than the landing page because it is
+     * a short marketing surface (one field), so the duplicated
      * body below the header costs the least. The header markup is identical
      * on every marketing route, so this frame is the state, not a special case
      * of it.
@@ -1012,7 +1012,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the marketing header renders true to the design for a signed-in staffer (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/onboard");
+        // Not `/onboard`: a funnel door wears the wordmark and no bar (#2746).
+        await page.goto("/find-your-booking");
         // Wait on the signed-in CTA itself, not the page heading: the heading
         // renders in the static shell, so it proves nothing about the
         // session-aware nav having streamed in over MarketingNavFallback.

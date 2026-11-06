@@ -8,7 +8,7 @@ import { noticeRole } from "@/components/ui/tone";
 import type { Shop } from "@/db/schema";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { claimCounterLinkAction, emailFreshWaiverLinkAction } from "./actions";
+import { emailFreshWaiverLinkAction } from "./actions";
 
 /**
  * What the rescue send actually did, as one-word codes on the URL — the
@@ -93,38 +93,6 @@ export function UnavailableWaiverLink({ t }: { t: DiverTranslator }) {
 }
 
 /**
- * **A counter QR not yet opened on any phone** (attacker review S1). The code
- * opens on one phone only, so the diver says "this one" with a tap; the next
- * phone to scan it is turned away (`CounterElsewhereCard`).
- */
-export function CounterClaimCard({
-  token,
-  t,
-  via = "counter",
-}: {
-  token: string;
-  t: DiverTranslator;
-  /** A counter QR, or the waiver-only door a party member's join email carried (#3986). */
-  via?: "counter" | "mail";
-}) {
-  const mail = via === "mail";
-  return (
-    <ExpiredLinkCard
-      wordmark
-      glyph="sent"
-      title={t(mail ? "waiver.doorClaimTitle" : "waiver.counterClaimTitle")}
-      text={t(mail ? "waiver.doorClaimBody" : "waiver.counterClaimBody")}
-    >
-      <form action={claimCounterLinkAction.bind(null, token)}>
-        <SubmitButton pendingLabel={t("words.busy.opening")} className={buttonClass()}>
-          {t("waiver.counterClaimButton")}
-        </SubmitButton>
-      </form>
-    </ExpiredLinkCard>
-  );
-}
-
-/**
  * A minor's release on a door the desk never vouched a guardian for (issue
  * #4003): said instead of a form that Sign would refuse.
  */
@@ -134,24 +102,6 @@ export function GuardianAtCounterCard({ t }: { t: DiverTranslator }) {
       wordmark
       title={t("waiver.guardianAtCounterTitle")}
       text={t("waiver.guardianAtCounter")}
-    />
-  );
-}
-
-/** A counter QR, or an emailed door, already open on another device: it opens nothing here. */
-export function CounterElsewhereCard({
-  t,
-  via = "counter",
-}: {
-  t: DiverTranslator;
-  via?: "counter" | "mail";
-}) {
-  const mail = via === "mail";
-  return (
-    <ExpiredLinkCard
-      wordmark
-      title={t(mail ? "waiver.doorElsewhereTitle" : "waiver.counterElsewhereTitle")}
-      text={t(mail ? "waiver.doorElsewhereBody" : "waiver.counterElsewhereBody")}
     />
   );
 }

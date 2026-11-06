@@ -1,7 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import { effectiveWaiverForBooking, waiverStanding } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
@@ -33,16 +32,6 @@ async function personByEmail(db: AppDb, shopId: string, email: string) {
     .where(and(eq(people.shopId, shopId), eq(people.email, email), isNull(people.deletedAt)))
     .limit(1);
   return row ?? null;
-}
-
-/** A record with its physician answer sealed as the desk seals one: an unsealed stamp is no clearance. */
-async function insertSealed(db: AppDb, values: typeof waiverRecords.$inferInsert) {
-  const [row] = await db.insert(waiverRecords).values(values).returning();
-  if (!row) throw new Error("fixture insert failed");
-  await db
-    .update(waiverRecords)
-    .set({ medicalAnswerSeal: medicalAnswerSealFor(row) })
-    .where(eq(waiverRecords.id, row.id));
 }
 
 async function accountPersonId(db: AppDb, email: string) {
@@ -271,7 +260,7 @@ describe("a superseded hold (issue #3780)", () => {
       "Cleared Cal",
     );
     const signedAt = new Date(nowDate().getTime() - 60 * 60 * 1000);
-    await insertSealed(db, {
+    await db.insert(waiverRecords).values({
       ...heldRecord({
         shopId: shop.id,
         personId: person.id,
@@ -299,7 +288,7 @@ describe("a superseded hold (issue #3780)", () => {
       "Cleared Cleo",
     );
     const signedAt = new Date(nowDate().getTime() - 60 * 60 * 1000);
-    await insertSealed(db, {
+    await db.insert(waiverRecords).values({
       ...heldRecord({ shopId: shop.id, personId: person.id, bookingId: null, template, signedAt }),
       supersededAt: null,
       medicalClearedAt: signedAt,
@@ -480,10 +469,7 @@ describe("merging a duplicate over a medical hold (issue #3815)", () => {
       medicalClearedByPersonId: f.importer,
       medicalClearanceDocumentFromDiver: false,
     };
-    // Sealed as the desk seals one: an unsealed stamp is no clearance.
-    await f.db
-      .insert(waiverRecords)
-      .values({ ...cleared, medicalAnswerSeal: medicalAnswerSealFor(cleared) });
+    await f.db.insert(waiverRecords).values(cleared);
     const duplicate = await importDuplicate(f);
     expect(await mergeInto(f, duplicate.id, f.rhea.id)).toMatchObject({ ok: true });
     expect(await standing(f, f.rhea.id)).toBe("signed");

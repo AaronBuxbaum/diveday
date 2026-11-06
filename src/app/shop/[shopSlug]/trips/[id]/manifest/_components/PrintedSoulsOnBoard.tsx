@@ -10,9 +10,16 @@ import type { TripManifest } from "@/lib/manifests";
 export function PrintedSoulsOnBoard({
   manifest,
   vesselName,
+  isDeparture = true,
   t,
 }: {
   manifest: TripManifest;
+  /**
+   * At the dock. After a dive the overlap is never offered as a reason: a crew
+   * member then is back aboard or not, never "confirm who sails" (the same
+   * rule as `CrewRollCall`'s, #2745 adversarial review).
+   */
+  isDeparture?: boolean;
   /**
    * The boat this departure sails on, leading the line (fourth review, item
    * 11): the sheet in a coastguard's hands said how many were aboard and never
@@ -23,7 +30,9 @@ export function PrintedSoulsOnBoard({
 }) {
   // How many of the named crew another departure claims at the same hours
   // (issue #1779) — the head figure's own qualification, printed beside it.
-  const crewToConfirm = manifest.crew.filter((member) => (member.clashes ?? []).length > 0).length;
+  const crewToConfirm = isDeparture
+    ? manifest.crew.filter((member) => !member.rollCall && (member.clashes ?? []).length > 0).length
+    : 0;
   return (
     <>
       {/* Print-only static facts: divers carried and crew named, never the

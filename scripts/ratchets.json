@@ -1014,7 +1014,7 @@
     "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
     "budgets": {
       "CLAUDE.md": 45,
-      "AGENTS.md": 1042,
+      "AGENTS.md": 1040,
       ".claude/rules/*.md (without paths: frontmatter)": 0,
       ".claude/skills/*/SKILL.md (description lines)": 770,
       ".claude/agents/*.md (description lines)": 130
@@ -1533,12 +1533,12 @@
   },
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 314,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 312,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 396,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 306,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 302,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 337,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 334,
     "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
@@ -1605,7 +1605,7 @@
     ],
     "src/app/(marketing)/page.tsx": 436,
     "src/app/(token)/ready/[token]/page.tsx": 617,
-    "src/app/s/[shopSlug]/page.tsx": 645,
+    "src/app/s/[shopSlug]/page.tsx": 644,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 464,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 576,
@@ -1615,7 +1615,7 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 578,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 457
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 455
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

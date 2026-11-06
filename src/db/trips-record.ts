@@ -15,6 +15,7 @@ import {
 import { cache } from "react";
 import { STAFF_ROLES } from "@/lib/authz";
 import { sellableSeats } from "@/lib/boat-safety";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { TripCrewRole } from "@/lib/crew-roles";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
@@ -56,6 +57,7 @@ import {
   people,
   personRoles,
   rollCallEvents,
+  shops,
   tripAssignments,
   tripDives,
   tripScheduleDays,
@@ -83,6 +85,7 @@ import { liveTrip, notRehearsal } from "./trips-live";
 import {
   bookedDiversCount,
   bookedSnorkelersCount,
+  firstYardDayOn,
   heldSeatCounts,
   seatHeld,
   tripAssignedCrewCount,
@@ -581,7 +584,9 @@ export type UpdateTripOutcome =
   | { ok: false; reason: "boat_not_found" }
   | { ok: false; reason: "capacity_above_certificate"; detail: { limit: number } }
   | { ok: false; reason: "planned_dives_below_history"; detail: { recordedDiveCount: number } }
-  | { ok: false; reason: "meeting_day_has_roll_call"; detail: { dayNumber: number } };
+  | { ok: false; reason: "meeting_day_has_roll_call"; detail: { dayNumber: number } }
+  /** The hull is in the yard on `on`, the first day the edited departure would hold it (#4009). */
+  | { ok: false; reason: "boat_out_of_service"; on: CalendarDate };
 
 /**
  * Edits a trip's own details/schedule/dives. Locks the trip row (mirroring
@@ -771,6 +776,62 @@ function patchAtTripLock(
   };
 }
 
+/**
+ * **A hull in the yard sails nothing** (loop 5, row 5; issues #3994, #4009):
+ * the first yard day an edit would sail into, or null. Asked only of an edit
+ * that changes the hull or the days, under the window's share lock in the
+ * edit's own transaction, so a window saved mid-save makes the save wait and
+ * then refuse. A title, a meeting point or a self-guided toggle on a departure
+ * whose hull went to the yard later changes neither, and is saved (#4026).
+ */
+async function yardDayAfterEdit(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  existing: Pick<Trip, "boatId" | "diveMode" | "startsAt">,
+  requested: Partial<TripPatch>,
+  patch: TripPatch,
+): Promise<CalendarDate | null> {
+  const nextMode = patch.diveMode ?? existing.diveMode;
+  const nextBoatId =
+    nextMode === "boat" ? (patch.boatId === undefined ? existing.boatId : patch.boatId) : null;
+  const movesHull = nextBoatId !== existing.boatId || nextMode !== existing.diveMode;
+  const movesDays =
+    requested.scheduleDays !== undefined ||
+    patch.startsAt.getTime() !== existing.startsAt.getTime();
+  if (!nextBoatId || !(movesHull || movesDays)) return null;
+  return firstYardDayOn(
+    tx,
+    shopId,
+    nextBoatId,
+    await legsAfterEdit(tx, tripId, patch),
+    await shopTimeZone(tx, shopId),
+  );
+}
+
+/**
+ * The meeting days a departure will hold its hull on after this edit: the
+ * patch's own when it names them, else the stored rows, else its one window.
+ */
+async function legsAfterEdit(tx: DbExecutor, tripId: string, patch: TripPatch) {
+  if (patch.scheduleDays?.length) return patch.scheduleDays;
+  const stored = await tx
+    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, tripId));
+  return stored.length > 0 ? stored : [patch];
+}
+
+async function shopTimeZone(tx: DbExecutor, shopId: string) {
+  const [shop] = await tx
+    .select({ timeZone: shops.timezone })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!shop) throw new Error("shopTimeZone: the departure's shop is missing");
+  return shop.timeZone;
+}
+
 async function updateTripRecord(
   db: AppDb,
   shopId: string,
@@ -915,6 +976,8 @@ async function updateTripRecord(
         }
       }
     }
+    const yardDay = await yardDayAfterEdit(tx, shopId, tripId, existing, requested, patch);
+    if (yardDay) return { ok: false, reason: "boat_out_of_service", on: yardDay };
     const changedAt = nowDate();
     const beforeArrival = tripArrivalSnapshot(existing);
 
@@ -1310,6 +1373,10 @@ export function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
   );
 }
 
+/**
+ * Call a departure off. Putting one back is `reinstateTrip`
+ * (`trips-minimum.ts`), the one door that asks the yard first (issue #4027).
+ */
 export async function setTripStatus(
   // Also callable inside a transaction: callers that already take the trip row
   // lock must first hold the revision fence (the blow-out and one-trip cancel
@@ -1317,7 +1384,7 @@ export async function setTripStatus(
   db: DbExecutor,
   shopId: string,
   tripId: string,
-  status: "scheduled" | "cancelled",
+  status: "cancelled",
   now: Date = nowDate(),
   options: { actorPersonId?: string | null } = {},
 ) {
@@ -1328,21 +1395,15 @@ export async function setTripStatus(
     await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
     // Only a real call-off is news to the crew: a departure already cancelled
     // being cancelled again tells nobody twice.
-    const [before] =
-      status === "cancelled"
-        ? await tx
-            .select({ status: trips.status })
-            .from(trips)
-            .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-            .limit(1)
-        : [];
+    const [before] = await tx
+      .select({ status: trips.status })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+      .limit(1);
     const [trip] = await tx
       .update(trips)
-      // Stamped on the way into `cancelled` and **cleared** on the way back to
-      // `scheduled`: an un-cancelled departure that kept a stale cancellation date
-      // would tell the owed-refund queue it had been owed since the day the shop
-      // changed its mind, and would put a date on a trip that is sailing.
-      .set({ status, cancelledAt: status === "cancelled" ? now : null })
+      // Stamped on the way into `cancelled`; `reinstateTrip` clears it.
+      .set({ status, cancelledAt: now })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
     // A cancelled departure keeps its bookings, so the booking cascade never
@@ -1350,7 +1411,7 @@ export async function setTripStatus(
     // on the same executor (and so inside the blow-out's transaction when there
     // is one). Reinstating does not resurrect them: the units went back on the
     // wall, and prep re-assigns from what is actually free.
-    if (trip && status === "cancelled") {
+    if (trip) {
       await releaseUnclaimedGearReservationsForTrips(tx, { shopId, tripIds: [tripId] });
       // The crew hear it was called off (ADR 20261009-crew-hear-about-their-boats);
       // the caller tells them once this commits (`flushUrgentCrewNotices`).

@@ -6,7 +6,6 @@ import { getOrder, isVoidableCounterOrder } from "./orders";
 
 export { pendingCounterPayment } from "./counter-payment-hold";
 export { isStaleCounterClaim } from "./orders";
-export { hasRequiredStepUp } from "./step-up";
 
 /**
  * The order page's question in one call: the order, what this person may do

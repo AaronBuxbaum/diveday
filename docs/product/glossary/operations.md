@@ -493,8 +493,7 @@
   (ADR 20260729-staffing-waiver-audit-and-localized-copy, amendment of 2026-10-23). A **medical
   alert for the crew** joins the sealed set the same way, only when there is one; the version 2
   (erased) seal leaves it out, so a version 2 record carrying an alert reads `invalid`. The
-  physician's answer on a referral is outside this seal and inside its own, the **physician answer
-  seal**, which the same check reads: a forged clearance is `invalid` too.
+  physician's answer on a referral is outside every seal: see **Physician clearance**.
 
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, prep needs,
@@ -1129,7 +1128,7 @@
 - **Shore alert contact** — the one person outside the shop's accounts who hears a **stale roll
   call**: an email address on the emergency reference page, beside the free-text shore contact a
   crew reads, saved only with the box that records they agreed (who ticked it, and when), and sent
-  nothing until the address itself confirms by the link DiveDay mails it. Changing the address asks
+  from the save (#4060); the link DiveDay mails it only adds a confirmed badge. Changing the address asks
   for both again; clearing it clears them. Their copy names the shop and its phone, the departure,
   the dive and the counts, in the shop's language, with no names and one link, the one that takes
   the address off the shop (H-20261014-stale-roll-call-recipients, `src/lib/shore-alert-contact.ts`, `src/db/shore-alert-tokens.ts`).
@@ -1139,8 +1138,8 @@
   hourly pass after that, while a started count or a person recorded not back aboard can alert at
   the first pass past the half hour. Once per departure the owners are emailed ("after the boat was
   due back at 4:00 PM EDT") and every device following the manifest is pushed
-  (`sendStaleRollCallAlerts`), and the Today row says when. A confirmed **shore alert contact** is
-  emailed too, under a claim of its own (H-20261014-stale-roll-call-recipients). It informs and never closes or changes the count.
+  (`sendStaleRollCallAlerts`), and the Today row says when. The **shore alert contact** is
+  emailed too, from the save, under a claim of its own (H-20261014-stale-roll-call-recipients). It informs and never closes or changes the count.
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking
@@ -1728,7 +1727,7 @@
   whole questionnaire. It opens only while the release waits on a physician (`awaitsPhysician`)
   on a held seat whose departure has not ended plus a day, and prints without the browser's
   URL header and footer. DiveDay decides nothing from it; staff record the **physician clearance**.
-  It opens from the diver's thread link or a party member's emailed door (issue #4003); a diver
+  It opens from the diver's thread link; a diver
   referred on the counter QR gets the same sheet printed at the desk, from the seat on the counter
   queue, with the answers left off (issue #3984).
 - **Diver-sent doctor's form** — the signed physician's form a referred diver sends from the
@@ -1769,7 +1768,9 @@
   same letter against that referral is the ordinary path and clears it. And it records **evidence** —
   the evaluation itself, or the clinician's name — because without one the row says only that a
   member of the shop's own staff pressed a button. Any live staff member may record one, and the
-  row names who did. Issue #1252.
+  row names who did. Issue #1252. A recorded clearance counts as written: it carries no seal of its
+  own, and the signature's seal never covers it (decided 2026-11-06, under the experience-first
+  rule), so recording one never re-seals the release and never holds a diver on a digest.
 
   **A recorded answer is final for that waiver record**, cleared or not cleared — confirmed by the
   owner on 2026-09-10 (issue #1366) as the shipped default rather than a first cut. The two stamps
@@ -1795,32 +1796,6 @@
   did, evaluated no earlier than the day it was signed. A booking whose own release is the open
   referral still waits for a physician, and a referral a seat's fresh link superseded can still be
   cleared: superseding moves a hold off a seat and answers nothing.
-- **Physician answer seal** — the keyed digest (`waiver_records.medical_answer_seal`, issue #3949)
-  over a **physician clearance** or refusal as the desk recorded it: which stamp, who recorded it
-  and when, the evaluation date, the physician's name and whether the form came from the diver,
-  bound to the record's id and shop. `recordMedicalEvaluation` writes it once, in the same guarded
-  update as the answer, and nothing re-seals it, because a recorded answer is final. It is separate
-  from the **integrity-sealed waiver**'s seal on purpose: the answer is the shop's later act, not
-  what the diver signed, so recording one never re-seals the signature, and a refile, a guardian
-  redaction or an erasure re-seals the signature without touching it (every field it covers
-  survives all three; the evaluation's document link does not, so it is outside, and stays
-  outside by decision of issue #3987: erasure and media deletion rewrite the link, so sealing it
-  would break the seal on a legitimate act, and a swapped link lifts nothing, because the stamps
-  do. Catching a swapped letter needs the document's own hash, not the link). The clearance
-  stamp is what lifts a referral, so the check fails closed, at read time: every read that decides
-  boarding (readiness, the roster, the manifest, check-in), and every one that does not (the
-  import's hold check, the token page's completed record, the signature log), verifies the seal and reads a clearance
-  whose seal is missing or wrong as no clearance, so the referral holds; the nightly pass is defence
-  in depth, not the gate. There it reads a stamp with no matching seal, a seal with no answer, or a
-  seal copied from another record as `invalid`, and holds the diver with `waiver_seal_failed` like
-  any other changed release. An unsealed clearance (a stamp and no seal at all: an answer an older
-  build wrote while the seal's deploy rolled out, or a forgery that never touched the seal) is no
-  answer, never backfilled and never trusted: the desk records the physician's answer again, which
-  seals it and lifts a nightly hold the stamp alone caused, after writing a line on the diver's
-  trail (`medical_unsealed_clearance_replaced`) that a stamp was replaced. A seal that is present but wrong is
-  tampering: that row stays as evidence, and the way out is a fresh signature. The
-  `superseded_at` column stays outside both seals: superseding answers nothing, and a superseded
-  referral still holds by time.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded
@@ -2305,9 +2280,9 @@
   refused. See [20260726-staff-invite-accounts](../../architecture/decisions/20260726-staff-invite-accounts.md).
 - **Your days** — a diver's other bookings with the shop, listed on one booking's page as "Your
   days with {shop}": upcoming seats, and the six newest past dive days numbered as the recap
-  stamps them (`diveDayOrdinal`, so two boats on one date carry one number). A row is a send,
-  never a door: "Email me the link" mails that day's own page (a fresh readiness link, or a recap
-  link for a past day) to the address on file, so one link still opens one booking (H-20261014-other-days-send-fresh).
+  stamps them (`diveDayOrdinal`, so two boats on one date carry one number). A row's "Open"
+  takes the diver to that day's own page: its delivered readiness link, or a recap link for a past
+  day (#4059, superseding the mailed send of H-20261014-other-days-send-fresh).
   **Drawn only on a delivered link** (security review of layer r5-4, F1): a readiness link DiveDay
   mailed to the contact on file (`booking_capabilities.delivered`), never the one a booking or a
   seat claim redirects its browser to, because that browser proved only that it typed a name and
@@ -2401,7 +2376,7 @@
 
 - **Crew thanks** — the optional line a diver leaves under their review for one crew member of that departure ("Keiko made my first wreck easy"), on the recap's review form (loop 5, row 6). It is `trip_reviews.crew_thanks` with `crew_thanks_person_id`, both or neither, at most 200 characters, and it is never published: only that crew member (on their Today, beside the tips line, newest two of the last 14 days, without the diver's name) and the shop's owners and managers (the people who may reply to reviews) see it, on the reviews ledger too. A person not on the departure's crew is dropped at the write. An owner or manager can hide one from the ⋯ menu on the review row (`crew_thanks_hidden_at`, with who did it in `crew_thanks_hidden_by_person_id`; the words stay for the shop); the hide stays through any revision the diver makes, and only an owner or manager showing it lifts it. A diver's erasure clears it with their review. The words are the diver's, not the crew member's: erasing the crew member a line names keeps the line and its pointer, as erasure keeps a person's name in other people's words (Aaron, 2026-11-05, #3913). The recap's menu sends a `crewThanksChoice` (`src/lib/crew-thanks-choice.ts`), a digest of the departure and the crew member, never their person id; the writer resolves it against that departure's crew (#3912). `src/db/crew-thanks.ts`.
 - **Seat-sold alert** — one email an hour, at most, to a shop's owners and managers while seats are selling (loop 5, row 8): "3 seats sold in the last hour" with a line per departure, never a diver or an amount. It is a Features switch, `seatSoldAlerts`, and the one that starts **off** for a new shop (owner decision 2026-11-05); a seat a staffer put on the boat is not news to the desk, and a cancelled seat is not a sale. The hourly `seat-sold-alerts` scan claims `shops.seat_sold_alerted_through` with a compare-and-set so a batch is sent once, and gives it back if nobody could be reached. `src/db/seat-sold-alerts.ts`.
-- **Out of service** — a boat in the yard: one window of shop-local calendar days, both ends inclusive, with the shop's own one-line reason ("Hull repaint", at most 120 characters), set on the boat's papers under Settings → Boats (loop 5, row 5). Every path that puts a departure on that hull refuses it when any day the departure *holds the hull* is in the window: the builder's add and the pattern's second departure, a trip's details save (`boat_out_of_service` in `tripDetailsPatch`), a move (`moveTrip`), a copy (`duplicateTrip`; Copy last year's week leaves that departure off), and a series, which is refused whole when any week it would put on the board lands in the window (#3915). The nightly roll leaves a yard week off the board without storing a skip, so the week returns on the first roll after the window moves; a trip's Repeats row names those weeks, read when the page is drawn (#3948, #3988), and the roll reads the window under a share lock. The week board still warns, as for a window set after the departure was, but only on the day a one-day departure leaves; a multi-day span and a night dive's second day carry no warning yet (#4025). A row naming a boat this shop does not own reads as always in the yard (`HULL_NOT_IN_SHOP`): the roll puts nothing on it and names no yard week, a move refuses it, and a series on one is refused as a bad form (#3994). A move and a copy read the window under the same share lock as the roll. It is `boats.out_of_service_from` / `_until` / `_reason`, both dates or neither. It is not readiness, admission or the manifest. `src/lib/service-window.ts`.
+- **Out of service** — a boat in the yard: one window of shop-local calendar days, both ends inclusive, with the shop's own one-line reason ("Hull repaint", at most 120 characters), set on the boat's papers under Settings → Boats (loop 5, row 5). Every path that puts a departure on that hull refuses it when any day the departure *holds the hull* is in the window: the builder's add and the pattern's second departure (`createTripOrRefusal`), a trip's details save (`boat_out_of_service` from `editTrip`/`editTripSection`), a move (`moveTrip`), a copy (`duplicateTrip`; Copy last year’s week leaves that departure off), a reinstatement of a called-off departure (`reinstateTrip`, which names the yard day; #4027), and a series, which is refused whole when any week it would put on the board lands in the window (#3915). Every refusal names the first yard day, which need not be the day the departure leaves (#4026). A trip page section save asks the yard only when it can move the days or the hull (Timing, Boat), of the stored meeting days when it does not move them; a title or meeting-point fix on a departure whose hull went to the yard later is saved. A soft-deleted hull takes no new departure at all (`validateBoat`, #4027). The nightly roll leaves a yard week off the board without storing a skip, so the week returns on the first roll after the window moves; a trip's Repeats row names the run's hull and its window's last day, those weeks, and the weeks still on the board inside the window, read within the roll's horizon when the page is drawn, and says nothing for a run whose course is archived, since its roll fails anyway (#3948, #3988, #4010); and the roll reads the window under a share lock. The week board warns, as for a window set after the departure was, on every column a departure holds the hull in the window: a one-day departure, a course bar's meeting days, a liveaboard's middle day and the morning a night dive comes back, even one that left the week before (`weekBoard`'s `held`, #4025). Saving a window never refuses: a hull that must go to the yard goes. A row naming a boat this shop does not own reads as always in the yard (`HULL_NOT_IN_SHOP`): the roll puts nothing on it and names no yard week, a move refuses it, and a series on one is refused as a bad form (#3994). Every one of those doors reads the window inside its write, under the same share lock as the roll, so a window saved mid-write makes the write wait and then refuse (#4009). It is `boats.out_of_service_from` / `_until` / `_reason`, both dates or neither. It is not readiness, admission or the manifest. `src/lib/service-window.ts`.
 - **Holds the hull** — the shop-local calendar days a departure has its boat; held is nights aboard (Aaron's decision of 2026-11-06, #3994). Each meeting day holds every day from the one it leaves the dock through the one it ties up, both inclusive, in the shop's zone. A Friday-to-Sunday liveaboard holds Saturday; a night dive back at 02:00 Sunday holds Sunday, and one back at exactly 00:00 does not. Days between meeting days are not held, so a course on two Saturdays holds those two days, not the week between. A departure with no meeting-day rows is one meeting day, its own span. What every Out of service check reads (`hullHeldSpans`). Not the roll-call *Held* mark. `src/lib/service-window.ts`.
 - **Site closure** — a dive site closed for a window of shop-local calendar days with a reason (a marine-park closure, a storm-damaged mooring; loop 5, row 5), set on the site's page under Dive sites. While the shop's own day is inside it, the public site page answers not found, the sitemap leaves it out and a departure's day plan drops the link; the week board warns on a departure that visits it. It is `dive_sites.closed_from` / `closed_until` / `closure_reason`; the window is never read by readiness or the manifest. `src/db/dive-site-closures.ts`.
 - **Referral student** — a course seat whose diver finished theory and pool with another instructor and comes here for the open-water dives (loop 5, row 10). Marked on the course roster; the desk then collects the referral form and the other instructor's training record, each stamped with who collected it and when (`bookings.referred_in_at`, `referral_form_at`, `referral_record_at`, each with its staffer). Only on a course departure. What is still owed shows on the seat until both are in. `src/lib/referral-student.ts`, `src/db/referral-students.ts`.

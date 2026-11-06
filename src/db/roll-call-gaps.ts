@@ -479,11 +479,14 @@ export async function listRollCallGaps(
     // two) carries on the earlier days' numbering: the checkpoints below it
     // read the earlier days' results, not an empty count. A day whose results
     // start at the dock, or that has none yet, counts every checkpoint afresh.
+    // An undo is not a count (#4018): a `cleared`, even one that takes back an
+    // earlier day's carried mark, never says where the day's count began.
     const firstCheckpointOf = (day: number) => {
       if (day === 0) return 0;
       let first = Number.POSITIVE_INFINITY;
       for (const standing of [diverStanding.get(day), crewStanding.get(day)]) {
         for (const mark of standing?.values() ?? []) {
+          if (mark.status === "cleared") continue;
           const index = (checkpoints as readonly string[]).indexOf(mark.checkpoint);
           if (index >= 0 && index < first) first = index;
         }

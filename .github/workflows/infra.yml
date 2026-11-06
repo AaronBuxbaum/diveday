@@ -92,15 +92,13 @@ jobs:
     # this job by propagation. GitHub's actual rule (confirmed the hard way —
     # every workflow_dispatch run of this workflow silently no-op'd until this
     # was added): a job whose `needs:` job was itself skipped is skipped by
-    # default regardless of this job's own `if:`, unless that `if:` is
-    # wrapped in `always()`. ci.yml's real-postgres/visual-report jobs
-    # (`db-surface-changes` gate) already carry this wrapper; this job's
-    # condition below was written without it.
+    # default unless its `if:` includes a status function. !cancelled() survives
+    # that skipped dependency and lets cancellation stop an obsolete synth/diff.
     # `command: deploy` also lands here, not just `command: diff`: the
     # `deploy` job below `needs: diff`, so its required-reviewer approval
     # gate comes after a fresh synth+diff is already visible in this run,
     # not blind against whatever a past PR's diff comment happened to show.
-    if: ${{ always() && ((github.event_name == 'workflow_dispatch' && (inputs.command == 'diff' || inputs.command == 'deploy')) || (github.event_name == 'pull_request' && needs.infra-changed.outputs.changed == 'true')) }}
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && (inputs.command == 'diff' || inputs.command == 'deploy')) || (github.event_name == 'pull_request' && needs.infra-changed.outputs.changed == 'true')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     # GitHubActionsCdkDiffRole's trust condition (infra-stack.ts §18) accepts
@@ -233,10 +231,9 @@ jobs:
   comment:
     name: Post the cdk diff
     needs: diff
-    # `always()` so a red diff (a destructive change) still gets its comment;
-    # skipped when the diff never ran, and for a fork's pull request, which
-    # got no credentials and no diff.
-    if: ${{ always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && needs.diff.result != 'skipped' }}
+    # A failed diff (including a destructive change) still gets its comment;
+    # cancellation stops reporting, and a skipped diff or fork gets no comment.
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && needs.diff.result != 'skipped' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -295,7 +292,7 @@ jobs:
     needs: diff
     # Three things this condition has to do at once, each learned the hard way:
     #
-    # `always() &&` -- skip propagation is *transitive*, and a job's own `if:`
+    # A status function -- skip propagation is *transitive*, and a job's own `if:`
     # does not override it. `infra-changed` is skipped on every
     # workflow_dispatch (its condition is pull_request-only); `diff` survives
     # that only because of the same wrapper; and `deploy` still inherited the
@@ -307,15 +304,17 @@ jobs:
     # `needs.diff.result: success`, `full condition: true`, while this job,
     # same run, same `needs:`, reported "This job was skipped".
     #
-    # `needs.diff.result == 'success'` -- `always()` means this job's `if:`
+    # !cancelled() keeps that skipped-dependency behavior while honoring cancellation.
+    #
+    # `needs.diff.result == 'success'` -- a status function means this job's `if:`
     # fully replaces the default success-gating, so without this a failed
     # synth/diff would not stop the deploy from proceeding straight to the
-    # reviewer-approval gate. (It also has to survive `always()` itself, which
+    # reviewer-approval gate. (It also has to survive the status function itself, which
     # would otherwise run this job even when `diff` failed outright.)
     #
     # `inputs.command == 'deploy'` -- `diff` runs for both commands, so this is
     # what keeps a `command: diff` dispatch from deploying.
-    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.command == 'deploy' && needs.diff.result == 'success' }}
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.command == 'deploy' && needs.diff.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     # The approval gate. GitHub only issues an OIDC token for a job that

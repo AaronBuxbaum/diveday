@@ -115,11 +115,10 @@ function SeenTap({
  * the dock checkpoint, and on a departure that has not sailed, it does not
  * render at all: there is nothing yet to have seen.
  *
- * **`print:hidden`, like every sibling after-dive control** (`TripPlanSection`,
- * `ExecutedDiveLog`, `CatchUpStrip`, `BuddyTeamsPanel`). The printed packet is
- * the fallback under the fallback — a sheet a crew carries when the phones are
- * gone — and a page of species buttons nobody can press is paper spent on an
- * ornament. The tally is on the trip page and in the shop's own export.
+ * **Never on paper**, like every sibling after-dive control: the Boat tab
+ * prints its sheet (`BoatTabSheet`), and a page of species buttons nobody can
+ * press is paper spent on an ornament. The tally is on the trip page and in
+ * the shop's own export.
  *
  * **Boat targets and boat contrast.** 44px chips with `touch-manipulation`, on the
  * manifest's Boat mode palette. A crew is doing this
@@ -176,7 +175,7 @@ export function SeenGroup({
   };
   const headingId = scopedId(idPrefix, "seen-heading");
   return (
-    <section className="print:hidden" aria-labelledby={headingId}>
+    <section aria-labelledby={headingId}>
       <h2 id={headingId} className={SECTION_TITLE_CLASS}>
         {copy.heading}
       </h2>

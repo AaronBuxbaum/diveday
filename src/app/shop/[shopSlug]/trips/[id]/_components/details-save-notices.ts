@@ -33,11 +33,14 @@ export const DETAILS_SAVE_NOTICES = {
     key: "trips.notices.capacityAboveCertificate",
     countKey: "trips.notices.capacityAboveCertificateCount",
   },
-  // Loop 5, row 5: the hull is in the yard on this departure's day.
+  // Loop 5, row 5: the hull is in the yard on a day this departure holds it,
+  // named when the redirect carries it (issue #4026): it need not be the day
+  // the departure leaves.
   "boat-out-of-service": {
     form: "details",
     tone: "danger",
     key: "trips.notices.boatOutOfService",
+    onKey: "trips.notices.boatOutOfServiceOn",
   },
   "planned-dives-below-history": {
     form: "details",

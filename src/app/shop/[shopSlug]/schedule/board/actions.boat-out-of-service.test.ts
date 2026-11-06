@@ -110,6 +110,8 @@ describe("a hull in the yard, at every builder door", () => {
       ),
     );
     expect(to).toContain("builder=boat-out-of-service");
+    // Issue #4026: the notice names the yard day.
+    expect(to).toContain(`on=${dayFromNow(shop.timezone, 18)}`);
     expect(await departuresOn(db, boat.id)).toEqual([{ id: trip.id, startsAt: trip.startsAt }]);
   });
 
@@ -135,6 +137,30 @@ describe("a hull in the yard, at every builder door", () => {
     );
     expect(to).toContain("builder=copied");
     expect(await departuresOn(db, boat.id)).toHaveLength(2);
+  });
+
+  // Issues #4009, #4026: the single add asks in its write and names the day.
+  it("refuses a single add on the window's first day, naming it", async () => {
+    const { db, shop, boat } = await ownerWithHullInTheYard();
+    const day = dayFromNow(shop.timezone, 17);
+    const to = await redirectedTo(() =>
+      addDepartureAction(
+        shop.slug,
+        form({
+          title: "One more on Hull B",
+          date: day,
+          startTime: "08:00",
+          endTime: "12:00",
+          capacity: "10",
+          plannedDives: "2",
+          diveMode: "boat",
+          boatId: boat.id,
+        }),
+      ),
+    );
+    expect(to).toContain("builder=boat-out-of-service");
+    expect(to).toContain(`on=${day}`);
+    expect(await departuresOn(db, boat.id)).toHaveLength(1);
   });
 
   it("refuses a weekly series whose second week lands in the window, and adds no week", async () => {

@@ -185,6 +185,12 @@ export function shiftInstantByCalendarDays(date: Date, days: number, timeZone: s
   return wallTimeToUtc(addCalendarDays(utcToWallTime(date, timeZone), days), timeZone);
 }
 
+/** The next local midnight after `date` in `timeZone`: the instant its local day ends. */
+export function endOfLocalDay(date: Date, timeZone: string): Date {
+  const next = addCalendarDays(utcToWallTime(date, timeZone), 1);
+  return wallTimeToUtc({ ...next, hour: 0, minute: 0 }, timeZone);
+}
+
 /**
  * Wall-clock delta between two wall times, in milliseconds — pure calendar
  * arithmetic on the local reading itself (no timezone/DST involved, since a

@@ -1,6 +1,7 @@
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { type FormNotice, noticeFromParam } from "@/lib/staff-notices";
 import { tripGateBinding, verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { DETAILS_SAVE_NOTICES } from "./details-save-notices";
@@ -37,6 +38,8 @@ const NOTICE_KEYS: Record<
     values?: Record<string, string>;
     /** The words name the seat's diver (`TripNoticeInput.roster`); said only when known. */
     named?: true;
+    /** The words name a shop-local day (`TripNoticeInput.on`); said only when it is a real date. */
+    onKey?: StaffMessageKey;
   }
 > = {
   saved: { form: "details", tone: "success", key: "trips.notices.saved" },
@@ -55,6 +58,13 @@ const NOTICE_KEYS: Record<
   // Refused: the boat may be on the water (`cancelDeparture`). Nothing changed.
   "cancel-underway": { form: "lifecycle", tone: "danger", key: "trips.notices.cancelUnderway" },
   reinstated: { form: "lifecycle", tone: "success", key: "trips.notices.reinstated" },
+  // Refused: its hull went to the yard meanwhile (issue #4027). Nothing changed.
+  "reinstate-boat-out-of-service": {
+    form: "lifecycle",
+    tone: "danger",
+    key: "trips.notices.reinstateBoatOutOfService",
+    onKey: "trips.notices.reinstateBoatOutOfServiceOn",
+  },
   crew: { form: "crew", tone: "success", key: "trips.notices.crew" },
   "crew-conflict": { form: "crew", tone: "danger", key: "trips.notices.crewConflict" },
   "note-added": { form: "roster", tone: "success", key: "trips.notices.noteAdded" },
@@ -820,6 +830,8 @@ export type TripNoticeInput = {
   locale: string;
   /** The seat `?bid=` names, for a notice whose words name its diver. */
   bid?: string;
+  /** The shop-local day `?on=` names, for a notice whose words name a yard day. */
+  on?: string;
   /**
    * The page's own roster, where that seat's name is read: never from the URL,
    * and a `bid` that is not on it names nobody.
@@ -842,6 +854,7 @@ export function resolveTripNotice({
   tripId,
   locale,
   bid,
+  on,
   roster,
 }: TripNoticeInput): FormNotice | undefined {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
@@ -866,10 +879,15 @@ export function resolveTripNotice({
           tripGateBinding(tripId, notice, notice === "participant-type-cert" ? bid : null),
         )
       : null;
+  // The day comes off the URL: only a real calendar date is named, and a URL
+  // without one gets the plain sentence.
+  const day = banner.onKey && on && isValidCalendarDate(on) ? on : undefined;
   const text = refusal
     ? tripAdmissionRefusalText(t, refusal, locale)
-    : parsedCount !== undefined && banner.countKey
-      ? t(banner.countKey, { count: parsedCount })
-      : t(banner.key, banner.values);
+    : day && banner.onKey
+      ? t(banner.onKey, { date: formatCalendarDate(day, locale) })
+      : parsedCount !== undefined && banner.countKey
+        ? t(banner.countKey, { count: parsedCount })
+        : t(banner.key, banner.values);
   return { form: tripNoticeForm(form, banner.form), tone: banner.tone, text };
 }

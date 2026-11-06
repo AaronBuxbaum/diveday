@@ -25,7 +25,7 @@ import {
   editTripSection,
   getTripWithBooked,
   listTripScheduleDays,
-  reinstateTripClearingMinimum,
+  reinstateTrip,
   type TripPatch,
   type UpdateTripOutcome,
 } from "@/db/trips";
@@ -37,7 +37,6 @@ import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { boatServiceWindow } from "@/lib/service-window";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { deleteStoredImage, storeArrivalImage } from "@/lib/storage";
@@ -150,6 +149,7 @@ const detailsSchema = z.object({
 const UPDATE_TRIP_NOTICE: Record<Extract<UpdateTripOutcome, { ok: false }>["reason"], string> = {
   invalid: "invalid",
   not_found: "invalid",
+  boat_out_of_service: "boat-out-of-service",
   capacity_below_booked: "capacity-below-booked",
   boat_not_found: "boat-not-found",
   capacity_above_certificate: "capacity-above-certificate",
@@ -357,8 +357,8 @@ async function saveDepartureDetails(
       boatCapacity: nextBoat?.capacity ?? null,
       // And its certificate (H-20261009-certificate-caps-seats): no seat above it is sold.
       boatCertifiedPassengers: nextBoat?.certifiedPassengers ?? null,
-      // And its yard window (loop 5, row 5): a hull out of service sails nothing.
-      boatOutOfService: boatServiceWindow(nextBoat),
+      // Its yard window is asked in the write, under the window's lock, of the
+      // days the departure will really hold (`updateTripRecord`, #4009).
       diveMode: patchDiveMode,
       boatId: nextBoatId,
       requiresPayment: gate?.requiresPayment ?? false,
@@ -494,9 +494,6 @@ function redirectDetailsRefusal(
   if (details.reason === "price_required_by_gate") {
     redirect(noticeUrl(back, "price-required-by-gate", { form: section ?? "details" }));
   }
-  if (details.reason === "boat_out_of_service") {
-    redirect(noticeUrl(back, "boat-out-of-service", { form: section ?? "details" }));
-  }
   if (details.reason === "capacity_above_certificate") {
     redirect(
       noticeUrl(back, "capacity-above-certificate", {
@@ -550,6 +547,12 @@ function redirectUpdateRefusal(
   // Two of the three refusals carry a number into the banner ("4 divers are
   // already booked"), which is why this is a ladder over a plain table lookup
   // — but the code itself comes from one.
+  if (outcome.reason === "boat_out_of_service") {
+    // The first yard day, which need not be the day it leaves (#4026).
+    redirect(
+      noticeUrl(back, "boat-out-of-service", { on: outcome.on, form: section ?? "details" }),
+    );
+  }
   if (outcome.reason === "capacity_above_certificate") {
     redirect(
       noticeUrl(back, "capacity-above-certificate", {
@@ -623,6 +626,11 @@ export async function reinstateTripAction(shopSlug: string, tripId: string) {
   // 20260813-minimum-head-count-departures). A trip reinstated after an
   // ordinary cancellation had no minimum to clear, so this is the same
   // statement either way rather than a branch.
-  await reinstateTripClearingMinimum(await getDb(), s.user.shopId, tripId);
+  const outcome = await reinstateTrip(await getDb(), s.user.shopId, tripId);
+  // Its hull went to the yard meanwhile (issue #4027): the notice names the
+  // day, so the desk moves the departure or swaps the boat first.
+  if (!outcome.ok && outcome.reason === "boat_out_of_service") {
+    redirect(noticeUrl(back, "reinstate-boat-out-of-service", { on: outcome.on }));
+  }
   revalidateAndRedirect(back, noticeUrl(back, "reinstated"));
 }

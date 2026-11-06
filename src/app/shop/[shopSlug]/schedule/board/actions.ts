@@ -14,7 +14,7 @@ import { getShopById } from "@/db/shops";
 import { getTripLens, listTripLenses } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
-  createTrip,
+  createTripOrRefusal,
   createTripSeriesOrRefusal,
   deleteTrip,
   duplicateTripOrRefusal,
@@ -45,7 +45,6 @@ import {
   weekdaySetFrom,
 } from "@/lib/recurrence";
 import { signScheduleMoveResult } from "@/lib/schedule-move-result";
-import { boatServiceWindow } from "@/lib/service-window";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { laterHoursFromForm, MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
@@ -486,8 +485,6 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       capacity,
       boatCapacity: assignedBoat?.capacity ?? null,
       boatCertifiedPassengers: assignedBoat?.certifiedPassengers ?? null,
-      // Loop 5, row 5: the builder refuses a hull in the yard.
-      boatOutOfService: boatServiceWindow(assignedBoat),
     },
     shop,
   );
@@ -598,13 +595,14 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     );
   }
 
-  const created = await createTrip(db, {
-    ...common,
-    startsAt,
-    endsAt,
-    scheduleDays,
-  });
+  // Loop 5, row 5: a hull in the yard is refused in the write, under the
+  // window's lock, naming its first yard day (issues #4009, #4026).
+  const created = await createTripOrRefusal(db, { ...common, startsAt, endsAt, scheduleDays });
   if (!created) return await invalid();
+  if ("refusal" in created) {
+    await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+    redirect(`${back}&builder=boat-out-of-service&on=${created.firstDay}${returnWeek}`);
+  }
   await recordShopActivity(db, {
     shopId: shop.id,
     actorPersonId: session.user.personId,
@@ -684,16 +682,14 @@ async function addPatternDeparture(
       boatCertifiedPassengers: boatId
         ? (boats?.find((boat) => boat.id === boatId)?.certifiedPassengers ?? null)
         : null,
-      // Issue #3915: the second departure refuses a hull in the yard as the first does.
-      boatOutOfService: boatId
-        ? boatServiceWindow(boats?.find((boat) => boat.id === boatId))
-        : null,
     },
     shop,
   );
   if (!details.ok) return false;
   if (also.lensId && !(await getTripLens(db, shop.id, also.lensId))) return false;
-  const created = await createTrip(db, {
+  // Issue #3915: the second departure refuses a hull in the yard as the first
+  // does, in the write (#4009).
+  const created = await createTripOrRefusal(db, {
     shopId: shop.id,
     title: also.title ?? fallback.title,
     capacity: also.capacity ?? fallback.capacity,
@@ -711,7 +707,7 @@ async function addPatternDeparture(
     endsAt: details.patch.endsAt,
     scheduleDays: details.patch.scheduleDays,
   });
-  if (!created) return false;
+  if (!created || "refusal" in created) return false;
   await recordShopActivity(db, {
     shopId: shop.id,
     actorPersonId: input.actorPersonId,
@@ -806,7 +802,8 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   );
   if (!outcome.ok) {
     await trackEvent({ name: "schedule_builder_action", action: "move", outcome: outcome.reason });
-    redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}`);
+    const on = outcome.reason === "boat_out_of_service" ? `&on=${outcome.on}` : ""; // #4026
+    redirect(`${back}?builder=${outcome.reason.replace(/_/g, "-")}${on}`);
   }
   await trackEvent({ name: "schedule_builder_action", action: "move", outcome: "ok" });
   await recordShopActivity(db, {

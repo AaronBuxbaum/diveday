@@ -60,7 +60,7 @@ test("a captain adds a rider at the dock, who counts at once and only once", asy
   await expect(page.getByText("Someone by that name is already aboard.")).toBeVisible();
 });
 
-test("a note to everyone holds, refuses a link, and is recorded once sent", async ({ page }) => {
+test("a note to everyone holds, carries a link, and is recorded once sent", async ({ page }) => {
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, REEF);
@@ -69,11 +69,8 @@ test("a note to everyone holds, refuses a link, and is recorded once sent", asyn
   const box = page.getByTestId("departure-note-body");
   await expect(box).toBeVisible();
   const send = page.getByRole("button", { name: "Send to everyone booked" });
-  await box.fill("Map at parking.example");
-  await expect(page.getByText("Take the link out.", { exact: false })).toBeVisible();
-  await expect(send).toBeDisabled();
-
-  await box.fill("Marina lot is closed, park at the Elks lodge.");
+  // A note may carry a link (#4062).
+  await box.fill("Marina lot is closed, park at the Elks lodge: parking.example/map");
   await expect(send).toBeEnabled();
   await page.locator("form[data-hydrated='true']").filter({ has: box }).waitFor();
   await send.click();
@@ -82,7 +79,7 @@ test("a note to everyone holds, refuses a link, and is recorded once sent", asyn
     timeout: HELD_SEND_TIMEOUT_MS,
   });
   await expect(page.getByTestId("departure-notes")).toContainText(
-    "Marina lot is closed, park at the Elks lodge.",
+    "Marina lot is closed, park at the Elks lodge: parking.example/map",
   );
 });
 
@@ -98,7 +95,11 @@ test("the crew records something left aboard and the shop hands it back", async 
   expect(owner).not.toBe("");
   await seat.selectOption({ label: owner });
   await form.getByRole("button", { name: "Record" }).click();
-  const item = page.getByTestId("lost-item").filter({ hasText: "Blue mask, seat 4" });
+  // The Boat tab's print-only sheet lists the same item; the screen's row is the visible one.
+  const item = page
+    .getByTestId("lost-item")
+    .filter({ visible: true })
+    .filter({ hasText: "Blue mask, seat 4" });
   await expect(item).toContainText(owner);
   await expect(item.getByRole("button", { name: `Tell ${owner}` })).toBeVisible();
 

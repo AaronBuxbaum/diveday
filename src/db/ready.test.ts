@@ -635,7 +635,7 @@ describe("carriedPreparationForDiver", () => {
 describe("getBookedCard", () => {
   it("states the masthead's facts exactly as the full loader does", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
-    const card = await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true });
+    const card = await getBookedCard(db, { shopId: shop.id, bookingId });
     const data = await getReadyPageData(db, bookingId);
     if (!card || !data) throw new Error("expected both reads to resolve");
     expect(card.trip).toEqual({
@@ -670,14 +670,16 @@ describe("getBookedCard", () => {
       .set({ hotelPickupLocation: "Harbor Inn", pickupTime: "07:15" })
       .where(eq(bookings.id, bookingId));
     await db.update(shops).set({ offersHotelPickup: true }).where(eq(shops.id, shop.id));
-    expect(
-      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.pickup,
-    ).toEqual({ time: "07:15", location: "Harbor Inn" });
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.pickup).toEqual({
+      time: "07:15",
+      location: "Harbor Inn",
+    });
 
     await db.update(shops).set({ offersHotelPickup: false }).where(eq(shops.id, shop.id));
-    expect(
-      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.pickup,
-    ).toEqual({ time: "07:15", location: "Harbor Inn" });
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.pickup).toEqual({
+      time: "07:15",
+      location: "Harbor Inn",
+    });
     const data = await getReadyPageData(db, bookingId);
     expect([data?.hotelPickupLocation, data?.pickupTime]).toEqual(["Harbor Inn", "07:15"]);
     expect(data?.offersHotelPickup).toBe(false);
@@ -686,22 +688,17 @@ describe("getBookedCard", () => {
   it("says when the seat or the departure is gone, so the page can decline the fast path", async () => {
     const { db, shop, open, bookingId } = await unpaidBooking();
     await cancelBooking(db, shop.id, bookingId);
-    expect(
-      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.bookingCancelled,
-    ).toBe(true);
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.bookingCancelled).toBe(true);
     await setTripStatus(db, shop.id, open.id, "cancelled");
-    expect(
-      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))
-        ?.departureCancelled,
-    ).toBe(true);
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.departureCancelled).toBe(
+      true,
+    );
   });
 
   // H-20261014-boat-count-milestones: the diver's side of a regular's milestone, said on the booked moment.
   it("names a milestone boat, counting the shop's imported visits, and only that boat", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
-    expect(
-      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.milestone,
-    ).toBeNull();
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.milestone).toBeNull();
     const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     if (!seat) throw new Error("seat missing");
     await db.insert(priorVisits).values(
@@ -713,22 +710,16 @@ describe("getBookedCard", () => {
         importedAt: nowDate(),
       })),
     );
-    expect(
-      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.milestone,
-    ).toBe(10);
-    // A booking redirect proved only a typed name and address: no count of
-    // that record's days on it (security review r5-4, second pass, N-c).
-    expect(
-      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: false }))?.milestone,
-    ).toBeNull();
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.milestone).toBe(10);
+    // Said on the page right after booking too (#4059): a count of one
+    // shop's days is not worth a missing celebration.
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.milestone).toBe(10);
     // A held seat speaks for a record nobody has matched yet: no count of it.
     await db
       .update(bookings)
       .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
       .where(eq(bookings.id, bookingId));
-    expect(
-      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.milestone,
-    ).toBeNull();
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.milestone).toBeNull();
   });
 
   it("greets a held identity by the name it was booked as, never the matched record's", async () => {
@@ -737,9 +728,7 @@ describe("getBookedCard", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
       .where(eq(bookings.id, bookingId));
-    expect(
-      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.greetingName,
-    ).toBe("N. Q.");
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.greetingName).toBe("N. Q.");
   });
 
   /**
@@ -799,7 +788,7 @@ describe("getBookedCard", () => {
       expect.objectContaining({ code: "certification_insufficient" }),
     );
 
-    const card = await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true });
+    const card = await getBookedCard(db, { shopId: shop.id, bookingId });
     expect(card?.bookingCancelled).toBe(false);
     for (const locale of DIVER_LOCALES) {
       const heading = diverTranslator(locale)("booking.confirmedHeading", {
@@ -821,7 +810,6 @@ describe("getBookedCard", () => {
       await getBookedCard(db, {
         shopId: shop.id,
         bookingId: "00000000-0000-4000-8000-000000000000",
-        delivered: true,
       }),
     ).toBeNull();
   });
@@ -832,7 +820,6 @@ describe("getBookedCard", () => {
       await getBookedCard(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
         bookingId,
-        delivered: true,
       }),
     ).toBeNull();
   });

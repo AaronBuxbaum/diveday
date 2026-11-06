@@ -165,39 +165,29 @@
 - **Counter link** — the QR a staffer shows on a party's waiver panel, or on the one-seat queue of
   a solo seat with no email and no textable number (issue #3984), so one diver signs their own
   seat's release, scanned with any phone, or the URL Copy link hands staff for a release with no
-  seat (issue #3983): a `waiver_link` row in `capabilities` naming that release, alive 30 minutes
-  and spent by the signature; the form says the time left and saves each step (issue #3985),
-  and a closed one asks the staff for a fresh code. It opens on the first phone that claims it
-  and no other, shows only the medical answers saved through that same code, refuses a second
+  seat (issue #3983): a `waiver_link` row in `capabilities` naming that release, alive to the end
+  of the departure day (or of the day it was copied) and spent by the signature (issue #4064); the
+  form says the time left in its last hour and saves each step (issue #3985), and a closed one
+  asks the staff for a fresh code. It opens on any phone, shows the medical answers saved
+  through that same code only on the phone that saved them, refuses a second
   signature, and its mint is a line on the diver's trail naming the staffer. It carries no
-  readiness authority and opens no doctor's page; it dies when the seat changes hands or the
-  release is superseded. A minor signs on it only when the desk confirmed a guardian is there
+  readiness authority and opens no doctor's page; a fresh code leaves an earlier one working, and
+  it dies when the seat changes hands or the release is superseded. A minor signs on it only when the desk confirmed a guardian is there
   for that very code, asked again at signing: on a seat's code (issue #4003), and on Copy link
   for a release with no seat, a minor by date of birth or "Under 18" on a seat still ahead (issue
   #4019) (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
   A minor's code is shown only after the staffer confirms a parent or guardian is present to
   co-sign, and that confirmation is on the minor's trail too.
-- **Party waiver door** — what every send to a party member's address carries in place of a
-  thread link, because the lead typed that address (`bookings.contact_typed_by_lead_at`, until the
-  member claims the seat; issues #3986, #4003): a `party_waiver_link` row in `capabilities`
-  naming the member's release, alive two weeks. The join email, staff Send waivers, a re-sent
-  confirmation and find-my-booking carry it; reminders and reschedule notices go with no link. It
-  opens on `/waivers/<token>` by the **counter link**'s rules, plus the release's doctor's page on
-  the phone that holds it, and grants nothing else. A dead one offers to mail a fresh door to the
-  address on file. A counter code to the same release stands beside it (issue #4008). A minor
-  member gets no door, and a door never signs a minor's release: the lead signs that seat on their
-  own link, or the desk does with a guardian present. Claiming the seat closes the door, and any
-  counter code to the seat's release: the claimant's confirmation carries the release as its Sign
-  step, and the dead door says so instead of offering a fresh one (issue #2743).
 - **Recap link epoch** — the number a recap link signs beside its booking (`bookings.recap_link_epoch`,
   issue #3982). The link opens only while the booking still holds that number; correcting the
   diver's email or phone moves it on for all their bookings, so a recap link mailed to the old
   address opens nothing, and the next one carries the new number.
 - **Release link** — the link an email or a text carries to sign a release with no seat (issue
   #3983): a `release_link` row in `capabilities` naming that release, alive a week, spent by the
-  signature, sent only to the contact on file and never shown to staff. A newer one replaces it; a
-  counter link to the same release stands beside it (issue #4008). A contact change revokes it, an
+  signature, sent only to the contact on file and never shown to staff. A resend adds a link and
+  closes none, so the one a diver is part-way through keeps working, and a failed send leaves the
+  live one alone; once any link signs, the rest open nothing. Replacing a contact revokes it, an
   erasure deletes it, and a dead one
   lands on the rescue, which mails a fresh one to the address on file. A minor whose contact a
   party's lead typed is sent none (issue #4019). It never opens a seat's release (ADR

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { DAY_MS, HOUR_MS, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
@@ -17,7 +18,13 @@ import {
   OTHER_TRIP,
 } from "./incident-reports-test-fixtures";
 import { crewSubject } from "./roll-call-subject";
-import { incidentReportPeople, incidentReports, rollCallEvents, tripAssignments } from "./schema";
+import {
+  incidentReportPeople,
+  incidentReports,
+  rollCallEvents,
+  tripAssignments,
+  tripScheduleDays,
+} from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -484,5 +491,123 @@ describe("a missing diver report from the manifest", () => {
         actorPersonId: f.owner.id,
       }),
     ).toEqual({ ok: false, reason: "not_allowed" });
+  });
+
+  describe("on a course that meets on two days (#4017)", () => {
+    // Day one three days back, day two under way now: the server counts day two.
+    const now = nowMs();
+    const dayOne = {
+      startsAt: new Date(now - 3 * DAY_MS),
+      endsAt: new Date(now - 3 * DAY_MS + 4 * HOUR_MS),
+    };
+    const dayTwo = { startsAt: new Date(now - 2 * HOUR_MS), endsAt: new Date(now + 2 * HOUR_MS) };
+    const dayOneMarkedAt = new Date(dayOne.startsAt.getTime() + HOUR_MS);
+
+    async function course() {
+      const { db, shop } = ctx;
+      const f = await fixture(db, shop.id);
+      await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, f.trip.id));
+      await db.insert(tripScheduleDays).values([
+        { tripId: f.trip.id, dayNumber: 1, ...dayOne },
+        { tripId: f.trip.id, dayNumber: 2, ...dayTwo },
+      ]);
+      const say = async (
+        status: "boarded" | "not_boarded" | "cleared",
+        occurredAt: Date,
+        retractsEventId?: string,
+      ) => {
+        const [row] = await db
+          .insert(rollCallEvents)
+          .values({
+            shopId: shop.id,
+            tripId: f.trip.id,
+            bookingId: f.seat.booking.id,
+            recordedByPersonId: f.crew.id,
+            status,
+            checkpoint: "after_dive_1",
+            source: "live",
+            occurredAt,
+            retractsEventId,
+          })
+          .returning({ id: rollCallEvents.id });
+        if (!row) throw new Error("roll call insert failed");
+        return row.id;
+      };
+      const input = {
+        shopId: shop.id,
+        tripId: f.trip.id,
+        subject: seatOf(f),
+        actorPersonId: f.crew.id,
+      };
+      return { db, say, input };
+    }
+
+    it("still opens the report for day one's missing diver after day two's mistaken count is undone", async () => {
+      const { db, say, input } = await course();
+      await say("not_boarded", dayOneMarkedAt);
+      const boarded = await say("boarded", new Date(now - HOUR_MS));
+      await say("cleared", new Date(now - HOUR_MS + 60_000), boarded);
+      const started = await startMissingDiverReport(db, input);
+      if (!started.ok) throw new Error(`refused: ${started.reason}`);
+      expect((await reportOf(db, started.reportId)).occurredAt).toEqual(dayOneMarkedAt);
+    });
+
+    it("reads a crew member carried missing from day one the same way", async () => {
+      const { db } = await course();
+      const f = await fixture(db, ctx.shop.id);
+      await db.insert(tripAssignments).values({ tripId: f.trip.id, personId: f.ashore.id });
+      const crewMark = async (
+        status: "boarded" | "not_boarded" | "cleared",
+        occurredAt: Date,
+        retractsEventId?: string,
+      ) => {
+        const [row] = await db
+          .insert(rollCallEvents)
+          .values({
+            shopId: ctx.shop.id,
+            tripId: f.trip.id,
+            ...crewSubject(f.ashore.id),
+            recordedByPersonId: f.crew.id,
+            status,
+            checkpoint: "after_dive_1",
+            occurredAt,
+            retractsEventId,
+          })
+          .returning({ id: rollCallEvents.id });
+        return row?.id;
+      };
+      await crewMark("not_boarded", dayOneMarkedAt);
+      const boarded = await crewMark("boarded", new Date(now - HOUR_MS));
+      await crewMark("cleared", new Date(now - HOUR_MS + 60_000), boarded);
+      const subject = { kind: "crew" as const, personId: f.ashore.id };
+      const started = await startMissingDiverReport(db, {
+        shopId: ctx.shop.id,
+        tripId: f.trip.id,
+        subject,
+        actorPersonId: f.crew.id,
+      });
+      if (!started.ok) throw new Error(`refused: ${started.reason}`);
+      expect((await reportOf(db, started.reportId)).occurredAt).toEqual(dayOneMarkedAt);
+    });
+
+    it("lets go once day two counts them back aboard", async () => {
+      const { db, say, input } = await course();
+      await say("not_boarded", dayOneMarkedAt);
+      await say("boarded", new Date(now - HOUR_MS));
+      expect(await startMissingDiverReport(db, input)).toEqual({
+        ok: false,
+        reason: "not_missing",
+      });
+    });
+
+    it("lets a named undo of day one's mark take it back", async () => {
+      const { db, say, input } = await course();
+      const missing = await say("not_boarded", dayOneMarkedAt);
+      await say("cleared", new Date(now - HOUR_MS), missing);
+      expect(await startMissingDiverReport(db, input)).toEqual({
+        ok: false,
+        reason: "not_missing",
+      });
+    });
   });
 });

@@ -21,6 +21,7 @@ import {
   listStaff,
   listTripScheduleDays,
   moveTrip,
+  reinstateTrip,
   setTripCrew,
   setTripStatus,
   upcomingTripsWithCounts,
@@ -1167,8 +1168,7 @@ describe("crewClashes", () => {
     expect(await crewClashes(db, shop.id, mover.id)).toEqual([]);
     // The cancelled boat's own panel says nothing either — it is not sailing.
     expect(await crewClashes(db, shop.id, host.id)).toEqual([]);
-
-    await setTripStatus(db, shop.id, host.id, "scheduled");
+    await reinstateTrip(db, shop.id, host.id);
     expect(await crewClashes(db, shop.id, mover.id)).toHaveLength(1);
     await deleteTrip(db, shop.id, host.id);
     expect(await crewClashes(db, shop.id, mover.id)).toEqual([]);

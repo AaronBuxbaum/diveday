@@ -9,7 +9,8 @@ for (const document of [
     page,
   }, testInfo) => {
     await page.goto(document.route);
-    await expect(page.locator("main h1")).toBeVisible();
+    // The print-only paper sheet carries its own h1; the screen's is the visible one.
+    await expect(page.locator("main h1").filter({ visible: true })).toBeVisible();
     await page.evaluate(() => window.document.fonts.ready);
     for (const format of ["Letter", "A4"] as const) {
       const pdf = testInfo.outputPath(`${format}.pdf`);

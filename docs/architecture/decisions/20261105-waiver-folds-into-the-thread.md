@@ -1,6 +1,6 @@
 # 20261105-waiver-folds-into-the-thread — Hand a seat's release over as its thread link
 
-- **Status:** Accepted, **amended 2026-11-06** (#3983, #4003, #4008)
+- **Status:** Accepted, **amended 2026-11-06** (#3983, #4003, #4008; party door retired)
 - **Date:** 2026-11-05
 - **Decided by:** Aaron, 2026-11-05 on issue #2743 ("do it"), the full idea that
   [20261103-waiver-signs-in-the-thread](20261103-waiver-signs-in-the-thread.md) rejected; layer 6
@@ -20,10 +20,10 @@ ever to the holder's contact on file. Every other release link is a capability.
 1. **The booking confirmation** carries the Sign step on its readiness link (`openJoinSignStep`).
 2. **Every other send of a seat's release** goes through `deliverThreadLink`. No Copy link for a
    seat (`thread_only`): it would put the whole readiness credential in a staff clipboard. An
-   address a party's lead typed gets only a `party_waiver_link` door, from every sender, until
-   the member claims the seat (#3986, #4003).
+   adult party member's address gets the normal links; a minor's the lead typed gets none
+   (#4003; door retired 2026-11-06, ux-over-hardening).
 3. **A party lead signs a minor's seat on their own link** (`partySeatWaiverKey`).
-4. **Counter tablets sign on a `waiver_link`**: 30 minutes, once, on the first phone to claim it.
+4. **Counter tablets sign on a `waiver_link`**: to the end of the departure day, once, on any phone (#4064).
    A minor signs only on a code the desk vouched a guardian for (#4003, #4019).
 5. **`/waivers/<token>` refuses a seat's release** (`waiverLinkDoor`).
 6. **A release with no seat signs on a capability too.** Signed, it covers every seat the diver
@@ -32,7 +32,8 @@ ever to the holder's contact on file. Every other release link is a capability.
    spends it, a contact change revokes it, an erasure deletes it; a dead one lands on a rescue
    that mails the address on file. The record carries no link and no clock.
 
-**One live door per release and purpose** (Aaron, #4008): once one signs, the others open nothing.
+**A resend keeps the live link** (Aaron, 2026-11-06): a send revokes no link already out; once one
+signs, the others open nothing.
 
 ## Alternatives considered
 
@@ -48,6 +49,6 @@ ever to the holder's contact on file. Every other release link is a capability.
   moves and adds seats until the trip ends plus its grace. Accepted for the holder's own seat
   (security review, S1).
 - A seat with no email or textable number is signed at the counter or on paper.
-- A counter link dies on a merge, a holder, contact or terms change, or a new code. A failed
-  email or text hands staff nothing.
+- A counter link dies on a merge, a holder, contact or terms change. A failed email or text
+  hands staff nothing.
 - A link only prefills the medical answers saved through itself.

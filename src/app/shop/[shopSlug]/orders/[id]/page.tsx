@@ -12,7 +12,6 @@ import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import {
   getOrderDetailPage,
-  hasRequiredStepUp,
   isStaleCounterClaim,
   pendingCounterPayment,
 } from "@/db/order-detail-page";
@@ -55,14 +54,14 @@ export default async function OrderDetailPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string; invoiceCreated?: string }>;
+  searchParams: Promise<{ notice?: string; invoiceCreated?: string; refundAmount?: string }>;
 }) {
   const { shopSlug, id } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(id)) notFound();
-  const { notice, invoiceCreated } = await searchParams;
+  const { notice, invoiceCreated, refundAmount } = await searchParams;
   // One shop read for both the demo guard and the timezone the order's date is
   // written in — a money screen should say "3 Aug" in the shop's own day, not
   // the server's.
@@ -104,12 +103,14 @@ export default async function OrderDetailPage({
   // Record payment: an open invoice, or one whose counter claim died (stale).
   const recordable =
     stripeOpen || (order.order.status === "open" && isStaleCounterClaim(order.order, nowDate()));
-  // A counter payment tapped and still inside its Undo hold (issue #3030),
-  // handed only to a screen that may undo or release it (the money step-up).
-  const counterHold =
-    recordable && (await hasRequiredStepUp(db, session, "money"))
-      ? await pendingCounterPayment(db, shop.id, order.order.id)
-      : null;
+  // A counter payment tapped and still inside its Undo hold (issue #3030).
+  const counterHold = recordable ? await pendingCounterPayment(db, shop.id, order.order.id) : null;
+  // The amount typed before a step-up challenge, put back on the way in
+  // (issue 4063). A prefill only: refundAction re-reads the balance under its lock.
+  const refundPrefill =
+    refundAmount && Number(refundAmount) > 0 && Number(refundAmount) <= refundableMajor
+      ? Number(refundAmount)
+      : refundableMajor;
   const orderPath = shopPath(shop.slug, "orders", order.order.id);
   const banner = noticeFromParam(notice, NOTICES);
   const noticeText =
@@ -349,7 +350,7 @@ export default async function OrderDetailPage({
                       min={minorToMajor(1, order.order.currency)}
                       max={refundableMajor}
                       step={minorToMajor(1, order.order.currency)}
-                      defaultValue={refundableMajor}
+                      defaultValue={refundPrefill}
                       className={`${controlClass} tabular-nums`}
                     />
                   </span>

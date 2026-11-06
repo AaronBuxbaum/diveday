@@ -78,14 +78,14 @@ const replyToSchema = z.email().max(200);
  * (`src/app/actions/inquiry.ts`), which pushes a diver's details to the box
  * unprompted.
  *
- * **Not for display.** `shops.contact_email` is published on the shop's own
- * pages regardless; only *delivery* waits for proof.
+ * Delivery starts at the save (#4061): the person saving it is the shop's own
+ * owner or manager writing the shop's own address. `contactEmailConfirmedAt`
+ * is a badge on the settings page, not a gate.
  */
 export function deliverableShopContactEmail(shop: {
   contactEmail: string | null;
   contactEmailConfirmedAt: Date | null;
 }): string | null {
-  if (!shop.contactEmailConfirmedAt) return null;
   const parsed = replyToSchema.safeParse(shop.contactEmail?.trim());
   return parsed.success ? parsed.data : null;
 }
