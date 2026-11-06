@@ -50,7 +50,7 @@ const set = (db: AppDb, shopId: string, email: string | null, personId = PERSON,
 
 /** Sets the address and confirms it through its link. */
 async function confirmed(db: AppDb, shopId: string, email = BOOKS, now = OCT_20) {
-  await set(db, shopId, email);
+  await set(db, shopId, email, PERSON, now);
   const issued = await issueBookkeeperConfirmation(db, { shopId, email, now });
   if (!issued) throw new Error("no link");
   await consumeBookkeeperConfirmation(db, { token: issued.token, now, origin: null });
@@ -143,7 +143,7 @@ describe("setBookkeeper", () => {
     expect((await readBookkeeper(db, shopId))?.confirmedAt).toEqual(OCT_20);
   });
 
-  it("drops the confirmation when the address changes, so the new inbox must say yes", async () => {
+  it("drops the confirmation when the address changes, and the new address is still listed (#4061)", async () => {
     const db = await unseededTestDb();
     const shopId = await shopRow(db, "books-change");
     const oldLink = await confirmed(db, shopId);
@@ -152,7 +152,7 @@ describe("setBookkeeper", () => {
       confirmed: false,
     });
     expect((await readBookkeeper(db, shopId))?.confirmedAt).toBeNull();
-    expect(await listBookkeeperShops(db)).toEqual([]);
+    expect((await listBookkeeperShops(db)).map((shop) => shop.email)).toEqual(["new@example.com"]);
     // The old link is gone with its address.
     expect(await isBookkeeperToken(db, { token: oldLink })).toBe(false);
   });
@@ -211,28 +211,29 @@ describe("the confirm link", () => {
     ).toEqual({ shopId });
   });
 
-  it("starts the files with the month after it is used, however late (second-pass N2)", async () => {
+  it("leaves the month claim alone however late the link is used (#4061)", async () => {
     const db = await unseededTestDb();
     const shopId = await shopRow(db, "books-late");
     // Set on 20 October (October counts from the next 2nd); its link is used 10 December.
-    await confirmed(db, shopId, BOOKS, new Date("2026-12-10T15:00:00Z"));
-    expect((await rowOf(db, shopId))?.bookkeeperSentMonth).toBe("2026-11");
-  });
-});
-
-describe("the month-end claim", () => {
-  it("is won once per month, and only for the confirmed address still on file", async () => {
-    const db = await unseededTestDb();
-    const shopId = await shopRow(db, "books-claim");
     await set(db, shopId, BOOKS);
-    // Unconfirmed: nothing to claim.
-    expect(await claim(db, shopId, "2026-10")).toBeNull();
+    const late = new Date("2026-12-10T15:00:00Z");
     const issued = await issueBookkeeperConfirmation(db, { shopId, email: BOOKS, now: OCT_20 });
     await consumeBookkeeperConfirmation(db, {
       token: issued?.token ?? "",
       now: OCT_20,
       origin: null,
     });
+    expect((await rowOf(db, shopId))?.bookkeeperSentMonth).toBe("2026-09");
+    expect(late.getTime()).toBeGreaterThan(OCT_20.getTime());
+  });
+});
+
+describe("the month-end claim", () => {
+  it("is won once per month, from the save, and only for the address still on file (#4061)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "books-claim");
+    await set(db, shopId, BOOKS);
+    // Unconfirmed is claimable; confirmation is a badge.
     expect(await claim(db, shopId, "2026-10", { email: "old@example.com" })).toBeNull();
     const won = await claim(db, shopId, "2026-10");
     if (!won) throw new Error("no claim");
@@ -242,7 +243,7 @@ describe("the month-end claim", () => {
       shopId,
       month: "2026-10",
       email: BOOKS,
-      confirmedAt: won.confirmedAt,
+      claimedUnder: won.claimedUnder,
       previous: "2026-09",
     });
     expect((await rowOf(db, shopId))?.bookkeeperSentMonth).toBe("2026-09");
@@ -282,7 +283,7 @@ describe("the month-end claim", () => {
       shopId,
       month: "2026-12",
       email: BOOKS,
-      confirmedAt: december.confirmedAt,
+      claimedUnder: december.claimedUnder,
       previous: "2026-11",
     });
     const after = await rowOf(db, shopId);
@@ -307,13 +308,13 @@ describe("the month-end claim", () => {
       shopId,
       month: "2026-12",
       email: BOOKS,
-      confirmedAt: december.confirmedAt,
+      claimedUnder: december.claimedUnder,
       previous: "2026-11",
     });
     expect((await rowOf(db, shopId))?.bookkeeperSentMonth).toBe("2026-12");
   });
 
-  it("lists real shops with a confirmed address, never a demo shop or an unconfirmed one", async () => {
+  it("lists real shops with an address, confirmed or not, never a demo shop (#4061)", async () => {
     const db = await unseededTestDb();
     const real = await shopRow(db, "books-real");
     const demo = await shopRow(db, "books-demo", { isDemo: true });
@@ -322,7 +323,9 @@ describe("the month-end claim", () => {
     await confirmed(db, real);
     await confirmed(db, demo);
     await set(db, waiting, BOOKS);
-    expect((await listBookkeeperShops(db)).map((shop) => shop.id)).toEqual([real]);
+    expect((await listBookkeeperShops(db)).map((shop) => shop.id).sort()).toEqual(
+      [real, waiting].sort(),
+    );
   });
 });
 
@@ -387,7 +390,7 @@ describe("the stop link (second-pass N1)", () => {
       shopId,
       month: "2026-12",
       email: BOOKS,
-      confirmedAt: december.confirmedAt,
+      claimedUnder: december.claimedUnder,
       previous: "2026-11",
     });
     expect(await resolveBookkeeperStopToken(db, november.stopToken)).not.toBeNull();
@@ -486,7 +489,10 @@ describe("who hears about the address (second-pass N5)", () => {
     expect(await bookkeeperNoticeRecipients(db, { shopId, actorPersonId: mia })).toEqual([
       { personId: null, fullName: null, email: "desk@shop.example", locale: null },
     ]);
+    // Unconfirmed is still the shop's own address (#4061).
     await db.update(shops).set({ contactEmailConfirmedAt: null }).where(eq(shops.id, shopId));
-    expect(await bookkeeperNoticeRecipients(db, { shopId, actorPersonId: mia })).toEqual([]);
+    expect(await bookkeeperNoticeRecipients(db, { shopId, actorPersonId: mia })).toEqual([
+      { personId: null, fullName: null, email: "desk@shop.example", locale: null },
+    ]);
   });
 });

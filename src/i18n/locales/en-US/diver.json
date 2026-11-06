@@ -550,7 +550,7 @@
     "submit": "Stop these alerts",
     "submitting": "Stopping…",
     "confirmedTitle": "Roll-call alerts stopped",
-    "confirmedText": "{shopName} won’t send you roll-call alerts anymore. If the shop adds you again, you’ll be asked to confirm first."
+    "confirmedText": "{shopName} won’t send you roll-call alerts anymore. If the shop adds you again, they start again until you stop them."
   },
   "contactConfirm": {
     "title": "Confirm this address for {shopName}?",
@@ -4379,14 +4379,14 @@
         "confirmed": "{shopName}: {email} confirmed the month-end files",
         "bounced": "{shopName}: the month-end files to {email} bounced"
       },
-      "set": "{actor} set {email} as the bookkeeper’s email. Once that inbox confirms, last month’s report, orders and crew sheet go there on the 2nd of each month.",
-      "changed": "{actor} changed the bookkeeper’s email to {email}. Nothing goes to it until that inbox confirms.",
+      "set": "{actor} set {email} as the bookkeeper’s email. Last month’s report, orders and crew sheet go there on the 2nd of each month.",
+      "changed": "{actor} changed the bookkeeper’s email to {email}. Month-end files go to it from the next 2nd.",
       "cleared": "{actor} removed the bookkeeper’s email. No month-end files will be sent.",
       "sent": "Month-end files for {month} sent to {email}.",
       "open": "Open Reports",
       "vouched": "{actor} re-confirmed {email} as the bookkeeper’s email. Month-end files resume going there on the 2nd of each month.",
       "confirmed": "{email} confirmed it wants the month-end files. The first ones go there on the next 2nd of the month.",
-      "clearedByRecipient": "{email} used the link in a month-end email to stop them. No month-end files will be sent until you set an address again and it confirms.",
+      "clearedByRecipient": "{email} used the link in a month-end email to stop them. No month-end files will be sent until you set an address again.",
       "clearedByErasure": "The bookkeeper’s email was removed when that person’s data was erased at their request. No month-end files will be sent until you set an address again.",
       "bounced": "The month-end files to {email} bounced, so the bookkeeper did not get them. Check the address in Settings, and save it again or change it."
     }
@@ -4494,6 +4494,6 @@
     "submit": "Stop these emails",
     "submitting": "Stopping…",
     "confirmedTitle": "Month-end files stopped",
-    "confirmedText": "{shopName} won’t send you month-end files anymore. If the shop adds you again, you’ll be asked to confirm first."
+    "confirmedText": "{shopName} won’t send you month-end files anymore. If the shop adds you again, they start again until you stop them."
   }
 }

@@ -38,7 +38,7 @@ export type MonthEndPassSummary = {
  * address whose month is due (`bookkeeperMonthDue`), claim the month, build
  * the three files the Reports zip holds (`monthEndFiles`), and send them.
  *
- * Only a confirmed address is a candidate (security review B1), and only
+ * An address is a candidate from the save (#4061; confirmation is a badge), and only
  * while the person who set it still passes `canPersonExportShopData` (F1): an
  * address a departed manager left behind sends nothing until an owner or
  * manager saves it again, which Reports asks for; the claim requires the same
@@ -108,7 +108,7 @@ export async function sendDueMonthEndEmails(
         shopId: shop.id,
         month,
         email: claimedEmail,
-        confirmedAt: claim.confirmedAt,
+        claimedUnder: claim.claimedUnder,
         previous: shop.sentMonth,
       });
     const withdrawStop = () =>
@@ -124,7 +124,7 @@ export async function sendDueMonthEndEmails(
           shopId: shop.id,
           month,
           email: claimedEmail,
-          confirmedAt: claim.confirmedAt,
+          claimedUnder: claim.claimedUnder,
         }))
       ) {
         summary.skipped += 1;

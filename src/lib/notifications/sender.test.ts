@@ -44,7 +44,10 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
     expect(shopSenderOf({ ...nothing, contactPhone: "  " }, off)).toBeUndefined();
     // One printable line, or nothing: a newline could fake a line in the sign-off.
     expect(shopSenderOf({ ...nothing, contactPhone: "555\nPay to: x" }, off)).toBeUndefined();
-    expect(shopSenderOf({ ...nothing, contactEmail: "desk@bluemantis.dive" }, off)).toBeUndefined();
+    expect(shopSenderOf({ ...nothing, contactEmail: "desk@bluemantis.dive" }, off)).toEqual({
+      replyTo: "desk@bluemantis.dive",
+      contactEmail: "desk@bluemantis.dive",
+    });
   });
 
   it("is nothing at all for a shop with nothing on file", () => {
@@ -69,7 +72,7 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
 
   // Issue #1288: a typed address is not a proven one. Until the shop opens the
   // link sent to it, diver replies must not be routed there.
-  it("withholds Reply-To from an address the shop has not confirmed", () => {
+  it("uses the front-desk address as Reply-To from the save, confirmed or not (#4061)", () => {
     expect(
       shopSenderOf(
         {
@@ -79,7 +82,7 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
         },
         off,
       ),
-    ).toBeUndefined();
+    ).toEqual({ replyTo: "desk@bluemantis.dive", contactEmail: "desk@bluemantis.dive" });
     expect(
       shopSenderOf(
         {
@@ -90,7 +93,11 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
         },
         off,
       ),
-    ).toEqual({ postalAddress: "US" });
+    ).toEqual({
+      replyTo: "desk@bluemantis.dive",
+      contactEmail: "desk@bluemantis.dive",
+      postalAddress: "US",
+    });
     expect(
       shopSenderOf(
         {
@@ -137,9 +144,10 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
       replyTo: `reply+${token}@inbound.ses.dive.day`,
       contactEmail: "desk@bluemantis.dive",
     });
-    // An unconfirmed front desk changes nothing about the inbound address.
+    // An unconfirmed front desk still shows as the contact address.
     expect(shopSenderOf({ ...shop, contactEmailConfirmedAt: null }, {})).toEqual({
       replyTo: `reply+${token}@inbound.ses.dive.day`,
+      contactEmail: "desk@bluemantis.dive",
     });
     // Inbound switched off: the confirmed front desk, and its proof rule.
     expect(shopSenderOf(shop, { EMAIL_INBOUND_DOMAIN: "" })).toEqual({
@@ -148,7 +156,7 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
     });
     expect(
       shopSenderOf({ ...shop, contactEmailConfirmedAt: null }, { EMAIL_INBOUND_DOMAIN: "" }),
-    ).toBeUndefined();
+    ).toEqual({ replyTo: "desk@bluemantis.dive", contactEmail: "desk@bluemantis.dive" });
   });
 
   it("drops a contact address SES would refuse rather than sending the header", () => {
