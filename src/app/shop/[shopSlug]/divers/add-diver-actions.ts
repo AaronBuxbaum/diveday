@@ -82,6 +82,9 @@ export async function createDiverFormAction(formData: FormData) {
   if (
     activeSurface === "departure" &&
     !activeWaitlist &&
+    // A date request seats its own party one seat at a time and closes it; the
+    // party form ignores the request, so a forged post never reaches it.
+    !context.request &&
     activeTripId &&
     (party.rows.length > 0 || party.first.minor || party.first.match !== undefined || party.invalid)
   ) {

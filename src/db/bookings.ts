@@ -486,8 +486,7 @@ export async function createBookingParty(
         // cleared) so a re-booked party member is claimable again.
         //
         // A party **staff** seat is stamped claimed as it is made (security
-        // review N3): the counter typed each name with that person standing at
-        // the desk, so no claim link from the lead's readiness page may
+        // review N3): staff typed each name, so no claim link from the lead's readiness page may
         // re-point the seat to whoever opens it. The public party form's seats
         // stay claimable, which is what the claim link is for.
         const leadBookingId = created[0]?.bookingId;

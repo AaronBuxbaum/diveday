@@ -102,8 +102,8 @@
 - **Walk-in** — a person who turns up at the desk. DiveDay has no separate walk-in seat, door or
   activity line (Aaron, 2026-11-05): adding a diver to a boat is one act whether they phoned,
   emailed or stand at the counter. A name is enough; email and phone are optional (the wait list
-  alone asks for an email, to reach someone when a seat opens), and a diver who comes back is
-  matched to their record by whatever the shop has. Every gate is the departure door's own:
+  alone asks for an email, to reach someone when a seat opens), and a returning diver is matched by the name or email typed (phone is not matched), so a name-only
+  add may create a second record the shop merges later. Every gate is the departure door's own:
   readiness, admission, waiver and capacity. A seat with no address is not mailed a confirmation,
   and the desk is told the waiver wasn't emailed.
 - **Counter payment hold** — Cash or Card machine tapped on an open order's Record payment row: a
@@ -115,7 +115,7 @@
   hold is the same hold. A hold that finds the order no longer open records nothing and writes a
   line in the shop's log (issue #3030, H-20261024-counter-payment-undo-hold).
 - **Walk-in party** — several people seated in one counter submission: the first person's own
-  fields plus further rows (`member-<n>-…`, `src/lib/seat-party.ts`), each seated by the
+  fields plus further rows (`member-<n>-…`, `src/lib/seat-party-form.ts`), each seated by the
   walk-in door with every gate its own. A name that reads like someone on file is settled row by
   row (the record, or a new person) before anyone is seated. Staff can open the party's waiver
   queue after seating or from the roster. Each person scans only their own code and signs on their

@@ -34,8 +34,7 @@ import {
  * puts someone on a boat owes the same four consequences: the transaction
  * (`createBooking`), the waiver the trip may require, the trip's activity
  * trail, and the analytics event. Five doors used to write those four things
- * out by hand — the trip roster's hand entry, its returning-diver picker, the
- * counter walk-in's two halves, and the diver record's "book on an upcoming
+ * out by hand — the trip roster's hand entry, its returning-diver picker, and the diver record's "book on an upcoming
  * trip" — and they had drifted: the picker skipped the activity log, and the
  * diver record skipped *both* the activity log and the waiver, so a diver
  * booked from their own record silently never got a waiver email and showed up
@@ -123,13 +122,13 @@ export type SeatDiverInput = {
  *   decides; this only reports.
  * - `sent` — a link was issued *and* the email actually left the building.
  * - `not_delivered` — a link exists but nothing was mailed: no address on file
- *   (the normal walk-in), no provider configured, a rejected test recipient, a
+ *   (a name-only add, the normal case at the desk), no provider configured, a rejected test recipient, a
  *   provider error. Staff must hand the link over themselves.
  * - `failed` — the link could not be issued at all.
  *
  * The distinction is the whole point of this type. It used to be a boolean
  * cast of `issueWaiverOnJoin`'s result, which made every one of those outcomes
- * read as "issued" — so the no-email counter walk-in, the *normal* case, told
+ * read as "issued" — so the no-email add, the *normal* case, told
  * the staffer a waiver was on its way while the diver's readiness sat waiting
  * for a signature that nobody had been asked for.
  *
@@ -141,8 +140,7 @@ export type SeatDiverWaiver = "not_needed" | "sent" | "not_delivered" | "failed"
  * Whether the diver was sent the booking confirmation (fourth UX review,
  * item 3), so the door can say "Their confirmation is on its way."
  *
- * - `sent` — the departure has not sailed (at the walk-in counter, it is on a
- *   later day than today at the shop), and the confirmation (with the waiver
+ * - `sent` — the departure has not sailed, and the confirmation (with the waiver
  *   riding in it when one was owed) went out.
  * - `not_sent` — it was owed and could not go: no address, no provider, a
  *   provider error. The door's ordinary notice stands.
@@ -295,10 +293,10 @@ type SeatPartyMemberFacts = {
 };
 
 /**
- * One person on the walk-in form's party rows (fifth loop, item 9): a name
+ * One person on the new-diver form's party rows (fifth loop, item 9): a name
  * typed for somebody new, or the record the staffer picked for that row from
  * the on-file prompt, with the name they had typed for it (`typedName`, which
- * the booking compares the way the single walk-in's prompt does, issue #1556).
+ * the booking compares the way the single add's prompt does, issue #1556).
  */
 export type SeatPartyMember = SeatPartyMemberFacts &
   ({ fullName: string; email?: string; phone?: string } | { personId: string; typedName: string });
@@ -311,7 +309,7 @@ export type SeatPartyResult =
     });
 
 /**
- * **A walk-in family on the boat in one pass** (fifth loop, item 9). Every
+ * **A family on the boat in one pass** (fifth loop, item 9). Every
  * member is booked in one all-or-nothing transaction (`createBookingParty`):
  * the counter never leaves two of four seated and the other two refused, and
  * capacity is checked for the whole party at once. Each seat past the first
@@ -496,7 +494,7 @@ async function seatConsequences(
   });
 
   // A diver just appeared on the roster. This is the archetypal change that
-  // lands *while a captain is walking to the boat* — a walk-in seated at the
+  // lands *while a captain is walking to the boat* — a diver seated at the
   // counter — so it is exactly what the manifest's refresh triggers exist for
   // (ADR 20260804-manifest-web-push). Best-effort and never thrown, like every
   // other call to it, and deliberately after the booking and its side effects
