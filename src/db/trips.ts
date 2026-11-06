@@ -171,6 +171,7 @@ export {
   type SeriesDetailApplyResult,
   type SeriesRollResult,
   type SeriesSweepResult,
+  type SeriesYardLine,
   setSeriesRepeat,
   setSeriesStandingCrew,
 } from "./trips-series";

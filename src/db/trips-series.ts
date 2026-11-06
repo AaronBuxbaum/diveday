@@ -1,4 +1,19 @@
-import { and, asc, count, desc, eq, gt, gte, inArray, isNull, max, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  max,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { seatsWithinCertificate } from "@/lib/boat-safety";
 import {
   type CalendarDate,
@@ -22,6 +37,7 @@ import {
   type WeekdaySet,
 } from "@/lib/recurrence";
 import {
+  boatServiceWindow,
   firstHeldDayInWindow,
   HULL_NOT_IN_SHOP,
   hullHeldSpans,
@@ -215,14 +231,17 @@ async function loadTemplate(
 }
 
 /**
- * The cadence dates of a series that are already spoken for: every date an
- * instance was ever materialized on, and every date staff skipped. The roll
- * fills the rest, and the desk's yard line (issue #3988) names the rest the
- * hull's window kept off.
+ * The cadence dates of a series that are already spoken for, between `from`
+ * and `through`: every date an instance was ever materialized on, and every
+ * date staff skipped. The roll fills the rest, and the desk's yard line (issue
+ * #3988) names the rest the hull's window kept off. Bounded to the dates the
+ * caller asks about (issue #4010): a run years old would otherwise read every
+ * instance it ever had to answer for the next 120 days.
  */
 async function spokenForDates(
   tx: DbExecutor,
   series: Pick<typeof tripSeries.$inferSelect, "id" | "shopId">,
+  range: { from: CalendarDate; through: CalendarDate },
 ): Promise<Set<string>> {
   // `queryAll`, not `Promise.all`: the nightly roll materializes inside a
   // transaction, which is one pinned client. See `queryAll` in `src/db/query-helpers.ts`.
@@ -236,7 +255,14 @@ async function spokenForDates(
         // also leaves a `trip_series_skips` row, so the roll is refused that date
         // twice over — and reading the tombstone is the half that survives
         // somebody deleting the skip.
-        .where(and(eq(trips.seriesId, series.id), eq(trips.shopId, series.shopId))),
+        .where(
+          and(
+            eq(trips.seriesId, series.id),
+            eq(trips.shopId, series.shopId),
+            gte(trips.seriesOccurrenceDate, range.from),
+            lte(trips.seriesOccurrenceDate, range.through),
+          ),
+        ),
     () =>
       tx
         .select({ date: tripSeriesSkips.occurrenceDate })
@@ -247,7 +273,12 @@ async function spokenForDates(
         // the pairing right, and a skip that silently applied across tenants
         // would take a departure off a board nobody could explain.
         .where(
-          and(eq(tripSeriesSkips.seriesId, series.id), eq(tripSeriesSkips.shopId, series.shopId)),
+          and(
+            eq(tripSeriesSkips.seriesId, series.id),
+            eq(tripSeriesSkips.shopId, series.shopId),
+            gte(tripSeriesSkips.occurrenceDate, range.from),
+            lte(tripSeriesSkips.occurrenceDate, range.through),
+          ),
         ),
   ]);
   const spokenFor = new Set<string>();
@@ -266,43 +297,137 @@ function occurrenceMeetsYard(
 }
 
 /**
- * **The yard weeks the nightly roll leaves off, read from the board as it
- * stands** (issue #3988, Aaron's decision of 2026-11-06): the cadence dates in
- * the horizon that no instance or skip speaks for and whose meeting days touch
- * the template boat's window. Nothing is stored, so a week the window has
- * since released is not named, and the next roll puts it back. Empty for a
- * series with no instance to template from, no boat, or no window.
+ * **The trip page's yard line** (issues #3988, #4010): the hull the run's
+ * template sails on, the last day of its yard window, the cadence dates the
+ * nightly roll leaves off for it, and the weeks already on the board inside
+ * the window, which will sail into the yard unless the desk moves them.
  */
-async function yardDatesLeftOff(
+export type SeriesYardLine = {
+  boat: string;
+  from: CalendarDate;
+  until: CalendarDate;
+  leftOff: CalendarDate[];
+  onBoard: CalendarDate[];
+};
+
+/**
+ * **The yard line, read from the board as it stands** (issue #3988, Aaron's
+ * decision of 2026-11-06): nothing is stored, so a week the window has since
+ * released is not named, and the next roll puts it back. Every read is bounded
+ * to the roll's horizon. Null for a series with no instance to template from,
+ * no boat, another shop's boat, no window, or nothing in the window. A run
+ * whose course is archived names no week left off, since its roll fails
+ * before the yard is asked, but still names the weeks on the board that sail
+ * into the yard (#4010).
+ */
+async function seriesYardLine(
   db: DbExecutor,
   series: typeof tripSeries.$inferSelect,
   timeZone: string,
   now: Date,
-): Promise<CalendarDate[]> {
+): Promise<SeriesYardLine | null> {
   const template = await loadTemplate(db, series.shopId, series.id);
-  if (!template) return [];
-  const yard = await boatServiceWindowOf(db, series.shopId, template.trip.boatId);
+  const boatId = template?.trip.boatId;
+  if (!template || !boatId) return null;
+  const [course] = template.trip.courseId
+    ? await db
+        .select({ isActive: courses.isActive })
+        .from(courses)
+        .where(and(eq(courses.id, template.trip.courseId), eq(courses.shopId, series.shopId)))
+        .limit(1)
+    : [{ isActive: true }];
+  const rolls = course?.isActive === true;
   // Another shop's hull is no yard week to name: the roll puts nothing on it,
   // and the boat's papers here hold no window to explain it (#3994).
-  if (!yard || yard === HULL_NOT_IN_SHOP) return [];
-  const today = calendarDateInTimezone(now, timeZone);
-  const proposed = seriesOccurrenceDates({
-    anchorDate: series.anchorDate,
-    pattern: { intervalWeeks: series.intervalWeeks, weekdays: series.weekdayMask },
-    from: today,
-    through: shiftCalendarDate(today, SERIES_HORIZON_DAYS),
-    endsOn: series.endsOn,
-  });
-  if (!proposed || proposed.length === 0) return [];
-  const spokenFor = await spokenForDates(db, series);
-  return proposed.filter((occurrenceDate) => {
-    if (spokenFor.has(occurrenceDate)) return false;
-    return occurrenceMeetsYard(
-      yard,
-      daysOnOccurrence(template.days, occurrenceDate, timeZone),
-      timeZone,
+  const [boat] = await db
+    .select({
+      name: boats.name,
+      outOfServiceFrom: boats.outOfServiceFrom,
+      outOfServiceUntil: boats.outOfServiceUntil,
+      outOfServiceReason: boats.outOfServiceReason,
+    })
+    .from(boats)
+    .where(and(eq(boats.id, boatId), eq(boats.shopId, series.shopId)))
+    .limit(1);
+  const yard = boatServiceWindow(boat);
+  if (!boat || !yard) return null;
+  const range = {
+    from: calendarDateInTimezone(now, timeZone),
+    through: shiftCalendarDate(calendarDateInTimezone(now, timeZone), SERIES_HORIZON_DAYS),
+  };
+  const proposed =
+    seriesOccurrenceDates({
+      anchorDate: series.anchorDate,
+      pattern: { intervalWeeks: series.intervalWeeks, weekdays: series.weekdayMask },
+      ...range,
+      endsOn: series.endsOn,
+    }) ?? [];
+  const spokenFor = await spokenForDates(db, series, range);
+  const leftOff = proposed.filter(
+    (occurrenceDate) =>
+      rolls &&
+      !spokenFor.has(occurrenceDate) &&
+      occurrenceMeetsYard(
+        yard,
+        daysOnOccurrence(template.days, occurrenceDate, timeZone),
+        timeZone,
+      ),
+  );
+  const onBoard = await weeksOnBoardInYard(db, series, boatId, yard, range, timeZone, now);
+  if (leftOff.length === 0 && onBoard.length === 0) return null;
+  return { boat: boat.name, from: yard.from, until: yard.until, leftOff, onBoard };
+}
+
+/**
+ * The run's departures still to sail on that hull, inside the horizon, that
+ * hold it on a day of its window: each by the shop-local day it leaves.
+ */
+async function weeksOnBoardInYard(
+  db: DbExecutor,
+  series: Pick<typeof tripSeries.$inferSelect, "id" | "shopId">,
+  boatId: string,
+  yard: ServiceWindow,
+  range: { from: CalendarDate; through: CalendarDate },
+  timeZone: string,
+  now: Date,
+): Promise<CalendarDate[]> {
+  const instances = await db
+    .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.seriesId, series.id),
+        eq(trips.shopId, series.shopId),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        eq(trips.diveMode, "boat"),
+        eq(trips.boatId, boatId),
+        gt(trips.endsAt, now),
+        gte(trips.seriesOccurrenceDate, range.from),
+        lte(trips.seriesOccurrenceDate, range.through),
+      ),
+    )
+    .orderBy(asc(trips.startsAt));
+  if (instances.length === 0) return [];
+  const days = await db
+    .select({
+      tripId: tripScheduleDays.tripId,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+    })
+    .from(tripScheduleDays)
+    .where(
+      inArray(
+        tripScheduleDays.tripId,
+        instances.map((instance) => instance.id),
+      ),
     );
-  });
+  return instances
+    .filter((instance) => {
+      const legs = days.filter((day) => day.tripId === instance.id);
+      return occurrenceMeetsYard(yard, legs.length > 0 ? legs : [instance], timeZone);
+    })
+    .map((instance) => calendarDateInTimezone(instance.startsAt, timeZone));
 }
 
 /**
@@ -359,7 +484,7 @@ async function materializeWindow(
     await boatCertifiedPassengers(tx, series.shopId, template.trip.boatId),
   );
 
-  const spokenFor = await spokenForDates(tx, series);
+  const spokenFor = await spokenForDates(tx, series, input);
   // The run's own standing crew, never the furthest-out date's: a date the
   // roll had to leave short must not become every later date's crew.
   const standingCrew = await getSeriesStandingCrew(tx, series.shopId, series.id);
@@ -931,7 +1056,7 @@ export async function getTripSeriesSummary(
     futureScheduledCount: counts?.future ?? 0,
     futureBookedCount: reach?.divers ?? 0,
     futurePaidCount: reach?.paid ?? 0,
-    yardDatesLeftOff: await yardDatesLeftOff(db, row.series, row.timeZone, now),
+    yardLine: await seriesYardLine(db, row.series, row.timeZone, now),
   };
 }
 

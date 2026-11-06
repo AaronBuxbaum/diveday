@@ -1,6 +1,7 @@
 import type { AppDb } from "@/db/client";
 import { getTripOpenSeatsDebrief } from "@/db/open-seats";
 import { lastAtSites } from "@/db/site-history";
+import type { SeriesYardLine } from "@/db/trips";
 import { openSeatsDebriefText } from "@/i18n/open-seats-labels";
 import { siteHistoryText } from "@/i18n/site-history-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -33,8 +34,8 @@ export function repeatsRowText(
     futureScheduledCount: number;
     /** Who crews every date, by name; empty when the run has no standing crew. */
     standingCrewNames: string[];
-    /** Cadence dates the nightly roll left off because the boat is out of service (issue #3988). */
-    yardDatesLeftOff: CalendarDate[];
+    /** The run's hull in the yard: its window's last day, and the weeks it touches (#3988, #4010). */
+    yardLine: SeriesYardLine | null;
   } | null,
 ): string {
   if (!series) return t("trips.about.oneTime");
@@ -60,31 +61,44 @@ export function repeatsRowText(
           names: cachedListFormat(locale, { type: "conjunction" }).format(series.standingCrewNames),
           count: series.standingCrewNames.length,
         });
-  return [counted, crewLine, yardLeftOffText(t, locale, series.yardDatesLeftOff)]
-    .filter(Boolean)
-    .join(" ");
+  return [counted, crewLine, yardLineText(t, locale, series.yardLine)].filter(Boolean).join(" ");
 }
 
 /** The most yard dates the row names before the rest are counted. */
 const YARD_DATES_SHOWN = 3;
 
 /**
- * The weeks the nightly roll left off because the boat is out of service,
- * read from the board and the boat's window as they stand: nothing is stored,
- * so the line goes when the window moves. Empty when the roll left none off.
+ * **The run's hull in the yard** (issues #3988, #4010): which hull and until
+ * when, the weeks the nightly roll left off for it, and the weeks still on the
+ * board inside the window, which sail into the yard unless the desk moves
+ * them. The hull is the run's own (the one the roll copies forward), named so
+ * a page whose departure sails on another boat is not read as about that one.
+ * Read from the board and the window as they stand: nothing is stored, so the
+ * line goes when the window moves. Empty when there is no line.
  */
-function yardLeftOffText(
-  t: StaffTranslator,
-  locale: string,
-  dates: readonly CalendarDate[],
-): string {
-  if (dates.length === 0) return "";
-  const named = dates.slice(0, YARD_DATES_SHOWN).map((date) => formatCalendarDate(date, locale));
-  const rest = dates.length - named.length;
-  if (rest > 0) named.push(t("tripSeries.panel.yardLeftOffMore", { count: rest }));
-  return t("tripSeries.panel.yardLeftOff", {
-    dates: cachedListFormat(locale, { type: "conjunction" }).format(named),
-  });
+function yardLineText(t: StaffTranslator, locale: string, line: SeriesYardLine | null): string {
+  if (!line) return "";
+  const dates = (list: readonly CalendarDate[]) => {
+    const named = list.slice(0, YARD_DATES_SHOWN).map((date) => formatCalendarDate(date, locale));
+    const rest = list.length - named.length;
+    if (rest > 0) named.push(t("tripSeries.panel.yardLeftOffMore", { count: rest }));
+    return cachedListFormat(locale, { type: "conjunction" }).format(named);
+  };
+  return [
+    t("tripSeries.panel.yardThrough", {
+      boat: line.boat,
+      from: formatCalendarDate(line.from, locale),
+      until: formatCalendarDate(line.until, locale),
+    }),
+    line.leftOff.length > 0
+      ? t("tripSeries.panel.yardLeftOff", { dates: dates(line.leftOff) })
+      : "",
+    line.onBoard.length > 0
+      ? t("tripSeries.panel.yardStillOn", { dates: dates(line.onBoard) })
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /**

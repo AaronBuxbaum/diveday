@@ -52,7 +52,7 @@ const run = {
   weekdayMask: SATURDAYS as never,
   endsOn: null,
   futureScheduledCount: 4,
-  yardDatesLeftOff: [],
+  yardLine: null,
 };
 
 describe("repeatsRowText: a run's standing crew", () => {
@@ -85,28 +85,45 @@ describe("repeatsRowText: a run's standing crew", () => {
   });
 });
 
-describe("repeatsRowText: the yard weeks the roll left off", () => {
-  const withYard = (yardDatesLeftOff: string[]) => ({
+describe("repeatsRowText: the yard line, issues 3988 and 4010", () => {
+  const withYard = (leftOff: string[], onBoard: string[] = []) => ({
     ...run,
     standingCrewNames: [],
-    yardDatesLeftOff: yardDatesLeftOff as never,
+    yardLine: {
+      boat: "Reef Runner",
+      from: "2031-01-06",
+      until: "2031-01-31",
+      leftOff,
+      onBoard,
+    } as never,
   });
 
-  it("says nothing when the roll left no week off", () => {
-    expect(repeatsRowText(staffTranslator("en-US"), "en-US", withYard([]))).not.toContain(
-      "out of service",
-    );
+  it("says nothing when the run has no yard line", () => {
+    const text = repeatsRowText(staffTranslator("en-US"), "en-US", {
+      ...run,
+      standingCrewNames: [],
+    });
+    expect(text).not.toMatch(/yard/);
   });
 
-  it("names the dates the boat's window kept off the board", () => {
+  it("names the hull, the window's last day and the dates kept off the board", () => {
     const text = repeatsRowText(
       staffTranslator("en-US"),
       "en-US",
       withYard(["2031-01-08", "2031-01-15"]),
     );
     expect(text).toMatch(
-      /Left off the board, the boat is out of service then: Jan\s8,\s2031 and Jan\s15,\s2031\./,
+      /Reef Runner is in the yard from Jan\s6,\s2031 through Jan\s31,\s2031\. Left off the board: Jan\s8,\s2031 and Jan\s15,\s2031\./,
     );
+    expect(text).not.toContain("Still on the board");
+  });
+
+  it("names the weeks still on the board inside the window, and what to do", () => {
+    const text = repeatsRowText(staffTranslator("en-US"), "en-US", withYard([], ["2031-01-22"]));
+    expect(text).toMatch(
+      /Reef Runner is in the yard from Jan\s6,\s2031 through Jan\s31,\s2031\. Still on the board: Jan\s22,\s2031\. Move them or pick another boat\./,
+    );
+    expect(text).not.toContain("Left off");
   });
 
   it("names the first three and counts the rest", () => {
@@ -119,7 +136,13 @@ describe("repeatsRowText: the yard weeks the roll left off", () => {
   });
 
   it("says it in Spanish", () => {
-    const text = repeatsRowText(staffTranslator("es-ES"), "es-ES", withYard(["2031-01-08"]));
-    expect(text).toContain("Fuera del calendario porque el barco estará fuera de servicio:");
+    const text = repeatsRowText(
+      staffTranslator("es-ES"),
+      "es-ES",
+      withYard(["2031-01-08"], ["2031-01-22"]),
+    );
+    expect(text).toContain("Reef Runner está en el astillero del");
+    expect(text).toContain("Fuera del calendario:");
+    expect(text).toContain("Aún en el calendario:");
   });
 });
