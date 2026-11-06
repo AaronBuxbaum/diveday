@@ -75,7 +75,6 @@ describe("which reviewer a diff needs", () => {
     "src/app/waivers/[token]/doctor/actions.ts",
     "src/db/party-waiver-queue.ts",
     "src/lib/paper-waiver-form.ts",
-    "src/lib/counter-waiver-token.ts",
   ])("asks dive-domain-expert for the waiver path %s", (file) => {
     expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
   });

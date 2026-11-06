@@ -11,7 +11,7 @@ import {
 } from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
-import { issueBookingCapability } from "./booking-capabilities";
+import { hasLiveDeliveredReadinessLink, issueBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { getCourseFormsForBooking } from "./course-forms";
 import {
@@ -23,10 +23,10 @@ import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips, waiverRecords } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
+import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import {
   hasLivePersonWaiverRequest,
-  hasLiveWaiverRequest,
   issueWaiverRequest,
   openWaiverInThread,
   recordWaiverDelivery,
@@ -918,8 +918,8 @@ export type WaiverLinkRescue =
  * which is exactly the affordance staff already had and no more.
  *
  * Repeat taps are safe by construction, and by one explicit refusal.
- * `hasLiveWaiverRequest` is the guard: when the booking already has a signable
- * link, this reports `current_link_live` and issues nothing.
+ * `hasLivePersonWaiverRequest` is the guard: when the person already has a
+ * signable link, this reports `current_link_live` and issues nothing.
  *
  * That guard used to be load-bearing for a second reason that no longer holds
  * — issuing superseded every pending record, so a rescue fired against a live
@@ -934,6 +934,11 @@ export type WaiverLinkRescue =
  * A cancelled booking or a sailed trip is refused by the same issuing
  * transaction the staff path uses, and a booking already covered by a signature
  * reports `already_signed` rather than mailing a pointless link.
+ *
+ * A seat's waiver link is dead by decision (issue #2743): its rescue sends the
+ * holder their thread link, to the contact on file, unless the seat already
+ * holds a delivered, live one (`hasLiveDeliveredReadinessLink`, the readiness
+ * rescue's own guard).
  */
 export async function emailFreshWaiverLink(
   db: AppDb,
@@ -943,7 +948,20 @@ export async function emailFreshWaiverLink(
   const stale = await staleWaiverRecordForToken(db, token, now);
   if (!stale) return "unavailable";
   if (stale.bookingId) {
-    if (await hasLiveWaiverRequest(db, stale.bookingId, now)) return "current_link_live";
+    // A seat's waiver link opens nothing any more (issue #2743): what goes out
+    // is the holder's own thread link (`issueAndDeliverWaiver`). The seat and
+    // its departure are checked first, so "your link still works" is never
+    // said about a seat or a trip that is gone (issue #850); a dead URL then
+    // never drives a delivery on a thread link already in the holder's mail.
+    if (!(await seatStillSails(db, stale.shopId, stale.bookingId))) return "unavailable";
+    if (
+      await hasLiveDeliveredReadinessLink(db, {
+        shopId: stale.shopId,
+        bookingId: stale.bookingId,
+        now,
+      })
+    )
+      return "current_link_live";
   } else if (await hasLivePersonWaiverRequest(db, stale.shopId, stale.personId, now)) {
     return "current_link_live";
   }
@@ -956,6 +974,25 @@ export async function emailFreshWaiverLink(
   // Issued, but nothing left the building — an unconfigured provider, a
   // rejected recipient, a provider error. Never claim mail is on its way.
   return "failed";
+}
+
+/** The seat is held and its departure still scheduled. */
+async function seatStillSails(db: DbExecutor, shopId: string, bookingId: string) {
+  const [seat] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        seatNotCancelled,
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+      ),
+    )
+    .limit(1);
+  return Boolean(seat);
 }
 
 export type WaiverBatchFallbackLink = {

@@ -81,7 +81,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     for (const radio of await leadNo.all()) await radio.check();
     await phone.getByRole("button", { name: "Sign waiver" }).click();
     await expect(phone.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
-    expect(new URL(phone.url()).pathname.startsWith("/waivers/counter_")).toBe(true);
+    expect(new URL(phone.url()).pathname.startsWith("/waivers/")).toBe(true);
     await expect(phone.locator('a[href^="/ready/"]')).toHaveCount(0);
     await phone.reload().catch(() => {
       throw new Error("lead waiver reload failed");

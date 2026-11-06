@@ -1175,11 +1175,24 @@ async function scrubPersonOnlyRows(
   // that opens this person goes with them (security review of #2710, F1).
   // A staff credential naming them (a calendar feed, `merge: "refuse"`) is
   // revoked by `scrubStandingCredentials` instead, so the record of it stays.
+  // A counter tablet's waiver link (`waiver_link`) names one of their
+  // releases, which stay as evidence: the link goes, so nothing opens the
+  // release again.
   await tx.delete(capabilities).where(
     or(
       and(
         eq(capabilities.personId, personId),
         notInArray(capabilities.purpose, personPurposesThatMerge("refuse")),
+      ),
+      and(
+        eq(capabilities.shopId, shopId),
+        inArray(
+          capabilities.waiverRecordId,
+          tx
+            .select({ id: waiverRecords.id })
+            .from(waiverRecords)
+            .where(and(eq(waiverRecords.shopId, shopId), eq(waiverRecords.personId, personId))),
+        ),
       ),
       and(
         eq(capabilities.shopId, shopId),

@@ -1,5 +1,5 @@
 import { EMAIL_VERIFICATION_TTL_MS, INVITE_TTL_MS, PASSWORD_RESET_TTL_MS } from "./account-tokens";
-import { DAY_MS } from "./clock";
+import { DAY_MS, MINUTE_MS } from "./clock";
 import { SETUP_LINK_TTL_MS } from "./setup-links";
 
 /**
@@ -21,7 +21,9 @@ import { SETUP_LINK_TTL_MS } from "./setup-links";
  * addresses, and the account tokens (verify, reset, invite), which name a
  * sign-in account and no shop, and the setup link, which names a set-up
  * request and no shop, and the staff calendar feeds, which are opened on every
- * poll and never spent (ADR 20261105-capabilities-shop-id-nullable).
+ * poll and never spent (ADR 20261105-capabilities-shop-id-nullable), and the
+ * counter tablet's waiver link, which opens one seat's release for one sitting
+ * (ADR 20261105-waiver-folds-into-the-thread).
  * Purposes still on their own tables (the front desk's confirm link) are the
  * rest of #2710.
  * Booking links stay on `booking_capabilities`: they are derived from their
@@ -46,6 +48,7 @@ export const CAPABILITY_PURPOSES = [
   "shop_setup",
   "calendar_assignments",
   "calendar_shop_trips",
+  "waiver_link",
 ] as const;
 
 export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
@@ -59,7 +62,9 @@ export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
  * never act on a later, different address. `user_account` is
  * `capabilities.user_account_id`, a sign-in account; `setup_request` is
  * `capabilities.setup_request_id`, a request to be set up that no shop exists
- * for yet. The table's
+ * for yet. `waiver_record` is `capabilities.waiver_record_id`, one release:
+ * the link opens that record and no other, so a seat that changes hands, or
+ * terms that change under it, leaves the link opening nothing. The table's
  * `capabilities_subject_by_purpose` check holds every row to its purpose's
  * subject, and keeps the other subject columns null.
  */
@@ -68,7 +73,8 @@ export type CapabilitySubject =
   | "person"
   | "shop_address"
   | "user_account"
-  | "setup_request";
+  | "setup_request"
+  | "waiver_record";
 
 /**
  * What a diver merge does with a `person` purpose's rows (`mergeDiverRecords`).
@@ -295,6 +301,24 @@ export const CAPABILITY_POLICY = {
     reissue: "supersedes",
     per: "subject",
     use: "reusable",
+  },
+  // The counter tablet's waiver link (issue #2743, ADR
+  // 20261105-waiver-folds-into-the-thread): staff show it as a QR on the
+  // party's waiver panel, and the diver signs their own seat's release on the
+  // shop's device. It names the release, not the person, so it carries no
+  // readiness authority and opens nothing once the seat changes hands or the
+  // terms change. Half an hour is one sitting; signing spends it, and a fresh
+  // QR revokes the one before. A diver merge supersedes the unsigned release,
+  // so the link opens nothing after it; an erasure deletes the links to the
+  // person's releases.
+  waiver_link: {
+    subject: "waiver_record",
+    scope: "shop",
+    lifetime: "expires",
+    ttlMs: 30 * MINUTE_MS,
+    reissue: "supersedes",
+    per: "subject",
+    use: "once",
   },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;
 

@@ -419,6 +419,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 
 [glossary/records-and-evidence.md](glossary/records-and-evidence.md)
 
+- Counter link
 - Coverage denominator
 - Day profile
 - Dispute sheet

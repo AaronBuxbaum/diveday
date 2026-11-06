@@ -46,10 +46,10 @@
     "exempt": "The same waiverSigningForm the waiver link draws, which the waiver captures photograph with its guardian card; only the door differs. guardian-co-signature.spec.ts reaches this page by the party panel's Sign tap, and src/app/(token)/ready/[token]/party-waiver-actions.test.ts holds the door against a real record (issue #2743)."
   },
   "/ready/[token]/party/[seatId]/waiver/doctor": {
-    "exempt": "The same DoctorReferralBody the waiver link's doctor page draws, which waivers.spec.ts walks and the waiver-doctor capture photographs; only the door differs, and that door (the lead's readiness link, the panel's physician door on the seat, the referral gate) is held against a real record by src/app/(token)/ready/[token]/party-waiver-actions.test.ts (issue #2743)."
+    "exempt": "The same DoctorReferralBody the diver's own doctor's page draws, held against a real record by src/app/(token)/ready/[token]/waiver/doctor/page.test.ts; only the door differs, and that door (the lead's readiness link, the panel's physician door on the seat, the referral gate) is held against a real record by src/app/(token)/ready/[token]/party-waiver-actions.test.ts (issue #2743)."
   },
   "/ready/[token]/waiver/doctor": {
-    "exempt": "The same DoctorReferralBody the waiver link's doctor page draws, which waivers.spec.ts walks and the waiver-doctor capture photographs; only the door differs, and that door (the readiness link, the seat's own record, the referral gate) is held against a real record by src/app/(token)/ready/[token]/waiver-actions.test.ts (issue #2743)."
+    "exempt": "The doctor's page since the waiver link's was deleted (issue #2743): src/app/(token)/ready/[token]/waiver/doctor/page.test.ts renders it and src/app/(token)/ready/[token]/waiver-doctor-actions.test.ts sends its form, against a real record. The waiver-doctor capture and the waivers.spec.ts walk reached it through a seat's copied waiver link, which no longer exists, and move onto this door in their own change."
   },
   "/s/[shopSlug]/embed/calendar": {
     "e2e": [
@@ -113,9 +113,5 @@
   "/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers": {
     "e2e": ["check-in.spec.ts", "party-waiver-qr.spec.ts"],
     "visual": ["party-waiver-held-medical", "party-waiver-queue"]
-  },
-  "/waivers/[token]/doctor": {
-    "e2e": ["waivers.spec.ts"],
-    "visual": ["waiver-doctor"]
   }
 }

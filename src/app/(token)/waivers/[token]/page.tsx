@@ -3,10 +3,9 @@ import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId } from "@/db/waiver-signing";
-import { doctorPageOpen, getWaiverForToken, staleWaiverRecordForToken } from "@/db/waivers";
+import { getWaiverForToken, staleWaiverRecordForToken, waiverLinkDoor } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { isCounterWaiverToken } from "@/lib/counter-waiver-token";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction, saveWaiverDraftAction } from "./actions";
@@ -57,7 +56,12 @@ export default async function WaiverPage({
   // `shops.default_locale` to fall back to — negotiate from the visitor's own
   // device alone for those branches.
   const anonT = diverTranslator(await requestLocale());
-  const state = await getWaiverForToken(db, token);
+  // A counter tablet's link, or a release with no seat. A seat's own waiver
+  // link opens nothing (issue #2743): its release is signed in the holder's
+  // thread, so it lands on the card below that sends them their thread link.
+  const door = await waiverLinkDoor(db, token);
+  const state = door ? await getWaiverForToken(db, door.key) : { state: "unavailable" as const };
+  const counter = door?.door === "counter";
 
   if (state.state === "unavailable") {
     // A rescue send supersedes the very record that asked for it, so this
@@ -106,21 +110,19 @@ export default async function WaiverPage({
 
     const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
-    // The same gate the doctor's page opens on, so the door never leads to a redirect.
-    const doctorDoor = needsReview && (await doctorPageOpen(db, state.record));
     const signedRail = completedWaiverRail(needsReview, !!state.record.shopAnswers);
     return (
       <WaiverCompleted
         shop={shop}
         t={t}
         locale={locale}
-        waiverOnly={isCounterWaiverToken(token)}
+        waiverOnly={counter}
         medicalState={completedMedicalState(state.record)}
-        showPrepHelp={Boolean(bookingTripId) && !isCounterWaiverToken(token)}
-        // A waiver link opens no thread: a parent signing a child's seat signs
-        // on their own link (`/ready/<token>/party/<seat>/waiver`, issue #2743).
+        // A waiver link opens no thread and no doctor's page (issue #2743): a
+        // seat's release, and its doctor's page, are on the holder's own link.
+        showPrepHelp={false}
         readyPath={null}
-        doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
+        doctorPath={null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}
       />
@@ -136,6 +138,7 @@ export default async function WaiverPage({
     search: { saved, error, field, q, at },
     completeAction: completeWaiverAction.bind(null, token),
     saveAction: saveWaiverDraftAction.bind(null, token),
-    showLinkExpiry: true,
+    // A counter link's half hour is not the release's own expiry.
+    showLinkExpiry: !counter,
   });
 }

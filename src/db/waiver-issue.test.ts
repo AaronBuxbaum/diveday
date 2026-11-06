@@ -9,7 +9,11 @@ import {
   WAIVER_SIGNATURE_VALIDITY_MS,
 } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
-import { revokeBookingCapabilities, verifyBookingCapability } from "./booking-capabilities";
+import {
+  issueBookingCapability,
+  revokeBookingCapabilities,
+  verifyBookingCapability,
+} from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
 import {
   createCourseForm,
@@ -24,7 +28,6 @@ import {
   recordNotificationDelivery,
 } from "./notifications";
 import { getBookingReadiness } from "./readiness";
-import type { MedicalAnswers } from "./schema";
 import {
   bookingCapabilities,
   bookings,
@@ -49,7 +52,6 @@ import {
   getDiverWaiverRequestStatus,
   getWaiverForToken,
   issueWaiverRequest,
-  recordWaiverDraft,
   recordWaiverTemplate,
 } from "./waivers";
 
@@ -719,30 +721,22 @@ describe("emailFreshWaiverLink", () => {
     );
   });
 
-  it("refuses when a fresher link is still live, and leaves that link and its draft alone", async () => {
-    // The attack: a stale waiver URL is its own capability, and issuing
-    // supersedes every non-superseded record for the booking. Without a guard,
-    // whoever holds the dead link could reissue at will — killing the link the
-    // diver is actually working in and taking their half-filled medical
-    // answers with it. A remote wipe button, triggerable by a forwarded email.
+  it("refuses while the seat's thread link is live in the holder's mail, and leaves the release alone", async () => {
+    // A seat's waiver link is dead by decision (issue #2743); what its rescue
+    // sends is the holder's thread link. A dead URL never drives a delivery on
+    // a thread link already delivered and live (`hasLiveDeliveredReadinessLink`).
     const send = configureEmail();
     const { db, shop, bookingId, token, after } = await expiredLink();
-    // Issued at the instant the first link dies, so at `after` the diver's own
-    // link is comfortably live while the one in the attacker's hands is not.
     const live = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now: after });
     if (!live.ok) throw new Error(`issue failed: ${live.reason}`);
-    const draft: MedicalAnswers = {
-      questionnaireId: "rstc",
-      questionnaireVersion: 1,
-      responses: { heart: false },
-    };
-    expect(
-      await recordWaiverDraft(db, live.token, {
-        signerName: "Nora Quinn",
-        acknowledged: true,
-        medicalAnswers: draft,
-      }),
-    ).toBe(true);
+    const thread = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+      delivered: true,
+      now: after,
+    });
+    if (!thread) throw new Error("thread link missing");
 
     await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("current_link_live");
 
@@ -753,11 +747,8 @@ describe("emailFreshWaiverLink", () => {
       .from(waiverRecords)
       .where(eq(waiverRecords.bookingId, bookingId));
     expect(records).toHaveLength(2);
-    // …and the diver's live link and saved work are exactly as they left them.
-    const state = await getWaiverForToken(db, live.token, after);
-    expect(state.state).toBe("available");
-    expect(state.state === "available" ? state.record.draftMedicalAnswers : null).toEqual(draft);
-    expect(state.state === "available" ? state.record.draftSignerName : null).toBe("Nora Quinn");
+    // …and the live release is exactly as it was.
+    expect((await getWaiverForToken(db, live.token, after)).state).toBe("available");
   });
 
   it("refuses a canceled booking", async () => {
@@ -801,11 +792,15 @@ describe("emailFreshWaiverLink", () => {
     await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("failed");
   });
 
-  it("refuses a link that is still live, so this is never a second way to sign", async () => {
-    configureEmail();
+  it("treats a seat's still-live waiver link as dead: it sends the thread link, never a waiver link", async () => {
+    const send = configureEmail();
     const { db, token } = await expiredLink();
-    // `after` deliberately not used: the link has not aged out yet.
-    await expect(emailFreshWaiverLink(db, token)).resolves.toBe("unavailable");
+    // `after` deliberately not used: the link's own expiry has not come.
+    await expect(emailFreshWaiverLink(db, token)).resolves.toBe("sent");
+    const command = send.mock.calls[0]?.[0] as SendEmailCommand;
+    const html = String(command.input.Content?.Simple?.Body?.Html?.Data);
+    expect(html).toMatch(/\/ready\/[^/"]+\/waiver/);
+    expect(html).not.toContain("/waivers/");
   });
 
   it("refuses a token that matches nothing", async () => {
