@@ -760,6 +760,31 @@ describe("party release QR handoff", () => {
       expect(read).toMatchObject({ answers: "locked" });
     });
 
+    it("carries the diver's recorded language and whether a parent signs too", async () => {
+      const { f, input } = await referred();
+      const [booking] = await f.db
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .where(eq(bookings.id, f.lead.bookingId));
+      if (!booking) throw new Error("booking missing");
+      expect(await getCounterDoctorReferral(f.db, input)).toMatchObject({
+        locale: null,
+        minor: false,
+      });
+      await f.db.update(people).set({ locale: "es-ES" }).where(eq(people.id, booking.personId));
+      expect(await getCounterDoctorReferral(f.db, input)).toMatchObject({ locale: "es-ES" });
+      // A date of birth under 18 puts the release back in the guardian's queue,
+      // so read the doctor's page itself, as the diver's own link does.
+      const born = shiftCalendarDate(calendarDateInTimezone(nowDate(), f.shop.timezone), -365 * 12);
+      await f.db.update(people).set({ dateOfBirth: born }).where(eq(people.id, booking.personId));
+      const [record] = await f.db
+        .select()
+        .from(waiverRecords)
+        .where(eq(waiverRecords.bookingId, f.lead.bookingId));
+      if (!record) throw new Error("record missing");
+      expect(await medicalDb.getDoctorReferral(f.db, record)).toMatchObject({ minor: true });
+    });
+
     it("prints nothing when the release has no key, is not signed, or has no doctor's page", async () => {
       const { f, input } = await referred();
       const key = vi.spyOn(completionDb, "threadWaiverKey").mockResolvedValueOnce(null);

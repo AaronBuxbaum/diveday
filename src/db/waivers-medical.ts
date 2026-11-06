@@ -7,6 +7,7 @@ import { and, desc, eq, gte, isNotNull, isNull, ne, or, sql } from "drizzle-orm"
 import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { guardianSignatureRequired } from "@/lib/guardian";
 import { log } from "@/lib/log";
 import {
   answeredMedicalForm,
@@ -31,6 +32,7 @@ import {
   activityEvents,
   bookings,
   people,
+  shops,
   trips,
   type WaiverRecord,
   waiverRecords,
@@ -957,6 +959,13 @@ export type DoctorReferral = {
   answers: "locked" | "whole" | "unfinished";
   /** The diver already sent the signed form from this page (issue #2797). */
   formSent: boolean;
+  /** The language the diver reads (`people.locale`); null when no signal was captured. */
+  locale: string | null;
+  /**
+   * Whether a parent or guardian signs for this diver today: a date of birth on
+   * file decides, else the booker's "Under 18" (`guardianSignatureRequired`).
+   */
+  minor: boolean;
 };
 
 /** What the answers section shows once the date of birth matches. */
@@ -976,9 +985,14 @@ export type DoctorReferralAnswers = {
 async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date) {
   if (!awaitsPhysician(record) || !record.bookingId) return null;
   const [seat] = await db
-    .select({ tripEndsAt: trips.endsAt })
+    .select({
+      tripEndsAt: trips.endsAt,
+      minorDeclaredAt: bookings.minorDeclaredAt,
+      timezone: shops.timezone,
+    })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(
       and(
         eq(bookings.id, record.bookingId),
@@ -991,11 +1005,20 @@ async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date
     .limit(1);
   if (!seat || !doctorPageWithinTrip(seat.tripEndsAt, now)) return null;
   const [person] = await db
-    .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
+    .select({
+      fullName: people.fullName,
+      dateOfBirth: people.dateOfBirth,
+      locale: people.locale,
+    })
     .from(people)
     .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId), livePerson()))
     .limit(1);
-  return person ?? null;
+  if (!person) return null;
+  const today = calendarDateInTimezone(now, seat.timezone);
+  return {
+    ...person,
+    minor: guardianSignatureRequired(person.dateOfBirth, today, seat.minorDeclaredAt !== null),
+  };
 }
 
 /**
@@ -1071,6 +1094,8 @@ export async function getDoctorReferral(
     answers:
       hasItems && person.dateOfBirth ? "locked" : unfinished && !hasItems ? "unfinished" : "whole",
     formSent: record.diverMedicalFormSentAt !== null,
+    locale: person.locale,
+    minor: person.minor,
   };
 }
 
