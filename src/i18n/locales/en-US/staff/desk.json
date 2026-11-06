@@ -38,7 +38,7 @@
   },
   "departureNote": {
     "heading": "Note to everyone",
-    "description": "One short message to everyone booked on this departure, by email or text. No links: each person’s own booking link goes with it.",
+    "description": "One short message to everyone booked on this departure, by email or text. A link is fine, like a map pin.",
     "label": "Note",
     "left": "{left} left",
     "submit": "Send to everyone booked",
@@ -47,8 +47,7 @@
     "someone": "Staff",
     "refusals": {
       "empty": "Write the note first.",
-      "tooLong": "Keep it to 200 characters.",
-      "link": "Take the link out. Everyone gets their own booking link.",
+      "tooLong": "Keep it to 500 characters.",
       "cancelled": "This departure is canceled.",
       "past": "This departure has sailed.",
       "limit": "This departure has had its {max, plural, one {# note} other {# notes}}.",

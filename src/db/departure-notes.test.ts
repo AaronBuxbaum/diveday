@@ -113,20 +113,37 @@ describe("sendDepartureNote", () => {
     expect(lines).toHaveLength(1);
   });
 
-  it("refuses a note with a link and sends nothing", async () => {
+  it("sends and records a note with a link that runs to 500 characters", async () => {
     const { db, shop } = ctx;
     const trip = await departure(db, shop.id);
     await book(db, shop.id, trip.id, { email: "note-link@example.com" });
     const email = fakeEmail();
+    const body = `Park here: https://maps.app.goo.gl/abc123 ${"x".repeat(500)}`.slice(0, 500);
 
     const outcome = await sendDepartureNote(
       db,
-      { shopId: shop.id, tripId: trip.id, body: "Map: https://evil.example", actorPersonId: null },
+      { shopId: shop.id, tripId: trip.id, body, actorPersonId: null },
       { emailProvider: email.provider },
     );
-    expect(outcome).toEqual({ ok: false, reason: "link" });
+    expect(outcome).toMatchObject({ ok: true, recipients: 1, delivered: 1 });
+    expect(email.sent[0]).toMatchObject({ kind: "departure_note", body });
+    expect(await listDepartureNotes(db, shop.id, trip.id)).toEqual([
+      expect.objectContaining({ body }),
+    ]);
+  });
+
+  it("refuses a note over 500 characters and sends nothing", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    await book(db, shop.id, trip.id, { email: "note-long@example.com" });
+    const email = fakeEmail();
+    const outcome = await sendDepartureNote(
+      db,
+      { shopId: shop.id, tripId: trip.id, body: "x".repeat(501), actorPersonId: null },
+      { emailProvider: email.provider },
+    );
+    expect(outcome).toEqual({ ok: false, reason: "too_long" });
     expect(email.sent).toEqual([]);
-    expect(await listDepartureNotes(db, shop.id, trip.id)).toEqual([]);
   });
 
   it("refuses a cancelled departure", async () => {
@@ -366,13 +383,13 @@ describe("a held departure note", () => {
     expect(rows).toEqual([]);
   });
 
-  it("will not hold a note that carries a link", async () => {
+  it("will not hold a note past 500 characters", async () => {
     const { db, shop } = ctx;
     const trip = await departure(db, shop.id);
     await expect(
       holdSend(db, {
         shopId: shop.id,
-        payload: { kind: "departure_note", tripId: trip.id, body: "see www.example" },
+        payload: { kind: "departure_note", tripId: trip.id, body: "x".repeat(501) },
         actorPersonId: null,
       }),
     ).rejects.toThrow();

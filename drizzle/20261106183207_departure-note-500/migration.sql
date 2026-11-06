@@ -1,0 +1,2 @@
+-- diveday:allow-destructive drop-constraint departure_notes.departure_notes_body_length: the replacement is looser (1 to 500, was 1 to 200), so every row and every write of the previous release still passes
+ALTER TABLE "departure_notes" DROP CONSTRAINT "departure_notes_body_length", ADD CONSTRAINT "departure_notes_body_length" CHECK (length(trim("body")) between 1 and 500);

@@ -211,7 +211,7 @@ and run the command again.
 | H-20261025-built-order-website-priced | Ready | — | How is the built-to-order website priced, and what may the pages promise about it? |
 | H-20261025-crew-now-both-counted | Open | — | Crew are now both counted (per-checkpoint attestation) and named (per-person roll call, roll_call_crew_events) —… |
 | H-20261025-dema-seasonality-posture-meetings | Ready | — | DEMA/seasonality posture — meetings-only or a booth — has no gate row at all… |
-| H-20261025-departure-note-limits | Ready | — | Who may send a note to everyone on a departure, and how much may it say? |
+| H-20261025-departure-note-limits | Ready | 2026-11-06 | Who may send a note to everyone on a departure, and how much may it say? |
 | H-20261025-every-alert-path-terminates | Ready | — | Every alert path terminates at alerts@dive.day, one mailbox, one person (comprehensive-review-20260802 HD-23). |
 | H-20261025-ga-migration-budget-pre | Ready | — | GA migration budget for the pre-release stack running the whole critical path simultaneously —… |
 | H-20261025-invoice-snapshot-erasure-obligation | Open | — | The invoice-snapshot erasure obligation (processor_erasure_obligations) has no API behind it and is never auto-retried… |

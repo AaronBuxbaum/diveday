@@ -1,0 +1,38 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "23ade63a-f5f7-4c5d-bdb5-b3dc58a9d6bb",
+  "prevIds": [
+    "4d2cce10-c824-40db-8aa4-df0b87947e97"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "departure_notes"
+      ],
+      "writes": [
+        "s|ck|public.departure_notes.departure_notes_body_length"
+      ],
+      "reads": [
+        "n|tbl|public.departure_notes",
+        "n|sch|public",
+        "n|col|public.departure_notes.body",
+        "e|col|public.departure_notes.body"
+      ],
+      "sqlHash": "96015f38cb63a1b9"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"departure_notes\",\"departure_notes_body_length\"]",
+      "set": {
+        "value": "length(trim(\"body\")) between 1 and 500"
+      }
+    }
+  ]
+}
