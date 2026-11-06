@@ -5,6 +5,7 @@
  */
 import { and, desc, eq, getTableColumns, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import { hashBearerToken } from "@/lib/bearer-tokens";
+import { seatAddressIsLeadTyped } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { readEmergencyContact } from "@/lib/contact";
 import {
@@ -38,7 +39,7 @@ import type { DraftGuardian, MedicalAnswers } from "./schema";
 import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 import { withVerifiedClearance } from "./waiver-record-columns";
-import { seatMinorDeclared } from "./waiver-signing";
+import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
 import { doctorPageOpen } from "./waivers-medical";
 import {
   getCurrentWaiverTemplate,
@@ -238,6 +239,7 @@ async function currentRecordForToken(db: DbExecutor, key: WaiverKey, now = nowDa
   if (!issuedLinkKeys.has(key)) return null;
   const link = await standingLink(db, key, now);
   if (!link) return null;
+  if (key.purpose === "party_waiver_link" && !(await doorSeatUnclaimed(db, key))) return null;
   const record = key.bookingId
     ? await seatRecord(db, { ...key, bookingId: key.bookingId })
     : await seatlessRecord(db, key);
@@ -299,6 +301,28 @@ async function seatRecord(
     )
     .limit(1);
   return record ?? null;
+}
+
+/**
+ * Whether a party member's door still has a seat to open (issue #2743): the
+ * seat's address is still one its party's lead typed. Once the member claims
+ * the seat, the release is their thread's Sign step and the door opens
+ * nothing, whether or not the claim revoked it (`revokeSeatReleaseLinks`).
+ */
+async function doorSeatUnclaimed(
+  db: DbExecutor,
+  door: { shopId: string; bookingId: string | null },
+): Promise<boolean> {
+  if (!door.bookingId) return false;
+  const [seat] = await db
+    .select({
+      contactTypedByLeadAt: bookings.contactTypedByLeadAt,
+      claimedAt: bookings.claimedAt,
+    })
+    .from(bookings)
+    .where(and(eq(bookings.id, door.bookingId), eq(bookings.shopId, door.shopId)))
+    .limit(1);
+  return seat ? seatAddressIsLeadTyped(seat) : false;
 }
 
 /**
@@ -392,6 +416,45 @@ export async function closedCounterCode(
   return closed ? { shopId: link.shopId } : null;
 }
 
+/**
+ * **A party member's door to a seat that has since been claimed** (issue
+ * #2743): the release is signed as the claimant's thread's Sign step now, so
+ * the page names the shop and says where the release went. No record, no
+ * person, no answers. Only when the door's own person holds the claimed seat
+ * and can sign in the thread; null for anything else.
+ */
+export async function claimedSeatDoor(
+  db: DbExecutor,
+  token: string,
+): Promise<{ shopId: string } | null> {
+  if (token.length === 0) return null;
+  const door = await verifyCapability(db, { purpose: "party_waiver_link", token });
+  if (!door) return null;
+  const [seat] = await db
+    .select({ id: bookings.id })
+    .from(waiverRecords)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
+    )
+    .where(
+      and(
+        eq(waiverRecords.id, door.subjectId),
+        eq(waiverRecords.shopId, door.shopId),
+        isNotNull(bookings.claimedAt),
+        // Only the person who holds the seat now, signable in their thread:
+        // a placeholder someone else displaced, a cancelled seat or a held
+        // one is told nothing more than any dead link (reviews of #2743).
+        eq(bookings.personId, waiverRecords.personId),
+        isNull(waiverRecords.supersededAt),
+        seatNotCancelled,
+        isNull(bookings.identityUnconfirmedAt),
+      ),
+    )
+    .limit(1);
+  return seat ? { shopId: door.shopId } : null;
+}
+
 export type WaiverLinkDoor =
   | { door: "counter"; key: CounterWaiverKey }
   /** `via`: a counter QR or Copy link, or the door a party member's join email carried. */
@@ -470,6 +533,13 @@ async function linkWaiverKey(
       bookingId: record.bookingId,
     });
     if (current?.recordId !== record.id) return null;
+    // A party member's door stands only until they claim the seat: from
+    // then on the release is their thread's Sign step (issue #2743).
+    if (
+      link.purpose === "party_waiver_link" &&
+      !(await doorSeatUnclaimed(db, { shopId: link.shopId, bookingId: record.bookingId }))
+    )
+      return null;
   } else if (link.purpose === "party_waiver_link") {
     // A party member's door names their seat's release, never one with no
     // seat, which would cover every seat they hold (issue #3986).
@@ -556,6 +626,9 @@ export async function staleWaiverRecordForToken(
     )
     .limit(1);
   if (record?.status !== "pending" || record.anonymizedAt) return null;
+  // A claimed seat's door is never rescued: its way on is the claimant's
+  // thread link (`claimedSeatDoor`, issue #2743).
+  if (door && !(await doorSeatUnclaimed(db, record))) return null;
   const linkLive = !link.revokedAt && !link.usedAt && link.expiresAt && link.expiresAt > now;
   if (linkLive && !record.supersededAt) {
     // A live door whose release is no longer the seat's own (the shop changed
@@ -1102,19 +1175,20 @@ async function completeWaiverLocked(
     signingDate(now, timezone),
     // The booker's "Under 18" on this release's seat, read where the page
     // reads it, so the two can never disagree about asking.
-    await seatMinorDeclared(db, state.record.shopId, state.record.bookingId),
+    await seatMinorDeclared(db, state.record, now),
   );
   let guardian: ReturnType<typeof guardianEvidence> | null = null;
-  // A seat's release signed on a door, a minor's, needs the desk's word that
-  // a parent or guardian is here, given for this very code (issue #4003): a
-  // birth date or "Under 18" that arrived after the code was shown is asked
-  // again here, and a party member's emailed door never carries that word.
-  if (
-    minor &&
-    isCounterKey(token) &&
-    token.bookingId !== null &&
-    !(await deskSawGuardian(db, token, state.record.personId))
-  )
+  // A minor's release signed on a counter door needs the desk's word that a
+  // parent or guardian is here, given for this very code (issues #4003, and
+  // #4019 for a release with no seat): a birth date or "Under 18" that
+  // arrived after the code was shown is asked again here, and a party
+  // member's emailed door never carries that word.
+  if (minor && isCounterKey(token) && !(await deskSawGuardian(db, token, state.record.personId)))
+    return { ok: false, reason: "guardian_at_counter" };
+  // A mailed release link to a minor whose contact a party's lead typed: that
+  // inbox cannot prove a guardian, so whoever holds it signs nothing, however
+  // the diver came to read as a minor after it was sent (issue #4019).
+  if (minor && (await releaseKeyLeadTyped(db, token, state.record.personId)))
     return { ok: false, reason: "guardian_at_counter" };
   if (minor) {
     if (!input.guardian) return { ok: false, reason: "guardian_required" };
@@ -1306,17 +1380,31 @@ async function deskSawGuardian(
 }
 
 /**
+ * A mailed release link (`release_link`) whose diver's contact a party's lead
+ * typed (`personContactLeadTyped`, issue #4019): for a minor, that inbox
+ * cannot prove a guardian.
+ */
+async function releaseKeyLeadTyped(
+  db: DbExecutor,
+  key: WaiverKey,
+  personId: string,
+): Promise<boolean> {
+  if (key.kind !== "release" || key.bookingId !== null) return false;
+  return personContactLeadTyped(db, key.shopId, personId);
+}
+
+/**
  * **A door that cannot sign this minor's release, said before the form**
  * (issue #4003 reviews): the diver reads as under 18 today and the desk never
- * vouched a guardian for this code, so the page shows why instead of a form
- * the family would fill in only to be refused at Sign.
+ * vouched a guardian for this code, or the door is a mailed release link to a
+ * contact a party's lead typed (issue #4019), so the page shows why instead of
+ * a form the family would fill in only to be refused at Sign.
  */
 export async function doorNeedsDeskGuardian(
   db: DbExecutor,
-  key: CounterWaiverKey,
+  key: LinkWaiverKey,
   now: Date = nowDate(),
 ): Promise<boolean> {
-  if (key.bookingId === null) return false;
   const [signer] = await db
     .select({ personId: waiverRecords.personId, dateOfBirth: people.dateOfBirth })
     .from(waiverRecords)
@@ -1327,9 +1415,15 @@ export async function doorNeedsDeskGuardian(
   const minor = guardianSignatureRequired(
     signer.dateOfBirth,
     signingDate(now, await shopTimezone(db, key.shopId)),
-    await seatMinorDeclared(db, key.shopId, key.bookingId),
+    await seatMinorDeclared(
+      db,
+      { shopId: key.shopId, personId: signer.personId, bookingId: key.bookingId },
+      now,
+    ),
   );
-  return minor && !(await deskSawGuardian(db, key, signer.personId));
+  if (!minor) return false;
+  if (isCounterKey(key)) return !(await deskSawGuardian(db, key, signer.personId));
+  return releaseKeyLeadTyped(db, key, signer.personId);
 }
 
 function isCounterKey(token: WaiverKey): token is CounterWaiverKey {

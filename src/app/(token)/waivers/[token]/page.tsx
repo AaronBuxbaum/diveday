@@ -5,6 +5,7 @@ import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId } from "@/db/waiver-signing";
 import {
+  claimedSeatDoor,
   closedCounterCode,
   doctorPageOpen,
   doorNeedsDeskGuardian,
@@ -19,6 +20,7 @@ import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { autosaveWaiverDraftAction, completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { completedMedicalState } from "./completed-medical-state";
 import { counterDevice } from "./counter-device";
+import { recordForDoor } from "./door-draft";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
 import {
   CounterClaimCard,
@@ -104,6 +106,14 @@ export default async function WaiverPage({
       const closedT = diverTranslator(await requestLocale(closedShop.defaultLocale));
       return <DeadLink t={closedT} next={closedT("waiver.counterClosedNext")} shop={closedShop} />;
     }
+    // A party member's door to a seat since claimed: the release is signed
+    // on the trip link the claimant's confirmation carried (issue #2743).
+    const claimed = await claimedSeatDoor(db, token);
+    const claimedShop = claimed ? await getShopById(db, claimed.shopId) : null;
+    if (claimedShop) {
+      const claimedT = diverTranslator(await requestLocale(claimedShop.defaultLocale));
+      return <DeadLink t={claimedT} next={claimedT("waiver.doorClaimedNext")} shop={claimedShop} />;
+    }
     // No record at all reached through this token (garbage, or a completed
     // link long since replaced) — there is no shop to attribute it to
     // without weakening the token model's own guarantee that a bearer token
@@ -162,14 +172,19 @@ export default async function WaiverPage({
     );
   }
 
-  // A minor's seat on a door the desk never vouched a guardian for: Sign
-  // would refuse, so the page says why before anyone fills it in (#4003).
-  if (door?.door === "counter" && (await doorNeedsDeskGuardian(db, door.key)))
+  // A minor on a door the desk never vouched a guardian for (#4003), or on a
+  // mailed link to a contact a party's lead typed (#4019): Sign would refuse,
+  // so the page says why before anyone fills it in.
+  if (
+    (door?.door === "counter" || door?.door === "release") &&
+    (await doorNeedsDeskGuardian(db, door.key))
+  )
     return <GuardianAtCounterCard t={t} />;
 
   return waiverSigningForm({
     db,
-    record: state.record,
+    // Only the draft saved through this door comes back to it (issue #4008).
+    record: recordForDoor(state.record, door?.key.linkId ?? null),
     shop,
     locale,
     t,

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { MarketingNav } from "@/app/_components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
@@ -43,7 +42,6 @@ export default async function FindYourBookingPage() {
   const t = diverTranslator(locale);
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNav compactMobile />
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-12 sm:py-16">
         <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{t("findYourBooking.title")}</h1>
         <p className="mt-2 max-w-prose text-pretty text-muted">

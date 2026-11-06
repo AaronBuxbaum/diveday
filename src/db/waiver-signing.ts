@@ -1,5 +1,7 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
+import { peopleMinorDeclared } from "./minor-declared";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -14,24 +16,61 @@ import { seatNotCancelled } from "./trips-queries";
  */
 
 /**
- * Whether the seat a release is for was marked "Under 18" by whoever booked it
- * (`bookings.minor_declared_at`). False for a person-scoped release, which has
- * no seat. The guardian rule reads it only where no date of birth is on file
- * (`guardianSignatureRequired`), so the signing page and `completeWaiver` ask
- * the same question.
+ * Whether the booker marked the release's diver "Under 18"
+ * (`bookings.minor_declared_at`): on the release's own seat, or, for a
+ * release with no seat (which covers every seat the diver holds once signed,
+ * issue #4019), on a seat of theirs still ahead (`peopleMinorDeclared`, issue
+ * #2553: a dive already over says nothing about the person today). The
+ * guardian rule reads it only where no date of birth is on file
+ * (`guardianSignatureRequired`), so the signing page, `completeWaiver` and
+ * Copy link ask the same question.
  */
 export async function seatMinorDeclared(
   db: DbExecutor,
-  shopId: string,
-  bookingId: string | null,
+  record: { shopId: string; personId: string; bookingId: string | null },
+  now: Date = nowDate(),
 ): Promise<boolean> {
-  if (!bookingId) return false;
+  if (record.bookingId) {
+    const [row] = await db
+      .select({ minorDeclaredAt: bookings.minorDeclaredAt })
+      .from(bookings)
+      .where(and(eq(bookings.id, record.bookingId), eq(bookings.shopId, record.shopId)))
+      .limit(1);
+    return Boolean(row?.minorDeclaredAt);
+  }
+  const declared = await peopleMinorDeclared(db, {
+    shopId: record.shopId,
+    personIds: [record.personId],
+    now,
+  });
+  return declared.has(record.personId);
+}
+
+/**
+ * Whether any seat of the person ever carried an address the party's lead
+ * typed that the member never claimed (`seatAddressIsLeadTyped`, issue
+ * #4003), whatever became of the seat or its departure: the contact on file
+ * may still be that typed one, which cannot prove a guardian (issue #4019).
+ * Read only for a minor, so counting old seats fails closed.
+ */
+export async function personContactLeadTyped(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<boolean> {
   const [row] = await db
-    .select({ minorDeclaredAt: bookings.minorDeclaredAt })
+    .select({ id: bookings.id })
     .from(bookings)
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.personId, personId),
+        isNotNull(bookings.contactTypedByLeadAt),
+        isNull(bookings.claimedAt),
+      ),
+    )
     .limit(1);
-  return Boolean(row?.minorDeclaredAt);
+  return Boolean(row);
 }
 
 /** The departure a booking sits on, or null when the booking is gone. */
@@ -60,7 +99,7 @@ export async function getBookingTripId(
 
 /**
  * The name a release has to be signed under, and what the guardian rule reads:
- * the date of birth on file and the seat's "Under 18" (`seatMinorDeclared`).
+ * the date of birth on file and the booker's "Under 18" (`seatMinorDeclared`).
  */
 export async function getWaiverSignerOnFile(
   db: DbExecutor,
@@ -73,7 +112,7 @@ export async function getWaiverSignerOnFile(
     .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId)))
     .limit(1);
   if (!row) return undefined;
-  const minorDeclared = await seatMinorDeclared(db, record.shopId, record.bookingId);
+  const minorDeclared = await seatMinorDeclared(db, record);
   return { ...row, minorDeclared };
 }
 

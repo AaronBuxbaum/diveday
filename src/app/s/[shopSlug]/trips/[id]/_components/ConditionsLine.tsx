@@ -86,6 +86,8 @@ type ConditionsLineProps = {
   locale: string;
   /** The reader's own units, added after the shop's when they differ (ideas item 22). */
   readerUnits?: ReaderUnits;
+  /** On paper the credit's link back is its address in words: nothing on a sheet taps (#2745). */
+  paper?: boolean;
 };
 
 function ConditionsLineView({
@@ -96,6 +98,7 @@ function ConditionsLineView({
   crewLanguages,
   locale,
   readerUnits,
+  paper = false,
 }: ConditionsLineProps) {
   const t = diverTranslator(locale);
   // Stored metric, displayed in the shop's own units (src/lib/depth-units.ts,
@@ -156,8 +159,14 @@ function ConditionsLineView({
     // under the pitch's door it sits flush, so its rule is the door's close —
     // 24px below, the door's label sat in an 80px band between two rules
     // (pixel-craft class 6). The page decides which; the line is the same.
-    <section data-trip-conditions className={`border-t border-border pt-4 ${ledgerRowRoomClass}`}>
-      {parts.length > 0 ? (
+    // On paper the sheet draws the rule, and the readings are one line of words.
+    <section
+      data-trip-conditions
+      className={paper ? undefined : `border-t border-border pt-4 ${ledgerRowRoomClass}`}
+    >
+      {paper && parts.length > 0 ? (
+        <p className="text-sm">{parts.join(" · ")}</p>
+      ) : parts.length > 0 ? (
         // **A wrap never strands a "·"** (pixel-craft class 8, K-483). Each
         // reading carries the dot before it in one item, so the two wrap
         // together, and the row stands 12px left of the column — the dot's
@@ -206,14 +215,18 @@ function ConditionsLineView({
         // thing nothing else on the page says: the crew make the final call.
         <p className="mt-2 text-xs text-muted">
           {t("trip.forecastCrewCall")} {t("trip.forecastCreditPrefix")}{" "}
-          <a
-            href="https://open-meteo.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-primary hover:underline"
-          >
-            Open-Meteo
-          </a>
+          {paper ? (
+            "Open-Meteo (open-meteo.com)"
+          ) : (
+            <a
+              href="https://open-meteo.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              Open-Meteo
+            </a>
+          )}
         </p>
       ) : null}
     </section>

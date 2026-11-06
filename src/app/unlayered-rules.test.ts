@@ -44,8 +44,6 @@ const ALLOWED: Record<string, string> = {
   "html:has([data-foot-bar])": "Scroll padding for a page with a foot bar, as above.",
   "body:has([data-foot-bar])":
     "Room under the last line for the foot bar, which nothing on <body> sets.",
-  "body:has([data-public-trip-paper])":
-    "Print: the departure's named page owns its repeated identity across the document, including public chrome outside the main content.",
   'button[type="submit"]':
     "Print: a submit button has nothing to say on paper, and the print sheet must beat any display utility on it.",
   html: "Print: the sheet's 13px root size, which every rem on the page reads; no utility sets it.",
@@ -124,9 +122,9 @@ describe("unlayered element rules", () => {
     expect(isElementRule('body:has([data-x]) [data-skip-link="root"]')).toBe(false);
     expect(isElementRule("html:has(#shop-main-content > main)")).toBe(false);
     expect(isElementRule("[data-trip-details-paper] > div")).toBe(false);
-    expect(isElementRule("[data-public-trip-layout] > * + *")).toBe(false);
-    expect(isElementRule("[data-public-trip-reading] details::details-content")).toBe(false);
-    expect(isElementRule("body:has([data-public-trip-paper])")).toBe(true);
+    expect(isElementRule("[data-x-layout] > * + *")).toBe(false);
+    expect(isElementRule("[data-x-reading] details::details-content")).toBe(false);
+    expect(isElementRule("body:has([data-x-paper])")).toBe(true);
     expect(isElementRule("details[open]::details-content")).toBe(true);
     expect(isElementRule("[disabled] input")).toBe(true);
     expect(isElementRule("[aria-hidden] input")).toBe(true);

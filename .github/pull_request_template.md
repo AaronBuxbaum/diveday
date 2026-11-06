@@ -22,14 +22,12 @@
 
 <!-- Each line: "launched" and what it found and what changed, or "not needed because <reason>".
      A diff touching manifests, roll call, readiness, cert gating, medical, waivers, nitrox,
-     erasure or src/db/bookings.ts needs two dive-domain-expert runs launched in parallel, one line
-     each: one framed as a dock operator, one as an attacker (each line names its framing in parentheses right after the agent name, and a "not needed because" line is accepted only alone). Auth,
+     erasure or src/db/bookings.ts needs one dive-domain-expert run framed as a dock operator (the line names its framing in parentheses right after the agent name, and a "not needed because" line is accepted only alone). Auth,
      tokens, personal data, waivers, src/lib/payments/, src/app/api/webhooks/ or export/import
      must name security-reviewer. CI's "Pull request body names its reviews" step
      (scripts/check-pr-body.mjs) reads these lines. -->
 
 - `dive-domain-expert` (dock operator):
-- `dive-domain-expert` (attacker):
 - `security-reviewer`:
 
 ## Seen filled in

@@ -10,12 +10,10 @@ import { useMenuDismissalEvents } from "@/components/useMenuDismissal";
 export function MarketingNavLinks({
   links,
   menuLabel,
-  compactMobile,
   pending = false,
 }: {
   links: readonly { href: string; label: string }[];
   menuLabel: string;
-  compactMobile: boolean;
   pending?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -27,7 +25,7 @@ export function MarketingNavLinks({
   const id = useId();
   useMenuDismissalEvents({ open, close, inside: [trigger, panel], returnFocus: trigger });
   return (
-    <div className={`print:hidden ${compactMobile ? "max-lg:hidden" : ""}`}>
+    <div className="print:hidden">
       <button
         ref={trigger}
         type="button"

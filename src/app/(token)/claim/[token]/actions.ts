@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { sendClaimedSeatConfirmation } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { tellSeatAlreadyHeld } from "@/db/seat-already-held";
 import { claimPartySeatRecord, settleClaimedSeat } from "@/db/seat-claims";
@@ -84,11 +83,10 @@ export async function claimSeatAction(token: string, formData: FormData) {
       bookingId: outcome.bookingId,
       locale: ownLocale,
     });
-    // The waiver mail, the analytics event and the activity trail: all after
-    // the response, so a claim that worked costs the caller no more time than
-    // one that was refused.
+    // The confirmation with its Sign step, the analytics event and the
+    // activity trail: all after the response, so a claim that worked costs
+    // the caller no more time than one that was refused.
     await settleClaimedSeat(db, outcome);
-    await sendClaimedSeatConfirmation(db, outcome.shopId, outcome.bookingId);
   });
   redirect(sentPath(base));
 }

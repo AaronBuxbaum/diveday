@@ -24,13 +24,18 @@ import {
   withErasureCoordinatedBookingSend,
   withErasureCoordinatedPersonSend,
 } from "./erasure-coordinated-send";
-import { retryBookingConfirmation, sendAndRecordNotification } from "./notifications";
+import {
+  retryBookingConfirmation,
+  sendAndRecordNotification,
+  sendClaimedSeatConfirmation,
+} from "./notifications";
 import { recordDiverActivity } from "./operations";
 import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
 import { bookings, capabilities, people, shops, trips, waiverRecords } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { seatNotCancelled } from "./trips-queries";
+import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
 import {
   hasLivePersonWaiverRequest,
   openWaiverInThread,
@@ -88,7 +93,13 @@ export type WaiverDelivery =
    * nothing was sent, because a guardian is something that address cannot
    * prove. A parent signs with them at the counter, or the lead signs it.
    */
-  | "guardian_needed";
+  | "guardian_needed"
+  /**
+   * Copy link on a minor's release with no seat, before the desk said a
+   * parent or legal guardian is at the counter to co-sign (issue #4019):
+   * nothing was minted. Asked again with `guardianPresent`.
+   */
+  | "guardian_check";
 
 /**
  * The shop's own text senders, resolved once per send.
@@ -236,6 +247,11 @@ export type WaiverDeliveryOptions = {
    * diver is signing on. Reports `sent` without sending.
    */
   keepLiveLink?: boolean;
+  /**
+   * Copy link on a release with no seat: the desk confirmed a parent or legal
+   * guardian is at the counter to co-sign a minor's release (issue #4019).
+   */
+  guardianPresent?: boolean;
   /** Identity read before a booking-bound send; stale assignments are refused. */
   expectedPersonId?: string;
   expectedTripId?: string;
@@ -346,8 +362,8 @@ function emailDelivery(
 
 /**
  * A party member's waiver-only door to the release (issue #3986): first
- * device, spent by the signature, two weeks. Minting it revokes every other
- * live door to the release.
+ * device, spent by the signature, two weeks. Minting it revokes the member's
+ * earlier door; a counter code to the same release stays live (issue #4008).
  */
 async function mintPartyDoor(
   tx: DbExecutor,
@@ -609,7 +625,10 @@ export async function issueAndDeliverWaiver(
  *   contact on file only. Its token never comes back, sent or not; a staffer
  *   who needs a URL to hand over asks for Copy link.
  *
- * A release holds one live link: either mint revokes the one before.
+ * A release holds one live link of each kind: a resend revokes the mailed link
+ * before it, a Copy link the counter link before it, and a counter link and a
+ * mailed one stand side by side (issue #4008). Whichever signs, the other then
+ * opens nothing.
  */
 export async function issueAndDeliverPersonWaiver(
   db: AppDb,
@@ -673,6 +692,40 @@ export async function issueAndDeliverPersonWaiver(
           delivery: "sent" as const,
         };
       }
+      // A minor's release, by the date of birth on file or "Under 18" on any
+      // live seat: signed, it covers every seat they hold (issue #4019).
+      const minor = guardianSignatureRequired(
+        ctx.person.dateOfBirth,
+        signingDate(options.now ?? nowDate(), ctx.shop.timezone),
+        await seatMinorDeclared(
+          tx,
+          { shopId, personId, bookingId: null },
+          options.now ?? nowDate(),
+        ),
+      );
+      // Copy link asks the desk what a seat's counter QR asks (issue #3986)
+      // before anything is minted: nobody else at the counter can say whether
+      // the person typing a guardian's name is one.
+      if (channel === "link" && minor && options.guardianPresent !== true) {
+        return {
+          ok: true as const,
+          bookingId: null,
+          diverName: ctx.person.fullName,
+          token: null,
+          delivery: "guardian_check" as const,
+        };
+      }
+      // A minor whose contact the party's lead may have typed gets no mailed
+      // link: that address cannot prove a guardian (issues #4003, #4019).
+      if (channel !== "link" && minor && (await personContactLeadTyped(tx, shopId, personId))) {
+        return {
+          ok: true as const,
+          bookingId: null,
+          diverName: ctx.person.fullName,
+          token: null,
+          delivery: "guardian_needed" as const,
+        };
+      }
       const origin = publicAppUrl();
       const mint = (purpose: "waiver_link" | "release_link") =>
         mintCapability(tx, { purpose, shopId, subjectId: outcome.recordId, now: options.now });
@@ -694,6 +747,18 @@ export async function issueAndDeliverPersonWaiver(
           waiverRecordId: outcome.recordId,
         });
         if (!recorded) throw new CopyLinkNotRecorded();
+        if (minor) {
+          // The desk's word, naming this very link: signing asks for it.
+          const confirmed = await recordDiverActivity(tx, {
+            shopId,
+            personId,
+            actorPersonId: options.actorPersonId as string,
+            code: "waiver_counter_guardian_confirmed",
+            waiverRecordId: outcome.recordId,
+            linkId: link.id,
+          });
+          if (!confirmed) throw new CopyLinkNotRecorded();
+        }
         token = link.token;
         delivery = origin ? "link_only" : "no_app_origin";
       } else if (!origin) {
@@ -1044,6 +1109,48 @@ export async function resendConfirmationWithWaiver(
 }
 
 /**
+ * **A claimed seat's one email** (issue #2743): the claimant's booking
+ * confirmation, carrying the seat's release as its Sign step on the mail's own
+ * readiness link whenever one is owed or still out. A party member's door
+ * closed with the claim (`revokeSeatReleaseLinks`), so a release the door
+ * carried is signed in the thread from here on. When the mail cannot carry
+ * the step, the release goes on its own as the thread link
+ * (`settleJoinWaiverDelivery`); when none is owed, nothing goes.
+ */
+export async function confirmClaimedSeat(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+): Promise<void> {
+  // The confirmation goes whatever the Sign step does: it is the claimant's
+  // only link, and the claim already closed the door (reviews of #2743).
+  const step = await signStepForResend(db, shopId, bookingId).catch((error: unknown) => {
+    log("seat_claim.sign_step_failed", "error", {
+      bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    return null;
+  });
+  let delivery: Awaited<ReturnType<typeof sendClaimedSeatConfirmation>> = null;
+  try {
+    delivery = await sendClaimedSeatConfirmation(db, shopId, bookingId, { signStep: step });
+  } finally {
+    if (!step) {
+      await issueWaiverOnJoin(db, shopId, bookingId);
+    } else {
+      const sent = delivery?.status === "sent" && delivery.carriedSignStep ? delivery : null;
+      await settleJoinWaiverDelivery(db, {
+        shopId,
+        bookingId,
+        step,
+        confirmationSent: sent !== null,
+        confirmationProviderMessageId: sent?.providerMessageId,
+      });
+    }
+  }
+}
+
+/**
  * What a diver's own rescue attempt from a dead waiver link amounted to. A code,
  * never a sentence — the page picks the words (docs ADR
  * 20260731-domain-layer-copy-leaks).
@@ -1071,7 +1178,7 @@ export type WaiverLinkRescue =
  * which is exactly the affordance staff already had and no more.
  *
  * `hasLivePersonWaiverRequest` is the guard: when the person already holds a
- * live link (a release link, or a counter link open at the shop), this reports
+ * live release link (a counter link stands beside it, issue #4008), this reports
  * `current_link_live` and issues nothing, so whoever holds a *dead* URL never
  * drives a delivery on the live one. `staleWaiverRecordForToken` keeps
  * resolving the original token after a send, so a second tap on a link whose
@@ -1106,14 +1213,17 @@ export async function emailFreshWaiverLink(
   if (!outcome.ok) return outcome.reason === "already_completed" ? "already_signed" : "unavailable";
   if (outcome.delivery === "sent") return "sent";
   if (outcome.delivery === "no_email") return "no_email";
+  // A minor whose contact a party's lead typed is sent nothing (issue #4019).
+  if (outcome.delivery === "guardian_needed") return "unavailable";
   // Issued, but nothing left the building — an unconfigured provider, a
   // rejected recipient, a provider error. Never claim mail is on its way.
   return "failed";
 }
 
 /**
- * Whether any door to the seat's current release still stands: a party
- * member's door or a counter code, unspent, unrevoked and unexpired.
+ * Whether a party member's door to the seat's current release still stands:
+ * unspent, unrevoked and unexpired. A counter code does not count: it stands
+ * beside the door (issue #4008), so a fresh door never revokes it.
  */
 export async function hasLiveSeatDoor(
   db: DbExecutor,
@@ -1129,6 +1239,7 @@ export async function hasLiveSeatDoor(
     .from(capabilities)
     .where(
       and(
+        eq(capabilities.purpose, "party_waiver_link"),
         eq(capabilities.shopId, shopId),
         eq(capabilities.waiverRecordId, current.recordId),
         isNull(capabilities.usedAt),
@@ -1142,7 +1253,7 @@ export async function hasLiveSeatDoor(
 
 /**
  * **A party member's seat, sent its door again** (issue #4003): a dead door's
- * rescue, and find-my-booking for an address the lead typed. While any door to
+ * rescue, and find-my-booking for an address the lead typed. While a door to
  * the release still stands nothing is sent, so a stranger's request never
  * revokes a live one. The seat must still be this diver's and its address
  * still the one the lead typed: a claimed seat's own links are its holder's
@@ -1234,6 +1345,8 @@ export async function deliverWaiverBatch(
     channel: WaiverSendChannel;
     /** The staffer sending; Copy link on a release with no seat needs one. */
     actorPersonId?: string | null;
+    /** Copy link: the desk confirmed a parent or guardian is at the counter (issue #4019). */
+    guardianPresent?: boolean;
   },
 ): Promise<WaiverBatchOutcome> {
   const outcome: WaiverBatchOutcome = {
@@ -1253,6 +1366,7 @@ export async function deliverWaiverBatch(
         ? await issueAndDeliverPersonWaiver(db, shopId, target.personId, {
             channel: input.channel,
             actorPersonId: input.actorPersonId,
+            guardianPresent: input.guardianPresent,
           })
         : await issueAndDeliverWaiver(db, shopId, target.bookingId, { channel: input.channel });
     if (!result.ok) {

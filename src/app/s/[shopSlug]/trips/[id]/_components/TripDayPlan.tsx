@@ -119,7 +119,7 @@ export function courseDayPlan(
   };
 }
 
-function CoursePlan({
+export function CoursePlan({
   plan,
   t,
   locale,

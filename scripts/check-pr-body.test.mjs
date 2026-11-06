@@ -22,15 +22,11 @@ const TEMPLATE = readFileSync(
   path.join(import.meta.dirname, "../.github/pull_request_template.md"),
   "utf8",
 );
-const filled = ({ dock = "", attacker = "", security = "" }) =>
+const filled = ({ dock = "", security = "" }) =>
   TEMPLATE.replace(
     "- `dive-domain-expert` (dock operator):",
     `- \`dive-domain-expert\` (dock operator): ${dock}`,
   )
-    .replace(
-      "- `dive-domain-expert` (attacker):",
-      `- \`dive-domain-expert\` (attacker): ${attacker}`,
-    )
     .replace("- `security-reviewer`:", `- \`security-reviewer\`: ${security}`);
 
 describe("which reviewer a diff needs", () => {
@@ -248,7 +244,7 @@ describe("the whole check", () => {
   });
 
   it("passes once each needed reviewer is answered", () => {
-    const pair = { dock: "launched on abc123, nothing found", attacker: "launched, found nothing" };
+    const pair = { dock: "launched on abc123, nothing found" };
     expect(bodyProblems({ body: filled(pair), files: manifest })).toEqual([]);
     expect(
       bodyProblems({
@@ -259,30 +255,20 @@ describe("the whole check", () => {
     expect(bodyProblems({ body: filled(pair), files: both })).toHaveLength(1);
   });
 
-  it("refuses a safety diff with one dive-domain-expert run, naming both framings", () => {
+  it("refuses a safety diff whose dive-domain-expert run names no framing", () => {
     const one =
       "## Reviews launched\n\n- `dive-domain-expert`: launched on abc123, nothing found\n";
     const [problem] = bodyProblems({ body: one, files: manifest });
     expect(problem).toMatch(/dock operator/);
-    expect(problem).toMatch(/attacker/);
     expect(
       bodyProblems({ body: filled({ dock: "launched, nothing found" }), files: manifest }),
-    ).toHaveLength(1);
+    ).toEqual([]);
   });
 
   it("refuses two runs that do not say which framing each had", () => {
     const body =
       "## Reviews launched\n\n- `dive-domain-expert`: launched, nothing found\n- `dive-domain-expert`: launched again, found nothing\n";
     expect(bodyProblems({ body, files: manifest })).toHaveLength(1);
-  });
-
-  it("refuses one line that claims both framings, and a framing named without an answer", () => {
-    const both =
-      "## Reviews launched\n\n- `dive-domain-expert` (dock operator, attacker): launched\n";
-    expect(bodyProblems({ body: both, files: manifest })).toHaveLength(1);
-    expect(
-      bodyProblems({ body: filled({ dock: "launched", attacker: "yes" }), files: manifest }),
-    ).toHaveLength(1);
   });
 
   it("passes a correct pair whatever the case or order", () => {
@@ -297,10 +283,7 @@ describe("the whole check", () => {
     expect(bodyProblems({ body, files: ["src/app/shop/[shopSlug]/waivers/page.tsx"] })).toEqual([]);
   });
 
-  const pair = {
-    dock: "launched, nothing found",
-    attacker: "launched, found a stale count",
-  };
+  const pair = { dock: "launched, nothing found" };
   const lines = (...ls) => `## Reviews launched\n\n${ls.join("\n")}\n`;
   const dockLine = "- `dive-domain-expert` (dock operator): launched, found nothing";
 
@@ -311,68 +294,9 @@ describe("the whole check", () => {
     expect(bodyProblems({ body: alone, files: manifest })).toEqual([]);
     const mixed = lines(
       dockLine,
-      "- `dive-domain-expert` (attacker): not needed because one run was enough",
+      "- `dive-domain-expert` (dock operator): not needed because layout only",
     );
     expect(bodyProblems({ body: mixed, files: manifest })).toHaveLength(1);
-    const reverse = lines(
-      "- `dive-domain-expert` (dock operator): not needed because layout only",
-      "- `dive-domain-expert` (attacker): launched, found nothing",
-    );
-    expect(bodyProblems({ body: reverse, files: manifest })).toHaveLength(1);
-  });
-
-  it.each([
-    ["the same line twice", lines(dockLine, dockLine)],
-    [
-      "two framings in one label",
-      lines(
-        "- `dive-domain-expert` (dock operator, attacker): launched, found nothing",
-        "- `dive-domain-expert` (dock operator, attacker): launched, found nothing",
-      ),
-    ],
-    [
-      "a framing in a negation",
-      lines(
-        "- `dive-domain-expert` (dock operator; no attacker run): launched, found nothing",
-        "- `dive-domain-expert`: also found nothing as attacker",
-      ),
-    ],
-    [
-      "a framing in hidden HTML",
-      lines(
-        dockLine,
-        '- `dive-domain-expert`<sub title="attacker"></sub>: launched, found nothing',
-      ),
-    ],
-    [
-      "a framing before the agent name",
-      lines(dockLine, "attacker `dive-domain-expert` launched, found nothing"),
-    ],
-    [
-      "lines inside a code fence",
-      lines("```", dockLine, "- `dive-domain-expert` (attacker): launched, found nothing", "```"),
-    ],
-    [
-      "a security-reviewer line naming the agent",
-      lines(
-        dockLine,
-        "- `security-reviewer` launched in place of `dive-domain-expert` (attacker): found nothing",
-      ),
-    ],
-  ])("does not count %s as two runs", (_name, body) => {
-    expect(bodyProblems({ body, files: manifest })).toHaveLength(1);
-  });
-
-  it.each([
-    "not yet launched",
-    "not launched; found no time",
-    "skipped, nothing found",
-    "didn't launch it, found nothing",
-    "no time, found nothing",
-    "never launched, nothing found",
-  ])("refuses the attacker answer %s", (answer) => {
-    const body = lines(dockLine, `- \`dive-domain-expert\` (attacker): ${answer}`);
-    expect(bodyProblems({ body, files: manifest })).toHaveLength(1);
   });
 
   it("passes a pair of labelled runs", () => {

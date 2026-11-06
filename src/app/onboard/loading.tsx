@@ -1,4 +1,3 @@
-import { MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { EntryShell } from "@/components/account/EntryShell";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 
@@ -6,9 +5,9 @@ import { MarketingFooterFallback } from "@/components/MarketingFooter";
 export default function OnboardLoading() {
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNavFallback compactMobile />
       <EntryShell
         pending
+        wordmark
         eyebrow
         width="lg"
         description={false}

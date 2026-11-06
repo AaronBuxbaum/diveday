@@ -24,7 +24,7 @@ export function ReadyDateActions({
   const target = heldSeats.find((seat) => !seat.claimed && seat.hasInvitation);
   if (!moveAsk && heldSeats.length === 0) return null;
   return (
-    <div className="mt-3 space-y-2 text-base print:hidden">
+    <div className="mt-3 space-y-2 text-base">
       {moveAsk ? (
         <p>
           <a

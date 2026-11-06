@@ -57,7 +57,7 @@ export function MoveAsk({
           ? t("ready.moveAsk.body", { shop: shopName, phone: shopPhone })
           : t("ready.moveAsk.bodyNoPhone", { shop: shopName })}
       </p>
-      <form action={action} className="flex flex-wrap items-end gap-3 print:hidden">
+      <form action={action} className="flex flex-wrap items-end gap-3">
         <input type="hidden" name="tripId" value={tripId} />
         <Field label={t("ready.moveAsk.noteLabel")} className="min-w-56 flex-1">
           <input

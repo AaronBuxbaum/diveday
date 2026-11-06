@@ -171,8 +171,10 @@
   and no other, shows only the medical answers saved through that same code, refuses a second
   signature, and its mint is a line on the diver's trail naming the staffer. It carries no
   readiness authority and opens no doctor's page; it dies when the seat changes hands or the
-  release is superseded. A minor's seat signs on it only when the desk confirmed a guardian is
-  there for that very code, asked again at signing (issue #4003) (ADR
+  release is superseded. A minor signs on it only when the desk confirmed a guardian is there
+  for that very code, asked again at signing: on a seat's code (issue #4003), and on Copy link
+  for a release with no seat, a minor by date of birth or "Under 18" on a seat still ahead (issue
+  #4019) (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
   A minor's code is shown only after the staffer confirms a parent or guardian is present to
   co-sign, and that confirmation is on the minor's trail too.
@@ -183,19 +185,22 @@
   confirmation and find-my-booking carry it; reminders and reschedule notices go with no link. It
   opens on `/waivers/<token>` by the **counter link**'s rules, plus the release's doctor's page on
   the phone that holds it, and grants nothing else. A dead one offers to mail a fresh door to the
-  address on file. A release has one live door of any kind, so a counter code replaces it. A minor
+  address on file. A counter code to the same release stands beside it (issue #4008). A minor
   member gets no door, and a door never signs a minor's release: the lead signs that seat on their
-  own link, or the desk does with a guardian present.
+  own link, or the desk does with a guardian present. Claiming the seat closes the door, and any
+  counter code to the seat's release: the claimant's confirmation carries the release as its Sign
+  step, and the dead door says so instead of offering a fresh one (issue #2743).
 - **Recap link epoch** — the number a recap link signs beside its booking (`bookings.recap_link_epoch`,
   issue #3982). The link opens only while the booking still holds that number; correcting the
   diver's email or phone moves it on for all their bookings, so a recap link mailed to the old
   address opens nothing, and the next one carries the new number.
 - **Release link** — the link an email or a text carries to sign a release with no seat (issue
   #3983): a `release_link` row in `capabilities` naming that release, alive a week, spent by the
-  signature, sent only to the contact on file and never shown to staff. A release holds one live
-  door of any kind; a contact change revokes it, an erasure deletes it, and a dead one
-  lands on the rescue, which mails a fresh one to the address on file. It never opens a seat's
-  release (ADR
+  signature, sent only to the contact on file and never shown to staff. A newer one replaces it; a
+  counter link to the same release stands beside it (issue #4008). A contact change revokes it, an
+  erasure deletes it, and a dead one
+  lands on the rescue, which mails a fresh one to the address on file. A minor whose contact a
+  party's lead typed is sent none (issue #4019). It never opens a seat's release (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md),
   layer 6).
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the

@@ -225,6 +225,80 @@ function StepIcon({ step, className }: { step: DockDayStep; className?: string }
   }
 }
 
+/**
+ * **What to bring, what is rented, what the shop provides**: the exposure
+ * suit line and the three lists, with no heading. The thread's packing
+ * section and the diver's day sheet (`ReadyDaySheet`) both draw them, so the
+ * paper and the phone cannot disagree about the bag. Nothing here taps.
+ */
+export function PackingLists({
+  shop,
+  trip,
+  rentalFit,
+  holdsCertification,
+  locale,
+}: {
+  shop: Shop;
+  trip: Trip;
+  rentalFit?: RentalFit;
+  holdsCertification: boolean;
+  locale: string;
+}) {
+  const packing = packingConfidence(
+    shop.packingList,
+    rentalFit ?? null,
+    shop.briefingMinutes > 0,
+    trip.course?.gearIncluded === true,
+  );
+  const logbook = packsLogbook({
+    shopSuggests: shop.packingLogbook,
+    introCourseSession: trip.course?.isIntroCourse === true,
+    holdsCertification,
+  });
+  const t = diverTranslator(locale);
+  const exposureSuit =
+    trip.waterTemperatureC === null ? null : exposureSuitFor(trip.waterTemperatureC);
+  return (
+    <>
+      {exposureSuit ? (
+        <p className="mt-2 text-sm text-muted">{t(EXPOSURE_SUIT_KEYS[exposureSuit])}</p>
+      ) : null}
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div>
+          <h3 className="font-semibold">{t("trip.packBring")}</h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
+            {packing.bringPersonal.map((code) => (
+              <li key={code}>{t(PERSONAL_GEAR_KEYS[code])}</li>
+            ))}
+            {packing.bring.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+            {logbook ? <li>{t("trip.packLogbook")}</li> : null}
+          </ul>
+        </div>
+        <div>
+          <h3 className="font-semibold">{t("trip.packRenting")}</h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
+            {packing.rented.length ? (
+              packing.rented.map((kind) => <li key={kind}>{t(RENTAL_ITEM_KEYS[kind])}</li>)
+            ) : (
+              <li>{t("trip.packNothingRequested")}</li>
+            )}
+          </ul>
+        </div>
+        <div>
+          <h3 className="font-semibold">{t("trip.packProvided")}</h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
+            {packing.provided.map((code) => (
+              <li key={code}>{t(PROVIDED_ITEM_KEYS[code])}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function PackingSection({
   shop,
   trip,
@@ -275,20 +349,7 @@ export function PackingSection({
   locale: string;
 }) {
   const rhythmDays = days?.length ? days : [day ?? trip];
-  const packing = packingConfidence(
-    shop.packingList,
-    rentalFit ?? null,
-    shop.briefingMinutes > 0,
-    trip.course?.gearIncluded === true,
-  );
-  const logbook = packsLogbook({
-    shopSuggests: shop.packingLogbook,
-    introCourseSession: trip.course?.isIntroCourse === true,
-    holdsCertification,
-  });
   const t = diverTranslator(locale);
-  const exposureSuit =
-    trip.waterTemperatureC === null ? null : exposureSuitFor(trip.waterTemperatureC);
   return (
     // No outer card: this is pre-trip reading, not a decision, and the three
     // columns plus the rhythm below are their own shape.
@@ -305,41 +366,13 @@ export function PackingSection({
     // with `space-y-10` (K-233).
     <section>
       <h2 className={SECTION_TITLE_CLASS}>{t("trip.packTitle")}</h2>
-      {exposureSuit ? (
-        <p className="mt-2 text-sm text-muted">{t(EXPOSURE_SUIT_KEYS[exposureSuit])}</p>
-      ) : null}
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <div>
-          <h3 className="font-semibold">{t("trip.packBring")}</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
-            {packing.bringPersonal.map((code) => (
-              <li key={code}>{t(PERSONAL_GEAR_KEYS[code])}</li>
-            ))}
-            {packing.bring.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-            {logbook ? <li>{t("trip.packLogbook")}</li> : null}
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-semibold">{t("trip.packRenting")}</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
-            {packing.rented.length ? (
-              packing.rented.map((kind) => <li key={kind}>{t(RENTAL_ITEM_KEYS[kind])}</li>)
-            ) : (
-              <li>{t("trip.packNothingRequested")}</li>
-            )}
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-semibold">{t("trip.packProvided")}</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
-            {packing.provided.map((code) => (
-              <li key={code}>{t(PROVIDED_ITEM_KEYS[code])}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <PackingLists
+        shop={shop}
+        trip={trip}
+        rentalFit={rentalFit}
+        holdsCertification={holdsCertification}
+        locale={locale}
+      />
       {trip.course ? null : (
         <>
           <h3 className="mt-6 font-semibold">{t("trip.dockDayRhythm")}</h3>

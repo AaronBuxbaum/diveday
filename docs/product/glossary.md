@@ -115,8 +115,10 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Change ledger
 - Conditions hold
 - Day load-out
+- Day sheet
 - Day-of help request
 - Departure note
+- Departure sheet
 - Dock line
 - Dock rider
 - Last time line

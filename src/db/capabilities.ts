@@ -244,21 +244,17 @@ export async function mintCapability<P extends CapabilityPurpose>(
   if (policy.reissue === "supersedes") {
     // The invariant (one live link per shop, or per subject, per purpose)
     // belongs to this module, not to its callers. A release holds one live
-    // door whatever its purpose (`capabilities_live_waiver_record_idx`): a
-    // counter link, a party member's door and a mailed release link to the
-    // same release each revoke the others (issues #3983, #3986; whether a
-    // counter link and a mailed one may both stay live is #4008).
+    // door of each purpose (`capabilities_live_waiver_record_idx`): a counter
+    // link, a party member's door and a mailed release link to the same
+    // release stand side by side, and the signature through any one of them
+    // leaves the others opening nothing (issue #4008).
     await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
-    const superseded =
-      policy.per === "subject" && policy.subject === "waiver_record"
-        ? purposesNaming("waiver_record")
-        : [input.purpose];
     await db
       .update(capabilities)
       .set({ revokedAt: now })
       .where(
         and(
-          inArray(capabilities.purpose, superseded),
+          eq(capabilities.purpose, input.purpose),
           policy.per === "shop"
             ? eq(capabilities.shopId, shopId as string)
             : eq(subjectColumn(input.purpose), input.subjectId),
@@ -673,6 +669,40 @@ export async function revokePersonReleaseLinks(
               and(
                 eq(waiverRecords.shopId, input.shopId),
                 eq(waiverRecords.personId, input.personId),
+              ),
+            ),
+        ),
+      ),
+    );
+}
+
+/**
+ * Turns off every live link to one seat's releases (`revoked_at`): the
+ * counter code and the party member's door (issue #2743). A claim calls it,
+ * so no link minted while the seat was its placeholder's outlives the claim;
+ * the claimant signs as their thread's Sign step.
+ */
+export async function revokeSeatReleaseLinks(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; now?: Date },
+): Promise<void> {
+  await db
+    .update(capabilities)
+    .set({ revokedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        inArray(capabilities.purpose, purposesNaming("waiver_record")),
+        eq(capabilities.shopId, input.shopId),
+        isNull(capabilities.revokedAt),
+        inArray(
+          capabilities.waiverRecordId,
+          db
+            .select({ id: waiverRecords.id })
+            .from(waiverRecords)
+            .where(
+              and(
+                eq(waiverRecords.shopId, input.shopId),
+                eq(waiverRecords.bookingId, input.bookingId),
               ),
             ),
         ),

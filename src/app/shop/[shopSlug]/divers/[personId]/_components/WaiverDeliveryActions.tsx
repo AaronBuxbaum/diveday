@@ -85,6 +85,9 @@ function outcomeToast(state: WaiverSendState, copy: WaiverSendCopy): string | nu
     });
   }
   if (state.errors.length > 0) return fill(copy.errors, { names: state.errors.join(", ") });
+  // An email or text that went nowhere on purpose (issue #4019): no ring says it.
+  if (state.links.some((link) => link.reason === "guardian_needed"))
+    return copy.reasonGuardianNeededRelease;
   return null;
 }
 
@@ -219,6 +222,13 @@ export function WaiverDeliveryActions({
     setAttempt((count) => count + 1);
   };
 
+  // Copy link on a minor's release with no seat waits on the desk's word
+  // that a parent or legal guardian is at the counter (issue #4019).
+  const askGuardian =
+    state.status === "done" &&
+    state.channel === "link" &&
+    state.links.some((link) => link.reason === "guardian_check");
+
   const [toast, setToast] = useState<{ attempt: number; message: string } | null>(null);
   useEffect(() => {
     if (state.status !== "done") return;
@@ -296,14 +306,31 @@ export function WaiverDeliveryActions({
               and "you copied this once" is not a state anyone needs a mark for
               — the control's own "Copied" already said so at the moment it
               mattered (design principle 9). */}
-          <ChannelButton
-            channel="link"
-            icon="link"
-            label={copy.link}
-            pendingLabel={sendCopy.sending}
-            tapped={tapped}
-            onTap={tap}
-          />
+          {askGuardian ? (
+            <div className="basis-full">
+              <input type="hidden" name="guardianPresent" value="yes" />
+              <p role="status">{sendCopy.guardianCheck}</p>
+              <div className="mt-2">
+                <ChannelButton
+                  channel="link"
+                  icon="link"
+                  label={sendCopy.guardianConfirm}
+                  pendingLabel={sendCopy.sending}
+                  tapped={tapped}
+                  onTap={tap}
+                />
+              </div>
+            </div>
+          ) : (
+            <ChannelButton
+              channel="link"
+              icon="link"
+              label={copy.link}
+              pendingLabel={sendCopy.sending}
+              tapped={tapped}
+              onTap={tap}
+            />
+          )}
         </SendHold>
         {children}
       </div>

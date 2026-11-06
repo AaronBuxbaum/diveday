@@ -136,7 +136,7 @@ function MastheadDoors({ facts, t }: { facts: MastheadFacts; t: DiverTranslator 
       {/* What this page *is*, said once, at the top. Divers arrive here from a
           booking submit or an emailed link, and both read as a confirmation, a
           thing you look at once and close. This one is the same URL all week. */}
-      <p className="mt-3 text-sm text-muted print:hidden">{t("ready.keepThisPage")}</p>
+      <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
     </>
   );
 }
@@ -330,6 +330,21 @@ export function ReadyBookedPage({
   );
 }
 
+/** The masthead's facts as the full loader reads them; the day sheet states the same ones. */
+export function readyMastheadFacts(data: ReadyPageData): MastheadFacts {
+  return {
+    shop: {
+      name: data.detail.shop.name,
+      slug: data.shop.slug,
+      timezone: data.detail.shop.timezone,
+      dockCallMinutes: data.shop.dockCallMinutes,
+    },
+    trip: data.detail.trip,
+    days: data.meetingDays,
+    pickup: { time: data.pickupTime, location: data.hotelPickupLocation },
+  };
+}
+
 /** The full thread and narrow booked card use the same masthead facts. */
 export function ReadyThreadMasthead({
   data,
@@ -344,17 +359,7 @@ export function ReadyThreadMasthead({
 }) {
   return (
     <ReadyMastheadMeta
-      facts={{
-        shop: {
-          name: data.detail.shop.name,
-          slug: data.shop.slug,
-          timezone: data.detail.shop.timezone,
-          dockCallMinutes: data.shop.dockCallMinutes,
-        },
-        trip: data.detail.trip,
-        days: data.meetingDays,
-        pickup: { time: data.pickupTime, location: data.hotelPickupLocation },
-      }}
+      facts={readyMastheadFacts(data)}
       locale={locale}
       now={nowDate()}
       t={t}

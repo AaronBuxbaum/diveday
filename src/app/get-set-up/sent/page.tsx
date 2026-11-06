@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MarketingNav } from "@/app/_components/MarketingNav";
 import { EntryDone } from "@/components/account/EntryShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { buttonClass, proseLinkClass } from "@/components/ui/button";
@@ -41,8 +40,9 @@ export default async function SetUpSentPage({
   const advice = setupSentAdvice(uses, guide);
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNav compactMobile />
       <EntryDone
+        wordmark
+        homeLink
         glyph="sent"
         title={t("marketing.setUp.sent.title")}
         text={t("marketing.setUp.sent.body")}

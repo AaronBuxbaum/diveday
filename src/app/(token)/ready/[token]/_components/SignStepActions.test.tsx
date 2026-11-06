@@ -40,7 +40,7 @@ describe("SignStepActions", () => {
   });
 
   it.each(["en-US", "es-ES"] as const)(
-    "keeps owed course forms factual on paper beside an unsigned waiver in %s",
+    "offers owed course forms beside an unsigned waiver in %s",
     (locale) => {
       const translate = diverTranslator(locale);
       render(
@@ -57,7 +57,6 @@ describe("SignStepActions", () => {
           t={translate}
         />,
       );
-      expect(screen.getByText(translate("ready.courseFormsNeedSigning"))).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: translate("ready.signWaiver") }),
       ).toBeInTheDocument();
@@ -69,7 +68,7 @@ describe("SignStepActions", () => {
 
   it("names forms owed even when readiness raises no blocking code", () => {
     renderStep(true);
-    expect(screen.getByText(t("ready.courseFormsNeedSigning"))).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: t("ready.signCourseForms") })).toBeInTheDocument();
   });
 
   it("does not invent a course-form obligation for a waiver alone", () => {
@@ -77,7 +76,9 @@ describe("SignStepActions", () => {
       code: "waiver_pending",
       actionable: [{ code: "waiver_pending" }],
     } as unknown as DiverChecklistItem);
-    expect(screen.queryByText(t("ready.courseFormsNeedSigning"))).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: t("ready.signCourseForms") }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: t("ready.signWaiver") })).toBeInTheDocument();
   });
 

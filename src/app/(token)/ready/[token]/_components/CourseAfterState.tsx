@@ -41,7 +41,7 @@ export function CourseAfterState({
   nextStep: { words: string; byName: string | null } | null;
 }) {
   return (
-    <section className="mt-10 print:hidden">
+    <section className="mt-10">
       <p className="text-base">
         {certification
           ? t("recap.course.certified", {

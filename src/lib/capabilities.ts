@@ -357,9 +357,10 @@ export const CAPABILITY_POLICY = {
   // goes only to the contact on file and its token never comes back to staff:
   // a staffer who wants a URL to hand over gets a counter link
   // (`waiver_link`) instead. A week, as the mail says; signing spends it, and
-  // any newer link to the same release, of any of the three purposes, revokes
-  // it (one live link per release, `capabilities_live_waiver_record_idx`). A contact
-  // change revokes it; an erasure deletes it.
+  // a newer release link to the same release revokes it. A counter link to the
+  // same release stands beside it (one live link per release and purpose,
+  // `capabilities_live_waiver_record_idx`, issue #4008); whichever signs, the
+  // other opens nothing after. A contact change revokes it; an erasure deletes it.
   release_link: {
     subject: "waiver_record",
     scope: "shop",

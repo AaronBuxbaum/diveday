@@ -92,7 +92,7 @@ Other sessions share this checkout ([rules](docs/agents/working-rules.md#paralle
 - **New runtime dependency → ADR; new domain concept → glossary; invalidated doc → fixed in the
   same PR.**
 - **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical, waivers,
-  nitrox, erasure): boring code, adversarial tests, two differently framed `dive-domain-expert` runs; **security-sensitive changes**: a `security-reviewer` run; the PR body names both.
+  nitrox, erasure): boring code, failure-path tests, one `dive-domain-expert` run; **security-sensitive changes**: a `security-reviewer` run. Experience beats speculative hardening (`.claude/rules/ux-over-hardening.md`).
 - **`app → features → lib/db`, one way; routes stay thin.**
 - **Tests travel with behavior**: a bug fix starts with a failing test
   ([testing.md](docs/engineering/testing.md)).

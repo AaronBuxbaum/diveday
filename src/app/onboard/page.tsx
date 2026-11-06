@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MarketingNav } from "@/app/_components/MarketingNav";
 import { EntryShell } from "@/components/account/EntryShell";
 import { DetectTimezone } from "@/components/DetectTimezone";
 import { MarketingFooter } from "@/components/MarketingFooter";
@@ -158,11 +157,12 @@ export default async function OnboardPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* The nav's demo CTA would repeat the one the footer already offers
-          here, and would compete with the form's own "Create shop & start
-          trial" — the one primary here. */}
-      <MarketingNav compactMobile />
+      {/* A door, not a page of the marketing face: the wordmark and the form,
+          with no bar whose demo CTA would repeat the footer's and compete with
+          "Create shop & start trial", the one primary here. */}
       <EntryShell
+        wordmark
+        homeLink
         width="lg"
         eyebrow={t("account.onboard.eyebrow")}
         title={t("account.onboard.title")}

@@ -100,7 +100,10 @@ test("the check-in feature prints a useful first sheet", async ({ page }) => {
   await capturePrintPdfs(page, "public-feature-check-in");
 });
 
-test("a course prep PDF keeps the checklist without signing actions", async ({ page }) => {
+test("a course diver's day prints its sheet without signing actions or readiness", async ({
+  page,
+}) => {
+  const t = diverTranslator("en-US");
   await bookOpenWaterSession(page, "Paper Course Diver", "paper-course@example.com");
   const sign = await openThreadStep(page, "sign");
   const forms = sign.getByRole("link", { name: "Sign course forms", exact: true });
@@ -111,16 +114,14 @@ test("a course prep PDF keeps the checklist without signing actions", async ({ p
   await expect(
     sign.getByRole("button", { name: "Sign your waiver", exact: true }),
   ).not.toBeVisible();
-  await expect(
-    sign.getByText(diverTranslator("en-US")("ready.courseFormsNeedSigning"), { exact: true }),
-  ).toBeVisible();
-  await expect(
-    sign.getByText(diverTranslator("en-US")("ready.checklistDetail.waiverPending"), {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(sign.getByText("Sign", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Where to go", exact: true })).toBeVisible();
+  // The paper is the arrival card's, not the thread's: it leaves the house,
+  // so it says where and when and never what is owed (#2745).
+  // The trip page it booked on can stay mounted, hidden (cacheComponents).
+  const sheet = page.locator(".paper-sheet", { hasText: t("trip.arrivalHeading") });
+  await expect(sheet).toBeVisible();
+  await expect(sheet).toContainText(t("trip.arrivalHeading"));
+  await expect(sheet).toContainText(t("trip.packTitle"));
+  await expect(sheet).not.toContainText(t("ready.checklistDetail.waiverPending"));
   const pdf = await page.pdf({ format: "Letter", preferCSSPageSize: true });
   expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
   await capturePrintPdfs(page, "public-course-prep-actions");

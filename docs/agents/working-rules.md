@@ -220,21 +220,13 @@ runs. Pass args directly. The shell guard refuses the bare form.
   (`pnpm check:glossary`). Invalidated doc → fix in the same PR (`pnpm check:docs`).
 - **Safety-critical surfaces** (manifests, roll call, readiness and cert gating, medical
   flags and the waiver state they are read from, nitrox fill authorization and the prep list's
-  air/nitrox split, erasure) get boring code, failure-path and adversarial tests, and a `dive-domain-expert` review,
+  air/nitrox split, erasure) get boring code, failure-path tests, and a `dive-domain-expert` review,
   named in the PR body's "Reviews launched" section, which CI reads
-  ([repo-checks.md](repo-checks.md#pr-body)). On every one of these surfaces that review is **two independent runs with different framing**, launched in parallel
-  so neither sees the other: one as **a dock operator** (the boat is leaving, the count is
-  called, the diver is at the rail — what does this code let happen?) and one as **an attacker**
-  (a second `dive-domain-expert` run told to break the rule rather than check it; a
-  `security-reviewer` the change also needs runs on its own line besides).
-  Act on the union of their findings, each under the reviewers' evidence rule: it cites the
-  rule, ADR or glossary line it violates and a failing input or a test, labelled confirmed or
-  possible. A finding is acted on once its test runs and fails. Each run gets its own
-  `dive-domain-expert` line in "Reviews launched", labelled right after the agent name, `dive-domain-expert` (dock operator) and `dive-domain-expert` (attacker), each answered "launched" with what it found. CI reads the rendered text, ignores code fences, counts two identical lines once, and rejects an answer that says not, never, skipped, didn't or no time. A "not needed because <reason>" line is accepted only as the sole `dive-domain-expert` line, never beside a launched one; CI cannot tell whether the change only moves layout, so that judgement is the author's and a reviewer's. Waiver tests and fixtures need the review as much as waiver code; only message bundles and `*-copy.ts(x)` files are exempt. CI checks that two runs are recorded, not that they happened. Ordinary PRs and rental fit keep one run: two runs double
-  the review spend, and the voting is worth it only where a miss puts a diver in the water.
+  ([repo-checks.md](repo-checks.md#pr-body)). On every one of these surfaces that review is **one run framed as a dock operator**: the boat is leaving, the count is called, the diver is at the rail, what does this code let happen? It cites the rule, ADR or glossary line it violates and a failing input or a test, labelled confirmed or possible; a finding is acted on once its test runs and fails. The PR body's "Reviews launched" section has a `dive-domain-expert` (dock operator) line answered "launched" with what it found. CI reads the rendered text, ignores code fences, and rejects an answer that says not, never, skipped, didn't or no time. A "not needed because <reason>" line is accepted only as the sole `dive-domain-expert` line; CI cannot tell whether the change only moves layout, so that judgement is the author's and a reviewer's. Waiver tests and fixtures need the review as much as waiver code; only message bundles and `*-copy.ts(x)` files are exempt. Experience comes before speculative hardening (`.claude/rules/ux-over-hardening.md`): no adversarial second run, and a defense-in-depth finding is closed with a one-line reason, not built or filed.
 - **Security-sensitive changes** (auth/authz, token flows, rows holding personal or medical data,
   export/import) get a `security-reviewer` review before merge, named in the same "Reviews
-  launched" section (`scripts/check-pr-body.mjs`).
+  launched" section (`scripts/check-pr-body.mjs`); it reports only what another shop or the
+  public could do today.
 - **Layout**: domain logic in `src/lib/` or a feature module; routes in `src/app/` stay thin; e2e
   specs live in `e2e/`. The dependency direction is one way — `app → features → lib/db` — and
   `pnpm check:architecture` enforces it.

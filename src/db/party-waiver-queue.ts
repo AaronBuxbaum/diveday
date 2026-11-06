@@ -221,21 +221,18 @@ export async function issuePartyWaiver(
       if (!opened.ok) return null;
       // A code the diver's phone already opened is kept unless the desk
       // confirms a new one: a mint would revoke it under their typing (dock
-      // review S2). The door a party member's join email carried counts too:
-      // a release has one live door, and this mint revokes it (issue #3986).
-      if (!input.replace) {
-        for (const purpose of ["waiver_link", "party_waiver_link"] as const) {
-          if (
-            await hasLiveClaimedCapability(tx, {
-              purpose,
-              shopId: input.shopId,
-              subjectId: opened.recordId,
-              now: input.now,
-            })
-          )
-            return { openOnPhone: true as const };
-        }
-      }
+      // review S2). The door a party member's join email carried stays live
+      // beside it (issue #4008), so it is no reason to ask.
+      if (
+        !input.replace &&
+        (await hasLiveClaimedCapability(tx, {
+          purpose: "waiver_link",
+          shopId: input.shopId,
+          subjectId: opened.recordId,
+          now: input.now,
+        }))
+      )
+        return { openOnPhone: true as const };
       const link = await mintCapability(tx, {
         purpose: "waiver_link",
         shopId: input.shopId,

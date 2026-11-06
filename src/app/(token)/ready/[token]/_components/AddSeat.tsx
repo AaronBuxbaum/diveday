@@ -24,7 +24,7 @@ export function AddSeat({
   t: DiverTranslator;
 }) {
   return (
-    <DisclosureRowList className="print:hidden">
+    <DisclosureRowList>
       <DisclosureRow id="add-seat" heading={t("seatClaim.addHeading")}>
         <p className="text-sm text-muted">{t("seatClaim.addBody")}</p>
         <form action={action} className="mt-4 flex flex-wrap items-end gap-3">

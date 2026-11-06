@@ -50,11 +50,7 @@ export async function YourDays({
   const action = sendYourDayLinkAction.bind(null, token);
 
   return (
-    <SectionCard
-      padding="lg"
-      className={`${className} print:hidden`}
-      title={t("yourDays.heading", { shopName })}
-    >
+    <SectionCard padding="lg" className={className} title={t("yourDays.heading", { shopName })}>
       <p className="text-base text-muted">{t("yourDays.note")}</p>
       {upcoming.length > 0 ? (
         <>

@@ -1,0 +1,2 @@
+DROP INDEX "capabilities_live_waiver_record_idx";--> statement-breakpoint
+CREATE UNIQUE INDEX "capabilities_live_waiver_record_idx" ON "capabilities" ("waiver_record_id","purpose") WHERE "waiver_record_id" is not null and "used_at" is null and "revoked_at" is null;
