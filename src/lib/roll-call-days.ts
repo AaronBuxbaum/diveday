@@ -13,10 +13,12 @@
  *   checkpoint that day and no `boarded` anywhere on a later day, is still
  *   open on every later day ({@link carriedMissing}); the manifest keeps
  *   showing it, and Today keeps raising it.
- * - **An undo reaches back.** A `cleared` on a later day at the checkpoint
- *   where an earlier day's `not_boarded` stands is the crew taking that tap
- *   back, so it clears the earlier day's word too (the person reads as not yet
- *   counted there, never as missing).
+ * - **An undo reaches back, only past its own day.** A `cleared` on a later
+ *   day at the checkpoint where an earlier day's `not_boarded` stands, with
+ *   nothing standing before it on its own day, is the crew taking that carried
+ *   tap back, so it clears the earlier day's word too (the person reads as not
+ *   yet counted there, never as missing). A `cleared` that follows its own
+ *   day's mark there takes back that mark and nothing earlier (#3981).
  */
 
 export type RollCallStatus = "boarded" | "not_boarded" | "cleared";
@@ -40,20 +42,34 @@ const ordinalOf = (checkpoint: string) => {
 /**
  * Each day's standing result per subject and checkpoint, from marks **oldest
  * first**: the newest mark on a day wins, a newest `cleared` stands as
- * `cleared` (the caller reads it as nothing), and a `cleared` also reaches
- * back to an earlier day's standing `not_boarded` at the same checkpoint.
+ * `cleared` (the caller reads it as nothing), and a `cleared` with no mark of
+ * its own day before it reaches back to the newest earlier day's standing
+ * `not_boarded` at the same checkpoint, and no further.
  */
 export function standingByDay<M extends DayMark>(marks: readonly M[]): Map<number, Map<string, M>> {
   const byDay = new Map<number, Map<string, M>>();
   for (const mark of marks) {
     const key = keyOf(mark.subject, mark.checkpoint);
     const day = byDay.get(mark.day) ?? new Map<string, M>();
+    const sameDay = day.get(key);
     day.set(key, mark);
     byDay.set(mark.day, day);
     if (mark.status !== "cleared" || !isAfterDive(mark.checkpoint)) continue;
-    for (const [earlier, standing] of byDay) {
-      if (earlier >= mark.day) continue;
-      if (standing.get(key)?.status === "not_boarded") standing.set(key, mark);
+    // A `cleared` takes back the mark standing just before it at this
+    // checkpoint (ADR 20260815-an-offline-retraction-names-its-target). When
+    // its own day has any mark there already, the undo is about that day
+    // only, and an earlier day's "did not come back" stays (#3981). A live
+    // undo names no target, so a repeated tap after a same-day undo is not
+    // read as aimed at the carried row: missing stays missing.
+    if (sameDay) continue;
+    // It reaches back to the one carried row the manifest shows, the newest
+    // earlier day's stated missing person (`carriedMissing`), and no further.
+    const earlierDays = [...byDay.keys()].filter((d) => d < mark.day).sort((a, b) => b - a);
+    for (const earlier of earlierDays) {
+      const standing = byDay.get(earlier);
+      if (standing?.get(key)?.status !== "not_boarded") continue;
+      standing.set(key, mark);
+      break;
     }
   }
   return byDay;
@@ -122,9 +138,10 @@ export function manifestRollCallView<M extends DayMark>(
   const standing = standingByDay(marks);
   const view = new Map<string, M>();
   for (const [key, mark] of carriedMissing(standing, currentDay)) view.set(key, mark);
+  // A standing `cleared` today is nothing today: an earlier day's stated
+  // missing person it did not reach back to stays on the view (#3981).
   for (const [key, mark] of standing.get(currentDay) ?? new Map<string, M>()) {
-    if (mark.status === "cleared") view.delete(key);
-    else view.set(key, mark);
+    if (mark.status !== "cleared") view.set(key, mark);
   }
   return view;
 }
