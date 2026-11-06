@@ -5,7 +5,12 @@ import { withErasureCoordinatedBookingSend } from "@/db/erasure-coordinated-send
 import { sendAndRecordNotification } from "@/db/notifications";
 import type { shopBySlugCached } from "@/db/shops-cached";
 import { getTripWithBooked } from "@/db/trips";
-import { issueWaiverOnJoin, openJoinSignStep, settleJoinWaiverDelivery } from "@/db/waiver-issue";
+import {
+  issuePartyMemberWaiverOnJoin,
+  issueWaiverOnJoin,
+  openJoinSignStep,
+  settleJoinWaiverDelivery,
+} from "@/db/waiver-issue";
 import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath, readinessWaiverLinkPath } from "@/lib/booking-capabilities";
 import { readLearningMaterials } from "@/lib/courses";
@@ -29,7 +34,8 @@ function emailUrl(path: string): string | undefined {
  * Send the just-booked party's confirmation and any releases safely. The
  * lead's own release rides in the confirmation as the thread's Sign step, on
  * the readiness link it carries (issue #2743); every other seat's goes to
- * that seat's holder as their own thread link, never the lead's.
+ * the address the lead typed for that member as a waiver-only door, never a
+ * thread link (issue #3986).
  */
 export async function sendJoinMail(
   db: AppDb,
@@ -141,10 +147,16 @@ export async function sendJoinMail(
             });
           return;
         }
-        await issueWaiverOnJoin(db, shop.id, bookingId, {
-          expectedPersonId: personId,
-          expectedTripId: trip?.id,
-        });
+        const identity = { expectedPersonId: personId, expectedTripId: trip?.id };
+        // The lead's own seat, when its confirmation could not carry the Sign
+        // step, gets its thread link at the lead's own address. Every other
+        // seat's address is one the lead typed: it gets a waiver-only door,
+        // never a link that pays, cancels or moves the seat (issue #3986).
+        if (bookingId === primaryBookingId) {
+          await issueWaiverOnJoin(db, shop.id, bookingId, identity);
+        } else {
+          await issuePartyMemberWaiverOnJoin(db, shop.id, bookingId, identity);
+        }
       } catch (error) {
         log("booking.waiver_on_join_failed", "error", {
           bookingId,

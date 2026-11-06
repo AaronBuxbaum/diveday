@@ -71,6 +71,10 @@ export type TokenWaiverState =
  */
 export type WaiverKey = string | ThreadWaiverKey | CounterWaiverKey;
 
+/** The capabilities that open one seat's release and nothing else. */
+const WAIVER_DOOR_PURPOSES = ["waiver_link", "party_waiver_link"] as const;
+export type WaiverDoorPurpose = (typeof WAIVER_DOOR_PURPOSES)[number];
+
 /**
  * **A seat's release, signed on the shop's counter tablet** (issue #2743): the
  * one record a live `waiver_link` capability names, while it is still that
@@ -82,6 +86,12 @@ export type WaiverKey = string | ThreadWaiverKey | CounterWaiverKey;
  */
 export type CounterWaiverKey = {
   readonly kind: "counter";
+  /**
+   * Which door opened it: the counter tablet's QR, or the waiver-only door
+   * the join email sent a party member (`party_waiver_link`, issue #3986).
+   * Both open the one release and nothing else, by the same rules.
+   */
+  readonly purpose: WaiverDoorPurpose;
   readonly shopId: string;
   readonly bookingId: string;
   readonly recordId: string;
@@ -283,7 +293,7 @@ async function standingCounterLink(db: DbExecutor, key: CounterWaiverKey, now: D
     .from(capabilities)
     .where(
       and(
-        eq(capabilities.purpose, "waiver_link"),
+        eq(capabilities.purpose, key.purpose),
         eq(capabilities.tokenHash, hashBearerToken(key.token)),
         eq(capabilities.shopId, key.shopId),
         eq(capabilities.waiverRecordId, key.recordId),
@@ -317,17 +327,18 @@ export async function waiverLinkDoor(
 ): Promise<WaiverLinkDoor> {
   if (token.length === 0) return null;
   const now = options.now ?? nowDate();
-  const link = await verifyCapability(db, { purpose: "waiver_link", token });
+  const link = await verifiedWaiverDoor(db, token);
   if (link) {
     const key = await counterWaiverKey(db, link, token, now);
     if (!key) return null;
+    const via = link.purpose === "party_waiver_link" ? "mail" : "counter";
     const claim = await capabilityClaim(db, {
-      purpose: "waiver_link",
+      purpose: link.purpose,
       token,
       device: options.device,
     });
-    if (claim === "unclaimed") return { door: "counter_unclaimed" };
-    if (claim !== "this_device") return { door: "counter_elsewhere" };
+    if (claim === "unclaimed") return { door: "counter_unclaimed", via };
+    if (claim !== "this_device") return { door: "counter_elsewhere", via };
     return { door: "counter", key };
   }
   const [record] = await db
@@ -341,10 +352,23 @@ export async function waiverLinkDoor(
 
 export type WaiverLinkDoor =
   | { door: "counter"; key: CounterWaiverKey }
-  | { door: "counter_unclaimed" }
-  | { door: "counter_elsewhere" }
+  /** `via`: a counter QR, or the door a party member's join email carried. */
+  | { door: "counter_unclaimed"; via: "counter" | "mail" }
+  | { door: "counter_elsewhere"; via: "counter" | "mail" }
   | { door: "release"; key: string }
   | null;
+
+/** The waiver door a token names, of either purpose, with the purpose it was minted for. */
+async function verifiedWaiverDoor(
+  db: DbExecutor,
+  token: string,
+): Promise<(VerifiedCapability<WaiverDoorPurpose> & { purpose: WaiverDoorPurpose }) | null> {
+  for (const purpose of WAIVER_DOOR_PURPOSES) {
+    const link = await verifyCapability(db, { purpose, token });
+    if (link) return { ...link, purpose };
+  }
+  return null;
+}
 
 /**
  * The first phone to open a counter link claims it: the secret it keeps in a
@@ -357,14 +381,14 @@ export async function claimCounterLink(
   now: Date = nowDate(),
 ): Promise<string | null> {
   if (token.length === 0) return null;
-  const link = await verifyCapability(db, { purpose: "waiver_link", token });
+  const link = await verifiedWaiverDoor(db, token);
   if (!link || !(await counterWaiverKey(db, link, token, now))) return null;
-  return claimCapability(db, { purpose: "waiver_link", token, now });
+  return claimCapability(db, { purpose: link.purpose, token, now });
 }
 
 async function counterWaiverKey(
   db: DbExecutor,
-  link: VerifiedCapability<"waiver_link">,
+  link: VerifiedCapability<WaiverDoorPurpose> & { purpose: WaiverDoorPurpose },
   token: string,
   now: Date,
 ): Promise<CounterWaiverKey | null> {
@@ -386,6 +410,7 @@ async function counterWaiverKey(
   if (current?.recordId !== record.id) return null;
   const key: CounterWaiverKey = Object.freeze({
     kind: "counter",
+    purpose: link.purpose,
     shopId: link.shopId,
     bookingId: record.bookingId,
     recordId: record.id,
@@ -1055,7 +1080,7 @@ async function completeWaiverLocked(
   // since the read above signs nothing.
   if (typeof token !== "string" && token.kind === "counter") {
     const spent = await spendCapability(db, {
-      purpose: "waiver_link",
+      purpose: token.purpose,
       token: token.token,
       now: input.now ?? nowDate(),
       alsoRequire: and(

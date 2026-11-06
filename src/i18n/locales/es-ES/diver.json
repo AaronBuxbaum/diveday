@@ -1287,6 +1287,10 @@
     "counterClaimButton": "Abrir la exención aquí",
     "counterElsewhereTitle": "Este código está abierto en otro teléfono",
     "counterElsewhereBody": "Pide al personal un código nuevo.",
+    "doorClaimTitle": "Firma tu exención en este dispositivo",
+    "doorClaimBody": "Este enlace se abre en un solo dispositivo. Cuando se abra aquí, ningún otro dispositivo podrá usarlo.",
+    "doorElsewhereTitle": "Este enlace está abierto en otro dispositivo",
+    "doorElsewhereBody": "Termina tu exención allí o pide ayuda al centro.",
     "counterAlreadySigned": "Esta exención ya estaba firmada, así que lo que acabas de escribir no se guardó. Si alguna respuesta cambió, díselo al personal.",
     "independentTitle": "Firma tu exención",
     "backToPrep": "Volver a tu preparación"

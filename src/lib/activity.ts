@@ -318,6 +318,11 @@ type ActivityParamShapes = {
    */
   waiver_counter_code_shown: { actor: string; diver: string };
   /**
+   * A staffer confirmed a parent or guardian was at the counter to co-sign a
+   * minor's release before showing its code (issue #3986).
+   */
+  waiver_counter_guardian_confirmed: { actor: string; diver: string };
+  /**
    * A staffer read a diver's medical alert for the crew, on a manifest they
    * crew or on the signed record (issue #2960). Never written offline.
    */
@@ -616,6 +621,7 @@ export const ACTIVITY_CODES = [
   "scheduled_backup_holds_medical_answers",
   "waiver_seal_acknowledged",
   "waiver_counter_code_shown",
+  "waiver_counter_guardian_confirmed",
   "medical_alert_read",
   "medical_alert_saved_offline",
   "medical_alert_printed",

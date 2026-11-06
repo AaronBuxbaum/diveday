@@ -160,13 +160,14 @@ describe("the waiver_link capability", () => {
 
   it("opens on the first phone that claims it and on no other, and that phone can reload (attacker S1)", async () => {
     const { db, token } = await counterSeat();
-    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_unclaimed" });
+    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_unclaimed", via: "counter" });
     const device = await claimCounterLink(db, token);
     if (!device) throw new Error("first claim refused");
     expect(await claimCounterLink(db, token)).toBeNull();
-    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_elsewhere" });
+    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_elsewhere", via: "counter" });
     expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toEqual({
       door: "counter_elsewhere",
+      via: "counter",
     });
     expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
     expect(await waiverLinkDoor(db, token, { device })).toMatchObject({ door: "counter" });
@@ -285,6 +286,7 @@ describe("the waiver_link capability", () => {
     const { db, shop, bookingId, recordId, token } = await counterSeat();
     const forged: CounterWaiverKey = {
       kind: "counter",
+      purpose: "waiver_link",
       shopId: shop.id,
       bookingId,
       recordId,
@@ -340,6 +342,97 @@ describe("the waiver_link capability", () => {
         .where(eq(capabilities.tokenHash, hashBearerToken(token))),
     ).toEqual([]);
     expect(await waiverLinkDoor(db, token)).toMatchObject({ door: "release" });
+    expect(await counterState(token)).toBe("closed");
+  });
+});
+
+/**
+ * **A party member's emailed door** (`party_waiver_link`, issue #3986): the
+ * same release-only door as the counter's, minted for the address the lead
+ * typed. Adversarial on the same terms.
+ */
+describe("the party_waiver_link capability", () => {
+  /** A seat whose release was mailed as a door (it replaces the counter link). */
+  async function mailedSeat(fullName = "Theo Mailed") {
+    const seat = await counterSeat(fullName);
+    const door = await mintCapability(seat.db, {
+      purpose: "party_waiver_link",
+      shopId: seat.shop.id,
+      subjectId: seat.recordId,
+    });
+    if (!door.expiresAt) throw new Error("door without expiry");
+    return { ...seat, counterToken: seat.token, token: door.token, expiresAt: door.expiresAt };
+  }
+
+  it("opens only its seat's release, says it came by mail, and replaces the counter code", async () => {
+    const { db, token, recordId, counterToken } = await mailedSeat();
+    expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_unclaimed", via: "mail" });
+    expect(await openOnDevice(db, token)).toMatchObject({
+      door: "counter",
+      key: { purpose: "party_waiver_link", recordId },
+    });
+    expect(await counterState(counterToken)).toBe("closed");
+    expect(await verifyCapability(db, { purpose: "waiver_link", token })).toBeNull();
+    expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toEqual({
+      door: "counter_elsewhere",
+      via: "mail",
+    });
+  });
+
+  it("lives two weeks, and opens nothing at its deadline", async () => {
+    const { token, expiresAt } = await mailedSeat();
+    expect(expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(14 * 24 * 60 * MINUTE_MS);
+    expect(expiresAt.getTime() - nowDate().getTime()).toBeGreaterThan(13 * 24 * 60 * MINUTE_MS);
+    expect(await counterState(token, new Date(expiresAt.getTime() - 1))).toBe("available");
+    expect(await counterState(token, expiresAt)).toBe("closed");
+  });
+
+  it("is spent by the signature and refuses a second one", async () => {
+    const { db, token, fullName } = await mailedSeat();
+    const door = await openOnDevice(db, token);
+    if (door?.door !== "counter") throw new Error("door missing");
+    const sign = () =>
+      completeWaiver(db, door.key, {
+        signerName: fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+      });
+    expect(await sign()).toMatchObject({ ok: true, idempotent: false });
+    const [row] = await db
+      .select({ usedAt: capabilities.usedAt })
+      .from(capabilities)
+      .where(eq(capabilities.tokenHash, hashBearerToken(token)));
+    expect(row?.usedAt).not.toBeNull();
+    expect(await sign()).toEqual({ ok: false, reason: "already_signed" });
+  });
+
+  it("opens nothing once the seat changes hands or is cancelled", async () => {
+    const { db, shop, bookingId, token } = await mailedSeat();
+    const [other] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Someone Else", email: null })
+      .returning({ id: people.id });
+    if (!other) throw new Error("another diver missing");
+    await db.update(bookings).set({ personId: other.id }).where(eq(bookings.id, bookingId));
+    expect(await counterState(token)).toBe("closed");
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    expect(await counterState(token)).toBe("closed");
+  });
+
+  it("goes with the person on erasure", async () => {
+    const { db, shop, token, personId } = await mailedSeat("Ivy Erase");
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId,
+      actorPersonId: await owner(),
+    });
+    expect(erased.ok).toBe(true);
+    expect(
+      await db
+        .select()
+        .from(capabilities)
+        .where(eq(capabilities.tokenHash, hashBearerToken(token))),
+    ).toEqual([]);
     expect(await counterState(token)).toBe("closed");
   });
 });

@@ -69,8 +69,9 @@ export default async function WaiverPage({
   const door = await waiverLinkDoor(db, token, { device: await counterDevice() });
   // A counter QR opens on the first phone that taps "open here", and on no
   // other (attacker review S1).
-  if (door?.door === "counter_unclaimed") return <CounterClaimCard token={token} t={anonT} />;
-  if (door?.door === "counter_elsewhere") return <CounterElsewhereCard t={anonT} />;
+  if (door?.door === "counter_unclaimed")
+    return <CounterClaimCard token={token} t={anonT} via={door.via} />;
+  if (door?.door === "counter_elsewhere") return <CounterElsewhereCard t={anonT} via={door.via} />;
   const state = door ? await getWaiverForToken(db, door.key) : { state: "unavailable" as const };
   const counter = door?.door === "counter";
 

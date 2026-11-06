@@ -7,6 +7,7 @@ import {
   capabilityExpiry,
   capabilitySubject,
   onePerPersonPurposes,
+  purposesNaming,
   reusablePurposes,
 } from "@/lib/capabilities";
 import { nowDate } from "@/lib/clock";
@@ -244,12 +245,20 @@ export async function mintCapability<P extends CapabilityPurpose>(
     // The invariant (one live link per shop, or per subject, per purpose)
     // belongs to this module, not to its callers.
     await lockForSupersede(db, input.purpose, policy.per, shopId, input.subjectId);
+    // A release has one live door at a time, whichever purpose opened it
+    // (`capabilities_live_waiver_record_idx`): a counter code shown at the desk
+    // takes the place of the door the join email sent, and the reverse
+    // (issue #3986).
+    const superseded =
+      policy.per === "subject" && policy.subject === "waiver_record"
+        ? purposesNaming("waiver_record")
+        : [input.purpose];
     await db
       .update(capabilities)
       .set({ revokedAt: now })
       .where(
         and(
-          eq(capabilities.purpose, input.purpose),
+          inArray(capabilities.purpose, superseded),
           policy.per === "shop"
             ? eq(capabilities.shopId, shopId as string)
             : eq(subjectColumn(input.purpose), input.subjectId),
