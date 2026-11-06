@@ -439,6 +439,16 @@ export const waiverRecords = pgTable(
      * move and by erasure (`CLEARED_DRAFT_COLUMNS`).
      */
     draftMedicalAlert: text("draft_medical_alert"),
+    /**
+     * The counter link (`capabilities.id`, a `waiver_link`) the drafts were
+     * last saved through, or null when they were saved through any other
+     * door. A counter form pre-fills the medical drafts only when this is its
+     * own claimed link, so a fresh QR never shows answers typed earlier
+     * (security review S2) while the phone that typed them gets them back
+     * after a refusal (dock review B1). No foreign key: it is only ever
+     * compared with a live link's id, and a deleted link matches nothing.
+     */
+    draftViaLinkId: uuid("draft_via_link_id"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),

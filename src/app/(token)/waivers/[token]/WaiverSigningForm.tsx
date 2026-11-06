@@ -77,8 +77,9 @@ export async function waiverSigningForm({
   showLinkExpiry: boolean;
   /**
    * Whether the saved medical answers and alert fill the form. Off on a counter
-   * QR, which any camera can read: the diver answers again on the phone in
-   * their hand (security review S2).
+   * QR unless this claimed code saved them itself (security review S2, dock
+   * review B1). Off, the form still says whether the diver's last release
+   * gave the crew an alert, never its words (dock review S1).
    */
   prefillMedical: boolean;
   /** The thread's way back to its checklist; none on the waiver link. */
@@ -254,9 +255,12 @@ export async function waiverSigningForm({
               not a step on the rail (issue #2960). */}
           <MedicalAlertSection
             prefill={
-              prefillMedical
-                ? await medicalAlertPrefill(db, record)
-                : { draft: null, earlierAlert: false }
+              await medicalAlertPrefill(
+                db,
+                prefillMedical
+                  ? record
+                  : { ...record, draftMedicalAlert: null, draftMedicalAnswers: null },
+              )
             }
             minorName={guardianRequired ? (signerOnFile?.fullName ?? null) : null}
             error={

@@ -87,6 +87,8 @@ export type CounterWaiverKey = {
   readonly recordId: string;
   /** The counter link itself, spent by the signature. */
   readonly token: string;
+  /** The link's row id: the drafts saved through it are this phone's own. */
+  readonly linkId: string;
 };
 
 /**
@@ -388,6 +390,7 @@ async function counterWaiverKey(
     bookingId: record.bookingId,
     recordId: record.id,
     token,
+    linkId: link.id,
   });
   issuedCounterKeys.add(key);
   return key;
@@ -518,6 +521,8 @@ async function saveWaiverDraftLocked(
       draftSignerName: input.signerName?.trim() || null,
       draftAcknowledged: input.acknowledged,
       draftMedicalAnswers: input.medicalAnswers,
+      // A counter phone gets back only what it saved itself (dock review B1).
+      draftViaLinkId: isCounterKey(token) ? token.linkId : null,
       ...(input.guardian === undefined ? {} : { draftGuardian: input.guardian }),
       ...(draftShopAnswers === undefined ? {} : { draftShopAnswers }),
       ...(input.medicalAlert === undefined

@@ -26,6 +26,7 @@ export type WaiverStateFields = Omit<
   | "draftShopAnswers"
   | "shopAnswers"
   | "draftMedicalAlert"
+  | "draftViaLinkId"
   | "medicalAlert"
   | "tokenHash"
   | "integrityHash"

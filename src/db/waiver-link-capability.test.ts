@@ -289,6 +289,7 @@ describe("the waiver_link capability", () => {
       bookingId,
       recordId,
       token,
+      linkId: crypto.randomUUID(),
     };
     expect(await getWaiverForToken(db, forged)).toEqual({ state: "unavailable" });
   });

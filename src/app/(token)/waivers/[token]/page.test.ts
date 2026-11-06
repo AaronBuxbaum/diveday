@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { bookingCapabilities, bookings, trips, waiverRecords } from "@/db/schema";
 import { listStaff } from "@/db/trips";
-import { completeWaiver } from "@/db/waivers-completion";
+import { completeWaiver, recordWaiverDraft } from "@/db/waivers-completion";
 import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import {
@@ -322,6 +322,53 @@ describe("the actual completed waiver branch", () => {
     expect(html).toContain(t("waiver.signButton"));
     expect(html).not.toMatch(/value="yes"[^>]*checked=""|checked=""[^>]*value="yes"/);
     expect(html).not.toContain("Stent placed in June");
+  });
+  it("a counter form keeps what was saved through this claimed code, and a fresh code shows none of it (dock B1)", async () => {
+    const { db, shop, booking } = await context();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
+    const door = await openOnDevice(db, link.token);
+    if (door?.door !== "counter") throw new Error("counter door missing");
+    // What a refused Sign or "Save and finish later" writes before redrawing.
+    await recordWaiverDraft(db, door.key, {
+      acknowledged: false,
+      medicalAnswers: medicalReferralAnswers,
+      medicalAlert: "Stent placed in June",
+    });
+    const { html } = await renderOnDevice(db, link.token, { error: "invalid" });
+    expect(html).toMatch(/value="yes"[^>]*checked=""|checked=""[^>]*value="yes"/);
+    expect(html).toContain("Stent placed in June");
+    cookieJar.clear();
+    const fresh = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
+    const { html: bystander } = await renderOnDevice(db, fresh.token);
+    expect(bystander).toContain(t("waiver.signButton"));
+    expect(bystander).not.toMatch(/value="yes"[^>]*checked=""|checked=""[^>]*value="yes"/);
+    expect(bystander).not.toContain("Stent placed in June");
+  });
+  it("a counter form says the diver gave the crew an alert last time, without its words (dock S1)", async () => {
+    const { db, shop, booking, person } = await context();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
+    const earlier = await issueWaiverRequest(db, { shopId: shop.id, personId: person.id, now });
+    if (!earlier.ok) throw new Error("earlier release missing");
+    expect(
+      await completeWaiver(db, earlier.token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        medicalAlert: "Type 1 diabetic, glucose in BCD pocket",
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+    // A thread draft on this release must not hide the hint on the counter.
+    await db
+      .update(waiverRecords)
+      .set({ draftMedicalAnswers: clearAnswers })
+      .where(eq(waiverRecords.id, link.recordId));
+    const { html } = await renderOnDevice(db, link.token);
+    expect(html).toContain(t("waiver.signButton"));
+    expect(html).toContain(t("waiver.medicalAlertEarlier"));
+    expect(html).not.toContain("Type 1 diabetic");
   });
   it("a counter submit that finds its release signed says what was entered was not saved (attacker S1)", async () => {
     const { db, shop, booking, person } = await context();

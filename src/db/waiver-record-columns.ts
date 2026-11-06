@@ -18,7 +18,7 @@ import { waiverRecords } from "./schema";
  *   integrity audit read it through {@link WAIVER_SEALED_COLUMNS}, because
  *   the seal covers it.
  * - `draftSignerName`, `draftMedicalAnswers`, `draftGuardian`,
- *   `draftShopAnswers`, `draftMedicalAlert` — what a bearer typed before
+ *   `draftShopAnswers`, `draftMedicalAlert`, `draftViaLinkId` — what a bearer typed before
  *   signing. Nothing about readiness reads an unsigned draft.
  * - `shopAnswers` — the shop's own questions as answered. They inform and
  *   never gate, so no status read, roster or manifest has a use for them; the
@@ -48,6 +48,7 @@ const {
   draftShopAnswers: _draftShopAnswers,
   shopAnswers: _shopAnswers,
   draftMedicalAlert: _draftMedicalAlert,
+  draftViaLinkId: _draftViaLinkId,
   medicalAlert: _medicalAlert,
   tokenHash: _tokenHash,
   integrityHash: _integrityHash,
@@ -123,6 +124,7 @@ export const CLEARED_DRAFT_COLUMNS = {
   draftGuardian: null,
   draftShopAnswers: null,
   draftMedicalAlert: null,
+  draftViaLinkId: null,
 } as const satisfies {
   [Column in keyof typeof allColumns as Column extends `draft${string}` ? Column : never]:
     | null

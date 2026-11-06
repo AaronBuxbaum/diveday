@@ -165,7 +165,7 @@
 - **Counter link** — the QR a staffer shows on a party's waiver panel so one diver signs their own
   seat's release, scanned with any phone: a `waiver_link` row in `capabilities` naming that
   release, alive 30 minutes and spent by the signature. It opens on the first phone that claims it
-  and no other, never shows the medical answers the diver saved in their thread, refuses a second
+  and no other, shows only the medical answers saved through that same code, refuses a second
   signature, and its mint is a line on the diver's trail naming the staffer. It carries no
   readiness authority and opens no doctor's page; it dies when the seat changes hands or the
   release is superseded (ADR

@@ -155,8 +155,9 @@ export default async function WaiverPage({
     // A counter link's half hour is not the release's own expiry.
     showLinkExpiry: !counter,
     // The counter QR can be read by any camera, so it never shows the medical
-    // answers the diver saved in their own thread (security review S2): the
-    // diver answers them again on the phone in their hand.
-    prefillMedical: !counter,
+    // answers the diver saved in their own thread (security review S2); it
+    // shows only what this claimed code saved, so a refused Sign or a Save
+    // never blanks the questionnaire on the phone that typed it (dock B1).
+    prefillMedical: door?.door !== "counter" || state.record.draftViaLinkId === door.key.linkId,
   });
 }

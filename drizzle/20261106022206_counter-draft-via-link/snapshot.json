@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a85254e1-7f6c-4bdb-943c-489c4804195d",
+  "prevIds": [
+    "16a2f7fa-2dbf-4071-9d48-f50910d451b1"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "draft_via_link_id"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.draft_via_link_id",
+        "n|col|public.waiver_records.draft_via_link_id",
+        "e|col|public.waiver_records.draft_via_link_id"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "draft_via_link_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}
