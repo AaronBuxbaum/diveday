@@ -36,11 +36,11 @@ describe("the CI result job", () => {
     expect([...CI_JOBS].sort()).toEqual(others.filter((id) => id !== "stack-gate").sort());
   });
 
-  it("runs even when a job it needs failed and keeps a stable aggregate name", () => {
+  it("runs even when a job it needs failed, not on a cancelled run, and keeps a stable aggregate name", () => {
     const job = CI.slice(CI.indexOf("\n  ci-result:\n"));
     expect(job).toMatch(/^ {4}name: CI result$/mu);
     expect(job).toMatch(
-      /^ {4}if: always\(\) && github\.event_name != 'schedule' && needs\.stack-gate\.outputs\.run != 'false'$/mu,
+      /^ {4}if: \$\{\{ !cancelled\(\) && github\.event_name != 'schedule' && needs\.stack-gate\.outputs\.run != 'false' \}\}$/mu,
     );
   });
 
