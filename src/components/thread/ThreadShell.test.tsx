@@ -43,8 +43,8 @@ const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "load
  *
  * `/recap/[token]` is a bearer page and part of the thread, but since slice 7d
  * it is a thin route that renders `AfterState`, and that component owns its own
- * `<main>` on purpose: the after-state's header *is* its moment, and it is
- * `print:hidden` so the keepsake prints alone. It is the same call the waiver's
+ * `<main>` on purpose: the after-state's header *is* its moment, and on paper
+ * the page is its logbook sheet alone. It is the same call the waiver's
  * completed state already made, and it does not escape the thread's one column
  * — `AfterState` takes the measure from this file's own exported
  * `THREAD_MEASURE_CLASS`, so the width cannot drift.

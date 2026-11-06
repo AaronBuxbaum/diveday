@@ -43,6 +43,12 @@
   departure time. The panel on the public trip page is public and non-sensitive. The **download**
   is not: it is the booked diver's own card, released only against their `/ready` capability. It
   contains no waiver, readiness or medical state, no credential, and no booking id.
+- **Day sheet** — what a booked diver's `/ready` link prints before the dive, and the only thing
+  it prints: the arrival card's facts on one sheet of paper, with the day's date and zone, the
+  dock call (or the hotel pickup's time, never the hotel), the planned sites, the packing lists
+  and the shop's number, stamped "as of" the minute the page read the booking. Like the download
+  it carries no readiness, waiver, medical or money state, no name, no booking id and no link,
+  and it says the paperwork is checked at arrival: it is never a boarding pass (issue #2745).
 - **Change ledger** — the chronological, diver-visible record of material meeting-point,
   conditions and site changes (a site change, `site_change`, is the day's run of sites as the
   diver reads it, by public name, written in the transaction that changed the dives; issue

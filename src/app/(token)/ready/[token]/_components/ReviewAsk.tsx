@@ -28,7 +28,7 @@ export function ReviewAsk({
   action: (formData: FormData) => void | Promise<void>;
 }) {
   return (
-    <SectionCard padding="lg" className="mt-10 print:hidden" title={t("reviews.askHeading")}>
+    <SectionCard padding="lg" className="mt-10" title={t("reviews.askHeading")}>
       {notice ? <FormStatus tone={notice.tone}>{t(notice.key)}</FormStatus> : null}
       {ownReview ? (
         <p className="mt-3 text-sm text-muted">

@@ -29,10 +29,6 @@ import { noticeFromParam } from "@/lib/staff-notices";
  * question twice at equal weight. A complaint is a minority act at a minority
  * moment, which is what disclosure is for (principle 8).
  *
- * `print:hidden` is the door's. The record is a logbook page a divemaster
- * signs, and what a diver privately asked the shop to fix is not a fact of the
- * day.
- *
  * Words come from the bundle and codes from `src/db/recap-pulses.ts`; the five
  * chips are `RECAP_PULSE_CATEGORIES` in the enum's own order, so a sixth
  * category is a compile error here rather than a chip nobody added.
