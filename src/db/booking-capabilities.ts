@@ -1311,11 +1311,19 @@ export async function revokeBookingCapabilities(
  * **Revoke every link this person's contact on file was sent** (#3902). A
  * delivered link went to the email or phone the person row held at the time;
  * when staff change either (a typo corrected), the old address must not keep
- * a live link to the diver's bookings. Only delivered rows: a link the
- * browser was handed is not about the address. The next send mints a fresh
- * row to the new address (`issueBookingCapability` never reuses a revoked one).
+ * a live link to the diver's bookings. The next send mints a fresh row to the
+ * new address (`issueBookingCapability` never reuses a revoked one).
+ *
+ * Two kinds of row went to the address:
+ *  - a **delivered** row of any purpose. An undelivered readiness link is the
+ *    one the booking browser was handed; it is not about the address and stays.
+ *  - a **`course_forms`** row, delivered or not (#3950). The waiver send mints
+ *    the forms link undelivered, because the same row is the one a staffer
+ *    copies or the counter QR shows, and then mails or texts it to the
+ *    contact on file. It signs the course's own release as the student, so it
+ *    goes; a staffer at the counter shows a fresh QR.
  */
-export async function revokeDeliveredBookingLinksForPerson(
+export async function revokeBookingLinksSentToPerson(
   db: DbExecutor,
   input: { shopId: string; personId: string; now?: Date },
 ): Promise<void> {
@@ -1325,7 +1333,10 @@ export async function revokeDeliveredBookingLinksForPerson(
     .where(
       and(
         eq(bookingCapabilities.shopId, input.shopId),
-        eq(bookingCapabilities.delivered, true),
+        or(
+          eq(bookingCapabilities.delivered, true),
+          eq(bookingCapabilities.purpose, "course_forms"),
+        ),
         isNull(bookingCapabilities.revokedAt),
         inArray(
           bookingCapabilities.bookingId,
