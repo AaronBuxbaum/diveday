@@ -105,4 +105,4 @@ future work if a real incident calls for it.
 
 ## Amendment 2026-11-05 (#3721)
 
-The invite token is a `capabilities` row (purpose `invite`, subject `user_account_id`, no shop), and `account_tokens` is dropped. Its seven days, superseding per account and once-use are unchanged. See [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md).
+The invite token is a `capabilities` row (purpose `invite`, subject `user_account_id`, no shop), and `account_tokens` is dropped. Its 30 days (was seven until #4065), superseding per account and once-use are unchanged. See [20261105-capabilities-shop-id-nullable](20261105-capabilities-shop-id-nullable.md).

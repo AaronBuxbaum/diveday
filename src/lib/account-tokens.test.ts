@@ -17,6 +17,11 @@ describe("account-tokens", () => {
     expect(EMAIL_VERIFICATION_TTL_MS).toBeGreaterThan(PASSWORD_RESET_TTL_MS);
   });
 
+  it("lets a reset live a day and an invite a month: single-use and superseded by a resend either way", () => {
+    expect(PASSWORD_RESET_TTL_MS).toBe(24 * 60 * 60 * 1000);
+    expect(INVITE_TTL_MS).toBe(30 * 24 * 60 * 60 * 1000);
+  });
+
   it("builds the expected link paths", () => {
     expect(verifyAccountLinkPath("abc123")).toBe("/verify/abc123");
     expect(resetPasswordLinkPath("abc123")).toBe("/reset-password/abc123");
