@@ -78,6 +78,12 @@ describe("fresh versioned visual baseline workflow", () => {
       PUBLISH_WORKFLOW.match(
         /VISUAL_EXPECTED_CAPTURE_MANIFEST: \$\{\{ runner\.temp \}\}\/reg-suit-capture-manifest\.json/gu,
       ),
+    ).toHaveLength(4);
+    // The compare and the verify both read the plan, to tell a retired surface from a lost one.
+    expect(
+      PUBLISH_WORKFLOW.match(
+        /VISUAL_EXPECTED_CAPTURE_TESTS: \$\{\{ runner\.temp \}\}\/reg-suit-visual-plan\/visual-list\.json/gu,
+      ),
     ).toHaveLength(3);
     expect(PUBLISH_WORKFLOW).toContain("name: Verify complete screenshot inventory");
   });

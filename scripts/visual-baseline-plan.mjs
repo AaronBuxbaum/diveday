@@ -36,6 +36,8 @@ export const STASH_DIR = ".reg-unchanged";
 const SHA256 = /^[0-9a-f]{64}$/u;
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}\.png$/u;
 
+const isTestId = (value) => typeof value === "string" && value.length > 0 && value.length <= 512;
+
 const byName = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
 /** `{ name: sha256 }` of every PNG directly under `dir`. */
@@ -59,6 +61,9 @@ export function hashScreenshots(dir) {
  * - `filled`: baseline surfaces a selective run did not capture. Unchanged by construction.
  * - `fetch`: baseline images reg-suit needs, because the capture differs, has no recorded hash,
  *   or (on a full capture) main no longer takes it and the report shows its last image as deleted.
+ * - `baselineTests`: for each baseline surface this run did not capture, the Playwright test that
+ *   took it on main, when main's report records one (`actualTests`). On a full pull request
+ *   capture it tells a retired surface from a lost one (scripts/visual-publish-artifacts.mjs).
  *
  * The plan names the baseline it was drawn from (`key`, `version`), and `readPlan` refuses it for
  * any other: a leftover or foreign plan would otherwise skip captures against hashes that are not
@@ -74,14 +79,18 @@ export function planBaselineReuse({ report, actualHashes, selective, key, versio
   const hashed = Object.entries(blobs).filter(([, hash]) => SHA256.test(hash ?? ""));
   if (hashed.length === 0) return null;
 
+  const tests =
+    report.actualTests && typeof report.actualTests === "object" ? report.actualTests : {};
   const unchanged = [];
   const filled = [];
   const fetch = [];
+  const baselineTests = {};
   for (const name of report.actualItems) {
     if (typeof name !== "string" || !SAFE_NAME.test(name)) continue;
     const captured = Object.hasOwn(actualHashes, name);
     if (!captured) {
       (selective ? filled : fetch).push(name);
+      if (Object.hasOwn(tests, name) && isTestId(tests[name])) baselineTests[name] = tests[name];
       continue;
     }
     const recorded = blobs[name];
@@ -99,6 +108,7 @@ export function planBaselineReuse({ report, actualHashes, selective, key, versio
     unchanged: unchanged.sort(byName),
     filled: filled.sort(byName),
     fetch: fetch.sort(byName),
+    ...(Object.keys(baselineTests).length > 0 ? { baselineTests } : {}),
   };
 }
 
@@ -128,6 +138,16 @@ export function readPlan(file = BASELINE_PLAN_FILE, expected = {}) {
     lists.some(
       (key) => !Array.isArray(plan[key]) || plan[key].some((name) => !SAFE_NAME.test(name)),
     )
+  ) {
+    throw new Error("the baseline plan has an unexpected shape");
+  }
+  const tests = plan.baselineTests;
+  if (
+    tests !== undefined &&
+    (!tests ||
+      typeof tests !== "object" ||
+      Array.isArray(tests) ||
+      Object.entries(tests).some(([name, testId]) => !SAFE_NAME.test(name) || !isTestId(testId)))
   ) {
     throw new Error("the baseline plan has an unexpected shape");
   }

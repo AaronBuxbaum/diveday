@@ -278,3 +278,24 @@ publishes its captures as the next baseline, so a series of sub-threshold change
 step is at most 20 pixels and the whole-suite byte comparison in `pnpm visual:layers` still sees all
 of them. This is a deliberate, written exception to "every changed pixel earns an explanation", not
 a relaxation of it: raise it only against a new measurement, never to make a diff list shorter.
+
+## Amendment 2026-11-06: a pull request retires a surface whose test it renamed or deleted
+
+**What failed.** The stack top of #2745 renamed the public course's print capture
+(`public-course-faqs-print.png` became `public-course-sheet-print.png`) and retitled its test. A
+push to `main` already reported a baseline surface it no longer captures as deleted, but a pull
+request refused any gap, so the full capture stopped at "visual capture is incomplete: 1 of 1747
+baseline screenshots are missing" and nothing short of a hand-edited baseline could unblock it.
+
+**The decision.** A complete (`all`-mode) pull request capture splits its missing baseline
+surfaces in two (`verifyCompleteScreenshotInventory` in `scripts/visual-publish-artifacts.mjs`). One
+whose Playwright test is no longer in this run's complete test plan (`visual-list.json`) is
+**retired**: the change renamed or deleted it, and the report lists it as deleted. One whose test is
+still planned, yet produced no screenshot, is a **lost capture** and stays the loud error, naming
+the screenshot and its test. To tell them apart, a `main` snapshot's `out.json` now records the test
+behind each capture (`actualTests`, from the capture manifest), and the baseline plan carries it for
+every surface the run did not take (`baselineTests`). A baseline published before `actualTests`
+existed cannot name the test; `sanitizeVisualArtifacts` has already proved every planned test
+delivered every capture it registered, so no test in the run takes that surface and it is retired
+too. A selective capture still refuses any gap, since it fills every surface it skipped from the
+baseline, and a pull request without its test plan refuses as before.
