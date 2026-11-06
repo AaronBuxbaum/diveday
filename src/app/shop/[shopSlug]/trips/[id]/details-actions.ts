@@ -29,7 +29,6 @@ import {
   type TripPatch,
   type UpdateTripOutcome,
 } from "@/db/trips";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { checkbox, formValue, readForm } from "@/lib/form-parse";
@@ -38,17 +37,10 @@ import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { minorToMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { boatServiceWindow } from "@/lib/service-window";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { deleteStoredImage, storeArrivalImage } from "@/lib/storage";
-import {
-  laterHoursFromForm,
-  laterMeetingDates,
-  laterMeetingHours,
-  MAX_TRIP_DAYS,
-  MIN_TRIP_DAYS,
-} from "@/lib/trip-days";
+import { laterHoursFromForm, MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { firstOfferedDiveMode, shopOffersDiveMode, tripDetailsPatch } from "@/lib/trip-details";
 import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
@@ -157,6 +149,7 @@ const detailsSchema = z.object({
 const UPDATE_TRIP_NOTICE: Record<Extract<UpdateTripOutcome, { ok: false }>["reason"], string> = {
   invalid: "invalid",
   not_found: "invalid",
+  boat_out_of_service: "boat-out-of-service",
   capacity_below_booked: "capacity-below-booked",
   boat_not_found: "boat-not-found",
   capacity_above_certificate: "capacity-above-certificate",
@@ -330,25 +323,14 @@ async function saveDepartureDetails(
   // only until that module existed.
   // The later days' dates when they are not consecutive (third UX review,
   // item 10); empty is the consecutive run.
-  const postedDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
+  const laterDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
+  if (!laterDates.success) redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
   // Each later day's own hours (#2558); none is day one's on every day.
-  const postedHours = laterHoursFromForm(
+  const laterHours = laterHoursFromForm(
     formData.getAll("meetingStart"),
     formData.getAll("meetingEnd"),
   );
-  if (!postedDates.success || !postedHours) {
-    redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
-  }
-  // **A section that does not edit the timing keeps the stored meeting days**
-  // (issue #4026). Only the timing section posts them; rebuilt from day one,
-  // a course on two Saturdays became two days in a row, and the yard was
-  // asked about a Sunday it never sails while its second Saturday went unread.
-  const storedDays = section !== undefined && section !== "timing";
-  const movesHullOrDays = section === undefined || section === "timing" || section === "boat";
-  const laterDates = storedDays
-    ? laterMeetingDates(days.map((day) => calendarDateInTimezone(day.startsAt, shopNow.timezone)))
-    : postedDates.data;
-  const laterHours = storedDays ? laterMeetingHours(days, shopNow.timezone) : postedHours;
+  if (!laterHours) redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
   const courseOwnsPrice = tripNow.course !== null && tripNow.course.priceCents !== null;
   const details = tripDetailsPatch(
     {
@@ -356,7 +338,7 @@ async function saveDepartureDetails(
       startTime,
       endTime,
       dayCount,
-      laterDates,
+      laterDates: laterDates.data,
       laterHours,
       // A catalog-priced course owns its full enrollment amount. Ignore any
       // stale or forged trip fee and clear it from this departure on save.
@@ -375,11 +357,8 @@ async function saveDepartureDetails(
       boatCapacity: nextBoat?.capacity ?? null,
       // And its certificate (H-20261009-certificate-caps-seats): no seat above it is sold.
       boatCertifiedPassengers: nextBoat?.certifiedPassengers ?? null,
-      // And its yard window (loop 5, row 5): a hull out of service sails nothing.
-      // Asked only of a save that can move the days or the hull: a title or a
-      // meeting-point fix on a departure whose hull went to the yard later
-      // changes nothing about the sailing, and refusing it is a dead end.
-      boatOutOfService: movesHullOrDays ? boatServiceWindow(nextBoat) : null,
+      // Its yard window is asked in the write, under the window's lock, of the
+      // days the departure will really hold (`updateTripRecord`, #4009).
       diveMode: patchDiveMode,
       boatId: nextBoatId,
       requiresPayment: gate?.requiresPayment ?? false,
@@ -515,11 +494,6 @@ function redirectDetailsRefusal(
   if (details.reason === "price_required_by_gate") {
     redirect(noticeUrl(back, "price-required-by-gate", { form: section ?? "details" }));
   }
-  if (details.reason === "boat_out_of_service") {
-    redirect(
-      noticeUrl(back, "boat-out-of-service", { on: details.on, form: section ?? "details" }),
-    );
-  }
   if (details.reason === "capacity_above_certificate") {
     redirect(
       noticeUrl(back, "capacity-above-certificate", {
@@ -573,6 +547,12 @@ function redirectUpdateRefusal(
   // Two of the three refusals carry a number into the banner ("4 divers are
   // already booked"), which is why this is a ladder over a plain table lookup
   // — but the code itself comes from one.
+  if (outcome.reason === "boat_out_of_service") {
+    // The first yard day, which need not be the day it leaves (#4026).
+    redirect(
+      noticeUrl(back, "boat-out-of-service", { on: outcome.on, form: section ?? "details" }),
+    );
+  }
   if (outcome.reason === "capacity_above_certificate") {
     redirect(
       noticeUrl(back, "capacity-above-certificate", {

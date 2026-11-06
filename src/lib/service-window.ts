@@ -8,8 +8,8 @@ import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "
  * shop's zone, so a caller asks with the shop-local date of the day it means
  * (`calendarDateInTimezone(…, shop.timezone)`).
  *
- * The rules that read a window live with their surfaces: the builder refuses
- * a hull (`tripDetailsPatch`), the board warns, the public site page hides a
+ * The rules that read a window live with their surfaces: every write that puts
+ * a departure on a hull refuses it (`firstYardDayOn`), the board warns, the public site page hides a
  * closed site. None of them is readiness, admission or the manifest.
  */
 export type ServiceWindow = { from: CalendarDate; until: CalendarDate; reason: string | null };

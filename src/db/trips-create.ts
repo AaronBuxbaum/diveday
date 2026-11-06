@@ -1,16 +1,19 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { maxPlannedDives } from "@/lib/trip-dive-limits";
 import type { AppTransaction, DbExecutor } from "./client";
-import type { Course, TripRequirement } from "./schema";
+import type { Course, Trip, TripRequirement } from "./schema";
 import {
   boats,
   courses,
   diveSites,
+  shops,
   tripDives,
   tripRequirements,
   tripScheduleDays,
   trips,
 } from "./schema";
+import { firstYardDayOn } from "./trips-queries";
 
 /**
  * Materializing a departure.
@@ -417,7 +420,27 @@ export async function insertTripInstances(tx: AppTransaction, list: TripInstance
 // caller that is already inside one (the seed runs under `client.ts`'s single
 // atomic seed transaction) opens a savepoint instead of a second connection.
 export async function createTrip(db: DbExecutor, input: NewTrip) {
-  return db.transaction(async (tx) => {
+  const created = await createTripAskingTheYard(db, input, false);
+  return created && "refusal" in created ? null : created;
+}
+
+/** {@link createTripOrRefusal}'s refusal: the hull is in the yard on `firstDay`, a day it would hold. */
+export type TripBoatOutOfService = { refusal: "boat_out_of_service"; firstDay: CalendarDate };
+
+/**
+ * **The builder's add: a new departure, unless its hull is in the yard** on a
+ * day it would hold it (loop 5, row 5; issue #4009). The window is read inside
+ * the write's transaction under the same share lock the roll, a series, a move
+ * and a copy take, so a window saved between the read and the insert makes
+ * the insert wait and then refuse, rather than leave a departure in a yard
+ * week. `createTrip` stays the plain insert the seed and fixtures use.
+ */
+export async function createTripOrRefusal(db: DbExecutor, input: NewTrip) {
+  return createTripAskingTheYard(db, input, true);
+}
+
+async function createTripAskingTheYard(db: DbExecutor, input: NewTrip, askTheYard: boolean) {
+  return db.transaction(async (tx): Promise<Trip | TripBoatOutOfService | null> => {
     const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
     if (!ok) return null;
     const plannedDives = normalizedDiveCount(input.plannedDives, course !== null);
@@ -425,6 +448,17 @@ export async function createTrip(db: DbExecutor, input: NewTrip) {
     const drafts = normalizedDiveDrafts(plannedDives, input.dives);
     if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
     if (!(await validateBoat(tx, input.shopId, input.boatId))) return null;
+    if (askTheYard && input.boatId && (input.diveMode ?? "boat") === "boat") {
+      const [shop] = await tx
+        .select({ timeZone: shops.timezone })
+        .from(shops)
+        .where(eq(shops.id, input.shopId))
+        .limit(1);
+      if (!shop) return null;
+      const legs = input.scheduleDays?.length ? input.scheduleDays : [input];
+      const firstDay = await firstYardDayOn(tx, input.shopId, input.boatId, legs, shop.timeZone);
+      if (firstDay) return { refusal: "boat_out_of_service", firstDay };
+    }
     return insertTripInstance(tx, {
       lensId: input.lensId ?? null,
       shopId: input.shopId,
