@@ -238,7 +238,7 @@ export function SummaryPanel({
           its danger lines make it. */}
       <PanelHeight
         labelledBy={scopedId(idPrefix, "roll-call-progress-heading")}
-        className="sticky top-(--chrome-h) z-10 mt-4 rounded-panel border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
+        className="sticky top-(--chrome-h) z-10 mt-4 rounded-panel border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

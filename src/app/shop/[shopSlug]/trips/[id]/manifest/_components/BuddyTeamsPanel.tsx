@@ -33,8 +33,8 @@ export type BuddyMemberOption = { token: string; label: string };
  * this departure, made here because this is the surface the roll call
  * runs from. A team is two or more, and a member is a seated diver or a
  * crew person — the divemaster leading a group holds no booking.
- * Management controls only, so the whole panel stays off the printed
- * manifest; the team itself prints on each member's row.
+ * Management controls only, so the panel is never on the Boat tab's sheet;
+ * the team itself prints on each member's row.
  */
 export function BuddyTeamsPanel({
   idPrefix,
@@ -121,7 +121,7 @@ export function BuddyTeamsPanel({
   const builderError = buddyErrorForm === "builder" && showBuilder ? buddyErrorText : null;
   const panelError = builderError ? null : buddyErrorText;
   return (
-    <section aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")} className="print:hidden">
+    <section aria-labelledby={scopedId(idPrefix, "buddy-teams-heading")}>
       {buddyTeamsList.some((team) => (teamWarnings[team.teamId] ?? []).length > 0) ? (
         <ul className="mb-3 max-w-4xl space-y-2 text-sm" aria-label={t("manifest.buddyHeading")}>
           {buddyTeamsList.flatMap((team, index) => {

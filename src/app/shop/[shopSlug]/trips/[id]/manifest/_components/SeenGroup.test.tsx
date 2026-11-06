@@ -114,17 +114,6 @@ describe("SeenGroup", () => {
     expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
   });
 
-  it("keeps the group off the printed sheet", () => {
-    // The printed packet is the fallback under the fallback — a sheet a crew
-    // carries when the phones are gone — and a page of species buttons nobody
-    // can press is paper spent on an ornament. Every sibling after-dive control
-    // is `print:hidden` for the same reason (`TripPlanSection`).
-    const { container } = render(
-      <SeenGroup chips={chips} tallies={[]} copy={copy} recordAction={noop} deleteAction={noop} />,
-    );
-    expect(container.querySelector("section")?.className).toContain("print:hidden");
-  });
-
   it("keeps the chip row in the order the server sent, whatever has been logged", () => {
     // A row that floated tapped species to the front would rearrange itself
     // under a thumb already reaching for the next one, on a moving deck. The

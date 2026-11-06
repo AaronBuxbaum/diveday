@@ -1011,7 +1011,8 @@ select:not([multiple]):not([size]):dir(rtl) {
  * Every document the app prints is a `PaperSheet` behind `SheetDocument`: the
  * passes, the counter card, and the trip, day and medical-alerts packets. The
  * offline manifest's saved copy is the one drawn on the device, with no
- * server: a `PaperSheet` in the page's own paper state (`ManifestSheet.tsx`).
+ * server: a `PaperSheet` in the page's own paper state (`ManifestSheet.tsx`);
+ * the live Boat tab prints its checkpoint as one (`BoatTabSheet.tsx`).
  * A diver's logbook page is the after-state's paper state the same way
  * (`RecordPaper.tsx`), reached by its Print and by the browser's own, and
  * the readiness thread before the dive prints its day sheet
@@ -1114,9 +1115,10 @@ select:not([multiple]):not([size]):dir(rtl) {
    without firing `beforeprint` (a share-sheet print on some phones). One
    rule, by structure, in place of a `print:hidden` on each control. A page
    with no sheet is not a document and prints as the browser draws it.
+   A sheet kept alive on a hidden route (Cache Components) does not count.
    Unlayered and `!important`, so no display utility can bring a screen back. */
 @media print {
-  body:has(.paper-sheet-frame)
+  body:has(.paper-sheet-frame:not([style*="display: none"] *))
     :not(
       .paper-sheet-frame,
       .paper-sheet-frame *,

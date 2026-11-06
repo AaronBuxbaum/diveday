@@ -16,6 +16,7 @@ import { DeparturePaperIdentity } from "../_components/DeparturePaperIdentity";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
+import { BoatTabPaper } from "./_components/BoatTabPaper";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CancelledRollCallBanner } from "./_components/CancelledRollCallBanner";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
@@ -36,8 +37,6 @@ import { manifestSpecies } from "./_components/manifest-species";
 import { readManifestView } from "./_components/manifest-view";
 import { offlineManifestPayload } from "./_components/offline-payload";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
-import { PrintedBoatPaper } from "./_components/PrintedBoatProcedure";
-import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
@@ -148,10 +147,29 @@ export default async function TripManifestPage({
     t,
   });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);
-  const printedBoatPaper = <PrintedBoatPaper {...boatPaper} />;
+  const diveLog = isDeparture
+    ? null
+    : executedDiveLogView({
+        plannedDives,
+        executedDives,
+        liveDiveSites,
+        catalogSpecies,
+        speciesBySite,
+        locale,
+        timeZone: shop.timezone,
+        depthUnit: shop.depthUnit,
+        t,
+      });
 
   return (
     <DeparturePaperIdentity {...paperIdentity}>
+      {/* On paper the Boat tab is this sheet alone, at the checkpoint on screen (#2745). */}
+      <BoatTabPaper
+        {...{ tripId, shop, shopSlug, checkpoint, paperIdentity, diveLog, cancelled, manifest }}
+        {...{ boatSafety, rollCall, boatPaper, stage, dockDesk, t }}
+        vesselName={vessel?.name ?? null}
+        checklist={checklistProps}
+      />
       <div className="boat-mode">
         <SkipLink
           href={scopedHash(undefined, "roll-call-list")}
@@ -186,7 +204,6 @@ export default async function TripManifestPage({
           same fact twice. */}
         <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
         <CancelledRollCallBanner state={cancelled} t={t} />
-        <PrintedSoulsOnBoard manifest={manifest} vesselName={vessel?.name ?? null} t={t} />
         {/* **The catch-up strip**, under the masthead and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
           slice 16d). It renders nothing when there is nothing new, and nothing
@@ -266,19 +283,9 @@ export default async function TripManifestPage({
             />
           ) : null}
 
-          {!isDeparture ? (
+          {diveLog ? (
             <ExecutedDiveLog
-              {...executedDiveLogView({
-                plannedDives,
-                executedDives,
-                liveDiveSites,
-                catalogSpecies,
-                speciesBySite,
-                locale,
-                timeZone: shop.timezone,
-                depthUnit: shop.depthUnit,
-                t,
-              })}
+              {...diveLog}
               action={actions.saveExecutedDive}
               checkpoint={checkpoint}
               sightingsOn={shop.sightingsEnabled}
@@ -292,9 +299,8 @@ export default async function TripManifestPage({
           {/* **The numbers a crew dials during** are a rare reference, behind the
             manifest-local ellipsis on a phone and a quiet footer line on desktop
             (ADR 20260827-the-departure-is-two-working-surfaces, decision 2). The
-            printed manifest is the fallback under the fallback, so its complete
-            copy is rendered outside either interactive disclosure below. */}
-          {printedBoatPaper}
+            printed manifest is the fallback under the fallback: its complete
+            copy is on the sheet above (`PrintedBoatPaper`). */}
           {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
             people happens before the boat leaves, while the lists above are
             worked at the rail. Below the lists, still expanded — the teams

@@ -97,7 +97,7 @@ export function CheckpointSwitch({
       {/* The checkpoint before this one is still open: said here, by the
           server, on the checkpoint it leads to. */}
       {openedGap ? (
-        <p className="mt-3 text-base font-bold text-danger print:hidden">
+        <p className="mt-3 text-base font-bold text-danger">
           {checkpointGapLine(t, openedGap)}{" "}
           <Link
             href={checkpointHref(shopSlug, tripId, openedGap.checkpoint)}

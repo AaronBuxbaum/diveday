@@ -96,7 +96,7 @@ describe("the paper face", () => {
   });
 
   it("prints a page that holds a sheet as its sheets, and nothing of its screen", () => {
-    const only = rules.find((rule) => rule.selector.startsWith("body:has(.paper-sheet-frame)"));
+    const only = rules.find((rule) => rule.selector.startsWith("body:has(.paper-sheet-frame"));
     expect(only?.body, "the screen's hide on paper").toMatch(/display:\s*none\s*!important/);
     document.body.innerHTML = `<header id="chrome"><button>Menu</button></header>
       <main id="screen-around"><form id="answers"><input name="birthdate" /></form>
@@ -113,6 +113,16 @@ describe("the paper face", () => {
     // A page with no sheet is not a document: the rule leaves it alone.
     document.body.innerHTML = `<header id="chrome">Menu</header><main>Screen</main>`;
     expect(document.getElementById("chrome")?.matches(selector)).toBe(false);
+  });
+
+  it("ignores a sheet kept alive on a hidden route, so the page on screen still prints", () => {
+    // Cache Components keeps a page you left mounted under `display: none`
+    // (#2745 dock-operator review): the Boat tab's sheet must not blank Prep.
+    const only = rules.find((rule) => rule.selector.startsWith("body:has(.paper-sheet-frame"));
+    document.body.innerHTML = `<main id="prep">Prep</main>
+      <div style="display: none"><div class="paper-sheet-frame" data-paper-print-only=""><div>
+      <section class="paper-sheet">Manifest</section></div></div></div>`;
+    expect(document.getElementById("prep")?.matches(only?.selector ?? "")).toBe(false);
   });
 
   it("gives a sheet no background of its own except the ground", () => {
