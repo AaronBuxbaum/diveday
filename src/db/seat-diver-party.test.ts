@@ -1,10 +1,19 @@
 // @vitest-environment node
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { getBookingReadiness } from "./readiness";
-import { activityEvents, bookings, cards, people, personRoles, tripRequirements } from "./schema";
+import {
+  activityEvents,
+  bookings,
+  cards,
+  people,
+  personRoles,
+  tripRequirements,
+  trips as tripsTable,
+} from "./schema";
 import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers-completion";
@@ -40,7 +49,7 @@ async function activityLines(db: AppDb, tripId: string) {
 }
 
 /**
- * **A walk-in family in one pass** (fifth loop, item 9): every member seated
+ * **A family in one pass** (fifth loop, item 9): every member seated
  * on one transaction, the "Under 18" tick on that seat's own row, each seat
  * past the first led by the first, and nothing seated when the boat cannot
  * take them all.
@@ -96,6 +105,31 @@ describe("seatParty", () => {
     for (const name of [`Ana Party ${stamp}`, `Mia Party ${stamp}`, `Leo Party ${stamp}`]) {
       expect(JSON.stringify(lines)).toContain(name);
     }
+  });
+
+  it.each([
+    [
+      "sailed",
+      {
+        startsAt: new Date(nowDate().getTime() - 6 * 3600_000),
+        endsAt: new Date(nowDate().getTime() - 2 * 3600_000),
+      },
+    ],
+    ["cancelled", { status: "cancelled" as const }],
+  ])("seats nobody on a boat that is %s", async (_name, patch) => {
+    const { db, shop, open, actorPersonId } = await context();
+    await db.update(tripsTable).set(patch).where(eq(tripsTable.id, open.id));
+    const result = await seatParty(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      entry: "roster",
+      refusals: "specific",
+      members: [{ fullName: "Nobody Sailed", minor: false }],
+    });
+    expect(result.ok).toBe(false);
+    const rows = await db.select().from(people).where(eq(people.fullName, "Nobody Sailed"));
+    expect(rows).toHaveLength(0);
   });
 
   it("seats nobody when the boat cannot take them all, and says which member it stopped on", async () => {
