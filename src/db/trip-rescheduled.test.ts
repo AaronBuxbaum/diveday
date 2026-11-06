@@ -197,11 +197,10 @@ describe("sendRescheduleNotices", () => {
       expect(sent.previousStartsAt).toEqual(previousStartsAt);
       expect(sent.startsAt).toEqual(moved.startsAt);
       expect(sent.revision).toBe(moved.revision);
-      // The lead's own address carries their trip link; Sam's is one the lead
-      // typed, and gets the news with no link that pays, cancels or moves
-      // the seat (issue #4003).
-      if (sent.bookingId === sam) expect(sent.readinessUrl).toBeUndefined();
-      else expect(sent.readinessUrl).toMatch(/^https:\/\/diveday\.example\/ready\//);
+      // Sam is an adult party member: the address the lead typed gets the
+      // same trip link any booker does (ux-over-hardening, 2026-11-06); only
+      // a seat declared Under 18 goes without one (party-member-sends.test.ts).
+      expect(sent.readinessUrl).toMatch(/^https:\/\/diveday\.example\/ready\//);
       // The meeting point did not move, so the message does not restate it.
       expect(sent.meetingPoint).toBeUndefined();
     }
