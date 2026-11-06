@@ -27,6 +27,7 @@ import {
   bookingConfirmationMailState,
   recordNotificationDelivery,
 } from "./notifications";
+import { createPerson } from "./people";
 import { getBookingReadiness } from "./readiness";
 import {
   bookingCapabilities,
@@ -53,6 +54,7 @@ import {
   getWaiverForToken,
   issueWaiverRequest,
   recordWaiverTemplate,
+  staleWaiverRecordForToken,
 } from "./waivers";
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
@@ -801,6 +803,25 @@ describe("emailFreshWaiverLink", () => {
     const html = String(command.input.Content?.Simple?.Body?.Html?.Data);
     expect(html).toMatch(/\/ready\/[^/"]+\/waiver/);
     expect(html).not.toContain("/waivers/");
+  });
+
+  it("refuses a link issued to the seat's previous holder, and sends the new holder nothing", async () => {
+    // Security review S1: a dead link of A's must not drive a send to B, nor
+    // answer anything about B's seat.
+    const send = configureEmail();
+    const { db, shop, bookingId, token, after } = await expiredLink();
+    const b = await createPerson(db, {
+      shopId: shop.id,
+      fullName: "Ines Ruiz",
+      email: "ines@dive.day",
+      phone: null,
+      origin: "counter",
+    });
+    await db.update(bookings).set({ personId: b.id }).where(eq(bookings.id, bookingId));
+
+    await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("unavailable");
+    expect(send).not.toHaveBeenCalled();
+    await expect(staleWaiverRecordForToken(db, token, after)).resolves.toBeNull();
   });
 
   it("refuses a token that matches nothing", async () => {
