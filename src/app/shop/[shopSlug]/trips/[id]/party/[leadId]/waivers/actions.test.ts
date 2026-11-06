@@ -12,7 +12,11 @@ const bookingId = "55555555-5555-4555-8555-555555555555";
 
 describe("party waiver QR action", () => {
   it("gates each issue through shop staff and returns only an image", async () => {
-    vi.mocked(requireShopSurface).mockResolvedValue({ db: {}, shop: { id: "shop" } } as never);
+    vi.mocked(requireShopSurface).mockResolvedValue({
+      db: {},
+      shop: { id: "shop" },
+      session: { user: { personId: "staffer" } },
+    } as never);
     vi.mocked(issuePartyWaiver).mockResolvedValue({
       token: "secret-credential",
       expiresAt: new Date(),
@@ -24,6 +28,7 @@ describe("party waiver QR action", () => {
       tripId,
       leadBookingId: leadId,
       bookingId,
+      actorPersonId: "staffer",
     });
     expect(result).toMatchObject({
       ok: true,

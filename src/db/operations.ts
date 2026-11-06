@@ -232,7 +232,8 @@ export type DiverActivityCode =
   | "record_exported"
   | "dispute_sheet_printed"
   | "running_late_from_message"
-  | "waiver_seal_acknowledged";
+  | "waiver_seal_acknowledged"
+  | "waiver_counter_code_shown";
 
 /**
  * One line on the diver-record trail, subject-only — the same shape

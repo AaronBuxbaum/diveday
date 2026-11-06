@@ -17,11 +17,18 @@ export async function issuePartyWaiverQrAction(
   leadBookingId: string,
   bookingId: string,
 ): Promise<{ ok: true; qr: string } | { ok: false }> {
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const origin = publicAppUrl();
   if (!origin || !uuidParam(tripId) || !uuidParam(leadBookingId) || !uuidParam(bookingId))
     return { ok: false };
-  const issued = await issuePartyWaiver(db, { shopId: shop.id, tripId, leadBookingId, bookingId });
+  const issued = await issuePartyWaiver(db, {
+    shopId: shop.id,
+    tripId,
+    leadBookingId,
+    bookingId,
+    // On the diver's trail: who showed the code (security review S2).
+    actorPersonId: session.user.personId,
+  });
   if (!issued) return { ok: false };
   const url = new URL(`/waivers/${issued.token}`, `${origin}/`).toString();
   return { ok: true, qr: await QRCode.toDataURL(url, { margin: 4, width: 256 }) };

@@ -7,18 +7,25 @@ import { fileScopedShopContext } from "@/test/db";
 import { getPartyWaiverQueue, issuePartyWaiver } from "./party-waiver-queue";
 import * as readinessDb from "./readiness";
 import { listTripReadiness } from "./readiness";
-import { bookings, capabilities, people, personRoles, waiverRecords } from "./schema";
+import {
+  activityEvents,
+  bookings,
+  capabilities,
+  people,
+  personRoles,
+  waiverRecords,
+} from "./schema";
 import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
-import { completeWaiver, getWaiverForToken, waiverLinkDoor } from "./waivers-completion";
+import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { recordMedicalEvaluation } from "./waivers-medical";
-import { clearAnswers, medicalReferralAnswers } from "./waivers-test-fixtures";
+import { clearAnswers, medicalReferralAnswers, openOnDevice } from "./waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
 
 /** What `/waivers/<token>` opens for a counter link: its state, or unavailable. */
 async function opened(db: typeof ctx.db, token: string, now?: Date) {
-  const door = await waiverLinkDoor(db, token, now);
+  const door = await openOnDevice(db, token, now);
   if (door?.door !== "counter") return { state: "unavailable" as const };
   return getWaiverForToken(db, door.key, now);
 }
@@ -29,7 +36,7 @@ async function signAtCounter(
   token: string,
   input: Parameters<typeof completeWaiver>[2],
 ) {
-  const door = await waiverLinkDoor(db, token);
+  const door = await openOnDevice(db, token);
   if (door?.door !== "counter") return { ok: false as const, reason: "no_door" as const };
   return completeWaiver(db, door.key, input);
 }
@@ -90,6 +97,28 @@ describe("party release QR handoff", () => {
     ).toBeNull();
   });
 
+  it("records on the diver's trail which staffer showed the code (security S2)", async () => {
+    const f = await family();
+    const issued = await issuePartyWaiver(f.db, {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
+    });
+    if (!issued) throw new Error("link missing");
+    const lines = await f.db
+      .select({ actor: activityEvents.actorPersonId, subject: activityEvents.subjectPersonId })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.shopId, f.shop.id),
+          eq(activityEvents.code, "waiver_counter_code_shown"),
+        ),
+      );
+    expect(lines).toEqual([{ actor: f.staff.id, subject: f.third.personId }]);
+  });
+
   it("issues only the clicked seat's link and keeps guardian consent required", async () => {
     const f = await family();
     const input = {
@@ -97,6 +126,7 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.minor.bookingId,
+      actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
     if (!issued) throw new Error("eligible minor refused");
@@ -123,6 +153,7 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.minor.bookingId,
+      actorPersonId: f.staff.id,
     };
     const existing = await issuePartyWaiver(f.db, input);
     if (!existing) throw new Error("link missing");
@@ -153,6 +184,7 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
     };
     const first = await issuePartyWaiver(f.db, input);
     if (!first) throw new Error("first link missing");
@@ -178,6 +210,7 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
     if (!issued) throw new Error("link missing");
@@ -204,6 +237,7 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.lead.bookingId,
+      actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
     if (!issued) throw new Error("link missing");
@@ -239,6 +273,7 @@ describe("party release QR handoff", () => {
       tripId: f.trip.id,
       leadBookingId: f.lead.bookingId,
       bookingId: f.lead.bookingId,
+      actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
     if (!issued) throw new Error("link missing");
