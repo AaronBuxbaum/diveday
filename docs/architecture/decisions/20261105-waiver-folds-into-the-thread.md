@@ -24,7 +24,7 @@ ever to the holder's contact on file. Every other release link is a capability.
    the member claims the seat (#3986, #4003).
 3. **A party lead signs a minor's seat on their own link** (`partySeatWaiverKey`).
 4. **Counter tablets sign on a `waiver_link`**: 30 minutes, once, on the first phone to claim it.
-   A minor signs only on a code the desk vouched a guardian for (#4003).
+   A minor signs only on a code the desk vouched a guardian for (#4003, #4019).
 5. **`/waivers/<token>` refuses a seat's release** (`waiverLinkDoor`).
 6. **A release with no seat signs on a capability too.** Signed, it covers every seat the diver
    holds. Copy link mints a counter link, with the staffer on the diver's trail; email and text

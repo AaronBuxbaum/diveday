@@ -173,6 +173,36 @@ describe("holdSendAction", () => {
     expect(revalidatePath).toHaveBeenCalledWith(`/shop/${shop.slug}/gear/rentals/${ticketId}`);
   });
 
+  // Issue #4019: the diver record's "Yes, copy the link" carries the desk's
+  // answer that a parent or guardian is at the counter, and nothing else does.
+  it("carries the desk's guardian answer on a Copy link, and only a yes", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const [minor] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Counter Minor", dateOfBirth: "2012-03-04" })
+      .returning();
+    if (!minor) throw new Error("person insert failed");
+    const form = (answer?: string) => {
+      const data = new FormData();
+      data.set("holdKind", "waiver_send");
+      data.set("surface", "diver");
+      data.set("personId", minor.id);
+      data.set("channel", "link");
+      if (answer !== undefined) data.set("guardianPresent", answer);
+      return data;
+    };
+    await holdSendAction(form("yes"));
+    await holdSendAction(form("no"));
+    const rows = await heldRows(db, { shopId: shop.id });
+    expect(rows.map((row) => row.payload)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ personId: minor.id, guardianPresent: true }),
+        expect.not.objectContaining({ guardianPresent: expect.anything() }),
+      ]),
+    );
+  });
+
   it("refuses a form that names no send at all", async () => {
     const { shop, owner } = await context();
     signIn(shop, owner);

@@ -48,6 +48,11 @@ const waiverSendPayload = z
     tripId: z.uuid().optional(),
     /** The counter rental's ticket a `counter` send was made from, when there is one yet. */
     ticketId: z.uuid().optional(),
+    /**
+     * Copy link: the desk confirmed a parent or legal guardian is at the
+     * counter to co-sign a minor's release with no seat (issue #4019).
+     */
+    guardianPresent: z.literal(true).optional(),
   })
   // A send with nobody to send to is not a send; refused here so no row is
   // ever held for it.

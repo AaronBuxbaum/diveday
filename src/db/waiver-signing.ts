@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -14,24 +14,74 @@ import { seatNotCancelled } from "./trips-queries";
  */
 
 /**
- * Whether the seat a release is for was marked "Under 18" by whoever booked it
- * (`bookings.minor_declared_at`). False for a person-scoped release, which has
- * no seat. The guardian rule reads it only where no date of birth is on file
- * (`guardianSignatureRequired`), so the signing page and `completeWaiver` ask
- * the same question.
+ * Whether the booker marked the release's diver "Under 18"
+ * (`bookings.minor_declared_at`): on the release's own seat, or, for a
+ * release with no seat (which covers every seat the diver holds once signed,
+ * issue #4019), on any of their seats not cancelled on a live departure. The
+ * guardian rule reads it only where no date of birth is on file
+ * (`guardianSignatureRequired`), so the signing page, `completeWaiver` and
+ * Copy link ask the same question.
  */
 export async function seatMinorDeclared(
   db: DbExecutor,
-  shopId: string,
-  bookingId: string | null,
+  record: { shopId: string; personId: string; bookingId: string | null },
 ): Promise<boolean> {
-  if (!bookingId) return false;
+  if (record.bookingId) {
+    const [row] = await db
+      .select({ minorDeclaredAt: bookings.minorDeclaredAt })
+      .from(bookings)
+      .where(and(eq(bookings.id, record.bookingId), eq(bookings.shopId, record.shopId)))
+      .limit(1);
+    return Boolean(row?.minorDeclaredAt);
+  }
   const [row] = await db
-    .select({ minorDeclaredAt: bookings.minorDeclaredAt })
+    .select({ id: bookings.id })
     .from(bookings)
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, record.shopId),
+        eq(bookings.personId, record.personId),
+        isNotNull(bookings.minorDeclaredAt),
+        seatNotCancelled,
+        eq(trips.shopId, record.shopId),
+        ne(trips.status, "cancelled"),
+        liveTrip(),
+      ),
+    )
     .limit(1);
-  return Boolean(row?.minorDeclaredAt);
+  return Boolean(row);
+}
+
+/**
+ * Whether any of the person's seats not cancelled on a live departure carries
+ * an address the party's lead typed and the member never claimed
+ * (`seatAddressIsLeadTyped`, issue #4003). The contact on file may then be
+ * that typed one, which cannot prove a guardian (issue #4019).
+ */
+export async function personContactLeadTyped(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.personId, personId),
+        isNotNull(bookings.contactTypedByLeadAt),
+        isNull(bookings.claimedAt),
+        seatNotCancelled,
+        eq(trips.shopId, shopId),
+        ne(trips.status, "cancelled"),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
 /** The departure a booking sits on, or null when the booking is gone. */
@@ -60,7 +110,7 @@ export async function getBookingTripId(
 
 /**
  * The name a release has to be signed under, and what the guardian rule reads:
- * the date of birth on file and the seat's "Under 18" (`seatMinorDeclared`).
+ * the date of birth on file and the booker's "Under 18" (`seatMinorDeclared`).
  */
 export async function getWaiverSignerOnFile(
   db: DbExecutor,
@@ -73,7 +123,7 @@ export async function getWaiverSignerOnFile(
     .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId)))
     .limit(1);
   if (!row) return undefined;
-  const minorDeclared = await seatMinorDeclared(db, record.shopId, record.bookingId);
+  const minorDeclared = await seatMinorDeclared(db, record);
   return { ...row, minorDeclared };
 }
 
