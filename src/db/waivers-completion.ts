@@ -26,7 +26,13 @@ import { buildShopAnswers, draftShopAnswersFrom } from "@/lib/waiver-questions";
 import { hashWaiverToken } from "@/lib/waiver-tokens";
 import { isUnresolvedMedicalHold, needsMedicalReview } from "@/lib/waivers";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
-import { spendCapability, type VerifiedCapability, verifyCapability } from "./capabilities";
+import {
+  capabilityClaim,
+  claimCapability,
+  spendCapability,
+  type VerifiedCapability,
+  verifyCapability,
+} from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
@@ -295,19 +301,32 @@ async function standingCounterLink(db: DbExecutor, key: CounterWaiverKey, now: D
  * only when the release has no seat. A seat's own waiver link opens nothing:
  * that release is signed in its holder's thread, or at the counter. Null for
  * those and for a dead counter link; a token that names nothing at all comes
- * back as itself, for the page's dead-link card. Every action of the page and
- * of its doctor's page goes through this, never a raw token.
+ * back as itself, for the page's dead-link card. Every action of the page
+ * goes through this, never a raw token.
+ *
+ * A counter link opens on one phone only (attacker review S1): the first one
+ * to claim it (`claimCounterLink`) keeps the secret as `device`. Until then it
+ * is `counter_unclaimed`; to any other phone it is `counter_elsewhere`.
  */
 export async function waiverLinkDoor(
   db: DbExecutor,
   token: string,
-  now: Date = nowDate(),
-): Promise<{ door: "counter"; key: CounterWaiverKey } | { door: "release"; key: string } | null> {
+  options: { device?: string; now?: Date } = {},
+): Promise<WaiverLinkDoor> {
   if (token.length === 0) return null;
+  const now = options.now ?? nowDate();
   const link = await verifyCapability(db, { purpose: "waiver_link", token });
   if (link) {
     const key = await counterWaiverKey(db, link, token, now);
-    return key ? { door: "counter", key } : null;
+    if (!key) return null;
+    const claim = await capabilityClaim(db, {
+      purpose: "waiver_link",
+      token,
+      device: options.device,
+    });
+    if (claim === "unclaimed") return { door: "counter_unclaimed" };
+    if (claim !== "this_device") return { door: "counter_elsewhere" };
+    return { door: "counter", key };
   }
   const [record] = await db
     .select({ bookingId: waiverRecords.bookingId })
@@ -316,6 +335,29 @@ export async function waiverLinkDoor(
     .limit(1);
   if (record?.bookingId) return null;
   return { door: "release", key: token };
+}
+
+export type WaiverLinkDoor =
+  | { door: "counter"; key: CounterWaiverKey }
+  | { door: "counter_unclaimed" }
+  | { door: "counter_elsewhere" }
+  | { door: "release"; key: string }
+  | null;
+
+/**
+ * The first phone to open a counter link claims it: the secret it keeps in a
+ * cookie, or null when the link is already claimed or opens nothing (expired,
+ * replaced, spent, or its release no longer the seat's).
+ */
+export async function claimCounterLink(
+  db: DbExecutor,
+  token: string,
+  now: Date = nowDate(),
+): Promise<string | null> {
+  if (token.length === 0) return null;
+  const link = await verifyCapability(db, { purpose: "waiver_link", token });
+  if (!link || !(await counterWaiverKey(db, link, token, now))) return null;
+  return claimCapability(db, { purpose: "waiver_link", token, now });
 }
 
 async function counterWaiverKey(
@@ -529,7 +571,13 @@ export type CompleteWaiverOutcome =
         /** A guardian section came, and it is not a signature: no consent, no relationship, no email, or the diver's own name. */
         | "guardian_invalid"
         /** The booking is a held seat: nothing is signed onto the matched record until the desk confirms (issue #2125). */
-        | "identity_unconfirmed";
+        | "identity_unconfirmed"
+        /**
+         * A counter link's release was already signed: this submit's answers
+         * are not saved, and never reported as that signature (attacker
+         * review S1).
+         */
+        | "already_signed";
     };
 
 /**
@@ -898,6 +946,7 @@ async function completeWaiverLocked(
   if (state.state === "expired") return { ok: false, reason: "expired" };
   if (state.state === "held") return { ok: false, reason: "identity_unconfirmed" };
   if (state.state === "completed") {
+    if (isCounterKey(token)) return { ok: false, reason: "already_signed" };
     return { ok: true, status: completedStatus(state.record.status), idempotent: true };
   }
 
@@ -992,8 +1041,10 @@ async function completeWaiverLocked(
   if (atWrite.state === "unavailable") return { ok: false, reason: "unavailable" };
   if (atWrite.state === "expired") return { ok: false, reason: "expired" };
   if (atWrite.state === "held") return { ok: false, reason: "identity_unconfirmed" };
-  if (atWrite.state === "completed")
+  if (atWrite.state === "completed") {
+    if (isCounterKey(token)) return { ok: false, reason: "already_signed" };
     return { ok: true, status: completedStatus(atWrite.record.status), idempotent: true };
+  }
   // A counter link is spent by the signature it carries, in this transaction:
   // a refusal below rolls the spend back, and a link spent, revoked or expired
   // since the read above signs nothing.
@@ -1085,7 +1136,17 @@ async function completeWaiverLocked(
   // stable result instead, which makes duplicate browser submits harmless.
   const current = await currentRecordForToken(db, token);
   if (current?.status === "completed" || current?.status === "medical_review") {
+    if (isCounterKey(token)) return { ok: false, reason: "already_signed" };
     return { ok: true, status: completedStatus(current.status), idempotent: true };
   }
   return { ok: false, reason: "unavailable" };
+}
+
+/**
+ * A counter link is a QR any camera can read, so a release it reaches that is
+ * already signed refuses a second submit rather than reporting the first one
+ * as its own: a different set of answers is never silently dropped.
+ */
+function isCounterKey(token: WaiverKey): token is CounterWaiverKey {
+  return typeof token !== "string" && token.kind === "counter";
 }

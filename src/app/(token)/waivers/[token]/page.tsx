@@ -10,8 +10,15 @@ import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { completedMedicalState } from "./completed-medical-state";
+import { counterDevice } from "./counter-device";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
-import { ExpiredLink, HeldWaiverCard, UnavailableWaiverLink } from "./WaiverDoorCards";
+import {
+  CounterClaimCard,
+  CounterElsewhereCard,
+  ExpiredLink,
+  HeldWaiverCard,
+  UnavailableWaiverLink,
+} from "./WaiverDoorCards";
 import { waiverSigningForm } from "./WaiverSigningForm";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -59,7 +66,11 @@ export default async function WaiverPage({
   // A counter tablet's link, or a release with no seat. A seat's own waiver
   // link opens nothing (issue #2743): its release is signed in the holder's
   // thread, so it lands on the card below that sends them their thread link.
-  const door = await waiverLinkDoor(db, token);
+  const door = await waiverLinkDoor(db, token, { device: await counterDevice() });
+  // A counter QR opens on the first phone that taps "open here", and on no
+  // other (attacker review S1).
+  if (door?.door === "counter_unclaimed") return <CounterClaimCard token={token} t={anonT} />;
+  if (door?.door === "counter_elsewhere") return <CounterElsewhereCard t={anonT} />;
   const state = door ? await getWaiverForToken(db, door.key) : { state: "unavailable" as const };
   const counter = door?.door === "counter";
 
@@ -117,6 +128,9 @@ export default async function WaiverPage({
         t={t}
         locale={locale}
         waiverOnly={counter}
+        // A counter submit that found its release already signed: what was
+        // just entered was not saved, and the receipt says so.
+        notSaved={counter && error === "signed"}
         medicalState={completedMedicalState(state.record)}
         // A waiver link opens no thread and no doctor's page (issue #2743): a
         // seat's release, and its doctor's page, are on the holder's own link.
@@ -140,5 +154,9 @@ export default async function WaiverPage({
     saveAction: saveWaiverDraftAction.bind(null, token),
     // A counter link's half hour is not the release's own expiry.
     showLinkExpiry: !counter,
+    // The counter QR can be read by any camera, so it never shows the medical
+    // answers the diver saved in their own thread (security review S2): the
+    // diver answers them again on the phone in their hand.
+    prefillMedical: !counter,
   });
 }

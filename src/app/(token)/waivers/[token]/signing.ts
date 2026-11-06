@@ -390,6 +390,18 @@ export async function saveWaiverDraftThrough(door: SigningDoor, formData: FormDa
 }
 
 /**
+ * Why a counter link's form no longer signs: `signed` when its release was
+ * signed since the form was painted, so the receipt can say this submit's
+ * answers were not saved rather than look like their signature (attacker
+ * review S1). Every other door, and every other reason, is `unavailable`.
+ */
+async function counterRefusal(key: WaiverKey): Promise<"signed" | "unavailable"> {
+  if (typeof key === "string" || key.kind !== "counter") return "unavailable";
+  const state = await getWaiverForToken(await getDb(), key);
+  return state.state === "completed" ? "signed" : "unavailable";
+}
+
+/**
  * **Sign**, through either door. Every refusal redirects back to `door.path`
  * with what the diver typed kept as a draft; a signature returns the record and
  * the status it was filed under, for the caller to route.
@@ -399,7 +411,7 @@ export async function completeWaiverThrough(
   formData: FormData,
 ): Promise<{ record: WaiverRecordRow; status: "completed" | "medical_review" }> {
   const context = await signingContext(door.key);
-  if (!context) redirect(`${door.path}?error=unavailable`);
+  if (!context) redirect(`${door.path}?error=${await counterRefusal(door.key)}`);
   const { record, questionnaire, guardianRequired, shopQuestions } = context;
   const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
   const answers = readFormMedicalAnswers(formData, questionnaire);
@@ -519,6 +531,9 @@ export async function completeWaiverThrough(
     if (outcome.reason === "invalid_medical") {
       redirect(refusedSubmitPath(door.path, "medical"));
     }
+    // A counter link's release signed since this form was painted: the
+    // receipt says these answers were not saved (attacker review S1).
+    if (outcome.reason === "already_signed") redirect(`${door.path}?error=signed`);
     // The writer's own refusal of a shop answer, past the check above (the
     // version changed under a form left open, or a hand-built request).
     if (outcome.reason === "invalid_shop_answers") {

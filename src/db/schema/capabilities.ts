@@ -15,6 +15,7 @@ import {
   CAPABILITY_PURPOSES,
   type CapabilityPurpose,
   type CapabilitySubject,
+  claimablePurposes,
   expiringPurposes,
   onePerPersonPurposes,
   platformPurposes,
@@ -111,6 +112,13 @@ export const capabilities = pgTable(
      */
     lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
     /**
+     * The digest of the secret the first device to open a claimable link keeps
+     * in a cookie (`claim: "first_device"`, the counter link): that device
+     * opens it, every other is refused. Null until claimed; only ever on a
+     * claimable purpose.
+     */
+    claimHash: text("claim_hash"),
+    /**
      * True exactly on a `person` purpose of which a person holds one live link
      * (`per: "subject"`: the calendar feeds), as `capabilities_one_live_by_purpose`
      * holds. It exists for the partial unique index below: an index predicate
@@ -187,6 +195,11 @@ export const capabilities = pgTable(
     check(
       "capabilities_accessed_only_when_reusable",
       sql`${table.lastAccessedAt} is null or ${table.purpose}::text in (${sqlList(reusablePurposes())})`,
+    ),
+    // Only a link the first device claims carries that device's digest.
+    check(
+      "capabilities_claim_only_when_claimable",
+      sql`${table.claimHash} is null or ${table.purpose}::text in (${sqlList(claimablePurposes())})`,
     ),
     // Only a setup link records the shop it opened.
     check(

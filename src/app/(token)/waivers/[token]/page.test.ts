@@ -4,14 +4,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { bookingCapabilities, bookings, trips, waiverRecords } from "@/db/schema";
 import { listStaff } from "@/db/trips";
-import { completeWaiver, waiverLinkDoor } from "@/db/waivers-completion";
+import { completeWaiver } from "@/db/waivers-completion";
 import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import {
+  claimedDevice,
   clearAnswers,
   issueCounterLink,
   medicalReferralAnswers,
   now,
+  openOnDevice,
   waiverContextFor,
 } from "@/db/waivers-test-fixtures";
 import { diverTranslator } from "@/i18n/messages";
@@ -43,10 +45,17 @@ vi.mock("@/i18n/request", () => ({
 const { getDb } = await import("@/db/client");
 const { default: WaiverPage } = await import("./page");
 const t = diverTranslator("en-US");
-const renderToken = async (token: string) =>
+const renderToken = async (token: string, search: { error?: string } = {}) =>
   renderToStaticMarkup(
-    await WaiverPage({ params: Promise.resolve({ token }), searchParams: Promise.resolve({}) }),
+    await WaiverPage({ params: Promise.resolve({ token }), searchParams: Promise.resolve(search) }),
   );
+/** Render a counter link on the phone that opened it first. */
+async function renderOnDevice(db: Parameters<typeof openOnDevice>[0], token: string, search = {}) {
+  const door = await openOnDevice(db, token);
+  const device = claimedDevice(token);
+  if (device) cookieJar.set("diveday_counter_device", device);
+  return { door, html: await renderToken(token, search) };
+}
 afterEach(() => {
   cookieJar.clear();
   vi.clearAllMocks();
@@ -232,9 +241,8 @@ describe("the actual completed waiver branch", () => {
       .select({ id: bookingCapabilities.id })
       .from(bookingCapabilities)
       .where(eq(bookingCapabilities.bookingId, booking.id));
-    const form = await renderToken(link.token);
+    const { door, html: form } = await renderOnDevice(db, link.token);
     expect(form).toContain(t("waiver.signButton"));
-    const door = await waiverLinkDoor(db, link.token);
     if (door?.door !== "counter") throw new Error("counter door missing");
     const outcome = await completeWaiver(db, door.key, {
       signerName: person.fullName,
@@ -276,7 +284,7 @@ describe("the actual completed waiver branch", () => {
     if (!trip) throw new Error("trip missing");
     const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, booking.tripId));
-    const departure = await renderToken(link.token);
+    const { html: departure } = await renderOnDevice(db, link.token);
     expect(departure).toContain(t("waiver.independentTitle"));
     expect(departure).not.toContain(t("waiver.beforeDockTitle"));
     expect(departure).not.toContain(trip.title);
@@ -285,5 +293,51 @@ describe("the actual completed waiver branch", () => {
     const seat = await renderToken(link.token);
     expect(seat).not.toContain(t("waiver.signButton"));
     expect(seat).not.toContain(t("waiver.emailFreshLink"));
+  });
+  it("a counter QR opens on the first phone that taps, and tells any other phone it is open elsewhere (attacker S1)", async () => {
+    const { db, shop, booking } = await context();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
+    const unclaimed = await renderToken(link.token);
+    expect(unclaimed).toContain(t("waiver.counterClaimButton"));
+    expect(unclaimed).not.toContain(t("waiver.signButton"));
+    await openOnDevice(db, link.token);
+    const elsewhere = await renderToken(link.token);
+    expect(elsewhere).toContain(t("waiver.counterElsewhereTitle"));
+    expect(elsewhere).not.toContain(t("waiver.signButton"));
+    expect(elsewhere).not.toContain(t("waiver.counterClaimButton"));
+  });
+  it("a counter form never shows the medical answers or alert the diver saved in their thread (security S2)", async () => {
+    const { db, shop, booking } = await context();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
+    await db
+      .update(waiverRecords)
+      .set({
+        draftMedicalAnswers: medicalReferralAnswers,
+        draftMedicalAlert: "Stent placed in June",
+      })
+      .where(eq(waiverRecords.id, link.recordId));
+    const { html } = await renderOnDevice(db, link.token);
+    expect(html).toContain(t("waiver.signButton"));
+    expect(html).not.toMatch(/value="yes"[^>]*checked=""|checked=""[^>]*value="yes"/);
+    expect(html).not.toContain("Stent placed in June");
+  });
+  it("a counter submit that finds its release signed says what was entered was not saved (attacker S1)", async () => {
+    const { db, shop, booking, person } = await context();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
+    const door = await openOnDevice(db, link.token);
+    if (door?.door !== "counter") throw new Error("counter door missing");
+    await completeWaiver(db, door.key, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    const { html } = await renderOnDevice(db, link.token, { error: "signed" });
+    expect(html).toContain(t("waiver.counterAlreadySigned"));
+    expect((await renderOnDevice(db, link.token)).html).not.toContain(
+      t("waiver.counterAlreadySigned"),
+    );
   });
 });

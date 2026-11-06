@@ -1,0 +1,77 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "16a2f7fa-2dbf-4071-9d48-f50910d451b1",
+  "prevIds": [
+    "38fe8ce5-1f0a-4ee8-a8a5-4e5b461bd9a8"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "capabilities",
+        "claim_hash"
+      ],
+      "writes": [
+        "s|col|public.capabilities.claim_hash",
+        "n|col|public.capabilities.claim_hash",
+        "e|col|public.capabilities.claim_hash"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "capabilities"
+      ],
+      "writes": [
+        "s|ck|public.capabilities.capabilities_claim_only_when_claimable",
+        "n|ck|public.capabilities.capabilities_claim_only_when_claimable",
+        "e|ck|public.capabilities.capabilities_claim_only_when_claimable",
+        "n|con|public.capabilities.capabilities_claim_only_when_claimable"
+      ],
+      "reads": [
+        "n|tbl|public.capabilities",
+        "n|sch|public",
+        "n|col|public.capabilities.claim_hash",
+        "n|col|public.capabilities.purpose"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "claim_hash",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "capabilities",
+        "name": "capabilities_claim_only_when_claimable",
+        "value": "\"claim_hash\" is null or \"purpose\"::text in ('waiver_link')",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { clearCourseForms } from "./course-form-only";
 import { decodeQrDataUrl } from "./decode-qr";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
@@ -19,6 +20,11 @@ import {
 // The image itself is a bearer credential; do not retain screenshots or traces.
 test.use({ screenshot: "off", trace: "off" });
 signedInAsOwner();
+
+/** The first phone to open a counter code says "this one" (attacker review S1). */
+async function openCounterCode(phone: Page) {
+  await phone.getByRole("button", { name: "Open the waiver here" }).click();
+}
 
 test("a minor scans their own waiver on a signed-out phone and a guardian signs", async ({
   page,
@@ -53,7 +59,19 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.goto(url.pathname).catch(() => {
       throw new Error("minor waiver navigation failed");
     });
+    await openCounterCode(phone);
     await expect(phone.getByRole("heading", { name: "Parent or guardian" })).toBeVisible();
+    // The code opens on the first phone only (attacker review S1).
+    const otherPhone = await browser.newContext({
+      baseURL: workerBaseURL,
+      storageState: { cookies: [], origins: [] },
+    });
+    const second = makeActivitySafe(await otherPhone.newPage());
+    await second.goto(url.pathname);
+    await expect(
+      second.getByRole("heading", { name: "This code is open on another phone" }),
+    ).toBeVisible();
+    await otherPhone.close();
     await dialog.getByRole("button", { name: "Close" }).click();
     await phone.getByLabel("Type your full name").fill("Sky Lagoon");
     await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();
@@ -73,6 +91,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.goto(leadPath).catch(() => {
       throw new Error("lead waiver navigation failed");
     });
+    await openCounterCode(phone);
     await leadDialog.getByRole("button", { name: "Close" }).click();
     await phone.getByLabel("Type your full name").fill("Alex Lagoon");
     await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();
@@ -97,6 +116,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await phone.goto(thirdPath).catch(() => {
       throw new Error("third waiver navigation failed");
     });
+    await openCounterCode(phone);
     await expect(phone.getByLabel("Type your full name")).toBeVisible();
     await thirdDialog.getByRole("button", { name: "Close" }).click();
     await page.getByRole("link", { name: "Back to departure" }).click();
@@ -185,6 +205,7 @@ test("a counter waiver receipt stays scoped when course forms are still outstand
     await phone.goto(new URL(decoded).pathname).catch(() => {
       throw new Error("course waiver navigation failed");
     });
+    await openCounterCode(phone);
     await dialog.getByRole("button", { name: "Close" }).click();
     await phone.getByLabel("Type your full name").fill("Alex Course");
     await phone.getByLabel("I have read this waiver, understand it, and agree to it.").check();

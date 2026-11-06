@@ -3,10 +3,11 @@
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { emailFreshWaiverLink, type WaiverLinkRescue } from "@/db/waiver-issue";
-import { staleWaiverRecordForToken, waiverLinkDoor } from "@/db/waivers";
+import { claimCounterLink, staleWaiverRecordForToken, waiverLinkDoor } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { counterDevice, keepCounterDevice } from "./counter-device";
 import { completeWaiverThrough, type SigningDoor, saveWaiverDraftThrough } from "./signing";
 
 /**
@@ -78,9 +79,30 @@ async function tokenDoor(token: unknown): Promise<SigningDoor> {
   ) {
     redirect(`${path}?error=rate`);
   }
-  const door = await waiverLinkDoor(await getDb(), token);
-  if (!door) redirect(`${path}?error=unavailable`);
+  const door = await waiverLinkDoor(await getDb(), token, { device: await counterDevice() });
+  // A counter link on another phone, or not yet opened on this one, signs
+  // nothing: the page itself then says which.
+  if (door?.door !== "counter" && door?.door !== "release") redirect(`${path}?error=unavailable`);
   return { key: door.key, path };
+}
+
+/**
+ * **Open a counter link on this phone** (attacker review S1): the first phone
+ * to tap claims the link and keeps the claim in a cookie; any later phone is
+ * told the code is open elsewhere. Same per-IP bucket as the page's other acts.
+ */
+export async function claimCounterLinkAction(token: string) {
+  if (typeof token !== "string") redirect("/");
+  const path = `/waivers/${token}`;
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction)).allowed
+  ) {
+    redirect(`${path}?error=rate`);
+  }
+  const device = await claimCounterLink(await getDb(), token);
+  if (device) await keepCounterDevice(token, device);
+  redirect(path);
 }
 
 export async function saveWaiverDraftAction(token: string, formData: FormData) {
