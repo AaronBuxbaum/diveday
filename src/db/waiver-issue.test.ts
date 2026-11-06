@@ -582,6 +582,29 @@ describe("issueAndDeliverWaiver", () => {
       ).toBeNull();
     });
 
+    it("sends no forms link to an address the party's lead typed for a minor", async () => {
+      vi.stubEnv("APP_HOST", "https://diveday.test");
+      const { db, shop, bookingId } = await courseSeat();
+      await db
+        .update(bookings)
+        .set({ contactTypedByLeadAt: nowDate(), claimedAt: null })
+        .where(eq(bookings.id, bookingId));
+
+      const result = await issueAndDeliverWaiver(db, shop.id, bookingId, { channel: "email" });
+
+      expect(result).toMatchObject({ ok: true, delivery: "guardian_needed", token: null });
+      const minted = await db
+        .select({ id: bookingCapabilities.id })
+        .from(bookingCapabilities)
+        .where(
+          and(
+            eq(bookingCapabilities.bookingId, bookingId),
+            eq(bookingCapabilities.purpose, "course_forms"),
+          ),
+        );
+      expect(minted).toEqual([]);
+    });
+
     it("hands back the same forms link on a second send while it is live", async () => {
       vi.stubEnv("APP_HOST", "https://diveday.test");
       vi.stubEnv("SECRET_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));

@@ -266,6 +266,7 @@ async function deliverCourseFormsLink(
     person: typeof people.$inferSelect;
     trip: typeof trips.$inferSelect;
     shop: typeof shops.$inferSelect;
+    seat: { contactTypedByLeadAt: Date | null; claimedAt: Date | null };
   },
   bookingId: string,
   options: WaiverDeliveryOptions,
@@ -274,6 +275,24 @@ async function deliverCourseFormsLink(
   const shopId = ctx.shop.id;
   const forms = await getCourseFormsForBooking(db, shopId, bookingId);
   if (!forms || forms.outstanding.length === 0 || forms.enrollment.identityHeld) return null;
+  // A minor's address the party's lead typed cannot prove a guardian, and the
+  // forms page takes a guardian co-signature: no mailed or texted link there
+  // (issue #4033, same rule as the release's own link). A copied link stays,
+  // the desk hands it to whoever is at the counter.
+  if (
+    !ctx.trip.isRehearsal &&
+    (options.channel ?? "email") !== "link" &&
+    seatAddressIsLeadTyped(ctx.seat)
+  ) {
+    return {
+      ok: true,
+      bookingId,
+      diverName: ctx.person.fullName,
+      token: null,
+      delivery: "guardian_needed",
+      textable: false,
+    };
+  }
   // A forms-only link, and the live one when the diver already holds it:
   // never the readiness link, which would also open the diver's whole trip
   // prep to whoever the URL is handed to (security review).
