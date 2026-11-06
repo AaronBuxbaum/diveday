@@ -908,9 +908,14 @@ test("a phone number read off a diver's record finds their seat at the counter",
  * rather than answering with nothing.
  */
 test("Today's arrival search says who is on file but not arriving today", async ({ page }) => {
+  // A name no earlier attempt of this test (a retry shares the database) can have filed: a
+  // second "Zephyrine Quayside" stops the add at the "same person?" prompt, and no URL changes.
+  const stamp = Date.now();
+  const diverName = `Zephyrine ${stamp} Quayside`;
   await page.goto("/shop/blue-mantis/divers?add=1");
-  await page.getByLabel("Full name").fill("Zephyrine Quayside");
-  await page.getByRole("button", { name: "Add diver" }).click();
+  await page.getByRole("heading", { level: 2, name: "Add a diver" }).waitFor();
+  await page.getByLabel("Full name").fill(diverName);
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
 
   await page.goto("/shop/blue-mantis");
@@ -918,12 +923,12 @@ test("Today's arrival search says who is on file but not arriving today", async 
   await expect(page.getByRole("heading", { name: "Find an arriving diver" })).toBeVisible();
   const search = page.getByRole("searchbox", { name: "Find an arriving diver" });
   await expect(search).toHaveAttribute("data-hydrated", "true");
-  await search.fill("Zephyrine Quayside");
+  await search.fill(diverName);
   await search.press("Enter");
 
   const elsewhere = page.getByTestId("arrival-elsewhere");
   await expect(elsewhere.getByText("Not arriving today")).toBeVisible();
-  await expect(elsewhere.getByText("Zephyrine Quayside has nothing booked.")).toBeVisible();
-  await elsewhere.getByRole("link", { name: "Open Zephyrine Quayside’s record" }).click();
+  await expect(elsewhere.getByText(`${diverName} has nothing booked.`)).toBeVisible();
+  await elsewhere.getByRole("link", { name: `Open ${diverName}’s record` }).click();
   await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
 });
