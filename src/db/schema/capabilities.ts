@@ -134,10 +134,11 @@ export const capabilities = pgTable(
     index("capabilities_user_account_idx").on(table.userAccountId),
     index("capabilities_setup_request_idx").on(table.setupRequestId),
     index("capabilities_waiver_record_idx").on(table.waiverRecordId),
-    // One live link per release (the counter link): the mint's revoke under
-    // the record-row lock is the rule, this is its backstop.
+    // One live link per release and purpose: a counter link and a mailed one
+    // to the same release may both stand (issue #4008). The mint's revoke
+    // under the record-row lock is the rule, this is its backstop.
     uniqueIndex("capabilities_live_waiver_record_idx")
-      .on(table.waiverRecordId)
+      .on(table.waiverRecordId, table.purpose)
       .where(
         sql`${table.waiverRecordId} is not null and ${table.usedAt} is null and ${table.revokedAt} is null`,
       ),

@@ -242,7 +242,7 @@ describe("the waiver_link capability", () => {
       mintCapability(db, { purpose: "waiver_link", shopId: otherShop.id, subjectId: recordId }),
     ).rejects.toThrow(/outside its shop/);
     // A live row that names this shop's release under another shop, however
-    // it got there (the real link revoked first: one live link per release).
+    // it got there (the real link revoked first: one live link per release and purpose).
     await db
       .update(capabilities)
       .set({ revokedAt: nowDate() })
@@ -367,14 +367,15 @@ describe("the party_waiver_link capability", () => {
     return { ...seat, counterToken: seat.token, token: door.token, expiresAt: door.expiresAt };
   }
 
-  it("opens only its seat's release, says it came by mail, and replaces the counter code", async () => {
+  it("opens only its seat's release, says it came by mail, and leaves the counter code live (#4008)", async () => {
     const { db, token, recordId, counterToken } = await mailedSeat();
     expect(await waiverLinkDoor(db, token)).toEqual({ door: "counter_unclaimed", via: "mail" });
     expect(await openOnDevice(db, token)).toMatchObject({
       door: "counter",
       key: { purpose: "party_waiver_link", recordId },
     });
-    expect(await counterState(counterToken)).toBe("closed");
+    // The counter code to the same release stands beside it, a door of its own.
+    expect(await counterState(counterToken)).toBe("available");
     expect(await verifyCapability(db, { purpose: "waiver_link", token })).toBeNull();
     expect(await waiverLinkDoor(db, token, { device: "another-phone" })).toEqual({
       door: "counter_elsewhere",

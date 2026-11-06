@@ -1,6 +1,6 @@
 # 20261105-waiver-folds-into-the-thread — Hand a seat's release over as its thread link
 
-- **Status:** Accepted, **amended 2026-11-06** (#3983, #4003)
+- **Status:** Accepted, **amended 2026-11-06** (#3983, #4003, #4008)
 - **Date:** 2026-11-05
 - **Decided by:** Aaron, 2026-11-05 on issue #2743 ("do it"), the full idea that
   [20261103-waiver-signs-in-the-thread](20261103-waiver-signs-in-the-thread.md) rejected; layer 6
@@ -32,8 +32,7 @@ ever to the holder's contact on file. Every other release link is a capability.
    spends it, a contact change revokes it, an erasure deletes it; a dead one lands on a rescue
    that mails the address on file. The record carries no link and no clock.
 
-**A release holds one live door**: minting a `waiver_link`, `party_waiver_link` or `release_link`
-revokes the others (#4008).
+**One live door per release and purpose** (Aaron, #4008): once one signs, the others open nothing.
 
 ## Alternatives considered
 
@@ -49,6 +48,6 @@ revokes the others (#4008).
   moves and adds seats until the trip ends plus its grace. Accepted for the holder's own seat
   (security review, S1).
 - A seat with no email or textable number is signed at the counter or on paper.
-- A counter link dies on a merge, a holder, contact or terms change, or a new link. A failed
+- A counter link dies on a merge, a holder, contact or terms change, or a new code. A failed
   email or text hands staff nothing.
 - A link only prefills the medical answers saved through itself.
