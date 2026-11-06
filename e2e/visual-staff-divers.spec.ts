@@ -702,7 +702,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a deleted diver's record renders true to the design (${scheme})`, async ({ page }) => {
         await openDiverProfile(page, "Felix", "Felix Grant");
         const record = page.url().split("?")[0] ?? "";
-        await page.getByText("Delete Felix Grant").click();
+        page.once("dialog", (dialog) => void dialog.accept());
+        await page.getByRole("button", { name: "Record actions" }).click();
         await page.getByRole("button", { name: "Delete diver" }).click();
         await page.getByText("Diver deleted").waitFor();
         await page.goto(record);
@@ -727,7 +728,8 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await openDiverProfile(page, "Felix", "Felix Grant");
         const record = page.url().split("?")[0] ?? "";
-        await page.getByText("Delete Felix Grant").click();
+        page.once("dialog", (dialog) => void dialog.accept());
+        await page.getByRole("button", { name: "Record actions" }).click();
         await page.getByRole("button", { name: "Delete diver" }).click();
         await page.getByText("Diver deleted").waitFor();
         await page.goto(record);

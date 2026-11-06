@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DownloadAcknowledgmentLink } from "@/components/DownloadAcknowledgmentLink";
+import { DownloadAcknowledgmentLink } from "./DownloadAcknowledgmentLink";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, SectionCard } from "@/components/ui/card";
