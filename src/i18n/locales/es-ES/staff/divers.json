@@ -514,7 +514,6 @@
     "diverFormGone": "Ese formulario ya no está en el archivo.",
     "medicalClearanceOutcomeRequired": "Indica qué decidió el médico.",
     "medicalClearanceAnswerRecorded": "Este registro ya tiene la respuesta de un médico. Resérvale una plaza en una salida y envía desde ahí una exención nueva.",
-    "medicalClearanceAnswerSealBroken": "La respuesta del médico en este registro no se verifica, así que el buceador sigue retenido. Resérvale una plaza en una salida y envía desde ahí una exención nueva.",
     "medicalClearanceNoHold": "Este buceador no tiene nada pendiente de revisión médica aquí.",
     "medicalClearanceRecorded": "Autorización médica registrada. Este buceador ya no está retenido por revisión médica.",
     "medicalNotClearedRecorded": "Registrado. El médico no autorizó a esta persona, y la retención médica sigue en pie.",

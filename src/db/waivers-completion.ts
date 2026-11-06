@@ -37,7 +37,6 @@ import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
 import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
-import { withVerifiedClearance } from "./waiver-record-columns";
 import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
 import { doctorPageOpen } from "./waivers-medical";
 import {
@@ -491,10 +490,8 @@ export async function getWaiverForToken(
 ): Promise<TokenWaiverState> {
   const record = await currentRecordForToken(db, token, now);
   if (!record) return { state: "unavailable" };
-  // A clearance counts only while its seal verifies (issue #3987): the record this hands the token
-  // page and the thread never shows a bare stamp as an answer.
   if (record.status !== "pending") {
-    return { state: "completed", record: withVerifiedClearance(record) };
+    return { state: "completed", record };
   }
   // A held seat (`identity_unconfirmed_at`) is reached by no key: its link may
   // be in someone else's hands, so it opens no form, names nobody and takes

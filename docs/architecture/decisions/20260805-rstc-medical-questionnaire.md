@@ -90,6 +90,6 @@ Participant Questionnaire*, product 10346 EN, version date 2026-01-01, sha256
 Any future revision states its own hash the same way. H-20260730-jurisdiction-waiver-text-medical's specialist sign-off needs an artefact
 to sign off *against*, and this is it.
 
-## Amendment 2026-11-06 — a clearance counts only while its seal verifies
+## Amendment 2026-11-06 — a recorded clearance counts
 
-A desk-recorded physician answer carries its own seal (glossary *Physician answer seal*, issue #3949), verified on every read that decides boarding, not only by the nightly pass. A clearance stamp without a seal is no clearance: nothing backfills it (there are no real divers yet, H-20260815-no-legacy), and the desk records the answer again, which seals it.
+A desk-recorded physician answer carries no seal of its own. The stamp names the staffer and the evaluation date, and that record lifts the referral; no recorded clearance, no boarding. An earlier amendment the same day sealed the answer and held the diver when the seal failed; it was withdrawn under the experience-first rule (`.claude/rules/ux-over-hardening.md`).

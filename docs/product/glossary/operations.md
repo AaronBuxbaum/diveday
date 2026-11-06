@@ -493,8 +493,7 @@
   (ADR 20260729-staffing-waiver-audit-and-localized-copy, amendment of 2026-10-23). A **medical
   alert for the crew** joins the sealed set the same way, only when there is one; the version 2
   (erased) seal leaves it out, so a version 2 record carrying an alert reads `invalid`. The
-  physician's answer on a referral is outside this seal and inside its own, the **physician answer
-  seal**, which the same check reads: a forged clearance is `invalid` too.
+  physician's answer on a referral is outside every seal: see **Physician clearance**.
 
 - **Trip / charter** — a scheduled boat outing to one or more **dive sites**; commonly a
   "two-tank" (two dives with a **surface interval** between). Has capacity, staff, prep needs,
@@ -1769,7 +1768,9 @@
   same letter against that referral is the ordinary path and clears it. And it records **evidence** —
   the evaluation itself, or the clinician's name — because without one the row says only that a
   member of the shop's own staff pressed a button. Any live staff member may record one, and the
-  row names who did. Issue #1252.
+  row names who did. Issue #1252. A recorded clearance counts as written: it carries no seal of its
+  own, and the signature's seal never covers it (decided 2026-11-06, under the experience-first
+  rule), so recording one never re-seals the release and never holds a diver on a digest.
 
   **A recorded answer is final for that waiver record**, cleared or not cleared — confirmed by the
   owner on 2026-09-10 (issue #1366) as the shipped default rather than a first cut. The two stamps
@@ -1795,32 +1796,6 @@
   did, evaluated no earlier than the day it was signed. A booking whose own release is the open
   referral still waits for a physician, and a referral a seat's fresh link superseded can still be
   cleared: superseding moves a hold off a seat and answers nothing.
-- **Physician answer seal** — the keyed digest (`waiver_records.medical_answer_seal`, issue #3949)
-  over a **physician clearance** or refusal as the desk recorded it: which stamp, who recorded it
-  and when, the evaluation date, the physician's name and whether the form came from the diver,
-  bound to the record's id and shop. `recordMedicalEvaluation` writes it once, in the same guarded
-  update as the answer, and nothing re-seals it, because a recorded answer is final. It is separate
-  from the **integrity-sealed waiver**'s seal on purpose: the answer is the shop's later act, not
-  what the diver signed, so recording one never re-seals the signature, and a refile, a guardian
-  redaction or an erasure re-seals the signature without touching it (every field it covers
-  survives all three; the evaluation's document link does not, so it is outside, and stays
-  outside by decision of issue #3987: erasure and media deletion rewrite the link, so sealing it
-  would break the seal on a legitimate act, and a swapped link lifts nothing, because the stamps
-  do. Catching a swapped letter needs the document's own hash, not the link). The clearance
-  stamp is what lifts a referral, so the check fails closed, at read time: every read that decides
-  boarding (readiness, the roster, the manifest, check-in), and every one that does not (the
-  import's hold check, the token page's completed record, the signature log), verifies the seal and reads a clearance
-  whose seal is missing or wrong as no clearance, so the referral holds; the nightly pass is defence
-  in depth, not the gate. There it reads a stamp with no matching seal, a seal with no answer, or a
-  seal copied from another record as `invalid`, and holds the diver with `waiver_seal_failed` like
-  any other changed release. An unsealed clearance (a stamp and no seal at all: an answer an older
-  build wrote while the seal's deploy rolled out, or a forgery that never touched the seal) is no
-  answer, never backfilled and never trusted: the desk records the physician's answer again, which
-  seals it and lifts a nightly hold the stamp alone caused, after writing a line on the diver's
-  trail (`medical_unsealed_clearance_replaced`) that a stamp was replaced. A seal that is present but wrong is
-  tampering: that row stays as evidence, and the way out is a fresh signature. The
-  `superseded_at` column stays outside both seals: superseding answers nothing, and a superseded
-  referral still holds by time.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded

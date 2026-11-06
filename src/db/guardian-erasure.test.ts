@@ -409,10 +409,9 @@ describe("eraseGuardianEmail", () => {
     expect(verifyWaiverIntegrity(after)).toBe("valid");
   });
 
-  // The physician's answer seal (issue #3949) is written once and never
-  // re-sealed, so every act that re-seals the signature must leave the answer
-  // it covers exactly as the desk recorded it.
-  it("keeps a physician's clearance verifying through a redaction, a refile and an erasure", async () => {
+  // Every act that re-seals the signature must leave the physician's answer
+  // exactly as the desk recorded it.
+  it("keeps a physician's clearance through a redaction, a refile and an erasure", async () => {
     const { db, shop, roster, owner } = await fixtures();
     const [first, second] = roster;
     if (!first || !second) throw new Error("seats missing");
@@ -435,14 +434,12 @@ describe("eraseGuardianEmail", () => {
     expect(cleared).toMatchObject({ ok: true, alreadyRecorded: false });
     const answered = await readRecord(db, id);
     expect(answered.medicalClearedAt).not.toBeNull();
-    expect(answered.medicalAnswerSeal).not.toBeNull();
     expect(verifyWaiverIntegrity(answered)).toBe("valid");
     const answer = {
       medicalClearedAt: answered.medicalClearedAt,
       medicalClearedByPersonId: answered.medicalClearedByPersonId,
       medicalClearanceEvaluatedOn: answered.medicalClearanceEvaluatedOn,
       medicalClearancePhysicianName: answered.medicalClearancePhysicianName,
-      medicalAnswerSeal: answered.medicalAnswerSeal,
     };
 
     await eraseGuardianEmail(db, {
@@ -484,11 +481,5 @@ describe("eraseGuardianEmail", () => {
     expect(after).toMatchObject(answer);
     expect(verifyWaiverIntegrity(after)).toBe("valid");
     expect(after.integrityValid).toBe(true);
-
-    // And the seal still bites after all three: a stamp re-dated on the
-    // erased record reads as tampered.
-    expect(verifyWaiverIntegrity({ ...after, medicalClearanceEvaluatedOn: "2099-01-01" })).toBe(
-      "invalid",
-    );
   });
 });

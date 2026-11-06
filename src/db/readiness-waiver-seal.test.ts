@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { getBookingReadiness, listTripReadiness, upsertTripRequirements } from "./readiness";
@@ -177,10 +176,11 @@ describe("readiness over a release whose seal failed", () => {
 });
 
 /**
- * **A physician's answer is sealed apart from the signature** (issue #3949).
- * The clearance stamp is what lifts a referral, so writing it straight into
- * the database must break a seal the way rewriting the answers does, and the
- * diver must stay held. The answer recorded through the desk keeps both seals.
+ * **A recorded clearance counts** (Aaron, 2026-11-06, under the ux-over-hardening rule): the
+ * physician's answer has no seal of its own. A clearance stamp names the staffer who recorded it
+ * and the evaluation date (`waiver_records_medical_clearance_attributed` and `_evidenced`), and
+ * that record is what lifts the referral, however the row was written. No recorded clearance, no
+ * boarding.
  */
 describe("readiness over a physician's answer", () => {
   async function clearAtTheDesk(ctx: Awaited<ReturnType<typeof signedOnAWaiverOnlyTrip>>) {
@@ -197,6 +197,13 @@ describe("readiness over a physician's answer", () => {
     return owner;
   }
 
+  it("holds a referral no physician has answered", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
+    const seat = await seatCodes(ctx);
+    expect(seat.status).toBe("blocked");
+    expect(seat.codes).toContain("medical_review");
+  });
+
   it("boards a referral a physician cleared at the desk, through the nightly check", async () => {
     const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
     await clearAtTheDesk(ctx);
@@ -205,7 +212,7 @@ describe("readiness over a physician's answer", () => {
     expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
   });
 
-  it("holds a diver whose referral was stamped cleared straight in the database", async () => {
+  it("boards a diver whose recorded clearance was written outside the desk's form", async () => {
     const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
     const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);
     await ctx.db
@@ -214,149 +221,17 @@ describe("readiness over a physician's answer", () => {
         medicalClearedAt: nowDate(),
         medicalClearedByPersonId: owner,
         medicalClearanceEvaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
-        medicalClearancePhysicianName: "Dr. Nobody",
+        medicalClearancePhysicianName: "Dr. Imani Reyes",
       })
       .where(eq(waiverRecords.id, ctx.recordId));
-
+    expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
+    // The nightly check reads the signature, not the answer: still ready.
     const summary = await recheckWaiverSeals(ctx.db, { now: nightly });
-    expect(summary.newlyInvalid).toBeGreaterThanOrEqual(1);
-    const seat = await seatCodes(ctx);
-    expect(seat.status).toBe("blocked");
-    expect(seat.codes).toContain("waiver_seal_failed");
-  });
-
-  it("holds a diver whose real clearance was re-dated to stretch its year", async () => {
-    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
-    await clearAtTheDesk(ctx);
-    await ctx.db
-      .update(waiverRecords)
-      .set({ medicalClearanceEvaluatedOn: "2099-01-01" })
-      .where(eq(waiverRecords.id, ctx.recordId));
-    await recheckWaiverSeals(ctx.db, { now: nightly });
-    expect((await seatCodes(ctx)).codes).toContain("waiver_seal_failed");
-  });
-
-  /**
-   * **Read time, not the nightly check, decides** (final attacker review B1).
-   * The nightly pass reaches one row every few nights at most, so a stamp
-   * written after last night's check must hold the diver on the very next
-   * read. None of these runs the nightly check after the edit.
-   */
-  it("holds a diver stamped cleared in the database before any nightly check reads it", async () => {
-    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
-    // Last night's check found the referral intact.
-    expect((await recheckWaiverSeals(ctx.db, { now: nightly })).invalid).toBe(0);
-    const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);
-    await ctx.db
-      .update(waiverRecords)
-      .set({
-        medicalClearedAt: nowDate(),
-        medicalClearedByPersonId: owner,
-        medicalClearanceEvaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
-        medicalClearancePhysicianName: "Dr. Nobody",
-      })
-      .where(eq(waiverRecords.id, ctx.recordId));
-    const seat = await seatCodes(ctx);
-    expect(seat.status).toBe("blocked");
-    expect(seat.codes).toContain("medical_review");
-  });
-
-  it("holds a diver whose forged clearance carries a seal made for another release", async () => {
-    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
-    const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);
-    const answer = {
-      medicalClearedAt: nowDate(),
-      medicalClearedByPersonId: owner,
-      medicalClearanceDeclinedAt: null,
-      medicalClearanceDeclinedByPersonId: null,
-      medicalClearanceEvaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
-      medicalClearancePhysicianName: "Dr. Imani Reyes",
-      medicalClearanceDocumentFromDiver: false,
-    };
-    // A real seal over exactly this answer, lifted from another release.
-    const elsewhere = medicalAnswerSealFor({
-      id: crypto.randomUUID(),
-      shopId: ctx.shop.id,
-      ...answer,
-    });
-    await ctx.db
-      .update(waiverRecords)
-      .set({ ...answer, medicalAnswerSeal: elsewhere })
-      .where(eq(waiverRecords.id, ctx.recordId));
-    expect((await seatCodes(ctx)).codes).toContain("medical_review");
-  });
-
-  it("holds a diver whose real clearance was re-dated, before the nightly check", async () => {
-    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
-    await clearAtTheDesk(ctx);
-    expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
-    await ctx.db
-      .update(waiverRecords)
-      .set({ medicalClearanceEvaluatedOn: "2099-01-01" })
-      .where(eq(waiverRecords.id, ctx.recordId));
-    expect((await seatCodes(ctx)).codes).toContain("medical_review");
-  });
-
-  /**
-   * **A clearance with no seal is no clearance, and the desk can record it
-   * again** (final attacker review B2, dock review S1). The one honest way to
-   * get this row is a desk answer an older build wrote during the deploy that
-   * added the seal; a forgery that never touched the seal looks the same.
-   * Either way it lifts nothing, and the desk's fresh answer, with its
-   * evidence, seals it: nothing is backfilled, and nothing is laundered.
-   */
-  it("holds a diver whose clearance has no seal until the desk records it again", async () => {
-    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
-    await clearAtTheDesk(ctx);
-    await ctx.db
-      .update(waiverRecords)
-      .set({ medicalAnswerSeal: null })
-      .where(eq(waiverRecords.id, ctx.recordId));
-    // Held at once, before any check.
-    expect((await seatCodes(ctx)).codes).toContain("medical_review");
-    // The nightly check reads the stamp as unsealed.
-    const summary = await recheckWaiverSeals(ctx.db, { now: nightly });
-    expect(summary.newlyInvalid).toBeGreaterThanOrEqual(1);
-    expect((await seatCodes(ctx)).codes).toContain("waiver_seal_failed");
-    // The desk records the physician's letter again: the diver boards, and the
-    // next check agrees.
-    await clearAtTheDesk(ctx);
-    expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
-    const later = await recheckWaiverSeals(ctx.db, {
-      now: new Date(nightly.getTime() + 86_400_000),
-    });
-    expect(later.invalid).toBe(0);
+    expect(summary.invalid).toBe(0);
     expect(await seatCodes(ctx)).toEqual({ status: "ready", codes: [] });
   });
 
-  it("never lets the desk overwrite a clearance whose seal is present but wrong", async () => {
-    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
-    await clearAtTheDesk(ctx);
-    await ctx.db
-      .update(waiverRecords)
-      .set({ medicalClearanceEvaluatedOn: "2099-01-01" })
-      .where(eq(waiverRecords.id, ctx.recordId));
-    const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);
-    const again = await recordMedicalEvaluationForShop(ctx.db, {
-      outcome: "cleared",
-      shopId: ctx.shop.id,
-      personId: ctx.person.id,
-      recordedByPersonId: owner,
-      evaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
-      physicianName: "Dr. Imani Reyes",
-    });
-    // The tampered row is evidence: it is not rewritten, the desk is told the seal
-    // is broken (#3998), and it still holds.
-    expect(again).toMatchObject({ ok: false, reason: "answer_seal_broken" });
-    const [row] = await ctx.db
-      .select({ evaluatedOn: waiverRecords.medicalClearanceEvaluatedOn })
-      .from(waiverRecords)
-      .where(eq(waiverRecords.id, ctx.recordId));
-    expect(row?.evaluatedOn).toBe("2099-01-01");
-    expect((await seatCodes(ctx)).codes).toContain("medical_review");
-  });
-
-  it("holds a diver whose physician's no was turned into a yes", async () => {
+  it("holds a diver whose physician said no", async () => {
     const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
     const owner = await seededStaffPersonId(ctx.db, ctx.shop.id, SEEDED_OWNER_EMAIL);
     const refused = await recordMedicalEvaluationForShop(ctx.db, {
@@ -368,24 +243,24 @@ describe("readiness over a physician's answer", () => {
       physicianName: "Dr. Imani Reyes",
     });
     expect(refused).toMatchObject({ ok: true });
-    const [row] = await ctx.db
-      .select({ declinedAt: waiverRecords.medicalClearanceDeclinedAt })
-      .from(waiverRecords)
-      .where(eq(waiverRecords.id, ctx.recordId));
-    await ctx.db
-      .update(waiverRecords)
-      .set({
-        medicalClearedAt: row?.declinedAt ?? null,
-        medicalClearedByPersonId: owner,
-        medicalClearanceDeclinedAt: null,
-        medicalClearanceDeclinedByPersonId: null,
-      })
-      .where(eq(waiverRecords.id, ctx.recordId));
-    await recheckWaiverSeals(ctx.db, { now: nightly });
-    expect((await seatCodes(ctx)).codes).toContain("waiver_seal_failed");
+    expect((await seatCodes(ctx)).status).toBe("blocked");
   });
 
-  // supersededAt is outside both seals on purpose: superseding moves a hold
+  it("refuses a clearance stamp that names no staffer", async () => {
+    const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);
+    await expect(
+      ctx.db
+        .update(waiverRecords)
+        .set({
+          medicalClearedAt: nowDate(),
+          medicalClearanceEvaluatedOn: calendarDateInTimezone(nowDate(), ctx.shop.timezone),
+          medicalClearancePhysicianName: "Dr. Imani Reyes",
+        })
+        .where(eq(waiverRecords.id, ctx.recordId)),
+    ).rejects.toThrow();
+  });
+
+  // supersededAt is outside the seal on purpose: superseding moves a hold
   // off a seat and answers nothing, so a referral keeps holding by time.
   it("still holds a diver whose own referral was superseded straight in the database", async () => {
     const ctx = await signedOnAWaiverOnlyTrip(medicalReferralAnswers);

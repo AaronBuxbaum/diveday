@@ -319,7 +319,6 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Party / Came together
 - Payment event
 - Per-trip crew role
-- Physician answer seal
 - Physician clearance
 - Post-trip recap
 - Pre-departure checklist

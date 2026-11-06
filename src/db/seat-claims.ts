@@ -47,7 +47,7 @@ import {
 import { livePerson, liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import { confirmClaimedSeat } from "./waiver-issue";
-import { WAIVER_BOARDING_COLUMNS, withTrustedClearance } from "./waiver-record-columns";
+import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 import { type ThreadWaiverKey, threadWaiverKey } from "./waivers-completion";
 import { openWaiverInThread } from "./waivers-requests";
 
@@ -834,8 +834,7 @@ export async function issuePartySeatClaims(
         snorkelerPriceCents: trips.snorkelerPriceCents,
         riderPriceCents: trips.riderPriceCents,
       },
-      // A clearance whose seal does not verify reads as none (final attacker review B1).
-      waiver: WAIVER_BOARDING_COLUMNS,
+      waiver: WAIVER_STATE_COLUMNS,
       // The shop's current material terms, in the same statement
       // (`getCurrentWaiverGeneration`'s read): no extra round trip on a page
       // the render-cost ratchet counts.
@@ -935,7 +934,7 @@ export async function issuePartySeatClaims(
       // changed is one the diver signs again (dive-domain-expert run 4, D3).
       waiverSigned: row.waiver
         ? isCompletedWaiverCurrent(
-            withTrustedClearance(row.waiver),
+            row.waiver,
             row.generation === null ? null : Number(row.generation),
             // The roster's instant for this seat (issue #2611): a release that
             // runs out before the trip is one the diver signs again.

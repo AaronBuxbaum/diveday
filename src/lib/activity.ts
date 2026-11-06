@@ -269,20 +269,6 @@ type ActivityParamShapes = {
   /** A staffer did not use the form a diver sent, and it was deleted (issue #2797). */
   medical_diver_form_not_used: { actor: string; diver: string; record?: string };
   /**
-   * A staffer recorded the physician's answer again over a clearance stamp that carried no seal,
-   * so the stamp was replaced (issue #3987). A stamp the desk never sealed is forged or an
-   * older build's; either way the trail says it was there.
-   */
-  medical_unsealed_clearance_replaced: {
-    actor: string;
-    diver: string;
-    record?: string;
-    /** The replaced stamp's values (issue #3999): who stamped it, the physician, the date. */
-    clearedBy?: string;
-    physician?: string;
-    evaluated?: string;
-  };
-  /**
    * A physician's answer was recorded from a letter dated before the referral it
    * answers (issue #2616): the letter's date, the earlier referral it was written
    * for (its signing day and id), the later referral's signing day and id, and
@@ -635,7 +621,6 @@ export const ACTIVITY_CODES = [
   "diver_medical_form_opened",
   "medical_diver_form_accepted",
   "medical_diver_form_not_used",
-  "medical_unsealed_clearance_replaced",
   "medical_answered_by_earlier_letter",
   "medical_answers_read",
   "scheduled_backup_medical_answers",

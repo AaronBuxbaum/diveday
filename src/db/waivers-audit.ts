@@ -14,11 +14,9 @@ import { offsetPage, PAGE_SIZE } from "./paging";
 import { personSearchMatch } from "./person-search";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import {
-  WAIVER_BOARDING_COLUMNS,
   WAIVER_SEALED_COLUMNS,
+  WAIVER_STATE_COLUMNS,
   type WaiverStateRecord,
-  withTrustedClearance,
-  withVerifiedClearance,
 } from "./waiver-record-columns";
 
 const recorder = alias(people, "waiver_recorder");
@@ -79,11 +77,9 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
     /**
      * Where a medical hold stands. A clearance leaves the record
      * `medical_review` (`isCleanCompletion`), so without these the log could
-     * not tell a cleared diver from one nobody has heard back about. Read from
-     * the sealed columns: the physician's answer has a seal of its own
-     * (`medical_answer_seal`, issue #3949), checked by `integrity` above.
+     * not tell a cleared diver from one nobody has heard back about.
      */
-    medicalClearedAt: withVerifiedClearance(row.record).medicalClearedAt,
+    medicalClearedAt: row.record.medicalClearedAt,
     medicalClearanceDeclinedAt: row.record.medicalClearanceDeclinedAt,
     flaggedPrompts:
       row.record.status === "medical_review" && row.record.medicalAnswers
@@ -429,9 +425,7 @@ export async function listSignedWaiversByPerson(
   const byPerson = new Map<string, WaiverStateRecord[]>();
   if (personIds.length === 0) return byPerson;
   const rows = await db
-    // A clearance whose seal does not verify is taken off before any rule
-    // reads it (final attacker review B1).
-    .select({ record: WAIVER_BOARDING_COLUMNS })
+    .select({ record: WAIVER_STATE_COLUMNS })
     .from(waiverRecords)
     .leftJoin(
       bookings,
@@ -478,7 +472,7 @@ export async function listSignedWaiversByPerson(
         ),
       ),
     )
-    .then((joined) => joined.map((row) => withTrustedClearance(row.record)));
+    .then((joined) => joined.map((row) => row.record));
   for (const row of rows) {
     const list = byPerson.get(row.personId) ?? [];
     list.push(row);

@@ -1,7 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { demoEmail } from "@/lib/simulator-email";
-import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { bookings, cards, people, personRoles, type trips, waiverRecords } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
@@ -245,10 +244,8 @@ async function seedHeldDiver(
     status: "medical_review",
     medicalReviewRequired: true,
     // Never a clearance stamp on either row: the held diver has no answer, and
-    // the refused one has an answer that lifts nothing (issue #1283). The
-    // refusal is sealed as the desk seals one (issue #3949).
+    // the refused one has an answer that lifts nothing (issue #1283).
     ...answer,
-    medicalAnswerSeal: declined ? medicalAnswerSealFor({ id: recordId, shopId, ...answer }) : null,
     createdAt: signedAt,
   });
 }

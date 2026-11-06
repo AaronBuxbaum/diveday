@@ -222,7 +222,6 @@ const MEDICAL_CLEARANCE_NOTICES: Record<
 > = {
   no_medical_hold: "medical-clearance-no-hold",
   answer_already_recorded: "medical-clearance-answer-recorded",
-  answer_seal_broken: "medical-clearance-answer-seal-broken",
   evaluation_date_required: "medical-clearance-date-required",
   evaluation_predates_disclosure: "medical-clearance-date-too-early",
   evaluation_in_future: "medical-clearance-date-in-future",

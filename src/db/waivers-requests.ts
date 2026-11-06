@@ -22,11 +22,7 @@ import type { DbExecutor } from "./client";
 import { isTransactionExecutor } from "./query-helpers";
 import { bookings, capabilities, people, trips, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
-import {
-  WAIVER_BOARDING_COLUMNS,
-  withTrustedClearance,
-  withVerifiedClearance,
-} from "./waiver-record-columns";
+import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 import { threadWaiverKey, type WaiverKey, waiverLinkDoor } from "./waivers-completion";
 import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
@@ -287,9 +283,7 @@ async function openRelease(
           isNull(waiverRecords.supersededAt),
         ),
       )
-      .for("update")
-      // A clearance counts only while its seal verifies (issue #3998).
-      .then((rows) => rows.map(withVerifiedClearance));
+      .for("update");
     // An unanswered referral remains evidence after its waiver row is
     // superseded. Include the person's booking referrals only while that seat
     // still belongs to them; a link may have moved with the seat to someone
@@ -297,7 +291,7 @@ async function openRelease(
     const personReferrals = booking
       ? []
       : await tx
-          .select(WAIVER_BOARDING_COLUMNS)
+          .select(WAIVER_STATE_COLUMNS)
           .from(waiverRecords)
           .leftJoin(
             bookings,
@@ -312,11 +306,7 @@ async function openRelease(
             ),
           )
           .for("update", { of: waiverRecords })
-          // Uncleared once the seal is read: a stamp whose seal does not verify is no answer
-          // (issue #3998).
-          .then((rows) =>
-            rows.map(withTrustedClearance).filter((record) => record.medicalClearedAt === null),
-          );
+          .then((rows) => rows.filter((record) => record.medicalClearedAt === null));
     const personReferralIds = new Set(personReferrals.map((record) => record.id));
     const standingRecords = booking
       ? current

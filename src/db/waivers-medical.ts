@@ -16,7 +16,6 @@ import {
   referralItems,
 } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
-import { medicalAnswerSealFor } from "@/lib/waiver-integrity";
 import {
   awaitsPhysician,
   DOCTOR_UNLOCK_FAILURE_LIMIT,
@@ -38,8 +37,6 @@ import {
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatHeld, seatNotCancelled } from "./trips-queries";
-import { withVerifiedClearance } from "./waiver-record-columns";
-import { recheckAnsweredSeal } from "./waiver-seal-checks";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -92,13 +89,6 @@ export type MedicalEvaluationResult =
          * new hold that can be cleared on its own terms.
          */
         | "answer_already_recorded"
-        /**
-         * The record carries a clearance whose seal does not match its answer
-         * (tampering): boarding holds the diver, so "already recorded" would
-         * be false. The stamp stays as evidence and nothing is written
-         * (issue #3998).
-         */
-        | "answer_seal_broken"
         /**
          * The diver-sent form was ticked as the evidence with no physician's
          * name typed from it (issue #2797, domain review 1): a tick alone
@@ -166,9 +156,7 @@ export async function hasUnansweredMedicalHold(
         // Superseded or not: a referral keeps holding after its seat takes a
         // fresh link (`isUnclearedReferral`), so it stays answerable.
         isNull(waiverRecords.anonymizedAt),
-        // A stamp with no seal is no answer (`unsealedClearanceAsOpen`), so the desk can record
-        // the physician's answer again (issue #3987).
-        or(isNull(waiverRecords.medicalClearedAt), isNull(waiverRecords.medicalAnswerSeal)),
+        isNull(waiverRecords.medicalClearedAt),
         isNull(waiverRecords.medicalClearanceDeclinedAt),
       ),
     )
@@ -271,24 +259,7 @@ async function heldReferrals(db: DbExecutor, shopId: string, personId: string) {
         isNull(waiverRecords.anonymizedAt),
       ),
     )
-    .orderBy(desc(waiverRecords.completedAt))
-    .then((rows) => rows.map(unsealedClearanceAsOpen));
-}
-
-/**
- * **A clearance stamp with no seal at all is no answer** (glossary *Physician
- * answer seal*; final attacker review B2, dock review S1): boarding reads it as
- * none, so the desk must be able to record the physician's answer again,
- * which seals it. The honest way to get one is an answer an older build wrote
- * while the deploy that added the seal rolled out. A seal that is present and
- * wrong is tampering: that row stays answered, as evidence, and holds.
- */
-function unsealedClearanceAsOpen(record: WaiverRecord): WaiverRecord {
-  return record.medicalClearedAt !== null &&
-    record.medicalClearanceDeclinedAt === null &&
-    record.medicalAnswerSeal === null
-    ? { ...record, medicalClearedAt: null, medicalClearedByPersonId: null }
-    : record;
+    .orderBy(desc(waiverRecords.completedAt));
 }
 
 /**
@@ -447,9 +418,6 @@ export async function recordMedicalEvaluation(
     const open = openReferral(held);
     if (!open) {
       if (!answered) return { ok: false, reason: "no_medical_hold" };
-      if (withVerifiedClearance(answered).medicalClearedAt !== answered.medicalClearedAt) {
-        return { ok: false, reason: "answer_seal_broken" };
-      }
       const standing: MedicalEvaluationOutcome = answered.medicalClearedAt
         ? "cleared"
         : "not_cleared";
@@ -502,13 +470,6 @@ export async function recordMedicalEvaluation(
     const [locked] = await tx
       .select({
         form: waiverRecords.diverMedicalFormUrl,
-        clearedAt: waiverRecords.medicalClearedAt,
-        declinedAt: waiverRecords.medicalClearanceDeclinedAt,
-        seal: waiverRecords.medicalAnswerSeal,
-        clearedBy: waiverRecords.medicalClearedByPersonId,
-        physician: waiverRecords.medicalClearancePhysicianName,
-        evaluated: waiverRecords.medicalClearanceEvaluatedOn,
-        document: waiverRecords.medicalClearanceDocumentUrl,
       })
       .from(waiverRecords)
       .where(eq(waiverRecords.id, open.id))
@@ -528,29 +489,6 @@ export async function recordMedicalEvaluation(
       }
     }
 
-    // **A stamp the desk never sealed is overwritten with a line on the trail** (issue #3987): the
-    // record is open to be answered again (`unsealedClearanceAsOpen`), and the write below replaces
-    // whatever stamp was there, forged or an older build's. The row is locked, so this is the
-    // stamp the write replaces, and the same condition as its guard.
-    if (locked && locked.clearedAt !== null && locked.declinedAt === null && locked.seal === null) {
-      if (
-        !(await recordDiverActivity(tx, {
-          shopId: input.shopId,
-          personId: input.personId,
-          actorPersonId: recordedBy,
-          code: "medical_unsealed_clearance_replaced",
-          waiverRecordId: open.id,
-          replacedStamp: {
-            clearedByPersonId: locked.clearedBy,
-            physician: locked.physician,
-            evaluated: locked.evaluated,
-          },
-        }))
-      ) {
-        throw new Error("recordMedicalEvaluation: the replaced stamp was not recorded");
-      }
-    }
-
     const cleared = input.outcome === "cleared";
     const answer = {
       medicalClearedAt: cleared ? now : null,
@@ -565,9 +503,6 @@ export async function recordMedicalEvaluation(
       .update(waiverRecords)
       .set({
         ...answer,
-        // Sealed in the same guarded write, never afterwards (issue #3949):
-        // the stamp lifts a hold, so a stamp without this seal reads as forged.
-        medicalAnswerSeal: medicalAnswerSealFor({ id: open.id, shopId: input.shopId, ...answer }),
         medicalClearanceDocumentUrl: evidenceUrl,
         diverMedicalFormUrl: null,
       })
@@ -579,9 +514,7 @@ export async function recordMedicalEvaluation(
         and(
           eq(waiverRecords.id, open.id),
           isNull(waiverRecords.medicalClearanceDeclinedAt),
-          // An unsealed clearance is open to be recorded again
-          // (`unsealedClearanceAsOpen`); a sealed one never is.
-          or(isNull(waiverRecords.medicalClearedAt), isNull(waiverRecords.medicalAnswerSeal)),
+          isNull(waiverRecords.medicalClearedAt),
         ),
       )
       .returning({ id: waiverRecords.id });
@@ -598,27 +531,6 @@ export async function recordMedicalEvaluation(
       return standing === input.outcome
         ? { ok: true, recordId: open.id, outcome: standing, alreadyRecorded: true }
         : { ok: false, reason: "answer_already_recorded" };
-    }
-    // The nightly check may already have read the unsealed stamp as broken
-    // and held the person on it (`personSealFailed`). The record is checked
-    // again now, whole, and only a verdict that it is intact is written:
-    // anything else on the row stays broken, and its old verdict stands.
-    await recheckAnsweredSeal(tx, open.id, now);
-    // The write above overwrote the file the replaced stamp named; queued so it is not
-    // orphaned outside erasure's reach (issue #3999).
-    if (
-      locked &&
-      locked.clearedAt !== null &&
-      locked.declinedAt === null &&
-      locked.seal === null &&
-      locked.document &&
-      locked.document !== evidenceUrl
-    ) {
-      await queueMediaDeletion(tx, {
-        shopId: input.shopId,
-        kind: "waiver_document",
-        url: locked.document,
-      });
     }
     // A form used from another of the diver's holds moves: one column, one
     // file. A form on this row the staffer did not use is not evidence of
@@ -1062,8 +974,7 @@ export type DoctorReferralAnswers = {
  * layer r5-3, F3).
  */
 async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date) {
-  // A stamp whose seal does not verify is no answer: the page holds, as boarding does (issue #3998).
-  if (!awaitsPhysician(withVerifiedClearance(record)) || !record.bookingId) return null;
+  if (!awaitsPhysician(record) || !record.bookingId) return null;
   const [seat] = await db
     .select({ tripEndsAt: trips.endsAt })
     .from(bookings)
@@ -1214,8 +1125,6 @@ export async function attachDiverMedicalForm(
         eq(waiverRecords.shopId, record.shopId),
         eq(waiverRecords.status, "medical_review"),
         isNull(waiverRecords.supersededAt),
-        // No stamp at all: a form beside a stamp that does not verify would sit where no desk
-        // reader looks, so that diver's upload is refused and queued for deletion (issue #3998).
         isNull(waiverRecords.medicalClearedAt),
         isNull(waiverRecords.medicalClearanceDeclinedAt),
         isNull(waiverRecords.anonymizedAt),
