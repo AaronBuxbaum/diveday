@@ -136,6 +136,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // pending_checkout_intent_id.
     "party_lead_booking_id",
     "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
+    "contact_typed_by_lead_at", // which address may get a trip link (issue #4003): claim-flow state, as claimed_at
   ],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id), both exported.
   buddy_team_members: ["shop_id", "id"],

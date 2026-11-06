@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { hashBearerToken } from "@/lib/bearer-tokens";
-import { capabilityExpiryFor } from "@/lib/booking-capabilities";
+import { capabilityExpiryFor, seatAddressIsLeadTyped } from "@/lib/booking-capabilities";
 import {
   bookingLinkToken,
   deploymentKeyring,
@@ -117,6 +117,8 @@ export async function issueBookingCapability(
         tripId: bookings.tripId,
         status: bookings.status,
         tripEndsAt: trips.endsAt,
+        contactTypedByLeadAt: bookings.contactTypedByLeadAt,
+        claimedAt: bookings.claimedAt,
       })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -128,7 +130,8 @@ export async function issueBookingCapability(
       booking.personId !== subject.personId ||
       booking.status === "cancelled" ||
       (input.expectedPersonId && booking.personId !== input.expectedPersonId) ||
-      (input.expectedTripId && booking.tripId !== input.expectedTripId)
+      (input.expectedTripId && booking.tripId !== input.expectedTripId) ||
+      refusesDeliveredLink(input, booking)
     )
       return null;
     const tripBound = capabilityExpiryFor(booking.tripEndsAt, now);
@@ -143,6 +146,22 @@ export async function issueBookingCapability(
     return issued.get(booking.id) ?? null;
   };
   return isTransactionExecutor(db) ? issue(db) : db.transaction(issue);
+}
+
+/**
+ * **No readiness link goes to an address a party's lead typed** (issue
+ * #4003). A delivered readiness link pays, cancels and moves the seat, and
+ * nobody has shown that address is the diver's (`seatAddressIsLeadTyped`):
+ * a send to it carries the seat's waiver-only door, or no link. Refused here,
+ * under the booking lock, so a reminder, find-my-booking, a reschedule notice
+ * or a rescue cannot mint one by a path of its own. A link a page hands over
+ * (`delivered: false`, the lead's own party panel) is the lead's, and goes on.
+ */
+function refusesDeliveredLink(
+  input: { purpose: CapabilityPurpose; delivered?: boolean },
+  seat: { contactTypedByLeadAt: Date | null; claimedAt: Date | null },
+): boolean {
+  return input.purpose === "readiness" && input.delivered === true && seatAddressIsLeadTyped(seat);
 }
 
 /**
@@ -823,6 +842,8 @@ export async function mintBookingCapabilities(
         tripId: bookings.tripId,
         tripEndsAt: trips.endsAt,
         status: bookings.status,
+        contactTypedByLeadAt: bookings.contactTypedByLeadAt,
+        claimedAt: bookings.claimedAt,
       })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -848,7 +869,8 @@ export async function mintBookingCapabilities(
         locked.status !== "cancelled" &&
         locked.personId === lockedPerson &&
         (!expected || locked.personId === expected) &&
-        (!expectedTripId || locked.tripId === expectedTripId);
+        (!expectedTripId || locked.tripId === expectedTripId) &&
+        !refusesDeliveredLink(input, locked);
       return ok
         ? [
             {

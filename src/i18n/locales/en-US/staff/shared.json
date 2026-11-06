@@ -69,6 +69,7 @@
     "copyFailed": "Try again",
     "sendByText": "Send by text",
     "reasonThreadOnly": "A booked diver’s waiver goes to their own email or phone, so there’s no link to copy.",
+    "reasonGuardianNeeded": "Nothing was sent: this diver is under 18 and the person who booked typed their contact. A parent or legal guardian signs with them at the counter, or the person who booked signs it from their own booking.",
     "reasonNoEmailOne": "No email on file",
     "reasonNoEmailOther": "{count} have no email on file.",
     "reasonNoPhoneOne": "No number we can text on file",

@@ -1,5 +1,5 @@
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { readinessLinkPath, seatAddressIsLeadTyped } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { log } from "@/lib/log";
@@ -13,6 +13,7 @@ import { sendAndRecordNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
 import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
+import { hasLiveSeatDoor, resendSeatDoor } from "./waiver-issue";
 import { latestDiveDayBooking, planLogEntryLink, sendYourDayLink } from "./your-days";
 
 /**
@@ -73,6 +74,8 @@ export async function sendFindMyBookingLinks(
       diverName: people.fullName,
       personLocale: people.locale,
       tripTitle: trips.title,
+      contactTypedByLeadAt: bookings.contactTypedByLeadAt,
+      claimedAt: bookings.claimedAt,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -101,7 +104,14 @@ export async function sendFindMyBookingLinks(
   // same guard under a row lock regardless — this pass only decides whether
   // any real work is pending, never whether a specific booking gets minted.
   const candidates = [];
+  const doors = [];
   for (const row of rows) {
+    // An address the party's lead typed is sent no readiness link (issue
+    // #4003): only its seat's waiver-only door, again, when none still stands.
+    if (seatAddressIsLeadTyped(row)) {
+      if (!(await hasLiveSeatDoor(db, input.shopId, row.bookingId, now))) doors.push(row);
+      continue;
+    }
     const live = await hasLiveDeliveredReadinessLink(db, {
       shopId: input.shopId,
       bookingId: row.bookingId,
@@ -109,7 +119,7 @@ export async function sendFindMyBookingLinks(
     });
     if (!live) candidates.push(row);
   }
-  if (candidates.length === 0) return;
+  if (candidates.length === 0 && doors.length === 0) return;
 
   if (
     !(
@@ -120,6 +130,22 @@ export async function sendFindMyBookingLinks(
     ).allowed
   ) {
     return;
+  }
+
+  for (const row of doors) {
+    // Nothing is sent when no release is owed (`already_signed`) or the seat
+    // is a minor's; never a failure the caller sees (see the doc comment).
+    await resendSeatDoor(db, {
+      shopId: input.shopId,
+      bookingId: row.bookingId,
+      personId: row.personId,
+      now,
+    }).catch((error: unknown) => {
+      log("find_my_booking.door_failed", "error", {
+        bookingId: row.bookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+    });
   }
 
   for (const row of candidates) {

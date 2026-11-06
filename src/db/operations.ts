@@ -275,6 +275,11 @@ export async function recordDiverActivity(
       physician: string | null;
       evaluated: string | null;
     };
+    /**
+     * The counter code a desk's guardian check was given for (issue #4003),
+     * so signing asks about that code and no other.
+     */
+    linkId?: string;
   },
 ): Promise<boolean> {
   const [diver] = await db
@@ -314,6 +319,7 @@ export async function recordDiverActivity(
       ...(stamper ? { clearedBy: stamper } : {}),
       ...(stamp?.physician ? { physician: stamp.physician } : {}),
       ...(stamp?.evaluated ? { evaluated: stamp.evaluated } : {}),
+      ...(input.linkId ? { link: input.linkId } : {}),
     },
     occurredAt: nowDate(),
   });

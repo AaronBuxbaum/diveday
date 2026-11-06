@@ -259,6 +259,8 @@ export async function issuePartyWaiver(
           actorPersonId: input.actorPersonId,
           code: "waiver_counter_guardian_confirmed",
           waiverRecordId: opened.recordId,
+          // Signing asks about this code exactly (issue #4003).
+          linkId: link.id,
         });
         if (!confirmed) throw new PartyWaiverNotRecorded();
       }

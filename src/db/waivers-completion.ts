@@ -3,7 +3,7 @@
  * guardian's co-signature, emergency contacts, and completing the release.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, getTableColumns, gt, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { readEmergencyContact } from "@/lib/contact";
@@ -35,7 +35,7 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
-import { bookings, capabilities, people, waiverRecords } from "./schema";
+import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 import { withVerifiedClearance } from "./waiver-record-columns";
 import { seatMinorDeclared } from "./waiver-signing";
@@ -509,11 +509,11 @@ export async function getWaiverForToken(
  * never to the caller (`emailFreshWaiverLink`), so this is what keeps the same
  * dead URL landing on that card on every refresh.
  *
- * Deliberately narrow: only a release link (a counter link's way on is a
- * fresh code from the staff), only a release with no seat, never a live link
- * and never a signed release, so this can't become a second way to reach a
- * signable link or to read signed evidence. It returns the record for context
- * only.
+ * Deliberately narrow: a release link to a release with no seat, or a party
+ * member's door to a seat's release (issue #4003); never a counter link (its
+ * way on is a fresh code from the staff), never a live link and never a
+ * signed release, so this can't become a second way to reach a signable link
+ * or to read signed evidence. It returns the record for context only.
  */
 export async function staleWaiverRecordForToken(
   db: DbExecutor,
@@ -521,7 +521,9 @@ export async function staleWaiverRecordForToken(
   now: Date = nowDate(),
 ): Promise<typeof waiverRecords.$inferSelect | null> {
   if (token.length === 0) return null;
-  const link = await verifyCapability(db, { purpose: "release_link", token });
+  const release = await verifyCapability(db, { purpose: "release_link", token });
+  const door = release ? null : await verifyCapability(db, { purpose: "party_waiver_link", token });
+  const link = release ?? door;
   if (!link) return null;
   const [record] = await db
     .select()
@@ -530,13 +532,22 @@ export async function staleWaiverRecordForToken(
       and(
         eq(waiverRecords.id, link.subjectId),
         eq(waiverRecords.shopId, link.shopId),
-        isNull(waiverRecords.bookingId),
+        release ? isNull(waiverRecords.bookingId) : isNotNull(waiverRecords.bookingId),
       ),
     )
     .limit(1);
   if (record?.status !== "pending" || record.anonymizedAt) return null;
   const linkLive = !link.revokedAt && !link.usedAt && link.expiresAt && link.expiresAt > now;
-  if (linkLive && !record.supersededAt) return null;
+  if (linkLive && !record.supersededAt) {
+    // A live door whose release is no longer the seat's own (the shop changed
+    // its terms) opens nothing, so it is rescued like a dead one (issue #4003).
+    if (!door || !record.bookingId) return null;
+    const current = await threadWaiverKey(db, {
+      shopId: record.shopId,
+      bookingId: record.bookingId,
+    });
+    if (current?.recordId === record.id) return null;
+  }
   return record;
 }
 
@@ -654,6 +665,12 @@ export type CompleteWaiverOutcome =
         | "invalid_medical_alert"
         /** The diver is a minor on the signing day and no guardian section came with the signature. */
         | "guardian_required"
+        /**
+         * A minor's seat signed on a door the desk never vouched a guardian
+         * for: an emailed door, or a counter code shown before the diver read
+         * as a minor (issue #4003). The desk shows a fresh code.
+         */
+        | "guardian_at_counter"
         /** A guardian section came, and it is not a signature: no consent, no relationship, no email, or the diver's own name. */
         | "guardian_invalid"
         /** The booking is a held seat: nothing is signed onto the matched record until the desk confirms (issue #2125). */
@@ -1069,6 +1086,17 @@ async function completeWaiverLocked(
     await seatMinorDeclared(db, state.record.shopId, state.record.bookingId),
   );
   let guardian: ReturnType<typeof guardianEvidence> | null = null;
+  // A seat's release signed on a door, a minor's, needs the desk's word that
+  // a parent or guardian is here, given for this very code (issue #4003): a
+  // birth date or "Under 18" that arrived after the code was shown is asked
+  // again here, and a party member's emailed door never carries that word.
+  if (
+    minor &&
+    isCounterKey(token) &&
+    token.bookingId !== null &&
+    !(await deskSawGuardian(db, token, state.record.personId))
+  )
+    return { ok: false, reason: "guardian_at_counter" };
   if (minor) {
     if (!input.guardian) return { ok: false, reason: "guardian_required" };
     guardian = guardianEvidence(input.guardian, signer.fullName, now);
@@ -1229,6 +1257,62 @@ async function completeWaiverLocked(
  * already signed refuses a second submit rather than reporting the first one
  * as its own: a different set of answers is never silently dropped.
  */
+/**
+ * **The desk said a guardian is here, for this code** (issues #3986, #4003):
+ * the `waiver_counter_guardian_confirmed` line on the diver's trail, naming
+ * this release and this very code (`params.link`), written when the code was
+ * shown. A party member's emailed door is never vouched for: nobody at the
+ * desk saw who opened it.
+ */
+async function deskSawGuardian(
+  db: DbExecutor,
+  key: CounterWaiverKey,
+  personId: string,
+): Promise<boolean> {
+  if (key.purpose !== "waiver_link") return false;
+  const [line] = await db
+    .select({ id: activityEvents.id })
+    .from(activityEvents)
+    .where(
+      and(
+        eq(activityEvents.shopId, key.shopId),
+        eq(activityEvents.code, "waiver_counter_guardian_confirmed"),
+        eq(activityEvents.subjectPersonId, personId),
+        sql`${activityEvents.params}->>'record' = ${key.recordId}`,
+        sql`${activityEvents.params}->>'link' = ${key.linkId}`,
+      ),
+    )
+    .limit(1);
+  return Boolean(line);
+}
+
+/**
+ * **A door that cannot sign this minor's release, said before the form**
+ * (issue #4003 reviews): the diver reads as under 18 today and the desk never
+ * vouched a guardian for this code, so the page shows why instead of a form
+ * the family would fill in only to be refused at Sign.
+ */
+export async function doorNeedsDeskGuardian(
+  db: DbExecutor,
+  key: CounterWaiverKey,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  if (key.bookingId === null) return false;
+  const [signer] = await db
+    .select({ personId: waiverRecords.personId, dateOfBirth: people.dateOfBirth })
+    .from(waiverRecords)
+    .innerJoin(people, eq(people.id, waiverRecords.personId))
+    .where(and(eq(waiverRecords.id, key.recordId), eq(waiverRecords.shopId, key.shopId)))
+    .limit(1);
+  if (!signer) return false;
+  const minor = guardianSignatureRequired(
+    signer.dateOfBirth,
+    signingDate(now, await shopTimezone(db, key.shopId)),
+    await seatMinorDeclared(db, key.shopId, key.bookingId),
+  );
+  return minor && !(await deskSawGuardian(db, key, signer.personId));
+}
+
 function isCounterKey(token: WaiverKey): token is CounterWaiverKey {
   return token.kind === "counter";
 }

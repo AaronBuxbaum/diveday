@@ -1167,6 +1167,8 @@
     "errorContactPair": "A contact needs both a name and a phone number, so nothing changed. Fill in both, or ask the shop if you need the contact taken off your record.",
     "errorJumpToField": "Jump to that field",
     "linkInactive": "That link is no longer active. Ask the shop for a fresh one.",
+    "guardianAtCounterTitle": "Sign this with a parent or guardian",
+    "guardianAtCounter": "You’re under 18, so a parent or legal guardian signs this waiver with you. Sign it together at the shop, where the staff will show you a code, or ask whoever booked your seat to sign it from their booking.",
     "rateLimited": "Give it a few seconds and try again. Nothing was lost.",
     "medicalReview": "Thanks. One of your medical answers needs a closer look, and a doctor’s sign-off may be required. Please don’t assume you’re cleared until your shop confirms.",
     "medicalContactBoth": "Questions about next steps? Reach out to {shop}: <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>.",

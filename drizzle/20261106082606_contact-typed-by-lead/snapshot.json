@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "3a06786a-df6e-45dd-91ee-d0a508c251aa",
+  "prevIds": [
+    "104b4908-f110-49a2-a293-e787bad3f1e0"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "contact_typed_by_lead_at"
+      ],
+      "writes": [
+        "s|col|public.bookings.contact_typed_by_lead_at",
+        "n|col|public.bookings.contact_typed_by_lead_at",
+        "e|col|public.bookings.contact_typed_by_lead_at"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "contact_typed_by_lead_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}
