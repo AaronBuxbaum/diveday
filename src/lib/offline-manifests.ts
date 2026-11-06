@@ -2113,10 +2113,10 @@ function offlineDayStarts(snapshot: OfflineManifestSnapshot): number[] {
  * empty and reads only what was queued since, except that an earlier day's
  * stated missing person stays at their checkpoint until somebody counts them
  * (a `boarded` on the new day, or at a later dive that day, settles them; a
- * `cleared` here takes the mis-tap back). A person is never read as accounted
- * for by a count that was about another day. The carried statement is not this
- * device's to undo (`local: false`): the retraction names an event on the
- * earlier day, and the live manifest is where that is taken back.
+ * `cleared` queued here does not, since the server compares it with its own
+ * day only and refuses it, #3995). A person is never read as accounted for by
+ * a count that was about another day. The carried statement is not this
+ * device's to undo (`local: false`): the live manifest's undo names it.
  */
 function offlineRollCallAt(
   snapshot: OfflineManifestSnapshot,

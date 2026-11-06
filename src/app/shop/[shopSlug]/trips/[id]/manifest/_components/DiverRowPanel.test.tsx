@@ -95,6 +95,23 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
     expect(retract).toBeDefined();
   });
 
+  // #3995: the undo names the mark it takes back, and a row carried from an
+  // earlier meeting day says so, so its old time does not read as a failed undo.
+  it("names the mark the undo takes back, and says when it came from an earlier day", () => {
+    const eventId = "00000000-0000-4000-8000-0000000000e1";
+    renderList({
+      divers: [diver({ rollCall: { ...notBackAt(), eventId, fromEarlierDay: true } })],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const sheet = screen.getByRole("dialog");
+    const retract = within(sheet).getByRole("button", { name: "Not back aboard" });
+    const posted = retract
+      .closest("form")
+      ?.querySelector<HTMLInputElement>("input[name='retractsEventId']");
+    expect(posted?.value).toBe(eventId);
+    expect(sheet).toHaveTextContent("Recorded on an earlier day.");
+  });
+
   /**
    * **Both controls wear an opaque fill** (issue #2341). A translucent
    * `bg-<hue>/N` takes its contrast from whatever is under it, and these are

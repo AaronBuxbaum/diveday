@@ -705,6 +705,7 @@ export const ROLL_CALL_EVENTS_CSV = sharedFile<ShopRow<"rollCallRows">>({
     { header: "checkpoint", in: "both", value: (row) => row.checkpoint },
     { header: "source", in: "shop", value: (row) => row.source },
     { header: "client_event_id", in: "shop", value: (row) => row.clientEventId },
+    { header: "retracts_event_id", in: "shop", value: (row) => row.retractsEventId },
     { header: "offline_snapshot_saved_at", in: "shop", value: (row) => row.offlineSnapshotSavedAt },
     { header: "recorded_by_person_id", in: "shop", value: (row) => row.recordedByPersonId },
     {

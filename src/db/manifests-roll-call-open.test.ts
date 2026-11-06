@@ -113,6 +113,7 @@ describe("rollCallOpenOnTrip", () => {
     // A `cleared` row is still a row: the crew had started. Reading "open"
     // only off a standing mark would close a page whose writers still accept.
     const { db, shop, reef, bookingId, staffId } = await reefDeparture();
+    let retractsEventId: string | undefined;
     for (const status of ["boarded", "cleared"] as const) {
       const result = await recordRollCall(db, {
         shopId: shop.id,
@@ -121,8 +122,10 @@ describe("rollCallOpenOnTrip", () => {
         recordedByPersonId: staffId,
         status,
         checkpoint: "after_dive_1",
+        retractsEventId,
       });
-      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(result.reason);
+      retractsEventId = result.eventId;
     }
     await cancel(reef.id);
     expect(await rollCallOpenOnTrip(db, shop.id, reef.id)).toBe(true);

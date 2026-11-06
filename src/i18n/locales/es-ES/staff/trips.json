@@ -785,7 +785,8 @@
   "rollCall": {
     "errorRefusal": "Eso no se guardó. Revisa tu conexión o vuelve a tocar.",
     "stillBlocked": "El buceador sigue bloqueado. <tripLink>Abre Salida para resolver el bloqueo</tripLink> y vuelve a intentarlo.",
-    "boatFull": "Barco lleno. Pasa por el mostrador."
+    "boatFull": "Barco lleno. Pasa por el mostrador.",
+    "undoSuperseded": "La marca cambió antes de poder deshacerla. Revisa la fila."
   },
   "guests": {
     "demandSignal": "Demanda no cubierta",

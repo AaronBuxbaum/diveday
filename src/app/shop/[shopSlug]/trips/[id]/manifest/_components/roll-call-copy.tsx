@@ -21,7 +21,8 @@ export function rollCallCopies(
   // `crewRollCallAction` — the blocked message is the plain error for the same
   // reason the action collapses every server refusal into one: on a boat, the
   // only thing that matters is that the tap did not stick.
-  const crewRollCallButtonCopy = { errorRefusal, blockedMessage: errorRefusal };
+  const superseded = t("trips.rollCall.undoSuperseded");
+  const crewRollCallButtonCopy = { errorRefusal, blockedMessage: errorRefusal, superseded };
   // One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
   // link to that diver's own Guests anchor, so it is built here (server-side,
   // with `t.rich`) rather than reassembled from string fragments in the
@@ -30,6 +31,7 @@ export function rollCallCopies(
     return {
       errorRefusal,
       boatFull: t("trips.rollCall.boatFull"),
+      superseded,
       blockedMessage: t.rich("trips.rollCall.stillBlocked", {
         tripLink: (chunks) => (
           <Link href={`${shopPath(shopSlug, "trips", tripId)}#booking-${bookingId}`}>{chunks}</Link>

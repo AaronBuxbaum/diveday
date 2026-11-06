@@ -785,7 +785,8 @@
   "rollCall": {
     "errorRefusal": "That didn’t save. Recheck your connection or tap again.",
     "stillBlocked": "Diver is still blocked. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again.",
-    "boatFull": "Boat full. See the desk."
+    "boatFull": "Boat full. See the desk.",
+    "undoSuperseded": "The mark changed before it could be undone. Check the row."
   },
   "guests": {
     "demandSignal": "Unmet demand",

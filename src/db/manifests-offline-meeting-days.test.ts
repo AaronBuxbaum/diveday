@@ -138,6 +138,193 @@ describe("offline roll call across meeting days", () => {
 });
 
 /**
+ * **The live undo names the mark it takes back** (issue #3995). It applies
+ * only while that mark is the one the manifest shows, so a repeated tap after
+ * a same-day undo is refused rather than read as aimed at the carried row, and
+ * an undo of the carried row itself reaches its own day.
+ */
+describe("a live undo across meeting days", () => {
+  async function dayOneMissing() {
+    const ctx = await twoDayCourse();
+    const base = {
+      shopId: ctx.shop.id,
+      tripId: ctx.reef.id,
+      bookingId: ctx.booking.booking.id,
+      recordedByPersonId: ctx.staff.id,
+      checkpoint: "after_dive_1" as const,
+    };
+    const dayOne = await recordRollCall(ctx.db, {
+      ...base,
+      status: "not_boarded",
+      occurredAt: new Date(ctx.now - 23 * HOUR),
+    });
+    if (!dayOne.ok) throw new Error(dayOne.reason);
+    const shown = async () =>
+      (await getTripManifest(ctx.db, ctx.shop.id, ctx.reef.id, "after_dive_1"))?.divers.find(
+        (diver) => diver.bookingId === ctx.booking.booking.id,
+      )?.rollCall;
+    return { ...ctx, base, dayOne: dayOne.eventId, shown };
+  }
+
+  it("takes the carried row back after day two re-stated the diver and undid that", async () => {
+    const { db, base, now, dayOne, shown } = await dayOneMissing();
+    const dayTwo = await recordRollCall(db, {
+      ...base,
+      status: "not_boarded",
+      occurredAt: new Date(now - 60 * 60 * 1000),
+    });
+    if (!dayTwo.ok) throw new Error(dayTwo.reason);
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "cleared",
+        retractsEventId: dayTwo.eventId,
+        occurredAt: new Date(now - 50 * 60 * 1000),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    // The carried row is back, and says it came over from day one.
+    expect(await shown()).toMatchObject({
+      state: "not_boarded",
+      eventId: dayOne,
+      fromEarlierDay: true,
+    });
+    // A double tap of the same undo is refused: the alarm stays.
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "cleared",
+        retractsEventId: dayTwo.eventId,
+        occurredAt: new Date(now - 45 * 60 * 1000),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
+    expect(await shown()).toMatchObject({ state: "not_boarded", eventId: dayOne });
+    // The undo of the carried row names it, and takes it back.
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "cleared",
+        retractsEventId: dayOne,
+        occurredAt: new Date(now - 40 * 60 * 1000),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    expect(await shown()).toBeUndefined();
+  });
+
+  it("refuses an undo of the carried row while day two's own mark stands", async () => {
+    const { db, base, now, dayOne, shown } = await dayOneMissing();
+    await recordRollCall(db, {
+      ...base,
+      status: "boarded",
+      occurredAt: new Date(now - 60 * 60 * 1000),
+    });
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "cleared",
+        retractsEventId: dayOne,
+        occurredAt: new Date(now - 50 * 60 * 1000),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
+    expect(await shown()).toMatchObject({ state: "boarded" });
+  });
+
+  it("refuses a live undo after a dive that names nothing", async () => {
+    const { db, base, now, dayOne, shown } = await dayOneMissing();
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "cleared",
+        occurredAt: new Date(now - 50 * 60 * 1000),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
+    expect(await shown()).toMatchObject({ state: "not_boarded", eventId: dayOne });
+  });
+
+  it("refuses an undo naming another diver's mark", async () => {
+    const { db, shop, reef, staff, base, now, dayOne } = await dayOneMissing();
+    const crewMark = await recordCrewRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: staff.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      occurredAt: new Date(now - 60 * 60 * 1000),
+    });
+    if (!crewMark.ok) throw new Error(crewMark.reason);
+    await expect(
+      recordRollCall(db, {
+        ...base,
+        status: "cleared",
+        retractsEventId: crewMark.eventId,
+        occurredAt: new Date(now - 50 * 60 * 1000),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
+    await expect(
+      recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        recordedByPersonId: staff.id,
+        checkpoint: "after_dive_1",
+        status: "cleared",
+        retractsEventId: dayOne,
+        occurredAt: new Date(now - 50 * 60 * 1000),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "retraction_superseded" });
+  });
+
+  it("does the same for the crew's own roll call", async () => {
+    const { db, shop, reef, staff, now } = await twoDayCourse();
+    const base = {
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: staff.id,
+      recordedByPersonId: staff.id,
+      checkpoint: "after_dive_1" as const,
+    };
+    const shown = async () =>
+      (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.find(
+        (entry) => entry.id === staff.id,
+      )?.rollCall;
+    const dayOne = await recordCrewRollCall(db, {
+      ...base,
+      status: "not_boarded",
+      occurredAt: new Date(now - 23 * HOUR),
+    });
+    const dayTwo = await recordCrewRollCall(db, {
+      ...base,
+      status: "not_boarded",
+      occurredAt: new Date(now - 60 * 60 * 1000),
+    });
+    if (!dayOne.ok || !dayTwo.ok) throw new Error("crew marks refused");
+    for (const [retractsEventId, minutesAgo, outcome] of [
+      [dayTwo.eventId, 50, { ok: true }],
+      [dayTwo.eventId, 45, { ok: false, reason: "retraction_superseded" }],
+    ] as const) {
+      await expect(
+        recordCrewRollCall(db, {
+          ...base,
+          status: "cleared",
+          retractsEventId,
+          occurredAt: new Date(now - minutesAgo * 60 * 1000),
+        }),
+      ).resolves.toMatchObject(outcome);
+    }
+    expect(await shown()).toMatchObject({ eventId: dayOne.eventId, fromEarlierDay: true });
+    await expect(
+      recordCrewRollCall(db, {
+        ...base,
+        status: "cleared",
+        retractsEventId: dayOne.eventId,
+        occurredAt: new Date(now - 40 * 60 * 1000),
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    expect(await shown()).toBeUndefined();
+  });
+});
+
+/**
  * **A retraction that names nothing retracts nothing after a dive** (issue
  * #3951). An earlier day's stated missing person is carried onto every later
  * day, and a `cleared` at the same after-dive checkpoint on a later day takes

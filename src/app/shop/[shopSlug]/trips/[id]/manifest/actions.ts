@@ -46,6 +46,7 @@ import { TRIP_STAGES } from "@/lib/trip-stages";
 import { UUID_SOURCE } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { formShowedSpecies } from "./_components/species-shown";
+import { retractsEventIdSchema, supersededOr } from "./roll-call-undo";
 
 /* -------------------------------------------------------------------------- *
  * The boat manifest's mutations
@@ -136,6 +137,7 @@ const rollCallSchema = z.object({
    * a departure event the surface never offered a box for.
    */
   note: z.string().trim().max(ROLL_CALL_NOTE_MAX).optional(),
+  retractsEventId: retractsEventIdSchema,
 });
 
 const executedDiveSchema = z.object({
@@ -364,6 +366,7 @@ const crewRollCallSchema = z.object({
   status: z.enum(ROLL_CALL_EVENT_STATUSES),
   /** The same, for the other half of the head count. */
   note: z.string().trim().max(ROLL_CALL_NOTE_MAX).optional(),
+  retractsEventId: retractsEventIdSchema,
 });
 
 /**
@@ -531,6 +534,7 @@ export async function rollCallAction(
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
       note: parsed.data.note,
+      retractsEventId: parsed.data.retractsEventId,
       // Re-proved against this trip's own `plannedDives` inside the write's
       // transaction (`invalid_checkpoint`).
       checkpoint,
@@ -541,7 +545,7 @@ export async function rollCallAction(
         return { ok: false, reason: "not_ready" };
       }
       if (outcome.reason === "boat_full") return { ok: false, reason: "boat_full" };
-      return { ok: false, reason: "error" };
+      return supersededOr(manifestPath(ctx), outcome.reason);
     }
   } catch {
     return { ok: false, reason: "error" };
@@ -755,14 +759,15 @@ export async function crewRollCallAction(
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
       note: parsed.data.note,
+      retractsEventId: parsed.data.retractsEventId,
       // Same re-proof the diver write runs: the checkpoint is checked against
       // the trip row inside the transaction, never against anything posted.
       checkpoint,
     });
-    // Every refusal reads the same on the boat: the tap did not stick. The
-    // distinctions (`crew_not_assigned`, `trip_unavailable`) are server-side
-    // codes, not something to explain to someone with wet hands.
-    if (!outcome.ok) return { ok: false, reason: "error" };
+    // Every other refusal reads the same on the boat: the tap did not stick.
+    // The distinctions (`crew_not_assigned`, `trip_unavailable`) are
+    // server-side codes, not something to explain to someone with wet hands.
+    if (!outcome.ok) return supersededOr(manifestPath(ctx), outcome.reason);
   } catch {
     return { ok: false, reason: "error" };
   }

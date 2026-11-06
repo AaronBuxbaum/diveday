@@ -623,7 +623,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
 
     // No waiver: readiness gates boarding at the dock only, so an after-dive
     // head count takes the diver as they are.
-    await recordRollCall(db, {
+    const boarded = await recordRollCall(db, {
       shopId: shop.id,
       tripId: reef.id,
       bookingId: booking.booking.id,
@@ -634,8 +634,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBe("boarded");
     expect(await departureRollCallForBooking(db, shop.id, reef.id, booking.booking.id)).toBeNull();
 
-    // And a `cleared` undo drops it back out, the same supersession every other
-    // reader here applies — there is then nothing standing anywhere.
+    // A named `cleared` undo drops it back out: nothing stands anywhere then.
     await recordRollCall(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -643,6 +642,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       recordedByPersonId: staff.id,
       status: "cleared",
       checkpoint: "after_dive_1",
+      retractsEventId: boarded.ok ? boarded.eventId : undefined,
     });
     expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBeNull();
   });
@@ -684,7 +684,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
 
     // "Did not come back from dive one" is the opposite fact, and the crew can
     // record it whatever the dock said.
-    await recordRollCall(db, {
+    const missing = await recordRollCall(db, {
       shopId: shop.id,
       tripId: reef.id,
       bookingId: seatId,
@@ -694,8 +694,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     });
     expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBe("missing_after_dive");
 
-    // A `cleared` at that checkpoint is the crew undoing a mistake, so nothing
-    // stands there any more and the dock's own result still does not count.
+    // A `cleared` there undoes a mistake; the dock's result still does not count.
     await recordRollCall(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -703,6 +702,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       recordedByPersonId: staff.id,
       status: "cleared",
       checkpoint: "after_dive_1",
+      retractsEventId: missing.ok ? missing.eventId : undefined,
     });
     expect(await onTheWaterByRollCall(db, shop.id, reef.id, seatId)).toBeNull();
   });

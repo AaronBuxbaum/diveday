@@ -77,7 +77,7 @@ it. None of that applies here:
 What *is* kept, because the risk it guards against is real regardless of stakes: a `cleared` names
 the `clientEventId` it retracts (`retractsClientEventId`), and the server refuses a retraction whose
 named target is no longer the newest standing (`recordPreDepartureCheck`, mirroring
-`offlineRetractionSuperseded`) — otherwise a device holding a stale copy could unsay a check a
+`retractionSuperseded`) — otherwise a device holding a stale copy could unsay a check a
 different device made since.
 
 ### Where it lands

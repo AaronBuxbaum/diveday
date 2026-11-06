@@ -245,6 +245,7 @@
   "notBackAboardActive": "Not back aboard",
   "markNotBackAboard": "Mark not back aboard",
   "tapToUndoNotBackAboard": "Tap “Not back aboard” again to undo.",
+  "tapToUndoCarriedNotBackAboard": "Recorded on an earlier day. If they’re here, mark them back aboard. Tap “Not back aboard” only to undo a mis-tap.",
   "diverFactsSummary": "Contact & gear",
   "notBackAboardListLabel": "Who is not back aboard",
   "rollCallNoteLabel": "What happened (optional)",
