@@ -1,5 +1,6 @@
-import { and, eq, exists, ne, sql } from "drizzle-orm";
+import { and, eq, exists, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { AccountTokenPurpose } from "@/lib/account-tokens";
+import { nowDate } from "@/lib/clock";
 import { mintCapability, openCapability, spendCapability, verifyCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { capabilities, userAccounts } from "./schema";
@@ -11,6 +12,14 @@ import { capabilities, userAccounts } from "./schema";
  * limit) is one record each in `CAPABILITY_POLICY`; this module is what an
  * account token means on top of it.
  */
+
+/** A token was asked for an account that is disabled: none is minted. */
+export class DisabledAccountError extends Error {
+  constructor() {
+    super("account is disabled");
+    this.name = "DisabledAccountError";
+  }
+}
 
 export type IssuedAccountToken = { token: string; tokenId: string; expiresAt: Date };
 
@@ -27,6 +36,14 @@ export async function issueAccountToken(
   input: { userAccountId: string; purpose: AccountTokenPurpose; now?: Date },
 ): Promise<IssuedAccountToken> {
   return db.transaction(async (tx) => {
+    // The mint below locks this row too, so a removal that commits first is seen here: a link
+    // minted just after it would be live again on a re-enable (issue #3989, security review).
+    const [account] = await tx
+      .select({ status: userAccounts.status })
+      .from(userAccounts)
+      .where(eq(userAccounts.id, input.userAccountId))
+      .for("update");
+    if (account?.status === "disabled") throw new DisabledAccountError();
     const minted = await mintCapability(tx, {
       purpose: input.purpose,
       shopId: null,
@@ -98,4 +115,33 @@ export async function consumeAccountToken(
     ),
   });
   return spent ? { userAccountId: spent.subjectId } : null;
+}
+
+const ACCOUNT_TOKEN_PURPOSES: readonly AccountTokenPurpose[] = [
+  "email_verification",
+  "password_reset",
+  "invite",
+];
+
+/**
+ * Turns off every unspent account token an account holds (`revoked_at`), without minting a
+ * replacement. Spending already refuses a disabled account, but that refusal lifts on re-enable;
+ * a removal calls this so a link mailed before it does not come back to life (issue #3989). The
+ * rows stay, so the fact that they were withdrawn stays on record.
+ */
+export async function withdrawAccountTokens(
+  db: DbExecutor,
+  input: { userAccountId: string; now?: Date },
+): Promise<void> {
+  await db
+    .update(capabilities)
+    .set({ revokedAt: input.now ?? nowDate() })
+    .where(
+      and(
+        eq(capabilities.userAccountId, input.userAccountId),
+        inArray(capabilities.purpose, [...ACCOUNT_TOKEN_PURPOSES]),
+        isNull(capabilities.usedAt),
+        isNull(capabilities.revokedAt),
+      ),
+    );
 }

@@ -6,6 +6,7 @@ import { crewPublicNameToStore } from "@/lib/crew-public-name";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
+import { withdrawAccountTokens } from "./account-tokens";
 import type { AppDb, DbExecutor } from "./client";
 import { lockDemoShopIdentityChanges } from "./demo-account-guard";
 import { releaseHelpRequestsOfPerson } from "./help-requests";
@@ -584,6 +585,10 @@ export async function removeStaffMember(
     // Revoke any session issued before this instant, same reasoning as
     // setStaffAccountStatus above.
     await tx.delete(accountSessions).where(eq(accountSessions.userAccountId, input.userAccountId));
+    // And the reset, invite and verification links mailed before it. Only the disabled status
+    // refuses them, and a re-enable lifts that (issue #3989). Not done by a temporary disable, for
+    // the reason the consent below is not: that person is still here to use their own link.
+    await withdrawAccountTokens(tx, { userAccountId: input.userAccountId });
     // Revoke this person's push subscriptions in the same transaction (ADR
     // 20260804-manifest-web-push). Disabling the account does not reach them:
     // the `people` row deliberately survives, so the row's ON DELETE CASCADE
