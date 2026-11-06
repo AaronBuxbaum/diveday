@@ -254,6 +254,9 @@ for (const scheme of ["light", "dark"] as const) {
         // An unsigned release opens its group onto the ways to get it signed.
         await openDiverFileGroup(staffPage, "Waiver");
         await staffPage.getByRole("button", { name: "Copy link" }).click();
+        // A minor's release with no seat waits on the desk's word that a
+        // parent is at the counter (#4019).
+        await staffPage.getByRole("button", { name: "Yes, copy the link" }).click();
         const waiverHref = await waiverLinkFromToast(staffPage);
         await staffContext.close();
 
