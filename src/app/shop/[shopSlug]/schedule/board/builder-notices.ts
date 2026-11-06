@@ -72,6 +72,12 @@ export function builderNoticeMessage(
       ? st(key, { date: formatCalendarDate(on.day, on.locale) })
       : st("schedule.notices.boatOutOfService");
   }
+  if (key === "schedule.notices.boatOutOfService" && on?.day && isValidCalendarDate(on.day)) {
+    // Issue #4026: the first yard day, which need not be the day it leaves.
+    return st("schedule.notices.boatOutOfServiceOn", {
+      date: formatCalendarDate(on.day, on.locale),
+    });
+  }
   if (key === "schedule.notices.weekCopied") {
     return st(key, { count: count && /^\d{1,4}$/.test(count) ? Number.parseInt(count, 10) : 0 });
   }

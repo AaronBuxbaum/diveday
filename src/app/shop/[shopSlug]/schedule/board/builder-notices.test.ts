@@ -86,6 +86,20 @@ describe("the series hull-in-the-yard notice", () => {
       ).toBe(st("schedule.notices.boatOutOfService"));
     }
   });
+
+  // Issue #4026: a single add or a move names its first yard day too.
+  it("names the yard day on a one-departure refusal, and says the plain sentence without one", () => {
+    expect(builderNoticeFor({ ...none, builder: "boat-out-of-service", on: "2031-01-18" })).toEqual(
+      {
+        tone: "danger",
+        message:
+          "That boat is in the yard on Jan 18, 2031, a day this departure would sail. Pick another boat or another day.",
+      },
+    );
+    expect(builderNoticeFor({ ...none, builder: "boat-out-of-service" })?.message).toBe(
+      st("schedule.notices.boatOutOfService"),
+    );
+  });
 });
 
 describe("verifiedGearMoveNotice", () => {

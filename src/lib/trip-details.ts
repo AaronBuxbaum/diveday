@@ -1,4 +1,4 @@
-import { isValidCalendarDate } from "./calendar-date";
+import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "./money";
 import { paymentGateIsUnclearable } from "./readiness";
 import { firstHeldDayInWindow, hullHeldSpans, type ServiceWindow } from "./service-window";
@@ -152,9 +152,9 @@ export type TripDetailsResult =
   // Clearing the price off a departure that demands payment. See
   // `paymentGateIsUnclearable` — the gate would then be one nobody can clear.
   | { ok: false; reason: "price_required_by_gate" }
-  // Loop 5, row 5: the hull is in the yard on a day of this departure; `until`
-  // is the window's last day, so the notice can say when it is back.
-  | { ok: false; reason: "boat_out_of_service"; until: string };
+  // Loop 5, row 5: the hull is in the yard on a day of this departure; `on` is
+  // the first such day, so the notice can name it (issue #4026).
+  | { ok: false; reason: "boat_out_of_service"; on: CalendarDate };
 
 export function tripDetailsPatch(
   fields: TripDetailsFields,
@@ -282,9 +282,10 @@ export function tripDetailsPatch(
   // trip page's timing section) is asked too (attacker review, #3994).
   const hull = fields.diveMode !== undefined ? patch.boatId : fields.boatId;
   const yard = fields.boatOutOfService ?? null;
-  if (hull && yard && firstHeldDayInWindow(yard, hullHeldSpans(scheduleDays, shop.timezone))) {
-    return { ok: false, reason: "boat_out_of_service", until: yard.until };
-  }
+  const yardDay = hull
+    ? firstHeldDayInWindow(yard, hullHeldSpans(scheduleDays, shop.timezone))
+    : null;
+  if (yardDay) return { ok: false, reason: "boat_out_of_service", on: yardDay };
 
   return { ok: true, patch };
 }

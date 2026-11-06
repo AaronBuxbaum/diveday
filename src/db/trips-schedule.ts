@@ -118,11 +118,9 @@ export type MoveTripOutcome =
        */
       gearReleased: number;
     }
-  | {
-      ok: false;
-      /** `boat_out_of_service`: the departure's hull is in the yard on a day it would land on (#3915). */
-      reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" | "boat_out_of_service";
-    };
+  | { ok: false; reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" }
+  /** The departure's hull is in the yard on a day it would land on (#3915); `on` is the first (#4026). */
+  | { ok: false; reason: "boat_out_of_service"; on: CalendarDate };
 
 /**
  * Every kind of head-count evidence a trip can carry — the divers' roll call
@@ -246,17 +244,14 @@ export async function moveTrip(
       .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
       .from(tripScheduleDays)
       .where(eq(tripScheduleDays.tripId, tripId));
-    if (
-      await firstYardDayOn(
-        tx,
-        shopId,
-        existing.boatId,
-        movedLegs(meetingDays, existing, shift),
-        shop.timezone,
-      )
-    ) {
-      return { ok: false, reason: "boat_out_of_service" };
-    }
+    const yardDay = await firstYardDayOn(
+      tx,
+      shopId,
+      existing.boatId,
+      movedLegs(meetingDays, existing, shift),
+      shop.timezone,
+    );
+    if (yardDay) return { ok: false, reason: "boat_out_of_service", on: yardDay };
     await options.beforeMove?.(tx);
 
     const [trip] = await tx
