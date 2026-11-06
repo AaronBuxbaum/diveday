@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { PAPER_PASS_PAPER, PRINT_SHEET_BOX_MM } from "@/lib/print-sheets";
 import { PaperSheet, SheetMark } from "./PaperSheet";
 
@@ -12,15 +11,10 @@ import { PaperSheet, SheetMark } from "./PaperSheet";
 
 afterEach(cleanup);
 
-// The pass page's own derivation, so the test carries no colour of its own.
-const THEME = deriveBrandTheme(DIVEDAY_BRAND_COLOR);
-const TONE = { band: THEME.primary, bandInk: THEME.primaryForeground };
-
 function renderSheet() {
   return render(
     <PaperSheet
       paper={PAPER_PASS_PAPER}
-      tone={TONE}
       band={<span>Blue Mantis</span>}
       foldLeft="Printed Aug 12, 2026"
       foldRight="dive.day/s/blue-mantis"
@@ -51,13 +45,11 @@ describe("every sheet", () => {
     expect(sheet?.style.height).toBe("");
   });
 
-  it("takes its band color as a value, not a token", () => {
-    // `@media print` redefines `--primary` to repaint the app monochrome, so a
-    // band drawn from the token would print grey. The caller resolves it.
+  it("carries no colour of its own", () => {
+    // The band is ruled, never filled or brand-coloured: paper spends no ink on it.
     const { container } = renderSheet();
     const sheet = container.querySelector<HTMLElement>(".paper-sheet");
-    expect(sheet?.style.getPropertyValue("--sheet-band")).toBe(TONE.band);
-    expect(sheet?.style.getPropertyValue("--sheet-band-ink")).toBe(TONE.bandInk);
+    expect(sheet?.getAttribute("style")).not.toMatch(/--sheet-band/);
   });
 });
 

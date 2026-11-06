@@ -1,16 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DateField, Field } from "@/components/ui/form";
+import { useRevealAnswers } from "./DoctorPaper";
 import type { DoctorAnswersState } from "./doctor-core";
 
 const LOCKED: DoctorAnswersState = { status: "locked" };
 
 export type DoctorAnswersCopy = {
   prompt: string;
-  printOmitted: string;
   birthdate: string;
   submit: string;
   submitting: string;
@@ -23,11 +23,12 @@ export type DoctorAnswersCopy = {
 
 /**
  * **The doctor's page's answers, behind the diver's date of birth** (security
- * review of layer r5-3, F1). The page itself prints neither the date nor the
+ * review of layer r5-3, F1). The page itself renders neither the date nor the
  * answers; the action hands back the published prompts once the date matches,
  * and they live only in this render, so a reload, a forwarded link or a
- * printed footer shows the locked form again. Printing after unlocking prints
- * them, which is the point.
+ * printed footer shows the locked form again. Once unlocked they go to the
+ * page's sheet as well (`DoctorPaper`), so printing after unlocking prints
+ * them, which is the point; nothing here is ever printed itself.
  */
 export function DoctorAnswers({
   action,
@@ -38,6 +39,10 @@ export function DoctorAnswers({
   copy: DoctorAnswersCopy;
 }) {
   const [state, formAction] = useActionState(action, LOCKED);
+  const reveal = useRevealAnswers();
+  useEffect(() => {
+    if (state.status === "open" || state.status === "whole") reveal(state);
+  }, [state, reveal]);
 
   if (state.status === "open") {
     return (
@@ -71,9 +76,8 @@ export function DoctorAnswers({
 
   return (
     <>
-      <p className="mt-3 text-base text-muted print:hidden">{copy.prompt}</p>
-      <p className="mt-3 hidden text-base text-muted print:block">{copy.printOmitted}</p>
-      <form action={formAction} className="mt-4 flex flex-wrap items-end gap-3 print:hidden">
+      <p className="mt-3 text-base text-muted">{copy.prompt}</p>
+      <form action={formAction} className="mt-4 flex flex-wrap items-end gap-3">
         <Field label={copy.birthdate} error={refusal} className="min-w-56">
           <DateField name="birthdate" required autoComplete="bday" />
         </Field>

@@ -1,16 +1,9 @@
 import type { ReactNode } from "react";
-import { PaperSheet, SheetMark, type SheetTone } from "@/components/paper/PaperSheet";
+import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { formatDateWithYear, formatTimeTz } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { type PrintSheetPaper, storefrontAddress } from "@/lib/print-sheets";
-
-/** The shop's band, as every sheet the shop prints wears it. */
-export function shopSheetTone(shop: { brandColor: string | null }): SheetTone {
-  const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
-  return { band: theme.primary, bandInk: theme.primaryForeground };
-}
 
 /**
  * The fold line's left half: when the sheet came out of the printer, in the
@@ -54,7 +47,6 @@ export function ShopSheet({
   return (
     <PaperSheet
       paper={paper}
-      tone={shopSheetTone(shop)}
       band={
         <>
           <SheetMark name={shop.name} size="sm" />

@@ -34,17 +34,21 @@ the itemized pass below.
 Evaluate, in order of severity:
 
 1. **Dock test failures** — small touch targets, thin text, weak contrast, precision gestures.
-2. **Trust failures** — ambiguous states, color-only meaning, sloppy numbers/timestamps on
+2. **Print-ink failures** (printed surfaces only; `.claude/rules/print-ink.md`) — any colour, any
+   fill even grey, any one-sided bar over a hairline, any white-on-dark, any pill or chip that is
+   not plain text or a thin outline. Only a diver not back, a medical alert or a blocked boarding
+   may take a heavier outline, never a fill.
+3. **Trust failures** — ambiguous states, color-only meaning, sloppy numbers/timestamps on
    operational surfaces.
-3. **Token violations** — raw hex, palette-scale Tailwind classes, hard-coded dark-mode
+4. **Token violations** — raw hex, palette-scale Tailwind classes, hard-coded dark-mode
    variants (grep the components).
-4. **Instinct failures** (principle 10) — a fact the app knows hidden behind navigation; an
+5. **Instinct failures** (principle 10) — a fact the app knows hidden behind navigation; an
    action detached from its object into a toolbar; an "Edit" button and form page where a safe
    in-place edit fits; hierarchy drawn with borders and fills where type and space would do;
    any control or border that would not be missed if removed.
-5. **Calm violations** — visual noise, cramped spacing, border overuse, accent (coral) spent on
+6. **Calm violations** — visual noise, cramped spacing, border overuse, accent (coral) spent on
    routine elements.
-6. **Control-count violations** (principle 8) — a row of same-weight buttons where one should be
+7. **Control-count violations** (principle 8) — a row of same-weight buttons where one should be
    primary and the rest demoted (`secondary`/`ghost`/`link`, or `danger` for a non-primary
    destructive action); buttons that are really one action
    with a default, stacked instead of merged; a rare or advanced control sitting at equal weight
@@ -52,14 +56,14 @@ Evaluate, in order of severity:
    each section at rest — more than two or three competing for attention is a finding. Before
    demoting a button, ask the stronger question first: per principle 10, could it disappear into
    the object it acts on, or into a default?
-7. **Composition defaults** (principle 11) — a surface whose content has its own natural shape
+8. **Composition defaults** (principle 11) — a surface whose content has its own natural shape
    rendered as the generic card-stack-plus-button-row; a layout the content clearly outgrew.
    For a significant surface, name one concretely better composition (what moves where, what it
    buys) — a direction specific enough to build, not "make it nicer". Creativity that added
    chrome or a new interaction grammar is a finding too, in the other direction.
-8. **Voice violations** — lawyer/robot copy, "Submit" buttons, empty states that don't teach,
+9. **Voice violations** — lawyer/robot copy, "Submit" buttons, empty states that don't teach,
    errors that don't help.
-9. **Missed moments** — a completed action that deserved a small moment of joy and didn't get
+10. **Missed moments** — a completed action that deserved a small moment of joy and didn't get
    one. Flag at most one per review; delight stays rationed.
 
 Report the holistic answers first, then the probe verdicts when you were given a report, then

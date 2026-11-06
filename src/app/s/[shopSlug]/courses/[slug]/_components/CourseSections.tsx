@@ -313,7 +313,7 @@ export function CourseSchedule({
                     At `top-1.5` it rode 2px high (K-562). */}
                   <span
                     aria-hidden="true"
-                    className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface print:border-foreground"
+                    className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface print:border print:border-foreground"
                   />
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <h3 className={ITEM_TITLE_CLASS}>{day.title}</h3>

@@ -89,6 +89,9 @@ function OfflineDiverRow({
     <li
       key={diver.bookingId}
       id={offlineRollCallRowId(diver.bookingId)}
+      // A diver who did not come back is the one fact paper must not lose: it
+      // prints as an outline, never a fill (`.claude/rules/print-ink.md`).
+      data-print-critical={rowState.notBackAboard ? "" : undefined}
       // Every row is a jump target — the missing-divers grid is
       // handed this very id for any uncalled person, which is why
       // one function mints it rather than a literal here and a

@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
@@ -41,7 +40,6 @@ export default async function CounterCardPage({
   if (!shop.selfRegistrationEnabled) redirect(shopPath(shopSlug, "settings"));
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
   const registerUrl = `${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`;
 
   return (
@@ -54,7 +52,6 @@ export default async function CounterCardPage({
     >
       <PaperSheet
         paper={COUNTER_CARD_PAPER}
-        tone={{ band: theme.primary, bandInk: theme.primaryForeground }}
         band={
           <>
             <SheetMark name={shop.name} size="sm" />

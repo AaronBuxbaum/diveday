@@ -29,6 +29,11 @@ Read when changing print CSS, a printable document, or PDF capture mechanics. Us
    PDF/page-image paths and findings. Give the design critic paginated page images for significant
    paper changes. State missing PDF rendering or browser/physical-printer coverage explicitly.
 
+**Ink audit.** Paper is ink on white ([print-ink rule](../../../.claude/rules/print-ink.md)): `capturePrint`
+runs `assertPrintInk` (`e2e/print-ink.ts`), so a colour, a fill (even grey), a bar thicker than a
+hairline, white on dark or a shadow fails the capture. Fix the style; never loosen the audit. Look
+for pills, chips, tinted rows, left bars, reversed bands and coloured status text in every page image.
+
 Paper must carry the useful values after interactive controls disappear: an address rather than
 a map frame, a code rather than its Copy button, an answer rather than its closed disclosure.
 Retain safety and medical distinctions with readable text in monochrome. Preserve the permission

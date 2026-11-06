@@ -20,6 +20,7 @@ import {
 } from "../src/lib/offline-manifests";
 import { expect, makeActivitySafe, test } from "./fixtures";
 import { offlineCopySaved, openTripFromBoard, openTripTab, seededTripId } from "./helpers";
+import { assertPrintInk } from "./print-ink";
 import { capturePrintPdfs } from "./print-pdf";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { auditInitialPaint, INITIAL_PAINT_FALLBACK } from "./visual-audit-initial-paint";
@@ -2118,6 +2119,8 @@ export async function capturePrint(page: Page, name: string) {
           "find what grew after that read rather than widening further.",
       );
     }
+    // Every printed capture is also an ink audit: paper has no colour, fill or bar.
+    await assertPrintInk(page);
     await screenshotOrGiveUp(page, `e2e/screenshots/${name}-print.png`);
     await page.emulateMedia({ media: "screen" });
     if (baseViewport && widened) await page.setViewportSize(baseViewport);

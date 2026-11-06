@@ -1021,8 +1021,8 @@ select:not([multiple]):not([size]):dir(rtl) {
  *    page a staffer reviews before printing is the page that comes out, in
  *    the light scheme whatever the device's, and nothing under it is repainted
  *    for print. The `@media print` block below leaves a sheet alone.
- * 2. **The band's colour is set inline by the sheet**: the shop's derived
- *    brand, resolved at render and handed down as `--sheet-band`.
+ * 2. **The band is ruled, never filled.** A sheet carries no brand colour and
+ *    no fill: ink on white is what the customer's printer is asked for.
  * 3. **A sheet is a box in millimetres**, sized to its paper less the `@page`
  *    margin - a floor rather than a ceiling, and never a clip. A sheet that
  *    outgrows its paper takes a second page, and no sheet ever loses a word.
@@ -1047,52 +1047,51 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 .paper-sheet {
+  /* Ink on white, nothing else: paper never spends ink on colour, fill or a
+     band (`.claude/rules/print-ink.md`). Every token a sheet's content reads
+     is achromatic, so what a staffer reviews is the page that prints. */
   --sheet-ground: #ffffff;
-  --sheet-ink: #0c2a35;
-  --sheet-muted: #54676d;
-  --sheet-rule: #d9d2c2;
-  --sheet-well: #f3f1ec;
-  --sheet-band: #0c2a35;
-  --sheet-band-ink: #ffffff;
-  /* The paper face: every semantic token, from the sheet's own. Status keeps
-     its colour (the words still carry it, for a mono printer); fills are
-     the sheet's well, never the screen's sea-green ground. */
+  --sheet-ink: #000000;
+  --sheet-muted: #000000;
+  --sheet-rule: #666666;
+  /* The paper face: every semantic token, from the sheet's own. Status loses
+     its colour and its fill; the word, the mark and an outline carry it. */
   color-scheme: light;
   --background: var(--sheet-ground);
   --surface: var(--sheet-ground);
-  --surface-sunken: var(--sheet-well);
+  --surface-sunken: var(--sheet-ground);
   --border: var(--sheet-rule);
-  --border-strong: var(--sheet-muted);
+  --border-strong: var(--sheet-ink);
   --foreground: var(--sheet-ink);
   --muted: var(--sheet-muted);
   --primary: var(--sheet-ink);
   --primary-hover: var(--sheet-ink);
-  --primary-foreground: var(--sheet-ground);
-  --primary-sunken: var(--sheet-ink);
-  --primary-tint: var(--sheet-well);
+  --primary-foreground: var(--sheet-ink);
+  --primary-sunken: var(--sheet-ground);
+  --primary-tint: var(--sheet-ground);
   --focus-ring: var(--sheet-ink);
   --accent: var(--sheet-ink);
-  --accent-foreground: var(--sheet-ground);
+  --accent-foreground: var(--sheet-ink);
   --accent-deep: var(--sheet-ink);
-  --accent-tint: var(--sheet-well);
-  --shallows: var(--sheet-well);
-  --success: #1c7445;
-  --warning: #8f5409;
-  --danger: #b3262f;
-  --info: #3b4fb8;
-  --success-strong: var(--success);
-  --warning-strong: var(--warning);
-  --success-tint: #e2f2e8;
-  --warning-tint: #fbefdc;
-  --danger-tint: #fbe6e7;
+  --accent-tint: var(--sheet-ground);
+  --shallows: var(--sheet-ground);
+  --success: var(--sheet-ink);
+  --warning: var(--sheet-ink);
+  --danger: var(--sheet-ink);
+  --info: var(--sheet-ink);
+  --success-strong: var(--sheet-ink);
+  --warning-strong: var(--sheet-ink);
+  --success-tint: var(--sheet-ground);
+  --warning-tint: var(--sheet-ground);
+  --danger-tint: var(--sheet-ground);
   position: relative;
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
   background: var(--sheet-ground);
   color: var(--sheet-ink);
-  print-color-adjust: exact;
-  -webkit-print-color-adjust: exact;
+  print-color-adjust: economy;
+  -webkit-print-color-adjust: economy;
 }
 
 /* **A print-only document never reaches the screen** (the medical-alerts
@@ -1100,6 +1099,28 @@ select:not([multiple]):not([size]):dir(rtl) {
    above, so no utility and no rule below can show it again. */
 @media screen {
   .paper-sheet-frame[data-paper-print-only] {
+    display: none !important;
+  }
+}
+
+/* **On paper, a page that holds a sheet is its sheets** (issue #2745). Every
+   element that is not a sheet's frame, inside one, or around one goes, so a
+   screen never reaches the printer beside its document: not the chrome, not
+   a page's own controls, and not a diver's screen when the browser prints
+   without firing `beforeprint` (a share-sheet print on some phones). One
+   rule, by structure, in place of a `print:hidden` on each control. A page
+   with no sheet is not a document and prints as the browser draws it.
+   Unlayered and `!important`, so no display utility can bring a screen back. */
+@media print {
+  body:has(.paper-sheet-frame)
+    :not(
+      .paper-sheet-frame,
+      .paper-sheet-frame *,
+      :has(.paper-sheet-frame),
+      [data-staff-session-lock],
+      [data-staff-session-lock] *,
+      :has([data-staff-session-lock])
+    ) {
     display: none !important;
   }
 }
@@ -1115,8 +1136,8 @@ select:not([multiple]):not([size]):dir(rtl) {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1.25rem;
-  background: var(--sheet-band);
-  color: var(--sheet-band-ink);
+  border-bottom: 1px solid var(--sheet-ink);
+  color: var(--sheet-ink);
 }
 
 .paper-sheet-mark {
@@ -1124,9 +1145,9 @@ select:not([multiple]):not([size]):dir(rtl) {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--sheet-ink);
   border-radius: 0.5rem;
-  background: var(--sheet-band-ink);
-  color: var(--sheet-band);
+  color: var(--sheet-ink);
   font-weight: 800;
 }
 
@@ -1169,7 +1190,7 @@ select:not([multiple]):not([size]):dir(rtl) {
     content: counter(page) " / " counter(pages);
     font-family: var(--font-mono), ui-monospace, monospace;
     font-size: 8pt;
-    color: #4b5563;
+    color: #000000;
   }
 }
 
@@ -1292,21 +1313,21 @@ select:not([multiple]):not([size]):dir(rtl) {
     --background: #ffffff;
     --surface: #ffffff;
     --surface-sunken: #ffffff;
-    --border: #9ca3af;
-    --border-strong: #4b5563;
+    --border: #999999;
+    --border-strong: #444444;
     --foreground: #000000;
-    --muted: #374151;
-    --primary: #111827;
+    --muted: #333333;
+    --primary: #111111;
     --primary-hover: #000000;
     /* Ink, not white: the rule below strips every fill, so a label written
        for a primary fill lands on white paper (K-141, the manifest's stage). */
     --primary-foreground: #000000;
-    --accent: #374151;
+    --accent: #333333;
     --accent-foreground: #000000;
-    --success: #111827;
-    --warning: #111827;
+    --success: #111111;
+    --warning: #111111;
     --danger: #000000;
-    --info: #111827;
+    --info: #111111;
   }
 
   html {
@@ -1314,22 +1335,66 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 
   /*
-   * White paper, no filled backgrounds. A shop shouldn't spend toner laying
-   * grey behind every card, pill, and status row — on paper, borders and a
-   * row's left rule carry the structure a fill carried on screen, and the text
-   * carries the status. This has to beat the utilities that paint those fills
-   * (bg-surface, the tinted bg-danger/10 rows, the badge pills), so it wins
-   * with !important the way the reduced-motion kill-switch below does. Shadows
-   * go too: they never read as depth on paper, only as wasted grey.
+   * **Ink-light paper** (`.claude/rules/print-ink.md`). White paper, black
+   * ink, nothing else: no fill (not even grey), no colour, no shadow, no
+   * thick bar, and never white on a dark ground. A customer pays for every
+   * drop, so structure comes from type, space and thin outlines, and status
+   * from its word (design principle 6). This has to beat the utilities that
+   * paint those fills (bg-surface, the tinted bg-danger/10 rows, the badge
+   * pills), so it wins with !important the way the reduced-motion
+   * kill-switch below does. It applies to a `PaperSheet` as much as to a
+   * screen: a sheet's tokens are already ink on white, so this is the net.
    */
-  /* A sheet keeps its face: it is the shop's paper, not a screen to repaint. */
-  :not(.paper-sheet, .paper-sheet *),
-  :not(.paper-sheet, .paper-sheet *)::before,
-  :not(.paper-sheet, .paper-sheet *)::after {
+  *,
+  *::before,
+  *::after {
     /* print must strip every ink-heavy fill to keep the page white */
     background: transparent !important;
-    /* a shadow prints as grey haze, never as depth */
+    /* a shadow (and a ring, which is one) prints as grey haze, never as depth */
     box-shadow: none !important;
+    text-shadow: none !important;
+    /* the browser's own default for a customer who left "background graphics" off */
+    print-color-adjust: economy;
+    -webkit-print-color-adjust: economy;
+    /* A shop's brand is set inline on its storefront's root (`brandThemeProperties`),
+       which beats the tokens above; paper takes none of it. */
+    --primary: #111111 !important;
+    --primary-hover: #000000 !important;
+    --primary-tint: #ffffff !important;
+    --primary-foreground: #000000 !important;
+    --focus-ring: #000000 !important;
+  }
+
+  /*
+   * **A bar is a block.** A 2px-or-thicker rule down a row's edge is a solid
+   * strip of ink repeated on every row, so it goes; the row's word carries
+   * its state. The one exception is critical safety information
+   * (`data-print-critical`, below), which is drawn as an outline instead.
+   */
+  :where(
+    [class*="border-l-2"],
+    [class*="border-l-4"],
+    [class*="border-l-8"],
+    [class*="border-s-2"],
+    [class*="border-s-4"],
+    [class*="border-s-8"]
+  ) {
+    border-inline-start-width: 0;
+  }
+
+  /*
+   * **Critical information is outlined, never filled.** What a reader must
+   * not lose on paper — a diver in the water, a medical alert, a blocked
+   * boarding — keeps a heavier outline round it and its words and symbol;
+   * the `.claude/rules/print-ink.md` rule lists what counts. Mark an element
+   * with `data-print-critical`; nothing else on paper may be heavier than a
+   * hairline.
+   */
+  [data-print-critical] {
+    border: 2px solid #000000 !important;
+    border-radius: 0.25rem;
+    /* Weight carries it where a fill used to: it survives a photocopy. */
+    font-weight: 700;
   }
 
   /* Keep a diver's row, a summary card, or a kit line whole — a card split at

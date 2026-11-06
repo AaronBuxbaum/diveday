@@ -99,6 +99,7 @@ export function OfflineCrewRollCall({
                 key={member.key}
                 // The diver rows' own left rule, tone and inset, and the
                 // live crew list's: one colour vocabulary by import.
+                data-print-critical={missingCrew ? "" : undefined}
                 className={`border-l-4 p-4 sm:p-5 ${
                   crewTone ? ROLL_CALL_ROW_TONE[crewTone] : ROLL_CALL_ROW_TONE.awaiting
                 }`}

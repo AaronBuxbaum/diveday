@@ -12,7 +12,7 @@ import {
 } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { MENU_PANEL, menuRowClass } from "@/components/ui/menu";
+import { MENU_PANEL } from "@/components/ui/menu";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 
 /**
@@ -23,7 +23,8 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
  * otherwise sit at the primary's weight or wrap alone on a phone (visual
  * review 2026-10-24: A06's three downloads, A16's Refresh, Void and Print,
  * A17's schedule doors at 390). The rows are the caller's, built with
- * `menuRowClass(…, { gutter: false })`: links, small forms, `MoreMenuPrint`.
+ * `menuRowClass(…, { gutter: false })`: links and small forms. A document
+ * prints from its own sheet's page, never from a menu row (issue #2745).
  *
  * The panel hangs from the trigger's end edge, and from its start edge when
  * that would push it off the left of the screen (a phone's wrapped header).
@@ -108,18 +109,5 @@ export function MoreMenu({
         </div>
       ) : null}
     </div>
-  );
-}
-
-/** A menu row that opens the browser's print dialog. */
-export function MoreMenuPrint({ label }: { label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={() => window.print()}
-      className={menuRowClass("quiet", { gutter: false })}
-    >
-      {label}
-    </button>
   );
 }

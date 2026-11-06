@@ -77,9 +77,11 @@ export function DiverRowPrint({
           alerts" puts them under the row instead (below, issue #2990). */}
         {diver.medicalAlert && !diver.identityWithheld && !printedAlert ? (
           // Two sentences, wider than a sheet's column: it wraps rather than clips.
-          <Badge tone="primary" wraps>
-            {t("manifest.medicalAlertPrinted")}
-          </Badge>
+          <span data-print-critical className="px-2 py-0.5">
+            <Badge tone="primary" wraps>
+              {t("manifest.medicalAlertPrinted")}
+            </Badge>
+          </span>
         ) : null}
         {diver.hotelPickupLocation ? (
           <Badge tone="neutral">
