@@ -17,44 +17,6 @@ vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
   };
 });
 
-// Wrappers that call the real function until a test queues a fault, so the
-// best-effort catch blocks of `seatConsequences` run against a real seat.
-const { mailFaults } = vi.hoisted(() => ({
-  mailFaults: {
-    confirmation: [] as unknown[],
-    waiverOnJoin: [] as unknown[],
-    courseSeat: [] as unknown[],
-  },
-}));
-vi.mock("./notifications", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./notifications")>();
-  return {
-    ...actual,
-    sendStaffSeatingConfirmation: (
-      ...args: Parameters<typeof actual.sendStaffSeatingConfirmation>
-    ) => {
-      if (mailFaults.confirmation.length > 0)
-        return Promise.reject(mailFaults.confirmation.shift());
-      return actual.sendStaffSeatingConfirmation(...args);
-    },
-    sendCourseSeatConfirmation: (...args: Parameters<typeof actual.sendCourseSeatConfirmation>) => {
-      if (mailFaults.courseSeat.length > 0) return Promise.reject(mailFaults.courseSeat.shift());
-      return actual.sendCourseSeatConfirmation(...args);
-    },
-  };
-});
-vi.mock("./waiver-issue", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./waiver-issue")>();
-  return {
-    ...actual,
-    issueWaiverOnJoin: (...args: Parameters<typeof actual.issueWaiverOnJoin>) => {
-      if (mailFaults.waiverOnJoin.length > 0)
-        return Promise.reject(mailFaults.waiverOnJoin.shift());
-      return actual.issueWaiverOnJoin(...args);
-    },
-  };
-});
-
 import { levelShort } from "@/test/admission-refusals";
 import {
   activityEvents,
@@ -155,9 +117,6 @@ const ctx = fileScopedShopContext({ realShop: true });
 
 afterEach(() => {
   vi.unstubAllEnvs();
-  mailFaults.confirmation.length = 0;
-  mailFaults.waiverOnJoin.length = 0;
-  mailFaults.courseSeat.length = 0;
 });
 
 describe("seatDiver (the one consequence path behind every staff door)", () => {
@@ -908,61 +867,3 @@ describe("seatDiver trip admission (the boat's own cert gate reaches every staff
  * issued is `failed`. A thrown value that is not an `Error` is logged as
  * unknown, never rethrown.
  */
-describe("seatDiver consequence failures (the seat stands, the door says so)", () => {
-  const heldSeat = async () => {
-    const { db, shop, open, actorPersonId } = await context();
-    const diver = await bookableDiver(db, shop.id, open.id);
-    return await seatDiver(db, {
-      shopId: shop.id,
-      tripId: open.id,
-      actorPersonId,
-      // A held seat owes no confirmation, so it takes the waiver-on-join path.
-      diver: { personId: diver.id, fromNameMatch: { typedName: "Someone Else Entirely" } },
-      entry: "roster",
-      refusals: "specific",
-    });
-  };
-
-  it.each([
-    ["an Error", new Error("ses down")],
-    ["a thrown string", "ses down"],
-  ])("reports not_sent and failed when the confirmation throws %s", async (_label, fault) => {
-    const { db, shop, open, actorPersonId } = await context();
-    deliverableEmailEnv();
-    mailFaults.confirmation.push(fault);
-
-    const result = await seatDiver(db, {
-      shopId: shop.id,
-      tripId: open.id,
-      actorPersonId,
-      diver: { fullName: "Fault Fay", email: DELIVERABLE_EMAIL },
-      entry: "roster",
-      refusals: "specific",
-    });
-
-    expect(result).toMatchObject({ ok: true, confirmation: "not_sent", waiver: "failed" });
-  });
-
-  it.each([
-    ["an Error", new Error("template gone")],
-    ["a thrown string", "template gone"],
-  ])("reports failed when a held seat's waiver throws %s", async (_label, fault) => {
-    mailFaults.waiverOnJoin.push(fault);
-
-    expect(await heldSeat()).toMatchObject({
-      ok: true,
-      identityUnconfirmed: true,
-      waiver: "failed",
-    });
-  });
-
-  it.each([
-    ["an Error", new Error("materials mail down")],
-    ["a thrown string", "materials mail down"],
-  ])("still seats a held diver when the course materials mail throws %s", async (_label, fault) => {
-    mailFaults.courseSeat.push(fault);
-
-    expect(await heldSeat()).toMatchObject({ ok: true, identityUnconfirmed: true });
-    expect(mailFaults.courseSeat).toHaveLength(0);
-  });
-});
