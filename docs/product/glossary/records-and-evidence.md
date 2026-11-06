@@ -171,8 +171,10 @@
   and no other, shows only the medical answers saved through that same code, refuses a second
   signature, and its mint is a line on the diver's trail naming the staffer. It carries no
   readiness authority and opens no doctor's page; it dies when the seat changes hands or the
-  release is superseded. A minor's seat signs on it only when the desk confirmed a guardian is
-  there for that very code, asked again at signing (issue #4003) (ADR
+  release is superseded. A minor signs on it only when the desk confirmed a guardian is there
+  for that very code, asked again at signing: on a seat's code (issue #4003), and on Copy link
+  for a release with no seat, a minor by date of birth or "Under 18" on any live seat (issue
+  #4019) (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
   A minor's code is shown only after the staffer confirms a parent or guardian is present to
   co-sign, and that confirmation is on the minor's trail too.
@@ -195,8 +197,8 @@
   signature, sent only to the contact on file and never shown to staff. A newer one replaces it; a
   counter link to the same release stands beside it (issue #4008). A contact change revokes it, an
   erasure deletes it, and a dead one
-  lands on the rescue, which mails a fresh one to the address on file. It never opens a seat's
-  release (ADR
+  lands on the rescue, which mails a fresh one to the address on file. A minor whose contact a
+  party's lead typed is sent none (issue #4019). It never opens a seat's release (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md),
   layer 6).
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the

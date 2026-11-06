@@ -31,6 +31,7 @@ import { getBookingReadiness } from "./readiness";
 import { bookings, capabilities, people, shops, trips, waiverRecords } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { seatNotCancelled } from "./trips-queries";
+import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
 import {
   hasLivePersonWaiverRequest,
   openWaiverInThread,
@@ -88,7 +89,13 @@ export type WaiverDelivery =
    * nothing was sent, because a guardian is something that address cannot
    * prove. A parent signs with them at the counter, or the lead signs it.
    */
-  | "guardian_needed";
+  | "guardian_needed"
+  /**
+   * Copy link on a minor's release with no seat, before the desk said a
+   * parent or legal guardian is at the counter to co-sign (issue #4019):
+   * nothing was minted. Asked again with `guardianPresent`.
+   */
+  | "guardian_check";
 
 /**
  * The shop's own text senders, resolved once per send.
@@ -236,6 +243,11 @@ export type WaiverDeliveryOptions = {
    * diver is signing on. Reports `sent` without sending.
    */
   keepLiveLink?: boolean;
+  /**
+   * Copy link on a release with no seat: the desk confirmed a parent or legal
+   * guardian is at the counter to co-sign a minor's release (issue #4019).
+   */
+  guardianPresent?: boolean;
   /** Identity read before a booking-bound send; stale assignments are refused. */
   expectedPersonId?: string;
   expectedTripId?: string;
@@ -676,6 +688,36 @@ export async function issueAndDeliverPersonWaiver(
           delivery: "sent" as const,
         };
       }
+      // A minor's release, by the date of birth on file or "Under 18" on any
+      // live seat: signed, it covers every seat they hold (issue #4019).
+      const minor = guardianSignatureRequired(
+        ctx.person.dateOfBirth,
+        signingDate(options.now ?? nowDate(), ctx.shop.timezone),
+        await seatMinorDeclared(tx, { shopId, personId, bookingId: null }),
+      );
+      // Copy link asks the desk what a seat's counter QR asks (issue #3986)
+      // before anything is minted: nobody else at the counter can say whether
+      // the person typing a guardian's name is one.
+      if (channel === "link" && minor && options.guardianPresent !== true) {
+        return {
+          ok: true as const,
+          bookingId: null,
+          diverName: ctx.person.fullName,
+          token: null,
+          delivery: "guardian_check" as const,
+        };
+      }
+      // A minor whose contact the party's lead may have typed gets no mailed
+      // link: that address cannot prove a guardian (issues #4003, #4019).
+      if (channel !== "link" && minor && (await personContactLeadTyped(tx, shopId, personId))) {
+        return {
+          ok: true as const,
+          bookingId: null,
+          diverName: ctx.person.fullName,
+          token: null,
+          delivery: "guardian_needed" as const,
+        };
+      }
       const origin = publicAppUrl();
       const mint = (purpose: "waiver_link" | "release_link") =>
         mintCapability(tx, { purpose, shopId, subjectId: outcome.recordId, now: options.now });
@@ -697,6 +739,18 @@ export async function issueAndDeliverPersonWaiver(
           waiverRecordId: outcome.recordId,
         });
         if (!recorded) throw new CopyLinkNotRecorded();
+        if (minor) {
+          // The desk's word, naming this very link: signing asks for it.
+          const confirmed = await recordDiverActivity(tx, {
+            shopId,
+            personId,
+            actorPersonId: options.actorPersonId as string,
+            code: "waiver_counter_guardian_confirmed",
+            waiverRecordId: outcome.recordId,
+            linkId: link.id,
+          });
+          if (!confirmed) throw new CopyLinkNotRecorded();
+        }
         token = link.token;
         delivery = origin ? "link_only" : "no_app_origin";
       } else if (!origin) {
@@ -1239,6 +1293,8 @@ export async function deliverWaiverBatch(
     channel: WaiverSendChannel;
     /** The staffer sending; Copy link on a release with no seat needs one. */
     actorPersonId?: string | null;
+    /** Copy link: the desk confirmed a parent or guardian is at the counter (issue #4019). */
+    guardianPresent?: boolean;
   },
 ): Promise<WaiverBatchOutcome> {
   const outcome: WaiverBatchOutcome = {
@@ -1258,6 +1314,7 @@ export async function deliverWaiverBatch(
         ? await issueAndDeliverPersonWaiver(db, shopId, target.personId, {
             channel: input.channel,
             actorPersonId: input.actorPersonId,
+            guardianPresent: input.guardianPresent,
           })
         : await issueAndDeliverWaiver(db, shopId, target.bookingId, { channel: input.channel });
     if (!result.ok) {

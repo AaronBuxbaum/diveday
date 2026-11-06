@@ -310,6 +310,7 @@ async function runHeldSend(db: AppDb, row: HeldSendRow): Promise<HeldSendOutcome
         personId: payload.personId,
         channel: payload.channel,
         actorPersonId: row.actorPersonId,
+        guardianPresent: payload.guardianPresent,
       });
       return { kind: "waiver_send", ...outcome };
     }

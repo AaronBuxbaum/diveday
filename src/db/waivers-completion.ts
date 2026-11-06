@@ -1102,19 +1102,15 @@ async function completeWaiverLocked(
     signingDate(now, timezone),
     // The booker's "Under 18" on this release's seat, read where the page
     // reads it, so the two can never disagree about asking.
-    await seatMinorDeclared(db, state.record.shopId, state.record.bookingId),
+    await seatMinorDeclared(db, state.record),
   );
   let guardian: ReturnType<typeof guardianEvidence> | null = null;
-  // A seat's release signed on a door, a minor's, needs the desk's word that
-  // a parent or guardian is here, given for this very code (issue #4003): a
-  // birth date or "Under 18" that arrived after the code was shown is asked
-  // again here, and a party member's emailed door never carries that word.
-  if (
-    minor &&
-    isCounterKey(token) &&
-    token.bookingId !== null &&
-    !(await deskSawGuardian(db, token, state.record.personId))
-  )
+  // A minor's release signed on a counter door needs the desk's word that a
+  // parent or guardian is here, given for this very code (issues #4003, and
+  // #4019 for a release with no seat): a birth date or "Under 18" that
+  // arrived after the code was shown is asked again here, and a party
+  // member's emailed door never carries that word.
+  if (minor && isCounterKey(token) && !(await deskSawGuardian(db, token, state.record.personId)))
     return { ok: false, reason: "guardian_at_counter" };
   if (minor) {
     if (!input.guardian) return { ok: false, reason: "guardian_required" };
@@ -1316,7 +1312,6 @@ export async function doorNeedsDeskGuardian(
   key: CounterWaiverKey,
   now: Date = nowDate(),
 ): Promise<boolean> {
-  if (key.bookingId === null) return false;
   const [signer] = await db
     .select({ personId: waiverRecords.personId, dateOfBirth: people.dateOfBirth })
     .from(waiverRecords)
@@ -1327,7 +1322,11 @@ export async function doorNeedsDeskGuardian(
   const minor = guardianSignatureRequired(
     signer.dateOfBirth,
     signingDate(now, await shopTimezone(db, key.shopId)),
-    await seatMinorDeclared(db, key.shopId, key.bookingId),
+    await seatMinorDeclared(db, {
+      shopId: key.shopId,
+      personId: signer.personId,
+      bookingId: key.bookingId,
+    }),
   );
   return minor && !(await deskSawGuardian(db, key, signer.personId));
 }

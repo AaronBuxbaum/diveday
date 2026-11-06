@@ -64,11 +64,14 @@ export type WaiverFallbackLink = {
    * to pass on themselves, so it renders the copy control and no sentence.
    * `thread_only` is a Copy link tap on a booked seat, which has no link to
    * copy. `guardian_needed` is a minor whose address the party's lead typed:
-   * nothing was sent (issue #4003). */
+   * nothing was sent (issue #4003). `guardian_check` is Copy link on a
+   * minor's release with no seat, before the desk said a parent or guardian
+   * is at the counter: nothing was minted (issue #4019). */
   reason:
     | "link_only"
     | "thread_only"
     | "guardian_needed"
+    | "guardian_check"
     | "no_email"
     | "no_phone"
     | "no_app_origin"
@@ -124,6 +127,9 @@ export type WaiverSendCopy = {
   sendByText: string;
   reasonThreadOnly: string;
   reasonGuardianNeeded: string;
+  /** Copy link on a minor's release with no seat: the desk's question, and its yes (#4019). */
+  guardianCheck: string;
+  guardianConfirm: string;
   reasonNoEmailOne: string;
   reasonNoEmailOther: string;
   reasonNoPhoneOne: string;
@@ -171,6 +177,8 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     sendByText: t("shared.waiverSend.sendByText"),
     reasonThreadOnly: t("shared.waiverSend.reasonThreadOnly"),
     reasonGuardianNeeded: t("shared.waiverSend.reasonGuardianNeeded"),
+    guardianCheck: t("shared.waiverSend.guardianCheck"),
+    guardianConfirm: t("shared.waiverSend.guardianConfirm"),
     reasonNoEmailOne: t("shared.waiverSend.reasonNoEmailOne"),
     reasonNoEmailOther: t.raw("shared.waiverSend.reasonNoEmailOther"),
     reasonNoPhoneOne: t("shared.waiverSend.reasonNoPhoneOne"),

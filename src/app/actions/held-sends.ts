@@ -72,6 +72,7 @@ const heldSendForm = z.object({
   surface: optionalText(),
   tripId: optionalText(),
   ticketId: optionalText(),
+  guardianPresent: optionalText(),
   interestId: idList(),
   discount: formValue(),
   discountPercent: formValue(),
@@ -124,6 +125,8 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
           surface: form.surface ?? "today",
           tripId: form.tripId,
           ticketId: form.ticketId,
+          // The diver record's "Yes, copy the link" answer (issue #4019).
+          ...(form.guardianPresent === "yes" ? { guardianPresent: true } : {}),
         }
       : {
           kind,
