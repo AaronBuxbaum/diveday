@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { revokeBookingLinksSentToPerson } from "./booking-capabilities";
@@ -22,9 +22,11 @@ import { waiverRecords } from "./schema";
  *    derived URL, so whoever holds the old address could still read the draft
  *    and sign as the diver. The pending record is superseded instead, and the
  *    next send mints a fresh record and link to the new address;
- *  - a signed release still waiting for a physician (final attacker review
- *    B3). Its waiver link opens the doctor's page: the diver's name, the
- *    conditions behind a date of birth, and the one form upload. Its bearer
+ *  - a signed release (final attacker review B3, security review S2). Its
+ *    waiver link still opens the receipt, which says where the medical stands
+ *    ("the physician did not clear you"), and on a release still waiting for
+ *    a physician the doctor's page: the diver's name, the conditions behind a
+ *    date of birth, and the one form upload. Every signed release's bearer
  *    link is rotated, as erasure rotates it (`token_hash` is outside both
  *    seals), and a doctor's form sent before the change, which nobody has
  *    reviewed, is withdrawn so the slot reopens for the diver. The diver
@@ -50,30 +52,36 @@ export async function revokeLinksSentToOldContact(
         isNull(waiverRecords.supersededAt),
       ),
     );
-  const held = await tx
-    .select({ id: waiverRecords.id, form: waiverRecords.diverMedicalFormUrl })
+  const signed = await tx
+    .select({
+      id: waiverRecords.id,
+      awaitsPhysician: sql<boolean>`${waiverRecords.status} = 'medical_review'
+        and ${waiverRecords.medicalClearedAt} is null
+        and ${waiverRecords.medicalClearanceDeclinedAt} is null`.mapWith(Boolean),
+      form: waiverRecords.diverMedicalFormUrl,
+    })
     .from(waiverRecords)
     .where(
       and(
         eq(waiverRecords.shopId, input.shopId),
         eq(waiverRecords.personId, input.personId),
-        eq(waiverRecords.status, "medical_review"),
-        isNull(waiverRecords.medicalClearedAt),
-        isNull(waiverRecords.medicalClearanceDeclinedAt),
+        ne(waiverRecords.status, "pending"),
         isNull(waiverRecords.anonymizedAt),
       ),
     )
     .for("update");
-  for (const record of held) {
+  for (const record of signed) {
     await tx
       .update(waiverRecords)
       .set({
         tokenHash: hashWaiverToken(createWaiverToken()),
-        diverMedicalFormUrl: null,
-        diverMedicalFormSentAt: null,
+        // Only a form nobody has reviewed: an answered record holds none.
+        ...(record.awaitsPhysician
+          ? { diverMedicalFormUrl: null, diverMedicalFormSentAt: null }
+          : {}),
       })
       .where(eq(waiverRecords.id, record.id));
-    if (record.form) {
+    if (record.awaitsPhysician && record.form) {
       await queueMediaDeletion(tx, {
         shopId: input.shopId,
         kind: "waiver_document",

@@ -1,5 +1,6 @@
 import { inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
@@ -15,9 +16,13 @@ import { waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { issueAndDeliverPersonWaiver, issueAndDeliverWaiver } from "./waiver-issue";
 import { completeWaiver, getWaiverForToken, recordWaiverDraft } from "./waivers-completion";
-import { attachDiverMedicalForm, doctorPageOpen } from "./waivers-medical";
+import { attachDiverMedicalForm, doctorPageOpen, revealDoctorReferral } from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
-import { clearAnswers, medicalReferralAnswers } from "./waivers-test-fixtures";
+import {
+  clearAnswers,
+  medicalReferralAnswers,
+  recordMedicalEvaluationForShop,
+} from "./waivers-test-fixtures";
 
 /**
  * **A corrected address takes the old links with it** (#3902). A delivered
@@ -384,6 +389,65 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     );
   });
 
+  /**
+   * **An upload already in flight cannot land** (security review S1). The
+   * doctor's page reads the record from the old link, then spends seconds
+   * storing the file; a contact change in between rotates the link and
+   * reopens the slot. The write must still refuse a record read under the
+   * old link, and so must the answers behind the date of birth.
+   */
+  it("refuses a form or the answers for a record read under the old link before the change", async () => {
+    const { db, shop, diver, bookingId } = await seatedDiver("held-race");
+    const now = nowDate();
+    const seatLink = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now });
+    if (!seatLink.ok) throw new Error("no seat link");
+    await completeWaiver(db, seatLink.token, {
+      signerName: diver.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+      now,
+    });
+    const opened = await getWaiverForToken(db, seatLink.token);
+    if (opened.state !== "completed") throw new Error(`old link is ${opened.state}`);
+
+    expect((await fixEmail(diver, "held-race-fixed@example.com")).ok).toBe(true);
+
+    const stale = opened.record;
+    expect(
+      await attachDiverMedicalForm(db, stale, "https://storage.example/medical/forged.pdf"),
+    ).toBe("closed");
+    expect(await revealDoctorReferral(db, stale, "1990-01-01")).toBeNull();
+  });
+
+  it("a release the physician refused: the old link no longer says so", async () => {
+    const { db, shop, diver, bookingId } = await seatedDiver("held-refused");
+    const now = nowDate();
+    const seatLink = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now });
+    if (!seatLink.ok) throw new Error("no seat link");
+    await completeWaiver(db, seatLink.token, {
+      signerName: diver.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+      now,
+    });
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    expect(
+      await recordMedicalEvaluationForShop(db, {
+        outcome: "not_cleared",
+        shopId: shop.id,
+        personId: diver.id,
+        recordedByPersonId: owner,
+        evaluatedOn: calendarDateInTimezone(nowDate(), shop.timezone),
+        physicianName: "Dr. Imani Reyes",
+      }),
+    ).toMatchObject({ ok: true });
+    expect((await getWaiverForToken(db, seatLink.token)).state).toBe("completed");
+
+    expect((await fixEmail(diver, "held-refused-fixed@example.com")).ok).toBe(true);
+
+    expect((await getWaiverForToken(db, seatLink.token)).state).toBe("unavailable");
+  });
+
   it("leaves a signed release and a release held for a physician exactly as they were", async () => {
     const { db, shop, diver, bookingId } = await seatedDiver("signed");
     const now = nowDate();
@@ -417,8 +481,9 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
 
     expect((await fixEmail(diver, "signed-fixed@example.com")).ok).toBe(true);
 
-    // Every column but the held release's bearer link, which moves (final
-    // attacker review B3); the clean one keeps its link.
+    // Every column but the bearer link, which moves on every signed release
+    // (final attacker review B3, security review S2): the old link opens
+    // neither the held one nor the clean one's receipt.
     const withoutLink = (rows: typeof before) =>
       rows.map(({ tokenHash: _tokenHash, ...row }) => row);
     const after = await signedRows();
@@ -426,7 +491,8 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     const linkOf = (rows: typeof before, id: string) =>
       rows.find((row) => row.id === id)?.tokenHash;
     expect(linkOf(after, seatLink.recordId)).not.toBe(linkOf(before, seatLink.recordId));
-    expect(linkOf(after, personLink.recordId)).toBe(linkOf(before, personLink.recordId));
+    expect(linkOf(after, personLink.recordId)).not.toBe(linkOf(before, personLink.recordId));
+    expect((await getWaiverForToken(db, personLink.token)).state).toBe("unavailable");
     expect(before.every((row) => row.supersededAt === null)).toBe(true);
   });
 
