@@ -1,4 +1,5 @@
 import { and, asc, count, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { effectiveMinimum, MINIMUM_SEATS_DECISION_HOURS_DEFAULT } from "@/lib/minimum-seats";
 import type { AppDb } from "./client";
@@ -6,10 +7,10 @@ import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
 import { recordSystemTripActivity } from "./operations";
-import { bookings, people, shops, trips } from "./schema";
+import { bookings, people, shops, type Trip, tripScheduleDays, trips } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
-import { seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
+import { firstYardDayOn, seatNotCancelled, tripSellableSeatsSql } from "./trips-queries";
 
 /**
  * The minimum-head-count sweep: cancel every departure whose decision moment
@@ -276,8 +277,9 @@ export async function listMinimumNotMetRecipients(db: AppDb, shopId: string, tri
 }
 
 /**
- * Put a departure back on the board **and** spend its minimum, in one
- * statement.
+ * **The one way a called-off departure goes back on the board**: put it back
+ * **and** spend its minimum, in one statement, unless its hull is in the yard
+ * on a day it holds it.
  *
  * Reinstating *is* the shop saying "run it anyway", so the promise the minimum
  * encoded is over — without clearing it the next hourly pass would cancel the
@@ -290,14 +292,57 @@ export async function listMinimumNotMetRecipients(db: AppDb, shopId: string, tri
  * had just reinstated, and the clear would then arrive to tidy up a departure
  * that was cancelled again.
  */
-export async function reinstateTripClearingMinimum(db: AppDb, shopId: string, tripId: string) {
+export async function reinstateTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<ReinstateTripOutcome> {
   return db.transaction(async (tx) => {
     await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
+    const [existing] = await tx
+      .select({ trip: trips, timeZone: shops.timezone })
+      .from(trips)
+      .innerJoin(shops, eq(shops.id, trips.shopId))
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+      .limit(1);
+    if (!existing) return { ok: false, reason: "not_found" };
+    // A second tap, or a stale tab, on a departure already back: nothing to
+    // do, and its minimum stays the one the shop set since.
+    if (existing.trip.status === "scheduled") return { ok: true, trip: existing.trip };
+    // **A hull in the yard sails nothing** (issue #4027): a departure called
+    // off for weather, then a repair window set on its boat, comes back only
+    // once the desk moves it or swaps the hull. Every day it holds the hull,
+    // each meeting day or its own span, read under the window's share lock.
+    const meetingDays = await tx
+      .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, tripId));
+    const yardDay = await firstYardDayOn(
+      tx,
+      shopId,
+      existing.trip.boatId,
+      meetingDays.length > 0 ? meetingDays : [existing.trip],
+      existing.timeZone,
+    );
+    if (yardDay) return { ok: false, reason: "boat_out_of_service", on: yardDay };
     const [trip] = await tx
       .update(trips)
-      .set({ status: "scheduled", minimumBookings: null, minimumDecisionHours: null })
+      // The call-off date goes with the call-off: a sailing departure that kept
+      // it would tell the owed-refund queue it was owed since then.
+      .set({
+        status: "scheduled",
+        cancelledAt: null,
+        minimumBookings: null,
+        minimumDecisionHours: null,
+      })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
-    return trip ?? null;
+    return trip ? { ok: true, trip } : { ok: false, reason: "not_found" };
   });
 }
+
+/** What {@link reinstateTrip} did: the departure is back, or why it is not. */
+export type ReinstateTripOutcome =
+  | { ok: true; trip: Trip }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "boat_out_of_service"; on: CalendarDate };

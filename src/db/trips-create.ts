@@ -140,10 +140,10 @@ export async function replaceTripDives(
  * hull reaches into this one's departure. `duplicateTrip` then copies the id
  * forward on every copy.
  *
- * Scoped to the shop and nothing else. Refusing a *deleted* hull belongs here
- * too — assigning one is a new departure naming a boat the shop has retired,
- * not history — but `boats` has no `deleted_at` on this branch; it arrives with
- * the soft-delete change (issue #680), and the clause goes in with it.
+ * A *deleted* hull is refused too (issue #4027): assigning one is a new
+ * departure naming a boat the shop has retired, not history. The builder lists
+ * live boats only, but a stale add panel or the pattern's second departure can
+ * still post a retired hull's id, and its yard window is no longer read there.
  */
 export async function validateBoat(
   db: DbExecutor,
@@ -154,7 +154,7 @@ export async function validateBoat(
   const [boat] = await db
     .select({ id: boats.id })
     .from(boats)
-    .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId)))
+    .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId), isNull(boats.deletedAt)))
     .limit(1);
   return Boolean(boat);
 }

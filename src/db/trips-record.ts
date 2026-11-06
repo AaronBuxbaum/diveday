@@ -1310,6 +1310,10 @@ export function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
   );
 }
 
+/**
+ * Call a departure off. Putting one back is `reinstateTrip`
+ * (`trips-minimum.ts`), the one door that asks the yard first (issue #4027).
+ */
 export async function setTripStatus(
   // Also callable inside a transaction: callers that already take the trip row
   // lock must first hold the revision fence (the blow-out and one-trip cancel
@@ -1317,7 +1321,7 @@ export async function setTripStatus(
   db: DbExecutor,
   shopId: string,
   tripId: string,
-  status: "scheduled" | "cancelled",
+  status: "cancelled",
   now: Date = nowDate(),
   options: { actorPersonId?: string | null } = {},
 ) {
@@ -1328,21 +1332,15 @@ export async function setTripStatus(
     await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
     // Only a real call-off is news to the crew: a departure already cancelled
     // being cancelled again tells nobody twice.
-    const [before] =
-      status === "cancelled"
-        ? await tx
-            .select({ status: trips.status })
-            .from(trips)
-            .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-            .limit(1)
-        : [];
+    const [before] = await tx
+      .select({ status: trips.status })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+      .limit(1);
     const [trip] = await tx
       .update(trips)
-      // Stamped on the way into `cancelled` and **cleared** on the way back to
-      // `scheduled`: an un-cancelled departure that kept a stale cancellation date
-      // would tell the owed-refund queue it had been owed since the day the shop
-      // changed its mind, and would put a date on a trip that is sailing.
-      .set({ status, cancelledAt: status === "cancelled" ? now : null })
+      // Stamped on the way into `cancelled`; `reinstateTrip` clears it.
+      .set({ status, cancelledAt: now })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
     // A cancelled departure keeps its bookings, so the booking cascade never
@@ -1350,7 +1348,7 @@ export async function setTripStatus(
     // on the same executor (and so inside the blow-out's transaction when there
     // is one). Reinstating does not resurrect them: the units went back on the
     // wall, and prep re-assigns from what is actually free.
-    if (trip && status === "cancelled") {
+    if (trip) {
       await releaseUnclaimedGearReservationsForTrips(tx, { shopId, tripIds: [tripId] });
       // The crew hear it was called off (ADR 20261009-crew-hear-about-their-boats);
       // the caller tells them once this commits (`flushUrgentCrewNotices`).

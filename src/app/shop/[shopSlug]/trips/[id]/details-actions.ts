@@ -25,7 +25,7 @@ import {
   editTripSection,
   getTripWithBooked,
   listTripScheduleDays,
-  reinstateTripClearingMinimum,
+  reinstateTrip,
   type TripPatch,
   type UpdateTripOutcome,
 } from "@/db/trips";
@@ -623,6 +623,11 @@ export async function reinstateTripAction(shopSlug: string, tripId: string) {
   // 20260813-minimum-head-count-departures). A trip reinstated after an
   // ordinary cancellation had no minimum to clear, so this is the same
   // statement either way rather than a branch.
-  await reinstateTripClearingMinimum(await getDb(), s.user.shopId, tripId);
+  const outcome = await reinstateTrip(await getDb(), s.user.shopId, tripId);
+  // Its hull went to the yard meanwhile (issue #4027): the notice names the
+  // day, so the desk moves the departure or swaps the boat first.
+  if (!outcome.ok && outcome.reason === "boat_out_of_service") {
+    redirect(noticeUrl(back, "reinstate-boat-out-of-service", { on: outcome.on }));
+  }
   revalidateAndRedirect(back, noticeUrl(back, "reinstated"));
 }

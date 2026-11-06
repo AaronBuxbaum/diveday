@@ -43,6 +43,7 @@ import {
   listTripScheduleDays,
   moveTrip,
   type NewTripSeries,
+  reinstateTrip,
   rollAllSeriesForward,
   rollSeriesForward,
   setSeriesRepeat,
@@ -792,10 +793,9 @@ describe("recurring trip series (in-memory PGlite)", () => {
         checkout: fakeCheckout(),
       });
       expect(blown.ok).toBe(true);
-      await setTripStatus(run.db, run.shop.id, first.id, "scheduled", run.now);
+      await reinstateTrip(run.db, run.shop.id, first.id);
       return first;
     }
-
     // Review 1b (2026-10-12): a reinstated date the run cancel calls off again
     // is cancelled because the run ended, not because of the old weather.
     it("tells a diver on a reinstated date that the run ended, not the old weather", async () => {

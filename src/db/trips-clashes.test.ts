@@ -10,6 +10,7 @@ import {
   createTrip,
   deleteTrip,
   moveTrip,
+  reinstateTrip,
   setTripStatus,
 } from "./trips";
 
@@ -111,7 +112,7 @@ describe("boatClashes (H-20260916-may-one-hull-carry: one hull, one departure at
     expect(await boatClashes(ctx.db, ctx.shop.id, charter.id)).toEqual([]);
     expect(await boatClashes(ctx.db, ctx.shop.id, drift.id)).toEqual([]);
 
-    await setTripStatus(ctx.db, ctx.shop.id, drift.id, "scheduled");
+    await reinstateTrip(ctx.db, ctx.shop.id, drift.id);
     expect(await boatClashes(ctx.db, ctx.shop.id, charter.id)).toHaveLength(1);
     await deleteTrip(ctx.db, ctx.shop.id, drift.id);
     expect(await boatClashes(ctx.db, ctx.shop.id, charter.id)).toEqual([]);
