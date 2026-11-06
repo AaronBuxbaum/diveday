@@ -47,9 +47,7 @@ export async function refreshAction(formData: FormData) {
     revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));
     return;
   }
-  if (!(await hasRequiredStepUp(db, session, "money"))) {
-    revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
-  }
+  // Reading whether money came in asks no step-up (#4063).
   const updated = orderId ? await refreshOrderStatus(db, session.user.shopId, orderId) : null;
   // A refresh can settle the order to paid or refunded, which enqueues an
   // integration event; drain it now rather than at the next cron tick (ADR
@@ -87,7 +85,10 @@ export async function refundAction(formData: FormData) {
     return;
   }
   if (!(await hasRequiredStepUp(db, session, "money"))) {
-    revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
+    // Back from the challenge with the amount the staffer typed (#4063).
+    const typed = postedRefundAmount(formData);
+    const returnTo = typed ? `${back}?refundAmount=${encodeURIComponent(typed)}` : back;
+    revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", returnTo));
   }
   if (await isDemoShop(db, session.user.shopId)) {
     revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));

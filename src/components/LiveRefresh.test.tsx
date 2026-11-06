@@ -69,12 +69,12 @@ describe("LiveRefresh", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it("stops after twelve hours with no tap or key, so the session can lapse", () => {
-    expect(LIVE_REFRESH_IDLE_LIMIT_MS).toBe(12 * 60 * 60 * 1000);
+  it("stops after a week with no tap or key, so the session can lapse (issue 4063)", () => {
+    expect(LIVE_REFRESH_IDLE_LIMIT_MS).toBe(7 * 24 * 60 * 60 * 1000);
     render(<LiveRefresh />);
     act(() => vi.advanceTimersByTime(LIVE_REFRESH_IDLE_LIMIT_MS));
     const before = refresh.mock.calls.length;
-    // The refresh landing on the twelfth hour is the first one skipped.
+    // The refresh landing on the last moment is the first one skipped.
     expect(before).toBe(LIVE_REFRESH_IDLE_LIMIT_MS / LIVE_REFRESH_INTERVAL_MS - 1);
     act(() => vi.advanceTimersByTime(LIVE_REFRESH_INTERVAL_MS * 60));
     expect(refresh).toHaveBeenCalledTimes(before);

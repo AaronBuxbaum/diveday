@@ -1,5 +1,5 @@
 import { and, eq, gt, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
-import { nowDate, nowMs } from "@/lib/clock";
+import { HOUR_MS, nowDate, nowMs } from "@/lib/clock";
 import {
   openingKeys,
   openSecretWithKeyring,
@@ -25,7 +25,8 @@ import {
 } from "./schema";
 import { getAccountIdForPerson } from "./user-accounts";
 
-const STEP_UP_TTL_MS = 15 * 60 * 1000;
+/** One challenge a shift (#4063): refunds, exports and backup changes ask again after twelve hours. */
+const STEP_UP_TTL_MS = 12 * HOUR_MS;
 
 export async function getAccountSecurity(db: DbExecutor, userAccountId: string) {
   const [row] = await db

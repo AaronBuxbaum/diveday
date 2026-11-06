@@ -1,13 +1,11 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
 import type { WorkOrderLine } from "@/db/schema";
 import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
-import { hasRequiredStepUp } from "@/db/step-up";
 import {
   billWorkOrder,
   recordWorkOrderCounterPayment,
@@ -21,7 +19,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { billLinesForWorkOrder } from "@/lib/work-order-follow-up";
@@ -104,7 +101,7 @@ export async function resendReadyNoticeAction(formData: FormData) {
 }
 
 /**
- * **Send the bill.** Owner or manager work, behind the money step-up, exactly
+ * **Send the bill.** Owner or manager work, with no step-up (#4063), exactly
  * like raising an order from Orders (H-20260724-staff-role-reach, ADR 20260803-invoicing-role-gate):
  * this *is* raising an order, built from the ticket's lines rather than typed.
  */
@@ -118,9 +115,6 @@ export async function sendWorkOrderBillAction(formData: FormData) {
 
   if (!(await canPersonManageOrders(db, session.user.shopId, session.user.personId))) {
     revalidateAndRedirect(landing, noticeUrl(landing, "bill-not-authorized"));
-  }
-  if (!(await hasRequiredStepUp(db, session, "money"))) {
-    redirect(stepUpChallengeUrl(session.user.shopSlug, "money", landing));
   }
 
   const shop = await getShopById(db, session.user.shopId);
@@ -190,8 +184,8 @@ export async function setCustomerGearRemindersAction(formData: FormData) {
 /**
  * **Paid at pickup** (fourth UX review, item 19): the customer paid for the
  * bench job in cash or on the shop's card machine. Any active staff member,
- * as any counter money is (ADR 20261009-counter-payments), behind the money
- * step-up; `recordWorkOrderCounterPayment` records it as the ticket's bill.
+ * as any counter money is (ADR 20261009-counter-payments), with no step-up
+ * (#4063); `recordWorkOrderCounterPayment` records it as the ticket's bill.
  */
 export async function recordBenchPaymentAction(formData: FormData) {
   const session = await requireBenchSession();
@@ -200,9 +194,6 @@ export async function recordBenchPaymentAction(formData: FormData) {
   if (!parsed.success) revalidateAndRedirect(board, noticeUrl(board, "invalid"));
   const landing = shopPath(session.user.shopSlug, "gear", "work-orders", parsed.data.workOrderId);
   const db = await getDb();
-  if (!(await hasRequiredStepUp(db, session, "money"))) {
-    redirect(stepUpChallengeUrl(session.user.shopSlug, "money", landing));
-  }
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) revalidateAndRedirect(landing, noticeUrl(landing, "not-found"));
   const detail = await getWorkOrderDetail(db, shop.id, parsed.data.workOrderId, {

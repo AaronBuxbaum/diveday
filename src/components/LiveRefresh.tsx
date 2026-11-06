@@ -11,7 +11,7 @@ export const LIVE_REFRESH_INTERVAL_MS = MINUTE_MS;
 export const LIVE_REFRESH_MIN_GAP_MS = 30 * 1000;
 /**
  * With no tap or key for this long, the page stops re-reading itself, so an
- * unattended counter tablet's session can lapse (one working day; issue #2803).
+ * unattended counter tablet's session can lapse (a week; issues #2803, issue 4063).
  */
 export const LIVE_REFRESH_IDLE_LIMIT_MS = STAFF_IDLE_LIMIT_MS;
 

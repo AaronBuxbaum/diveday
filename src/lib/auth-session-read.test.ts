@@ -8,6 +8,7 @@ import { createAuth, readSessionFrom, sessionCookieWriteDue } from "@/lib/auth";
 import { authSecret } from "@/lib/auth-secret";
 import * as clock from "@/lib/clock";
 import { DAY_MS } from "@/lib/clock";
+import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 import { seededTestDb } from "@/test/db";
 
 /**
@@ -127,7 +128,7 @@ describe("the session read writes no cookie it does not owe (issue #2263)", () =
       headers: cookie,
       query: { disableCookieCache: true, disableRefresh: true },
     });
-    const boundary = mintedAt(harness) + 12 * 60 * 60 * 1000;
+    const boundary = mintedAt(harness) + STAFF_IDLE_LIMIT_MS;
     let current = boundary - 1;
     const clockSpy = vi.spyOn(clock, "nowMs").mockImplementation(() => current);
     try {
@@ -166,7 +167,7 @@ describe("the session read writes no cookie it does not owe (issue #2263)", () =
       ),
     ).not.toBeNull();
   });
-  it("refuses a session at twelve hours of inactivity even with a warm cookie", async () => {
+  it("refuses a session at a week of inactivity even with a warm cookie", async () => {
     const harness = await signedInHarness();
     const warm = await warmCacheCookie(harness);
     const issued = mintedAt(harness);
@@ -174,7 +175,7 @@ describe("the session read writes no cookie it does not owe (issue #2263)", () =
       await readSessionFrom(
         harness.auth,
         cookiesOf(harness.sessionCookie, warm),
-        issued + 12 * 60 * 60 * 1000,
+        issued + STAFF_IDLE_LIMIT_MS,
       ),
     ).toBeNull();
   });

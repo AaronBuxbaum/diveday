@@ -3,7 +3,6 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { commitCounterPaymentHold } from "@/db/counter-payment-hold";
 import { getShopById } from "@/db/shops";
-import { hasRequiredStepUp } from "@/db/step-up";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { isCrossSiteHeaders } from "@/lib/same-origin";
 import { requireStaffSession } from "@/lib/session";
@@ -19,7 +18,7 @@ const body = z.object({ heldId: z.uuid() });
  * order stops reading Open and Stripe stops asking the diver within seconds.
  *
  * The same gate as the release action it stands in for: a staff session of
- * this shop, the money step-up the tap asked, and only a `counter_payment`
+ * this shop (money coming in asks no step-up, #4063), and only a `counter_payment`
  * row of this shop (`commitCounterPaymentHold`). A cookie-authenticated POST
  * from another site is refused before the session is read, against the host
  * the request was sent to (`isCrossSiteHeaders`): behind a proxy the
@@ -37,9 +36,6 @@ export async function POST(
   if (!shop || shop.slug !== shopSlug) return new Response(null, { status: 404 });
   const parsed = body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return new Response(null, { status: 400 });
-  if (!(await hasRequiredStepUp(db, session, "money"))) {
-    return new Response(null, { status: 403 });
-  }
   const left = await commitCounterPaymentHold(db, {
     shopId: shop.id,
     heldId: parsed.data.heldId,

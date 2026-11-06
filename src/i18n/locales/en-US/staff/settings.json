@@ -1252,7 +1252,7 @@
     "revokingAll": "Signing out…",
     "lastSeen": "last seen {date}",
     "stepUpHeading": "Confirm this sensitive action",
-    "stepUpDescription": "Enter a current authenticator code or a recovery code. This approval lasts 15 minutes in this browser.",
+    "stepUpDescription": "Enter a current authenticator code or a recovery code. This approval lasts 12 hours in this browser.",
     "stepUpCodeLabel": "Authenticator or recovery code",
     "stepUpCodeHint": "Recovery codes can be used once.",
     "stepUpVerify": "Verify and continue",

@@ -21,10 +21,11 @@ must not become readable from database rows or logs.
 - Keep active sessions in the database, show the session's user agent, IP address, and last-seen
   timestamp to the account owner, and revoke either one session or all sessions by deleting rows.
   Every staff surface continues to re-read live roles and session validity.
-- When TOTP is enabled, require a successful second factor before money actions, shop exports, or
-  backup-destination changes. Grant the result to the current database session and purpose for
-  fifteen minutes; a different or revoked session cannot reuse it. The challenge only accepts a
-  same-shop internal return path.
+- When TOTP is enabled, require a successful second factor before money going out (refunds, voids),
+  shop exports, or backup-destination changes; money coming in asks none. Grant the result to the
+  current database session and purpose for twelve hours (amended 2026-11-06, #4063); a different
+  or revoked session cannot reuse it. The challenge only accepts a same-shop internal return path,
+  and a refund comes back with the amount typed.
 - Keep the sign-in, step-up, session-revocation, and recovery-code failures generic to avoid
   account or factor enumeration.
 

@@ -19,7 +19,6 @@ import {
   undoHeldSend,
 } from "@/db/held-sends";
 import { getShopById } from "@/db/shops";
-import { hasRequiredStepUp } from "@/db/step-up";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
 import { addPanelHref } from "@/lib/add-panel";
@@ -232,11 +231,6 @@ async function assertMayActOnHeld(
 ): Promise<void> {
   const row = await pendingHeldSend(db, session.user.shopId, id);
   if (!row) return;
-  // Money, as the tap was (review of #3061): taking a counter payment back,
-  // or recording it sooner, asks the same step-up the tap asked.
-  if (row.kind === "counter_payment" && !(await hasRequiredStepUp(db, session, "money"))) {
-    throw new Error("not_authorized");
-  }
   const gate =
     row.kind === "trip_rescheduled"
       ? canPersonConfigureTrips

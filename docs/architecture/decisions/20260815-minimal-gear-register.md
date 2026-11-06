@@ -364,7 +364,7 @@ amendment records what was built on it and the calls the build made.
   kind the shop offers and the shop prices a set, one set line replaces those units' lines,
   prefilled at the set price times the days; the action re-checks the set against what it
   wrote before billing it. Sending it is owner/manager work behind the
-  money step-up and a connected Stripe account, like the new-order form; renting itself stays
+  a connected Stripe account, like the new-order form; renting itself stays
   any-staff (H-20260724-initial-gear-policy-sizing). The rental is written first and the invoice only after it stands, so the
   one partial outcome is Stripe failing, which leaves the rental and says so.
 - **Two columns were added.** `gear_reservations.order_id`, nullable, a link and never money:
