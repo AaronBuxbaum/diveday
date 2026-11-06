@@ -869,7 +869,8 @@ for (const scheme of ["light", "dark"] as const) {
         const form = page.getByTestId("lost-item-form");
         await form.getByLabel("What was found").fill("Blue mask in a black case");
         await form.getByRole("button", { name: "Record" }).click();
-        await page.getByTestId("lost-item").first().waitFor();
+        // The Boat tab's print-only sheet lists it too; wait for the screen's row.
+        await page.getByTestId("lost-item").filter({ visible: true }).first().waitFor();
         await page.goto("/shop/blue-mantis/lost-found");
         await page.getByTestId("lost-item").first().waitFor();
         await capture(page, "lost-found", scheme);

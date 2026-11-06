@@ -95,7 +95,11 @@ test("the crew records something left aboard and the shop hands it back", async 
   expect(owner).not.toBe("");
   await seat.selectOption({ label: owner });
   await form.getByRole("button", { name: "Record" }).click();
-  const item = page.getByTestId("lost-item").filter({ hasText: "Blue mask, seat 4" });
+  // The Boat tab's print-only sheet lists the same item; the screen's row is the visible one.
+  const item = page
+    .getByTestId("lost-item")
+    .filter({ visible: true })
+    .filter({ hasText: "Blue mask, seat 4" });
   await expect(item).toContainText(owner);
   await expect(item.getByRole("button", { name: `Tell ${owner}` })).toBeVisible();
 
