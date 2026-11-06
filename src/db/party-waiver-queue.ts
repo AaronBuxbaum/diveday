@@ -195,10 +195,8 @@ export async function issuePartyWaiver(
         )
         .orderBy(asc(bookings.id))
         .for("update");
-      if (locked.length !== ids.length) return null;
       const seat = locked.find((row) => row.id === input.bookingId);
-      if (!seat) return null;
-      if (hasReturned(trip.endsAt, input.now ?? nowDate())) return null;
+      if (!seat || !locked.some((row) => row.id === input.leadBookingId)) return null;
       const queue = await getPartyWaiverQueue(tx, input);
       const member = queue?.members.find((entry) => entry.bookingId === input.bookingId);
       if (member?.state !== "needed") return null;
