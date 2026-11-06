@@ -24,11 +24,9 @@ the first Saturday's "back aboard" closed the second's count (#2557). It amends
 - **Missing stays missing across days.** One fold (`src/lib/roll-call-days.ts`) serves the
   detector, the manifest and `listUnaccountedForByTrip`, which compares dive numbers within a day.
   An earlier day's stated missing person stays on the manifest past the boundary until counted
-  again; a later `cleared` takes that "not back" back. *Amended 2026-11-06 (issue #3981):* only a
-  `cleared` that is its own day's first mark at that checkpoint reaches back, and only to the
-  newest earlier day's "not back"; one that follows its own day's mark takes back that mark alone,
-  and the offline copy files each saved result under the day it was recorded. Dock counts read the current day only
-  (`currentMeetingDayMarks`).
+  again. A later `cleared` that is its own day's first mark there takes back the newest earlier
+  day's "not back"; after its own day's mark it takes back only that (#3981). Dock counts read the
+  current day only (`currentMeetingDayMarks`).
 - **The stale-count alert is per meeting day**: due when a day ends, the newest due day speaks, and
   a claim taken before a day ended does not hold it.
 - **A counted meeting day stays put**: a save that moves or removes it, or re-files a result, is
