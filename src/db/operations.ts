@@ -265,6 +265,11 @@ export async function recordDiverActivity(
      * form before accepting it.
      */
     waiverRecordId?: string;
+    /**
+     * The counter code a desk's guardian check was given for (issue #4003),
+     * so signing asks about that code and no other.
+     */
+    linkId?: string;
   },
 ): Promise<boolean> {
   const [diver] = await db
@@ -291,6 +296,7 @@ export async function recordDiverActivity(
       diver: diver.name,
       ...(input.departureId ? { departure: input.departureId } : {}),
       ...(input.waiverRecordId ? { record: input.waiverRecordId } : {}),
+      ...(input.linkId ? { link: input.linkId } : {}),
     },
     occurredAt: nowDate(),
   });

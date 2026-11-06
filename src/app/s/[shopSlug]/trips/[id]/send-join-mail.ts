@@ -5,12 +5,7 @@ import { withErasureCoordinatedBookingSend } from "@/db/erasure-coordinated-send
 import { sendAndRecordNotification } from "@/db/notifications";
 import type { shopBySlugCached } from "@/db/shops-cached";
 import { getTripWithBooked } from "@/db/trips";
-import {
-  issuePartyMemberWaiverOnJoin,
-  issueWaiverOnJoin,
-  openJoinSignStep,
-  settleJoinWaiverDelivery,
-} from "@/db/waiver-issue";
+import { issueWaiverOnJoin, openJoinSignStep, settleJoinWaiverDelivery } from "@/db/waiver-issue";
 import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath, readinessWaiverLinkPath } from "@/lib/booking-capabilities";
 import { readLearningMaterials } from "@/lib/courses";
@@ -35,7 +30,7 @@ function emailUrl(path: string): string | undefined {
  * lead's own release rides in the confirmation as the thread's Sign step, on
  * the readiness link it carries (issue #2743); every other seat's goes to
  * the address the lead typed for that member as a waiver-only door, never a
- * thread link (issue #3986).
+ * thread link (issues #3986, #4003).
  */
 export async function sendJoinMail(
   db: AppDb,
@@ -147,16 +142,15 @@ export async function sendJoinMail(
             });
           return;
         }
-        const identity = { expectedPersonId: personId, expectedTripId: trip?.id };
         // The lead's own seat, when its confirmation could not carry the Sign
         // step, gets its thread link at the lead's own address. Every other
-        // seat's address is one the lead typed: it gets a waiver-only door,
-        // never a link that pays, cancels or moves the seat (issue #3986).
-        if (bookingId === primaryBookingId) {
-          await issueWaiverOnJoin(db, shop.id, bookingId, identity);
-        } else {
-          await issuePartyMemberWaiverOnJoin(db, shop.id, bookingId, identity);
-        }
+        // seat's address is one the lead typed: the send itself gives it a
+        // waiver-only door, never a link that pays, cancels or moves the seat
+        // (issues #3986, #4003).
+        await issueWaiverOnJoin(db, shop.id, bookingId, {
+          expectedPersonId: personId,
+          expectedTripId: trip?.id,
+        });
       } catch (error) {
         log("booking.waiver_on_join_failed", "error", {
           bookingId,

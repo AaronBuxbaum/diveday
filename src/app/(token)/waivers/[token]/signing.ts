@@ -552,6 +552,9 @@ export async function completeWaiverThrough(
     if (outcome.reason === "guardian_required") {
       redirect(refusedSubmitPath(door.path, "guardianName"));
     }
+    // A minor's release on a door the desk never vouched a guardian for
+    // (issue #4003): the staff show a fresh code with the guardian there.
+    if (outcome.reason === "guardian_at_counter") redirect(`${door.path}?error=guardian`);
     // Past the schema above, the one way a guardian section is not a
     // signature is a guardian who typed the diver's own name.
     if (outcome.reason === "guardian_invalid") {

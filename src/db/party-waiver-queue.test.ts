@@ -18,7 +18,7 @@ import {
 } from "./schema";
 import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
-import { completeWaiver, getWaiverForToken } from "./waivers-completion";
+import { completeWaiver, doorNeedsDeskGuardian, getWaiverForToken } from "./waivers-completion";
 import { recordMedicalEvaluation } from "./waivers-medical";
 import { clearAnswers, medicalReferralAnswers, openOnDevice } from "./waivers-test-fixtures";
 
@@ -199,6 +199,55 @@ describe("party release QR handoff", () => {
       });
       expect(issued && "token" in issued).toBe(true);
       expect(await guardianLines(f)).toEqual([]);
+    });
+
+    it("asks again at signing: a code shown for an adult signs no minor's release (#4003)", async () => {
+      const f = await family();
+      const issued = await issuePartyWaiver(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+        bookingId: f.third.bookingId,
+        actorPersonId: f.staff.id,
+      });
+      if (!issued || !("token" in issued)) throw new Error("adult code refused");
+      // Under 18, said after the code was shown and before it was signed.
+      await f.db
+        .update(bookings)
+        .set({ minorDeclaredAt: nowDate() })
+        .where(eq(bookings.id, f.third.bookingId));
+      expect(
+        await signAtCounter(f.db, issued.token, {
+          signerName: `Leo ${f.stamp}`,
+          agreed: true,
+          medicalAnswers: clearAnswers,
+          guardian: { name: "Rosa Guardian", relationship: "parent", email: "", agreed: true },
+        }),
+      ).toEqual({ ok: false, reason: "guardian_at_counter" });
+    });
+
+    it("signs a minor's release on a code the desk confirmed a guardian for", async () => {
+      const f = await family();
+      const issued = await issuePartyWaiver(f.db, {
+        shopId: f.shop.id,
+        tripId: f.trip.id,
+        leadBookingId: f.lead.bookingId,
+        bookingId: f.minor.bookingId,
+        actorPersonId: f.staff.id,
+        guardianPresent: true,
+      });
+      if (!issued || !("token" in issued)) throw new Error("confirmed minor refused");
+      const door = await openOnDevice(f.db, issued.token);
+      if (door?.door !== "counter") throw new Error("code does not open");
+      expect(await doorNeedsDeskGuardian(f.db, door.key)).toBe(false);
+      expect(
+        await signAtCounter(f.db, issued.token, {
+          signerName: `Mia ${f.stamp}`,
+          agreed: true,
+          medicalAnswers: clearAnswers,
+          guardian: { name: "Rosa Guardian", relationship: "parent", email: "", agreed: true },
+        }),
+      ).toMatchObject({ ok: true });
     });
   });
 

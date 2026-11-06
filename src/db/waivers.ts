@@ -40,6 +40,7 @@ export {
   type CounterWaiverKey,
   claimCounterLink,
   completeWaiver,
+  doorNeedsDeskGuardian,
   type EmergencyContactInput,
   type GuardianInput,
   getEmergencyContactForBearer,

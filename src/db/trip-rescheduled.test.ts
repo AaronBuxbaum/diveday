@@ -197,7 +197,11 @@ describe("sendRescheduleNotices", () => {
       expect(sent.previousStartsAt).toEqual(previousStartsAt);
       expect(sent.startsAt).toEqual(moved.startsAt);
       expect(sent.revision).toBe(moved.revision);
-      expect(sent.readinessUrl).toMatch(/^https:\/\/diveday\.example\/ready\//);
+      // The lead's own address carries their trip link; Sam's is one the lead
+      // typed, and gets the news with no link that pays, cancels or moves
+      // the seat (issue #4003).
+      if (sent.bookingId === sam) expect(sent.readinessUrl).toBeUndefined();
+      else expect(sent.readinessUrl).toMatch(/^https:\/\/diveday\.example\/ready\//);
       // The meeting point did not move, so the message does not restate it.
       expect(sent.meetingPoint).toBeUndefined();
     }

@@ -124,6 +124,20 @@ export function CounterClaimCard({
   );
 }
 
+/**
+ * A minor's release on a door the desk never vouched a guardian for (issue
+ * #4003): said instead of a form that Sign would refuse.
+ */
+export function GuardianAtCounterCard({ t }: { t: DiverTranslator }) {
+  return (
+    <ExpiredLinkCard
+      wordmark
+      title={t("waiver.guardianAtCounterTitle")}
+      text={t("waiver.guardianAtCounter")}
+    />
+  );
+}
+
 /** A counter QR, or an emailed door, already open on another device: it opens nothing here. */
 export function CounterElsewhereCard({
   t,

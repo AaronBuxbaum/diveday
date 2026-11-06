@@ -169,16 +169,21 @@
   and no other, shows only the medical answers saved through that same code, refuses a second
   signature, and its mint is a line on the diver's trail naming the staffer. It carries no
   readiness authority and opens no doctor's page; it dies when the seat changes hands or the
-  release is superseded (ADR
+  release is superseded. A minor's seat signs on it only when the desk confirmed a guardian is
+  there for that very code, asked again at signing (issue #4003) (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md)).
   A minor's code is shown only after the staffer confirms a parent or guardian is present to
   co-sign, and that confirmation is on the minor's trail too.
-- **Party waiver door** — what a party member's join email carries in place of a thread link,
-  because the lead typed the address: a `party_waiver_link` row in `capabilities` naming the
-  member's release, alive two weeks. It opens on `/waivers/<token>` by the **counter link**'s rules
-  and grants nothing else. A release has one live door of any kind, so a counter code replaces
-  it. A minor member gets no door: the lead signs that seat on their own link, or the desk does
-  with a guardian present (issue #3986).
+- **Party waiver door** — what every send to a party member's address carries in place of a
+  thread link, because the lead typed that address (`bookings.contact_typed_by_lead_at`, until the
+  member claims the seat; issues #3986, #4003): a `party_waiver_link` row in `capabilities`
+  naming the member's release, alive two weeks. The join email, staff Send waivers, a re-sent
+  confirmation and find-my-booking carry it; reminders and reschedule notices go with no link. It
+  opens on `/waivers/<token>` by the **counter link**'s rules, plus the release's doctor's page on
+  the phone that holds it, and grants nothing else. A dead one offers to mail a fresh door to the
+  address on file. A release has one live door of any kind, so a counter code replaces it. A minor
+  member gets no door, and a door never signs a minor's release: the lead signs that seat on their
+  own link, or the desk does with a guardian present.
 - **Recap link epoch** — the number a recap link signs beside its booking (`bookings.recap_link_epoch`,
   issue #3982). The link opens only while the booking still holds that number; correcting the
   diver's email or phone moves it on for all their bookings, so a recap link mailed to the old
