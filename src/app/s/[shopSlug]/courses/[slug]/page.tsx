@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { submitInquiryAction } from "@/app/actions/inquiry";
-import { PublicDocumentMain } from "@/app/s/[shopSlug]/_components/PublicDocumentMain";
 import { SHOP_MAIN_CLASS } from "@/app/s/[shopSlug]/_components/shop-main";
 import { DateRequestForm } from "@/components/DateRequestForm";
 import { JsonLd } from "@/components/JsonLd";
@@ -23,6 +22,7 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { auth } from "@/lib/auth";
+import { nowDate } from "@/lib/clock";
 import { withLocalizedOpenWaterTemplateCopy } from "@/lib/course-template-localization";
 import { courseTotalCents, resolveCourseContentDepths, resolveCourseDepths } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
@@ -31,6 +31,7 @@ import { publicCoursePath } from "@/lib/public-routes";
 import { isLiveShopStaff } from "@/lib/session";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { coursePageJsonLd } from "@/lib/structured-data";
+import { CoursePaperSheet } from "./_components/CoursePaperSheet";
 import {
   CourseAdmission,
   CourseFaqs,
@@ -205,13 +206,33 @@ export default async function CoursePage({
       )
     : null;
 
+  const totalCents = courseTotalCents(course);
+  const currency = toShopCurrency(shop.currency);
+  const admission = (
+    <CourseAdmission
+      certificationRequired={certificationRequired}
+      minimumAge={course.minimumAge}
+      shopNote={course.prerequisiteNote}
+      t={t}
+    />
+  );
+
   return (
-    <PublicDocumentMain
-      kind="course"
-      shopName={shop.name}
-      title={course.title}
-      className={`${SHOP_MAIN_CLASS} print:[&_.text-primary]:text-foreground print:[&_h1]:text-foreground`}
-    >
+    <main className={SHOP_MAIN_CLASS}>
+      {/* On paper the page is this sheet alone (#2745). */}
+      <CoursePaperSheet
+        shop={shop}
+        shopSlug={shopSlug}
+        course={course}
+        totalCents={totalCents}
+        currency={currency}
+        facts={facts}
+        admission={admission}
+        sessions={sessions}
+        locale={locale}
+        t={t}
+        now={nowDate()}
+      />
       {structuredData ? <JsonLd data={structuredData} /> : null}
       {course.isActive ? null : (
         <p
@@ -229,8 +250,8 @@ export default async function CoursePage({
       )}
       <CourseHero
         course={course}
-        totalCents={courseTotalCents(course)}
-        currency={toShopCurrency(shop.currency)}
+        totalCents={totalCents}
+        currency={currency}
         locale={locale}
         t={t}
         facts={facts}
@@ -243,14 +264,7 @@ export default async function CoursePage({
           t,
           shop.waitlistEnabled,
         )}
-        admission={
-          <CourseAdmission
-            certificationRequired={certificationRequired}
-            minimumAge={course.minimumAge}
-            shopNote={course.prerequisiteNote}
-            t={t}
-          />
-        }
+        admission={admission}
       />
       {jumpItems.length > 1 ? (
         <JumpNav ariaLabel={t("course.onThisPage")} items={jumpItems} className="mt-10" />
@@ -273,7 +287,7 @@ export default async function CoursePage({
         inquiryHref={inquiryHref}
         t={t}
       />
-      <div className="mt-4 print:hidden">
+      <div className="mt-4">
         {/* The composer's client-side refusals need the diver's translator. */}
         <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
           <DateRequestForm
@@ -288,6 +302,6 @@ export default async function CoursePage({
       <CourseFaqs faqs={course.faqs} t={t} />
 
       {footBar ? <PhoneFootBar href={footBar.href}>{footBar.label}</PhoneFootBar> : null}
-    </PublicDocumentMain>
+    </main>
   );
 }

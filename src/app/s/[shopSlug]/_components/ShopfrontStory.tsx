@@ -64,7 +64,7 @@ export function ShopfrontStory({
   }
 
   return (
-    <section className={`${className} print:hidden`} aria-label={shop.name}>
+    <section className={className} aria-label={shop.name}>
       <ShopfrontHero
         headingLevel="h2"
         name={shop.name}
@@ -82,7 +82,7 @@ export function ShopfrontStory({
         t={t}
       />
       {shop.shopfrontPhotoUrls.length > 0 ? (
-        <div className="mt-8 print:hidden">
+        <div className="mt-8">
           <ShopPhotoStrip urls={shop.shopfrontPhotoUrls} label={t("schedule.shopPhotos")} />
         </div>
       ) : null}

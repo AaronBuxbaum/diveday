@@ -2,6 +2,7 @@ import type { listedDepartureSummaries } from "@/app/s/[shopSlug]/_components/sc
 import type { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
+import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { addMonths, type MonthRef, monthKey } from "@/lib/calendar";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
@@ -381,4 +382,20 @@ export function nextBoatCardShows(
   if (!nextBoat) return false;
   const first = visibleUpcoming[0];
   return first !== undefined && first.id !== nextBoat.id;
+}
+
+/**
+ * "All times below are local to …", zoned on the board's first departure, for
+ * the screen's header and its sheet alike; null with nothing on the board.
+ */
+export function scheduleZoneLine(
+  t: DiverTranslator,
+  shopName: string,
+  anchor: Date | null | undefined,
+  locale: string,
+  tz: string,
+): string | null {
+  return anchor
+    ? t("schedule.timesInZone", { shop: shopName, zone: timeZoneLabel(anchor, locale, tz) })
+    : null;
 }

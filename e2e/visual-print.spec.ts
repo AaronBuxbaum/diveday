@@ -285,30 +285,55 @@ test.describe("print", () => {
     });
   }
 
-  test("a public course prints complete FAQ answers", async ({ page }) => {
+  // The course prints one sheet with every answer open, never its screen (#2745).
+  test("a public course prints as its sheet, with every answer", async ({ page }) => {
     await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
     await page.getByRole("heading", { level: 1, name: "Discover Scuba Diving" }).waitFor();
-    await expect(page.locator("#faqs details").first()).not.toHaveAttribute("open");
+    const closed = page.locator("#faqs details").first();
+    await expect(closed).not.toHaveAttribute("open");
+    const answer = (await closed.locator("p").textContent())?.trim() ?? "";
+    expect(answer).not.toBe("");
     const dateRequest = page.getByText(diverTranslator("en-US")("course.askAnotherDate"), {
       exact: true,
     });
     await expect(dateRequest).toBeVisible();
+    const sheet = page.locator(".paper-sheet");
+    await expect(sheet).not.toBeVisible();
     await page.emulateMedia({ media: "print" });
+    await expect(sheet).toBeVisible();
     await expect(dateRequest).not.toBeVisible();
-    await expect(page.locator("[data-public-print-identity]")).toHaveText("Blue Mantis Divers");
     await expect(page.locator("main img").filter({ visible: true })).toHaveCount(0);
-    await expect(page.locator("#get-in-touch")).toBeHidden();
-    await expect(page.locator("footer")).toContainText("100 Ocean Drive");
-    const answers = page.locator("[data-print-faq] p");
-    await expect(answers).not.toHaveCount(0);
-    for (const answer of await answers.all()) {
-      await expect(answer).toBeVisible();
-      await expect(answer).toHaveText(/\S/);
-    }
-    await expect(page.locator("#faqs details").first()).not.toBeVisible();
+    await expect(sheet.getByRole("heading", { level: 1 })).toHaveText("Discover Scuba Diving");
+    await expect(sheet).toContainText(answer);
+    await expect(sheet).toContainText("100 Ocean Drive");
+    await expect(sheet.locator("a, button, input, select, textarea, details")).toHaveCount(0);
     await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "public-course-faqs");
+    await capturePrint(page, "public-course-sheet");
   });
+
+  // The schedule and its frame print the listed departures as one sheet (#2745).
+  for (const [name, path] of [
+    ["public-schedule-sheet", "/s/blue-mantis"],
+    ["public-calendar-embed-sheet", "/s/blue-mantis/embed/calendar"],
+  ] as const) {
+    test(`${name} prints the listed departures with their zone`, async ({ page }) => {
+      await page.goto(path);
+      const firstRow = page.locator("#schedule ul h3").first();
+      const title = (await firstRow.textContent())?.trim() ?? "";
+      expect(title).not.toBe("");
+      const sheet = page.locator(".paper-sheet");
+      await expect(sheet).not.toBeVisible();
+      await page.emulateMedia({ media: "print" });
+      await expect(sheet).toBeVisible();
+      await expect(page.locator("#schedule")).not.toBeVisible();
+      await expect(sheet).toContainText(title);
+      await expect(sheet).toContainText(/\d{4}/);
+      await expect(sheet).toContainText(/E[DS]T/);
+      await expect(sheet.locator("a, button, input, select, textarea")).toHaveCount(0);
+      await page.emulateMedia({ media: "screen" });
+      await capturePrint(page, name);
+    });
+  }
 
   // Reach the seeded reef trip the way staff do, then print its dock surfaces.
   // Navigating by link keeps these off any hard-coded trip id.

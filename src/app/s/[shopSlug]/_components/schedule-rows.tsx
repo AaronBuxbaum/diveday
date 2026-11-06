@@ -11,13 +11,7 @@ import {
   resolveImageAlt,
 } from "@/lib/courses";
 import { embedTripPath } from "@/lib/embed-routes";
-import {
-  formatDayParts,
-  formatMoneyScanned,
-  formatShortDate,
-  formatTimeRange,
-  formatTimeRangeTz,
-} from "@/lib/format";
+import { formatDayParts, formatMoneyScanned, formatShortDate, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicTripPath } from "@/lib/public-routes";
@@ -110,8 +104,8 @@ export function weekLedgerRows({
         capacity: seats.text,
       }),
       timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, timezone),
-      printDate: formatShortDate(trip.startsAt, locale, timezone),
-      printTimeRange: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timezone),
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
       title: trip.title,
       lens: trip.lensId ? (lensById.get(trip.lensId) ?? null) : null,
       course: trip.course

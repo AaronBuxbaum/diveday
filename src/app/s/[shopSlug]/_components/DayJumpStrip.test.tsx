@@ -14,6 +14,8 @@ function row(id: string, dayKey: string, day: string, weekday: string): WeekLedg
     href: `/s/reef/trips/${id}`,
     linkLabel: `Trip ${id}`,
     timeRange: "8:00 AM – 12:00 PM",
+    startsAt: new Date("2026-10-03T12:00:00Z"),
+    endsAt: new Date("2026-10-03T16:00:00Z"),
     title: `Trip ${id}`,
     lens: null,
     course: null,

@@ -22,6 +22,8 @@ function row(overrides: Partial<WeekLedgerRow> = {}): WeekLedgerRow {
     href: "/s/blue-mantis/trips/trip-1",
     linkLabel: "Aug 27 · 7:00 AM – 10:30 AM · Two-Tank Reef · 3 seats left",
     timeRange: "7:00 AM – 10:30 AM",
+    startsAt: new Date("2026-08-27T11:00:00Z"),
+    endsAt: new Date("2026-08-27T14:30:00Z"),
     title: "Two-Tank Reef — Molasses & French",
     lens: null,
     course: null,
