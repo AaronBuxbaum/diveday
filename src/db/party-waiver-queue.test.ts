@@ -106,7 +106,7 @@ describe("party release QR handoff", () => {
       bookingId: f.third.bookingId,
       actorPersonId: f.staff.id,
     });
-    if (!issued) throw new Error("link missing");
+    if (!issued || !("token" in issued)) throw new Error("link missing");
     const lines = await f.db
       .select({ actor: activityEvents.actorPersonId, subject: activityEvents.subjectPersonId })
       .from(activityEvents)
@@ -129,7 +129,7 @@ describe("party release QR handoff", () => {
       actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
-    if (!issued) throw new Error("eligible minor refused");
+    if (!issued || !("token" in issued)) throw new Error("eligible minor refused");
     const state = await opened(f.db, issued.token);
     expect(state).toMatchObject({ state: "available", record: { bookingId: f.minor.bookingId } });
     expect(
@@ -156,7 +156,7 @@ describe("party release QR handoff", () => {
       actorPersonId: f.staff.id,
     };
     const existing = await issuePartyWaiver(f.db, input);
-    if (!existing) throw new Error("link missing");
+    if (!existing || !("token" in existing)) throw new Error("link missing");
     await f.db
       .update(bookings)
       .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Mia" })
@@ -177,6 +177,31 @@ describe("party release QR handoff", () => {
     // A cancelled seat has no release to sign, on the counter as in the thread.
     expect((await opened(f.db, existing.token)).state).toBe("unavailable");
   });
+  it("keeps a code open on a diver's phone unless the desk asks for a new one (dock S2)", async () => {
+    const f = await family();
+    const input = {
+      shopId: f.shop.id,
+      tripId: f.trip.id,
+      leadBookingId: f.lead.bookingId,
+      bookingId: f.third.bookingId,
+      actorPersonId: f.staff.id,
+    };
+    const shown = await issuePartyWaiver(f.db, input);
+    if (!shown || !("token" in shown)) throw new Error("link missing");
+    // Nobody scanned it yet: showing it again just shows a fresh one.
+    const reshown = await issuePartyWaiver(f.db, input);
+    if (!reshown || !("token" in reshown)) throw new Error("re-shown link missing");
+    expect((await opened(f.db, shown.token)).state).toBe("unavailable");
+    // The diver's phone opens it: a second tap keeps it and says so.
+    expect((await opened(f.db, reshown.token)).state).toBe("available");
+    expect(await issuePartyWaiver(f.db, input)).toEqual({ openOnPhone: true });
+    expect((await opened(f.db, reshown.token)).state).toBe("available");
+    // The desk confirms: the open code is replaced.
+    const replaced = await issuePartyWaiver(f.db, { ...input, replace: true });
+    if (!replaced || !("token" in replaced)) throw new Error("replacement missing");
+    expect((await opened(f.db, reshown.token)).state).toBe("unavailable");
+  });
+
   it("never revives an expired, replaced or superseded QR and issues a fresh one", async () => {
     const f = await family();
     const input = {
@@ -187,12 +212,13 @@ describe("party release QR handoff", () => {
       actorPersonId: f.staff.id,
     };
     const first = await issuePartyWaiver(f.db, input);
-    if (!first) throw new Error("first link missing");
+    if (!first || !("token" in first)) throw new Error("first link missing");
     expect(first.expiresAt.getTime() - nowDate().getTime()).toBeLessThanOrEqual(30 * 60_000);
     expect((await opened(f.db, first.token)).state).toBe("available");
     expect((await opened(f.db, first.token, first.expiresAt)).state).toBe("unavailable");
-    const next = await issuePartyWaiver(f.db, input);
-    if (!next) throw new Error("replacement link missing");
+    // The first is open on a phone, so the desk confirms the new one.
+    const next = await issuePartyWaiver(f.db, { ...input, replace: true });
+    if (!next || !("token" in next)) throw new Error("replacement link missing");
     expect(next.token).not.toBe(first.token);
     // A fresh QR revokes the one before it.
     expect(await opened(f.db, first.token)).toEqual({ state: "unavailable" });
@@ -213,7 +239,7 @@ describe("party release QR handoff", () => {
       actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
-    if (!issued) throw new Error("link missing");
+    if (!issued || !("token" in issued)) throw new Error("link missing");
     const result = await signAtCounter(f.db, issued.token, {
       signerName: `Leo ${f.stamp}`,
       agreed: true,
@@ -240,7 +266,7 @@ describe("party release QR handoff", () => {
       actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
-    if (!issued) throw new Error("link missing");
+    if (!issued || !("token" in issued)) throw new Error("link missing");
     expect((await opened(f.db, issued.token)).state).toBe("available");
     expect(
       (
@@ -276,7 +302,7 @@ describe("party release QR handoff", () => {
       actorPersonId: f.staff.id,
     };
     const issued = await issuePartyWaiver(f.db, input);
-    if (!issued) throw new Error("link missing");
+    if (!issued || !("token" in issued)) throw new Error("link missing");
     const signed = await signAtCounter(f.db, issued.token, {
       signerName: `Ana ${f.stamp}`,
       agreed: true,

@@ -48,4 +48,28 @@ describe("course forms QR", () => {
     expect(screen.getByRole("img")).toHaveAttribute("src", "data:image/png;base64,Qg==");
     expect(screen.queryByText(/\/ready\//)).toBeNull();
   });
+
+  it("asks before replacing a code open on the person's phone (dock S2)", async () => {
+    const action = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, openOnPhone: true })
+      .mockResolvedValueOnce({ ok: true, qr: "data:image/png;base64,Qg==" });
+    render(
+      <CourseFormsQrProvider
+        action={action}
+        copy={{ ...copy, openOnPhone: "Open on their phone", replace: "Show a new code" }}
+      >
+        <CourseFormsQrButton bookingId="a" name="Ada" />
+      </CourseFormsQrProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Show QR code for Ada" }));
+    await act(async () => {});
+    expect(screen.getByRole("dialog")).toHaveTextContent("Open on their phone");
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(action).toHaveBeenLastCalledWith("a", false);
+    fireEvent.click(screen.getByRole("button", { name: "Show a new code" }));
+    await act(async () => {});
+    expect(action).toHaveBeenLastCalledWith("a", true);
+    expect(screen.getByRole("img")).toHaveAttribute("src", "data:image/png;base64,Qg==");
+  });
 });

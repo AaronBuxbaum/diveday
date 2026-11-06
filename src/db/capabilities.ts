@@ -527,6 +527,32 @@ export async function claimCapability(
 }
 
 /**
+ * Whether a subject's live link of a claimable purpose is open on a device:
+ * claimed, not spent, not revoked, not expired. A new mint would revoke it
+ * under whoever is typing into it, so the minting surface asks first.
+ */
+export async function hasLiveClaimedCapability(
+  db: DbExecutor,
+  input: { purpose: CapabilityPurpose; shopId: string; subjectId: string; now?: Date },
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: capabilities.id })
+    .from(capabilities)
+    .where(
+      and(
+        eq(capabilities.purpose, input.purpose),
+        eq(capabilities.shopId, input.shopId),
+        eq(subjectColumn(input.purpose), input.subjectId),
+        isNotNull(capabilities.claimHash),
+        isNull(capabilities.usedAt),
+        unrevokedAndUnexpired(input.now ?? nowDate()),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+/**
  * Who a claimable link opens for: nobody has claimed it yet (`unclaimed`),
  * the device holding `device` did (`this_device`), or another one did
  * (`elsewhere`). Null for a token that names no link of this purpose.

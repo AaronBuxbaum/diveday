@@ -49,6 +49,8 @@ export default async function PartyWaiversPage({
     close: t("trips.partyWaiverQueue.close"),
     loading: t("trips.partyWaiverQueue.loading"),
     failed: t("trips.partyWaiverQueue.failed"),
+    openOnPhone: t("trips.partyWaiverQueue.openOnPhone"),
+    replace: t("trips.partyWaiverQueue.replace"),
   };
   return (
     <StaffPage width="reading">

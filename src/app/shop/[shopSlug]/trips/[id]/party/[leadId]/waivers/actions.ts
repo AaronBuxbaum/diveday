@@ -16,7 +16,9 @@ export async function issuePartyWaiverQrAction(
   tripId: string,
   leadBookingId: string,
   bookingId: string,
-): Promise<{ ok: true; qr: string } | { ok: false }> {
+  /** The desk confirmed a new code over one open on the diver's phone. */
+  replace?: unknown,
+): Promise<{ ok: true; qr: string } | { ok: false; openOnPhone?: true }> {
   const { db, shop, session } = await requireShopSurface(shopSlug);
   const origin = publicAppUrl();
   if (!origin || !uuidParam(tripId) || !uuidParam(leadBookingId) || !uuidParam(bookingId))
@@ -28,8 +30,10 @@ export async function issuePartyWaiverQrAction(
     bookingId,
     // On the diver's trail: who showed the code (security review S2).
     actorPersonId: session.user.personId,
+    replace: replace === true,
   });
   if (!issued) return { ok: false };
+  if ("openOnPhone" in issued) return { ok: false, openOnPhone: true };
   const url = new URL(`/waivers/${issued.token}`, `${origin}/`).toString();
   return { ok: true, qr: await QRCode.toDataURL(url, { margin: 4, width: 256 }) };
 }

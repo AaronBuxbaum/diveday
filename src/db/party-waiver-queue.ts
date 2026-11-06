@@ -3,7 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { guardianSignatureMissing, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { hasReturned } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
-import { mintCapability } from "./capabilities";
+import { hasLiveClaimedCapability, mintCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
 import { listTripReadiness } from "./readiness";
@@ -157,9 +157,11 @@ export async function issuePartyWaiver(
     bookingId: string;
     /** The staffer showing the QR. */
     actorPersonId: string;
+    /** The desk confirmed: replace a code already open on the diver's phone. */
+    replace?: boolean;
     now?: Date;
   },
-): Promise<{ token: string; expiresAt: Date } | null> {
+): Promise<{ token: string; expiresAt: Date } | { openOnPhone: true } | null> {
   try {
     return await db.transaction(async (tx) => {
       await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
@@ -205,6 +207,19 @@ export async function issuePartyWaiver(
         now: input.now,
       });
       if (!opened.ok) return null;
+      // A code the diver's phone already opened is kept unless the desk
+      // confirms a new one: a mint would revoke it under their typing (dock
+      // review S2).
+      if (
+        !input.replace &&
+        (await hasLiveClaimedCapability(tx, {
+          purpose: "waiver_link",
+          shopId: input.shopId,
+          subjectId: opened.recordId,
+          now: input.now,
+        }))
+      )
+        return { openOnPhone: true as const };
       const link = await mintCapability(tx, {
         purpose: "waiver_link",
         shopId: input.shopId,

@@ -29,6 +29,7 @@ describe("party waiver QR action", () => {
       leadBookingId: leadId,
       bookingId,
       actorPersonId: "staffer",
+      replace: false,
     });
     expect(result).toMatchObject({
       ok: true,
@@ -38,6 +39,22 @@ describe("party waiver QR action", () => {
     expect(await issuePartyWaiverQrAction("shop", tripId, leadId, "invalid")).toEqual({
       ok: false,
     });
+    // A code open on the diver's phone is kept, and replaced only on a confirmed `true`.
+    vi.mocked(issuePartyWaiver).mockResolvedValue({ openOnPhone: true } as never);
+    expect(await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId)).toEqual({
+      ok: false,
+      openOnPhone: true,
+    });
+    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, "true");
+    expect(issuePartyWaiver).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ replace: false }),
+    );
+    await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId, true);
+    expect(issuePartyWaiver).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ replace: true }),
+    );
     vi.mocked(issuePartyWaiver).mockResolvedValue(null);
     expect(await issuePartyWaiverQrAction("shop", tripId, leadId, bookingId)).toEqual({
       ok: false,

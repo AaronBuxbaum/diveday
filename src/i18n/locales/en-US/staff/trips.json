@@ -905,6 +905,8 @@
     "close": "Close",
     "loading": "Preparing the code…",
     "failed": "This waiver is no longer available here. Refresh and check the seat.",
+    "openOnPhone": "This code is open on their phone right now. A new code closes it.",
+    "replace": "Show a new code",
     "needed": "Waiver needed",
     "signed": "Waiver signed",
     "medicalReview": "Waiver signed · medical review needed",

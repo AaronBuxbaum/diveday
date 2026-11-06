@@ -7,7 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/layer";
 import { fill } from "@/i18n/fill";
 
-type QrResult = { ok: true; qr: string } | { ok: false };
+type QrResult = { ok: true; qr: string } | { ok: false; openOnPhone?: true };
 type Copy = {
   show: string;
   showFor: string;
@@ -16,6 +16,9 @@ type Copy = {
   close: string;
   loading: string;
   failed: string;
+  /** A code already open on the person's phone, and the desk's way to replace it. */
+  openOnPhone?: string;
+  replace?: string;
 };
 type Selection = { bookingId: string; name: string };
 const QrContext = createContext<null | {
@@ -31,7 +34,7 @@ export function CourseFormsQrProvider({
   copy,
 }: {
   children: ReactNode;
-  action: (bookingId: string) => Promise<QrResult>;
+  action: (bookingId: string, replace?: boolean) => Promise<QrResult>;
   copy: Copy;
 }) {
   const [selected, setSelected] = useState<Selection | null>(null);
@@ -49,11 +52,11 @@ export function CourseFormsQrProvider({
     setResult(null);
     setSelected(null);
   };
-  const show = (selection: Selection) => {
+  const show = (selection: Selection, replace = false) => {
     const current = ++generation.current;
     setSelected(selection);
     setResult(null);
-    void action(selection.bookingId)
+    void action(selection.bookingId, replace)
       .then((next) => {
         if (generation.current === current) {
           setResult(next);
@@ -69,7 +72,13 @@ export function CourseFormsQrProvider({
       {children}
       {monitoring ? <LiveRefresh holdAfterTapMs={5000} /> : null}
       {selected ? (
-        <CourseFormsQrDialog selected={selected} result={result} copy={copy} onClose={close} />
+        <CourseFormsQrDialog
+          selected={selected}
+          result={result}
+          copy={copy}
+          onClose={close}
+          onReplace={() => show(selected, true)}
+        />
       ) : null}
     </QrContext.Provider>
   );
@@ -80,11 +89,13 @@ function CourseFormsQrDialog({
   result,
   copy,
   onClose,
+  onReplace,
 }: {
   selected: Selection;
   result: QrResult | null;
   copy: Copy;
   onClose: () => void;
+  onReplace: () => void;
 }) {
   const router = useRouter();
   const close = () => {
@@ -108,6 +119,18 @@ function CourseFormsQrDialog({
           height={256}
           className="mt-4 size-64 max-w-full"
         />
+      ) : result.openOnPhone && copy.openOnPhone && copy.replace ? (
+        // Never a silent replace: the person may be halfway through (dock review S2).
+        <div className="mt-4">
+          <p role="status">{copy.openOnPhone}</p>
+          <button
+            type="button"
+            onClick={onReplace}
+            className={buttonClass({ variant: "secondary", className: "mt-3" })}
+          >
+            {copy.replace}
+          </button>
+        </div>
       ) : (
         <p role="alert" className="mt-4">
           {copy.failed}

@@ -905,6 +905,8 @@
     "close": "Cerrar",
     "loading": "Preparando el código…",
     "failed": "Esta exención ya no está disponible aquí. Actualiza y revisa la plaza.",
+    "openOnPhone": "Este código está abierto en su teléfono ahora mismo. Un código nuevo lo cierra.",
+    "replace": "Mostrar un código nuevo",
     "needed": "Falta la exención",
     "signed": "Exención firmada",
     "medicalReview": "Exención firmada · requiere revisión médica",
