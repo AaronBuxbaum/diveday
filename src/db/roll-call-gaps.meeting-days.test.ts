@@ -268,6 +268,65 @@ describe("roll call on a course that meets on two Saturdays", () => {
       { reason: "after_dive_uncounted", dayNumber: 1, diveNumber: 2, uncounted: 1 },
     ]);
   });
+
+  describe("an undo is not a count: it never says where a later day's roll call began (#4018)", () => {
+    /** Saturday counted, one diver mis-tapped not back after dive 2, undone by name at 07:30 on the second Saturday. */
+    async function undoneEarlyOnDayTwo() {
+      const c = await course();
+      const [first] = c.bookingIds as [string, string];
+      await c.countDay(SAT_ONE);
+      const missing = await c.say(first, "after_dive_2", "not_boarded", "2026-08-01T16:40:00.000Z");
+      await c.say(first, "after_dive_2", "cleared", "2026-08-15T11:30:00.000Z", missing);
+      return c;
+    }
+
+    it("still asks for the second Saturday's dock count when nobody has counted that day", async () => {
+      const c = await undoneEarlyOnDayTwo();
+      expect(await c.gaps("2026-08-15T19:00:00.000Z")).toMatchObject([
+        { reason: "no_roll_call", dayNumber: 2, uncounted: 2 },
+        // Taken back, Saturday's dive 2 reads as not yet counted, never as missing.
+        { reason: "after_dive_uncounted", dayNumber: 1, diveNumber: 2, uncounted: 1 },
+      ]);
+    });
+
+    it("still raises the second Saturday's uncounted dive 1 once they board", async () => {
+      const c = await undoneEarlyOnDayTwo();
+      for (const id of c.bookingIds)
+        await c.say(id, "departure", "boarded", "2026-08-15T12:45:00.000Z");
+      expect(await c.gaps("2026-08-15T19:00:00.000Z")).toMatchObject([
+        { reason: "after_dive_uncounted", dayNumber: 2, diveNumber: 1, uncounted: 2 },
+      ]);
+    });
+
+    it("never numbers the day on from an undo that names nothing, or from a repeated undo", async () => {
+      const c = await course();
+      const [first] = c.bookingIds as [string, string];
+      await c.countDay(SAT_ONE);
+      await c.say(first, "after_dive_2", "cleared", "2026-08-15T11:30:00.000Z");
+      await c.say(first, "after_dive_2", "cleared", "2026-08-15T11:31:00.000Z");
+      expect(await c.gaps("2026-08-15T19:00:00.000Z")).toMatchObject([
+        { reason: "no_roll_call", dayNumber: 2, uncounted: 2 },
+      ]);
+    });
+
+    it("asks for the day's dock count again once a stray later-checkpoint tap is undone", async () => {
+      const c = await course();
+      const [first] = c.bookingIds as [string, string];
+      await c.countDay(SAT_ONE);
+      const stray = await c.say(first, "after_dive_2", "boarded", "2026-08-15T11:30:00.000Z");
+      await c.say(first, "after_dive_2", "cleared", "2026-08-15T11:31:00.000Z", stray);
+      expect(await c.gaps("2026-08-15T19:00:00.000Z")).toMatchObject([
+        { reason: "no_roll_call", dayNumber: 2, uncounted: 2 },
+      ]);
+    });
+
+    it("still numbers on from a real count at a later checkpoint beside an undo", async () => {
+      const c = await undoneEarlyOnDayTwo();
+      for (const id of c.bookingIds)
+        await c.say(id, "after_dive_2", "boarded", "2026-08-15T16:00:00.000Z");
+      expect(await c.gaps("2026-08-15T19:00:00.000Z")).toEqual([]);
+    });
+  });
 });
 
 describe("a weekend course that numbers its dives across the run", () => {
