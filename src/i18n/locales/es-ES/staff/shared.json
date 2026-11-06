@@ -69,6 +69,7 @@
     "copyFailed": "Reintentar",
     "sendByText": "Enviar por mensaje",
     "reasonThreadOnly": "La exención de un buceador con reserva va a su propio correo o teléfono, así que no hay enlace para copiar.",
+    "reasonGuardianNeeded": "No se envió nada: este buceador es menor de 18 años y quien hizo la reserva escribió su contacto. Su padre, madre o tutor legal firma con él en el mostrador, o quien reservó la firma desde su propia reserva.",
     "reasonNoEmailOne": "Sin correo registrado",
     "reasonNoEmailOther": "{count} no tienen correo registrado.",
     "reasonNoPhoneOne": "Sin un número al que podamos enviar mensajes",

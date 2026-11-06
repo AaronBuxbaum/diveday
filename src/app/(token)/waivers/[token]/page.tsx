@@ -3,7 +3,13 @@ import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId } from "@/db/waiver-signing";
-import { getWaiverForToken, staleWaiverRecordForToken, waiverLinkDoor } from "@/db/waivers";
+import {
+  doctorPageOpen,
+  doorNeedsDeskGuardian,
+  getWaiverForToken,
+  staleWaiverRecordForToken,
+  waiverLinkDoor,
+} from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { connectionForRoute } from "@/lib/observability/render-connection";
@@ -16,6 +22,7 @@ import {
   CounterClaimCard,
   CounterElsewhereCard,
   ExpiredLink,
+  GuardianAtCounterCard,
   UnavailableWaiverLink,
 } from "./WaiverDoorCards";
 import { waiverSigningForm } from "./WaiverSigningForm";
@@ -116,6 +123,13 @@ export default async function WaiverPage({
     const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
     const signedRail = completedWaiverRail(needsReview, !!state.record.shopAnswers);
+    // A party member's door is the one door they hold, so their doctor's page
+    // is on it (issue #4003); a counter QR's is printed at the desk.
+    const doctorDoor =
+      needsReview &&
+      door?.door === "counter" &&
+      door.key.purpose === "party_waiver_link" &&
+      (await doctorPageOpen(db, state.record));
     return (
       <WaiverCompleted
         shop={shop}
@@ -126,16 +140,22 @@ export default async function WaiverPage({
         // just entered was not saved, and the receipt says so.
         notSaved={counter && error === "signed"}
         medicalState={completedMedicalState(state.record)}
-        // A waiver link opens no thread and no doctor's page (issue #2743): a
-        // seat's release, and its doctor's page, are on the holder's own link.
+        // A waiver link opens no thread (issue #2743): a seat's release is on
+        // the holder's own link, and so is its doctor's page, unless the
+        // holder is a party member whose only door this is.
         showPrepHelp={false}
         readyPath={null}
-        doctorPath={null}
+        doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}
       />
     );
   }
+
+  // A minor's seat on a door the desk never vouched a guardian for: Sign
+  // would refuse, so the page says why before anyone fills it in (#4003).
+  if (door?.door === "counter" && (await doorNeedsDeskGuardian(db, door.key)))
+    return <GuardianAtCounterCard t={t} />;
 
   return waiverSigningForm({
     db,

@@ -114,5 +114,8 @@
   "/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers": {
     "e2e": ["check-in.spec.ts", "party-waiver-qr.spec.ts"],
     "visual": ["party-waiver-held-medical", "party-waiver-queue"]
+  },
+  "/waivers/[token]/doctor": {
+    "exempt": "The same DoctorReferralBody the diver's own doctor's page draws, which waivers.spec.ts walks and the waiver-doctor capture photographs; only the door differs (a party member's emailed door on the phone that claimed it, issue #4003), and src/app/(token)/waivers/[token]/doctor/page.test.ts holds that door against a real record."
   }
 }

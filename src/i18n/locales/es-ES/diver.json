@@ -1167,6 +1167,8 @@
     "errorContactPair": "Un contacto necesita nombre y teléfono, así que no se cambió nada. Rellena los dos campos, o pídele al centro que elimine el contacto de tu ficha si ya no quieres tenerlo.",
     "errorJumpToField": "Ir a ese campo",
     "linkInactive": "Ese enlace ya no está activo. Pide uno nuevo al centro.",
+    "guardianAtCounterTitle": "Firma esto con tu padre, madre o tutor",
+    "guardianAtCounter": "Tienes menos de 18 años, así que tu padre, madre o tutor legal firma esta exención contigo. Fírmenlo juntos en el centro, donde el personal les mostrará un código, o pide a quien reservó tu plaza que lo firme desde su reserva.",
     "rateLimited": "Espera unos segundos e inténtalo de nuevo. No se ha perdido nada.",
     "medicalReview": "Gracias. Una de tus respuestas médicas requiere una revisión más detenida y puede que necesites el visto bueno de un médico. No des por hecho que estás autorizado hasta que tu centro te lo confirme.",
     "medicalContactBoth": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>.",

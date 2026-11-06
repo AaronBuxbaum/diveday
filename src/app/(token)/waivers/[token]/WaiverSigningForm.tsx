@@ -158,7 +158,9 @@ export async function waiverSigningForm({
         ? t("waiver.linkInactive")
         : error === "rate"
           ? t("waiver.rateLimited")
-          : undefined;
+          : error === "guardian"
+            ? t("waiver.guardianAtCounter")
+            : undefined;
 
   const signBlock = (
     <WaiverSignBlock

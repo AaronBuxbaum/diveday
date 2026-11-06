@@ -82,8 +82,15 @@ async function seat(tripId: string, fullName: string, email: string) {
 
 async function joinMail(seats: { bookingId: string; personId: string }[], tripId: string) {
   const { db, shop } = ctx;
-  const [lead] = seats;
+  const [lead, ...members] = seats;
   if (!lead) throw new Error("no lead");
+  // Each other seat is one the public party form made for the lead, unclaimed.
+  for (const member of members) {
+    await db
+      .update(bookings)
+      .set({ partyLeadBookingId: lead.bookingId, contactTypedByLeadAt: nowDate() })
+      .where(eq(bookings.id, member.bookingId));
+  }
   await sendJoinMail(db, {
     shop,
     trip: await getTripWithBooked(db, shop.id, tripId),

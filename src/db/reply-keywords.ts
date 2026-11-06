@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, isNull, lte, ne, not } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNotNull, isNull, lte, ne, not, or } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { normalizeEmailAddress, normalizePhoneAddress } from "@/lib/inbox";
@@ -165,6 +165,9 @@ async function cancellableBookings(
         eq(bookings.status, "booked"),
         // Not a seat the desk has checked in (the trail, issue #2702).
         not(seatCheckedIn),
+        // Not a seat whose contact a party's lead typed: that mailbox may not
+        // cancel it (issue #4003, `seatAddressIsLeadTyped`).
+        or(isNull(bookings.contactTypedByLeadAt), isNotNull(bookings.claimedAt)),
         liveTrip(),
       ),
     )
