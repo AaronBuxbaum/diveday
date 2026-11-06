@@ -172,7 +172,15 @@ describe("a booked seat that was not reached", () => {
   it("offers Send by text and no Copy link", async () => {
     outcome = {
       ...outcome,
-      links: [{ name: "Declan Murphy", token: null, bookingId: "booking-1", reason: "no_email" }],
+      links: [
+        {
+          name: "Declan Murphy",
+          token: null,
+          bookingId: "booking-1",
+          textable: true,
+          reason: "no_email",
+        },
+      ],
     };
     renderControl();
     await tapSend();
@@ -189,6 +197,25 @@ describe("a booked seat that was not reached", () => {
     expect(formData.get("channel")).toBe("sms");
     expect(formData.getAll("bookingId")).toEqual(["booking-1"]);
     expect(formData.get("surface")).toBe("today");
+  });
+
+  it("offers no Send by text when the record holds no number a text can reach (issue 3984)", async () => {
+    outcome = {
+      ...outcome,
+      links: [
+        {
+          name: "Declan Murphy",
+          token: null,
+          bookingId: "booking-1",
+          textable: false,
+          reason: "no_email",
+        },
+      ],
+    };
+    renderControl();
+    await tapSend();
+    expect(screen.getByRole("status")).toHaveTextContent("No email on file");
+    expect(screen.queryByRole("button", { name: "Send by text" })).toBeNull();
   });
 
   it("does not offer a text again after a text failed", async () => {

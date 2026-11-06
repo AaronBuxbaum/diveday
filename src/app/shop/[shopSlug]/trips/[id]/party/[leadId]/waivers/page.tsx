@@ -32,6 +32,9 @@ export default async function PartyWaiversPage({
   ]);
   if (!queue) notFound();
   const t = staffTranslator(locale);
+  // A solo seat nobody can reach signs here too (issue #3984), often on the
+  // shop's tablet: its own words, never a party's.
+  const solo = queue.members.length === 1;
   const states: Record<PartyWaiverState, string> = {
     needed: t("trips.partyWaiverQueue.needed"),
     signed: t("trips.partyWaiverQueue.signed"),
@@ -44,8 +47,8 @@ export default async function PartyWaiversPage({
   const copy = {
     show: t("trips.partyWaiverQueue.show"),
     showFor: t("trips.partyWaiverQueue.showFor", { name: "{name}" }),
-    title: t("trips.partyWaiverQueue.title"),
-    scan: t("trips.partyWaiverQueue.scan"),
+    title: solo ? t("trips.partyWaiverQueue.titleSolo") : t("trips.partyWaiverQueue.title"),
+    scan: solo ? t("trips.partyWaiverQueue.scanSolo") : t("trips.partyWaiverQueue.scan"),
     close: t("trips.partyWaiverQueue.close"),
     loading: t("trips.partyWaiverQueue.loading"),
     failed: t("trips.partyWaiverQueue.failed"),
@@ -59,9 +62,14 @@ export default async function PartyWaiversPage({
       <div className="space-y-6">
         <EyebrowWayUp>{t("trips.partyWaiverQueue.back")}</EyebrowWayUp>
         <div>
-          <h1 className={PAGE_TITLE_CLASS}>{t("trips.partyWaiverQueue.title")}</h1>
+          <h1 className={PAGE_TITLE_CLASS}>
+            {/* A solo seat nobody can reach signs here too (issue #3984). */}
+            {solo ? t("trips.partyWaiverQueue.titleSolo") : t("trips.partyWaiverQueue.title")}
+          </h1>
           <p className="mt-1 text-muted">{queue.tripTitle}</p>
-          <p className="mt-3">{t("trips.partyWaiverQueue.intro")}</p>
+          <p className="mt-3">
+            {solo ? t("trips.partyWaiverQueue.introSolo") : t("trips.partyWaiverQueue.intro")}
+          </p>
         </div>
         <CourseFormsQrProvider
           action={issuePartyWaiverQrAction.bind(null, shopSlug, id, leadId)}
@@ -92,6 +100,25 @@ export default async function PartyWaiversPage({
                   <div className="flex flex-wrap gap-2">
                     {member.state === "needed" && member.name ? (
                       <CourseFormsQrButton bookingId={member.bookingId} name={member.name} />
+                    ) : null}
+                    {/* Referred at the counter: the diver holds no doctor's
+                        page, so the desk prints the form (issue #3984). */}
+                    {member.state === "medical_review" ? (
+                      <Link
+                        className={buttonClass({ variant: "secondary" })}
+                        href={shopPath(
+                          shopSlug,
+                          "trips",
+                          id,
+                          "party",
+                          leadId,
+                          "waivers",
+                          member.bookingId,
+                          "doctor",
+                        )}
+                      >
+                        {t("trips.partyWaiverQueue.printDoctor")}
+                      </Link>
                     ) : null}
                     {member.state === "held" || member.medicalState ? (
                       <Link

@@ -113,7 +113,7 @@ export {
   shopSenderOf,
 } from "./sender";
 export { type SesEmailClient, type SesProviderOptions, sesNotificationProvider } from "./ses";
-export { type SmsProvider, smsProviderFromEnvironment } from "./sms";
+export { type SmsProvider, smsProviderFromEnvironment, smsRecipient } from "./sms";
 export {
   manifestChangedPush,
   missingDiverPush,

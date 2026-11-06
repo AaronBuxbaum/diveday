@@ -223,9 +223,23 @@ describe("deliverWaiverBatch for seats", () => {
     });
 
     expect(outcome.links).toEqual([
-      { name: "Nora Quinn", token: null, bookingId, reason: "unconfigured" },
+      { name: "Nora Quinn", token: null, bookingId, textable: false, reason: "unconfigured" },
     ]);
     expect(JSON.stringify(outcome)).not.toMatch(/\/ready\/|\/waivers\//);
+  });
+
+  it("says whether the seat's record holds a number a text can reach (issue 3984)", async () => {
+    configureMail();
+    vi.stubEnv("SES_FROM_EMAIL", "");
+    const { db, shop, bookingId, personId } = await seat();
+    await db.update(people).set({ phone: "+13055550188" }).where(eq(people.id, personId));
+
+    const outcome = await deliverWaiverBatch(db, shop.id, {
+      bookingIds: [bookingId],
+      channel: "email",
+    });
+
+    expect(outcome.links).toMatchObject([{ bookingId, textable: true }]);
   });
 
   it("answers a Copy link tap on seats with no link", async () => {
@@ -238,7 +252,7 @@ describe("deliverWaiverBatch for seats", () => {
     });
 
     expect(outcome.links).toEqual([
-      { name: "Nora Quinn", token: null, bookingId, reason: "thread_only" },
+      { name: "Nora Quinn", token: null, bookingId, textable: false, reason: "thread_only" },
     ]);
   });
 });
