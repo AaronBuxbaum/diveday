@@ -89,6 +89,25 @@ describe("ConditionsLine — the automated marine outlook", () => {
     );
   });
 
+  it("on paper credits the model with its address in words, never a link", () => {
+    const { container } = render(
+      <ConditionsLine
+        shop={shop}
+        trip={{ waterTemperatureC: null } as Trip}
+        crewPrediction={false}
+        automatedForecast={automated()}
+        crewLanguages={null}
+        locale={DEFAULT_DIVER_LOCALE}
+        paper
+      />,
+    );
+    expect(container).toHaveTextContent("Open-Meteo (open-meteo.com)");
+    expect(container.querySelector("a")).toBeNull();
+    // The sheet draws the rule; the readings are one line of words, no hung dot.
+    expect(container.querySelector("section")).not.toHaveClass("border-t");
+    expect(container.querySelector("[aria-hidden]")).toBeNull();
+  });
+
   it("names the water temperature without the suit advice, which is prep", () => {
     // What to wear moved to the thread with `PackingSection` — it is
     // preparation, and preparation belongs to a diver who has a seat.

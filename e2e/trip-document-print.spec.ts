@@ -38,17 +38,21 @@ test("paper keeps a full boat's status and an embedded course's age and contact 
 }) => {
   const full = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
   await page.goto(`/s/blue-mantis/trips/${full}`);
+  // The departure's sheet is the page on paper, framed or not (#2745).
+  const sheet = page.locator(".paper-sheet");
+  await expect(sheet).not.toBeVisible();
   await page.emulateMedia({ media: "print" });
-  await expect(page.locator("[data-public-trip-terms]")).toContainText(t("booking.fullHeading"));
+  await expect(sheet).toContainText(t("booking.fullHeading"));
   await page.emulateMedia({ media: "screen" });
   const course = await seededTripId(page, "blue-mantis", "Open Water Diver — three-day course");
   await page.goto(`/s/blue-mantis/embed/trip/${course}`);
   await page.emulateMedia({ media: "print" });
-  const facts = page.locator("[data-public-trip-terms]");
-  await expect(facts).toContainText(t("course.agesAndUp", { age: 10 }));
-  await expect(facts).toContainText(t("course.noCertification"));
-  await expect(facts).toContainText(t("trip.questionsContact"));
-  await expect(facts.locator('a[href^="mailto:"]')).toBeVisible();
+  await expect(sheet).toContainText(t("course.agesAndUp", { age: 10 }));
+  await expect(sheet).toContainText(t("course.noCertification"));
+  await expect(sheet).toContainText(t("trip.questionsContact"));
+  // The shop's address is words on paper: nothing on a sheet taps.
+  await expect(sheet).toContainText("@");
+  await expect(sheet.locator("a, button, input, select, textarea")).toHaveCount(0);
   await page.emulateMedia({ media: "screen" });
   const continuing = await seededTripId(
     page,
@@ -57,33 +61,32 @@ test("paper keeps a full boat's status and an embedded course's age and contact 
   );
   await page.goto(`/s/blue-mantis/trips/${continuing}`);
   await page.emulateMedia({ media: "print" });
-  await expect(page.locator("[data-public-trip-terms]")).toContainText(
+  await expect(sheet).toContainText(
     t("course.certificationOrHigher", { level: t(DIVER_CERTIFICATION_LEVEL_KEYS.open_water) }),
   );
 });
 
-test("public trip prints its briefing and terms without a booking worksheet", async ({
+test("public trip prints its departure sheet and never the booking form", async ({
   page,
 }, info) => {
   const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
   await page.goto(`/s/blue-mantis/trips/${id}`);
+  const title = await page.getByRole("heading", { level: 1 }).innerText();
   await expect(page.locator("#book")).toBeVisible();
   await page.emulateMedia({ media: "print" });
   await expect(page.locator("#book")).not.toBeVisible();
-  await expect(page.locator("[data-public-trip-terms]")).toBeVisible();
-  const briefing = page.locator("[data-public-trip-reading] details").first();
-  await expect(briefing).not.toHaveAttribute("open", "");
-  const species = await briefing.locator("li p").first().innerText();
-  await expect(briefing.locator(":scope > :not(summary)")).toBeVisible();
-  const map = briefing.locator('[class~="group/map"]');
-  await expect(map).not.toBeVisible();
-  await expect(briefing.locator("figcaption").first()).toBeVisible();
+  const sheet = page.locator(".paper-sheet");
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("heading", { level: 1 })).toHaveText(title);
+  await expect(sheet).toContainText(t("trip.theDay"));
+  await expect(sheet).toContainText(t("trip.lookFor"));
   const pdf = info.outputPath("public-trip.pdf");
   await page.pdf({ path: pdf, format: "Letter", preferCSSPageSize: true });
   const words = execFileSync("pdftotext", [pdf, "-"], { encoding: "utf8", timeout: 30_000 });
   const normalize = (value: string) => value.replace(/\s+/gu, " ").trim();
-  // PDF text extraction may interleave the field guide's two columns.
-  expect(normalize(words)).toContain(normalize(species));
+  expect(normalize(words)).toContain(normalize(title));
+  // The fold names the departure's own address; a wrapped line can drop a hyphen.
+  expect(words.replace(/[\s-]/gu, "")).toContain(`/s/blue-mantis/trips/${id}`.replace(/-/gu, ""));
   const sheets = words.split("\f").filter((sheet) => sheet.trim());
   for (const [index, sheet] of sheets.entries()) {
     expect(sheet).toContain("Blue Mantis Divers");

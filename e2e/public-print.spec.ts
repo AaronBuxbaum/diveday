@@ -116,7 +116,8 @@ test("a course diver's day prints its sheet without signing actions or readiness
   ).not.toBeVisible();
   // The paper is the arrival card's, not the thread's: it leaves the house,
   // so it says where and when and never what is owed (#2745).
-  const sheet = page.locator(".paper-sheet");
+  // The trip page it booked on can stay mounted, hidden (cacheComponents).
+  const sheet = page.locator(".paper-sheet", { hasText: t("trip.arrivalHeading") });
   await expect(sheet).toBeVisible();
   await expect(sheet).toContainText(t("trip.arrivalHeading"));
   await expect(sheet).toContainText(t("trip.packTitle"));

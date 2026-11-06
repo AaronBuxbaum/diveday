@@ -167,5 +167,7 @@ export function paperPassPath(shopSlug: string, tripId: string, bookingId: strin
 export const CAPABILITY_PAGE_PRINT_MARGIN_MM = 12;
 
 export function capabilityPagePrintRule(): string {
-  return `@page{margin:0;@bottom-right{content:none}}@media print{body{padding:${CAPABILITY_PAGE_PRINT_MARGIN_MM}mm}}`;
+  // No named page may bring a margin back: a page kept alive from an earlier
+  // visit (a hidden route's `<style>`) can still name one (#2745 review).
+  return `@page{margin:0;@bottom-right{content:none}}@media print{body{padding:${CAPABILITY_PAGE_PRINT_MARGIN_MM}mm}body,[data-departure-paper]{page:auto!important}}`;
 }
