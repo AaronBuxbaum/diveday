@@ -1,6 +1,6 @@
 # H-20260806-orders-csv-carries-hosted: orders.csv carries hosted_invoice_url and invoice_pdf_url — unauthenticated, long-lived, publicly reachable Stripe-hosted pages rendering a…
 
-- **Status:** Ready
+- **Status:** Chosen
 - **Human owner:** Product owner
 
 ## Decision or approval needed
@@ -10,6 +10,10 @@
 ## Minimum outcome to record
 
 Approve dropping the two URL columns from the published export contract (a diver-privacy improvement with no loss of reconcilable data), or state why they should stay.
+
+## Outcome
+
+Declined (Aaron, 2026-11-06): keep `hosted_invoice_url` and `invoice_pdf_url` in the export. A leaving shop's convenience outweighs a speculative leak of its own export bundle; `anonymize.ts` still nulls both on erasure.
 
 ## Unblocks / follow-up
 
