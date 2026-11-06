@@ -269,6 +269,19 @@ describe("step-up grants", () => {
     expect(await asked("money", crypto.randomUUID())).toBe(false);
   });
 
+  /** One challenge a shift (#4063): a refund at closing does not ask again. */
+  it("lasts twelve hours", async () => {
+    const { db, shop, account } = await seededAccount();
+    const session = await sessionFor(db, account, shop);
+    const grant = await grantStepUp(db, {
+      userAccountId: account.id,
+      accountSessionId: session.id,
+      purpose: "money",
+    });
+    if (!grant) throw new Error("no grant");
+    expect(grant.expiresAt.getTime() - grant.verifiedAt.getTime()).toBe(12 * 60 * 60 * 1000);
+  });
+
   /** A grant for a session that is not this account's is not a grant. */
   it("refuses to grant against a session the account does not own", async () => {
     const { db, shop, account } = await seededAccount();

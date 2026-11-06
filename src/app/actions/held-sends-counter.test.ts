@@ -23,10 +23,9 @@ const { hasRequiredStepUp } = await import("@/db/step-up");
 const { releaseHeldSendAction, undoHeldSendAction } = await import("./held-sends");
 
 /**
- * **Undo and early release of a counter payment ask the money step-up**
- * (review of #3061, security note 1). The tap asked it; a second staffer who
- * opens the order inside the hold must not take the payment back, or record
- * it sooner, without it.
+ * **Undo and early release of a counter payment ask no step-up** (#4063).
+ * Money coming in is not money going out: the tap asks none, so neither does
+ * taking it back inside the hold or recording it sooner.
  */
 async function heldPayment() {
   const { db, shop } = fileCtx;
@@ -60,25 +59,18 @@ async function stillHeld(id: string) {
 }
 
 describe("a counter payment's Undo and early release", () => {
-  it("refuses Undo without the money step-up, and leaves the hold", async () => {
+  it("takes the payment back without a step-up", async () => {
     const { row } = await heldPayment();
     vi.mocked(hasRequiredStepUp).mockResolvedValue(false);
-    await expect(undoHeldSendAction(row.id)).rejects.toThrow("not_authorized");
-    expect(await stillHeld(row.id)).toHaveLength(1);
-    expect(hasRequiredStepUp).toHaveBeenCalledWith(expect.anything(), expect.anything(), "money");
-  });
-
-  it("refuses an early release without it", async () => {
-    const { row } = await heldPayment();
-    vi.mocked(hasRequiredStepUp).mockResolvedValue(false);
-    await expect(releaseHeldSendAction(row.id)).rejects.toThrow("not_authorized");
-    expect(await stillHeld(row.id)).toHaveLength(1);
-  });
-
-  it("takes the payment back with it", async () => {
-    const { row } = await heldPayment();
-    vi.mocked(hasRequiredStepUp).mockResolvedValue(true);
     expect(await undoHeldSendAction(row.id)).toBe(true);
+    expect(await stillHeld(row.id)).toHaveLength(0);
+    expect(hasRequiredStepUp).not.toHaveBeenCalled();
+  });
+
+  it("releases early without one", async () => {
+    const { row } = await heldPayment();
+    vi.mocked(hasRequiredStepUp).mockResolvedValue(false);
+    await releaseHeldSendAction(row.id);
     expect(await stillHeld(row.id)).toHaveLength(0);
   });
 });

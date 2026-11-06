@@ -1252,7 +1252,7 @@
     "revokingAll": "Cerrando sesión…",
     "lastSeen": "última actividad {date}",
     "stepUpHeading": "Confirma esta acción sensible",
-    "stepUpDescription": "Escribe un código actual de tu aplicación o un código de recuperación. Esta aprobación dura 15 minutos en este navegador.",
+    "stepUpDescription": "Escribe un código actual de tu aplicación o un código de recuperación. Esta aprobación dura 12 horas en este navegador.",
     "stepUpCodeLabel": "Código de autenticación o recuperación",
     "stepUpCodeHint": "Los códigos de recuperación se pueden usar una vez.",
     "stepUpVerify": "Verificar y continuar",

@@ -62,11 +62,14 @@ describe("POST orders/[id]/leave", () => {
     expect(commitCounterPaymentHold).not.toHaveBeenCalled();
   });
 
-  it("refuses without the money step-up, and records nothing", async () => {
-    vi.mocked(commitCounterPaymentHold).mockClear();
+  it("records money coming in without a step-up (issue 4063)", async () => {
     vi.mocked(hasRequiredStepUp).mockResolvedValueOnce(false);
-    expect((await post()).status).toBe(403);
-    expect(commitCounterPaymentHold).not.toHaveBeenCalled();
+    vi.mocked(commitCounterPaymentHold).mockResolvedValueOnce({
+      status: "done",
+      orderId: ORDER,
+      outcome: { kind: "counter_payment", demo: true, outcome: { ok: true } } as never,
+    });
+    expect((await post()).status).toBe(204);
   });
 
   it("answers another shop's slug or a malformed id with nothing done", async () => {

@@ -50,6 +50,7 @@ vi.mock("@/db/orders", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
+const { hasRequiredStepUp } = await import("@/db/step-up");
 const { requireStaffSession } = await import("@/lib/session");
 const { recordDemoPaymentOnOpenOrder, recordPaymentOnOpenOrder } = await import("@/db/orders");
 const { holdCounterPaymentAction, recordRoomChargeAction } = await import("./counter-actions");
@@ -127,6 +128,18 @@ describe("record payment on a demo shop", () => {
       expect(recordPaymentOnOpenOrder).not.toHaveBeenCalled();
     },
   );
+
+  it("holds cash without asking for a step-up (issue 4063)", async () => {
+    const { orderId } = await as({ demo: true });
+    vi.mocked(hasRequiredStepUp).mockResolvedValue(false);
+    try {
+      const held = await holdCounterPaymentAction(form({ orderId, collection: "cash" }));
+      expect(held).toMatchObject({ ok: true, collection: "cash" });
+      expect(hasRequiredStepUp).not.toHaveBeenCalled();
+    } finally {
+      vi.mocked(hasRequiredStepUp).mockResolvedValue(true);
+    }
+  });
 
   it("records nothing on Undo, and the release finds nothing to record", async () => {
     const { orderId } = await as({ demo: true });

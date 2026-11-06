@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowDate } from "@/lib/clock";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 import { fileScopedShopContext } from "@/test/db";
 import { accountSessions, people, userAccounts } from "./schema";
@@ -54,6 +54,21 @@ describe("server-recorded staff activity", () => {
     expect(await touchStaffSession(db, key, () => now)).toBe(true);
     const [row] = await db.select().from(accountSessions).where(eq(accountSessions.id, session.id));
     expect(row?.lastHumanActivityAt).toEqual(now);
+  });
+
+  it("keeps a counter tablet signed in across a weekend off (#4063)", async () => {
+    const { db, shop, account, session, now } = await fixture();
+    await db
+      .update(accountSessions)
+      .set({ lastHumanActivityAt: new Date(now.getTime() - 3 * DAY_MS) })
+      .where(eq(accountSessions.id, session.id));
+    const key = {
+      sessionId: session.id,
+      userAccountId: account.accountId,
+      personId: account.personId,
+      shopId: shop.id,
+    };
+    expect(await touchStaffSession(db, key, () => now)).toBe(true);
   });
 
   it("cannot revive a session at the idle boundary or after revocation", async () => {
