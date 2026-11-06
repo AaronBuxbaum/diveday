@@ -1,5 +1,7 @@
 import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
+import { peopleMinorDeclared } from "./minor-declared";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -17,7 +19,8 @@ import { seatNotCancelled } from "./trips-queries";
  * Whether the booker marked the release's diver "Under 18"
  * (`bookings.minor_declared_at`): on the release's own seat, or, for a
  * release with no seat (which covers every seat the diver holds once signed,
- * issue #4019), on any of their seats not cancelled on a live departure. The
+ * issue #4019), on a seat of theirs still ahead (`peopleMinorDeclared`, issue
+ * #2553: a dive already over says nothing about the person today). The
  * guardian rule reads it only where no date of birth is on file
  * (`guardianSignatureRequired`), so the signing page, `completeWaiver` and
  * Copy link ask the same question.
@@ -25,6 +28,7 @@ import { seatNotCancelled } from "./trips-queries";
 export async function seatMinorDeclared(
   db: DbExecutor,
   record: { shopId: string; personId: string; bookingId: string | null },
+  now: Date = nowDate(),
 ): Promise<boolean> {
   if (record.bookingId) {
     const [row] = await db
@@ -34,30 +38,20 @@ export async function seatMinorDeclared(
       .limit(1);
     return Boolean(row?.minorDeclaredAt);
   }
-  const [row] = await db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookings.shopId, record.shopId),
-        eq(bookings.personId, record.personId),
-        isNotNull(bookings.minorDeclaredAt),
-        seatNotCancelled,
-        eq(trips.shopId, record.shopId),
-        ne(trips.status, "cancelled"),
-        liveTrip(),
-      ),
-    )
-    .limit(1);
-  return Boolean(row);
+  const declared = await peopleMinorDeclared(db, {
+    shopId: record.shopId,
+    personIds: [record.personId],
+    now,
+  });
+  return declared.has(record.personId);
 }
 
 /**
- * Whether any of the person's seats not cancelled on a live departure carries
- * an address the party's lead typed and the member never claimed
- * (`seatAddressIsLeadTyped`, issue #4003). The contact on file may then be
- * that typed one, which cannot prove a guardian (issue #4019).
+ * Whether any seat of the person ever carried an address the party's lead
+ * typed that the member never claimed (`seatAddressIsLeadTyped`, issue
+ * #4003), whatever became of the seat or its departure: the contact on file
+ * may still be that typed one, which cannot prove a guardian (issue #4019).
+ * Read only for a minor, so counting old seats fails closed.
  */
 export async function personContactLeadTyped(
   db: DbExecutor,
@@ -67,17 +61,12 @@ export async function personContactLeadTyped(
   const [row] = await db
     .select({ id: bookings.id })
     .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.personId, personId),
         isNotNull(bookings.contactTypedByLeadAt),
         isNull(bookings.claimedAt),
-        seatNotCancelled,
-        eq(trips.shopId, shopId),
-        ne(trips.status, "cancelled"),
-        liveTrip(),
       ),
     )
     .limit(1);

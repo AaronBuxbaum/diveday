@@ -130,6 +130,8 @@ export type WaiverSendCopy = {
   /** Copy link on a minor's release with no seat: the desk's question, and its yes (#4019). */
   guardianCheck: string;
   guardianConfirm: string;
+  /** The diver record's word for a minor's release with no seat that went nowhere (#4019). */
+  reasonGuardianNeededRelease: string;
   reasonNoEmailOne: string;
   reasonNoEmailOther: string;
   reasonNoPhoneOne: string;
@@ -179,6 +181,7 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     reasonGuardianNeeded: t("shared.waiverSend.reasonGuardianNeeded"),
     guardianCheck: t("shared.waiverSend.guardianCheck"),
     guardianConfirm: t("shared.waiverSend.guardianConfirm"),
+    reasonGuardianNeededRelease: t("shared.waiverSend.reasonGuardianNeededRelease"),
     reasonNoEmailOne: t("shared.waiverSend.reasonNoEmailOne"),
     reasonNoEmailOther: t.raw("shared.waiverSend.reasonNoEmailOther"),
     reasonNoPhoneOne: t("shared.waiverSend.reasonNoPhoneOne"),

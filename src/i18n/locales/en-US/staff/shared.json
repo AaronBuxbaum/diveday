@@ -72,6 +72,7 @@
     "reasonGuardianNeeded": "Nothing was sent: this diver is under 18 and the person who booked typed their contact. A parent or legal guardian signs with them at the counter, or the person who booked signs it from their own booking.",
     "guardianCheck": "Is their parent or legal guardian at the counter to co-sign?",
     "guardianConfirm": "Yes, copy the link",
+    "reasonGuardianNeededRelease": "Nothing was sent: this diver is under 18 and the person who booked may have typed their contact. A parent or legal guardian signs with them at the counter.",
     "reasonNoEmailOne": "No email on file",
     "reasonNoEmailOther": "{count} have no email on file.",
     "reasonNoPhoneOne": "No number we can text on file",

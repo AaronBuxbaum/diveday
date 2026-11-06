@@ -85,6 +85,9 @@ function outcomeToast(state: WaiverSendState, copy: WaiverSendCopy): string | nu
     });
   }
   if (state.errors.length > 0) return fill(copy.errors, { names: state.errors.join(", ") });
+  // An email or text that went nowhere on purpose (issue #4019): no ring says it.
+  if (state.links.some((link) => link.reason === "guardian_needed"))
+    return copy.reasonGuardianNeededRelease;
   return null;
 }
 

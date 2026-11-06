@@ -693,7 +693,11 @@ export async function issueAndDeliverPersonWaiver(
       const minor = guardianSignatureRequired(
         ctx.person.dateOfBirth,
         signingDate(options.now ?? nowDate(), ctx.shop.timezone),
-        await seatMinorDeclared(tx, { shopId, personId, bookingId: null }),
+        await seatMinorDeclared(
+          tx,
+          { shopId, personId, bookingId: null },
+          options.now ?? nowDate(),
+        ),
       );
       // Copy link asks the desk what a seat's counter QR asks (issue #3986)
       // before anything is minted: nobody else at the counter can say whether
@@ -1163,6 +1167,8 @@ export async function emailFreshWaiverLink(
   if (!outcome.ok) return outcome.reason === "already_completed" ? "already_signed" : "unavailable";
   if (outcome.delivery === "sent") return "sent";
   if (outcome.delivery === "no_email") return "no_email";
+  // A minor whose contact a party's lead typed is sent nothing (issue #4019).
+  if (outcome.delivery === "guardian_needed") return "unavailable";
   // Issued, but nothing left the building — an unconfigured provider, a
   // rejected recipient, a provider error. Never claim mail is on its way.
   return "failed";
