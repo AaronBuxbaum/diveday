@@ -39,7 +39,7 @@ import {
   lockBoardingCertificationEvidence,
   rewriteBoardingSnapshotReviewer,
 } from "./boarding-certification-snapshot";
-import { contactChanged, revokeLinksSentToOldContact } from "./contact-change";
+import { contactReplaced, revokeLinksSentToOldContact } from "./contact-change";
 import { refileCourseFormRecords } from "./course-forms";
 import { retireRecapLinks } from "./recap-links";
 import { liveTrip } from "./trips-live";
@@ -1280,7 +1280,7 @@ export async function mergeDiverRecords(input: {
 
       // Links sent to an address the merged record no longer holds, the
       // survivor's or the source's (now the survivor's), go with it (#3902).
-      if (contactChanged(survivor, mergedContact) || contactChanged(source, mergedContact)) {
+      if (contactReplaced(survivor, mergedContact) || contactReplaced(source, mergedContact)) {
         await revokeLinksSentToOldContact(tx, {
           shopId: input.shopId,
           personId: survivor.id,

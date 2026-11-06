@@ -197,7 +197,7 @@
 - **Release link** — the link an email or a text carries to sign a release with no seat (issue
   #3983): a `release_link` row in `capabilities` naming that release, alive a week, spent by the
   signature, sent only to the contact on file and never shown to staff. A newer one replaces it; a
-  counter link to the same release stands beside it (issue #4008). A contact change revokes it, an
+  counter link to the same release stands beside it (issue #4008). Replacing a contact revokes it, an
   erasure deletes it, and a dead one
   lands on the rescue, which mails a fresh one to the address on file. A minor whose contact a
   party's lead typed is sent none (issue #4019). It never opens a seat's release (ADR
