@@ -195,16 +195,16 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
     });
   });
 
-  it("says a walk-in was a walk-in on the trail, and takes a diver with no email", async () => {
+  it("takes a diver with no email, and says so on the trail", async () => {
     const { db, shop, open, actorPersonId } = await context();
 
     const result = await seatDiver(db, {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      // The counter's shape: a name and nothing else.
+      // A name and nothing else.
       diver: { fullName: "Counter Cass" },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -213,7 +213,7 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
     // `waiver: "issued"` and was pinning the bug it was meant to catch.
     expect(result).toMatchObject({ ok: true, personName: "Counter Cass", waiver: "not_delivered" });
     expect(await activityLines(db, open.id)).toContainEqual({
-      code: "seat_added_walk_in",
+      code: "seat_added",
       params: expect.objectContaining({ diver: "Counter Cass" }),
     });
   });
@@ -227,13 +227,13 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { personId: diver.id },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
     expect(result).toMatchObject({ ok: true, personName: diver.fullName });
     expect(await activityLines(db, open.id)).toContainEqual({
-      code: "seat_added_walk_in",
+      code: "seat_added",
       params: expect.objectContaining({ diver: diver.fullName }),
     });
   });
@@ -325,7 +325,7 @@ describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { fullName: "No Email Nell" },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -478,38 +478,12 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { fullName: "Counter Cleo", email: DELIVERABLE_EMAIL },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
     expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
     expect(send).toHaveBeenCalledOnce();
-  });
-
-  it("seats a returning diver picked at the counter as a walk-in: trail code", async () => {
-    const { db, shop, open, actorPersonId } = await context();
-    const _send = deliverableEmailEnv();
-    const startsAt = new Date(nowDate().getTime() + 2 * 60 * 60 * 1000);
-    await db
-      .update(tripsTable)
-      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
-      .where(eq(tripsTable.id, open.id));
-    const diver = await bookableDiver(db, shop.id, open.id);
-
-    const result = await seatDiver(db, {
-      shopId: shop.id,
-      tripId: open.id,
-      actorPersonId,
-      diver: { personId: diver.id },
-      entry: "walk_in",
-      refusals: "specific",
-    });
-
-    expect(result).toMatchObject({ ok: true });
-    expect(await activityLines(db, open.id)).toContainEqual({
-      code: "seat_added_walk_in",
-      params: expect.objectContaining({ diver: diver.fullName }),
-    });
   });
 
   /**
@@ -551,7 +525,7 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { fullName: "Counter Cato", email: DELIVERABLE_EMAIL },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -603,7 +577,7 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
       // actually typed. A different human under a similar spelling is the case
       // the flag exists for.
       diver: { personId: diver.id, fromNameMatch: { typedName: "Someone Else Entirely" } },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
     });
 
@@ -661,7 +635,7 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
       // What the counter's "divers not booked today" seat link submits: the
       // row's id and nothing else.
       diver: { personId: diver.id },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -724,7 +698,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { personId: UNKNOWN_ID },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
     const unknownTrip = await seatDiver(db, {
@@ -732,7 +706,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: UNKNOWN_ID,
       actorPersonId,
       diver: { fullName: "Nobody Home" },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -755,7 +729,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { personId: diver.id },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -764,7 +738,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: open.id,
       actorPersonId,
       diver: { personId: diver.id },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
     const onFullBoat = await seatDiver(db, {
@@ -772,7 +746,7 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
       tripId: fullTrip.id,
       actorPersonId,
       diver: { fullName: "Counter Cass" },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
 
@@ -858,7 +832,7 @@ describe("seatDiver trip admission (the boat's own cert gate reaches every staff
         tripId: open.id,
         actorPersonId,
         diver: { personId: diver.id },
-        entry: "walk_in",
+        entry: "roster",
         refusals: "coarse",
       }),
       // `toEqual`, not `toMatchObject`: the collapse must also drop the
@@ -879,7 +853,7 @@ describe("seatDiver trip admission (the boat's own cert gate reaches every staff
         tripId: open.id,
         actorPersonId,
         diver: { fullName: "Counter Cass" },
-        entry: "walk_in",
+        entry: "roster",
         refusals: "coarse",
       }),
     ).resolves.toMatchObject({ ok: true, personName: "Counter Cass" });

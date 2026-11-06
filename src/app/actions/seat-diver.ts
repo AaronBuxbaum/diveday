@@ -4,7 +4,6 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";
-import { isOpenDateRequestWithoutEmail } from "@/db/interest-dates";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import {
   type SeatDiverPerson,
@@ -13,26 +12,22 @@ import {
   seatDiver,
   seatParty,
 } from "@/db/seat-diver";
-import { getTripWithBooked } from "@/db/trips";
-import { nowDate } from "@/lib/clock";
-import { walkInDoorOpen } from "@/lib/departure-clock";
 import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
+import { PARTY_FIRST_ROW, PARTY_NEW_PERSON, readParty } from "@/lib/seat-party-form";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
-import { readWalkInParty, WALK_IN_FIRST_ROW, WALK_IN_NEW_PERSON } from "@/lib/walk-in-party";
 import {
   SEAT_BUSY_NOTICE,
   SEAT_SURFACES,
   type SeatLanding,
   type SeatSurface,
   type SeatSurfaceId,
-  seatSurfaceFor,
 } from "./seat-diver-surfaces";
 
 /**
@@ -48,10 +43,8 @@ import {
  * (`./seat-diver-surfaces.ts`).
  *
  * Both read `tripId` from the form, so a trip-first door (the roster, the
- * counter walk-in, the global Add booking) and a diver-first one (a diver's
- * record) submit the same shape. The counter is the `"walk-in"` door, bound
- * server-side and honoured only while the boat's walk-in door is open
- * (`holdsWalkInOpen`).
+ * global Add booking) and a diver-first one (a diver's record) submit the
+ * same shape. Email and phone are optional on both: a name is enough.
  */
 
 const existingDiverSchema = z.object({
@@ -87,11 +80,7 @@ const landingFields = z.object({
   force: formValue(),
 });
 
-/**
- * Email optional here and required by refinement per surface, rather than two
- * schemas: `""` is what an untouched optional input actually submits, and the
- * required surfaces need that to read as "missing", not as an invalid address.
- */
+/** `""` is what an untouched optional input submits, so it reads as absent. */
 const newDiverSchema = z.object({
   tripId: single(z.uuid()),
   // Shared diver person-field bounds (src/lib/person-fields.ts).
@@ -108,38 +97,15 @@ function rawLanding(formData: FormData): z.infer<typeof landingFields> {
 }
 
 /**
- * The door a server action is bound to: a surface, or the departure door in
- * its counter mode (`"walk-in"`). The mode rides the encrypted bound argument,
- * like the surface itself, never a form field a client could add; it is still
- * checked against the boat by {@link holdsWalkInOpen} before any seat is made.
+ * The door a server action is bound to. The id arrives as an encrypted bound
+ * argument, so it cannot be forged from the client; checked anyway, because a
+ * bad lookup here would build a redirect path out of `undefined`.
  */
-export type SeatDoorId = SeatSurfaceId | "walk-in";
-
-function doorFor(doorId: SeatDoorId): { surface: SeatSurface; walkIn: boolean } {
-  // The id arrives as an encrypted bound argument, so it cannot be forged from
-  // the client — checked anyway, because a bad lookup here would build a
-  // redirect path out of `undefined`.
-  if (doorId === "walk-in") return { surface: SEAT_SURFACES.departure, walkIn: true };
-  if (!Object.hasOwn(SEAT_SURFACES, doorId)) throw new Error("unknown seat surface");
-  return { surface: SEAT_SURFACES[doorId], walkIn: false };
-}
+export type SeatDoorId = SeatSurfaceId;
 
 function surfaceFor(surfaceId: SeatSurfaceId): SeatSurface {
-  return doorFor(surfaceId).surface;
-}
-
-/**
- * **A walk-in is only for a boat the counter can still seat.** The counter door is a claim like any other, so the
- * boat is read again here: scheduled, inside the counter's window and not yet
- * sailed (`walkInDoorOpen`). A boat that has gone, or one a week away, cannot
- * be walk-in seated by a typed URL or a stale page; the staffer is told the
- * trip cannot take divers and nothing is written.
- */
-async function holdsWalkInOpen(landing: SeatLanding, shopId: string): Promise<boolean> {
-  if (!landing.walkIn) return true;
-  if (!uuidParam(landing.tripId)) return false;
-  const trip = await getTripWithBooked(await getDb(), shopId, landing.tripId);
-  return trip?.status === "scheduled" && walkInDoorOpen(trip.startsAt, nowDate());
+  if (!Object.hasOwn(SEAT_SURFACES, surfaceId)) throw new Error("unknown seat surface");
+  return SEAT_SURFACES[surfaceId];
 }
 
 /**
@@ -155,7 +121,7 @@ async function holdsWalkInOpen(landing: SeatLanding, shopId: string): Promise<bo
  * already on, with a second query param, left the client router on the page it
  * held and the submit button spinning. Every door's refusal lands on a route
  * with a path segment of its own (the boat, the diver), led by its notice; what
- * follows is only the band's kept mode (`bandKept`).
+ * follows is only the band's kept request (`bandKept`).
  */
 function refuse(
   surface: SeatSurface,
@@ -195,16 +161,14 @@ function refuse(
 /**
  * What the departure's add band was doing, kept on the landing so the next
  * seat is made the same way: a date request's party still being seated
- * (`add=1&request=`). The counter is the window's own band, so it keeps nothing
- * and a walk-in is never a request. Nothing on the diver's record.
+ * (`add=1&request=`). Nothing on the diver's record.
  */
 function bandKept(
   surface: SeatSurface,
-  landing: SeatLanding,
+  _landing: SeatLanding,
   requestId: string | null,
 ): Record<string, string> {
   if (surface !== SEAT_SURFACES.departure) return {};
-  if (landing.walkIn) return {};
   return requestId ? { add: "1", request: requestId } : {};
 }
 
@@ -235,13 +199,8 @@ async function seat(
   // fault: the staffer reads "tap again" on the page they were on, rather than
   // a crash page with the diver still at the counter. Anything else still
   // throws. The redirect is outside the `try`, since `redirect` throws too.
-  // A walk-in answers no request: the counter's seat is someone at the desk,
-  // and a request is somebody who asked ahead (dive-domain review, #2737).
-  const request = landing.walkIn ? null : (requestId ?? null);
-  if (!(await holdsWalkInOpen(landing, actor.shopId))) {
-    refuse(surface, landing, surface.refusalNotice.trip_unavailable);
-  }
-  const door = seatSurfaceFor(surface, landing);
+  const request = requestId ?? null;
+  const door = surface;
   const db = await getDb();
   const outcome = await seatDiver(db, {
     shopId: actor.shopId,
@@ -318,28 +277,6 @@ async function seat(
 }
 
 /**
- * The counter's hold, asked on its own: a walk-in on a boat the counter can no
- * longer seat lands back on the boat with the "cannot take divers" notice and
- * nothing is looked up or written. The new-diver form asks it before its
- * name-match lookup, so a closed boat is refused before anyone is searched for.
- * Returns when the door is open.
- */
-export async function refuseClosedWalkIn(shopSlug: string, formData: FormData) {
-  const { surface } = doorFor("walk-in");
-  const session = (await requireShopSurface(shopSlug)).session;
-  const raw = rawLanding(formData);
-  const landing: SeatLanding = {
-    shopSlug,
-    tripId: String(raw.tripId ?? ""),
-    personId: "",
-    walkIn: true,
-  };
-  if (!(await holdsWalkInOpen(landing, session.user.shopId))) {
-    refuse(surface, landing, surface.refusalNotice.trip_unavailable);
-  }
-}
-
-/**
  * Seat a diver already on file — the "enter once, reuse everywhere" path. No
  * name or email is re-typed: the existing person row carries their certs,
  * waivers, rental fit, and history straight onto the trip.
@@ -349,7 +286,7 @@ export async function seatExistingDiverAction(
   shopSlug: string,
   formData: FormData,
 ) {
-  const { surface, walkIn } = doorFor(doorId);
+  const surface = surfaceFor(doorId);
   const session = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(existingDiverSchema, formData);
   const raw = rawLanding(formData);
@@ -357,7 +294,6 @@ export async function seatExistingDiverAction(
     shopSlug,
     tripId: parsed.ok ? parsed.data.tripId : String(raw.tripId ?? ""),
     personId: parsed.ok ? parsed.data.personId : String(raw.personId ?? ""),
-    walkIn,
   };
   if (!parsed.ok) {
     refuse(surface, landing, surface.invalidNotice, undefined, answeredRequestId(formData));
@@ -385,11 +321,10 @@ export async function seatExistingDiverAction(
 
 /**
  * Seat a diver typed in by hand — a genuine first-timer, or someone tracked in
- * another system. Whether an email is required is the surface's call, and
- * walk-in mode waives it: the counter can add a diver on a name alone and collect the rest later.
+ * another system. A name is enough; the email and phone can be collected later.
  */
 export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, formData: FormData) {
-  const { surface, walkIn } = doorFor(doorId);
+  const surface = surfaceFor(doorId);
   const session = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(newDiverSchema, formData);
   const raw = rawLanding(formData);
@@ -398,23 +333,10 @@ export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, f
     shopSlug,
     tripId: parsed.ok ? parsed.data.tripId : String(raw.tripId ?? ""),
     personId: "",
-    walkIn,
   };
   const requestId = answeredRequestId(formData);
-  // The door asks for an email, except for the party a date request named when
-  // that request has none itself (issue #3743): the desk would otherwise type a
-  // placeholder into a real person's record. Read here under the shop scope,
-  // never trusted from the form, and only once the email is the one thing missing.
-  const emailMissing = parsed.ok && surface.email === "required" && !landing.walkIn && !email;
-  const emailWaived =
-    emailMissing &&
-    requestId !== null &&
-    (await isOpenDateRequestWithoutEmail(await getDb(), session.user.shopId, requestId));
-  if (!parsed.ok || (emailMissing && !emailWaived)) {
+  if (!parsed.ok) {
     refuse(surface, landing, surface.invalidNotice, undefined, requestId);
-  }
-  if (!(await holdsWalkInOpen(landing, session.user.shopId))) {
-    refuse(surface, landing, surface.refusalNotice.trip_unavailable);
   }
 
   const force = raw.force === "true";
@@ -427,9 +349,8 @@ export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, f
       search.set("confirmName", parsed.data.fullName);
       if (parsed.data.email) search.set("confirmEmail", parsed.data.email);
       if (parsed.data.phone) search.set("confirmPhone", parsed.data.phone);
-      // The prompt is answered on the same band, in the same mode: the
-      // counter's stays at the counter, and a request's rides along so the
-      // seat it makes still closes that request.
+      // The prompt is answered on the same band: a request's id rides along
+      // so the seat it makes still closes that request.
       for (const [key, value] of Object.entries(
         bandKept(surface, landing, answeredRequestId(formData)),
       )) {
@@ -458,7 +379,7 @@ export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, f
 /**
  * The new-diver form's own code for each refusal, so a refused party lands
  * back on the form it was typed on (with its rows, `KeepTypedOnRefusal`)
- * rather than on the walk-in search, which would show none of them.
+ * rather than on the search, which would show none of them.
  */
 const PARTY_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
   trip_full: "diver-full",
@@ -479,7 +400,7 @@ const PARTY_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
 };
 
 /**
- * **A walk-in family, seated in one pass** (fifth loop, item 9): the form's
+ * **A family or group, seated in one pass** (fifth loop, item 9): the form's
  * own fields are the first person and each party row one more, booked
  * together on the departure or not at all (`seatParty`). Each row says what
  * that person is coming as, and an "Under 18" (the first person's too) may
@@ -487,18 +408,13 @@ const PARTY_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
  *
  * **Nobody here is seated on a guess.** A name that reads like somebody on
  * file brings the form back naming that row (`onFile-<row>`), and the page
- * lists its candidates the way the single walk-in's prompt does (H-20260724-one-person-per-email, issue
+ * lists its candidates the way the single add's prompt does (H-20260724-one-person-per-email, issue
  * #1556). The staffer then settles each such row on its own: "Use the record
  * on file" (that record's id) or "New person". A row settled either way is not
  * asked about again; one still unsettled is.
  */
-export async function seatWalkInPartyAction(shopSlug: string, formData: FormData) {
-  const door = seatSurfaceFor(surfaceFor("departure"), {
-    shopSlug,
-    tripId: "",
-    personId: "",
-    walkIn: true,
-  });
+export async function seatPartyAction(shopSlug: string, formData: FormData) {
+  const door = surfaceFor("departure");
   const session = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(newDiverSchema, formData);
   const raw = rawLanding(formData);
@@ -506,22 +422,13 @@ export async function seatWalkInPartyAction(shopSlug: string, formData: FormData
   const formPath = `${shopPath(shopSlug, "divers")}?${new URLSearchParams({
     add: "1",
     surface: "departure",
-    walkIn: "true",
     tripId,
   }).toString()}`;
   function back(notice: string, extra?: Record<string, string>): never {
     return revalidateAndRedirect(formPath, noticeUrl(formPath, notice, extra));
   }
   if (!parsed.ok || !uuidParam(tripId)) back("diver-invalid");
-  // The same hold the single walk-in keeps: a boat the counter can no longer
-  // seat takes nobody, whatever page the form came from.
-  if (
-    !(await holdsWalkInOpen({ shopSlug, tripId, personId: "", walkIn: true }, session.user.shopId))
-  ) {
-    back(PARTY_REFUSAL_NOTICE.trip_unavailable);
-  }
-
-  const party = readWalkInParty(formData.entries());
+  const party = readParty(formData.entries());
   if (party.invalid) back("diver-invalid");
   if (party.rows.some((row) => !diverNameSchema.safeParse(row.fullName).success)) {
     back("diver-invalid");
@@ -529,7 +436,7 @@ export async function seatWalkInPartyAction(shopSlug: string, formData: FormData
   const everyone = [
     {
       ...party.first,
-      row: WALK_IN_FIRST_ROW,
+      row: PARTY_FIRST_ROW,
       fullName: parsed.data.fullName,
       email: parsed.data.email || undefined,
       phone: parsed.data.phone,
@@ -554,7 +461,7 @@ export async function seatWalkInPartyAction(shopSlug: string, formData: FormData
   // A chosen record must be one the row's own name reads like: a posted id is
   // never trusted to name somebody the staffer was not shown.
   const chosen = everyone.filter(
-    (member) => member.match !== undefined && member.match !== WALK_IN_NEW_PERSON,
+    (member) => member.match !== undefined && member.match !== PARTY_NEW_PERSON,
   );
   const shown = await Promise.all(
     chosen.map((member) => findSimilarDivers(db, session.user.shopId, member.fullName)),
@@ -569,7 +476,7 @@ export async function seatWalkInPartyAction(shopSlug: string, formData: FormData
       participantType: member.participantType,
       dateOfBirth: member.dateOfBirth,
     };
-    if (member.match !== undefined && member.match !== WALK_IN_NEW_PERSON) {
+    if (member.match !== undefined && member.match !== PARTY_NEW_PERSON) {
       return { ...facts, personId: member.match, typedName: member.fullName };
     }
     return "email" in member

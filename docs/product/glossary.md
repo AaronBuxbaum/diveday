@@ -218,7 +218,6 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Counter hand-off
 - Counter payment hold
 - Counter self-registration
-- Counter window
 - Course catalog copy
 - Course form
 - Course page

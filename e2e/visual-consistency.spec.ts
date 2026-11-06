@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openCounterFor, openDiverFileGroup, openRosterRow, walkInFormPath } from "./helpers";
+import { addDiverFormPath, openCounterFor, openDiverFileGroup, openRosterRow } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 for (const width of [390, 1280]) {
@@ -9,7 +9,7 @@ for (const width of [390, 1280]) {
 
     test("the walk-in name and its remove action share a control size", async ({ page }) => {
       const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
-      await page.goto(walkInFormPath("blue-mantis", tripId));
+      await page.goto(addDiverFormPath("blue-mantis", tripId));
       await page.getByRole("button", { name: "Add another person" }).click();
       const person = page.getByRole("group", { name: "Person 2" });
       const input = person.getByLabel("Full name");

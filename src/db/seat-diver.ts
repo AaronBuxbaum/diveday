@@ -64,7 +64,7 @@ export type SeatDiverRefusal = BookingRefusalReason | "unavailable";
  * How the trip's activity trail describes the seating. Same event either way;
  * the crew reading the feed at the dock cares which door it came through.
  */
-export type SeatDiverEntry = "roster" | "walk_in" | "dock";
+export type SeatDiverEntry = "roster" | "dock";
 
 /**
  * How much of a refusal a surface repeats back.
@@ -204,17 +204,12 @@ export type SeatDiverResult =
     };
 
 /**
- * Which line the trail gets: the same act, told two ways.
- *
- * A walk-in and a booked seat are the same insert with different stories behind
- * them, and the trail is where a shop reads the difference back. The words are
- * picked where the trail is rendered (issue #1655) — this only says which
- * sentence; `recordSeatChange` reads the name off the seat.
+ * Which line the trail gets. The words are picked where the trail is rendered
+ * (issue #1655) — this only says which sentence; `recordSeatChange` reads the
+ * name off the seat.
  */
 function activityCode(entry: SeatDiverEntry): SeatChangeCode {
   switch (entry) {
-    case "walk_in":
-      return "seat_added_walk_in";
     // A rider the crew added at the boat (`src/db/dock-rider.ts`).
     case "dock":
       return "rider_added_at_dock";

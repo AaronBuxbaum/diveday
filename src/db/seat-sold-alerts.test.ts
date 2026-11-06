@@ -116,7 +116,7 @@ describe("sendSeatSoldAlerts", () => {
       tripId: trip.id,
       bookingId,
       actorPersonId: staffer?.id,
-      code: "seat_added_walk_in",
+      code: "seat_added",
       params: { actor: "Dana", diver: "Buyer" },
     });
     const { sent, provider } = recorder();

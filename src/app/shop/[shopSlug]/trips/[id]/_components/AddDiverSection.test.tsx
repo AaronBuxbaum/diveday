@@ -72,40 +72,7 @@ describe("AddDiverSection", () => {
     );
   });
 
-  it("is one search field at the counter, whose empty result offers the walk-in (UX audit item 24)", () => {
-    const props = {
-      shopSlug: "blue-mantis",
-      tripId: "trip-1",
-      full: false,
-      candidates: [],
-      addBookingAction: action,
-      addToWaitlistAction: action,
-      addKnownToWaitlistAction: action,
-      addExistingDiverAction: action,
-      locale: "en-US",
-      timeZone: "America/Cancun",
-      mode: "counter" as const,
-    };
-    const { rerender } = render(<AddDiverSection context={{ ...props, query: "" }} />);
-    expect(screen.getByRole("searchbox")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Add as a walk-in" })).toBeNull();
-    // Nothing rides the search: the window alone makes the band the counter.
-    const search = screen.getByRole("searchbox").closest("form");
-    expect(search?.querySelector('input[type="hidden"]:not([name="tripId"])')).toBeNull();
-
-    rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
-    expect(screen.getByRole("link", { name: "Add as a walk-in" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/divers?add=1&name=Zed+Quill&surface=departure&walkIn=true&tripId=trip-1",
-    );
-    // One door, no second one beside it, and no choice to make.
-    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
-    expect(screen.queryByRole("navigation", { name: "Booking or walk-in" })).toBeNull();
-  });
-
-  /** Outside the window the band books, with one door for someone new. */
-  it("books with one door for someone new outside the window", () => {
+  it("offers one door for someone new, beside the search and again on an empty result", () => {
     const props = {
       shopSlug: "blue-mantis",
       tripId: "trip-1",
@@ -121,55 +88,8 @@ describe("AddDiverSection", () => {
     const { rerender } = render(<AddDiverSection context={{ ...props, query: "" }} />);
     expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
     rerender(<AddDiverSection context={{ ...props, query: "Zed Quill" }} />);
-    expect(screen.queryByRole("link", { name: "Add as a walk-in" })).toBeNull();
-  });
-
-  it("offers one door for someone new under a results list at the counter", () => {
-    const candidate = {
-      person: { id: "person-1", fullName: "Avery Diaz", email: "avery@example.com" },
-      rentalFit: null,
-    } as unknown as BookableDiver;
-    render(
-      <AddDiverSection
-        context={{
-          shopSlug: "blue-mantis",
-          tripId: "trip-1",
-          full: false,
-          query: "Avery",
-          candidates: [candidate],
-          addBookingAction: action,
-          addToWaitlistAction: action,
-          addKnownToWaitlistAction: action,
-          addExistingDiverAction: action,
-          locale: "en-US",
-          timeZone: "America/Cancun",
-          mode: "counter",
-        }}
-      />,
-    );
-    const links = screen.getAllByRole("link", { name: /^(Add diver|Add as a walk-in)$/ });
-    expect(links.map((link) => link.textContent)).toEqual(["Add as a walk-in"]);
-  });
-
-  it("draws no choice outside the window", () => {
-    render(
-      <AddDiverSection
-        context={{
-          shopSlug: "blue-mantis",
-          tripId: "trip-1",
-          full: false,
-          query: "",
-          candidates: [],
-          addBookingAction: action,
-          addToWaitlistAction: action,
-          addKnownToWaitlistAction: action,
-          addExistingDiverAction: action,
-          locale: "en-US",
-          timeZone: "America/Cancun",
-        }}
-      />,
-    );
-    expect(screen.queryByRole("navigation", { name: "Booking or walk-in" })).toBeNull();
+    // An empty result carries the door itself, so the search draws none beside it.
+    expect(screen.getAllByRole("link", { name: "Add diver" })).toHaveLength(1);
   });
 
   it("offers waitlist addition directly when trip is full", () => {

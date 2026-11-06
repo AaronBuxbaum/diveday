@@ -57,7 +57,7 @@ async function family() {
     shopId: shop.id,
     tripId: trip.id,
     actorPersonId: staff.id,
-    entry: "walk_in",
+    entry: "roster",
     refusals: "specific",
     members: [
       { fullName: `Ana ${stamp}`, minor: false },

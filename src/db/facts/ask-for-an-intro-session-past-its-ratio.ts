@@ -86,7 +86,7 @@ export async function askForAnIntroSessionPastItsRatio(
       tripId: session.id,
       actorPersonId,
       diver: { fullName: `Intro Guest ${seat + 1}` },
-      entry: "walk_in",
+      entry: "roster",
       refusals: "coarse",
     });
     if (!seated.ok) return null;

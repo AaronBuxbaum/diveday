@@ -24,7 +24,7 @@ import {
   isNoShowAtCounter,
   isTurnedAwayAtCounter,
 } from "@/lib/check-in";
-import { arrivalsWindow, walkInDoorOpen } from "@/lib/departure-clock";
+import { arrivalsWindow } from "@/lib/departure-clock";
 import { formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { paperPassPath } from "@/lib/print-sheets";
@@ -50,12 +50,6 @@ import { TurnAwayDoor, TurnAwayScript } from "./TurnAwayScript";
 export type ArrivalDesk = {
   /** The count, the taps and the groups the roster draws (`RosterSection`'s `arrival`). */
   arrival: RosterArrival;
-  /**
-   * Whether the boat can still seat a walk-in. The door itself is the add-a-
-   * diver search's empty result (UX audit 2026-10-07, item 24), not a row of
-   * its own.
-   */
-  walkInOpen: boolean;
 };
 
 /**
@@ -74,7 +68,7 @@ export function deskIsOpen(trip: { status: string; startsAt: Date }, now: Date):
  * the same blockers and the same fixes; arrival is a state of the roster now,
  * and this is the part of the old counter that the roster does not already
  * have: the count, the check-in tap and its undo, "Not here" and the released
- * seat's next step, the paper pass, and whether a walk-in can still be seated.
+ * seat's next step and the paper pass.
  *
  * Every fix for a blocked diver — the waiver, the paper release, the identity
  * confirm, payment — is the roster row's own, so a blocked row gets no
@@ -467,11 +461,7 @@ export async function buildArrivalDesk({
 
   const boarded = new Set(rows.filter((row) => row.boarded).map((row) => row.bookingId));
 
-  // The seat action asks the same question again, so a boat that has left (or
-  // is out of the counter's reach) is not offered the door.
-  const walkInOpen = walkInDoorOpen(trip.startsAt, now);
-
-  return { arrival: { instrument, controls, below, details, boarded }, walkInOpen };
+  return { arrival: { instrument, controls, below, details, boarded } };
 }
 
 /**

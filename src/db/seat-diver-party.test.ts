@@ -53,7 +53,7 @@ describe("seatParty", () => {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
       members: [
         { fullName: `Ana Party ${stamp}`, minor: false },
@@ -109,7 +109,7 @@ describe("seatParty", () => {
       shopId: shop.id,
       tripId: fullTrip.id,
       actorPersonId,
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
       members: [
         { fullName: `Full Party A ${stamp}`, minor: false },
@@ -133,7 +133,7 @@ describe("seatParty", () => {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
       members: [
         { fullName: `Claim Lead ${stamp}`, minor: false },
@@ -156,7 +156,7 @@ describe("seatParty", () => {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
       members: [
         { fullName: `Type Diver ${stamp}`, minor: false, participantType: "diver" },
@@ -194,7 +194,7 @@ describe("seatParty", () => {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
       members: [
         {
@@ -234,7 +234,7 @@ describe("seatParty", () => {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
       members: [
         {
@@ -266,7 +266,7 @@ describe("seatParty", () => {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
       members: [
         { fullName: `Picked Lead ${stamp}`, minor: false },
@@ -313,7 +313,7 @@ describe("seatParty", () => {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
       members: [
         { fullName: `Gate Snorkel ${stamp}`, minor: false, participantType: "snorkeler" },
@@ -341,7 +341,7 @@ describe("seatParty", () => {
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      entry: "walk_in",
+      entry: "roster",
       refusals: "specific",
       members: [
         { fullName: `Guard Lead ${stamp}`, minor: false },

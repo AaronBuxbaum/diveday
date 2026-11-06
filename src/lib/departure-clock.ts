@@ -259,20 +259,10 @@ export function arrivalsWindow(now: Date): DepartureWindow {
 /**
  * Whether this departure is on the arrivals desk at `now`: the window's own
  * question. Not "has it sailed": the desk keeps a boat for six hours after it
- * left. A gate asks {@link walkInDoorOpen} or `hasSailed`.
+ * left. A gate asks `hasSailed`.
  */
 export function onArrivalsDesk(startsAt: Date, now: Date): boolean {
   return (
     hasCrossed("desk_opens", { startsAt }, now) && !hasCrossed("desk_closes", { startsAt }, now)
   );
-}
-
-/**
- * Whether the counter may still seat a walk-in on a departure: it is on the
- * arrivals desk and has not sailed (the one departure buffer). The staffer's
- * door and the seat action both ask this, so a typed URL or a stale page
- * cannot seat someone on a boat that has gone.
- */
-export function walkInDoorOpen(startsAt: Date, now: Date): boolean {
-  return onArrivalsDesk(startsAt, now) && !hasCrossed("sailing_grace_over", { startsAt }, now);
 }

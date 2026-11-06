@@ -99,11 +99,11 @@ describe("KeepTypedOnRefusal", () => {
 describe("forgetAllKeptTyped", () => {
   it("clears every kept form on the tab and nothing else", () => {
     window.sessionStorage.setItem(keptTypedKey("gear-add-unit", SCOPE), "{}");
-    window.sessionStorage.setItem(keptTypedKey("walk-in-party", "reef.p-2"), "{}");
+    window.sessionStorage.setItem(keptTypedKey("seat-party", "reef.p-2"), "{}");
     window.sessionStorage.setItem("diveday.something-else", "kept");
     forgetAllKeptTyped();
     expect(window.sessionStorage.getItem(keptTypedKey("gear-add-unit", SCOPE))).toBeNull();
-    expect(window.sessionStorage.getItem(keptTypedKey("walk-in-party", "reef.p-2"))).toBeNull();
+    expect(window.sessionStorage.getItem(keptTypedKey("seat-party", "reef.p-2"))).toBeNull();
     expect(window.sessionStorage.getItem("diveday.something-else")).toBe("kept");
   });
 });

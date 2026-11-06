@@ -30,8 +30,7 @@ type DeskNoticeMap = Record<string, DeskNotice> & Record<DeskNoticeCode, DeskNot
 /**
  * No success entries for checking in or undoing one: the row itself settles
  * into (or out of) "Checked in" beside the tap that did it (design principle
- * 9). Every code here is a refusal or a walk-in outcome with no row state to
- * land on.
+ * 9). Every code here is a refusal or an outcome with no row state to land on.
  */
 export const DESK_NOTICES: DeskNoticeMap = {
   "not-ready": { tone: "warning", key: "checkIn.notice.notReady" },
@@ -41,23 +40,6 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "not-found": { tone: "danger", key: "checkIn.notice.notFound" },
   "staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },
-  "walkin-added": { tone: "success", key: "checkIn.notice.walkinAdded" },
-  "walkin-added-confirmed": { tone: "success", key: "checkIn.notice.walkinAddedConfirmed" },
-  // The waiver link could not be delivered.
-  "walkin-added-waiver-undelivered": {
-    tone: "warning",
-    key: "checkIn.notice.walkinAddedWaiverUndelivered",
-  },
-  // Walk-in outcomes include party seating and identity-unconfirmed matches.
-  "walkin-party-added": { tone: "success", key: "checkIn.notice.walkinPartyAdded" },
-  "walkin-party-added-waiver-undelivered": {
-    tone: "warning",
-    key: "checkIn.notice.walkinPartyAddedWaiverUndelivered",
-  },
-  "walkin-added-identity-unconfirmed": {
-    tone: "warning",
-    key: "checkIn.notice.walkinAddedIdentityUnconfirmed",
-  },
   // These outcomes distinguish boarded from not-back-aboard roll call states.
   "no-show-already-boarded": { tone: "danger", key: "checkIn.notice.noShowAlreadyBoarded" },
   "no-show-already-missing-after-dive": {

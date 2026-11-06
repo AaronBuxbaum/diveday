@@ -4,6 +4,7 @@ import { clearCourseForms } from "./course-form-only";
 import { decodeQrDataUrl } from "./decode-qr";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
+  addDiverFormPath,
   counterPath,
   createTrip,
   daysFromNow,
@@ -14,7 +15,6 @@ import {
   rosterRow,
   seededTripId,
   tripPathByTitle,
-  walkInFormPath,
   writeCourseForm,
 } from "./helpers";
 
@@ -36,7 +36,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
 }) => {
   test.setTimeout(60_000);
   const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
-  await page.goto(walkInFormPath("blue-mantis", tripId));
+  await page.goto(addDiverFormPath("blue-mantis", tripId));
   await page.getByRole("button", { name: "Add another person" }).click();
   const child = page.getByRole("group", { name: "Person 2" });
   await child.getByLabel("Full name").fill("Sky Lagoon");
@@ -45,7 +45,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
   await page.getByRole("group", { name: "Person 3" }).getByLabel("Full name").fill("Chris Lagoon");
   await page.getByLabel("Full name").first().fill("Alex Lagoon");
   await expect(page.getByLabel("Full name").first()).toHaveValue("Alex Lagoon");
-  await page.getByRole("button", { name: "Add to boat" }).click();
+  await page.getByRole("button", { name: "Add to trip" }).click();
   await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers$/);
   await expect(page.getByText("A parent or guardian must also sign.")).toBeVisible();
   await page.getByRole("button", { name: "Show waiver QR code for Sky Lagoon" }).click();
@@ -184,12 +184,12 @@ test("a counter waiver receipt stays scoped when course forms are still outstand
   await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
   const tripId = new URL(tripPath, workerBaseURL).pathname.split("/").at(-1);
   if (!tripId) throw new Error("course departure missing");
-  await page.goto(walkInFormPath("blue-mantis", tripId));
+  await page.goto(addDiverFormPath("blue-mantis", tripId));
   await page.getByRole("button", { name: "Add another person" }).click();
   await page.getByRole("group", { name: "Person 2" }).getByLabel("Full name").fill("Morgan Course");
   await page.getByLabel("Full name").first().fill("Alex Course");
   await expect(page.getByLabel("Full name").first()).toHaveValue("Alex Course");
-  await page.getByRole("button", { name: "Add to boat" }).click();
+  await page.getByRole("button", { name: "Add to trip" }).click();
   await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers$/);
   await page.getByRole("button", { name: "Show waiver QR code for Alex Course" }).click();
   const dialog = page.getByRole("dialog", { name: "Party waivers" });

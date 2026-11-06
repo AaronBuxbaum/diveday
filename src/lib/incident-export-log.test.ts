@@ -253,7 +253,7 @@ describe("roster changes and incident reports on the departure log", () => {
     const at = AFTER_START;
     const line = (code: string, params: Record<string, string>) =>
       rosterChangeFromActivity({ code, params, occurredAt: at });
-    expect(line("seat_added_walk_in", { actor: "Rae Owner", diver: "Ben Cho" })).toEqual({
+    expect(line("seat_added", { actor: "Rae Owner", diver: "Ben Cho" })).toEqual({
       action: "added",
       subjectName: "Ben Cho",
       recordedByName: "Rae Owner",
