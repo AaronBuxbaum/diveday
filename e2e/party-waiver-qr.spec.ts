@@ -50,6 +50,11 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
   await expect(page.getByText("A parent or guardian must also sign.")).toBeVisible();
   await page.getByRole("button", { name: "Show waiver QR code for Sky Lagoon" }).click();
   const dialog = page.getByRole("dialog", { name: "Party waivers" });
+  // A minor's code waits until the desk says a parent or guardian is at the counter (#3986).
+  await expect(
+    dialog.getByText("Is their parent or legal guardian at the counter to co-sign?"),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Yes, show the code" }).click();
   const src = await dialog.getByRole("img").getAttribute("src");
   const url = new URL(await decodeQrDataUrl(src));
   if (!url.pathname.startsWith("/waivers/")) throw new Error("unexpected QR destination");
