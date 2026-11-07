@@ -30,7 +30,6 @@
     "offCadenceDescription": "Takes them off the public schedule. Reinstate any single one from its own trip page.",
     "offCadenceDescriptionBooked": "{count, plural, one {# of them has divers booked. They are told the date is off, and their card payments go back in full.} other {# of them have divers booked. They are told the date is off, and their card payments go back in full.}}",
     "offCadenceDescriptionBookedHeld": "{count, plural, one {# of them has divers booked. They are told the date is off, and an owner or manager sends the card refunds back.} other {# of them have divers booked. They are told the date is off, and an owner or manager sends the card refunds back.}}",
-    "cancelling": "Canceling…",
     "cancelAllUpcoming": "Cancel every upcoming date",
     "cancelAllConfirm": "Yes, cancel every upcoming date",
     "cancelDescription": "{count, plural, one {Cancels the remaining # date and stops the repeat.} other {Cancels the remaining # dates and stops the repeat.}}",

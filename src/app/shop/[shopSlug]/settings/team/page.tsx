@@ -27,13 +27,13 @@ import { settingsPaneClass } from "../_components/settings-pane";
 import { AddCredentialDisclosure } from "./_components/AddCredentialDisclosure";
 import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
 import { LanguageCheckboxes, StaffLanguagesValue } from "./_components/LanguageCheckboxes";
+import { PendingInviteActions } from "./_components/PendingInviteActions";
 import { StaffCardCredentialsWithActions as StaffCardCredentials } from "./_components/StaffCardCredentialsWithActions";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
 import {
   deleteStaffCredentialAction,
   removeStaffAction,
-  resendInviteAction,
   restoreStaffAction,
   reviewStaffCredentialAction,
   saveStaffEmergencyContactAction,
@@ -307,21 +307,7 @@ function StaffRow({
           phone (the pixel probe, settings-team). `sm:ms-auto` holds the
           switches to the end without a placeholder holding the start. */}
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between print:hidden">
-        {member.accountStatus === "invited" ? (
-          <form action={resendInviteAction}>
-            <input type="hidden" name="userAccountId" value={member.userAccountId} />
-            <SubmitButton
-              pendingLabel={t("words.busy.sending")}
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-                className: "w-full sm:w-auto",
-              })}
-            >
-              {t("settings.team.staffRow.resendInvite")}
-            </SubmitButton>
-          </form>
-        ) : null}
+        {member.accountStatus === "invited" ? <PendingInviteActions member={member} t={t} /> : null}
         {member.accountStatus !== "invited" ? (
           <div className="flex gap-2 sm:ms-auto">
             <form action={setStaffStatusAction}>
@@ -508,9 +494,17 @@ export default async function TeamSettingsPage({
         }
       />
 
-      {notice === "removed" && undoPersonId && undoUserAccountId && undoRoles ? (
+      {(notice === "removed" || notice === "invite-canceled") &&
+      undoPersonId &&
+      undoUserAccountId &&
+      undoRoles ? (
         <UndoToast
-          message={t("settings.team.staffRow.deletedToast", { name: undoName ?? "" })}
+          message={t(
+            notice === "invite-canceled"
+              ? "settings.team.staffRow.inviteCanceledToast"
+              : "settings.team.staffRow.deletedToast",
+            { name: undoName ?? "" },
+          )}
           action={restoreStaffAction}
           fields={{
             personId: undoPersonId,
