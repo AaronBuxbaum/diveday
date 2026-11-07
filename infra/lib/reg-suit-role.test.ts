@@ -39,6 +39,111 @@ function attachedStatements(template: ReturnType<typeof synthesize>, roleLogical
     );
 }
 
+type TrustConditions = Record<string, Record<string, string | string[]>>;
+
+function trustConditions(template: ReturnType<typeof synthesize>): TrustConditions {
+  const [, role] = regSuitRole(template);
+  const document = role.Properties.AssumeRolePolicyDocument as {
+    Statement: { Condition: TrustConditions }[];
+  };
+  expect(document.Statement).toHaveLength(1);
+  return document.Statement[0].Condition;
+}
+
+function globMatches(pattern: string, value: string) {
+  const source = pattern
+    .split("")
+    .map((char) => {
+      if (char === "*") return ".*";
+      if (char === "?") return ".";
+      return char.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+    })
+    .join("");
+  return new RegExp(`^${source}$`).test(value);
+}
+
+/**
+ * Whether a token with these claims satisfies every condition, the way STS reads
+ * `StringEquals` (exact) and `StringLike` (`*` and `?` globs) over GitHub's claims.
+ * An operator this does not know fails the test rather than passing silently.
+ */
+function admits(conditions: TrustConditions, claims: Record<string, string>) {
+  return Object.entries(conditions).every(([operator, keys]) =>
+    Object.entries(keys).every(([key, expected]) => {
+      const claim = claims[key.replace("token.actions.githubusercontent.com:", "")];
+      if (claim === undefined) return false;
+      const values = ([] as string[]).concat(expected);
+      if (operator === "StringEquals") return values.includes(claim);
+      if (operator === "StringLike") return values.some((pattern) => globMatches(pattern, claim));
+      throw new Error(`unexpected trust operator ${operator}`);
+    }),
+  );
+}
+
+const REPO_SUB = "repo:AaronBuxbaum@5578581/diveday@1302222351";
+const MAIN_PUBLISHER =
+  "AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@refs/heads/main";
+const PUBLISHER = "AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml";
+
+describe("GitHubActionsRegSuitRole trusts only the reviewed publisher on main (#3274)", () => {
+  // A pull request controls its own workflow files, so the `sub` claim alone
+  // (`...:pull_request`) admits any job a pull request adds.
+  const conditions = trustConditions(synthesize());
+  const claims = (job_workflow_ref: string, sub = `${REPO_SUB}:pull_request`) => ({
+    aud: "sts.amazonaws.com",
+    sub,
+    job_workflow_ref,
+  });
+
+  it("admits main's publisher from a pull request and from a main run", () => {
+    expect(admits(conditions, claims(MAIN_PUBLISHER))).toBe(true);
+    expect(admits(conditions, claims(MAIN_PUBLISHER, `${REPO_SUB}:ref:refs/heads/main`))).toBe(
+      true,
+    );
+  });
+
+  it.each([
+    [
+      "a job a pull request adds to ci.yml",
+      "AaronBuxbaum/diveday/.github/workflows/ci.yml@refs/pull/7/merge",
+    ],
+    [
+      "a new workflow file in the pull request",
+      "AaronBuxbaum/diveday/.github/workflows/exfil.yml@refs/pull/7/merge",
+    ],
+    ["the publisher at a commit the pull request picks", `${PUBLISHER}@${"a".repeat(40)}`],
+    ["the publisher from the pull request's branch", `${PUBLISHER}@refs/heads/attacker`],
+    ["the publisher at a tag named main", `${PUBLISHER}@refs/tags/main`],
+    ["the publisher as a local reusable workflow", `${PUBLISHER}@refs/pull/7/merge`],
+    [
+      "a look-alike publisher in another repository",
+      "attacker/diveday/.github/workflows/reg-suit-publish.yml@refs/heads/main",
+    ],
+  ])("refuses %s", (_label, jobWorkflowRef) => {
+    expect(admits(conditions, claims(jobWorkflowRef))).toBe(false);
+  });
+
+  it("refuses a token from a job that calls no reusable workflow", () => {
+    expect(admits(conditions, { aud: "sts.amazonaws.com", sub: `${REPO_SUB}:pull_request` })).toBe(
+      false,
+    );
+  });
+
+  it("refuses main's publisher from another branch's run or for another audience", () => {
+    expect(admits(conditions, claims(MAIN_PUBLISHER, `${REPO_SUB}:ref:refs/heads/feature`))).toBe(
+      false,
+    );
+    expect(admits(conditions, { ...claims(MAIN_PUBLISHER), aud: "example.com" })).toBe(false);
+  });
+
+  it("names the publisher exactly, never by pattern", () => {
+    expect(JSON.stringify(conditions.StringLike ?? {})).not.toContain("job_workflow_ref");
+    expect(
+      conditions.StringEquals?.["token.actions.githubusercontent.com:job_workflow_ref"],
+    ).toBeDefined();
+  });
+});
+
 describe("GitHubActionsRegSuitRole", () => {
   it("is trusted from this repository's pull_request and main runs only", () => {
     const [, role] = regSuitRole(synthesize());

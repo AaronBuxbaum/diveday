@@ -38,16 +38,20 @@ describe("reg-suit consumer workflow", () => {
     expect(visual).not.toMatch(/^\s+path: e2e\/screenshots\/$/mu);
   });
 
-  it("calls the pinned publisher with OIDC only", () => {
+  it("calls main's publisher, the one identity its OIDC role trusts (#3274)", () => {
     const publisher = job("visual-publish");
     expect(publisher).toContain("      id-token: write");
     expect(publisher).not.toContain("pull-requests: write");
+    // GitHub mints `@main` as job_workflow_ref `...reg-suit-publish.yml@refs/heads/main`,
+    // the value GitHubActionsRegSuitRole's trust names (infra/lib/infra-stack.ts S18).
+    // A SHA, another branch or `./.github/workflows/...` would be refused by AWS.
     expect(publisher).toMatch(
-      /uses: AaronBuxbaum\/diveday\/.github\/workflows\/reg-suit-publish\.yml@[0-9a-f]{40}/u,
+      /^ {4}uses: AaronBuxbaum\/diveday\/\.github\/workflows\/reg-suit-publish\.yml@main(?: #.*)?$/mu,
     );
-    expect(publisher).not.toContain("reg-suit-publish.yml@refs/heads/main");
-    expect(publisher).toContain(
-      "uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@3c33684c026ecb49aa000a08a269c5e8cf40306c # immutable commit 3c33684c026ecb49aa000a08a269c5e8cf40306c",
+    expect(CI.match(/uses: \S*reg-suit-publish\.yml/gu)).toHaveLength(1);
+    expect(CI).not.toContain("./.github/workflows/reg-suit-publish.yml");
+    expect(readFileSync(path.join(ROOT, "infra/lib/infra-stack.ts"), "utf8")).toContain(
+      '".github/workflows/reg-suit-publish.yml@refs/heads/main"',
     );
     expect(publisher).not.toContain("steps:");
     expect(publisher).toContain("capture-mode: ${{ needs.visual-plan.outputs.mode }}");

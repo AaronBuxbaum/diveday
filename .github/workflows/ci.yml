@@ -995,7 +995,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@3c33684c026ecb49aa000a08a269c5e8cf40306c # immutable commit 3c33684c026ecb49aa000a08a269c5e8cf40306c
+    # Always main's reviewed publisher, never a SHA or `./`: GitHubActionsRegSuitRole trusts only
+    # job_workflow_ref `reg-suit-publish.yml@refs/heads/main` (#3274). A publisher change takes
+    # effect for every pull request once it merges; change its inputs compatibly.
+    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@main
     with:
       capture-mode: ${{ needs.visual-plan.outputs.mode }}
       capture-shards: ${{ needs.visual-plan.outputs.shards }}
