@@ -142,7 +142,9 @@ export function DiverRollCallRow({
         className={`${ROLL_CALL_ROW_CLASS} ${paperRowTone(recordedTone, blockedAtDock)}`}
       >
         <div className={ruleClass}>
-          <div className={PAPER_ROW_CLASS}>{rowTrigger}</div>
+          <div data-roll-call-name="" className={PAPER_ROW_CLASS}>
+            {rowTrigger}
+          </div>
           {rowPrint}
         </div>
       </li>

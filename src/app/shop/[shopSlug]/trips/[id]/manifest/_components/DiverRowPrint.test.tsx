@@ -49,3 +49,32 @@ describe("DiverRowPrint, drawn on its own", () => {
     expect(block.textContent).toMatch(/EDT/);
   });
 });
+
+describe("a printed medical alert is critical on paper", () => {
+  // `.claude/rules/print-ink.md`: a medical alert is critical, so it wears
+  // the 2px outline whether the sheet prints the flag or the diver's words
+  // (dive-domain review of #2745, finding 1).
+  it.each([
+    ["the flag", undefined],
+    ["the words", "Bee-sting allergy."],
+  ])("outlines %s", (_, printedAlert) => {
+    const alerted = diver({ medicalAlert: true });
+    const state = diverRowState(alerted, "departure", true, "America/New_York");
+    const { container } = render(
+      <DiverRowPrint
+        diver={alerted}
+        printedAlert={printedAlert}
+        state={state}
+        checkpoint="departure"
+        auditLabel="To call"
+        teamLabel={null}
+        locale="en-US"
+        timezone="America/New_York"
+        t={t}
+      />,
+    );
+    const outlined = container.querySelector("[data-print-critical]");
+    expect(outlined).not.toBeNull();
+    if (printedAlert) expect(outlined).toHaveTextContent(printedAlert);
+  });
+});

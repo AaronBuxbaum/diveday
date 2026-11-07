@@ -63,6 +63,8 @@ export async function printInkViolations(page: Page): Promise<InkViolation[]> {
         }
         return parts.join(" > ");
       };
+      const zoomOf = (element: Element) =>
+        (element as Element & { currentCSSZoom?: number }).currentCSSZoom ?? 1;
       const found: { path: string; problem: string }[] = [];
       const add = (element: Element, problem: string) =>
         found.push({ path: path(element), problem });
@@ -88,7 +90,7 @@ export async function printInkViolations(page: Page): Promise<InkViolation[]> {
           const line = parse(style.outlineColor);
           if (line && line[3] > 0 && !grey(line))
             add(element, `coloured outline ${style.outlineColor}`);
-          if (Number.parseFloat(style.outlineWidth) > outlineMax)
+          if (Number.parseFloat(style.outlineWidth) * zoomOf(element) > outlineMax)
             add(element, `${style.outlineWidth} outline`);
         }
 
@@ -116,10 +118,18 @@ export async function printInkViolations(page: Page): Promise<InkViolation[]> {
             add(element, `light text ${style.color}`);
         }
 
+        // Widths as drawn on the page: a sheet's contents are zoomed
+        // (`.paper-sheet > *`, globals.css), and a computed width is in the
+        // element's own zoomed units, so a 1px rule there reads 1.23px.
+        const zoom = zoomOf(element);
         const widths = (["Top", "Right", "Bottom", "Left"] as const).map((side) =>
           style[`border${side}Style` as "borderTopStyle"] === "none"
             ? 0
-            : Number.parseFloat(style[`border${side}Width` as "borderTopWidth"]) || 0,
+            : Math.round(
+                (Number.parseFloat(style[`border${side}Width` as "borderTopWidth"]) || 0) *
+                  zoom *
+                  100,
+              ) / 100,
         );
         // A hollow box (a checkbox, a marker ring) is the same line on all four sides.
         const outlined = widths.every((width) => width > 0 && width === widths[0]);

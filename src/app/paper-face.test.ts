@@ -79,6 +79,12 @@ describe("the paper face", () => {
     expect(CSS).not.toMatch(/--sheet-band/);
   });
 
+  it("sets a sheet's type for paper on the sheet itself, never on the print root", () => {
+    const scale = rules.find((rule) => rule.selector === ".paper-sheet > *");
+    expect(scale?.body).toMatch(/zoom:\s*0\.8125/);
+    for (const block of printBlocks(CSS)) expect(block).not.toMatch(/font-size:\s*13px/);
+  });
+
   it("draws no fill or shadow inside a sheet, on screen as on paper", () => {
     const strip = rules.find((rule) => rule.selector.startsWith(".paper-sheet *,"));
     expect(strip, "the sheet's own strip, outside any media query").toBeDefined();

@@ -1017,6 +1017,9 @@ select:not([multiple]):not([size]):dir(rtl) {
   display: flex;
   justify-content: center;
   overflow-x: auto;
+  /* Ink for what a document names outside its sheets (its screen-reader
+     title): the frame is paper's, whatever the device's scheme. */
+  color: #000000;
   background: var(--surface-sunken);
   padding: 1.5rem 1rem;
 }
@@ -1141,6 +1144,19 @@ select:not([multiple]):not([size]):dir(rtl) {
     /* a page's own layout utilities must not reach the paper around a sheet */
     box-shadow: none !important;
   }
+}
+
+/*
+ * **A sheet sets its type for paper, on screen too.** The app's rem is tuned
+ * for a boat-deck touchscreen at arm's length, which reads oversized on paper
+ * held at reading distance, so a sheet's band, body and fold draw at 13/16 of
+ * it: the scale a 13px root gave paper before (#2745), now part of the
+ * sheet's own face rather than a print-only step, so what a staffer reviews
+ * on screen is the page, line for line, that comes out of the printer. The
+ * sheet's box stays in millimetres; only what is inside it scales.
+ */
+.paper-sheet > * {
+  zoom: 0.8125;
 }
 
 .paper-sheet-band {

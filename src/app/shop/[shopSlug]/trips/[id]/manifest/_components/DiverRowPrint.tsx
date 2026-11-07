@@ -119,7 +119,8 @@ export function DiverRowPrint({
         <p className="mt-1 text-sm text-muted tabular-nums">{quietFacts.join(" · ")}</p>
       ) : null}
       {printedAlert && !diver.identityWithheld ? (
-        <div className="mt-2 rounded border border-border px-3 py-2">
+        // Critical on paper (`.claude/rules/print-ink.md`): the 2px outline.
+        <div data-print-critical className="mt-2 px-3 py-2">
           <p className="text-sm font-semibold">{t("manifest.medicalAlertHeading")}</p>
           {/* The diver's own words, line breaks kept. */}
           <p className="text-base whitespace-pre-wrap [overflow-wrap:anywhere]">{printedAlert}</p>
