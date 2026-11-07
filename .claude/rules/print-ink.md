@@ -14,7 +14,7 @@ paths:
 A customer pays for every drop. Paper is **black ink on white paper**, and structure comes from type,
 space and thin outlines. Status comes from its word (design principle 6), never from a fill or a hue.
 This holds for every printed thing: sheets (`PaperSheet`), packets, the roster and manifest, the
-logbook, the doctor referral, waivers, passes and cards. An ordinary staff screen prints nothing but a line pointing at the Print buttons (`data-staff-print-notice`, `globals.css`; Aaron, 2026-11-07), so it never needs a capture.
+logbook, the doctor referral, waivers, passes and cards. An ordinary staff screen prints nothing but a line pointing at the Print buttons (`data-staff-print-notice`, `globals.css`; Aaron, 2026-11-07), so it never needs a capture. A staff page that is itself the kept document (the signed waiver, a work order) carries `data-staff-print-document` and prints as itself.
 
 ## A violation is any of these on paper
 

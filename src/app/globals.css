@@ -1136,9 +1136,14 @@ select:not([multiple]):not([size]):dir(rtl) {
    prints: a staff page that holds no sheet hides all of itself on paper and
    leaves `data-staff-print-notice`, which points at the Print buttons. Staff
    only (the notice lives in the staff chrome); a diver's or a visitor's page
-   prints as it did. Unlayered and `!important`, like the rule above. */
+   prints as it did. A staff page that is itself the document a person keeps
+   (the signed waiver, a work order; `data-staff-print-document`) prints as itself, without
+   the notice; one kept alive on a hidden route does not count.
+   Unlayered and `!important`, like the rule above. */
 @media print {
-  body:has([data-staff-print-notice]):not(:has(.paper-sheet-frame:not([style*="display: none"] *)))
+  body:has([data-staff-print-notice]):not(
+      :has(.paper-sheet-frame:not([style*="display: none"] *))
+    ):not(:has([data-staff-print-document]:not([style*="display: none"] *)))
     :not(
       [data-staff-print-notice],
       [data-staff-print-notice] *,
@@ -1147,6 +1152,10 @@ select:not([multiple]):not([size]):dir(rtl) {
       [data-staff-session-lock] *,
       :has([data-staff-session-lock])
     ) {
+    display: none !important;
+  }
+
+  body:has([data-staff-print-document]:not([style*="display: none"] *)) [data-staff-print-notice] {
     display: none !important;
   }
 }

@@ -200,7 +200,9 @@ export default async function SignedWaiverPage({
             : t("waiversStaff.record.replaced", { date: when(waiver.supersededAt) })}
         </p>
       ) : null}
-      <div className="mt-8 space-y-10">
+      {/* A signed release is the document a person keeps, so this page prints
+          as itself rather than as the staff print notice (`globals.css`). */}
+      <div className="mt-8 space-y-10" data-staff-print-document="">
         <SectionCard>
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[10rem_1fr]">
             {facts.map((fact) => (

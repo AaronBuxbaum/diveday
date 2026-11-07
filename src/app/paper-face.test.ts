@@ -138,6 +138,29 @@ describe("the paper face", () => {
     expect(document.getElementById("diver")?.matches(selector)).toBe(false);
   });
 
+  it("prints a staff page that is itself the document as itself, without the notice", () => {
+    const staff = rules.find((rule) =>
+      rule.selector.startsWith("body:has([data-staff-print-notice])"),
+    );
+    const quiet = rules.find((rule) =>
+      rule.selector.startsWith("body:has([data-staff-print-document]"),
+    );
+    expect(quiet?.body).toMatch(/display:\s*none\s*!important/);
+    const chrome = `<header id="chrome"><p data-staff-print-notice="">Screens don't print.</p></header>`;
+    document.body.innerHTML = `${chrome}<main id="waiver"><div data-staff-print-document="">Release</div></main>`;
+    expect(document.getElementById("waiver")?.matches(staff?.selector ?? "")).toBe(false);
+    expect(
+      document.querySelector("[data-staff-print-notice]")?.matches(quiet?.selector ?? ""),
+    ).toBe(true);
+    // A signed waiver kept alive on a hidden route leaves the screen on show to the notice.
+    document.body.innerHTML = `${chrome}<main id="screen">Promos</main>
+      <div style="display: none"><div data-staff-print-document="">Release</div></div>`;
+    expect(document.getElementById("screen")?.matches(staff?.selector ?? "")).toBe(true);
+    expect(
+      document.querySelector("[data-staff-print-notice]")?.matches(quiet?.selector ?? ""),
+    ).toBe(false);
+  });
+
   it("ignores a sheet kept alive on a hidden route, so the page on screen still prints", () => {
     // Cache Components keeps a page you left mounted under `display: none`
     // (#2745 dock-operator review): the Boat tab's sheet must not blank Prep.
