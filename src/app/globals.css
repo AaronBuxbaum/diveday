@@ -1146,19 +1146,6 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 }
 
-/*
- * **A sheet sets its type for paper, on screen too.** The app's rem is tuned
- * for a boat-deck touchscreen at arm's length, which reads oversized on paper
- * held at reading distance, so a sheet's band, body and fold draw at 13/16 of
- * it: the scale a 13px root gave paper before (#2745), now part of the
- * sheet's own face rather than a print-only step, so what a staffer reviews
- * on screen is the page, line for line, that comes out of the printer. The
- * sheet's box stays in millimetres; only what is inside it scales.
- */
-.paper-sheet > * {
-  zoom: 0.8125;
-}
-
 .paper-sheet-band {
   display: flex;
   align-items: center;
@@ -1285,6 +1272,13 @@ select:not([multiple]):not([size]):dir(rtl) {
   min-width: 0;
 }
 
+/* A sheet's table is set for paper: half the screen's cell gutter, so a
+   departure log's every column fits a page without a phone number running
+   past its cell (the five-dive log, #2745). */
+.paper-sheet :is(th, td) {
+  padding-inline: 0.5rem;
+}
+
 @media print {
   @layer base {
     /* A session lock protects the page on paper as well as on screen. */
@@ -1336,6 +1330,13 @@ select:not([multiple]):not([size]):dir(rtl) {
   .paper-sheet * {
     /* a clipped box on paper is content that does not exist */
     overflow: visible !important;
+  }
+
+  /* A card or list a page break cuts closes its border on each page, rather
+     than running an open box into the margin. */
+  .paper-sheet * {
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
 
   /* On paper the frame stops being a frame, and every sheet starts a page. */

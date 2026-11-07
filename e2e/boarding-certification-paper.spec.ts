@@ -29,8 +29,11 @@ test("boarding evidence stays with its heading and every sheet identifies the de
     })
       .split("\f")
       .filter((sheet) => sheet.trim().length > 0);
-    expect(sheets).toHaveLength(4);
+    // As many sheets as the log needs, and none of them only a margin: each
+    // carries the departure's identity and something of the log under it.
+    expect(sheets.length).toBeGreaterThan(1);
     for (const sheet of sheets) {
+      expect(sheet.split("\n").filter((line) => line.trim()).length).toBeGreaterThan(8);
       expect(sheet).toContain("Operational trust departure");
       expect(sheet).toContain("Printed Jul 21, 2026");
     }
