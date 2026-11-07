@@ -737,18 +737,26 @@ test.describe("the printed trip packet", () => {
   /**
    * **The tank count is one line, on screen and on paper** (visual review
    * 2026-10-24, B54): the three tiles held two digits each, and on paper they
-   * pushed the packing list onto its own page.
+   * pushed the packing list onto its own page. Paper is the packet's
+   * packing-list sheet: the Prep screen itself prints only the staff notice
+   * (#2745).
    */
   test("says the tank count as one line on screen and on paper", async ({ page }) => {
+    const tankLine = /^\d+ tanks?(, air|: \d+ air, \d+ nitrox)$/;
     const tripPath = await seededTripPath(page);
     await page.goto(`${tripPath}/prep`);
     const tanks = page.getByRole("heading", { name: "Tanks" });
     await tanks.waitFor();
-    const section = page.locator("section").filter({ has: tanks });
-    const line = section.getByText(/^\d+ tanks?(, air|: \d+ air, \d+ nitrox)$/);
+    await expect(page.locator("section").filter({ has: tanks }).getByText(tankLine)).toBeVisible();
 
-    await expect(line).toBeVisible();
+    await page.goto(`${tripPath}?print=1`);
+    await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
-    await expect(line).toBeVisible();
+    await expect(
+      page
+        .locator(".paper-sheet-frame section")
+        .filter({ has: page.getByRole("heading", { name: "Tanks" }) })
+        .getByText(tankLine),
+    ).toBeVisible();
   });
 });
