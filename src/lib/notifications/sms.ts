@@ -31,6 +31,8 @@ export type SmsDelivery = CourtesyDelivery;
 
 export interface SmsProvider {
   send(message: SmsMessage, options?: { signal?: AbortSignal }): Promise<SmsDelivery>;
+  /** False when no SMS credentials are set, so every send is `not_configured`. */
+  readonly configured?: boolean;
 }
 
 type SmsEnvironment = Readonly<Record<string, string | undefined>>;
@@ -146,6 +148,7 @@ export function snsSmsProvider(config: SnsConfig, options: SnsProviderOptions = 
 }
 
 const disabledSmsProvider: SmsProvider = {
+  configured: false,
   async send() {
     return { status: "not_configured" };
   },

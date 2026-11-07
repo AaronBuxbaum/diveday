@@ -190,6 +190,7 @@ function rosterProps({
       roster,
       readinessByBooking: readiness,
       waiverByBooking: waivers,
+      textableBookings: new Set<string>(),
       rentalFitByBooking: rentalFit ?? (new Map() as RentalFitByBooking),
       nitroxByBooking: new Map() as NitroxByBooking,
       notesByBooking: new Map(),

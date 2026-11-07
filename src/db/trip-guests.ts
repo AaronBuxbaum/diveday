@@ -41,6 +41,7 @@ import { trainingMarksForRoster } from "./training-marks";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import type { TripSharedReads } from "./trip-shared-reads";
 import { getTripWithBooked } from "./trips-record";
+import { textableSeats } from "./waiver-issue";
 
 /**
  * Everything the trip's Guests page is about, in one call — the last of the
@@ -127,6 +128,23 @@ function inviteDatesForCandidates(
     shopId,
     candidates.map(({ person }) => person.id),
     nowDate(),
+  );
+}
+
+/** What `textableSeats` reads of a seat: the rest are offered the counter (issue #4039). */
+function textReachOf(seat: { booking: { id: string }; person: { phone: string | null } }) {
+  return { bookingId: seat.booking.id, phone: seat.person.phone };
+}
+
+/** Per held seat, its matched diver's last dive day here, or null (issue #1789). */
+function lastDiveDayBySeat(
+  heldSeats: readonly { booking: { id: string; personId: string } }[],
+  lastDiveDays: ReadonlyMap<string, Date>,
+) {
+  return new Map<string, Date | null>(
+    heldSeats.map(
+      ({ booking }) => [booking.id, lastDiveDays.get(booking.personId) ?? null] as const,
+    ),
   );
 }
 
@@ -263,6 +281,7 @@ export async function getTripGuests(
     dependentCharters,
     trainingMarks,
     specialtiesByPerson,
+    textableBookings,
   ] = await Promise.all([
     inviteDatesForCandidates(db, shop.id, diverCandidates),
     // What "Different person" on a held seat can offer to move along with it:
@@ -387,13 +406,10 @@ export async function getTripGuests(
       lastMinuteMatched.map(({ person }) => person.id),
       dealRequirement,
     ),
+    textableSeats(db, shop.id, roster.map(textReachOf)),
   ]);
 
-  const heldSeatLastDiveDay = new Map<string, Date | null>(
-    heldSeats.map(
-      ({ booking }) => [booking.id, heldLastDiveDays.get(booking.personId) ?? null] as const,
-    ),
-  );
+  const heldSeatLastDiveDay = lastDiveDayBySeat(heldSeats, heldLastDiveDays);
 
   const packageDivesByBooking = new Map<string, number>();
   for (const { booking } of roster) {
@@ -495,6 +511,7 @@ export async function getTripGuests(
     packageDivesByBooking,
     /** Per seat, the Paid mark's money and what the seat still owes (`getTripRosterWithPaymentMarks`). */
     paymentMarksByBooking,
+    textableBookings,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A

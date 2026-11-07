@@ -34,7 +34,7 @@ import { recordDiverActivity } from "./operations";
 import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
 import { bookings, capabilities, people, shops, trips, waiverRecords } from "./schema";
-import { stopListedSmsProvider } from "./sms-opt-outs";
+import { optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
 import { seatNotCancelled } from "./trips-queries";
 import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
 import {
@@ -116,6 +116,51 @@ async function waiverTextProviders(db: DbExecutor, shopId: string): Promise<Cour
   };
 }
 
+/** The shop can send a text at all: its own WhatsApp, or platform SMS. */
+function shopCanText(providers: CourtesyProviders): boolean {
+  return Boolean(providers.whatsapp) || providers.sms.configured !== false;
+}
+
+/**
+ * **Whether a text can reach this number** (issue #4039): a number on file,
+ * a shop that can send a text, and a number not on the STOP list, which holds
+ * on WhatsApp too (`sendCourtesyMessage`).
+ */
+async function canTextNumber(
+  db: DbExecutor,
+  shopId: string,
+  phone: string | null,
+  injected?: CourtesyProviders,
+): Promise<boolean> {
+  const to = smsRecipient(phone);
+  if (!to) return false;
+  const providers = injected ?? (await waiverTextProviders(db, shopId));
+  if (!shopCanText(providers)) return false;
+  return !((await providers.sms.isStopListed?.(to)) ?? false);
+}
+
+/**
+ * The seats a text can reach, by the same rule as `canTextNumber`, in one
+ * read of the STOP list: the roster offers the counter to the rest.
+ */
+export async function textableSeats(
+  db: DbExecutor,
+  shopId: string,
+  seats: ReadonlyArray<{ bookingId: string; phone: string | null }>,
+): Promise<Set<string>> {
+  const numbered = seats.flatMap(({ bookingId, phone }) => {
+    const to = smsRecipient(phone);
+    return to ? [{ bookingId, to }] : [];
+  });
+  if (numbered.length === 0) return new Set();
+  if (!shopCanText(await waiverTextProviders(db, shopId))) return new Set();
+  const stopped = await optedOutPhones(
+    db,
+    numbered.map(({ to }) => to),
+  );
+  return new Set(numbered.filter(({ to }) => !stopped.has(to)).map(({ bookingId }) => bookingId));
+}
+
 /**
  * Text one diver their waiver link over the shop's own WhatsApp when it has
  * connected one, and platform SMS otherwise — one message either way, never
@@ -170,6 +215,9 @@ function recordedDeliveryStatus(delivery: WaiverDelivery): "sent" | "failed" | "
   return "failed";
 }
 
+/** A seat's counter queue: its shop, its departure and the seat its party is led from. */
+export type SeatCounter = { shopSlug: string; tripId: string; leadBookingId: string };
+
 export type IssueAndDeliverWaiverResult =
   | {
       ok: true;
@@ -195,6 +243,11 @@ export type IssueAndDeliverWaiverResult =
        * address the lead typed: a text would carry nothing either.
        */
       textable?: boolean;
+      /**
+       * Where a seat no text can reach signs instead (issue #4039): the
+       * counter queue of its departure, under its party's lead seat.
+       */
+      counter?: SeatCounter;
     }
   | {
       ok: false;
@@ -528,6 +581,7 @@ export async function issueAndDeliverWaiver(
           seat: {
             contactTypedByLeadAt: bookings.contactTypedByLeadAt,
             claimedAt: bookings.claimedAt,
+            partyLeadBookingId: bookings.partyLeadBookingId,
           },
         })
         .from(bookings)
@@ -577,13 +631,26 @@ export async function issueAndDeliverWaiver(
         options,
       });
       if (!delivered) return null;
+      const textable =
+        delivered !== "guardian_needed" &&
+        (await canTextNumber(tx, shopId, ctx.person.phone, options.textProviders));
       return {
         ok: true,
         bookingId,
         diverName: ctx.person.fullName,
         token: null,
         delivery: delivered,
-        textable: delivered !== "guardian_needed" && smsRecipient(ctx.person.phone) !== null,
+        textable,
+        // A seat no text can reach signs at the counter, on its party's queue.
+        ...(textable
+          ? {}
+          : {
+              counter: {
+                shopSlug: ctx.shop.slug,
+                tripId: ctx.trip.id,
+                leadBookingId: ctx.seat.partyLeadBookingId ?? bookingId,
+              },
+            }),
       };
     },
   );
@@ -1189,8 +1256,10 @@ export type WaiverBatchFallbackLink = {
   token: string | null;
   /** The seat, when `token` is null, so its row can offer a text instead. */
   bookingId?: string;
-  /** The seat's record holds a number a text can reach (`IssueAndDeliverWaiverResult`). */
+  /** A text can reach the seat (`IssueAndDeliverWaiverResult`). */
   textable?: boolean;
+  /** Where the seat signs when no text can reach it (`IssueAndDeliverWaiverResult`). */
+  counter?: SeatCounter;
   /** Set when the link is not the release's own (`IssueAndDeliverWaiverResult.path`). */
   path?: string;
   reason: WaiverDelivery;
@@ -1266,6 +1335,7 @@ export async function deliverWaiverBatch(
           ? {
               bookingId: result.bookingId,
               textable: "textable" in result && result.textable === true,
+              ...("counter" in result && result.counter ? { counter: result.counter } : {}),
             }
           : {}),
         ...(result.path ? { path: result.path } : {}),

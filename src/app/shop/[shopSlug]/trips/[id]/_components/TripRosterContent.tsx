@@ -320,6 +320,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           roster,
           readinessByBooking,
           waiverByBooking,
+          textableBookings: guests.textableBookings,
           rentalFitByBooking,
           nitroxByBooking,
           notesByBooking,
