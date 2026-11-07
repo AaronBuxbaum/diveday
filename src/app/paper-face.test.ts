@@ -115,6 +115,29 @@ describe("the paper face", () => {
     expect(document.getElementById("chrome")?.matches(selector)).toBe(false);
   });
 
+  it("prints an ordinary staff screen as its notice alone, and leaves a sheet page to its sheet", () => {
+    const staff = rules.find((rule) =>
+      rule.selector.startsWith("body:has([data-staff-print-notice])"),
+    );
+    expect(staff?.body).toMatch(/display:\s*none\s*!important/);
+    const selector = staff?.selector ?? "";
+    const page = `<header id="chrome"><p data-staff-print-notice="">Screens don't print.</p>
+      <button id="menu">Menu</button></header><main id="screen"><form id="form"></form></main>`;
+    document.body.innerHTML = page;
+    for (const id of ["menu", "screen", "form"]) {
+      expect(document.getElementById(id)?.matches(selector), id).toBe(true);
+    }
+    for (const kept of ["#chrome", "[data-staff-print-notice]"]) {
+      expect(document.querySelector(kept)?.matches(selector), kept).toBe(false);
+    }
+    // A staff page that holds a sheet is the sheet's, not this rule's.
+    document.body.innerHTML = `${page}<div class="paper-sheet-frame"><div><section class="paper-sheet">x</section></div></div>`;
+    expect(document.getElementById("screen")?.matches(selector)).toBe(false);
+    // A page without the staff chrome (a diver's, a visitor's) is left alone.
+    document.body.innerHTML = `<main id="diver">Screen</main>`;
+    expect(document.getElementById("diver")?.matches(selector)).toBe(false);
+  });
+
   it("ignores a sheet kept alive on a hidden route, so the page on screen still prints", () => {
     // Cache Components keeps a page you left mounted under `display: none`
     // (#2745 dock-operator review): the Boat tab's sheet must not blank Prep.

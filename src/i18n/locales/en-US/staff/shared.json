@@ -6,6 +6,7 @@
   "operationalWindow": {},
   "padiChecksOff": "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Features.",
   "skipToContent": "Skip to main content",
+  "printNotice": "Screens don’t print. Use a page’s Print button to get its sheet.",
   "notFound": {
     "heading": "We couldn’t find that page",
     "backToToday": "Back to Today"

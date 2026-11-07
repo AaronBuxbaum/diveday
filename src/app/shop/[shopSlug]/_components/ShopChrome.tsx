@@ -268,6 +268,10 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
 
   return (
     <>
+      {/* Seen only on paper, on a staff page that holds no sheet (`globals.css`). */}
+      <p data-staff-print-notice="" className="hidden text-base print:block">
+        {staffT("shared.printNotice")}
+      </p>
       {ownShop &&
       session?.idleRemainingMs !== undefined &&
       session.user?.sessionId &&

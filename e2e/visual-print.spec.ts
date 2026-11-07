@@ -110,96 +110,6 @@ test.describe("print", () => {
     await capturePrint(page, "public-product-directory");
   });
 
-  test("record editing controls stay off paper while record facts remain", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/dive-sites");
-    const site = page.getByRole("link", { name: "Christ of the Abyss", exact: true });
-    await site.click();
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Christ of the Abyss" }),
-    ).toBeVisible();
-    const deletion = page.locator("summary").filter({ hasText: "Delete site" });
-    await expect(deletion).toBeVisible();
-    const maximumDepth = page.getByRole("spinbutton", { name: "Maximum depth" });
-    await expect(maximumDepth).toHaveValue("26");
-    await page.emulateMedia({ media: "print" });
-    await expect(deletion).not.toBeVisible();
-    await expect(maximumDepth).toBeVisible();
-    await expect(maximumDepth).toHaveValue("26");
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "dive-site-record");
-
-    await page.goto("/shop/blue-mantis/gear");
-    await page.getByRole("link", { name: "BCD #1", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "BCD #1" })).toBeVisible();
-    const service = page.getByRole("button", { name: "Pull for service", exact: true });
-    await expect(service).toBeVisible();
-    await expect(page.getByText("CS-2201", { exact: true })).toBeVisible();
-    await page.emulateMedia({ media: "print" });
-    await expect(service).not.toBeVisible();
-    await expect(page.getByText("CS-2201", { exact: true })).toBeVisible();
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "gear-unit-record");
-  });
-
-  test("dock-day settings print without a trailing action-only sheet", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/settings/dock-day");
-    await page.getByRole("heading", { level: 1, name: "Dock-day rhythm" }).waitFor();
-    await expect(page.locator("[data-sticky-actions]")).toBeVisible();
-    await page.emulateMedia({ media: "print" });
-    await expect(page.locator("[data-sticky-actions]")).not.toBeVisible();
-    const pdf = await page.pdf({ format: "Letter", preferCSSPageSize: true });
-    // Chromium's PDF marks every page dictionary separately from the /Pages tree.
-    expect(pdf.toString("latin1").match(/\/Type \/Page\b/g)).toHaveLength(1);
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "dock-day-settings");
-  });
-
-  test("copy controls stay off paper while their values remain", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/promos");
-    const copies = page.getByRole("button", { name: "Copy code", exact: true });
-    await expect(copies).not.toHaveCount(0);
-    await expect(copies.first()).toBeVisible();
-    await page.emulateMedia({ media: "print" });
-    for (const copy of await copies.all()) await expect(copy).not.toBeVisible();
-    await expect(page.getByText("REEF10", { exact: true })).toBeVisible();
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "promo-codes");
-
-    await page.goto("/shop/blue-mantis/settings/embed");
-    const snippet = page.getByRole("textbox", { name: "Embed code" });
-    await expect(snippet).toBeVisible();
-    const value = await snippet.inputValue();
-    await expect(page.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
-    await page.emulateMedia({ media: "print" });
-    await expect(page.getByRole("button", { name: "Copy", exact: true })).not.toBeVisible();
-    await expect(snippet).not.toBeVisible();
-    const printedSnippet = page.locator("[data-print-snippet]");
-    await expect(printedSnippet).toBeVisible();
-    await expect(printedSnippet).toHaveText(value);
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "embed-code");
-  });
-
-  test("the inbox prints its excerpts without clipping", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/inbox");
-    await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
-    await page.emulateMedia({ media: "print" });
-    const excerpts = page.locator("main p.truncate");
-    await expect(excerpts).not.toHaveCount(0);
-    for (const excerpt of await excerpts.all()) {
-      if (!(await excerpt.isVisible())) continue;
-      expect(await excerpt.evaluate((node) => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
-    }
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "inbox");
-  });
-
-  test("the site library prints its ledger without the interactive map", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
-    await capturePrint(page, "dive-site-library");
-  });
-
   // **The crew week is a sheet** (issue #2745): the Crew screen's Print door
   // opens the week's rota, the paper on the noticeboard, and the screen itself
   // is never printed.
@@ -343,14 +253,6 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/manifest`);
     await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
     await capturePrint(page, "manifest");
-  });
-
-  test("the dock prep list prints monochrome and padded", async ({ page }) => {
-    await openReefTrip(page);
-    const tripPath = new URL(page.url()).pathname;
-    await page.goto(`${tripPath}/prep`);
-    await page.getByRole("heading", { name: "Tanks" }).waitFor();
-    await capturePrint(page, "prep");
   });
 
   // **Not "every staff tab" any more, and that is the point.** The packet used

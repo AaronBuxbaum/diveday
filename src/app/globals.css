@@ -1131,6 +1131,26 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 }
 
+/* **An ordinary staff screen prints nothing but a line** (issue #2745,
+   decided by Aaron 2026-11-07). A document is a sheet and a screen never
+   prints: a staff page that holds no sheet hides all of itself on paper and
+   leaves `data-staff-print-notice`, which points at the Print buttons. Staff
+   only (the notice lives in the staff chrome); a diver's or a visitor's page
+   prints as it did. Unlayered and `!important`, like the rule above. */
+@media print {
+  body:has([data-staff-print-notice]):not(:has(.paper-sheet-frame:not([style*="display: none"] *)))
+    :not(
+      [data-staff-print-notice],
+      [data-staff-print-notice] *,
+      :has([data-staff-print-notice]),
+      [data-staff-session-lock],
+      [data-staff-session-lock] *,
+      :has([data-staff-session-lock])
+    ) {
+    display: none !important;
+  }
+}
+
 /* Paper's own rows, which the live manifest keeps for its print-only
    fallback (`data-print-only`): inside a sheet they are the content. */
 .paper-sheet [data-print-only] {
