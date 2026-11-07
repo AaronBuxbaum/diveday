@@ -3250,6 +3250,25 @@ exports.handler = async (event) => {
         resources: bootstrapVersionParameterArns,
       }),
     );
+    // The change set itself reads the published template back. `cdk diff`
+    // hands CloudFormation an S3 URL (the template is past the 51,200-byte
+    // inline limit, and CDK uses the URL for every stack once it has published
+    // one), and CloudFormation fetches that object with the *caller's*
+    // credentials -- this role's, not file-publishing-role's. Without the read,
+    // CreateChangeSet fails and CDK prints "Could not create a change set, will
+    // base the diff on template differences", then diffs text only (no
+    // replacement information). Read-only, on the bootstrap staging bucket's
+    // template objects alone; the publish-side write stays with the assumed role.
+    cdkDiffRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadPublishedTemplates",
+        actions: ["s3:GetObject"],
+        resources: deploymentRegions.map(
+          (region) =>
+            `arn:${this.partition}:s3:::cdk-${bootstrapQualifier}-assets-${this.account}-${region}/*`,
+        ),
+      }),
+    );
     // `cdk diff` always publishes the stack template as an asset before
     // comparing it -- this stack's template is well past the 51,200-byte
     // inline limit -- and same-account role assumption needs the calling
