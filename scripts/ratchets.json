@@ -1281,12 +1281,6 @@
         }
       },
       {
-        "why": "merge of main into fourth-review layer r4-1: both sides added to seat-claims.test.ts",
-        "files": {
-          "src/db/seat-claims.test.ts": "1478 -> 1525"
-        }
-      },
-      {
         "why": "fourth review layer 3 merged layer 2: both sides grew these files",
         "files": {
           "src/db/reviews.test.ts": "1004 -> 1034",
@@ -1450,12 +1444,6 @@
         }
       },
       {
-        "why": "the trip page readers left the trips barrel (issue #2757): two import lines, removed again when the page reads through one reader in the next layer",
-        "files": {
-          "src/db/rental-fit.test.ts": "1227 -> 1237"
-        }
-      },
-      {
         "why": "issue #2722: every card insert now names its kind on the one cards ledger",
         "files": {
           "src/db/executed-dives.test.ts": "1084 -> 1085",
@@ -1504,7 +1492,7 @@
     "src/db/reporting.test.ts": 1380,
     "src/db/retention.test.ts": 1027,
     "src/db/reviews.test.ts": 1034,
-    "src/db/seat-claims.test.ts": 1527,
+    "src/db/seat-claims.test.ts": 1524,
     "src/db/self-declared-cards.test.ts": 1869,
     "src/db/staffing.test.ts": 952,
     "src/db/trips-crew.test.ts": 1430,
