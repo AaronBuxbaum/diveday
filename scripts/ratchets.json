@@ -1511,7 +1511,6 @@
     "src/db/trips-crew.test.ts": 1430,
     "src/db/trips-queries.test.ts": 1176,
     "src/db/trips-series.test.ts": 1785,
-    "src/db/waiver-issue.test.ts": 1079,
     "src/db/waivers-medical.test.ts": 1001,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
