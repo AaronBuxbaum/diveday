@@ -18,7 +18,7 @@ import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff, staffDestinationGates } from "@/lib/authz";
@@ -130,7 +130,7 @@ function refusedShopSlug(value: string | null): string | null {
   return value ? shopSlugFromPublicPath(publicSchedulePath(value)) : null;
 }
 
-type Locale = Parameters<typeof diverTranslator>[0];
+type Locale = DiverLocale;
 
 /**
  * DiveDay's own refusal, for a URL that names no shop — and the static shell
@@ -146,7 +146,7 @@ function DiveDayNotFound({ locale, isShell }: { locale: Locale; isShell?: boolea
   // streamed one reads the session for the nav's door, as every page does.
   return (
     <div className="flex flex-1 flex-col" data-suspense-placeholder={isShell ? "" : undefined}>
-      {isShell ? <MarketingNavFallback /> : <MarketingNav />}
+      {isShell ? <MarketingNavFallback /> : <MarketingNav locale={locale} />}
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center">
         <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{t("notFound.heading")}</h1>
         <p className="mt-3 text-muted">{t("notFound.body")}</p>

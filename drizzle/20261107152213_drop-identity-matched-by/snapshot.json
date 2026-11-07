@@ -1,0 +1,57 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ca599ed3-e0a5-4067-b782-e6a37a50781b",
+  "prevIds": [
+    "d3dc6967-f400-41d5-a61e-e69186f7479e",
+    "9bd369c3-606c-49e0-bc84-0876f64dcf86"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "identity_matched_by"
+      ],
+      "writes": [
+        "s|col|public.bookings.identity_matched_by",
+        "n|col|public.bookings.identity_matched_by",
+        "e|col|public.bookings.identity_matched_by"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "identity_match_kind"
+      ],
+      "writes": [
+        "s|enum|public.identity_match_kind",
+        "n|enum|public.identity_match_kind",
+        "e|enum|public.identity_match_kind",
+        "n|type|public.identity_match_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "enums\u0000[\"public\",\"identity_match_kind\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"bookings\",\"identity_matched_by\"]"
+    }
+  ]
+}
