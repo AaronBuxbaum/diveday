@@ -2963,3 +2963,5 @@ svg.leaflet-image-layer.leaflet-interactive path {
     break-before: avoid;
   }
 }
+
+/* Throwaway verification of the narrowed reg-suit role (PR #4129); not for merge. */
