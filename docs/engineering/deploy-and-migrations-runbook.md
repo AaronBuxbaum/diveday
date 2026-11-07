@@ -378,6 +378,12 @@ No reason excuses this, H-20260815-no-legacy ("there is no legacy") included —
 order. Remove the declaration (and every reader) in one release; drop the column in the next. In a
 shallow clone with no reachable history only this branch's schema is checked.
 
+**While DiveDay is pre-pilot, the drop and the code change may ship in one PR** (Aaron, 2026-11-07):
+write `-- diveday:allow-destructive pre-pilot <table>.<column>: <why>` instead of `drop-column`. It waives
+only the previous-release check — this branch must still not declare the column — and it covers a
+column drop, nothing else. It stops working when `PILOT_HAS_REAL_DIVERS` in `scripts/check-migrations.mjs`
+is set to `true`, which happens when Aaron says the first pilot shop has real divers.
+
 ### How a rename is split across releases
 
 A rename is the canonical case. `people.full_name` → `people.display_name`, in four deploys:

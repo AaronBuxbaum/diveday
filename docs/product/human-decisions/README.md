@@ -99,7 +99,7 @@ and run the command again.
 | H-20260814-may-sight-card | Chosen | 2026-08-20 | Who may sight a card? |
 | H-20260814-production-database-disposable | Chosen | 2026-08-14 | Is the production database disposable? |
 | H-20260814-where-diveday-sit-between | Chosen | 2026-08-14 | Where does DiveDay sit between data minimisation and feature completeness while it is pre-pilot? |
-| H-20260815-no-legacy | Chosen | 2026-08-15 | Do we carry legacy code and legacy data forward? |
+| H-20260815-no-legacy | Chosen | 2026-11-07 | Do we carry legacy code and legacy data forward? |
 | H-20260820-composed-cert-gates-only | Chosen | 2026-08-20 | Composed cert gates can only tighten. |
 | H-20260820-shophasadjudicated-src-lib-trip | Implemented | 2026-08-20 | shopHasAdjudicated (src/lib/trip-admission.ts) triggers on a verified certification only, contradicting its own stated rationale. |
 | H-20260822-close-out-leftovers-resolved | Implemented | 2026-10-05 | How should close-out leftovers be resolved before the day is closed? |

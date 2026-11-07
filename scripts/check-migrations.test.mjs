@@ -515,3 +515,47 @@ describe("a drop-column marker while a serving release still declares the column
     expect(schemaSourceAt("missing", run)).toBeNull();
   });
 });
+
+describe("a pre-pilot marker lets the drop ship with the code that stops using the column", () => {
+  // Aaron, 2026-11-07: no users yet, so the previous release's deploy window
+  // protects nobody. The branch's own schema must still not declare the column.
+  const sql = `-- diveday:allow-destructive pre-pilot people.full_name: no shop has divers yet; readers removed in this PR\nALTER TABLE "people" DROP COLUMN "full_name";`;
+  const declaring = 'export const people = pgTable("people", { fullName: text("full_name") });';
+  const dropped = 'export const people = pgTable("people", { id: uuid("id") });';
+
+  it("passes when only the previous release still declares the column", () => {
+    expect(
+      problems(sql, {
+        schemas: [
+          { label: "previous release", source: declaring },
+          { label: "this branch", source: dropped },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("still refuses when this branch declares the column", () => {
+    const found = problems(sql, { schemas: [{ label: "this branch", source: declaring }] });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toContain("this branch");
+  });
+
+  it("expires once the first pilot shop has real divers", () => {
+    const found = problems(sql, { pilotHasRealDivers: true });
+    expect(found.some((message) => message.includes("has expired"))).toBe(true);
+  });
+
+  it("excuses only a drop-column, so a table drop still needs its own marker", () => {
+    const found = problems(
+      `-- diveday:allow-destructive pre-pilot people: no shop has divers yet; readers removed\nDROP TABLE "people";`,
+    );
+    expect(found.some((message) => message.startsWith("drop-table"))).toBe(true);
+  });
+
+  it("still demands a real reason", () => {
+    const found = problems(
+      `-- diveday:allow-destructive pre-pilot people.full_name: ok\nALTER TABLE "people" DROP COLUMN "full_name";`,
+    );
+    expect(found.some((message) => message.includes("at least"))).toBe(true);
+  });
+});
