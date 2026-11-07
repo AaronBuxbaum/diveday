@@ -240,13 +240,9 @@ export function PersonSheet({
           them on a phone (K-266). The sheet itself is portalled, so nothing
           else shares this row. */}
       <div className="flex items-center">
-        {/* `data-print-content`: the trigger's content is the person, so a
-            printed screen keeps it. The caret is the control part, so it
-            alone stays off paper. */}
         <button
           ref={triggerRef}
           type="button"
-          data-print-content
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={sheetId}
@@ -258,7 +254,7 @@ export function PersonSheet({
           {trigger}
           {/* `size-4`, not the default `size-3`: a 4×8px tick beside an 18px
               semibold name read as a stray mark (K-549). */}
-          <DisclosureCaret className="size-4 shrink-0 print:hidden" />
+          <DisclosureCaret className="size-4 shrink-0" />
         </button>
         {/* The mark's own box. `ps-3` is the real gap between two adjacent
             targets that do opposite things (`ROW_DISCLOSURE_SUMMARY_CLASS`).
@@ -267,7 +263,7 @@ export function PersonSheet({
             whenever the mark sets the row's height — on the last row, flush
             with the card's `overflow-hidden`, the ring lost its bottom 5px
             without it (#1981). */}
-        {mark ? <div className="shrink-0 py-2.5 ps-3 pe-3 print:hidden">{mark}</div> : null}
+        {mark ? <div className="shrink-0 py-2.5 ps-3 pe-3">{mark}</div> : null}
       </div>
       {overlay ? createPortal(overlay, document.body) : null}
     </>

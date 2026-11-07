@@ -35,7 +35,7 @@ export function PrepTanks({ view, showNitrox }: { view: PrepView; showNitrox: bo
         {/* Counts approved nitrox seats, not analyzed cylinders. Paper carries
             this note in the printed day's header. */}
         {showNitrox && checklist.tanks.nitrox > 0 && !view.paper ? (
-          <p className="mt-1 text-sm text-muted print:hidden">{t("tripPrep.nitroxCountNote")}</p>
+          <p className="mt-1 text-sm text-muted">{t("tripPrep.nitroxCountNote")}</p>
         ) : null}
       </section>
 

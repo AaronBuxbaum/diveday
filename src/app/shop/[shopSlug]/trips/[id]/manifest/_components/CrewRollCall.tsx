@@ -167,10 +167,10 @@ export function CrewRollCall({
         // typed "how many crew are aboard" attestation the manifest used to
         // ask for — a number that named nobody, on a page whose whole point is
         // naming people (ADR 20260804-crew-roll-call-is-per-person).
-        // The card itself prints: the paper the boat carries must not show a
-        // "Crew" heading with blank space under it on exactly the departures
-        // whose crew half is open (dive-domain review 20260804). Only the
-        // button is screen-only — a link is not an action on paper.
+        // The card itself is on the sheet: the paper the boat carries must not
+        // show a "Crew" heading with blank space under it on exactly the
+        // departures whose crew half is open (dive-domain review 20260804).
+        // Only the link stays off it — a link is not an action on paper.
         // It stands where the crew list's card would, under the same heading,
         // so it is that card in a tone (`TONE_PANEL_CLASS`), not a box of its
         // own shape: a hand-rolled `p-4` with no step and no bed.
@@ -179,7 +179,7 @@ export function CrewRollCall({
           {paper ? null : (
             <Link
               href={`/shop/${shopSlug}/trips/${tripId}?view=details#crew`}
-              className={buttonClass({ size: "boat", className: "mt-3 print:hidden" })}
+              className={buttonClass({ size: "boat", className: "mt-3" })}
             >
               {t("manifest.addCrewToTrip")}
             </Link>
@@ -209,7 +209,7 @@ export function CrewRollCall({
               Each row draws its own rule inside, off the diver list's helper
               (`rollCallRuleClass`). */}
           {crewToConfirm > 0 && !paper ? (
-            <p className="mt-2 max-w-prose text-base font-semibold text-warning-strong print:hidden">
+            <p className="mt-2 max-w-prose text-base font-semibold text-warning-strong">
               {t("manifest.crewClashConfirm", { count: crewToConfirm })}
             </p>
           ) : null}
@@ -331,20 +331,13 @@ export function CrewRollCall({
                   }`}
                 >
                   {/* The row's hairline sits on this box, in the rule colour and
-                      off whichever row is first on screen or on paper
+                      off the list's first row
                       (`rollCallRuleClass`, K-165); the sheet lays the name and
                       the mark out inside it as one centred row (K-266). */}
-                  <div
-                    className={rollCallRuleClass({
-                      firstOnScreen: index === 0,
-                      firstOnPaper: index === 0,
-                    })}
-                  >
+                  <div className={rollCallRuleClass(index === 0)}>
                     {paper ? (
                       // The packet's paper (B03): the name line, no sheet or mark.
-                      <div data-print-content className={PAPER_ROW_CLASS}>
-                        {crewTrigger}
-                      </div>
+                      <div className={PAPER_ROW_CLASS}>{crewTrigger}</div>
                     ) : (
                       <PersonSheet
                         name={member.fullName}
@@ -442,43 +435,44 @@ export function CrewRollCall({
                       </PersonSheet>
                     )}
                   </div>
-                  {/* Paper keeps what the sheet hides: the recorded state as a
-                      word, the team, and the contact. The summary above prints
-                      as it stands, so the name, role and who-and-when are
-                      already on the sheet. */}
-                  <div data-print-only className="hidden px-4 pb-4 print:block">
-                    <p className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={
-                          impliedNotBoarded
-                            ? "rounded-full bg-warning-tint px-3 py-1 text-sm font-medium text-warning-strong"
-                            : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted"
-                        }
-                      >
-                        {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
-                      </span>
-                      {teamLabel ? (
-                        <Badge tone="neutral">
-                          {teamLabel}
-                          {member.buddyAlert
-                            ? ` · ${buddyAlertText(t, member.buddyAlert, member.buddyMissing)}`
-                            : ""}
-                        </Badge>
-                      ) : null}
-                    </p>
-                    {rc && !rc.implied ? (
-                      <p className="mt-2 text-sm">
-                        {t("manifest.crewRollCallRecordedBy", {
-                          label: auditLabel,
-                          date: formatDateTimeTz(rc.occurredAt, locale, timezone),
-                          name: rc.recordedByName,
-                        })}
+                  {/* Paper keeps what the person sheet hides on screen: the
+                      recorded state as a word, the team, and the contact. The
+                      name line above carries the name, role and who-and-when. */}
+                  {paper ? (
+                    <div className="px-4 pb-4">
+                      <p className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={
+                            impliedNotBoarded
+                              ? "rounded-full bg-warning-tint px-3 py-1 text-sm font-medium text-warning-strong"
+                              : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted"
+                          }
+                        >
+                          {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
+                        </span>
+                        {teamLabel ? (
+                          <Badge tone="neutral">
+                            {teamLabel}
+                            {member.buddyAlert
+                              ? ` · ${buddyAlertText(t, member.buddyAlert, member.buddyMissing)}`
+                              : ""}
+                          </Badge>
+                        ) : null}
                       </p>
-                    ) : null}
-                    <div className="mt-2">
-                      <CrewFacts member={member} labelled t={t} />
+                      {rc && !rc.implied ? (
+                        <p className="mt-2 text-sm">
+                          {t("manifest.crewRollCallRecordedBy", {
+                            label: auditLabel,
+                            date: formatDateTimeTz(rc.occurredAt, locale, timezone),
+                            name: rc.recordedByName,
+                          })}
+                        </p>
+                      ) : null}
+                      <div className="mt-2">
+                        <CrewFacts member={member} labelled t={t} />
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -492,7 +486,7 @@ export function CrewRollCall({
         // *now*, so the way to correct it is the trip's own crew list.
         <Link
           href={`/shop/${shopSlug}/trips/${tripId}?view=details#crew`}
-          className={buttonClass({ variant: "secondary", className: "mt-4 print:hidden" })}
+          className={buttonClass({ variant: "secondary", className: "mt-4" })}
         >
           {t("manifest.manageCrewOnTrip")}
         </Link>

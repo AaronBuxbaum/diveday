@@ -44,14 +44,8 @@ const ALLOWED: Record<string, string> = {
   "html:has([data-foot-bar])": "Scroll padding for a page with a foot bar, as above.",
   "body:has([data-foot-bar])":
     "Room under the last line for the foot bar, which nothing on <body> sets.",
-  'button[type="submit"]':
-    "Print: a submit button has nothing to say on paper, and the print sheet must beat any display utility on it.",
-  html: "Print: the sheet's 13px root size, which every rem on the page reads; no utility sets it.",
   "*, *::before, *::after":
-    "Print's white sheet and the reduced-motion kill-switch, each !important by design so it beats every utility.",
-  "li, tr, thead": "Print: rows never split across a page, whatever a utility asked for on screen.",
-  "h1, h2, h3, h4": "Print: a heading never ends a page, whatever a utility asked for on screen.",
-  thead: "Print: a long table repeats its header on every page.",
+    "The reduced-motion kill-switch, !important by design so it beats every utility.",
   "details::details-content":
     "The disclosure's open and close motion; no utility reaches the ::details-content pseudo-element, and the reduced-motion copy must beat it.",
   "details[open]::details-content": "The open half of the same motion.",

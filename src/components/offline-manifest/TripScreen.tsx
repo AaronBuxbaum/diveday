@@ -4,6 +4,7 @@ import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
 import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { ScreenNotPrinted } from "@/components/paper/ScreenNotPrinted";
 import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { SkipLink } from "@/components/SkipLink";
 import { buttonClass } from "@/components/ui/button";
@@ -68,16 +69,16 @@ export function OfflineTripScreen({
     // **The screen never prints** (layer 7 review A1/S1): opened panels
     // hold a medical alert's words a saved copy may carry, and Ctrl+P must
     // not put them on paper with no record of it. Paper is the sheet's job,
-    // so on paper this page is one line that says so.
+    // so on paper this page is one line that says so (`ScreenNotPrinted`).
     <>
-      <p data-offline-screen-on-paper="" className="hidden p-6 text-base font-semibold print:block">
+      <ScreenNotPrinted>
         {t(
           view.expired
             ? "shared.offlineManifest.sheet.screenOnPaperExpired"
             : "shared.offlineManifest.sheet.screenOnPaper",
         )}
-      </p>
-      <main data-roll-call-surface className="boat-mode w-full flex-1 bg-background print:hidden">
+      </ScreenNotPrinted>
+      <main data-roll-call-surface className="boat-mode w-full flex-1 bg-background">
         <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
           <PullToRefresh onRefresh={reconcile}>
             <OfflineShellVersionBanner copy={shellVersionCopy} />
@@ -116,7 +117,7 @@ export function OfflineTripScreen({
               className={buttonClass({
                 variant: "link",
                 flush: true,
-                className: "mt-2 print:hidden",
+                className: "mt-2",
               })}
             >
               {t("shared.offlineManifest.single.rollCallJump")}

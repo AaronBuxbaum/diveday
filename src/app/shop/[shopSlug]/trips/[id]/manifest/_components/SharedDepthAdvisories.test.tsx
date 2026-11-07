@@ -55,7 +55,6 @@ describe("sharedDepthAdvisories", () => {
     );
     expect(screen.getByText(depthWarningText(t, deep))).toBeInTheDocument();
     expect(container.textContent).toContain("Ana Ruiz, Ben Okafor, and Cleo Park");
-    expect(container.firstElementChild?.className).toContain("print:hidden");
   });
 
   it("draws nothing when no advisory is shared", () => {

@@ -69,7 +69,7 @@ export function MissingReportButton({
   );
   useEffect(() => watchRollCallTouches(), []);
   return (
-    <form action={formAction} className="mt-3 print:hidden">
+    <form action={formAction} className="mt-3">
       {offline ? (
         <ConnectivityStatus
           onlyWhenOffline

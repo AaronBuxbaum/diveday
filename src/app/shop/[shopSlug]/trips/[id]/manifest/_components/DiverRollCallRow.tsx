@@ -70,28 +70,22 @@ export function DiverRollCallRow({
     timezone,
     t,
   });
-  // `print:block` on the list above is what actually guarantees the
-  // printed order, and `print:order-none` is the belt to its braces:
-  // `order` has no effect at all outside a flex or grid container, so
-  // on paper the DOM order *is* the order by construction rather than
-  // by the cascade happening to emit the print variant last. Block
-  // layout is also the one browsers fragment reliably across printed
-  // pages, and `break-inside-avoid` then keeps a diver's row off a
-  // page boundary — a name split in half on the sheet a coastguard
-  // reads is a defect (dive-domain review 20260828). The printed table
-  // rows do the same, for the same reason (`src/components/ui/table.tsx`).
-  // `ROLL_CALL_ROW_CLASS` carries it, with the card's corner on paper.
-  const rowClass = `${ROLL_CALL_ROW_CLASS} ${alarmed ? "order-first print:order-none" : ""} ${rollCallScrollMargin(isDeparture)} ${
+  // On screen an alarmed row comes first (`order-first`). The sheet's
+  // branch below never sets it, and its list is block layout
+  // (`DiverRollCall`), so on paper the DOM order *is* the manifest order
+  // by construction. `break-inside-avoid` (in `ROLL_CALL_ROW_CLASS`) keeps
+  // a diver's row off a page boundary — a name split in half on the sheet
+  // a coastguard reads is a defect (dive-domain review 20260828).
+  const rowClass = `${ROLL_CALL_ROW_CLASS} ${alarmed ? "order-first" : ""} ${rollCallScrollMargin(isDeparture)} ${
     // Aboard over a block wears the blocked tone (`rollCallRowTone`).
     rollCallRowTone(recordedTone, blockedAtDock)
   }`;
   // The hairline above this row, in each of the two orders. On screen
   // the first row is the first alarmed one when there is any; on paper
   // it is always the top of the manifest.
-  const ruleClass = rollCallRuleClass({
-    firstOnScreen: diver.bookingId === firstOnScreenBookingId,
-    firstOnPaper: index === 0,
-  });
+  const ruleClass = rollCallRuleClass(
+    context.paper ? index === 0 : diver.bookingId === firstOnScreenBookingId,
+  );
   const capsule = diverCapsule(diver, state, t);
   const typeBadge = diverTypeBadge(diver, t);
   // The one line under the name: **who said what, and when.** Roll call
@@ -119,6 +113,7 @@ export function DiverRollCallRow({
       typeBadge={typeBadge}
       lateAt={state.lateAt}
       checkedInAtDesk={state.checkedInAtDesk}
+      paper={context.paper}
       locale={locale}
       timezone={timezone}
       t={t}
@@ -147,9 +142,7 @@ export function DiverRollCallRow({
         className={`${ROLL_CALL_ROW_CLASS} ${paperRowTone(recordedTone, blockedAtDock)}`}
       >
         <div className={ruleClass}>
-          <div data-print-content className={PAPER_ROW_CLASS}>
-            {rowTrigger}
-          </div>
+          <div className={PAPER_ROW_CLASS}>{rowTrigger}</div>
           {rowPrint}
         </div>
       </li>
@@ -198,7 +191,7 @@ export function DiverRollCallRow({
             ) : null
           }
           closeLabel={t("manifest.closePersonDetails")}
-          triggerClassName={`${ROW_DISCLOSURE_SUMMARY_CLASS} flex-wrap gap-y-2 sm:flex-nowrap print:flex-nowrap`}
+          triggerClassName={`${ROW_DISCLOSURE_SUMMARY_CLASS} flex-wrap gap-y-2 sm:flex-nowrap`}
           mark={
             rowState.notBackAboard ? (
               <RollCallMark state="notBack" />
@@ -233,15 +226,6 @@ export function DiverRollCallRow({
             bookingNotes={bookingNotes}
           />
         </PersonSheet>
-        {/* **Paper keeps everything the screen tucks away** (decision 2).
-          The person sheet contributes nothing to print, so every
-          fact behind the tap above is restated here unconditionally:
-          the recorded state as a word, the exceptions the one capsule
-          could not carry, the blockers at any checkpoint, the full
-          depth advisory, and the contact block. The summary line above
-          prints as it stands, so the name, the capsule and the
-          who-and-when are already on the sheet and are not repeated. */}
-        {rowPrint}
       </div>
     </li>
   );

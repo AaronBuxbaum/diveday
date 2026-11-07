@@ -151,25 +151,10 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
 /**
  * The box every roll-call row is, diver and crew alike: the 4px state stripe
  * on its leading edge (its colour is the row's tone), kept whole across a
- * printed page break.
- *
- * **On paper the first and last rows carry the card's corner themselves.** The
- * print packets lift every `overflow` clip on purpose (`.paper-sheet *`
- * in globals.css — a clipped box on paper is content that does not exist), so
- * the card's rounded corner stops cutting the rows, and the stripe and the
- * row's fill stood square across the curve: 14px of stripe past it at each end
- * of the day packet's diver list (pixel-craft class 6). The corner is the
- * card's inner one, `PANEL_INNER_RADIUS` (`ui/card.tsx`) — the panel's 20px
- * less its 1px border — on the corners each end row actually touches. Do not
- * reinstate clipping in the bundle instead.
- *
- * **Print only**, because on screen the lists are `overflow-hidden` and clip
- * anyway, and because only on paper is `:first-child` the first row painted:
- * on screen an alarmed diver row is `order-first`, while the printed list is
- * block layout in manifest order (`print:order-none`).
+ * printed page break. On a sheet the stripe is drawn as nothing
+ * (`.paper-sheet` in globals.css): the row's word carries its state.
  */
-export const ROLL_CALL_ROW_CLASS =
-  "border-l-4 break-inside-avoid print:first:rounded-t-[calc(var(--radius-panel)-1px)] print:last:rounded-b-[calc(var(--radius-panel)-1px)]";
+export const ROLL_CALL_ROW_CLASS = "border-l-4 break-inside-avoid";
 
 /**
  * The person row's disclosure: the whole name column is the summary, and one
@@ -208,18 +193,14 @@ export const ROLL_CALL_ROW_CLASS =
  * corners nest in the card's without the row having to know it is an end —
  * which it cannot by `:first-child`, since an alarmed row is `order-first`.
  * The button paints nothing, so the radius shapes the ring and nothing else.
- *
- * **On paper it is one line of name** (`print:min-h-0 print:py-1`). The 76px
- * floor and 12px inset are the 56px mark's row on a deck; the mark does not
- * print, and once the name reached paper (it is `data-print-content`) the
- * button carried its screen height there too, about 16mm a row at the 13px
- * print root, adding pages to a day packet's roll call — the sheet whose page
- * count a captain checks for a missing one. `paper-day.spec.ts` measures it.
  */
 /**
- * The name line of a row on the packet's paper (B03): the summary's own box
- * and rhythm, with nothing about it that says "tap me", because nothing
- * opens from it there.
+ * The name line of a row on the packet's paper (B03): the summary's inset,
+ * with nothing about it that says "tap me", because nothing opens from it
+ * there. **One line of name**: the 76px floor and 12px inset are the 56px
+ * mark's row on a deck, and the mark does not print, so a sheet's row is the
+ * name's own height — the page count a captain checks for a missing one
+ * (`paper-day.spec.ts` measures it).
  */
 /**
  * **A paper row's tone** (visual review polish, B55): on the packet the
@@ -244,9 +225,9 @@ export function paperRowTone(
 }
 
 export const PAPER_ROW_CLASS =
-  "flex min-h-19 w-full flex-wrap items-center gap-2.5 py-3 ps-4 pe-2 text-start sm:flex-nowrap print:min-h-0 print:flex-nowrap print:py-1";
+  "flex w-full flex-nowrap items-center gap-2.5 py-1 ps-4 pe-2 text-start";
 export const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 rounded-panel py-3 ps-4 pe-2 text-start select-none focus-visible:focus-ring-inset print:min-h-0 print:py-1 [&::-webkit-details-marker]:hidden";
+  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 rounded-panel py-3 ps-4 pe-2 text-start select-none focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden";
 /**
  * The box that holds a person's details, the blockers and the exception
  * control. It is drawn inside `PersonSheet`, whose body already pads the sheet
@@ -396,7 +377,7 @@ export function RollCallBackAboardControl({
 }) {
   const isCrew = kind === "crew";
   return (
-    <div className="mt-3 print:hidden">
+    <div className="mt-3">
       <RollCallButton
         key={isCrew ? `crew-back-aboard-${checkpoint}` : `back-aboard-${checkpoint}`}
         // Unsaying a missing person is exactly when the sentence matters:
@@ -451,7 +432,7 @@ export function RollCallExceptionControl({
   );
   const isCrew = kind === "crew";
   return (
-    <div className="mt-4 print:hidden">
+    <div className="mt-4">
       <RollCallButton
         // Same remount-on-checkpoint reasoning as the mark button above.
         key={isCrew ? `crew-not-aboard-${checkpoint}` : `not-boarded-${checkpoint}`}

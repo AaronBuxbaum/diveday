@@ -27,9 +27,9 @@ import { tapTargetLinkClass } from "./button";
  *   index is the worked example). For lists a staffer reads on the move.
  * - **Scroll**: desk- and print-first documents (departure log, import
  *   preview) keep every column and set `minWidth`; the shell scrolls
- *   sideways on a narrow screen and `print:` unclamps it so paper is never
- *   subject to the scroll rule — a clipped column on a printed packing list
- *   is a silent one.
+ *   sideways on a narrow screen. On a sheet the floor goes (`.paper-sheet
+ *   .table-scroll-shell` in globals.css), so paper is never subject to the
+ *   scroll rule — a clipped column on a printed packing list is a silent one.
  *
  * Numbers are trustworthy by inspection (design principle 6): a numeric
  * column says `numeric` on both its `Th` and `Td`, which right-aligns and
@@ -43,12 +43,12 @@ const HIDE_BELOW = {
 
 /**
  * Scroll-strategy floors. Static strings on purpose — Tailwind cannot see an
- * interpolated arbitrary value — and each carries `print:min-w-0` so the
- * floor never forces a printed table wider than the paper.
+ * interpolated arbitrary value. A sheet lifts the floor, so it never forces a
+ * printed table wider than the paper.
  */
 const MIN_WIDTH = {
-  "36rem": "min-w-[36rem] print:min-w-0",
-  "40rem": "min-w-[40rem] print:min-w-0",
+  "36rem": "min-w-[36rem]",
+  "40rem": "min-w-[40rem]",
 } as const;
 
 export type TableMinWidth = keyof typeof MIN_WIDTH;
@@ -114,8 +114,8 @@ const CELL_ALIGN = {
  * hand-rolled. The outer shell clips rounded corners; its inner scroll region
  * keeps wide tables usable on a phone. Separating those two responsibilities
  * prevents a first/last row hover from painting square beyond the card while
- * preserving sideways scrolling. `print:overflow-visible` keeps paper out of
- * the scroll rule entirely.
+ * preserving sideways scrolling. On a sheet neither box clips (`globals.css`),
+ * which keeps paper out of the scroll rule entirely.
  *
  * Elevation follows containment, one rule: a table that *is* the surface
  * (orders, reports, the departure log) wears the card shell; a table already
@@ -135,14 +135,14 @@ export function Table({
   minWidth?: TableMinWidth;
   /** Chrome-less shell for a table nested inside an existing card. */
   flush?: boolean;
-  /** Margins and visibility for the shell (e.g. `mt-6`, `hidden sm:block print:block`). */
+  /** Margins and visibility for the shell (e.g. `mt-6`, `hidden sm:block`). */
   shellClassName?: string;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div
-      className={`overflow-hidden print:overflow-visible ${
+      className={`overflow-hidden ${
         flush ? "" : "rounded-panel border border-border bg-surface shadow-bed"
       } ${shellClassName}`
         .replace(/\s+/g, " ")
@@ -151,7 +151,7 @@ export function Table({
       {/* `table-scroll-shell` fades the far edge while more table lies past it
           (globals.css): a wide log table was cut mid-word at the card edge
           with no sign that it scrolls. */}
-      <div className="table-scroll-shell overflow-x-auto print:overflow-visible">
+      <div className="table-scroll-shell overflow-x-auto">
         <table
           className={`w-full table-layout-fixed text-sm ${minWidth ? MIN_WIDTH[minWidth] : ""} ${className}`.trim()}
           style={{ tableLayout: "fixed" }}

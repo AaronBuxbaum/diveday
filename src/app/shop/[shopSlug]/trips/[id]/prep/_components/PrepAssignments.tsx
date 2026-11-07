@@ -48,11 +48,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
   // Keep the summary and confirmation button on the same proposal count.
   const counts = assignmentCounts(assignmentRows, proposalPicks);
   return (
-    <section
-      aria-labelledby={scopedId(idPrefix, "assignments-heading")}
-      // The paper projection is empty until there is an assigned unit.
-      className={assignmentRows.some((row) => row.assigned.length > 0) ? undefined : "print:hidden"}
-    >
+    <section aria-labelledby={scopedId(idPrefix, "assignments-heading")}>
       {/* Keep the bulk action beside the heading when there is room. */}
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
@@ -65,7 +61,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
           </h2>
           {/* Show load-out counts and only the applicable exceptions. */}
           {loadOut ? (
-            <p className="mt-1 text-sm text-muted print:hidden">
+            <p className="mt-1 text-sm text-muted">
               {/* On cancellation or after sailing, report the load-out without inviting new picks. */}
               {counts.missing > 0 && !cancelled && !sailed ? (
                 <span className="font-medium text-foreground">
@@ -110,15 +106,12 @@ export function PrepAssignments({ view }: { view: PrepView }) {
       <ul
         className={sectionCardClass({
           padding: "none",
-          className: "mt-4 divide-y divide-border overflow-hidden print:overflow-visible",
+          className: "mt-4 divide-y divide-border overflow-hidden",
         })}
       >
         {assignmentRows.map(
           ({ diver, assigned, wanted, needsStaffFit, handedOver, counterHeld }) => (
-            <li
-              key={diver.bookingId}
-              className={`px-4 py-3 sm:px-5${assigned.length > 0 ? "" : " print:hidden"}`}
-            >
+            <li key={diver.bookingId} className="px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <p className="font-medium">{diver.fullName}</p>
                 {/* A ticket is useful only for an assigned diver; paper already lists their units. */}
@@ -130,7 +123,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                         variant: "ghost",
                         size: "sm",
                         flush: true,
-                        className: "-my-2.5 focus-visible:focus-ring-inset print:hidden",
+                        className: "-my-2.5 focus-visible:focus-ring-inset",
                       })}
                     >
                       {t("gear.prep.ticketDoor")}
@@ -138,7 +131,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                   ) : null}
                   {/* Hand over an assigned set once, while it remains in the shop. */}
                   {assigned.length > 0 && !handedOver && !home ? (
-                    <form action={checkOutTripGearSetAction} className="-my-2 print:hidden">
+                    <form action={checkOutTripGearSetAction} className="-my-2">
                       <input type="hidden" name="tripId" value={tripId} />
                       <input type="hidden" name="bookingId" value={diver.bookingId} />
                       <SubmitButton
@@ -192,7 +185,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                         {assignment.checkedOutAt ? (
                           <span className="text-muted">{t("gear.prep.outLabel")}</span>
                         ) : (
-                          <form action={releaseGearUnitAction} className="print:hidden">
+                          <form action={releaseGearUnitAction}>
                             <input type="hidden" name="tripId" value={tripId} />
                             <input
                               type="hidden"

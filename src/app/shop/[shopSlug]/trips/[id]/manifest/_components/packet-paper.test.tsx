@@ -183,11 +183,27 @@ describe("the manifest's divers on the packet's paper", () => {
     expect(controls(container)).toHaveLength(0);
   });
 
-  it("shows the printed facts on the packet's screen, which marks them print-only", () => {
-    const { container } = renderPaper([diver({ bookingId: "b-1", fullName: "Sana Malik" })]);
-    const printed = container.querySelectorAll("[data-print-only]");
-    expect(printed.length).toBeGreaterThan(0);
-    for (const block of printed) expect(block).toHaveClass("hidden", "print:block");
+  it("is one face: the facts it prints are the facts on its screen, in manifest order", () => {
+    // Issue #2745: nothing on the sheet is hidden until print, and nothing on
+    // it reorders. A blocked row stays where the manifest puts it; the list
+    // is block layout, so the DOM order is the paper's order by construction.
+    const { container } = renderPaper([
+      diver({ bookingId: "b-1", fullName: "Sana Malik" }),
+      diver({
+        bookingId: "b-2",
+        fullName: "Ana Ruiz",
+        readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+      }),
+    ]);
+    expect(container.querySelector("ul")?.className).not.toMatch(/(^|\s)(flex|grid)(\s|$)/);
+    for (const element of container.querySelectorAll("*")) {
+      const classes = element.getAttribute("class") ?? "";
+      expect(classes, element.tagName).not.toMatch(/(^|\s)(hidden|order-first|print:\S+)(\s|$)/);
+    }
+    expect([...container.querySelectorAll("li[id^='diver-row-']")].map((row) => row.id)).toEqual([
+      "diver-row-b-1",
+      "diver-row-b-2",
+    ]);
   });
 });
 

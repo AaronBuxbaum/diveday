@@ -53,7 +53,7 @@ export function GearReturnPane({
   }, [concernOpen]);
 
   return (
-    <form action={action} className="mt-2 flex flex-col gap-2 print:hidden">
+    <form action={action} className="mt-2 flex flex-col gap-2">
       {Object.entries(fields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}

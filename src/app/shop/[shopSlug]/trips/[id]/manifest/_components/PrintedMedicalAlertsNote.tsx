@@ -32,7 +32,7 @@ export function PrintedMedicalAlertsNote({
       : [],
   );
   return (
-    <div data-print-only className="mt-3 hidden rounded border border-border px-4 py-3 print:block">
+    <div className="mt-3 rounded border border-border px-4 py-3">
       <p className="text-base font-semibold">{t("manifest.medicalAlertsPrintedHeading")}</p>
       <p className="mt-1 text-sm">{t("manifest.medicalAlertNotReviewed")}</p>
       {onSheet.length > 0 ? (

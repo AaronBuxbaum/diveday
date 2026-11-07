@@ -75,7 +75,10 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
       {showsDecompressionReminder ? (
         <DecompressionReminder text={t("manifest.decompressionReminder")} />
       ) : null}
-      <SharedDepthAdvisories sharedAdvisories={sharedAdvisories} locale={locale} t={t} />
+      {/* On a sheet each row restates its own advisory in full (`DiverRowPrint`). */}
+      {context.paper ? null : (
+        <SharedDepthAdvisories sharedAdvisories={sharedAdvisories} locale={locale} t={t} />
+      )}
       <MixedTrainingDepthWarning
         show={mixedTrainingDepthAdvisory(
           divers.flatMap((diver) =>
@@ -85,7 +88,9 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
         t={t}
       />
       {/* Only on a packet printed with the medical alerts (issue #2990). */}
-      {context.printedMedicalAlerts && context.printedMedicalAlerts.texts.size > 0 ? (
+      {context.paper &&
+      context.printedMedicalAlerts &&
+      context.printedMedicalAlerts.texts.size > 0 ? (
         <PrintedMedicalAlertsNote
           printed={context.printedMedicalAlerts}
           divers={divers}
@@ -98,8 +103,9 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
           A diver recorded not back aboard is pulled to the top *on screen* with
           `order-first`, because that row is where a crew member taps to record
           her back and it is otherwise three or four screens below the alarm.
-          `print:order-none` puts her back: the printed sheet goes ashore and
-          into a coastguard's hands, and it stays in strict manifest order.
+          The sheet's list is block layout and its rows set no order: the
+          printed sheet goes ashore and into a coastguard's hands, and it stays
+          in strict manifest order by construction.
 
           `divide-y` cannot survive that. It draws its hairlines by DOM order,
           so the visually-first row would carry a stray top rule and the
@@ -109,19 +115,15 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
           the 4px left edge and would win the top edge's colour too
           (`rollCallRuleClass`, which the crew list draws its rules off too).
 
-          **`print:block` is what actually holds the printed order**, rather
-          than `print:order-none` alone: `order` is inert outside a flex or
-          grid container, so in block layout the DOM order is the printed order
-          by construction instead of by the cascade emitting one variant after
-          another. Block is also the layout mode browsers fragment reliably
-          across printed pages. `order-first` is paint order only — it moves
+          Block is also the layout mode browsers fragment reliably across
+          printed pages. `order-first` is paint order only — it moves
           nothing in the DOM, tab or screen-reader order, which is why the
           count panel names the missing people in links rather than leaving
           this to carry the alarm on its own (dive-domain review 20260828). */}
       <ul
         className={sectionCardClass({
           padding: "none",
-          className: "mt-3 flex flex-col overflow-hidden print:block",
+          className: context.paper ? "mt-3" : "mt-3 flex flex-col overflow-hidden",
         })}
       >
         {divers.map((diver, index) => (

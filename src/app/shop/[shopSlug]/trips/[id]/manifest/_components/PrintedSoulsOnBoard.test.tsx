@@ -20,8 +20,6 @@ describe("PrintedSoulsOnBoard", () => {
       />,
     );
     const line = container.querySelector("p") as HTMLElement;
-    expect(line.className).toContain("hidden");
-    expect(line.className).toContain("print:block");
     expect(line).toHaveTextContent(t("manifest.soulsOnBoardCrewToConfirm", { count: 1 }));
   });
 

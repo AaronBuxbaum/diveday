@@ -46,7 +46,7 @@ export function SharedDepthAdvisories({
 }) {
   if (sharedAdvisories.length === 0) return null;
   return (
-    <div className="mt-3 flex flex-col gap-2 print:hidden">
+    <div className="mt-3 flex flex-col gap-2">
       {sharedAdvisories.map(([text, names]) => (
         <div
           key={text}

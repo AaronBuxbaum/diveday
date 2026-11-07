@@ -10,6 +10,10 @@ import type { PrepView } from "./prep-view";
 /** Who the list cannot pack for yet: sizes missing, seats held, fits only staff can do. */
 export function PrepFitGaps({ view }: { view: PrepView }) {
   const { prep, t, locale, shopSlug, idPrefix } = view;
+  // A name is a tap target on screen and a line of ink on a sheet.
+  const nameLinkClass = view.paper
+    ? "font-medium"
+    : `${tapTargetLinkClass} py-3 -my-3 font-medium hover:text-primary hover:underline`;
   const { checklist } = prep;
   // Separate partial fits from seats that have never been asked.
   const partialFit = checklist.diversWithIncompleteFit.filter(
@@ -36,7 +40,7 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
                     <span>
                       <Link
                         href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                        className={`${tapTargetLinkClass} py-3 -my-3 print:min-h-0 print:py-0 print:my-0 font-medium hover:text-primary hover:underline`}
+                        className={nameLinkClass}
                       >
                         {diver.fullName}
                       </Link>{" "}
@@ -70,7 +74,7 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
                         <Link
                           key={diver.personId}
                           href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                          className={`${tapTargetLinkClass} py-3 -my-3 print:min-h-0 print:py-0 print:my-0 font-medium hover:text-primary hover:underline`}
+                          className={nameLinkClass}
                         >
                           {diver.fullName}
                         </Link>
@@ -124,7 +128,7 @@ export function PrepFitGaps({ view }: { view: PrepView }) {
                 <span>
                   <Link
                     href={`/shop/${shopSlug}/divers/${diver.personId}`}
-                    className={`${tapTargetLinkClass} py-3 -my-3 print:min-h-0 print:py-0 print:my-0 font-medium hover:text-primary hover:underline`}
+                    className={nameLinkClass}
                   >
                     {diver.fullName}
                   </Link>

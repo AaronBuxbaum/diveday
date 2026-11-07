@@ -190,10 +190,7 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
                   {/* The rule between rows on the inner wrapper, as the live
                       rows draw it: the tone owns the row's border colour. */}
                   <div
-                    className={`flex items-center gap-2.5 py-2 ps-2.5 pe-2 ${rollCallRuleClass({
-                      firstOnScreen: index === 0,
-                      firstOnPaper: index === 0,
-                    })}`}
+                    className={`flex items-center gap-2.5 py-2 ps-2.5 pe-2 ${rollCallRuleClass(index === 0)}`}
                   >
                     <span className="grid size-7 shrink-0 place-items-center rounded-md bg-surface text-xs font-semibold tabular-nums">
                       {String(index + 1).padStart(2, "0")}

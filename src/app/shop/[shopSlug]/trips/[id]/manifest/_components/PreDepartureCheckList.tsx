@@ -152,7 +152,7 @@ function CarriedSnags({
   return (
     <section
       aria-labelledby={scopedId(idPrefix, "boat-snags-heading")}
-      className="border-b border-border bg-warning/10 px-4 py-4 print:hidden"
+      className="border-b border-border bg-warning/10 px-4 py-4"
     >
       <h3 id={scopedId(idPrefix, "boat-snags-heading")} className="text-base font-semibold">
         {copy.snagsHeading}
@@ -249,7 +249,7 @@ export function PreDepartureCheckList({
         <CarriedSnags idPrefix={idPrefix} carried={carried} copy={copy} snagActions={snagActions} />
       ) : null}
       {paper ? null : (
-        <details open={open} className="group/check print:hidden">
+        <details open={open} className="group/check">
           <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}>
             <SummaryCaret className="group-open/check:rotate-90" />
             <h2
@@ -277,33 +277,34 @@ export function PreDepartureCheckList({
           ) : null}
         </details>
       )}
-      {/* A collapsed disclosure prints nothing at all, so the printed list is
-          restated here, outside the control, and the sheet a captain carries
-          offline still says what was checked. */}
-      <div data-print-only className="hidden px-4 py-3 print:block">
-        <h2 className="text-base font-semibold">{copy.heading}</h2>
-        <ul className="mt-1 flex flex-col gap-1">
-          {items.map((item) => (
-            <li key={item.id} className="text-sm">
-              {/* `inline`: a bare mark is a block (preflight), and printed the
+      {/* On a sheet the list is stated, never a disclosure, so the paper a
+          captain carries offline still says what was checked. */}
+      {paper ? (
+        <div className="px-4 py-3">
+          <h2 className="text-base font-semibold">{copy.heading}</h2>
+          <ul className="mt-1 flex flex-col gap-1">
+            {items.map((item) => (
+              <li key={item.id} className="text-sm">
+                {/* `inline`: a bare mark is a block (preflight), and printed the
                   box above its line rather than in front of it (K-15). */}
-              <StatusMark
-                variant={item.checkedByLine !== undefined ? "checked" : "unchecked"}
-                size="sm"
-                inline
-              />{" "}
-              {item.printLine}
-            </li>
-          ))}
-          {/* The boat's open snags ride on paper too: the sheet is what
+                <StatusMark
+                  variant={item.checkedByLine !== undefined ? "checked" : "unchecked"}
+                  size="sm"
+                  inline
+                />{" "}
+                {item.printLine}
+              </li>
+            ))}
+            {/* The boat's open snags ride on paper too: the sheet is what
               the crew holds when the tablet is dead. */}
-          {[...carried, ...items.flatMap((item) => item.snags ?? [])].map((snag) => (
-            <li key={snag.id} className="text-sm font-medium">
-              {snag.printLine}
-            </li>
-          ))}
-        </ul>
-      </div>
+            {[...carried, ...items.flatMap((item) => item.snags ?? [])].map((snag) => (
+              <li key={snag.id} className="text-sm font-medium">
+                {snag.printLine}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

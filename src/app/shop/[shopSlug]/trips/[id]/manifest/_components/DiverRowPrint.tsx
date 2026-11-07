@@ -55,7 +55,7 @@ export function DiverRowPrint({
     diver.birthday && capsuleKind !== "birthday" ? birthdayCalloutText(t, diver.birthday) : null,
   ].filter((fact) => fact !== null);
   return (
-    <div data-print-only className="hidden px-4 pb-4 print:block">
+    <div className="px-4 pb-4">
       <p className="flex flex-wrap items-center gap-2">
         <span
           className={

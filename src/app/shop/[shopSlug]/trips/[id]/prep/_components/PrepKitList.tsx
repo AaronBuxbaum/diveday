@@ -114,16 +114,14 @@ export function PrepKitList({
               : t("tripPrep.nothingToPullOwnKit")
           }
           action={
-            <Link
-              href={shopPath(shopSlug, "trips", tripId)}
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-                className: "print:hidden",
-              })}
-            >
-              {t("tripPrep.rentalKitEmptyAction")}
-            </Link>
+            view.paper ? undefined : (
+              <Link
+                href={shopPath(shopSlug, "trips", tripId)}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("tripPrep.rentalKitEmptyAction")}
+              </Link>
+            )
           }
           className="mt-3"
         />
@@ -136,59 +134,60 @@ export function PrepKitList({
                     piece and its size, who it is for, and how many. Four
                     table columns still do not fit 390px, so the names take
                     the row's middle and wrap there, never the piece or the
-                    count. `print:` pins each half explicitly so the printed
-                    packing list is the table at any paper width, not a
-                    breakpoint coincidence. */}
-          <ul
-            className={sectionCardClass({
-              padding: "none",
-              className: "mt-3 divide-y divide-border overflow-hidden sm:hidden print:hidden",
-            })}
-          >
-            {byItem.lines.map((line) => (
-              <li
-                key={`${line.kind}:${prepLineKey(line)}`}
-                data-kit-line=""
-                className={KIT_PHONE_ROW_CLASS}
-              >
-                <p>
-                  <span className="font-semibold">{rentalItemLabel(t, line.kind)}</span>
-                  {pieceSize(t, line) ? <> {pieceSize(t, line)}</> : null}
-                </p>
-                <p className="text-muted">{diverNames(line.divers)}</p>
-                <p className="font-semibold tabular-nums">
-                  <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
-                  {line.count}
-                </p>
-              </li>
-            ))}
-            {byItem.fits.map((row) => (
-              <li
-                key={`fit:${row.diver.bookingId}`}
-                data-kit-line=""
-                className={KIT_PHONE_ROW_CLASS}
-              >
-                <p className="font-medium text-warning">{t("tripPrep.fitAtCheckIn")}</p>
-                <p>
-                  <span className="font-semibold">{row.diver.fullName}</span>{" "}
-                  <span className="text-muted">{fitPieces(row.lines)}</span>
-                </p>
-                <p className="font-semibold tabular-nums">
-                  <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
-                  {row.lines.length}
-                </p>
-              </li>
-            ))}
-          </ul>
+                    count. A sheet (`view.paper`) draws the table alone, at
+                    any viewport: the printed packing list is the table, not
+                    a breakpoint coincidence. */}
+          {view.paper ? null : (
+            <ul
+              className={sectionCardClass({
+                padding: "none",
+                className: "mt-3 divide-y divide-border overflow-hidden sm:hidden",
+              })}
+            >
+              {byItem.lines.map((line) => (
+                <li
+                  key={`${line.kind}:${prepLineKey(line)}`}
+                  data-kit-line=""
+                  className={KIT_PHONE_ROW_CLASS}
+                >
+                  <p>
+                    <span className="font-semibold">{rentalItemLabel(t, line.kind)}</span>
+                    {pieceSize(t, line) ? <> {pieceSize(t, line)}</> : null}
+                  </p>
+                  <p className="text-muted">{diverNames(line.divers)}</p>
+                  <p className="font-semibold tabular-nums">
+                    <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
+                    {line.count}
+                  </p>
+                </li>
+              ))}
+              {byItem.fits.map((row) => (
+                <li
+                  key={`fit:${row.diver.bookingId}`}
+                  data-kit-line=""
+                  className={KIT_PHONE_ROW_CLASS}
+                >
+                  <p className="font-medium text-warning">{t("tripPrep.fitAtCheckIn")}</p>
+                  <p>
+                    <span className="font-semibold">{row.diver.fullName}</span>{" "}
+                    <span className="text-muted">{fitPieces(row.lines)}</span>
+                  </p>
+                  <p className="font-semibold tabular-nums">
+                    <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
+                    {row.lines.length}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
           {/* The scroll strategy: the 40rem floor is what stops the four
-                    columns collapsing between 640px and a real tablet, and the
-                    vocabulary's `print:` overrides keep paper out of the
-                    scroll rule entirely — an A4 sheet is narrower than the
-                    floor, and a clipped column on a packing list is a silent
-                    one. Not 45rem: that is 720px, and at 768 the trip shell's
+                    columns collapsing between 640px and a real tablet; on a
+                    sheet the floor goes (`.paper-sheet` in globals.css) — an
+                    A4 sheet is narrower than the floor, and a clipped column
+                    on a packing list is a silent one. Not 45rem: that is 720px, and at 768 the trip shell's
                     column is 720px with a 718px scroll region inside the
                     table's borders, so the table scrolled sideways by 2px. */}
-          <Table minWidth="40rem" shellClassName="mt-3 hidden sm:block print:block">
+          <Table minWidth="40rem" shellClassName={view.paper ? "mt-3" : "mt-3 hidden sm:block"}>
             <THead>
               {/* Pinned, the short Item column and the count, so Size
                           and For share the rest: with only the count pinned,
@@ -233,49 +232,51 @@ export function PrepKitList({
                  Every diver on the boat has a row, including the ones with
                  nothing to pull: a name whose answer is "own kit" is what
                  lets the packer stop looking for it. Same card-under-`sm`,
-                 table-above split and the same `print:` pins as the by-item
-                 view, so whichever grouping is on screen is what prints. */
+                 table-above split as the by-item view, and the same table
+                 alone on a sheet. */
         <>
           {/* One card of rows on a phone, as the by-item view above: a
                     diver's whole kit on one row under their name. */}
-          <ul
-            className={sectionCardClass({
-              padding: "none",
-              className: "mt-3 divide-y divide-border overflow-hidden sm:hidden print:hidden",
-            })}
-          >
-            {checklist.diverLines.map((line) => (
-              <li
-                key={line.bookingId}
-                data-kit-line=""
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-3 text-base"
-              >
-                <div className="min-w-0">
-                  <p className="font-semibold">
-                    {/* The row's name: the 44px floor (`tapTargetLinkClass`),
+          {view.paper ? null : (
+            <ul
+              className={sectionCardClass({
+                padding: "none",
+                className: "mt-3 divide-y divide-border overflow-hidden sm:hidden",
+              })}
+            >
+              {checklist.diverLines.map((line) => (
+                <li
+                  key={line.bookingId}
+                  data-kit-line=""
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 px-4 py-3 text-base"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold">
+                      {/* The row's name: the 44px floor (`tapTargetLinkClass`),
                         handing back (44 − 20) / 2 of its own line as padding
                         and margin, so a name that wraps keeps both. */}
-                    <Link
-                      href={`/shop/${shopSlug}/divers/${line.personId}`}
-                      className={`${tapTargetLinkClass} py-2.5 -my-2.5 focus-visible:focus-ring-inset hover:text-primary hover:underline`}
-                    >
-                      {line.fullName}
-                    </Link>
+                      <Link
+                        href={`/shop/${shopSlug}/divers/${line.personId}`}
+                        className={`${tapTargetLinkClass} py-2.5 -my-2.5 focus-visible:focus-ring-inset hover:text-primary hover:underline`}
+                      >
+                        {line.fullName}
+                      </Link>
+                    </p>
+                    {diveRecencyLine(t, line.lastDivedBand)}
+                    <div className="mt-0.5">{kitCell(t, line)}</div>
+                  </div>
+                  <p className="font-semibold tabular-nums">
+                    <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
+                    {line.items.length}
                   </p>
-                  {diveRecencyLine(t, line.lastDivedBand)}
-                  <div className="mt-0.5">{kitCell(t, line)}</div>
-                </div>
-                <p className="font-semibold tabular-nums">
-                  <span className="sr-only">{t("tripPrep.qtyColumn")} </span>
-                  {line.items.length}
-                </p>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          )}
           {/* Three columns rather than four, so a lower floor than the
                     by-item table's: the kit cell wraps, and forcing 40rem
                     would scroll a phone-width tablet sideways for nothing. */}
-          <Table minWidth="36rem" shellClassName="mt-3 hidden sm:block print:block">
+          <Table minWidth="36rem" shellClassName={view.paper ? "mt-3" : "mt-3 hidden sm:block"}>
             <THead>
               <Th>{t("tripPrep.diverColumn")}</Th>
               <Th>{t("tripPrep.kitColumn")}</Th>

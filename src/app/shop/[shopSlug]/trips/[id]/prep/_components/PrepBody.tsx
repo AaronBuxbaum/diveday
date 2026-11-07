@@ -186,10 +186,7 @@ export function PrepBody({
       ) : (
         <div className={className}>
           {offersTasks ? (
-            <nav
-              aria-label={t("tripPrep.tasksLabel")}
-              className="flex flex-wrap gap-x-5 gap-y-1 print:hidden"
-            >
+            <nav aria-label={t("tripPrep.tasksLabel")} className="flex flex-wrap gap-x-5 gap-y-1">
               <a
                 href={`#${scopedId(idPrefix, "kit-heading")}`}
                 className={buttonClass({ variant: "link", flush: true })}

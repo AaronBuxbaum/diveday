@@ -35,9 +35,9 @@ export function PrintedSoulsOnBoard({
     : 0;
   return (
     <>
-      {/* Print-only static facts: divers carried and crew named, never the
+      {/* The sheet's static facts: divers carried and crew named, never the
         live boarded count. The rehearsal label marks practice sheets. */}
-      <p data-print-only className="mt-4 hidden text-base font-semibold tabular-nums print:block">
+      <p className="mt-4 text-base font-semibold tabular-nums">
         {manifest.trip.isRehearsal ? `${t("trips.rehearsal.label")} · ` : null}
         {vesselName ? `${vesselName} · ` : null}
         {staffSoulsOnBoardLine(t, manifest.summary, manifest.crew.length)}

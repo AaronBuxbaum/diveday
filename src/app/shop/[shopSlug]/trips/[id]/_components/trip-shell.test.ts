@@ -14,16 +14,10 @@ const SHOP = path.join(import.meta.dirname, "..", "..", "..");
 const WEARERS = ["trips/[id]/layout.tsx"] as const;
 
 describe("the trip shell", () => {
-  it("is a full-width staff page on screen and the full sheet less a gutter on paper", () => {
+  it("is a full-width staff page, with no face for paper", () => {
     const classes = TRIP_SHELL_CLASS.split(/\s+/);
-    for (const token of [
-      "max-w-6xl",
-      "px-4",
-      "sm:px-6",
-      "print:max-w-none",
-      "print:px-10",
-      "print:py-8",
-    ]) {
+    expect(classes.filter((token) => token.startsWith("print:"))).toEqual([]);
+    for (const token of ["max-w-6xl", "px-4", "sm:px-6"]) {
       expect(classes, token).toContain(token);
     }
   });

@@ -66,7 +66,7 @@ export function MedicalAnswers({
         <p className="text-sm text-muted">{emptyText}</p>
       ) : null}
       {show && !shown ? (
-        <form action={reveal} className="flex flex-col items-start gap-1 print:hidden">
+        <form action={reveal} className="flex flex-col items-start gap-1">
           <SubmitButton
             pendingLabel={copy.showing}
             className={buttonClass({ variant: "secondary", size: "sm", busy: true })}

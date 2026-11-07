@@ -367,11 +367,13 @@ describe("OfflineTripScreen's paper door", () => {
       }),
     );
     expect(screen.queryByRole("button", { name: "Print this saved copy" })).toBeNull();
-    // Ctrl+P on it prints one line, never the expired roster.
-    expect(document.querySelector("[data-roll-call-surface]")?.className).toContain("print:hidden");
-    expect(document.querySelector("[data-offline-screen-on-paper]")?.textContent).toContain(
-      "has no paper manifest",
-    );
+    // Ctrl+P on it prints one line, never the expired roster: the page holds
+    // a print-only frame, so on paper it is that frame (`ScreenNotPrinted`).
+    const onPaper = document.querySelector(".paper-sheet-frame[data-paper-print-only]");
+    expect(onPaper?.textContent).toContain("has no paper manifest");
+    expect(
+      document.querySelector("[data-roll-call-surface]")?.closest(".paper-sheet-frame"),
+    ).toBeNull();
   });
 
   it("never prints the screen, so an opened panel's medical alert words cannot reach paper", () => {
@@ -384,14 +386,11 @@ describe("OfflineTripScreen's paper door", () => {
     );
     for (const details of document.querySelectorAll("details")) details.open = true;
     const words = screen.getByText(ALERT_WORDS);
-    // The whole roll-call surface is off paper, so the words are too.
-    expect(words.closest(".print\\:hidden")).toBe(
-      document.querySelector("[data-roll-call-surface]"),
-    );
+    // The page holds a print-only frame, so on paper it is that frame and
+    // nothing of the screen: the words sit outside every sheet.
+    expect(words.closest(".paper-sheet-frame")).toBeNull();
     // And paper says where the paper manifest is instead.
-    const onPaper = document.querySelector("[data-offline-screen-on-paper]");
-    expect(onPaper?.className).toContain("print:block");
+    const onPaper = document.querySelector(".paper-sheet-frame[data-paper-print-only]");
     expect(onPaper?.textContent).toContain("Print this saved copy");
-    expect(onPaper?.contains(words)).toBe(false);
   });
 });

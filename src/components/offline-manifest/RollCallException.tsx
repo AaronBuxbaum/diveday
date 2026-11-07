@@ -66,7 +66,7 @@ export function OfflineRollCallException({
   const busy = busyBooking === subjectKey;
   const { recordedNotBoarded, notBackAboard: missing, recordedHere } = rowState;
   return (
-    <details data-roll-call-exception className="group/offlineexception mt-2 max-w-xl print:hidden">
+    <details data-roll-call-exception className="group/offlineexception mt-2 max-w-xl">
       <summary className={OFFLINE_DISCLOSURE_SUMMARY_CLASS}>
         <DisclosureCaret className="group-open/offlineexception:rotate-90" />
         <span className="group-hover/summary:underline">

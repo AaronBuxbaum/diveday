@@ -119,7 +119,7 @@ export function OfflineManifestSheet({
   return (
     <main className="w-full flex-1 bg-background">
       {autoPrint ? <AutoPrint /> : null}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <button
           type="button"
           onClick={onBack}
