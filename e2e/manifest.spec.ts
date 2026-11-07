@@ -237,8 +237,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // the six summary tiles (three responsive layouts of the same numbers,
   // one of them collapsed behind "More stats") are gone. Scoped to the
   // panel and asserted on the *number* as well as the word: an unscoped
-  // text match would also find each row's own `print:inline-flex` status
-  // pill, which is in the DOM but never visible on screen.
+  // text match would also find a row's own status words.
   const progressPanel = page.locator('section[aria-labelledby="roll-call-progress-heading"]');
   const notBoardedCount = progressPanel.locator("dl > div").filter({ hasText: "Not boarded" });
   await expect(notBoardedCount).toBeVisible();

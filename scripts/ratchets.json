@@ -1230,7 +1230,6 @@
     "e2e/visual-staff-divers.spec.ts": 1,
     "e2e/visual-staff-roll-call.spec.ts": 4,
     "e2e/visual-staff-trips.spec.ts": 1,
-    "e2e/waiver-print.spec.ts": 1,
     "e2e/waivers.spec.ts": 14,
     "e2e/whatsapp-settings.spec.ts": 1,
     "e2e/work-orders.spec.ts": 4

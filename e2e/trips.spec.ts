@@ -327,15 +327,14 @@ test.describe("trip print packet", () => {
     await expect(popup.getByRole("heading", { name: "Divers", exact: true })).toHaveCount(0);
 
     // **And the roster's names reach the paper.** A roll-call person's name
-    // line is what the packet prints on purpose (`data-print-content`): its
-    // content is the index and the name, and while the print backstop hid it
-    // with every other button this packet printed nine diver rows and two crew
-    // rows with no name in any of them. Priya Sharma is on this departure's
-    // roster (the trip pulse above lands on her). A CSS locator, because a
-    // role locator cannot see what `display: none` removed.
+    // line (`data-roll-call-name`) is the index and the name: while a print
+    // backstop hid buttons, this packet once printed nine diver rows and two
+    // crew rows with no name in any of them. Priya Sharma is on this
+    // departure's roster (the trip pulse above lands on her). A CSS locator,
+    // because a role locator cannot see what `display: none` removed.
     await popup.emulateMedia({ media: "print" });
     await expect(
-      popup.locator(".paper-sheet-frame [data-print-content]", { hasText: "Priya Sharma" }),
+      popup.locator(".paper-sheet-frame [data-roll-call-name]", { hasText: "Priya Sharma" }),
     ).toBeVisible();
     await popup.emulateMedia({ media: "screen" });
     await popup.close();
@@ -647,12 +646,9 @@ test.describe("the printed trip packet", () => {
           box.height > 0
         );
       };
-      // `button[data-print-content]` is the roll call's person: a button
-      // whose content is the name, which the packet exists to print
-      // (`globals.css`'s backstop lets it through; its caret stays off paper).
-      const found = [
-        ...document.querySelectorAll("button:not([data-print-content]), select, textarea, input"),
-      ].filter(visible);
+      const found = [...document.querySelectorAll("button, select, textarea, input")].filter(
+        visible,
+      );
       // Named, not counted: a failure that says "3" sends the next reader
       // hunting, and one that says "Cancel trip" sends them to the section.
       return found.map(
@@ -748,7 +744,13 @@ test.describe("the printed trip packet", () => {
     const line = section.getByText(/^\d+ tanks?(, air|: \d+ air, \d+ nitrox)$/);
 
     await expect(line).toBeVisible();
+    // On paper it is the packet's prep sheet that carries it, as one line.
+    await page.goto(`${tripPath}?print=1`);
+    await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
-    await expect(line).toBeVisible();
+    await expect(
+      page.locator(".paper-sheet").getByText(/^\d+ tanks?(, air|: \d+ air, \d+ nitrox)$/),
+    ).toBeVisible();
+    await page.emulateMedia({ media: "screen" });
   });
 });

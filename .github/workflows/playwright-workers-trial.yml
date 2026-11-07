@@ -84,7 +84,7 @@ jobs:
           if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
             pnpm exec playwright install chromium
           fi
-          if printf '%s\n' "${spec_files[@]}" | grep -Eq '^e2e/(staff-saved-print|boarding-certification-paper|five-dive-departure-log|trip-document-print|public-document-identity)[.]spec[.]ts$'; then
+          if printf '%s\n' "${spec_files[@]}" | grep -Eq '^e2e/(boarding-certification-paper|five-dive-departure-log|trip-document-print|public-document-identity)[.]spec[.]ts$'; then
             sudo apt-get update -qq
             sudo apt-get install -y --no-install-recommends poppler-utils
           fi

@@ -435,7 +435,7 @@ for (const scheme of ["light", "dark"] as const) {
        * model became visible: a team of any size, a crew member marked as crew
        * on the divemaster-led trio, per-member removal, and a checkbox builder
        * in place of the two dropdowns that could only ever express a pair. The
-       * whole panel is `print:hidden`, so no other capture covers it.
+       * Boat tab's sheet carries no panel, so no other capture covers it.
        */
       test(`the manifest's buddy-team builder renders true to the design (${scheme})`, async ({
         page,

@@ -2049,7 +2049,7 @@
   page says only that the recap is not ready yet, on the same link (see **Post-trip recap**). A
   held seat and a diver left at the dock are dead seats, answered before the wait.
 - **Dive record** — the card the after-state is built around, headed "Dive log entry", and the one
-  thing on the page that prints: everything else is `print:hidden`, and on paper the card gains a
+  thing on the page that prints: it is the page's sheet (`RecordPaper`), and on paper the card gains a
   ruled Notes block and a signature rule. **It states only what the shop wrote down** — the diver,
   the date, the vessel, the crew, the sites, the conditions, and which **dive day** this makes — and
   asserts nothing about the dive itself. There is no bottom time, no depth and no dive count

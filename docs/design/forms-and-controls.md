@@ -861,8 +861,8 @@ import { Switch } from "@/components/ui/Switch";
 wants. The label's words are the accessible name *and* a tap target; `aria-checked` is derived from
 the same prop as `checked`, so the two cannot disagree; the thumb moves on a bare
 `transition-transform`, so `prefers-reduced-motion` stills it through the global kill-switch; the
-label is `min-h-11` around a 44×24 track and a 16px thumb, and the whole control is
-`print:hidden`.
+label is `min-h-11` around a 44×24 track and a 16px thumb. It knows nothing of paper: a screen never
+prints, and no sheet renders a control (`.claude/rules/print-ink.md`).
 
 **A checkbox is not a switch, and the difference is when it takes effect.** A choice that only means
 something once a form is submitted stays a plain checkbox — Settings → Team's role and language

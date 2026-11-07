@@ -715,7 +715,7 @@ is gone because a first visit is now a stamp rather than a sentence. A **dive da
 day in the shop's own zone on which this diver actually dived, merged across their DiveDay bookings
 and the visits a shop imported — a blown-out departure is not one, which matters because the stamp
 is exact equality and a phantom day does not blur a milestone, it skips it permanently. The keepsake
-prints like a logbook page: everything else on the surface is `print:hidden`, and the record grows a
+prints like a logbook page: the record is the page's sheet, nothing else on the surface prints, and it grows a
 ruled Notes block and a divemaster signature rule that exist for the printer and nowhere else — the
 blanks that hold the numbers the record itself will not claim.
 
