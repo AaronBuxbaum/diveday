@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import { BoatTabSheet } from "./BoatTabSheet";
+import { boatSheetStatus } from "./boat-sheet-status";
 import type { executedDiveLogView } from "./executed-dive-copy";
 import { ManifestPaper } from "./ManifestPaper";
 import { PrintedBoatPaper } from "./PrintedBoatProcedure";
@@ -19,6 +20,7 @@ export function BoatTabPaper({
   shop,
   shopSlug,
   checkpoint,
+  manifests,
   paperIdentity,
   diveLog,
   cancelled,
@@ -36,6 +38,8 @@ export function BoatTabPaper({
   shop: { name: string; brandColor: string | null };
   shopSlug: string;
   checkpoint: RollCallCheckpoint;
+  /** The departure's manifests, dock first, for the status lines. */
+  manifests: Parameters<typeof boatSheetStatus>[0]["manifests"];
   paperIdentity: { identity: string[]; printed: string };
   /** `executedDiveLogView`, after a dive; null at the dock. */
   diveLog: ReturnType<typeof executedDiveLogView> | null;
@@ -53,6 +57,7 @@ export function BoatTabPaper({
       printed={paperIdentity.printed}
       // The margin's identity, less the shop the band already names.
       departure={paperIdentity.identity.slice(1)}
+      status={boatSheetStatus({ manifests, manifest, checkpoint, t })}
       diveLog={
         diveLog && logged ? { heading: diveLog.labels.heading, line: logged.summaryLine } : null
       }
