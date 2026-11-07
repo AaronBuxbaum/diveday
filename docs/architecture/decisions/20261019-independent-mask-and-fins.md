@@ -28,11 +28,7 @@ sets its own prices through the existing rental settings.
 All capture paths, completeness checks, recall, packing lists and exports preserve independent
 boot and fin sizes. An import never fills an unanswered size from another piece’s cell.
 
-The migration is additive during deployment. The old combined boolean and enum value remain
-storage-only while the previous release serves requests, and no new feature uses them.
-The runtime fit table now omits the old boolean, while `src/db/migration-schema.ts` retains its
-physical definition so unrelated migration generation does not drop it. Once this version has
-deployed, remove the migration-only definition and the enum value in a later release.
+The old combined boolean and enum value are dropped from the schema and the database (no users, so nothing serves the old release).
 
 ## Alternatives considered
 

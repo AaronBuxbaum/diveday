@@ -1,0 +1,80 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "59191828-0b4d-4ff7-ab42-5566444f4749",
+  "prevIds": [
+    "e8a5bf93-9281-40ac-823d-c107c015b8a0",
+    "d7150238-725b-4cf3-b6d3-39d122a9cdd2"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "courses",
+        "gear_included"
+      ],
+      "writes": [
+        "s|col|public.courses.gear_included",
+        "n|col|public.courses.gear_included",
+        "e|col|public.courses.gear_included"
+      ],
+      "reads": [
+        "n|tbl|public.courses",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "doctor_unlock_failures"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.doctor_unlock_failures",
+        "n|col|public.waiver_records.doctor_unlock_failures",
+        "e|col|public.waiver_records.doctor_unlock_failures"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "medical_answer_seal"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.medical_answer_seal",
+        "n|col|public.waiver_records.medical_answer_seal",
+        "e|col|public.waiver_records.medical_answer_seal"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"courses\",\"gear_included\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"doctor_unlock_failures\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"medical_answer_seal\"]"
+    }
+  ]
+}

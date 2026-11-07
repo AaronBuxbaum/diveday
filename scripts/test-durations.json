@@ -1406,7 +1406,7 @@
   "src/db/media-deletions.test.ts": 3368,
   "src/db/medical-alerts.postgres.test.ts": 809,
   "src/db/medical-alerts.test.ts": 7964,
-  "src/db/migration-schema.test.ts": 3559,
+  "src/db/retired-columns.test.ts": 3559,
   "src/db/migrations.postgres.test.ts": 141,
   "src/db/missing-diver-alerts.test.ts": 5241,
   "src/db/missing-diver-found.test.ts": 6814,
