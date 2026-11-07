@@ -314,8 +314,13 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   const counter = counterPath("blue-mantis", tripId);
   await page.goto(addDiverFormPath("blue-mantis", tripId));
   // A submit sent while the page hydrates can land without the name prompt
-  // (seen once in CI on #3740), so the form is filled only once React owns it.
-  await expect(page.locator("[data-identity-menu]")).toHaveAttribute("data-hydrated", "true");
+  // (seen in CI on #3740 and #4114), so the form is filled only once React owns
+  // it. The form's own draft anchor says so; the header's identity menu streams
+  // under another boundary and says nothing about this form (#3828, #3759).
+  await expect(page.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
 
   // One letter off a diver already on file. `personNamesMatch` compares token
   // sets exactly, so this is the disagreement that raises the flag — the prompt
