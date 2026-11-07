@@ -126,7 +126,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
     "reschedule_missed_place", // the same: whether the meeting point moved too
     ...FLY_SAFE_EXPORT_EXCLUSIONS,
-    ...["identity_matched_by", "delivery_email"], // retired review state; a shared inbox's mail address
+    "delivery_email", // a shared inbox's mail address
     // A held seat's desk-recorded emergency contact (#2145), moved at a split.
     "held_emergency_contact_name",
     "held_emergency_contact_phone",
