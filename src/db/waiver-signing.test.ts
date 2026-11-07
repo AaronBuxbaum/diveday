@@ -2,7 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { bookings, people, shops, trips } from "./schema";
-import { getBookingTripId, getWaiverSignerOnFile, getWaiverTripHeader } from "./waiver-signing";
+import {
+  getBookingTripId,
+  getWaiverSignerOnFile,
+  getWaiverTripHeader,
+  seatMinorDeclared,
+} from "./waiver-signing";
 import { getEmergencyContactForBearer } from "./waivers-completion";
 
 const ctx = fileScopedShopContext();
@@ -109,5 +114,30 @@ describe("the waiver signing page's reads (in-memory PGlite)", () => {
       }),
     ).toBeUndefined();
     expect(await getEmergencyContactForBearer(db, other.id, row.bookingId)).toBeNull();
+  });
+
+  it("reads no Under 18 declaration for a seat that is missing or another shop's", async () => {
+    const { db, shop } = ctx;
+    const [row] = await db
+      .select({ bookingId: bookings.id, personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.shopId, shop.id))
+      .limit(1);
+    if (!row) throw new Error("seed has no booking");
+    await db
+      .update(bookings)
+      .set({ minorDeclaredAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(bookings.id, row.bookingId));
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-minor-declared", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("second shop insert failed");
+
+    // Under its own shop the declaration reads, so the falses below are the lookup, not the data.
+    const own = { shopId: shop.id, personId: row.personId, bookingId: row.bookingId };
+    expect(await seatMinorDeclared(db, own)).toBe(true);
+    expect(await seatMinorDeclared(db, { ...own, shopId: other.id })).toBe(false);
+    expect(await seatMinorDeclared(db, { ...own, bookingId: MISSING })).toBe(false);
   });
 });
