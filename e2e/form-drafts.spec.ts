@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
@@ -8,10 +9,24 @@ const newDiver = "/shop/blue-mantis/divers?add=1";
 
 signedInAsOwner();
 
+/**
+ * Opens the add-diver form once React owns it. The panel streams under its own
+ * Suspense boundary, so the staff header's hydrated Search says nothing about
+ * it: a fill and blur that land before `FormDraft` attaches its listeners are
+ * taken as the form's starting values, and no draft save is ever sent.
+ */
+async function openNewDiver(page: Page): Promise<void> {
+  await page.goto(newDiver);
+  await expect(page.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
+}
+
 test("latest input survives immediate internal navigation, Back, and a fresh document", async ({
   page,
 }) => {
-  await page.goto(newDiver);
+  await openNewDiver(page);
   const name = "Draft Navigation Diver";
   const saved = page.waitForResponse(
     (response) =>
@@ -40,7 +55,7 @@ test("latest input survives immediate internal navigation, Back, and a fresh doc
 });
 
 test("blur and a completed save remain a positive draft recovery control", async ({ page }) => {
-  await page.goto(newDiver);
+  await openNewDiver(page);
   const name = "Draft Blur Diver";
   const saved = page.waitForResponse(
     (response) =>
@@ -58,7 +73,7 @@ test("blur and a completed save remain a positive draft recovery control", async
 test("successful submission waits for a pending draft save and leaves no recoverable draft", async ({
   page,
 }) => {
-  await page.goto(newDiver);
+  await openNewDiver(page);
   const name = "Draft Submitted Diver";
   let releaseSave = () => {};
   let sawSave = () => {};
@@ -96,7 +111,7 @@ test("successful submission waits for a pending draft save and leaves no recover
 });
 
 test("an old form cannot put its input into a replacement account's draft", async ({ page }) => {
-  await page.goto(newDiver);
+  await openNewDiver(page);
   const staffContext = page.context();
   const replacementPage = makeActivitySafe(await staffContext.newPage());
   try {
