@@ -9,6 +9,7 @@ import { getTripManifest } from "./manifests";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, waiverRecords } from "./schema";
 import { listStaff } from "./trips";
+import { getWaiverSignerOnFile } from "./waiver-signing";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { recordInPersonWaiver } from "./waivers-in-person";
 import { issueWaiverRequest } from "./waivers-requests";
@@ -681,6 +682,59 @@ describe("a seat marked Under 18 by its booker", () => {
     expect(readiness?.blockers ?? []).not.toContainEqual(
       expect.objectContaining({ code: "guardian_signature_missing" }),
     );
+  });
+
+  /**
+   * A release with no seat, signed from the diver record, covers that seat
+   * too: the page and `completeWaiver` read Under 18 from the diver's seats
+   * still ahead, as readiness does, so nobody is first told at the dock
+   * (issue #4007, fixed by #4050).
+   */
+  it("asks for the guardian on a release with no seat, on the page and at signing", async () => {
+    const ctx = await declaredSeat();
+    const issued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      personId: ctx.person.id,
+      now,
+    });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    expect(
+      await getWaiverSignerOnFile(ctx.db, {
+        shopId: ctx.shop.id,
+        personId: ctx.person.id,
+        bookingId: null,
+      }),
+    ).toMatchObject({ dateOfBirth: null, minorDeclared: true });
+    const sign = (extra: { guardian?: typeof guardian }) =>
+      completeWaiver(ctx.db, issued.key, {
+        signerName: ctx.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        now,
+        ...extra,
+      });
+
+    expect(await sign({})).toEqual({ ok: false, reason: "guardian_required" });
+    expect((await sign({ guardian })).ok).toBe(true);
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id);
+    expect(readiness?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "guardian_signature_missing" }),
+    );
+  });
+
+  it("reads nothing from a cancelled seat on a release with no seat", async () => {
+    const ctx = await declaredSeat();
+    await ctx.db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(eq(bookings.id, ctx.booking.id));
+    expect(
+      await getWaiverSignerOnFile(ctx.db, {
+        shopId: ctx.shop.id,
+        personId: ctx.person.id,
+        bookingId: null,
+      }),
+    ).toMatchObject({ minorDeclared: false });
   });
 
   it("asks the counter for the guardian on a paper release too", async () => {
