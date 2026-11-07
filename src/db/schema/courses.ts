@@ -61,9 +61,7 @@ export const courses = pgTable(
      */
     sourceTemplateSlug: text("source_template_slug"),
     sourceTemplateVersion: integer("source_template_version"),
-    sourceTemplateSnapshot: jsonb(
-      "source_template_snapshot",
-    ).$type<CourseTemplateSnapshot>(),
+    sourceTemplateSnapshot: jsonb("source_template_snapshot").$type<CourseTemplateSnapshot>(),
     /**
      * URL segment for the public course page. Shop-scoped rather than global so
      * two shops can both publish /courses/open-water-diver.
@@ -109,10 +107,7 @@ export const courses = pgTable(
      * the single-deploy shape of it cost — read it before assuming a drop here
      * is routine.
      */
-    galleryPhotos: jsonb("gallery_photos")
-      .$type<CourseGalleryPhoto[]>()
-      .notNull()
-      .default([]),
+    galleryPhotos: jsonb("gallery_photos").$type<CourseGalleryPhoto[]>().notNull().default([]),
     durationText: text("duration_text"),
     groupSizeText: text("group_size_text"),
     minimumAge: integer("minimum_age"),
@@ -120,10 +115,7 @@ export const courses = pgTable(
     prerequisiteNote: text("prerequisite_note"),
     includes: jsonb("includes").$type<string[]>().notNull().default([]),
     excludes: jsonb("excludes").$type<string[]>().notNull().default([]),
-    scheduleDays: jsonb("schedule_days")
-      .$type<CourseScheduleDay[]>()
-      .notNull()
-      .default([]),
+    scheduleDays: jsonb("schedule_days").$type<CourseScheduleDay[]>().notNull().default([]),
     faqs: jsonb("faqs").$type<CourseFaq[]>().notNull().default([]),
     /**
      * **What a student works through before the first day** — name, optional
@@ -157,9 +149,7 @@ export const courses = pgTable(
      * participant may enroll (for example, DSD/OW). Staff read it; nothing in
      * the app offers to edit it.
      */
-    minimumCertificationLevel: certificationLevel(
-      "minimum_certification_level",
-    ),
+    minimumCertificationLevel: certificationLevel("minimum_certification_level"),
     /**
      * **The rung this course leaves its students on**, or null for a course
      * that issues none — a specialty, a refresher, a taster, or a course the
@@ -291,10 +281,7 @@ export const courses = pgTable(
     // wildcard `ilike '%query%'`, which the (shop_id, title) unique btree above
     // cannot serve however tempting it looks: that index answers equality and
     // prefixes, never an interior substring (DATA-L6).
-    index("courses_title_trgm_idx").using(
-      "gin",
-      sql`${table.title} gin_trgm_ops`,
-    ),
+    index("courses_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
   ],
 );
 
