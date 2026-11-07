@@ -59,7 +59,6 @@ async function fixture(operation: Operation) {
           ? {
               identityUnconfirmedAt: nowDate(),
               identityBookedAs: "Alex Kim",
-              identityMatchedBy: "picked_name" as const,
             }
           : {}),
       })),

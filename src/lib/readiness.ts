@@ -470,16 +470,13 @@ export type ReadinessInput = {
    * proof and has not been staff-confirmed (H-20260724-one-person-per-email). Fails closed until staff
    * confirm it is the same human, so a seat can't board on borrowed evidence.
    *
-   * **Two doors raise it, and the module that acts on the flag documented one**
-   * (`dive-domain-expert`, the RFH-07 layer). The by-email path reused a row
-   * whose name on file disagrees with the submitted one — the shared-inbox
-   * signal this flag was built for — and the counter's name-match prompt handed
-   * over a person id on a tap, where either the typed name disagrees with the
-   * one on file or a second diver in the shop answers to that exact name
-   * (issue #1556). Each is argued where it is set, in `createBookingRecord` and
-   * `nameMatchLeavesIdentityInDoubt` (`src/db/bookings.ts`); a safety module
-   * describing only the older one teaches a reader that a tap at the counter
-   * cannot produce the blocker they are looking at.
+   * **One door raises it**: the counter's name-match prompt handed over a
+   * person id on a tap, where either the typed name disagrees with the one on
+   * file or a second diver in the shop answers to that exact name (issue
+   * #1556; `nameMatchLeavesIdentityInDoubt`, `src/db/bookings.ts`). A
+   * different name on an address another diver holds no longer raises it:
+   * that is another diver on a shared inbox, who gets a record of their own
+   * (Aaron 2026-11-06).
    */
   identityUnconfirmed?: boolean;
   /**

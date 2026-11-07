@@ -67,7 +67,6 @@ async function namesakes(name = "Alex Kim") {
     .set({
       identityUnconfirmedAt: nowDate(),
       identityBookedAs: name,
-      identityMatchedBy: "picked_name",
     })
     .where(eq(bookings.id, booked.bookingId));
   const [staff] = await listStaff(db, shop.id);
@@ -193,7 +192,6 @@ describe("repointHeldBooking", () => {
     // Never a confirmation: the hold, its name and its reason all stand.
     expect(seat?.identityUnconfirmedAt).not.toBeNull();
     expect(seat?.identityBookedAs).toBe("Alex Kim");
-    expect(seat?.identityMatchedBy).toBe("picked_name");
     const readiness = await getBookingReadiness(db, shop.id, bookingId);
     expect(readiness?.blockers.map((b) => b.code)).toContain("identity_unconfirmed");
 
@@ -509,7 +507,6 @@ describe("repointHeldBooking", () => {
       personId: second,
       identityUnconfirmedAt: null,
       identityBookedAs: null,
-      identityMatchedBy: null,
     });
     await db.execute(sql`set local session_replication_role = origin`);
     expect(
@@ -541,7 +538,6 @@ describe("repointHeldBooking", () => {
       .set({
         identityUnconfirmedAt: nowDate(),
         identityBookedAs: "alex kim",
-        identityMatchedBy: "picked_name",
       })
       .where(eq(bookings.id, again.bookingId));
 

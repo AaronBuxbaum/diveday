@@ -45,7 +45,6 @@ const seat = {
     hotelPickupLocation: null,
     pickupTime: null,
     identityBookedAs: null,
-    identityMatchedBy: null,
   } as unknown as RosterEntry["booking"],
   person: {
     id: "p-1",

@@ -3631,7 +3631,7 @@
       "ready": "Ready · {count}",
       "checkedInGroup": "Checked in · {count}",
       "blocked": "Blocked",
-      "heldReason": "Booked as {bookedAs} with {name}’s email. Confirm who this is.",
+      "heldReason": "Booked as {bookedAs}, then matched to {name} from the name list. Confirm who this is.",
       "samePerson": "Same person",
       "differentPerson": "Different person",
       "checkIn": "Check in",

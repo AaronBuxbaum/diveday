@@ -1278,16 +1278,16 @@ describe("the medical block on a departure that does not require the waiver", ()
  * again.
  */
 describe("the identity-unconfirmed docblock", () => {
-  it("names both doors that raise the flag", async () => {
+  it("names the one door that raises the flag, and the address that no longer does", async () => {
     const source = await readFile(path.join(process.cwd(), "src/lib/readiness.ts"), "utf8");
     const start = source.indexOf("identityUnconfirmed?: boolean;");
     expect(start).toBeGreaterThan(-1);
     const docblock = source.slice(Math.max(0, start - 1400), start);
     const block = docblock.slice(docblock.lastIndexOf("/**"));
     expect(block).toContain("H-20260724-one-person-per-email");
-    // The older door, and the one the layer added.
-    expect(block).toMatch(/by-email/);
+    // The counter's prompt, and the shared address that gets its own record.
     expect(block).toMatch(/name-match prompt/);
+    expect(block).toMatch(/record of their own/);
     expect(block).toContain("#1556");
     // Where each is argued, so this stays a pointer rather than a second copy.
     expect(block).toContain("nameMatchLeavesIdentityInDoubt");

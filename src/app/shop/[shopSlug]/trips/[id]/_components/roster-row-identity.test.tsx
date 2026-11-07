@@ -284,7 +284,6 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     const heldSeat = () =>
       entry("u", "Marisol Vega", {
         identityBookedAs: "Lucia Vega",
-        identityMatchedBy: "shared_email",
       });
 
     it("asks for a date of birth or an 18-or-older tick, and the date itself on a course with a minimum age", () => {
@@ -383,7 +382,6 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     it("offers the other same-name divers by name only, unpicked, beside a link to each record (issue 2129)", () => {
       const sameName = entry("u", "Alex Kim", {
         identityBookedAs: "Alex Kim",
-        identityMatchedBy: "picked_name",
       });
       const { unmount } = renderRoster({
         roster: [sameName],
@@ -442,7 +440,6 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       roster: [
         entry("u", "Marisol Vega", {
           identityBookedAs: "Lucia Vega",
-          identityMatchedBy: "shared_email",
         }),
       ],
       readiness: unconfirmed,
@@ -451,7 +448,9 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     });
 
     expect(
-      screen.getByText("Booked as Lucia Vega with Marisol Vega’s email. Confirm who this is."),
+      screen.getByText(
+        "Booked as Lucia Vega, then matched to Marisol Vega from the name list. Confirm who this is.",
+      ),
     ).toBeVisible();
     // "Different person" offers the booked-as name for the new record.
     expect(

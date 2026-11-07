@@ -909,7 +909,7 @@ describe("paid rental kinds on a held seat (dive-domain review of issue #2144)",
 
     await db
       .update(bookings)
-      .set({ identityUnconfirmedAt: null, identityBookedAs: null, identityMatchedBy: null })
+      .set({ identityUnconfirmedAt: null, identityBookedAs: null })
       .where(eq(bookings.id, held.bookingId));
     expect(await applyPaidRentalKindsToFit(db, { shopId, bookingId: held.bookingId })).toBe(true);
     // The checkout's own rule: every piece is the selection, sizes untouched.
@@ -951,7 +951,6 @@ async function heldSeatOnFittedNitroxDiver(
       .set({
         identityUnconfirmedAt: new Date("2026-09-01T12:00:00Z"),
         identityBookedAs: bookedAs,
-        identityMatchedBy: "shared_email",
       })
       .where(eq(bookings.id, visitor.bookingId));
   }

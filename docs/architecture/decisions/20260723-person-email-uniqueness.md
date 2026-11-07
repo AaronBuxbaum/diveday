@@ -105,6 +105,12 @@ notice short of staff spotting a duplicate on the roster.
   staff to confirm reflexively and blunt the gate. Security and dive-domain reviews accepted it as a
   floor, not a regression. See [H-20260724-one-person-per-email](../../product/human-decisions/README.md) and the
   [identity match key glossary entry](../../product/glossary.md#modeling-notes).
+- **Amended 2026-11-06 (Aaron: experience beats speculative hardening):** a different name on a
+  known email no longer holds the seat. It is another diver on a shared inbox and gets a record of
+  its own, holding no email, so the unique index stands and the address stays with the record that
+  owns it. Nobody waits on the desk and nobody inherits evidence; a nickname re-booker becomes a
+  duplicate the desk merges. `identity_unconfirmed` is now raised only by the counter's name
+  prompt, and `bookings.identity_matched_by` is retired.
 - **Concurrency-closing path is not exercisable in the current test suite:** the catch-and-reread
   branch in `findOrCreatePerson`/`createDiver`/`editDiver`/`restoreDiver`/`commitContactImport`
   only fires under a genuine race between two open transactions, which PGlite's single-connection

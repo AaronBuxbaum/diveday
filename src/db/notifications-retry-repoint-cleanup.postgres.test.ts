@@ -52,7 +52,6 @@ describePostgres("claimed retry cleanup after a booking repoint", () => {
       .set({
         identityUnconfirmedAt: new Date("2035-03-01T00:00:00Z"),
         identityBookedAs: "Same Name Diver",
-        identityMatchedBy: "picked_name",
       })
       .where(eq(bookings.id, booking.bookingId));
 

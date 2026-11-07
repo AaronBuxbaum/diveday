@@ -33,9 +33,10 @@ capability) — and only for still-unclaimed, non-cancelled member seats on a no
 (`issuePartySeatClaims`, the one authorization seam).
 
 **Claiming** (`claimPartySeat`, one transaction): verify token → lock the seat → resolve the
-claimant by email with `findOrCreatePerson` semantics — an email match reuses that person row, and
-a non-matching name stamps `identity_unconfirmed_at` exactly as the public booking form does
-(H-20260724-one-person-per-email), so nobody inherits verified evidence by typing an email — re-run the gates a fresh
+claimant by email with `findOrCreatePerson` semantics — an email match under the name on file
+reuses that person row, and a non-matching name gets a record of its own, holding no email, exactly
+as the public booking form does (H-20260724-one-person-per-email, amended 2026-11-06), so nobody
+inherits verified evidence by typing an email — re-run the gates a fresh
 booking would face (on a course session the course's own card gate, fail-closed exactly as
 `createBookingRecord`'s `course_prerequisite`; otherwise `tripAdmissionFor` on the claimant's own
 evidence; course minimum age deliberately not re-checked — an age refusal keyed to a typed email

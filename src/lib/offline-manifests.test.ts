@@ -996,7 +996,7 @@ describe("offline manifest policy", () => {
       rentalFit: { state: "own_kit" },
       nitroxRequested: true,
       checkedIn: true,
-      identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+      identityClaim: { bookedAs: "Maria" },
       readiness: {
         status: "blocked",
         blockers: [{ code: "identity_unconfirmed" }, { code: "medical_review" }],
@@ -1083,7 +1083,7 @@ describe("offline manifest policy", () => {
       const diver = {
         ...base.divers[0],
         medicalWaiver,
-        ...(held ? { identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" } } : {}),
+        ...(held ? { identityClaim: { bookedAs: "Maria" } } : {}),
       } as TripManifest["divers"][number];
       return serializeManifests([{ ...base, divers: [diver] }], shop, (blocker) => blocker.code);
     };

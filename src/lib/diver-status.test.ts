@@ -60,7 +60,6 @@ function booking(
       tripId: `trip-${id}`,
       identityUnconfirmedAt: null,
       identityBookedAs: null,
-      identityMatchedBy: null,
       ...overrides,
     },
     trip: {
@@ -638,7 +637,6 @@ describe("the blockers the record used to miss", () => {
           booking("b2", NEXT_WEEK, {
             identityUnconfirmedAt: LAST_MONTH,
             identityBookedAs: "Ama Mensah",
-            identityMatchedBy: "shared_email",
           }),
         ],
       }),
@@ -650,7 +648,7 @@ describe("the blockers the record used to miss", () => {
         kind: "identity",
         tone: "danger",
         sentence: {
-          key: "shared.identityCheck.reasonSharedEmail",
+          key: "shared.identityCheck.reasonPickedName",
           values: { bookedAs: "Ama Mensah", name: "Grace Mensah" },
         },
         action: { labelKey: "divers.status.acts.openBooking", target: "open_booking" },

@@ -53,7 +53,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Night Dive — City of Washington");
         await openTripTab(page, "Trip");
-        await page.getByText("Booked as Hana Park with June Park’s email.").first().waitFor();
+        await page
+          .getByText("Booked as Hana Park, then matched to June Park from the name list.")
+          .first()
+          .waitFor();
         await capture(page, "trip-guests-identity", scheme);
       });
 

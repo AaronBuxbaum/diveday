@@ -89,7 +89,7 @@ describe("the dock copy of a training dive", () => {
 
   it("does not save a held seat’s course or introductory classification", () => {
     const row = save({
-      identityClaim: { bookedAs: "Maya", matchedBy: "picked_name" },
+      identityClaim: { bookedAs: "Maya" },
       readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
       trainingDive: { courseTitle: "Intro", instructorAboard: false, intro: true },
     });

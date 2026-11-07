@@ -43,11 +43,14 @@ export function participantTypeRefusal(input: {
   return null;
 }
 
-/** How a booking attached itself to a person on something short of proof (H-20260724-one-person-per-email). */
-export type IdentityClaim = { bookedAs: string; matchedBy: "shared_email" | "picked_name" };
+/**
+ * The name a seat was guessed onto a person under, off the counter's name
+ * prompt (H-20260724-one-person-per-email, issue #1556).
+ */
+export type IdentityClaim = { bookedAs: string };
 
 /**
- * The three identity columns a booking row carries, for a fresh insert and a
+ * The two identity columns a booking row carries, for a fresh insert and a
  * reactivated row alike. A matching name clears a stale flag; a mismatch
  * (re)raises it with what the staffer is shown beside the matched record.
  */
@@ -58,14 +61,12 @@ export function bookingIdentityColumns(
 ): {
   identityUnconfirmedAt: Date | null;
   identityBookedAs: string | null;
-  identityMatchedBy: IdentityClaim["matchedBy"] | null;
   heldEmergencyContactName: null;
   heldEmergencyContactPhone: null;
 } {
   return {
     identityUnconfirmedAt: identityUnconfirmed ? now : null,
     identityBookedAs: identityUnconfirmed ? (claim?.bookedAs ?? null) : null,
-    identityMatchedBy: identityUnconfirmed ? (claim?.matchedBy ?? null) : null,
     // A seat (re)written starts with no desk-recorded contact of its own
     // (issue #2145): one from an earlier hold on a reactivated row was about
     // whoever stood at the counter then.

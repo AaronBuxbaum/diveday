@@ -1,7 +1,6 @@
 import type { BirthdayCallout } from "./age";
 import type { RentalFitLine } from "./dive-prep";
 import type { BookingAdvisory } from "./findings";
-import type { IdentityMatchKind } from "./identity-match";
 import {
   countParticipants,
   type ParticipantCounts,
@@ -150,14 +149,13 @@ export type ManifestDiverInput = {
   medicalAlert?: boolean;
   readiness?: ReadinessResult;
   /**
-   * The name a held seat was booked under and why it was matched to this
+   * The name a held seat was booked under before it was matched to this
    * diver (H-20260724-one-person-per-email), so its `identity_unconfirmed` line can name both people
    * (`identityReasonText`) rather than say "might be someone else" with
    * nothing to compare. Absent on a seat that was never held.
    */
   identityClaim?: {
     bookedAs: string | null;
-    matchedBy: IdentityMatchKind | null;
     /**
      * The emergency contact the desk recorded for the person on this held seat
      * (`bookings.held_emergency_contact_*`, issue #2145), which

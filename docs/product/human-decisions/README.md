@@ -72,7 +72,7 @@ and run the command again.
 | H-20260724-current-typed-name-explicit | Ready | 2026-07-24 | Is the current typed name + explicit consent + timestamp sufficient for the intended… |
 | H-20260724-initial-gear-policy-sizing | Implemented | 2026-08-02 | What is the initial gear policy for sizing, preferences, staff assignment, and substitutions? |
 | H-20260724-minimum-age-gate-fail | Implemented | 2026-07-25 | H-20260724-certification-levels-agency-rules's minimum-age gate as approved (2026-07-24, option B — "collect it, fail open") did… |
-| H-20260724-one-person-per-email | Implemented | 2026-10-05 | CR-008 made (shop_id, lower(email)) a hard uniqueness constraint for active people and, per the… |
+| H-20260724-one-person-per-email | Implemented | 2026-11-06 | CR-008 made (shop_id, lower(email)) a hard uniqueness constraint for active people and, per the… |
 | H-20260724-payment-deposit-cancellation-refund | In progress | 2026-08-26 | What payment/deposit, cancellation, refund, tax, and provider policy should the first paid booking support? |
 | H-20260724-product-now-uses-explicit | Implemented | 2026-07-26 | The product now uses explicit encrypted device snapshots rather than a live-only pilot. |
 | H-20260724-public-founding-shop-price | Chosen | 2026-10-14 | Is the public founding-shop price, commercial term, support promise, and multi-location policy correct? |

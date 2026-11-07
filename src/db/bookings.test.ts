@@ -1254,62 +1254,48 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
     expect(await identityFlag(db, second.bookingId)).toBeNull();
   });
 
-  it("flags a booking that reuses an existing email under a different name, and staff can confirm it", async () => {
+  /**
+   * **A different name on an address the shop already holds is another diver**
+   * (Aaron 2026-11-06: a spouse or a family on one inbox is not held off the
+   * boat). The seat gets its own record under the typed name, holding no
+   * address, since the address stays with the record that owns it; nothing of
+   * the matched diver's travels and nothing waits on the desk.
+   */
+  it("gives a different name on a known address its own record, held for nobody", async () => {
     const { db, shop, open } = await seededContext();
     const night = await nightTrip(db, shop.id);
     const first = await bookVisitor(db, shop.id, open.id);
     if (!first.ok) throw new Error("setup booking failed");
 
-    // A different human on Nora's shared inbox books a second trip: reused
-    // person, mismatched name — must not silently inherit her evidence.
-    const shared = await createBooking(db, {
-      actor: "staff",
-      shopId: shop.id,
-      tripId: night.id,
-      fullName: "Ben Quinn",
-      email: "nora@example.com",
-    });
-    if (!shared.ok) throw new Error("shared-inbox booking failed");
-    expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
+    for (const actor of ["public", "staff"] as const) {
+      const trip = actor === "public" ? night : open;
+      const shared = await createBooking(db, {
+        actor,
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: actor === "public" ? "  Ben Quinn " : "Ada Quinn",
+        email: "NORA@example.com",
+      });
+      if (!shared.ok) throw new Error(`${actor} shared-inbox booking failed: ${shared.reason}`);
+      expect(shared.personId).not.toBe(first.personId);
+      expect(shared.identityUnconfirmed).toBe(false);
 
-    // Staff confirm identity → flag clears; a second confirm is a no-op.
-    const staffer = await counterStaffer(db, shop.id);
-    const confirm = {
-      shopId: shop.id,
-      bookingId: shared.bookingId,
-      actorPersonId: staffer.id,
-    };
-    expect(await confirmBookingIdentity(db, confirm)).toBe(true);
-    expect(await identityFlag(db, shared.bookingId)).toBeNull();
-    expect(await confirmBookingIdentity(db, confirm)).toBe(false);
-  });
+      const [seat] = await db.select().from(bookings).where(eq(bookings.id, shared.bookingId));
+      expect(seat?.identityUnconfirmedAt).toBeNull();
+      expect(seat?.identityBookedAs).toBeNull();
+      const [own] = await db.select().from(people).where(eq(people.id, shared.personId));
+      expect(own?.fullName).toBe(actor === "public" ? "Ben Quinn" : "Ada Quinn");
+      expect(own?.email).toBeNull();
+      expect(own?.createdByBookingId).toBe(shared.bookingId);
 
-  it("keeps the name a flagged booking was made under, and why, until the flag clears", async () => {
-    const { db, shop, open } = await seededContext();
-    const night = await nightTrip(db, shop.id);
-    const first = await bookVisitor(db, shop.id, open.id);
-    if (!first.ok) throw new Error("setup booking failed");
-    const shared = await createBooking(db, {
-      actor: "staff",
-      shopId: shop.id,
-      tripId: night.id,
-      fullName: "  Ben Quinn ",
-      email: "nora@example.com",
-    });
-    if (!shared.ok) throw new Error("shared-inbox booking failed");
-    const [held] = await db.select().from(bookings).where(eq(bookings.id, shared.bookingId));
-    expect(held?.identityBookedAs).toBe("Ben Quinn");
-    expect(held?.identityMatchedBy).toBe("shared_email");
+      const readiness = await readinessModule.getBookingReadiness(db, shop.id, shared.bookingId);
+      expect(readiness?.blockers.map((b) => b.code)).not.toContain("identity_unconfirmed");
+    }
 
-    const staffer = await counterStaffer(db, shop.id);
-    await confirmBookingIdentity(db, {
-      shopId: shop.id,
-      bookingId: shared.bookingId,
-      actorPersonId: staffer.id,
-    });
-    const [cleared] = await db.select().from(bookings).where(eq(bookings.id, shared.bookingId));
-    expect(cleared?.identityBookedAs).toBeNull();
-    expect(cleared?.identityMatchedBy).toBeNull();
+    // Nora keeps her address, her record and her seat.
+    const [nora] = await db.select().from(people).where(eq(people.id, first.personId));
+    expect(nora?.email).toBe("nora@example.com");
+    expect(nora?.fullName).toBe("Nora Quinn");
   });
 
   it("never stores a booked-as name on a booking that was not flagged", async () => {
@@ -1318,7 +1304,6 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
     if (!first.ok) throw new Error("setup booking failed");
     const [row] = await db.select().from(bookings).where(eq(bookings.id, first.bookingId));
     expect(row?.identityBookedAs).toBeNull();
-    expect(row?.identityMatchedBy).toBeNull();
   });
 
   describe("splitBookingIdentity (not the same person)", () => {
@@ -1344,7 +1329,8 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
       return issued;
     }
 
-    async function sharedInboxSeat(db: AppDb, shopId: string, openId: string) {
+    /** A seat the counter took off the name prompt for Nora, typed "Ben Quinn". */
+    async function heldSeat(db: AppDb, shopId: string, openId: string) {
       const night = await nightTrip(db, shopId);
       const first = await bookVisitor(db, shopId, openId);
       if (!first.ok) throw new Error("setup booking failed");
@@ -1352,16 +1338,16 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
         actor: "staff",
         shopId,
         tripId: night.id,
-        fullName: "Ben Quinn",
-        email: "nora@example.com",
+        personId: first.personId,
+        fromNameMatch: { typedName: "Ben Quinn" },
       });
-      if (!shared.ok) throw new Error("shared-inbox booking failed");
+      if (!shared.ok) throw new Error("held-seat booking failed");
       return { night, nora: first.personId, shared };
     }
 
     it("moves the seat onto a new diver with no email, clears the flag, and leaves the match alone", async () => {
       const { db, shop, open } = await seededContext();
-      const { night, nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const { night, nora, shared } = await heldSeat(db, shop.id, open.id);
       expect(shared.personId).toBe(nora);
       const staffer = await counterStaffer(db, shop.id);
 
@@ -1409,7 +1395,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
     it("refuses a seat that is not held, a blank name, and another shop's booking", async () => {
       const { db, shop, open } = await seededContext();
-      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const { shared } = await heldSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
       const input = { shopId: shop.id, bookingId: shared.bookingId, actorPersonId: staffer.id };
 
@@ -1441,7 +1427,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
     // review 2026-10-05): it is blocked, and on its own missing release.
     it("leaves the split seat blocked on its own release", async () => {
       const { db, shop, open } = await seededContext();
-      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const { shared } = await heldSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
       const result = await splitBookingIdentity(db, {
         shopId: shop.id,
@@ -1458,7 +1444,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
     it("kills every link minted over the seat: bearer tokens and its release", async () => {
       const { db, shop, open } = await seededContext();
-      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const { shared } = await heldSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
       const ready = await bookingCapabilitiesModule.issueBookingCapability(db, {
         shopId: shop.id,
@@ -1498,7 +1484,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
     it("refuses a seat with an unanswered medical referral, which a split would lift", async () => {
       const { db, shop, open } = await seededContext();
-      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const { shared } = await heldSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
       await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       const [release] = await db
@@ -1530,7 +1516,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
     it("refuses a seat whose physician did not clear the diver, which is still a hold", async () => {
       const { db, shop, open } = await seededContext();
-      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const { shared } = await heldSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
       await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       await db
@@ -1561,7 +1547,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
     // the matched diver and stays theirs; unsigned links follow the seat.
     it("keeps a signed release with the matched diver it names", async () => {
       const { db, shop, open } = await seededContext();
-      const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const { nora, shared } = await heldSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
       await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       const [release] = await db
@@ -1616,7 +1602,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
     it("takes an unsigned link with the seat and clears what somebody half-typed on it", async () => {
       const { db, shop, open } = await seededContext();
-      const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const { nora, shared } = await heldSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
       await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
       await db
@@ -1670,7 +1656,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("asks for a date of birth when the seat is on a course with a minimum age", async () => {
         const { db, shop, open } = await seededContext();
-        const { night, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { night, shared } = await heldSeat(db, shop.id, open.id);
         await ageGate(db, shop.id, night.id, 12);
         const staffer = await counterStaffer(db, shop.id);
         const input = {
@@ -1703,7 +1689,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
        */
       it("refuses a split with neither a date of birth nor an 18-or-older answer, on any departure", async () => {
         const { db, shop, open } = await seededContext();
-        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { shared } = await heldSeat(db, shop.id, open.id);
         const staffer = await counterStaffer(db, shop.id);
         const input = {
           shopId: shop.id,
@@ -1726,7 +1712,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("files the 18-or-older answer with the staffer who gave it", async () => {
         const { db, shop, open } = await seededContext();
-        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { shared } = await heldSeat(db, shop.id, open.id);
         const staffer = await counterStaffer(db, shop.id);
         const result = await splitBookingIdentity(db, {
           shopId: shop.id,
@@ -1744,7 +1730,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("keeps the date and no 18-or-older answer when the staffer gave both", async () => {
         const { db, shop, open } = await seededContext();
-        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { shared } = await heldSeat(db, shop.id, open.id);
         const staffer = await counterStaffer(db, shop.id);
         const result = await splitBookingIdentity(db, {
           shopId: shop.id,
@@ -1764,7 +1750,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("still asks for the date on a course with a minimum age, 18-or-older or not", async () => {
         const { db, shop, open } = await seededContext();
-        const { night, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { night, shared } = await heldSeat(db, shop.id, open.id);
         await ageGate(db, shop.id, night.id, 12);
         const staffer = await counterStaffer(db, shop.id);
         expect(
@@ -1781,7 +1767,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("files the date on the new record, so the age check reads the person who is here", async () => {
         const { db, shop, open } = await seededContext();
-        const { night, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { night, shared } = await heldSeat(db, shop.id, open.id);
         await ageGate(db, shop.id, night.id, 99);
         const staffer = await counterStaffer(db, shop.id);
         const result = await splitBookingIdentity(db, {
@@ -1800,7 +1786,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("refuses a date of birth that cannot be one", async () => {
         const { db, shop, open } = await seededContext();
-        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { shared } = await heldSeat(db, shop.id, open.id);
         const staffer = await counterStaffer(db, shop.id);
         const input = {
           shopId: shop.id,
@@ -1819,7 +1805,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("keeps an email and phone the staffer typed, and works with neither", async () => {
         const { db, shop, open } = await seededContext();
-        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { shared } = await heldSeat(db, shop.id, open.id);
         const staffer = await counterStaffer(db, shop.id);
         const result = await splitBookingIdentity(db, {
           shopId: shop.id,
@@ -1839,7 +1825,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("refuses an address another diver already holds, the shared inbox above all", async () => {
         const { db, shop, open } = await seededContext();
-        const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { nora, shared } = await heldSeat(db, shop.id, open.id);
         const staffer = await counterStaffer(db, shop.id);
         const before = await db.select({ id: people.id }).from(people);
         expect(
@@ -1872,20 +1858,25 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
           (t) => !t.title.startsWith("Night Dive") && t.booked < t.sellableCapacity,
         );
         if (!other) throw new Error("expected another seeded trip");
+        const [nora] = await db
+          .select({ id: people.id })
+          .from(people)
+          .where(and(eq(people.shopId, shopId), eq(people.email, "nora@example.com")));
+        if (!nora) throw new Error("expected Nora on file");
         const seat = await createBooking(db, {
           actor: "staff",
           shopId,
           tripId: other.id,
-          fullName,
-          email: "nora@example.com",
+          personId: nora.id,
+          fromNameMatch: { typedName: fullName },
         });
-        if (!seat.ok) throw new Error("second shared-inbox booking failed");
+        if (!seat.ok) throw new Error("second held-seat booking failed");
         return { trip: other, seat };
       }
 
       it("moves every held seat with that name onto one new record", async () => {
         const { db, shop, open } = await seededContext();
-        const { night, nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { night, nora, shared } = await heldSeat(db, shop.id, open.id);
         const { trip: other, seat } = await secondHeldSeat(db, shop.id, "ben quinn");
         expect(seat.personId).toBe(nora);
         const staffer = await counterStaffer(db, shop.id);
@@ -1933,7 +1924,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("moves only the one seat unless asked, and never a seat booked under another name", async () => {
         const { db, shop, open } = await seededContext();
-        const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { nora, shared } = await heldSeat(db, shop.id, open.id);
         const { seat: sameName } = await secondHeldSeat(db, shop.id, "Ben Quinn");
         const staffer = await counterStaffer(db, shop.id);
 
@@ -1956,7 +1947,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("refuses the lot when any seat moving has an unanswered medical referral", async () => {
         const { db, shop, open } = await seededContext();
-        const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { nora, shared } = await heldSeat(db, shop.id, open.id);
         const { seat } = await secondHeldSeat(db, shop.id, "Ben Quinn");
         await releaseBehindHold(db, { shopId: shop.id, bookingId: seat.bookingId });
         await db
@@ -1989,7 +1980,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
        */
       it("never puts a held seat on the same departure onto the new record, whatever the form posts", async () => {
         const { db, shop, open } = await seededContext();
-        const { night, nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { night, nora, shared } = await heldSeat(db, shop.id, open.id);
         // A second "Ben Quinn" on the same boat, guessed onto another diver.
         const [omar] = await db
           .insert(people)
@@ -2000,8 +1991,8 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
           actor: "staff",
           shopId: shop.id,
           tripId: night.id,
-          fullName: "Ben Quinn",
-          email: "quinns@example.com",
+          personId: omar.id,
+          fromNameMatch: { typedName: "Ben Quinn" },
         });
         if (!twin.ok) throw new Error("second same-name booking failed");
         expect(await identityFlag(db, twin.bookingId)).not.toBeNull();
@@ -2048,7 +2039,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("leaves the staff notes with the matched person", async () => {
         const { db, shop, open } = await seededContext();
-        const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { nora, shared } = await heldSeat(db, shop.id, open.id);
         const staffer = await counterStaffer(db, shop.id);
         const [note] = await db
           .insert(internalNotes)
@@ -2075,7 +2066,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       it("clears how the moved link last reached the matched diver", async () => {
         const { db, shop, open } = await seededContext();
-        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { shared } = await heldSeat(db, shop.id, open.id);
         const staffer = await counterStaffer(db, shop.id);
         await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
         await db
@@ -2111,7 +2102,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
     it("refuses a canceled seat: there is nobody to give a record to", async () => {
       const { db, shop, open } = await seededContext();
-      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const { shared } = await heldSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
       await db
         .update(bookings)
@@ -2177,7 +2168,6 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
     expect(await identityFlag(db, outcome.bookingId)).not.toBeNull();
     const [held] = await db.select().from(bookings).where(eq(bookings.id, outcome.bookingId));
     expect(held?.identityBookedAs).toBe("Nadia Ruis");
-    expect(held?.identityMatchedBy).toBe("picked_name");
 
     const readiness = await readinessModule.getBookingReadiness(db, shop.id, outcome.bookingId);
     expect(readiness?.status).toBe("blocked");
@@ -2185,7 +2175,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
       expect.objectContaining({ code: "identity_unconfirmed" }),
     );
 
-    // One tap at the roster clears it, same as the shared-inbox path.
+    // One tap at the roster clears it, same as any held seat.
     const staffer = await counterStaffer(db, shop.id);
     expect(
       await confirmBookingIdentity(db, {
@@ -2284,10 +2274,10 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
       actor: "staff",
       shopId: shop.id,
       tripId: night.id,
-      fullName: "Ben Quinn",
-      email: "nora@example.com",
+      personId: first.personId,
+      fromNameMatch: { typedName: "Ben Quinn" },
     });
-    if (!shared.ok) throw new Error("shared-inbox booking failed");
+    if (!shared.ok) throw new Error("name-match booking failed");
     const staffer = await counterStaffer(db, shop.id);
 
     expect(
@@ -2921,7 +2911,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
         actor: "public",
         shopId: shop.id,
         tripId: open.id,
-        fullName: "Short Card",
+        fullName: "Cass Marlin",
         email: "shortcard@example.com",
         declared: { level: "open_water" },
         admissionGate: "advise",

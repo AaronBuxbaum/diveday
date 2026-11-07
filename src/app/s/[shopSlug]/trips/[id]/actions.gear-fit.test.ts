@@ -15,16 +15,15 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 
 /**
- * **The checkout's gear ticks write the fit only of a diver this booking is
- * sure it is.**
+ * **The checkout's gear ticks write the fit only of the diver the seat is for.**
  *
  * `bookSpot` persists each party member's priced gear as their rental fit the
- * moment the seat exists (ADR 20260801-checkout-upsells-rental-gear). A seat
- * held on a shared email (H-20260724-one-person-per-email) attached itself to an *existing* person whose
- * name on file does not match the one typed, so the booker may be somebody
- * else, and the fit is that diver's standing record. A rented wetsuit ticked
- * there would clear their `dives_dry` and, with it, the drysuit weight check
- * on every later trip (`security-reviewer`, layer 2 of the H-20260916-rental-fit-describe-shop work).
+ * moment the seat exists (ADR 20260801-checkout-upsells-rental-gear). Another
+ * name on an existing diver's email is another diver on a shared inbox
+ * (H-20260724-one-person-per-email, Aaron 2026-11-06), on a record of their
+ * own, so a rented wetsuit ticked there never clears the matched diver's
+ * `dives_dry` and, with it, the drysuit weight check on every later trip
+ * (`security-reviewer`, layer 2 of the H-20260916-rental-fit-describe-shop work).
  *
  * The real action on a real database, asserting rows: only the framework edge
  * (`next/*`), the request's IP and locale and the app's public URL are
@@ -156,32 +155,31 @@ async function seatOf(db: AppDb, tripId: string, personId: string) {
 }
 
 describe("gear ticked at checkout", () => {
-  it("leaves a held seat's matched diver's fit alone, and keeps the paid gear on the booking", async () => {
+  it("writes a shared inbox's other diver's fit onto their own record, never the matched diver's", async () => {
     const { db, shop } = ctx;
     const { tripId, danaId } = await gearShop(db, shop.id);
 
     await book(shop.slug, tripId, "Somebody Else");
 
-    const seat = await seatOf(db, tripId, danaId);
-    expect(seat, "the seat attached to Dana").toBeDefined();
-    expect(
-      seat?.identityUnconfirmedAt,
-      "and is held (H-20260724-one-person-per-email)",
-    ).not.toBeNull();
+    expect(await seatOf(db, tripId, danaId), "no seat attached to Dana").toBeUndefined();
     // Dana's standing fit is untouched: still dry, still a drysuit, no wetsuit.
     expect(await fitOf(db, shop.id, danaId)).toMatchObject({
       divesDry: true,
       rentsDrysuit: true,
       rentsWetsuit: false,
     });
-    // The wetsuit the booker paid for still reaches the rack, on the booking
-    // (dive-domain review of issue #2144).
-    expect(seat?.paidRentalKinds).toEqual(["wetsuit"]);
+    const [own] = await db
+      .select({ personId: bookings.personId, paidRentalKinds: bookings.paidRentalKinds })
+      .from(bookings)
+      .where(eq(bookings.tripId, tripId));
+    if (!own) throw new Error("the booker's seat is missing");
+    expect(own.personId).not.toBe(danaId);
+    expect(own.paidRentalKinds).toEqual(["wetsuit"]);
+    expect(await fitOf(db, shop.id, own.personId)).toMatchObject({ rentsWetsuit: true });
   });
 
   it("records the fit of a diver the booking is sure of", async () => {
-    // The control: the same post under the name on file is what reaches the
-    // fit, so the hold above is the only thing standing between.
+    // The control: the same post under the name on file reaches Dana's fit.
     const { db, shop } = ctx;
     const { tripId, danaId } = await gearShop(db, shop.id);
 

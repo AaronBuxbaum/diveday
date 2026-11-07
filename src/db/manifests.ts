@@ -1322,7 +1322,6 @@ export async function getTripManifests(
       identityClaim: booking.identityUnconfirmedAt
         ? {
             bookedAs: booking.identityBookedAs,
-            matchedBy: booking.identityMatchedBy,
             // The desk's contact for the person on the seat (issue #2145),
             // shown in place of the matched record's, which is withheld.
             heldEmergencyContact:

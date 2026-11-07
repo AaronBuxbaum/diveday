@@ -83,7 +83,7 @@ describe("an unanswered referral's warning", () => {
       checkpoint: "departure",
       divers: [
         diver({
-          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          identityClaim: { bookedAs: "Maria" },
           readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
           medicalWaiver: {
             ...referredBefore,
@@ -124,7 +124,7 @@ describe("a held seat on the manifest", () => {
         diver({
           age: 13,
           minor: true,
-          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          identityClaim: { bookedAs: "Maria" },
           readiness: {
             status: "blocked",
             blockers: [{ code: "identity_unconfirmed" }, { code: "medical_review" }],
@@ -185,7 +185,7 @@ describe("a held seat on the manifest", () => {
       checkpoint: "departure",
       divers: [
         diver({
-          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          identityClaim: { bookedAs: "Maria" },
           readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
         }),
       ],

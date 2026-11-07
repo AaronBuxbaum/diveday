@@ -3631,7 +3631,7 @@
       "ready": "Listos · {count}",
       "checkedInGroup": "Registrados · {count}",
       "blocked": "Bloqueado",
-      "heldReason": "Reservó como {bookedAs} con el correo de {name}. Confirma quién es.",
+      "heldReason": "Reservó como {bookedAs} y se asoció a {name} desde la lista de nombres. Confirma quién es.",
       "samePerson": "Misma persona",
       "differentPerson": "Otra persona",
       "checkIn": "Registrar",

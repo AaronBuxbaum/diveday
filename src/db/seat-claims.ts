@@ -27,7 +27,7 @@ import {
 import { partySeatGoesWithLead, tripAdmissionFor } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
-import { findOrCreatePerson } from "./people";
+import { createPerson, findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
@@ -257,8 +257,6 @@ export type ClaimSeatResult =
       tripId: string;
       personId: string;
       personName: string;
-      /** Set when the claimant's submitted name didn't match the person row their email resolved to (H-20260724-one-person-per-email). */
-      identityUnconfirmed: boolean;
     }
   /** `already_booked`: the typed address already holds a live seat on this trip. */
   | { ok: false; reason: "invalid" | "course_prerequisite" | "already_booked" }
@@ -284,10 +282,11 @@ export type ClaimSeatResult =
  *   claimant's data.
  *
  * Identity semantics follow the public booking form exactly (H-20260724-one-person-per-email): an email
- * match reuses that person row, and a submitted name that doesn't match the
- * row on file stamps `identity_unconfirmed_at`, so readiness fails closed
- * until staff confirm — a claimant can never silently inherit someone else's
- * verified evidence by typing their email.
+ * match under the name on file reuses that person row, and another name on
+ * that address is another diver on a shared inbox (Aaron 2026-11-06), who gets
+ * a record of their own holding no address — a claimant can never inherit
+ * someone else's verified evidence by typing their email, and is never held
+ * for the desk to confirm either.
  */
 async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<ClaimSeatResult> {
   const now = input.now ?? nowDate();
@@ -321,14 +320,17 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   const fullName = input.fullName.trim();
   // Look up without creating: a refused claim must leave no orphan person
   // behind, same as `createBookingRecord`'s pendingInsert ordering.
-  const [existing] = await tx
+  const [atAddress] = await tx
     .select()
     .from(people)
     .where(
       and(eq(people.shopId, capability.shopId), eq(people.email, email), isNull(people.deletedAt)),
     )
     .limit(1);
-  const identityUnconfirmed = existing ? !personNamesMatch(existing.fullName, fullName) : false;
+  // Another name on this address is somebody else on a shared inbox: they get
+  // their own record below, and nothing of this one's is read for them.
+  const existing =
+    atAddress && personNamesMatch(atAddress.fullName, fullName) ? atAddress : undefined;
 
   // On a course session the course's own card gate is the admission rule,
   // and it fails closed exactly as it does at booking (`createBookingRecord`'s
@@ -374,14 +376,14 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   // The trip's own cert/specialty/nitrox gate, re-run on the claimant's
   // evidence — claiming never weakens a gate, and admission for the claimant
   // is exactly what a fresh booking of this seat by this person would face.
-  // An unknown or identity-unconfirmed claimant is admitted (absence of
+  // An unknown claimant is admitted (absence of
   // evidence is never a refusal) and readiness still holds the boarding line.
   const admission = await tripAdmissionFor(
     tx,
     capability.shopId,
     trip.id,
     existing ? { id: existing.id } : undefined,
-    identityUnconfirmed,
+    false,
     Boolean(trip.courseId),
     undefined,
     // The seat's own type: a rider or a snorkeler is asked for no card, here
@@ -415,23 +417,32 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
 
   // Gates passed — now resolve for real. Under a racing insert for the same
   // email, `findOrCreatePerson` converges on the winner and reports whether
-  // *our* name matches the row that actually landed.
-  const resolved = existing
-    ? { person: existing, nameMatches: !identityUnconfirmed }
-    : await findOrCreatePerson(tx, {
-        shopId: capability.shopId,
-        fullName,
-        email,
-        phone: input.phone,
-        origin: "public_booking",
-      });
-  const person = resolved.person;
-  const unconfirmed = !resolved.nameMatches;
+  // *our* name matches the row that actually landed; another name there gets
+  // its own record, the same as one already on file.
+  const found = existing
+    ? { person: existing, nameMatches: true }
+    : atAddress
+      ? null
+      : await findOrCreatePerson(tx, {
+          shopId: capability.shopId,
+          fullName,
+          email,
+          phone: input.phone,
+          origin: "public_booking",
+        });
+  const person =
+    found?.nameMatches === true
+      ? found.person
+      : await createPerson(tx, {
+          shopId: capability.shopId,
+          fullName,
+          email: null,
+          phone: await storedPhone(tx, capability.shopId, input.phone),
+          origin: "public_booking",
+        });
 
-  // The claimant's own contact, but only onto an identity that matched: an
-  // unconfirmed claimant must not write contact data onto the person row
-  // they merely named (H-20260724-one-person-per-email's borrowed-evidence rule, applied to writes).
-  if (!unconfirmed && input.phone?.trim() && !person.phone) {
+  // The claimant's own number onto the record they matched, if it has none.
+  if (existing && input.phone?.trim() && !person.phone) {
     await tx
       .update(people)
       .set({ phone: await storedPhone(tx, capability.shopId, input.phone) })
@@ -457,9 +468,8 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     .set({
       personId: person.id,
       claimedAt: now,
-      identityUnconfirmedAt: unconfirmed ? now : null,
-      identityBookedAs: unconfirmed ? fullName : null,
-      identityMatchedBy: unconfirmed ? "shared_email" : null,
+      identityUnconfirmedAt: null,
+      identityBookedAs: null,
     })
     .where(eq(bookings.id, booking.id));
 
@@ -492,7 +502,6 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     tripId: trip.id,
     personId: person.id,
     personName: person.fullName,
-    identityUnconfirmed: unconfirmed,
   };
 }
 

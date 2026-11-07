@@ -164,7 +164,6 @@ describe("staff-only operational context", () => {
       .set({
         identityUnconfirmedAt: nowDate(),
         identityBookedAs: "Kai Quillfeather",
-        identityMatchedBy: "shared_email",
       })
       .where(eq(bookings.id, rosterEntry.booking.id));
 

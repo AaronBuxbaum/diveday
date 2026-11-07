@@ -237,7 +237,7 @@ describe("buildIncidentExport", () => {
         manifests: manifestsFor([
           {
             ...diver("b1", "Ana Diaz", boarded),
-            identityClaim: { bookedAs: "Ana Duarte", matchedBy: "shared_email" },
+            identityClaim: { bookedAs: "Ana Duarte" },
           },
           diver("b2", "Ben Cho"),
         ]),

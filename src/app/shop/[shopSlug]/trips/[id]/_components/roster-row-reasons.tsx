@@ -180,8 +180,7 @@ export function rowReasonLines(seat: RowReasonLinesInput) {
    * ask"). The reason line names the two people; these are the two ways to
    * ask the person on file. Only the record's email and phone come out from
    * behind the flag: the diver record prints both in its header to every
-   * staffer anyway, and for a shared-inbox match the email is the one the
-   * booker typed. Medical answers, date of birth, emergency contact and
+   * staffer anyway. Medical answers, date of birth, emergency contact and
    * sizes still wait for "Same person" (security review 2026-09-11).
    *
    * While arrivals are open the screen faces the queue, so the line moves

@@ -548,9 +548,6 @@ export function buildDiverStatus(
  * sentence every surface shares.
  */
 function identitySentence(held: BookingEntry, recordName: string): DiverStatusRow["sentence"] {
-  const message = identityReasonMessage(
-    { bookedAs: held.booking.identityBookedAs, matchedBy: held.booking.identityMatchedBy },
-    recordName,
-  );
+  const message = identityReasonMessage({ bookedAs: held.booking.identityBookedAs }, recordName);
   return message ?? { blocker: { code: "identity_unconfirmed" } };
 }

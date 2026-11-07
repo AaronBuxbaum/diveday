@@ -644,7 +644,7 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
     expect(await bookingIdentityHold(db, result.bookingId)).toBeNull();
   });
 
-  it("reports a held seat for a name typed against someone else's address", async () => {
+  it("seats a name typed against someone else's address on a record of its own", async () => {
     const { db, shop, open, actorPersonId } = await context();
     const diver = await bookableDiver(db, shop.id, open.id);
     await db.update(people).set({ email: DELIVERABLE_EMAIL }).where(eq(people.id, diver.id));
@@ -653,15 +653,16 @@ describe("seatDiver identity reporting (what a door is allowed to claim)", () =>
       shopId: shop.id,
       tripId: open.id,
       actorPersonId,
-      // Hand entry, deduped by email onto a row carrying a different name —
-      // the shared-inbox signal the flag was built for, reachable from every
-      // door that takes a typed name.
+      // Hand entry on an address another diver holds, under another name: a
+      // shared inbox, so another diver, held for nobody.
       diver: { fullName: "Not That Diver", email: DELIVERABLE_EMAIL },
       entry: "roster",
       refusals: "specific",
     });
 
-    expect(result).toMatchObject({ ok: true, identityUnconfirmed: true });
+    expect(result).toMatchObject({ ok: true, identityUnconfirmed: false });
+    if (!result.ok) throw new Error("seat refused");
+    expect(result.personId).not.toBe(diver.id);
   });
 });
 

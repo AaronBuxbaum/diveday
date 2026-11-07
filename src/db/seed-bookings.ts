@@ -66,9 +66,9 @@ export { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
  *
  * The spread is the point — a busy reef trip, a quiet night dive, a sold-out
  * wreck, and a fresh listing with nobody on it yet — and so are the holdouts:
- * one diver whose waiver request quietly never went out, and one seat booked
- * through a shared inbox under a different name, which the roster shows as a
- * fail-closed "Confirm identity" gate.
+ * one diver whose waiver request quietly never went out, and one seat the
+ * counter matched off its name prompt under a different name, which the
+ * roster shows as a fail-closed "Confirm identity" gate.
  */
 export async function seedBookings(
   db: DbExecutor,
@@ -138,11 +138,11 @@ export async function seedBookings(
     )
     .returning();
 
-  // H-20260724-one-person-per-email demo: one night-trip seat came in through a shared inbox under a
-  // different name than the person already on file for that email, so it carries
-  // the identity-unconfirmed flag. The roster shows the fail-closed "Confirm
-  // identity" gate until staff vouch for it — the diver can't board on the
-  // matched person's evidence. Reuses the booking's own createdAt so nothing new
+  // H-20260724-one-person-per-email demo: the counter seated one night-trip
+  // diver off its name prompt under a different name than the record it
+  // picked, so the seat carries the identity-unconfirmed flag. The roster shows
+  // the fail-closed "Confirm identity" gate until staff vouch for it — the
+  // diver can't board on the matched person's evidence. Reuses the booking's own createdAt so nothing new
   // is stamped against the clock. The diver is already blocked (no Night
   // specialty), so this adds a blocker rather than flipping a ready seat.
   const nightIdentityBooking = bookingRows_.find(
@@ -153,10 +153,9 @@ export async function seedBookings(
       .update(bookings)
       .set({
         identityUnconfirmedAt: nightIdentityBooking.createdAt,
-        // The name typed on the booking form, which the staff check shows
-        // beside the record it was matched to.
+        // The name the counter typed, which the staff check shows beside the
+        // record it was matched to.
         identityBookedAs: "Hana Park",
-        identityMatchedBy: "shared_email",
       })
       .where(eq(bookings.id, nightIdentityBooking.id));
   }
