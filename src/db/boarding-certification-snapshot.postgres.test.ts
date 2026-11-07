@@ -302,7 +302,13 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
       event?.certificationSnapshot?.find((card) => card.identifier === "MERGED-RACE-CARD"),
     ).toMatchObject({ reviewedByPersonId: null, reviewedByName: null });
   });
-  it("does not retain evidence if self-review boarding races with erasure", async () => {
+  /**
+   * A diver who reviewed their own card, boarded and erased at once. Each
+   * contender waits on the seat (held by a third connection) only after it
+   * holds the shop evidence lock, so the contender started first is parked
+   * before the second one starts: the order is the test's, not the scheduler's.
+   */
+  async function raceSelfReviewBoardingWithErasure(first: "boarding" | "erasure") {
     const pg = await postgresTestDb();
     await seedDemo(pg.db, "history");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
@@ -336,30 +342,67 @@ describePostgres("boarding certification capture and concurrent erasure", () => 
       pg,
       sql`select id from bookings where id = ${seat.booking.id} for update`,
     );
-    const board = recordRollCall(pg.connect(), {
-      shopId: shop.id,
-      tripId: reef.id,
-      bookingId: seat.booking.id,
-      recordedByPersonId: owner.person.id,
-      status: "boarded",
-    });
-    const erase = anonymizeDiver(pg.connect(), {
-      shopId: shop.id,
-      personId: seat.person.id,
-      actorPersonId: owner.person.id,
-    });
+    const startBoarding = () =>
+      recordRollCall(pg.connect(), {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: owner.person.id,
+        status: "boarded",
+      });
+    const startErasure = () =>
+      anonymizeDiver(pg.connect(), {
+        shopId: shop.id,
+        personId: seat.person.id,
+        actorPersonId: owner.person.id,
+      });
+    let board: ReturnType<typeof startBoarding> | undefined;
+    let erase: ReturnType<typeof startErasure> | undefined;
     try {
+      if (first === "boarding") board = startBoarding();
+      else erase = startErasure();
+      await waitForLockWaiters(pg.db, 1);
+      if (first === "boarding") erase = startErasure();
+      else board = startBoarding();
       await waitForLockWaiters(pg.db, 2);
     } finally {
       await gate.release();
     }
     const [boardResult, eraseResult] = await Promise.all([board, erase]);
-    if (!boardResult.ok) expect(["not_ready", "booking_unavailable"]).toContain(boardResult.reason);
-    expect(eraseResult).toMatchObject({ ok: true });
+    if (!boardResult || !eraseResult) throw new Error("contender missing");
     const events = await pg.db
       .select()
       .from(rollCallEvents)
       .where(eq(rollCallEvents.bookingId, seat.booking.id));
+    return { boardResult, eraseResult, events, personId: seat.person.id };
+  }
+
+  it("redacts a self-reviewed boarding sighting that commits before erasure", async () => {
+    const { boardResult, eraseResult, events, personId } =
+      await raceSelfReviewBoardingWithErasure("boarding");
+    expect(boardResult).toMatchObject({ ok: true });
+    expect(eraseResult).toMatchObject({ ok: true });
+    // ADR 20260802-diver-data-erasure (#3806): the sighting stands, the number
+    // and the reviewer who is this diver do not.
+    const card = events
+      .flatMap((event) => event.certificationSnapshot ?? [])
+      .find((row) => row.level === "rescue" && row.agency === "padi");
+    expect(card).toMatchObject({
+      status: "verified",
+      identifier: null,
+      reviewedByPersonId: null,
+      reviewedByName: null,
+    });
+    expect(JSON.stringify(events)).not.toContain("SELF-REVIEW-CARD");
+    expect(JSON.stringify(events.map((event) => event.certificationSnapshot))).not.toContain(
+      personId,
+    );
+  });
+
+  it("captures no evidence when boarding waits behind erasure", async () => {
+    const { boardResult, eraseResult, events } = await raceSelfReviewBoardingWithErasure("erasure");
+    expect(eraseResult).toMatchObject({ ok: true });
+    if (!boardResult.ok) expect(["not_ready", "booking_unavailable"]).toContain(boardResult.reason);
     expect(events.every((event) => event.certificationSnapshot === null)).toBe(true);
   });
 });
