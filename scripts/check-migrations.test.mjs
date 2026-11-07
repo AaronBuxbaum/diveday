@@ -474,7 +474,10 @@ describe("a drop-column marker while a serving release still declares the column
   });
 
   it("refuses the marker when the previous release still declares the column", () => {
-    const found = problems(sql, { schemas: [{ label: "previous release", source: declaring }] });
+    const found = problems(sql, {
+      pilotHasRealDivers: true,
+      schemas: [{ label: "previous release", source: declaring }],
+    });
     expect(found).toHaveLength(1);
     expect(found[0]).toContain("previous release");
     expect(found[0]).toContain("people.fullName");
@@ -516,22 +519,19 @@ describe("a drop-column marker while a serving release still declares the column
   });
 });
 
-describe("a pre-pilot marker lets the drop ship with the code that stops using the column", () => {
+describe("pre-pilot, a drop ships with the code that stops declaring the column", () => {
   // Aaron, 2026-11-07: no users yet, so the previous release's deploy window
-  // protects nobody. The branch's own schema must still not declare the column.
-  const sql = `-- diveday:allow-destructive pre-pilot people.full_name: no shop has divers yet; readers removed in this PR\nALTER TABLE "people" DROP COLUMN "full_name";`;
+  // protects nobody. This branch's own schema must still not declare the column.
+  const sql = `-- diveday:allow-destructive drop-column people.full_name: no shop has divers yet; readers removed in this PR\nALTER TABLE "people" DROP COLUMN "full_name";`;
   const declaring = 'export const people = pgTable("people", { fullName: text("full_name") });';
   const dropped = 'export const people = pgTable("people", { id: uuid("id") });';
+  const schemas = [
+    { label: "previous release", source: declaring },
+    { label: "this branch", source: dropped },
+  ];
 
   it("passes when only the previous release still declares the column", () => {
-    expect(
-      problems(sql, {
-        schemas: [
-          { label: "previous release", source: declaring },
-          { label: "this branch", source: dropped },
-        ],
-      }),
-    ).toEqual([]);
+    expect(problems(sql, { schemas })).toEqual([]);
   });
 
   it("still refuses when this branch declares the column", () => {
@@ -540,22 +540,9 @@ describe("a pre-pilot marker lets the drop ship with the code that stops using t
     expect(found[0]).toContain("this branch");
   });
 
-  it("expires once the first pilot shop has real divers", () => {
-    const found = problems(sql, { pilotHasRealDivers: true });
-    expect(found.some((message) => message.includes("has expired"))).toBe(true);
-  });
-
-  it("excuses only a drop-column, so a table drop still needs its own marker", () => {
-    const found = problems(
-      `-- diveday:allow-destructive pre-pilot people: no shop has divers yet; readers removed\nDROP TABLE "people";`,
-    );
-    expect(found.some((message) => message.startsWith("drop-table"))).toBe(true);
-  });
-
-  it("still demands a real reason", () => {
-    const found = problems(
-      `-- diveday:allow-destructive pre-pilot people.full_name: ok\nALTER TABLE "people" DROP COLUMN "full_name";`,
-    );
-    expect(found.some((message) => message.includes("at least"))).toBe(true);
+  it("consults the previous release again once the first pilot shop has real divers", () => {
+    const found = problems(sql, { schemas, pilotHasRealDivers: true });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toContain("previous release");
   });
 });
