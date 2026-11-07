@@ -185,7 +185,7 @@ export function HelpRequestControl({
             className={buttonClass({
               variant: "secondary",
               size: "sm",
-              className: "shrink-0 print:hidden",
+              className: "shrink-0",
             })}
           >
             {open ? copy.cancel : label}
@@ -200,7 +200,7 @@ export function HelpRequestControl({
               className={buttonClass({
                 variant: "secondary",
                 size: "sm",
-                className: "shrink-0 print:hidden",
+                className: "shrink-0",
               })}
             >
               {copy.complete}
@@ -217,7 +217,7 @@ export function HelpRequestControl({
           className={buttonClass({
             variant: "secondary",
             size: "sm",
-            className: "shrink-0 print:hidden",
+            className: "shrink-0",
           })}
         >
           {open ? copy.cancel : label}
@@ -238,7 +238,7 @@ export function HelpRequestControl({
               closeEditor();
             }
           }}
-          className="w-full space-y-3 rounded-inset border border-border bg-surface-sunken p-3 sm:max-w-lg print:hidden"
+          className="w-full space-y-3 rounded-inset border border-border bg-surface-sunken p-3 sm:max-w-lg"
         >
           <input type="hidden" name="requestId" value={requestId} />
           <input type="hidden" name="expectedRevision" value={revision} />
@@ -349,7 +349,7 @@ export function HandledHelpRequests({
                 className={buttonClass({
                   variant: "secondary",
                   size: "sm",
-                  className: "shrink-0 print:hidden",
+                  className: "shrink-0",
                 })}
               >
                 {row.reopenLabel}

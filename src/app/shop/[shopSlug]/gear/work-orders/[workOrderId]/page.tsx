@@ -34,7 +34,6 @@ import { WorkOrderJobCard } from "../_components/WorkOrderJobCard";
 import { WorkOrderLinesCard } from "../_components/WorkOrderLinesCard";
 import { WorkOrderStatusCard } from "../_components/WorkOrderStatusCard";
 import { WorkOrderWorkCard } from "../_components/WorkOrderWorkCard";
-import printStyles from "../_components/work-order-print.module.css";
 import { isLineAddRefusal } from "../_lib/line-add-feedback";
 import { lineEditFeedback } from "../_lib/line-edit-feedback";
 import { deleteWorkOrderAction } from "../actions";
@@ -126,9 +125,6 @@ export default async function WorkOrderPage({
   return (
     <StaffPage width="reading">
       <FlashParams params={["notice", "form", "line"]} />
-      <p className="hidden print:block text-sm font-medium">
-        {shop.name} · {t("workOrders.detail.eyebrow")}
-      </p>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <EyebrowWayUp>{t("workOrders.title")}</EyebrowWayUp>
@@ -159,7 +155,7 @@ export default async function WorkOrderPage({
         {deleted ? null : (
           <Link
             href={`${board}/${workOrder.id}/tag`}
-            className={buttonClass({ variant: "secondary", className: "print:hidden" })}
+            className={buttonClass({ variant: "secondary" })}
           >
             {t("workOrders.detail.claimTag")}
           </Link>
@@ -168,10 +164,7 @@ export default async function WorkOrderPage({
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
-      <p className="hidden print:block print:mt-3 text-sm text-muted">
-        {t("shared.formDraft.savedDetails")}
-      </p>
-      <div className={`mt-8 space-y-10 print:mt-4 print:space-y-4 ${printStyles.document}`}>
+      <div className="mt-8 space-y-10">
         {detail.gearItemKind ? (
           <p className="text-muted">
             {t("workOrders.detail.ownUnitSubject", {
@@ -264,7 +257,7 @@ export default async function WorkOrderPage({
         />
 
         {deleted ? null : (
-          <form action={deleteWorkOrderAction} className="print:hidden">
+          <form action={deleteWorkOrderAction}>
             <input type="hidden" name="workOrderId" value={workOrder.id} />
             <SubmitButton
               pendingLabel={t("words.busy.deleting")}

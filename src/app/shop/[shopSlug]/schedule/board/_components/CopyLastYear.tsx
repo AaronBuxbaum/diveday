@@ -41,7 +41,7 @@ export function CopyLastYear({
     <form
       data-week-copy-last-year=""
       action={copyLastYearWeekAction.bind(null, shopSlug)}
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-2 pt-6 text-sm print:hidden"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-2 pt-6 text-sm"
     >
       <input type="hidden" name="weekStart" value={copy.weekStart} />
       <p className="text-muted">{copy.line}</p>

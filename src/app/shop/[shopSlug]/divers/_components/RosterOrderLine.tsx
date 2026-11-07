@@ -46,7 +46,7 @@ export function RosterOrderLine({
       <Link
         href={rosterHref(roster, { query, filter, sort: target })}
         scroll={false}
-        className={`${link} print:hidden`}
+        className={`${link}`}
       >
         {label}
       </Link>
@@ -56,9 +56,7 @@ export function RosterOrderLine({
       <nav aria-label={t("divers.list.sortAriaLabel")} className="flex items-center gap-2">
         <span>{t("divers.list.sortLabel")}</span>
         {order("name", t("divers.list.sortName"))}
-        <span aria-hidden="true" className="print:hidden">
-          ·
-        </span>
+        <span aria-hidden="true">·</span>
         {order("last_dived", t("divers.list.sortLastDived"))}
       </nav>
     </div>

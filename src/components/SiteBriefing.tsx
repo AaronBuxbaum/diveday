@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { GroupLabel } from "@/components/ui/group-label";
@@ -44,12 +43,9 @@ export function TripLookFor({ briefings, locale }: { briefings: SiteBriefing[]; 
       {/* `mt-2`, as every beat opens under its label (pixel-craft class 4,
           K-509): at `mt-3` this one floated 12px above its faces. */}
       <GroupLabel as="h2">{t("trip.lookFor")}</GroupLabel>
-      <ul className="mt-2 grid gap-x-6 gap-y-5 sm:grid-cols-2 print:block">
+      <ul className="mt-2 grid gap-x-6 gap-y-5 sm:grid-cols-2">
         {cards.map((card) => (
-          <li
-            key={card.slug ?? card.name}
-            className="flex min-w-0 gap-3 print:mb-4 print:me-[2%] print:inline-flex print:w-[48%] print:align-top"
-          >
+          <li key={card.slug ?? card.name} className="flex min-w-0 gap-3">
             <StoredPhoto
               // Capture-only rewrite; `src/lib/marine-life-tiles.ts`.
               src={capturePhoto(card.imageUrl, 48)}
@@ -108,7 +104,7 @@ export function TripRoutes({ briefings, locale }: { briefings: SiteBriefing[]; l
       <GroupLabel as="h2">{t("trip.theRoute", { count: sites.length })}</GroupLabel>
       <div className="mt-2 space-y-3">
         {sites.map((site) => (
-          <DiveSiteMap key={site.id} site={site} t={t} printTextOnly />
+          <DiveSiteMap key={site.id} site={site} t={t} />
         ))}
       </div>
     </section>
@@ -254,7 +250,7 @@ export function TripSiteNotes({
               {lookFor.summary ? <SitePassage>{lookFor.summary}</SitePassage> : null}
               {lookFor.highlights ? <SitePassage>{lookFor.highlights}</SitePassage> : null}
               {landmarks.length > 0 ? (
-                <div className="mt-3 print:break-inside-avoid">
+                <div className="mt-3">
                   <p className="text-sm font-medium">{t("trip.siteLandmarksHeading")}</p>
                   {/* More air than the passages get: the label is followed by
                       another `font-medium` line — a landmark's own name — and
@@ -271,31 +267,19 @@ export function TripSiteNotes({
                       // review 2026-10-24, B50): three in a two-up grid left
                       // one large empty cell beside the last.
                       landmarks.length >= 4 && landmarks.some((landmark) => landmark.photoUrl)
-                        ? "mt-2 grid gap-x-4 gap-y-5 sm:grid-cols-2 print:block"
+                        ? "mt-2 grid gap-x-4 gap-y-5 sm:grid-cols-2"
                         : "mt-2 space-y-3"
                     }
                   >
                     {landmarks.map((landmark) => (
-                      <li
-                        key={landmark.name}
-                        className="min-w-0 text-sm print:mb-4 print:me-[2%] print:inline-block print:w-[48%] print:align-top"
-                      >
+                      <li key={landmark.name} className="min-w-0 text-sm">
                         {landmark.photoUrl ? (
-                          <>
-                            <StoredPhoto
-                              src={landmark.photoUrl}
-                              alt=""
-                              className="mb-2 aspect-[3/2] w-full rounded-inset print:hidden"
-                              sizes="(min-width: 896px) 26rem, (min-width: 640px) 46vw, 92vw"
-                            />
-                            <Image
-                              src={landmark.photoUrl}
-                              alt=""
-                              width={224}
-                              height={150}
-                              className="mb-2 hidden h-28 w-full object-contain print:block"
-                            />
-                          </>
+                          <StoredPhoto
+                            src={landmark.photoUrl}
+                            alt=""
+                            className="mb-2 aspect-[3/2] w-full rounded-inset"
+                            sizes="(min-width: 896px) 26rem, (min-width: 640px) 46vw, 92vw"
+                          />
                         ) : null}
                         <span className="font-medium">{landmark.name}</span>
                         <span className="text-muted"> · {t(landmarkKindKey[landmark.kind])}</span>

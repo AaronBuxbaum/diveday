@@ -169,7 +169,6 @@ export default async function SafetyChecklistPage({
         </section>
         <DisclosureRowList>
           <DisclosureRow
-            className="print:[&:not([open])]:hidden"
             id="checklist-new"
             heading={t("settings.safetyChecklist.addTitle")}
             open={

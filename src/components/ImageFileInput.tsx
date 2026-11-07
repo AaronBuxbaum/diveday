@@ -172,7 +172,7 @@ export function ImageFileInput({
             </div>
           ))
         : null}
-      <div className={`${shape === "logo" ? "w-24" : ""} ${inTile ? "" : "print:hidden"}`}>
+      <div className={shape === "logo" ? "w-24" : undefined}>
         <label className="group block cursor-pointer">
           {inTile ? (
             <PickedPhoto
@@ -192,9 +192,7 @@ export function ImageFileInput({
           {inTile ? (
             <>
               {caption(inTile.name)}
-              <span className="block text-xs font-medium text-primary print:hidden">
-                {copy.chooseAnother}
-              </span>
+              <span className="block text-xs font-medium text-primary">{copy.chooseAnother}</span>
             </>
           ) : null}
           <input

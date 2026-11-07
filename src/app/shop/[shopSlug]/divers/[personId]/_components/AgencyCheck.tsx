@@ -31,7 +31,7 @@ const LINK_CLASS = buttonClass({
   size: "sm",
   flush: true,
   busy: true,
-  className: "mt-1 print:hidden",
+  className: "mt-1",
 });
 
 /**
@@ -155,7 +155,7 @@ export function AgencyCheck({
         link
       )}
       {awaiting && hasExtension && !query && offNote ? (
-        <span className="mt-1 block text-sm text-muted print:hidden">{offNote}</span>
+        <span className="mt-1 block text-sm text-muted">{offNote}</span>
       ) : null}
       {awaiting && outcome ? (
         <span className="mt-1 block">

@@ -91,7 +91,7 @@ export function DrillLog({ view, paper = false }: { view: DrillLogView; paper?: 
         )
       ) : null}
       {paper ? null : (
-        <DisclosureRowList className="mt-4 print:hidden">
+        <DisclosureRowList className="mt-4">
           <DisclosureRow id="drill-new" heading={form.copy.logTitle}>
             <FieldGrid as="form" action={recordSafetyDrillAction} columns={2}>
               {form.month ? <input type="hidden" name="month" value={form.month} /> : null}

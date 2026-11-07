@@ -81,7 +81,7 @@ function statusBadge(
  * flagged in the extraction report rather than changed here.
  */
 const roleLabels = staffRoleLabelRecord;
-const EMPTY_PRINT_ROW_CLASS = "mt-4 print:[&:not(:has(details[open]))]:hidden";
+const EMPTY_PRINT_ROW_CLASS = "mt-4";
 
 function StaffRow({
   member,
@@ -115,10 +115,7 @@ function StaffRow({
   const languagesStatus = noticeForForm(notice, TEAM_FORMS.languages(member.personId));
   const hasContact = Boolean(member.emergencyContactName && member.emergencyContactPhone);
   return (
-    <li
-      id={`staff-${member.personId}`}
-      className="min-w-0 scroll-mt-24 px-5 py-4 sm:px-6 print:break-inside-avoid print:px-3 print:py-2 print:[&>div]:mt-1 print:[&_summary]:min-h-0 print:[&_summary]:py-0"
-    >
+    <li id={`staff-${member.personId}`} className="min-w-0 scroll-mt-24 px-5 py-4 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="font-medium">{member.fullName}</p>
@@ -258,7 +255,7 @@ function StaffRow({
             hasContact ? (
               member.emergencyContactName
             ) : (
-              <span className="print:hidden">{t("settings.team.emergencyContact.addValue")}</span>
+              <span>{t("settings.team.emergencyContact.addValue")}</span>
             )
           }
           open={Boolean(contactStatus)}
@@ -306,7 +303,7 @@ function StaffRow({
           which took this row's 8px gap and pushed the switches 8px down on a
           phone (the pixel probe, settings-team). `sm:ms-auto` holds the
           switches to the end without a placeholder holding the start. */}
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between print:hidden">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {member.accountStatus === "invited" ? <PendingInviteActions member={member} t={t} /> : null}
         {member.accountStatus !== "invited" ? (
           <div className="flex gap-2 sm:ms-auto">

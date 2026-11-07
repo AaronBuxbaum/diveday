@@ -161,7 +161,7 @@ export function RosterSection({
         className="scroll-mt-24"
       >
         {arrival?.instrument ? (
-          <div className="mb-10 print:mb-4">{arrival.instrument(groups.deskWorkOpen)}</div>
+          <div className="mb-10">{arrival.instrument(groups.deskWorkOpen)}</div>
         ) : null}
         {/* The departure page's H1 heads this tab. The moment the last blocker
           clears, nothing renders until an action on this page moves the count to
@@ -330,13 +330,7 @@ export function RosterSection({
             {/* One box, so `#add-diver` holds the form its links and specs
               scope to; the box draws the group's rule (K-354). */}
             {addDiverGroup ? (
-              // `print:hidden`: a search box and an Add button, which a printed
-              // roster has no use for.
-              <RosterGroup
-                id="add-diver"
-                label={t("trips.addDiver.heading")}
-                className="print:hidden"
-              >
+              <RosterGroup id="add-diver" label={t("trips.addDiver.heading")}>
                 {/* The masthead's "Add a booking" lands here (A31); the group
                   keeps `#add-diver` for the doors elsewhere that open it. */}
                 <div id={ADD_A_BOOKING_ID} className="scroll-mt-20 px-4 py-5 sm:px-5">

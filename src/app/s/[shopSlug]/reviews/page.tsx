@@ -77,7 +77,7 @@ export default async function PublicReviewsPage({
   const average = aggregate.average;
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10 print:py-3">
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* Keep the description in metadata; repeating it below the title adds
           no information. */}
       {/* The eyebrow is the single way back to the schedule (principle 10). */}

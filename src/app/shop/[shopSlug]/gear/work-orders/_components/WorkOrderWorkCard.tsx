@@ -125,7 +125,6 @@ export function WorkOrderWorkCard({
   return (
     <SectionCard
       title={t("workOrders.work.heading")}
-      className="print:hidden"
       description={t("workOrders.work.description")}
       padding="lg"
     >

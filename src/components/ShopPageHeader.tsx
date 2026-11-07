@@ -88,18 +88,13 @@ export function EyebrowBackLink({
   /**
    * **Layout classes land on the wrapper, not the link.** The wrapper is the
    * element the caller's parent lays out -- a grid places it with
-   * `col-start-1 row-start-1`, and `TripPageHeader` and the log and ticket
-   * pages hide it in print with `print:hidden` (the last two so their
-   * print-only `<p>` can take the line). On the link those do nothing and the
-   * wrapper auto-places, which is a 16px band of nothing on paper and a
-   * back-link in the wrong grid cell on screen.
+   * `col-start-1 row-start-1`. On the link those do nothing and the wrapper
+   * auto-places, which is a back-link in the wrong grid cell.
    */
   className?: string;
 }) {
   return (
-    // `print:hidden` on every back-link: paper has no way back up, and the
-    // eyebrow printed as a stray "‹ ORDERS" over every page's title.
-    <span className={`${EYEBROW_TAP_WRAPPER} print:hidden ${className}`.trim()}>
+    <span className={`${EYEBROW_TAP_WRAPPER} ${className}`.trim()}>
       <Link
         href={href}
         className={`${EYEBROW_TAP_TARGET} ${EYEBROW_SHAPE} text-primary hover:underline`}
@@ -155,7 +150,6 @@ function ResolvedShopPageHeader({
    * button/print row. Use "start" when actions can grow much taller than the
    * title — an expandable form — so opening it doesn't drag the title down. */
   align = "end",
-  printActions = false,
 }: {
   eyebrow?: string;
   /**
@@ -188,12 +182,6 @@ function ResolvedShopPageHeader({
     description?: string | null;
   };
   align?: "start" | "end";
-  /**
-   * The actions are facts rather than doors, and belong on paper. The offline
-   * manifest's are its connection and freshness pills: a printed copy has to
-   * say how old it is.
-   */
-  printActions?: boolean;
   /** The greeting rung (`GREETING_TITLE_CLASS`) instead of the title rung — the shop home only. */
   display?: boolean;
   /** A page-specific title treatment, such as wrapping an unusually long word on phones. */
@@ -294,9 +282,7 @@ function ResolvedShopPageHeader({
             ("Add a departure", "Connect payments") is a tap, and on a printed
             page it reads as an instruction nobody can follow. */}
         {actions ? (
-          <div
-            className={`flex shrink-0 flex-wrap gap-2 max-sm:[&>:is(a,button,form)]:grow ${printActions ? "" : "print:hidden"}`.trim()}
-          >
+          <div className="flex shrink-0 flex-wrap gap-2 max-sm:[&>:is(a,button,form)]:grow">
             {actions}
           </div>
         ) : null}

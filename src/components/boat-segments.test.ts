@@ -6,7 +6,6 @@ describe("the boat's segmented control", () => {
     expect(BOAT_SEGMENT_TRACK_CLASS).toContain("grid-flow-col");
     expect(BOAT_SEGMENT_TRACK_CLASS).toContain("overflow-x-auto");
     expect(BOAT_SEGMENT_TRACK_CLASS).not.toMatch(/flex-wrap|grid-cols-3/);
-    expect(BOAT_SEGMENT_TRACK_CLASS).toContain("print:hidden");
   });
 
   it("marks the selected segment with Boat mode's action color, not a shadow alone", () => {

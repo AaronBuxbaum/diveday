@@ -26,6 +26,7 @@ import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
+import { StaffListPagination } from "../_components/StaffListPagination";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { orderLedgerRow } from "./_components/ledger-row";
 import { newOrderDoorFor, OrdersAddPanel } from "./_components/NewOrderPanel";
@@ -36,10 +37,6 @@ import {
   OPEN_TRIP_LINK,
 } from "./_components/notice-rows";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
-import {
-  ImportedOrdersListPagination,
-  OrdersListPagination,
-} from "./_components/OrdersListPagination";
 import { OrdersSeatLines } from "./_components/OrdersSeatLines";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { OwedLine } from "./_components/OwedLine";
@@ -442,16 +439,15 @@ export default async function OrdersIndexPage({
         <OrdersLedger days={days} className="mt-8" />
       ) : null}
 
-      <OrdersListPagination
+      <StaffListPagination
         t={t}
-        shown={days.reduce((count, day) => count + day.rows.length, 0)}
         pagination={orderPage}
         href={(target) => hrefWith({ page: target })}
       />
 
       {/* Export every matching page as a browser download. */}
       {canExportOrders && days.length > 0 ? (
-        <p className="mt-2 text-end text-sm print:hidden">
+        <p className="mt-2 text-end text-sm">
           <a
             href={hrefWith({}, "orders/download")}
             className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
@@ -562,9 +558,8 @@ export default async function OrdersIndexPage({
                 })}
               </TBody>
             </Table>
-            <ImportedOrdersListPagination
+            <StaffListPagination
               t={t}
-              shown={importedHistoryPage.rows.length}
               pagination={importedHistoryPage}
               href={(target) => hrefWith({ importedPage: target })}
             />

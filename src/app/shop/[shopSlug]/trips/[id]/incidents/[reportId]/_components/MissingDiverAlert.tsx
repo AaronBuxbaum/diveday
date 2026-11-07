@@ -68,7 +68,7 @@ export function MissingDiverAlert({
         ) : null}
       </dl>
       {!alert.foundAt && mayWrite ? (
-        <form action={action} className="mt-4 print:hidden">
+        <form action={action} className="mt-4">
           <p className="text-sm text-muted">{t("incidents.found.help")}</p>
           <SubmitButton
             pendingLabel={t("words.busy.saving")}

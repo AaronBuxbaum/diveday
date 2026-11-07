@@ -122,7 +122,7 @@ export function AgencyCheckRow({
           {outcome && settled ? (
             // The page's words and the agency's link are for the desk, not a
             // printed roster: a printout carries the card's state, not this.
-            <div className="mt-1 text-sm print:hidden">
+            <div className="mt-1 text-sm">
               <FormStatus tone={settled.result && !settled.result.ok ? "danger" : "warning"}>
                 {outcome}
               </FormStatus>
@@ -142,7 +142,7 @@ export function AgencyCheckRow({
           {rowUndo ? (
             <form
               action={() => host.undo(card)}
-              className="flex flex-wrap items-center gap-x-3 text-sm print:hidden"
+              className="flex flex-wrap items-center gap-x-3 text-sm"
             >
               <span className="text-success-strong">{agencyCheckMatchedText(rowUndo, copy)}</span>
               <SubmitButton pendingLabel={copy.undoPending} className={LINK_BUTTON}>

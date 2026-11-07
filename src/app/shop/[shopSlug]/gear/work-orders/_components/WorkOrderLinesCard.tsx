@@ -107,7 +107,7 @@ export function WorkOrderLinesCard({
               {t("workOrders.detail.lineTotal")}
             </Th>
             {readOnly ? null : (
-              <Th className="w-16 print:hidden">
+              <Th className="w-16">
                 <span className="sr-only">{t("workOrders.detail.lineActions")}</span>
               </Th>
             )}
@@ -134,7 +134,7 @@ export function WorkOrderLinesCard({
                 </Td>
                 <Td numeric>{money(workOrderLineTotalCents(line))}</Td>
                 {readOnly ? null : (
-                  <Td clip={false} align="middle" className="py-1 print:hidden">
+                  <Td clip={false} align="middle" className="py-1">
                     <div className="flex justify-end">
                       <WorkOrderLineMenu
                         workOrderId={workOrderId}
@@ -169,7 +169,7 @@ export function WorkOrderLinesCard({
       )}
 
       {readOnly ? null : (
-        <div className="print:hidden">
+        <div>
           <WorkOrderAddLine
             key={workOrderId}
             scope={scope}

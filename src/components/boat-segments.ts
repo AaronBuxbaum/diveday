@@ -20,7 +20,7 @@ import { SEGMENT_CORNER, segmentedGridTrackClass } from "@/components/ui/segment
  * and the other links or buttons (the checkpoint), and each keeps its own
  * element. Never on paper: a control prints nothing.
  */
-export const BOAT_SEGMENT_TRACK_CLASS = `${segmentedGridTrackClass} w-full grid-flow-col auto-cols-[minmax(3.5rem,1fr)] overflow-x-auto overscroll-x-contain sm:max-w-2xl print:hidden`;
+export const BOAT_SEGMENT_TRACK_CLASS = `${segmentedGridTrackClass} w-full grid-flow-col auto-cols-[minmax(3.5rem,1fr)] overflow-x-auto overscroll-x-contain sm:max-w-2xl`;
 
 export function boatSegmentClass(selected: boolean): string {
   return `${SEGMENT_CORNER} inline-flex min-h-14 min-w-14 touch-manipulation items-center justify-center px-2 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:focus-ring-inset sm:px-4 sm:text-base ${

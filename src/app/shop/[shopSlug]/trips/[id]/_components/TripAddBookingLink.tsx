@@ -48,7 +48,7 @@ export function TripAddBookingLink({
         foot.scrollIntoView({ block: "start" });
         field.focus({ preventScroll: true });
       }}
-      className={buttonClass({ variant: "link", className: "gap-1.5 print:hidden" })}
+      className={buttonClass({ variant: "link", className: "gap-1.5" })}
     >
       <DiveDayIcon name="addBooking" className="size-4" />
       {label}

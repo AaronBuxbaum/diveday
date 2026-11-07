@@ -79,7 +79,7 @@ export function ReviewReply({
           <p className="text-xs font-medium text-muted">{copy.yourReply}</p>
           <p className="mt-0.5 break-words text-sm text-pretty">{reply}</p>
           {canReply ? (
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 print:hidden">
+            <div className="mt-1 flex flex-wrap items-center gap-x-3">
               <button
                 type="button"
                 onClick={() => setEditing(true)}
@@ -119,7 +119,6 @@ export function ReviewReply({
             variant: "link",
             size: "sm",
             flush: true,
-            className: "print:hidden",
           })}
         >
           {copy.reply}

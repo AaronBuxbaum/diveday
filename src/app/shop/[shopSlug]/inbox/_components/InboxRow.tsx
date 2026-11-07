@@ -136,9 +136,7 @@ export function InboxRow({
   // A diver's full message is one tap away, so the door row keeps a one-line
   // excerpt. A stranger has no record to open; let their words wrap in full.
   // The excerpt's 140-character cap bounds the row.
-  const wordsCut = message.personId
-    ? "truncate print:overflow-visible print:whitespace-normal print:text-clip"
-    : "wrap-anywhere";
+  const wordsCut = message.personId ? "truncate" : "wrap-anywhere";
   // Each seat's own roster row, by the anchor that opens it (`RosterRow`),
   // and the same row with its move open (`SeatFootActions`). With more than
   // one seat, each move names its departure: the row cannot know which one the
@@ -248,18 +246,12 @@ export function InboxRow({
           the message room. Below `md` it sits above the message, which then
           takes the body's full width. */}
         <div className="flex min-w-0 flex-col gap-1 md:flex-row md:items-baseline md:gap-4">
-          <p className="min-w-0 truncate font-semibold md:w-44 md:shrink-0 print:overflow-visible print:whitespace-normal print:text-clip">
-            {name}
-          </p>
+          <p className="min-w-0 truncate font-semibold md:w-44 md:shrink-0">{name}</p>
           <div className="min-w-0 flex-1">
             {/* A WhatsApp message has no subject and never will, so the row's
               lead line is the diver's own first words rather than a slot
               apologising for an empty one. */}
-            {subject ? (
-              <p className="truncate font-medium print:overflow-visible print:whitespace-normal print:text-clip">
-                {subject}
-              </p>
-            ) : null}
+            {subject ? <p className="truncate font-medium">{subject}</p> : null}
             {/* The diver's own words, and nothing added to them. An "Ask to
               move" sent without a note has none; its facts say what it is. */}
             {message.body.trim() ? (

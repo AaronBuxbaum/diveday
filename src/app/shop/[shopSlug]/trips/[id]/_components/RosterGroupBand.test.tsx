@@ -52,12 +52,12 @@ describe("RosterGroupBand and RosterGroup", () => {
 
   it("draws a group's rule on the box, so its band carries none of its own", () => {
     const { container } = render(
-      <RosterGroup id="add-diver" label="Add a diver" className="print:hidden">
+      <RosterGroup id="add-diver" label="Add a diver" className="scroll-mt-24">
         <p>Find a returning diver</p>
       </RosterGroup>,
     );
     const group = container.querySelector("#add-diver");
-    expect(group).toHaveClass("border-t", "first:border-t-0", "print:hidden");
+    expect(group).toHaveClass("border-t", "first:border-t-0", "scroll-mt-24");
     const band = screen.getByRole("heading", { name: "Add a diver" }).parentElement;
     expect(band).not.toHaveClass("border-t");
   });

@@ -17,7 +17,7 @@ export function StaffLanguagesValue({
   return names.length > 0 ? (
     cachedListFormat(locale).format(names)
   ) : (
-    <span className="print:hidden">{t("settings.team.emergencyContact.addValue")}</span>
+    <span>{t("settings.team.emergencyContact.addValue")}</span>
   );
 }
 

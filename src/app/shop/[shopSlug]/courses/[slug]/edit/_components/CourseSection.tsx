@@ -13,7 +13,6 @@ import {
 export type CourseSectionRef = EditorSectionRef & {
   /** Closed behind a disclosure that names it. */
   closed?: boolean;
-  printEditorLabel?: string;
   /** For a closed section: opened by a refusal or notice about it. */
   open?: boolean;
 };
@@ -28,7 +27,6 @@ export function CourseSection({
   as = "section",
   lead = false,
   children,
-  printEditorLabel,
 }: CourseSectionRef & {
   description?: ReactNode;
   as?: "section" | "fieldset";
@@ -39,7 +37,6 @@ export function CourseSection({
   return closed ? (
     <ClosedEditorSection
       id={id}
-      printEditorLabel={printEditorLabel}
       label={label}
       description={description}
       grouped={as === "fieldset"}

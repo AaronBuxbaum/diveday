@@ -30,9 +30,9 @@ export const segmentedTrackClass = `flex ${TRACK_WELL}`;
 /**
  * The same well laid out as a grid — `SegmentedControl`'s shape once its
  * options wrap, so every line shares its column edges. A class swapped for
- * the track's `flex`, never an inline `display`: an inline declaration beats a
- * stylesheet rule that is not `!important`, so a gridded track stopped obeying
- * `print:hidden` and printed on the counter's and the manifest's pages.
+ * the track's `flex`, never an inline `display`: an inline declaration beats
+ * every utility, so a caller's `hidden` or breakpoint display would stop
+ * applying to a gridded track.
  */
 export const segmentedGridTrackClass = `grid ${TRACK_WELL}`;
 

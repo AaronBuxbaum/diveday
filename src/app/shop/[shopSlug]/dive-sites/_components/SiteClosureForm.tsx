@@ -26,7 +26,7 @@ export function SiteClosureForm({
   closedLine: string | null;
 }) {
   return (
-    <section aria-labelledby="site-closure-heading" className="mt-10 print:hidden">
+    <section aria-labelledby="site-closure-heading" className="mt-10">
       <h2 id="site-closure-heading" className="font-semibold">
         {t("diveSites.closure.heading")}
       </h2>

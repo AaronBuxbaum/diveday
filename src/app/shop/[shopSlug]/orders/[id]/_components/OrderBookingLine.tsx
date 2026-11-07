@@ -38,7 +38,7 @@ export function OrderBookingLine({
         })}{" "}
         <Link
           href={shopPath(shopSlug, "trips", booking.tripId)}
-          className="font-medium text-primary hover:underline print:hidden"
+          className="font-medium text-primary hover:underline"
         >
           {t("orders.detail.openTrip")}
         </Link>

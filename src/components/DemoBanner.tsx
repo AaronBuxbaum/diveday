@@ -98,7 +98,7 @@ export function DemoBanner({
   };
 
   return (
-    <div className="border-b border-accent/40 bg-accent/5 transition-all print:hidden">
+    <div className="border-b border-accent/40 bg-accent/5 transition-all">
       {/* The chrome bar's own row (`ChromeBar`: `max-w-6xl … px-4 sm:px-6`), so
           the banner's words start on the bar's edge and the page's, not in a
           narrower column of their own. */}

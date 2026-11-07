@@ -273,7 +273,7 @@ export default async function DiversPage({
         // The open panel is the add; the toolbar draws no second door to it.
         quickAddAction={adding ? null : createDiverFromSearchAction}
         pager={
-          <div className="print:hidden">
+          <div>
             <Pager
               page={diverPage.page}
               pageCount={diverPage.pageCount}
@@ -299,10 +299,6 @@ export default async function DiversPage({
           // beside the box rather than a badge on a "People" heading: the count
           // is a fact about the list, not a status, and the heading it hung off
           // named the thing the page is already called.
-          paperCountLabel: t("divers.list.pagination.paperSubset", {
-            shown: rows.length,
-            total: diverPage.total,
-          }),
           countLabel: query
             ? t("divers.page.matchingCount", { count: diverPage.total })
             : t("divers.list.pagination.total", { count: diverPage.total }),

@@ -25,7 +25,7 @@ export function MarketingNavLinks({
   const id = useId();
   useMenuDismissalEvents({ open, close, inside: [trigger, panel], returnFocus: trigger });
   return (
-    <div className="print:hidden">
+    <div>
       <button
         ref={trigger}
         type="button"

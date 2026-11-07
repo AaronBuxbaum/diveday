@@ -290,7 +290,6 @@ describe("the chrome bar", () => {
     expect(CHROME_BAR_CLASS).toContain("sticky top-0");
     expect(CHROME_BAR_CLASS).toContain("z-30");
     expect(CHROME_BAR_CLASS).toContain("border-b border-border");
-    expect(CHROME_BAR_CLASS).toContain("print:hidden");
     // Translucent page background *behind a blur*, and solid where the blur
     // cannot run — a see-through bar with nothing blurring behind it is just
     // the page showing through the navigation.

@@ -13,7 +13,7 @@ const SCRIM_CLASS: Record<LayerAnchor, string> = {
   center: "items-center justify-center bg-foreground/25 px-4 backdrop-blur-[2px]",
   // A wash, not a curtain (issue #773): the page behind stays readable under a palette.
   top: "items-start justify-center bg-foreground/25 px-4 pt-[12vh] backdrop-blur-[2px]",
-  bottom: "items-end bg-foreground/30 backdrop-blur-sm print:hidden",
+  bottom: "items-end bg-foreground/30 backdrop-blur-sm",
 };
 
 /**

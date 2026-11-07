@@ -17,7 +17,7 @@
  */
 
 /** The rail is compact on narrow screens and a fixed-width sibling from `lg`. */
-export const SETTINGS_RAIL_COLUMN_CLASS = "w-full lg:block lg:w-[264px] lg:shrink-0 print:hidden";
+export const SETTINGS_RAIL_COLUMN_CLASS = "w-full lg:block lg:w-[264px] lg:shrink-0";
 
 /**
  * The column's sticky box: pinned under the bar at the bar's own height

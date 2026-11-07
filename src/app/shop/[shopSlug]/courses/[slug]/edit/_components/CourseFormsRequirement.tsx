@@ -134,7 +134,6 @@ export function CourseFormsRequirement({
   );
   return (
     <CourseSection
-      printEditorLabel={t("shared.formDraft.editorValues")}
       unsavedTag={t("shared.formDraft.unsavedSection")}
       id={id}
       label={label}

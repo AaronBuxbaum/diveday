@@ -35,14 +35,14 @@ function entry(id: string): SignedWaiverEntry {
   };
 }
 
-describe("signed record print scope", () => {
+describe("signed record paging", () => {
   it.each([
     ["en-US", true],
     ["es-ES", true],
     ["en-US", false],
     ["es-ES", false],
   ] as const)(
-    "keeps filtered totals and records while hiding web paging in %s (pin in page: %s)",
+    "keeps filtered totals and records under the pager in %s (pin in page: %s)",
     (locale, pinInPage) => {
       const t = staffTranslator(locale);
       const pinned = entry("pin");
@@ -65,16 +65,7 @@ describe("signed record print scope", () => {
           t={t}
         />,
       );
-      const scope = screen.getByText(
-        t("waiversStaff.signatures.pagination.paperSubset", { shown: 2, total: 7 }),
-        { exact: false },
-      );
-      expect(scope).toHaveClass("hidden", "print:block");
-      if (!pinInPage)
-        expect(scope).toHaveTextContent(t("waiversStaff.signatures.pagination.paperPinned"));
-      expect(
-        screen.getByRole("navigation", { name: t("shared.pager.label") }).parentElement,
-      ).toHaveClass("print:hidden");
+      expect(screen.getByRole("navigation", { name: t("shared.pager.label") })).toBeVisible();
       expect(
         screen.getByText(t("shared.pager.position", { page: 2, pageCount: 4 }), { exact: false }),
       ).toHaveTextContent(t("waiversStaff.signatures.pagination.total", { count: 7 }));

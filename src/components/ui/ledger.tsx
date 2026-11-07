@@ -71,8 +71,7 @@ export function DoorChevron({
   return (
     <DiveDayIcon
       name="door-chevron"
-      // `print:hidden`: a door is a tap, and paper has nowhere to go.
-      className={`h-4 w-auto shrink-0 print:hidden ${ink === "muted" ? "text-muted" : ""} ${className}`
+      className={`h-4 w-auto shrink-0 ${ink === "muted" ? "text-muted" : ""} ${className}`
         .replace(/\s+/g, " ")
         .trim()}
     />

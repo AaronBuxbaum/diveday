@@ -400,7 +400,6 @@ export default async function ReviewsPage({
 
       <StaffListPagination
         t={t}
-        scope={{ key: "reviews.pagination.paperSubset", shown: moderatedPage.reviews.length }}
         pagination={moderatedPage}
         href={pageHref}
         totalLabel={t("reviews.pagination.total", { count: moderatedPage.total })}

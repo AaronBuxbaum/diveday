@@ -29,7 +29,7 @@ export function SiteLibraryLayout({
 
   return (
     <div className="mt-6 flex flex-col gap-8">
-      <div className="h-[440px] w-full overflow-hidden rounded-xl border border-border bg-surface-sunken sm:h-[540px] lg:h-[620px] print:hidden">
+      <div className="h-[440px] w-full overflow-hidden rounded-xl border border-border bg-surface-sunken sm:h-[540px] lg:h-[620px]">
         <QuietSiteMap
           viewportStorageKey={viewportStorageKey}
           center={defaultCenter}

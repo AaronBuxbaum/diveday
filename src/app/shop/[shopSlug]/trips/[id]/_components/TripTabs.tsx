@@ -25,8 +25,7 @@ import type { TripStage } from "@/lib/trip-stages";
  * things (owner, 2026-10-05: simplify the trip page).
  *
  * A staff component takes its words as props; `staffTranslator` is
- * server-side only. `print:hidden` because the packet and the manifest both
- * print, and paper has no navigation.
+ * server-side only.
  */
 export const TRIP_TABS = ["divers", "boat", "gear", "details"] as const;
 
@@ -92,7 +91,7 @@ export function TripTabs({
   copy: TripTabsCopy;
 }) {
   return (
-    <div className="print:hidden">
+    <div>
       {/* **Never a sideways drag** (`e2e/trips.spec.ts`): the four fit a 390px
           phone in Spanish, the longer locale, by splitting the row with
           bounded controls rather than by scrolling. At enlarged text the

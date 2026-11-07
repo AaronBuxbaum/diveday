@@ -44,7 +44,7 @@ export function DiverRecordFoot({
   // Nothing here is primary-weight, and reaching the two destructive ones
   // costs a deleted record on purpose (ADR 20260802-diver-data-erasure).
   return (
-    <div className="mt-10 space-y-6 print:hidden">
+    <div className="mt-10 space-y-6">
       {mergeCandidates.length > 0 ? (
         <MergeDiver
           candidates={mergeCandidates}

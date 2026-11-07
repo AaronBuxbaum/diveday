@@ -63,7 +63,7 @@ export function SectionTabs(
   const { label, tabs, current } = props;
   if (tabs.length < 2) return null;
   return (
-    <nav aria-label={label} data-section-tabs className="mb-6 border-b border-border print:hidden">
+    <nav aria-label={label} data-section-tabs className="mb-6 border-b border-border">
       <ul className={SECTION_TAB_LIST_CLASS}>
         {tabs.map((tab) => {
           const active = tab.id === current;

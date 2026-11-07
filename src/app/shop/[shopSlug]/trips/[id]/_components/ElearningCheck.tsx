@@ -72,7 +72,7 @@ export function ElearningCheck({
   if (!hasExtension) return null;
   if (!query) {
     return offNote && !materialsDone ? (
-      <span className="mt-2 block text-sm text-muted print:hidden">{offNote}</span>
+      <span className="mt-2 block text-sm text-muted">{offNote}</span>
     ) : null;
   }
   const busy = asking || judging;
@@ -116,7 +116,7 @@ export function ElearningCheck({
     <>
       {materialsDone && outcome ? (
         // The materials read as done, so the button is gone; a no-op Undo still says why.
-        <span className="mt-2 block print:hidden">
+        <span className="mt-2 block">
           <FormStatus tone="warning">{outcome}</FormStatus>
         </span>
       ) : null}

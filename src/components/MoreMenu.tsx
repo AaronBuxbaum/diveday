@@ -85,7 +85,7 @@ export function MoreMenu({
     <div
       ref={rootRef}
       data-more-menu=""
-      className={`relative print:hidden ${open ? "z-20" : ""} ${className}`.trim()}
+      className={`relative ${open ? "z-20" : ""} ${className}`.trim()}
     >
       <button
         ref={triggerRef}

@@ -30,7 +30,6 @@ export function PrintTripBundleButton({
   return (
     <form
       action={recordAction}
-      className="print:hidden"
       onSubmit={() => {
         const popup = window.open(href, "_blank", "noopener,noreferrer");
         setPopupBlocked(popup === null);

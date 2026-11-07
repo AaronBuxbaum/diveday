@@ -52,7 +52,7 @@ export function AgencyCheckAll({
   const startLabel = copy.start[toRun.length] ?? copy.start.at(-1) ?? "";
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 print:hidden">
+    <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1">
       {queue.phase === "running" ? (
         <button
           type="button"

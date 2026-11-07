@@ -12,7 +12,6 @@ import { getDepartureNeeds } from "@/features/today";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatDateWithYear } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -230,8 +229,6 @@ export default async function ManageTripPage({
             name, the crew and boat in a line under it — so every tab change
             redrew the top of the page. */}
         <TripPageHeader
-          paperIdentity={`${shop.name} · ${formatDateWithYear(trip.startsAt, locale, shop.timezone)} · ${shop.timezone}`}
-          className=""
           backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
           trip={trip}
           locale={locale}

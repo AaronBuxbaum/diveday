@@ -311,13 +311,7 @@ export default async function CoursesPage({
         <CourseRoster rows={rows} className="mt-8" />
       )}
       <CourseFollowUps db={db} shop={shop} locale={locale} t={st} />
-      <p className="mt-4 hidden text-sm text-muted print:block">
-        {st("courses.list.pagination.paperSubset", {
-          shown: courseList.length,
-          total: coursePage.total,
-        })}
-      </p>
-      <div className="print:hidden">
+      <div>
         <Pager
           page={coursePage.page}
           pageCount={coursePage.pageCount}

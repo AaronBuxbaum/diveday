@@ -651,8 +651,6 @@
     "tellThem": "Tell them"
   },
   "formDraft": {
-    "editorValues": "Editor values, including unsaved changes",
-    "savedDetails": "Saved details",
     "pickedUp": "Picked up from the desk, {time}.",
     "startOver": "Start over",
     "unsavedSection": "Unsaved"

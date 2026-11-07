@@ -19,7 +19,7 @@ export function PhoneFootBar({ href, children }: { href: string; children: React
   return (
     <div
       data-foot-bar=""
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden print:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden"
     >
       <a href={href} className={buttonClass({ className: "w-full" })}>
         {children}

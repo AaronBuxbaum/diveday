@@ -208,11 +208,7 @@ export async function CallPanel({
   return (
     // Not a card: what it holds are cards and a ledger, and a card around
     // cards is a box drawn twice.
-    <section
-      id="call-panel"
-      aria-labelledby="call-panel-title"
-      className="scroll-mt-24 print:hidden"
-    >
+    <section id="call-panel" aria-labelledby="call-panel-title" className="scroll-mt-24">
       <div className="flex items-center justify-between gap-3">
         <h2 id="call-panel-title" className={SECTION_TITLE_CLASS}>
           {t(STAFF_DESTINATION_LABEL_KEYS.addBooking)}
@@ -267,7 +263,7 @@ export async function CallPanel({
         open={callNotice !== undefined || callDraft !== null}
         className={sectionCardClass({
           padding: "none",
-          className: "group/call mt-10 scroll-mt-24 print:[&:not([open])]:hidden",
+          className: "group/call mt-10 scroll-mt-24",
         })}
       >
         <summary className={cardSummaryClass({ className: "min-h-11 justify-between p-5 sm:p-6" })}>

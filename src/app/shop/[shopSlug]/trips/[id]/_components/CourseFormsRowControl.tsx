@@ -62,7 +62,7 @@ export function CourseFormsRowControl({
           })}
         </p>
       ) : null}
-      <div className="print:hidden">
+      <div>
         <CourseFormsQrButton bookingId={bookingId} name={personName} />
       </div>
       {offerSend ? (

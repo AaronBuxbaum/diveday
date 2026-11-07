@@ -70,7 +70,7 @@ export function MarketingNavView({
               href={staffShopRoot(shopSlug)}
               className={buttonClass({
                 variant: "outline",
-                className: "whitespace-nowrap print:hidden",
+                className: "whitespace-nowrap",
               })}
             >
               {t("nav.goToShop")}
@@ -81,7 +81,7 @@ export function MarketingNavView({
             // not the pair `FunnelCtas` renders. Secondary weight: each marketing
             // page carries its own primary CTA, and two competing primaries on
             // first paint was a real "what do I click?" cost (design review).
-            <form action={demoAction} className="print:hidden">
+            <form action={demoAction}>
               <FunnelTag source="nav" />
               <SubmitButton
                 pendingLabel={t("nav.gettingReady")}

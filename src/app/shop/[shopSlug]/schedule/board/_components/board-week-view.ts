@@ -321,7 +321,6 @@ export function boardWeekView({
       weekday: parts.weekday,
       dayNumber: parts.day,
       label,
-      paperLabel: joinFacts([formatCalendarDateRange(iso, iso, locale), tz]),
       isToday: iso === todayIso,
       isPast: iso < todayIso,
       // The board's whole question, asked of a column: more departures than

@@ -161,7 +161,7 @@ export function OfflineManifestManager({
            where it is a spacing decision rather than a stale measurement. */
         <div
           data-offline-rejected-notice="true"
-          className="pointer-events-none fixed inset-x-0 top-(--chrome-h) z-40 flex justify-center px-4 pt-3 print:hidden"
+          className="pointer-events-none fixed inset-x-0 top-(--chrome-h) z-40 flex justify-center px-4 pt-3"
         >
           <div
             role="alert"
@@ -172,7 +172,7 @@ export function OfflineManifestManager({
         </div>
       ) : null}
       {cutoffNoteEvents.length || unverifiedNoteEvents.length ? (
-        <div className="mx-auto my-3 max-w-4xl px-4 print:hidden" role="status">
+        <div className="mx-auto my-3 max-w-4xl px-4" role="status">
           {cutoffNoteEvents.length ? (
             <div className="text-sm text-muted">
               <p>{copy.reconcileNoteDiscarded}</p>
@@ -215,7 +215,7 @@ export function OfflineManifestManager({
           /offline-manifest is what a captain opens. */}
       <section
         data-offline-copy={settled || !tripId ? "settled" : "pending"}
-        className={sectionCardClass({ padding: "none", className: "print:hidden" })}
+        className={sectionCardClass({ padding: "none" })}
         aria-labelledby={scopedId(idPrefix, "offline-heading")}
       >
         <details className="group/phone">

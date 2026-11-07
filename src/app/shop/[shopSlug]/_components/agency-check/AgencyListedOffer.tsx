@@ -67,7 +67,7 @@ export function AgencyListedOffer({
 
   if (phase === "added") {
     return (
-      <div className="mt-2 text-sm print:hidden">
+      <div className="mt-2 text-sm">
         <FormStatus tone="success">{copy.listedAdded}</FormStatus>
       </div>
     );
@@ -89,7 +89,7 @@ export function AgencyListedOffer({
   return (
     <fieldset
       aria-labelledby={leadId}
-      className={`mt-2 ${INSET_NOTE_BOX} border border-border bg-surface-sunken print:hidden`}
+      className={`mt-2 ${INSET_NOTE_BOX} border border-border bg-surface-sunken`}
       data-agency-listed-offer=""
     >
       <p id={leadId}>{lead}</p>

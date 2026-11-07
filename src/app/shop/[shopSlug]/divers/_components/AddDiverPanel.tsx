@@ -362,11 +362,7 @@ export async function AddDiverPanel({
           <SubmitButton pendingLabel={t("words.busy.adding")} className={buttonClass()}>
             {submitLabel}
           </SubmitButton>
-          <Link
-            href={closeHref}
-            scroll={false}
-            className={buttonClass({ variant: "secondary", className: "print:hidden" })}
-          >
+          <Link href={closeHref} scroll={false} className={buttonClass({ variant: "secondary" })}>
             {t("divers.page.cancel")}
           </Link>
         </FieldActions>

@@ -55,7 +55,7 @@ export function RequestReplyForm({
 }) {
   const fieldId = `reply-${requestId}`;
   return (
-    <details className="group/reply mt-2 print:hidden" open={error ? true : undefined}>
+    <details className="group/reply mt-2" open={error ? true : undefined}>
       <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
         <SummaryCaret className="group-open/reply:rotate-90" />
         {copy.open}

@@ -143,7 +143,6 @@ export default async function TripTagsSettingsPage({
         )}
 
         <DisclosureRow
-          className="print:[&:not([open])]:hidden"
           id="tag-new"
           heading={t("lenses.createTitle")}
           open={refusedEditor === "new"}

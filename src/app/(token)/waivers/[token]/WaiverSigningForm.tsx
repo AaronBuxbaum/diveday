@@ -354,7 +354,7 @@ export async function waiverSigningForm({
       <WaiverHelpLine shop={shop} t={t} />
       <p className="mt-2 text-center text-sm text-muted">{t("waiver.signatureNote")}</p>
       {backHref ? (
-        <p className="mt-8 text-center text-sm print:hidden">
+        <p className="mt-8 text-center text-sm">
           <Link href={backHref} className="font-medium text-primary hover:underline">
             {t("waiver.backToPrep")}
           </Link>
