@@ -5,6 +5,8 @@ import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } fro
 import { consumeAccountToken, issueAccountToken } from "./account-tokens";
 import type { AppDb } from "./client";
 import { capabilities, people, personRoles, shops, userAccounts } from "./schema";
+import { removeStaffMember } from "./staff-accounts";
+import { setAccountPassword } from "./user-accounts";
 
 /**
  * One-time account tokens under genuine contention (A§4 item 8).
@@ -27,6 +29,10 @@ import { capabilities, people, personRoles, shops, userAccounts } from "./schema
  */
 
 async function account(db: AppDb, status: "active" | "invited" = "active") {
+  return (await accountWithPerson(db, status)).userAccountId;
+}
+
+async function accountWithPerson(db: AppDb, status: "active" | "invited" = "active") {
   const suffix = randomBytes(4).toString("hex");
   const [shop] = await db
     .insert(shops)
@@ -46,7 +52,7 @@ async function account(db: AppDb, status: "active" | "invited" = "active") {
     .values({ personId: person.id, email, hashedPassword: "x", status })
     .returning();
   if (!row) throw new Error("account insert returned no row");
-  return row.id;
+  return { userAccountId: row.id, personId: person.id, shopId: shop.id };
 }
 
 describePostgres("account tokens under real concurrency", () => {
@@ -100,4 +106,35 @@ describePostgres("account tokens under real concurrency", () => {
       );
     expect(live).toHaveLength(1);
   });
+
+  it.each(["password_reset", "email_verification"] as const)(
+    "lets a removal and a %s spend meet on one account without a deadlock",
+    async (purpose) => {
+      const pg = await postgresTestDb();
+      const { userAccountId, personId, shopId } = await accountWithPerson(pg.db);
+      const issued = await issueAccountToken(pg.db, { userAccountId, purpose });
+
+      // Both contenders park on the account row; the removal then withdraws the links and the
+      // spend writes the account, so a spend that took the link first would wait on the other
+      // for a lock it holds (issue #4068).
+      const gate = await holdRowLock(
+        pg,
+        sql`select id from user_accounts where id = ${userAccountId} for update`,
+      );
+      const removal = removeStaffMember(pg.connect(), { shopId, personId, userAccountId });
+      const spend = pg.connect().transaction(async (tx) => {
+        const claim = await consumeAccountToken(tx, { token: issued.token, purpose });
+        if (claim) await setAccountPassword(tx, claim.userAccountId, "y");
+        return claim;
+      });
+      await waitForLockWaiters(pg.db, 2);
+      await gate.release();
+      const [removed, spent] = await Promise.all([removal, spend]);
+
+      // One winner each way round, never a 40P01: either the spend ran first and the removal
+      // then withdrew nothing, or the removal ran first and the spend found a disabled account.
+      expect(removed).toEqual({ ok: true });
+      if (spent) expect(spent).toEqual({ userAccountId });
+    },
+  );
 });
