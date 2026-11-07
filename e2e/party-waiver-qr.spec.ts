@@ -87,6 +87,12 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     for (const radio of await no.all()) await radio.check();
     await phone.getByLabel("Guardian’s full name").fill("Morgan Lagoon");
     await phone.getByLabel("Relationship to Sky Lagoon").selectOption("parent");
+    // The tap that follows a saved step: its press blurs the last field, which
+    // clears "Saved."; the line it sat on must stay, or the page moves under
+    // the finger and the box is missed (main run 42344092796).
+    await expect(
+      phone.getByRole("status").filter({ hasText: diver("waiver.counterSaved") }),
+    ).toBeVisible();
     await phone.getByLabel("I am this diver’s parent or legal guardian", { exact: false }).check();
     await phone.getByRole("button", { name: "Sign waiver" }).click();
     await expect(phone.getByRole("heading", { name: "Waiver signed" })).toBeVisible();
