@@ -523,8 +523,7 @@ describe("saving the waiver template", () => {
       ...existing,
       id: undefined,
       bookingId: null,
-      // `token_hash` is unique — the second link is a second link, which is
-      // exactly how this state arises in production.
+      // A second completed record for the same diver, as production arrives at it.
       createdAt: existing.createdAt,
     });
 

@@ -17,6 +17,9 @@ const RETIRED: ReadonlyArray<readonly [table: string, column: string]> = [
   ["booking_capabilities", "token_hash"],
   ["booking_capabilities", "token_sealed"],
   ["waiver_records", "token_sealed"],
+  // #4006: the release link moved onto `capabilities` (#3983); a release carries no link or clock.
+  ["waiver_records", "token_hash"],
+  ["waiver_records", "expires_at"],
   // The unsubscribe and stop links layer 8 of #3721 moved onto `capabilities`.
   ["weekly_digest_sends", "unsubscribe_token_hash"],
   ["shops", "bookkeeper_stop_token_hash"],

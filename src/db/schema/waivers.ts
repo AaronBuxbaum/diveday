@@ -178,10 +178,8 @@ export const waiverRecords = pgTable(
     deliveryProviderStatus: notificationProviderStatus("delivery_provider_status"),
     deliveryProviderStatusAt: timestamp("delivery_provider_status_at", { withTimezone: true }),
     deliveryError: text("delivery_error"),
-    // `token_hash` and `expires_at` are retired (issue #3983): a release
-    // carries no link and no clock of its own; the capability that opens it
-    // does (`release_link`, `waiver_link`). Nullable and undeclared for one
-    // release, dropped in the next.
+    // A release carries no link and no clock of its own (issue #3983, columns dropped by #4006):
+    // the capability that opens it does (`release_link`, `waiver_link`).
     startedAt: timestamp("started_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
     draftSignerName: text("draft_signer_name"),
