@@ -376,7 +376,7 @@ describe("OfflineTripScreen's paper door", () => {
     ).toBeNull();
   });
 
-  it("never prints the screen, so an opened panel's medical alert words cannot reach paper", () => {
+  it("never prints the screen: an opened panel stays off paper, which is the dated sheet's", () => {
     renderScreen(
       copyWith((c) => {
         const priya = rosterOf(c).divers[0];

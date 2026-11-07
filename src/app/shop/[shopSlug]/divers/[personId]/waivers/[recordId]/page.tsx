@@ -1,25 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { ScreenNotPrinted } from "@/components/paper/ScreenNotPrinted";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import type { WaiverSignedVia } from "@/db/schema";
 import { getSignedWaiverPage } from "@/db/signed-waiver-page";
-import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { requestLocale } from "@/i18n/request";
-import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
-import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED } from "@/lib/waiver-integrity";
 import { MedicalAlertCard } from "./_components/MedicalAlertCard";
 import { MedicalAnswers } from "./_components/MedicalAnswers";
 import { ShopAnswersCard } from "./_components/ShopAnswersCard";
+import { signedWaiverView } from "./_components/signed-waiver-view";
 import { showMedicalAlertOnRecordAction, showMedicalAnswersAction } from "./actions";
 
 export const instant = true;
@@ -73,123 +67,39 @@ export default async function SignedWaiverPage({
     },
   } = record;
 
-  const when = (date: Date) => formatDateTimeTz(date, locale, shop.timezone);
-  const evaluatedOn =
-    waiver.medicalClearanceEvaluatedOn && isValidCalendarDate(waiver.medicalClearanceEvaluatedOn)
-      ? formatCalendarDate(waiver.medicalClearanceEvaluatedOn, locale)
-      : "";
-  const seal =
-    waiver.integrity === "invalid"
-      ? t("waiversStaff.signatures.integrityInvalid")
-      : waiver.signatureMethod === "in_person_attested"
-        ? t("waiversStaff.record.paperEvidence")
-        : waiver.integrity === "valid"
-          ? // Only the version 4 seal covers the redaction; on any other the
-            // stamp is a column beside the seal, not a fact the seal vouches for.
-            waiver.integrityVersion === WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED &&
-            waiver.guardianEmailErasedAt
-            ? t("waiversStaff.record.sealValidGuardianRedacted", {
-                date: when(waiver.guardianEmailErasedAt),
-              })
-            : t("waiversStaff.record.sealValid")
-          : t("waiversStaff.signatures.integrityUnsealed");
-  const facts: { label: string; value: React.ReactNode }[] = [
-    ...(waiver.signedAt
-      ? [{ label: t("waiversStaff.record.signedLabel"), value: when(waiver.signedAt) }]
-      : []),
-    ...(waiver.signatureMethod === "in_person_attested"
-      ? [
-          {
-            label: t("waiversStaff.record.recordedByLabel"),
-            value: waiver.recorderName ?? t("waiversStaff.record.recorderUnknown"),
-          },
-          ...(waiver.recordedAt
-            ? [{ label: t("waiversStaff.record.recordedAtLabel"), value: when(waiver.recordedAt) }]
-            : []),
-        ]
-      : []),
-    ...(waiver.signedName
-      ? [{ label: t("waiversStaff.record.signedAsLabel"), value: waiver.signedName }]
-      : []),
-    {
-      label: t("waiversStaff.record.howLabel"),
-      value:
-        waiver.signatureMethod === "in_person_attested"
-          ? t("waiversStaff.record.howPaper")
-          : waiver.signatureMethod === "imported"
-            ? t("waiversStaff.record.howImported")
-            : onlineDoorText(t, waiver.signedVia),
-    },
-    {
-      label: t("waiversStaff.record.releaseLabel"),
-      value: t("waiversStaff.record.releaseValue", {
-        title: waiver.templateTitle,
-        version: waiver.templateVersion,
-      }),
-    },
-    ...(waiver.trip
-      ? [
-          {
-            label: t("waiversStaff.record.departureLabel"),
-            value: (
-              <Link
-                href={shopPath(shopSlug, "trips", waiver.trip.id)}
-                className="text-primary hover:underline"
-              >
-                {waiver.trip.startsAt
-                  ? `${waiver.trip.title} · ${when(waiver.trip.startsAt)}`
-                  : waiver.trip.title}
-              </Link>
-            ),
-          },
-        ]
-      : []),
-    ...(waiver.guardian
-      ? [
-          {
-            label: t("waiversStaff.record.coSignedLabel"),
-            value: guardianCoSignedText(t, waiver.guardian),
-          },
-        ]
-      : []),
-    { label: t("waiversStaff.record.sealLabel"), value: seal },
-  ];
-
-  // What every staff role reads without a tap: the prompts that flagged.
-  const flagged = waiver.flaggedPrompts.map((prompt) => ({ id: prompt, prompt, yes: true }));
+  const { when, facts, flagged, noAnswersText, medicalLine } = signedWaiverView({
+    waiver,
+    readsMedicalAnswers,
+    locale,
+    timezone: shop.timezone,
+    departure: (tripId, text) => (
+      <Link href={shopPath(shopSlug, "trips", tripId)} className="text-primary hover:underline">
+        {text}
+      </Link>
+    ),
+    t,
+  });
   const showsAnswers = readsMedicalAnswers && waiver.medicalAnswersOnFile;
-  const noAnswersText = waiver.identityHeld
-    ? t("waiversStaff.record.identityHeld")
-    : !readsMedicalAnswers
-      ? sayWords(t, ownerOrManagerWords("questionnaire"))
-      : waiver.signatureMethod === "in_person_attested"
-        ? t("waiversStaff.record.noQuestionnairePaper")
-        : t("waiversStaff.record.noQuestionnaire");
   // A refusal retired off its seat (`retireMedicalRefusal`) is not replaced by
   // anything yet: it still blocks the diver, and saying "replaced" would read
   // as void.
   const retiredRefusal =
     waiver.supersededAt && waiver.medicalClearanceDeclinedAt && !waiver.medicalClearedAt;
-  const medicalLine =
-    waiver.status !== "medical_review"
-      ? null
-      : waiver.medicalClearedAt
-        ? {
-            tone: "text-success",
-            text: t("waiversStaff.record.medicalCleared", { date: evaluatedOn }),
-          }
-        : waiver.medicalClearanceDeclinedAt
-          ? {
-              tone: "text-danger",
-              text: t("waiversStaff.record.medicalNotCleared", { date: evaluatedOn }),
-            }
-          : { tone: "text-danger", text: t("waiversStaff.record.medicalReview") };
-
   return (
     <StaffPage width="reading">
-      {/* Revealed medical answers never reach paper (`ScreenNotPrinted`). */}
-      <ScreenNotPrinted>{t("waiversStaff.record.screenOnPaper")}</ScreenNotPrinted>
-      <ShopPageHeader eyebrow={waiver.personName} title={t("waiversStaff.record.title")} />
+      <ShopPageHeader
+        eyebrow={waiver.personName}
+        title={t("waiversStaff.record.title")}
+        actions={
+          // The release prints as its own sheet (issue #4142); this screen does not.
+          <Link
+            href={shopPath(shopSlug, "divers", waiver.personId, "waivers", waiver.id, "print")}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("waiversStaff.record.print")}
+          </Link>
+        }
+      />
       {waiver.supersededAt ? (
         <p className="mt-4 text-sm text-muted">
           {retiredRefusal
@@ -301,20 +211,4 @@ export default async function SignedWaiverPage({
       </div>
     </StaffPage>
   );
-}
-
-/**
- * Which kind of door an online signature came through (issue #4045): the
- * question a counter code and a mailed link to one release leave open. A
- * release signed before it was recorded says only "Online".
- */
-function onlineDoorText(
-  t: ReturnType<typeof staffTranslator>,
-  signedVia: WaiverSignedVia | null,
-): string {
-  if (signedVia === "thread") return t("waiversStaff.record.howThread");
-  if (signedVia === "counter") return t("waiversStaff.record.howCounter");
-  if (signedVia === "party_door") return t("waiversStaff.record.howPartyDoor");
-  if (signedVia === "release_link") return t("waiversStaff.record.howReleaseLink");
-  return t("waiversStaff.record.howOnline");
 }

@@ -64,7 +64,7 @@
     "openSignedRecord": "Open signed record"
   },
   "record": {
-    "screenOnPaper": "This screen doesn’t print: a signed waiver’s medical answers stay on screen.",
+    "print": "Print",
     "title": "Signed waiver",
     "signedLabel": "Signed",
     "signedAsLabel": "Signed as",
@@ -121,6 +121,7 @@
     "medicalAlertHeld": "The alert stays hidden until someone confirms who is in this seat.",
     "medicalAlertErased": "The alert was erased with the diver’s personal data on {date}.",
     "medicalAlertOnFile": "The diver left a medical alert for the crew. Only an owner or a manager can read it here; the departure’s crew reads it on the manifest.",
+    "medicalAlertOnFilePaper": "The diver left a medical alert for the crew.",
     "medicalAlertShow": "Show the alert",
     "medicalAlertShowing": "Showing…",
     "medicalAlertShowHint": "Opening it is noted on their record.",

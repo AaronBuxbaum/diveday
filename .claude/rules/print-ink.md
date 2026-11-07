@@ -14,7 +14,7 @@ paths:
 A customer pays for every drop. Paper is **black ink on white paper**, and structure comes from type,
 space and thin outlines. Status comes from its word (design principle 6), never from a fill or a hue.
 This holds for every printed thing, and every printed thing is a sheet: `PaperSheet` behind
-`SheetDocument` (packets, the manifest, the departure log, passes, cards, the blank release) or a
+`SheetDocument` (packets, the manifest, the departure log, passes, cards, the blank and signed releases) or a
 page's own sheet (the logbook, the doctor referral, the public trip, course and schedule).
 
 ## A screen never prints
@@ -22,8 +22,9 @@ page's own sheet (the logbook, the doctor referral, the public trip, course and 
 No component wears a print face: no `print:` variant, no `@media print` rule for a screen
 (`src/app/paper-face.test.ts` fails on one). A page that holds a sheet prints its sheets and nothing
 of its screen (`globals.css`); a page with none prints as the browser draws it, and offers no Print.
-A surface people print becomes a sheet. A screen that can hold medical words renders
-`ScreenNotPrinted`, so Ctrl+P gets one line.
+A surface people print becomes a sheet. A screen whose raw print would be unsafe paper (the offline
+roll call, whose sheet is the dated boarding source) renders `ScreenNotPrinted`, so Ctrl+P gets one
+line.
 
 ## A violation is any of these on paper
 

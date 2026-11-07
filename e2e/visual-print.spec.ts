@@ -24,6 +24,8 @@ import {
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
+const staff = staffTranslator("en-US");
+
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use(VISUAL_STEP_BOUNDS);
@@ -302,11 +304,11 @@ test.describe("print", () => {
     await capturePrint(page, "departure-log");
   });
 
-  // **A signed waiver's screen does not print** (issue #2745): its medical
-  // answers are revealed on screen, and paper with them on it is the
-  // medical-alerts packet's job, which records who printed it. Ctrl+P gets
-  // one line (`ScreenNotPrinted`). Rowan Pike's, because hers has the most to say.
-  test("a signed waiver's screen prints one line and nothing of the record", async ({ page }) => {
+  // **A signed waiver prints as its own sheet** (issue #4142): whose release
+  // it is, when and how it was signed, the seal, the medical line and the text
+  // the diver signed, with no control on it. Rowan Pike's, because hers has
+  // the most to say (a physician's refusal above the text).
+  test("a signed waiver prints as its sheet", async ({ page }) => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
     const row = page
@@ -315,13 +317,19 @@ test.describe("print", () => {
       .filter({ visible: true });
     await row.getByRole("link", { name: "View signed record" }).click();
     await page.getByRole("heading", { level: 1, name: "Signed waiver" }).waitFor();
-    await page.getByRole("heading", { name: "What they signed" }).waitFor();
-    await page.emulateMedia({ media: "print" });
-    await expect(page.getByRole("heading", { name: "What they signed" })).not.toBeVisible();
-    await expect(page.locator(".paper-sheet")).toHaveText(
-      staffTranslator("en-US")("waiversStaff.record.screenOnPaper"),
+    await page.getByRole("link", { name: staff("waiversStaff.record.print"), exact: true }).click();
+    await page.waitForURL(/\/waivers\/[^/]+\/print$/);
+    const sheet = page.locator(".paper-sheet");
+    await expect(sheet).toHaveCount(1);
+    await expect(sheet.getByRole("heading", { level: 1 })).toHaveText(
+      staff("waiversStaff.record.title"),
     );
-    await page.emulateMedia({ media: "screen" });
+    await expect(sheet).toContainText("Rowan Pike");
+    await expect(sheet).toContainText(/E[DS]T/);
+    await expect(
+      sheet.getByRole("heading", { name: staff("waiversStaff.record.releaseHeading") }),
+    ).toBeVisible();
+    await expect(sheet.locator("a, button, input, select, textarea")).toHaveCount(0);
     await capturePrint(page, "signed-waiver");
   });
 

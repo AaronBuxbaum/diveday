@@ -66,10 +66,10 @@ export function OfflineTripScreen({
     // **A paper page with a column on it** (visual review 2026-10-24, B51):
     // Boat mode's paper fills the window and the copy reads in one centred
     // `max-w-3xl` column, rather than a column floating on the body's grey.
-    // **The screen never prints** (layer 7 review A1/S1): opened panels
-    // hold a medical alert's words a saved copy may carry, and Ctrl+P must
-    // not put them on paper with no record of it. Paper is the sheet's job,
-    // so on paper this page is one line that says so (`ScreenNotPrinted`).
+    // **The screen never prints** (layer 7 review A1/S1): the paper a crew
+    // boards from is the saved copy's sheet, dated and refused once the copy
+    // expires, so on paper this page is one line that says so
+    // (`ScreenNotPrinted`).
     <>
       <ScreenNotPrinted>
         {t(
