@@ -183,9 +183,15 @@ test("the one-tap waiver send works from a station row, without leaving the home
   await expect(outcome).toContainText("DiveDay can’t send email from this deployment yet", {
     timeout: HELD_SEND_TIMEOUT_MS,
   });
-  // A booked seat has no link to copy (ADR 20261105-waiver-folds-into-the-thread):
-  // the outcome offers a text to the number on file instead.
-  await expect(outcome.getByRole("button", { name: "Send by text" })).toBeVisible();
+  // A booked seat has no link to copy (ADR 20261105-waiver-folds-into-the-thread).
+  // It offers a text only where the shop can text (its own WhatsApp or platform
+  // SMS) and the number is not on the STOP list (#4039); this harness sends no
+  // text, so the outcome points to the counter. The text branch is held by
+  // WaiverSendControl.test.tsx and waiver-textable.test.ts.
+  await expect(
+    outcome.getByRole("link", { name: staff("trips.partyWaiverQueue.counter") }),
+  ).toBeVisible();
+  await expect(outcome.getByRole("button", { name: "Send by text" })).toHaveCount(0);
   await expect(outcome.getByRole("button", { name: "Copy link" })).toHaveCount(0);
 
   // Still on the home: the sweep never left it.
