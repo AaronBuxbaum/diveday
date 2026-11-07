@@ -80,6 +80,11 @@ export function DoctorReferralSheet({
                 form: (chunks) => <span lang="en">{chunks}</span>,
               })}
             </p>
+            {referral.minor ? (
+              <p className="mt-2 text-sm">
+                {t("waiver.doctor.formMinor", { name: referral.fullName })}
+              </p>
+            ) : null}
             <p className="mt-1 break-all text-sm">{FORM.url}</p>
 
             <h2 className="mt-5 text-sm font-semibold">{t("waiver.doctor.answersHeading")}</h2>

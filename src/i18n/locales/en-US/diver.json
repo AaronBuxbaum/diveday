@@ -1187,6 +1187,7 @@
       "back": "Back to your waiver",
       "formHeading": "The doctor’s form",
       "formBody": "Take the complete official <form>{title}</form> ({product}, version {version}). Your doctor completes and signs page {page}.",
+      "formMinor": "{name} is a minor, so a parent or legal guardian also signs the participant questionnaire.",
       "formLink": "Open the official medical PDF",
       "nameLabel": "Participant name",
       "answersHeading": "Your answers for the doctor",

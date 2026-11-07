@@ -169,7 +169,11 @@ function readCaptureIntents(directory, label) {
   return captures;
 }
 
-function readCompleteCaptureManifest(file) {
+/**
+ * A run's capture manifest (`{ version: 1, captures: [{ name, testId }] }`, written by this
+ * script's sanitize step) as a map from screenshot name to the Playwright test that planned it.
+ */
+export function readCaptureManifest(file) {
   if (!file) throw new Error("fresh baseline requires its complete capture manifest");
   let stat;
   let manifest;
@@ -180,7 +184,7 @@ function readCompleteCaptureManifest(file) {
     }
     manifest = JSON.parse(readFileSync(file, "utf8"));
   } catch {
-    throw new Error("fresh baseline capture manifest is missing or invalid");
+    throw new Error("the capture manifest is missing or invalid");
   }
   if (
     manifest?.version !== 1 ||
@@ -188,25 +192,26 @@ function readCompleteCaptureManifest(file) {
     manifest.captures.length < 1 ||
     manifest.captures.length > MAX_SCREENSHOTS
   ) {
-    throw new Error("fresh baseline capture manifest has an invalid inventory");
+    throw new Error("the capture manifest has an invalid inventory");
   }
-  const names = new Set();
+  const tests = new Map();
   for (const capture of manifest.captures) {
     if (
       !SAFE_SCREENSHOT.test(capture?.name ?? "") ||
       typeof capture.testId !== "string" ||
       capture.testId.length < 1 ||
       capture.testId.length > 512 ||
-      names.has(capture.name)
+      tests.has(capture.name)
     ) {
-      throw new Error("fresh baseline capture manifest has an unsafe or duplicate entry");
+      throw new Error("the capture manifest has an unsafe or duplicate entry");
     }
-    names.add(capture.name);
+    tests.set(capture.name, capture.testId);
   }
-  return names;
+  return tests;
 }
 
-function readExpectedCaptureTestIds(file) {
+/** The IDs of every Playwright test the complete visual plan (`visual-list.json`) expects. */
+export function readExpectedCaptureTestIds(file) {
   if (!file) throw new Error("the complete visual capture test plan is missing");
   let stat;
   let plan;
@@ -236,6 +241,23 @@ function readExpectedCaptureTestIds(file) {
   return ids;
 }
 
+/**
+ * Split a complete pull request capture's missing baseline screenshots into retired and lost.
+ *
+ * A baseline surface whose Playwright test is no longer in this run's complete plan was renamed or
+ * deleted by the change: it is retired, and the report lists it as deleted. One whose test is still
+ * planned, yet produced no screenshot, is a lost capture. A baseline from before main recorded its
+ * tests (`plan.baselineTests`) cannot name the test; sanitizeVisualArtifacts has already proved
+ * every planned test delivered every capture it registered, so no test in this run takes it, and it
+ * is retired too.
+ */
+function lostCaptures(missing, { plan, expectedTests }) {
+  const planned = readExpectedCaptureTestIds(expectedTests);
+  return missing
+    .map((name) => ({ name, testId: plan?.baselineTests?.[name] }))
+    .filter(({ testId }) => testId && planned.has(testId));
+}
+
 /** Require a complete capture, except when a full-capture fresh start has no baseline yet. */
 export function verifyCompleteScreenshotInventory({
   actualDir,
@@ -244,6 +266,7 @@ export function verifyCompleteScreenshotInventory({
   allowEmptyExpected = false,
   captureMode = "",
   captureManifest = "",
+  expectedTests = "",
   plan = null,
 }) {
   const actual = screenshotInventory(actualDir, "actual screenshots");
@@ -262,8 +285,8 @@ export function verifyCompleteScreenshotInventory({
     if (expected.size > 0) {
       throw new Error("fresh baseline cannot reuse an existing screenshot inventory");
     }
-    const planned = readCompleteCaptureManifest(captureManifest);
-    const missing = [...planned].filter((name) => !actual.has(name));
+    const planned = readCaptureManifest(captureManifest);
+    const missing = [...planned.keys()].filter((name) => !actual.has(name));
     const unexpected = [...actual].filter((name) => !planned.has(name));
     if (missing.length > 0 || unexpected.length > 0) {
       throw new Error(
@@ -275,22 +298,38 @@ export function verifyCompleteScreenshotInventory({
   if (requireExpected && !allowEmptyExpected && expected.size === 0) {
     throw new Error("no trusted baseline screenshot inventory is available for this PR");
   }
-  const missing = [...expected].filter((name) => !actual.has(name));
+  const missing = [...expected].filter((name) => !actual.has(name)).sort();
+  const incomplete = (count) =>
+    new Error(
+      `visual capture is incomplete: ${count} of ${expected.size} baseline screenshots are missing`,
+    );
+  // Only a complete capture can tell a retired surface from a lost one: a selective run fills
+  // every surface it skipped from the baseline, so any gap there is a lost capture.
+  if (missing.length > 0 && captureMode !== "all") throw incomplete(missing.length);
   // A push to main captures every planned test, and sanitizeVisualArtifacts has already refused a
   // run whose test IDs differ from the complete plan. A baseline surface main no longer captures
-  // is therefore a surface a change retired or renamed, not a lost capture. Refusing it would
-  // leave main unable to publish until someone hand-edited the baseline, so the run publishes and
-  // the report lists the surface as deleted. A pull request still refuses: it fills from the
-  // baseline, so a gap there is a lost capture.
-  if (missing.length > 0 && (requireExpected || captureMode !== "all")) {
-    throw new Error(
-      `visual capture is incomplete: ${missing.length} of ${expected.size} baseline screenshots are missing`,
-    );
+  // is therefore one a change retired or renamed, not a lost capture. Refusing it would leave main
+  // unable to publish until someone hand-edited the baseline, so the run publishes and the report
+  // lists the surface as deleted.
+  // A pull request needs its complete test plan to tell the two apart (lostCaptures).
+  if (missing.length > 0 && requireExpected) {
+    if (!expectedTests) throw incomplete(missing.length);
+    const lost = lostCaptures(missing, { plan, expectedTests });
+    if (lost.length > 0) {
+      const named = lost
+        .slice(0, 10)
+        .map(({ name, testId }) => `${name} (test ${testId})`)
+        .join(", ");
+      throw new Error(
+        `${incomplete(lost.length).message}; their tests are still planned: ${named}` +
+          (lost.length > 10 ? `, … ${lost.length - 10} more` : ""),
+      );
+    }
   }
   return {
     actualCount: actual.size,
     expectedCount: expected.size,
-    ...(missing.length > 0 ? { retired: missing.sort() } : {}),
+    ...(missing.length > 0 ? { retired: missing } : {}),
   };
 }
 
@@ -417,6 +456,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         allowEmptyExpected: process.env.VISUAL_FRESH_START === "true",
         captureMode: process.env.VISUAL_CAPTURE_MODE ?? "",
         captureManifest: process.env.VISUAL_EXPECTED_CAPTURE_MANIFEST ?? "",
+        expectedTests: process.env.VISUAL_EXPECTED_CAPTURE_TESTS ?? "",
         plan: readPlan(undefined, {
           key: process.env.REG_EXPECTED_KEY ?? "",
           version: process.env.REG_EXPECTED_VERSION ?? "",

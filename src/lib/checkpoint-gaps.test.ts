@@ -3,6 +3,7 @@ import {
   checkpointGap,
   homewardCheckpointGap,
   isHomewardStage,
+  laterCheckpointMissing,
   plannedDivesWithout,
   previousCheckpointGaps,
 } from "./checkpoint-gaps";
@@ -254,5 +255,95 @@ describe("isHomewardStage", () => {
     expect(isHomewardStage("home")).toBe(true);
     expect(isHomewardStage("surface")).toBe(false);
     expect(isHomewardStage("boarding")).toBe(false);
+  });
+});
+
+describe("laterCheckpointMissing (issue #4067)", () => {
+  const named = (
+    checkpoint: RollCallCheckpoint,
+    counts: Parameters<typeof at>[1],
+    missing: string[] = [],
+  ) => ({
+    ...at(checkpoint, counts),
+    divers: missing.map((fullName) => ({
+      fullName,
+      rollCall: { state: "not_boarded" as const },
+    })),
+    crew: [] as { id: string; fullName: string }[],
+  });
+
+  it("names who is not back aboard at a later count the printed sheet predates", () => {
+    const manifests = [
+      named("departure", { boarded: 8 }),
+      named("after_dive_1", { boarded: 8 }),
+      named("after_dive_2", { boarded: 7, notBackAboard: 1 }, ["Theo Lind"]),
+    ];
+    expect(laterCheckpointMissing(manifests, "after_dive_1")).toEqual({
+      checkpoint: "after_dive_2",
+      names: ["Theo Lind"],
+      unmarked: 0,
+    });
+  });
+
+  it("keeps naming someone missing at dive 2 until a later count marks them aboard", () => {
+    const aboard = { fullName: "Meera Iyer", rollCall: { state: "boarded" as const } };
+    const theo = (state: "boarded" | "not_boarded") => ({
+      fullName: "Theo Lind",
+      rollCall: { state },
+    });
+    const base = (cp: RollCallCheckpoint, counts: Parameters<typeof at>[1], divers: object[]) => ({
+      ...at(cp, counts),
+      divers,
+      crew: [] as { id: string; fullName: string }[],
+    });
+    // After dive 3 is half counted: Meera tapped aboard, Theo not marked yet.
+    const half = [
+      base("departure", { boarded: 2 }, [aboard, theo("boarded")]),
+      base("after_dive_1", { boarded: 2 }, [aboard, theo("boarded")]),
+      base("after_dive_2", { boarded: 1, notBackAboard: 1 }, [aboard, theo("not_boarded")]),
+      base("after_dive_3", { boarded: 1, awaiting: 1 }, [aboard, { fullName: "Theo Lind" }]),
+    ] as never;
+    expect(laterCheckpointMissing(half, "after_dive_1")).toEqual({
+      checkpoint: "after_dive_3",
+      names: ["Theo Lind"],
+      unmarked: 1,
+    });
+    const done = [
+      ...(half as unknown as object[]).slice(0, 3),
+      base("after_dive_3", { boarded: 2 }, [aboard, theo("boarded")]),
+    ] as never;
+    expect(laterCheckpointMissing(done, "after_dive_1")).toBeNull();
+  });
+
+  it("reports divers not marked yet at the newest count", () => {
+    const manifests = [
+      named("departure", { boarded: 8 }),
+      named("after_dive_1", { boarded: 8 }),
+      named("after_dive_2", { boarded: 3, awaiting: 5 }),
+    ];
+    expect(laterCheckpointMissing(manifests, "after_dive_1")).toEqual({
+      checkpoint: "after_dive_2",
+      names: [],
+      unmarked: 5,
+    });
+  });
+
+  it("says nothing at the latest checkpoint, or when the later count has everyone", () => {
+    const manifests = [
+      named("departure", { boarded: 8 }),
+      named("after_dive_1", { boarded: 7, notBackAboard: 1 }, ["Theo Lind"]),
+      named("after_dive_2", { boarded: 8 }),
+    ];
+    expect(laterCheckpointMissing(manifests, "after_dive_2")).toBeNull();
+    expect(laterCheckpointMissing(manifests, "after_dive_1")).toBeNull();
+  });
+
+  it("ignores a later checkpoint nobody has counted yet", () => {
+    const manifests = [
+      named("departure", { boarded: 8 }),
+      named("after_dive_1", { boarded: 8 }),
+      named("after_dive_2", { awaiting: 8 }),
+    ];
+    expect(laterCheckpointMissing(manifests, "after_dive_1")).toBeNull();
   });
 });

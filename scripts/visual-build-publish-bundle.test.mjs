@@ -368,7 +368,39 @@ describe("content-addressed actual images", () => {
       expect(Object.keys(report.actualBlobs)).toEqual(["a.png", "b.png", "c.png"]);
       expect(report.actualBlobs["a.png"]).toBe(report.actualBlobs["b.png"]);
       expect(report.actualItems).toEqual(["a.png", "b.png", "c.png"]);
+      expect(report).not.toHaveProperty("actualTests");
     }
+  });
+
+  it("records the test behind each published capture, for the next pull request", () => {
+    const { sourceDir, bundleDir } = fixture();
+    for (const dir of ["actual", "expected", "diff"]) mkdirSync(path.join(sourceDir, dir));
+    writeFileSync(path.join(sourceDir, "actual", "a.png"), "a");
+    writeFileSync(
+      path.join(sourceDir, "out.json"),
+      JSON.stringify({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+        actualItems: ["a.png"],
+        failedItems: [],
+        deletedItems: [],
+      }),
+    );
+    buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4103-1",
+      contentAddressedActual: true,
+      captureTests: new Map([
+        ["a.png", "test-a"],
+        ["not-published.png", "test-b"],
+      ]),
+    });
+    const report = JSON.parse(
+      gunzipSync(readFileSync(path.join(bundleDir, "payload", "out.json.gz"))).toString("utf8"),
+    );
+    expect(report.actualTests).toEqual({ "a.png": "test-a" });
   });
 
   it("names an image main already holds instead of carrying it, and still carries a changed one", () => {

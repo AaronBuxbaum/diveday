@@ -8,6 +8,7 @@ import { getCounterDoctorReferral } from "@/db/party-waiver-queue";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { recipientLocale } from "@/lib/notifications";
 import { capabilityPagePrintRule } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
@@ -18,7 +19,9 @@ export const instant = true;
  * **The physician form, printed at the desk** (issue #3984). A diver referred
  * at the counter signed on the shop's tablet, so they hold no doctor's page:
  * the desk prints the same sheet the doctor's page prints, for the diver to
- * carry. Their answers stay off it (`getCounterDoctorReferral`).
+ * carry. Their answers stay off it (`getCounterDoctorReferral`). It prints in
+ * the diver's recorded language (`recipientLocale`), and a minor's carries the
+ * line that a parent or guardian signs too.
  */
 export default async function CounterDoctorFormPage({
   params,
@@ -28,12 +31,14 @@ export default async function CounterDoctorFormPage({
   const { shopSlug, id, leadId, bookingId } = await params;
   if (!uuidParam(id) || !uuidParam(leadId) || !uuidParam(bookingId)) notFound();
   const { db, shop } = await requireShopSurface(shopSlug);
-  const [referral, locale] = await Promise.all([
+  const [referral, staffLocale] = await Promise.all([
     getCounterDoctorReferral(db, { shopId: shop.id, tripId: id, leadBookingId: leadId, bookingId }),
     requestLocale(shop.defaultLocale),
   ]);
   if (!referral) notFound();
-  const t = staffTranslator(locale);
+  const t = staffTranslator(staffLocale);
+  // The sheet is the diver's paper: their language, not the desk's browser.
+  const diverLocale = recipientLocale(referral.locale, shop.defaultLocale);
   return (
     <StaffPage width="reading">
       {/* No page margin, so the browser prints no staff URL on the diver's
@@ -49,7 +54,7 @@ export default async function CounterDoctorFormPage({
         </div>
         <PrintButton label={t("trips.partyWaiverQueue.doctorPrint")} />
         {/* What the diver carries, in the shop's own words for divers. */}
-        <DoctorReferralSheet referral={referral} shop={shop} t={diverTranslator(locale)} />
+        <DoctorReferralSheet referral={referral} shop={shop} t={diverTranslator(diverLocale)} />
       </div>
     </StaffPage>
   );

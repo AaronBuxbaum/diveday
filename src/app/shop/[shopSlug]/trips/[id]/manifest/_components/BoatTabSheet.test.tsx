@@ -116,6 +116,28 @@ describe("the Boat tab's sheet", () => {
     expect(container.textContent).toContain("Reef Runner · After dive 1");
   });
 
+  it("prints the status lines above the roster, and none at the dock", () => {
+    const lines = ["1 of 2 passengers back aboard after dive 1", "Dive 1 not marked."];
+    const { container } = render(
+      <BoatTabSheet
+        shop={SHOP}
+        shopSlug="blue-mantis"
+        name="Manifest"
+        printed="Printed"
+        departure={[]}
+        status={lines}
+        diveLog={null}
+      >
+        <p>roster</p>
+      </BoatTabSheet>,
+    );
+    const text = container.textContent ?? "";
+    for (const line of lines) expect(text).toContain(line);
+    expect(text.indexOf(lines[0] ?? "")).toBeLessThan(text.indexOf("roster"));
+    const dock = renderSheet(null);
+    expect(dock.container.textContent).not.toContain("back aboard after dive");
+  });
+
   it("carries no control", () => {
     const { container } = renderSheet({ heading: "Dive log", line: "Dive 1" });
     expect(

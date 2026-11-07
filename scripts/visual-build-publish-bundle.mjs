@@ -18,6 +18,7 @@ import { gzipSync } from "node:zlib";
 
 import { hashScreenshots, readPlan } from "./visual-baseline-plan.mjs";
 import { isPublicationId, publicationIdFromEnv } from "./visual-publication-id.mjs";
+import { readCaptureManifest } from "./visual-publish-artifacts.mjs";
 import { DEFAULT_BUCKET } from "./visual-report-lib.mjs";
 
 const MAX_FILES = 10_000;
@@ -121,6 +122,7 @@ export function buildVisualPublishBundle({
   skipPassedActual = false,
   contentAddressedActual = false,
   referencedActual = [],
+  captureTests = null,
 }) {
   if (!sourceDir || !bundleDir) throw new Error("sourceDir and bundleDir are required");
   if (!isPublicationId(publicationId)) throw new Error("a valid publicationId is required");
@@ -166,6 +168,15 @@ export function buildVisualPublishBundle({
       blobHashes.set(name, createHash("sha256").update(readFileSync(file.absolute)).digest("hex"));
     }
     if (blobHashes.size > 0) sourceReport.actualBlobs = Object.fromEntries(blobHashes);
+    // The test that took each capture, so a later pull request can tell a surface it retired
+    // (its test is gone) from one it lost (its test still runs) (scripts/visual-publish-artifacts.mjs).
+    if (captureTests && captureTests.size > 0) {
+      sourceReport.actualTests = Object.fromEntries(
+        sourceReport.actualItems
+          .filter((name) => captureTests.has(name))
+          .map((name) => [name, captureTests.get(name)]),
+      );
+    }
   }
   // A capture that matched main's own hash (scripts/visual-baseline-plan.mjs) is a blob the
   // bucket already holds: the bundle names it and the publisher checks it is there, instead of
@@ -337,6 +348,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       skipPassedActual: process.env.GITHUB_EVENT_NAME === "pull_request",
       contentAddressedActual: process.env.GITHUB_EVENT_NAME !== "pull_request",
       referencedActual,
+      captureTests:
+        onMain && process.env.VISUAL_EXPECTED_CAPTURE_MANIFEST
+          ? readCaptureManifest(process.env.VISUAL_EXPECTED_CAPTURE_MANIFEST)
+          : null,
     });
     console.log(
       `visual-build-publish-bundle: prepared ${result.count} files (${result.totalBytes} bytes) for snapshot ${result.snapshotVersion}`,

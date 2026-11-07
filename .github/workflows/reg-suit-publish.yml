@@ -225,6 +225,7 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           VISUAL_FRESH_START: ${{ steps.baseline.outputs.fresh_start }}
           VISUAL_EXPECTED_CAPTURE_MANIFEST: ${{ runner.temp }}/reg-suit-capture-manifest.json
+          VISUAL_EXPECTED_CAPTURE_TESTS: ${{ runner.temp }}/reg-suit-visual-plan/visual-list.json
 
       - name: Verify complete screenshot inventory
         run: node scripts/visual-publish-artifacts.mjs --verify-complete
@@ -233,13 +234,17 @@ jobs:
           VISUAL_FRESH_START: ${{ steps.baseline.outputs.fresh_start }}
           VISUAL_CAPTURE_MODE: ${{ inputs.capture-mode }}
           VISUAL_EXPECTED_CAPTURE_MANIFEST: ${{ runner.temp }}/reg-suit-capture-manifest.json
+          VISUAL_EXPECTED_CAPTURE_TESTS: ${{ runner.temp }}/reg-suit-visual-plan/visual-list.json
 
+      # A main snapshot records the test behind each capture, which a later pull request reads to
+      # tell a retired surface from a lost one.
       - name: Build the trusted S3 publish bundle
         id: bundle
         run: node scripts/visual-build-publish-bundle.mjs
         env:
           VISUAL_PUBLISH_SOURCE: .reg
           VISUAL_PUBLISH_BUNDLE: ${{ runner.temp }}/reg-suit-publish-bundle
+          VISUAL_EXPECTED_CAPTURE_MANIFEST: ${{ runner.temp }}/reg-suit-capture-manifest.json
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

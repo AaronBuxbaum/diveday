@@ -70,6 +70,13 @@ type GapManifest = Pick<TripManifest, "checkpoint"> & {
   crew: readonly GapCrewMember[];
 };
 
+type NamedResult = {
+  /** Booking or crew id; a name stands in for a hand-built row. */
+  key?: string;
+  fullName: string;
+  rollCall?: Parameters<typeof isNotBackAboard>[1];
+};
+
 /** A result somebody recorded here; a carried-forward default is not one. */
 function recordedState(rollCall: GapCrewMember["rollCall"]): RollCallState {
   if (!rollCall || rollCall.implied) return undefined;
@@ -184,3 +191,63 @@ export const HOMEWARD_STAGES = ["heading_in", "home"] as const;
 export function isHomewardStage(stage: string): stage is (typeof HOMEWARD_STAGES)[number] {
   return (HOMEWARD_STAGES as readonly string[]).includes(stage);
 }
+
+/**
+ * **Counts taken after the one a sheet was printed at** (issue #4067). A sheet
+ * printed at after dive 1 while after dive 2 has someone recorded not back
+ * aboard would show everyone boarded and give no sign a later count exists.
+ *
+ * `latest` is the last checkpoint of the departure that anybody has a result
+ * at, when it comes after `printed`. `names` is everyone whose **last**
+ * result after the printed checkpoint is "not back aboard": someone missing at
+ * after dive 2 and not yet marked at after dive 3 stays named, and someone
+ * counted aboard later is not. `unmarked` is the divers with no result yet at
+ * `latest`. Null when the printed checkpoint is the latest, or when nobody is
+ * unresolved and nobody is unmarked there. Divers then crew, manifest order.
+ */
+export function laterCheckpointMissing(
+  manifests: readonly (GapManifest & {
+    divers: readonly NamedResult[];
+    crew: readonly (GapCrewMember & { fullName: string })[];
+  })[],
+  printed: RollCallCheckpoint,
+): { checkpoint: RollCallCheckpoint; names: string[]; unmarked: number } | null {
+  const printedAt = manifests.findIndex((manifest) => manifest.checkpoint === printed);
+  if (printedAt < 0) return null;
+  const hasResult = (manifest: (typeof manifests)[number]) =>
+    manifest.summary.boarded > 0 ||
+    manifest.summary.notBackAboard > 0 ||
+    manifest.crew.some((member) => recordedState(member.rollCall));
+  const latest = manifests.findLast(hasResult);
+  if (!latest || manifests.indexOf(latest) <= printedAt) return null;
+  const later = manifests.slice(printedAt + 1, manifests.indexOf(latest) + 1);
+  const unresolved = (
+    people: (manifest: (typeof manifests)[number]) => readonly NamedResult[],
+  ): string[] => {
+    const last = new Map<string, { fullName: string; missing: boolean }>();
+    for (const manifest of later) {
+      for (const person of people(manifest)) {
+        if (!person.rollCall || person.rollCall.implied) continue;
+        last.set(person.key ?? person.fullName, {
+          fullName: person.fullName,
+          missing: isNotBackAboard(manifest.checkpoint, person.rollCall),
+        });
+      }
+    }
+    return [...last.values()].filter((entry) => entry.missing).map((entry) => entry.fullName);
+  };
+  const names = [
+    ...unresolved((manifest) => manifest.divers),
+    ...unresolved((manifest) => manifest.crew.map(withKey)),
+  ];
+  const unmarked = latest.summary.awaiting;
+  return names.length > 0 || unmarked > 0
+    ? { checkpoint: latest.checkpoint, names, unmarked }
+    : null;
+}
+
+const withKey = (member: GapCrewMember & { fullName: string }): NamedResult => ({
+  key: member.id,
+  fullName: member.fullName,
+  rollCall: member.rollCall,
+});
