@@ -46,11 +46,11 @@ import {
 } from "./missing-diver-alerts";
 import {
   affectedSubjects,
-  afterDiveEvents,
   backAboard,
   type MissingSubject,
   standingNotBackAboardSince,
   subjectOnDeparture,
+  subjectRollCallEvents,
 } from "./missing-subject";
 import { recordTripActivity } from "./operations";
 import { queryAll } from "./query-helpers";
@@ -329,7 +329,7 @@ async function openMissingReport(
   const refused = await startGate(tx, input);
   if (refused) return { ok: false, reason: refused === "not_found" ? "not_allowed" : refused };
   if (!(await subjectOnDeparture(tx, input))) return { ok: false, reason: "not_missing" };
-  const since = standingNotBackAboardSince(await afterDiveEvents(tx, input));
+  const since = standingNotBackAboardSince(await subjectRollCallEvents(tx, input));
   if (!since) return { ok: false, reason: "not_missing" };
   const { subject } = input;
   const subjectId = subject.kind === "diver" ? subject.bookingId : subject.personId;
@@ -583,7 +583,7 @@ export async function markMissingDiverFound(
     const subjects = await affectedSubjects(tx, input.shopId, input.reportId);
     for (const subject of subjects) {
       const target = { shopId: input.shopId, tripId: report.tripId, subject };
-      if (!backAboard(await afterDiveEvents(tx, target))) {
+      if (!backAboard(await subjectRollCallEvents(tx, target))) {
         return { ok: false, reason: "still_missing" };
       }
     }

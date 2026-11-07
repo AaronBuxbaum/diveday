@@ -168,4 +168,15 @@ describe("the roll call a course's manifest shows on its second Saturday", () =>
     await mark("after_dive_1", "boarded", "2026-08-15T14:00:00Z");
     expect((await listUnaccountedForByTrip(db, shopId, [trip.id])).get(trip.id)).toBeUndefined();
   });
+
+  it("keeps a first-Saturday not-back after dive 2 through a second-Saturday tap after dive 1 alone (#4056)", async () => {
+    const { db, shopId, trip, bookingId, mark } = await course();
+    await mark("after_dive_2", "not_boarded", "2026-08-01T16:00:00Z");
+    await mark("after_dive_1", "boarded", "2026-08-15T14:00:00Z");
+    const unaccounted = async () =>
+      (await listUnaccountedForByTrip(db, shopId, [trip.id])).get(trip.id)?.has(bookingId);
+    expect(await unaccounted()).toBe(true);
+    await mark("departure", "boarded", "2026-08-15T14:05:00Z");
+    expect(await unaccounted()).toBeUndefined();
+  });
 });

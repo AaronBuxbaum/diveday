@@ -542,10 +542,12 @@ export async function listRollCallGaps(
         turnedAwayIds,
         diverStates: (bookingId) => diverStates(day, bookingId),
         crewStates: (personId) => crewStates(day, personId),
-        // Somebody counted back aboard on a later meeting day is not lost
-        // from an earlier one: they stood on the dock since.
-        diverSeenLater: (bookingId) => seenAfter(diverStanding, bookingId, day),
-        crewSeenLater: (personId) => seenAfter(crewStanding, personId, day),
+        // Somebody counted on a later meeting day at the dock, or at this
+        // checkpoint or a later one, is not lost from an earlier day: they
+        // stood on the dock since (`seenAfter`, #4056).
+        diverSeenLater: (bookingId, checkpoint) =>
+          seenAfter(diverStanding, bookingId, day, checkpoint),
+        crewSeenLater: (personId, checkpoint) => seenAfter(crewStanding, personId, day, checkpoint),
         latestEventAt: (checkpoint) => {
           let latest: Date | null = null;
           for (const standing of [diverStanding.get(day), crewStanding.get(day)]) {
@@ -623,8 +625,8 @@ function dayGaps(input: {
   turnedAwayIds: ReadonlySet<string>;
   diverStates: (bookingId: string) => ("boarded" | "not_boarded" | undefined)[];
   crewStates: (personId: string) => ("boarded" | "not_boarded" | undefined)[];
-  diverSeenLater: (bookingId: string) => boolean;
-  crewSeenLater: (personId: string) => boolean;
+  diverSeenLater: (bookingId: string, checkpoint: string) => boolean;
+  crewSeenLater: (personId: string, checkpoint: string) => boolean;
   latestEventAt: (checkpoint: string) => Date | null;
 }): { diver?: OpenRollCall; crew?: OpenRollCall; dock?: OpenRollCall } {
   const { trip, window, now, historical, checkpoints, bookingIds, crewIds } = input;
@@ -663,11 +665,11 @@ function dayGaps(input: {
       dockOffBoat += 1;
     } else if (states[0] === undefined) departureAwaiting += 1;
     if (!inAfterDivePopulation(states)) continue;
-    const seenLater = input.diverSeenLater(bookingId);
     for (let dive = 1; dive < checkpoints.length; dive++) {
       const state = states[dive];
       population[dive] = (population[dive] ?? 0) + 1;
       if (state !== undefined) recorded[dive] = (recorded[dive] ?? 0) + 1;
+      const seenLater = input.diverSeenLater(bookingId, checkpoints[dive] as string);
       if (isAccountedForAfterDive(state) || seenLater) continue;
       // The latest checkpoint speaks (issue #2404): "not back" after dive 1
       // is settled by "back aboard" after a later dive, the rule
@@ -689,7 +691,6 @@ function dayGaps(input: {
     // crew has started one, so it is not a `no_roll_call` trip.
     if (states.some((state) => state !== undefined)) anyEvent = true;
     if (!inAfterDivePopulation(states)) continue;
-    const seenLater = input.crewSeenLater(personId);
     // Recorded not back and not counted aboard since: missing, never "not counted".
     const missingCrew = states.some(
       (state, dive) =>
@@ -699,6 +700,7 @@ function dayGaps(input: {
       const state = states[dive];
       crewPopulation[dive] = (crewPopulation[dive] ?? 0) + 1;
       if (state !== undefined) crewRecorded[dive] = (crewRecorded[dive] ?? 0) + 1;
+      const seenLater = input.crewSeenLater(personId, checkpoints[dive] as string);
       if (isAccountedForAfterDive(state) || seenLater) continue;
       // The latest checkpoint speaks for crew as it does for divers above: a
       // divemaster "not back" after dive 1 and counted aboard after dive 2

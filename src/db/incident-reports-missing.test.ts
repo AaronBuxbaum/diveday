@@ -515,6 +515,7 @@ describe("a missing diver report from the manifest", () => {
         status: "boarded" | "not_boarded" | "cleared",
         occurredAt: Date,
         retractsEventId?: string,
+        checkpoint = "after_dive_1",
       ) => {
         const [row] = await db
           .insert(rollCallEvents)
@@ -524,7 +525,7 @@ describe("a missing diver report from the manifest", () => {
             bookingId: f.seat.booking.id,
             recordedByPersonId: f.crew.id,
             status,
-            checkpoint: "after_dive_1",
+            checkpoint,
             source: "live",
             occurredAt,
             retractsEventId,
@@ -539,7 +540,7 @@ describe("a missing diver report from the manifest", () => {
         subject: seatOf(f),
         actorPersonId: f.crew.id,
       };
-      return { db, say, input };
+      return { db, f, say, input };
     }
 
     it("still opens the report for day one's missing diver after day two's mistaken count is undone", async () => {
@@ -597,6 +598,71 @@ describe("a missing diver report from the manifest", () => {
       expect(await startMissingDiverReport(db, input)).toEqual({
         ok: false,
         reason: "not_missing",
+      });
+    });
+
+    describe("a later day settles a carried miss only at the dock or at its dive or later (#4056)", () => {
+      it("keeps day one's diver missing after dive 2 through day two's tap after dive 1, until the dock count", async () => {
+        const { db, say, input } = await course();
+        await say(
+          "boarded",
+          new Date(dayOneMarkedAt.getTime() - HOUR_MS),
+          undefined,
+          "after_dive_1",
+        );
+        await say("not_boarded", dayOneMarkedAt, undefined, "after_dive_2");
+        await say("boarded", new Date(now - HOUR_MS), undefined, "after_dive_1");
+        const started = await startMissingDiverReport(db, input);
+        if (!started.ok) throw new Error(`refused: ${started.reason}`);
+        expect((await reportOf(db, started.reportId)).occurredAt).toEqual(dayOneMarkedAt);
+        await say("boarded", new Date(now - HOUR_MS + 60_000), undefined, "departure");
+        expect(await startMissingDiverReport(db, input)).toEqual({
+          ok: false,
+          reason: "not_missing",
+        });
+      });
+
+      it("reads a crew member the same way: day two's tap after dive 1 leaves them missing", async () => {
+        const { db, f } = await course();
+        await db.insert(tripAssignments).values({ tripId: f.trip.id, personId: f.ashore.id });
+        const crewMark = async (
+          status: "boarded" | "not_boarded",
+          at: Date,
+          checkpoint: string,
+        ) => {
+          await db.insert(rollCallEvents).values({
+            shopId: ctx.shop.id,
+            tripId: f.trip.id,
+            ...crewSubject(f.ashore.id),
+            recordedByPersonId: f.crew.id,
+            status,
+            checkpoint,
+            occurredAt: at,
+          });
+        };
+        const input = {
+          shopId: ctx.shop.id,
+          tripId: f.trip.id,
+          subject: { kind: "crew" as const, personId: f.ashore.id },
+          actorPersonId: f.crew.id,
+        };
+        await crewMark("not_boarded", dayOneMarkedAt, "after_dive_2");
+        await crewMark("boarded", new Date(now - HOUR_MS), "after_dive_1");
+        const started = await startMissingDiverReport(db, input);
+        if (!started.ok) throw new Error(`refused: ${started.reason}`);
+        expect((await reportOf(db, started.reportId)).occurredAt).toEqual(dayOneMarkedAt);
+      });
+
+      it("lets day two's dock count, or a count after dive 2, settle the carried miss", async () => {
+        for (const checkpoint of ["departure", "after_dive_2"]) {
+          const { db, say, input } = await course();
+          await say("not_boarded", dayOneMarkedAt, undefined, "after_dive_2");
+          await say("boarded", new Date(now - HOUR_MS), undefined, checkpoint);
+          expect(await startMissingDiverReport(db, input), checkpoint).toEqual({
+            ok: false,
+            reason: "not_missing",
+          });
+        }
       });
     });
 
