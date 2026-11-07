@@ -9,6 +9,7 @@ import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getShopById } from "@/db/shops";
 import {
+  cancelStaffInvite,
   getStaffRoles,
   inviteStaffMember,
   listShopStaff,
@@ -450,6 +451,42 @@ export async function removeStaffAction(formData: FormData) {
       undoUserAccountId: userAccountId,
       undoRoles: roles.join(","),
       undoName: fullName,
+    }),
+  );
+}
+
+/**
+ * Withdraws an invite nobody has accepted (issue #4013): the invitee leaves the team list, the
+ * emailed link stops working, and the toast carries the Undo `removeStaffAction` carries.
+ */
+export async function cancelInviteAction(formData: FormData) {
+  const fields = readForm(teamForm, formData);
+  const session = await requireStaffSession();
+  const path = teamPath(session.user.shopSlug);
+  await teamManagementBlock(session);
+
+  const personId = fields.personId;
+  const userAccountId = fields.userAccountId;
+  if (!personId || !userAccountId) redirect(path);
+
+  const db = await getDb();
+  const roles = await getStaffRoles(db, session.user.shopId, personId);
+  const result = await cancelStaffInvite(db, {
+    shopId: session.user.shopId,
+    personId,
+    userAccountId,
+  });
+  if (!result.ok) {
+    revalidateAndRedirect(path, noticeUrl(path, result.reason));
+    return;
+  }
+  revalidateAndRedirect(
+    path,
+    noticeUrl(path, "invite-canceled", {
+      undoPersonId: personId,
+      undoUserAccountId: userAccountId,
+      undoRoles: roles.join(","),
+      undoName: fields.fullName,
     }),
   );
 }

@@ -392,15 +392,33 @@ export async function inviteStaffMember(
 
       const existingPerson = await selectActivePersonByEmail(tx, input.shopId, email);
       let personId: string;
+      // A cancelled invite leaves its account behind, `invited` and without a role; inviting the
+      // address again picks that account up rather than answering "already on the team" about
+      // someone the roster does not show (issue #4013).
+      let cancelledInviteAccountId: string | null = null;
       if (existingPerson) {
         const [existingAccount] = await tx
-          .select({ id: userAccounts.id })
+          .select({ id: userAccounts.id, status: userAccounts.status })
           .from(userAccounts)
           .where(eq(userAccounts.personId, existingPerson.id))
           .limit(1);
         if (existingAccount) {
-          refusal = { ok: false, reason: "already_on_team" };
-          tx.rollback();
+          const [stillOnTeam] = await tx
+            .select({ role: personRoles.role })
+            .from(personRoles)
+            .where(
+              and(
+                eq(personRoles.personId, existingPerson.id),
+                inArray(personRoles.role, [...STAFF_ROLES]),
+              ),
+            )
+            .limit(1);
+          if (existingAccount.status === "invited" && !stillOnTeam) {
+            cancelledInviteAccountId = existingAccount.id;
+          } else {
+            refusal = { ok: false, reason: "already_on_team" };
+            tx.rollback();
+          }
         }
         personId = existingPerson.id;
       } else {
@@ -421,6 +439,8 @@ export async function inviteStaffMember(
           .values(input.roles.map((role) => ({ personId, role })))
           .onConflictDoNothing();
       }
+
+      if (cancelledInviteAccountId) return { personId, userAccountId: cancelledInviteAccountId };
 
       // Never given to anyone: the invitee chooses their real password when
       // they accept the invite, and until then this hash cannot match any
@@ -616,6 +636,26 @@ export async function restoreStaffMember(
   if (account?.status === "invited") return { ok: true, resendInvite: true };
   const statusResult = await setStaffAccountStatus(db, { ...input, status: "active" });
   return statusResult.ok ? { ok: true, resendInvite: false } : statusResult;
+}
+
+/**
+ * Withdraws an invite nobody has accepted (issue #4013): the same removal as below, for an
+ * account still `invited` only. Someone who has joined is removed with `removeStaffMember`,
+ * which says so; this refuses them rather than quietly doing that. The Undo is
+ * `restoreStaffMember`, as for any removal.
+ */
+export async function cancelStaffInvite(
+  db: AppDb,
+  input: { shopId: string; personId: string; userAccountId: string },
+): Promise<StaffMutationResult> {
+  const [account] = await db
+    .select({ status: userAccounts.status })
+    .from(userAccounts)
+    .where(
+      and(eq(userAccounts.id, input.userAccountId), eq(userAccounts.personId, input.personId)),
+    );
+  if (account?.status !== "invited") return { ok: false, reason: "not_found" };
+  return removeStaffMember(db, input);
 }
 
 /**

@@ -296,7 +296,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
                 }
                 confirmLabel={t("ready.cancelConfirmButton")}
                 cancelLabel={t("words.dismiss.neverMind")}
-                pendingLabel={t("ready.cancelling")}
+                pendingLabel={t("words.busy.canceling")}
                 confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
               />
             </form>

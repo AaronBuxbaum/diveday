@@ -62,6 +62,29 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
   });
 
+  test("an owner cancels a pending invite from its card, and Undo brings it back", async ({
+    page,
+  }) => {
+    await page.goto(`/shop/${SHOP}/settings/team`);
+    const inviteSection = page.locator("#invite");
+    await inviteSection.locator("summary").click();
+    await inviteSection.getByLabel("Full name").fill("Marlo Pending");
+    await inviteSection.getByLabel("Email").fill(`marlo-pending-${Date.now()}@example.com`);
+    await inviteSection.getByLabel("Instructor", { exact: true }).check();
+    await inviteSection.getByRole("button", { name: "Send invite" }).click();
+
+    const row = page.locator("li").filter({ hasText: "Marlo Pending" }).filter({ visible: true });
+    await row.getByRole("button", { name: "Cancel invite for Marlo Pending" }).click();
+
+    await expect(page.getByText("Invite for Marlo Pending canceled.")).toBeVisible();
+    await expect(page.locator("li").filter({ hasText: "Marlo Pending" })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(
+      page.locator("li").filter({ hasText: "Marlo Pending" }).filter({ visible: true }),
+    ).toBeVisible();
+  });
+
   test("removing a staff member lands immediately with an Undo banner, no confirm dialog", async ({
     page,
     request,

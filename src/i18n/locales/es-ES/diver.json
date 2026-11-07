@@ -927,7 +927,6 @@
     "cancelPartyStays": "{count, plural, one {Sigue reservada} other {Siguen reservadas}}: {names}",
     "cancelPartyRefund": "El centro reembolsa {count, plural, one {esa plaza} other {esas plazas}} de la misma manera.",
     "cancelConfirmButton": "Sí, cancelar mi plaza",
-    "cancelling": "Cancelando…",
     "cancelPreviewRefund": "Todavía estás dentro del plazo de cancelación gratuita, así que se te devuelve lo pagado.",
     "cancelPreviewForfeit": "Has pasado el plazo de cancelación gratuita, así que lo pagado no se devuelve.",
     "cancelPreviewNoPolicy": "Este centro no automatiza las devoluciones por cancelación, así que no se devuelve nada de inmediato.",

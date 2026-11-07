@@ -181,7 +181,7 @@ export function SeriesCadenceEditor({
             ))}
           </ul>
           <SubmitButton
-            pendingLabel={t("tripSeries.panel.cancelling")}
+            pendingLabel={t("words.busy.canceling")}
             className={buttonClass({ variant: "danger", className: "w-fit" })}
           >
             {t("tripSeries.panel.cancelOffCadence", { count: offCadence.length })}
@@ -344,7 +344,7 @@ export function SeriesMoreActions({
             })}
             confirmLabel={t("tripSeries.panel.cancelAllConfirm")}
             cancelLabel={t("words.dismiss.neverMind")}
-            pendingLabel={t("tripSeries.panel.cancelling")}
+            pendingLabel={t("words.busy.canceling")}
             triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm", flush: true })}
             confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
           />

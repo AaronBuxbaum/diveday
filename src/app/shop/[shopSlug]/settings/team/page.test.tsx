@@ -168,9 +168,11 @@ describe("a staff card's account row", () => {
         const shown = Children.toArray(accountRow?.props.children);
         expect(shown, accountStatus).toHaveLength(1);
         for (const child of shown) {
-          const content = isValidElement<{ children?: ReactNode }>(child)
-            ? Children.toArray(child.props.children)
-            : [child];
+          // A component stands for what it renders; only a host box can be empty.
+          const content =
+            isValidElement<{ children?: ReactNode }>(child) && typeof child.type === "string"
+              ? Children.toArray(child.props.children)
+              : [child];
           expect(content.length, `an empty box on a ${accountStatus} row`).toBeGreaterThan(0);
         }
       }
