@@ -171,7 +171,12 @@ export default async function WorkOrderPage({
       <p className="hidden print:block print:mt-3 text-sm text-muted">
         {t("shared.formDraft.savedDetails")}
       </p>
-      <div className={`mt-8 space-y-10 print:mt-4 print:space-y-4 ${printStyles.document}`}>
+      {/* The ticket is the shop's record of the job, so this page prints as
+          itself rather than as the staff print notice (`globals.css`). */}
+      <div
+        className={`mt-8 space-y-10 print:mt-4 print:space-y-4 ${printStyles.document}`}
+        data-staff-print-document=""
+      >
         {detail.gearItemKind ? (
           <p className="text-muted">
             {t("workOrders.detail.ownUnitSubject", {
