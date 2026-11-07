@@ -7,6 +7,7 @@ import {
 } from "@/content/course-templates";
 import { nowDate } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
+import { SCUBA_UNIT_PRESET } from "@/lib/rentals";
 import type { DbExecutor } from "./client";
 import { attachStandardCourseForms } from "./course-forms";
 import { courseForms, courseFormVersions, courses } from "./schema";
@@ -294,8 +295,10 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
           // default, and a shop turns one off on the course page.
           nitroxCompatible: !(isIntroCourse || minimumCertificationLevel === null),
           // Discover Scuba's page says "Complete rental gear", so its session's
-          // trip page says "Gear is included." (UX sheet 2026-10-22, item 3).
-          gearIncluded: template?.slug === "discover-scuba-diving",
+          // trip page says "Gear is included." (UX sheet 2026-10-22, item 3):
+          // the scuba unit, as a shop ticking the box gets it (issue #2796).
+          includedRentalKinds:
+            template?.slug === "discover-scuba-diving" ? [...SCUBA_UNIT_PRESET] : [],
         };
       }),
     )

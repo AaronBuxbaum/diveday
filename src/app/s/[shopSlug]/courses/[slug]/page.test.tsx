@@ -70,7 +70,7 @@ const course: Course = {
   isActive: true,
   isIntroCourse: false,
   nitroxCompatible: false,
-  gearIncluded: false,
+  includedRentalKinds: [],
   rowVersion: 0,
   sourceTemplateSlug: null,
   sourceTemplateVersion: null,

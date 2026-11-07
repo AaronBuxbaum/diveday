@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "50349f02-90ab-4188-a6f2-fa61b4280e70",
+  "prevIds": [
+    "ca599ed3-e0a5-4067-b782-e6a37a50781b"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "courses",
+        "included_rental_kinds"
+      ],
+      "writes": [
+        "s|col|public.courses.included_rental_kinds",
+        "n|col|public.courses.included_rental_kinds",
+        "e|col|public.courses.included_rental_kinds"
+      ],
+      "reads": [
+        "n|tbl|public.courses",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "courses",
+        "name": "included_rental_kinds",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

@@ -51,8 +51,13 @@ vi.mock("@/db/course-forms", () => ({
 }));
 
 const { revalidatePath } = await import("next/cache");
-const { getCourseBySlug, pullCourseTemplateUpdates, setCourseVisibility, editCourseContent } =
-  await import("@/db/courses");
+const {
+  editCourse,
+  getCourseBySlug,
+  pullCourseTemplateUpdates,
+  setCourseVisibility,
+  editCourseContent,
+} = await import("@/db/courses");
 const { readTranslations, recordTranslation } = await import("@/db/shop-text-translations");
 const { requireStaffSession } = await import("@/lib/session");
 const { canPersonConfigureTrips, canPersonManageWaiverTemplates } = await import("@/db/authz");
@@ -386,6 +391,28 @@ describe("saveCourseContentAction, with the forms a course asks for", () => {
  * A11): a refused box refuses the save before anything is written, and an
  * accepted one is written after the English it translates.
  */
+/** **What the course fee includes** (issue #2796): a set of rental kinds, behind one box. */
+describe("saveCourseContentAction, with the gear the fee includes", () => {
+  const includedSaved = () => vi.mocked(editCourse).mock.calls[0]?.[3]?.includedRentalKinds;
+
+  it("saves the ticked kinds while gear included is ticked", async () => {
+    await savedTo(
+      coursePage([
+        ["gearIncluded", "true"],
+        ["includedRentalKind", "wetsuit"],
+        ["includedRentalKind", "bcd"],
+        ["includedRentalKind", "nitrox"],
+      ]),
+    );
+    expect(includedSaved()).toEqual(["bcd", "wetsuit"]);
+  });
+
+  it("saves none when gear included is unticked, whatever its hidden boxes still hold", async () => {
+    await savedTo(coursePage([["includedRentalKind", "bcd"]]));
+    expect(includedSaved()).toEqual([]);
+  });
+});
+
 describe("saveCourseContentAction, with the summary's Spanish", () => {
   it("writes typed Spanish once the course page is saved", async () => {
     expect(

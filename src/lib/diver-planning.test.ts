@@ -458,11 +458,45 @@ describe("booking delight planning", () => {
     expect(packingConfidence([], null, false).provided).toEqual(["tanksAndWeights"]);
   });
 
-  it("names the scuba unit on a course whose fee includes the gear, and leaves personal gear to bring (ideas item 16)", () => {
-    const packing = packingConfidence(["Towel"], null, false, true);
+  it("names the scuba unit on a course whose fee includes it, and leaves personal gear to bring (ideas item 16)", () => {
+    const packing = packingConfidence(["Towel"], null, false, ["bcd", "regulator", "weights"]);
     expect(packing.provided).toEqual(["scubaUnit", "instructorBriefing"]);
+    expect(packing.providedKinds).toEqual([]);
     expect(packing.bringPersonal).toEqual(["mask", "fins", "snorkel", "boots"]);
     expect(packing.bring).toEqual(["Towel"]);
+  });
+
+  // Issue #2796: a course fee can cover more than the scuba unit, or less.
+  it("takes mask and fins off Bring when the fee includes them, and names the extra kinds provided", () => {
+    const packing = packingConfidence([], null, true, [
+      "bcd",
+      "regulator",
+      "weights",
+      "wetsuit",
+      "mask",
+      "fins",
+    ]);
+    expect(packing.provided).toEqual(["scubaUnit", "instructorBriefing"]);
+    expect(packing.providedKinds).toEqual(["wetsuit", "mask", "fins"]);
+    // Boots stay: whether a suit or fins come with boots is the shop's to say.
+    expect(packing.bringPersonal).toEqual(["snorkel", "boots"]);
+  });
+
+  it("promises no scuba unit when the fee includes only part of it", () => {
+    const packing = packingConfidence([], null, true, ["wetsuit", "weights"]);
+    expect(packing.provided).toEqual(["tanksAndWeights", "instructorBriefing"]);
+    expect(packing.providedKinds).toEqual(["wetsuit"]);
+    expect(packing.bringPersonal).toEqual(["mask", "fins", "snorkel", "boots"]);
+  });
+
+  it("promises only tanks when the fee leaves the weights out, which /ready then prices", () => {
+    const packing = packingConfidence([], null, true, ["bcd", "wetsuit"]);
+    expect(packing.provided).toEqual(["tanks", "instructorBriefing"]);
+    expect(packing.providedKinds).toEqual(["bcd", "wetsuit"]);
+  });
+
+  it("lists nothing the course provides on an ordinary departure", () => {
+    expect(packingConfidence([], null).providedKinds).toEqual([]);
   });
 
   it("asks nobody to bring personal gear on an ordinary departure", () => {

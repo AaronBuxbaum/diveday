@@ -118,6 +118,7 @@ const COURSE = {
   isActive: true,
   isIntroCourse: false,
   nitroxCompatible: true,
+  includedRentalKinds: [],
   sourceTemplateSlug: "open-water-diver",
   sourceTemplateVersion: 1,
   sourceTemplateSnapshot: {},
@@ -157,7 +158,13 @@ beforeEach(() => {
   vi.mocked(requireShopSurface).mockResolvedValue({
     session: { user: { shopId: SHOP_ID, shopSlug: "blue-mantis", personId: "staff" } },
     db: {},
-    shop: { id: SHOP_ID, slug: "blue-mantis", defaultLocale: "en-US", currency: "usd" },
+    shop: {
+      id: SHOP_ID,
+      slug: "blue-mantis",
+      defaultLocale: "en-US",
+      currency: "usd",
+      rentalItems: ["bcd"],
+    },
   } as never);
   vi.mocked(requireStaffSession).mockResolvedValue({
     user: { shopId: SHOP_ID, shopSlug: "blue-mantis", personId: "staff" },

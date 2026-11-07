@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TripLookFor, TripRoutes, TripSiteNotes } from "@/components/SiteBriefing";
 import { diverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import type { RentableItemKind } from "@/lib/rentals";
 import { courseDayPlan, TripDayPlan } from "./TripDayPlan";
 import type { DiveBriefing } from "./types";
 
@@ -469,7 +470,10 @@ describe("TripDayPlan's course plan", () => {
     timeNote: "about 3 hours",
     items: ["Briefing: how the gear works", "One shallow open-water dive, maximum {depth12}"],
   };
-  const course = { scheduleDays: [afternoon], gearIncluded: true };
+  const course = {
+    scheduleDays: [afternoon],
+    includedRentalKinds: ["bcd", "regulator", "weights"] as RentableItemKind[],
+  };
   const t = diverTranslator(DEFAULT_DIVER_LOCALE);
   // A course session: the day's two ends are the course's to say.
   const profile = {
@@ -491,7 +495,7 @@ describe("TripDayPlan's course plan", () => {
     expect(plan?.days[0]?.items[1]).toBe("One shallow open-water dive, maximum 40 feet");
     expect(courseDayPlan(null, t, "meters", 1)).toBeUndefined();
     expect(
-      courseDayPlan({ scheduleDays: [], gearIncluded: false }, t, "meters", 1),
+      courseDayPlan({ scheduleDays: [], includedRentalKinds: [] }, t, "meters", 1),
     ).toBeUndefined();
   });
 
@@ -502,14 +506,21 @@ describe("TripDayPlan's course plan", () => {
         { title: "Day 2: first ocean dives", items: ["Open-water dives 1 and 2"] },
         { title: "Day 3: certify", items: ["Open-water dives 3 and 4"] },
       ],
-      gearIncluded: false,
+      includedRentalKinds: [],
     };
     // A session records no plan day of its own, so neither a one-meeting
     // session nor the whole three-meeting run can say which day it is.
     expect(courseDayPlan(threeDays, t, "meters", 1)).toBeUndefined();
     expect(courseDayPlan(threeDays, t, "meters", 3)).toBeUndefined();
     // The gear line is the course's, whichever day this is.
-    expect(courseDayPlan({ ...threeDays, gearIncluded: true }, t, "meters", 1)?.days).toEqual([]);
+    expect(
+      courseDayPlan(
+        { ...threeDays, includedRentalKinds: ["bcd", "regulator", "weights"] },
+        t,
+        "meters",
+        1,
+      )?.days,
+    ).toEqual([]);
     for (const dayCount of [1, 3]) {
       cleanup();
       render(
@@ -555,10 +566,23 @@ describe("TripDayPlan's course plan", () => {
         briefings={[briefing()]}
         shop={SHOP}
         locale={DEFAULT_DIVER_LOCALE}
-        profile={{ ...profile, course: { ...course, gearIncluded: false } }}
+        profile={{ ...profile, course: { ...course, includedRentalKinds: [] } }}
       />,
     );
     expect(screen.getByText("Your afternoon")).toBeInTheDocument();
+    expect(screen.queryByText("Gear is included.")).not.toBeInTheDocument();
+  });
+
+  it("names the gear when the course includes more or less than the scuba unit (issue #2796)", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={{ ...profile, course: { ...course, includedRentalKinds: ["wetsuit"] } }}
+      />,
+    );
+    expect(screen.getByText("Included with the course: Wetsuit.")).toBeInTheDocument();
     expect(screen.queryByText("Gear is included.")).not.toBeInTheDocument();
   });
 

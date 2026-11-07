@@ -104,6 +104,18 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "course-edit", scheme);
       });
 
+      // Issue #2796: the seeded Discover Scuba includes the scuba unit, so its
+      // editor shows "gear included" ticked with the kinds open beneath it —
+      // the state the open-water capture above, with the box unticked, never draws.
+      test(`the course editor's included gear renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/courses/discover-scuba-diving/edit");
+        await page.locator('[data-hydrated="true"]:has([name="summary"])').waitFor();
+        await page.getByTestId("course-included-kinds").waitFor();
+        await capture(page, "course-edit-included-gear", scheme);
+      });
+
       /**
        * The save bar, which `capture()` above cannot photograph: it is sticky,
        * and a full-page screenshot taken at scroll 0 does not paint a stuck

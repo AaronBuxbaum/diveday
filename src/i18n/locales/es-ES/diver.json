@@ -231,6 +231,7 @@
     "providedItems": {
       "scubaUnit": "Equipo de buceo (chaleco, regulador, tanque, plomos)",
       "tanksAndWeights": "Tanques y plomos",
+      "tanks": "Tanques",
       "crewBriefing": "Briefing de la tripulación",
       "instructorBriefing": "Briefing del instructor"
     },
@@ -248,6 +249,7 @@
     "siteToBeConfirmed": "Sitio por confirmar",
     "sitesToBeConfirmed": "{count, plural, one {Una inmersión · sitio por confirmar} other {# inmersiones · sitios por confirmar}}",
     "courseGearIncluded": "El equipo está incluido.",
+    "courseGearIncludedKinds": "Incluido en el curso: {items}.",
     "seen": {
       "heading": "Visto aquí este mes",
       "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}}",
@@ -1382,6 +1384,7 @@
     },
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
     "courseGearIncluded": "Tu equipo de buceo (chaleco, regulador, tanque, plomos) va incluido en el curso. Dinos tus tallas para tenerlo listo.",
+    "courseGearIncludedKinds": "Incluido en el curso: {items}. Dinos tus tallas para tenerlo todo listo.",
     "notSure": "No lo tengo claro: ayúdame a elegir",
     "sizeOnFile": "{size}: registrada por el centro",
     "wetsuitSize": "Talla de neopreno",

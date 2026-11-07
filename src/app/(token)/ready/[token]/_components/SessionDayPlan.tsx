@@ -3,6 +3,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 import { type CourseScheduleDay, formatScheduleDayTime } from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
+import type { RentableItemKind } from "@/lib/rentals";
 
 /**
  * **The session's own day, on the thread** (issue #2795): Discover Scuba's
@@ -24,7 +25,10 @@ export function SessionDayPlan({
   t,
   locale,
 }: {
-  course: { scheduleDays: CourseScheduleDay[]; gearIncluded: boolean } | null | undefined;
+  course:
+    | { scheduleDays: CourseScheduleDay[]; includedRentalKinds: readonly RentableItemKind[] }
+    | null
+    | undefined;
   /** How many days this session meets on (`trip_schedule_days`). */
   meetingDays: number;
   depthUnit: DepthUnit;

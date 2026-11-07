@@ -2,8 +2,11 @@ import { sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { rentalFitProfiles as migrationProfiles } from "./migration-schema";
-import { rentalFitProfiles } from "./schema";
+import {
+  courses as migrationCourses,
+  rentalFitProfiles as migrationProfiles,
+} from "./migration-schema";
+import { courses, rentalFitProfiles } from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -31,4 +34,18 @@ it("removes the retired fit column and enum value from runtime and migration sch
     where t.typname = 'rental_fit_item'
   `);
   expect(enumRows.map((row) => row.enumlabel)).not.toContain("mask_fins");
+});
+
+// Issue #2796: `courses.gear_included` is undeclared at runtime for one release
+// while the migration barrel keeps the physical column, so no generated
+// migration drops it before the release that stopped reading it is serving.
+it("keeps courses.gear_included in the migration barrel only, beside the runtime's columns", async () => {
+  const names = (table: typeof courses | typeof migrationCourses) =>
+    getTableConfig(table)
+      .columns.map((column) => column.name)
+      .sort();
+  expect(names(courses)).not.toContain("gear_included");
+  expect(names(courses)).toContain("included_rental_kinds");
+  expect(names(migrationCourses)).toEqual([...names(courses), "gear_included"].sort());
+  await ctx.db.select().from(courses).limit(1);
 });

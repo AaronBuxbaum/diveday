@@ -1,0 +1,1 @@
+ALTER TABLE "courses" ADD COLUMN "included_rental_kinds" jsonb DEFAULT '[]' NOT NULL;

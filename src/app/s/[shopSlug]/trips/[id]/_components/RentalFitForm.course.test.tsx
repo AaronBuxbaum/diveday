@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { RentalPricing } from "@/lib/rentals";
+import type { RentableItemKind, RentalPricing } from "@/lib/rentals";
 import { renderDiver } from "@/test/intl";
 import { RentalFitForm } from "./RentalFitForm";
 
@@ -30,7 +30,7 @@ describe("RentalFitForm on a course that includes the gear", () => {
         action={mockAction}
         rentalFit={null}
         rentalItems={["bcd", "wetsuit", "fins"]}
-        course={{ nitroxCompatible: false, gearIncluded: true }}
+        course={{ nitroxCompatible: false, includedRentalKinds: ["bcd", "regulator", "weights"] }}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -55,7 +55,7 @@ describe("RentalFitForm on a course that includes the gear", () => {
         action={mockAction}
         rentalFit={null}
         rentalItems={["bcd", "regulator", "wetsuit", "fins", "weights", "nitrox"]}
-        course={{ nitroxCompatible: true, gearIncluded: true }}
+        course={{ nitroxCompatible: true, includedRentalKinds: ["bcd", "regulator", "weights"] }}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -78,7 +78,7 @@ describe("RentalFitForm on a course that includes the gear", () => {
         action={mockAction}
         rentalFit={null}
         rentalItems={["bcd", "wetsuit", "fins"]}
-        course={{ nitroxCompatible: false, gearIncluded: false }}
+        course={{ nitroxCompatible: false, includedRentalKinds: [] }}
         pricing={defaultPricing}
         wantsNitrox={false}
         nitroxCardVerified={false}
@@ -89,5 +89,51 @@ describe("RentalFitForm on a course that includes the gear", () => {
     );
     expect(document.body.textContent).toMatch(/\$15\.00/);
     expect(screen.queryByText(/comes with the course/)).toBeNull();
+  });
+});
+
+/**
+ * **A course fee that includes a set of its own** (issue #2796): the sizes
+ * form asks about what the fee includes with no price, keeps the shop's price
+ * on the scuba unit and the suit when the fee leaves them out, and leaves the
+ * personal gear the fee leaves out to the student.
+ */
+describe("RentalFitForm on a course that includes a set of kinds", () => {
+  const form = (includedRentalKinds: RentableItemKind[]) =>
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "regulator", "wetsuit", "mask", "fins", "weights"]}
+        course={{ nitroxCompatible: false, includedRentalKinds }}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+
+  it("asks sizes for the suit, mask and fins the fee includes, with no price anywhere", () => {
+    form(["bcd", "regulator", "wetsuit", "mask", "fins", "weights"]);
+    expect(
+      screen.getByText(
+        /^Included with the course: Scuba unit \(BCD, regulator, tank, weights\), Wetsuit, Mask,? and Fins\./,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /^Mask/ })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /^Fins/ })).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/\$\d/);
+  });
+
+  it("keeps the scuba unit on offer, at the shop's price, when the fee includes only the suit", () => {
+    form(["wetsuit"]);
+    expect(screen.getByText(/^Included with the course: Wetsuit\./)).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /^BCD/ })).toBeInTheDocument();
+    expect(document.body.textContent).toMatch(/\$15\.00/);
+    // The suit is the fee's.
+    expect(document.body.textContent).not.toMatch(/\$20\.00/);
+    expect(screen.queryByRole("checkbox", { name: /^Mask/ })).toBeNull();
   });
 });

@@ -147,7 +147,12 @@ describe("PackingSection — the logbook line", () => {
       endsAt: new Date("2026-08-12T16:00:00Z"),
       plannedDives: 2,
       waterTemperatureC: null,
-      course: options.course ? { gearIncluded: true, isIntroCourse: options.intro ?? true } : null,
+      course: options.course
+        ? {
+            includedRentalKinds: ["bcd", "regulator", "weights"],
+            isIntroCourse: options.intro ?? true,
+          }
+        : null,
     } as unknown as Trip;
     return render(
       <PackingSection
@@ -185,5 +190,47 @@ describe("PackingSection — the logbook line", () => {
   it("never suggests one the shop has switched off", () => {
     renderBring({ packingLogbook: false, course: false, holdsCertification: true });
     expect(screen.queryByText("Logbook")).not.toBeInTheDocument();
+  });
+});
+
+/** **"Bring" and "Provided" follow what the course fee includes** (issue #2796). */
+describe("PackingSection — a course's included gear", () => {
+  function renderCourse(includedRentalKinds: string[]) {
+    const trip = {
+      startsAt: new Date("2026-08-12T12:00:00Z"),
+      endsAt: new Date("2026-08-12T16:00:00Z"),
+      plannedDives: 2,
+      waterTemperatureC: null,
+      course: { includedRentalKinds, isIntroCourse: false },
+    } as unknown as Trip;
+    return render(
+      <PackingSection
+        shop={{ ...shop, packingLogbook: false } as Shop}
+        trip={trip}
+        multiDay={false}
+        holdsCertification={false}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+  }
+
+  const column = (heading: string) =>
+    screen.getByRole("heading", { name: heading }).parentElement?.textContent ?? "";
+
+  it("asks the student to bring mask and fins when the fee is the scuba unit", () => {
+    renderCourse(["bcd", "regulator", "weights"]);
+    expect(column("Bring")).toContain("Mask");
+    expect(column("Bring")).toContain("Fins");
+    expect(column("We provide")).toContain("Scuba unit (BCD, regulator, tank, weights)");
+  });
+
+  it("moves mask, fins and the wetsuit under Provided when the fee includes them", () => {
+    renderCourse(["bcd", "regulator", "wetsuit", "mask", "fins", "weights"]);
+    expect(column("We provide")).toContain("Wetsuit");
+    expect(column("We provide")).toContain("Mask");
+    expect(column("We provide")).toContain("Fins");
+    expect(column("Bring")).not.toContain("Mask");
+    expect(column("Bring")).toContain("Snorkel");
+    expect(column("Bring")).toContain("Boots");
   });
 });

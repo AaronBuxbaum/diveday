@@ -1,8 +1,9 @@
+import type { RentableItemKind } from "@/lib/rentals";
 import type { Trip } from "../_components/types";
 
 /**
  * **The departure as the booking form sees it**: the facts the client
- * component reads (its seats, its dives, and its course's age and gas rules, and whether its fee includes the gear), and nothing else (security review, code review 2026-10-13
+ * component reads (its seats, its dives, and its course's age and gas rules, and which rental kinds its fee includes), and nothing else (security review, code review 2026-10-13
  * layer C, item 2).
  *
  * `getTripWithBooked` answers with the whole trip row joined to its dive site
@@ -16,7 +17,11 @@ export type BookingFormTrip = {
   capacity: number;
   booked: number;
   plannedDives: number;
-  course: { minimumAge: number | null; nitroxCompatible: boolean; gearIncluded: boolean } | null;
+  course: {
+    minimumAge: number | null;
+    nitroxCompatible: boolean;
+    includedRentalKinds: RentableItemKind[];
+  } | null;
 };
 
 export function bookingFormTrip(
@@ -30,7 +35,7 @@ export function bookingFormTrip(
       ? {
           minimumAge: trip.course.minimumAge,
           nitroxCompatible: trip.course.nitroxCompatible,
-          gearIncluded: trip.course.gearIncluded,
+          includedRentalKinds: trip.course.includedRentalKinds,
         }
       : null,
   };

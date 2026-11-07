@@ -14,7 +14,7 @@ import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { publicCoursePath } from "@/lib/public-routes";
 import { type ReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
 import { noCertificationStands } from "@/lib/readiness";
-import type { RentalPricing } from "@/lib/rentals";
+import type { RentableItemKind, RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
 import { type DiveDayMilestone, diveDayMilestone } from "@/lib/visit-milestones";
@@ -202,11 +202,11 @@ export type ReadyPageData = {
     /**
      * Only what the gear step needs, never the whole catalog row: whether a
      * session of this course may run on enriched air (`nitroxAvailableOn`,
-     * src/lib/rentals.ts), and whether its rental gear is part of the course
-     * fee, which takes the prices off the sizes form. Null on an ordinary
+     * src/lib/rentals.ts), and which rental kinds its fee includes, which
+     * the sizes form asks about with no price (issue #2796). Null on an ordinary
      * charter, which the gate reads as "the shop's answer is the whole answer".
      */
-    course: { nitroxCompatible: boolean; gearIncluded: boolean } | null;
+    course: { nitroxCompatible: boolean; includedRentalKinds: RentableItemKind[] } | null;
     /**
      * What this seat costs on this departure (`seatListPriceCents`): the fare
      * for its participant type, or null on an unpriced trip. The thread's
@@ -790,7 +790,10 @@ export async function getReadyPageData(
       arrivalLookFor: trip.arrivalLookFor,
       arrivalFirstInteraction: trip.arrivalFirstInteraction,
       course: trip.course
-        ? { nitroxCompatible: trip.course.nitroxCompatible, gearIncluded: trip.course.gearIncluded }
+        ? {
+            nitroxCompatible: trip.course.nitroxCompatible,
+            includedRentalKinds: trip.course.includedRentalKinds,
+          }
         : null,
       seatPriceCents: perDiverPriceCents,
     },

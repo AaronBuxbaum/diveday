@@ -91,11 +91,11 @@ describe("seeded gear-included courses", () => {
   it("are Discover Scuba Diving alone", async () => {
     const { db, shop } = await seededShopContext();
     const rows = await db
-      .select({ slug: courses.slug, gearIncluded: courses.gearIncluded })
+      .select({ slug: courses.slug, included: courses.includedRentalKinds })
       .from(courses)
       .where(eq(courses.shopId, shop.id));
     expect(rows.length).toBeGreaterThan(1);
-    expect(rows.filter((row) => row.gearIncluded).map((row) => row.slug)).toEqual([
+    expect(rows.filter((row) => row.included.length > 0).map((row) => row.slug)).toEqual([
       "discover-scuba-diving",
     ]);
   }, 60_000);

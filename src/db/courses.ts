@@ -32,6 +32,7 @@ import {
 import { type CourseContent, canonicalAgency } from "@/lib/courses";
 import { REFRESHER_TEMPLATE_SLUGS } from "@/lib/re-entry";
 import type { CertificationLevel } from "@/lib/readiness";
+import { type RentableItemKind, toIncludedRentalKinds } from "@/lib/rentals";
 import type { AppDb, DbExecutor } from "./client";
 import { attachStandardCourseForms, courseFormsAwaitingTextByCourse } from "./course-forms";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -51,8 +52,8 @@ export type NewCourse = {
   minimumCertificationLevel?: CertificationLevel | null;
   /** Whether a session of this course may run on enriched air — see the column's own note. */
   nitroxCompatible?: boolean;
-  /** Whether rental gear is part of the course fee — see the column's own note. */
-  gearIncluded?: boolean;
+  /** The rental kinds the course fee includes — see the column's own note. */
+  includedRentalKinds?: RentableItemKind[];
 } & Partial<CourseContent>;
 
 /**
@@ -64,7 +65,11 @@ export type NewCourse = {
  */
 export type CoursePatch = Pick<
   NewCourse,
-  "priceCents" | "eLearningPriceCents" | "privatePriceCents" | "nitroxCompatible" | "gearIncluded"
+  | "priceCents"
+  | "eLearningPriceCents"
+  | "privatePriceCents"
+  | "nitroxCompatible"
+  | "includedRentalKinds"
 >;
 
 /**
@@ -483,7 +488,9 @@ export async function editCourse(db: AppDb, shopId: string, courseId: string, in
       // did not have it and the column keeps its own default rather than
       // silently flipping.
       ...(input.nitroxCompatible === undefined ? {} : { nitroxCompatible: input.nitroxCompatible }),
-      ...(input.gearIncluded === undefined ? {} : { gearIncluded: input.gearIncluded }),
+      ...(input.includedRentalKinds === undefined
+        ? {}
+        : { includedRentalKinds: toIncludedRentalKinds(input.includedRentalKinds) }),
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();

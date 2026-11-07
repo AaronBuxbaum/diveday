@@ -13,10 +13,13 @@ import type { EditableCourse } from "./course-types";
 export function CourseGlanceSection({
   course,
   glance,
+  rentalItems,
   t,
 }: {
   course: EditableCourse;
   glance: CourseSectionRef;
+  /** The shop's rental catalog, for the kinds the course fee can include. */
+  rentalItems: readonly string[];
   t: StaffTranslator;
 }) {
   return (
@@ -46,7 +49,7 @@ export function CourseGlanceSection({
       {/* Filed with how the course *runs* rather than with who may take
             it: the shop's own calls about its own gas and its own gear, not
             agency admission rules like the facts in the next section. */}
-      <CourseSwitches course={course} t={t} />
+      <CourseSwitches course={course} rentalItems={rentalItems} t={t} />
     </CourseSection>
   );
 }

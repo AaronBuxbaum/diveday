@@ -307,7 +307,12 @@ export default async function EditCoursePage({
                   ) : undefined
                 }
               />
-              <CourseGlanceSection course={course} glance={glance} t={t} />
+              <CourseGlanceSection
+                course={course}
+                glance={glance}
+                rentalItems={shop.rentalItems}
+                t={t}
+              />
               <CourseDayByDaySection course={course} dayByDay={dayByDay} t={t} />
 
               <DisclosureRowList className="print:[&>details:not([open])]:hidden">

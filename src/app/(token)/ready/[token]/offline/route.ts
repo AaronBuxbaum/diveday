@@ -80,7 +80,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
     fullShop?.packingList ?? [],
     data.rentalFit,
     (fullShop?.briefingMinutes ?? 15) > 0,
-    data.trip.course?.gearIncluded === true,
+    data.trip.course?.includedRentalKinds ?? [],
   );
   const snapshot = buildReadySnapshot({
     locale: await requestLocale(shop.defaultLocale),

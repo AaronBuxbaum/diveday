@@ -51,7 +51,7 @@ import {
  * shop has priced rental gear online (`hasAnyRentalPricing`) — a shop that
  * hasn't priced anything keeps today's flow unchanged.
  *
- * **A course whose fee includes the gear rents nothing here** (issue #2795,
+ * **A course whose fee includes any gear rents nothing here** (issues #2795, #2796,
  * `checkoutRentableItems`): no rental question, no rental price and no gear
  * total. Its sizes are asked on `/ready`. The nitrox fill, where the course
  * runs on it, is the step's one question and keeps its price.
@@ -77,9 +77,10 @@ export function BookingGearFields({
    * The course this departure teaches, or null on an ordinary charter — read
    * for whether it may run on enriched air (`nitroxAvailableOn`), so a course
    * that runs on air has no nitrox box however much nitrox the shop fills, and
-   * whether its fee includes the gear, which takes the rental off this step.
+   * whether its fee includes any rental kinds, which takes the rental off this
+   * step (`checkoutRentableItems`).
    */
-  course: { nitroxCompatible: boolean; gearIncluded: boolean } | null;
+  course: { nitroxCompatible: boolean; includedRentalKinds: readonly RentableItemKind[] } | null;
   pricing: RentalPricing;
   plannedDives: number;
   currency: ShopCurrency;
@@ -100,7 +101,7 @@ export function BookingGearFields({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const gearIncluded = course?.gearIncluded === true;
+  const gearIncluded = (course?.includedRentalKinds.length ?? 0) > 0;
   const offered = checkoutRentableItems(rentalItems, course).filter((item) =>
     rentsKind(participantType, item.kind),
   );
