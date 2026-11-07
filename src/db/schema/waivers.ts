@@ -104,6 +104,24 @@ export const waiverRecordStatus = pgEnum("waiver_record_status", [
 ]);
 
 /**
+ * **Which kind of door a release was signed through** (issue #4045):
+ * `thread` the diver's own readiness link, `counter` a counter code or Copy
+ * link (`waiver_link`), `party_door` a party lead signing a child's seat on
+ * the lead's link, `release_link` a link mailed or texted to the contact on
+ * file, `desk` a paper release a staffer attested. A kind, never a link id:
+ * erasure deletes the link rows and has nothing here to chase.
+ */
+export const waiverSignedVia = pgEnum("waiver_signed_via", [
+  "thread",
+  "counter",
+  "party_door",
+  "release_link",
+  "desk",
+]);
+
+export type WaiverSignedVia = (typeof waiverSignedVia.enumValues)[number];
+
+/**
  * A completed diver medical questionnaire. Stores the questionnaire id and
  * version it was answered against (src/lib/medical.ts) so signed evidence is
  * never re-interpreted by a later edit to the question set; `responses` maps
@@ -430,6 +448,18 @@ export const waiverRecords = pgTable(
      * compared with a live link's id, and a deleted link matches nothing.
      */
     draftViaLinkId: uuid("draft_via_link_id"),
+    /**
+     * **The kind of door the signature came through** (`waiverSignedVia`,
+     * issue #4045): since #4008 a counter code and a mailed link can both sign
+     * one release, and "at the counter or from the diver's own email" is an
+     * evidence question the spent link alone cannot answer once erasure has
+     * deleted it. Written in the same pending-guarded update as the signature
+     * (`completeWaiver`) or the paper insert (`recordInPersonWaiver`); null on
+     * an imported release. Inside the seal **only when not null**, versions 1
+     * to 4, so every older seal still verifies; it names nobody, so erasure
+     * keeps it.
+     */
+    signedVia: waiverSignedVia("signed_via"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),

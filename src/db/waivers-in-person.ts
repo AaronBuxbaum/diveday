@@ -504,6 +504,8 @@ export async function recordInPersonWaiver(
         recordedByPersonId: attestedBy,
         consentedAt: evidence.consentedAt,
         signedAt: evidence.signedAt,
+        // Sealed below with the rest (issue #4045).
+        signedVia: "desk",
         completedAt: now,
         ...(guardian && guardianRelationship
           ? {

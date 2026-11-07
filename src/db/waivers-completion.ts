@@ -34,7 +34,7 @@ import {
 } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
-import type { DraftGuardian, MedicalAnswers } from "./schema";
+import type { DraftGuardian, MedicalAnswers, WaiverSignedVia } from "./schema";
 import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
@@ -109,6 +109,12 @@ export type CounterWaiverKey = LinkWaiverKey & { readonly kind: "counter" };
  */
 export type ThreadWaiverKey = {
   readonly kind: "thread";
+  /**
+   * Whose link it is: the diver's own (`thread`), or a party lead's on a
+   * child's seat (`party_door`, `partySeatWaiverKey`). Recorded on the
+   * signature (`signed_via`, issue #4045); it widens nothing.
+   */
+  readonly via: "thread" | "party_door";
   readonly shopId: string;
   readonly bookingId: string;
   readonly recordId: string;
@@ -135,6 +141,7 @@ const issuedLinkKeys = new WeakSet<LinkWaiverKey>();
 export async function threadWaiverKey(
   db: DbExecutor,
   input: { shopId: string; bookingId: string },
+  via: ThreadWaiverKey["via"] = "thread",
 ): Promise<ThreadWaiverKey | null> {
   const [row] = await db
     .select({
@@ -184,6 +191,7 @@ export async function threadWaiverKey(
   }
   const key: ThreadWaiverKey = Object.freeze({
     kind: "thread",
+    via,
     shopId: input.shopId,
     bookingId: input.bookingId,
     recordId: row.id,
@@ -1171,6 +1179,8 @@ async function completeWaiverLocked(
       shopAnswers: shopAnswers.snapshot,
       // Sealed with the signature only when there is one (`signedMetadata`).
       medicalAlert: medicalAlert.value,
+      // Which kind of door signed (issue #4045), sealed with the signature.
+      signedVia: signedViaFor(token),
       completedAt: now,
       // The guardian's half, on a minor's release only. The draft goes with
       // the rest of the unsubmitted state: what was typed is now what was
@@ -1319,4 +1329,10 @@ export async function doorNeedsDeskGuardian(
 
 function isCounterKey(token: WaiverKey): token is CounterWaiverKey {
   return token.kind === "counter";
+}
+
+/** The kind of door a key is, as the signature records it (`signed_via`, issue #4045). */
+function signedViaFor(token: WaiverKey): WaiverSignedVia {
+  if (token.kind === "thread") return token.via;
+  return token.kind === "counter" ? "counter" : "release_link";
 }

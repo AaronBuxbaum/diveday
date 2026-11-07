@@ -357,6 +357,8 @@ export async function getSignedWaiverForDiver(
     signedAt: record.signedAt ?? record.completedAt,
     signedName: identityHeld ? null : record.signedName,
     signatureMethod: record.signatureMethod,
+    /** Which kind of door signed it (issue #4045); null on an import. */
+    signedVia: record.signedVia,
     recorderName: row.recorderName,
     recordedAt: record.completedAt,
     templateTitle: record.templateTitle,

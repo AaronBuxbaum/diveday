@@ -1,0 +1,80 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d7150238-725b-4cf3-b6d3-39d122a9cdd2",
+  "prevIds": [
+    "ca599ed3-e0a5-4067-b782-e6a37a50781b"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "waiver_signed_via"
+      ],
+      "writes": [
+        "s|enum|public.waiver_signed_via",
+        "n|enum|public.waiver_signed_via",
+        "e|enum|public.waiver_signed_via",
+        "n|type|public.waiver_signed_via"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "signed_via"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.signed_via",
+        "n|col|public.waiver_records.signed_via",
+        "e|col|public.waiver_records.signed_via"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public",
+        "n|enum|public.waiver_signed_via"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "waiver_signed_via",
+        "values": [
+          "thread",
+          "counter",
+          "party_door",
+          "release_link",
+          "desk"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_records",
+        "name": "signed_via",
+        "type": "waiver_signed_via",
+        "typeSchema": "public",
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

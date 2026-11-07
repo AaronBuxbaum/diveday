@@ -109,6 +109,7 @@ export const WAIVER_SEALED_FIELDS = [
   "medicalReviewRequired",
   "shopAnswers",
   "medicalAlert",
+  "signedVia",
   "guardianName",
   "guardianRelationship",
   "guardianEmail",
@@ -193,7 +194,18 @@ export function signedIntegrityVersionFor(
  * diver wrote one (`medical_alert` not null; `readMedicalAlert` never stores
  * `""`), inherited by versions 3 and 4, left out of version 2, and a version 2
  * row that carries one reads `invalid`. Recorded in the same ADR amendment.
+ *
+ * **A third conditional key: `signedVia`** (issue #4045), the kind of door
+ * the signature came through, present only when recorded (every release
+ * signed since the column, imports excepted), inherited by versions 3 and 4.
+ * Unlike the two above it is **also inside version 2**, on the same terms:
+ * it names nobody, and erasure deletes the link rows that were the only
+ * other trace of it.
  */
+function signedViaKey(record: WaiverSealedFields): { signedVia?: string } {
+  return record.signedVia != null ? { signedVia: record.signedVia } : {};
+}
+
 function signedMetadata(record: WaiverSealedFields): { [key: string]: IntegrityValue } {
   return {
     // Spread first and only when present: an absent key, not a null one, is
@@ -202,6 +214,7 @@ function signedMetadata(record: WaiverSealedFields): { [key: string]: IntegrityV
       ? { shopAnswers: record.shopAnswers as unknown as IntegrityValue }
       : {}),
     ...(record.medicalAlert != null ? { medicalAlert: record.medicalAlert } : {}),
+    ...signedViaKey(record),
     id: record.id,
     shopId: record.shopId,
     bookingId: record.bookingId,
@@ -254,6 +267,9 @@ function signedMetadata(record: WaiverSealedFields): { [key: string]: IntegrityV
  */
 function erasedMetadata(record: WaiverSealedFields): IntegrityValue {
   return {
+    // Which kind of door signed survives erasure; absent when never recorded,
+    // so an older erased seal still verifies.
+    ...signedViaKey(record),
     version: WAIVER_INTEGRITY_VERSION_ERASED,
     id: record.id,
     shopId: record.shopId,

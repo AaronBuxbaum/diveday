@@ -102,3 +102,19 @@ characters. It is what the diver signed beside, so the seal covers it, by the ru
   never exported, joins the shared draft-column list and is cleared on signing.
 - The alert never feeds readiness, admission, referral or any count. The seal makes it evidence of
   what the diver wrote, not of anything about their fitness.
+
+## Amendment 2026-11-07 — the door a release was signed through is a third conditional key
+
+Since #4008 a counter code and a link mailed to the contact on file can both sign one release, and
+erasure deletes the link rows that were the only trace of which one did. A signed record now says
+it: `waiver_records.signed_via` (glossary *Signed via*, issue #4045), one of `thread`, `counter`,
+`party_door`, `release_link`, `desk`, written in the same guarded update as the signature or the
+paper insert.
+
+- **The key is conditional**, on the same terms as the two above: `signedVia` joins the field set
+  only when the column is not null, so every release sealed before it, and every import, keeps its
+  digest byte for byte.
+- **Versions 3 and 4 inherit it, and so does version 2.** Unlike the answers and the alert it names
+  nobody, and it is the erased release's only record of how it was signed, so erasure keeps it and
+  the version 2 seal covers it when present.
+- It is a kind, never a link id: erasure has nothing in it to chase.

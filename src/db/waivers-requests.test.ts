@@ -274,6 +274,7 @@ describe("waiver records (in-memory PGlite)", () => {
     if (!sent.ok) throw new Error("expected the link to issue");
     const forged = {
       kind: "thread" as const,
+      via: "thread" as const,
       shopId: shop.id,
       bookingId: crypto.randomUUID(),
       recordId: sent.recordId,

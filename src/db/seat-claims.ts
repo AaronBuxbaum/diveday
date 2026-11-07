@@ -1110,10 +1110,11 @@ export async function partySeatWaiverKey(
 ): Promise<{ door: "sign" | "physician"; key: ThreadWaiverKey } | null> {
   const seat = await minorSeatForLead(db, { ...input, now: input.now ?? nowDate() });
   if (!seat || (seat.door !== "sign" && seat.door !== "physician")) return null;
-  const key = await threadWaiverKey(db, {
-    shopId: input.shopId,
-    bookingId: seat.row.booking.id,
-  });
+  const key = await threadWaiverKey(
+    db,
+    { shopId: input.shopId, bookingId: seat.row.booking.id },
+    "party_door",
+  );
   return key ? { door: seat.door, key } : null;
 }
 
