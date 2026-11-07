@@ -201,6 +201,18 @@ describe("the synthesized stack", () => {
     expect(statement).not.toContain("image-publishing-role");
   });
 
+  it("lets the diff role read published templates so CreateChangeSet can fetch them, read-only", () => {
+    const { template } = synthesize();
+    const statements = policyStatements(template).filter((statement) =>
+      statement.includes('"Sid":"ReadPublishedTemplates"'),
+    );
+    expect(statements).toHaveLength(1);
+    const [statement] = statements;
+    expect(statement).toContain("s3:GetObject");
+    expect(statement).toContain("-assets-");
+    expect(statement).not.toMatch(/s3:(Put|Delete|List)/);
+  });
+
   it("scopes the deploy role's SES read to the one identity, and keeps it read-only", () => {
     const { template } = synthesize();
     const statements = policyStatements(template).filter((statement) =>
