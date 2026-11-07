@@ -2,7 +2,6 @@ import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { nowDate } from "@/lib/clock";
 import { arrivalsWindow } from "@/lib/departure-clock";
-import type { IdentityMatchKind } from "@/lib/identity-match";
 import { OFFLINE_EVENT_SKEW_MS, offlineEventOutOfBounds } from "@/lib/offline-events";
 import { hasArrived, type StandingArrival } from "@/lib/presence";
 import { priorVisitStanding } from "@/lib/prior-visits";
@@ -47,11 +46,10 @@ export type CheckInQueueRow = {
    */
   dateOfBirth: string | null;
   /**
-   * The name a held seat was booked under and why it was matched (H-20260724-one-person-per-email), so
+   * The name a held seat was booked under (H-20260724-one-person-per-email), so
    * the counter can name both people. Null on every seat not held.
    */
   identityBookedAs: string | null;
-  identityMatchedBy: IdentityMatchKind | null;
   tripId: string;
   tripTitle: string;
   startsAt: Date;
@@ -201,7 +199,6 @@ export async function listCheckInQueue(
       email: people.email,
       dateOfBirth: people.dateOfBirth,
       identityBookedAs: bookings.identityBookedAs,
-      identityMatchedBy: bookings.identityMatchedBy,
       tripId: trips.id,
       tripTitle: trips.title,
       startsAt: trips.startsAt,

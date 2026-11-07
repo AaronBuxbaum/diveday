@@ -1080,6 +1080,50 @@ export async function staleBookingCapabilityForToken(
 }
 
 /**
+ * **A dead claim link's shop, and what became of its seat** (the claim page
+ * says what happened, Aaron 2026-11-06). Matches like
+ * `staleBookingCapabilityForToken`, and returns no id: the shop's published
+ * columns, the seat's status and claim stamp, and the trip's status, start and
+ * deletion stamp. Nothing about any person, and nothing to key a further read
+ * by.
+ */
+export async function staleClaimSeat(
+  db: DbExecutor,
+  token: string,
+): Promise<{
+  shop: Pick<typeof shops.$inferSelect, "name" | "contactEmail" | "contactPhone" | "defaultLocale">;
+  seat: Pick<typeof bookings.$inferSelect, "status" | "claimedAt">;
+  trip: Pick<typeof trips.$inferSelect, "status" | "startsAt" | "deletedAt">;
+} | null> {
+  const matches = rowMatchingToken(token, "claim");
+  if (!matches) return null;
+  const [row] = await db
+    .select({
+      shop: {
+        name: shops.name,
+        contactEmail: shops.contactEmail,
+        contactPhone: shops.contactPhone,
+        defaultLocale: shops.defaultLocale,
+      },
+      seat: { status: bookings.status, claimedAt: bookings.claimedAt },
+      trip: { status: trips.status, startsAt: trips.startsAt, deletedAt: trips.deletedAt },
+    })
+    .from(bookingCapabilities)
+    .innerJoin(shops, eq(shops.id, bookingCapabilities.shopId))
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.id, bookingCapabilities.bookingId),
+        eq(bookings.shopId, bookingCapabilities.shopId),
+      ),
+    )
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .where(matches)
+    .limit(1);
+  return row ?? null;
+}
+
+/**
  * **The booking behind a dead readiness link — for the rescue, and nothing
  * else.**
  *

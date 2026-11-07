@@ -27,6 +27,10 @@ const diver = diverTranslator("en-US");
 /** A counter code opens straight to its form on any phone (#4064). */
 async function openCounterCode(phone: Page) {
   await expect(phone.getByLabel("Type your full name")).toBeVisible();
+  // The form is server-drawn first; a press before React owns it can be lost.
+  await expect(
+    phone.locator('[data-testid="counter-time-left"][data-hydrated="true"]'),
+  ).toHaveCount(1);
 }
 
 test("a minor scans their own waiver on a signed-out phone and a guardian signs", async ({

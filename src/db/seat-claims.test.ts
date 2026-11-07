@@ -498,7 +498,7 @@ describe("claimPartySeat", () => {
     ).toBe(true);
   });
 
-  it("reuses an existing person by email and flags a name that doesn't match (H-20260724-one-person-per-email)", async () => {
+  it("reuses an existing person by email, and gives a different name on that address its own record", async () => {
     const { db, shop, open } = await seededContext();
     const existing = await createDiver(db, {
       shopId: shop.id,
@@ -508,17 +508,17 @@ describe("claimPartySeat", () => {
     if (!existing) throw new Error("diver setup failed");
     const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);
 
-    // Matching name: clean reuse, no flag.
+    // Matching name: clean reuse.
     const tokenOne = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
     const matched = await claimPartySeat(db, {
       token: tokenOne,
       fullName: "Sasha Reyes",
       email: "sasha@example.com",
     });
-    expect(matched).toMatchObject({ ok: true, personId: existing.id, identityUnconfirmed: false });
+    expect(matched).toMatchObject({ ok: true, personId: existing.id });
 
-    // Mismatched name against a second existing person: reused but flagged,
-    // so readiness fails closed until staff confirm.
+    // Another name on a second diver's address (a shared inbox): the claimant
+    // gets a record of their own, holding no address, and nothing is held.
     const second = await createDiver(db, {
       shopId: shop.id,
       fullName: "Tomás Vega",
@@ -526,20 +526,18 @@ describe("claimPartySeat", () => {
     });
     if (!second) throw new Error("diver setup failed");
     const tokenTwo = await claimTokenFor(db, shop.id, lead.bookingId, memberTwo.bookingId);
-    const mismatched = await claimPartySeat(db, {
+    const other = await claimPartySeat(db, {
       token: tokenTwo,
       fullName: "Somebody Else",
       email: "tomas@example.com",
       phone: "+1-305-555-0177",
     });
-    expect(mismatched).toMatchObject({ ok: true, personId: second.id, identityUnconfirmed: true });
-    const [row] = await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.id, memberTwo.bookingId))
-      .limit(1);
-    expect(row?.identityUnconfirmedAt).not.toBeNull();
-    // An unconfirmed identity writes no contact data onto the matched record.
+    if (!other.ok || other.personId === second.id) throw new Error("claim not its own record");
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, memberTwo.bookingId));
+    expect(row).toMatchObject({ personId: other.personId, deliveryEmail: "tomas@example.com" });
+    const [own] = await db.select().from(people).where(eq(people.id, other.personId));
+    expect(own).toMatchObject({ fullName: "Somebody Else", email: null });
+    // Nothing is written onto the record that holds the address.
     const [tomas] = await db.select().from(people).where(eq(people.id, second.id));
     expect(tomas?.phone).toBeNull();
   });
@@ -562,7 +560,7 @@ describe("claimPartySeat", () => {
       email: "sasha@example.com",
       phone: "305-555-0142",
     });
-    expect(matched).toMatchObject({ ok: true, personId: existing.id, identityUnconfirmed: false });
+    expect(matched).toMatchObject({ ok: true, personId: existing.id });
 
     // Not the bare national number the claimant typed. A public form is exactly
     // where an unnormalised row comes from, and a bare row's meaning follows
@@ -980,7 +978,7 @@ describe("claimPartySeat", () => {
  * still earns the shop's hand — which is the case a diver is likeliest to be
  * holding.
  */
-describe("getClaimPageState (what a dead claim link may name)", () => {
+describe("getClaimPageState (what a dead claim link may name and say)", () => {
   it("renders the form while the seat can still change hands", async () => {
     const { db, shop, open } = await seededContext();
     const { lead, memberOne } = await bookParty(db, shop.id, open.id);
@@ -1005,6 +1003,7 @@ describe("getClaimPageState (what a dead claim link may name)", () => {
     const state = await getClaimPageState(db, token);
     expect(state).toEqual({
       kind: "dead",
+      cause: "claimed",
       shop: {
         name: shop.name,
         contactEmail: shop.contactEmail,
@@ -1027,6 +1026,7 @@ describe("getClaimPageState (what a dead claim link may name)", () => {
     expect(state.kind).toBe("dead");
     if (state.kind !== "dead") throw new Error("unreachable");
     expect(state.shop.name).toBe(shop.name);
+    expect(state.cause).toBe("ended");
   });
 
   it("names the shop on a live link whose boat has already sailed", async () => {
@@ -1048,20 +1048,13 @@ describe("getClaimPageState (what a dead claim link may name)", () => {
     expect(state.kind).toBe("dead");
     if (state.kind !== "dead") throw new Error("unreachable");
     expect(state.shop.name).toBe(shop.name);
+    expect(state.cause).toBe("departed");
   });
 
   /**
-   * **The two causes that decide what the sentence may say.**
-   *
    * A shop calls Saturday off for weather, or takes one seat off the boat.
-   * `verifyBookingCapability` fails closed on both — cancelling the trip
-   * revokes nothing and simply stops verifying, cancelling the seat revokes
-   * every link over it — so both land here, in the same arm as a spent link,
-   * and every party member who taps the URL the organizer forwarded into the
-   * group chat reads whatever that arm says. They are the reason it may not say
-   * the seat is safe or offer a fresh link: for these two the seat is gone, and
-   * the organizer's panel has nothing left to hand out (the
-   * `issuePartySeatClaims` test above).
+   * `verifyBookingCapability` fails closed on both, and the page says which:
+   * every party member who taps the forwarded URL learns the seat is gone.
    */
   it("names the shop when the shop called the departure off", async () => {
     const { db, shop, open } = await seededContext();
@@ -1074,6 +1067,7 @@ describe("getClaimPageState (what a dead claim link may name)", () => {
     expect(state.kind).toBe("dead");
     if (state.kind !== "dead") throw new Error("unreachable");
     expect(state.shop.name).toBe(shop.name);
+    expect(state.cause).toBe("trip_cancelled");
   });
 
   it("names the shop when the seat itself was canceled", async () => {
@@ -1087,6 +1081,7 @@ describe("getClaimPageState (what a dead claim link may name)", () => {
     expect(state.kind).toBe("dead");
     if (state.kind !== "dead") throw new Error("unreachable");
     expect(state.shop.name).toBe(shop.name);
+    expect(state.cause).toBe("seat_cancelled");
   });
 
   it("names nothing at all for a token that was never ours", async () => {

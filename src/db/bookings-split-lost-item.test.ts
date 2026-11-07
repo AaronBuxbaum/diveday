@@ -30,10 +30,10 @@ describe("splitBookingIdentity and a found item on the held seat", () => {
       actor: "staff",
       shopId: shop.id,
       tripId: night.id,
-      fullName: "Ben Quinn",
-      email: "nora@example.com",
+      personId: first.personId,
+      fromNameMatch: { typedName: "Ben Quinn" },
     });
-    if (!shared.ok) throw new Error("shared-inbox booking failed");
+    if (!shared.ok) throw new Error("held-seat booking failed");
     const [staffer] = await listStaff(db, shop.id);
     if (!staffer) throw new Error("expected seeded staff");
 
@@ -80,10 +80,10 @@ describe("splitBookingIdentity and a found item on the held seat", () => {
       actor: "staff",
       shopId: shop.id,
       tripId: other.id,
-      fullName: "Ben Quinn",
-      email: "nora-told@example.com",
+      personId: first.personId,
+      fromNameMatch: { typedName: "Ben Quinn" },
     });
-    if (!shared.ok) throw new Error("shared-inbox booking failed");
+    if (!shared.ok) throw new Error("held-seat booking failed");
     const [staffer] = await listStaff(db, shop.id);
     if (!staffer) throw new Error("expected seeded staff");
     const recorded = await recordLostItem(db, {

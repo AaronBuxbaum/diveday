@@ -145,7 +145,6 @@ describePostgres("flying guidance erasure races", () => {
       .set({
         identityUnconfirmedAt: now,
         identityBookedAs: "Race Diver",
-        identityMatchedBy: "picked_name",
       })
       .where(eq(bookings.id, bookingId));
     const [replacement] = await pg.db

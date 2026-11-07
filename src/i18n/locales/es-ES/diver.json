@@ -927,7 +927,6 @@
     "cancelPartyStays": "{count, plural, one {Sigue reservada} other {Siguen reservadas}}: {names}",
     "cancelPartyRefund": "El centro reembolsa {count, plural, one {esa plaza} other {esas plazas}} de la misma manera.",
     "cancelConfirmButton": "Sí, cancelar mi plaza",
-    "cancelling": "Cancelando…",
     "cancelPreviewRefund": "Todavía estás dentro del plazo de cancelación gratuita, así que se te devuelve lo pagado.",
     "cancelPreviewForfeit": "Has pasado el plazo de cancelación gratuita, así que lo pagado no se devuelve.",
     "cancelPreviewNoPolicy": "Este centro no automatiza las devoluciones por cancelación, así que no se devuelve nada de inmediato.",
@@ -1329,11 +1328,16 @@
     "claiming": "Reclamando…",
     "privacyNote": "Lo que escribas aquí solo lo ven el centro y tú. Quien organiza el grupo solo ve que la plaza está reclamada.",
     "unavailableBody": "Pide un enlace nuevo a quien organiza el grupo o contacta con el centro.",
-    "sentHeading": "Revisa tu correo",
-    "sentBody": "Enviamos un mensaje a la dirección que indicaste. Ahí dice qué sigue.",
+    "claimedHeading": "La plaza es tuya",
+    "claimedNotice": "Tu exención y tu preparación van camino a tu correo.",
+    "claimedBody": "Esta plaza ya se reclamó. Si fuiste tú, tu preparación está en tu correo.",
+    "departedBody": "Este viaje ya salió.",
+    "tripCancelledBody": "El centro canceló este viaje.",
+    "seatCancelledBody": "Esta plaza se canceló.",
     "expiredBody": "Quien te envió este enlace puede decirte qué ha pasado con la plaza.",
     "errors": {
       "checkFields": "Revisa los campos marcados e inténtalo de nuevo.",
+      "alreadyHeld": "Este email ya tiene una plaza en este viaje. Busca su correo de confirmación.",
       "coursePrerequisite": "Esta sesión es un curso con sus propios requisitos, y el centro necesita una certificación verificada archivada antes de que la plaza cambie de manos. Contacta con el centro y lo resolverán."
     },
     "panelHeading": "Las plazas de tu grupo",
@@ -3627,7 +3631,7 @@
       "ready": "Listos · {count}",
       "checkedInGroup": "Registrados · {count}",
       "blocked": "Bloqueado",
-      "heldReason": "Reservó como {bookedAs} con el correo de {name}. Confirma quién es.",
+      "heldReason": "Reservó como {bookedAs} y se asoció a {name} desde la lista de nombres. Confirma quién es.",
       "samePerson": "Misma persona",
       "differentPerson": "Otra persona",
       "checkIn": "Registrar",
@@ -3843,8 +3847,7 @@
     },
     "seatAlreadyHeld": {
       "subject": "Ya tienes una plaza en {tripTitle}",
-      "body": "Alguien usó un enlace para reclamar una plaza de {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada.",
-      "bookingBody": "Alguien intentó reservar {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada."
+      "body": "Alguien intentó reservar {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada."
     },
     "partyNotBooked": {
       "subject": "No se reservó tu grupo para {tripTitle}",

@@ -5,7 +5,7 @@ import { escapeHtml } from "@/lib/html";
 import type { NotificationEmail } from "./email";
 import { notificationGreeting } from "./greeting";
 
-// i18n-exempt-file: the terminal renderer for the held-seat note (#2381), on
+// i18n-exempt-file: the terminal renderer for the held-seat note (#2691), on
 // the same footing as `./course-certified.ts`: no React component picks words
 // for a sent message, so this resolves its own text through `diverTranslator`
 // in the recipient's locale, and every dynamic value is escaped for the html.
@@ -17,24 +17,18 @@ export type SeatAlreadyHeldInput = {
   tripTitle: string;
   startsAt: Date;
   timezone: string;
-  /** The claim link (#2381) or the public booking form (#2691). */
-  attempt: "claim" | "booking";
 };
 
 /**
- * "Someone used a seat-claim link with your address" (or "tried to book",
- * from the public form). "You already have a seat on Two-Tank Reef, so nothing
- * changed." Names the seat the reader already holds and nothing about anyone
- * else's: not the organizer, not the seat or party the attempt was for.
+ * "Someone tried to book Two-Tank Reef with this address. You already hold a
+ * seat on it, so nothing changed." Names the seat the reader already holds and
+ * nothing about anyone else's: not the party the attempt was for.
  */
 export function seatAlreadyHeldEmail(input: SeatAlreadyHeldInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const greeting = notificationGreeting(t, input.diverName);
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
-  const key =
-    input.attempt === "booking"
-      ? "notifications.seatAlreadyHeld.bookingBody"
-      : "notifications.seatAlreadyHeld.body";
+  const key = "notifications.seatAlreadyHeld.body";
   const body = t(key, {
     shopName: input.shopName,
     tripTitle: input.tripTitle,

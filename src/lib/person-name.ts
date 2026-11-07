@@ -7,7 +7,8 @@
  * booking under a shared inbox (a spouse, or a minor booked under a parent's
  * email) and would silently inherit the matched person's verified certs and
  * current waiver. This module answers only that narrow question; the policy
- * (flag the booking, block readiness, require staff confirmation) lives in the
+ * (a different name gets a record of its own, holding no address; a name the
+ * counter picked off its prompt is held for staff to confirm) lives in the
  * booking flow and the readiness engine.
  *
  * The comparison fails toward "does not match" — a genuine mismatch is never

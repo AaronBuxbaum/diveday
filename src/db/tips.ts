@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/checkout";
+import { bookingAddress } from "./booking-address";
 import { tipCheckout } from "./checkout-purpose";
 import type { AppDb, DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
@@ -171,7 +172,7 @@ export async function startTipCheckout(
     .select({
       shopId: bookings.shopId,
       tripId: bookings.tripId,
-      email: people.email,
+      email: bookingAddress,
       status: bookings.status,
       tipsEnabled: shops.tipsEnabled,
     })

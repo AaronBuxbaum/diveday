@@ -126,7 +126,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
     "reschedule_missed_place", // the same: whether the meeting point moved too
     ...FLY_SAFE_EXPORT_EXCLUSIONS,
-    "identity_matched_by", // H-20260724-one-person-per-email review state: why the booking was matched
+    ...["identity_matched_by", "delivery_email"], // retired review state; a shared inbox's mail address
     // A held seat's desk-recorded emergency contact (#2145), moved at a split.
     "held_emergency_contact_name",
     "held_emergency_contact_phone",
@@ -170,7 +170,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // *inside* the product is precisely why it does not need to travel outside it.
     "medical_clearance_document_url",
     "diver_medical_form_url",
-    "doctor_unlock_failures", // abuse control on the doctor's page, not part of the record
+    "doctor_unlock_failures", // retired, undeclared, dropped next release
     "integrity_valid", // cached seal verdict (#2562); integrity_hash itself is exported
     "integrity_checked_at", // when that verdict was taken
   ],

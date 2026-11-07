@@ -7,6 +7,13 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A shared inbox is two divers (built 2026-11-06)
+
+- A booking or seat claim on a known email under a different name gets a record of its own, holding
+  no email (its seat keeps the typed address and is mailed there), and is never held for the desk; only the counter's name prompt holds a seat now
+  (H-20260724-one-person-per-email, amendment to
+  [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md)).
+
 ## Embeds are paths (built 2026-11-03)
 
 - A shop's framed calendar is `/s/<slug>/embed/calendar` and a framed departure is
@@ -2462,8 +2469,8 @@ claimable bearer link, so the people the shop has never met stop being names the
 same expiry and live-cap rules as its siblings, redacted before telemetry. Only the organizer's
 already-verified surfaces mint them (the confirmation panel and their `/ready` page), and only for
 unclaimed, non-cancelled member seats on a not-yet-departed trip. Claiming resolves the claimant by
-email with `findOrCreatePerson` semantics — a non-matching name stamps `identity_unconfirmed_at`,
-so nobody inherits verified evidence by typing an email (H-20260724-one-person-per-email) — re-runs the gates a fresh booking
+email with `findOrCreatePerson` semantics — a non-matching name gets a record of its own (since
+2026-11-06), so nobody inherits verified evidence by typing an email (H-20260724-one-person-per-email) — re-runs the gates a fresh booking
 would face, supersedes any waiver signed by the placeholder, and revokes every outstanding
 capability on the booking. Claiming never weakens a gate, and an unclaimed seat simply boards under
 the organizer's party as before. Pay-your-own-share stays out of scope. See

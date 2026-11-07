@@ -53,7 +53,7 @@ const matchedPerson: ManifestDiver = {
 
 const held = (blockers: ReadinessBlocker[]): ManifestDiver => ({
   ...matchedPerson,
-  identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+  identityClaim: { bookedAs: "Maria" },
   readiness: { status: "blocked", blockers },
 });
 
@@ -117,7 +117,7 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
       // Who walks up the gangway, not the matched person.
       fullName: "Maria",
       moreHoldsBehindConfirmation: false,
-      identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+      identityClaim: { bookedAs: "Maria" },
       hotelPickupLocation: "Casa Marina",
       pickupTime: "07:15",
       checkedIn: true,
@@ -166,7 +166,7 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
   it("keeps the matched person's name when the claim never recorded another", () => {
     const shown = withholdHeldSeatParticulars({
       ...held([{ code: "identity_unconfirmed" }]),
-      identityClaim: { bookedAs: null, matchedBy: null },
+      identityClaim: { bookedAs: null },
     });
     expect(shown.fullName).toBe("Maria Santos");
   });
@@ -193,7 +193,7 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
     // ready to board (dive-domain re-review).
     const shown = withholdHeldSeatParticulars({
       ...matchedPerson,
-      identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+      identityClaim: { bookedAs: "Maria" },
       readiness: { status: "ready", blockers: [] },
     });
     expect(shown.readiness).toEqual({

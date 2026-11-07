@@ -34,6 +34,7 @@ import {
 } from "@/lib/reminders";
 import { shopClock } from "@/lib/shop-clock";
 import { temperatureUnitFor } from "@/lib/temperature-units";
+import { bookingRecipient } from "./booking-address";
 import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
@@ -587,7 +588,7 @@ export async function sendDueReminders(
   const rows = await db
     .select({
       booking: bookings,
-      person: people,
+      person: bookingRecipient,
       trip: trips,
       shop: shops,
       // A course session's learning materials (ADR

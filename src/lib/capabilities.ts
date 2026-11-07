@@ -324,7 +324,7 @@ export const CAPABILITY_POLICY = {
   // are only a ceiling. The first phone to save a step claims it, and only that
   // phone is shown the medical answers saved through it. Signing spends it, and
   // a fresh QR leaves the one before working (a phone may be half-way through
-  // it). A diver merge supersedes the unsigned release, so the link opens
+  // it). A diver merge sets the unsigned release aside, so the link opens
   // nothing after it; a replaced contact revokes it; an erasure deletes the
   // links to the person's releases. It is also what Copy link hands staff for
   // a release with no seat (issue #3983), until the end of that day.

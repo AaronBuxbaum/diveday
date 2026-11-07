@@ -224,8 +224,8 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   /**
    * **The flag gates disclosure as well as boarding** (security review
    * 2026-09-11). This seat attached itself to an existing person on a guess
-   * — a reused email under a different name (H-20260724-one-person-per-email), or a name tapped off the
-   * counter's trigram prompt (issue #1556) — and everything the roster knows
+   * — a name tapped off the counter's trigram prompt (H-20260724-one-person-per-email,
+   * issue #1556) — and everything the roster knows
    * about that person is then a fact about *somebody*, not provably about
    * whoever is standing at the counter. Until a staffer confirms it, one
    * mis-tap would otherwise print a real diver's flagged medical answers,
@@ -280,7 +280,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
             blocker.code === "identity_unconfirmed"
               ? identityReasonText(
                   t,
-                  { bookedAs: booking.identityBookedAs, matchedBy: booking.identityMatchedBy },
+                  { bookedAs: booking.identityBookedAs },
                   person.fullName,
                   readinessBlockerText(t, blocker),
                 )

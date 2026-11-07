@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { currentSendActor, scopedSendActor, withSendActor } from "@/lib/notifications/send-actor";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
+import { bookingAddress } from "./booking-address";
 import type { DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
 import { isTransactionExecutor } from "./query-helpers";
@@ -63,7 +64,7 @@ export async function withErasureCoordinatedBookingSend<T>(
       .select({
         personId: people.id,
         tripId: bookings.tripId,
-        email: people.email,
+        email: bookingAddress,
         phone: people.phone,
         deletedAt: people.deletedAt,
         anonymizedAt: people.anonymizedAt,

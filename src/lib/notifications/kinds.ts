@@ -1600,13 +1600,12 @@ const partyPaymentReceiptSchema = z.object({
 });
 
 /**
- * **A seat-claim link was used with the address of someone who already holds a
- * seat on the trip** (#2381, Aaron's option b). The claim page shows the same
- * neutral landing whether the typed address holds a seat or not, so the only
- * answer to "is this address on the trip" goes here, to the inbox that owns it.
- * Carries `heldBookingId`, not `bookingId`, on purpose: it is a note about a
- * claim attempt, not a delivery tracked on that booking. Not queued; the
- * sender throttles it per booking.
+ * **The public booking form was tried with the address of someone who already
+ * holds a seat on the departure** (#2691). The form lands on a neutral page,
+ * so the answer goes here, to the inbox that owns the seat. Carries
+ * `heldBookingId`, not `bookingId`, on purpose: it is a note about an attempt,
+ * not a delivery tracked on that booking. Not queued; the sender throttles it
+ * per booking.
  */
 const seatAlreadyHeldSchema = z.object({
   kind: z.literal("seat_already_held"),
@@ -1619,13 +1618,8 @@ const seatAlreadyHeldSchema = z.object({
   tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
-  /** When the claim was tried; keys the send. */
+  /** When the booking was tried; keys the send. */
   requestedAt: z.date(),
-  /**
-   * Which door the address was tried at: a seat-claim link (#2381) or the
-   * public booking form (#2691). Only the sentence differs.
-   */
-  attempt: z.enum(["claim", "booking"]),
 });
 
 /**
@@ -2486,9 +2480,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // that completes the checkout.
     case "party_payment_receipt":
       return `party-payment-receipt/${notification.checkoutId}`;
-    // One note per held seat per clock hour, however many claims were tried:
+    // One note per held seat per clock hour, however many bookings were tried:
     // the same key for every attempt in the hour, so a limiter outage cannot
-    // turn a loop of claims into a loop of mail (issue #2381).
+    // turn a loop of attempts into a loop of mail.
     case "seat_already_held":
       return `seat-already-held/${notification.heldBookingId}/${Math.floor(notification.requestedAt.getTime() / 3_600_000)}`;
     // Never queued, so this key is never written; exact for the attempt anyway.

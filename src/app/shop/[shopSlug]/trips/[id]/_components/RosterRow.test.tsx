@@ -45,7 +45,6 @@ const seat = {
     hotelPickupLocation: null,
     pickupTime: null,
     identityBookedAs: null,
-    identityMatchedBy: null,
   } as unknown as RosterEntry["booking"],
   person: {
     id: "p-1",
@@ -87,6 +86,7 @@ function contextFor(status: "ready" | "blocked"): RosterRowContext {
       roster: [seat],
       readinessByBooking: new Map([["b-1", readinessRow]]) as unknown as ReadinessByBooking,
       waiverByBooking: new Map() as WaiverByBooking,
+      textableBookings: new Set<string>(),
       rentalFitByBooking: new Map() as RentalFitByBooking,
       nitroxByBooking: new Map() as NitroxByBooking,
       notesByBooking: new Map(),
@@ -460,6 +460,37 @@ describe("blockers and information", () => {
     expect(
       screen.getByRole("link", { name: t("trips.partyWaiverQueue.counter") }).getAttribute("href"),
     ).toMatch(/\/party\/b-1\/waivers$/);
+  });
+  it("offers the counter QR to a number no text can reach, and none to one it can (issue 4039)", () => {
+    const context = contextFor("blocked");
+    const existing = context.rows.readinessByBooking.get("b-1");
+    if (!existing) throw new Error("missing readiness fixture");
+    context.rows.readinessByBooking = new Map([
+      [
+        "b-1",
+        {
+          ...existing,
+          readiness: { ...existing.readiness, blockers: [{ code: "waiver_not_sent" }] },
+        },
+      ],
+    ]);
+    const phoneOnly = {
+      ...seat,
+      person: {
+        ...seat.person,
+        email: null,
+        phone: "+13055550188",
+      } as unknown as RosterEntry["person"],
+    };
+    // No SMS at the shop, or the number sent STOP: not in the textable set.
+    render(<RosterRow entry={phoneOnly} settled={false} context={context} />);
+    expect(
+      screen.getByRole("link", { name: t("trips.partyWaiverQueue.counter") }).getAttribute("href"),
+    ).toMatch(/\/party\/b-1\/waivers$/);
+    cleanup();
+    context.rows.textableBookings = new Set(["b-1"]);
+    render(<RosterRow entry={phoneOnly} settled={false} context={context} />);
+    expect(screen.queryByRole("link", { name: t("trips.partyWaiverQueue.counter") })).toBeNull();
   });
   it("keeps a certification remedy beside the blocker outside the guest-details fold", () => {
     const { container } = render(

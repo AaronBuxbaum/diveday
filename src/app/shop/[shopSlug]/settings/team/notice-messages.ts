@@ -11,6 +11,7 @@ export function noticeMessages(t: StaffTranslator): NoticeMessages {
     reactivated: { tone: "success", text: t("settings.team.notice.reactivated") },
     disabled: { tone: "success", text: t("settings.team.notice.disabled") },
     removed: { tone: "success", text: t("settings.team.notice.removed") },
+    "invite-canceled": { tone: "success", text: t("settings.team.notice.inviteCanceled") },
     restored: { tone: "success", text: t("settings.team.notice.restored") },
     "restored-resend-invite": {
       tone: "success",

@@ -4,13 +4,10 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 
 /**
- * **A claim for an address that already holds a seat looks exactly like a claim
- * that worked** (issue #2381, Aaron's option b). Anyone holding a claim link can
- * type any address, so a different answer for a booked address would tell them
- * who is on the manifest. These drive the real action against a real database:
- * two submissions, one for an address that holds a seat on the trip and one that
- * does not, must redirect to the same URL, and the only difference is which
- * inbox receives which email.
+ * **The claim page says what happened** (Aaron, 2026-11-06, superseding the
+ * same-answer rule of #2381). These drive the real action against a real
+ * database: a claim that worked, an address that already holds a seat on the
+ * trip, and a spent link each land on their own answer.
  */
 const ctx = fileScopedShopContext();
 
@@ -60,16 +57,6 @@ vi.mock("@/db/notifications", async (importOriginal) => {
       }),
   };
 });
-vi.mock("@/db/seat-already-held", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/seat-already-held")>();
-  return {
-    ...actual,
-    tellSeatAlreadyHeld: (
-      db: never,
-      input: { shopId: string; bookingId: string; attempt: "claim" | "booking" },
-    ) => actual.tellSeatAlreadyHeld(db, input, { provider: mail.current?.provider }),
-  };
-});
 
 const { eq } = await import("drizzle-orm");
 const { createBookingParty } = await import("@/db/bookings");
@@ -106,7 +93,7 @@ async function party() {
     if (!seat?.claim) throw new Error("expected a claim link");
     return seat.claim.token;
   };
-  return { lead, tokens: [token(one.bookingId), token(two.bookingId)] as const };
+  return { tokens: [token(one.bookingId), token(two.bookingId)] as const };
 }
 
 function form(name: string, email: string): FormData {
@@ -137,88 +124,50 @@ async function submit(
   return landed;
 }
 
-describe("claimSeatAction answers a booked address as it answers a fresh one", () => {
-  it("redirects both to the same URL, and emails each inbox its own answer", async () => {
+describe("claimSeatAction says what happened", () => {
+  it("lands a claim that worked on the claimed page, and emails the claimant", async () => {
     const { tokens } = await party();
-    const [freshToken, bookedToken] = tokens;
-
     mail.current = fakeEmail();
-    const fresh = await submit(freshToken, "Milo Member", "milo@example.com");
-    const freshMail = mail.current.sent;
-
-    mail.current = fakeEmail();
-    // The organizer's own address, already holding a seat on this trip.
-    const booked = await submit(bookedToken, "Orla Organizer", "orla@example.com");
-    const bookedMail = mail.current.sent;
-
-    // Same shape of redirect: the claim URL's own static page, nothing else.
-    expect(fresh).toBe(`/claim/${freshToken}?sent=1`);
-    expect(booked).toBe(`/claim/${bookedToken}?sent=1`);
-    expect(fresh.replace(freshToken, "T")).toBe(booked.replace(bookedToken, "T"));
-
-    // The fresh claimant's confirmation goes to the fresh claimant only.
-    expect(freshMail.map((m) => [m.kind, m.to])).toEqual([
+    expect(await submit(tokens[0], "Milo Member", "milo@example.com")).toBe(
+      `/claim/${tokens[0]}?claimed=1`,
+    );
+    expect(mail.current.sent.map((m) => [m.kind, m.to])).toEqual([
       ["booking_confirmation", "milo@example.com"],
-    ]);
-    // The holder's note goes to the holder only, and names no one else.
-    expect(bookedMail.map((m) => [m.kind, m.to])).toEqual([
-      ["seat_already_held", "orla@example.com"],
     ]);
   });
 
-  it("leaves the refused seat unclaimed, but its link ends as dead as a spent one", async () => {
+  it("tells an address that already holds a seat on the trip so, and leaves the link working", async () => {
     const { tokens } = await party();
-    const [freshToken, bookedToken] = tokens;
-    const live = (token: string) =>
-      verifyBookingCapability(ctx.db, { token, purpose: "claim", now: nowDate() });
-    expect(await live(freshToken)).not.toBeNull();
-    const refusedSeatId = (await live(bookedToken))?.bookingId ?? "";
-    expect(refusedSeatId).not.toBe("");
-
     mail.current = fakeEmail();
-    await submit(freshToken, "Milo Member", "milo@example.com");
-    mail.current = fakeEmail();
-    await submit(bookedToken, "Orla Organizer", "orla@example.com");
+    // The organizer's own address, already holding a seat on this trip.
+    expect(await submit(tokens[1], "Orla Organizer", "orla@example.com")).toBe(
+      `/claim/${tokens[1]}?error=held`,
+    );
+    // The page itself says it; nobody is mailed.
+    expect(mail.current.sent).toHaveLength(0);
 
-    // The page behind the link (`/claim/<token>`) answers from this check: a
-    // refusal that left its link live while a success killed it would let
-    // anyone holding a link learn which addresses hold a seat (issue #2381).
-    expect(await live(freshToken)).toBeNull();
-    expect(await live(bookedToken)).toBeNull();
-
-    // The refused seat itself is still the organizer's placeholder, unclaimed.
+    // A party member who typed the wrong address can claim with their own.
+    const live = await verifyBookingCapability(ctx.db, {
+      token: tokens[1],
+      purpose: "claim",
+      now: nowDate(),
+    });
+    expect(live).not.toBeNull();
     const [seat] = await ctx.db
       .select({ claimedAt: bookings.claimedAt })
       .from(bookings)
-      .where(eq(bookings.id, refusedSeatId));
+      .where(eq(bookings.id, live?.bookingId ?? ""));
     expect(seat?.claimedAt).toBeNull();
-
-    // A second attempt with the dead link lands where a spent one does.
-    mail.current = fakeEmail();
-    expect(await submit(bookedToken, "Orla Organizer", "orla@example.com")).toBe(
-      `/claim/${bookedToken}`,
+    expect(await submit(tokens[1], "Pia Member", "pia@example.com")).toBe(
+      `/claim/${tokens[1]}?claimed=1`,
     );
-    expect(mail.current.sent).toHaveLength(0);
   });
 
-  it("leaves the organizer a fresh link for the seat the refusal killed", async () => {
-    const { tokens, lead } = await party();
+  it("sends a spent link back to the claim page, which says what happened", async () => {
+    const { tokens } = await party();
     mail.current = fakeEmail();
-    await submit(tokens[1], "Orla Organizer", "orla@example.com");
-    const seats = await issuePartySeatClaims(ctx.db, {
-      shopId: ctx.shop.id,
-      leadBookingId: lead.bookingId,
-    });
-    const reissued = seats.filter((seat) => seat.claim && !seat.claimed);
-    expect(reissued.length).toBeGreaterThan(0);
-    for (const seat of reissued) {
-      const verified = await verifyBookingCapability(ctx.db, {
-        token: seat.claim?.token ?? "",
-        purpose: "claim",
-        now: nowDate(),
-      });
-      expect(verified).not.toBeNull();
-    }
+    await submit(tokens[0], "Milo Member", "milo@example.com");
+    expect(await submit(tokens[0], "Milo Member", "milo@example.com")).toBe(`/claim/${tokens[0]}`);
   });
 
   it("answers a claim that worked before its waiver, event and trail work, which all wait for after the response", async () => {
@@ -237,12 +186,5 @@ describe("claimSeatAction answers a booked address as it answers a fresh one", (
     // Nothing the claim sends or records had run when the answer was given.
     expect(before).toBe(0);
     expect((await waiversFor("milo@example.com")).length).toBeGreaterThan(0);
-  });
-
-  it("does not send the holder anything for a claim that worked", async () => {
-    const { tokens } = await party();
-    mail.current = fakeEmail();
-    await submit(tokens[0], "Milo Member", "milo@example.com");
-    expect(mail.current.sent.some((m) => m.kind === "seat_already_held")).toBe(false);
   });
 });

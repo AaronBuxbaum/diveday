@@ -56,6 +56,7 @@ import {
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { arrivalTrailHighWater, seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
+import { bookingAddress, bookingRecipient } from "./booking-address";
 import { realignTripLinkExpiry, revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
@@ -152,12 +153,12 @@ export type BookingPerson =
        * it must not silently inherit the matched diver's certifications,
        * sign-once waiver coverage and rental fit. It also fires on an exact
        * spelling, which is why this carries `typedName` rather than a bare
-       * boolean: the flag is raised by the same test the by-email path uses,
+       * boolean: the flag is raised by the name test (`personNamesMatch`),
        * not by the tap. See {@link nameMatchLeavesIdentityInDoubt}.
        *
-       * Raised, it means what a shared-inbox email mismatch means (H-20260724-one-person-per-email): the
-       * diver is Blocked at the rail until a staffer taps confirm identity,
-       * and no certification claim is written under their name.
+       * Raised (H-20260724-one-person-per-email), the diver is Blocked at the
+       * rail until a staffer taps confirm identity, and no certification claim
+       * is written under their name.
        *
        * Absent on every other identity booking, which is the point — a
        * returning diver picked out of the search by a staffer who went looking
@@ -214,8 +215,8 @@ export type BookingRequest = {
   dateRequestInterestId?: string;
   /**
    * Who is making this booking. `"public"` is the anonymous schedule form,
-   * where the submitter supplies an email but never proves it is theirs — the
-   * same uncertainty `identityUnconfirmedAt` exists for (H-20260724-one-person-per-email).
+   * where the submitter supplies an email but never proves it is theirs, so
+   * another name on a known address gets its own record (H-20260724-one-person-per-email).
    *
    * The minimum-age gate is skipped for `"public"` on purpose. Refusing there
    * would answer "is the holder of this address under N?" to anyone who can
@@ -551,6 +552,9 @@ export type AddPartySeatOutcome =
  * `leadBookingId`. This only refuses a lead that cannot lead a party — a held
  * seat (whose record may be somebody else's, issue #2125), a party member's
  * own seat, or a cancelled one.
+ *
+ * A name-only seat has no address and no "Under 18" input, so it never sets
+ * `contactTypedByLeadAt`: only `createBookingParty` does, for a declared minor.
  */
 export async function addPartySeat(
   db: AppDb,
@@ -1166,9 +1170,14 @@ async function createBookingRecord(
 
   // A seat with no email of its own inserts a fresh person (`noEmailPersonRow`),
   // which this booking then stamps as its own (issue #2665).
-  const madeByThisSeat = !person && pendingInsert !== null && !pendingInsert.email;
+  let madeByThisSeat = false;
+  let deliveryEmail: string | null = null;
   if (!person && pendingInsert) {
-    ({ person, identityUnconfirmed, identityClaim } = await writeWalkIn(tx, req, pendingInsert));
+    ({
+      person,
+      addressless: madeByThisSeat,
+      deliveryEmail,
+    } = await writeWalkIn(tx, req, pendingInsert));
   }
   // Only reachable on the identity path if the row vanished mid-transaction;
   // the walk-in path always has a pendingInsert. Guards the non-null uses below.
@@ -1181,6 +1190,7 @@ async function createBookingRecord(
     participantType,
     identityUnconfirmed,
     identityClaim,
+    deliveryEmail,
     admissionAdvisory,
     pending,
   });
@@ -1233,6 +1243,8 @@ async function writeSeat(
     participantType: ParticipantType;
     identityUnconfirmed: boolean;
     identityClaim: IdentityClaim | null;
+    /** The shared inbox this seat's mail goes to; null mails the person's own. */
+    deliveryEmail: string | null;
     admissionAdvisory: BookingAdmissionAdvisory | undefined;
     pending: PendingDeclaration[];
   },
@@ -1298,6 +1310,7 @@ async function writeSeat(
         // Re-booking this seat re-evaluates identity: a matching name now clears
         // any stale flag, a mismatch (re)raises it.
         ...bookingIdentityColumns(identityUnconfirmed, identityClaim, nowDate()),
+        deliveryEmail: input.deliveryEmail,
         // A reactivated row starts a *new* booking and must not inherit party
         // membership from its earlier life: a stale `party_lead_booking_id`
         // would list this fresh, independent seat in the old organizer's claim
@@ -1353,6 +1366,7 @@ async function writeSeat(
       diveIntent: req.diveIntent ?? null,
       reEntryAsk: req.reEntryAsk ?? null,
       ...bookingIdentityColumns(identityUnconfirmed, identityClaim, nowDate()),
+      deliveryEmail: input.deliveryEmail,
       referralSource: partnerReferralSlug(req.referralSource),
       minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       // **Stamped by the application clock, not the column's `defaultNow()`.**
@@ -1457,16 +1471,13 @@ async function resolveBookingPerson(
   let pendingInsert: PendingWalkIn | null = null;
   // Set when this booking attached itself to an existing person on something
   // short of proof, and must not silently inherit that person's evidence
-  // (H-20260724-one-person-per-email). Two ways in, and a fresh no-email row raises neither because it has
-  // no prior identity to disagree with:
+  // (H-20260724-one-person-per-email). One way in:
   //
-  //  - the by-email path reused a row whose name on file does not match the
-  //    submitted one — the shared-inbox / different-human signal this flag was
-  //    built for;
-  //  - the identity path carries `fromNameMatch`, meaning the person id came
-  //    off the counter's name prompt rather than out of a search a staffer went
-  //    looking in (issue #1556) — and, on that path, the typed name disagrees
-  //    with the one on file, or two divers answer to it.
+  // the identity path carrying `fromNameMatch`, meaning the person id came off
+  // the counter's name prompt rather than out of a search a staffer went
+  // looking in (issue #1556), and the typed name disagreeing with the one on
+  // file, or two divers answering to it. A different name on a known address
+  // is no guess: it gets its own record (below), so it raises nothing.
   //
   // This is where the two counter doors part, on purpose: a seat picked from
   // the search list carries no `fromNameMatch` and lands released, namesake
@@ -1496,7 +1507,7 @@ async function resolveBookingPerson(
       ? await nameMatchLeavesIdentityInDoubt(tx, req.shopId, person, req.fromNameMatch.typedName)
       : false;
     if (identityUnconfirmed && req.fromNameMatch) {
-      identityClaim = { bookedAs: req.fromNameMatch.typedName.trim(), matchedBy: "picked_name" };
+      identityClaim = { bookedAs: req.fromNameMatch.typedName.trim() };
     }
   } else {
     const email = req.email?.trim().toLowerCase() || null;
@@ -1510,14 +1521,20 @@ async function resolveBookingPerson(
         .limit(1)
         // As above: a record a merge is moving away is re-read once it lands.
         .for("key share");
-      if (person) {
-        // Reuse-by-email before the capacity gate: flag a name that doesn't match
-        // the person already on file for this address.
-        identityUnconfirmed = !personNamesMatch(person.fullName, req.fullName);
-        if (identityUnconfirmed) {
-          identityClaim = { bookedAs: req.fullName.trim(), matchedBy: "shared_email" };
-        }
-      } else {
+      if (person && !personNamesMatch(person.fullName, req.fullName)) {
+        // A different name on an address the shop already holds is another
+        // diver on a shared inbox (Aaron 2026-11-06): a record of their own,
+        // holding no address, since the address stays with the record that
+        // owns it — the same answer a party member on the lead's address and
+        // a public package buyer get. Nothing of the matched diver's travels.
+        person = undefined;
+        pendingInsert = {
+          fullName: req.fullName.trim(),
+          email: null,
+          phone: req.phone,
+          deliveryEmail: email,
+        };
+      } else if (!person) {
         pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
       }
     } else {
@@ -1529,8 +1546,17 @@ async function resolveBookingPerson(
   return { ok: true, person, pendingInsert, identityUnconfirmed, identityClaim };
 }
 
-/** A walk-in's person row, written only once every gate has passed. */
-type PendingWalkIn = { fullName: string; email: string | null; phone?: string };
+/**
+ * A walk-in's person row, written only once every gate has passed.
+ * `deliveryEmail` is the address typed for a diver on somebody else's inbox,
+ * kept on the seat rather than the record (`bookings.delivery_email`).
+ */
+type PendingWalkIn = {
+  fullName: string;
+  email: string | null;
+  phone?: string;
+  deliveryEmail?: string;
+};
 
 /**
  * **A course session's answer for a seat put on it**: a new sale, a staff
@@ -1615,7 +1641,8 @@ async function readCourseDiver(
 
 /**
  * Write the walk-in's person row, after every gate has passed so a refused
- * walk-in leaves no orphan behind.
+ * walk-in leaves no orphan behind. `addressless` is a fresh row with no email
+ * of its own, which the seat then stamps as the one that made it.
  */
 async function writeWalkIn(
   tx: DbExecutor,
@@ -1623,13 +1650,14 @@ async function writeWalkIn(
   pendingInsert: PendingWalkIn,
 ): Promise<{
   person: typeof people.$inferSelect;
-  identityUnconfirmed: boolean;
-  identityClaim: IdentityClaim | null;
+  addressless: boolean;
+  deliveryEmail: string | null;
 }> {
   if (pendingInsert.email) {
     // Under concurrency this can still resolve to an existing row (a racing
     // insert won); `nameMatches` reflects the row that actually landed, so a
-    // simultaneous shared-inbox booking is flagged the same as a serial one.
+    // simultaneous shared-inbox booking gets its own record, the same as a
+    // serial one (`resolveBookingPerson`).
     const resolved = await findOrCreatePerson(tx, {
       shopId: req.shopId,
       fullName: pendingInsert.fullName,
@@ -1637,20 +1665,19 @@ async function writeWalkIn(
       phone: pendingInsert.phone,
       origin: bookingOrigin(req),
     });
-    const identityUnconfirmed = !resolved.nameMatches;
-    return {
-      person: resolved.person,
-      identityUnconfirmed,
-      identityClaim: identityUnconfirmed
-        ? { bookedAs: pendingInsert.fullName, matchedBy: "shared_email" }
-        : null,
-    };
+    if (resolved.nameMatches) {
+      return { person: resolved.person, addressless: false, deliveryEmail: null };
+    }
   }
   // No email means no `people_shop_email_unique` row to race for (that
   // index is partial — null emails never collide, schema.ts) — a plain
   // insert, same shape as findOrCreatePerson's own insert branch.
   const inserted = await createPerson(tx, await noEmailPersonRow(tx, req, pendingInsert));
-  return { person: inserted, identityUnconfirmed: false, identityClaim: null };
+  return {
+    person: inserted,
+    addressless: true,
+    deliveryEmail: pendingInsert.deliveryEmail ?? pendingInsert.email,
+  };
 }
 
 /** One seat's declaration, held until every seat in the submission is settled. */
@@ -1788,7 +1815,7 @@ export async function getBookingForTrip(
   bookingId: string,
 ) {
   const [row] = await db
-    .select({ booking: bookings, person: people })
+    .select({ booking: bookings, person: bookingRecipient })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .where(
@@ -3399,7 +3426,7 @@ export async function cancelUnclaimedPartySeats(
   input: { shopId: string; leadBookingId: string; tripId: string; now: Date },
 ): Promise<PartyCancelOutcome> {
   const [lead] = await tx
-    .select({ email: people.email })
+    .select({ email: bookingAddress })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
@@ -3413,7 +3440,7 @@ export async function cancelUnclaimedPartySeats(
       checkedIn: seatCheckedIn,
       personId: bookings.personId,
       fullName: people.fullName,
-      email: people.email,
+      email: bookingAddress,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       identityBookedAs: bookings.identityBookedAs,
     })
@@ -3487,9 +3514,8 @@ export async function cancelUnclaimedPartySeats(
  * `settlePackageCoverage` returns empty under an unconfirmed identity, and
  * that refusal used to be the end of it: nothing re-ran when the flag came
  * off, so the seat stayed unpaid and the ten-dive regular was asked for money
- * on a departure their package covers. Rare while the flag only ever came off
- * a shared-inbox collision; every spelled-right name match at the counter
- * since issue #1556 (`dive-domain-expert`, the RFH-07 layer).
+ * on a departure their package covers: every spelled-right name match at the
+ * counter since issue #1556 (`dive-domain-expert`, the RFH-07 layer).
  *
  * Inside the confirm's own transaction, for the reason `createBookingRecord`
  * states at its own call: the claim has to be serialised with the row it
@@ -3546,11 +3572,9 @@ async function settleConfirmedPackageCoverage(
  * already holds a live signature, so the seat boards on somebody else's
  * paper), their certifications once readiness stops withholding them, and the
  * prepaid dives the seat is owed, which the tap itself now spends
- * (`settleConfirmedPackageCoverage`). It used to be true that the flag only
- * ever came off a shared-inbox email collision, where the two humans at least
- * shared an identifier; the counter's trigram name prompt now raises the same
- * flag off a spelling (issue #1556), so the tap is a lighter-weight diver
- * merge. The role list stays open — a counter staffer who cannot clear the
+ * (`settleConfirmedPackageCoverage`). The counter's trigram name prompt
+ * raises the flag off a spelling (issue #1556), so the tap is a lighter-weight
+ * diver merge. The role list stays open — a counter staffer who cannot clear the
  * flag they just raised is its own failure mode, and merge's owner/manager
  * boundary would strand a walk-in until a manager walked past — and
  * `src/lib/authz.ts` is explicit about what carries that weight instead: what
@@ -3611,7 +3635,6 @@ export async function confirmBookingIdentity(
       .set({
         identityUnconfirmedAt: null,
         identityBookedAs: null,
-        identityMatchedBy: null,
         heldEmergencyContactName: null,
         heldEmergencyContactPhone: null,
       })
@@ -4098,7 +4121,6 @@ export async function splitBookingIdentity(
           seatReopenedAt: now,
           identityUnconfirmedAt: null,
           identityBookedAs: null,
-          identityMatchedBy: null,
           // A reason the desk gave while the seat was held was chosen about the
           // guess (security review 2026-10-16, F1), so it does not travel to
           // the new record. That the desk turned somebody away does

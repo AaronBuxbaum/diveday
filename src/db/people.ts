@@ -90,8 +90,8 @@ export type FindOrCreatePersonResult = {
    * Whether the submitted `fullName` plausibly belongs to the returned person
    * (H-20260724-one-person-per-email). Always `true` when `created` (the person *is* the submitted name);
    * on a reuse it is the strict name comparison against the stored row, so a
-   * caller can route a mismatch to staff identity confirmation rather than let
-   * a different human inherit the matched person's evidence.
+   * caller can give a mismatch a record of its own rather than let a different
+   * human inherit the matched person's evidence.
    */
   nameMatches: boolean;
 };
@@ -152,7 +152,7 @@ export async function findOrCreatePerson(
     const winner = await selectActivePersonByEmail(tx, input.shopId, input.email);
     if (!winner) throw error; // the constraint violation proves a row exists; this would be a bug
     // The racing insert won with *its* name; compare ours to what landed so a
-    // concurrent shared-inbox submission is flagged the same as the serial one.
+    // concurrent shared-inbox submission gets its own record, as a serial one does.
     return {
       person: winner,
       created: false,

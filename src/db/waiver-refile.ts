@@ -27,6 +27,12 @@ import { listSignedWaiversByPerson } from "./waivers-audit";
  * where they are: nothing personal is left on them, and their version 2 seal
  * covers the record they were erased under.
  *
+ * An unsigned release with no seat that moves is set aside in the same
+ * statement (issue #4020): signed, it would cover every seat the diver holds,
+ * so the survivor must not end up with two of them, each with a live link.
+ * `superseded_at` is outside the seal, and a set-aside release opens through
+ * no link. A signed release, and an unsigned one on a seat, move as they are.
+ *
  * Returns the ids it moved, read from the rows it locked.
  *
  * Called by `mergeDiverRecords` for every release of the record merged away,
@@ -92,6 +98,9 @@ export async function refileWaiverRecords(
         movedFromPersonId: moved.movedFromPersonId,
         movedAt: moved.movedAt,
         movedByPersonId: moved.movedByPersonId,
+        ...(record.status === "pending" && record.bookingId === null && !record.supersededAt
+          ? { supersededAt: now }
+          : {}),
         integrityHash: written.integrityHash,
         integrityVersion: written.integrityVersion,
         // The row as written, re-checked: a refile never launders a failed

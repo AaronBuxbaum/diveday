@@ -2,7 +2,15 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { listRollCallGaps, oneRowPerHalf } from "./roll-call-gaps";
-import { bookings, people, rollCallEvents, tripScheduleDays, trips } from "./schema";
+import { crewSubject } from "./roll-call-subject";
+import {
+  bookings,
+  people,
+  rollCallEvents,
+  tripAssignments,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 import { listStaff } from "./trips";
 import { livePerson } from "./trips-live";
 
@@ -185,6 +193,52 @@ describe("roll call on a course that meets on two Saturdays", () => {
     await c.say(first, "after_dive_1", "boarded", "2026-08-15T14:30:00.000Z");
     await c.say(first, "after_dive_2", "boarded", "2026-08-15T16:30:00.000Z");
     expect(await c.gaps("2026-08-15T19:00:00.000Z")).toEqual([]);
+  });
+
+  it("keeps Saturday's diver missing after dive 2 through a second-Saturday tap after dive 1, until the dock count (#4056)", async () => {
+    const c = await course();
+    const [first] = c.bookingIds as [string, string];
+    await c.countDay(SAT_ONE);
+    await c.say(first, "after_dive_2", "not_boarded", "2026-08-01T16:40:00.000Z");
+    await c.say(first, "after_dive_1", "boarded", "2026-08-15T14:30:00.000Z");
+    expect(
+      (await c.gaps("2026-08-15T14:40:00.000Z")).filter((gap) => gap.reason === "missing_diver"),
+    ).toMatchObject([{ dayNumber: 1, diveNumber: 2, uncounted: 1 }]);
+    await c.say(first, "departure", "boarded", "2026-08-15T14:45:00.000Z");
+    expect(
+      (await c.gaps("2026-08-15T14:50:00.000Z")).filter((gap) => gap.reason === "missing_diver"),
+    ).toEqual([]);
+  });
+
+  it("reads a crew member missing after Saturday's dive 2 the same way (#4056)", async () => {
+    const c = await course();
+    const { db, shop } = ctx;
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+    await db.insert(tripAssignments).values({ tripId: c.trip.id, personId: staff.person.id });
+    const crew = async (checkpoint: string, status: "boarded" | "not_boarded", iso: string) =>
+      db.insert(rollCallEvents).values({
+        shopId: shop.id,
+        tripId: c.trip.id,
+        ...crewSubject(staff.person.id),
+        recordedByPersonId: staff.person.id,
+        status,
+        checkpoint,
+        source: "live",
+        occurredAt: at(iso),
+      });
+    await c.countDay(SAT_ONE);
+    await crew("departure", "boarded", "2026-08-01T12:40:00.000Z");
+    await crew("after_dive_1", "boarded", "2026-08-01T14:30:00.000Z");
+    await crew("after_dive_2", "not_boarded", "2026-08-01T16:40:00.000Z");
+    await crew("after_dive_1", "boarded", "2026-08-15T14:30:00.000Z");
+    const missingCrew = async (now: string) =>
+      (await c.gaps(now)).filter((gap) => gap.reason === "missing_crew");
+    expect(await missingCrew("2026-08-15T14:40:00.000Z")).toMatchObject([
+      { dayNumber: 1, diveNumber: 2 },
+    ]);
+    await crew("after_dive_2", "boarded", "2026-08-15T16:30:00.000Z");
+    expect(await missingCrew("2026-08-15T16:40:00.000Z")).toEqual([]);
   });
 
   it("keeps a second-Saturday dock tap from settling Saturday's own open count before it happens", async () => {

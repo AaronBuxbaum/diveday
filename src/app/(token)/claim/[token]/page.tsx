@@ -13,7 +13,7 @@ import { ShopNotice } from "@/components/ui/outcome";
 import { noticeRole } from "@/components/ui/tone";
 import { getDb } from "@/db/client";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
-import { type DeadClaimShop, getClaimPageState } from "@/db/seat-claims";
+import { type DeadClaimCause, type DeadClaimShop, getClaimPageState } from "@/db/seat-claims";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -38,40 +38,36 @@ export async function generateMetadata(): Promise<Metadata> {
 const CLAIM_NOTICES: Record<string, { tone: "danger" | "neutral"; key: DiverMessageKey }> = {
   "error-fields": { tone: "danger", key: "seatClaim.errors.checkFields" },
   "error-course": { tone: "danger", key: "seatClaim.errors.coursePrerequisite" },
+  "error-held": { tone: "danger", key: "seatClaim.errors.alreadyHeld" },
   "error-rate": { tone: "danger", key: "ready.rateLimited" },
+};
+
+/** What happened to the seat, in the dead card's one line under the shop. */
+const DEAD_CLAIM_BODY: Record<DeadClaimCause, DiverMessageKey> = {
+  trip_cancelled: "seatClaim.tripCancelledBody",
+  seat_cancelled: "seatClaim.seatCancelledBody",
+  claimed: "seatClaim.claimedBody",
+  departed: "seatClaim.departedBody",
+  ended: "seatClaim.expiredBody",
 };
 
 /**
  * **The dead claim link, in the booking tier** (ADR 20260827-first-light,
- * decisions 3 and 4).
- *
- * A dead link is the whole page — the terminal warm pattern, no card border
- * (docs/design/principles.md #4) — and this is the half of it that knows which
- * shop the link belonged to. A party member was forwarded this URL in a group
- * chat and it does not work; the one thing they need is who to ask, so the card
- * names the shop and hands over the contact details that shop already
- * publishes.
- *
- * **One sentence serves every cause, so it may claim nothing about the seat.**
- * `getClaimPageState` deliberately cannot tell those causes apart — a dead
- * token is read for its shop and for nothing else — so whatever this says is
- * said equally to a spent link, an expired one, a seat somebody else took, a
- * seat the shop cancelled, a departure called off for weather, and a boat that
- * has already sailed. It used to say "your seat is safe with your organizer —
- * ask them for a fresh link", which is untrue for four of those six and mints
- * nothing for five: `issuePartySeatClaims` hands back `claim: null` the moment
- * a seat can no longer change hands, so the organizer's panel has no link left
- * to forward. The sharpest of them is weather: a diver whose Saturday had been
- * called off read that their seat still existed and could reasonably turn up at
- * the dock. The sentence now names the one person this page cannot — whoever
- * sent the link — and asserts nothing it has not read.
- *
- * There is deliberately no way onward and no self-serve rescue: unlike
- * `/ready`, a fresh claim link can only be minted from the organizer's own
- * party panel, and this page has no idea who that is.
+ * decisions 3 and 4): the whole page, naming the shop the link belonged to
+ * with the contact details that shop already publishes, and saying what
+ * happened to the seat. A fresh claim link can only come from the organizer's
+ * own party panel, so there is no self-serve rescue here.
  */
-function DeadClaim({ shop, t }: { shop: DeadClaimShop; t: DiverTranslator }) {
-  return <DeadLink t={t} next={t("seatClaim.expiredBody")} shop={shop} />;
+function DeadClaim({
+  shop,
+  cause,
+  t,
+}: {
+  shop: DeadClaimShop;
+  cause: DeadClaimCause;
+  t: DiverTranslator;
+}) {
+  return <DeadLink t={t} next={t(DEAD_CLAIM_BODY[cause])} shop={shop} />;
 }
 
 /**
@@ -102,9 +98,10 @@ export const instant = true;
  * and the person opening it is already booked on a boat they have not been
  * told they are on. So the page wears `ThreadShell` — the shop as the eyebrow,
  * the trip as the title, DiveDay's name nowhere on it (decision 5) — and its
- * success lands on `/ready/<token>`, which is the same thread's next page. The
- * hand-rolled `max-w-xl` column and `TokenPageHeader` this used to spell for
- * itself are gone; the measure is the shell's
+ * success lands back here, saying the seat is theirs and that their prep is in
+ * the email on its way. The hand-rolled `max-w-xl` column and
+ * `TokenPageHeader` this used to spell for itself are gone; the measure is the
+ * shell's
  * (ADR 20260827-the-divers-thread, decision 1).
  *
  * The two dead-link tiers above are the part worth reading before editing.
@@ -114,28 +111,16 @@ export default async function SeatClaimPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ error?: string; sent?: string }>;
+  searchParams: Promise<{ error?: string; claimed?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { error, sent } = await searchParams;
-  // **Where a claim lands, whether or not it took** (issue #2381). A claim that
-  // worked and one for an address that already holds a seat on the trip both
-  // redirect here, so this renders before the token is looked at and says
-  // nothing about either: it cannot tell the visitor whose manifest anything
-  // is on. The answer is the email each of them is sent.
-  if (sent === "1") {
-    const t = diverTranslator(await requestLocale());
-    return (
-      <EntryDone glyph="sent" title={t("seatClaim.sentHeading")} text={t("seatClaim.sentBody")} />
-    );
-  }
+  const { error, claimed } = await searchParams;
   const db = await getDb();
-  // Three answers, and which one a dead link gets is the security question on
-  // this page (ADR 20260827-first-light, decision 3): `dead` still knows the
-  // shop and hands over its published contact, `unknown` knows nothing and
-  // says nothing. `getClaimPageState` owns that split so no branch here can
-  // widen it.
+  // Three answers (ADR 20260827-first-light, decision 3): `dead` knows the
+  // shop and what happened to the seat, `unknown` knows nothing and says
+  // nothing. `getClaimPageState` owns that split so no branch here can widen
+  // it.
   const state = await getClaimPageState(db, token);
   if (state.kind === "unknown") {
     // Nothing resolved, so nothing to negotiate a language against but the
@@ -143,12 +128,18 @@ export default async function SeatClaimPage({
     return <Unavailable t={diverTranslator(await requestLocale())} />;
   }
   if (state.kind === "dead") {
-    return (
-      <DeadClaim
-        shop={state.shop}
-        t={diverTranslator(await requestLocale(state.shop.defaultLocale))}
-      />
-    );
+    const t = diverTranslator(await requestLocale(state.shop.defaultLocale));
+    // Where a claim that worked lands: the seat now reads as claimed.
+    if (claimed === "1" && state.cause === "claimed") {
+      return (
+        <EntryDone
+          glyph="done"
+          title={t("seatClaim.claimedHeading")}
+          text={t("seatClaim.claimedNotice")}
+        />
+      );
+    }
+    return <DeadClaim shop={state.shop} cause={state.cause} t={t} />;
   }
   const data = state.data;
   const locale = await requestLocale(data.defaultLocale);

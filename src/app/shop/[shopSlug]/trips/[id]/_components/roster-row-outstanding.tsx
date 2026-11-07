@@ -12,7 +12,6 @@ import type { IssuedCard } from "@/db/agency-processing";
 import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { COURSE_FORMS_BLOCK_BOARDING } from "@/lib/course-forms";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
-import { smsRecipient } from "@/lib/notifications";
 import { isDiver } from "@/lib/participant-types";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { REFERRAL_PAPERS } from "@/lib/referral-student";
@@ -89,7 +88,11 @@ export type RowOutstandingInput = Pick<
 > &
   Pick<RowIdentity, "identityContact" | "packageNote"> &
   Pick<RowReasonList, "deskPrivateLines"> &
-  Pick<RosterRows, "trainingMarks"> & { partyLeadId?: string | null };
+  Pick<RosterRows, "trainingMarks"> & {
+    partyLeadId?: string | null;
+    /** A text can reach the seat (`RosterRows.textableBookings`). */
+    textable: boolean;
+  };
 
 /** The agency a card goes to, by name; "the agency" where the course named none. */
 function processingAgencyName(agency: IssuedCard["agency"], t: RosterSeat["t"]): string {
@@ -183,6 +186,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     identityContact,
     packageNote,
     deskPrivateLines,
+    textable,
   } = seat;
   // This seat's training mark on a charter (issue #2275); none on a course session.
   const trainingMark = trainingMarks?.bySeat.get(booking.id) ?? null;
@@ -192,8 +196,8 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     blockerTexts.some(
       ({ blocker }) => blocker.code === "medical_review" || blocker.code === "medical_not_cleared",
     );
-  // A solo seat with no email and no textable number can be sent nothing, so
-  // it signs on the counter QR (issue #3984, ADR
+  // A solo seat with no email and no text that can reach it can be sent
+  // nothing, so it signs on the counter QR (issues #3984 and #4039, ADR
   // 20261105-waiver-folds-into-the-thread): its own one-seat queue. Kept once
   // the release waits on a physician, where the desk prints the form.
   const counterSeat =
@@ -203,7 +207,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
       blockerTexts.some(({ blocker }) => blocker.code === "medical_review")) &&
     !identityUnconfirmed &&
     !person.email &&
-    !smsRecipient(person.phone);
+    !textable;
   const counterLeadId = partyLeadId ?? (counterSeat ? booking.id : null);
   const waiverRemedy =
     waiverControl.action || (counterLeadId && !record) ? (

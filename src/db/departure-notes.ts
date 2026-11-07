@@ -18,6 +18,7 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
+import { bookingRecipient } from "./booking-address";
 import { type IssuedCapability, issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { heldQueuedOfKind } from "./held-send-rows";
@@ -222,7 +223,7 @@ async function claimDepartureNote(
     if (block) return { ok: false as const, reason: block };
     const body = foldDepartureNote(input.body);
     const seats = await tx
-      .select({ booking: bookings, person: people })
+      .select({ booking: bookings, person: bookingRecipient })
       .from(bookings)
       .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
       .where(

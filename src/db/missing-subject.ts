@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { backAboardNow, notBackAboardSince, type TimedDayMark } from "@/lib/roll-call-days";
 import type { DbExecutor } from "./client";
 import { oldestMarkFirst } from "./roll-call-order";
@@ -28,32 +28,36 @@ export type MissingSubject =
  * the same alarm synced seven minutes later, or the same diver still missing
  * at the next count, is the same disappearance, and an insurer reads the
  * first time the crew said so. The dock's `not_boarded` is "never left",
- * never a missing diver, so the reader leaves the departure checkpoint out.
+ * never a missing diver; a later day's dock `boarded` settles a carried one,
+ * as on the manifest (#4056).
  */
-export function standingNotBackAboardSince(events: readonly AfterDiveEvent[]): Date | null {
+export function standingNotBackAboardSince(events: readonly RollCallEvent[]): Date | null {
   return notBackAboardSince(events, events[0]?.currentDay ?? 0);
 }
 
 /**
- * Whether these after-dive events (oldest first) say the person is back
- * aboard (`backAboardNow`): the latest is `boarded` and the manifest shows
- * them nowhere red. A `cleared` undo is not "back" (review 2026-10-17).
+ * Whether these events (oldest first) say the person is back aboard
+ * (`backAboardNow`): the last word is `boarded` (after a dive, or a later
+ * day's dock count) and the manifest shows them nowhere red. A `cleared` undo
+ * is not "back" (review 2026-10-17).
  */
-export function backAboard(events: readonly AfterDiveEvent[]): boolean {
+export function backAboard(events: readonly RollCallEvent[]): boolean {
   return backAboardNow(events, events[0]?.currentDay ?? 0);
 }
 
-/** One after-dive roll-call event of one subject, filed under its meeting day. */
-type AfterDiveEvent = TimedDayMark & { currentDay: number };
+/** One roll-call event of one subject, filed under its meeting day. */
+type RollCallEvent = TimedDayMark & { currentDay: number };
 
 /**
- * The subject's after-dive roll-call events on this departure, oldest first,
- * each filed under its meeting day with the id a later undo may name (#4017).
+ * The subject's roll-call events on this departure, the dock's included, oldest
+ * first, each filed under its meeting day with the id a later undo may name
+ * (#4017): the marks the manifest folds, so the gate settles a carried miss
+ * exactly when the manifest does (#4056).
  */
-export async function afterDiveEvents(
+export async function subjectRollCallEvents(
   tx: DbExecutor,
   input: { shopId: string; tripId: string; subject: MissingSubject },
-): Promise<AfterDiveEvent[]> {
+): Promise<RollCallEvent[]> {
   const { subject } = input;
   const rows = await tx
     .select({
@@ -73,7 +77,6 @@ export async function afterDiveEvents(
         subject.kind === "diver"
           ? and(seatMarks(), eq(rollCallEvents.bookingId, subject.bookingId))
           : and(crewMarks(), eq(rollCallEvents.crewPersonId, subject.personId)),
-        ne(rollCallEvents.checkpoint, "departure"),
       ),
     )
     .orderBy(...oldestMarkFirst());
@@ -154,7 +157,7 @@ export async function rollCallHasThemBack(
 ): Promise<boolean> {
   if (input.subjects.length === 0) return false;
   for (const subject of input.subjects) {
-    const events = await afterDiveEvents(db, { ...input, subject });
+    const events = await subjectRollCallEvents(db, { ...input, subject });
     if (!backAboard(events)) return false;
   }
   return true;

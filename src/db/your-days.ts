@@ -9,6 +9,7 @@ import { publicAppUrl } from "@/lib/notifications/app-url";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { diveDayOrdinal } from "@/lib/prior-visits";
 import { RECAP_TOKEN_MAX_AGE_MS } from "@/lib/recap-links";
+import { bookingAddress } from "./booking-address";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { diveDay, numberedDiveDay } from "./dive-days";
@@ -59,7 +60,7 @@ export async function listYourDays(
 ): Promise<YourDays> {
   const now = input.now ?? nowDate();
   const [own] = await db
-    .select({ personId: bookings.personId, email: people.email, timezone: shops.timezone })
+    .select({ personId: bookings.personId, email: bookingAddress, timezone: shops.timezone })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
@@ -210,7 +211,7 @@ async function planForDay(
     .select({
       personId: people.id,
       tripId: bookings.tripId,
-      email: people.email,
+      email: bookingAddress,
       diverName: people.fullName,
       personLocale: people.locale,
       shopName: shops.name,

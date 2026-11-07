@@ -126,6 +126,11 @@ export type RosterRows = {
   roster: RosterEntry[];
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
+  /**
+   * The seats a text can reach: a number on file, a shop that can text, and
+   * a number not on the STOP list (`textableSeats`, issue #4039).
+   */
+  textableBookings: ReadonlySet<string>;
   rentalFitByBooking: RentalFitByBooking;
   nitroxByBooking: NitroxByBooking;
   notesByBooking: Map<string, RosterPrivateNote[]>;

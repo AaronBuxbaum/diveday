@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d3dc6967-f400-41d5-a61e-e69186f7479e",
+  "prevIds": [
+    "1d84abe1-442d-4b9a-88dc-f0d86c1d7d06"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "delivery_email"
+      ],
+      "writes": [
+        "s|col|public.bookings.delivery_email",
+        "n|col|public.bookings.delivery_email",
+        "e|col|public.bookings.delivery_email"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "delivery_email",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

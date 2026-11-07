@@ -21,7 +21,7 @@ export async function persistCheckoutGear(
   dbi: AppDb,
   input: {
     shopId: string;
-    bookings: ReadonlyArray<{ bookingId: string; personId: string; identityUnconfirmed: boolean }>;
+    bookings: ReadonlyArray<{ bookingId: string; personId: string }>;
     selections: ReadonlyArray<{ rentedKinds: RentableItemKind[]; wantsNitrox: boolean }>;
     /**
      * The form asked about rental gear. False on a course session whose fee
@@ -33,33 +33,25 @@ export async function persistCheckoutGear(
   },
 ): Promise<void> {
   await Promise.all(
-    input.bookings.map(async ({ bookingId, personId, identityUnconfirmed }, index) => {
+    input.bookings.map(async ({ bookingId, personId }, index) => {
       const selection = input.selections[index];
       if (!selection) return;
       try {
         if (input.rentsAtCheckout) {
-          // **A held seat writes nothing to the person it matched.** The row
-          // is an existing diver's, reached by an email whose name on file
-          // does not match (H-20260724-one-person-per-email), so whoever booked may not be them, and the
-          // fit is theirs. A rented wetsuit ticked here would clear their
-          // `dives_dry`, and with it the drysuit weight check on every later
-          // trip (`security-reviewer`, layer 2). The paid gear still stands on
-          // the order, and on the booking itself (`paid_rental_kinds`), where
-          // prep racks it unsized and "Same person" can carry it to the fit;
-          // the nitrox request below is this booking's own too. `/ready`
-          // refuses a held seat's fit for the same reason.
+          // The paid gear stands on the booking itself (`paid_rental_kinds`),
+          // where prep racks it, and on the diver's fit. A public seat is
+          // never held: a different name on a known address is its own record
+          // (Aaron 2026-11-06), so the fit written is the booker's.
           await recordPaidRentalKinds(dbi, {
             shopId: input.shopId,
             bookingId,
             kinds: selection.rentedKinds,
           });
-          if (!identityUnconfirmed) {
-            await recordRentalFit(dbi, {
-              shopId: input.shopId,
-              personId,
-              ...rentalFlagsFromKinds(selection.rentedKinds),
-            });
-          }
+          await recordRentalFit(dbi, {
+            shopId: input.shopId,
+            personId,
+            ...rentalFlagsFromKinds(selection.rentedKinds),
+          });
         }
         if (input.nitroxOffered) {
           await setBookingNitrox(dbi, {

@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type NotificationProvider, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { bookingRecipient } from "./booking-address";
 import type { AppDb } from "./client";
 import { sendNotification } from "./notifications";
 import { bookings, people, shops, trips } from "./schema";
@@ -11,30 +12,29 @@ import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 
 /**
- * **Tell the holder of a seat that a claim link was tried with their address**
- * (#2381, Aaron's option b). The claim page answers a claim for an address that
- * already holds a seat on the trip exactly as it answers one that worked, so
- * the link holder learns nothing about the manifest. The only answer goes here:
- * to the address that owns it, naming the seat that address already holds.
+ * **Tell the holder of a seat that the booking form was tried with their
+ * address** (#2691). The form answers with a neutral page, so the answer goes
+ * here: to the address that owns it, naming the seat that address already
+ * holds.
  *
- * Says nothing about the seat the claim was for, the organizer, or who tried:
+ * Says nothing about the party the attempt was for, or who tried:
  * the holder learns only their own seat. Bounded per booking
  * (`readinessLinkResendByBooking`'s five an hour, in this note's own key space)
- * so a loop of claims cannot become a mail bomb to the holder. Carries no link,
+ * so a loop of attempts cannot become a mail bomb to the holder. Carries no link,
  * so it mints no capability that could rotate out a link the holder is using.
- * Never throws: the claimant has been answered already, and a failed note is
+ * Never throws: the submitter has been answered already, and a failed note is
  * nothing for them to see.
  */
 export type SeatAlreadyHeldOutcome = "sent" | "not_sent" | "throttled" | "skipped";
 
 export async function tellSeatAlreadyHeld(
   db: AppDb,
-  input: { shopId: string; bookingId: string; attempt: "claim" | "booking" },
+  input: { shopId: string; bookingId: string },
   options: { provider?: NotificationProvider; now?: Date } = {},
 ): Promise<SeatAlreadyHeldOutcome> {
   try {
     const [row] = await db
-      .select({ booking: bookings, person: people, trip: trips, shop: shops })
+      .select({ booking: bookings, person: bookingRecipient, trip: trips, shop: shops })
       .from(bookings)
       .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
       .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
@@ -63,7 +63,6 @@ export async function tellSeatAlreadyHeld(
         startsAt: row.trip.startsAt,
         timezone: row.shop.timezone,
         requestedAt: options.now ?? nowDate(),
-        attempt: input.attempt,
       },
       options.provider,
     );

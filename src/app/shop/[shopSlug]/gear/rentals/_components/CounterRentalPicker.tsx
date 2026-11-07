@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
@@ -24,6 +24,8 @@ export function CounterRentalPicker({
   const searchInput = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState<GearItemKind | undefined>(groups[0]?.kind);
   const [query, setQuery] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const shown = groups.find((group) => group.kind === kind) ?? groups[0];
   const terms = lookupText(query).trim().split(/\s+/).filter(Boolean);
   const matching =
@@ -33,7 +35,13 @@ export function CounterRentalPicker({
     }) ?? [];
   return (
     <SectionCard title={words.gearHeading}>
-      <fieldset aria-label={words.kindsAria} className="flex min-w-0 flex-wrap gap-2">
+      <fieldset
+        aria-label={words.kindsAria}
+        // Publish readiness for browser journeys: a kind pressed before
+        // hydration has no handler and the list stays on the first kind.
+        data-hydrated={hydrated ? "true" : undefined}
+        className="flex min-w-0 flex-wrap gap-2"
+      >
         {groups.map((group) => {
           const chosen = group.kind === shown?.kind;
           const taken = group.units.filter((unit) => pickedIds.includes(unit.id)).length;

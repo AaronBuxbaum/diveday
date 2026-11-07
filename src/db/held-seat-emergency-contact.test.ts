@@ -27,7 +27,7 @@ const ctx = fileScopedShopContext();
 
 let seq = 0;
 
-/** Marisol, with her sister on file, and a seat booked on her email as Lucia. */
+/** Marisol, with her sister on file, and a seat the counter guessed onto her for Lucia. */
 async function heldSeat(options: { recordContact?: boolean } = {}) {
   const { db, shop } = ctx;
   const recordContact = options.recordContact ?? true;
@@ -51,8 +51,8 @@ async function heldSeat(options: { recordContact?: boolean } = {}) {
     actor: "staff",
     shopId: shop.id,
     tripId: trip.id,
-    fullName: "Lucia Vega",
-    email,
+    personId: marisol.id,
+    fromNameMatch: { typedName: "Lucia Vega" },
   });
   if (!seat.ok || seat.personId !== marisol.id) throw new Error("seat not matched to Marisol");
   const [row] = await db.select().from(bookings).where(eq(bookings.id, seat.bookingId));
@@ -279,8 +279,8 @@ describe("a held seat's emergency contact", () => {
     expect(record?.emergencyContactName).toBe("Pilar Vega");
   });
 
-  /** A second seat booked as Lucia on Marisol's email, on another charter. */
-  async function siblingSeat(tripId: string, email: string) {
+  /** A second seat guessed onto Marisol for Lucia, on another charter. */
+  async function siblingSeat(tripId: string, marisol: string) {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const other = trips.find(
@@ -291,8 +291,8 @@ describe("a held seat's emergency contact", () => {
       actor: "staff",
       shopId: shop.id,
       tripId: other.id,
-      fullName: "Lucia Vega",
-      email,
+      personId: marisol,
+      fromNameMatch: { typedName: "Lucia Vega" },
     });
     if (!seat.ok) throw new Error("second seat refused");
     return seat.bookingId;
@@ -300,9 +300,7 @@ describe("a held seat's emergency contact", () => {
 
   async function heldPair() {
     const held = await heldSeat();
-    const [record] = await ctx.db.select().from(people).where(eq(people.id, held.marisol));
-    if (!record?.email) throw new Error("record email missing");
-    return { ...held, sibling: await siblingSeat(held.trip.id, record.email) };
+    return { ...held, sibling: await siblingSeat(held.trip.id, held.marisol) };
   }
 
   it("carries a contact recorded on any moving seat onto the new record", async () => {

@@ -29,8 +29,9 @@ wrong, give the shop a call and they'll sort it out."*
 
 This is a **known, accepted narrowing** of the original mitigation, not a full reversal of it.
 `identity_unconfirmed` (H-20260724-one-person-per-email) only flags a submitted name that doesn't **match** the name already
-on file (`!nameMatches`) — it exists to catch a shared inbox, not to prove the submitter is really
-the account holder. `buildDiverChecklist` always shows `identity_unconfirmed`'s generic line ahead
+on file (`!nameMatches`) — it existed to catch a shared inbox, not to prove the submitter is really
+the account holder; since 2026-11-06 such a submission gets a record of its own instead, which
+holds no date of birth to disclose. `buildDiverChecklist` always shows `identity_unconfirmed`'s generic line ahead
 of `under_minimum_age`'s specific one when both apply, because `calculateReadiness` pushes the
 identity blocker first (`src/lib/readiness.ts`). So the specific age copy is only ever shown when
 **no name mismatch was detected** — which protects the shared-inbox / random-guessing case, but

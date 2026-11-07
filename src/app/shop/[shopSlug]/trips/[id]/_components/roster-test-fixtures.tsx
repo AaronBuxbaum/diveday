@@ -45,7 +45,6 @@ export function entry(
     dateOfBirth?: string;
     reEntryAsk?: "deck_word" | "easy_first_dive" | "refresher_course";
     identityBookedAs?: string;
-    identityMatchedBy?: "shared_email" | "picked_name";
     participantType?: "diver" | "snorkeler" | "rider";
     checkedIn?: boolean;
   } = {},
@@ -61,7 +60,6 @@ export function entry(
       hotelPickupLocation: null,
       pickupTime: null,
       identityBookedAs: over.identityBookedAs ?? null,
-      identityMatchedBy: over.identityMatchedBy ?? null,
       participantType: over.participantType ?? "diver",
     } as unknown as RosterEntry["booking"],
     person: {
@@ -190,6 +188,7 @@ function rosterProps({
       roster,
       readinessByBooking: readiness,
       waiverByBooking: waivers,
+      textableBookings: new Set<string>(),
       rentalFitByBooking: rentalFit ?? (new Map() as RentalFitByBooking),
       nitroxByBooking: new Map() as NitroxByBooking,
       notesByBooking: new Map(),

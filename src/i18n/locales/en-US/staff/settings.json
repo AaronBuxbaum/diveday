@@ -707,6 +707,7 @@
       "changesSaved": "Team changes saved",
       "reactivated": "Account re-enabled",
       "disabled": "Account disabled. They can no longer sign in.",
+      "inviteCanceled": "Invite canceled. The link no longer works.",
       "removed": "Deleted. They’re off your team and can no longer sign in.",
       "restored": "Team access restored",
       "restoredResendInvite": "Back on the team. They haven’t joined yet, so resend their invite.",
@@ -761,6 +762,9 @@
     },
     "staffRow": {
       "resendInvite": "Resend invite",
+      "cancelInvite": "Cancel invite",
+      "cancelInviteAriaLabel": "Cancel invite for {name}",
+      "inviteCanceledToast": "Invite for {name} canceled.",
       "enable": "Enable",
       "disable": "Disable",
       "enabling": "Enabling…",

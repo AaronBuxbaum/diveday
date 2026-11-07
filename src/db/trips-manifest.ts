@@ -1,5 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { seatCheckedIn } from "./arrival-provenance";
+import { bookingAddress } from "./booking-address";
 import type { AppDb } from "./client";
 import { bookings, people } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
@@ -16,7 +17,7 @@ import { seatNotCancelled } from "./trips-queries";
 /** Email recipients holding active seats on one tenant-scoped trip, one row per seat. */
 export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: string) {
   return db
-    .select({ bookingId: bookings.id, fullName: people.fullName, email: people.email })
+    .select({ bookingId: bookings.id, fullName: people.fullName, email: bookingAddress })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(

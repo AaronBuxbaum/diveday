@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { log } from "@/lib/log";
 import { type NotificationProvider, recipientLocale } from "@/lib/notifications";
+import { bookingRecipient } from "./booking-address";
 import { settledPartyPayment } from "./checkouts";
 import type { AppDb } from "./client";
 import { sendNotification } from "./notifications";
@@ -116,7 +117,7 @@ async function send(
   }
 
   const [row] = await db
-    .select({ booking: bookings, person: people, trip: trips, shop: shops })
+    .select({ booking: bookings, person: bookingRecipient, trip: trips, shop: shops })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))

@@ -10,9 +10,10 @@
  *
  * - **Missing stays missing until they are counted again.** A standing
  *   `not_boarded` after a dive on an earlier day, with no `boarded` at a later
- *   checkpoint that day and no `boarded` anywhere on a later day, is still
- *   open on every later day ({@link carriedMissing}); the manifest keeps
- *   showing it, and Today keeps raising it.
+ *   checkpoint that day and none on a later day at the dock or at that
+ *   checkpoint or a later one ({@link seenAfter}, #4056), is still open on
+ *   every later day ({@link carriedMissing}); the manifest keeps showing it,
+ *   and Today keeps raising it.
  * - **An undo reaches back only to the mark it names.** A `cleared` on a
  *   later day that names an earlier day's standing `not_boarded` at the same
  *   checkpoint (`retracts`, written only after the write proved that mark was
@@ -72,16 +73,28 @@ export function standingByDay<M extends DayMark>(marks: readonly M[]): Map<numbe
   return byDay;
 }
 
-/** Whether a subject has a standing `boarded` at any checkpoint on a day after `day`. */
+/**
+ * Whether a later day's count settles a subject's "not back aboard" at
+ * `checkpoint` on `day` (#4056): a standing `boarded` on a day after `day` at
+ * the dock, or at that checkpoint or a later one. A later day's "back aboard"
+ * after an earlier dive is a tap at a dive not yet done that day, which a
+ * mis-tap during a search past the day boundary would otherwise turn green;
+ * the dock count says the person stood there since. A mark filed on a day
+ * after `through` (a fast tablet) settles nothing, as at the missing-diver gate.
+ */
 export function seenAfter(
   standing: ReadonlyMap<number, ReadonlyMap<string, DayMark>>,
   subject: string,
   day: number,
+  checkpoint: string,
+  through = Number.POSITIVE_INFINITY,
 ): boolean {
+  const dive = ordinalOf(checkpoint);
   for (const [later, marks] of standing) {
-    if (later <= day) continue;
+    if (later <= day || later > through) continue;
     for (const mark of marks.values()) {
-      if (mark.subject === subject && mark.status === "boarded") return true;
+      if (mark.subject !== subject || mark.status !== "boarded") continue;
+      if (mark.checkpoint === "departure" || ordinalOf(mark.checkpoint) >= dive) return true;
     }
   }
   return false;
@@ -90,7 +103,7 @@ export function seenAfter(
 /**
  * The stated missing people of days before `currentDay` still open: a
  * standing `not_boarded` after a dive, not settled by a `boarded` at a later
- * checkpoint the same day, and not counted on any later day. Keyed by
+ * checkpoint the same day, nor by a later day's count ({@link seenAfter}). Keyed by
  * subject and checkpoint, the earlier day's mark as the value (the newest
  * such day wins).
  */
@@ -125,7 +138,9 @@ function stillOpenEarlier<M extends DayMark>(
           isAfterDive(other.checkpoint) &&
           ordinalOf(other.checkpoint) > dive,
       );
-      if (settledThatDay || seenAfter(standing, mark.subject, day)) continue;
+      if (settledThatDay || seenAfter(standing, mark.subject, day, mark.checkpoint, currentDay)) {
+        continue;
+      }
       open.push(mark);
     }
   }
@@ -209,22 +224,51 @@ function runStart<M extends TimedDayMark>(marks: readonly M[], mark: M): Date {
 }
 
 /**
- * Whether one person's marks (oldest first) say they are back aboard: the
- * newest is `boarded` and the manifest shows them nowhere red after a dive
- * ({@link notBackAboardSince}). An undo is not "back": it takes a mark away
- * without saying anyone came aboard, and no marks at all is not back either.
+ * Whether one person's marks (oldest first) say they are back aboard: their
+ * last word ({@link lastWord}) is `boarded` and the manifest shows them
+ * nowhere red after a dive ({@link notBackAboardSince}). An undo is not
+ * "back": it takes a mark away without saying anyone came aboard, and no
+ * marks at all is not back either.
  */
 export function backAboardNow<M extends TimedDayMark>(
   marks: readonly M[],
   currentDay: number,
 ): boolean {
-  return marks.at(-1)?.status === "boarded" && notBackAboardSince(marks, currentDay) === null;
+  return (
+    lastWord(marks, currentDay)?.status === "boarded" &&
+    notBackAboardSince(marks, currentDay) === null
+  );
+}
+
+/**
+ * The newest mark that says whether the person came back: one after a dive,
+ * or a dock count on a later day than every after-dive mark before it, and no
+ * later than `currentDay` (#4056): the count {@link seenAfter} reads. The
+ * dock count on the day of the dive says nothing about after it.
+ */
+function lastWord<M extends DayMark>(marks: readonly M[], currentDay: number): M | undefined {
+  let word: M | undefined;
+  let afterDiveDay = Number.NEGATIVE_INFINITY;
+  for (const mark of marks) {
+    if (isAfterDive(mark.checkpoint)) {
+      word = mark;
+      afterDiveDay = Math.max(afterDiveDay, mark.day);
+    } else if (
+      afterDiveDay > Number.NEGATIVE_INFINITY &&
+      mark.day > afterDiveDay &&
+      mark.day <= currentDay
+    ) {
+      word = mark;
+    }
+  }
+  return word;
 }
 
 /**
  * **Who is still unaccounted for after a dive, on any meeting day** (issue
  * #2404, #2557): on some day, a standing `not_boarded` after dive N with no
- * `boarded` after a later dive that day, and no `boarded` on a later day.
+ * `boarded` after a later dive that day, and none on a later day at the dock
+ * or after dive N or a later one ({@link seenAfter}).
  * Dive numbers are compared within a day only: day one's "back after dive 2"
  * says nothing about day two's dive 1.
  */

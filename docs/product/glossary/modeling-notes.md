@@ -41,13 +41,16 @@
   active people as unique by `(shop_id, lower(email))` and **reuse** the matching person on any
   submission with that email, so a re-typed regular collapses onto their own cert/waiver/rental-fit
   history (`findOrCreatePerson`, `src/db/people.ts`, CR-008). **Name-mismatch safeguard (H-20260724-one-person-per-email):** the
-  reuse is no longer silent — `findOrCreatePerson` now compares the submitted name to the stored one
+  reuse is never silent — `findOrCreatePerson` compares the submitted name to the stored one
   (`personNamesMatch`, `src/lib/person-name.ts`; case/accent/order/middle-initial tolerant), and a
-  public booking that reuses an email under a genuinely different name is stamped
-  `bookings.identity_unconfirmed_at`. That raises a fail-closed `identity_unconfirmed` readiness
-  blocker — so a shared inbox (a spouse, or a minor booked under a parent's email; see **Junior
-  certification**) can't board on the matched diver's evidence — until staff **Confirm identity**
-  (below), on the trip roster. **The same blocker has a second
+  booking or seat claim on a known email under a genuinely different name is **another diver on a
+  shared inbox** (a spouse, or a minor booked under a parent's email; see **Junior certification**):
+  it gets a record of its own under the typed name, holding no email, since the address stays with
+  the record that owns it (Aaron 2026-11-06; the same answer a party member on the lead's address
+  and a public package buyer get). The typed address stays on the seat as its **delivery address**
+  (`bookings.delivery_email`), so that seat's confirmation, release link, reminders and notices
+  still reach the inbox that booked it; it is never a login or lookup key. Nothing of the matched diver's travels and nothing is held for
+  the desk; a wrong guess is two records the desk can merge. **The blocker below has one
   raiser (#1556):** a staffer who types a name at the
   counter is shown the divers it half-matches (`similarity() > 0.4`, `findSimilarDivers`) with the
   day each of them last dived, and tapping one seats that diver `identity_unconfirmed` too. The
@@ -59,8 +62,9 @@
   [human-decisions/](../human-decisions/README.md) and
   [20260723-person-email-uniqueness](../../architecture/decisions/20260723-person-email-uniqueness.md).
 - **Held seat** — a booking attached to an existing diver on a guess: it carries
-  `bookings.identity_unconfirmed_at` (with `identity_booked_as` and `identity_matched_by`) and the
-  `identity_unconfirmed` readiness blocker, raised by the **Identity match key** above. The seat is
+  `bookings.identity_unconfirmed_at` (with `identity_booked_as`) and the
+  `identity_unconfirmed` readiness blocker, raised by the counter's name prompt (**Identity match
+  key** above). The seat is
   real and counts against the boat; the *person* is not settled. It boards on nothing of the
   matched diver's, and the flag gates **disclosure** as well as boarding (security review
   2026-09-11): the roster, the boat manifest, its printed sheet, the crew phone's offline copy and

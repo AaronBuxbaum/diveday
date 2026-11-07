@@ -283,6 +283,27 @@ describe("cancelDeparturesBelowMinimum", () => {
     expect(recipients[0]?.email).toBe("hana-told@example.test");
   });
 
+  it("tells a diver who booked from a shared inbox at that inbox", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Shared inbox" });
+    await seat(db, shop.id, trip.id, "Ann Hale");
+    // Another name on Ann's address: their own record, mailed at the address typed.
+    const bo = await createBooking(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      actor: "public",
+      fullName: "Bo Hale",
+      email: "ann-hale@example.test",
+    });
+    if (!bo.ok) throw new Error(`could not seat Bo: ${bo.reason}`);
+
+    await cancelDeparturesBelowMinimum(db, { now: NOW });
+    const recipients = await listMinimumNotMetRecipients(db, shop.id, trip.id);
+    expect(recipients.find((row) => row.bookingId === bo.bookingId)?.email).toBe(
+      "ann-hale@example.test",
+    );
+  });
+
   /**
    * The race a conditional `UPDATE` exists to close: a seat sells between the
    * pass listing this departure and cancelling it. The seat has to win — the

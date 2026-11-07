@@ -9,20 +9,8 @@ const trip = {
 };
 
 describe("seatAlreadyHeldEmail", () => {
-  it("says which door the address was tried at", () => {
-    const claim = seatAlreadyHeldEmail({
-      ...trip,
-      locale: "en-US",
-      diverName: "Nora Diaz",
-      attempt: "claim",
-    });
-    const booking = seatAlreadyHeldEmail({
-      ...trip,
-      locale: "en-US",
-      diverName: "Nora Diaz",
-      attempt: "booking",
-    });
-    expect(claim.text).toContain("seat-claim link");
+  it("says the address was tried at the booking form, and that nothing changed", () => {
+    const booking = seatAlreadyHeldEmail({ ...trip, locale: "en-US", diverName: "Nora Diaz" });
     expect(booking.text).toContain("tried to book Two-Tank Reef");
     expect(booking.text).toContain("so nothing changed");
   });

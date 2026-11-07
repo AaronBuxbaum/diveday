@@ -293,6 +293,111 @@ describe("roll-call results read day by day (#2557)", () => {
     });
   });
 
+  describe("a later day settles a carried miss only at the dock or at its checkpoint or later (#4056)", () => {
+    // Maya is not back after dive 2 on day one and searched for overnight.
+    const t = (minute: number) => new Date(Date.UTC(2026, 7, 1, 14, minute));
+    const at = (checkpoint: string, status: DayMark["status"], day: number, minute: number) => ({
+      ...m("maya", checkpoint, status, day),
+      occurredAt: t(minute),
+    });
+    const dayOne = [
+      at("departure", "boarded", 0, 0),
+      at("after_dive_1", "boarded", 0, 10),
+      at("after_dive_2", "not_boarded", 0, 20),
+    ];
+    const missing = { "maya@after_dive_2": "not_boarded/0" };
+
+    it("keeps her missing on day two after a mis-tap of back aboard after dive 1", () => {
+      const marks = [...dayOne, at("after_dive_1", "boarded", 1, 30)];
+      expect(states(manifestRollCallView(marks, 1))).toEqual({
+        ...missing,
+        "maya@after_dive_1": "boarded/1",
+      });
+      expect(unaccountedSubjects(marks)).toEqual(new Set(["maya"]));
+      expect(notBackAboardSince(marks, 1)).toEqual(t(20));
+      expect(backAboardNow(marks, 1)).toBe(false);
+      expect(states(manifestRollCallView(marks, 2))).toEqual(missing);
+    });
+
+    it("lets a count filed on a day the server has not reached settle nothing, on the manifest as at the gate", () => {
+      for (const checkpoint of ["departure", "after_dive_2"]) {
+        const marks = [...dayOne, at(checkpoint, "boarded", 2, 30)];
+        expect(states(manifestRollCallView(marks, 1)), checkpoint).toEqual(missing);
+        expect(notBackAboardSince(marks, 1), checkpoint).toEqual(t(20));
+        expect(backAboardNow(marks, 1), checkpoint).toBe(false);
+      }
+    });
+
+    it("settles her on day two by a dock count, or a count after dive 2 or a later dive", () => {
+      for (const counted of [
+        at("departure", "boarded", 1, 30),
+        at("after_dive_2", "boarded", 1, 30),
+        at("after_dive_3", "boarded", 1, 30),
+      ]) {
+        const marks = [...dayOne, at("after_dive_1", "boarded", 1, 25), counted];
+        const shown = states(manifestRollCallView(marks, 1));
+        expect(shown["maya@after_dive_2"], counted.checkpoint).not.toBe("not_boarded/0");
+        expect(unaccountedSubjects(marks), counted.checkpoint).toEqual(new Set());
+        expect(notBackAboardSince(marks, 1), counted.checkpoint).toBeNull();
+      }
+    });
+
+    it("lets the Found gate read day two's dock count as back aboard, as the manifest does", () => {
+      const marks = [...dayOne, at("departure", "boarded", 1, 30)];
+      expect(states(manifestRollCallView(marks, 1))).toEqual({ "maya@departure": "boarded/1" });
+      expect(backAboardNow(marks, 1)).toBe(true);
+    });
+
+    it("never reads a dock count on the day of the miss as back aboard, even after an undo", () => {
+      const undone = [
+        ...dayOne.slice(0, 2),
+        { ...at("after_dive_2", "not_boarded", 0, 20), id: "d1" },
+        { ...at("after_dive_2", "cleared", 0, 21), retracts: "d1" },
+        at("departure", "boarded", 0, 22),
+      ];
+      expect(notBackAboardSince(undone, 0)).toBeNull();
+      expect(backAboardNow(undone, 0)).toBe(false);
+      expect(backAboardNow([...dayOne, at("departure", "boarded", 0, 30)], 0)).toBe(false);
+      expect(backAboardNow([at("departure", "boarded", 0, 0)], 0)).toBe(false);
+    });
+
+    it("keeps a dock 'not boarded' on day two from settling or raising anything", () => {
+      const marks = [...dayOne, at("departure", "not_boarded", 1, 30)];
+      expect(states(manifestRollCallView(marks, 1))).toEqual({
+        ...missing,
+        "maya@departure": "not_boarded/1",
+      });
+      expect(notBackAboardSince(marks, 1)).toEqual(t(20));
+      expect(backAboardNow(marks, 1)).toBe(false);
+    });
+
+    it("lets a dock count that is undone on day two settle nothing", () => {
+      const marks = [
+        ...dayOne,
+        at("departure", "boarded", 1, 30),
+        at("departure", "cleared", 1, 31),
+      ];
+      expect(states(manifestRollCallView(marks, 1))).toEqual(missing);
+      expect(notBackAboardSince(marks, 1)).toEqual(t(20));
+      expect(backAboardNow(marks, 1)).toBe(false);
+    });
+
+    it("agrees with the manifest on every day-two tap: red there is missing at the gate", () => {
+      for (const checkpoint of ["departure", "after_dive_1", "after_dive_2", "after_dive_3"]) {
+        for (const status of ["boarded", "not_boarded", "cleared"] as const) {
+          const marks = [...dayOne, at(checkpoint, status, 1, 30)];
+          const red = [...manifestRollCallView(marks, 1).values()].some(
+            (mark) => mark.status === "not_boarded" && mark.checkpoint !== "departure",
+          );
+          const label = `${checkpoint} ${status}`;
+          expect(notBackAboardSince(marks, 1) !== null, label).toBe(red);
+          expect(unaccountedSubjects(marks).has("maya"), label).toBe(red);
+          if (red) expect(backAboardNow(marks, 1), label).toBe(false);
+        }
+      }
+    });
+  });
+
   it("starts a later day empty for everyone accounted for", () => {
     const marks = [m("eve", "departure", "boarded", 0), m("eve", "after_dive_1", "boarded", 0)];
     expect(states(manifestRollCallView(marks, 1))).toEqual({});

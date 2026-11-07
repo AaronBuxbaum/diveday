@@ -104,9 +104,9 @@ export function rowIdentity(seat: RowIdentityInput) {
   /**
    * **A held seat's two answers stand in the open, under its reason line**
    * (Aaron, 2026-10-05). The seat attached itself to an existing diver on
-   * something short of proof — a reused email under a different name
-   * (H-20260724-one-person-per-email), or a name tapped off the counter's prompt (issue #1556) — and
-   * the reason line names both people. "Same person" is a blocking confirm,
+   * something short of proof — a name tapped off the counter's prompt
+   * (H-20260724-one-person-per-email, issue #1556) — and the reason line
+   * names both people. "Same person" is a blocking confirm,
    * not an undo banner: it hands the matched diver's cards and waiver to
    * this seat (docs/design/principles.md §7). "Different person" splits the
    * seat into its own record. Like the medical hold, it is a decision about

@@ -32,7 +32,7 @@ export type DoctorAnswersState =
   | { status: "mismatch" }
   | { status: "rate" }
   | { status: "closed" }
-  /** Nothing to unlock, or the wrong-date ceiling is reached: the whole questionnaire. */
+  /** Nothing to unlock: the whole questionnaire. */
   | { status: "whole" }
   | { status: "open"; items: { label: string; prompt: string }[]; source: string | null };
 

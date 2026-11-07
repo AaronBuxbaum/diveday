@@ -46,24 +46,18 @@ describe("bookingIdentityColumns", () => {
   const now = new Date("2031-06-14T09:00:00Z");
 
   it("stamps a held seat with what the staffer is shown", () => {
-    expect(
-      bookingIdentityColumns(true, { bookedAs: "Sam Reef", matchedBy: "shared_email" }, now),
-    ).toEqual({
+    expect(bookingIdentityColumns(true, { bookedAs: "Sam Reef" }, now)).toEqual({
       identityUnconfirmedAt: now,
       identityBookedAs: "Sam Reef",
-      identityMatchedBy: "shared_email",
       heldEmergencyContactName: null,
       heldEmergencyContactPhone: null,
     });
   });
 
   it("clears every column for a confirmed match, whatever claim rode along", () => {
-    expect(
-      bookingIdentityColumns(false, { bookedAs: "Sam Reef", matchedBy: "picked_name" }, now),
-    ).toEqual({
+    expect(bookingIdentityColumns(false, { bookedAs: "Sam Reef" }, now)).toEqual({
       identityUnconfirmedAt: null,
       identityBookedAs: null,
-      identityMatchedBy: null,
       heldEmergencyContactName: null,
       heldEmergencyContactPhone: null,
     });
@@ -77,19 +71,15 @@ describe("bookingIdentityColumns without a claim (issue #3832)", () => {
     expect(bookingIdentityColumns(true, null, now)).toEqual({
       identityUnconfirmedAt: now,
       identityBookedAs: null,
-      identityMatchedBy: null,
       heldEmergencyContactName: null,
       heldEmergencyContactPhone: null,
     });
   });
 
   it("clears the flag and the claim together on a seat that is no longer held", () => {
-    expect(
-      bookingIdentityColumns(false, { bookedAs: "Sam Reef", matchedBy: "picked_name" }, now),
-    ).toMatchObject({
+    expect(bookingIdentityColumns(false, { bookedAs: "Sam Reef" }, now)).toMatchObject({
       identityUnconfirmedAt: null,
       identityBookedAs: null,
-      identityMatchedBy: null,
     });
   });
 });

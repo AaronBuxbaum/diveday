@@ -171,15 +171,6 @@ export function awaitsPhysician(
  */
 export const DOCTOR_PAGE_TRIP_GRACE_MS = DAY_MS;
 
-/**
- * Wrong dates of birth a held release takes on the doctor's page before its
- * answers stay locked for the rest of the hold (second-pass security review of
- * layer r5-3, FIX-1). Far more than a diver mistyping their own birthday needs,
- * and a few days' guesses at most against a year the attacker already knows.
- * After it, the page says to go through the whole questionnaire.
- */
-export const DOCTOR_UNLOCK_FAILURE_LIMIT = 20;
-
 /** Whether a held seat's departure is still close enough for the doctor's page to open. */
 export function doctorPageWithinTrip(tripEndsAt: Date, now: Date): boolean {
   return now.getTime() < tripEndsAt.getTime() + DOCTOR_PAGE_TRIP_GRACE_MS;

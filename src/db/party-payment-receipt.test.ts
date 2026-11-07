@@ -249,6 +249,19 @@ describe("sendPartyPaymentReceipt", () => {
     expect(email.sent).toHaveLength(0);
   });
 
+  it("sends a lead who booked from a shared inbox the receipt there", async () => {
+    const g = await group(["Pat Party", "Sam Second"]);
+    await g.db.update(people).set({ email: null }).where(eq(people.fullName, "Pat Party"));
+    const [lead] = g.bookingIds;
+    await g.db
+      .update(bookings)
+      .set({ deliveryEmail: "home@example.com" })
+      .where(eq(bookings.id, lead ?? ""));
+    const email = fakeEmail();
+    expect((await deliverPaid(g, email)).result).toBe("sent");
+    expect(email.sent.map((sent) => ("to" in sent ? sent.to : null))).toEqual(["home@example.com"]);
+  });
+
   it("never throws at the webhook when the provider does", async () => {
     const g = await group(["Pat Party", "Sam Second"]);
     const email = fakeEmail(undefined, {

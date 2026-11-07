@@ -146,13 +146,22 @@ describe("the public booking form, for an address that already holds a seat", ()
     const fresh = await post(tripId, [{ name: "Nora Diaz", email: "nora@example.com" }]);
     expect(fresh.landed).toMatch(/^\/ready\/.+\?booked=1$/);
 
-    const repeat = await post(tripId, [{ name: "Anyone", email: "NORA@example.com" }]);
+    const repeat = await post(tripId, [{ name: "nora diaz", email: "NORA@example.com" }]);
     expect(repeat.state).toBeNull();
     expect(repeat.landed).toBe(NEUTRAL(tripId));
     expect(repeat.sent.map((m) => [m.kind, m.to])).toEqual([
       ["seat_already_held", "nora@example.com"],
     ]);
     expect(await seatEmails(tripId)).toEqual(["nora@example.com"]);
+  });
+
+  it("seats another name on that address as its own diver, a shared inbox (Aaron 2026-11-06)", async () => {
+    const tripId = await freeDeparture();
+    await post(tripId, [{ name: "Nora Diaz", email: "nora@example.com" }]);
+
+    const spouse = await post(tripId, [{ name: "Luis Diaz", email: "NORA@example.com" }]);
+    expect(spouse.landed).toMatch(/^\/ready\/.+\?booked=1$/);
+    expect(spouse.sent.map((m) => m.kind)).not.toContain("seat_already_held");
   });
 
   it("lands a rolled-back party on the same page, naming nobody", async () => {

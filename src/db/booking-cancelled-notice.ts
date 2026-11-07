@@ -11,6 +11,7 @@ import { isCapturedPaymentStatus, type PaymentStatusValue } from "@/lib/payment-
 import { hasArrived } from "@/lib/presence";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { standingArrivalStatus } from "./arrival-provenance";
+import { bookingRecipient } from "./booking-address";
 import type { AppDb } from "./client";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
 import { recordNotificationDelivery, sendAndRecordNotification } from "./notifications";
@@ -129,7 +130,7 @@ async function sendNotice(
 ): Promise<"sent" | "not_sent" | "no_address"> {
   if (input.from !== "booked") return "not_sent";
   const [observed] = await db
-    .select({ booking: bookings, person: people, trip: trips, shop: shops })
+    .select({ booking: bookings, person: bookingRecipient, trip: trips, shop: shops })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
@@ -161,7 +162,7 @@ async function sendNotice(
     },
     async (tx) => {
       const [row] = await tx
-        .select({ booking: bookings, person: people, trip: trips, shop: shops })
+        .select({ booking: bookings, person: bookingRecipient, trip: trips, shop: shops })
         .from(bookings)
         .innerJoin(
           people,

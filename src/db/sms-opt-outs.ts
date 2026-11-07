@@ -41,7 +41,10 @@ export async function isSmsOptedOut(db: DbExecutor, phone: string): Promise<bool
  * Which of these numbers are on the STOP list, in one read. For a caller that
  * would otherwise mint something for a text the wrapper below will refuse.
  */
-export async function optedOutPhones(db: AppDb, phones: readonly string[]): Promise<Set<string>> {
+export async function optedOutPhones(
+  db: DbExecutor,
+  phones: readonly string[],
+): Promise<Set<string>> {
   if (phones.length === 0) return new Set();
   const rows = await db
     .select({ phone: smsOptOuts.phone })
@@ -61,6 +64,7 @@ export async function optedOutPhones(db: AppDb, phones: readonly string[]): Prom
  */
 export function stopListedSmsProvider(db: DbExecutor, inner: PlainTextProvider): PlainTextProvider {
   return {
+    configured: inner.configured,
     isStopListed: (phone) => isSmsOptedOut(db, phone),
     async send(message, options) {
       if (await isSmsOptedOut(db, message.to)) {

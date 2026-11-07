@@ -59,7 +59,6 @@ describe("a held seat's name on the boat (in-memory PGlite)", () => {
       .set({
         identityUnconfirmedAt: nowDate(),
         identityBookedAs: bookedAs,
-        identityMatchedBy: "shared_email",
       })
       .where(eq(bookings.id, held.booking.id));
     // Teamed after the hold, so the trail's frozen `memberNames` is written now.

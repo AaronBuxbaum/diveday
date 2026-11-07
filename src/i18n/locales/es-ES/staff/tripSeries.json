@@ -30,7 +30,6 @@
     "offCadenceDescription": "Las quita del calendario público. Reactiva cualquiera desde su propia página de salida.",
     "offCadenceDescriptionBooked": "{count, plural, one {# de ellas lleva buceadores con reserva. Les avisamos de que la fecha se cancela y sus pagos con tarjeta se devuelven completos.} other {# de ellas llevan buceadores con reserva. Les avisamos de que la fecha se cancela y sus pagos con tarjeta se devuelven completos.}}",
     "offCadenceDescriptionBookedHeld": "{count, plural, one {# de ellas lleva buceadores con reserva. Les avisamos de que la fecha se cancela, y un propietario o gerente devuelve los pagos con tarjeta.} other {# de ellas llevan buceadores con reserva. Les avisamos de que la fecha se cancela, y un propietario o gerente devuelve los pagos con tarjeta.}}",
-    "cancelling": "Cancelando…",
     "cancelAllUpcoming": "Cancelar todas las fechas próximas",
     "cancelAllConfirm": "Sí, cancelar todas las fechas próximas",
     "cancelDescription": "{count, plural, one {Cancela la # fecha que queda y deja de repetirse.} other {Cancela las # fechas que quedan y deja de repetirse.}}",

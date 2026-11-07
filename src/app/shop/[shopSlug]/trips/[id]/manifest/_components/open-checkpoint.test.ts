@@ -48,7 +48,7 @@ describe("openCheckpoint", () => {
 
   it("withholds a held seat's matched particulars before anything reads the row", () => {
     const held = diver({
-      identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+      identityClaim: { bookedAs: "Maria" },
       emergencyContactName: "Matched Person",
     } as never);
     const page = opened(

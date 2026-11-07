@@ -29,7 +29,6 @@ export async function issueReturningDiverReceiptForBooking(
     !input.deviceToken ||
     !RETURNING_DIVER_DEVICE_TOKEN_PATTERN.test(input.deviceToken) ||
     !input.confirmedBooking ||
-    input.confirmedBooking.booking.identityUnconfirmedAt !== null ||
     !input.confirmedBooking.person.email
   )
     return;

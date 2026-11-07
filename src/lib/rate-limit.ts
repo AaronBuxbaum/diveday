@@ -784,11 +784,11 @@ export const RATE_LIMITS = {
    * typing the diver's date of birth, per **diver** (the held release's
    * person) rather than per IP or per record, so neither rotating addresses
    * nor a reissued link buys a fresh budget. Five a quarter hour is plenty for
-   * a diver mistyping their own birthday, but a bucket refills: sustained, it
-   * is 20 an hour, so on its own it would walk a known birth year in under a
-   * day. The real bound is the record's lifetime ceiling,
-   * `DOCTOR_UNLOCK_FAILURE_LIMIT` wrong dates, after which the answers stay
-   * locked for the rest of the hold; this only paces the tries before it.
+   * a diver mistyping their own birthday, and it is the whole bound: no
+   * ceiling on the record locks the page for the rest of a hold (Aaron,
+   * 2026-11-06), so a diver who spends it waits minutes, not until staff
+   * answer. Sustained it is 20 an hour, and the page closes a day after the
+   * departure, so a guesser also needs the diver's own link.
    * Checked with `checkRateLimitFailClosed` (security review of layer r5-3,
    * F1, and its second pass).
    */

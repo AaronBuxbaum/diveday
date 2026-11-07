@@ -178,10 +178,8 @@ export const waiverRecords = pgTable(
     deliveryProviderStatus: notificationProviderStatus("delivery_provider_status"),
     deliveryProviderStatusAt: timestamp("delivery_provider_status_at", { withTimezone: true }),
     deliveryError: text("delivery_error"),
-    // `token_hash` and `expires_at` are retired (issue #3983): a release
-    // carries no link and no clock of its own; the capability that opens it
-    // does (`release_link`, `waiver_link`). Nullable and undeclared for one
-    // release, dropped in the next.
+    // A release carries no link and no clock of its own (issue #3983, columns dropped by #4006):
+    // the capability that opens it does (`release_link`, `waiver_link`).
     startedAt: timestamp("started_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
     draftSignerName: text("draft_signer_name"),
@@ -475,15 +473,10 @@ export const waiverRecords = pgTable(
      * erasure is inside the seal rather than an unsealed annotation beside it.
      */
     anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
-    /**
-     * Wrong dates of birth typed on the doctor's page to unlock this release's
-     * referral answers (`revealDoctorReferral`). At
-     * `DOCTOR_UNLOCK_FAILURE_LIMIT` the answers stay locked for the rest of
-     * the hold: a ceiling for the life of the record, which a refilling rate
-     * limit cannot give (second-pass security review of layer r5-3, FIX-1).
-     * Outside the seal; a count of attempts, not evidence.
-     */
-    doctorUnlockFailures: integer("doctor_unlock_failures").notNull().default(0),
+    // `doctor_unlock_failures` is retired (Aaron, 2026-11-06): no wrong-date
+    // ceiling locks the doctor's page for the rest of a hold; the per-diver
+    // rate limit paces the tries. Undeclared for one release, dropped in the
+    // next.
     /**
      * **The signed doctor's form the diver sent from the doctor's page**
      * (issue #2797, ADR 20261024-diver-sent-doctors-form), re-stored under the

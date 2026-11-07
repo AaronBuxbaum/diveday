@@ -85,7 +85,6 @@ async function holdSeat(ctx: Ctx, bookedAs = "Sam Stranger") {
     .set({
       identityUnconfirmedAt: ctx.now,
       identityBookedAs: bookedAs,
-      identityMatchedBy: "shared_email",
     })
     .where(eq(bookings.id, ctx.bookingId));
 }

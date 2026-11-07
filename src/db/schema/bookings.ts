@@ -28,14 +28,6 @@ import { trips } from "./trips";
  */
 
 /**
- * What a flagged booking was matched to its person by (H-20260724-one-person-per-email): a reused email
- * under a different name, or a name a staffer picked off the counter's
- * "is this the same diver?" prompt. Read only to tell the staffer why the seat
- * is held; it gates nothing the flag itself does not.
- */
-export const identityMatchKind = pgEnum("identity_match_kind", ["shared_email", "picked_name"]);
-
-/**
  * **What the shop decided about the seat**, and nothing else: held, released
  * by a staffer who said the diver did not come, or given up. Where the person
  * has got to is not a seat word. The desk's sighting is the arrival trail
@@ -349,16 +341,16 @@ export const bookings = pgTable(
      */
     pendingCheckoutIntentId: uuid("pending_checkout_intent_id"),
     /**
-     * Set when a self-service path (public booking) reused an existing person by
-     * email match but the submitted name did not match that person's stored name
-     * — a shared-inbox / minor-under-a-parent's-email signal that this booking
-     * may be a *different* human silently inheriting the matched person's
-     * verified certs and current waiver (H-20260724-one-person-per-email). While set, readiness fails closed
+     * Set when the counter seated a diver off its "is this the same diver?"
+     * name prompt and the typed name disagrees with the record picked, or two
+     * divers answer to it (issue #1556): the seat may be a *different* human
+     * inheriting the matched person's verified certs and current waiver
+     * (H-20260724-one-person-per-email). While set, readiness fails closed
      * with an `identity_unconfirmed` blocker so the diver can never board on
      * borrowed evidence; staff clear it with a one-tap "confirm identity" once
-     * they've checked it really is the same person. Null on the identity path
-     * (an existing diver re-books themselves — no name is submitted) and on any
-     * matched-name booking.
+     * they've checked it really is the same person. A different name on a
+     * known address never sets it: that is another diver, who gets a record of
+     * their own (Aaron 2026-11-06).
      */
     identityUnconfirmedAt: timestamp("identity_unconfirmed_at", { withTimezone: true }),
     /**
@@ -378,8 +370,21 @@ export const bookings = pgTable(
      * Null on every booking that was never flagged.
      */
     identityBookedAs: text("identity_booked_as"),
-    /** Why the flag was raised — see {@link identityMatchKind}. Set and cleared with it. */
-    identityMatchedBy: identityMatchKind("identity_matched_by"),
+    /**
+     * **Where this seat's mail goes when its diver holds no address of their
+     * own** (Aaron 2026-11-06). A different name on an email another diver
+     * holds is another diver on a shared inbox: they get a record of their own
+     * with no email (`people_shop_email_unique` keeps the address with the
+     * record that owns it), and the address they typed is kept here, lower
+     * case, so this booking's confirmation, release link, reminders and notices
+     * reach the inbox that booked it (`bookingAddress`). Null on every other
+     * seat, which mails `people.email`. Never a login or a lookup key.
+     */
+    deliveryEmail: text("delivery_email"),
+    // `identity_matched_by` (and its `identity_match_kind` type) is retired: a
+    // different name on a known address now gets its own record, so a held
+    // seat has one way in, the counter's name prompt. Undeclared for one
+    // release, dropped in the next.
     /**
      * **An emergency contact for the person on a held seat** (issue #2145,
      * Aaron 2026-10-13, option b). While `identity_unconfirmed_at` is set the

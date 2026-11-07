@@ -461,13 +461,13 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
 test.describe("as owner", () => {
   signedInAs("owner");
 
-  test("a shared-inbox booking under a different name is held for staff identity confirmation", async ({
+  test("a shared-inbox booking under a different name is its own diver, held for nobody", async ({
     page,
   }) => {
     // Signs in as staff (cached — see `signedInAs` above), creates a trip,
-    // signs out, books as a diver, signs back in as staff, and confirms
-    // identity — several full navigation cycles plus one genuine live
-    // re-authentication (the sign-out/sign-back-in) chained in one test.
+    // signs out, books as two divers, and signs back in as staff — several
+    // full navigation cycles plus one genuine live re-authentication (the
+    // sign-out/sign-back-in) chained in one test.
     // Same aggregate-cost reasoning as the visual specs' `test.setTimeout`: a
     // traced CI failure measured the total sequential cost at 19s against
     // the default 15s test timeout, every individual step resolving
@@ -506,7 +506,8 @@ test.describe("as owner", () => {
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
-    // A different name on the same inbox books trip B — reuses Nora's record.
+    // A different name on the same inbox books trip B: another diver
+    // (Aaron 2026-11-06), on a record of their own.
     await page.goto("/s/blue-mantis");
     // Scoped to the trip list itself, the page's one stable anchor for
     // departures — day rules and other lists on the page never carry a
@@ -526,45 +527,17 @@ test.describe("as owner", () => {
     await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
-    await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /You’ve got a seat, Ben/ })).toBeVisible();
 
-    // Staff open trip B's roster: the diver is held on identity, not ready.
+    // Staff open trip B's roster: Ben is there under his own name, and
+    // nothing asks the desk who he is.
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, tripB);
-    // `.first()`: the reason line is itself a list item naming Nora, inside her row.
-    const row = rosterRow(page, "Nora Quinn").filter({ visible: true }).first();
-    // The row says who booked, on whose email, and offers both answers.
-    await expect(row).toContainText("Booked as Ben Quinn with Nora Quinn’s email.");
-
-    // Confirming identity clears the blocker — two-tap InlineConfirm, not a
-    // native dialog: the first tap only arms it.
-    await row.getByRole("button", { name: "Same person as Nora Quinn" }).click();
-    await row.getByRole("button", { name: "Yes, this is them" }).click();
-    await expect(page.getByRole("status")).toContainText("Identity confirmed");
-    await expect(
-      rosterRow(page, "Nora Quinn")
-        .filter({ visible: true })
-        .first()
-        .getByRole("button", { name: /^Same person as / }),
-    ).toHaveCount(0);
-
-    // And the tap is on the record. Clearing this flag hands the seat Nora's
-    // live signed release, her cards and any prepaid dives, and every staff
-    // role can make it — `src/lib/authz.ts`'s answer to that weight is the
-    // trail, not the role list, so the shop has to be able to read back who
-    // made the call (the RFH-07 security pass).
-    //
-    // **Naming the door is the assertion, not decoration.** There are two —
-    // this roster row and the check-in queue's own row (issue #1696) — and the
-    // trail carries a different code for each, because "somebody cleared it"
-    // and "somebody at the counter cleared it with the diver in front of them"
-    // are different facts to read back a week later. A regex that matched both
-    // would pass with the two doors indistinguishable again.
-    await openTripActivity(page);
-    await expect(
-      page.getByText(/confirmed on the trip’s Divers tab that this booking is Nora Quinn/),
-    ).toBeVisible();
+    const row = rosterRow(page, "Ben Quinn").filter({ visible: true }).first();
+    await expect(row).toBeVisible();
+    await expect(row.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
+    await expect(rosterRow(page, "Nora Quinn").filter({ visible: true })).toHaveCount(0);
   });
 });
 

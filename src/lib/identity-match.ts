@@ -2,13 +2,6 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { BLOCKER_CATEGORY, type ReadinessBlocker } from "@/lib/readiness";
 
 /**
- * Why a booking was attached to an existing diver on a guess (H-20260724-one-person-per-email): a reused
- * email under a different name, or a name a staffer picked off the counter's
- * "is this the same diver?" prompt. Mirrors the `identity_match_kind` pg enum.
- */
-export type IdentityMatchKind = "shared_email" | "picked_name";
-
-/**
  * **What a held seat says about itself** (dive-domain review 2026-10-05).
  *
  * While `identity_unconfirmed` stands, every other blocker readiness raised is
@@ -37,8 +30,8 @@ export function heldSeatBlockers<T extends ReadinessBlocker>(blockers: readonly 
 
 /**
  * **The held seat's reason, naming both people** (Aaron, 2026-10-05: the old
- * sentence did not say what the issue was). "Booked as Hana Park with June
- * Park's email" is the whole question in one line, so the two answers under it
+ * sentence did not say what the issue was). "Booked as Hana Park, matched to
+ * June Park" is the whole question in one line, so the two answers under it
  * need no explanation of their own.
  *
  * A key and its values rather than words, so the diver record's status rows,
@@ -46,19 +39,16 @@ export function heldSeatBlockers<T extends ReadinessBlocker>(blockers: readonly 
  * never kept, where the generic blocker sentence stands.
  */
 export function identityReasonMessage(
-  claim: { bookedAs: string | null; matchedBy: IdentityMatchKind | null },
+  claim: { bookedAs: string | null },
   recordName: string,
 ): { key: StaffMessageKey; values: Record<string, string> } | null {
-  const { bookedAs, matchedBy } = claim;
-  if (!bookedAs || !matchedBy) return null;
+  const { bookedAs } = claim;
+  if (!bookedAs) return null;
   if (bookedAs.trim().toLowerCase() === recordName.trim().toLowerCase()) {
     return { key: "shared.identityCheck.reasonSameName", values: { name: recordName } };
   }
   return {
-    key:
-      matchedBy === "shared_email"
-        ? "shared.identityCheck.reasonSharedEmail"
-        : "shared.identityCheck.reasonPickedName",
+    key: "shared.identityCheck.reasonPickedName",
     values: { bookedAs, name: recordName },
   };
 }

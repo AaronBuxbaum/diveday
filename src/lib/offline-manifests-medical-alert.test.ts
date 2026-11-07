@@ -84,7 +84,7 @@ describe("the dock copy of a medical alert", () => {
   it("never carries it on a held seat", () => {
     const row = save({
       medicalAlert: true,
-      identityClaim: { bookedAs: "Someone Else", matchedBy: null },
+      identityClaim: { bookedAs: "Someone Else" },
       readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
     });
     expect(row.identityWithheld).toBe(true);

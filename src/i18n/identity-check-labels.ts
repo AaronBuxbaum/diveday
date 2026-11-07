@@ -1,4 +1,4 @@
-import { type IdentityMatchKind, identityReasonMessage } from "@/lib/identity-match";
+import { identityReasonMessage } from "@/lib/identity-match";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { readinessBlockerText } from "./readiness-labels";
 import type { StaffTranslator } from "./staff-messages";
@@ -32,7 +32,7 @@ export function identityCheckWords(t: StaffTranslator, recordName: string) {
 /** {@link identityReasonMessage} in words, or `fallback` (the blocker sentence). */
 export function identityReasonText(
   t: StaffTranslator,
-  claim: { bookedAs: string | null; matchedBy: IdentityMatchKind | null },
+  claim: { bookedAs: string | null },
   recordName: string,
   fallback: string,
 ): string {

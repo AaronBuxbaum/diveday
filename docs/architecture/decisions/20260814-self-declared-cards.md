@@ -122,7 +122,7 @@ re-states `status = 'pending' AND self_declared_at IS NOT NULL` in its own `WHER
 
 **A joiner writes onto their own record only.** `findOrCreatePerson` resolves by email and merely
 *flags* a mismatched name (H-20260724-one-person-per-email). Everywhere else on that fork, a mismatch stops the write — a
-booking is marked `identityUnconfirmed`, a seat claim will not record a phone number, a locale is not
+booking or a seat claim goes onto a record of its own (since 2026-11-06), a locale is not
 recorded. A certification is stronger than all three, so both joins skip
 `recordSelfDeclaredCards` when `nameMatches` is false. The list entry is still created: joining a
 marketing list under a borrowed address predates this feature, and refusing the opt-in would be a new

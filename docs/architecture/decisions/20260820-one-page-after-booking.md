@@ -147,5 +147,5 @@ holder is emailed about the seat they already hold, and a party's lead that the 
 booked together, without why or who (the lead's address is whatever was typed); both after the
 response. A fresh booking still lands
 where this ADR says. The neutral page differs from a fresh booking's landing, so the "is this
-address booked" signal narrows on this form rather than closing; the seat-claim page stays fully
-closed (ADR 20260804-seat-claim-links, #2381).
+address booked" signal narrows on this form rather than closing; the seat-claim page says it on
+screen (ADR 20260804-seat-claim-links).

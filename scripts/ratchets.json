@@ -1179,7 +1179,7 @@
     "e2e/agency-check.spec.ts": 1,
     "e2e/backup.spec.ts": 5,
     "e2e/blowout.spec.ts": 2,
-    "e2e/booking.spec.ts": 2,
+    "e2e/booking.spec.ts": 1,
     "e2e/buddy-teams.spec.ts": 1,
     "e2e/certifications.spec.ts": 4,
     "e2e/check-in.spec.ts": 10,
@@ -1278,12 +1278,6 @@
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
           "src/db/seat-claims.test.ts": "1047 -> 1094"
-        }
-      },
-      {
-        "why": "merge of main into fourth-review layer r4-1: both sides added to seat-claims.test.ts",
-        "files": {
-          "src/db/seat-claims.test.ts": "1478 -> 1525"
         }
       },
       {
@@ -1450,17 +1444,10 @@
         }
       },
       {
-        "why": "the trip page readers left the trips barrel (issue #2757): two import lines, removed again when the page reads through one reader in the next layer",
-        "files": {
-          "src/db/rental-fit.test.ts": "1227 -> 1237"
-        }
-      },
-      {
         "why": "issue #2722: every card insert now names its kind on the one cards ledger",
         "files": {
           "src/db/executed-dives.test.ts": "1084 -> 1085",
           "src/db/no-show.test.ts": "1156 -> 1158",
-          "src/db/seat-claims.test.ts": "1525 -> 1529",
           "src/db/self-declared-cards.test.ts": "1849 -> 1869"
         }
       }
@@ -1478,8 +1465,8 @@
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
-    "src/db/anonymize.test.ts": 1627,
-    "src/db/bookings.test.ts": 3526,
+    "src/db/anonymize.test.ts": 1626,
+    "src/db/bookings.test.ts": 3516,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1207,
     "src/db/checkouts.test.ts": 2964,
@@ -1501,11 +1488,11 @@
     "src/db/recap.test.ts": 2141,
     "src/db/refunds.test.ts": 1150,
     "src/db/reminders.test.ts": 936,
-    "src/db/rental-fit.test.ts": 1237,
+    "src/db/rental-fit.test.ts": 1236,
     "src/db/reporting.test.ts": 1380,
     "src/db/retention.test.ts": 1027,
     "src/db/reviews.test.ts": 1034,
-    "src/db/seat-claims.test.ts": 1529,
+    "src/db/seat-claims.test.ts": 1524,
     "src/db/self-declared-cards.test.ts": 1869,
     "src/db/staffing.test.ts": 952,
     "src/db/trips-crew.test.ts": 1430,
@@ -1613,7 +1600,7 @@
     "src/app/shop/[shopSlug]/promos/page.tsx": 559,
     "src/app/shop/[shopSlug]/reports/page.tsx": 474,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 578,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 572,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 455
   },
