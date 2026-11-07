@@ -8,7 +8,6 @@ import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureRequired } from "@/lib/guardian";
-import { log } from "@/lib/log";
 import {
   answeredMedicalForm,
   calculateMedicalResult,
@@ -17,12 +16,7 @@ import {
   referralItems,
 } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
-import {
-  awaitsPhysician,
-  DOCTOR_UNLOCK_FAILURE_LIMIT,
-  doctorPageWithinTrip,
-  WAIVER_SIGNATURE_VALIDITY_MS,
-} from "@/lib/waivers";
+import { awaitsPhysician, doctorPageWithinTrip, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
@@ -1083,9 +1077,7 @@ export async function getDoctorReferral(
 ): Promise<DoctorReferral | null> {
   const person = await heldPersonForDoctor(db, record, now);
   if (!person) return null;
-  const hasItems =
-    referralItems(record.medicalAnswers).length > 0 &&
-    record.doctorUnlockFailures < DOCTOR_UNLOCK_FAILURE_LIMIT;
+  const hasItems = referralItems(record.medicalAnswers).length > 0;
   const unfinished =
     record.medicalAnswers !== null &&
     calculateMedicalResult(record.medicalAnswers).status === "incomplete";
@@ -1191,13 +1183,12 @@ export async function attachDiverMedicalForm(
  * - null when the page itself would not open;
  * - `whole` without comparing anything when there is nothing to unlock (no
  *   referral items, no date on file), so the action never confirms a date of
- *   birth for its own sake, and once the release has taken
- *   `DOCTOR_UNLOCK_FAILURE_LIMIT` wrong dates;
- * - `mismatch` for a wrong date, counted on the record, the attempt that
- *   reaches the ceiling answering `whole` and logging
- *   `doctor_answers.locked_out` with the record id only.
+ *   birth for its own sake;
+ * - `mismatch` for a wrong date.
  *
- * A right date spends nothing. The caller rate-limits as well.
+ * Nothing on the record ends the tries (Aaron, 2026-11-06): a diver who
+ * fumbles their birth date or shares a phone still needs the page on the day.
+ * The caller's per-diver rate limit, failing closed, paces the guesses.
  */
 export async function revealDoctorReferral(
   db: DbExecutor,
@@ -1215,21 +1206,8 @@ export async function revealDoctorReferral(
   if (!readContact || !(await contactStillOnFile(db, record, readContact))) return null;
   const items = referralItems(record.medicalAnswers);
   if (items.length === 0 || !person.dateOfBirth) return "whole";
-  if (record.doctorUnlockFailures >= DOCTOR_UNLOCK_FAILURE_LIMIT) return "whole";
   if (isValidCalendarDate(enteredBirthdate) && enteredBirthdate === person.dateOfBirth) {
     return { items, form: answeredMedicalForm(record.medicalAnswers) };
   }
-  // Counted in the statement, never from the read above: two tries racing each
-  // other must both be counted.
-  const [counted] = await db
-    .update(waiverRecords)
-    .set({ doctorUnlockFailures: sql`${waiverRecords.doctorUnlockFailures} + 1` })
-    .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, record.shopId)))
-    .returning({ failures: waiverRecords.doctorUnlockFailures });
-  const failures = counted?.failures ?? DOCTOR_UNLOCK_FAILURE_LIMIT;
-  if (failures < DOCTOR_UNLOCK_FAILURE_LIMIT) return "mismatch";
-  if (failures === DOCTOR_UNLOCK_FAILURE_LIMIT) {
-    log("doctor_answers.locked_out", "warn", { record: record.id });
-  }
-  return "whole";
+  return "mismatch";
 }

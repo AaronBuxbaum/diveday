@@ -5,7 +5,7 @@ import type { DoctorAnswersState } from "./doctor-core";
 
 /**
  * What the unlock settled: the answers once the diver's date of birth matched,
- * or the whole questionnaire once the wrong dates reached the ceiling.
+ * or the whole questionnaire when there was nothing to unlock.
  */
 export type RevealedAnswers = Extract<DoctorAnswersState, { status: "open" } | { status: "whole" }>;
 

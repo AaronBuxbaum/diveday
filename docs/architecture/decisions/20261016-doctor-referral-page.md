@@ -23,9 +23,8 @@ the same gate (`doctorPageOpen`). It carries:
   Questionnaire*, 10346 EN, version 2026-01-01, page 3, named and linked
   (`RSTC_QUESTIONNAIRE.published`), never a restyled copy;
 - the **referral answers behind the diver's date of birth**: `revealDoctorAnswersAction` compares
-  the entered date with the one on file (rate-limited per IP and per diver, failing closed; at 20
-  wrong dates per release, `waiver_records.doctor_unlock_failures`, the answers stay locked for the
-  rest of the hold) and returns each
+  the entered date with the one on file (rate-limited per IP and per diver, failing closed; no
+  ceiling locks it for the hold, Aaron 2026-11-06) and returns each
   referral item's place and **published prompt**, never free-text detail, with the form version
   answered. With no date on file or nothing to show, the page says to go through the whole
   questionnaire;

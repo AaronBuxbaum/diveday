@@ -15,7 +15,6 @@ import {
 } from "@/db/waivers-test-fixtures";
 import { diverTranslator } from "@/i18n/messages";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { DOCTOR_UNLOCK_FAILURE_LIMIT } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -260,18 +259,13 @@ describe("the doctor's page", () => {
     expect(await reveal(token, "1984-03-09")).toEqual({ status: "rate" });
   });
 
-  it("says to go through the whole questionnaire once the wrong dates reach the ceiling", async () => {
-    const { db, token, person } = await signedLink(medicalReferralAnswers);
-    await db
-      .update(waiverRecords)
-      .set({ doctorUnlockFailures: DOCTOR_UNLOCK_FAILURE_LIMIT - 1 })
-      .where(eq(waiverRecords.personId, person.id));
-    expect(await reveal(token, "1990-01-01")).toEqual({ status: "whole" });
-    expect(await reveal(token, "1984-03-09")).toEqual({ status: "whole" });
-    const html = await render(token);
-    expect(html).toContain("Go through the whole questionnaire with your doctor.");
-    expect(html).not.toContain('name="birthdate"');
-    expect(html).toContain(`href="${RSTC_QUESTIONNAIRE.published.url}"`);
+  it("still unlocks with the right date after many wrong ones", async () => {
+    const { token } = await signedLink(medicalReferralAnswers);
+    for (let tries = 0; tries < 25; tries++) {
+      expect(await reveal(token, "1990-01-01")).toEqual({ status: "mismatch" });
+    }
+    expect(await reveal(token, "1984-03-09")).toMatchObject({ status: "open" });
+    expect(await render(token)).toContain('name="birthdate"');
   });
 
   it("sends a clean release back to its waiver page", async () => {

@@ -170,7 +170,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // *inside* the product is precisely why it does not need to travel outside it.
     "medical_clearance_document_url",
     "diver_medical_form_url",
-    "doctor_unlock_failures", // abuse control on the doctor's page, not part of the record
+    "doctor_unlock_failures", // retired, undeclared, dropped next release
     "integrity_valid", // cached seal verdict (#2562); integrity_hash itself is exported
     "integrity_checked_at", // when that verdict was taken
   ],
