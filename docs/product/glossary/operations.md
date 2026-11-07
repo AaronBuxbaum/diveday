@@ -770,7 +770,8 @@
   has one meeting day, its own window.
 - **Roll-call day boundary** — where one meeting day's roll call ends and the next one's begins:
   the next day's start, or halfway from the day before's end to it if that is earlier. A stated
-  missing person stays on the manifest and on Today past it until counted again.
+  missing person stays on the manifest and on Today past it until counted again: on a later day,
+  at the dock or after the same dive or a later one, never after an earlier dive.
 - **Course catalog copy** — a shop's configurable copy of the PADI/SSI course list. The agency owns
   course identity, the prerequisite card (certification and minimum age), and the fact that every
   course session needs an instructor and a signed waiver; the shop controls its two prices, its

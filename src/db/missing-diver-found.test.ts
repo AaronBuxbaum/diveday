@@ -285,15 +285,19 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
     expect((await stateOf(db, raised.reportId)).sentAt).toBeInstanceOf(Date);
   });
 
-  it("is refused for a diver carried missing from day one after day two's count of them is undone (#4017)", async () => {
+  /**
+   * A raised alert on a course, nobody told yet (the provider was down): the
+   * fixture's "not back after dive 1" sits on day one, and day two began two
+   * minutes ago. `say` writes a seat mark that many minutes after it.
+   */
+  async function raisedOnACourse() {
     const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
     const raised = await raiseMissingDiverAlert(db, {
       ...input,
       actorPersonId: f.crew.id,
-      provider: recorder().provider,
+      provider: recorder("failed").provider,
     });
     if (!raised.ok || !raised.reportId) throw new Error("raise refused");
-    // A course: the mark sits on day one, and day two began a minute ago.
     const minute = 60_000;
     await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, input.tripId));
     await db.insert(tripScheduleDays).values([
@@ -310,7 +314,12 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
         endsAt: new Date(MARKED_AT.getTime() + 180 * minute),
       },
     ]);
-    const say = async (status: "boarded" | "cleared", at: number, retractsEventId?: string) => {
+    const say = async (
+      status: "boarded" | "not_boarded" | "cleared",
+      at: number,
+      checkpoint = "after_dive_1",
+      retractsEventId?: string,
+    ) => {
       const [row] = await db
         .insert(rollCallEvents)
         .values({
@@ -319,7 +328,7 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
           bookingId: f.seat.booking.id,
           recordedByPersonId: f.crew.id,
           status,
-          checkpoint: "after_dive_1",
+          checkpoint,
           source: "live",
           occurredAt: new Date(MARKED_AT.getTime() + at * minute),
           retractsEventId,
@@ -327,17 +336,47 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
         .returning({ id: rollCallEvents.id });
       return row?.id;
     };
-    await say("cleared", 4, await say("boarded", 3.5));
-    const { provider, sent } = recorder();
-    expect(
-      await markMissingDiverFound(db, {
+    const found = (provider = recorder().provider) =>
+      markMissingDiverFound(db, {
         ...input,
-        reportId: raised.reportId,
+        reportId: raised.reportId as string,
         actorPersonId: f.owner.id,
         provider,
-      }),
-    ).toEqual({ ok: false, reason: "still_missing" });
+      });
+    return { db, f, say, found, reportId: raised.reportId };
+  }
+
+  it("is refused for a diver carried missing from day one after day two's count of them is undone (#4017)", async () => {
+    const { say, found } = await raisedOnACourse();
+    await say("cleared", 4, "after_dive_1", await say("boarded", 3.5));
+    const { provider, sent } = recorder();
+    expect(await found(provider)).toEqual({ ok: false, reason: "still_missing" });
     expect(sent).toEqual([]);
+  });
+
+  describe("a later day settles a carried miss only at the dock or at its dive or later (#4056)", () => {
+    it("lets day two's dock count through Found, as the manifest reads it, and pages nobody", async () => {
+      const { db, say, found, reportId } = await raisedOnACourse();
+      await say("boarded", 3.5, "departure");
+      const { provider, sent } = recorder();
+      await sendMissingDiverAlerts(db, { reportId, origin: "https://example.test", provider });
+      expect(sent).toEqual([]);
+      expect(await found()).toMatchObject({ ok: true, changed: true });
+    });
+
+    it("refuses Found, and still pages, on day two's tap at a dive before the one they were missing after", async () => {
+      const { db, say, found, reportId } = await raisedOnACourse();
+      // Day one: still not back at the dive 2 count too. Day two: a stray tap after dive 1.
+      await say("not_boarded", 0.5, "after_dive_2");
+      await say("boarded", 3.5, "after_dive_1");
+      expect(await found()).toEqual({ ok: false, reason: "still_missing" });
+      const { provider, sent } = recorder();
+      await sendMissingDiverAlerts(db, { reportId, origin: "https://example.test", provider });
+      expect(sent.length).toBeGreaterThan(0);
+      // Counted after dive 2 on day two: back, as the manifest shows.
+      await say("boarded", 4, "after_dive_2");
+      expect(await found()).toMatchObject({ ok: true, changed: true });
+    });
   });
 
   it("sends no all-clear for an alarm that never went, and says so", async () => {

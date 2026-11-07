@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, exists, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -524,7 +524,7 @@ export async function listAfterDiveRollCallByTrip(
   shopId: string,
   tripIds: string[],
 ): Promise<Map<string, Map<string, "boarded" | "missing_after_dive">>> {
-  return foldAfterDiveByTrip(await afterDiveRollCallRows(db, shopId, tripIds));
+  return foldAfterDiveByTrip(await seatRollCallRows(db, shopId, tripIds));
 }
 
 type AfterDiveRow = {
@@ -540,12 +540,14 @@ type AfterDiveRow = {
 };
 
 /**
- * Every diver mark at an after-dive checkpoint of the trips asked about,
- * newest first, on seats that are not cancelled. The one query behind both
+ * Every diver mark of the trips asked about, the dock's included, newest
+ * first, on seats that are not cancelled. The one query behind both
  * `listAfterDiveRollCallByTrip` and `listUnaccountedForByTrip`, so a reader
  * that needs both reads them off the same rows (`readAfterDiveRollCallByTrip`).
+ * Only the unaccounted fold reads the dock: a later day's dock count settles
+ * an earlier day's "not back" (#4056).
  */
-async function afterDiveRollCallRows(
+async function seatRollCallRows(
   db: DbExecutor,
   shopId: string,
   tripIds: readonly string[],
@@ -568,7 +570,6 @@ async function afterDiveRollCallRows(
         eq(rollCallEvents.shopId, shopId),
         seatMarks(),
         inArray(rollCallEvents.tripId, [...tripIds]),
-        ne(rollCallEvents.checkpoint, "departure"),
       ),
     )
     .orderBy(...newestMarkFirst()) as Promise<AfterDiveRow[]>;
@@ -578,7 +579,7 @@ async function afterDiveRollCallRows(
  * Each booking's **standing result at each after-dive checkpoint** of the trips
  * asked about: newest event per booking and checkpoint wins, a newest `cleared`
  * drops that checkpoint out, and a cancelled booking is nobody. Folded off
- * `afterDiveRollCallRows`.
+ * `seatRollCallRows`, the dock's left out.
  */
 function foldStandingAfterDive(rows: readonly AfterDiveRow[]) {
   // Newest first, so the first row seen per booking *and* checkpoint is that
@@ -586,6 +587,7 @@ function foldStandingAfterDive(rows: readonly AfterDiveRow[]) {
   const seen = new Set<string>();
   const standing: { tripId: string; bookingId: string; status: "boarded" | "not_boarded" }[] = [];
   for (const row of rows) {
+    if (row.checkpoint === "departure") continue;
     const key = `${row.bookingId}:${row.checkpoint}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -624,7 +626,7 @@ export async function readAfterDiveRollCallByTrip(
   afterDive: Map<string, Map<string, "boarded" | "missing_after_dive">>;
   unaccounted: Map<string, Set<string>>;
 }> {
-  const rows = await afterDiveRollCallRows(db, shopId, tripIds);
+  const rows = await seatRollCallRows(db, shopId, tripIds);
   return { afterDive: foldAfterDiveByTrip(rows), unaccounted: foldUnaccountedByTrip(rows) };
 }
 
@@ -644,9 +646,10 @@ export async function readAfterDiveRollCallByTrip(
  *   that checkpoint out**, so a mis-tapped "not back" the crew retracted, or a
  *   correction to `boarded`, leaves nobody here. The same supersession every
  *   roll-call reader in this file applies.
- * - **The dock is never read.** A `not_boarded` there means "never left"
- *   (`standingResultMeansSailed`), benign, and never carried forward as
- *   missing.
+ * - **The dock never raises anyone.** A `not_boarded` there means "never
+ *   left" (`standingResultMeansSailed`), benign, and never carried forward as
+ *   missing; a later meeting day's dock `boarded` settles an earlier day's
+ *   "not back" (#4056).
  * - **A cancelled booking is nobody**, the guard the siblings carry.
  * - **Divers only.** Missing crew is the crew roll call's
  *   (`listDepartureCrewRollCallByTrip`) and still raises its own row.
@@ -658,24 +661,29 @@ export async function listUnaccountedForByTrip(
   shopId: string,
   tripIds: readonly string[],
 ): Promise<Map<string, Set<string>>> {
-  return foldUnaccountedByTrip(await afterDiveRollCallRows(db, shopId, tripIds));
+  return foldUnaccountedByTrip(await seatRollCallRows(db, shopId, tripIds));
 }
 
 function foldUnaccountedByTrip(rows: readonly AfterDiveRow[]): Map<string, Set<string>> {
   // Per trip, oldest first, each mark on its own meeting day: dive numbers are
-  // compared within a day, and a later day's `boarded` settles an earlier
-  // day's "not back" (`unaccountedSubjects`, the rule `listRollCallGaps` keeps;
-  // #2557). Keyed on the checkpoint's place, not its spelling:
-  // "after_dive_02" and "after_dive_2" are one checkpoint.
+  // compared within a day, and a later day's `boarded` at the dock or at that
+  // checkpoint or a later one settles an earlier day's "not back"
+  // (`unaccountedSubjects`, the rule `listRollCallGaps` keeps; #2557, #4056).
+  // Keyed on the checkpoint's place, not its spelling: "after_dive_02" and
+  // "after_dive_2" are one checkpoint.
   const marksByTrip = new Map<string, DayMark[]>();
   for (const row of [...rows].reverse()) {
-    if (!row.checkpoint.startsWith("after_dive_")) continue;
-    const ordinal = rollCallCheckpointOrdinal(row.checkpoint as RollCallCheckpoint);
-    if (!Number.isInteger(ordinal) || ordinal < 1) continue;
+    const dock = row.checkpoint === "departure";
+    const ordinal = dock ? 0 : rollCallCheckpointOrdinal(row.checkpoint as RollCallCheckpoint);
+    if (
+      !dock &&
+      (!row.checkpoint.startsWith("after_dive_") || !Number.isInteger(ordinal) || ordinal < 1)
+    )
+      continue;
     const marks = marksByTrip.get(row.tripId) ?? [];
     marks.push({
       subject: row.bookingId,
-      checkpoint: `after_dive_${ordinal}`,
+      checkpoint: dock ? "departure" : `after_dive_${ordinal}`,
       status: row.status,
       day: row.day,
       id: row.id,
