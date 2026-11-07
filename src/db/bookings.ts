@@ -551,6 +551,9 @@ export type AddPartySeatOutcome =
  * `leadBookingId`. This only refuses a lead that cannot lead a party — a held
  * seat (whose record may be somebody else's, issue #2125), a party member's
  * own seat, or a cancelled one.
+ *
+ * A name-only seat has no address and no "Under 18" input, so it never sets
+ * `contactTypedByLeadAt`: only `createBookingParty` does, for a declared minor.
  */
 export async function addPartySeat(
   db: AppDb,
