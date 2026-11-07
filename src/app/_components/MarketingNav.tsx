@@ -1,7 +1,7 @@
 import { enterDemoAction } from "@/app/actions/demo";
 import { MarketingNavView } from "@/components/MarketingNavView";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
+import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { auth } from "@/lib/auth";
 
 /**
@@ -13,9 +13,14 @@ import { auth } from "@/lib/auth";
  * nesting it inside the cached scope — see the marketing pages under
  * `src/app`.
  */
-export async function MarketingNav() {
-  const session = await auth();
-  const locale = await requestLocale();
+export async function MarketingNav({ locale: knownLocale }: { locale?: DiverLocale } = {}) {
+  // Every request read starts before the session's database round trip. Once
+  // a response closes, Next moves its request store to the `after` phase and
+  // refuses `cookies()` there as a read "inside `after()`"; a locale read
+  // queued behind the session could land in it (the root not-found's nav on
+  // `/ready/[token]`, logged on every e2e run). A caller that has already
+  // negotiated the locale passes it in.
+  const [session, locale] = await Promise.all([auth(), knownLocale ?? requestLocale()]);
   return (
     <MarketingNavView
       shopSlug={session?.user?.shopSlug ?? null}
