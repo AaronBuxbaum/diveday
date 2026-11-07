@@ -27,7 +27,7 @@ import {
   type ReadinessBlockerParams,
 } from "@/lib/readiness";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
-import { SUIT_CHOICES } from "@/lib/rentals";
+import { type RentableItemKind, SUIT_CHOICES } from "@/lib/rentals";
 import { ROLL_CALL_GAP_KINDS } from "@/lib/roll-call-gaps";
 import {
   type ReviewModerationLineCode,
@@ -76,6 +76,7 @@ import { codeRows, everyCodeOf, type LabelMapCase } from "./label-map-test-fixtu
 import { BUDDY_LABEL_MAP_CASES } from "./label-maps-buddy-test-fixtures";
 import { rollCallLabelText } from "./manifest-labels";
 import { diverTranslator } from "./messages";
+import { RENTAL_ITEM_KEYS } from "./packing-labels";
 import {
   DIVER_CERT_LEVEL_KEYS,
   NEXT_DIVE_REASON_KEYS,
@@ -557,6 +558,13 @@ const CASES: readonly LabelMapCase[] = [
     map: "STAFF_DIVE_INTENT_KEYS",
     rows: codeRows(DIVE_INTENTS, (locale, intent) =>
       staffDiveIntentLine(staffTranslator(locale), [{ intent, count: 2 }], locale),
+    ),
+  },
+  {
+    module: "packing-labels.ts",
+    map: "RENTAL_ITEM_KEYS",
+    rows: codeRows(Object.keys(RENTAL_ITEM_KEYS) as RentableItemKind[], (locale, kind) =>
+      diverTranslator(locale)(RENTAL_ITEM_KEYS[kind]),
     ),
   },
   {
@@ -1092,6 +1100,7 @@ const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   ["PIECE_KEYS.gopro", "brand name"],
   ["KIND_SOURCES.dpv", "initialism, used untranslated"],
   ["RENTAL_ITEM_LABEL_KEYS.gopro", "brand name"],
+  ["RENTAL_ITEM_KEYS.gopro", "brand name"],
   // The diver bundle's copy of the same ladder the staff bundle allowlists
   // above, `rescue` excepted the same way.
   ["DIVER_CERT_LEVEL_KEYS.open_water", "course name, used untranslated"],
