@@ -102,7 +102,14 @@ export function CounterAutosave({
           time: closesAt,
         });
   return (
-    <div ref={ref} className="mt-1 text-sm text-muted" data-testid="counter-time-left">
+    <div
+      ref={ref}
+      className="mt-1 text-sm text-muted"
+      data-testid="counter-time-left"
+      // Drawn once React owns the page: the first tick has run, so the
+      // form's draft listeners are on. A press before this can be lost.
+      data-hydrated={minutes !== null ? "true" : undefined}
+    >
       {left ? <span>{left}</span> : null}
       {saved ? (
         <span role="status" className="ms-2">
