@@ -2,6 +2,7 @@ import { and, asc, count, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { effectiveMinimum, MINIMUM_SEATS_DECISION_HOURS_DEFAULT } from "@/lib/minimum-seats";
+import { bookingAddress } from "./booking-address";
 import type { AppDb } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
@@ -260,7 +261,7 @@ export async function listMinimumNotMetRecipients(db: AppDb, shopId: string, tri
   return db
     .select({
       bookingId: bookings.id,
-      email: people.email,
+      email: bookingAddress,
       fullName: people.fullName,
       personLocale: people.locale,
     })

@@ -49,6 +49,7 @@ import type { TemperatureUnit } from "@/lib/temperature-units";
 import { deskTrailSaysArrived } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
+import { bookingAddress, bookingRecipient } from "./booking-address";
 import { levelCardLevel } from "./card-columns";
 import { refreshCheckoutFromStripe } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
@@ -478,7 +479,7 @@ async function readRecapRow(db: AppDb, bookingId: string) {
       tripBoatId: trips.boatId,
       tripCourseId: trips.courseId,
       diverName: people.fullName,
-      diverEmail: people.email,
+      diverEmail: bookingAddress,
       shopName: shops.name,
       slug: shops.slug,
       logoUrl: shops.logoUrl,
@@ -1782,7 +1783,7 @@ async function sendRecaps(
   const eligibleBefore = new Date(now.getTime() - rungOffsetMs("recap_due"));
 
   const candidates = await db
-    .select({ booking: bookings, person: people, trip: trips, shop: shops })
+    .select({ booking: bookings, person: bookingRecipient, trip: trips, shop: shops })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))

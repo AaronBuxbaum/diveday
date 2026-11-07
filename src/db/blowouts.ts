@@ -32,6 +32,7 @@ import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { departureMayBeAtSea } from "./aboard-at-sea";
 import { canPersonCallDayBlowout, canPersonRefund } from "./authz";
+import { bookingRecipient } from "./booking-address";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
@@ -565,7 +566,7 @@ async function sendPendingBlowoutMessages(
 ): Promise<SendSummary> {
   const summary: SendSummary = { sent: 0, queued: 0, failed: 0, noEmail: 0 };
   const pending = await db
-    .select({ diver: tripBlowoutDivers, person: people, booking: bookings })
+    .select({ diver: tripBlowoutDivers, person: bookingRecipient, booking: bookings })
     .from(tripBlowoutDivers)
     .innerJoin(people, eq(people.id, tripBlowoutDivers.personId))
     .innerJoin(bookings, eq(bookings.id, tripBlowoutDivers.bookingId))
