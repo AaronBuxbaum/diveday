@@ -117,7 +117,7 @@ describe("the Boat tab's sheet", () => {
   });
 
   it("prints the status lines above the roster, and none at the dock", () => {
-    const lines = ["1 of 2 people back aboard after dive 1", "Dive 1 not marked."];
+    const lines = ["1 of 2 passengers back aboard after dive 1", "Dive 1 not marked."];
     const { container } = render(
       <BoatTabSheet
         shop={SHOP}

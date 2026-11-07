@@ -55,7 +55,7 @@ describe("the Boat tab sheet's status lines", () => {
       at("departure", two(BOARDED, BOARDED)),
       at("after_dive_1", two(BOARDED, undefined)),
     ]);
-    expect(lines[0]).toBe("1 of 2 people back aboard after dive 1");
+    expect(lines[0]).toBe("1 of 2 passengers back aboard after dive 1");
   });
 
   it("prints the open roll call of the dive before, as the screen says it", () => {

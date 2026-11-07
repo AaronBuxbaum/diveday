@@ -43,13 +43,19 @@ export function boatSheetStatus({
   if (open) lines.push(checkpointGapLine(t, open));
   const later = laterCheckpointMissing(manifests, checkpoint);
   if (later) {
-    lines.push(
-      t("manifest.sheetLaterCount", {
-        dive: rollCallCheckpointOrdinal(later.checkpoint),
-        missing: later.names.length,
-        names: later.names.join(", "),
-      }),
-    );
+    const laterDive = rollCallCheckpointOrdinal(later.checkpoint);
+    if (later.names.length > 0) {
+      lines.push(
+        t("manifest.sheetLaterCount", {
+          dive: laterDive,
+          missing: later.names.length,
+          names: later.names.join(", "),
+        }),
+      );
+    }
+    if (later.unmarked > 0) {
+      lines.push(t("manifest.sheetLaterUnmarked", { dive: laterDive, count: later.unmarked }));
+    }
   }
   return lines;
 }
