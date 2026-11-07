@@ -246,7 +246,13 @@ export function RentalFitForm({
     () =>
       new Set(
         ticked
-          .filter((item) => rentalFit?.[item.field] ?? item.defaultRented)
+          // On a course with gear in its fee, a student with no fit on file
+          // starts from what the fee includes: nothing they would pay for is
+          // assumed (issue #2796).
+          .filter(
+            (item) =>
+              rentalFit?.[item.field] ?? (includesGear ? fee.has(item.kind) : item.defaultRented),
+          )
           .map((item) => item.kind),
       ),
   );
@@ -456,7 +462,9 @@ export function RentalFitForm({
             {showPricing || includesGear ? null : (
               <p className="mt-2 text-sm text-muted">{t("rental.askWhatsIncluded")}</p>
             )}
-            {showPricing && quote.subtotalCents > 0 ? (
+            {/* A course with gear in its fee prices each piece it leaves out
+                beside the piece, and adds no total: the fee is the headline. */}
+            {showPricing && !includesGear && quote.subtotalCents > 0 ? (
               // One line (visual review 2026-10-24, B25): the set price the
               // diver pays, said as the set price, with no struck-through
               // list price and no green savings line. The set-price math is

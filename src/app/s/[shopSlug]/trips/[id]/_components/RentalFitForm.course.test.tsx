@@ -136,4 +136,27 @@ describe("RentalFitForm on a course that includes a set of kinds", () => {
     expect(document.body.textContent).not.toMatch(/\$20\.00/);
     expect(screen.queryByRole("checkbox", { name: /^Mask/ })).toBeNull();
   });
+
+  it("still sizes a cold-water hood at the shop's price, unticked until the student asks", () => {
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "regulator", "weights", "hood", "dive_computer"]}
+        course={{ nitroxCompatible: false, includedRentalKinds: ["bcd", "regulator", "weights"] }}
+        pricing={{ ...defaultPricing, perItemCents: { hood: 800, dive_computer: 1200 } }}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+    expect(screen.getByRole("checkbox", { name: /^Hood/ })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^Dive computer/ })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^BCD/ })).toBeChecked();
+    expect(document.body.textContent).toMatch(/\$8\.00/);
+    // Each piece the fee leaves out carries its price; no total under them.
+    expect(screen.queryByText(/Estimated rental/)).toBeNull();
+  });
 });
