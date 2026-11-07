@@ -47,6 +47,9 @@ test.describe("counter rental lookup at 390px", () => {
     const { rentalLookup } = seeded as { rentalLookup: RentalLookupFleet };
     const chooseTank = async () => {
       const gear = page.getByRole("region", { name: t("counterRentals.new.gearHeading") });
+      await expect(
+        gear.getByRole("group", { name: t("counterRentals.new.kindsAria") }),
+      ).toHaveAttribute("data-hydrated", "true");
       await gear.getByRole("button", { name: gearItemKindLabel(t, "tank"), exact: true }).click();
       await gear
         .getByRole("searchbox", { name: t("counterRentals.new.filterLabel") })
@@ -88,6 +91,9 @@ test.describe("counter rental lookup at 390px", () => {
     const filter = gear.getByRole("searchbox", { name: t("counterRentals.new.filterLabel") });
     const tasks = [];
 
+    // The kind buttons are inert until the picker hydrates; a press before that
+    // leaves the list on the first kind.
+    await expect(kinds).toHaveAttribute("data-hydrated", "true");
     await kinds.getByRole("button", { name: gearItemKindLabel(t, "tank"), exact: true }).click();
     await expect(grid.getByRole("button")).toHaveCount(100);
     const tank = grid.getByRole("button", {
