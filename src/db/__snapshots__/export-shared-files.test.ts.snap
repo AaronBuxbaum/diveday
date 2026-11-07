@@ -382,6 +382,7 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "status",
     "signed_name",
     "signature_method",
+    "signed_via",
     "recorded_by_name",
     "started_at",
     "consented_at",
