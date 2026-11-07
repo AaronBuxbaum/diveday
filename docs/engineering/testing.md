@@ -547,6 +547,7 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | `seat-locks.postgres.test.ts` | `lockSeatDeparture` parks a second counter action on the departure before it holds the seat, leaves a roll-call insert's `KEY SHARE` alone, and gives up a wait on a stuck departure in five seconds (`55P03`, `boundLockWaits`) |
 | `work-orders.postgres.test.ts`, `waivers-templates.postgres.test.ts` | Two simultaneous tickets, or two saves of a release, get consecutive numbers; and neither waits behind an insert elsewhere in the shop, because the shop row is locked `for no key update` |
 | `course-forms.postgres.test.ts` | Two course syncs in one shop, each holding its course insert's `KEY SHARE`, both finish with one form per title; with the shop locked `for update` Postgres kills one with `40P01` |
+| `account-tokens.postgres.test.ts` | Two simultaneous taps spend one reset or invite link once; two reset requests leave one live link; a staff removal meeting a reset or verify spend on one account takes the account lock first on both sides, so neither dies with `40P01` (#4068) |
 | `promo-caps.postgres.test.ts` | The last use of a capped code goes to exactly one of two checkouts |
 | `waitlist.postgres.test.ts` | One diver joining a full departure's wait list twice at once leaves one person and one entry |
 | `tips.postgres.test.ts` | One booking tipping twice at once asks Stripe for one session |

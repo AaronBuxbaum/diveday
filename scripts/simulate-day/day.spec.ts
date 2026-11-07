@@ -215,7 +215,8 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       await advanceClock(at(id));
       await diver.goto(day.readyPath);
       await diver.getByRole("button", { name: "Sign your waiver" }).click();
-      await expect(diver).toHaveURL(/\/waivers\//);
+      // The thread signs its own release in place (ADR 20261105-waiver-folds-into-the-thread).
+      await expect(diver).toHaveURL(/\/ready\/[^/]+\/waiver$/);
       await expect(
         diver.getByRole("heading", { name: "A quick step before the dock" }),
       ).toBeVisible();

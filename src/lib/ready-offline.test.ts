@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  FORGET_ANSWER_TIMEOUT_MS,
   forgetReadyPageCopy,
   forgetThisReadyPage,
   parseReadySnapshot,
@@ -277,7 +278,7 @@ describe("forgetThisReadyPage", () => {
         serviceWorker: { controller: { postMessage: () => undefined } },
       });
       const pending = forgetThisReadyPage();
-      await vi.advanceTimersByTimeAsync(60_000);
+      await vi.advanceTimersByTimeAsync(FORGET_ANSWER_TIMEOUT_MS);
       expect(await pending).toBe(true);
       expect([...entries.keys()]).toEqual(["/ready/other"]);
     } finally {

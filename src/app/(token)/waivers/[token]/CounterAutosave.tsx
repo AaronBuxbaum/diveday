@@ -104,18 +104,21 @@ export function CounterAutosave({
   return (
     <div
       ref={ref}
-      className="mt-1 text-sm text-muted"
+      // One line, always held: "Saved." comes and goes as the signer answers,
+      // and a line that opened and closed under the Sign block moved the page
+      // at the bottom of its scroll, so a tap on the guardian's box (whose
+      // press blurs the last field and clears "Saved.") landed beside it.
+      className="mt-1 min-h-5 text-sm text-muted"
       data-testid="counter-time-left"
       // Drawn once React owns the page: the first tick has run, so the
       // form's draft listeners are on. A press before this can be lost.
       data-hydrated={minutes !== null ? "true" : undefined}
     >
       {left ? <span>{left}</span> : null}
-      {saved ? (
-        <span role="status" className="ms-2">
-          {copy.saved}
-        </span>
-      ) : null}
+      {/* Always in the page, so a screen reader hears "Saved." when it fills. */}
+      <span role="status" className="ms-2">
+        {saved ? copy.saved : null}
+      </span>
     </div>
   );
 }

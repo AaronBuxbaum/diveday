@@ -97,6 +97,14 @@ export function readyCopyKeepUntil(trip: { startsAt: Date; endsAt?: Date | null 
 
 const ACTIVATE_TIMEOUT_MS = 10_000;
 
+/**
+ * How long a cancelled card waits for the worker's answer to "forget this
+ * page" before it drops its own copy. A local message round trip, so far
+ * shorter than a worker's activation: a stalled worker must not leave a
+ * cancelled seat's summary on the phone for ten seconds.
+ */
+export const FORGET_ANSWER_TIMEOUT_MS = 2_000;
+
 function activeWorker(registration: ServiceWorkerRegistration): Promise<ServiceWorker | null> {
   if (registration.active) return Promise.resolve(registration.active);
   const pending = registration.installing ?? registration.waiting;
@@ -192,7 +200,7 @@ function askWorkerToForget(worker: ServiceWorker): Promise<boolean | null> {
     const timer = setTimeout(() => {
       channel.port1.close();
       resolve(null);
-    }, ACTIVATE_TIMEOUT_MS);
+    }, FORGET_ANSWER_TIMEOUT_MS);
     channel.port1.onmessage = (event) => {
       clearTimeout(timer);
       channel.port1.close();

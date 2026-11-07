@@ -110,13 +110,19 @@ export function minorDeclaredOnLiveUpcomingSeat(
   }[],
   now: Date,
 ): boolean {
-  return seats.some(
-    (seat) =>
-      seat.minorDeclaredAt !== null &&
-      seat.status !== "cancelled" &&
-      seat.trip.deletedAt === null &&
-      seat.trip.status === "scheduled" &&
-      !hasReturned(seat.trip.endsAt, now),
+  return seats.some((seat) => seat.minorDeclaredAt !== null && seatStandsAhead(seat, now));
+}
+
+/** A seat that still stands: not cancelled, on a live, scheduled departure not yet back. */
+export function seatStandsAhead(
+  seat: { status: string; trip: { deletedAt: Date | null; status: string; endsAt: Date } },
+  now: Date,
+): boolean {
+  return (
+    seat.status !== "cancelled" &&
+    seat.trip.deletedAt === null &&
+    seat.trip.status === "scheduled" &&
+    !hasReturned(seat.trip.endsAt, now)
   );
 }
 
