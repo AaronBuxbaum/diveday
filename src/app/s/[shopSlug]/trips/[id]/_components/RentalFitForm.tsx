@@ -7,9 +7,11 @@ import { buttonClass } from "@/components/ui/button";
 import { ChoiceFieldset, ChoicePill } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
+import { includedGearList, includesScubaUnitOnly } from "@/i18n/packing-labels";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import {
+  chargedRentalKinds,
   defaultSuitChoice,
   hasAnyRentalPricing,
   nitroxAvailableOn,
@@ -130,10 +132,23 @@ export function ItemPrice({ price, widest }: { price: string; widest: string }) 
   );
 }
 
-/** A course whose fee includes the gear asks for sizes only (fifth-loop ideas, item 16). */
-function CourseGearLine() {
+/**
+ * A course whose fee includes gear asks its sizes with no price (fifth-loop
+ * ideas item 16, issue #2796). The scuba unit alone keeps the yes/no's own
+ * sentence; any other set is named.
+ */
+function CourseGearLine({ included }: { included: readonly RentableItemKind[] }) {
   const t = useTranslations();
-  return <p className="mt-4 text-base text-foreground">{t("rental.courseGearIncluded")}</p>;
+  const locale = useLocale();
+  return (
+    <p className="mt-4 text-base text-foreground">
+      {includesScubaUnitOnly(included)
+        ? t("rental.courseGearIncluded")
+        : t("rental.courseGearIncludedKinds", {
+            items: includedGearList(included, (key) => t(key), locale),
+          })}
+    </p>
+  );
 }
 
 /**
@@ -169,10 +184,11 @@ export function RentalFitForm({
   /**
    * The course this departure teaches, or null on an ordinary charter — read
    * for whether it may run on enriched air (`nitroxAvailableOn`), the same gate
-   * the booking page's gear fields use, and whether its fee includes the gear,
-   * which asks for sizes with no prices (fifth-loop ideas, item 16).
+   * the booking page's gear fields use, and which rental kinds its fee
+   * includes, whose sizes are asked with no price (fifth-loop ideas item 16,
+   * issue #2796).
    */
-  course: { nitroxCompatible: boolean; gearIncluded?: boolean } | null;
+  course: { nitroxCompatible: boolean; includedRentalKinds?: readonly RentableItemKind[] } | null;
   pricing: RentalPricing;
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
@@ -208,8 +224,13 @@ export function RentalFitForm({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const offered = offeredRentableItems(rentalItems, course?.gearIncluded === true);
+  const included = course?.includedRentalKinds ?? [];
+  const includesGear = included.length > 0;
+  const fee = new Set(included);
+  const offered = offeredRentableItems(rentalItems, included);
   const offers = new Set(offered.map((item) => item.kind));
+  // What the shop may charge for: everything on offer the course fee leaves out.
+  const priced = offered.filter((item) => !fee.has(item.kind));
   // The suit is one choice of four rather than two of the ticks (H-20260916-rental-fit-describe-shop): a
   // diver dives one suit, and has to be able to say a drysuit is their own.
   // The stored choice stays on offer after the shop drops that suit, so a save
@@ -219,13 +240,19 @@ export function RentalFitForm({
   const [suit, setSuit] = useState<SuitChoice>(storedSuit);
   const ticked = offered.filter((item) => !SUIT_KINDS.has(item.kind));
   const nitroxOffered = nitroxAvailableOn(rentalItems, course);
-  const showPricing = !course?.gearIncluded && hasAnyRentalPricing(pricing);
-  const widestPrice = widestItemPrice(offered, pricing, currency, locale);
+  const showPricing = hasAnyRentalPricing(pricing);
+  const widestPrice = widestItemPrice(priced, pricing, currency, locale);
   const [tickedKinds, setTickedKinds] = useState(
     () =>
       new Set(
         ticked
-          .filter((item) => rentalFit?.[item.field] ?? item.defaultRented)
+          // On a course with gear in its fee, a student with no fit on file
+          // starts from what the fee includes: nothing they would pay for is
+          // assumed (issue #2796).
+          .filter(
+            (item) =>
+              rentalFit?.[item.field] ?? (includesGear ? fee.has(item.kind) : item.defaultRented),
+          )
           .map((item) => item.kind),
       ),
   );
@@ -272,8 +299,8 @@ export function RentalFitForm({
   // useful before a diver commits their changes. A shop that doesn't fill
   // nitrox never contributes it to the estimate, whatever a stale request flag says.
   const quote = quoteRentalFit(pricing, {
-    rentedKinds: [...rentedKinds],
-    offeredKinds: [...offers],
+    rentedKinds: chargedRentalKinds([...rentedKinds], included),
+    offeredKinds: priced.map((item) => item.kind),
     wantsNitrox: nitroxOffered && nitroxRequested,
     plannedDives,
   });
@@ -335,13 +362,14 @@ export function RentalFitForm({
           {t("rental.savedNote")}
         </p>
       ) : null}
-      {course?.gearIncluded ? <CourseGearLine /> : null}
+      {includesGear ? <CourseGearLine included={included} /> : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
         <ChoiceFieldset legend={t("rental.suitLegend")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
             {suitOptions.map((choice) => {
               const kind = SUIT_CHOICE_KIND[choice];
-              const priceCents = kind ? pricing.perItemCents[kind] : undefined;
+              // A suit the course fee includes is the fee's: no price beside it.
+              const priceCents = kind && !fee.has(kind) ? pricing.perItemCents[kind] : undefined;
               const hintKey = kind ? RENTABLE_ITEM_HINT_KEYS[kind] : undefined;
               const label = t(SUIT_CHOICE_KEYS[choice]);
               return (
@@ -353,7 +381,6 @@ export function RentalFitForm({
                   checked={suit === choice}
                   onChange={() => setSuit(choice)}
                   aside={
-                    // The suit is never in a course's included gear: it keeps its price.
                     hintKey || (hasAnyRentalPricing(pricing) && priceCents !== undefined) ? (
                       <>
                         {hintKey ? (
@@ -389,7 +416,7 @@ export function RentalFitForm({
                 put them 4px off either side). The rows keep their 8px. */}
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
               {ticked.map(({ kind, name }) => {
-                const priceCents = pricing.perItemCents[kind];
+                const priceCents = fee.has(kind) ? undefined : pricing.perItemCents[kind];
                 const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
                 const itemLabel = t(RENTABLE_ITEM_LABEL_KEYS[kind]);
                 return (
@@ -432,10 +459,12 @@ export function RentalFitForm({
                 );
               })}
             </div>
-            {showPricing || course?.gearIncluded ? null : (
+            {showPricing || includesGear ? null : (
               <p className="mt-2 text-sm text-muted">{t("rental.askWhatsIncluded")}</p>
             )}
-            {showPricing && quote.subtotalCents > 0 ? (
+            {/* A course with gear in its fee prices each piece it leaves out
+                beside the piece, and adds no total: the fee is the headline. */}
+            {showPricing && !includesGear && quote.subtotalCents > 0 ? (
               // One line (visual review 2026-10-24, B25): the set price the
               // diver pays, said as the set price, with no struck-through
               // list price and no green savings line. The set-price math is

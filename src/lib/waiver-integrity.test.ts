@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { WaiverSignedVia } from "@/db/schema";
 import {
   computeWaiverIntegrityHash,
   isWaiverIntegrityVersion,
@@ -63,6 +64,7 @@ const record = {
   draftShopAnswers: null,
   medicalAlert: null as string | null,
   draftMedicalAlert: null as string | null,
+  signedVia: null as WaiverSignedVia | null,
   completedAt: new Date("2026-07-29T01:00:00.000Z"),
   integrityHash: null,
   integrityVersion: null,
@@ -671,6 +673,75 @@ describe("waiver integrity over the medical alert for the crew (issue #2960)", (
     expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: alert })).toBe("invalid");
     expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: "" })).toBe("invalid");
     expect(verifyWaiverIntegrity({ ...sealed, draftMedicalAlert: alert })).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("waiver integrity over the door a release was signed through (issue #4045)", () => {
+  /** v1 over `record`, pinned by the medical alert describe above. */
+  const V1_DIGEST = "6a856dd2717dd12eaa1c0efe8e7238f64b28b0d33268c1087d42647cf5a63fed";
+  /** v2 over `erased`, computed from the build before the door was recorded (bef711f79). */
+  const V2_DIGEST = "2c1741ce10adb2983a0460e90464cb0aafab261d2f8d2f384824e1f58739e293";
+  const atCounter = { ...record, signedVia: "counter" as const };
+
+  it("keeps every release signed before the door was recorded on its old digest", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    expect(computeWaiverIntegrityHash(record)).toBe(V1_DIGEST);
+    expect(computeWaiverIntegrityHash(erased, WAIVER_INTEGRITY_VERSION_ERASED)).toBe(V2_DIGEST);
+    vi.unstubAllEnvs();
+  });
+
+  it("seals the door under v1, so stripping, adding or changing it reads invalid", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const sealed = {
+      ...atCounter,
+      integrityHash: computeWaiverIntegrityHash(atCounter),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+    };
+    expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+    for (const signedVia of [null, "release_link", "thread"] as const) {
+      expect(verifyWaiverIntegrity({ ...sealed, signedVia })).toBe("invalid");
+    }
+    expect(
+      verifyWaiverIntegrity({
+        ...atCounter,
+        integrityHash: V1_DIGEST,
+        integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+      }),
+    ).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps the door inside the v2 erasure seal: it names nobody, and the link rows go", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const erasedAtCounter = { ...erased, signedVia: "counter" as const };
+    const sealed = {
+      ...erasedAtCounter,
+      integrityHash: computeWaiverIntegrityHash(erasedAtCounter, WAIVER_INTEGRITY_VERSION_ERASED),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
+    };
+    expect(sealed.integrityHash).not.toBe(V2_DIGEST);
+    expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+    expect(verifyWaiverIntegrity({ ...sealed, signedVia: "release_link" })).toBe("invalid");
+    expect(verifyWaiverIntegrity({ ...sealed, signedVia: null })).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("carries the door inside a v3 refile", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const moved = {
+      ...atCounter,
+      movedFromPersonId: record.personId,
+      movedAt: new Date("2026-10-05T17:00:00.000Z"),
+      movedByPersonId: "00000000-0000-4000-8000-0000000000bb",
+    };
+    const sealed = {
+      ...moved,
+      integrityHash: computeWaiverIntegrityHash(moved, WAIVER_INTEGRITY_VERSION_MOVED),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_MOVED,
+    };
+    expect(verifyWaiverIntegrity(sealed)).toBe("valid");
+    expect(verifyWaiverIntegrity({ ...sealed, signedVia: "desk" })).toBe("invalid");
     vi.unstubAllEnvs();
   });
 });

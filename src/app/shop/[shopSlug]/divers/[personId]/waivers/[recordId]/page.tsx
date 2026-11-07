@@ -4,6 +4,7 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EYEBROW_CLASS, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import type { WaiverSignedVia } from "@/db/schema";
 import { getSignedWaiverPage } from "@/db/signed-waiver-page";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { requestLocale } from "@/i18n/request";
@@ -119,7 +120,7 @@ export default async function SignedWaiverPage({
           ? t("waiversStaff.record.howPaper")
           : waiver.signatureMethod === "imported"
             ? t("waiversStaff.record.howImported")
-            : t("waiversStaff.record.howOnline"),
+            : onlineDoorText(t, waiver.signedVia),
     },
     {
       label: t("waiversStaff.record.releaseLabel"),
@@ -308,4 +309,20 @@ export default async function SignedWaiverPage({
       </div>
     </StaffPage>
   );
+}
+
+/**
+ * Which kind of door an online signature came through (issue #4045): the
+ * question a counter code and a mailed link to one release leave open. A
+ * release signed before it was recorded says only "Online".
+ */
+function onlineDoorText(
+  t: ReturnType<typeof staffTranslator>,
+  signedVia: WaiverSignedVia | null,
+): string {
+  if (signedVia === "thread") return t("waiversStaff.record.howThread");
+  if (signedVia === "counter") return t("waiversStaff.record.howCounter");
+  if (signedVia === "party_door") return t("waiversStaff.record.howPartyDoor");
+  if (signedVia === "release_link") return t("waiversStaff.record.howReleaseLink");
+  return t("waiversStaff.record.howOnline");
 }

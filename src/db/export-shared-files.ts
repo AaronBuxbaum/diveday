@@ -823,6 +823,8 @@ export const WAIVER_RECORDS_CSV = sharedFile<ShopRow<"waiverRows">>({
     { header: "status", in: "both", value: (row) => row.status },
     { header: "signed_name", in: "both", value: (row) => row.signedName },
     { header: "signature_method", in: "both", value: (row) => row.signatureMethod },
+    // Which kind of door signed it (issue #4045): a kind, never a link.
+    { header: "signed_via", in: "both", value: (row) => row.signedVia },
     { header: "recorded_by_person_id", in: "shop", value: (row) => row.recordedByPersonId },
     {
       header: "recorded_by_name",

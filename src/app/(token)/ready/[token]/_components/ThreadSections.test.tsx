@@ -145,7 +145,7 @@ describe("ThreadSections", () => {
           fullTrip: {
             id: "trip-1",
             course: {
-              gearIncluded: true,
+              includedRentalKinds: ["bcd", "regulator", "weights"],
               scheduleDays: [{ title: "Your afternoon", items: ["Confined water skills"] }],
             },
           } as unknown as ReadyThreadSectionsContext["fullTrip"],

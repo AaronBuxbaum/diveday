@@ -329,6 +329,12 @@ type ActivityParamShapes = {
    */
   waiver_link_copied: { actor: string; diver: string };
   /**
+   * Answers came in through a door after the release was already signed
+   * through another (issue #4044): they were not saved, and the desk hears it
+   * here. The diver is the actor; nobody on staff did it.
+   */
+  waiver_answers_after_signing: { actor: string; diver: string };
+  /**
    * A staffer read a diver's medical alert for the crew, on a manifest they
    * crew or on the signed record (issue #2960). Never written offline.
    */
@@ -629,6 +635,7 @@ export const ACTIVITY_CODES = [
   "waiver_counter_code_shown",
   "waiver_counter_guardian_confirmed",
   "waiver_link_copied",
+  "waiver_answers_after_signing",
   "medical_alert_read",
   "medical_alert_saved_offline",
   "medical_alert_printed",

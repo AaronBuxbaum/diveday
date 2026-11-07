@@ -1430,12 +1430,12 @@ test("a course that includes its gear asks the student for sizes, not money", as
   const slug = privateShop.slug;
   await page.goto(`/shop/${slug}/courses/open-water-diver/edit`);
   await expect(editorHydrated(page)).toBeVisible();
-  await page.getByRole("checkbox", { name: "The scuba unit is part of the course fee" }).check();
+  await page.getByRole("checkbox", { name: "Rental gear is part of the course fee" }).check();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Course page saved");
   await page.reload();
   await expect(
-    page.getByRole("checkbox", { name: "The scuba unit is part of the course fee" }),
+    page.getByRole("checkbox", { name: "Rental gear is part of the course fee" }),
   ).toBeChecked();
 
   const diverContext = await browser.newContext({ baseURL: workerBaseURL });

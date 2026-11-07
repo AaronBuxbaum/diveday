@@ -207,35 +207,66 @@ export function toRentableKinds(values: readonly string[]): ShopCatalogKind[] {
 export function offeredRentableItems(
   rentalItems: readonly string[],
   /**
-   * The departure's course includes the scuba unit: only the unit and the
-   * suit are asked about, and personal gear is the student's own
-   * (`SCUBA_UNIT_KINDS`).
+   * The rental kinds the departure's course includes in its fee
+   * (`courses.included_rental_kinds`, issue #2796). Empty, or left out, offers
+   * the whole catalog. Otherwise a student is asked about everything the shop
+   * rents, the kinds the fee includes with no price and the rest at the shop's
+   * price (a cold-water student still needs a hood and gloves sized), except
+   * the mask and fins the fee leaves out: those are personal gear, and
+   * `packingConfidence` lists them under "Bring" (dive-domain review, #2796).
    */
-  courseGearIncluded = false,
+  courseIncluded: readonly RentableItemKind[] = [],
 ): RentableItem[] {
   const offered = new Set(toRentableKinds(rentalItems));
+  const included = new Set(courseIncluded);
   return RENTABLE_ITEMS.filter(
     (item) =>
       offered.has(item.kind) &&
-      (!courseGearIncluded || SCUBA_UNIT_KINDS.has(item.kind) || SUIT_KINDS.has(item.kind)),
+      (included.size === 0 || included.has(item.kind) || !PERSONAL_RENTAL_KINDS.has(item.kind)),
   );
 }
 
+/** The rental kinds that are a student's personal gear on a course unless its fee includes them. */
+export const PERSONAL_RENTAL_KINDS: ReadonlySet<RentableItemKind> = new Set(["mask", "fins"]);
+
+/** A course's included rental kinds, as every reader takes them. */
+export type CourseIncludedGear = { includedRentalKinds: readonly RentableItemKind[] };
+
 /**
- * **What the booking form may put on the card for gear** (issue #2795): the
- * shop's rental catalog on an ordinary departure, and nothing on a session of a
- * course whose fee includes the gear (`courses.gear_included`). There the scuba
- * unit is the fee's, and its sizes and the suit are asked after booking, on
- * `/ready` (`RentalFitForm`), where a suit's price is an estimate settled at the
- * shop. `BookingGearFields` renders from this list and `bookSpot` parses and
- * charges from it, so a hand-built post cannot buy what the form never offered.
- * Nitrox is a fill, not a rental, and is gated apart (`nitroxAvailableOn`).
+ * **What the booking form may put on the card for gear** (issues #2795, #2796):
+ * the shop's rental catalog on an ordinary departure, and nothing on a session
+ * of a course whose fee includes any gear. There the included kinds are the
+ * fee's, and their sizes and the rest (the suit, the scuba unit when the fee
+ * leaves it out) are asked after booking, on `/ready` (`RentalFitForm`), where
+ * a price is an estimate settled at the shop. `BookingGearFields` renders from
+ * this list and `bookSpot` parses and charges from it, so a hand-built post
+ * cannot buy what the form never offered. Nitrox is a fill, not a rental, and
+ * is gated apart (`nitroxAvailableOn`).
  */
 export function checkoutRentableItems(
   rentalItems: readonly string[],
-  course: { gearIncluded: boolean } | null | undefined,
+  course: CourseIncludedGear | null | undefined,
 ): RentableItem[] {
-  return course?.gearIncluded ? [] : offeredRentableItems(rentalItems);
+  return (course?.includedRentalKinds.length ?? 0) > 0 ? [] : offeredRentableItems(rentalItems);
+}
+
+/**
+ * Posted or stored values narrowed to rental kinds, in catalog order, each
+ * once. Nitrox is a fill, never part of a course fee, so it is dropped with
+ * anything else unknown.
+ */
+export function toIncludedRentalKinds(values: readonly unknown[]): RentableItemKind[] {
+  const given = new Set(values);
+  return RENTABLE_ITEMS.filter((item) => given.has(item.kind)).map((item) => item.kind);
+}
+
+/** The rented kinds a student pays the shop for: everything the course fee leaves out. */
+export function chargedRentalKinds(
+  rented: readonly RentableItemKind[],
+  courseIncluded: readonly RentableItemKind[],
+): RentableItemKind[] {
+  const included = new Set(courseIncluded);
+  return rented.filter((kind) => !included.has(kind));
 }
 
 /**
@@ -316,17 +347,17 @@ export type SuitChoice = (typeof SUIT_CHOICES)[number];
 export const SUIT_KINDS: ReadonlySet<RentableItemKind> = new Set(["wetsuit", "drysuit"]);
 
 /**
- * **What a course's "gear included" covers: the scuba unit** (BCD, regulator,
- * tank and weights; the tank is never a rental line). Not personal gear: mask,
- * fins, snorkel and boots are the student's to bring, which most shops require
- * of a student anyway, and not the suit or a nitrox fill, which keep the
- * shop's price (dive-domain review of layer r5-3, FIX 7).
+ * **The scuba unit**: BCD, regulator, tank and weights (the tank is never a
+ * rental line). It is what a course fee includes when a shop ticks "gear
+ * included" and leaves the preset alone (issue #2796), and what a student on
+ * any course is asked about whoever pays for it. Not personal gear: mask,
+ * fins, snorkel and boots are the student's to bring unless the fee includes
+ * them, which most shops require of a student anyway, and not the suit or a
+ * nitrox fill, which keep the shop's price unless the fee includes the suit
+ * (dive-domain review of layer r5-3, FIX 7).
  */
-export const SCUBA_UNIT_KINDS: ReadonlySet<RentableItemKind> = new Set([
-  "bcd",
-  "regulator",
-  "weights",
-]);
+export const SCUBA_UNIT_PRESET: readonly RentableItemKind[] = ["bcd", "regulator", "weights"];
+export const SCUBA_UNIT_KINDS: ReadonlySet<RentableItemKind> = new Set(SCUBA_UNIT_PRESET);
 
 /**
  * A rental pick holding at most one suit: the drysuit when both arrive, which

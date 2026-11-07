@@ -8,6 +8,7 @@ import {
   closedCounterCode,
   doorNeedsDeskGuardian,
   getWaiverForToken,
+  signedElsewhereShop,
   staleWaiverRecordForToken,
   waiverLinkDoor,
 } from "@/db/waivers";
@@ -20,7 +21,12 @@ import { completedMedicalState } from "./completed-medical-state";
 import { counterDevice } from "./counter-device";
 import { recordForDoor } from "./door-draft";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
-import { ExpiredLink, GuardianAtCounterCard, UnavailableWaiverLink } from "./WaiverDoorCards";
+import {
+  ExpiredLink,
+  GuardianAtCounterCard,
+  SignedElsewhereCard,
+  UnavailableWaiverLink,
+} from "./WaiverDoorCards";
 import { waiverSigningForm } from "./WaiverSigningForm";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -73,6 +79,15 @@ export default async function WaiverPage({
   const counter = door?.door === "counter";
 
   if (state.state === "unavailable") {
+    // A Sign through this link found its release signed through another door
+    // (issue #4044): what was entered was not saved, and the card says so and
+    // names the shop, never the release.
+    const signedElsewhere = error === "signed" ? await signedElsewhereShop(db, token) : null;
+    const signedShop = signedElsewhere ? await getShopById(db, signedElsewhere.shopId) : null;
+    if (signedShop) {
+      const signedT = diverTranslator(await requestLocale(signedShop.defaultLocale));
+      return <SignedElsewhereCard shop={signedShop} t={signedT} />;
+    }
     // A release link that expired, or that a newer link or a corrected
     // contact revoked, opens nothing; so does one whose release was replaced.
     // Resolve the stale record so this URL (and every later refresh of it,

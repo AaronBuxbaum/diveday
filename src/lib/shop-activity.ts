@@ -84,6 +84,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   waiver_counter_code_shown: "safety",
   waiver_counter_guardian_confirmed: "safety",
   waiver_link_copied: "safety",
+  waiver_answers_after_signing: "safety",
   medical_alert_read: "safety",
   medical_alert_saved_offline: "safety",
   medical_alert_printed: "safety",

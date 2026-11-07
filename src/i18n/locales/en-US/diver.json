@@ -231,6 +231,7 @@
     "providedItems": {
       "scubaUnit": "Scuba unit (BCD, regulator, tank, weights)",
       "tanksAndWeights": "Tanks and weights",
+      "tanks": "Tanks",
       "crewBriefing": "Crew briefing",
       "instructorBriefing": "Instructor briefing"
     },
@@ -248,6 +249,7 @@
     "siteToBeConfirmed": "Site to be confirmed",
     "sitesToBeConfirmed": "{count, plural, one {One dive · site to be confirmed} other {# dives · sites to be confirmed}}",
     "courseGearIncluded": "Gear is included.",
+    "courseGearIncludedKinds": "Included with the course: {items}.",
     "seen": {
       "heading": "Seen here this month",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}}",
@@ -1287,7 +1289,8 @@
     "medicalReferralNext": "Your questionnaire requires a physician’s written evaluation before you can dive.",
     "medicalShopReviewNext": "Your medical paperwork still needs review. Contact the shop before you dive.",
     "counterSigned": "Waiver signed",
-    "counterAlreadySigned": "This waiver was already signed, so what you just entered was not saved. If an answer has changed, tell the staff.",
+    "signedElsewhereTitle": "Already signed",
+    "counterAlreadySigned": "This waiver was already signed, so what you just entered was not saved. If any answer about your health has changed, tell the staff before you dive.",
     "independentTitle": "Sign your waiver",
     "backToPrep": "Back to your trip prep"
   },
@@ -1381,6 +1384,7 @@
     },
     "askWhatsIncluded": "Ask the shop what’s included in the trip price.",
     "courseGearIncluded": "Your scuba unit (BCD, regulator, tank, weights) comes with the course. Tell us your sizes so it’s ready.",
+    "courseGearIncludedKinds": "Included with the course: {items}. Tell us your sizes so everything’s ready.",
     "notSure": "Not sure — help me fit it",
     "sizeOnFile": "{size} — on file from the shop",
     "wetsuitSize": "Wetsuit size",

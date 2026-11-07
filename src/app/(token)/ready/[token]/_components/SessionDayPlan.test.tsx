@@ -23,7 +23,7 @@ describe("SessionDayPlan", () => {
   it("lays out a one-meeting session's day of a one-day plan", () => {
     render(
       <SessionDayPlan
-        course={{ scheduleDays: [afternoon], gearIncluded: true }}
+        course={{ scheduleDays: [afternoon], includedRentalKinds: ["bcd", "regulator", "weights"] }}
         meetingDays={1}
         depthUnit="feet"
         t={t}
@@ -46,7 +46,7 @@ describe("SessionDayPlan", () => {
   it("says nothing on a session that meets on more than one day", () => {
     const { container } = render(
       <SessionDayPlan
-        course={{ scheduleDays: [afternoon], gearIncluded: true }}
+        course={{ scheduleDays: [afternoon], includedRentalKinds: ["bcd", "regulator", "weights"] }}
         meetingDays={2}
         depthUnit="meters"
         t={t}

@@ -34,7 +34,8 @@ import {
 } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
-import type { DraftGuardian, MedicalAnswers } from "./schema";
+import { recordDiverActivity } from "./operations";
+import type { DraftGuardian, MedicalAnswers, WaiverSignedVia } from "./schema";
 import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
@@ -109,6 +110,12 @@ export type CounterWaiverKey = LinkWaiverKey & { readonly kind: "counter" };
  */
 export type ThreadWaiverKey = {
   readonly kind: "thread";
+  /**
+   * Whose link it is: the diver's own (`thread`), or a party lead's on a
+   * child's seat (`party_door`, `partySeatWaiverKey`). Recorded on the
+   * signature (`signed_via`, issue #4045); it widens nothing.
+   */
+  readonly via: "thread" | "party_door";
   readonly shopId: string;
   readonly bookingId: string;
   readonly recordId: string;
@@ -135,6 +142,7 @@ const issuedLinkKeys = new WeakSet<LinkWaiverKey>();
 export async function threadWaiverKey(
   db: DbExecutor,
   input: { shopId: string; bookingId: string },
+  via: ThreadWaiverKey["via"] = "thread",
 ): Promise<ThreadWaiverKey | null> {
   const [row] = await db
     .select({
@@ -184,6 +192,7 @@ export async function threadWaiverKey(
   }
   const key: ThreadWaiverKey = Object.freeze({
     kind: "thread",
+    via,
     shopId: input.shopId,
     bookingId: input.bookingId,
     recordId: row.id,
@@ -666,7 +675,13 @@ export type CompleteWaiverOutcome =
          * are not saved, and never reported as that signature (attacker
          * review S1).
          */
-        | "already_signed";
+        | "already_signed"
+        /**
+         * The release was signed through another door first (issue #4044):
+         * this submit's answers are not saved, and the diver's trail says
+         * they came in (`waiver_answers_after_signing`).
+         */
+        | "signed_elsewhere";
     };
 
 /**
@@ -1005,7 +1020,7 @@ export async function completeWaiver(
   input: CompleteWaiverInput,
 ): Promise<CompleteWaiverOutcome> {
   const initial = await currentRecordForToken(db, token, input.now);
-  if (!initial) return { ok: false, reason: "unavailable" };
+  if (!initial) return closedOutcome(db, token, input.now);
   const outcome = await db.transaction(async (tx): Promise<CompleteWaiverOutcome> => {
     const refusal = await lockWaiverForWriting(tx, initial);
     if (refusal) return { ok: false, reason: refusal };
@@ -1031,11 +1046,8 @@ async function completeWaiverLocked(
   if (!evidence) return { ok: false, reason: "invalid_signature" };
 
   const state = await getWaiverForToken(db, token, now);
-  if (state.state === "unavailable") return { ok: false, reason: "unavailable" };
-  if (state.state === "completed") {
-    if (isCounterKey(token)) return { ok: false, reason: "already_signed" };
-    return { ok: true, status: completedStatus(state.record.status), idempotent: true };
-  }
+  if (state.state === "unavailable") return closedOutcome(db, token, now);
+  if (state.state === "completed") return signedOutcome(db, token, state.record.status, now);
 
   // "Type your full name" is the signature. It accepted anything at least two
   // characters long, so a release could be executed under "asdf" and still read
@@ -1136,11 +1148,9 @@ async function completeWaiverLocked(
   // The questionnaire and template reads above can wait past either the
   // wrapper's or the underlying link's expiry. Recheck at the write boundary.
   const atWrite = await getWaiverForToken(db, token, input.now ?? nowDate());
-  if (atWrite.state === "unavailable") return { ok: false, reason: "unavailable" };
-  if (atWrite.state === "completed") {
-    if (isCounterKey(token)) return { ok: false, reason: "already_signed" };
-    return { ok: true, status: completedStatus(atWrite.record.status), idempotent: true };
-  }
+  if (atWrite.state === "unavailable") return closedOutcome(db, token, input.now ?? nowDate());
+  if (atWrite.state === "completed")
+    return signedOutcome(db, token, atWrite.record.status, input.now ?? nowDate());
   // A link is spent by the signature it carries, in this transaction: a
   // refusal below rolls the spend back, and a link spent, revoked or expired
   // since the read above signs nothing.
@@ -1171,6 +1181,8 @@ async function completeWaiverLocked(
       shopAnswers: shopAnswers.snapshot,
       // Sealed with the signature only when there is one (`signedMetadata`).
       medicalAlert: medicalAlert.value,
+      // Which kind of door signed (issue #4045), sealed with the signature.
+      signedVia: signedViaFor(token),
       completedAt: now,
       // The guardian's half, on a minor's release only. The draft goes with
       // the rest of the unsubmitted state: what was typed is now what was
@@ -1231,11 +1243,162 @@ async function completeWaiverLocked(
   // Another submit won the race. Do not overwrite its evidence; report that
   // stable result instead, which makes duplicate browser submits harmless.
   const current = await currentRecordForToken(db, token);
-  if (current?.status === "completed" || current?.status === "medical_review") {
-    if (isCounterKey(token)) return { ok: false, reason: "already_signed" };
-    return { ok: true, status: completedStatus(current.status), idempotent: true };
+  if (current?.status === "completed" || current?.status === "medical_review")
+    return signedOutcome(db, token, current.status, now);
+  return closedOutcome(db, token, now);
+}
+
+/**
+ * A submit that found its release signed: through a counter link, `already_signed`
+ * (attacker review S1); through a door other than the one that signed it,
+ * `signed_elsewhere` with its trail line (issue #4044); otherwise the same
+ * door's repeat, which reports the signature it made.
+ */
+async function signedOutcome(
+  db: DbExecutor,
+  token: WaiverKey,
+  status: typeof waiverRecords.$inferSelect.status,
+  now: Date,
+): Promise<CompleteWaiverOutcome> {
+  if (isCounterKey(token)) return { ok: false, reason: "already_signed" };
+  if (await refuseSignedElsewhere(db, token, now)) return { ok: false, reason: "signed_elsewhere" };
+  return { ok: true, status: completedStatus(status), idempotent: true };
+}
+
+/** A submit whose key reaches nothing: `signed_elsewhere` when another door signed first. */
+async function closedOutcome(
+  db: DbExecutor,
+  token: WaiverKey,
+  now: Date = nowDate(),
+): Promise<CompleteWaiverOutcome> {
+  return (await refuseSignedElsewhere(db, token, now))
+    ? { ok: false, reason: "signed_elsewhere" }
+    : { ok: false, reason: "unavailable" };
+}
+
+/**
+ * **A release signed through another door** (issue #4044). Since #4008 a
+ * counter link, a mailed link and the diver's thread can all name one
+ * release; once one signs, the others open nothing, so a submit through one
+ * of them would read as a dead link. This is that case and no other: the key
+ * still stands (issued here, its link live, unspent, unrevoked, unexpired),
+ * the release it names is still current, and it is signed, by another door.
+ * It returns the release's ids and nothing of what it says.
+ */
+async function signedThroughAnotherDoor(
+  db: DbExecutor,
+  key: WaiverKey,
+  now: Date,
+): Promise<{ shopId: string; personId: string; recordId: string } | null> {
+  if (key.kind === "thread") {
+    if (!issuedThreadKeys.has(key)) return null;
+    const record = await seatRecord(db, key);
+    // A release signed before the door was recorded names none: its repeat
+    // keeps reporting the signature, as it always did.
+    if (!record || record.status === "pending" || !record.signedVia) return null;
+    if (record.signedVia === key.via) return null;
+    return { shopId: record.shopId, personId: record.personId, recordId: record.id };
   }
-  return { ok: false, reason: "unavailable" };
+  if (!issuedLinkKeys.has(key)) return null;
+  return linkSignedElsewhere(db, key.token, now);
+}
+
+/**
+ * The same question asked of a link by its token alone: the page's own key
+ * is gone once its release is signed (`waiverLinkDoor` opens nothing for a
+ * door that did not sign), so the action and the page ask this instead. A
+ * counter link (`waiver_link`) or a release link to a release with no seat
+ * (`release_link`), standing and unspent, whose release is signed and still
+ * current.
+ */
+async function linkSignedElsewhere(
+  db: DbExecutor,
+  token: string,
+  now: Date,
+): Promise<{ shopId: string; personId: string; recordId: string } | null> {
+  if (token.length === 0) return null;
+  const counter = await verifyCapability(db, { purpose: "waiver_link", token });
+  const link = counter ?? (await verifyCapability(db, { purpose: "release_link", token }));
+  if (!link || link.usedAt || link.revokedAt || !link.expiresAt || link.expiresAt <= now)
+    return null;
+  const [record] = await db
+    .select({
+      id: waiverRecords.id,
+      shopId: waiverRecords.shopId,
+      personId: waiverRecords.personId,
+      bookingId: waiverRecords.bookingId,
+      status: waiverRecords.status,
+    })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.id, link.subjectId),
+        eq(waiverRecords.shopId, link.shopId),
+        isNull(waiverRecords.supersededAt),
+        isNull(waiverRecords.anonymizedAt),
+      ),
+    )
+    .limit(1);
+  if (!record || record.status === "pending") return null;
+  // A release link never names a seat's release (`waiverLinkDoor`).
+  if (!counter && record.bookingId !== null) return null;
+  return { shopId: record.shopId, personId: record.personId, recordId: record.id };
+}
+
+/**
+ * The shop of a link whose release another door signed, for the page's
+ * "not saved" card (issue #4044): the shop, and nothing about the release.
+ */
+export async function signedElsewhereShop(
+  db: DbExecutor,
+  token: string,
+  now: Date = nowDate(),
+): Promise<{ shopId: string } | null> {
+  const signed = await linkSignedElsewhere(db, token, now);
+  return signed ? { shopId: signed.shopId } : null;
+}
+
+/**
+ * **Answers that came in after the release was signed** (issue #4044): when
+ * the key's release was signed through another door, the diver's trail says
+ * so for the desk (`waiver_answers_after_signing`), and nothing they sent is
+ * saved or merged into the signed record. True when that is what happened.
+ */
+export async function refuseSignedElsewhere(
+  db: DbExecutor,
+  key: WaiverKey,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  const signed = await signedThroughAnotherDoor(db, key, now);
+  return signed ? noteAnswersAfterSigning(db, signed) : false;
+}
+
+/** {@link refuseSignedElsewhere} for a link the action holds only as a token. */
+export async function refuseLinkSignedElsewhere(
+  db: DbExecutor,
+  token: string,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  const signed = await linkSignedElsewhere(db, token, now);
+  return signed ? noteAnswersAfterSigning(db, signed) : false;
+}
+
+/**
+ * The line itself, with the diver as its actor (`seat_self_cancelled` does
+ * the same): nobody on staff did this, and the column needs a person.
+ */
+async function noteAnswersAfterSigning(
+  db: DbExecutor,
+  signed: { shopId: string; personId: string; recordId: string },
+): Promise<boolean> {
+  await recordDiverActivity(db, {
+    shopId: signed.shopId,
+    personId: signed.personId,
+    actorPersonId: signed.personId,
+    code: "waiver_answers_after_signing",
+    waiverRecordId: signed.recordId,
+  });
+  return true;
 }
 
 /**
@@ -1319,4 +1482,10 @@ export async function doorNeedsDeskGuardian(
 
 function isCounterKey(token: WaiverKey): token is CounterWaiverKey {
   return token.kind === "counter";
+}
+
+/** The kind of door a key is, as the signature records it (`signed_via`, issue #4045). */
+function signedViaFor(token: WaiverKey): WaiverSignedVia {
+  if (token.kind === "thread") return token.via;
+  return token.kind === "counter" ? "counter" : "release_link";
 }

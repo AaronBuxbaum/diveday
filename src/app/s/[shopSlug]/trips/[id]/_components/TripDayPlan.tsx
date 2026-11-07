@@ -11,6 +11,7 @@ import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import type { SiteReview } from "@/db/reviews";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { includedGearList, includesScubaUnitOnly } from "@/i18n/packing-labels";
 import { courseDepthFormat, diveSiteDepthText } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
 import { type CourseScheduleDay, formatScheduleDayTime, resolveCourseDepths } from "@/lib/courses";
@@ -19,6 +20,7 @@ import type { DepthUnit } from "@/lib/depth-units";
 import { type DiveMode, type DockDayRhythm, dockDayTimeline } from "@/lib/diver-planning";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { publicDiveSitePath } from "@/lib/public-routes";
+import type { RentableItemKind } from "@/lib/rentals";
 import { serviceWindowCoversInstant, serviceWindowFrom } from "@/lib/service-window";
 import type { SiteSightings } from "@/lib/sightings";
 import type { DiveBriefing, Shop, Trip } from "./types";
@@ -51,7 +53,10 @@ export type DayProfileFacts = {
   course?: CourseFacts | null;
 };
 
-type CourseFacts = { scheduleDays: CourseScheduleDay[]; gearIncluded: boolean };
+type CourseFacts = {
+  scheduleDays: CourseScheduleDay[];
+  includedRentalKinds: readonly RentableItemKind[];
+};
 
 type ProfileShop = Pick<Shop, keyof DockDayRhythm | "depthUnit">;
 type ProfileTrip = Pick<Trip, "diveMode" | "course" | "startsAt" | "endsAt" | "plannedDives">;
@@ -96,7 +101,11 @@ export function dayProfileFacts(
  * one-meeting session of a one-day plan: Discover Scuba's afternoon. Any other
  * session says no plan day at all; the gear line is the course's either way.
  */
-export type CourseDayPlan = { days: CourseScheduleDay[]; gearIncluded: boolean };
+export type CourseDayPlan = {
+  days: CourseScheduleDay[];
+  /** The rental kinds the course fee includes (issue #2796); empty says nothing of gear. */
+  includedRentalKinds: readonly RentableItemKind[];
+};
 
 export function courseDayPlan(
   course: CourseFacts | null | undefined,
@@ -107,7 +116,7 @@ export function courseDayPlan(
   if (!course) return undefined;
   const sessionDays =
     meetingDays === 1 && course.scheduleDays.length === 1 ? course.scheduleDays : [];
-  if (sessionDays.length === 0 && !course.gearIncluded) return undefined;
+  if (sessionDays.length === 0 && course.includedRentalKinds.length === 0) return undefined;
   const format = courseDepthFormat(t, depthUnit);
   return {
     days: sessionDays.map((day) => ({
@@ -115,7 +124,7 @@ export function courseDayPlan(
       title: resolveCourseDepths(day.title, format),
       items: day.items.map((item) => resolveCourseDepths(item, format)),
     })),
-    gearIncluded: course.gearIncluded,
+    includedRentalKinds: course.includedRentalKinds,
   };
 }
 
@@ -148,7 +157,15 @@ export function CoursePlan({
           </div>
         );
       })}
-      {plan.gearIncluded ? <p className="text-sm">{t("trip.courseGearIncluded")}</p> : null}
+      {plan.includedRentalKinds.length > 0 ? (
+        <p className="text-sm">
+          {includesScubaUnitOnly(plan.includedRentalKinds)
+            ? t("trip.courseGearIncluded")
+            : t("trip.courseGearIncludedKinds", {
+                items: includedGearList(plan.includedRentalKinds, (key) => t(key), locale),
+              })}
+        </p>
+      ) : null}
     </div>
   );
 }

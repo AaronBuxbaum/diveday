@@ -77,14 +77,18 @@
   (**Nitrox/EANx** above) and their training dives are conducted on air — the box could only ever
   advertise a fill the course cannot give. It changes what is *offered*, never what a diver already
   requested, and it is not a fill authorization: a verified card still gates that.
-- **Gear-included course** — a course whose fee includes the **scuba unit** (`courses.gear_included`,
-  "The scuba unit is part of the course fee" on the course editor): BCD, regulator, tank and
-  weights (`SCUBA_UNIT_KINDS`, `src/lib/rentals.ts`). It never means *everything*: mask, fins,
-  snorkel and boots are personal gear the student brings, and `/ready` lists them under "Bring";
-  the suit and a nitrox fill keep the shop's price. On a session of such a course the sizes form
-  asks only about the scuba unit and the suit, quotes no price for the unit, and "We provide" reads
-  the scuba unit and an instructor briefing. A yes/no rather than a set of included kinds; the public
-  booking page still quotes rental prices for these courses until the rest of the slice lands.
+- **Gear-included course** — a course whose fee includes a set of rental kinds
+  (`courses.included_rental_kinds`, issue #2796; "Rental gear is part of the course fee" on the
+  course editor, with the kinds under it). Ticking the box presets the **scuba unit**: BCD,
+  regulator, tank and weights (`SCUBA_UNIT_PRESET`, `src/lib/rentals.ts`); a shop can add the
+  suit, mask, fins or anything else it rents, or take pieces off. It never means *everything*
+  unless the shop ticks everything. The booking form rents nothing on a session of such a course;
+  `/ready`'s sizes form asks about the included kinds with no price and everything else the shop
+  rents at its price (a cold-water student still needs a hood and gloves sized), except the mask
+  and fins the fee leaves out: those, a snorkel and boots are personal gear listed under "Bring".
+  A nitrox fill keeps its price. "We provide" reads the scuba unit when the fee covers all of it,
+  otherwise tanks (and weights when the fee includes them), then any other included kinds and an
+  instructor briefing. Empty means none: an ordinary course.
 - **Rental prices** — the shop's optional price list for rental gear, set beside the catalog on the Rentals page (`shops.rental_pricing`,
   `src/lib/rentals.ts`): a **set price** for the full core kit of seven pieces (BCD, regulator, wetsuit, mask, fins, weights,
   dive computer; usually cheaper than the pieces), a **per-piece** price for any item, and a **per-dive nitrox** surcharge —

@@ -3,10 +3,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
+import { mintCapability } from "@/db/capabilities";
 import { bookingCapabilities, bookings, people, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
-import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
+import {
+  emptyMedicalAnswers,
+  medicalQuestionField,
+  questionnaireForJurisdiction,
+} from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 
 const ctx = fileScopedShopContext();
@@ -51,7 +56,8 @@ vi.mock("next/headers", () => ({
 
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
-const { issueWaiverRequest, threadWaiverAwaitsPhysician } = await import("@/db/waivers");
+const { completeWaiver, issueWaiverRequest, threadWaiverAwaitsPhysician, waiverLinkDoor } =
+  await import("@/db/waivers");
 const { completeWaiverFromReady, openWaiverFromReady, saveWaiverDraftFromReady } = await import(
   "./waiver-actions"
 );
@@ -228,6 +234,39 @@ describe("signing the release in the diver's thread", () => {
     // Reloading the signed release mints nothing and sends the diver home.
     expect(await redirectedTo(async () => renderPage(token))).toBe(`/ready/${token}`);
     expect(await capabilityCount(db, bookingId)).toBe(before);
+  });
+
+  it("tells the thread its answers were not saved when a counter code signed first (issue #4044)", async () => {
+    const { db, shop, bookingId, token } = await bookedSeat("Sam Secondoor");
+    await redirectedTo(async () => openWaiverFromReady(token));
+    const drawn = await drawnId(bookingId);
+    const code = await mintCapability(db, {
+      purpose: "waiver_link",
+      shopId: shop.id,
+      subjectId: drawn,
+    });
+    const counter = await waiverLinkDoor(db, code.token);
+    if (counter?.door !== "counter") throw new Error("counter door missing");
+    expect(
+      await completeWaiver(db, counter.key, {
+        signerName: "Sam Secondoor",
+        agreed: true,
+        medicalAnswers: emptyMedicalAnswers(questionnaireForJurisdiction(shop.jurisdiction)),
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await redirectedTo(async () =>
+        completeWaiverFromReady(
+          token,
+          drawn,
+          signedForm(shop, { signerName: "Sam Secondoor", acknowledged: "on" }),
+        ),
+      ),
+    ).toBe(`/ready/${token}/waiver?error=signed`);
+    const html = await renderPage(token, { error: "signed" });
+    expect(html).toContain(t("waiver.counterAlreadySigned"));
+    const [record] = await liveRecords(db, bookingId);
+    expect(record?.signedVia).toBe("counter");
   });
 
   it("sends a signature under another name back to the name field", async () => {

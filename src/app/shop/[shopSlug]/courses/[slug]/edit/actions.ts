@@ -28,6 +28,7 @@ import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-par
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicCoursePath } from "@/lib/public-routes";
+import { toIncludedRentalKinds } from "@/lib/rentals";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeCourseImage } from "@/lib/storage";
@@ -309,7 +310,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   // the staffer their edit saved. `notFound()` is what the page itself does
   // when the row disappears out from under it.
   if (!saved.ok) notFound();
-  // Pricing and the nitrox answer are the shop's own decisions rather than
+  // Pricing, the nitrox answer and the included gear are the shop's own decisions rather than
   // marketing copy, but the editor saves everything in one submit, so they land
   // together with the page.
   await editCourse(db, staff.user.shopId, course.id, {
@@ -317,7 +318,11 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     eLearningPriceCents: centsFromAmount(value.eLearningPrice, currency),
     privatePriceCents: centsFromAmount(value.privatePrice, currency),
     nitroxCompatible: extras.nitroxCompatible,
-    gearIncluded: extras.gearIncluded,
+    // The kinds only count while "gear included" is ticked: unticking it
+    // hides the boxes, and a hidden tick is not the shop's answer.
+    includedRentalKinds: extras.gearIncluded
+      ? toIncludedRentalKinds(formData.getAll("includedRentalKind"))
+      : [],
   });
 
   if (formsPlan?.ok) {

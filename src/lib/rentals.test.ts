@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  chargedRentalKinds,
   checkoutRentableItems,
   DEFAULT_SHOP_RENTAL_ITEMS,
   EMPTY_RENTAL_PRICING,
@@ -12,16 +13,19 @@ import {
   quoteRentalFit,
   RENTABLE_ITEMS,
   RENTAL_FIT_TEXT_LIMITS,
+  type RentableItemKind,
   type RentalFitField,
   type RentalFitSizes,
   type RentalPricing,
   rentalFitCompleteness,
+  SCUBA_UNIT_PRESET,
   SHOP_CATALOG_ITEMS,
   SIZED_RENTAL_FIT_COLUMN,
   SIZED_RENTAL_KINDS,
   shopOffersNitrox,
   sizedRentalKindOfGearKind,
   sizeForRentalItem,
+  toIncludedRentalKinds,
   toRentableKinds,
 } from "./rentals";
 
@@ -120,14 +124,73 @@ describe("checkoutRentableItems", () => {
     expect(checkoutRentableItems(catalog, null)).toEqual(offeredRentableItems(catalog));
   });
 
-  it("offers the whole catalog on a course whose fee leaves the gear out", () => {
-    expect(checkoutRentableItems(catalog, { gearIncluded: false })).toEqual(
+  it("offers the whole catalog on a course whose fee includes no gear", () => {
+    expect(checkoutRentableItems(catalog, { includedRentalKinds: [] })).toEqual(
       offeredRentableItems(catalog),
     );
   });
 
-  it("offers nothing to rent on a course whose fee includes the gear", () => {
-    expect(checkoutRentableItems(catalog, { gearIncluded: true })).toEqual([]);
+  it("offers nothing to rent on a course whose fee includes any gear", () => {
+    expect(checkoutRentableItems(catalog, { includedRentalKinds: ["bcd", "regulator"] })).toEqual(
+      [],
+    );
+    expect(checkoutRentableItems(catalog, { includedRentalKinds: ["wetsuit"] })).toEqual([]);
+  });
+});
+
+/**
+ * **What a course's fee includes** (issue #2796): a set of rental kinds, the
+ * scuba unit by default. `/ready`'s sizes form asks about everything the shop
+ * rents (the fee's kinds with no price, the rest at the shop's price), except
+ * the mask and fins the fee leaves out: personal gear, the student's to bring.
+ */
+describe("a course's included rental kinds", () => {
+  const catalog = [...RENTABLE_ITEMS.map((item) => item.kind), "nitrox"];
+  const kinds = (included: RentableItemKind[]) =>
+    offeredRentableItems(catalog, included).map((item) => item.kind);
+  const everythingBut = (...left: RentableItemKind[]) =>
+    RENTABLE_ITEMS.map((item) => item.kind).filter((kind) => !left.includes(kind));
+
+  it("presets to the scuba unit, which is BCD, regulator and weights", () => {
+    expect(SCUBA_UNIT_PRESET).toEqual(["bcd", "regulator", "weights"]);
+  });
+
+  it("leaves mask and fins to a scuba-unit student, and still sizes a cold-water hood and gloves", () => {
+    expect(kinds([...SCUBA_UNIT_PRESET])).toEqual(everythingBut("mask", "fins"));
+    expect(kinds([...SCUBA_UNIT_PRESET])).toEqual(expect.arrayContaining(["hood", "gloves"]));
+  });
+
+  it("asks about every kind the fee includes, mask and fins among them", () => {
+    expect(kinds(["bcd", "regulator", "weights", "wetsuit", "mask", "fins"])).toEqual(
+      everythingBut(),
+    );
+  });
+
+  it("still offers the scuba unit, at the shop's price, when the fee includes only the suit", () => {
+    expect(kinds(["wetsuit"])).toEqual(everythingBut("mask", "fins"));
+  });
+
+  it("never offers what the shop does not rent, whatever the course includes", () => {
+    expect(offeredRentableItems(["bcd", "weights"], ["bcd", "regulator", "mask"])).toEqual(
+      offeredRentableItems(["bcd", "weights"]),
+    );
+  });
+
+  it("offers the whole catalog when the fee includes nothing", () => {
+    expect(offeredRentableItems(catalog, [])).toEqual(offeredRentableItems(catalog));
+  });
+
+  it("narrows posted or stored values to rental kinds, in catalog order, without nitrox", () => {
+    expect(toIncludedRentalKinds(["fins", "nitrox", "bcd", "boots", "fins", 7])).toEqual([
+      "bcd",
+      "fins",
+    ]);
+  });
+
+  it("charges only for the kinds the fee leaves out", () => {
+    expect(chargedRentalKinds(["bcd", "wetsuit", "regulator"], ["bcd", "regulator"])).toEqual([
+      "wetsuit",
+    ]);
   });
 });
 

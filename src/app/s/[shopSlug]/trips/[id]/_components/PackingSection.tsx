@@ -1,7 +1,7 @@
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
-import { PERSONAL_GEAR_KEYS } from "@/i18n/packing-labels";
+import { PERSONAL_GEAR_KEYS, RENTAL_ITEM_KEYS } from "@/i18n/packing-labels";
 import {
   type DiveMode,
   type DockDayStep,
@@ -14,36 +14,21 @@ import {
   type SiteBottomTimes,
 } from "@/lib/diver-planning";
 import { formatTime } from "@/lib/format";
-import type { RentableItemKind } from "@/lib/rentals";
 import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
 import type { RentalFit, Shop, Trip } from "./types";
 
 /**
  * `packingConfidence` returns codes, not prose (src/lib/diver-planning.ts) —
- * these maps are where each one becomes a word in the diver bundle. Its own
- * namespace: `RentableItemKind` is also the code `src/lib/dive-prep.ts` (the
- * staff-side rental prep list) resolves against the staff bundle — the English
- * words happen to match, but the two bundles stay independent on purpose.
+ * these maps (and `RENTAL_ITEM_KEYS`, src/i18n/packing-labels.ts) are where
+ * each one becomes a word in the diver bundle. Its own namespace:
+ * `RentableItemKind` is also the code `src/lib/dive-prep.ts` (the staff-side
+ * rental prep list) resolves against the staff bundle — the English words
+ * happen to match, but the two bundles stay independent on purpose.
  */
-const RENTAL_ITEM_KEYS: Record<RentableItemKind, DiverMessageKey> = {
-  bcd: "trip.rentalItems.bcd",
-  regulator: "trip.rentalItems.regulator",
-  wetsuit: "trip.rentalItems.wetsuit",
-  mask: "trip.rentalItems.mask",
-  fins: "trip.rentalItems.fins",
-  weights: "trip.rentalItems.weights",
-  dive_computer: "trip.rentalItems.diveComputer",
-  gopro: "trip.rentalItems.gopro",
-  drysuit: "trip.rentalItems.drysuit",
-  hood: "trip.rentalItems.hood",
-  gloves: "trip.rentalItems.gloves",
-  torch: "trip.rentalItems.torch",
-  smb: "trip.rentalItems.smb",
-};
-
 const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
   scubaUnit: "trip.providedItems.scubaUnit",
   tanksAndWeights: "trip.providedItems.tanksAndWeights",
+  tanks: "trip.providedItems.tanks",
   crewBriefing: "trip.providedItems.crewBriefing",
   instructorBriefing: "trip.providedItems.instructorBriefing",
 };
@@ -248,7 +233,7 @@ export function PackingLists({
     shop.packingList,
     rentalFit ?? null,
     shop.briefingMinutes > 0,
-    trip.course?.gearIncluded === true,
+    trip.course?.includedRentalKinds ?? [],
   );
   const logbook = packsLogbook({
     shopSuggests: shop.packingLogbook,
@@ -291,6 +276,9 @@ export function PackingLists({
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
             {packing.provided.map((code) => (
               <li key={code}>{t(PROVIDED_ITEM_KEYS[code])}</li>
+            ))}
+            {packing.providedKinds.map((kind) => (
+              <li key={kind}>{t(RENTAL_ITEM_KEYS[kind])}</li>
             ))}
           </ul>
         </div>

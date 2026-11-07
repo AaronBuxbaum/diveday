@@ -1,5 +1,5 @@
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
-import type { RentableItemKind } from "@/lib/rentals";
+import { type RentableItemKind, SCUBA_UNIT_KINDS } from "@/lib/rentals";
 
 /**
  * The beats of a dock day; the component looks each one up in
@@ -457,6 +457,7 @@ export function siteFit(facts: SitePlanningFacts): { tone: SiteFitTone } {
 export type ProvidedItemCode =
   | "scubaUnit"
   | "tanksAndWeights"
+  | "tanks"
   | "crewBriefing"
   | "instructorBriefing";
 
@@ -523,9 +524,10 @@ export function exposureSuitFor(celsius: number): ExposureSuit {
 }
 
 /**
- * The personal gear a student brings to a course that includes the scuba unit
- * (`SCUBA_UNIT_KINDS` in `src/lib/rentals.ts`): what most shops expect a
- * student to own, and what the course's included gear does not cover.
+ * The personal gear a student brings to a course whose fee includes gear
+ * (`courses.included_rental_kinds`): what most shops expect a student to own,
+ * less the mask and fins when the fee includes them. Snorkel and boots are
+ * never rental kinds of their own, so they stay on the list.
  */
 export type PersonalGearCode = "mask" | "fins" | "snorkel" | "boots";
 const PERSONAL_GEAR: readonly PersonalGearCode[] = ["mask", "fins", "snorkel", "boots"];
@@ -546,18 +548,20 @@ export function packingConfidence(
    */
   briefs = true,
   /**
-   * The departure teaches a course whose fee includes the rental gear
-   * (`courses.gear_included`, fifth-loop ideas item 16): the shop provides the
-   * scuba unit, the student brings their personal gear, and the instructor
-   * briefs the class whatever the dock rhythm says.
+   * The rental kinds the departure's course includes in its fee
+   * (`courses.included_rental_kinds`, issue #2796; empty on a charter): the
+   * shop provides them, the student brings the personal gear the fee leaves
+   * out, and the instructor briefs the class whatever the dock rhythm says.
    */
-  courseGearIncluded = false,
+  courseIncluded: readonly RentableItemKind[] = [],
 ): {
   bring: string[];
   /** Personal gear to bring, said before the shop's own list. */
   bringPersonal: PersonalGearCode[];
   rented: RentableItemKind[];
   provided: ProvidedItemCode[];
+  /** Kinds the course fee includes beyond what `provided` already names, said after it. */
+  providedKinds: RentableItemKind[];
 } {
   // A note-only row rents nothing: every `rents_*` column defaults to true, so
   // without this the diver would be told the shop is bringing a BCD, regulator,
@@ -566,15 +570,33 @@ export function packingConfidence(
   const rented = statesAFit
     ? RENTAL_FIELD_KINDS.filter(([field]) => rental[field] === true).map(([, kind]) => kind)
     : [];
+  const shared = { bring: shopItems, rented };
+  if (courseIncluded.length === 0) {
+    return {
+      ...shared,
+      bringPersonal: [],
+      provided: briefs ? ["tanksAndWeights", "crewBriefing"] : ["tanksAndWeights"],
+      providedKinds: [],
+    };
+  }
+  const included = new Set<string>(courseIncluded);
+  const wholeUnit = [...SCUBA_UNIT_KINDS].every((kind) => included.has(kind));
+  // What the first provided line already says: the whole unit, or the tanks
+  // with the weights only when the fee includes them. A fee that leaves the
+  // weights out has `/ready` price them, so "We provide" must not promise them
+  // (dive-domain review, #2796).
+  const weights = included.has("weights");
+  const named: ReadonlySet<RentableItemKind> = wholeUnit
+    ? SCUBA_UNIT_KINDS
+    : new Set(weights ? ["weights"] : []);
   return {
-    bring: shopItems,
-    bringPersonal: courseGearIncluded ? [...PERSONAL_GEAR] : [],
-    rented,
-    provided: courseGearIncluded
-      ? ["scubaUnit", "instructorBriefing"]
-      : briefs
-        ? ["tanksAndWeights", "crewBriefing"]
-        : ["tanksAndWeights"],
+    ...shared,
+    bringPersonal: PERSONAL_GEAR.filter((code) => !included.has(code)),
+    provided: [
+      wholeUnit ? "scubaUnit" : weights ? "tanksAndWeights" : "tanks",
+      "instructorBriefing",
+    ],
+    providedKinds: courseIncluded.filter((kind) => !named.has(kind)),
   };
 }
 

@@ -52,7 +52,7 @@ export function WaiverCompleted({
   signedRail: WaiverRailProgress;
   diveSitesList: TripSitePeek[];
   waiverOnly?: boolean;
-  /** A counter submit found this release already signed: what it carried was not saved. */
+  /** A submit found this release already signed (a counter's own, or another door's, #4044): what it carried was not saved. */
   notSaved?: boolean;
 }) {
   const shopName = shop.name;

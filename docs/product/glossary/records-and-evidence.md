@@ -193,6 +193,12 @@
   party's lead typed is sent none (issue #4019). It never opens a seat's release (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md),
   layer 6).
+- **Signed via** — which kind of door a signed release came through (`waiver_records.signed_via`,
+  issue #4045): the diver's own link (`thread`), a counter code or Copy link (`counter`), the
+  person who booked signing a child's seat (`party_door`), a release link (`release_link`), or a
+  paper release the desk attested (`desk`). A kind, never a link: erasure deletes the links and
+  keeps this. Sealed with the signature, and kept in the erased seal; an import has none. The
+  signed record's "How" line says it.
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the
   bargain, and therefore that standing signatures no longer cover it
   (`waiver_materiality_decisions`, ADR

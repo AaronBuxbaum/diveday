@@ -98,6 +98,7 @@ const COURSE = {
   isActive: true,
   isIntroCourse: false,
   nitroxCompatible: true,
+  includedRentalKinds: [],
   sourceTemplateSlug: "open-water-diver",
   sourceTemplateVersion: 1,
   sourceTemplateSnapshot: {},
@@ -114,7 +115,13 @@ describe("EditCoursePage template update panel", () => {
     vi.mocked(requireShopSurface).mockResolvedValue({
       session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
       db: {},
-      shop: { id: COURSE.shopId, slug: "blue-mantis", defaultLocale: "en-US", currency: "usd" },
+      shop: {
+        id: COURSE.shopId,
+        slug: "blue-mantis",
+        defaultLocale: "en-US",
+        currency: "usd",
+        rentalItems: ["bcd"],
+      },
     } as never);
     vi.mocked(getCourseBySlug).mockResolvedValue(COURSE as never);
     vi.mocked(getCourseTemplateUpdate).mockResolvedValue({
@@ -154,7 +161,13 @@ describe("EditCoursePage sections", () => {
     vi.mocked(requireShopSurface).mockResolvedValue({
       session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
       db: {},
-      shop: { id: COURSE.shopId, slug: "blue-mantis", defaultLocale: "en-US", currency: "usd" },
+      shop: {
+        id: COURSE.shopId,
+        slug: "blue-mantis",
+        defaultLocale: "en-US",
+        currency: "usd",
+        rentalItems: ["bcd"],
+      },
     } as never);
     vi.mocked(getCourseBySlug).mockResolvedValue(COURSE as never);
     vi.mocked(getCourseTemplateUpdate).mockResolvedValue(null as never);
@@ -242,7 +255,13 @@ describe("EditCoursePage nitrox box", () => {
     vi.mocked(requireShopSurface).mockResolvedValue({
       session: { user: { shopId: COURSE.shopId, shopSlug: "blue-mantis", personId: "staff" } },
       db: {},
-      shop: { id: COURSE.shopId, slug: "blue-mantis", defaultLocale: "en-US", currency: "usd" },
+      shop: {
+        id: COURSE.shopId,
+        slug: "blue-mantis",
+        defaultLocale: "en-US",
+        currency: "usd",
+        rentalItems: ["bcd"],
+      },
     } as never);
     vi.mocked(getCourseBySlug).mockResolvedValue(COURSE as never);
     vi.mocked(getCourseTemplateUpdate).mockResolvedValue(null as never);
