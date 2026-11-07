@@ -167,6 +167,7 @@ export default async function TripManifestPage({
       <BoatTabPaper
         {...{ tripId, shop, shopSlug, checkpoint, paperIdentity, diveLog, cancelled, manifest }}
         {...{ boatSafety, rollCall, boatPaper, stage, dockDesk, t }}
+        manifests={completeManifests}
         vesselName={vessel?.name ?? null}
         checklist={checklistProps}
       />

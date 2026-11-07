@@ -3,6 +3,7 @@ import {
   checkpointGap,
   homewardCheckpointGap,
   isHomewardStage,
+  laterCheckpointMissing,
   plannedDivesWithout,
   previousCheckpointGaps,
 } from "./checkpoint-gaps";
@@ -254,5 +255,51 @@ describe("isHomewardStage", () => {
     expect(isHomewardStage("home")).toBe(true);
     expect(isHomewardStage("surface")).toBe(false);
     expect(isHomewardStage("boarding")).toBe(false);
+  });
+});
+
+describe("laterCheckpointMissing (issue #4067)", () => {
+  const named = (
+    checkpoint: RollCallCheckpoint,
+    counts: Parameters<typeof at>[1],
+    missing: string[] = [],
+  ) => ({
+    ...at(checkpoint, counts),
+    divers: missing.map((fullName) => ({
+      fullName,
+      rollCall: { state: "not_boarded" as const },
+    })),
+    crew: [] as { id: string; fullName: string }[],
+  });
+
+  it("names who is not back aboard at a later count the printed sheet predates", () => {
+    const manifests = [
+      named("departure", { boarded: 8 }),
+      named("after_dive_1", { boarded: 8 }),
+      named("after_dive_2", { boarded: 7, notBackAboard: 1 }, ["Theo Lind"]),
+    ];
+    expect(laterCheckpointMissing(manifests, "after_dive_1")).toEqual({
+      checkpoint: "after_dive_2",
+      names: ["Theo Lind"],
+    });
+  });
+
+  it("says nothing at the latest checkpoint, or when the later count has everyone", () => {
+    const manifests = [
+      named("departure", { boarded: 8 }),
+      named("after_dive_1", { boarded: 7, notBackAboard: 1 }, ["Theo Lind"]),
+      named("after_dive_2", { boarded: 8 }),
+    ];
+    expect(laterCheckpointMissing(manifests, "after_dive_2")).toBeNull();
+    expect(laterCheckpointMissing(manifests, "after_dive_1")).toBeNull();
+  });
+
+  it("ignores a later checkpoint nobody has counted yet", () => {
+    const manifests = [
+      named("departure", { boarded: 8 }),
+      named("after_dive_1", { boarded: 8 }),
+      named("after_dive_2", { awaiting: 8 }),
+    ];
+    expect(laterCheckpointMissing(manifests, "after_dive_1")).toBeNull();
   });
 });

@@ -23,6 +23,7 @@ export function BoatTabSheet({
   name,
   printed,
   departure,
+  status = [],
   diveLog,
   children,
 }: {
@@ -37,6 +38,12 @@ export function BoatTabSheet({
    * also carries it, and two boats' sheets must not read the same (#2745).
    */
   departure: readonly string[];
+  /**
+   * What the screen's count panel and warnings say and paper cannot: the
+   * back-aboard tally, a dive before still open, a later count with someone
+   * missing (`boatSheetStatus`, issue #4067). Empty at the dock.
+   */
+  status?: readonly string[];
   /** The checkpoint's logged dive, after a dive; null at the dock. */
   diveLog: { heading: string; line: string } | null;
   children: ReactNode;
@@ -62,6 +69,13 @@ export function BoatTabSheet({
                 </p>
               ))}
             </header>
+          ) : null}
+          {status.length > 0 ? (
+            <div className="mb-5 space-y-1 text-base font-bold">
+              {status.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
           ) : null}
           {children}
           {diveLog ? (

@@ -70,6 +70,8 @@ type GapManifest = Pick<TripManifest, "checkpoint"> & {
   crew: readonly GapCrewMember[];
 };
 
+type NamedResult = { fullName: string; rollCall?: Parameters<typeof isNotBackAboard>[1] };
+
 /** A result somebody recorded here; a carried-forward default is not one. */
 function recordedState(rollCall: GapCrewMember["rollCall"]): RollCallState {
   if (!rollCall || rollCall.implied) return undefined;
@@ -183,4 +185,35 @@ export const HOMEWARD_STAGES = ["heading_in", "home"] as const;
 
 export function isHomewardStage(stage: string): stage is (typeof HOMEWARD_STAGES)[number] {
   return (HOMEWARD_STAGES as readonly string[]).includes(stage);
+}
+
+/**
+ * **A count taken after the one a sheet was printed at** (issue #4067). A sheet
+ * printed at after dive 1 while after dive 2 has someone recorded not back
+ * aboard would show everyone boarded and give no sign a later count exists.
+ *
+ * The latest checkpoint of the departure that anybody has a result at, when it
+ * comes after `printed` and names people recorded not back aboard there; null
+ * otherwise (nobody missing there, or the printed checkpoint is the latest).
+ * Divers and crew, by name, in manifest order.
+ */
+export function laterCheckpointMissing(
+  manifests: readonly (GapManifest & {
+    divers: readonly NamedResult[];
+    crew: readonly (GapCrewMember & { fullName: string })[];
+  })[],
+  printed: RollCallCheckpoint,
+): { checkpoint: RollCallCheckpoint; names: string[] } | null {
+  const printedAt = manifests.findIndex((manifest) => manifest.checkpoint === printed);
+  if (printedAt < 0) return null;
+  const hasResult = (manifest: (typeof manifests)[number]) =>
+    manifest.summary.boarded > 0 ||
+    manifest.summary.notBackAboard > 0 ||
+    manifest.crew.some((member) => recordedState(member.rollCall));
+  const latest = manifests.findLast(hasResult);
+  if (!latest || manifests.indexOf(latest) <= printedAt) return null;
+  const names = [...latest.divers, ...latest.crew]
+    .filter((person) => isNotBackAboard(latest.checkpoint, person.rollCall))
+    .map((person) => person.fullName);
+  return names.length > 0 ? { checkpoint: latest.checkpoint, names } : null;
 }
