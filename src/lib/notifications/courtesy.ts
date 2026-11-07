@@ -103,6 +103,8 @@ export interface PlainTextProvider {
    * to that number: WhatsApp is not tried either (issue #3883).
    */
   isStopListed?(phone: string): Promise<boolean>;
+  /** False when no SMS credentials are set, so every send is `not_configured`. */
+  readonly configured?: boolean;
 }
 
 export type CourtesyResult = {

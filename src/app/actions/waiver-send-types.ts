@@ -46,10 +46,16 @@ export type WaiverFallbackLink = {
   /** The seat a null-token row is about, so its "Send by text" knows where to post. */
   bookingId?: string;
   /**
-   * The seat's record holds a number a text can reach. "Send by text" is
-   * offered only then (issue #3984): without one it could only fail.
+   * A text can reach the seat: a number on file, a shop that can text, and a
+   * number not on the STOP list (issue #4039). "Send by text" is offered only
+   * then (issue #3984): without it a text could only fail.
    */
   textable?: boolean;
+  /**
+   * Where a seat no text can reach signs instead: its departure's counter
+   * queue, under its party's lead seat (issue #4039).
+   */
+  counter?: { shopSlug: string; tripId: string; leadBookingId: string };
   /**
    * The link's own path when it is not the release's: a signed release with
    * course forms still owed hands over `/ready/<token>/forms` (ADR
@@ -125,6 +131,8 @@ export type WaiverSendCopy = {
   copyLink: string;
   copyFailed: string;
   sendByText: string;
+  /** A seat no text can reach: its counter queue (issue #4039). */
+  signAtCounter: string;
   reasonThreadOnly: string;
   reasonGuardianNeeded: string;
   /** Copy link on a minor's release with no seat: the desk's question, and its yes (#4019). */
@@ -177,6 +185,7 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     copyLink: t("shared.waiverSend.copyLink"),
     copyFailed: t("shared.waiverSend.copyFailed"),
     sendByText: t("shared.waiverSend.sendByText"),
+    signAtCounter: t("trips.partyWaiverQueue.counter"),
     reasonThreadOnly: t("shared.waiverSend.reasonThreadOnly"),
     reasonGuardianNeeded: t("shared.waiverSend.reasonGuardianNeeded"),
     guardianCheck: t("shared.waiverSend.guardianCheck"),

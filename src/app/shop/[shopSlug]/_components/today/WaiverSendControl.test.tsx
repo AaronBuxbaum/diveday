@@ -218,6 +218,42 @@ describe("a booked seat that was not reached", () => {
     expect(screen.queryByRole("button", { name: "Send by text" })).toBeNull();
   });
 
+  it("offers Sign at the counter on Today for a seat no text can reach (issue 4039)", async () => {
+    outcome = {
+      ...outcome,
+      links: [
+        {
+          name: "Declan Murphy",
+          token: null,
+          bookingId: "booking-2",
+          textable: false,
+          counter: { shopSlug: "blue-reef", tripId: "trip-1", leadBookingId: "booking-1" },
+          reason: "no_email",
+        },
+      ],
+    };
+    renderControl();
+    await tapSend();
+    expect(screen.getByRole("link", { name: "Sign at the counter" })).toHaveAttribute(
+      "href",
+      "/shop/blue-reef/trips/trip-1/party/booking-1/waivers",
+    );
+    expect(screen.queryByRole("button", { name: "Send by text" })).toBeNull();
+    cleanup();
+    // The roster's row already links there, so its notice does not.
+    render(
+      <WaiverSendControl
+        surface="roster"
+        tripId="trip-1"
+        bookingIds={["booking-2"]}
+        label="Resend waiver link"
+        copy={copy}
+      />,
+    );
+    await tapSend();
+    expect(screen.queryByRole("link", { name: "Sign at the counter" })).toBeNull();
+  });
+
   it("does not offer a text again after a text failed", async () => {
     outcome = {
       ...outcome,

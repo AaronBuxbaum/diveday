@@ -97,7 +97,12 @@ export function RosterRow({
       : null);
   const s6 = {
     ...s5,
-    ...rowOutstanding({ ...s5, partyLeadId, trainingMarks: context.rows.trainingMarks }),
+    ...rowOutstanding({
+      ...s5,
+      partyLeadId,
+      trainingMarks: context.rows.trainingMarks,
+      textable: context.rows.textableBookings.has(entry.booking.id),
+    }),
   };
   // One remedy per actual reason family, in the open beside that reason.
   // Sending a link records delivery only; readiness still comes from the server.

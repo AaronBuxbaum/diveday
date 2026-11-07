@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import {
   holdSendAction,
@@ -22,6 +23,7 @@ import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { fill, pluralForm } from "@/i18n/fill";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * The diver's name and a control that puts their link on the clipboard.
@@ -38,6 +40,7 @@ function CopyLink({
   copy: copyText,
   autoCopy,
   resend,
+  offerCounter,
 }: {
   link: WaiverFallbackLink;
   copy: WaiverSendCopy;
@@ -45,10 +48,13 @@ function CopyLink({
   autoCopy?: boolean;
   /** Where a booked seat's "Send by text" posts; absent where it cannot. */
   resend?: ResendTarget;
+  /** Today: a seat no text can reach links to its counter queue. */
+  offerCounter?: boolean;
 }) {
   const path = waiverLinkPath(link);
   // A booked seat has no link to hand over (ADR 20261105-waiver-folds-into-
-  // the-thread): its name, and a text to the number on file instead.
+  // the-thread): its name, and a text to the number on file instead, or the
+  // counter when no text can reach it (issue #4039).
   if (!path) {
     return (
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -62,6 +68,21 @@ function CopyLink({
             wrapperClassName=""
             copy={copyText}
           />
+        ) : null}
+        {offerCounter && link.counter && !link.textable ? (
+          <Link
+            href={shopPath(
+              link.counter.shopSlug,
+              "trips",
+              link.counter.tripId,
+              "party",
+              link.counter.leadBookingId,
+              "waivers",
+            )}
+            className="inline-flex min-h-11 items-center font-semibold text-primary hover:underline"
+          >
+            {copyText.signAtCounter}
+          </Link>
         ) : null}
       </div>
     );
@@ -146,6 +167,7 @@ function LinkGroups({
   channel,
   autoCopy,
   resend,
+  offerCounter,
 }: {
   links: WaiverFallbackLink[];
   copy: WaiverSendCopy;
@@ -153,6 +175,7 @@ function LinkGroups({
   channel: WaiverSendChannel;
   autoCopy?: boolean;
   resend?: ResendTarget;
+  offerCounter?: boolean;
 }) {
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
     link_only: links.filter((link) => link.reason === "link_only"),
@@ -188,6 +211,7 @@ function LinkGroups({
                   autoCopy={autoCopy}
                   // A text that just failed is not offered again as a text.
                   resend={channel === "sms" ? undefined : resend}
+                  offerCounter={offerCounter}
                 />
               ))}
             </div>
@@ -259,6 +283,9 @@ export function ResultNotice({
           channel={state.channel}
           autoCopy={state.channel === "link"}
           resend={resend}
+          // Today offers a seat no text can reach its counter queue; the
+          // roster's row already links there (issue #4039).
+          offerCounter={resend?.surface === "today"}
         />
       ) : null}
       {state.errors.length > 0 ? (

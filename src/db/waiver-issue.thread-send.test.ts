@@ -215,7 +215,7 @@ describe("deliverWaiverBatch for seats", () => {
   it("lists an undelivered seat by name with no link to hand over", async () => {
     configureMail();
     vi.stubEnv("SES_FROM_EMAIL", "");
-    const { db, shop, bookingId } = await seat();
+    const { db, shop, bookingId, tripId } = await seat();
 
     const outcome = await deliverWaiverBatch(db, shop.id, {
       bookingIds: [bookingId],
@@ -223,7 +223,14 @@ describe("deliverWaiverBatch for seats", () => {
     });
 
     expect(outcome.links).toEqual([
-      { name: "Nora Quinn", token: null, bookingId, textable: false, reason: "unconfigured" },
+      {
+        name: "Nora Quinn",
+        token: null,
+        bookingId,
+        textable: false,
+        counter: { shopSlug: shop.slug, tripId, leadBookingId: bookingId },
+        reason: "unconfigured",
+      },
     ]);
     expect(JSON.stringify(outcome)).not.toMatch(/\/ready\/|\/waivers\//);
   });
@@ -231,6 +238,10 @@ describe("deliverWaiverBatch for seats", () => {
   it("says whether the seat's record holds a number a text can reach (issue 3984)", async () => {
     configureMail();
     vi.stubEnv("SES_FROM_EMAIL", "");
+    // A shop that can text (issue #4039: a number alone is not enough).
+    vi.stubEnv("SNS_AWS_REGION", "us-east-1");
+    vi.stubEnv("SNS_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SNS_AWS_SECRET_ACCESS_KEY", "test-secret");
     const { db, shop, bookingId, personId } = await seat();
     await db.update(people).set({ phone: "+13055550188" }).where(eq(people.id, personId));
 
@@ -244,7 +255,7 @@ describe("deliverWaiverBatch for seats", () => {
 
   it("answers a Copy link tap on seats with no link", async () => {
     configureMail();
-    const { db, shop, bookingId } = await seat();
+    const { db, shop, bookingId, tripId } = await seat();
 
     const outcome = await deliverWaiverBatch(db, shop.id, {
       bookingIds: [bookingId],
@@ -252,7 +263,14 @@ describe("deliverWaiverBatch for seats", () => {
     });
 
     expect(outcome.links).toEqual([
-      { name: "Nora Quinn", token: null, bookingId, textable: false, reason: "thread_only" },
+      {
+        name: "Nora Quinn",
+        token: null,
+        bookingId,
+        textable: false,
+        counter: { shopSlug: shop.slug, tripId, leadBookingId: bookingId },
+        reason: "thread_only",
+      },
     ]);
   });
 });

@@ -68,7 +68,12 @@ describe("unused package dives on the payment control", () => {
  * instead of running the builders before it.
  */
 describe("rowOutstanding, from the seat's facts and three drawn parts", () => {
-  const drawn = { identityContact: null, packageNote: null, deskPrivateLines: [] };
+  const drawn = {
+    identityContact: null,
+    packageNote: null,
+    deskPrivateLines: [],
+    textable: false,
+  };
   const signed = new Map([["o", signedWaiver]]) as WaiverByBooking;
 
   it("has no work for a ready seat on a trip that takes no payment", () => {
