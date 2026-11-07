@@ -63,7 +63,6 @@ function held(shopId: string): Notification {
     startsAt: new Date("2035-03-12T12:00:00Z"),
     timezone: "UTC",
     requestedAt: new Date("2035-03-01T00:00:00Z"),
-    attempt: "claim",
   };
 }
 

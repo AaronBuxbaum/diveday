@@ -427,19 +427,17 @@ for (const scheme of ["light", "dark"] as const) {
          * group chat is dead the moment the seat changes hands — and it is the
          * *ordinary* way this page is reached, not an edge case. The token
          * still resolves to a row this app issued, which is what earns the
-         * booking tier: the shop's name and its way in. What the sentence
-         * beside it may say is set by the *worst* of the six causes that share
-         * this card — a cancelled seat, a departure called off — so it names
-         * whoever sent the link and claims nothing about the seat. Captured
+         * booking tier: the shop's name and its way in, beside the sentence
+         * saying the seat has already been claimed. Captured
          * from the real spent link rather than a hand-made expiry, because the
          * revocation is the thing.
          */
         await page.getByLabel("Your name").fill("Sam Reyes");
         await page.getByLabel("Your email").fill(`claimant-${scheme}@example.com`);
         await page.getByRole("button", { name: "Claim this seat" }).click();
-        // Every claim lands on the static "check your email" page (#2381).
-        await expect(page).toHaveURL(/\/claim\/[^/?#]+\?sent=1$/);
-        if (scheme === "light") await capture(page, "seat-claim-sent", scheme);
+        // A claim that worked lands back here, saying the seat is theirs.
+        await expect(page).toHaveURL(/\/claim\/[^/?#]+\?claimed=1$/);
+        if (scheme === "light") await capture(page, "seat-claim-claimed", scheme);
         await page.goto(claimPath ?? "/");
         await page.getByRole("heading", { name: /This link no longer works/ }).waitFor();
         await capture(page, "expired-link-claim", scheme);

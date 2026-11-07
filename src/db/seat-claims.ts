@@ -21,7 +21,7 @@ import {
   type IssuedCapability,
   mintBookingCapabilities,
   revokeBookingCapabilities,
-  staleBookingCapabilityForToken,
+  staleClaimSeat,
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { partySeatGoesWithLead, tripAdmissionFor } from "./bookings";
@@ -65,11 +65,8 @@ import { openWaiverInThread } from "./waivers-requests";
 
 /**
  * Everything the `/claim/[token]` page needs to render the claim form.
- * `null` for anything that must read as "this link isn't available" —
- * unknown/expired/revoked token, cancelled booking or trip (both fail closed
- * inside `verifyBookingCapability`), a seat already claimed, a seat that
- * isn't a party member's, or a departed trip. Callers must not distinguish
- * those cases in a response, same rule as every capability page.
+ * `null` whenever the seat cannot be claimed through this token now;
+ * `getClaimPageState` says why.
  */
 export type ClaimPageData = {
   shopId: string;
@@ -147,62 +144,35 @@ export async function getClaimPageData(
 }
 
 /**
- * **The one thing a dead claim link is allowed to say about its shop.**
+ * **What a dead claim link may say** (ADR 20260827-first-light, decisions 3
+ * and 4, and Aaron's 2026-11-06 call that the claim page says what happened).
  *
- * A claim link is a *booking* capability, so it wears the booking tier of the
- * dead-link law (ADR 20260827-first-light, decision 3, and decision 4 — claim
- * joins the thread): the person holding a dead one is a party member who was
- * forwarded a URL in a group chat, and their whole question is *who do I ask*.
- * Answering "ask the shop" without naming the shop is a dead end, so where the
- * token still tells us which shop issued it, the page hands over that shop's
- * own published name and contact and the claim page's terminal card is
- * `ExpiredLinkCard`. Where it does not, the bare door renders and names
- * nothing — there is no shop to attribute an unresolvable token to without
- * weakening the guarantee the whole model rests on, that a bearer token reveals
- * only its own record.
+ * A claim link is a *booking* capability, so where the token still matches a
+ * capability row this app issued for `claim`, the page names that shop and
+ * hands over its published contact; a token that resolves to nothing names
+ * nothing. Guessing is no cheaper: `staleClaimSeat` still requires a genuine
+ * hash match, and lets expiry and revocation through, nothing else.
  *
- * **What is relaxed here is only *when* the token was valid, never *whether* it
- * was ours.** `staleBookingCapabilityForToken` still requires a genuine hash
- * match on a capability issued for the `claim` purpose, so guessing is no
- * cheaper than it was; expiry and revocation are what it lets through, which is
- * exactly the population this tier exists for — a spent claim (claiming revokes
- * every capability on the booking), a link replaced by a newer one, a seat
- * somebody else took, a seat the shop cancelled and a departure it called off
- * (those two fail closed inside `verifyBookingCapability`), a departure that
- * has since sailed.
+ * It also says why the link is dead, from the seat and the trip alone: the
+ * trip was canceled, the seat was canceled, the seat was claimed, the boat has
+ * left, or none of those (an expired link, a seat checked in at the desk). The
+ * holder was sent this link for this seat, so its fate is theirs to know; who
+ * holds the seat now is not, and nothing about any person is read.
  *
- * **That list is the constraint on what the page may say.** Six causes reach
- * one arm and this reader cannot tell them apart, so the dead card's sentence
- * has to be true of the worst of them: the seat may be gone, the boat may be
- * back, the day may be off, and no fresh link is mintable for any of those —
- * `issuePartySeatClaims` returns `claim: null` the moment `claimableNow` is
- * false, so the organizer has nothing left to forward. A sentence claiming the
- * seat, or offering that link, is this page telling a diver whose Saturday was
- * called off that their seat is safe and sending them to ask for something
- * nobody can produce. Widening the arm is not the fix; the sentence claiming
- * less is.
- *
- * **The shop's four public columns and nothing else.** No booking, no diver, no
- * trip is read through a dead token, and the narrow return type is the guard
- * rather than a comment asking the next caller not to — the same argument
- * `staleBookingCapabilityForToken`'s `{ shopId }`-only shape makes one file
- * over. `defaultLocale` is in the set because the page has to choose a language
- * before it can say anything at all.
- *
- * Like `/ready`'s, this attribution outlives revocation and expiry: it lasts
- * until the row is pruned, 90 days past its `expires_at` (`booking_capabilities`
- * in `src/lib/retention.ts`, issue #1726), and after that the URL names nobody.
- * That is recorded in
- * docs/engineering/capability-telemetry-runbook.md, where an exposed URL is
- * assessed.
+ * Like `/ready`'s, this attribution lasts until the row is pruned, 90 days
+ * past its `expires_at` (`booking_capabilities` in `src/lib/retention.ts`,
+ * issue #1726); docs/engineering/capability-telemetry-runbook.md assesses an
+ * exposed URL.
  */
 export type DeadClaimShop = Pick<Shop, "name" | "contactEmail" | "contactPhone" | "defaultLocale">;
+
+export type DeadClaimCause = "trip_cancelled" | "seat_cancelled" | "claimed" | "departed" | "ended";
 
 export type ClaimPageState =
   /** A live token over a seat that can still change hands: render the form. */
   | { kind: "claimable"; data: ClaimPageData }
-  /** Dead, but ours: the booking tier — name the shop, offer its hand. */
-  | { kind: "dead"; shop: DeadClaimShop }
+  /** Dead, but ours: name the shop and say what happened to the seat. */
+  | { kind: "dead"; shop: DeadClaimShop; cause: DeadClaimCause }
   /** Nothing resolved at all: the bare door, naming no one. */
   | { kind: "unknown" };
 
@@ -213,22 +183,22 @@ export async function getClaimPageState(
 ): Promise<ClaimPageState> {
   const data = await getClaimPageData(db, token, now);
   if (data) return { kind: "claimable", data };
-  const stale = await staleBookingCapabilityForToken(db, {
-    token,
-    purpose: "claim",
-  });
+  const stale = await staleClaimSeat(db, token);
   if (!stale) return { kind: "unknown" };
-  const [shop] = await db
-    .select({
-      name: shops.name,
-      contactEmail: shops.contactEmail,
-      contactPhone: shops.contactPhone,
-      defaultLocale: shops.defaultLocale,
-    })
-    .from(shops)
-    .where(eq(shops.id, stale.shopId))
-    .limit(1);
-  return shop ? { kind: "dead", shop } : { kind: "unknown" };
+  const { shop, seat, trip } = stale;
+  return { kind: "dead", shop, cause: deadClaimCause(seat, trip, now) };
+}
+
+function deadClaimCause(
+  seat: { status: string; claimedAt: Date | null },
+  trip: { status: string; startsAt: Date; deletedAt: Date | null },
+  now: Date,
+): DeadClaimCause {
+  if (trip.status === "cancelled" || trip.deletedAt !== null) return "trip_cancelled";
+  if (seat.status === "cancelled") return "seat_cancelled";
+  if (seat.claimedAt !== null) return "claimed";
+  if (trip.startsAt <= now) return "departed";
+  return "ended";
 }
 
 /**
@@ -290,14 +260,8 @@ export type ClaimSeatResult =
       /** Set when the claimant's submitted name didn't match the person row their email resolved to (H-20260724-one-person-per-email). */
       identityUnconfirmed: boolean;
     }
-  | { ok: false; reason: "invalid" | "course_prerequisite" }
-  /**
-   * The typed address already holds a live seat on this trip. `held`
-   * is that seat, for the note to its holder (`tellSeatAlreadyHeld`); the
-   * claimant is never shown it. Null only when two claims raced and the seat
-   * could not be re-found.
-   */
-  | { ok: false; reason: "already_booked"; held: { shopId: string; bookingId: string } | null }
+  /** `already_booked`: the typed address already holds a live seat on this trip. */
+  | { ok: false; reason: "invalid" | "course_prerequisite" | "already_booked" }
   | { ok: false; reason: "trip_prerequisite"; refusal: TripAdmissionRefusal };
 
 /**
@@ -437,9 +401,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   // (and violate bookings_trip_person_unique). The organizer's other seats
   // stay untouched — this refusal is about the claimant, not the party.
   // It runs after every gate, so a gate refusal does not depend on whether
-  // the typed email holds a seat here (issue #2288). The refusal itself is not
-  // shown: the action answers it exactly as it answers a claim that worked,
-  // and tells the seat's holder by email instead (issue #2381).
+  // the typed email holds a seat here (issue #2288).
   if (existing && existing.id !== booking.personId) {
     const [clash] = await tx
       .select({ id: bookings.id })
@@ -448,12 +410,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
         and(eq(bookings.tripId, trip.id), eq(bookings.personId, existing.id), seatNotCancelled),
       )
       .limit(1);
-    if (clash)
-      return {
-        ok: false,
-        reason: "already_booked",
-        held: { shopId: capability.shopId, bookingId: clash.id },
-      };
+    if (clash) return { ok: false, reason: "already_booked" };
   }
 
   // Gates passed — now resolve for real. Under a racing insert for the same
@@ -540,110 +497,26 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
 }
 
 /**
- * The live seat the typed address already holds on the claimed seat's trip,
- * found again after a racing claim rolled back. Null when it cannot be told.
- */
-async function heldSeatForClaim(
-  db: AppDb,
-  input: ClaimSeatInput,
-): Promise<{ shopId: string; bookingId: string } | null> {
-  const capability = await verifyBookingCapability(db, {
-    token: input.token,
-    purpose: "claim",
-    now: input.now ?? nowDate(),
-  });
-  if (!capability) return null;
-  const [seat] = await db
-    .select({ tripId: bookings.tripId })
-    .from(bookings)
-    .where(and(eq(bookings.id, capability.bookingId), eq(bookings.shopId, capability.shopId)))
-    .limit(1);
-  if (!seat) return null;
-  const [held] = await db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
-    .where(
-      and(
-        eq(bookings.shopId, capability.shopId),
-        eq(bookings.tripId, seat.tripId),
-        eq(people.email, input.email.trim().toLowerCase()),
-        isNull(people.deletedAt),
-        seatNotCancelled,
-        ne(bookings.id, capability.bookingId),
-      ),
-    )
-    .limit(1);
-  return held ? { shopId: capability.shopId, bookingId: held.id } : null;
-}
-
-/**
- * **A refused claim kills its link, as a claim that worked does** (issue
- * #2381). The action answers a booked address exactly as it answers a fresh
- * one, but the claim page behind the link is a second answer: a success ends
- * every claim link on the seat, so a refusal that left its link live would tell
- * anyone holding it which addresses hold a seat. Committed here, outside the
- * claim's transaction, because that one rolled back (or ended with no write)
- * and a revoke inside it would roll back with it. The organizer's next view of
- * the party panel mints a fresh link (`issuePartySeatClaims`).
- *
- * Fails open to the log: the refusal stands either way, and a failed revoke
- * must not turn into a different answer for a booked address.
- */
-async function retireRefusedClaimLink(db: AppDb, input: ClaimSeatInput): Promise<void> {
-  try {
-    const now = input.now ?? nowDate();
-    const capability = await verifyBookingCapability(db, {
-      token: input.token,
-      purpose: "claim",
-      now,
-    });
-    if (!capability) return;
-    await revokeBookingCapabilities(db, {
-      shopId: capability.shopId,
-      bookingId: capability.bookingId,
-      purpose: "claim",
-      now,
-    });
-  } catch (error) {
-    log("seat_claim.refused_link_not_retired", "error", {
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-  }
-}
-
-/**
- * The claim itself and nothing after it: the re-point (one transaction) and,
- * for a refusal of an address that already holds a seat, the retired link.
+ * The claim itself and nothing after it: the re-point, in one transaction.
  * The caller owes `settleClaimedSeat` for a success, after its response
- * (`claimSeatAction`): that work sends mail inline, so doing it before the
- * answer would let a claim that worked take visibly longer than one that was
- * refused (issue #2381).
+ * (`claimSeatAction`), so the claimant is not kept waiting on mail.
  */
 export async function claimPartySeatRecord(
   db: AppDb,
   input: ClaimSeatInput,
 ): Promise<ClaimSeatResult> {
-  const outcome = await db
+  return db
     .transaction((tx) => claimSeatRecord(tx, input))
-    .catch(async (error: unknown): Promise<ClaimSeatResult> => {
+    .catch((error: unknown): ClaimSeatResult => {
       // Two truly concurrent claims by the same *new* email on two different
       // seats of one trip both pass the serial clash check (neither person
       // row exists yet), converge on one person via `findOrCreatePerson`, and
       // the second re-point then trips `bookings_trip_person_unique`. The
       // index is the backstop that keeps one diver off the manifest twice;
       // surface it as the same refusal the serial path gives.
-      if (isUniqueConstraintViolation(error)) {
-        return {
-          ok: false,
-          reason: "already_booked",
-          held: await heldSeatForClaim(db, input),
-        };
-      }
+      if (isUniqueConstraintViolation(error)) return { ok: false, reason: "already_booked" };
       throw error;
     });
-  if (!outcome.ok && outcome.reason === "already_booked") await retireRefusedClaimLink(db, input);
-  return outcome;
 }
 
 /**

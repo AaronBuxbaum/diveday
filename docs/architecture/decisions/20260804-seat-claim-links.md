@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-04
+- **Amended 2026-11-06:** the claim page says what happened (see Answers).
 - **Amended by:** [20261104-derived-booking-link-tokens](20261104-derived-booking-link-tokens.md) — claim links are derived from their row and a booking holds one live one, so the organizer's panel hands back the same link instead of minting under a cap.
 
 ## Context
@@ -40,27 +41,19 @@ booking would face (on a course session the course's own card gate, fail-closed 
 evidence; course minimum age deliberately not re-checked — an age refusal keyed to a typed email
 is an oracle about someone else's record (H-20260724-minimum-age-gate-fail), and readiness still catches it), then refuse
 `already_booked` if the claimant already holds a live seat on the trip — checked after the gates,
-so a gate refusal does not depend on whether the typed email is booked. The refusal is never
-shown (#2381, decided 2026-10-16): the action answers a claim that worked and a claim for an
-already-held address with the same redirect, to a static "check your email" page rendered before
-the token is read, and does the rest after the response. The claimant is sent their booking
-confirmation, which carries their own prep link now that the claim link has died; the holder of the
-seat the address already has is sent a note naming it (`tellSeatAlreadyHeld`, five an hour a seat,
-no link in it). The refused claim link is retired in a write of its own, outside the claim's
-transaction, so a refusal and a success both leave the link dead and the page behind it cannot be
-read as an oracle; the organizer's panel mints a fresh link. The waiver mail, analytics event and
-activity trail of a success also wait for after the response, so it is no slower than a refusal.
-So the link holder learns nothing about who is on the manifest, and the only answer
-goes to the inbox that owns it. The public booking form keeps its on-screen refusal: it cannot
-imitate a success without abandoning the checkout redirect and telling a party its seats are booked
-when none are — then re-point `person_id`,
-stamp `claimed_at`, supersede any current waiver record on
+so a gate refusal does not depend on whether the typed email is booked — then re-point
+`person_id`, stamp `claimed_at`, supersede any current waiver record on
 the booking that belongs to a different person (readiness's booking-scoped waiver join would
 otherwise let the claimant board on the placeholder's signature), and revoke **every** outstanding
 capability on the booking. Consequences after commit mirror `seatDiver`: waiver-on-join to the
 claimant, activity trail, analytics. Payment rows stay with the booking (the organizer paid for
 the seat, not the identity); the placeholder person row is left behind, unbooked, for staff to
 tidy.
+
+**Answers** (Aaron, 2026-11-06, superseding #2381's single answer): the claim page says what
+happened — the seat is theirs, the address already has a seat on this trip (the link stays live
+for another address), a gate refused, or the link is dead and why (trip or seat canceled, seat
+claimed, boat left). It names no person and reads nothing about one.
 
 **Revocation.** Claiming revokes all live claim links for the seat (one-shot in effect); booking
 cancellation already revokes every capability; trip cancellation fails closed at verify; staff can

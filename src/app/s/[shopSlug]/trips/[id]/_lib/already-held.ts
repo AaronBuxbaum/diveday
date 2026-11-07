@@ -19,7 +19,7 @@ import { log } from "@/lib/log";
  *
  * Accepted residual: the neutral page is not a fresh booking's landing
  * (`/ready`, Stripe or the embed's confirm page), so the signal narrows rather
- * than closes on this form. The claim page stays fully closed (#2381).
+ * than closes on this form.
  */
 export function answerAlreadyHeld(
   db: AppDb,
@@ -45,7 +45,7 @@ export function answerAlreadyHeld(
       const held = member?.email
         ? await heldSeatOnTrip(db, { shopId, tripId, email: member.email })
         : null;
-      if (held) await tellSeatAlreadyHeld(db, { ...held, attempt: "booking" });
+      if (held) await tellSeatAlreadyHeld(db, held);
     } catch (error) {
       log("already_held.failed", "error", {
         tripId,

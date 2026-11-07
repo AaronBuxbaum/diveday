@@ -5,7 +5,6 @@ import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
-import { tellSeatAlreadyHeld } from "@/db/seat-already-held";
 import { claimPartySeatRecord, settleClaimedSeat } from "@/db/seat-claims";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { claimLinkPath } from "@/lib/booking-capabilities";
@@ -29,15 +28,10 @@ const claimSchema = z.object({
  * capability action throttles both guessing and replay spam ahead of
  * verification (the pattern `confirmContextFor` set, CR-013).
  *
- * **A claim that worked and a claim for an address that already holds a seat
- * on the trip answer identically** (issue #2381): the same redirect, to the
- * same static page, with the same work done after the response. Anyone holding
- * a claim link can type any address, so a different answer for a booked
- * address would tell them who is on the manifest. The answer goes by email
- * instead, to the only person entitled to it: the claimant gets their booking
- * confirmation (their own prep link in it, the old claim link having died in
- * the claim transaction), and the holder of an already-held seat gets a note
- * naming it. The data layer still refuses the double seat.
+ * Every answer lands back on the claim page, which says what happened: the
+ * seat is theirs (`?claimed=1`), the typed address already holds a seat on
+ * this trip (`?error=held`, the link still live so they can use their own
+ * address), a gate refused, or the link is dead and the page says why.
  */
 export async function claimSeatAction(token: string, formData: FormData) {
   const base = claimLinkPath(token);
@@ -53,7 +47,6 @@ export async function claimSeatAction(token: string, formData: FormData) {
   const db = await getDb();
   // This form is the claimant's own device — first-hand evidence of the
   // language they read (docs ADR 20260731-per-person-notification-locale).
-  // Read before the claim, for both answers alike.
   const ownLocale = await requestFirstHandLocale();
   const outcome = await claimPartySeatRecord(db, {
     token,
@@ -62,36 +55,28 @@ export async function claimSeatAction(token: string, formData: FormData) {
     phone: parsed.data.phone,
   });
   if (!outcome.ok) {
-    // `invalid` redirects with no code at all: the token no longer verifies
-    // (or never did), so the page itself renders the uniform "this link
-    // isn't available" notice — one honest answer for every dead-link cause.
+    // `invalid` redirects with no code: the token no longer verifies, and the
+    // page reads why from the seat and the trip.
     if (outcome.reason === "invalid") redirect(base);
-    if (outcome.reason === "already_booked") {
-      const { held } = outcome;
-      if (held) after(() => tellSeatAlreadyHeld(db, { ...held, attempt: "claim" }));
-      redirect(sentPath(base));
-    }
-    redirect(
-      `${base}?error=${outcome.reason === "course_prerequisite" ? "course" : "requirement"}`,
-    );
+    redirect(`${base}?error=${CLAIM_ERRORS[outcome.reason]}`);
   }
 
   // The booking-scoped writer refuses an identity-unconfirmed booking, which
-  // is exactly right here too. After the response, like the held-seat note.
+  // is exactly right here too. After the response.
   after(async () => {
     await recordDiverOwnLocaleForBooking(db, {
       bookingId: outcome.bookingId,
       locale: ownLocale,
     });
     // The confirmation with its Sign step, the analytics event and the
-    // activity trail: all after the response, so a claim that worked costs
-    // the caller no more time than one that was refused.
+    // activity trail.
     await settleClaimedSeat(db, outcome);
   });
-  redirect(sentPath(base));
+  redirect(`${base}?claimed=1`);
 }
 
-/** Where both answers land: the claim URL with the static "check your email" page. */
-function sentPath(base: string): string {
-  return `${base}?sent=1`;
-}
+const CLAIM_ERRORS = {
+  already_booked: "held",
+  course_prerequisite: "course",
+  trip_prerequisite: "requirement",
+} as const;

@@ -1328,11 +1328,16 @@
     "claiming": "Reclamando…",
     "privacyNote": "Lo que escribas aquí solo lo ven el centro y tú. Quien organiza el grupo solo ve que la plaza está reclamada.",
     "unavailableBody": "Pide un enlace nuevo a quien organiza el grupo o contacta con el centro.",
-    "sentHeading": "Revisa tu correo",
-    "sentBody": "Enviamos un mensaje a la dirección que indicaste. Ahí dice qué sigue.",
+    "claimedHeading": "La plaza es tuya",
+    "claimedNotice": "Tu exención y tu preparación van camino a tu correo.",
+    "claimedBody": "Esta plaza ya se reclamó. Si fuiste tú, tu preparación está en tu correo.",
+    "departedBody": "Este viaje ya salió.",
+    "tripCancelledBody": "El centro canceló este viaje.",
+    "seatCancelledBody": "Esta plaza se canceló.",
     "expiredBody": "Quien te envió este enlace puede decirte qué ha pasado con la plaza.",
     "errors": {
       "checkFields": "Revisa los campos marcados e inténtalo de nuevo.",
+      "alreadyHeld": "Este email ya tiene una plaza en este viaje. Busca su correo de confirmación.",
       "coursePrerequisite": "Esta sesión es un curso con sus propios requisitos, y el centro necesita una certificación verificada archivada antes de que la plaza cambie de manos. Contacta con el centro y lo resolverán."
     },
     "panelHeading": "Las plazas de tu grupo",
@@ -3842,8 +3847,7 @@
     },
     "seatAlreadyHeld": {
       "subject": "Ya tienes una plaza en {tripTitle}",
-      "body": "Alguien usó un enlace para reclamar una plaza de {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada.",
-      "bookingBody": "Alguien intentó reservar {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada."
+      "body": "Alguien intentó reservar {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada."
     },
     "partyNotBooked": {
       "subject": "No se reservó tu grupo para {tripTitle}",

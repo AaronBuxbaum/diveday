@@ -16,7 +16,7 @@ const diver = diverTranslator("en-US");
 /**
  * The group-organizer loop (docs ADR 20260804-seat-claim-links): one
  * organizer books several seats, shares a claim link, and the invited diver
- * takes the seat over as themselves — own contact, own waiver, own prep by email —
+ * takes the seat over as themselves — own contact, own waiver, own prep —
  * while the organizer watches the claimed state land. The whole point is
  * killing "the organizer does everyone's paperwork".
  */
@@ -104,27 +104,26 @@ test.describe("seat claim links", () => {
     await claimantPage.getByLabel(/Your phone/).fill("+1-305-555-0134");
     await claimantPage.getByRole("button", { name: "Claim this seat" }).click();
 
-    // They land on the static "check your email" page, the same page a claim
-    // for an address already on the trip gets (issue #2381): their own prep
-    // link is in the confirmation email, not on screen.
-    await expect(claimantPage).toHaveURL(/\/claim\/[^/?#]+\?sent=1$/);
-    await expect(claimantPage.getByRole("heading", { name: "Check your email" })).toBeVisible();
-    await expect(claimantPage.getByText(/We’ve sent a note to the address you gave/)).toBeVisible();
+    // They land back on the claim page, told the seat is theirs; their own
+    // prep link is in the confirmation email.
+    await expect(claimantPage).toHaveURL(/\/claim\/[^/?#]+\?claimed=1$/);
+    await expect(
+      claimantPage.getByRole("heading", { name: diver("seatClaim.claimedHeading") }),
+    ).toBeVisible();
+    await expect(claimantPage.getByText(diver("seatClaim.claimedNotice"))).toBeVisible();
 
     // The spent link is dead for everyone — and because the token still
     // resolves to a capability this app issued, it dies in the *booking* tier
-    // (ADR 20260827-first-light, decision 3): the shop's name and its way in.
+    // (ADR 20260827-first-light, decision 3): the shop's name and its way in,
+    // and what happened to the seat.
     await claimantPage.goto(claimPath ?? "/");
     await expect(
       claimantPage.getByRole("heading", { name: "This link no longer works" }),
     ).toBeVisible();
-    await expect(claimantPage.getByText(/Whoever sent you this link/)).toBeVisible();
+    await expect(claimantPage.getByText(diver("seatClaim.claimedBody"))).toBeVisible();
     await expect(
       claimantPage.getByRole("link", { name: /Contact Blue Mantis Divers/ }),
     ).toBeVisible();
-    // Five other causes share this one sentence — a cancelled seat, a departure
-    // called off for weather, a boat already back — so it may not tell this
-    // diver the seat is safe, nor send them for a link nothing can mint.
     await expect(claimantPage.getByText(/seat is safe|fresh link/i)).toHaveCount(0);
 
     // A token that was never ours resolves to no record, so it names nobody.

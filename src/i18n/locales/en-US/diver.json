@@ -1328,11 +1328,16 @@
     "claiming": "Claiming…",
     "privacyNote": "Only you and the shop see what you enter here. Your organizer just sees that the seat is claimed.",
     "unavailableBody": "Ask your organizer for a fresh link, or contact the shop.",
-    "sentHeading": "Check your email",
-    "sentBody": "We’ve sent a note to the address you gave. It says what happens next.",
+    "claimedHeading": "The seat is yours",
+    "claimedNotice": "Your waiver and trip prep are on their way to your email.",
+    "claimedBody": "This seat has already been claimed. If that was you, your trip prep is in your email.",
+    "departedBody": "This trip has already left.",
+    "tripCancelledBody": "The shop canceled this trip.",
+    "seatCancelledBody": "This seat was canceled.",
     "expiredBody": "Whoever sent you this link can tell you what’s happened with the seat.",
     "errors": {
       "checkFields": "Check the highlighted fields and try again.",
+      "alreadyHeld": "This email already has a seat on this trip. Look for its confirmation email.",
       "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified certification on file before the seat can change hands. Contact the shop and they can sort it out."
     },
     "panelHeading": "Your group’s seats",
@@ -3842,8 +3847,7 @@
     },
     "seatAlreadyHeld": {
       "subject": "You already have a seat on {tripTitle}",
-      "body": "Someone used a seat-claim link for {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed.",
-      "bookingBody": "Someone tried to book {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed."
+      "body": "Someone tried to book {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed."
     },
     "partyNotBooked": {
       "subject": "Your party for {tripTitle} wasn’t booked",

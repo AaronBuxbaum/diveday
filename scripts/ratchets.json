@@ -1460,7 +1460,6 @@
         "files": {
           "src/db/executed-dives.test.ts": "1084 -> 1085",
           "src/db/no-show.test.ts": "1156 -> 1158",
-          "src/db/seat-claims.test.ts": "1525 -> 1529",
           "src/db/self-declared-cards.test.ts": "1849 -> 1869"
         }
       }
@@ -1505,7 +1504,7 @@
     "src/db/reporting.test.ts": 1380,
     "src/db/retention.test.ts": 1027,
     "src/db/reviews.test.ts": 1034,
-    "src/db/seat-claims.test.ts": 1529,
+    "src/db/seat-claims.test.ts": 1526,
     "src/db/self-declared-cards.test.ts": 1869,
     "src/db/staffing.test.ts": 952,
     "src/db/trips-crew.test.ts": 1430,
