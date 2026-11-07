@@ -2,12 +2,15 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isMinorOnDate } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
+import { charterContext, markSeat } from "@/test/training-mark-context";
 import { anonymizeDiver } from "./anonymize";
 import { getTripManifest } from "./manifests";
 import { getBookingReadiness } from "./readiness";
-import { bookings, people, waiverRecords } from "./schema";
+import { bookings, people, trips, waiverRecords } from "./schema";
+import { clearTrainingDive } from "./training-marks";
 import { listStaff } from "./trips";
 import { getWaiverSignerOnFile } from "./waiver-signing";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
@@ -750,5 +753,85 @@ describe("a seat marked Under 18 by its booker", () => {
         now,
       }),
     ).toEqual({ ok: false, reason: "guardian_required" });
+  });
+});
+
+/**
+ * **A training-mark enrollment declared Under 18** reaches the release the way it reaches the
+ * gate: readiness reads the course seat's "Under 18" through a standing mark
+ * (`minorDeclaredOf`), so a release signed with no seat, or on the charter seat, must ask for
+ * the guardian too, or the diver is first turned away at the dock (issue #4103).
+ */
+describe("a charter seat whose training enrollment was declared Under 18", () => {
+  async function declaredEnrollment() {
+    const ctx = await charterContext(fileCtx);
+    await ctx.db
+      .update(people)
+      .set({ dateOfBirth: null })
+      .where(eq(people.id, ctx.course.personId));
+    await ctx.db
+      .update(bookings)
+      .set({ minorDeclaredAt: now })
+      .where(eq(bookings.id, ctx.course.bookingId));
+    expect(await markSeat(ctx)).toEqual({ ok: true, changed: true });
+    const signer = (bookingId: string | null) =>
+      getWaiverSignerOnFile(ctx.db, {
+        shopId: ctx.shop.id,
+        personId: ctx.course.personId,
+        bookingId,
+      });
+    return { ctx, signer };
+  }
+
+  it("asks for the guardian on a release with no seat, and on the charter seat's own", async () => {
+    const { ctx, signer } = await declaredEnrollment();
+    expect(await signer(null)).toMatchObject({ dateOfBirth: null, minorDeclared: true });
+    expect(await signer(ctx.seat.id)).toMatchObject({ minorDeclared: true });
+  });
+
+  it("asks nothing when the enrollment was not declared", async () => {
+    const { ctx, signer } = await declaredEnrollment();
+    await ctx.db
+      .update(bookings)
+      .set({ minorDeclaredAt: null })
+      .where(eq(bookings.id, ctx.course.bookingId));
+    expect(await signer(null)).toMatchObject({ minorDeclared: false });
+    expect(await signer(ctx.seat.id)).toMatchObject({ minorDeclared: false });
+  });
+
+  it("asks nothing once the mark is cleared", async () => {
+    const { ctx, signer } = await declaredEnrollment();
+    expect(
+      await clearTrainingDive(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.seat.id,
+        actorPersonId: ctx.owner,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await signer(ctx.seat.id)).toMatchObject({ minorDeclared: false });
+  });
+
+  it("asks nothing when the marked enrollment was cancelled", async () => {
+    const { ctx, signer } = await declaredEnrollment();
+    await ctx.db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(eq(bookings.id, ctx.course.bookingId));
+    expect(await signer(ctx.seat.id)).toMatchObject({ minorDeclared: false });
+  });
+
+  it("asks on a release with no seat while the charter is out, though the course session is over", async () => {
+    const { ctx, signer } = await declaredEnrollment();
+    const hour = 60 * 60 * 1000;
+    const clock = nowDate().getTime();
+    await ctx.db
+      .update(trips)
+      .set({ startsAt: new Date(clock - 2 * hour), endsAt: new Date(clock + 2 * hour) })
+      .where(eq(trips.id, ctx.charter.id));
+    await ctx.db
+      .update(trips)
+      .set({ startsAt: new Date(clock - 5 * hour), endsAt: new Date(clock - 2 * hour) })
+      .where(eq(trips.id, ctx.course.tripId));
+    expect(await signer(null)).toMatchObject({ dateOfBirth: null, minorDeclared: true });
   });
 });

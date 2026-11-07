@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { peopleMinorDeclared } from "./minor-declared";
+import { enrollmentMinorDeclaredSeats, peopleMinorDeclared } from "./minor-declared";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -20,8 +20,9 @@ import { seatNotCancelled } from "./trips-queries";
  * (`bookings.minor_declared_at`): on the release's own seat, or, for a
  * release with no seat (which covers every seat the diver holds once signed,
  * issue #4019), on a seat of theirs still ahead (`peopleMinorDeclared`, issue
- * #2553: a dive already over says nothing about the person today). The
- * guardian rule reads it only where no date of birth is on file
+ * #2553: a dive already over says nothing about the person today). A training-mark
+ * enrollment declared Under 18 speaks for the seat that carries the mark too (issue #4103).
+ * The guardian rule reads it only where no date of birth is on file
  * (`guardianSignatureRequired`), so the signing page, `completeWaiver` and
  * Copy link ask the same question.
  */
@@ -32,11 +33,24 @@ export async function seatMinorDeclared(
 ): Promise<boolean> {
   if (record.bookingId) {
     const [row] = await db
-      .select({ minorDeclaredAt: bookings.minorDeclaredAt })
+      .select({
+        bookingId: bookings.id,
+        personId: bookings.personId,
+        participantType: bookings.participantType,
+        minorDeclaredAt: bookings.minorDeclaredAt,
+        trainingEnrollmentBookingId: bookings.trainingEnrollmentBookingId,
+        tripCourseId: trips.courseId,
+        tripStartsAt: trips.startsAt,
+      })
       .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(and(eq(bookings.id, record.bookingId), eq(bookings.shopId, record.shopId)))
       .limit(1);
-    return Boolean(row?.minorDeclaredAt);
+    if (!row) return false;
+    if (row.minorDeclaredAt) return true;
+    // The charter seat of a training dive asks the guardian the way its course seat does, as
+    // readiness reads it (issue #4103).
+    return (await enrollmentMinorDeclaredSeats(db, record.shopId, [row])).has(row.bookingId);
   }
   const declared = await peopleMinorDeclared(db, {
     shopId: record.shopId,
