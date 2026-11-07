@@ -299,3 +299,33 @@ existed cannot name the test; `sanitizeVisualArtifacts` has already proved every
 delivered every capture it registered, so no test in the run takes that surface and it is retired
 too. A selective capture still refuses any gap, since it fills every surface it skipped from the
 baseline, and a pull request without its test plan refuses as before.
+
+## Amendment 2026-11-07: only main's publisher may assume the reg-suit role (issue #3274)
+
+**What was open.** `GitHubActionsRegSuitRole` trusted the `sub` claims
+`repo:<repo>:pull_request` and `repo:<repo>:ref:refs/heads/main`. A pull request writes its own
+workflow files, so any job it added with `id-token: write` matched the first and could list, read
+and write the visual bucket directly. Pinning `ci.yml`'s call to the publisher at a SHA did not help:
+the pin lives in the pull request's own `ci.yml`, so the pull request chose the publisher revision.
+
+**The decision.** The role also requires `token.actions.githubusercontent.com:job_workflow_ref`
+to equal `AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@refs/heads/main`
+(StringEquals; the repository's `owner@id/repo@id` spelling is accepted too). `ci.yml` calls the
+publisher `@main`, never a SHA or `./`. A pull request can only change that code by merging into
+protected `main`. Its own jobs mint `ci.yml@refs/pull/N/merge`, and the publisher called at a SHA,
+a branch or a tag mints that ref, so AWS refuses all of them (`infra/lib/reg-suit-role.test.ts`).
+The `# immutable commit` exemption in `scripts/check-action-pins.mjs` is gone; the one exemption is
+the publisher `@main`, exactly.
+
+**What does not change.** Pull requests still compare against the baseline and publish their
+snapshots under their own key: the comparison job reads the baseline without AWS credentials, and
+the credentialed `publish` job is the one the role now admits. The permissions are the same
+(list, read and write in the visual bucket, no delete, no secret).
+
+**The cost.** A change to `reg-suit-publish.yml` takes effect for every pull request when it
+merges, and a pull request cannot exercise its own publisher change before then. Change the
+publisher's inputs compatibly: add an input as optional, merge, then use it from `ci.yml`.
+
+**Still open.** The publisher still trusts the caller's `capture-mode` and `capture-shards`, and
+the test plan comes from the pull request's own code, so an understated selection fills omitted
+surfaces from the baseline. That completeness gap is issue #4115, separate from this trust change.

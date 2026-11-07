@@ -131,6 +131,11 @@ export function eventBridgeCron(crontab: string): string {
  * closing a spoofing gap a name-only match left open.
  */
 const GITHUB_REPO_SUB = "AaronBuxbaum@5578581/diveday@1302222351";
+/**
+ * The reusable reg-suit publisher as `job_workflow_ref` names it when `ci.yml` calls it
+ * `@main` (S18, issue #3274); `scripts/reg-suit-caller.test.mjs` holds the caller to it.
+ */
+const REG_SUIT_PUBLISHER_ON_MAIN = ".github/workflows/reg-suit-publish.yml@refs/heads/main";
 /** Must match the `environment:` name .github/workflows/infra.yml's deploy job declares (S18). */
 const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
 
@@ -3094,6 +3099,18 @@ exports.handler = async (event) => {
     // of it). A fork's pull request is never handed an OIDC token. The `main`
     // subject is the ref, so a scheduled run on `main` carries it too: this
     // trust does not exclude schedule runs, the workflow's own triggers do.
+    //
+    // **And only from main's reviewed publisher (issue #3274).** A pull request
+    // writes its own workflow files, so `sub` alone admits any job it adds with
+    // `id-token: write`. `job_workflow_ref` names the reusable workflow a job
+    // runs, at the ref it was called by: `ci.yml` calls
+    // `reg-suit-publish.yml@main`, which GitHub mints as `@refs/heads/main`. A
+    // pull request can only reach that by merging into protected `main`; its
+    // own jobs carry `ci.yml@refs/pull/N/merge`, and the publisher called at a
+    // SHA or another branch carries that SHA or branch. StringEquals, never a
+    // pattern. Both repository spellings are listed because GitHub has moved
+    // `sub` to `owner@id/repo@id` (GITHUB_REPO_SUB) and may do the same here;
+    // each is this repository and nothing else.
     // **Scoped to the visual bucket and to
     // what `reg-suit run` does with it** -- list, read and write objects. No
     // delete (the pruner, section 15, owns expiry and runs with its own role),
@@ -3102,12 +3119,27 @@ exports.handler = async (event) => {
     // carries.
     const regSuitRole = new iam.Role(this, "GitHubActionsRegSuitRole", {
       roleName: "diveday-github-actions-reg-suit",
-      assumedBy: githubActionsPrincipal([
-        `repo:${GITHUB_REPO_SUB}:pull_request`,
-        `repo:${GITHUB_REPO_SUB}:ref:refs/heads/main`,
-      ]),
+      assumedBy: new iam.FederatedPrincipal(
+        githubActionsOidcProvider.openIdConnectProviderArn,
+        {
+          StringEquals: {
+            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+            "token.actions.githubusercontent.com:job_workflow_ref": [
+              `AaronBuxbaum/diveday/${REG_SUIT_PUBLISHER_ON_MAIN}`,
+              `${GITHUB_REPO_SUB}/${REG_SUIT_PUBLISHER_ON_MAIN}`,
+            ],
+          },
+          StringLike: {
+            "token.actions.githubusercontent.com:sub": [
+              `repo:${GITHUB_REPO_SUB}:pull_request`,
+              `repo:${GITHUB_REPO_SUB}:ref:refs/heads/main`,
+            ],
+          },
+        },
+        "sts:AssumeRoleWithWebIdentity",
+      ),
       description:
-        "Assumed by .github/workflows/ci.yml's visual-publish job to upload prebuilt reg-suit snapshots to the visual bucket. Cannot delete objects or touch any other resource.",
+        "Assumed only by main's .github/workflows/reg-suit-publish.yml, called from ci.yml's visual-publish job, to upload prebuilt reg-suit snapshots to the visual bucket. Cannot delete objects or touch any other resource.",
       maxSessionDuration: cdk.Duration.hours(1),
     });
     regSuitRole.addToPolicy(
@@ -3128,7 +3160,7 @@ exports.handler = async (event) => {
     new cdk.CfnOutput(this, "GitHubActionsRegSuitRoleArn", {
       value: regSuitRole.roleArn,
       description:
-        "role-to-assume for the pinned reusable publisher called by .github/workflows/ci.yml's visual-publish job. Store as the AWS_REG_SUIT_ROLE_ARN repository variable.",
+        "role-to-assume for main's reusable publisher (reg-suit-publish.yml@main) called by .github/workflows/ci.yml's visual-publish job. Store as the AWS_REG_SUIT_ROLE_ARN repository variable.",
     });
 
     // The monthly restore drill's identity (issue #2986): `.github/workflows/restore-drill.yml`

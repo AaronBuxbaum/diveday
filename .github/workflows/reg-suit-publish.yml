@@ -35,8 +35,8 @@ jobs:
   prepare:
     name: Prepare reg-suit comparison
     # Repeat the caller's same-repository PR filter so the normal publication
-    # path does not run for forks. The deployed role still trusts any
-    # pull_request subject; #3274 tracks narrowing that trust to this workflow.
+    # path does not run for forks. The role trusts only this workflow as
+    # called `@main` (job_workflow_ref, infra-stack.ts S18, #3274).
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -293,7 +293,8 @@ jobs:
           path: ${{ runner.temp }}/reg-suit-publish-bundle
 
       # Dependencies and publisher code come from the immutable reusable
-      # workflow checkout. The IAM trust restriction is tracked separately in #3274.
+      # workflow checkout, which is main's: the role refuses this workflow at any
+      # other ref (#3274).
       - name: Assume the reg-suit publisher role
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:

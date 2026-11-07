@@ -23,7 +23,7 @@ describe("findUnpinnedActions", () => {
 
   it("refuses a pinned SHA that does not say which version it is", () => {
     expect(findUnpinnedActions("ci.yml", `      - uses: actions/checkout@${SHA}`)).toEqual([
-      `ci.yml:1: actions/checkout@${SHA} has no version comment or permitted matching immutable-commit comment`,
+      `ci.yml:1: actions/checkout@${SHA} has no version comment`,
     ]);
   });
 
@@ -36,32 +36,31 @@ describe("findUnpinnedActions", () => {
     expect(findUnpinnedActions("ci.yml", text)).toEqual([]);
   });
 
-  it("accepts an untagged immutable revision only when the comment repeats its SHA", () => {
-    const otherSha = "4".repeat(40);
+  it("accepts the reg-suit publisher on main, which its OIDC role trusts and nothing else", () => {
     expect(
       findUnpinnedActions(
         "ci.yml",
-        `      - uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@${SHA} # immutable commit ${SHA}`,
+        "    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@main # reviewed on main; #3274",
       ),
     ).toEqual([]);
-    expect(
-      findUnpinnedActions(
-        "ci.yml",
-        `      - uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@${SHA} # immutable commit ${otherSha}`,
-      ),
-    ).toEqual([
-      `ci.yml:1: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@${SHA} has no version comment or permitted matching immutable-commit comment`,
-    ]);
   });
 
-  it("rejects immutable-commit comments for unrelated actions", () => {
+  it("leaves no other branch exemption: not another workflow on main, not the publisher elsewhere", () => {
     expect(
       findUnpinnedActions(
         "ci.yml",
-        `      - uses: actions/checkout@${SHA} # immutable commit ${SHA}`,
+        [
+          "    uses: AaronBuxbaum/diveday/.github/workflows/other.yml@main",
+          "    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@feature",
+          "    uses: attacker/diveday/.github/workflows/reg-suit-publish.yml@main",
+          `    uses: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@${SHA} # immutable commit ${SHA}`,
+        ].join("\n"),
       ),
     ).toEqual([
-      `ci.yml:1: actions/checkout@${SHA} has no version comment or permitted matching immutable-commit comment`,
+      "ci.yml:1: AaronBuxbaum/diveday/.github/workflows/other.yml@main is not pinned to a 40-character commit SHA",
+      "ci.yml:2: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@feature is not pinned to a 40-character commit SHA",
+      "ci.yml:3: attacker/diveday/.github/workflows/reg-suit-publish.yml@main is not pinned to a 40-character commit SHA",
+      `ci.yml:4: AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@${SHA} has no version comment`,
     ]);
   });
 
