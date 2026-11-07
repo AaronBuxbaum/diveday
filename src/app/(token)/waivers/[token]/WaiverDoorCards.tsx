@@ -93,6 +93,29 @@ export function UnavailableWaiverLink({ t }: { t: DiverTranslator }) {
 }
 
 /**
+ * A Sign through a link whose release another door signed first (issue
+ * #4044): what was entered was not saved. It names the shop to tell, and
+ * nothing of the signed release.
+ */
+export function SignedElsewhereCard({
+  shop,
+  t,
+}: {
+  shop: Pick<Shop, "name" | "contactEmail" | "contactPhone">;
+  t: DiverTranslator;
+}) {
+  return (
+    <ExpiredLinkCard
+      wordmark
+      title={t("waiver.signedElsewhereTitle")}
+      text={t("waiver.counterAlreadySigned")}
+      shop={shop}
+      t={t}
+    />
+  );
+}
+
+/**
  * A minor's release on a door the desk never vouched a guardian for (issue
  * #4003): said instead of a form that Sign would refuse.
  */

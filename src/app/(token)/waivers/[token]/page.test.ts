@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { bookingCapabilities, bookings, trips, waiverRecords } from "@/db/schema";
 import { listStaff } from "@/db/trips";
-import { completeWaiver, recordWaiverDraft } from "@/db/waivers-completion";
+import { completeWaiver, recordWaiverDraft, threadWaiverKey } from "@/db/waivers-completion";
 import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
 import {
@@ -368,6 +368,30 @@ describe("the actual completed waiver branch", () => {
     expect(html).toContain(t("waiver.counterAlreadySigned"));
     expect((await renderOnDevice(db, link.token)).html).not.toContain(
       t("waiver.counterAlreadySigned"),
+    );
+  });
+  it("a counter code whose release the thread signed first says not saved, and shows no receipt (issue #4044)", async () => {
+    const { db, shop, booking, person } = await context();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
+    await openOnDevice(db, link.token);
+    const thread = await threadWaiverKey(db, { shopId: shop.id, bookingId: booking.id });
+    if (!thread) throw new Error("thread key missing");
+    await completeWaiver(db, thread, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+    });
+    const { html } = await renderOnDevice(db, link.token, { error: "signed" });
+    expect(html).toContain(t("waiver.signedElsewhereTitle"));
+    expect(html).toContain(t("waiver.counterAlreadySigned"));
+    expect(html).toContain(shop.name);
+    // Nothing of the signed release: no receipt, no medical state.
+    expect(html).not.toContain(t("waiver.signedBody"));
+    expect(html).not.toContain("data-medical-next");
+    // Without a refused Sign it is a link that opens nothing.
+    expect((await renderOnDevice(db, link.token)).html).not.toContain(
+      t("waiver.signedElsewhereTitle"),
     );
   });
 });

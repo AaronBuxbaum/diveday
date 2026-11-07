@@ -74,20 +74,26 @@ export default async function ThreadWaiverPage({
   const t = diverTranslator(locale);
 
   if (state.state === "completed") {
-    if (!isUnresolvedMedicalHold(state.record)) redirect(prep);
+    // A Sign here that found the release signed through another door first
+    // (issue #4044) is told its answers were not saved, on the seat's own
+    // receipt; otherwise a signed release has nothing more to show here.
+    const notSaved = error === "signed";
+    const held = isUnresolvedMedicalHold(state.record);
+    if (!held && !notSaved) redirect(prep);
     const tripId = await getBookingTripId(db, shop.id, capability.bookingId);
-    const doctorDoor = await doctorPageOpen(db, state.record);
+    const doctorDoor = held && (await doctorPageOpen(db, state.record));
     return (
       <WaiverCompleted
         shop={shop}
         t={t}
         locale={locale}
         waiverOnly={false}
+        notSaved={notSaved}
         medicalState={completedMedicalState(state.record)}
         showPrepHelp={false}
         readyPath={prep}
         doctorPath={doctorDoor ? `${prep}/waiver/doctor` : null}
-        signedRail={completedWaiverRail(true, !!state.record.shopAnswers)}
+        signedRail={completedWaiverRail(held, !!state.record.shopAnswers)}
         diveSitesList={tripId ? await getTripDiveSitesPeek(db, tripId) : []}
       />
     );

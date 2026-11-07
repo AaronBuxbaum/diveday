@@ -3,11 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
 import { issueCapability } from "@/db/capabilities";
-import { bookingCapabilities, capabilities, people, waiverRecords } from "@/db/schema";
+import {
+  activityEvents,
+  bookingCapabilities,
+  capabilities,
+  people,
+  waiverRecords,
+} from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import { completeWaiver, threadWaiverKey } from "@/db/waivers-completion";
 import { claimedDevice, issueCounterLink, openOnDevice } from "@/db/waivers-test-fixtures";
 import { hashBearerToken } from "@/lib/bearer-tokens";
-import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
+import {
+  emptyMedicalAnswers,
+  medicalQuestionField,
+  questionnaireForJurisdiction,
+} from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 
 const ctx = fileScopedShopContext();
@@ -283,6 +294,36 @@ describe("the signing doors", () => {
       .from(bookingCapabilities)
       .where(eq(bookingCapabilities.bookingId, bookingId));
     expect(after).toHaveLength(before.length);
+  });
+
+  it("tells a counter phone its answers were not saved when the thread signed first (issue #4044)", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const { bookingId } = await bookedSeat("Jordan Twodoor");
+    const link = await issueCounterLink(db, { shopId: shop.id, bookingId });
+    await onThisPhone(db, link.token);
+    const thread = await threadWaiverKey(db, { shopId: shop.id, bookingId });
+    if (!thread) throw new Error("thread key missing");
+    const signed = await completeWaiver(db, thread, {
+      signerName: "Jordan Twodoor",
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(questionnaireForJurisdiction(shop.jurisdiction)),
+    });
+    expect(signed).toMatchObject({ ok: true });
+    const form = () => signedForm(shop, { signerName: "Jordan Twodoor", acknowledged: "on" });
+    // Save and finish later has nothing to keep, and says the link is closed.
+    expect(await redirectedTo(() => saveWaiverDraftAction(link.token, form()))).toBe(
+      `/waivers/${link.token}?error=unavailable`,
+    );
+    expect(await redirectedTo(() => completeWaiverAction(link.token, form()))).toBe(
+      `/waivers/${link.token}?error=signed`,
+    );
+    expect(await linkUsedAt(link.token)).toBeNull();
+    const lines = await db
+      .select({ code: activityEvents.code })
+      .from(activityEvents)
+      .where(eq(activityEvents.code, "waiver_answers_after_signing"));
+    expect(lines).toHaveLength(1);
   });
 
   it("refuses a counter signature under another name without spending the link", async () => {

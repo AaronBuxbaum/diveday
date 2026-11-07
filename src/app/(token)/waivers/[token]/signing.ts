@@ -12,6 +12,7 @@ import {
   getWaiverForToken,
   getWaiverTemplateQuestions,
   recordWaiverDraft,
+  refuseSignedElsewhere,
   type WaiverKey,
 } from "@/db/waivers";
 import { requestFirstHandLocale } from "@/i18n/request";
@@ -424,15 +425,19 @@ async function recordDraftFrom(key: WaiverKey, formData: FormData): Promise<Draf
 }
 
 /**
- * Why a counter link's form no longer signs: `signed` when its release was
- * signed since the form was painted, so the receipt can say this submit's
- * answers were not saved rather than look like their signature (attacker
- * review S1). Every other door, and every other reason, is `unavailable`.
+ * Why a form no longer signs: `signed` when its release was signed since the
+ * form was painted, so the page can say this submit's answers were not saved
+ * rather than look like their signature: a counter link's own release
+ * (attacker review S1), or a release another door signed first, which puts a
+ * line on the diver's trail for the desk (issue #4044). Every other reason is
+ * `unavailable`.
  */
-async function counterRefusal(key: WaiverKey): Promise<"signed" | "unavailable"> {
-  if (typeof key === "string" || key.kind !== "counter") return "unavailable";
-  const state = await getWaiverForToken(await getDb(), key);
-  return state.state === "completed" ? "signed" : "unavailable";
+async function closedRefusal(key: WaiverKey): Promise<"signed" | "unavailable"> {
+  if (typeof key === "string") return "unavailable";
+  const db = await getDb();
+  if (key.kind === "counter" && (await getWaiverForToken(db, key)).state === "completed")
+    return "signed";
+  return (await refuseSignedElsewhere(db, key)) ? "signed" : "unavailable";
 }
 
 /**
@@ -445,7 +450,7 @@ export async function completeWaiverThrough(
   formData: FormData,
 ): Promise<{ record: WaiverRecordRow; status: "completed" | "medical_review" }> {
   const context = await signingContext(door.key);
-  if (!context) redirect(`${door.path}?error=${await counterRefusal(door.key)}`);
+  if (!context) redirect(`${door.path}?error=${await closedRefusal(door.key)}`);
   const { record, questionnaire, guardianRequired, shopQuestions } = context;
   const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
   const answers = readFormMedicalAnswers(formData, questionnaire);
@@ -568,6 +573,9 @@ export async function completeWaiverThrough(
     // A counter link's release signed since this form was painted: the
     // receipt says these answers were not saved (attacker review S1).
     if (outcome.reason === "already_signed") redirect(`${door.path}?error=signed`);
+    // Another door signed it first (issue #4044): the same "not saved" words,
+    // and the trail line is already written.
+    if (outcome.reason === "signed_elsewhere") redirect(`${door.path}?error=signed`);
     // The writer's own refusal of a shop answer, past the check above (the
     // version changed under a form left open, or a hand-built request).
     if (outcome.reason === "invalid_shop_answers") {

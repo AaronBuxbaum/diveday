@@ -5,6 +5,7 @@ import { getDb } from "@/db/client";
 import { emailFreshWaiverLink, type WaiverLinkRescue } from "@/db/waiver-issue";
 import {
   claimCounterLink,
+  refuseLinkSignedElsewhere,
   staleWaiverRecordForToken,
   type WaiverKey,
   waiverLinkDoor,
@@ -79,14 +80,21 @@ export async function emailFreshWaiverLinkAction(token: string) {
  * opens (`waiverLinkDoor`): a counter tablet's link, or a release with no seat.
  * A seat's own waiver link signs nothing (issue #2743).
  */
-async function tokenDoor(token: unknown): Promise<SigningDoor> {
+async function tokenDoor(token: unknown, act: "save" | "sign" = "save"): Promise<SigningDoor> {
   // The bound argument is whatever the browser posts: only a string is a link.
   if (typeof token !== "string") redirect("/");
   const path = `/waivers/${token}`;
   const opened = await budgetedDoor(token);
   if (opened === "rate") redirect(`${path}?error=rate`);
-  // A dead link signs nothing: the page itself then says so.
-  if (!opened) redirect(`${path}?error=unavailable`);
+  if (!opened) {
+    // A Sign through a live link whose release another door signed first
+    // (issue #4044): nothing is saved, the desk's trail says answers came in,
+    // and the page says they were not saved.
+    if (act === "sign" && (await refuseLinkSignedElsewhere(await getDb(), token)))
+      redirect(`${path}?error=signed`);
+    // A dead link signs nothing: the page itself then says so.
+    redirect(`${path}?error=unavailable`);
+  }
   return { key: opened.key, path };
 }
 
@@ -147,7 +155,7 @@ export async function saveWaiverDraftAction(token: string, formData: FormData) {
 }
 
 export async function completeWaiverAction(token: string, formData: FormData) {
-  await completeWaiverThrough(await tokenDoor(token), formData);
+  await completeWaiverThrough(await tokenDoor(token, "sign"), formData);
   // Always the receipt, which carries the physician instructions when
   // referred: a waiver link is authority to sign that waiver, not to open trip
   // prep. A parent signing a child's seat signs on their own link instead
