@@ -9,7 +9,7 @@ import { bookings, people, tripRequirements, trips, waiverRecords } from "./sche
 import { completeWaiver, recordWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
-import { clearAnswers } from "./waivers-test-fixtures";
+import { clearAnswers, draftsOf } from "./waivers-test-fixtures";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -117,11 +117,7 @@ describePostgres("counter waiver locking", () => {
       else expect(result).toBe(false);
       const [person] = await f.pg.db.select().from(people).where(eq(people.id, f.person.id));
       expect(person?.emergencyContactName).toBeNull();
-      const [record] = await f.pg.db
-        .select()
-        .from(waiverRecords)
-        .where(eq(waiverRecords.id, f.issued.recordId));
-      expect(record?.draftAcknowledged).not.toBe(true);
+      expect(await draftsOf(f.pg.db, f.issued.recordId)).toEqual([]);
     },
   );
   it.each([

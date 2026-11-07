@@ -12,7 +12,12 @@ import {
 } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { completeWaiver, threadWaiverKey } from "@/db/waivers-completion";
-import { claimedDevice, issueCounterLink, openOnDevice } from "@/db/waivers-test-fixtures";
+import {
+  claimedDevice,
+  draftsOf,
+  issueCounterLink,
+  openOnDevice,
+} from "@/db/waivers-test-fixtures";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import {
   emptyMedicalAnswers,
@@ -200,7 +205,9 @@ describe("the signing doors", () => {
     ).toBe(`/waivers/${token}?saved=1`);
     const [record] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
     expect(record?.status).toBe("pending");
-    expect(record?.draftMedicalAnswers).not.toBeNull();
+    const [draft] = await draftsOf(db, recordId);
+    expect(draft?.signerName).toBe("Half Way");
+    expect(draft?.medicalAnswers).not.toBeNull();
   });
 
   it("send a signature under another name back to the name field", async () => {
@@ -253,7 +260,7 @@ describe("the signing doors", () => {
       .from(waiverRecords)
       .where(eq(waiverRecords.id, issued.recordId));
     expect(record?.status).toBe("pending");
-    expect(record?.draftSignerName).toBeNull();
+    expect(await draftsOf(db, issued.recordId)).toEqual([]);
   });
 
   it("signs a seat on its counter link, spends it, and grants no trip prep", async () => {

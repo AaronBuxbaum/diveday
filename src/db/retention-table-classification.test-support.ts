@@ -133,6 +133,9 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // A manager's note that a broken seal was looked into (#3891): it speaks for
   // the release it names and goes the way that release goes.
   "waiver_seal_acknowledgements",
+  // What a door typed into a release before signing (issue #4130): deleted
+  // when the release is signed, moved or erased, never aged out on a clock.
+  "waiver_drafts",
   // Course forms (ADR 20261008-course-forms): the same signed evidence as the
   // release, on the same footing. The forms, their versions and a course's
   // list of them are the shop's own configuration; a signed record is erased

@@ -1,4 +1,4 @@
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, exists, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   computeWaiverIntegrityHash,
@@ -11,7 +11,7 @@ import {
 import { canPersonErasePersonalData } from "./authz";
 import { forgetClaudeCallContent } from "./claude-call-content";
 import type { AppDb } from "./client";
-import { type WaiverRecord, waiverRecords } from "./schema";
+import { type WaiverRecord, waiverDrafts, waiverRecords } from "./schema";
 
 export type GuardianEmailErasure =
   | { ok: true; erased: number }
@@ -62,7 +62,20 @@ export async function eraseGuardianEmail(
       return { ok: false, reason: "not_authorized" } as const;
     }
     const sameAddress = sql`lower(trim(${waiverRecords.guardianEmail})) = ${email}`;
-    const sameDraftAddress = sql`lower(trim(${waiverRecords.draftGuardian}->>'email')) = ${email}`;
+    // A draft is per door (issue #4130): any door's draft of the release counts.
+    const sameDraftAddress = sql`lower(trim(${waiverDrafts.guardian}->>'email')) = ${email}`;
+    const draftedHere = exists(
+      tx
+        .select({ id: waiverDrafts.id })
+        .from(waiverDrafts)
+        .where(
+          and(
+            eq(waiverDrafts.shopId, input.shopId),
+            eq(waiverDrafts.waiverRecordId, waiverRecords.id),
+            sameDraftAddress,
+          ),
+        ),
+    );
     // The anchor is this diver's release in this shop, signed or still a
     // draft: a guardian who typed their address and never submitted handed it
     // over all the same (security review F1).
@@ -73,7 +86,7 @@ export async function eraseGuardianEmail(
         and(
           eq(waiverRecords.shopId, input.shopId),
           eq(waiverRecords.personId, input.personId),
-          or(sameAddress, sameDraftAddress),
+          or(sameAddress, draftedHere),
         ),
       )
       .limit(1);
@@ -100,7 +113,6 @@ export async function eraseGuardianEmail(
       const redacted: WaiverRecord = {
         ...record,
         guardianEmail: null,
-        draftGuardian: record.draftGuardian ? { ...record.draftGuardian, email: null } : null,
         guardianEmailErasedAt: now,
         guardianEmailErasedByPersonId: input.actorPersonId,
       };
@@ -118,7 +130,6 @@ export async function eraseGuardianEmail(
         .update(waiverRecords)
         .set({
           guardianEmail: null,
-          draftGuardian: redacted.draftGuardian,
           guardianEmailErasedAt: now,
           guardianEmailErasedByPersonId: input.actorPersonId,
           integrityHash: written.integrityHash,
@@ -135,12 +146,10 @@ export async function eraseGuardianEmail(
     // Deliberately no erasure stamp either: the stamp forbids an address on
     // the row, and the guardian finishing that release later may give one.
     const drafts = await tx
-      .update(waiverRecords)
-      .set({
-        draftGuardian: sql`jsonb_set(${waiverRecords.draftGuardian}, '{email}', 'null'::jsonb)`,
-      })
-      .where(and(eq(waiverRecords.shopId, input.shopId), sameDraftAddress))
-      .returning({ id: waiverRecords.id });
+      .update(waiverDrafts)
+      .set({ guardian: sql`jsonb_set(${waiverDrafts.guardian}, '{email}', 'null'::jsonb)` })
+      .where(and(eq(waiverDrafts.shopId, input.shopId), sameDraftAddress))
+      .returning({ id: waiverDrafts.waiverRecordId });
     const touched = new Set([
       ...records.map((record) => record.id),
       ...drafts.map((row) => row.id),
@@ -163,28 +172,39 @@ export async function listGuardianEmails(
   shopId: string,
   personId: string,
 ): Promise<string[]> {
-  const rows = await db
-    .select({
-      email: waiverRecords.guardianEmail,
-      draftEmail: sql<string | null>`${waiverRecords.draftGuardian}->>'email'`,
-    })
+  const signed = await db
+    .select({ email: waiverRecords.guardianEmail })
     .from(waiverRecords)
     .where(
       and(
         eq(waiverRecords.shopId, shopId),
         eq(waiverRecords.personId, personId),
-        or(
-          sql`${waiverRecords.guardianEmail} is not null`,
-          sql`nullif(trim(${waiverRecords.draftGuardian}->>'email'), '') is not null`,
-        ),
+        sql`${waiverRecords.guardianEmail} is not null`,
       ),
     );
+  // Every door's draft of this diver's releases (issue #4130).
+  const drafted = await db
+    .select({ email: sql<string | null>`${waiverDrafts.guardian}->>'email'` })
+    .from(waiverDrafts)
+    .innerJoin(
+      waiverRecords,
+      and(
+        eq(waiverRecords.id, waiverDrafts.waiverRecordId),
+        eq(waiverRecords.shopId, waiverDrafts.shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(waiverDrafts.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        sql`nullif(trim(${waiverDrafts.guardian}->>'email'), '') is not null`,
+      ),
+    );
+  const rows = [...signed, ...drafted];
   const seen = new Map<string, string>();
-  for (const row of rows) {
-    for (const email of [row.email, row.draftEmail]) {
-      const key = email ? normalized(email) : "";
-      if (email && key && !seen.has(key)) seen.set(key, email.trim());
-    }
+  for (const { email } of rows) {
+    const key = email ? normalized(email) : "";
+    if (email && key && !seen.has(key)) seen.set(key, email.trim());
   }
   return [...seen.values()];
 }

@@ -125,7 +125,8 @@ import {
   tripBoatCapacity,
   tripBoatCertifiedPassengers,
 } from "./trips-queries";
-import { CLEARED_DRAFT_COLUMNS, WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
+import { clearWaiverDrafts } from "./waiver-drafts";
+import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 
 /**
  * A booking names its diver one of two ways: a walk-in supplies a name (and,
@@ -4146,11 +4147,10 @@ export async function splitBookingIdentity(
         );
       // Unsigned links follow the seat; nothing on them is sealed. Only what is
       // filed under the matched diver: a placeholder's (`claimSeat`) stays put.
-      await tx
+      const movedLinks = await tx
         .update(waiverRecords)
         .set({
           personId: person.id,
-          ...CLEARED_DRAFT_COLUMNS,
           // How the link last reached the matched diver's inbox or phone: a
           // bounce or a provider id about *their* address, not the new diver's.
           deliveryError: null,
@@ -4170,7 +4170,15 @@ export async function splitBookingIdentity(
             isNull(waiverRecords.integrityHash),
             isNull(waiverRecords.anonymizedAt),
           ),
-        );
+        )
+        .returning({ id: waiverRecords.id });
+      // What was typed on them belongs to whoever typed it, never the matched
+      // diver (security review M1): every door's draft goes (issue #4130).
+      await clearWaiverDrafts(
+        tx,
+        input.shopId,
+        movedLinks.map((row) => row.id),
+      );
 
       for (const bookingId of seatIds) {
         await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId, now });

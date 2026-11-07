@@ -59,6 +59,7 @@ import {
   upcomingTripsWithCounts,
 } from "./trips";
 import { issueWaiverRequest } from "./waivers";
+import { draftsOf, halfTypedDrafts } from "./waivers-test-fixtures";
 
 async function seededContext() {
   const { db, shop } = ctx;
@@ -1605,10 +1606,8 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
       const { nora, shared } = await heldSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
       await releaseBehindHold(db, { shopId: shop.id, bookingId: shared.bookingId });
-      await db
-        .update(waiverRecords)
-        .set({ draftSignerName: "Ben Q", draftAcknowledged: true, draftShopAnswers: { q1: "Ana" } })
-        .where(eq(waiverRecords.bookingId, shared.bookingId));
+      const drafted = await halfTypedDrafts(db, shared.bookingId);
+      expect(drafted.length).toBeGreaterThan(0);
 
       const result = await splitBookingIdentity(db, {
         shopId: shop.id,
@@ -1628,8 +1627,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
         expect(release.personId).toBe(result.personId);
         expect(release.movedFromPersonId).toBe(nora);
         expect(release.movedByPersonId).toBe(staffer.id);
-        expect([release.draftSignerName, release.draftShopAnswers]).toEqual([null, null]);
-        expect(release.draftAcknowledged).toBe(false);
+        expect(await draftsOf(db, release.id)).toEqual([]);
         expect(verifyWaiverIntegrity(release)).toBe("unsealed");
       }
     });

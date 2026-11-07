@@ -164,7 +164,7 @@ import {
 } from "./schema";
 import { customerProviderFromEnvironment } from "./stripe-providers";
 import { forgetTrainingPlanPeople } from "./training-plan-privacy";
-import { CLEARED_DRAFT_COLUMNS } from "./waiver-record-columns";
+import { clearWaiverDrafts } from "./waiver-drafts";
 
 export type AnonymizeDiverRefusal =
   /** No live person with this id at this shop. */
@@ -931,6 +931,14 @@ async function scrubWaiverRecords(
     .from(waiverRecords)
     .where(and(eq(waiverRecords.shopId, shopId), eq(waiverRecords.personId, personId)));
 
+  // What any door typed into these releases and never signed — names, the
+  // medical answers and alert, a guardian's half (issue #4130).
+  await clearWaiverDrafts(
+    tx,
+    shopId,
+    waiverRows.map((record) => record.id),
+  );
+
   for (const record of waiverRows) {
     await retire("waiver_document", record.importSourceDocumentUrl);
     await retire("waiver_document", record.importSourceMedicalDocumentUrl);
@@ -946,7 +954,6 @@ async function scrubWaiverRecords(
     const [stripped] = await tx
       .update(waiverRecords)
       .set({
-        ...CLEARED_DRAFT_COLUMNS,
         signedName: null,
         medicalAnswers: null,
         // The shop's questions as answered are the diver's own words, and a
@@ -956,8 +963,8 @@ async function scrubWaiverRecords(
         shopAnswers: null,
         // The medical alert for the crew is the diver's own health words
         // (issue #2960). Outside the v2 seal like the answers above, so it
-        // reads as erased, not as tampered; its draft goes with
-        // CLEARED_DRAFT_COLUMNS.
+        // reads as erased, not as tampered; its draft goes with the rest of
+        // `waiver_drafts` below.
         medicalAlert: null,
         // The guardian's name and email are a third party's personal data
         // held only because they are on this diver's release, and they go

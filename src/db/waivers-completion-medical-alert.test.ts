@@ -17,6 +17,7 @@ import { issueWaiverRequest } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
 import {
   clearAnswers,
+  draftsOf,
   medicalReferralAnswers,
   now,
   waiverContextFor,
@@ -59,6 +60,15 @@ describe("the medical alert for the crew on the waiver", () => {
       .limit(1);
     if (!row) throw new Error("record missing");
     return row;
+  }
+
+  /** The alert this door's own draft holds (issue #4130); null with no draft. */
+  async function draftAlertFor(
+    db: Awaited<ReturnType<typeof waiverContext>>["db"],
+    token: WaiverKey,
+  ) {
+    const state = await getWaiverForToken(db, token, now);
+    return state.state === "available" ? (state.draft?.medicalAlert ?? null) : null;
   }
 
   async function readinessOf(
@@ -277,10 +287,10 @@ describe("the medical alert for the crew on the waiver", () => {
         now,
       }),
     ).toBe(true);
-    expect((await recordFor(db, token)).draftMedicalAlert).toBe(alert);
+    expect(await draftAlertFor(db, token)).toBe(alert);
     // A save that did not carry the section leaves the draft as it was.
     await recordWaiverDraft(db, token, { acknowledged: false, medicalAnswers: clearAnswers, now });
-    expect((await recordFor(db, token)).draftMedicalAlert).toBe(alert);
+    expect(await draftAlertFor(db, token)).toBe(alert);
     // A draft the signature would refuse is mended, not refused or lost.
     await recordWaiverDraft(db, token, {
       acknowledged: false,
@@ -288,7 +298,7 @@ describe("the medical alert for the crew on the waiver", () => {
       medicalAlert: "a".repeat(MEDICAL_ALERT_MAX + 1),
       now,
     });
-    expect((await recordFor(db, token)).draftMedicalAlert).toBe("a".repeat(MEDICAL_ALERT_MAX));
+    expect(await draftAlertFor(db, token)).toBe("a".repeat(MEDICAL_ALERT_MAX));
     await recordWaiverDraft(db, token, {
       acknowledged: false,
       medicalAnswers: clearAnswers,
@@ -303,7 +313,7 @@ describe("the medical alert for the crew on the waiver", () => {
       now,
     });
     const record = await recordFor(db, token);
-    expect(record.draftMedicalAlert).toBeNull();
+    expect(await draftsOf(db, record.id)).toEqual([]);
     expect(record.medicalAlert).toBe("Diabetic, glucose in my bag");
   });
 
@@ -372,7 +382,7 @@ describe("the medical alert for the crew on the waiver", () => {
       .limit(1);
     if (!erased) throw new Error("record missing");
     expect(erased.medicalAlert).toBeNull();
-    expect(erased.draftMedicalAlert).toBeNull();
+    expect(await draftsOf(db, erased.id)).toEqual([]);
     expect(erased.integrityVersion).toBe(2);
     expect(verifyWaiverIntegrity(erased)).toBe("valid");
   });
@@ -390,10 +400,13 @@ describe("the medical alert for the crew on the waiver", () => {
       (await anonymizeDiver(db, { shopId: shop.id, personId: person.id, actorPersonId: owner })).ok,
     ).toBe(true);
     const rows = await db
-      .select({ draft: waiverRecords.draftMedicalAlert, alert: waiverRecords.medicalAlert })
+      .select({ id: waiverRecords.id, alert: waiverRecords.medicalAlert })
       .from(waiverRecords)
       .where(eq(waiverRecords.personId, person.id));
     expect(rows.length).toBeGreaterThan(0);
-    for (const row of rows) expect(row).toEqual({ draft: null, alert: null });
+    for (const row of rows) {
+      expect(row.alert).toBeNull();
+      expect(await draftsOf(db, row.id)).toEqual([]);
+    }
   });
 });

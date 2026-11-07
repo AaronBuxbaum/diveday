@@ -1472,7 +1472,7 @@
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
     "src/db/anonymize.test.ts": 1626,
-    "src/db/bookings.test.ts": 3516,
+    "src/db/bookings.test.ts": 3514,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1207,
     "src/db/checkouts.test.ts": 2964,

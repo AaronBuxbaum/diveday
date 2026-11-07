@@ -19,7 +19,6 @@ import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { autosaveWaiverDraftAction, completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { completedMedicalState } from "./completed-medical-state";
 import { counterDevice } from "./counter-device";
-import { recordForDoor } from "./door-draft";
 import { completedWaiverRail, WaiverCompleted } from "./WaiverCompleted";
 import {
   ExpiredLink,
@@ -170,8 +169,9 @@ export default async function WaiverPage({
 
   return waiverSigningForm({
     db,
-    // Only the draft saved through this door comes back to it (issue #4008).
-    record: recordForDoor(state.record, door?.key.linkId ?? null),
+    record: state.record,
+    // Only the draft saved through this door comes back to it (issues #4008, #4130).
+    draft: state.draft,
     shop,
     locale,
     t,
@@ -187,11 +187,9 @@ export default async function WaiverPage({
     // (issue #4064: any phone opens it), so a refused Sign or a Save never
     // blanks the questionnaire on the phone that typed it (dock B1).
     // A release link likewise prefills only what was saved through itself:
-    // never a counter phone's answers, and never an old link's (issue #3983).
-    prefillMedical:
-      door !== null &&
-      (door.door !== "counter" || door.ownDevice) &&
-      state.record.draftViaLinkId === door.key.linkId,
+    // never a counter phone's answers, and never an old link's (issue #3983);
+    // `state.draft` is this link's own and no other door's (issue #4130).
+    prefillMedical: door !== null && (door.door !== "counter" || door.ownDevice),
     // A counter QR's time left, said in its last hour, and its answers saved on each
     // step, so the record holds them when it runs out (issue #3985); a fresh
     // code never shows the medical answers saved through this one (S2).

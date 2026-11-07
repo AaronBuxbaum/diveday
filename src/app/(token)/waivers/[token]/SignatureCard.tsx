@@ -21,13 +21,14 @@ import type { WAIVER_FIELD_ERROR, WaiverInvalidField } from "./waiver-fields";
  */
 export function SignatureCard({
   signerOnFile,
-  record,
+  draft,
   namedFieldError,
   t,
   children,
 }: {
   signerOnFile: { fullName: string } | null | undefined;
-  record: { draftSignerName: string | null; draftAcknowledged: boolean };
+  /** What this door saved (`waiver_drafts`), or null when it saved nothing. */
+  draft: { signerName: string | null; acknowledged: boolean } | null;
   namedFieldError: (typeof WAIVER_FIELD_ERROR)[WaiverInvalidField] | undefined;
   t: DiverTranslator;
   children: ReactNode;
@@ -60,7 +61,7 @@ export function SignatureCard({
             required
             minLength={2}
             maxLength={120}
-            defaultValue={record.draftSignerName ?? ""}
+            defaultValue={draft?.signerName ?? ""}
             className={controlClass}
           />
         </Field>
@@ -71,7 +72,7 @@ export function SignatureCard({
         name="acknowledged"
         value="on"
         required
-        defaultChecked={record.draftAcknowledged}
+        defaultChecked={draft?.acknowledged ?? false}
         // The checkbox isn't a `Field`, so its refusal wiring is by
         // hand: the same aria pair `Field`'s `error` prop provides,
         // pointing at the message rendered just below.

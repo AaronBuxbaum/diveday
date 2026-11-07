@@ -107,6 +107,7 @@ import {
   trips,
   userAccounts,
   waiverDeliveries,
+  waiverDrafts,
   waiverMaterialityDecisions,
   waiverRecords,
   waiverSealAcknowledgements,
@@ -999,6 +1000,7 @@ export async function clearDemoSchedule(
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   // So does an acknowledgement of a broken seal (#3891).
   await db.delete(waiverSealAcknowledgements).where(eq(waiverSealAcknowledgements.shopId, shopId));
+  await db.delete(waiverDrafts).where(eq(waiverDrafts.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));

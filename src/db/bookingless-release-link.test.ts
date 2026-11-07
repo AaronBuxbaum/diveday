@@ -9,7 +9,14 @@ import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { mintCapability } from "./capabilities";
 import { revokeLinksSentToOldContact } from "./contact-change";
-import { activityEvents, capabilities, people, personRoles, waiverRecords } from "./schema";
+import {
+  activityEvents,
+  capabilities,
+  people,
+  personRoles,
+  waiverDrafts,
+  waiverRecords,
+} from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { emailFreshWaiverLink, issueAndDeliverPersonWaiver } from "./waiver-issue";
 import {
@@ -233,10 +240,85 @@ describe("who took a copied link", () => {
     });
     const door = await waiverLinkDoor(ctx.db, tokenIn(bodies[0]), { now });
     if (door?.door !== "release") throw new Error("release door expected");
-    const record = await pendingRelease(person.id);
-    // The draft is the counter phone's, so the page will not prefill it here.
-    expect(record.draftViaLinkId).toBe(counter.key.linkId);
-    expect(record.draftViaLinkId).not.toBe(door.key.linkId);
+    // The draft is the counter phone's, so the release link opens with none.
+    expect(await getWaiverForToken(ctx.db, door.key, now)).toMatchObject({
+      state: "available",
+      draft: null,
+    });
+  });
+
+  it("gives each door back its own medical answers when two doors type at once (issue 4130)", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const person = await diver();
+    const copied = await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
+      channel: "link",
+      actorPersonId: await shopStaffer(ctx.db, ctx.shop.id),
+      now,
+    });
+    if (!copied.ok || !copied.token) throw new Error("copy link refused");
+    const counter = await openOnDevice(ctx.db, copied.token, now);
+    if (counter?.door !== "counter") throw new Error("counter door expected");
+    const { providers, bodies } = textCapture();
+    await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {
+      channel: "sms",
+      textProviders: providers,
+      now,
+    });
+    const release = await waiverLinkDoor(ctx.db, tokenIn(bodies[0]), { now });
+    if (release?.door !== "release") throw new Error("release door expected");
+
+    // A parent at the counter answers Yes to the first question; the diver at
+    // home answers No to everything a moment later, on the same release.
+    const [first] = RSTC_QUESTIONNAIRE.questions;
+    if (!first) throw new Error("questionnaire without questions");
+    const counterAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    counterAnswers.responses[first.id] = true;
+    const homeAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    expect(
+      await recordWaiverDraft(ctx.db, counter.key, {
+        signerName: "Parent At Counter",
+        acknowledged: false,
+        medicalAnswers: counterAnswers,
+        medicalAlert: "Bee-sting allergy",
+        now,
+      }),
+    ).toBe(true);
+    expect(
+      await recordWaiverDraft(ctx.db, release.key, {
+        signerName: person.fullName,
+        acknowledged: true,
+        medicalAnswers: homeAnswers,
+        now,
+      }),
+    ).toBe(true);
+
+    const atCounter = await getWaiverForToken(ctx.db, counter.key, now);
+    const atHome = await getWaiverForToken(ctx.db, release.key, now);
+    if (atCounter.state !== "available" || atHome.state !== "available")
+      throw new Error("both doors must stay open");
+    expect(atCounter.draft).toMatchObject({
+      signerName: "Parent At Counter",
+      acknowledged: false,
+      medicalAnswers: counterAnswers,
+      medicalAlert: "Bee-sting allergy",
+    });
+    expect(atHome.draft).toMatchObject({
+      signerName: person.fullName,
+      acknowledged: true,
+      medicalAnswers: homeAnswers,
+      medicalAlert: null,
+    });
+
+    // Signing through one door clears every door's draft of the release.
+    expect(
+      await completeWaiver(ctx.db, release.key, { ...signature(person.fullName), now }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await ctx.db
+        .select()
+        .from(waiverDrafts)
+        .where(eq(waiverDrafts.waiverRecordId, release.key.recordId)),
+    ).toEqual([]);
   });
 });
 
@@ -335,9 +417,11 @@ describe("Email and text on a release with no seat", () => {
     const kept = await waiverLinkDoor(ctx.db, first, { now });
     if (kept?.door !== "release") throw new Error("the first link must stay open");
     expect((await waiverLinkDoor(ctx.db, second, { now }))?.door).toBe("release");
-    const record = await pendingRelease(person.id);
-    expect(record.draftViaLinkId).toBe(kept.key.linkId);
-    expect(record.draftSignerName).toBe(person.fullName);
+    const reopened = await getWaiverForToken(ctx.db, kept.key, now);
+    expect(reopened).toMatchObject({
+      state: "available",
+      draft: { door: "release", linkId: kept.key.linkId, signerName: person.fullName },
+    });
 
     // A Copy link stands beside both.
     const copied = await issueAndDeliverPersonWaiver(ctx.db, ctx.shop.id, person.id, {

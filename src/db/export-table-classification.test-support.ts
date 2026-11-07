@@ -40,6 +40,9 @@ export const EXCLUDED_TABLES = [
   // these rows are the per-channel mechanics behind it, so they are out as
   // plumbing, not a shop record.
   "waiver_deliveries",
+  // What a door typed into a release before signing (issue #4130): unsubmitted
+  // draft state, never a signed record, out like the draft columns it replaces.
+  "waiver_drafts",
   "notification_send_queue", // operational retry state, not shop records
   "email_bounces", // DiveDay's own record of mail SES bounced, for debugging delivery; not a shop record
   // What the bench told a customer and how it went (ADR

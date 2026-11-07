@@ -182,7 +182,7 @@ describe("medicalAlertPrefill", () => {
   it("says the latest signed release here carried an alert, and never carries its words", async () => {
     const { db, record } = await freshLinkAfterSigning(alert);
     expect(record.medicalAlert).toBeNull();
-    const prefill = await medicalAlertPrefill(db, record);
+    const prefill = await medicalAlertPrefill(db, record, null);
     expect(prefill).toEqual({ draft: null, earlierAlert: true });
     expect(JSON.stringify(prefill)).not.toContain("EpiPen");
   });
@@ -190,15 +190,14 @@ describe("medicalAlertPrefill", () => {
   it("prefers the link's own draft, even a blank one the diver saved, and adds no note", async () => {
     const { db, record } = await freshLinkAfterSigning(alert);
     expect(
-      await medicalAlertPrefill(db, { ...record, draftMedicalAlert: "Inhaler in my BCD pocket." }),
+      await medicalAlertPrefill(db, record, {
+        medicalAlert: "Inhaler in my BCD pocket.",
+        medicalAnswers: null,
+      }),
     ).toEqual({ draft: "Inhaler in my BCD pocket.", earlierAlert: false });
     // A saved draft with the box cleared stays cleared.
     expect(
-      await medicalAlertPrefill(db, {
-        ...record,
-        draftMedicalAlert: null,
-        draftMedicalAnswers: clearAnswers,
-      }),
+      await medicalAlertPrefill(db, record, { medicalAlert: null, medicalAnswers: clearAnswers }),
     ).toEqual({ draft: null, earlierAlert: false });
   });
 
@@ -220,7 +219,10 @@ describe("medicalAlertPrefill", () => {
     });
     if (!cleared.ok) throw new Error(`expected a signature, got ${cleared.reason}`);
     const pending = await pendingFor(db, person.id);
-    expect(await medicalAlertPrefill(db, pending)).toEqual({ draft: null, earlierAlert: false });
+    expect(await medicalAlertPrefill(db, pending, null)).toEqual({
+      draft: null,
+      earlierAlert: false,
+    });
   });
 
   it("says nothing on a held seat's link (defense in depth: the page renders no form there)", async () => {
@@ -229,7 +231,7 @@ describe("medicalAlertPrefill", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: now })
       .where(eq(bookings.id, booking.id));
-    expect(await medicalAlertPrefill(db, { ...record, bookingId: booking.id })).toEqual({
+    expect(await medicalAlertPrefill(db, { ...record, bookingId: booking.id }, null)).toEqual({
       draft: null,
       earlierAlert: false,
     });
@@ -248,7 +250,10 @@ describe("medicalAlertPrefill", () => {
       .where(eq(waiverRecords.id, record.id));
     const [moved] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
     if (!moved) throw new Error("moved record missing");
-    expect(await medicalAlertPrefill(db, moved)).toEqual({ draft: null, earlierAlert: false });
+    expect(await medicalAlertPrefill(db, moved, null)).toEqual({
+      draft: null,
+      earlierAlert: false,
+    });
   });
 });
 

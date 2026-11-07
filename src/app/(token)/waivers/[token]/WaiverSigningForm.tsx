@@ -5,7 +5,7 @@ import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { ShopNotice } from "@/components/ui/outcome";
 import type { AppDb } from "@/db/client";
 import { medicalAlertPrefill } from "@/db/medical-alerts";
-import type { waiverRecords } from "@/db/schema";
+import type { WaiverDraft, waiverRecords } from "@/db/schema";
 import type { getShopById } from "@/db/shops";
 import { getWaiverSignerOnFile, getWaiverTripHeader } from "@/db/waiver-signing";
 import { getEmergencyContactForBearer, getEmergencyContactForPerson } from "@/db/waivers";
@@ -56,6 +56,7 @@ export type WaiverFormSearch = {
 export async function waiverSigningForm({
   db,
   record,
+  draft,
   shop,
   locale,
   t,
@@ -69,6 +70,11 @@ export async function waiverSigningForm({
 }: {
   db: AppDb;
   record: typeof waiverRecords.$inferSelect;
+  /**
+   * What the door this form was opened through saved, and only that door
+   * (issue #4130): never a draft typed through another link or the thread.
+   */
+  draft: WaiverDraft | null;
   shop: NonNullable<Awaited<ReturnType<typeof getShopById>>>;
   locale: DiverLocale;
   t: DiverTranslator;
@@ -141,17 +147,23 @@ export async function waiverSigningForm({
     signingDate(nowDate(), shop.timezone),
     signerOnFile?.minorDeclared ?? false,
   );
-  const draftGuardian = record.draftGuardian;
+  const draftGuardian = draft?.guardian ?? null;
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const { draftResponses, primaryQuestionCount, draftAnsweredFields, draftFollowUpsRemaining } =
-    medicalDraftState(questionnaire, prefillMedical ? record.draftMedicalAnswers : null);
+    medicalDraftState(questionnaire, prefillMedical ? (draft?.medicalAnswers ?? null) : null);
   // The trip this waiver is for (task 42) — named on the page itself so the
   // diver can verify what they're signing for, rather than trusting a link
   // that names only the shop.
   const tripHeader = recordBookingId
     ? await getWaiverTripHeader(db, record.shopId, recordBookingId)
     : null;
-  const shopQuestions = await shopQuestionsForPage(db, record, { field, q, fieldError }, t);
+  const shopQuestions = await shopQuestionsForPage(
+    db,
+    record,
+    draft?.shopAnswers ?? null,
+    { field, q, fieldError },
+    t,
+  );
   namedFieldError = shopQuestions.refusedFieldError ?? namedFieldError;
   // Only the segment owning a refused field links to it (`refusalRailAnchors`).
   const railAnchors = refusalRailAnchors({
@@ -285,14 +297,7 @@ export async function waiverSigningForm({
           {/* Right after the questionnaire, its own heading, optional, and
               not a step on the rail (issue #2960). */}
           <MedicalAlertSection
-            prefill={
-              await medicalAlertPrefill(
-                db,
-                prefillMedical
-                  ? record
-                  : { ...record, draftMedicalAlert: null, draftMedicalAnswers: null },
-              )
-            }
+            prefill={await medicalAlertPrefill(db, record, prefillMedical ? draft : null)}
             minorName={guardianRequired ? (signerOnFile?.fullName ?? null) : null}
             error={
               namedFieldError?.anchor === MEDICAL_ALERT_ANCHOR
@@ -320,7 +325,7 @@ export async function waiverSigningForm({
 
           <SignatureCard
             signerOnFile={signerOnFile}
-            record={record}
+            draft={draft}
             namedFieldError={namedFieldError}
             t={t}
           >

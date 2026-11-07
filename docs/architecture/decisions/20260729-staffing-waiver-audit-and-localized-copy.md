@@ -73,11 +73,12 @@ snapshot is what was asked and answered, so it is signed evidence and the seal c
 - **Versions 3 and 4 inherit it** by spreading the version 1 set, as they inherit every other
   field. **Version 2 (erased) excludes it**: erasure strips the answers with the rest of the
   diver's own words and re-seals without them. Because the answers cannot survive erasure, a version
-  2 record that carries `shop_answers` or `draft_shop_answers` again reads `invalid`, the way
-  version 4 refuses a guardian address put back.
+  2 record that carries `shop_answers` again reads `invalid`, the way version 4 refuses a
+  guardian address put back. (Drafts moved off the row to `waiver_drafts` with issue #4130, and
+  erasure deletes them.)
 - `shopAnswers` is in `WAIVER_SEALED_FIELDS`, so the integrity readers (`WAIVER_SEALED_COLUMNS`)
-  select it. The unsigned draft, `draft_shop_answers`, is never sealed, never exported and is
-  cleared on signing.
+  select it. The unsigned draft (`waiver_drafts.shop_answers`, per door since issue #4130) is
+  never sealed, never exported and is deleted on signing.
 - The snapshot is built on the server from the record's own `template_id`, never from what the
   form posted, so a prompt or option the browser altered never reaches the seal.
 
@@ -96,10 +97,10 @@ characters. It is what the diver signed beside, so the seal covers it, by the ru
   spelling and one digest. Stripping an alert from a record that had one changes the digest and
   reads `invalid`.
 - **Versions 3 and 4 inherit it; version 2 (erased) excludes it.** Erasure nulls the alert and its
-  draft with the diver's other words, so a version 2 record carrying `medical_alert` or
-  `draft_medical_alert` reads `invalid`.
-- `medicalAlert` is in `WAIVER_SEALED_FIELDS`; the draft, `draft_medical_alert`, is never sealed,
-  never exported, joins the shared draft-column list and is cleared on signing.
+  draft with the diver's other words, so a version 2 record carrying `medical_alert` reads
+  `invalid`.
+- `medicalAlert` is in `WAIVER_SEALED_FIELDS`; the draft (`waiver_drafts.medical_alert`, per door
+  since issue #4130) is never sealed, never exported and is deleted on signing.
 - The alert never feeds readiness, admission, referral or any count. The seal makes it evidence of
   what the diver wrote, not of anything about their fitness.
 

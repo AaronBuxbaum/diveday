@@ -246,9 +246,10 @@ export async function medicalAlertForSeat(
 
 /**
  * **What the diver's box starts with on their own waiver page** (H-20261023-medical-alert-for-the
- * amendments): the link's own draft when there is one
- * (`draft_medical_answers` set means the diver saved, and a cleared box stays
- * cleared). Otherwise the box starts empty, and `earlierAlert` says whether
+ * amendments): this door's own draft when there is one (`waiver_drafts`,
+ * issue #4130; saved medical answers mean the diver saved, and a cleared box
+ * stays cleared). The caller passes null where the medical drafts must not
+ * prefill (a counter code on a phone that did not claim it). Otherwise the box starts empty, and `earlierAlert` says whether
  * the same person's **latest** signed release at this shop carried an alert,
  * so the page can tell them to write it again if it still applies.
  *
@@ -263,17 +264,11 @@ export async function medicalAlertForSeat(
  */
 export async function medicalAlertPrefill(
   db: DbExecutor,
-  record: {
-    id: string;
-    shopId: string;
-    personId: string;
-    bookingId: string | null;
-    draftMedicalAlert: string | null;
-    draftMedicalAnswers: unknown;
-  },
+  record: { id: string; shopId: string; personId: string; bookingId: string | null },
+  draft: { medicalAlert: string | null; medicalAnswers: unknown } | null,
 ): Promise<{ draft: string | null; earlierAlert: boolean }> {
-  if (record.draftMedicalAlert !== null || record.draftMedicalAnswers !== null) {
-    return { draft: record.draftMedicalAlert, earlierAlert: false };
+  if (draft && (draft.medicalAlert !== null || draft.medicalAnswers !== null)) {
+    return { draft: draft.medicalAlert, earlierAlert: false };
   }
   const nothing = { draft: null, earlierAlert: false };
   if (record.bookingId) {

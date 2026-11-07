@@ -22,6 +22,7 @@ import {
 } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { issueWaiverRequest } from "./waivers";
+import { draftsOf, halfTypedDrafts } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -311,14 +312,7 @@ describe("repointHeldBooking", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: nowDate() })
       .where(eq(bookings.id, bookingId));
-    await db
-      .update(waiverRecords)
-      .set({
-        draftSignerName: "Alex K",
-        draftAcknowledged: true,
-        draftShopAnswers: { demoreferral1: "secret" },
-      })
-      .where(eq(waiverRecords.bookingId, bookingId));
+    expect((await halfTypedDrafts(db, bookingId)).length).toBeGreaterThan(0);
 
     const result = await repointHeldBooking(db, {
       shopId: shop.id,
@@ -334,9 +328,7 @@ describe("repointHeldBooking", () => {
     expect(moved.length).toBeGreaterThan(0);
     for (const row of moved) {
       expect(row.personId).toBe(second);
-      expect(row.draftSignerName).toBeNull();
-      expect(row.draftAcknowledged).toBe(false);
-      expect(row.draftShopAnswers).toBeNull();
+      expect(await draftsOf(db, row.id)).toEqual([]);
     }
   });
 

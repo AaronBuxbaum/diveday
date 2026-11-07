@@ -108,6 +108,7 @@ import {
   trips,
   userAccounts,
   waiverDeliveries,
+  waiverDrafts,
   waiverMaterialityDecisions,
   waiverRecords,
   waiverSealAcknowledgements,
@@ -242,6 +243,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
   // So does an acknowledgement of a broken seal (#3891).
   await db.delete(waiverSealAcknowledgements).where(eq(waiverSealAcknowledgements.shopId, shopId));
+  await db.delete(waiverDrafts).where(eq(waiverDrafts.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));

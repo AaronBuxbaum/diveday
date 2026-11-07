@@ -11,6 +11,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -134,15 +135,15 @@ export type MedicalAnswers = {
 };
 
 /**
- * The guardian section of a minor's release as last saved for later — the
- * sibling of `draft_signer_name`. Strings as typed, unvalidated: what a parent
+ * The guardian section of a minor's release as last saved for later
+ * (`waiver_drafts.guardian`). Strings as typed, unvalidated: what a parent
  * finds when they come back to the link, never what the record attests to.
  */
 export type DraftGuardian = {
   name: string | null;
   relationship: string | null;
   email: string | null;
-  /** The guardian's own consent tick, kept across a refusal exactly as `draft_acknowledged` is. */
+  /** The guardian's own consent tick, kept across a refusal exactly as `waiver_drafts.acknowledged` is. */
   acknowledged: boolean;
 };
 
@@ -200,6 +201,9 @@ export const waiverRecords = pgTable(
     // the capability that opens it does (`release_link`, `waiver_link`).
     startedAt: timestamp("started_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
+    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes these
+    // three or the other `draft_*` columns below. Still declared for one
+    // release; dropped in the follow-up once this merges.
     draftSignerName: text("draft_signer_name"),
     draftAcknowledged: boolean("draft_acknowledged").notNull().default(false),
     draftMedicalAnswers: jsonb("draft_medical_answers").$type<MedicalAnswers>(),
@@ -387,13 +391,8 @@ export const waiverRecords = pgTable(
     guardianEmailErasedByPersonId: uuid("guardian_email_erased_by_person_id").references(
       () => people.id,
     ),
-    /**
-     * The guardian section as last saved with "Save and finish later" — the
-     * sibling of `draft_signer_name`, so a parent who comes back to the link
-     * finds their own fields as they left them. Unsubmitted state, never
-     * evidence: excluded from the export bundle with the other drafts, and
-     * stripped by erasure.
-     */
+    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes it.
+    // Still declared for one release; dropped in the follow-up once this merges.
     draftGuardian: jsonb("draft_guardian").$type<DraftGuardian>(),
     /**
      * **The shop's questions as asked, with the diver's answers** (glossary
@@ -409,12 +408,8 @@ export const waiverRecords = pgTable(
      * Destroyed by erasure, with the rest of the diver's own words.
      */
     shopAnswers: jsonb("shop_answers").$type<ShopAnswer[]>(),
-    /**
-     * The shop questions as last saved with "Save and finish later", by
-     * question id. Re-validated against the pinned questions on load
-     * (`restoreDraftShopAnswers`); never evidence, out of the export bundle
-     * like the other drafts, and stripped by erasure.
-     */
+    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes it.
+    // Still declared for one release; dropped in the follow-up once this merges.
     draftShopAnswers: jsonb("draft_shop_answers").$type<DraftShopAnswers>(),
     /**
      * **The medical alert for the crew** (glossary *Medical alert for the
@@ -432,21 +427,11 @@ export const waiverRecords = pgTable(
      * (`canReadMedicalAlert`); destroyed by erasure.
      */
     medicalAlert: text("medical_alert"),
-    /**
-     * The medical alert as last saved with "Save and finish later". Never
-     * evidence, out of the export like the other drafts, cleared on every
-     * move and by erasure (`CLEARED_DRAFT_COLUMNS`).
-     */
+    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes it.
+    // Still declared for one release; dropped in the follow-up once this merges.
     draftMedicalAlert: text("draft_medical_alert"),
-    /**
-     * The counter link (`capabilities.id`, a `waiver_link`) the drafts were
-     * last saved through, or null when they were saved through any other
-     * door. A counter form pre-fills the medical drafts only when this is its
-     * own claimed link, so a fresh QR never shows answers typed earlier
-     * (security review S2) while the phone that typed them gets them back
-     * after a refusal (dock review B1). No foreign key: it is only ever
-     * compared with a live link's id, and a deleted link matches nothing.
-     */
+    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes it.
+    // Still declared for one release; dropped in the follow-up once this merges.
     draftViaLinkId: uuid("draft_via_link_id"),
     /**
      * **The kind of door the signature came through** (`waiverSignedVia`,
@@ -646,6 +631,71 @@ export const waiverRecords = pgTable(
     ),
   ],
 );
+
+/**
+ * **Which door saved a draft** (issue #4130): `thread` the seat's own
+ * readiness link (the diver's, or a party lead's on a child's seat),
+ * `counter` a counter code or Copy link (`waiver_link`), `release` a link
+ * mailed or texted to the contact on file (`release_link`).
+ */
+export const waiverDraftDoor = pgEnum("waiver_draft_door", ["thread", "counter", "release"]);
+
+export type WaiverDraftDoor = (typeof waiverDraftDoor.enumValues)[number];
+
+/**
+ * **What one door typed into a release before signing** (issue #4130). Since
+ * #4008 a counter code, a mailed release link and the seat's thread can all
+ * be open on one release, so each keeps its own draft: a parent typing at the
+ * counter and a diver typing at home never overwrite each other, and each
+ * reopens to exactly what it saved. Never two doors' drafts merged into one.
+ *
+ * One row per (release, door kind, link): `link_id` is the counter or release
+ * link's `capabilities.id`, null for the thread. No foreign key on it: it is
+ * only ever compared with a live link's id, and a deleted link matches
+ * nothing.
+ *
+ * Unsubmitted state, never evidence: never sealed, never exported, deleted
+ * for every door when the release is signed, when its pending link moves to
+ * another diver, and by erasure. Written by `recordWaiverDraft`, read through
+ * `getWaiverForToken` for the key's own door only.
+ */
+export const waiverDrafts = pgTable(
+  "waiver_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    waiverRecordId: uuid("waiver_record_id")
+      .notNull()
+      .references(() => waiverRecords.id, { onDelete: "cascade" }),
+    door: waiverDraftDoor("door").notNull(),
+    linkId: uuid("link_id"),
+    signerName: text("signer_name"),
+    acknowledged: boolean("acknowledged").notNull().default(false),
+    medicalAnswers: jsonb("medical_answers").$type<MedicalAnswers>(),
+    /** The guardian section as typed; strings unvalidated (`DraftGuardian`). */
+    guardian: jsonb("guardian").$type<DraftGuardian>(),
+    /** The shop questions as typed, by question id; re-validated on load. */
+    shopAnswers: jsonb("shop_answers").$type<DraftShopAnswers>(),
+    /** The medical alert for the crew as typed. */
+    medicalAlert: text("medical_alert"),
+    savedAt: appNowTimestamp("saved_at").notNull(),
+  },
+  (table) => [
+    unique("waiver_drafts_door_unique")
+      .on(table.waiverRecordId, table.door, table.linkId)
+      .nullsNotDistinct(),
+    index("waiver_drafts_shop_idx").on(table.shopId),
+    // The thread has no link; every other door is one link.
+    check(
+      "waiver_drafts_link_matches_door",
+      sql`(${table.door} = 'thread') = (${table.linkId} is null)`,
+    ),
+  ],
+);
+
+export type WaiverDraft = typeof waiverDrafts.$inferSelect;
 
 /** The longest note a staffer can leave when acknowledging a broken seal. */
 export const MAX_WAIVER_SEAL_ACKNOWLEDGEMENT_NOTE = 1000;
