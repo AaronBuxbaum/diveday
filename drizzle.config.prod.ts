@@ -14,7 +14,7 @@ if (!url) {
 
 export default defineConfig({
   // Match the schema barrel used by migration generation.
-  schema: ["./src/db/migration-schema.ts"],
+  schema: ["./src/db/schema/index.ts"],
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: { url: withExplicitSslMode(url) },

@@ -76,7 +76,6 @@ import { codeRows, everyCodeOf, type LabelMapCase } from "./label-map-test-fixtu
 import { BUDDY_LABEL_MAP_CASES } from "./label-maps-buddy-test-fixtures";
 import { rollCallLabelText } from "./manifest-labels";
 import { diverTranslator } from "./messages";
-import { RENTAL_ITEM_KEYS } from "./packing-labels";
 import {
   DIVER_CERT_LEVEL_KEYS,
   NEXT_DIVE_REASON_KEYS,
@@ -88,6 +87,7 @@ import {
   ORDER_PAID_AT_COUNTER_KEYS,
   ORDER_STATUS_KEYS,
 } from "./order-labels";
+import { RENTAL_ITEM_KEYS } from "./packing-labels";
 import {
   DIVER_PARTICIPANT_CHOICE_KEYS,
   DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
