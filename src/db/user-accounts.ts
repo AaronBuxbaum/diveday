@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { checkAccountToken, consumeAccountToken } from "./account-tokens";
+import { consumeAccountToken } from "./account-tokens";
 import type { AppDb, DbExecutor } from "./client";
 import { accountSessions, accountSignInChallenges, people, shops, userAccounts } from "./schema";
 
@@ -153,16 +153,7 @@ export async function claimStaffInvite(
 ): Promise<{ userAccountId: string } | null> {
   try {
     return await db.transaction(async (tx) => {
-      // The account before the link: a removal locks the account and then withdraws its links, so
-      // taking them the other way round could deadlock and surface as a 500 (issue #4013). Peek
-      // for the account, lock it, then spend, which re-checks every condition under the lock.
-      const open = await checkAccountToken(tx, { token: input.token, purpose: "invite" });
-      if (!open) return null;
-      await tx
-        .select({ id: userAccounts.id })
-        .from(userAccounts)
-        .where(eq(userAccounts.id, open.userAccountId))
-        .for("update");
+      // consumeAccountToken locks the account before it spends (issue #4068).
       const claim = await consumeAccountToken(tx, { token: input.token, purpose: "invite" });
       if (!claim) return null;
       // Not invited any more: roll the claim back with it rather than burn a link for nothing.

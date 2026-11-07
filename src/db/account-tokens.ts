@@ -130,6 +130,17 @@ export async function consumeAccountToken(
   db: DbExecutor,
   input: { token: string; purpose: AccountTokenPurpose; now?: Date },
 ): Promise<{ userAccountId: string } | null> {
+  // The account before the link: a removal and an erasure lock the account and then withdraw its
+  // links, so spending first would take the two the other way round and could deadlock into a 500
+  // (issues #4013, #4068). Peek for the account, lock it, then spend, which re-checks every
+  // condition under the lock. Inside the caller's transaction the lock lasts to its commit.
+  const open = await checkAccountToken(db, input);
+  if (!open) return null;
+  await db
+    .select({ id: userAccounts.id })
+    .from(userAccounts)
+    .where(eq(userAccounts.id, open.userAccountId))
+    .for("update");
   const spent = await spendCapability(db, {
     ...input,
     alsoRequire: exists(
