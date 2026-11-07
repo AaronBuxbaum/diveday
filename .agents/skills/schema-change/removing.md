@@ -30,7 +30,9 @@ value nothing writes any more:
 - **Expand/contract** still applies for the same reason: if the *currently deployed* code reads the
   thing you are dropping, split it across two deploys regardless of how worthless the data is.
   For a column the guard enforces it: a `drop-column` marker is refused while the previous
-  release's or this branch's `src/db/schema/` still declares the column, whatever the reason says.
+  release's or this branch's `src/db/schema/` still declares the column, whatever the reason says. While pre-pilot, mark the drop
+  `-- diveday:allow-destructive pre-pilot <table>.<column>: <why>` instead and it ships in the same PR as the code
+  that stops using the column; this branch's schema must still not declare it.
 - **H-20260730-evidence-retention-period-deletion's retention windows and the erasure path** stand. Those are promises about data we *will*
   hold, not tolerance for data we already have.
 

@@ -62,6 +62,24 @@ const GRANDFATHERED_THROUGH = "20260805033500_remove-course-paths-add-inquiry-pr
 /** The marker's sentinel. Namespaced and colon-joined so no prose contains it. */
 const ACKNOWLEDGEMENT = "diveday:allow-destructive";
 
+/**
+ * The pre-pilot marker's rule id: `-- diveday:allow-destructive pre-pilot <table>.<column>: <why>`.
+ *
+ * It excuses a `drop-column` whose column the *previous release* still declares,
+ * so the code that stops using the column and the migration that drops it can
+ * ship in one PR. That is Aaron's call (no users yet, so no deploy window worth
+ * protecting), not a bypass: this branch must still not declare the column, the
+ * reason still has to say why, and the marker expires with the decision.
+ */
+const PRE_PILOT = "pre-pilot";
+
+/**
+ * Flip to `true` the moment the first pilot shop has real divers in the system
+ * (Aaron says so; an agent never decides it). Every `pre-pilot` marker then
+ * fails, and the retiring of H-20260815-no-legacy starts here.
+ */
+export const PILOT_HAS_REAL_DIVERS = false;
+
 /** How much reason a marker must carry before it counts as one. */
 const MINIMUM_REASON_LENGTH = 20;
 
@@ -246,7 +264,7 @@ export const rules = [
   },
 ];
 
-const ruleIds = new Set(rules.map((rule) => rule.id));
+const ruleIds = new Set([...rules.map((rule) => rule.id), PRE_PILOT]);
 
 function ruleMatches(rule, statement) {
   return rule.matches ? rule.matches(statement) : rule.pattern.test(statement);
@@ -441,7 +459,7 @@ const ACKNOWLEDGEMENT_LINE = new RegExp(
   String.raw`^--\s*${ACKNOWLEDGEMENT}\s+([a-z][a-z0-9-]*)\s+([^\s:]+)\s*:\s*(\S.*)$`,
 );
 
-export function parseAcknowledgements(sql) {
+export function parseAcknowledgements(sql, { pilotHasRealDivers = PILOT_HAS_REAL_DIVERS } = {}) {
   // Condition 2: the `--` has to be one the masker entered a comment on. A
   // line that merely *looks* like a comment because it sits inside a multi-line
   // string literal is not in this set.
@@ -473,6 +491,13 @@ export function parseAcknowledgements(sql) {
       acknowledgements.push({
         line: at,
         error: `acknowledgement names unknown rule "${ruleId}" — known rules: ${[...ruleIds].join(", ")}`,
+      });
+      return;
+    }
+    if (ruleId === PRE_PILOT && pilotHasRealDivers) {
+      acknowledgements.push({
+        line: at,
+        error: `acknowledgement "${PRE_PILOT} ${target}" has expired: the first pilot shop has real divers (H-20260815-no-legacy), so the previous release's serving window is real — split the drop across two releases and use \`drop-column\``,
       });
       return;
     }
@@ -580,8 +605,13 @@ export function schemaSourceAt(commit, run = runGit) {
  * `schemas` is one `{ label, source }` per release to ask about: the previous
  * release (from git) and this branch (from disk).
  */
-function liveDeclarations(acknowledgement, schemas) {
-  if (acknowledgement.ruleId !== "drop-column") return [];
+function liveDeclarations(acknowledgement, allSchemas) {
+  const prePilot = acknowledgement.ruleId === PRE_PILOT;
+  if (acknowledgement.ruleId !== "drop-column" && !prePilot) return [];
+  // A pre-pilot marker waives the previous release's declaration (no users to
+  // fail) but never this branch's: the code that ships with the drop must not
+  // name the column.
+  const schemas = prePilot ? allSchemas.filter(({ label }) => label === "this branch") : allSchemas;
   const parts = acknowledgement.target
     .split(".")
     .map((part) => part.replace(/"/g, "").trim())
@@ -594,7 +624,7 @@ function liveDeclarations(acknowledgement, schemas) {
     return [
       {
         line: acknowledgement.line,
-        message: `drop-column ${table}.${column}: the ${label} still declares it as ${table}.${property} in ${SCHEMA_DIR}/, so its whole-row selects and returning() name the column and fail while this migration's deploy is in flight — remove the declaration in one release and drop the column in the next (no marker reason, H-20260815-no-legacy included, excuses this)`,
+        message: `${acknowledgement.ruleId} ${table}.${column}: the ${label} still declares it as ${table}.${property} in ${SCHEMA_DIR}/, so its whole-row selects and returning() name the column and fail while this migration's deploy is in flight — remove the declaration in one release and drop the column in the next (no \`drop-column\` reason, H-20260815-no-legacy included, excuses this; while DiveDay is pre-pilot, \`${PRE_PILOT}\` does, for the previous release only)`,
       },
     ];
   });
@@ -606,11 +636,14 @@ function liveDeclarations(acknowledgement, schemas) {
  * `drop-column` acknowledgements for a column a serving release still declares.
  *
  * @param {string} sql
- * @param {{ schemas?: Array<{ label: string, source: string }> }} [options]
+ * @param {{ schemas?: Array<{ label: string, source: string }>, pilotHasRealDivers?: boolean }} [options]
  * @returns {Array<{ line: number, message: string }>}
  */
-export function auditMigration(sql, { schemas = [] } = {}) {
-  const acknowledgements = parseAcknowledgements(sql);
+export function auditMigration(
+  sql,
+  { schemas = [], pilotHasRealDivers = PILOT_HAS_REAL_DIVERS } = {},
+) {
+  const acknowledgements = parseAcknowledgements(sql, { pilotHasRealDivers });
   const problems = acknowledgements
     .filter((item) => item.error)
     .map((item) => ({ line: item.line, message: item.error }));
@@ -621,7 +654,10 @@ export function auditMigration(sql, { schemas = [] } = {}) {
     // and a constraint in the same statement, and each needs its own consent.
     for (const rule of rules.filter((candidate) => ruleMatches(candidate, statement.masked))) {
       const index = acknowledgements.findIndex(
-        (item) => !item.error && item.ruleId === rule.id && coversStatement(item, statement.code),
+        (item) =>
+          !item.error &&
+          (item.ruleId === rule.id || (item.ruleId === PRE_PILOT && rule.id === "drop-column")) &&
+          coversStatement(item, statement.code),
       );
       if (index === -1) {
         problems.push({

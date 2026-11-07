@@ -68,7 +68,9 @@ barrels, bookings, seating, retention, integrations). What they do not say:
   guard (`-- diveday:allow-destructive <rule> <table>.<column>: <why>`) or H-20260730-evidence-retention-period-deletion's retention and
   erasure promises, and it never justifies dropping a column a serving release still reads: remove
   the schema declaration in one release, drop the column in the next (the guard refuses a
-  `drop-column` marker while the previous release or this branch still declares it). It expires when Aaron says the first pilot shop has real divers.
+  `drop-column` marker while the previous release or this branch still declares it; while pre-pilot,
+  `-- diveday:allow-destructive pre-pilot <table>.<column>: <why>` waives the previous-release half so the
+  drop ships with the code change). It expires when Aaron says the first pilot shop has real divers.
 - **Every delete is soft**: `deleted_at`, a partial index over live rows, `deleted_at is null` in
   every live read (ADR 20260820-every-delete-is-soft). On screen the word is still "Delete"
   (the `softDelete` lint rule); a publish toggle is "Hidden". The exceptions are legal erasure
