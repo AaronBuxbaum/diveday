@@ -55,6 +55,7 @@ import { isOnceOnlyDeliveryKind, ONCE_ONLY_LIVE_PREDICATE } from "@/lib/once-onl
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { hasSailed } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
+import { bookingRecipient } from "./booking-address";
 import { issueBookingCapability } from "./booking-capabilities";
 import { settledPartyPayment } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
@@ -389,7 +390,11 @@ async function queueRetry(
     if (bookingId) {
       await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
       const [snapshot] = await tx
-        .select({ personId: bookings.personId, tripId: bookings.tripId })
+        .select({
+          personId: bookings.personId,
+          tripId: bookings.tripId,
+          deliveryEmail: bookings.deliveryEmail,
+        })
         .from(bookings)
         .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, input.shopId)));
       if (!snapshot) return "stale_recipient";
@@ -415,7 +420,8 @@ async function queueRetry(
         ("to" in input &&
           input.to &&
           input.kind !== "fly_safe_correction" &&
-          input.to !== subject.email)
+          // The seat's shared inbox (`bookings.delivery_email`) before the record's.
+          input.to !== (snapshot.deliveryEmail ?? subject.email))
       )
         return "stale_recipient";
       recipientPersonId = subject.id;
@@ -2135,7 +2141,7 @@ async function sendStoredBookingConfirmation(
     executor
       .select({
         booking: bookings,
-        person: people,
+        person: bookingRecipient,
         trip: trips,
         shop: shops,
         course: courses,

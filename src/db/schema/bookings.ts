@@ -370,6 +370,17 @@ export const bookings = pgTable(
      * Null on every booking that was never flagged.
      */
     identityBookedAs: text("identity_booked_as"),
+    /**
+     * **Where this seat's mail goes when its diver holds no address of their
+     * own** (Aaron 2026-11-06). A different name on an email another diver
+     * holds is another diver on a shared inbox: they get a record of their own
+     * with no email (`people_shop_email_unique` keeps the address with the
+     * record that owns it), and the address they typed is kept here, lower
+     * case, so this booking's confirmation, release link, reminders and notices
+     * reach the inbox that booked it (`bookingAddress`). Null on every other
+     * seat, which mails `people.email`. Never a login or a lookup key.
+     */
+    deliveryEmail: text("delivery_email"),
     // `identity_matched_by` (and its `identity_match_kind` type) is retired: a
     // different name on a known address now gets its own record, so a held
     // seat has one way in, the counter's name prompt. Undeclared for one

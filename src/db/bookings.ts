@@ -56,6 +56,7 @@ import {
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { arrivalTrailHighWater, seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
+import { bookingAddress, bookingRecipient } from "./booking-address";
 import { realignTripLinkExpiry, revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
@@ -1170,8 +1171,13 @@ async function createBookingRecord(
   // A seat with no email of its own inserts a fresh person (`noEmailPersonRow`),
   // which this booking then stamps as its own (issue #2665).
   let madeByThisSeat = false;
+  let deliveryEmail: string | null = null;
   if (!person && pendingInsert) {
-    ({ person, addressless: madeByThisSeat } = await writeWalkIn(tx, req, pendingInsert));
+    ({
+      person,
+      addressless: madeByThisSeat,
+      deliveryEmail,
+    } = await writeWalkIn(tx, req, pendingInsert));
   }
   // Only reachable on the identity path if the row vanished mid-transaction;
   // the walk-in path always has a pendingInsert. Guards the non-null uses below.
@@ -1184,6 +1190,7 @@ async function createBookingRecord(
     participantType,
     identityUnconfirmed,
     identityClaim,
+    deliveryEmail,
     admissionAdvisory,
     pending,
   });
@@ -1236,6 +1243,8 @@ async function writeSeat(
     participantType: ParticipantType;
     identityUnconfirmed: boolean;
     identityClaim: IdentityClaim | null;
+    /** The shared inbox this seat's mail goes to; null mails the person's own. */
+    deliveryEmail: string | null;
     admissionAdvisory: BookingAdmissionAdvisory | undefined;
     pending: PendingDeclaration[];
   },
@@ -1301,6 +1310,7 @@ async function writeSeat(
         // Re-booking this seat re-evaluates identity: a matching name now clears
         // any stale flag, a mismatch (re)raises it.
         ...bookingIdentityColumns(identityUnconfirmed, identityClaim, nowDate()),
+        deliveryEmail: input.deliveryEmail,
         // A reactivated row starts a *new* booking and must not inherit party
         // membership from its earlier life: a stale `party_lead_booking_id`
         // would list this fresh, independent seat in the old organizer's claim
@@ -1356,6 +1366,7 @@ async function writeSeat(
       diveIntent: req.diveIntent ?? null,
       reEntryAsk: req.reEntryAsk ?? null,
       ...bookingIdentityColumns(identityUnconfirmed, identityClaim, nowDate()),
+      deliveryEmail: input.deliveryEmail,
       referralSource: partnerReferralSlug(req.referralSource),
       minorDeclaredAt: req.minorDeclared ? nowDate() : null,
       // **Stamped by the application clock, not the column's `defaultNow()`.**
@@ -1517,7 +1528,12 @@ async function resolveBookingPerson(
         // owns it — the same answer a party member on the lead's address and
         // a public package buyer get. Nothing of the matched diver's travels.
         person = undefined;
-        pendingInsert = { fullName: req.fullName.trim(), email: null, phone: req.phone };
+        pendingInsert = {
+          fullName: req.fullName.trim(),
+          email: null,
+          phone: req.phone,
+          deliveryEmail: email,
+        };
       } else if (!person) {
         pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
       }
@@ -1530,8 +1546,17 @@ async function resolveBookingPerson(
   return { ok: true, person, pendingInsert, identityUnconfirmed, identityClaim };
 }
 
-/** A walk-in's person row, written only once every gate has passed. */
-type PendingWalkIn = { fullName: string; email: string | null; phone?: string };
+/**
+ * A walk-in's person row, written only once every gate has passed.
+ * `deliveryEmail` is the address typed for a diver on somebody else's inbox,
+ * kept on the seat rather than the record (`bookings.delivery_email`).
+ */
+type PendingWalkIn = {
+  fullName: string;
+  email: string | null;
+  phone?: string;
+  deliveryEmail?: string;
+};
 
 /**
  * **A course session's answer for a seat put on it**: a new sale, a staff
@@ -1623,7 +1648,11 @@ async function writeWalkIn(
   tx: DbExecutor,
   req: BookingRequest,
   pendingInsert: PendingWalkIn,
-): Promise<{ person: typeof people.$inferSelect; addressless: boolean }> {
+): Promise<{
+  person: typeof people.$inferSelect;
+  addressless: boolean;
+  deliveryEmail: string | null;
+}> {
   if (pendingInsert.email) {
     // Under concurrency this can still resolve to an existing row (a racing
     // insert won); `nameMatches` reflects the row that actually landed, so a
@@ -1636,13 +1665,19 @@ async function writeWalkIn(
       phone: pendingInsert.phone,
       origin: bookingOrigin(req),
     });
-    if (resolved.nameMatches) return { person: resolved.person, addressless: false };
+    if (resolved.nameMatches) {
+      return { person: resolved.person, addressless: false, deliveryEmail: null };
+    }
   }
   // No email means no `people_shop_email_unique` row to race for (that
   // index is partial — null emails never collide, schema.ts) — a plain
   // insert, same shape as findOrCreatePerson's own insert branch.
   const inserted = await createPerson(tx, await noEmailPersonRow(tx, req, pendingInsert));
-  return { person: inserted, addressless: true };
+  return {
+    person: inserted,
+    addressless: true,
+    deliveryEmail: pendingInsert.deliveryEmail ?? pendingInsert.email,
+  };
 }
 
 /** One seat's declaration, held until every seat in the submission is settled. */
@@ -1780,7 +1815,7 @@ export async function getBookingForTrip(
   bookingId: string,
 ) {
   const [row] = await db
-    .select({ booking: bookings, person: people })
+    .select({ booking: bookings, person: bookingRecipient })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .where(
@@ -3391,7 +3426,7 @@ export async function cancelUnclaimedPartySeats(
   input: { shopId: string; leadBookingId: string; tripId: string; now: Date },
 ): Promise<PartyCancelOutcome> {
   const [lead] = await tx
-    .select({ email: people.email })
+    .select({ email: bookingAddress })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
@@ -3405,7 +3440,7 @@ export async function cancelUnclaimedPartySeats(
       checkedIn: seatCheckedIn,
       personId: bookings.personId,
       fullName: people.fullName,
-      email: people.email,
+      email: bookingAddress,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       identityBookedAs: bookings.identityBookedAs,
     })

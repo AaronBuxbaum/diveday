@@ -534,7 +534,7 @@ describe("claimPartySeat", () => {
     });
     if (!other.ok || other.personId === second.id) throw new Error("claim not its own record");
     const [row] = await db.select().from(bookings).where(eq(bookings.id, memberTwo.bookingId));
-    expect(row).toMatchObject({ personId: other.personId, identityUnconfirmedAt: null });
+    expect(row).toMatchObject({ personId: other.personId, deliveryEmail: "tomas@example.com" });
     const [own] = await db.select().from(people).where(eq(people.id, other.personId));
     expect(own).toMatchObject({ fullName: "Somebody Else", email: null });
     // Nothing is written onto the record that holds the address.

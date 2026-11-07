@@ -155,12 +155,12 @@ describe("a party seat after its claim (issue 2743)", () => {
     expect(seat?.personId).not.toBe(party.member.personId);
   });
 
-  it("points no held claim at a Sign step it cannot open yet", async () => {
+  it("sends a claimant under another name on that address their own Sign step there", async () => {
     const party = await memberWithRelease();
-    // The member's address, a different name: the seat is held for the desk.
+    // The member's address, a different name: a shared inbox, its own record.
     await claimAs(party, { fullName: "T. Marsh-Ortega", email: MEMBER });
 
-    expect(mailTo(MEMBER).join("\n")).not.toMatch(SIGN_STEP);
+    expect(mailTo(MEMBER).join("\n")).toMatch(SIGN_STEP);
   });
 
   it("still sends the confirmation when opening the Sign step fails", async () => {

@@ -24,6 +24,7 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
+import { bookingAddress, bookingRecipient } from "./booking-address";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { lastDayStartsAt } from "./departure-notes";
@@ -375,7 +376,7 @@ export async function sendRescheduleNotices(
   if (!(await stillAhead(db, trip, now))) return outcome;
 
   const seats = await db
-    .select({ booking: bookings, person: people })
+    .select({ booking: bookings, person: bookingRecipient })
     .from(bookings)
     // The seat's own person, and only within this shop: the one record whose
     // address this message may use.
@@ -562,7 +563,7 @@ async function activeSeatContactChanged(
   const [current] = await db
     .select({
       personId: people.id,
-      email: people.email,
+      email: bookingAddress,
       phone: people.phone,
       anonymizedAt: people.anonymizedAt,
       mergedIntoPersonId: people.mergedIntoPersonId,
@@ -738,7 +739,7 @@ export async function sendSeatMoveNotice(
 ): Promise<"told" | "failed" | "skipped"> {
   const now = options.now ?? nowDate();
   const [row] = await db
-    .select({ trip: trips, shop: shops, booking: bookings, person: people })
+    .select({ trip: trips, shop: shops, booking: bookings, person: bookingRecipient })
     .from(bookings)
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
     .innerJoin(shops, eq(shops.id, trips.shopId))
@@ -829,7 +830,7 @@ export async function sendMissedRescheduleNotice(
   if (!owed) return "nothing";
 
   const [row] = await db
-    .select({ trip: trips, shop: shops, booking: bookings, person: people })
+    .select({ trip: trips, shop: shops, booking: bookings, person: bookingRecipient })
     .from(bookings)
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
     .innerJoin(shops, eq(shops.id, trips.shopId))

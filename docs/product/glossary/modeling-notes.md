@@ -47,7 +47,9 @@
   shared inbox** (a spouse, or a minor booked under a parent's email; see **Junior certification**):
   it gets a record of its own under the typed name, holding no email, since the address stays with
   the record that owns it (Aaron 2026-11-06; the same answer a party member on the lead's address
-  and a public package buyer get). Nothing of the matched diver's travels and nothing is held for
+  and a public package buyer get). The typed address stays on the seat as its **delivery address**
+  (`bookings.delivery_email`), so that seat's confirmation, release link, reminders and notices
+  still reach the inbox that booked it; it is never a login or lookup key. Nothing of the matched diver's travels and nothing is held for
   the desk; a wrong guess is two records the desk can merge. **The blocker below has one
   raiser (#1556):** a staffer who types a name at the
   counter is shown the divers it half-matches (`similarity() > 0.4`, `findSimilarDivers`) with the

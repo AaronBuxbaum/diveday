@@ -1487,6 +1487,8 @@ async function scrubBookingRows(
         // #2145) names somebody and their number.
         heldEmergencyContactName: null,
         heldEmergencyContactPhone: null,
+        // The shared inbox a seat was mailed at is how to reach this person.
+        deliveryEmail: null,
       })
       .where(inArray(bookings.id, bookingIds));
 

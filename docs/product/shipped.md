@@ -10,7 +10,7 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
 ## A shared inbox is two divers (built 2026-11-06)
 
 - A booking or seat claim on a known email under a different name gets a record of its own, holding
-  no email, and is never held for the desk; only the counter's name prompt holds a seat now
+  no email (its seat keeps the typed address and is mailed there), and is never held for the desk; only the counter's name prompt holds a seat now
   (H-20260724-one-person-per-email, amendment to
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md)).
 

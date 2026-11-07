@@ -173,6 +173,53 @@ describe("sendJoinMail", () => {
     ).toBe(true);
   });
 
+  /**
+   * **A shared inbox's other diver hears at the inbox that booked them**
+   * (Aaron 2026-11-06). Their record holds no email, since the address is
+   * Nora's; the seat keeps the address they typed, and its mail goes there.
+   */
+  it("mails a shared-inbox booker's confirmation and Sign step to the address they typed", async () => {
+    configureMail();
+    const { db, shop } = ctx;
+    const tripId = await upcomingTripId();
+    await seat(tripId, "Nora Quinn", "nora@dive.day");
+    const ben = await seat(tripId, "Ben Quinn", "NORA@dive.day");
+    sesSend.mockClear();
+
+    await joinMail([ben], tripId);
+
+    const mail = sentMail();
+    expect(mail.map((sent) => sent.to)).toEqual(["nora@dive.day"]);
+    const token = mail[0]?.body.match(SIGN_STEP)?.[1];
+    if (!token) throw new Error("no Sign step in the confirmation");
+    expect(await verifyBookingCapability(db, { token, purpose: "readiness" })).toMatchObject({
+      shopId: shop.id,
+      bookingId: ben.bookingId,
+    });
+  });
+
+  it("sends a party member on the lead's own address their seat's links there", async () => {
+    configureMail();
+    const { db, shop } = ctx;
+    const tripId = await upcomingTripId();
+    const lead = await seat(tripId, "Nora Quinn", "nora@dive.day");
+    const ben = await seat(tripId, "Ben Quinn", "nora@dive.day");
+
+    await joinMail([lead, ben], tripId);
+
+    const tokens = sentMail()
+      .filter((sent) => sent.to === "nora@dive.day")
+      .map((sent) => sent.body.match(SIGN_STEP)?.[1])
+      .filter((token): token is string => Boolean(token));
+    const seats = await Promise.all(
+      tokens.map((token) => verifyBookingCapability(db, { token, purpose: "readiness" })),
+    );
+    expect(seats.map((seat) => seat?.bookingId)).toContain(ben.bookingId);
+    expect(
+      await hasLiveDeliveredReadinessLink(db, { shopId: shop.id, bookingId: ben.bookingId }),
+    ).toBe(true);
+  });
+
   it("sends a minor member nothing: their release needs a guardian the address cannot prove (issue 3986)", async () => {
     configureMail();
     const { db } = ctx;

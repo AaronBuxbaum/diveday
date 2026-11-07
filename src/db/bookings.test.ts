@@ -1282,7 +1282,7 @@ describe("createBooking identity safeguard (H-20260724-one-person-per-email)", (
 
       const [seat] = await db.select().from(bookings).where(eq(bookings.id, shared.bookingId));
       expect(seat?.identityUnconfirmedAt).toBeNull();
-      expect(seat?.identityBookedAs).toBeNull();
+      expect(seat?.deliveryEmail).toBe("nora@example.com");
       const [own] = await db.select().from(people).where(eq(people.id, shared.personId));
       expect(own?.fullName).toBe(actor === "public" ? "Ben Quinn" : "Ada Quinn");
       expect(own?.email).toBeNull();

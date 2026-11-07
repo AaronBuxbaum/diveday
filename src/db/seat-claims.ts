@@ -470,6 +470,9 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
       claimedAt: now,
       identityUnconfirmedAt: null,
       identityBookedAs: null,
+      // A claimant on somebody else's inbox is mailed there; anyone else at
+      // their own record's address (`bookings.delivery_email`).
+      deliveryEmail: found?.nameMatches === true ? null : email,
     })
     .where(eq(bookings.id, booking.id));
 

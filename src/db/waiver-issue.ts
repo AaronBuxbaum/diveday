@@ -17,6 +17,7 @@ import {
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
 import { endOfLocalDay } from "@/lib/zoned";
+import { bookingAddress, bookingRecipient } from "./booking-address";
 import { issueBookingCapability } from "./booking-capabilities";
 import { mintCapability } from "./capabilities";
 import type { AppDb, DbExecutor } from "./client";
@@ -551,7 +552,7 @@ export async function issueAndDeliverWaiver(
   options: WaiverDeliveryOptions = {},
 ): Promise<IssueAndDeliverWaiverResult> {
   const [observed] = await db
-    .select({ person: people, trip: trips, shop: shops })
+    .select({ person: bookingRecipient, trip: trips, shop: shops })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
@@ -575,7 +576,7 @@ export async function issueAndDeliverWaiver(
     async (tx) => {
       const [ctx] = await tx
         .select({
-          person: people,
+          person: bookingRecipient,
           trip: trips,
           shop: shops,
           seat: {
@@ -963,7 +964,7 @@ export async function openJoinSignStep(
 ): Promise<JoinSignStep | null> {
   if (!publicAppUrl()) return null;
   const [observed] = await db
-    .select({ personId: bookings.personId, tripId: bookings.tripId, email: people.email })
+    .select({ personId: bookings.personId, tripId: bookings.tripId, email: bookingAddress })
     .from(bookings)
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), seatNotCancelled))

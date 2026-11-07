@@ -5,6 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { notificationProviderSignal } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { recipientLocale } from "@/lib/notifications/kinds";
+import { bookingAddress } from "./booking-address";
 import { issueBookingCapability, staleReadinessBookingForResend } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { withErasureCoordinatedBookingSend } from "./erasure-coordinated-send";
@@ -148,7 +149,7 @@ export async function planReadinessLinkRescue(
     .select({
       personId: people.id,
       tripId: trips.id,
-      email: people.email,
+      email: bookingAddress,
       diverName: people.fullName,
       personLocale: people.locale,
       shopName: shops.name,
