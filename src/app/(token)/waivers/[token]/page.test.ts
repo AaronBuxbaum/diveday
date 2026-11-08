@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { bookingCapabilities, bookings, trips, waiverRecords } from "@/db/schema";
 import { listStaff } from "@/db/trips";
+import { recordDoorDraft } from "@/db/waiver-drafts";
 import { completeWaiver, recordWaiverDraft, threadWaiverKey } from "@/db/waivers-completion";
 import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
@@ -289,13 +290,17 @@ describe("the actual completed waiver branch", () => {
     const { db, shop, booking } = await context();
     vi.mocked(getDb).mockResolvedValue(db);
     const link = await issueCounterLink(db, { shopId: shop.id, bookingId: booking.id });
-    await db
-      .update(waiverRecords)
-      .set({
-        draftMedicalAnswers: medicalReferralAnswers,
-        draftMedicalAlert: "Stent placed in June",
-      })
-      .where(eq(waiverRecords.id, link.recordId));
+    await recordDoorDraft(
+      db,
+      { shopId: shop.id, recordId: link.recordId, door: "thread", linkId: null },
+      {
+        signerName: null,
+        acknowledged: false,
+        medicalAnswers: medicalReferralAnswers,
+        medicalAlert: "Stent placed in June",
+        now: nowDate(),
+      },
+    );
     const { html } = await renderOnDevice(db, link.token);
     expect(html).toContain(t("waiver.signButton"));
     expect(html).not.toMatch(/value="yes"[^>]*checked=""|checked=""[^>]*value="yes"/);
@@ -344,10 +349,11 @@ describe("the actual completed waiver branch", () => {
       }),
     ).toMatchObject({ ok: true });
     // A thread draft on this release must not hide the hint on the counter.
-    await db
-      .update(waiverRecords)
-      .set({ draftMedicalAnswers: clearAnswers })
-      .where(eq(waiverRecords.id, link.recordId));
+    await recordDoorDraft(
+      db,
+      { shopId: shop.id, recordId: link.recordId, door: "thread", linkId: null },
+      { signerName: null, acknowledged: false, medicalAnswers: clearAnswers, now: nowDate() },
+    );
     const { html } = await renderOnDevice(db, link.token);
     expect(html).toContain(t("waiver.signButton"));
     expect(html).toContain(t("waiver.medicalAlertEarlier"));

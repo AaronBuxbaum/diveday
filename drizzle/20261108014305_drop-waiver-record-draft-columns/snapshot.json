@@ -1,0 +1,167 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7a62b6d4-d6d5-4776-b017-43a8c6042a5c",
+  "prevIds": [
+    "38f21911-6f53-4201-95d8-43f1f963b200"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "draft_signer_name"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.draft_signer_name",
+        "n|col|public.waiver_records.draft_signer_name",
+        "e|col|public.waiver_records.draft_signer_name"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "draft_acknowledged"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.draft_acknowledged",
+        "n|col|public.waiver_records.draft_acknowledged",
+        "e|col|public.waiver_records.draft_acknowledged"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "draft_medical_answers"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.draft_medical_answers",
+        "n|col|public.waiver_records.draft_medical_answers",
+        "e|col|public.waiver_records.draft_medical_answers"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "draft_guardian"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.draft_guardian",
+        "n|col|public.waiver_records.draft_guardian",
+        "e|col|public.waiver_records.draft_guardian"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "draft_shop_answers"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.draft_shop_answers",
+        "n|col|public.waiver_records.draft_shop_answers",
+        "e|col|public.waiver_records.draft_shop_answers"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "draft_medical_alert"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.draft_medical_alert",
+        "n|col|public.waiver_records.draft_medical_alert",
+        "e|col|public.waiver_records.draft_medical_alert"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "waiver_records",
+        "draft_via_link_id"
+      ],
+      "writes": [
+        "s|col|public.waiver_records.draft_via_link_id",
+        "n|col|public.waiver_records.draft_via_link_id",
+        "e|col|public.waiver_records.draft_via_link_id"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_records",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"draft_signer_name\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"draft_acknowledged\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"draft_medical_answers\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"draft_guardian\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"draft_shop_answers\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"draft_medical_alert\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"waiver_records\",\"draft_via_link_id\"]"
+    }
+  ]
+}

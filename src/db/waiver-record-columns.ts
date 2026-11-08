@@ -13,10 +13,6 @@ import { waiverRecords } from "./schema";
  *   shows. The signed copy (`getSignedWaiverRecordForShop`) and the
  *   integrity audit read it through {@link WAIVER_SEALED_COLUMNS}, because
  *   the seal covers it.
- * - `draftSignerName`, `draftMedicalAnswers`, `draftGuardian`,
- *   `draftShopAnswers`, `draftMedicalAlert`, `draftViaLinkId` — retired by
- *   `waiver_drafts` (issue #4130) and dropped in the follow-up; nothing reads
- *   them, and no status read ever needed an unsigned draft.
  * - `shopAnswers` — the shop's own questions as answered. They inform and
  *   never gate, so no status read, roster or manifest has a use for them; the
  *   signed record reads them through {@link WAIVER_SEALED_COLUMNS}, because
@@ -37,13 +33,7 @@ import { waiverRecords } from "./schema";
  */
 const {
   templateBody: _templateBody,
-  draftSignerName: _draftSignerName,
-  draftMedicalAnswers: _draftMedicalAnswers,
-  draftGuardian: _draftGuardian,
-  draftShopAnswers: _draftShopAnswers,
   shopAnswers: _shopAnswers,
-  draftMedicalAlert: _draftMedicalAlert,
-  draftViaLinkId: _draftViaLinkId,
   medicalAlert: _medicalAlert,
   integrityHash: _integrityHash,
   ...stateColumns

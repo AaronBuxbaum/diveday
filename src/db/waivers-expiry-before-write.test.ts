@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { people, waiverRecords } from "./schema";
+import { people, waiverDrafts, waiverRecords } from "./schema";
 import { completeWaiver, recordWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import * as templates from "./waivers-templates";
@@ -82,7 +82,9 @@ describe("waiver expiry during validation", () => {
       else expect(result).toBe(false);
       const [stored] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
       expect(stored?.status).toBe("pending");
-      expect(stored?.draftAcknowledged).not.toBe(true);
+      expect(
+        await db.select().from(waiverDrafts).where(eq(waiverDrafts.waiverRecordId, recordId)),
+      ).toEqual([]);
       const [after] = await db.select().from(people).where(eq(people.id, person.id));
       expect(after?.emergencyContactName).toBe(person.emergencyContactName);
       expect(after?.emergencyContactPhone).toBe(person.emergencyContactPhone);

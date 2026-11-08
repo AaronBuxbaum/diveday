@@ -23,7 +23,6 @@ describe("seeded medical-review training scenario", () => {
         status: waiverRecords.status,
         medicalReviewRequired: waiverRecords.medicalReviewRequired,
         medicalAnswers: waiverRecords.medicalAnswers,
-        draftMedicalAnswers: waiverRecords.draftMedicalAnswers,
       })
       .from(waiverRecords)
       .innerJoin(people, eq(people.id, waiverRecords.personId))
@@ -39,7 +38,6 @@ describe("seeded medical-review training scenario", () => {
       status: "medical_review",
       medicalReviewRequired: true,
       medicalAnswers: null,
-      draftMedicalAnswers: null,
     });
     expect(fixture?.startsAt.getTime()).toBeGreaterThan(nowMs());
   });

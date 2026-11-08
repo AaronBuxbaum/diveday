@@ -629,8 +629,6 @@ describe("signed waivers after a diver is erased", () => {
     expect(record).toMatchObject({
       signedName: null,
       medicalAnswers: null,
-      draftSignerName: null,
-      draftMedicalAnswers: null,
     });
     // But the release itself — what was agreed to, and when — is still there.
     expect(record?.templateBody).toBeTruthy();

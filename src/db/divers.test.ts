@@ -1542,9 +1542,6 @@ describe("diver erasure", () => {
     expect(waiver).toMatchObject({
       signedName: null,
       medicalAnswers: null,
-      draftSignerName: null,
-      draftMedicalAnswers: null,
-      draftAcknowledged: false,
       importedFromLabel: null,
       importSourceDocumentUrl: null,
       importSourceMedicalDocumentUrl: null,

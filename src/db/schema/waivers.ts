@@ -201,12 +201,6 @@ export const waiverRecords = pgTable(
     // the capability that opens it does (`release_link`, `waiver_link`).
     startedAt: timestamp("started_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
-    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes these
-    // three or the other `draft_*` columns below. Still declared for one
-    // release; dropped in the follow-up once this merges.
-    draftSignerName: text("draft_signer_name"),
-    draftAcknowledged: boolean("draft_acknowledged").notNull().default(false),
-    draftMedicalAnswers: jsonb("draft_medical_answers").$type<MedicalAnswers>(),
     signedName: text("signed_name"),
     signatureMethod: text("signature_method"),
     /**
@@ -391,9 +385,6 @@ export const waiverRecords = pgTable(
     guardianEmailErasedByPersonId: uuid("guardian_email_erased_by_person_id").references(
       () => people.id,
     ),
-    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes it.
-    // Still declared for one release; dropped in the follow-up once this merges.
-    draftGuardian: jsonb("draft_guardian").$type<DraftGuardian>(),
     /**
      * **The shop's questions as asked, with the diver's answers** (glossary
      * *Shop question*): a snapshot `completeWaiver` builds from this record's
@@ -408,9 +399,6 @@ export const waiverRecords = pgTable(
      * Destroyed by erasure, with the rest of the diver's own words.
      */
     shopAnswers: jsonb("shop_answers").$type<ShopAnswer[]>(),
-    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes it.
-    // Still declared for one release; dropped in the follow-up once this merges.
-    draftShopAnswers: jsonb("draft_shop_answers").$type<DraftShopAnswers>(),
     /**
      * **The medical alert for the crew** (glossary *Medical alert for the
      * crew*, issue #2960): what the diver wants the boat to know in an
@@ -427,12 +415,6 @@ export const waiverRecords = pgTable(
      * (`canReadMedicalAlert`); destroyed by erasure.
      */
     medicalAlert: text("medical_alert"),
-    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes it.
-    // Still declared for one release; dropped in the follow-up once this merges.
-    draftMedicalAlert: text("draft_medical_alert"),
-    // Retired by `waiver_drafts` (issue #4130): nothing reads or writes it.
-    // Still declared for one release; dropped in the follow-up once this merges.
-    draftViaLinkId: uuid("draft_via_link_id"),
     /**
      * **The kind of door the signature came through** (`waiverSignedVia`,
      * issue #4045): since #4008 a counter code and a mailed link can both sign
