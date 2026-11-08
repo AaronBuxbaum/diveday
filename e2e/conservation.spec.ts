@@ -1,11 +1,12 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, tripPathByTitle } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 signedInAsOwner();
 const t = staffTranslator("en-US");
 
-test("staff record, correct and delete measured conservation actions after a departure", async ({
+test("staff record and correct measured conservation actions after a departure", async ({
   page,
 }) => {
   const title = "Recorded cleanup departure";
@@ -38,7 +39,28 @@ test("staff record, correct and delete measured conservation actions after a dep
   await expect(item.locator("p").first()).toContainText("3.25");
   await page.reload();
   await expect(item.locator("p").first()).toContainText("3.25");
+});
+
+// Deletion exercises its own returned-departure state. Keeping the entire create/correct/
+// reload/delete/undo/delete/reload journey in one test exceeded the ordinary 15s CI budget.
+// The named fact writes through the same conservation writer as the staff action.
+test("a corrected conservation record can be restored with Undo and deleted again", async ({
+  page,
+  request,
+}) => {
+  const {
+    returnedConservationRecap: { tripId },
+  } = await seedFacts(request, ["returnedConservationRecap"]);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details`);
+  const item = page
+    .locator("li")
+    .filter({ hasText: "Discarded fishing gear" })
+    .filter({ has: page.locator('details[id^="conservation-"]') });
   await item.locator("summary").click();
+  await item.getByRole("spinbutton", { name: t("trips.conservation.quantity") }).fill("3.25");
+  await item.getByRole("button", { name: t("trips.conservation.save"), exact: true }).click();
+  await expect(item.locator("p").first()).toContainText("3.25");
+  // Saving leaves this edit disclosure open; toggling it here would hide Delete.
   await item.getByRole("button", { name: t("trips.conservation.delete"), exact: true }).click();
   await expect(page.getByText(t("trips.conservation.empty"), { exact: true })).toBeVisible();
   await expect(item).toHaveCount(0);
