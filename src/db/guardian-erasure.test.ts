@@ -111,6 +111,27 @@ async function readRecord(db: AppDb, id: string) {
 }
 
 describe("eraseGuardianEmail", () => {
+  it("lists each guardian mailbox once and ignores blank signed addresses", async () => {
+    const { db, shop, roster } = await fixtures();
+    const [first, second] = roster;
+    if (!first || !second) throw new Error("seats missing");
+    await coSignedRelease(db, shop.id, first, "Jonas@Example.com");
+    const duplicate = await coSignedRelease(db, shop.id, second, "jonas@example.com");
+    await db
+      .update(waiverRecords)
+      .set({ personId: first.person.id })
+      .where(eq(waiverRecords.id, duplicate));
+    expect(await listGuardianEmails(db, shop.id, first.person.id)).toEqual(["jonas@example.com"]);
+
+    // Imported or unfinished evidence can carry an empty address. It must
+    // not become an erasure choice beside a real guardian mailbox.
+    await db
+      .update(waiverRecords)
+      .set({ guardianEmail: "" })
+      .where(eq(waiverRecords.id, duplicate));
+    expect(await listGuardianEmails(db, shop.id, first.person.id)).toEqual(["jonas@example.com"]);
+  });
+
   it("takes the address off and leaves a release that verifies as redacted", async () => {
     const { db, shop, roster, owner } = await fixtures();
     const [seat] = roster;
@@ -355,6 +376,33 @@ describe("eraseGuardianEmail", () => {
     expect(row.guardianEmail).toBeNull();
     expect(row.integrityVersion).toBe(1);
     expect(verifyWaiverIntegrity(row)).toBe("invalid");
+  });
+
+  it("erases an unsealed guardian address without minting a seal", async () => {
+    const { db, shop, roster, owner } = await fixtures();
+    const [seat] = roster;
+    if (!seat) throw new Error("seat missing");
+    const id = await coSignedRelease(db, shop.id, seat, "jonas@example.com");
+    await db
+      .update(waiverRecords)
+      .set({ integrityHash: null, integrityVersion: null })
+      .where(eq(waiverRecords.id, id));
+
+    expect(
+      await eraseGuardianEmail(db, {
+        shopId: shop.id,
+        personId: seat.person.id,
+        email: "jonas@example.com",
+        actorPersonId: owner,
+        now,
+      }),
+    ).toEqual({ ok: true, erased: 1 });
+    const row = await readRecord(db, id);
+    expect(row.guardianEmail).toBeNull();
+    expect(row.guardianEmailErasedAt).toEqual(now);
+    expect(row.integrityHash).toBeNull();
+    expect(row.integrityVersion).toBeNull();
+    expect(verifyWaiverIntegrity(row)).toBe("unsealed");
   });
 
   it("refuses to put an erased address back", async () => {
