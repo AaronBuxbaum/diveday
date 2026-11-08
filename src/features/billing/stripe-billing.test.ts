@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DEFAULT_PRICING_CONFIG, termsFor } from "../../lib/billing/pricing-plans";
+import { FLAT_MONTHLY_CENTS } from "../../lib/billing/pricing-plans";
 import {
   billingConfigFromEnvironment,
   billingKeyIsLive,
@@ -300,9 +300,13 @@ describe("configured pricing in Stripe", () => {
   });
 
   it("sells today's flat price on the existing price, and any other fee as price_data", () => {
-    expect(checkoutLines(termsFor("flat_monthly", DEFAULT_PRICING_CONFIG), CONFIG, null)).toEqual(
-      TODAY,
-    );
+    expect(
+      checkoutLines(
+        { plan: "flat_monthly", monthlyCents: FLAT_MONTHLY_CENTS, basisPoints: 0 },
+        CONFIG,
+        null,
+      ),
+    ).toEqual(TODAY);
     expect(
       checkoutLines({ plan: "flat_monthly", monthlyCents: 12_900, basisPoints: 0 }, CONFIG, null),
     ).toEqual([{ kind: "monthly_amount", unitAmountCents: 12_900 }]);

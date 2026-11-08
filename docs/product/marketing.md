@@ -24,7 +24,7 @@ jobs — marketer and maintainer — and must leave both the pages and this rule
 Every visitor sees the same configured offer. `PRICING_MONTHLY_CENTS` and
 `PRICING_BASIS_POINTS` independently set the monthly fee and percentage of eligible card receipts
 collected through DiveDay. Omit either component when configuring the other to charge only that
-component. With both unset, the published monthly default applies; explicit zeroes mean free.
+component. With both unset, the default is $0/month plus 3%; explicit zeroes mean free.
 Copy names only the components charged, and percentage offers never claim no cut of bookings.
 Existing subscribers keep their sold terms. This supersedes references below to a universal flat
 price; see [configured pricing](../architecture/decisions/20261108-configured-pricing.md).

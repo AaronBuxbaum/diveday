@@ -19,6 +19,9 @@ const result = runBounded("pnpm", ["exec", "next", "build"], {
     DATABASE_URL_UNPOOLED: "",
     PGLITE_DATA_DIR: "memory",
     DIVEDAY_E2E: "1",
+    // Stable legacy-offer fixture; default percentage copy is covered in marketing-pricing.test.tsx.
+    PRICING_MONTHLY_CENTS: "9900",
+    PRICING_BASIS_POINTS: "0",
     NEXT_PUBLIC_SENTRY_DSN: "",
   },
 });

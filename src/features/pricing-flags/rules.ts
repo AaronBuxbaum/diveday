@@ -7,7 +7,7 @@ import { log } from "../../lib/log";
 
 /**
  * PRICING_MONTHLY_CENTS (0–100000) and PRICING_BASIS_POINTS (0–1000).
- * Neither set preserves the published monthly price. When either is set, an
+ * Neither set uses no monthly fee plus three percent. When either is set, an
  * omitted component is zero. Invalid values refuse the entire configuration.
  */
 

@@ -97,9 +97,9 @@ describe("configured pricing at sign-up", () => {
     });
   });
 
-  it("assigns the monthly offer with the default configuration", async () => {
+  it("assigns the percentage offer with the default configuration", async () => {
     const db = await unseededTestDb();
     const shop = await signUp(db, "Reef Line", "reef-line-monthly");
-    expect((await getShopSubscription(db, shop.id))?.pricingPlan).toBe("flat_monthly");
+    expect((await getShopSubscription(db, shop.id))?.pricingPlan).toBe("percent_of_volume");
   });
 });
