@@ -120,8 +120,8 @@ export function AgencyCheckRow({
             </button>
           ) : null}
           {outcome && settled ? (
-            // The page's words and the agency's link are for the desk, not a
-            // printed roster: a printout carries the card's state, not this.
+            // The page's words and the agency's link are for the desk; a
+            // printed roster draws no host, so it carries the card's state only.
             <div className="mt-1 text-sm">
               <FormStatus tone={settled.result && !settled.result.ok ? "danger" : "warning"}>
                 {outcome}

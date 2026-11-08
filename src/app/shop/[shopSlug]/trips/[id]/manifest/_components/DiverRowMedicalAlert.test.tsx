@@ -367,6 +367,7 @@ describe("the manifest printed with the medical alerts", () => {
     return render(
       <DiverRollCall
         context={diverContext({
+          paper: true,
           checkpoint: "departure",
           isDeparture: true,
           timezone: "America/New_York",
@@ -403,6 +404,7 @@ describe("the manifest printed with the medical alerts", () => {
     const { container } = render(
       <DiverRollCall
         context={diverContext({
+          paper: true,
           checkpoint: "departure",
           isDeparture: true,
           timezone: "America/New_York",
