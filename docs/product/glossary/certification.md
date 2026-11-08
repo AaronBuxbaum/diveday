@@ -807,3 +807,6 @@
   who does Open Water and Advanced Open Water here counts twice, as agencies count (dive-domain
   review F7). Level cards only; a specialty such as Nitrox is not in it, and a card captured from
   another shop never is.
+
+
+- **Course preparation and instructor note** — a course departure’s preparation summary reuses the roster’s forms, certification card, payment and learning-materials records. “Prep recorded” describes those records, never permission to board or evidence of a completed qualification. Names link to their existing roster controls. The departure’s shared instructor note records teaching focus and next steps, up to 600 characters, with its last author and time. It is visible only to assigned instructors and live shop owners or managers, never to students or public departure readers. Concurrent edits refuse to overwrite newer words. Disabling Course preparation in Settings hides the summary and prevents note reads and edits without deleting saved notes. Individual student next steps remain on their existing course roster controls and student recap.

@@ -191,9 +191,19 @@ export async function getTripWithBooked(db: DbExecutor, shopId: string, tripId: 
     .groupBy(trips.id, courses.id, diveSites.id)
     .limit(1);
   const row = rows[0];
+  if (!row) return null;
+  // Teaching notes are private to the course instructor audience, read separately.
+  const {
+    courseTeachingNote: _note,
+    courseTeachingNoteAt: _at,
+    courseTeachingNoteDeletedAt: _deletedAt,
+    courseTeachingNoteRevision: _noteRevision,
+    courseTeachingNoteByPersonId: _by,
+    ...publicTrip
+  } = row.trip;
   return row
     ? {
-        ...row.trip,
+        ...publicTrip,
         sellableCapacity: sellableSeats(
           row.trip.capacity,
           row.certifiedPassengers,

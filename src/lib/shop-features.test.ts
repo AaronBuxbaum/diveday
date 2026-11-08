@@ -9,6 +9,8 @@ import {
 
 const allOn = {
   reviewsEnabled: true,
+  conservationEnabled: true,
+  coursePulseEnabled: true,
   dateRequestsEnabled: true,
   lastMinuteListEnabled: true,
   tipsEnabled: true,

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { uuidParam } from "@/lib/uuid";
 import { EmbedChromeCollapse } from "../../../_components/EmbedChromeCollapse";
 import { publicTripMetadata } from "../../../trips/[id]/_lib/page-metadata";
-import TripDetailPage from "../../../trips/[id]/page";
+import { TripDetailPage } from "../../../trips/[id]/TripDetail";
 
 // The frame paints inside its own shell like every route (ADR
 // 20260804-instant-navigation), and that shell is the reason this segment
@@ -31,7 +31,7 @@ export function generateMetadata(props: {
 export default async function EmbeddedTripPage({
   params,
   searchParams,
-}: Parameters<typeof TripDetailPage>[0]) {
+}: Omit<Parameters<typeof TripDetailPage>[0], "isEmbed">) {
   // The trip page narrows the id before its first read too; this file sits
   // under `[id]` as well, and a junk id is a 404 here rather than something a
   // reader has to follow into another file to see (scripts/check-uuid-segments.mjs).

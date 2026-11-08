@@ -8,14 +8,14 @@ const near = (a, b) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - 
 const round1 = (value) => Math.round(value * 10) / 10;
 
 /**
- * Evidence for the two structures dismissed in #2887, not another analyzer.
+ * Evidence for specifically reviewed structures, not another analyzer.
  * The original flags stay intact. Old records without this evidence cannot
  * claim these settlements; a new capture must prove the structure again.
  */
 export function settlementContextFor(snapshot) {
   const ix = buildIndex(snapshot);
   const kids = (el) => (ix.kids[el?.i] || []).map((i) => ix.els[i]);
-  const context = { version: 1, conditionsLine: [], certCheckSteps: [] };
+  const context = { version: 1, conditionsLine: [], certCheckSteps: [], recapPanelEdges: [] };
   if (snapshot.truncated) return context;
 
   for (const line of ix.els) {
@@ -165,6 +165,54 @@ export function settlementContextFor(snapshot) {
     )
       continue;
     context.certCheckSteps.push({ el: icons[0].i, xs: icons.map((icon) => round1(icon.x)) });
+  }
+  // The recap's three peer headings belong to independent panels. Two use
+  // SectionCard's 1px border; the buddy invitation is a borderless wash. Equal
+  // inline padding therefore puts its ink exactly 1px before the card ink.
+  // Settle only this measured structure: another heading, changed padding,
+  // or an offset not fully accounted for by those borders stays reportable.
+  const labels = ["How was your day?", "Your next dive", "Bring a buddy next time"];
+  const headings = ix.els.filter(
+    (el) =>
+      el.tag === "h2" &&
+      isVisible(el) &&
+      has(el, "font-semibold text-2xl tracking-tight") &&
+      el.text?.length,
+  );
+  if (headings.length === labels.length) {
+    const ordered = labels.map((label) => headings.find((el) => el.label === label));
+    const panels = ordered.map((heading) => {
+      let ancestor = ix.els[heading?.p];
+      while (ancestor && ancestor.tag !== "section") ancestor = ix.els[ancestor.p];
+      return ancestor;
+    });
+    const [review, next, buddy] = panels;
+    if (
+      ordered.every(Boolean) &&
+      panels.every(
+        (panel) =>
+          panel?.tag === "section" &&
+          has(panel, "rounded-panel p-5 sm:p-6") &&
+          panel.p === buddy?.p &&
+          near(panel.x, buddy?.x) &&
+          near(panel.w, buddy?.w) &&
+          [20, 24].includes(panel.pad?.[3]) &&
+          near(panel.pad[3], buddy.pad?.[3]) &&
+          near(panel.pad[1], buddy.pad?.[1]),
+      ) &&
+      [review, next].every(
+        (panel) => has(panel, "border border-border bg-surface") && panel.bw.every((b) => b === 1),
+      ) &&
+      has(buddy, "bg-surface-sunken") &&
+      buddy.bw.every((b) => b === 0) &&
+      ordered.every((heading, index) =>
+        near(heading.text[0][0], panels[index].x + panels[index].pad[3] + panels[index].bw[3]),
+      )
+    )
+      context.recapPanelEdges.push({
+        el: ordered[2].i,
+        starts: [round1(ordered[2].text[0][0]), round1(ordered[0].text[0][0])],
+      });
   }
   return context;
 }

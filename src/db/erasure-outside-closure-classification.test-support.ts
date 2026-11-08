@@ -72,21 +72,8 @@ export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   course_forms: "the course forms a shop asks students to sign, by title and agency code",
   course_form_requirements: "which course asks for which form, and from when",
   trip_lenses: "the shop’s own word for a kind of day",
-  // The departure and the rows that hang off it only: none carries a foreign key
-  // to a person. `trips` reached the closure by accident, through its old
-  // `dive_site_id` pointer to `dive_sites` (which names a staff author), and left
-  // it when the pointer went (issue #3237). A diver reaches a departure through
-  // `bookings`, which the erasure strips; a title that carries a diver's name is
-  // the shop's own word and stays (owner, 2026-11-01).
-  trips:
-    "the shop's own departure: schedule, price, conditions and arrival notes. It names no person by key; an erased diver reaches it only through `bookings`, and a title that mentions them stays (owner, 2026-11-01)",
-  trip_requirements:
-    "the gates one departure asks of every diver (waiver, level, specialties, nitrox, payment): the shop's rule, never a diver's data",
-  trip_schedule_days: "the meeting windows of one departure: timestamps only, no person",
-  departure_boat_safety_snapshots:
-    "the hull's papers, radio and notices as they stood when the boat left: the boat's record, no diver",
-  offline_manifest_snapshot_revisions:
-    "a revision counter per departure that tells an offline manifest it is stale; it holds no manifest and no person",
+  // Series have no person key. Their concrete departures now enter the closure
+  // through the staff teaching-note author and are decided in ERASURE_KEEPS.
   trip_series:
     "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows; a title that mentions an erased diver stays (owner, 2026-11-01)",
   trip_series_skips:

@@ -15,8 +15,10 @@ import { pathToFileURL } from "node:url";
  * A second pass covers the consumers the segment walk cannot see: a shared
  * Client Component under `src/components` has no route ancestry of its own, so
  * its provider is whichever page renders it. For each such consumer the guard
- * follows the import graph backwards to every `src/app` file that pulls it in
- * and requires *that* file's ancestry to offer the consumer's namespaces.
+ * follows the import graph backwards to every route that pulls it in. A shared
+ * server composition may carry the provider too, but only on an import path
+ * that renders the consumer inside that provider; a neighboring component or
+ * a second route that bypasses it does not count.
  * Moved from `src/i18n/provider-coverage.test.ts` (test review 2026-10-14, L2c).
  */
 
@@ -101,6 +103,154 @@ function resolveImport(root, importer, specifier, sources) {
   return null;
 }
 
+/** Value-import edges, including the local component names rendered by a wrapper. */
+function importerGraph(root, sources) {
+  const graph = new Map();
+  for (const [file, source] of sources) {
+    if (file.endsWith(".test.tsx")) continue;
+    for (const match of source.matchAll(/\bimport\s+([^;]*?)\s+from\s+["']([^"']+)["']/g)) {
+      if (/^type\b/.test(match[1])) continue;
+      const clause = match[1].trim();
+      const bindings = clause
+        .replace(/[{}]/g, "")
+        .split(",")
+        .map((name) => name.trim())
+        .filter((name) => name && !/^type\s/.test(name))
+        .map((name) => {
+          const parts = name.split(/\s+as\s+/);
+          return { imported: parts[0].trim(), local: parts.at(-1).trim() };
+        });
+      if (bindings.length === 0) continue;
+      const target = resolveImport(root, file, match[2], sources);
+      if (!target) continue;
+      const edges = graph.get(target) ?? [];
+      edges.push({ importer: file, bindings });
+      graph.set(target, edges);
+    }
+  }
+  return graph;
+}
+
+/**
+ * A multi-export client file can render different subtrees: the cancelled
+ * notice does not render the booking form merely because both share a file.
+ * Resolve named function exports when possible, retaining the whole source for
+ * shapes this deliberately small source guard cannot distinguish.
+ */
+function importedRenderSource(source, bindings) {
+  const declarations = [
+    ...source.matchAll(/\bexport\s+(?:default\s+)?(?:async\s+)?function\s+(\w+)\b/g),
+  ];
+  const selected = declarations.filter((declaration) =>
+    bindings.some((binding) => binding.imported === declaration[1]),
+  );
+  if (selected.length === 0) return source;
+  return selected
+    .map((declaration) => {
+      const next = declarations.find((candidate) => candidate.index > declaration.index);
+      return source.slice(declaration.index, next?.index ?? source.length);
+    })
+    .join("\n");
+}
+
+function combinedOffers(...proofs) {
+  const offered = new Set();
+  let sawProvider = false;
+  for (const proof of proofs) {
+    if (!proof) continue;
+    sawProvider ||= proof.sawProvider;
+    for (const namespace of proof.offered) offered.add(namespace);
+  }
+  return { sawProvider, offered };
+}
+
+/** A server wrapper supplies copy only to imported components inside its provider. */
+function renderedProvider(source, names) {
+  if (/^\s*["']use client["']/m.test(source)) return null;
+  const offered = new Set();
+  let sawProvider = false;
+  for (const match of source.matchAll(
+    /<(DiverIntlProvider|ErrorBoundaryIntlProvider)\b[\s\S]*?<\/\1\s*>/g,
+  )) {
+    const block = match[0];
+    if (!names.some((name) => new RegExp(`<${name.replace(/\*/g, "")}\\b`).test(block))) {
+      continue;
+    }
+    // Keep module-scope namespace lists available without borrowing another
+    // provider's inline list in the same component.
+    const constants = [...source.matchAll(/const\s+[A-Z_][A-Z0-9_]*\s*=\s*\[[^\]]*\]/g)]
+      .map((constant) => constant[0])
+      .join("\n");
+    const namespaces = providedNamespaces(`${constants}\n${block}`);
+    if (!namespaces) continue;
+    sawProvider = true;
+    for (const namespace of namespaces) offered.add(namespace);
+  }
+  return { sawProvider, offered };
+}
+
+/** A rendered server shell can put its own provider around the route's children. */
+function renderedShellProviders(file, sources, graph) {
+  const source = sources.get(file) ?? "";
+  const offered = new Set();
+  let sawProvider = false;
+  for (const [target, edges] of graph) {
+    for (const edge of edges) {
+      if (edge.importer !== file) continue;
+      const shell = importedRenderSource(sources.get(target) ?? "", edge.bindings);
+      if (/^\s*["']use client["']/m.test(shell)) continue;
+      for (const { local } of edge.bindings) {
+        if (!new RegExp(`<${local}\\b[\\s\\S]*?<\\/${local}\\s*>`).test(source)) continue;
+        for (const match of shell.matchAll(
+          /<(DiverIntlProvider|ErrorBoundaryIntlProvider)\b[\s\S]*?<\/\1\s*>/g,
+        )) {
+          if (!/\{\s*children\s*\}/.test(match[0])) continue;
+          const namespaces = providedNamespaces(match[0]);
+          if (!namespaces) continue;
+          sawProvider = true;
+          for (const namespace of namespaces) offered.add(namespace);
+        }
+      }
+    }
+  }
+  return { sawProvider, offered };
+}
+
+/** Every import route is checked separately, so a wrapped route cannot bless a bypass. */
+function compositionOffers(app, consumer, sources, graph) {
+  const results = [];
+  const walk = (file, inherited, seen, throughNames, needed) => {
+    const proof = combinedOffers(
+      inherited,
+      offeredAbove(app, file, sources),
+      renderedShellProviders(file, sources, graph),
+    );
+    const isSegment =
+      file.startsWith(app + path.sep) && SEGMENT_FILES.includes(path.basename(file));
+    const parents = graph.get(file) ?? [];
+    if (isSegment || parents.length === 0) {
+      results.push({ ...proof, file, needed });
+      return;
+    }
+    for (const { importer, bindings } of parents) {
+      if (seen.has(importer)) continue;
+      const rendered = importedRenderSource(sources.get(file) ?? "", bindings);
+      if (throughNames && !throughNames.some((name) => new RegExp(`\\b${name}\\b`).test(rendered)))
+        continue;
+      const names = bindings.map((binding) => binding.local);
+      walk(
+        importer,
+        combinedOffers(proof, renderedProvider(sources.get(importer) ?? "", names)),
+        new Set([...seen, importer]),
+        names,
+        file === consumer ? requiredNamespaces(rendered) : needed,
+      );
+    }
+  };
+  walk(consumer, null, new Set([consumer]), null, requiredNamespaces(sources.get(consumer) ?? ""));
+  return results.length ? results : [{ ...offeredAbove(app, consumer, sources), file: consumer }];
+}
+
 /** Every `src/app` file that imports `consumer`, through other shared components if need be. */
 function appImportersOf(root, app, consumer, sources) {
   const importersOf = new Map();
@@ -152,6 +302,7 @@ export async function providerProblems(root = process.cwd()) {
     sources.set(file, stripComments(await readFile(file, "utf8")));
   }
   const problems = [];
+  const graph = importerGraph(root, sources);
   const check = (where, needed, { sawProvider, offered }, consumer) => {
     const via = consumer ? ` (rendering ${consumer})` : "";
     if (!sawProvider) {
@@ -170,18 +321,16 @@ export async function providerProblems(root = process.cwd()) {
   for (const [file, source] of sources) {
     if (!file.startsWith(app + path.sep) || !isClientConsumer(source)) continue;
     consumers++;
-    check(rel(file), requiredNamespaces(source), offeredAbove(app, file, sources));
+    for (const proof of compositionOffers(app, file, sources, graph)) {
+      check(rel(file), proof.needed ?? requiredNamespaces(source), proof);
+    }
   }
   for (const [file, source] of sources) {
     if (!file.startsWith(components + path.sep) || file.endsWith(".test.tsx")) continue;
     if (!isClientConsumer(source)) continue;
-    for (const importer of appImportersOf(root, app, file, sources)) {
-      check(
-        rel(importer),
-        requiredNamespaces(source),
-        offeredAbove(app, importer, sources),
-        rel(file),
-      );
+    for (const proof of compositionOffers(app, file, sources, graph)) {
+      if (!proof.file.startsWith(app + path.sep)) continue;
+      check(rel(proof.file), proof.needed ?? requiredNamespaces(source), proof, rel(file));
     }
   }
 

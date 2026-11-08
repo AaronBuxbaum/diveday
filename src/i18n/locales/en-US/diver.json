@@ -663,6 +663,7 @@
     "thanksHint": "Only that person, the shop owner and the managers see this. It is not part of your review.",
     "commentLabel": "Anything you’d tell another diver?",
     "commentPlaceholder": "The crew, the sites, how the day ran",
+    "usageHint": "Your rating can appear publicly. The shop reviews your words before publishing them with your first name and last initial.",
     "submit": "Leave my review",
     "savedPublished": "Thanks. Your rating is up.",
     "savedPending": "Thanks. The shop will read your words before they go up.",
@@ -813,7 +814,14 @@
     "nextDiveSameSite": "Back to {site}",
     "nextDiveSoonest": "The next one with room",
     "nextDiveLevelCovers": "Your {level} card covers it.",
-    "nextDiveSeats": "{count, plural, one {# seat} other {# seats}}"
+    "nextDiveSeats": "{count, plural, one {# seat} other {# seats}}",
+    "conservation": {
+      "heading": "Recorded conservation actions",
+      "byShop": "Recorded by {shopName}",
+      "litter_kg": "{quantity} kg of litter collected",
+      "litter_items": "{quantity} litter items collected",
+      "line_m": "{quantity} m of fishing line removed"
+    }
   },
   "register": {
     "title": "Register with {shop}",

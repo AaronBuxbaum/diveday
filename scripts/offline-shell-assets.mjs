@@ -11,7 +11,9 @@ import vm from "node:vm";
  * `entryCSSFiles`) and the chunks every client component under it needs
  * (`clientModules[*].chunks`, which is where lazily imported chunks appear).
  * `build-manifest.json` adds the files every App Router page loads
- * (`rootMainFiles`, `polyfillFiles`). `next build` itself unions the first
+ * (`rootMainFiles`, `polyfillFiles`). Webpack omits `entryJSFiles`; its own page
+ * chunk comes from `clientModules`, and its reachable async imports come from
+ * `react-loadable-manifest.json`. `next build` itself unions the first
  * two for its route size table (`route-bundle-stats.js`).
  *
  * `clientModules` lists only client-reference chunks. A chunk reached by
@@ -87,10 +89,59 @@ function followAsyncChunks(distDir, seeds) {
   return found;
 }
 
+/** Webpack names async chunks by id; its loadable manifest connects them to source importers. */
+function webpackAsyncFiles(distDir, clientModules) {
+  const file = path.join(distDir, "react-loadable-manifest.json");
+  if (!existsSync(file))
+    throw new Error("offline shell assets: webpack react-loadable-manifest.json is missing");
+  const entries = Object.entries(JSON.parse(readFileSync(file, "utf8")));
+  const withoutExtension = (source) => source.replace(/\.[cm]?[jt]sx?$/, "");
+  const reachable = new Set(
+    Object.keys(clientModules).map((source) => withoutExtension(source.replaceAll("\\", "/"))),
+  );
+  const consumed = new Set();
+  const files = [];
+  let advanced = true;
+  while (advanced) {
+    advanced = false;
+    for (const [key, entry] of entries) {
+      if (consumed.has(key)) continue;
+      const [importer, target] = key.split(" -> ");
+      const source = withoutExtension(importer);
+      if (
+        ![...reachable].some(
+          (candidate) => candidate === source || candidate.endsWith(`/src/${source}`),
+        )
+      )
+        continue;
+      consumed.add(key);
+      files.push(...(entry.files ?? []));
+      const local = target?.startsWith("@/")
+        ? target.slice(2)
+        : target?.startsWith(".")
+          ? path.posix.normalize(path.posix.join(path.posix.dirname(importer), target))
+          : null;
+      if (local) reachable.add(withoutExtension(local));
+      advanced = true;
+    }
+  }
+  return files;
+}
+
 /** Sorted, de-duplicated `/_next/static/...` paths the offline shell needs. Throws rather than returns a thin list. */
 export function collectOfflineShellAssets(distDir, route = SHELL_ROUTE) {
   const manifest = readRouteManifest(distDir, route);
-  const entryJs = manifest.entryJSFiles ?? {};
+  // Turbopack supplies entryJSFiles. Webpack's own page chunk lives among
+  // its client-reference chunks instead; require that exact route's chunk.
+  const webpack = manifest.entryJSFiles === undefined;
+  const clientModules = manifest.clientModules ?? {};
+  const pagePrefix = `/_next/static/chunks/app${route}/page-`;
+  const entryJs = manifest.entryJSFiles ?? {
+    [`${route.slice(1)}/page`]: Object.values(clientModules)
+      .flatMap((module) => module?.chunks ?? [])
+      .map(normalizeAsset)
+      .filter((asset) => asset?.startsWith(pagePrefix) && asset.endsWith(".js")),
+  };
   const pageEntry = Object.keys(entryJs).find((k) => k.endsWith(`${route.slice(1)}/page`));
   const pageFiles = (pageEntry ? entryJs[pageEntry] : []).map(normalizeAsset).filter(Boolean);
   if (pageFiles.length === 0) {
@@ -113,6 +164,7 @@ export function collectOfflineShellAssets(distDir, route = SHELL_ROUTE) {
     ...Object.values(manifest.clientModules ?? {}).flatMap((m) => m?.chunks ?? []),
     ...(buildManifest.rootMainFiles ?? []),
     ...(buildManifest.polyfillFiles ?? []),
+    ...(webpack ? webpackAsyncFiles(distDir, clientModules) : []),
   ];
   const listed = [...new Set(raw.map(normalizeAsset).filter(Boolean))];
   for (const asset of listed) {

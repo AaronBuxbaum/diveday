@@ -13,7 +13,8 @@ import { routeSource } from "@/test/route-source";
  * `scripts/check-intl-providers.mjs`, and for the same reason.
  */
 
-const SOURCE = component("page.tsx");
+// Public and embedded routes both render this shared server composition.
+const SOURCE = component("TripDetail.tsx");
 /** The page's one wave of reads, lifted beside it so the route stays a renderer (#2353). */
 const READS_SOURCE = component("_lib/page-reads.ts");
 

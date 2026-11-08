@@ -94,6 +94,7 @@ import {
   tripBlowoutDivers,
   tripBlowouts,
   tripChangeEvents,
+  tripConservation,
   tripDives,
   tripHelpRequests,
   tripLenses,
@@ -258,6 +259,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     await db.delete(executedDives).where(inArray(executedDives.tripId, tripIds));
     // The crew's sighting tally references trips, dive sites and people, so it
     // goes with the dive log it sits beside on the manifest.
+    await db.delete(tripConservation).where(inArray(tripConservation.tripId, tripIds));
     await db.delete(tripSightings).where(inArray(tripSightings.tripId, tripIds));
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }

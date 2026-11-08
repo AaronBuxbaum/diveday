@@ -1934,7 +1934,7 @@ export function clusterKey(flag) {
  * Whether a flag is one `scripts/pixel-probe-settled.json` has already judged
  * right. An entry names the check and either the exact signature or a
  * `classes` list every one of which the flag's class string must carry.
- * The two contextual #2887 settlements additionally require freshly captured
+ * Contextual settlements additionally require freshly captured
  * evidence for their documented structure and geometry. Missing evidence or
  * an unknown context leaves the flag open; older signature entries are intact.
  */
@@ -1978,6 +1978,21 @@ export function settledEntryFor(flag, settled, record) {
               step.xs.length === 3 &&
               flag.measure.xs?.length === 3 &&
               step.xs.every((x, index) => x === flag.measure.xs[index]),
+          )
+        )
+          continue;
+      } else if (entry.context === "recap-independent-panels") {
+        if (
+          flag.check !== "ragged-edges" ||
+          flag.measure?.kind !== "headings" ||
+          flag.measure.count !== 3 ||
+          flag.measure.starts?.length !== 2 ||
+          !evidence.recapPanelEdges?.some(
+            (edge) =>
+              edge.el === flag.el &&
+              edge.starts.length === 2 &&
+              edge.starts[1] - edge.starts[0] === 1 &&
+              edge.starts.every((x, index) => x === flag.measure.starts[index]),
           )
         )
           continue;

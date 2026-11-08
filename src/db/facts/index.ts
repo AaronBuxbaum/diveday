@@ -66,6 +66,7 @@ import {
   fileAPulseOnTheRecap,
   findTheOtherSharedPhoto,
   recordASightingOnTheRecap,
+  returnTheConservationRecap,
   shareTheRecapPhoto,
   timeEveryRecapDive,
 } from "./recap-states";
@@ -235,6 +236,7 @@ const FACTS = {
   offSeason: withArgs(offSeasonArgs, ({ db, shop, now }, args) =>
     emptyTheBoard(db, shop.id, args, now),
   ),
+  returnedConservationRecap: ({ db, shop, now }) => returnTheConservationRecap(db, shop.id, now),
   certifiedRecap: ({ db, shop }) => certifyTheRecapDiver(db, shop.id),
   changedDiveSite: ({ db, shop }) => diveTheRecapSomewhereElse(db, shop.id),
   observedSpecies: ({ db, shop }) => recordASightingOnTheRecap(db, shop.id),

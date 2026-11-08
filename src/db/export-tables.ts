@@ -73,6 +73,7 @@ import {
   staffCredentials,
   staffReplies,
   tripChangeEvents,
+  tripConservation,
   tripHelpRequests,
   tripLenses,
   tripRequirements,
@@ -331,6 +332,11 @@ export const EXPORT_TABLES = {
   // The crew's own tally beside the dive log it sits under. Ordered by
   // departure then site then species, so a reader walking the file stays
   // inside one day and one reef.
+  tripConservation: {
+    table: tripConservation,
+    order: [asc(tripConservation.recordedAt), asc(tripConservation.id)],
+    scope: { shopColumn: tripConservation.shopId },
+  },
   tripSightings: {
     table: tripSightings,
     order: [

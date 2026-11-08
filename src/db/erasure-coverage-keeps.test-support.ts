@@ -84,6 +84,19 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "that a staff member's Monday email went out for a week — a date and a delivery status. Only staff receive it, and it holds a date and a status, no words",
 
   // --- the shop's own objects, holding nobody ------------------------------
+  // The teaching-note author brings trips and these departure-only children
+  // into the person-key closure. It is a staff actor, not a diver subject.
+  trips:
+    "the shop's departure: schedule, price, conditions, arrival notes and private teaching focus. Its person key names the staff note author, not a diver; a mention in staff prose stays (owner, 2026-11-01)",
+  trip_requirements:
+    "the gates one departure asks of every diver (waiver, level, specialties, nitrox, payment): the shop's rule, never a diver's data",
+  trip_schedule_days: "the meeting windows of one departure: timestamps only, no person",
+  departure_boat_safety_snapshots:
+    "the hull's papers, radio and notices as they stood when the boat left: the boat's record, no diver",
+  offline_manifest_snapshot_revisions:
+    "a revision counter per departure that tells an offline manifest it is stale; it holds no manifest and no person",
+  trip_conservation:
+    "measured actions from a departure: kind, quantity, place and staff prose, attributed to the shop. Its only person key names the staff recorder; a mention of an erased diver in staff prose stays (owner, 2026-11-01)",
   trip_dives: "the dives inside a departure, by site and order",
   trip_recap_photos:
     "the shop’s photographs of a departure, uploaded by a staff member and attached to the trip rather than to anyone on it. A photo *of* a diver is `recap_photos`, which the erasure deletes and queues for blob deletion",

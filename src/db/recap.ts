@@ -18,6 +18,7 @@ import type { BrandDisplayFontCode } from "@/lib/brand";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import type { ConservationFact } from "@/lib/conservation";
 import { crewThanksChoice } from "@/lib/crew-thanks-choice";
 import { rungOffsetMs } from "@/lib/departure-clock";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -85,6 +86,7 @@ import {
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking } from "./tips";
+import { tripConservationFacts } from "./trip-conservation";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives, seatNotCancelled } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
@@ -143,6 +145,7 @@ export type RecapSite = {
 };
 
 export type RecapPageData = {
+  conservation: ConservationFact[];
   shop: {
     /**
      * The shop this booking belongs to. Carried so the thread's after-state
@@ -421,7 +424,7 @@ export async function getRecapPageState(
   const leftAtDock = dock.then(leftAtTheDockOf);
   const [bySeat, loaded] = await Promise.all([
     recapClosedBySeat(db, row, bookingId, now, leftAtDock),
-    loadRecapPageData(db, row, bookingId, dock),
+    loadRecapPageData(db, row, bookingId, dock, now),
   ]);
   if (bySeat) return closedRecapState(bySeat, shop);
   if (!loaded) return { kind: "dead", shop };
@@ -813,6 +816,7 @@ async function loadRecapPageData(
   row: RecapRow,
   bookingId: string,
   dock: Promise<DockEvidence>,
+  now: Date,
 ): Promise<{
   data: Omit<RecapPageData, "tip">;
   latestTip: Awaited<ReturnType<typeof getLatestTipForBooking>>;
@@ -834,6 +838,7 @@ async function loadRecapPageData(
     sessionCertifications,
     nextStepAuthors,
     tappedSightings,
+    conservation,
     dockEvidence,
   ] = await Promise.all([
     getTripWithBooked(db, row.shopId, row.tripId),
@@ -920,6 +925,7 @@ async function loadRecapPageData(
           .limit(1)
       : Promise.resolve([]),
     listTripSightings(db, row.shopId, row.tripId),
+    tripConservationFacts(db, row.shopId, row.tripId, now),
     dock,
   ]);
   if (!trip) return null;
@@ -1034,6 +1040,7 @@ async function loadRecapPageData(
     (nextStepAuthorRow?.consentAt && nextStepAuthorRow.publicName?.trim()) || null;
 
   const data: Omit<RecapPageData, "tip"> = {
+    conservation,
     shop: {
       id: row.shopId,
       name: row.shopName,

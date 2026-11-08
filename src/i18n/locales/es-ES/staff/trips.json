@@ -945,5 +945,66 @@
     "noCourseInstructor": "No hay un instructor del curso disponible en esta salida.",
     "checkTrainingMark": "Revisa esta marca de formación antes de asignar un instructor.",
     "checkCourseLimit": "Revisa los límites de este curso antes de bucear."
+  },
+  "coursePulse": {
+    "heading": "Preparación del curso",
+    "summary": "Preparación registrada: {count} / {total}",
+    "complete": "Preparación registrada",
+    "empty": "Aún no hay estudiantes en esta salida.",
+    "items": {
+      "forms": "Formularios pendientes",
+      "card": "Tarjeta por revisar",
+      "payment": "Pago pendiente",
+      "materials": "Materiales pendientes",
+      "staff": "Seguimiento del equipo"
+    },
+    "noteLabel": "Nota del instructor",
+    "audience": "Enfoque de enseñanza y próximos pasos para esta salida. Visible para sus instructores asignados y la gerencia del centro.",
+    "save": "Guardar nota",
+    "delete": "Eliminar nota",
+    "saved": "Nota guardada.",
+    "deleted": "Nota eliminada.",
+    "attribution": "{name} · {when} ({zone})",
+    "errors": {
+      "invalid": "Revisa la nota e inténtalo de nuevo.",
+      "too_long": "La nota debe tener como máximo 600 caracteres.",
+      "changed": "Alguien cambió esta nota. Recarga la página antes de guardar. Tu texto sigue aquí.",
+      "forbidden": "Solo los instructores de esta salida y la gerencia pueden editar esta nota.",
+      "disabled": "La preparación del curso está desactivada en Ajustes.",
+      "cancelled": "Esta salida fue cancelada.",
+      "not_found": "Esta salida ya no está disponible.",
+      "not_a_course_session": "Esta salida no tiene un curso."
+    },
+    "undoFailed": "No se pudo restaurar esta nota. Puede haber cambiado o la opción Deshacer ya no está disponible."
+  },
+  "conservation": {
+    "heading": "Registros de conservación",
+    "hint": "Registra acciones medidas de esta salida. Los buceadores verán estos datos en su resumen, atribuidos a tu centro.",
+    "empty": "No hay acciones de conservación registradas.",
+    "afterReturn": "Registra acciones después del regreso de esta salida.",
+    "kind": "Acción registrada y unidad",
+    "quantity": "Cantidad",
+    "location": "Lugar (opcional)",
+    "note": "Qué se recogió (opcional)",
+    "save": "Guardar cambios",
+    "add": "Registrar una acción",
+    "delete": "Eliminar",
+    "saved": "Registro de conservación guardado.",
+    "edit": "Editar registro",
+    "recorded": "Registrado {when} · {zone}",
+    "kinds": {
+      "litter_kg": "Residuos recogidos (kg)",
+      "litter_items": "Residuos recogidos (objetos)",
+      "line_m": "Sedal recogido (m)"
+    },
+    "errors": {
+      "invalid": "Ingresa una cantidad medida positiva, con números enteros para objetos. Usa menos de 120 caracteres para el lugar y de 500 para la nota.",
+      "not_authorized": "Ya no tienes permiso para registrar acciones de este centro.",
+      "unavailable": "Esta salida o función ya no está disponible.",
+      "not_returned": "Registra acciones después del regreso de la salida.",
+      "stale": "Este registro cambió. Actualiza la página antes de volver a editarlo."
+    },
+    "deleted": "Registro de conservación eliminado.",
+    "undoFailed": "No se pudo restaurar este registro. Puede haber cambiado o la opción Deshacer ya no está disponible."
   }
 }

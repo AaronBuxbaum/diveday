@@ -11,6 +11,7 @@ import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
+import { seedConservation } from "./seed-conservation";
 import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCounterRental } from "./seed-counter-rental";
 import { seedCourseFormWording } from "./seed-course-form-wording";
@@ -555,6 +556,7 @@ const THE_DAY: readonly SeedStep[] = [
   // and the recap's keepsake line, never by readiness, the roll call or a
   // head count — so nothing seeded before it moves.
   demo((db, c) => seedSightings(db, c.shopId)),
+  demo((db, c) => seedConservation(db, c.shopId, c.staff.instructor.id)),
   // Adds-only and late: a snorkeler and a rider on today's reef boat, into the
   // two places `seed-trips.ts` holds for them (src/db/seed-mixed-boat.ts, ADR
   // 20261007-participant-types).

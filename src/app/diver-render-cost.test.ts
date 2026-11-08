@@ -302,7 +302,10 @@ describe("how many round trips a diver's page waits for, one after another", () 
 // recap's `dive_site_creatures` read (`listSiteFieldGuides`, src/db/dive-sites.ts,
 // which returns before sending when no dive names a site) used to be skipped for
 // them and now runs, one statement.
-const READY_AFTER_CEILING = 65;
+// 65 → 66 (#1199): one tenant-scoped measured-conservation projection beside the recap's
+// existing reads. Departure validity and the owner switch are joined into that statement;
+// neither introduces another phase. The public recap remains under its existing ceiling.
+const READY_AFTER_CEILING = 66;
 const READY_AFTER_PHASE_CEILING = 12;
 // `/recap/[token]`, replayed from item 32: the recap's 3 and the after-state's
 // next-dive read, with no handoff. Before item 32 the same reads were 7 + 2.

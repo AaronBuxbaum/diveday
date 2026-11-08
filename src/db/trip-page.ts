@@ -2,6 +2,8 @@ import type { Role } from "@/lib/authz";
 import { canPersonRefund, canPersonRetireMedicalRefusal } from "./authz";
 import { listBoats } from "./boats";
 import type { AppDb } from "./client";
+import { getCoursePulse } from "./course-pulse";
+import { getTripConservationPanel } from "./trip-conservation";
 import { getTripGuests, type TripGuestsFilters, type TripGuestsShop } from "./trip-guests";
 import { listTripLenses } from "./trip-lenses";
 import { getTripOverview, type TripOverviewShop } from "./trip-overview";
@@ -38,7 +40,17 @@ export async function getTripManifest(
 ) {
   const personId = input.session.user.personId;
   const sharedReads = loadTripSharedReads(db, shop.id, tripId);
-  const [overview, guests, boats, lenses, refund, stage, retireMedicalRefusal] = await Promise.all([
+  const [
+    overview,
+    guests,
+    boats,
+    lenses,
+    refund,
+    stage,
+    coursePulse,
+    conservation,
+    retireMedicalRefusal,
+  ] = await Promise.all([
     getTripOverview(db, shop, tripId, personId, undefined, sharedReads),
     getTripGuests(db, shop, tripId, input.filters, sharedReads),
     // The fleet, for the Details form's hull select. Live hulls only: this is
@@ -50,12 +62,16 @@ export async function getTripManifest(
     listTripLenses(db, shop.id),
     canPersonRefund(db, shop.id, personId),
     latestTripStage(db, shop.id, tripId),
+    getCoursePulse(db, shop.id, tripId, personId, sharedReads),
+    getTripConservationPanel(db, shop.id, tripId, personId),
     // Who may give a refused seat a fresh release; the action re-checks.
     canPersonRetireMedicalRefusal(db, shop.id, personId),
   ]);
   if (!overview || !guests) return null;
   return {
     overview,
+    coursePulse,
+    conservation,
     guests,
     boats,
     lenses,

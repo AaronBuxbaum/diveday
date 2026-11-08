@@ -133,6 +133,19 @@ was deleted on 2026-10-03 (pre-pilot, no bookmarks to keep); the wait list is th
   guidance is authored beside Where we meet, while invite and add actions are its terminal
   bands, not detached forms.
 
+**Amended 2026-11-08 (#1205, #1199):** course preparation answers the instructor's question,
+"who still needs preparation, and what are we teaching next?" above the existing roster. It
+summarizes the existing preparation categories and keeps one private departure note; it introduces
+no second readiness decision. The note's secondary save leaves the roster's main action in place.
+The roster remains the place to fix a student's missing evidence. Remove the preparation summary first if
+it merely repeats a settled roster; the note still earns its place as the next teaching focus.
+
+Conservation belongs after the departure facts in Details: "what measured action did this crew
+record?" A record is a quantity with its unit, optional location and collection note, then an
+in-place correction disclosure. The add disclosure owns the section's one primary action;
+correction and deletion stay secondary, with Undo after deletion. No score, badge or inferred
+environmental benefit is needed. The owner's Features switch removes this optional section and its recap facts together.
+
 **Amended 2026-10-27 (S7, S3; #3141):** each Details row owns one subject and one explicit save. The plan edits dives and their operational kit/decompression/lunch facts; Where we meet edits the meeting point with optional arrival guidance disclosed; Timing owns dates, times and meeting days; Booking and payment owns seats, price, deposits and cancellation/minimum policy; Departure details owns title, description and trip tag. Boat/mode/self-guided controls stay with Boat & crew behind Edit boat, independently of the existing crew assignment controls. Per-dive site choices stay visible while secondary name, ride and descriptive fields disclose on request. Each save submits its own fields, and omitted facts are preserved from the locked current departure rather than a stale browser snapshot. The roster keeps its neutral Ready group, because boarding and counter check-in are independent; routine Not here confirmation sits inside the person's existing details, while blockers, late arrivals, turned-away facts and released-seat remedies stay in the open. Phone/desktop rendered-state review is required before this amendment is called visually verified.
 
 **Amended 2026-09-17** (design review, "as rendered"). The About panel said every fact twice: five
@@ -579,6 +592,14 @@ one line beside Add to calendar, *Add to Wallet*, on every state after booking; 
 - **Composition:** a step spine, because getting ready is a sequence, followed by the reusable
   arrival/change reading and the party hand-off; the same spine grammar the staff home speaks makes
   the product one product.
+
+**Amended 2026-11-08 (#1213, #1199):** the returned state shows measured conservation facts
+below the log entry, attributed to the shop, only when that shop uses the feature. The arriving
+question is "what happened on our dive?"; a quiet factual line answers it without another card or
+action. Remove the collection note first if the measurement and location already tell the story.
+The review textarea qualifies public use directly below the field in small supporting copy;
+there is no extra permission control or separate explanation panel competing with the review.
+Phone and desktop filled-state captures preserve one obvious submission action in that section.
 
 ### The waiver — `/waivers/[token]`
 

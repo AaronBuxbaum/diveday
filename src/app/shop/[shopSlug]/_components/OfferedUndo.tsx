@@ -38,6 +38,10 @@ export function OfferedUndo({
 
 function undoMessage(offer: UndoOffer, by: string | undefined, t: StaffTranslator): string {
   switch (offer.undo) {
+    case "trip-conservation":
+      return t("trips.conservation.deleted");
+    case "course-teaching-note":
+      return t("trips.coursePulse.deleted");
     case "diver-card":
       return t("divers.notices.cardRemovedToast", {
         name: by ?? t("divers.certifications.noCertificationClearedByUnknown"),

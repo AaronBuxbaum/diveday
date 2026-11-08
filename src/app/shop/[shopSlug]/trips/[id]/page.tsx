@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -20,6 +19,8 @@ import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
 import { blowoutPath } from "./_components/blowout/blowout-path";
+import { ConservationPanel } from "./_components/ConservationPanel";
+import { CoursePulse } from "./_components/CoursePulse";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { departureStateOf } from "./_components/departure-states";
@@ -32,12 +33,14 @@ import { addBandFor } from "./_components/seat-request-band";
 import { TripAboutLinks } from "./_components/TripAboutLinks";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { TripAddBookingLink } from "./_components/TripAddBookingLink";
+import { TripDeskConnectivity } from "./_components/TripDeskConnectivity";
+import { TripHeaderBadges } from "./_components/TripHeaderBadges";
 import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { TripMoreActions } from "./_components/TripMoreActions";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
+import { TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
-import { TripStageBadge, TripTabs } from "./_components/TripTabs";
+import { TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
 import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-price";
 import { showsDetailsTab } from "./_components/trip-notice-tabs";
@@ -120,6 +123,7 @@ export default async function ManageTripPage({
   if (!manifest) notFound();
   const {
     overview,
+    coursePulse,
     guests,
     boats: shopBoats,
     lenses: shopLenses,
@@ -234,33 +238,9 @@ export default async function ManageTripPage({
           locale={locale}
           timeZone={shop.timezone}
           badge={
-            <>
-              <TripStageBadge stage={shown?.stage ?? null} copy={tabsCopy} />
-              <TripCapacityBadge
-                trip={trip}
-                finished={sailed}
-                cancelledLabel={t("trips.detail.cancelledBadge")}
-                t={t}
-              />
-            </>
+            <TripHeaderBadges {...{ trip, sailed, tabsCopy, t }} stage={shown?.stage ?? null} />
           }
-          // **Say it before the tap, not after.** The desk is live-only — the boat has an
-          // encrypted device copy and this does not — so a dropped signal means the list is
-          // stale and the next tap will not send (issue #819).
-          extraMeta={
-            desk ? (
-              <ConnectivityStatus
-                offlineLabel={t("checkIn.offlineLabel")}
-                onlyWhenOffline
-                className="mt-2"
-                copy={{
-                  online: t("shared.connectivity.online"),
-                  onlineTitle: t("shared.connectivity.onlineTitle"),
-                  offlineTitle: t("shared.connectivity.offlineTitle"),
-                }}
-              />
-            ) : undefined
-          }
+          extraMeta={desk ? <TripDeskConnectivity active t={t} /> : undefined}
           price={tripHeaderPrice(trip, shop.currency, locale, t)}
           daySpan={tripHeaderDaySpan(scheduleDays, locale, shop.timezone, t)}
           // A full boat's wait list stays in the roster's Add band.
@@ -352,6 +332,14 @@ export default async function ManageTripPage({
                 />
               }
             />
+            <ConservationPanel
+              shopSlug={shopSlug}
+              panel={manifest.conservation}
+              tripId={tripId}
+              t={t}
+              locale={locale}
+              timeZone={shop.timezone}
+            />
             <TripIncidentReports shop={shop} personId={session.user.personId} tripId={tripId} />
             <TripPromoteAndActivity
               guests={guests}
@@ -401,6 +389,14 @@ export default async function ManageTripPage({
             <PulseFacts
               facts={shownPulseFacts(pulseFacts, { desk, finished: sailed })}
               foldLabel={(count) => t("trips.pulse.needsYou", { count })}
+            />
+
+            <CoursePulse
+              shopSlug={shopSlug}
+              pulse={coursePulse}
+              tripId={tripId}
+              locale={locale}
+              timeZone={shop.timezone}
             />
 
             <TripRosterContent

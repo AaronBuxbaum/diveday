@@ -545,7 +545,17 @@
         "label": "Keep a field guide for each site",
         "description": "The species you pick for each dive site, shown on its public page."
       },
-      "door": "Turn features on or off"
+      "door": "Turn features on or off",
+      "coursePulse": {
+        "heading": "Course preparation",
+        "description": "Give assigned instructors a student preparation summary and a private teaching note on each course departure.",
+        "label": "Show course preparation"
+      },
+      "conservation": {
+        "heading": "Conservation records",
+        "description": "Record departure cleanup actions and show the measured facts on diver recaps.",
+        "label": "Conservation records"
+      }
     },
     "crewSchedule": {
       "heading": "Crew schedule",
@@ -919,7 +929,8 @@
       "dive_package_entitlements": "Package dives owed and used",
       "shop_promo_codes": "Discount codes",
       "courses": "Course catalog",
-      "shop_text_translations": "Shop translations"
+      "shop_text_translations": "Shop translations",
+      "trip_conservation": "Measured conservation actions per departure, with correction and deletion state."
     }
   },
   "crewSheet": {

@@ -945,5 +945,66 @@
     "noCourseInstructor": "No course instructor is available on this departure.",
     "checkTrainingMark": "Review this training mark before assigning an instructor.",
     "checkCourseLimit": "Check this course’s limits before diving."
+  },
+  "coursePulse": {
+    "heading": "Course preparation",
+    "summary": "Prep recorded: {count} / {total}",
+    "complete": "Prep recorded",
+    "empty": "No students on this departure yet.",
+    "items": {
+      "forms": "Forms to finish",
+      "card": "Card to check",
+      "payment": "Payment due",
+      "materials": "Materials to finish",
+      "staff": "Staff follow-up"
+    },
+    "noteLabel": "Instructor note",
+    "audience": "Teaching focus and next steps for this departure. Visible to its assigned instructors and shop managers.",
+    "save": "Save note",
+    "delete": "Delete note",
+    "saved": "Note saved.",
+    "deleted": "Note deleted.",
+    "attribution": "{name} · {when} ({zone})",
+    "errors": {
+      "invalid": "Check the note and try again.",
+      "too_long": "Keep the note to 600 characters.",
+      "changed": "Someone changed this note. Reload the page before saving again. Your words are still here.",
+      "forbidden": "Only this departure’s instructors and shop managers can edit this note.",
+      "disabled": "Course preparation is turned off in Settings.",
+      "cancelled": "This departure was canceled.",
+      "not_found": "This departure is no longer available.",
+      "not_a_course_session": "This departure has no course."
+    },
+    "undoFailed": "This note could not be restored. It may have changed, or Undo is no longer available."
+  },
+  "conservation": {
+    "heading": "Conservation records",
+    "hint": "Record measured actions from this departure. Divers see these facts on their recap, attributed to your shop.",
+    "empty": "No conservation actions recorded.",
+    "afterReturn": "Record actions after this departure has returned.",
+    "kind": "Recorded action and unit",
+    "quantity": "Quantity",
+    "location": "Location (optional)",
+    "note": "What was collected (optional)",
+    "save": "Save changes",
+    "add": "Record an action",
+    "delete": "Delete",
+    "saved": "Conservation record saved.",
+    "edit": "Edit record",
+    "recorded": "Recorded {when} · {zone}",
+    "kinds": {
+      "litter_kg": "Litter collected (kg)",
+      "litter_items": "Litter collected (items)",
+      "line_m": "Fishing line removed (m)"
+    },
+    "errors": {
+      "invalid": "Enter a positive measured quantity, with whole numbers for items. Keep the location under 120 characters and the note under 500.",
+      "not_authorized": "You no longer have permission to record actions for this shop.",
+      "unavailable": "This departure or feature is no longer available.",
+      "not_returned": "Record actions after the departure has returned.",
+      "stale": "This record changed. Refresh the page before editing it again."
+    },
+    "deleted": "Conservation record deleted.",
+    "undoFailed": "This record could not be restored. It may have changed, or Undo is no longer available."
   }
 }
