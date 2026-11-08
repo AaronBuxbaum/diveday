@@ -29,6 +29,25 @@ import { seedFacts } from "./shop-facts";
 const diver = diverTranslator("en-US");
 const staff = staffTranslator("en-US");
 
+test("thread status ignores hidden streamed and preserved copies", async ({ page }) => {
+  // Main CI's failing trace contained the second hook in a hidden S:7
+  // streaming container. Keep both streaming and Activity copies present.
+  await page.setContent(`
+    <main><div data-testid="thread-status">Current thread</div></main>
+    <div hidden id="S:7"><div data-testid="thread-status">Streamed thread</div></div>
+    <div style="display: none"><div data-testid="thread-status">Previous thread</div></div>
+  `);
+  await expect(threadStatus(page)).toHaveCount(1);
+  await expect(threadStatus(page)).toHaveText("Current thread");
+  // Do not hide a real duplicate by selecting .first().
+  await page.locator("main").evaluate((main) => {
+    const status = main.firstElementChild;
+    if (!status) throw new Error("Missing visible status fixture");
+    main.append(status.cloneNode(true));
+  });
+  await expect(threadStatus(page)).toHaveCount(2);
+});
+
 test.describe("staff", () => {
   signedInAsOwner();
 

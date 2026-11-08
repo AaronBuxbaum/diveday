@@ -98,9 +98,9 @@ export async function bookASeatAndOpenThread(page: Page, name: string, email?: s
   await expect(page).toHaveURL(/\/ready\//);
 }
 
-/** Stable, unique anchor for the diver's trip-prep thread status. */
+/** The visible trip-prep status, excluding hidden streamed or preserved copies. */
 export function threadStatus(page: Page): Locator {
-  return page.locator('[data-testid="thread-status"]');
+  return page.locator('[data-testid="thread-status"]').filter({ visible: true });
 }
 
 /**
