@@ -1,0 +1,74 @@
+name: Backup setup
+
+# Explicit bootstrap/credential refresh; weekly dumps remain scheduled by CDK.
+# Reuse the existing required-reviewer, default-branch-only infra-deploy environment
+# and its OIDC role. No new secret copy or AWS trust policy is needed.
+on:
+  workflow_dispatch:
+    inputs:
+      branch_id:
+        description: Production Neon branch ID (br-...)
+        type: string
+        required: true
+      database_name:
+        description: Production database name from the Neon connection dialog
+        type: string
+        required: true
+      role_name:
+        description: Database owner role used for full backups
+        type: string
+        required: true
+
+concurrency:
+  group: backup-setup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: infra-deploy
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Confirm backup setup credentials are set
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          AWS_CDK_DEPLOY_ROLE_ARN: ${{ vars.AWS_CDK_DEPLOY_ROLE_ARN }}
+        run: |
+          set -uo pipefail
+          missing=0
+          for name in NEON_API_KEY NEON_PROJECT_ID AWS_CDK_DEPLOY_ROLE_ARN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is missing. See backup setup in docs/engineering/backup-and-restore-runbook.md."
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.AWS_CDK_DEPLOY_ROLE_ARN }}
+          role-session-name: gha-backup-setup
+      - name: Provision the direct Neon dump connection
+        id: provision-dump-connection
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_BRANCH_ID: ${{ inputs.branch_id }}
+          NEON_DATABASE_NAME: ${{ inputs.database_name }}
+          NEON_ROLE_NAME: ${{ inputs.role_name }}
+        run: node scripts/provision-database-dump-connection.mjs
+      - name: Start the first database dump
+        if: steps.provision-dump-connection.outputs.first_seed == 'true'
+        run: aws codebuild start-build --project-name diveday-database-dump --region us-east-1 --query 'build.id' --output text
