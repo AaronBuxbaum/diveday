@@ -169,3 +169,12 @@ describe("canonical agent contract inputs", () => {
     ).toBe("all");
   });
 });
+
+it("seeds computed dynamic imports that native related cannot discover", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "computed-imports-"));
+  mkdirSync(path.join(root, "src"), { recursive: true });
+  writeFileSync(path.join(root, "src/computed.test.ts"), "await import(modulePath);");
+  writeFileSync(path.join(root, "src/template.ts"), "await import(`./${name}.ts`);");
+  writeFileSync(path.join(root, "src/literal.ts"), 'await import("./literal.ts");');
+  expect(sourceReaders(root)).toEqual(["src/computed.test.ts", "src/template.ts"]);
+});
