@@ -443,3 +443,10 @@ de-indexed from search for the rest of a run.
 fixture (`e2e/fixtures.ts`) mints a fully seeded one and signs in as its owner, and the next test's
 reset purges it (ADR 20260815-per-test-private-shops). Never a `finally` that puts the setting
 back: it is a convention nothing enforces, and it does not survive the failure it is there for.
+
+## Fast feedback during editing
+
+`pnpm verify:agent --plan` explains selection for committed and uncommitted work.
+`pnpm verify:agent` runs it without requiring a clean tree or regenerating files. See
+[test-impact verification](../engineering/test-impact-verification.md) for budgets, conservative
+fallbacks, shadow evidence and the incremental-mode evaluation. The selected result is not full CI.

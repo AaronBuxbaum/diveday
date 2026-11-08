@@ -9,6 +9,13 @@ This is the one pre-commit and pre-push checklist; AGENTS.md, `.claude/rules/` a
 point here rather than repeat it, and [docs/agents/verifying.md](../../../docs/agents/verifying.md)
 holds the why. A change is verified when you have **observed** it working, not when checks pass.
 
+For fast feedback while editing, use **`pnpm verify:agent --plan`** to inspect the live-worktree
+selection, then **`pnpm verify:agent`**. It includes staged, unstaged and untracked inputs,
+static checks, affected units, mandatory browser smoke and highest-ranked reach. Broad
+uncertainty forces full functional-browser selection rather than a false small green. The
+receipt names deferred checks and is not a push stamp or full-CI result. See
+[verification selection](../../../docs/engineering/test-impact-verification.md).
+
 ## The checklist
 
 Before every commit:

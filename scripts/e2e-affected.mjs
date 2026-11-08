@@ -21,7 +21,8 @@
 //            directory the diff edits.
 //   reach  — a spec that navigates to a route whose page or layout imports, through any chain,
 //            a module the diff edits. Wide by nature (a barrel reaches everything), so
-//            `verify-push.mjs` runs it only while the estimated time stays inside a budget.
+//            full `verify:push` runs all of it; `verify:agent` budgets only this tier unless
+//            a conservative fallback requires all functional specs.
 //
 //   smoke  — five tests a push always runs when the diff changes the app ({@link SMOKE}): the
 //            booking loop, a waiver, a check-in, roll call offline, sign-in.
@@ -30,17 +31,22 @@
 // the diff touches, a seeded name it changed), then by the narrowest route, so a budget spends
 // itself on the specs most likely to break (#2517).
 //
-//   node scripts/e2e-affected.mjs [--base <ref> | --commit <sha>] [--json]
+//   node scripts/e2e-affected.mjs [--base <ref> | --commit <sha>] [--working-tree] [--json]
 //
-// `--commit` replays one commit against its parent, to score the selector against what CI
-// caught. The visual spec is never selected as a file: its captures are picked one by one
+// `--commit` diffs one commit against its parent, but reads the CURRENT source graph.
+// Historical recall measurement requires checking out that commit first. The visual spec is never selected as a file: its captures are picked one by one
 // ({@link selectCaptures}, #2517) and run in light mode only. A path-gated spec (`PATH_GATED`) is picked only when what it tests changed. Every git call is
 // a constant argument array plus refs git itself printed.
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import {
+  browserFallbacks,
+  browserRuntimeInput,
+  expandBrowserFallback,
+} from "./browser-impact-safety.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { changedLinesByFile, moduleIndex, readModules, symbolReach } from "./symbol-reach.mjs";
 import { resolveVerificationBase } from "./verification-base.mjs";
@@ -818,30 +824,92 @@ export function changedLocaleKeysIn(git, names, from, to) {
   return keys;
 }
 
-export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root) } = {}) {
-  const diff = changedDiff({ root, base, commit, git });
+export function affectedSpecs({
+  root = ROOT,
+  base,
+  commit,
+  workingTree = false,
+  git = gitReader(root),
+} = {}) {
+  if (commit && workingTree) throw new Error("--commit and --working-tree cannot be combined");
+  const diff = changedDiff({ root, base, commit, workingTree, git });
   if (!diff) return null;
   const { from, to, base: label, changed: names } = diff;
-  const diffText = git(["diff", "-U0", "--no-color", from, to, "--", "src", "e2e"]) ?? "";
+  const diffText = git([
+    "diff",
+    "-U0",
+    "--no-color",
+    from,
+    ...(workingTree ? [] : [to]),
+    "--",
+    "src",
+    "e2e",
+  ]);
+  if (diffText === null) return null;
   const specs = readSpecs(root);
-  const localeKeys = changedLocaleKeysIn(git, names, from, to);
+  const localeGit = workingTree
+    ? (args) => {
+        if (args[0] === "show" && args[1].startsWith(`${to}:`)) {
+          try {
+            return readFileSync(path.join(root, args[1].slice(to.length + 1)), "utf8");
+          } catch {
+            return null;
+          }
+        }
+        return git(args);
+      }
+    : git;
+  const localeKeys = changedLocaleKeysIn(localeGit, names, from, to);
   const seedValues = seedConstantValues(readSeedSources(root));
+  const modules = moduleIndex(readModules(root));
+  const parsed = parseDiff(diffText);
+  const lines = changedLinesByFile(diffText);
   const selection = selectSpecs({
     changed: names,
-    diff: parseDiff(diffText),
+    diff: parsed,
     specs,
-    modules: moduleIndex(readModules(root)),
-    lines: changedLinesByFile(diffText),
+    modules,
+    lines,
     localeKeys,
     seedValues,
   });
-  if (names.some((file) => APP_CHANGE.test(file))) {
+  const fallbacks = browserFallbacks({
+    changed: names,
+    selected: selection.strong.size + selection.reach.size,
+    existing: (file) => existsSync(path.join(root, file)),
+  });
+  if (fallbacks.length === 0) {
+    const inputs = names.filter(browserRuntimeInput);
+    if (inputs.length > 25) fallbacks.push("large runtime diff: per-input mapping limit exceeded");
+    else
+      for (const file of inputs) {
+        const coverage = selectSpecs({
+          changed: [file],
+          diff: new Map(parsed.has(file) ? [[file, parsed.get(file)]] : []),
+          specs,
+          modules,
+          lines,
+          localeKeys: changedLocaleKeysIn(localeGit, [file], from, to),
+          seedValues,
+        });
+        if (coverage.strong.size + coverage.reach.size === 0)
+          fallbacks.push(`runtime input has no mapped browser coverage: ${file}`);
+      }
+  }
+  expandBrowserFallback(
+    selection,
+    specs,
+    fallbacks,
+    (spec) => isVisualSpec(spec) || MOBILE_SPEC.test(spec) || PATH_GATED.has(spec),
+  );
+  if (
+    names.some((file) => APP_CHANGE.test(file)) ||
+    selection.strong.size + selection.reach.size > 0
+  ) {
     for (const test of smokeTests(specs).found) {
       const spec = test.replace(/:\d+$/, "");
       if (selection.strong.has(spec)) continue;
       selection.strong.set(test, new Set(["smoke"]));
-      selection.reach.delete(spec);
-      selection.rank.delete(spec);
     }
   }
   const captures = new Map();
@@ -859,7 +927,7 @@ export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root)
         captures.set(title, new Set([...(captures.get(title) ?? []), ...why]));
     }
   }
-  return { base: label, changed: names, ...selection, captures };
+  return { base: label, changed: names, ...selection, captures, fallbacks };
 }
 
 function render(result, record) {
@@ -893,11 +961,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const result = affectedSpecs({
     base: baseAt >= 0 ? args[baseAt + 1] : undefined,
     commit: commitAt >= 0 ? args[commitAt + 1] : undefined,
+    workingTree: args.includes("--working-tree"),
   });
   if (args.includes("--json")) {
     const plain = result && {
       base: result.base,
       changed: result.changed.length,
+      fallbacks: result.fallbacks,
       strong: Object.fromEntries([...result.strong].map(([k, v]) => [k, [...v]])),
       reach: Object.fromEntries([...result.reach].map(([k, v]) => [k, [...v]])),
       captures: Object.fromEntries([...result.captures].map(([k, v]) => [k, [...v]])),

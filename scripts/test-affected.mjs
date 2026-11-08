@@ -20,7 +20,11 @@ const FILE_READER =
 const READ_OPERATION =
   /\b(?:readFileSync|readFile|readdirSync|readdir|globSync|glob|opendirSync|opendir|createReadStream|readSync|readvSync|readv)\b/;
 
-/** Conservative contract readers, including tests that also import app behavior. */
+// Native related cannot resolve import(variable) or interpolated module names. Seed their
+// owners too: incremental evaluation caught this miss, but its cache has different misses.
+const COMPUTED_IMPORT = /\bimport\s*\(\s*(?:[^\s"'`]|`[^`]*\$\{)/;
+
+/** Conservative contract readers and computed-import owners. */
 export function sourceReaders(root = ROOT) {
   try {
     // Reader modules are seeds too: native related follows their importers,
@@ -37,7 +41,9 @@ export function sourceReaders(root = ROOT) {
     return files
       .filter((file) => {
         const source = readFileSync(path.join(root, file), "utf8");
-        return FILE_READER.test(source) && READ_OPERATION.test(source);
+        return (
+          (FILE_READER.test(source) && READ_OPERATION.test(source)) || COMPUTED_IMPORT.test(source)
+        );
       })
       .sort();
   } catch {
