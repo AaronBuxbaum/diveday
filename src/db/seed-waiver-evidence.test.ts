@@ -3,13 +3,16 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate, nowMs } from "@/lib/clock";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { advanceClock } from "@/test/clock";
+import { seededShopContext, unseededTestDb } from "@/test/db";
 import { listTripReadiness } from "./readiness";
-import { trips, waiverRecords } from "./schema";
+import { shops, trips, waiverRecords } from "./schema";
+import { seedDemo } from "./seed";
 import { at, DEMO_SHOP_TIMEZONE, withinDeskHours } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { seedWaiverEvidence, signedBeforeDeparture } from "./seed-waiver-evidence";
 import { liveTrip } from "./trips";
+import { recheckWaiverSeals } from "./waiver-seal-checks";
 import { listWaiverIntegrityAudit } from "./waivers";
 
 /**
@@ -36,6 +39,19 @@ async function evidence() {
 }
 
 describe("seeded waiver evidence", () => {
+  it("passes the nightly seal check without reporting untouched demo evidence as tampered", async () => {
+    advanceClock(110 * DAY_MS);
+    const db = await unseededTestDb();
+    await seedDemo(db, "history");
+    const [shop] = await db.select().from(shops).where(eq(shops.slug, "blue-mantis"));
+    // A refreshed demo keeps the shop's original creation date.
+    await db
+      .update(shops)
+      .set({ createdAt: new Date(nowMs() - 90 * DAY_MS) })
+      .where(eq(shops.id, shop.id));
+    const result = await recheckWaiverSeals(db, { now: new Date(nowMs() + DAY_MS) });
+    expect(result.invalid).toBe(0);
+  });
   it("holds both integrity states, and every sealed record verifies", async () => {
     const { records } = await evidence();
     const states = records.map(verifyWaiverIntegrity);
@@ -45,6 +61,29 @@ describe("seeded waiver evidence", () => {
     // inside the seal would land here, and it would teach a reader that the
     // shop's own untampered evidence had been tampered with.
     expect(states.filter((state) => state === "invalid")).toEqual([]);
+    const imported = records.filter((record) => record.signatureMethod === "imported");
+    expect(imported.length).toBeGreaterThan(0);
+    expect(imported.every((record) => record.medicalAnswers === null)).toBe(true);
+    expect(imported.every((record) => record.shopAnswers === null)).toBe(true);
+    expect(imported.every((record) => record.medicalAlert === null)).toBe(true);
+    expect(
+      records
+        .filter((record) => record.medicalReviewRequired)
+        .every(
+          (record) =>
+            record.signatureMethod !== "imported" && verifyWaiverIntegrity(record) === "valid",
+        ),
+    ).toBe(true);
+  });
+
+  it("keeps an older signed shop-question example sealed and native", async () => {
+    const { records } = await evidence();
+    const answered = records.filter((record) => record.shopAnswers !== null);
+    expect(answered.length).toBeGreaterThan(0);
+    for (const record of answered) {
+      expect(record.signatureMethod).toBe("typed_consent");
+      expect(verifyWaiverIntegrity(record)).toBe("valid");
+    }
   });
 
   it("shows both states on the audit trail's first page, without paging", async () => {

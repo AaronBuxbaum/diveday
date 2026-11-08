@@ -45,6 +45,10 @@ Zero new dependency, zero new cost.
   lines, runtime context). An errors-only server has no use for the SDK's OpenTelemetry HTTP and
   fetch instrumentation, console breadcrumbs or local variables, and a static import put its
   runtime in the two largest server chunks of every route. The client side is unchanged.
+  *Amended 2026-11-07 (#4145):* `enableOpenTelemetrySetup: false` also keeps the server SDK
+  from installing its tracer provider and propagator. A zero sampling rate alone still installs
+  them in Next.js, producing context-mismatch warnings on cached renders. Error capture and cron
+  check-ins remain enabled.
 - `src/instrumentation-client.ts` calls it client-side; the SDK's default `GlobalHandlers`
   integration then covers uncaught exceptions and unhandled promise rejections without any manual
   listener code. *Amended 2026-10-13 (code review 2026-10-13b, item 34):* the browser SDK loads on
