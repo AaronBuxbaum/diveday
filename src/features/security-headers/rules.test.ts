@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { securityHeaderRules } from "./rules";
 
-const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "app");
+const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "app");
 
 /**
  * A directory that contributes **no URL segment**.
