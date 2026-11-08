@@ -10,8 +10,8 @@ import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-label
 import { nowDate } from "@/lib/clock";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { formatDateTimeTz } from "@/lib/format";
-import { rollCallCheckpointOrdinal, rollCallLabel } from "@/lib/manifests";
-import { isOfflineManifestExpired } from "@/lib/offline-manifests";
+import { rollCallCheckpointOrdinal, rollCallLabel, rollCallRowState } from "@/lib/manifests";
+import { isOfflineManifestExpired, type OfflineRollCallResult } from "@/lib/offline-manifests";
 import { PACKET_PAPER, storefrontAddress } from "@/lib/print-sheets";
 import type { OfflineTripControls } from "./controls";
 import { offlineDiverFactLines, offlineDiverRowFacts } from "./diver-row-facts";
@@ -87,6 +87,19 @@ export function OfflineManifestSheet({
   const { envelope, manifest, checkpoint } = view;
   const { shop } = envelope.snapshot;
   const [printedAt, setPrintedAt] = useState(() => nowDate());
+  // Who recorded a saved state and when, zone named, as the live printed row
+  // says it (`DiverRowPrint`). A tap queued on this device has no name to
+  // print, and an implied reading nobody recorded.
+  const recordedLine = (state: OfflineRollCallResult | undefined) =>
+    state?.recordedByName && !state.implied ? (
+      <p data-sheet-recorded="">
+        {t("manifest.rollCallRecordedByPlain", {
+          label: rollCallLabelText(t, rollCallLabel(checkpoint, state)),
+          date: formatDateTimeTz(new Date(state.occurredAt), locale, shop.timezone),
+          name: state.recordedByName,
+        })}
+      </p>
+    ) : null;
 
   useEffect(() => {
     const expired = () => isOfflineManifestExpired(envelope.snapshot, nowDate());
@@ -265,6 +278,7 @@ export function OfflineManifestSheet({
                         {line}
                       </p>
                     ))}
+                    {recordedLine(facts.state)}
                     {facts.state?.note ? <p className="break-words">{facts.state.note}</p> : null}
                     {diver.buddyTeamNames && diver.buddyTeamNames.length > 0 ? (
                       <p>
@@ -313,13 +327,20 @@ export function OfflineManifestSheet({
                 {view.crewWithKeys.length > 0 ? (
                   <ul data-sheet-crew="" className="mt-1 grid gap-2">
                     {view.crewWithKeys.map((member) => (
-                      <li key={member.key} className="break-inside-avoid">
+                      <li
+                        key={member.key}
+                        data-print-critical={
+                          rollCallRowState(checkpoint, member.state).notBackAboard ? "" : undefined
+                        }
+                        className="break-inside-avoid"
+                      >
                         <span className="font-bold">{member.fullName}</span>
                         {" · "}
                         {rollCallLabelText(t, rollCallLabel(checkpoint, member.state))}
                         {member.state?.pending
                           ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
                           : ""}
+                        {recordedLine(member.state)}
                         <CheckpointBoxes labels={boxLabels} />
                       </li>
                     ))}

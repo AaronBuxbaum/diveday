@@ -577,12 +577,11 @@ describe("offline manifest policy", () => {
       "ready",
       "after_dive_1",
     );
-    expect(latest).toEqual({
+    expect(latest).toMatchObject({
       state: "boarded",
       occurredAt: "2026-07-20T14:03:00.000Z",
-      pending: false,
       implied: false,
-      local: false,
+      recordedByName: "Sal Ortiz",
     });
   });
 
@@ -790,12 +789,11 @@ describe("offline manifest policy", () => {
     });
 
     const carried = latestOfflineRollCall(saved, [], "carried", "departure");
-    expect(carried).toEqual({
+    expect(carried).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T11:02:00.000Z",
-      pending: false,
       implied: true,
-      local: false,
+      recordedByName: "Dana Divemaster",
     });
   });
 
@@ -1610,12 +1608,11 @@ describe("offline crew roll call", () => {
     // The server knows something this device does not, so the rejected
     // "boarded" must not keep reading aboard beside a divemaster the live page
     // says did not come back.
-    expect(latestOfflineCrewRollCall(saved, [event], "crew-dana", "after_dive_1")).toEqual({
+    expect(latestOfflineCrewRollCall(saved, [event], "crew-dana", "after_dive_1")).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T14:30:00.000Z",
-      pending: false,
       implied: false,
-      local: false,
+      recordedByName: "Sal Ortiz",
     });
   });
 

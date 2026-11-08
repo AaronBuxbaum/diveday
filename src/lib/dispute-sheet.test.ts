@@ -85,7 +85,6 @@ describe("assembleDisputeSheet: what may appear", () => {
         questionnaireVersion: 1,
         responses: { q3: true, q7: true },
       },
-      draftMedicalAnswers: { responses: { q9: true } },
       medicalClearancePhysicianName: "Dr. Okafor",
       medicalClearedAt: at(5),
       medicalReviewRequired: true,

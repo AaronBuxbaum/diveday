@@ -7,14 +7,7 @@ import { WAIVER_SEALED_COLUMNS, WAIVER_STATE_COLUMNS } from "./waiver-record-col
  * bearer link or an unsigned draft back out.
  */
 describe("waiver record column sets", () => {
-  const neverRead = [
-    "tokenHash",
-    "draftSignerName",
-    "draftMedicalAnswers",
-    "draftGuardian",
-    "draftShopAnswers",
-    "draftMedicalAlert",
-  ];
+  const neverRead = ["tokenHash"];
 
   it("keeps the bearer token and the unsigned draft out of the sealed read", () => {
     const sealed = Object.keys(WAIVER_SEALED_COLUMNS);

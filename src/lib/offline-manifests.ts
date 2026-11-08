@@ -1794,6 +1794,11 @@ export type OfflineRollCallResult = {
   pending: boolean;
   implied: boolean;
   /**
+   * Who recorded it, on a *saved* (server-resolved) reading only. A queued tap
+   * on this device carries no name, as {@link OfflineChecklistCheckResult} does.
+   */
+  recordedByName?: string;
+  /**
    * What the crew observed about someone unaccounted for, from whichever
    * statement this reading came from — this device's queued event or the saved
    * snapshot (ADR 20260828-a-missing-diver-gets-a-sentence). Absent on a
@@ -2200,6 +2205,7 @@ function savedResult(
         occurredAt: string;
         implied?: boolean;
         note?: string | null;
+        recordedByName?: string;
       }
     | undefined,
 ): OfflineRollCallResult | undefined {
@@ -2210,6 +2216,7 @@ function savedResult(
         pending: false,
         implied: saved.implied ?? false,
         local: false,
+        ...(saved.recordedByName ? { recordedByName: saved.recordedByName } : {}),
         // A snapshot written before the field simply has none, which reads the
         // same as a result nobody wrote a sentence on — so the key is absent
         // either way rather than present and null.

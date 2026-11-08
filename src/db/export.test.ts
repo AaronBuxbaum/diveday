@@ -144,13 +144,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
     "token_hash", // bearer credential — never exported; a destination issues its own links
-    "draft_signer_name", // unsubmitted draft state, not a signed record
-    "draft_acknowledged",
-    "draft_medical_answers",
-    "draft_guardian", // the guardian section as typed, same class as the three above
-    "draft_shop_answers", // the shop questions as typed before signing, same class
-    "draft_medical_alert", // the medical alert as typed before signing, same class
-    "draft_via_link_id", // which counter link saved the draft; a destination issues its own links
     // Delivery plumbing is provider state: a destination issues its own link and delivery.
     "delivery_status",
     "delivery_provider_message_id",

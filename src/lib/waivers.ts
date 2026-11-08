@@ -19,16 +19,7 @@ import { flaggedMedicalPrompts, needsPhysicianReview } from "./medical";
  */
 export type WaiverStateFields = Omit<
   StoredWaiverRecord,
-  | "templateBody"
-  | "draftSignerName"
-  | "draftMedicalAnswers"
-  | "draftGuardian"
-  | "draftShopAnswers"
-  | "shopAnswers"
-  | "draftMedicalAlert"
-  | "draftViaLinkId"
-  | "medicalAlert"
-  | "integrityHash"
+  "templateBody" | "shopAnswers" | "medicalAlert" | "integrityHash"
 >;
 
 type WaiverRecord = WaiverStateFields;

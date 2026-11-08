@@ -393,4 +393,50 @@ describe("OfflineTripScreen's paper door", () => {
     const onPaper = document.querySelector(".paper-sheet-frame[data-paper-print-only]");
     expect(onPaper?.textContent).toContain("Print this saved copy");
   });
+
+  it("outlines a crew member not back aboard and prints who recorded each state", () => {
+    const copy = copyWith((c) => {
+      const manifest = rosterOf(c);
+      const priya = manifest.divers[0];
+      const dana = manifest.crew[0];
+      if (!priya || !dana) throw new Error("fixture");
+      const boarded = { state: "boarded", occurredAt: "2026-08-01T13:00:00.000Z" };
+      priya.rollCall = { ...boarded, recordedByName: "Sal" } as typeof priya.rollCall;
+      dana.rollCall = { ...boarded, recordedByName: "Sal" } as typeof dana.rollCall;
+      const afterDive = structuredClone(manifest);
+      afterDive.checkpoint = "after_dive_1";
+      const afterPriya = afterDive.divers[0];
+      const afterDana = afterDive.crew[0];
+      if (!afterPriya || !afterDana) throw new Error("fixture");
+      afterPriya.rollCall = {
+        state: "boarded",
+        occurredAt: "2026-08-01T15:00:00.000Z",
+        recordedByName: "Sal",
+      } as typeof afterPriya.rollCall;
+      afterDana.rollCall = {
+        state: "not_boarded",
+        occurredAt: "2026-08-01T15:05:00.000Z",
+        recordedByName: "Sal",
+      } as typeof afterDana.rollCall;
+      c.snapshot.manifests.push(afterDive);
+    });
+    const view = offlineTripView(copy, "after_dive_1");
+    if (!view) throw new Error("fixture");
+    render(
+      <OfflineManifestSheet
+        view={view}
+        controls={controls()}
+        origin={null}
+        onBack={() => {}}
+        autoPrint={false}
+      />,
+    );
+    const crew = document.querySelector("[data-sheet-crew] > li");
+    expect(crew?.hasAttribute("data-print-critical")).toBe(true);
+    expect(crew?.textContent).toMatch(/by Sal/);
+    expect(crew?.textContent).toMatch(/EDT/);
+    const priyaRow = document.querySelector('[data-sheet-row="b-priya"]');
+    expect(priyaRow?.hasAttribute("data-print-critical")).toBe(false);
+    expect(priyaRow?.textContent).toMatch(/EDT by Sal/);
+  });
 });

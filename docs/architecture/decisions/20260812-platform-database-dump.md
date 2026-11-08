@@ -236,3 +236,16 @@ live on `restore-drill`, so they must also be present on `infra-deploy` for this
 them. This is the only remaining manual setup: the URI itself is retrieved and stored without a
 person copying it. The infra deploy role has `GetSecretValue`/`PutSecretValue` only on
 `diveday/database-url-unpooled`, and `codebuild:StartBuild` only on `diveday-database-dump`.
+
+
+### Amendment (2026-11-07): explicit backup setup workflow
+
+Backup provisioning moves from the infra deployment to the manually dispatched
+`.github/workflows/backup-setup.yml`. CDK still owns the backup resources and weekly schedule.
+The setup workflow reuses the protected `infra-deploy` environment and its existing OIDC role;
+normal deployments no longer require Neon credentials or call the Neon API. The operator supplies
+an explicit production branch ID, database name and role name. These are URL-encoded into the
+connection URI request together with `pooled=false`; the previous request omitted the database
+and role and returned HTTP 400. Secret masking, idempotent refresh and first-seed-only build
+submission remain unchanged. A successful setup submits the first build; CodeBuild completion
+and the dump object must still be checked separately.

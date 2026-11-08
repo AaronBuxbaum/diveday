@@ -271,8 +271,6 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     });
     expect(record?.guardianSignedAt).not.toBeNull();
     expect(record?.guardianConsentedAt).not.toBeNull();
-    // The draft of the section goes with the rest of the unsubmitted state.
-    expect(record?.draftGuardian).toBeNull();
     expect(verifyWaiverIntegrity(record)).toBe("valid");
 
     const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id);
