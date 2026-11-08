@@ -159,6 +159,14 @@ pnpm infra:deploy           # all three stacks; the other two for the first time
 
 Every deploy after that is one command again.
 
+**Repairing the diff role's change-set permissions:** if the workflow reports `iam:PassRole`
+denied on `cdk-<qualifier>-cfn-exec-role-<account>-<region>`, deploy `DiveDay` from the reviewed
+checkout with the existing deployer credentials (`pnpm infra:deploy DiveDay`). The stack grants
+only passing that role to CloudFormation, plus read-only bootstrap inspection; it does not grant
+the diff identity permission to execute changes. This first application cannot use the strict
+diff-gated workflow because that workflow needs the permission being repaired. Rerun Infra after
+the deploy succeeds to verify change-set creation. Do not grant deploy-role assumption to the diff role.
+
 After CloudFormation succeeds, the command writes `.env.local`, `.env.vercel`, and `.env.github`,
 then checks each optional handoff before asking whether it needs an update: generated AWS CLI
 profiles, Vercel Production variables, GitHub visual-test secrets, the CI role-ARN repository

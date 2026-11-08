@@ -213,6 +213,67 @@ describe("the synthesized stack", () => {
     expect(statement).not.toMatch(/s3:(Put|Delete|List)/);
   });
 
+  it("lets the diff role pass only bootstrap execution roles to CloudFormation", () => {
+    const { template } = synthesize();
+    const arn = (suffix: string) => ({
+      "Fn::Join": ["", ["arn:", { Ref: "AWS::Partition" }, suffix]],
+    });
+    const statements = policyStatements(template).map((statement) => JSON.parse(statement));
+    const pass = statements.filter((statement) => statement.Sid === "PassExecutionRoleForDiff");
+    expect(pass).toHaveLength(1);
+    expect(pass[0]).toEqual({
+      Sid: "PassExecutionRoleForDiff",
+      Effect: "Allow",
+      Action: "iam:PassRole",
+      Resource: arn(":iam::123456789012:role/cdk-hnb659fds-cfn-exec-role-123456789012-us-east-1"),
+      Condition: { StringEquals: { "iam:PassedToService": "cloudformation.amazonaws.com" } },
+    });
+    const diff = statements.find((statement) => statement.Sid === "DiffAgainstDeployedStack");
+    expect(diff.Action).toEqual([
+      "cloudformation:DescribeStacks",
+      "cloudformation:GetTemplate",
+      "cloudformation:CreateChangeSet",
+      "cloudformation:DescribeChangeSet",
+      "cloudformation:DeleteChangeSet",
+    ]);
+    const bootstrap = statements.filter(
+      (statement) => statement.Sid === "ReadBootstrapStackForDiff",
+    );
+    expect(bootstrap).toEqual([
+      {
+        Sid: "ReadBootstrapStackForDiff",
+        Effect: "Allow",
+        Action: "cloudformation:DescribeStacks",
+        Resource: arn(":cloudformation:us-east-1:123456789012:stack/CDKToolkit/*"),
+      },
+    ]);
+    const [roleId] = Object.keys(
+      template.findResources("AWS::IAM::Role", {
+        Properties: { RoleName: "diveday-github-actions-cdk-diff" },
+      }),
+    );
+    expect(roleId).toBeDefined();
+    const policies = template.findResources("AWS::IAM::Policy", {
+      Properties: { Roles: [{ Ref: roleId }] },
+    });
+    const allowedActions = Object.values(policies).flatMap((policy) =>
+      policy.Properties.PolicyDocument.Statement.filter(
+        (statement: { Effect: string }) => statement.Effect === "Allow",
+      ).flatMap((statement: { Action: string | string[] }) => statement.Action),
+    );
+    expect(allowedActions.filter((action: string) => action.startsWith("cloudformation:"))).toEqual(
+      [
+        "cloudformation:DescribeStacks",
+        "cloudformation:GetTemplate",
+        "cloudformation:CreateChangeSet",
+        "cloudformation:DescribeChangeSet",
+        "cloudformation:DeleteChangeSet",
+        "cloudformation:DescribeStacks",
+      ],
+    );
+    expect(allowedActions).not.toContain("*");
+  });
+
   it("scopes the deploy role's SES read to the one identity, and keeps it read-only", () => {
     const { template } = synthesize();
     const statements = policyStatements(template).filter((statement) =>
