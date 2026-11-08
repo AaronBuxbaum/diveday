@@ -100,7 +100,8 @@ export function worstCaseMs() {
     operations +
     neonRead + // the connection string
     SUBPROCESS_TIMEOUTS.pgRestore +
-    SUBPROCESS_TIMEOUTS.nodeScript +
+    neonRead + // recheck the migration target
+    2 * SUBPROCESS_TIMEOUTS.nodeScript + // migration and read-only verification
     neonRead + // the last check
     neonRead // the delete
   );
@@ -586,7 +587,29 @@ async function main() {
     restoreSeconds = Math.round((Date.now() - restoreStarted) / 1000);
     console.log(`restore-drill: restored in ${restoreSeconds}s`);
 
-    // 4. Sign in and read tomorrow's manifest, through the app's own code.
+    // 4. Upgrade the old dump to this checkout's schema, only on the scratch branch. Recheck the
+    //    branch before DDL; the child also checks the actual database and restored inventory.
+    const { branch: migrationBranch } = await call(
+      "GET",
+      `/projects/${projectId}/branches/${branchId}`,
+    );
+    if (scratchBranchProblem(migrationBranch, branchId)) {
+      throw new Error("The restore branch is no longer a safe migration target.");
+    }
+    const migrateStderr = join(workdir, "migrate.stderr");
+    const migration = withStderrFile(migrateStderr, (stderrFd) =>
+      runBounded("pnpm", ["exec", "tsx", "scripts/restore-drill-migrate.ts"], {
+        stdio: ["ignore", stderrFd, stderrFd],
+        env: subprocessEnv(process.env, { RESTORE_DATABASE_URL: uri }),
+        timeoutMs: SUBPROCESS_TIMEOUTS.nodeScript,
+      }),
+    );
+    for (const line of ownLines(readFileSync(migrateStderr, "utf8"), "restore-drill-migrate: ")) {
+      console.error(line);
+    }
+    if (migration.status !== 0) throw new Error("Migrating the restored scratch database failed.");
+
+    // 5. Sign in and read tomorrow's manifest, through the app's own code.
     //    NODE_ENV=production because production admits the seeded staff through the demo bypass.
     //    Its stderr is filtered to its own vetted lines, as pg_restore's is.
     const verifyStderr = join(workdir, "verify.stderr");
@@ -605,7 +628,7 @@ async function main() {
   } finally {
     rmSync(workdir, { recursive: true, force: true });
     if (branchId) {
-      // 5. Delete the branch, after checking once more that it is the scratch one.
+      // 6. Delete the branch, after checking once more that it is the scratch one.
       try {
         const problem = await deleteCheckedBranch(call, projectId, branchId, (branch) =>
           scratchBranchProblem(branch, branchId),
