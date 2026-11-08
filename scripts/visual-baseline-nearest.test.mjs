@@ -102,6 +102,52 @@ function git(args) {
 }
 
 describe("prepareNearestBaseline (#3968)", () => {
+  it("passes over a report-only PR snapshot instead of treating its 76 uploads as the whole baseline", async () => {
+    const baseline = Array.from({ length: 1740 }, (_, i) => `surface-${i}.png`);
+    const changed = baseline.slice(0, 70);
+    const added = Array.from({ length: 6 }, (_, i) => `new-${i}.png`);
+    const partial = {
+      ...report(VERSION_A, {}),
+      actualItems: [...changed, ...added],
+      expectedItems: baseline,
+      passedItems: baseline.slice(70),
+      failedItems: changed,
+      newItems: added,
+      partialActual: true,
+    };
+    const fake = bucket({
+      snapshots: {
+        [A]: { version: VERSION_A, owner: "pr", report: partial },
+        [C]: {
+          version: VERSION_C,
+          owner: "main",
+          report: report(VERSION_C, Object.fromEntries(baseline.map((name) => [name, HASH]))),
+        },
+      },
+      blobs: new Set([HASH]),
+    });
+    const partialImagePrefix = `${A}/snapshots/${VERSION_A}/actual/`;
+    const fetchedPartialImages = [];
+    const fetchImpl = async (url, init) => {
+      const key = new URL(String(url)).pathname.slice(1);
+      if (key.startsWith(partialImagePrefix)) {
+        fetchedPartialImages.push(key);
+        return new Response(PNG, { status: 200 });
+      }
+      return fake.fetchImpl(url, init);
+    };
+    const result = await prepareNearestBaseline({
+      git,
+      bucket: BUCKET,
+      key: A,
+      version: VERSION_A,
+      outputDir: outputDir(),
+      fetchImpl,
+    });
+    expect(result).toMatchObject({ key: C, version: VERSION_C, count: 1740, passedOver: [A] });
+    expect(fetchedPartialImages).toEqual([]);
+  });
+
   it("compares against the resolved baseline when it is whole, and passes nothing over", async () => {
     const { fetchImpl } = bucket({
       snapshots: {
