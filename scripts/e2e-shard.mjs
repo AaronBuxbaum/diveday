@@ -311,7 +311,7 @@ export function listedTests(report) {
 }
 
 /**
- * Serialize real test identities for Playwright's CLI. In installed 1.64.1,
+ * Serialize real test identities for Playwright's CLI. In installed 1.65.0,
  * `--test-list` filters which files load AND each test's declaration file.
  * An imported test therefore needs its own location line plus the registering
  * file with the same title path, so that file loads. The companion selects no
