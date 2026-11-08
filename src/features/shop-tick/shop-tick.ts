@@ -10,6 +10,7 @@ import { sendSeatSoldAlerts } from "@/db/seat-sold-alerts";
 import { bringDemoBoatsAtSeaHome } from "@/db/seed";
 import { sendDueServiceReminders } from "@/db/work-order-follow-up";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
+import { errorClassToken, errorCodeToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import { reportScrubbedError } from "@/lib/observability";
 import { sweepMinimumSeats } from "./minimum-seats";
@@ -104,7 +105,11 @@ async function runScan<Scan extends ShopTickScan>(
       message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
       tags: { cron_scan: scan.replaceAll("-", "_") },
     });
-    log("cron_shop_tick.scan_failed", "error", { scan });
+    log("cron_shop_tick.scan_failed", "error", {
+      scan,
+      errorClass: errorClassToken(error),
+      errorCode: errorCodeToken(error),
+    });
     return null;
   }
 }
