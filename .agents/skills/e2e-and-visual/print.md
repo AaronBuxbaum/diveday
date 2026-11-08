@@ -3,9 +3,10 @@
 Read when changing print CSS, a printable document, or PDF capture mechanics. Use the existing
 **design-review** procedure for visual judgement; this reference adds the paper evidence it needs.
 
-1. **Inventory the affected family.** Follow shared print selectors to their consumers. Include
-   ordinary staff/public pages when changing global print rules, and packet compositions when
-   changing a constituent sheet. Record route, role, fixture, paper size and expected contents.
+1. **Inventory the affected family.** Only sheets print (a screen never does, and has no print
+   face; `.claude/rules/print-ink.md`). Follow a sheet's components to every sheet that composes
+   them, and include packet compositions when changing a constituent sheet. Record route, role,
+   fixture, paper size and expected contents.
 2. **Exercise the failure.** Choose populated data and a dense state that spans sheets: long names,
    notes, warning labels, grouped rows or expanded answers as appropriate. Keep an ordinary short
    state too. Assert the intended content before capture; privacy checks exercise each allowed role.
@@ -34,8 +35,10 @@ runs `assertPrintInk` (`e2e/print-ink.ts`), so a colour, a fill (even grey), a b
 hairline, white on dark or a shadow fails the capture. Fix the style; never loosen the audit. Look
 for pills, chips, tinted rows, left bars, reversed bands and coloured status text in every page image.
 
-Paper must carry the useful values after interactive controls disappear: an address rather than
-a map frame, a code rather than its Copy button, an answer rather than its closed disclosure.
+A sheet carries the useful values and never a control, by construction rather than by hiding:
+an address rather than a map frame, a code rather than its Copy button, an answer rather than its
+closed disclosure. A component a sheet shares with a screen takes a `paper` branch that renders
+those values and no control.
 Retain safety and medical distinctions with readable text in monochrome. Preserve the permission
 boundary of the source view when printing or composing packets.
 

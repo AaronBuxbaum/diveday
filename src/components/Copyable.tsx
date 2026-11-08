@@ -127,7 +127,7 @@ export function Copyable({
         variant: "ghost",
         size: "sm",
         flush,
-        className: panel ? "-mt-3 focus-visible:focus-ring-inset print:hidden" : "print:hidden",
+        className: panel ? "-mt-3 focus-visible:focus-ring-inset" : undefined,
       })}
     >
       <span aria-live="polite" className={status === "failed" ? "text-danger" : undefined}>

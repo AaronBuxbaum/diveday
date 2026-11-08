@@ -77,7 +77,7 @@ export default async function VerifyAccountPage({
     // `/reset-password` already offer their own dead links.
     return (
       <DeadLink t={t} next={t("account.verify.unavailableText")} diveDayDoor={false}>
-        <Link href="/sign-in" className="font-medium text-primary hover:underline print:hidden">
+        <Link href="/sign-in" className="font-medium text-primary hover:underline">
           {t("account.common.backToSignIn")}
         </Link>
       </DeadLink>

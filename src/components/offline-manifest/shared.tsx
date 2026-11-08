@@ -199,8 +199,8 @@ export type OfflineStatement = Pick<OfflineRollCallEvent, "status" | "retractsCl
  * **After a dive only**, matching the live manifest and the server rule: at the
  * dock `not_boarded` means "never left", which has never needed a sentence. It
  * sits beneath the row's controls rather than inside the cluster so it claims a
- * full line at every width. The roll-call screen is `print:hidden` as a whole
- * (`TripScreen.tsx`): the saved copy's paper is its own sheet
+ * full line at every width. The roll-call screen never prints
+ * (`TripScreen.tsx`, `ScreenNotPrinted`): the saved copy's paper is its own sheet
  * (`ManifestSheet.tsx`, issue #2745), which prints the note a row carries as
  * words.
  */
@@ -216,7 +216,7 @@ export function OfflineRollCallNote({
   onChange: (next: string) => void;
 }) {
   return (
-    <p className="w-full print:hidden">
+    <p className="w-full">
       <label htmlFor={`offline-roll-call-note-${subjectId}`} className="sr-only">
         {label}
       </label>

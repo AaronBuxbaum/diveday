@@ -193,6 +193,11 @@
   party's lead typed is sent none (issue #4019). It never opens a seat's release (ADR
   [20261105-waiver-folds-into-the-thread](../../architecture/decisions/20261105-waiver-folds-into-the-thread.md),
   layer 6).
+- **Door draft** — what one door typed into a release before signing (`waiver_drafts`, issue
+  #4130): a counter code, a release link and the seat's thread each keep their own, so two
+  doors typing at once never erase each other and each reopens to exactly what it saved. Never
+  merged across doors, never sealed or exported; signing deletes every door's draft of the
+  release, and so do a pending link moving to another diver and erasure.
 - **Signed via** — which kind of door a signed release came through (`waiver_records.signed_via`,
   issue #4045): the diver's own link (`thread`), a counter code or Copy link (`counter`), the
   person who booked signing a child's seat (`party_door`), a release link (`release_link`), or a

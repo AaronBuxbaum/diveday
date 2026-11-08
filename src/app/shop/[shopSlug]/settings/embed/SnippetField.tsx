@@ -53,21 +53,15 @@ export function SnippetField({
           rows={rows}
           value={snippet}
           onFocus={(event) => event.currentTarget.select()}
-          className={`${textareaClassFor(rows)} pe-24 font-mono text-xs print:hidden`}
+          className={`${textareaClassFor(rows)} pe-24 font-mono text-xs`}
         />
-        <span
-          data-print-snippet
-          className="hidden whitespace-pre-wrap break-all font-mono text-xs print:block"
-        >
-          {snippet}
-        </span>
         <button
           type="button"
           onClick={copy}
           className={buttonClass({
             variant: "secondary",
             size: "sm",
-            className: "absolute end-2 top-2 print:hidden",
+            className: "absolute end-2 top-2",
           })}
         >
           <span aria-live="polite" className={status === "failed" ? "text-danger" : undefined}>

@@ -35,12 +35,9 @@ describe("the manifest's emergency reference", () => {
    * blanks print (issue #2035). The procedure ends "call for help on the
    * numbers below", so it sits above the card it points at.
    */
-  it("prints the missing-diver procedure above the numbers and the kit blanks below, on paper only", () => {
-    const wrapper = PAPER.match(/<div\s+data-print-only\s+className="([^"]+)"[^>]*>/);
+  it("prints the missing-diver procedure above the numbers and the kit blanks below", () => {
+    const wrapper = PAPER.match(/<div\s+className="break-inside-avoid"[^>]*>/);
     expect(wrapper).not.toBeNull();
-    const classes = wrapper?.[1].split(/\s+/) ?? [];
-    expect(classes).toContain("hidden");
-    expect(classes).toContain("print:block");
     const printOnly = wrapper?.index ?? -1;
     const block = PAPER.slice(printOnly, PAPER.indexOf("</div>", printOnly));
     const procedure = block.indexOf("<PrintedMissingProcedure");

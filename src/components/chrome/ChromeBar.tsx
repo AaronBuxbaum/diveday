@@ -18,7 +18,7 @@ import type { ReactNode } from "react";
  * way the bar's height and every sticky offset beneath it are one declaration.
  */
 const CHROME_BAR_SURFACE_CLASS =
-  "sticky top-0 z-30 border-b border-border bg-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/85 print:hidden";
+  "sticky top-0 z-30 border-b border-border bg-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/85";
 export const CHROME_BAR_CLASS = `${CHROME_BAR_SURFACE_CLASS} h-(--chrome-h)`;
 
 export function ChromeBar({

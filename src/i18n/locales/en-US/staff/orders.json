@@ -202,8 +202,7 @@
       "amount": "Amount"
     },
     "pagination": {
-      "total": "{count, plural, one {# entry} other {# entries}}",
-      "paperSubset": "{total, plural, one {{shown} of # order shown} other {{shown} of # orders shown}}"
+      "total": "{count, plural, one {# entry} other {# entries}}"
     },
     "importedHistory": {
       "sectionLabel": "Imported payment history",
@@ -224,8 +223,7 @@
       "stripeReference": "Stripe reference: {reference}",
       "amountNotProvided": "Amount not provided",
       "pagination": {
-        "total": "{count, plural, one {# imported source record} other {# imported source records}}",
-        "paperSubset": "{total, plural, one {{shown} of # imported record shown} other {{shown} of # imported records shown}}"
+        "total": "{count, plural, one {# imported source record} other {# imported source records}}"
       }
     },
     "paymentOps": {

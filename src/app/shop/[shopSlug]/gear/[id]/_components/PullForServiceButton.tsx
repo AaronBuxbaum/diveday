@@ -37,7 +37,7 @@ export function PullForServiceButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={buttonClass({ variant: "secondary", className: "print:hidden" })}
+        className={buttonClass({ variant: "secondary" })}
       >
         {copy.trigger}
       </button>

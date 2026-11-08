@@ -101,10 +101,7 @@ export function MonthFigures({
             <dd className="mt-2">
               {/* Keep the figure size on the value; its detail lines use a smaller size. */}
               {figure.href ? (
-                <Link
-                  href={figure.href}
-                  className={`block ${FIGURE_LARGE_CLASS} hover:underline print:no-underline`}
-                >
+                <Link href={figure.href} className={`block ${FIGURE_LARGE_CLASS} hover:underline`}>
                   {figure.value}
                 </Link>
               ) : (
@@ -134,7 +131,7 @@ export function MonthFigures({
               {/* Preserve the 44px tap target without changing the 20px text line (K-288). */}
               {figure.link ? (
                 // A link does nothing on paper, so it does not print (review F3).
-                <span className="mt-2 flex h-5 items-center print:hidden">
+                <span className="mt-2 flex h-5 items-center">
                   <Link
                     href={figure.link.href}
                     className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}

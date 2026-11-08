@@ -136,11 +136,7 @@ export function WhoWantsInPanel({
   };
 
   return (
-    <RosterGroup
-      id={WHO_WANTS_IN_ID}
-      label={t("trips.whoWantsIn.heading", { count: rows.length })}
-      className="print:hidden"
-    >
+    <RosterGroup id={WHO_WANTS_IN_ID} label={t("trips.whoWantsIn.heading", { count: rows.length })}>
       <OfferDiscountProvider>
         <div className="space-y-4 px-4 py-3 sm:px-5">
           <p className="text-xs text-muted">

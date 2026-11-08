@@ -27,9 +27,9 @@ const LINE_TONE: Record<BoatSafetyLine["tone"], string> = {
  * an empty card, so a shop that never dates a paper or registers an AED sees
  * the manifest exactly as before.
  *
- * Always open and **always printed** (no `print:hidden`, unlike the
- * after-dive controls around it): a lapsed flare date is the one line that
- * must not be a tap away, and the sheet the boat carries has to say it too.
+ * Always open and **always on the sheet** (`ManifestPaper`, the offline
+ * copy's `ManifestSheet`): a lapsed flare date is the one line that must not
+ * be a tap away, and the sheet the boat carries has to say it too.
  * Shared by the live manifest and the offline copy, so the two read the same.
  */
 export function BoatSafetyNotices({

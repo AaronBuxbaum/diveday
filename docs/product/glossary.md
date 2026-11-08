@@ -424,6 +424,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Day profile
 - Dispute sheet
 - Dive area
+- Door draft
 - Drill log
 - Earliest flight
 - Executed dive

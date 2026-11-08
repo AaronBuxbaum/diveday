@@ -30,6 +30,7 @@ import {
 import { issueWaiverRequest } from "./waivers-requests";
 import {
   clearAnswers,
+  draftsOf,
   medicalReferralAnswers,
   openOnDevice,
   recordMedicalEvaluationForShop,
@@ -383,7 +384,7 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     expect(await waiverLinkDoor(db, mailed)).toBeNull();
   });
 
-  it("what the diver typed follows them to the new link", async () => {
+  it("what the diver typed stays on the release, and a fresh counter code never shows it", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     const { db, shop, diver } = await seatedDiver("person-draft");
     const copied = await issueAndDeliverPersonWaiver(db, shop.id, diver.id, {
@@ -412,8 +413,14 @@ describe("a corrected address retires the waiver it was sent (#3950)", () => {
     if (freshDoor?.door !== "counter") throw new Error("counter door expected");
     const opened = await getWaiverForToken(db, freshDoor.key);
     if (opened.state !== "available") throw new Error(`fresh link is ${opened.state}`);
-    expect(opened.record.draftSignerName).toBe("Not The Diver");
-    expect(opened.record.draftMedicalAnswers).toEqual(medicalReferralAnswers);
+    // The same release, so its draft is still there for erasure to find; it is
+    // the dead code's, and a fresh code shows no medical answers typed through
+    // another (security review S2, issue #4130).
+    expect(opened.record.id).toBe(door.key.recordId);
+    expect(opened.draft).toBeNull();
+    expect(await draftsOf(db, opened.record.id)).toMatchObject([
+      { door: "counter", linkId: door.key.linkId, signerName: "Not The Diver" },
+    ]);
   });
 
   it("a course's forms link, which the waiver send mails undelivered, dies with the old address", async () => {

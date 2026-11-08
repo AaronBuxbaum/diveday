@@ -37,7 +37,6 @@ import {
 } from "./_components/CourseFormsRequirement";
 import { CoursePhotosSection } from "./_components/CoursePhotosSection";
 import { CoursePitchPricingSections } from "./_components/CoursePitchPricingSections";
-import { CourseSavedPrintDetails } from "./_components/CourseSavedPrintDetails";
 import { CourseDayByDaySection, CourseFaqSection } from "./_components/CourseScheduleFaqSections";
 import { CourseTemplateUpdatesPanel } from "./_components/CourseTemplateUpdatesPanel";
 import { courseEditNotices, refusedSectionId } from "./_components/edit-notices";
@@ -146,7 +145,6 @@ export default async function EditCoursePage({
     ...section,
     unsavedTag,
     closed: true,
-    printEditorLabel: t("shared.formDraft.editorValues"),
     open: refusedSection === section.id,
   });
   const [pitch, pricing, glance, dayByDay] = sections
@@ -315,7 +313,7 @@ export default async function EditCoursePage({
               />
               <CourseDayByDaySection course={course} dayByDay={dayByDay} t={t} />
 
-              <DisclosureRowList className="print:[&>details:not([open])]:hidden">
+              <DisclosureRowList>
                 <CoursePhotosSection course={course} photos={photos} t={t} />
                 <CourseEnrollSection course={course} enroll={enroll} levelAge={levelAge} t={t} />
                 <CourseFeeCoversSection course={course} feeCovers={feeCovers} t={t} />
@@ -335,12 +333,6 @@ export default async function EditCoursePage({
                   />
                 ) : null}
               </DisclosureRowList>
-              <CourseSavedPrintDetails
-                course={course}
-                t={t}
-                display={{ locale, depthUnit: shop.depthUnit, levelAge }}
-                formsPanel={formsPanel}
-              />
             </div>
 
             {/* One control, not two: "Preview" opened the same page the "Live

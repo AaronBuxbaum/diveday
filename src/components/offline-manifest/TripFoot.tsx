@@ -30,7 +30,7 @@ function StillToCallLine({
 }) {
   if (!line) return null;
   return (
-    <p className="mt-4 print:hidden">
+    <p className="mt-4">
       <a
         href={line.href}
         className="inline-flex min-h-11 items-center text-base font-semibold text-primary underline underline-offset-2"
@@ -78,7 +78,7 @@ export function OfflineTripFoot({
           with no vibration motor, and then the group has nothing in it, so
           it hides rather than opening onto an empty box. */}
       <section
-        className="mt-8 border-t border-border pt-5 print:hidden has-[[data-phone-prefs]:empty]:hidden"
+        className="mt-8 border-t border-border pt-5 has-[[data-phone-prefs]:empty]:hidden"
         aria-labelledby="offline-phone-heading"
       >
         <details id="offline-phone-settings" className="group/offline-phone">

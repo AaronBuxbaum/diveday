@@ -3,7 +3,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { type fileScopedShopContext, seededShopContext } from "@/test/db";
 import { mintCapability } from "./capabilities";
 import type { DbExecutor } from "./client";
-import { bookings, people, personRoles, shops } from "./schema";
+import { bookings, people, personRoles, shops, waiverDrafts, waiverRecords } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { claimCounterLink, waiverLinkDoor } from "./waivers-completion";
 import { recordMedicalEvaluation as recordMedicalEvaluationInShop } from "./waivers-medical";
@@ -132,4 +132,46 @@ export async function shopStaffer(db: DbExecutor, shopId: string): Promise<strin
     .limit(1);
   if (!staffer) throw new Error("shop has no staff");
   return staffer.personId;
+}
+
+/** Every door's draft of one release (issue #4130): thread, counter, release. */
+export async function draftsOf(db: DbExecutor, recordId: string) {
+  return db
+    .select()
+    .from(waiverDrafts)
+    .where(eq(waiverDrafts.waiverRecordId, recordId))
+    .orderBy(waiverDrafts.door, waiverDrafts.linkId);
+}
+
+/**
+ * What somebody half-typed on every release of a seat, through two doors: the
+ * thread and a counter code (issue #4130). For the writers that must clear it.
+ */
+export async function halfTypedDrafts(db: DbExecutor, bookingId: string) {
+  const records = await db
+    .select({ id: waiverRecords.id, shopId: waiverRecords.shopId })
+    .from(waiverRecords)
+    .where(eq(waiverRecords.bookingId, bookingId));
+  for (const record of records) {
+    await db.insert(waiverDrafts).values([
+      {
+        shopId: record.shopId,
+        waiverRecordId: record.id,
+        door: "thread",
+        linkId: null,
+        signerName: "Half Typed",
+        acknowledged: true,
+        shopAnswers: { q1: "secret" },
+      },
+      {
+        shopId: record.shopId,
+        waiverRecordId: record.id,
+        door: "counter",
+        linkId: crypto.randomUUID(),
+        signerName: "Half Typed",
+        medicalAnswers: medicalReferralAnswers,
+      },
+    ]);
+  }
+  return records.map((record) => record.id);
 }

@@ -140,7 +140,7 @@ export function MedicalAlertReveal({
 
   if (revealed) {
     return (
-      <div className="flex flex-col gap-1 print:hidden">
+      <div className="flex flex-col gap-1">
         {/* The diver's own words, line breaks kept: "Bee-sting allergy.\nEpiPen
             in the blue dry bag." */}
         <p className="text-base whitespace-pre-wrap [overflow-wrap:anywhere]">{revealed.text}</p>
@@ -199,7 +199,7 @@ export function MedicalAlertReveal({
     });
 
   return (
-    <div className="flex flex-col items-start gap-1 print:hidden">
+    <div className="flex flex-col items-start gap-1">
       <button
         type="button"
         onClick={reveal}
@@ -300,7 +300,7 @@ function EmergencyRead({
           ? copy.closed
           : null;
   return (
-    <div className="flex flex-col items-start gap-2 print:hidden">
+    <div className="flex flex-col items-start gap-2">
       {confirming ? (
         <div className="flex flex-col items-start gap-2 rounded-lg border border-border bg-surface px-3 py-2">
           <p className="text-sm font-medium">{copy.confirmBody}</p>

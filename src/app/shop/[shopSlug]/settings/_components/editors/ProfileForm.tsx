@@ -54,12 +54,7 @@ export function ProfileForm({
     tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
   };
   return (
-    <FieldGrid
-      as="form"
-      action={saveProfileAction}
-      columns={1}
-      className={`${className} print:gap-y-2`}
-    >
+    <FieldGrid as="form" action={saveProfileAction} columns={1} className={`${className}`}>
       <Field label={t("settings.main.profile.tagline")}>
         <textarea
           name="tagline"

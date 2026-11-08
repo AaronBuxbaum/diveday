@@ -34,12 +34,6 @@ describe("StaffingWeek away note", () => {
     expect(screen.getAllByText(/Hospital appointment/).length).toBeGreaterThan(0);
   });
 
-  it("keeps a privileged reader's note off the page when someone prints the screen", () => {
-    weekAs({ personId: "person-owner", canReadCrewAwayNote: true });
-    const note = screen.getAllByText(/Hospital appointment/)[0];
-    expect(note).toHaveClass("print:hidden");
-  });
-
   it("shows a colleague that she is away, and not why", () => {
     weekAs({ personId: "person-colleague", canReadCrewAwayNote: false });
     expect(screen.getAllByText(/Away/).length).toBeGreaterThan(0);

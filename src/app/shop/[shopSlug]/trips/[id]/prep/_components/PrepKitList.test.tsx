@@ -101,7 +101,7 @@ describe("the packing list's geometry", () => {
     const { container } = renderKitList(everyPanelPrep());
     const card = container.querySelector("ul.sm\\:hidden");
     expect(card).not.toBeNull();
-    expect(tokens(card)).toEqual(expect.arrayContaining(["divide-y", "print:hidden"]));
+    expect(tokens(card)).toEqual(expect.arrayContaining(["divide-y", "sm:hidden"]));
     const rows = card?.querySelectorAll(":scope > li") ?? [];
     expect(rows.length).toBeGreaterThan(1);
     for (const row of rows) {

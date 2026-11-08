@@ -517,12 +517,11 @@ describe("waiver integrity over the shop's own questions (glossary *Shop questio
 
   // Security review L2: an erased (v2) record never holds answers, so answers
   // planted back on one are tampering, not a record that verifies.
-  it("reads an erased record carrying answers or a draft of them as invalid", () => {
+  it("reads an erased record carrying answers as invalid", () => {
     vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
     const sealed = {
       ...erased,
       shopAnswers: null,
-      draftShopAnswers: null,
       integrityHash: computeWaiverIntegrityHash(
         { ...erased, shopAnswers: null },
         WAIVER_INTEGRITY_VERSION_ERASED,
@@ -532,9 +531,6 @@ describe("waiver integrity over the shop's own questions (glossary *Shop questio
     expect(verifyWaiverIntegrity(sealed)).toBe("valid");
     expect(verifyWaiverIntegrity({ ...sealed, shopAnswers: answers })).toBe("invalid");
     expect(verifyWaiverIntegrity({ ...sealed, shopAnswers: [] })).toBe("invalid");
-    expect(verifyWaiverIntegrity({ ...sealed, draftShopAnswers: { divecount01: 40 } })).toBe(
-      "invalid",
-    );
     vi.unstubAllEnvs();
   });
 
@@ -665,14 +661,12 @@ describe("waiver integrity over the medical alert for the crew (issue #2960)", (
     const sealed = {
       ...erased,
       medicalAlert: null,
-      draftMedicalAlert: null,
       integrityHash: computeWaiverIntegrityHash(erased, WAIVER_INTEGRITY_VERSION_ERASED),
       integrityVersion: WAIVER_INTEGRITY_VERSION_ERASED,
     };
     expect(verifyWaiverIntegrity(sealed)).toBe("valid");
     expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: alert })).toBe("invalid");
     expect(verifyWaiverIntegrity({ ...sealed, medicalAlert: "" })).toBe("invalid");
-    expect(verifyWaiverIntegrity({ ...sealed, draftMedicalAlert: alert })).toBe("invalid");
     vi.unstubAllEnvs();
   });
 });

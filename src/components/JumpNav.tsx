@@ -20,7 +20,7 @@ export function JumpNav({
   return (
     // Align the first label with the page title. Keep 44px targets and inset
     // focus rings inside the row; jump links have no use in print.
-    <div className={`mb-8 border-b border-border pb-2 print:hidden ${className}`}>
+    <div className={`mb-8 border-b border-border pb-2 ${className}`}>
       <nav aria-label={ariaLabel} className="-ml-3 flex flex-wrap items-center gap-x-1">
         {items.map((item) => (
           <a

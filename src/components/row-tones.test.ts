@@ -42,17 +42,13 @@ describe("the roll-call row tones", () => {
 describe("the rule between two roll-call rows", () => {
   const classes = (value: string) => value.split(/\s+/);
 
-  it("skips the rule above the first row on screen and on paper, separately", () => {
-    expect(classes(rollCallRuleClass({ firstOnScreen: true, firstOnPaper: false }))).toEqual(
-      expect.arrayContaining(["border-t-0", "print:border-t"]),
-    );
-    expect(classes(rollCallRuleClass({ firstOnScreen: false, firstOnPaper: true }))).toEqual(
-      expect.arrayContaining(["border-t", "print:border-t-0"]),
-    );
+  it("skips the rule above the row its list shows first", () => {
+    expect(classes(rollCallRuleClass(true))).toContain("border-t-0");
+    expect(classes(rollCallRuleClass(false))).toContain("border-t");
   });
 
   it("draws it in the rule color and never a tone's", () => {
-    const rule = classes(rollCallRuleClass({ firstOnScreen: false, firstOnPaper: false }));
+    const rule = classes(rollCallRuleClass(false));
     expect(rule).toContain("border-border");
     const toneColours = Object.values(ROLL_CALL_ROW_TONE)
       .flatMap(classes)

@@ -114,10 +114,7 @@ export default async function IncidentReportPage({
           call is still running, so the way back to it is the first thing
           under the title (domain review 2026-10-16). */}
       {backToManifest ? (
-        <Link
-          href={backToManifest}
-          className={buttonClass({ variant: "secondary", className: "print:hidden" })}
-        >
+        <Link href={backToManifest} className={buttonClass({ variant: "secondary" })}>
           {t("incidents.missingDiver.backToManifest")}
         </Link>
       ) : null}

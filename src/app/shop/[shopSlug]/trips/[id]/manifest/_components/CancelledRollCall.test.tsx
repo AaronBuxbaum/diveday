@@ -104,6 +104,17 @@ describe("the diver roll call of a cancelled departure nobody counted on", () =>
       />,
     );
     expect(rollCallForms()).toHaveLength(0);
+    expect(screen.getByText("Meera Iyer")).toBeInTheDocument();
+    cleanup();
+    render(
+      <DiverRollCall
+        context={diverContext({
+          divers: [diver({ rollCall: boardedAt() })],
+          rollCallClosed: true,
+          paper: true,
+        })}
+      />,
+    );
     expect(screen.getAllByText(/Keiko Tanaka/).length).toBeGreaterThan(0);
   });
 });

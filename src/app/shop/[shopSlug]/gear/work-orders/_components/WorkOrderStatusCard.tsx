@@ -39,11 +39,7 @@ export function WorkOrderStatusCard({
 }) {
   if (readOnly) {
     return (
-      <SectionCard
-        title={t("workOrders.detail.statusHeading")}
-        padding="lg"
-        className="print:hidden"
-      >
+      <SectionCard title={t("workOrders.detail.statusHeading")} padding="lg">
         <form action={restoreWorkOrderAction}>
           <input type="hidden" name="workOrderId" value={workOrder.id} />
           <SubmitButton pendingLabel={t("words.busy.restoring")} className={buttonClass()}>
@@ -60,7 +56,7 @@ export function WorkOrderStatusCard({
   const label = (status: WorkOrderStatus) => workOrderStatusLabel(t, status, subject, outcome);
 
   return (
-    <SectionCard title={t("workOrders.detail.statusHeading")} padding="lg" className="print:hidden">
+    <SectionCard title={t("workOrders.detail.statusHeading")} padding="lg">
       <ChoiceFieldset
         legend={t("workOrders.detail.moveTo")}
         className="min-w-0"

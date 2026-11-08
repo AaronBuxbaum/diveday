@@ -275,18 +275,15 @@ describe("a track too narrow for one line", () => {
   });
 
   /**
-   * **A gridded track still leaves the printed page** (the counter's and the
-   * manifest's tracks are chrome, `print:hidden`). The grid's `display` was an
-   * inline style, and an inline declaration beats a stylesheet rule that is
-   * not `!important`, so every track that had flipped to a grid printed. The
-   * display is a class swapped for the track's `flex`, which `print:hidden`
-   * outranks as it always did; only the column count is inline.
+   * **A gridded track keeps its display in a class.** An inline declaration
+   * beats every utility, so a track whose `display` was an inline style
+   * stopped obeying a caller's `hidden` or breakpoint display. The display is
+   * a class swapped for the track's `flex`; only the column count is inline.
    */
-  it("keeps its display in a class print:hidden outranks, never in an inline style", () => {
+  it("keeps its display in a class, never in an inline style", () => {
     const nav = renderInRoom(300);
     expect(nav.style.display).toBe("");
     expect(nav.getAttribute("style") ?? "").not.toMatch(/display/);
-    expect(nav).toHaveClass("print:hidden");
   });
 
   it("never lays a column narrower than its widest option", () => {

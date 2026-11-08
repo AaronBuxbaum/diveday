@@ -42,8 +42,8 @@ import { getCurrentWaiverTemplate } from "./waivers-templates";
  * a paper release records no answers ("Not recorded in DiveDay"). It goes to
  * an adult diver who already holds a clean release, person-scoped (no seat),
  * signed two days ago and sealed here, as `completeWaiver` seals it.
- * `seedWaiverEvidence` (which runs after this) leaves a release it did not
- * re-date and that its own cutoff would not seal alone, and dating it before
+ * `seedWaiverEvidence` (which runs after this) preserves an existing seal
+ * even when its own cutoff would not seal the release, and dating it before
  * that cutoff keeps the audit trail's first page showing both of its states.
  * Nothing about anyone's readiness changes: the diver was cleared before and
  * is cleared after.

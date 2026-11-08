@@ -2,11 +2,13 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { TripManifest } from "@/lib/manifests";
+import { DiverRollCall } from "./DiverRollCall";
 import { DiverRowTrigger } from "./DiverRowTrigger";
 import {
   boardedAt,
   dangerToned,
   diver,
+  diverContext,
   renderList,
   type TestLocale,
   TRANSLATORS,
@@ -60,8 +62,13 @@ describe("the rider's riding-only capsule", () => {
     expect(capsuleOf(container)).toHaveTextContent(REFERRAL);
     const sentence =
       /Referred to a physician on Aug\s20,\s2026 with no answer on file: riding only, not in the water/;
-    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
-    expect(printed).toHaveTextContent(sentence);
+    const paper = render(
+      <DiverRollCall
+        context={diverContext({ divers: [rider({ riderMedicalHold: referral })], paper: true })}
+      />,
+    );
+    expect(paper.container).toHaveTextContent(sentence);
+    paper.unmount();
     fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
     expect(within(screen.getByRole("dialog")).getByText(sentence)).toBeDefined();
   });

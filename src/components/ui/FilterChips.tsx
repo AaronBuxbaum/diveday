@@ -42,38 +42,32 @@ export function FilterChips({
 }) {
   const activeChip = chips.find((chip) => chip.active);
   return (
-    <>
-      {/* Paper needs the list's scope, not the navigation to other views. */}
-      {activeChip ? (
-        <p className={`hidden text-sm font-medium print:block ${className}`}>{activeChip.label}</p>
-      ) : null}
-      <nav aria-label={label} className={`print:hidden ${className}`}>
-        {/* Keep one horizontally scrolling row on phones and wrap from `sm`.
+    <nav aria-label={label} className={`${className}`}>
+      {/* Keep one horizontally scrolling row on phones and wrap from `sm`.
           The inner scroller owns focus-ring clearance and edge fades; the nav
           owns caller spacing. Its scroll padding keeps focused chips clear of
           the clipping edge, and `FilterChipsScroller` brings the current chip
           into view on arrival. See the scroller and `globals.css` for those
           behaviors. */}
-        <FilterChipsScroller
-          activeKey={activeChip?.key}
-          className="chip-scroller flex items-center gap-2 max-sm:-mx-4 max-sm:-my-1.5 max-sm:scroll-px-6 max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:[scrollbar-width:none] sm:flex-wrap"
-        >
-          {chips.map((chip) => (
-            <Link
-              key={chip.key}
-              href={chip.href}
-              // The chips sit above the list they narrow; a scroll reset would
-              // throw the reader back to the top of the page on every view change.
-              scroll={false}
-              onClick={onNavigate}
-              aria-current={chip.active ? "true" : undefined}
-              className={chipClass(chip.active)}
-            >
-              {chip.label}
-            </Link>
-          ))}
-        </FilterChipsScroller>
-      </nav>
-    </>
+      <FilterChipsScroller
+        activeKey={activeChip?.key}
+        className="chip-scroller flex items-center gap-2 max-sm:-mx-4 max-sm:-my-1.5 max-sm:scroll-px-6 max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:[scrollbar-width:none] sm:flex-wrap"
+      >
+        {chips.map((chip) => (
+          <Link
+            key={chip.key}
+            href={chip.href}
+            // The chips sit above the list they narrow; a scroll reset would
+            // throw the reader back to the top of the page on every view change.
+            scroll={false}
+            onClick={onNavigate}
+            aria-current={chip.active ? "true" : undefined}
+            className={chipClass(chip.active)}
+          >
+            {chip.label}
+          </Link>
+        ))}
+      </FilterChipsScroller>
+    </nav>
   );
 }

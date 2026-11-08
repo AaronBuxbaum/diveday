@@ -265,7 +265,6 @@ export default async function BoatsSettingsPage({
             fields, especially when narrow boxes truncate their text (K-145). */}
         <DisclosureRow
           id={boatRowId("new")}
-          className="print:hidden"
           heading={t("boats.createTitle")}
           open={Boolean(errorFor("new"))}
         >

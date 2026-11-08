@@ -77,6 +77,10 @@ async function initSentry(dsn: string) {
     dsn,
     environment: process.env.NODE_ENV,
     tracesSampleRate: 0,
+    // Errors and cron check-ins do not need a tracer provider. Sampling at
+    // zero still installs Sentry's propagator in Next.js; cached renders can
+    // then ask it to inject a different context and warn on every request.
+    enableOpenTelemetrySetup: false,
     dataCollection: SENTRY_DATA_COLLECTION,
     beforeSend: redactEvent,
     beforeBreadcrumb: redactBreadcrumb,

@@ -242,7 +242,6 @@ describe("DiverRollCallRow, drawn on its own", () => {
     const row = container.querySelector("li") as HTMLElement;
     expect(row.id).toBe(`diver-row-${missing.bookingId}`);
     expect(row.className).toContain("order-first");
-    expect(row.className).toContain("print:order-none");
   });
 });
 

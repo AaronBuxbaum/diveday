@@ -32,8 +32,8 @@ import { seatNotCancelled } from "./trips-queries";
  *
  * This scenario fixes both, and the fix is itself the story a demo should tell:
  * releases signed since the shop's account got the evidence seal carry a
- * verifiable seal; everything signed before it is the unsealed legacy the
- * migration brought across. The cutoff sits close enough to today that the
+ * verifiable seal; everything signed before it is an unsealed import from
+ * the shop's paper archive. The cutoff sits close enough to today that the
  * audit trail's first page shows both.
  *
  * **Runs last in `seedDemoSchedule`, and only ever updates.** It inserts
@@ -43,15 +43,15 @@ import { seatNotCancelled } from "./trips-queries";
  * different reason too: a seal covers the record's *final* stored metadata, so
  * anything that still had a waiver row to write must already have written it.
  *
- * Readiness is deliberately untouched. Sealing is orthogonal to it, and the
- * re-dated signatures stay inside `WAIVER_SIGNATURE_VALIDITY_MS` and keep their
- * template version, so `isCompletedWaiverCurrent` answers exactly what it
- * answered before for every booking on the board.
+ * The re-dated signatures stay inside `WAIVER_SIGNATURE_VALIDITY_MS` and keep
+ * their template version. Referrals stay native and sealed; paper imports
+ * carry no questionnaire answers. A changed sealed release still fails the
+ * real seal check.
  */
 
 /**
  * The instant the demo shop's account got the evidence seal. Records signed at
- * or after it are sealed; everything older is unsealed legacy.
+ * or after it are sealed; everything older is an unsealed paper import.
  *
  * Yesterday morning, and the recency is the whole reason for the number. The
  * audit trail pages twenty rows at a time ordered by signature, and the spread
@@ -184,8 +184,10 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
         ? signedBeforeDeparture(inDeskHours, departsAt.get(record.personId) ?? null, spreadIndex)
         : inDeskHours;
     if (stampedNow) spreadIndex += 1;
-    const sealed = (signedAt?.getTime() ?? 0) >= sealFrom;
-    if (!stampedNow && !sealed) continue;
+    const sealed =
+      Boolean(record.integrityHash && record.integrityVersion) ||
+      record.medicalReviewRequired ||
+      (signedAt?.getTime() ?? 0) >= sealFrom;
     // The seal covers the record exactly as it will be stored, so the metadata
     // is built from the row *after* the re-date, never before it — a seal over
     // the old timestamps would verify as `invalid`, which is the one thing a
@@ -208,6 +210,13 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
       createdAt: stampedNow && signedAt ? signedAt : record.createdAt,
       integrityHash: null,
       integrityVersion: null,
+      // The older, unsealed half came from the shop's paper archive. It must
+      // be an import: a recent signature taken by DiveDay always has a seal,
+      // so the nightly check rightly treats an unsealed native signature as
+      // a removed seal once this shop has existed for more than a day.
+      signatureMethod: sealed ? record.signatureMethod : "imported",
+      importedFromLabel: sealed ? record.importedFromLabel : "Paper archive",
+      medicalAnswers: sealed ? record.medicalAnswers : null,
     };
     const hash = sealed ? computeWaiverIntegrityHash(next, WAIVER_INTEGRITY_VERSION_SIGNED) : null;
     const resealed: WaiverRecord = {
@@ -232,7 +241,7 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
 }
 
 /**
- * How many rows one `UPDATE … FROM (VALUES …)` carries. Nine bound parameters
+ * How many rows one `UPDATE … FROM (VALUES …)` carries. Twelve bound parameters
  * per row, so this is nowhere near Postgres's 65535-parameter ceiling; it is
  * sized to keep one statement's plan small rather than to dodge a limit.
  */
@@ -264,7 +273,7 @@ async function applyEvidence(
     const rows = sql.join(
       chunk.map(
         ({ id, next }) =>
-          sql`(${id}::uuid, ${next.signedAt}::timestamptz, ${next.consentedAt}::timestamptz, ${next.completedAt}::timestamptz, ${next.createdAt}::timestamptz, ${next.integrityHash}::text, ${next.integrityVersion}::integer, ${next.integrityValid}::boolean, ${next.integrityCheckedAt}::timestamptz)`,
+          sql`(${id}::uuid, ${next.signedAt}::timestamptz, ${next.consentedAt}::timestamptz, ${next.completedAt}::timestamptz, ${next.createdAt}::timestamptz, ${next.integrityHash}::text, ${next.integrityVersion}::integer, ${next.integrityValid}::boolean, ${next.integrityCheckedAt}::timestamptz, ${next.signatureMethod}::text, ${next.importedFromLabel}::text, ${next.medicalAnswers ? JSON.stringify(next.medicalAnswers) : null}::jsonb)`,
       ),
       sql`, `,
     );
@@ -277,10 +286,13 @@ async function applyEvidence(
         integrity_hash = source.integrity_hash,
         integrity_version = source.integrity_version,
         integrity_valid = source.integrity_valid,
-        integrity_checked_at = source.integrity_checked_at
+        integrity_checked_at = source.integrity_checked_at,
+        signature_method = source.signature_method,
+        imported_from_label = source.imported_from_label,
+        medical_answers = source.medical_answers
       from (values ${rows}) as source (
         id, signed_at, consented_at, completed_at, created_at, integrity_hash, integrity_version,
-        integrity_valid, integrity_checked_at
+        integrity_valid, integrity_checked_at, signature_method, imported_from_label, medical_answers
       )
       where target.id = source.id
     `);

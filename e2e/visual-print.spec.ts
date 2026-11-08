@@ -8,6 +8,7 @@
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { DEMO_MEDICAL_ALERT, DEMO_MEDICAL_ALERT_TRIP } from "../src/db/seed-medical-alert";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { ARRIVAL_MAP_PROBES } from "../src/lib/maps";
 import { assertCrewPdfPixels } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
@@ -23,19 +24,20 @@ import {
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
+const staff = staffTranslator("en-US");
+
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 test.use(VISUAL_STEP_BOUNDS);
 
 /**
- * Print / Save-as-PDF surfaces. The complete trip packet, manifest, prep list,
- * and departure log are the documents staff physically print for the dock, and print gets a dedicated
- * rendering (globals.css `@media print`): monochrome, so a shop's black-and-
- * white printer isn't asked for muddy color, and padded, so content doesn't
- * slam into the paper edge. The interactive baselines above never exercise
- * that path. This block lives outside the light/dark loop on purpose — print
- * is scheme-independent — and runs at a US-Letter-ish width so the baseline
- * reflects paper rather than a 1280px browser window.
+ * Print / Save-as-PDF documents. Every one is a run of sheets (issue #2745):
+ * the trip packet, the Boat tab's manifest, the departure log, the day packet
+ * and the public pages' sheets. A screen never prints, so nothing here
+ * photographs one (`capturePrint` refuses a page with no sheet). This block
+ * lives outside the light/dark loop on purpose — print is scheme-independent
+ * — and runs at a US-Letter-ish width so the baseline reflects paper rather
+ * than a 1280px browser window.
  *
  * One test per printed surface, same rule as the rest of the file: the manifest
  * failing to render must not cost the prep list its baseline.
@@ -81,123 +83,6 @@ test.describe("print", () => {
     await page.emulateMedia({ media: "screen" });
     await expect(sheet).not.toBeVisible();
     await capturePrint(page, "ready-arrival-address");
-  });
-
-  test("the product directory prints unopened capabilities and unvisited sections", async ({
-    page,
-  }) => {
-    await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page.goto("/product");
-    await expect(page.locator("[data-marketing-reveal]").first()).toBeAttached();
-    await expect(
-      page.locator("[data-marketing-reveal]:not([data-marketing-reveal-ready])"),
-    ).toHaveCount(0);
-    const pending = page.locator("main section.marketing-reveal-pending").first();
-    await expect(pending).toHaveCSS("opacity", "0");
-    expect(
-      await pending.evaluate((section) => section.getBoundingClientRect().top > window.innerHeight),
-    ).toBe(true);
-    const checklist = page.locator(".marketing-capability-lines").first();
-    await expect(checklist).not.toHaveAttribute("open");
-    await page.emulateMedia({ media: "print" });
-    await expect(checklist.locator("li").first()).toBeVisible();
-    const sections = page.locator("main section");
-    await expect(sections).not.toHaveCount(0);
-    for (const section of await sections.all()) {
-      await expect(section).toHaveCSS("opacity", "1");
-    }
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "public-product-directory");
-  });
-
-  test("record editing controls stay off paper while record facts remain", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/dive-sites");
-    const site = page.getByRole("link", { name: "Christ of the Abyss", exact: true });
-    await site.click();
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Christ of the Abyss" }),
-    ).toBeVisible();
-    const deletion = page.locator("summary").filter({ hasText: "Delete site" });
-    await expect(deletion).toBeVisible();
-    const maximumDepth = page.getByRole("spinbutton", { name: "Maximum depth" });
-    await expect(maximumDepth).toHaveValue("26");
-    await page.emulateMedia({ media: "print" });
-    await expect(deletion).not.toBeVisible();
-    await expect(maximumDepth).toBeVisible();
-    await expect(maximumDepth).toHaveValue("26");
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "dive-site-record");
-
-    await page.goto("/shop/blue-mantis/gear");
-    await page.getByRole("link", { name: "BCD #1", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "BCD #1" })).toBeVisible();
-    const service = page.getByRole("button", { name: "Pull for service", exact: true });
-    await expect(service).toBeVisible();
-    await expect(page.getByText("CS-2201", { exact: true })).toBeVisible();
-    await page.emulateMedia({ media: "print" });
-    await expect(service).not.toBeVisible();
-    await expect(page.getByText("CS-2201", { exact: true })).toBeVisible();
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "gear-unit-record");
-  });
-
-  test("dock-day settings print without a trailing action-only sheet", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/settings/dock-day");
-    await page.getByRole("heading", { level: 1, name: "Dock-day rhythm" }).waitFor();
-    await expect(page.locator("[data-sticky-actions]")).toBeVisible();
-    await page.emulateMedia({ media: "print" });
-    await expect(page.locator("[data-sticky-actions]")).not.toBeVisible();
-    const pdf = await page.pdf({ format: "Letter", preferCSSPageSize: true });
-    // Chromium's PDF marks every page dictionary separately from the /Pages tree.
-    expect(pdf.toString("latin1").match(/\/Type \/Page\b/g)).toHaveLength(1);
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "dock-day-settings");
-  });
-
-  test("copy controls stay off paper while their values remain", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/promos");
-    const copies = page.getByRole("button", { name: "Copy code", exact: true });
-    await expect(copies).not.toHaveCount(0);
-    await expect(copies.first()).toBeVisible();
-    await page.emulateMedia({ media: "print" });
-    for (const copy of await copies.all()) await expect(copy).not.toBeVisible();
-    await expect(page.getByText("REEF10", { exact: true })).toBeVisible();
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "promo-codes");
-
-    await page.goto("/shop/blue-mantis/settings/embed");
-    const snippet = page.getByRole("textbox", { name: "Embed code" });
-    await expect(snippet).toBeVisible();
-    const value = await snippet.inputValue();
-    await expect(page.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
-    await page.emulateMedia({ media: "print" });
-    await expect(page.getByRole("button", { name: "Copy", exact: true })).not.toBeVisible();
-    await expect(snippet).not.toBeVisible();
-    const printedSnippet = page.locator("[data-print-snippet]");
-    await expect(printedSnippet).toBeVisible();
-    await expect(printedSnippet).toHaveText(value);
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "embed-code");
-  });
-
-  test("the inbox prints its excerpts without clipping", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/inbox");
-    await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
-    await page.emulateMedia({ media: "print" });
-    const excerpts = page.locator("main p.truncate");
-    await expect(excerpts).not.toHaveCount(0);
-    for (const excerpt of await excerpts.all()) {
-      if (!(await excerpt.isVisible())) continue;
-      expect(await excerpt.evaluate((node) => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
-    }
-    await page.emulateMedia({ media: "screen" });
-    await capturePrint(page, "inbox");
-  });
-
-  test("the site library prints its ledger without the interactive map", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
-    await capturePrint(page, "dive-site-library");
   });
 
   // **The crew week is a sheet** (issue #2745): the Crew screen's Print door
@@ -337,20 +222,12 @@ test.describe("print", () => {
 
   // Reach the seeded reef trip the way staff do, then print its dock surfaces.
   // Navigating by link keeps these off any hard-coded trip id.
-  test("the dock manifest prints monochrome and padded", async ({ page }) => {
+  test("the dock manifest prints as the Boat tab's sheet", async ({ page }) => {
     await openReefTrip(page);
     const tripPath = new URL(page.url()).pathname;
     await page.goto(`${tripPath}/manifest`);
     await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
     await capturePrint(page, "manifest");
-  });
-
-  test("the dock prep list prints monochrome and padded", async ({ page }) => {
-    await openReefTrip(page);
-    const tripPath = new URL(page.url()).pathname;
-    await page.goto(`${tripPath}/prep`);
-    await page.getByRole("heading", { name: "Tanks" }).waitFor();
-    await capturePrint(page, "prep");
   });
 
   // **Not "every staff tab" any more, and that is the point.** The packet used
@@ -427,11 +304,11 @@ test.describe("print", () => {
     await capturePrint(page, "departure-log");
   });
 
-  // **A signed waiver on paper** (plan `rental-tracking`, layer 2): the
-  // shop's name where the screen's way back stood, whose release it is, the
-  // signed time with its zone, the seal, and the text the diver signed. Rowan
-  // Pike's, like the screen capture, because it has the most to say.
-  test("a signed waiver prints as a document", async ({ page }) => {
+  // **A signed waiver prints as its own sheet** (issue #4142): whose release
+  // it is, when and how it was signed, the seal, the medical line and the text
+  // the diver signed, with no control on it. Rowan Pike's, because hers has
+  // the most to say (a physician's refusal above the text).
+  test("a signed waiver prints as its sheet", async ({ page }) => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
     const row = page
@@ -440,7 +317,19 @@ test.describe("print", () => {
       .filter({ visible: true });
     await row.getByRole("link", { name: "View signed record" }).click();
     await page.getByRole("heading", { level: 1, name: "Signed waiver" }).waitFor();
-    await page.getByRole("heading", { name: "What they signed" }).waitFor();
+    await page.getByRole("link", { name: staff("waiversStaff.record.print"), exact: true }).click();
+    await page.waitForURL(/\/waivers\/[^/]+\/print$/);
+    const sheet = page.locator(".paper-sheet");
+    await expect(sheet).toHaveCount(1);
+    await expect(sheet.getByRole("heading", { level: 1 })).toHaveText(
+      staff("waiversStaff.record.title"),
+    );
+    await expect(sheet).toContainText("Rowan Pike");
+    await expect(sheet).toContainText(/E[DS]T/);
+    await expect(
+      sheet.getByRole("heading", { name: staff("waiversStaff.record.releaseHeading") }),
+    ).toBeVisible();
+    await expect(sheet.locator("a, button, input, select, textarea")).toHaveCount(0);
     await capturePrint(page, "signed-waiver");
   });
 

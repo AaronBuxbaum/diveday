@@ -116,7 +116,7 @@ export function RollCallTouchCue({ message }: { message: string }) {
           createPortal(
             <div
               style={position}
-              className={`pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4 print:hidden ${
+              className={`pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4 ${
                 refusal.boat ? BOAT_MODE_CLASS : ""
               }`}
             >

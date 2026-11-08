@@ -51,16 +51,7 @@ export function canDrawRoute(site: DiveSiteRouteMap): boolean {
  * pitch, as one figure per site rather than one card per tank: the deck was the
  * thousand pixels the thread ADR objected to, and a single drawn line is not.
  */
-export function DiveSiteMap({
-  site,
-  t,
-  printTextOnly = false,
-}: {
-  site: DiveSiteRouteMap;
-  t: DiverTranslator;
-  /** The trip's paper briefing keeps route prose without the live terrain embed. */
-  printTextOnly?: boolean;
-}) {
+export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTranslator }) {
   const query = routeMapQuery(site);
   if (!query || !hasRoute(site.routePoints)) return null;
   const path = routePathD(site.routePoints);
@@ -81,9 +72,7 @@ export function DiveSiteMap({
 
   return (
     <figure className="overflow-hidden rounded-panel border border-border bg-surface-sunken">
-      <div
-        className={`group/map relative h-[calc(16rem+4rem)] overflow-hidden sm:h-[calc(20rem+4rem)] ${printTextOnly ? "print:hidden" : ""}`}
-      >
+      <div className="group/map relative h-[calc(16rem+4rem)] overflow-hidden sm:h-[calc(20rem+4rem)]">
         <div
           className="absolute inset-0 origin-top-left"
           style={
@@ -160,7 +149,7 @@ export function DiveSiteMap({
           href={openMapsUrl(query)}
           target="_blank"
           rel="noreferrer"
-          className={`min-h-11 shrink-0 content-center text-sm font-medium text-primary hover:underline ${printTextOnly ? "print:hidden" : ""}`}
+          className="min-h-11 shrink-0 content-center text-sm font-medium text-primary hover:underline"
         >
           {t("site.openMap")}
         </a>

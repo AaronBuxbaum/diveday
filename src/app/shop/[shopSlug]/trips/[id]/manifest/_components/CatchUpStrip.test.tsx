@@ -44,14 +44,6 @@ describe("CatchUpStrip", () => {
     expect(className).not.toMatch(/primary-tint|warning|accent/);
   });
 
-  it("keeps the strip off the printed sheet", () => {
-    // The printed manifest goes ashore or into a coastguard's hands. A
-    // paragraph about what the desk did at 06:40 is neither current nor
-    // evidence by the time that sheet is read.
-    const { container } = render(<CatchUpStrip {...props} />);
-    expect(container.querySelector("section")?.className).toContain("print:hidden");
-  });
-
   it("draws nothing — no icon, no illustration, no badge", () => {
     const { container } = render(<CatchUpStrip {...props} />);
     expect(container.querySelectorAll("svg")).toHaveLength(0);

@@ -9,30 +9,6 @@ signedInAsOwner();
 
 const t = diverTranslator("en-US");
 
-test("trip details print saved facts independently of an open editor", async ({ page }, info) => {
-  const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
-  await page.goto(`/shop/blue-mantis/trips/${id}?view=details`);
-  const title = await page.getByRole("heading", { level: 1 }).innerText();
-  const labels = await page.locator("[data-trip-detail-row] > :first-child").allTextContents();
-  const row = page.locator("#departure-details");
-  await row.locator("summary").click();
-  await row.locator('input[name="title"]').fill("UNSAVED PAPER TITLE");
-  await page.emulateMedia({ media: "print" });
-  await expect(row.locator('input[name="title"]')).not.toBeVisible();
-  await expect(page.locator("[data-trip-detail-row]").first()).toBeVisible();
-  const pdf = info.outputPath("trip-details.pdf");
-  await page.pdf({ path: pdf, format: "Letter", preferCSSPageSize: true });
-  const words = execFileSync("pdftotext", [pdf, "-"], { encoding: "utf8", timeout: 30_000 });
-  const normalize = (value: string) => value.replace(/\s+/gu, "").toLowerCase();
-  expect(normalize(words)).toContain(normalize(title));
-  for (const label of labels) expect(normalize(words)).toContain(normalize(label));
-  expect(words).toContain("Blue Mantis Divers");
-  expect(words).toContain("America/New_York");
-  expect(words).toMatch(/20\d{2}/);
-  expect(words).not.toContain("UNSAVED PAPER TITLE");
-  await info.attach("trip-details", { path: pdf, contentType: "application/pdf" });
-});
-
 test("paper keeps a full boat's status and an embedded course's age and contact facts", async ({
   page,
 }) => {

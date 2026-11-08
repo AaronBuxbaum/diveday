@@ -1230,7 +1230,6 @@
     "e2e/visual-staff-divers.spec.ts": 1,
     "e2e/visual-staff-roll-call.spec.ts": 4,
     "e2e/visual-staff-trips.spec.ts": 1,
-    "e2e/waiver-print.spec.ts": 1,
     "e2e/waivers.spec.ts": 14,
     "e2e/whatsapp-settings.spec.ts": 1,
     "e2e/work-orders.spec.ts": 4
@@ -1464,7 +1463,7 @@
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
-    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1040,
+    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1027,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1156,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 913,
@@ -1472,7 +1471,7 @@
     "src/components/ui/form.test.tsx": 1464,
     "src/components/ui/form.tsx": 1153,
     "src/db/anonymize.test.ts": 1626,
-    "src/db/bookings.test.ts": 3516,
+    "src/db/bookings.test.ts": 3514,
     "src/db/buddy-teams.test.ts": 975,
     "src/db/check-in.test.ts": 1207,
     "src/db/checkouts.test.ts": 2964,
@@ -1527,11 +1526,11 @@
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 312,
-    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 396,
+    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 394,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 306,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 302,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 334,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 332,
     "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
@@ -1590,25 +1589,24 @@
         "files": {
           "src/app/(token)/ready/[token]/page.tsx": "616 -> 617",
           "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577",
-          "src/app/shop/[shopSlug]/orders/page.tsx": "575 -> 576",
           "src/app/shop/[shopSlug]/page.tsx": "577 -> 578",
           "src/app/shop/[shopSlug]/staffing/page.tsx": "503 -> 504"
         }
       }
     ],
-    "src/app/(marketing)/page.tsx": 436,
+    "src/app/(marketing)/page.tsx": 433,
     "src/app/(token)/ready/[token]/page.tsx": 617,
     "src/app/s/[shopSlug]/page.tsx": 644,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 464,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
-    "src/app/shop/[shopSlug]/orders/page.tsx": 576,
+    "src/app/shop/[shopSlug]/orders/page.tsx": 571,
     "src/app/shop/[shopSlug]/page.tsx": 578,
     "src/app/shop/[shopSlug]/promos/page.tsx": 559,
     "src/app/shop/[shopSlug]/reports/page.tsx": 474,
-    "src/app/shop/[shopSlug]/reviews/page.tsx": 410,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 572,
+    "src/app/shop/[shopSlug]/reviews/page.tsx": 409,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 569,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 455
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 452
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

@@ -63,7 +63,7 @@ function ResolvedShopReviews({
         {/* A 44px door on the words' 20px line: the target bleeds above and
             below, and the baseline row stays the heading's height. Spelled
             as the storefront's other text doors are, so all draw one ring. */}
-        <span className={`${tapTargetLineClass} print:hidden`}>
+        <span className={`${tapTargetLineClass}`}>
           <Link
             href={publicReviewsPath(shopSlug)}
             className={buttonClass({ variant: "link", size: "sm", flush: true })}
@@ -168,7 +168,7 @@ export function ReviewLedger({
       {reviews.map((review) => (
         // 16px, the room a diver's words have always stood in here, and the
         // room its loading skeletons draw.
-        <LedgerRow key={review.id} pad="xl" className="print:py-2">
+        <LedgerRow key={review.id} pad="xl">
           <StarRating
             rating={review.rating}
             label={t("reviews.ratingOption", { rating: review.rating })}

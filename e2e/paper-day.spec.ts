@@ -157,11 +157,7 @@ test.describe("the paper day", () => {
           box.height > 0
         );
       };
-      // Less the roll call's person buttons, whose content is the name the
-      // sheet exists to carry (`button[data-print-content]`, as in trips.spec).
-      return [
-        ...document.querySelectorAll("button:not([data-print-content]), select, textarea, input"),
-      ]
+      return [...document.querySelectorAll("button, select, textarea, input")]
         .filter(visible)
         .map(
           (element) =>
@@ -170,14 +166,14 @@ test.describe("the paper day", () => {
     });
     expect(controls).toEqual([]);
 
-    // **And every roll-call name is on it.** The person's name line is the
-    // packet's `data-print-content` (a plain line since the packet renders its
-    // paper, B03; a button once): while the backstop hid it with every other
-    // button the day's two departures printed 8 + 2 and 9 + 2 roster rows
-    // with no name in any of them. Every person the sheet carries is on paper
+    // **And every roll-call name is on it.** The person's name line
+    // (`data-roll-call-name`, a plain line since the packet renders its paper,
+    // B03; a button once): while a backstop hid buttons the day's two
+    // departures printed 8 + 2 and 9 + 2 roster rows with no name in any of
+    // them. Every person the sheet carries is on paper
     // and says who they are.
     const people = await popup
-      .locator(".paper-sheet [data-print-content]")
+      .locator(".paper-sheet [data-roll-call-name]")
       .evaluateAll((elements) =>
         elements.map((element) => ({
           onPaper:
@@ -193,19 +189,21 @@ test.describe("the paper day", () => {
     // person button's floor and inset are its 56px mark's, and the mark does
     // not print: carried to paper they made every name a 16mm band, and a full
     // boat's roll call ran to extra sheets of the packet a captain counts
-    // pages on. On paper the button is its content and 4px a side.
-    const slack = await popup.locator(".paper-sheet [data-print-content]").evaluateAll((elements) =>
-      elements.map((element) => {
-        const tallest = Math.max(
-          0,
-          ...[...element.children].map((child) => child.getBoundingClientRect().height),
-        );
-        return {
-          text: (element as HTMLElement).innerText.trim().slice(0, 30),
-          slack: Math.round(element.getBoundingClientRect().height - tallest),
-        };
-      }),
-    );
+    // pages on. On paper the line is its content and 4px a side.
+    const slack = await popup
+      .locator(".paper-sheet [data-roll-call-name]")
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const tallest = Math.max(
+            0,
+            ...[...element.children].map((child) => child.getBoundingClientRect().height),
+          );
+          return {
+            text: (element as HTMLElement).innerText.trim().slice(0, 30),
+            slack: Math.round(element.getBoundingClientRect().height - tallest),
+          };
+        }),
+      );
     expect(slack.filter((person) => person.slack > 10)).toEqual([]);
     await popup.emulateMedia({ media: "screen" });
     await popup.close();

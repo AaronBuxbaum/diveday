@@ -132,7 +132,7 @@ export function StaffCardCredentials({
           className={buttonClass({
             variant: "secondary",
             size: "sm",
-            className: "mt-3 print:hidden",
+            className: "mt-3",
           })}
         >
           {t("staffing.credentials.add")}
@@ -184,7 +184,7 @@ function CredentialRow({
         </Badge>
       )}
       {editAction ? (
-        <details className="basis-full print:hidden">
+        <details className="basis-full">
           <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
             {t("staffing.credentials.editOrRenew")}
           </summary>
@@ -244,7 +244,7 @@ function CredentialRow({
           </FieldGrid>
         </details>
       ) : null}
-      <span className="ms-auto flex flex-wrap items-center gap-x-6 gap-y-2 print:hidden">
+      <span className="ms-auto flex flex-wrap items-center gap-x-6 gap-y-2">
         {credential.reviewed ? null : (
           <form action={reviewAction}>
             <input type="hidden" name="credentialId" value={credential.id} />

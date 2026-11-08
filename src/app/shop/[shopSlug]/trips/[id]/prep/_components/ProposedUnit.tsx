@@ -84,7 +84,7 @@ export function ConfirmProposals({
   useEffect(() => setHydrated(true), []);
   return (
     <div
-      className={`flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 print:hidden ${className}`}
+      className={`flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 ${className}`}
       data-hydrated={hydrated ? "true" : undefined}
     >
       <button

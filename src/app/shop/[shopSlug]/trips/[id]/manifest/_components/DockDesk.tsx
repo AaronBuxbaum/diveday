@@ -53,7 +53,7 @@ export function DockDesk({
   return (
     <>
       {atTheDock ? (
-        <div className="print:hidden">
+        <div>
           <DockRiderForm
             action={addDockRiderAction.bind(null, tripId)}
             copy={{

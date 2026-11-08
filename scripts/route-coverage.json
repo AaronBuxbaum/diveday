@@ -72,7 +72,11 @@
   },
   "/shop/[shopSlug]/divers/[personId]/waivers/[recordId]": {
     "e2e": ["waiver-print.spec.ts", "waivers.spec.ts"],
-    "visual": ["diver-signed-waiver", "signed-waiver"]
+    "visual": ["diver-signed-waiver"]
+  },
+  "/shop/[shopSlug]/divers/[personId]/waivers/[recordId]/print": {
+    "e2e": ["waiver-print.spec.ts"],
+    "visual": ["signed-waiver"]
   },
   "/shop/[shopSlug]/gear/[id]": {
     "e2e": ["boat-safety.spec.ts", "gear.spec.ts"]

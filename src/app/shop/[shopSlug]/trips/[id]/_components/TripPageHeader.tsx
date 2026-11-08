@@ -101,7 +101,6 @@ export function TripPageHeader({
   price,
   daySpan,
   className,
-  paperIdentity,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
   /** The nav's own word for it, so the two cannot drift (issue #824). */
@@ -133,25 +132,19 @@ export function TripPageHeader({
   daySpan?: string;
   /** Allows a surface to tighten the space after its masthead when needed. */
   className?: string;
-  /** Shop and full calendar context for a detached paper record. */
-  paperIdentity?: string;
 }) {
   // A surface-only door owns one slot. Keeping a second wrapper around a
   // responsive action reserves a title-row gap after the action is hidden.
   const actionSlot = actions ? (
     <div
-      className={`flex shrink-0 flex-wrap items-center gap-x-1 gap-y-2 print:hidden ${actionsClassName ?? ""}`}
+      className={`flex shrink-0 flex-wrap items-center gap-x-1 gap-y-2 ${actionsClassName ?? ""}`}
     >
       {actions}
     </div>
   ) : null;
 
   return (
-    // `data-trip-page-header`: the printed packet drops the manifest's copy on
-    // the sheet it shares with the dive plan, whose header already said it
-    // (`globals.css`, fourth review item 17).
-    <header data-trip-page-header="" className={className ?? "mb-8"}>
-      {paperIdentity ? <p className="hidden text-sm print:block">{paperIdentity}</p> : null}
+    <header className={className ?? "mb-8"}>
       {/* **The way back up.** These are the deepest pages in the staff app and
           were once the only ones at depth 2-3 with no link to their parent at
           all: the first link in the header was a tab strip, which moved you
@@ -164,10 +157,8 @@ export function TripPageHeader({
 
           The strip is gone now (ADR 20260919-one-idea, slice 23c) and this is
           the only way up, which is why these three name the **departure** they
-          are readings of rather than the board two levels above it.
-          `print:hidden` because `print/page.tsx` wears this header too and a
-          paper sheet has no navigation. */}
-      <EyebrowWayUp className="print:hidden">{backLabel}</EyebrowWayUp>
+          are readings of rather than the board two levels above it. */}
+      <EyebrowWayUp>{backLabel}</EyebrowWayUp>
       {/* **The title and its actions are one row, centred on each other.**
           The 48px ••• used to sit in a grid cell beside the 16px eyebrow on a
           phone — 16px under the eyebrow's centre, and holding the title 49px

@@ -70,7 +70,7 @@ export default async function GetSetUpPage({
   };
 
   return (
-    <div className="flex flex-1 flex-col print:block">
+    <div className="flex flex-1 flex-col">
       <EntryShell
         wordmark
         homeLink

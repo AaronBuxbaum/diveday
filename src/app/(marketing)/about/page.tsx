@@ -295,7 +295,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   href={setUpHref("about-work")}
-                  className={buttonClass({ variant: "outline", className: "print:hidden" })}
+                  className={buttonClass({ variant: "outline" })}
                 >
                   {t("marketing.common.getSetUp")}
                 </Link>

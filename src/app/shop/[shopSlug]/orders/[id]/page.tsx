@@ -263,7 +263,7 @@ export default async function OrderDetailPage({
         ) : null}
 
         {counterCollection === null && order.order.hostedInvoiceUrl ? (
-          <p className="mt-4 text-sm print:hidden">
+          <p className="mt-4 text-sm">
             <a
               href={order.order.hostedInvoiceUrl}
               target="_blank"
@@ -278,7 +278,7 @@ export default async function OrderDetailPage({
 
         {/* Off the paper: a printed order is the diver's copy of what they
             paid, and Record payment and Refund are the shop's taps. */}
-        <div className="mt-6 flex flex-wrap items-center gap-3 print:hidden">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           {canVoidCounter ? <VoidCounterOrderForm orderId={order.order.id} t={t} /> : null}
           {recordable ? (
             // Cash and the card machine never touch Stripe, so a demo records
@@ -371,7 +371,7 @@ export default async function OrderDetailPage({
             `?notice=` is attacker-craftable, and this is a money screen — a
             hostile link must not be able to paint its own words into a
             success-green message (same rule as the new-order panel's fallback). */}
-        <FormStatus tone={banner?.tone ?? "neutral"} className="mt-2 print:hidden">
+        <FormStatus tone={banner?.tone ?? "neutral"} className="mt-2">
           {notice && notice !== "not-authorized"
             ? banner
               ? (noticeText ?? t(banner.key))

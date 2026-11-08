@@ -74,10 +74,11 @@ export function manifestNoteThreads(
  * booking-scoped record used by Guests. Historical roll-call notes remain on
  * their append-only roll-call event and are still rendered with the result.
  *
- * `print:hidden`, unlike every other fact on this row. The printed manifest is
- * the sheet that goes ashore with the dock and into a coastguard's hands; a
- * note a shop wrote for itself about a customer is not a document either of
- * them asked for, and paper cannot be un-handed.
+ * **Never on the sheet**, unlike every other fact on this row: the sheet's
+ * row (`DiverRowPrint`) carries no note. The printed manifest is the sheet
+ * that goes ashore with the dock and into a coastguard's hands; a note a shop
+ * wrote for itself about a customer is not a document either of them asked
+ * for, and paper cannot be un-handed.
  */
 export function StaffNotes({
   notes,
@@ -94,7 +95,7 @@ export function StaffNotes({
   return (
     <section
       aria-label={t("manifest.diverNotesHeading")}
-      className="mt-3 rounded-lg bg-surface px-3 py-2 print:hidden"
+      className="mt-3 rounded-lg bg-surface px-3 py-2"
     >
       <h3 className="text-sm font-semibold">{t("manifest.diverNotesHeading")}</h3>
       <ul className="mt-1 flex flex-col gap-1.5">

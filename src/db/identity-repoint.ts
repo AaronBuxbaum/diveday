@@ -18,7 +18,8 @@ import {
 } from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
-import { CLEARED_DRAFT_COLUMNS, WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
+import { clearWaiverDrafts } from "./waiver-drafts";
+import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 
 /**
  * **The third answer to a held seat: it is another diver already on file**
@@ -411,11 +412,10 @@ async function repointInTransaction(
         isNull(waiverRecords.supersededAt),
       ),
     );
-  await tx
+  const movedLinks = await tx
     .update(waiverRecords)
     .set({
       personId: input.toPersonId,
-      ...CLEARED_DRAFT_COLUMNS,
       deliveryError: null,
       deliveryProviderMessageId: null,
       deliveryProviderStatus: null,
@@ -433,7 +433,15 @@ async function repointInTransaction(
         isNull(waiverRecords.integrityHash),
         isNull(waiverRecords.anonymizedAt),
       ),
-    );
+    )
+    .returning({ id: waiverRecords.id });
+  // A draft belongs to whoever typed it (security review M1): every door's
+  // draft of a moved link goes (issue #4130).
+  await clearWaiverDrafts(
+    tx,
+    input.shopId,
+    movedLinks.map((row) => row.id),
+  );
   for (const bookingId of seatIds) {
     await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId, now });
   }

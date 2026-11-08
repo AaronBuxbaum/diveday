@@ -14,7 +14,8 @@ Module shape: [20260730-feature-module-contracts](../../../docs/architecture/dec
 
 - The list of scans (`SHOP_TICK_SCANS`) and their order.
 - Isolation: a scan that throws is reported under its own `cron_scan` tag, logged as
-  `cron_shop_tick.scan_failed` with its name, and answered as `null`.
+  `cron_shop_tick.scan_failed` with its name and sanitized error class/code, and answered as `null`.
+  Error messages and query parameters never enter that log line.
 - Whether the tick did its work (`shopTickIsHealthy`): every scan answered and no filed
   missing-diver report is still untold.
 - The minimum-seats sweep's refund and mail loop (`sweepMinimumSeats`).

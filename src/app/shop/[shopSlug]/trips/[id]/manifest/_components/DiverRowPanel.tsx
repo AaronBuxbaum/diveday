@@ -201,12 +201,10 @@ export function DiverRowPanel({
         ) : null}
       </ul>
       <StaffNotes notes={bookingNotes} locale={locale} timezone={timezone} t={t} />
-      {/* `print:hidden` like the notes above it: an unsaved
-        sentence a staffer was mid-way through typing about a
-        customer is the last thing that should ride the sheet
-        that goes ashore, and the packet's own stylesheet only
-        covers the packet (security review, slice 5a). */}
-      <div className="mt-3 print:hidden">
+      {/* Never on paper, like the notes above it: this panel is the
+        screen's, and the Boat tab prints its sheet instead (security
+        review, slice 5a). */}
+      <div className="mt-3">
         <PrivateNoteForm
           action={addPrivateNoteAction}
           hiddenFields={{ bookingId: diver.bookingId }}

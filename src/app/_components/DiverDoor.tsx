@@ -12,7 +12,7 @@ import { FIND_YOUR_BOOKING_PATH } from "@/lib/public-routes";
  */
 export function DiverDoor({ t }: { t: DiverTranslator }) {
   return (
-    <p className="mt-6 text-sm text-muted print:hidden">
+    <p className="mt-6 text-sm text-muted">
       {t("marketing.home.diverDoor")}{" "}
       <Link
         href={FIND_YOUR_BOOKING_PATH}

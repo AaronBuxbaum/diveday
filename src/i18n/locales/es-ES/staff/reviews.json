@@ -34,8 +34,7 @@
   "rowMoreSrLabel": "Más opciones para la reseña de {name}",
   "publish": "Publicar",
   "pagination": {
-    "total": "{count, plural, one {# reseña que has respondido} other {# reseñas que has respondido}}",
-    "paperSubset": "{total, plural, one {{shown} de # reseña respondida en esta lista} other {{shown} de # reseñas respondidas en esta lista}}"
+    "total": "{count, plural, one {# reseña que has respondido} other {# reseñas que has respondido}}"
   },
   "hideConfirm": "Ocultar esta reseña",
   "hideReasonLabel": "¿Por qué la retiras?",

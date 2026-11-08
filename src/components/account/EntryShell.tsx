@@ -95,7 +95,7 @@ function ResolvedEntryShell({
       )}
       {footer ? (
         <footer
-          className={`mt-8 flex flex-col items-center gap-2 text-center text-sm text-muted print:hidden ${FOOTER_LINK_SLOT}`}
+          className={`mt-8 flex flex-col items-center gap-2 text-center text-sm text-muted ${FOOTER_LINK_SLOT}`}
         >
           {footer}
         </footer>
@@ -154,7 +154,7 @@ const ACTION_LINK_SLOT =
  * drift structurally impossible.
  */
 export function entryMainClass(width: "sm" | "lg") {
-  return `mx-auto flex w-full ${width === "lg" ? "max-w-xl" : "max-w-md"} flex-1 flex-col justify-center px-6 py-12 sm:py-16 print:justify-start print:py-4`;
+  return `mx-auto flex w-full ${width === "lg" ? "max-w-xl" : "max-w-md"} flex-1 flex-col justify-center px-6 py-12 sm:py-16`;
 }
 
 /**
@@ -174,7 +174,7 @@ export function entryMainClass(width: "sm" | "lg") {
  * that stands in for it cannot drift apart.
  */
 export const entryPanelClass =
-  "mt-8 sm:rounded-panel sm:border sm:border-border sm:bg-surface sm:p-8 sm:shadow-bed print:mt-4 print:p-4";
+  "mt-8 sm:rounded-panel sm:border sm:border-border sm:bg-surface sm:p-8 sm:shadow-bed";
 
 /**
  * **The closed set of marks a terminal door may wear** (ADR
@@ -270,7 +270,7 @@ export function EntryDone({
   action?: ReactNode;
 }) {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-12 text-center sm:py-16 print:justify-start print:py-4">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-12 text-center sm:py-16">
       {wordmark ? (
         <Wordmark href={homeLink ? "/" : undefined} className="mb-8 justify-center" />
       ) : null}
@@ -298,9 +298,7 @@ export function EntryDone({
           two-line body ended on "do." or "one." alone, and verify's split
           "Sign" from "in" across its two lines. */}
       <p className="mt-3 max-w-prose text-balance text-muted">{text}</p>
-      {action ? (
-        <div className={`mt-6 text-sm print:hidden ${ACTION_LINK_SLOT}`}>{action}</div>
-      ) : null}
+      {action ? <div className={`mt-6 text-sm ${ACTION_LINK_SLOT}`}>{action}</div> : null}
     </main>
   );
 }

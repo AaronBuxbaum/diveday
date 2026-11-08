@@ -169,7 +169,7 @@ describe("the trailing mark", () => {
     expect(trigger).not.toContainElement(mark);
     const slot = mark.parentElement as HTMLElement;
     expect(slot.parentElement).toBe(row);
-    expect(slot).toHaveClass("shrink-0", "py-2.5", "ps-3", "print:hidden");
+    expect(slot).toHaveClass("shrink-0", "py-2.5", "ps-3");
   });
 
   it("draws no slot when there is no mark", () => {

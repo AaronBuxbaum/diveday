@@ -6,6 +6,7 @@ import { createBookingParty } from "@/db/bookings";
 import { mintCapability } from "@/db/capabilities";
 import { bookingCapabilities, bookings, people, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import { draftsOf } from "@/db/waivers-test-fixtures";
 import { diverTranslator } from "@/i18n/messages";
 import {
   emptyMedicalAnswers,
@@ -187,7 +188,9 @@ describe("signing the release in the diver's thread", () => {
     await redirectedTo(async () => openWaiverFromReady(token));
     const live = await liveRecords(db, bookingId);
     expect(live.map((record) => record.id)).toEqual([sent.recordId]);
-    expect(live[0]?.draftSignerName).toBe("Kit Keeper");
+    expect(await draftsOf(db, sent.recordId)).toMatchObject([
+      { door: "thread", linkId: null, signerName: "Kit Keeper" },
+    ]);
   });
 
   it("signs only the release the page drew, never one that replaced it", async () => {

@@ -59,7 +59,7 @@ export function AgencyCheckLink({
             variant: "link",
             size: "sm",
             flush: true,
-            className: "mt-1 print:hidden",
+            className: "mt-1",
           })}
         >
           {link.label}

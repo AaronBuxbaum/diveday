@@ -42,7 +42,7 @@ export function TurnAwayDoor({ bookingId, label }: { bookingId: string; label: s
       aria-expanded={open}
       aria-controls={`turn-away-${bookingId}`}
       onClick={toggle}
-      className={buttonClass({ variant: "secondary", size: "sm", className: "print:hidden" })}
+      className={buttonClass({ variant: "secondary", size: "sm" })}
     >
       {label}
     </button>
@@ -64,7 +64,7 @@ export function TurnAwayScript({
   const only = reasons.length === 1;
   const { open } = useContext(TurnAwayContext);
   return (
-    <div id={`turn-away-${bookingId}`} hidden={!open} className="pb-2 print:hidden">
+    <div id={`turn-away-${bookingId}`} hidden={!open} className="pb-2">
       <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
         <input type="hidden" name="bookingId" value={bookingId} />
         <div className="mt-1 flex flex-col gap-3 rounded-lg bg-surface-sunken p-3">

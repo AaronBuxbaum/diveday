@@ -382,30 +382,18 @@ export function computeWaiverIntegrityHash(
   return integrityDigest(waiverIntegrityMetadata(record, version));
 }
 
-export function verifyWaiverIntegrity(
-  record: WaiverSealedFields & {
-    /**
-     * Read when the caller holds the whole row (the signed record page,
-     * erasure's re-seal check): an erased record never keeps a draft of its
-     * shop answers or its medical alert either. Never part of any digest.
-     */
-    draftShopAnswers?: unknown;
-    draftMedicalAlert?: string | null;
-  },
-): WaiverIntegrityState {
+export function verifyWaiverIntegrity(record: WaiverSealedFields): WaiverIntegrityState {
   if (!record.integrityHash || !record.integrityVersion) return "unsealed";
   if (!isWaiverIntegrityVersion(record.integrityVersion)) return "invalid";
   // A version 2 seal means "erased", and erasure destroys the shop's
-  // questions as answered and any draft of them. Answers back on such a row
-  // were put there afterwards, and the seal must not vouch for them (security
-  // review L2), the way version 4 refuses a guardian address put back. The
-  // medical alert for the crew is destroyed the same way (issue #2960).
+  // questions as answered. Answers back on such a row were put there
+  // afterwards, and the seal must not vouch for them (security review L2), the
+  // way version 4 refuses a guardian address put back. The medical alert for
+  // the crew is destroyed the same way (issue #2960). Drafts live in
+  // `waiver_drafts`, off the row, and erasure deletes them (issue #4130).
   if (
     record.integrityVersion === WAIVER_INTEGRITY_VERSION_ERASED &&
-    (record.shopAnswers != null ||
-      record.draftShopAnswers != null ||
-      record.medicalAlert != null ||
-      record.draftMedicalAlert != null)
+    (record.shopAnswers != null || record.medicalAlert != null)
   )
     return "invalid";
   // A version 4 seal is the shop's own redaction, and only means that while

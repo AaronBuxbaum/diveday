@@ -51,14 +51,4 @@ describe("BoatSafetyNotices", () => {
     expect(plain).not.toContain("bg-warning/10");
     expect(plain).not.toContain("bg-danger/10");
   });
-
-  it("is on the printed sheet: nothing in it is print-hidden", () => {
-    // The sheet the boat carries is this page printed; the after-dive controls
-    // around it are `print:hidden`, and this section must never join them.
-    const { container } = render(
-      <BoatSafetyNotices heading={HEADING} lines={[{ text: "No AED aboard", tone: "danger" }]} />,
-    );
-    expect(container.querySelector("[class*='print:hidden']")).toBeNull();
-    expect(container.querySelector("[class*='hidden']")).toBeNull();
-  });
 });

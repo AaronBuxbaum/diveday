@@ -96,7 +96,7 @@ export function WantedPiece({
     />
   );
   return (
-    <div className={`${kitLineOpenClass} print:hidden`}>
+    <div className={`${kitLineOpenClass}`}>
       <dt className="text-muted">
         {groups.length === 0 ? pieceLabel : <label htmlFor={selectId}>{pieceLabel}</label>}
       </dt>

@@ -141,9 +141,6 @@ export async function recheckWaiverSeals(
         .select({
           record: WAIVER_SEALED_COLUMNS,
           shopId: waiverRecords.shopId,
-          // Read by `verifyWaiverIntegrity` on an erased (version 2) seal.
-          draftShopAnswers: waiverRecords.draftShopAnswers,
-          draftMedicalAlert: waiverRecords.draftMedicalAlert,
           previousVerdict: waiverRecords.integrityValid,
         })
         .from(waiverRecords)
@@ -161,14 +158,7 @@ export async function recheckWaiverSeals(
         const { integrityHash, integrityVersion } = row.record;
         const sealed = Boolean(integrityHash && integrityVersion);
         const verdict = sealed
-          ? waiverIntegrityVerdict(
-              {
-                ...row.record,
-                draftShopAnswers: row.draftShopAnswers,
-                draftMedicalAlert: row.draftMedicalAlert,
-              },
-              options.now,
-            )
+          ? waiverIntegrityVerdict(row.record, options.now)
           : { integrityValid: false, integrityCheckedAt: options.now };
         // A sealed row always verifies to a verdict; one that somehow read
         // otherwise stops the pass rather than being selected again forever.

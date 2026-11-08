@@ -141,9 +141,8 @@ describe("the screen worries only with reason (decision 4)", () => {
       divers: [diver({ rollCall: notBackAt() })],
     });
     expect(dangerToned(container).length).toBeGreaterThan(0);
-    // And it carries a word, never colour alone: the who-and-when of the
-    // record itself sits under the name.
-    expect(screen.getByRole("listitem")).toHaveTextContent(/Keiko Tanaka/);
+    // And never colour alone: the mark draws the not-back cross, a shape.
+    expect(container.querySelector('[data-mark-state="notBack"]')).not.toBeNull();
   });
 
   it("keeps the minor flag on screen when something louder took the row's capsule", () => {
@@ -161,7 +160,8 @@ describe("the screen worries only with reason (decision 4)", () => {
         }),
       ],
     });
-    expect(screen.getAllByText("Minor · age 13").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(within(screen.getByRole("dialog")).getByText("Minor · age 13")).toBeDefined();
   });
 });
 
@@ -183,7 +183,6 @@ describe("a recorded alarm sorts to the top, and paper does not (decision 4)", (
     // did. Priya is third in the document and first under a reader's eye.
     const alarmed = rows.find((row) => row.id === "diver-row-b-3");
     expect(alarmed?.className).toContain("order-first");
-    expect(alarmed?.className).toContain("print:order-none");
     for (const row of rows.filter((candidate) => candidate.id !== "diver-row-b-3")) {
       expect(row.className).not.toContain("order-first");
     }
@@ -203,22 +202,6 @@ describe("a recorded alarm sorts to the top, and paper does not (decision 4)", (
     // rule and Ana -- first in the document -- now does.
     expect(rule("b-3")).toContain("border-t-0");
     expect(rule("b-1")).toMatch(/(^|\s)border-t(\s|$)/);
-    // On paper the list starts at the top of the manifest, which is Ana.
-    expect(rule("b-1")).toContain("print:border-t-0");
-    expect(rule("b-3")).toContain("print:border-t");
-  });
-
-  it("holds the printed order in block layout, not on the cascade", () => {
-    const { container } = renderList({ divers: roster() });
-    const list = container.querySelector<HTMLElement>("ul");
-    // `order` is inert outside a flex or grid container, so `print:block` is
-    // what makes the DOM order the printed order by construction. Without it
-    // the sheet a coastguard reads depends on Tailwind emitting the
-    // `print:order-none` variant after `order-first` at equal specificity —
-    // true today, and not something a manifest should rest on (dive-domain
-    // review 20260828).
-    expect(list?.className).toContain("flex");
-    expect(list?.className).toContain("print:block");
   });
 
   it("keeps each row whole across a page break", () => {
@@ -228,25 +211,6 @@ describe("a recorded alarm sorts to the top, and paper does not (decision 4)", (
     const { container } = renderList({ divers: roster() });
     for (const row of container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")) {
       expect(row.className).toContain("break-inside-avoid");
-    }
-  });
-
-  it("gives the first and last rows the card's inner corner on paper, where nothing clips them", () => {
-    // The print packets lift every `overflow` clip on purpose (a clipped box
-    // on paper is content that does not exist), so the card's rounded corner
-    // stopped cutting the rows and the 4px state stripe stood square across
-    // it (pixel probe, day-packet-print: 14px of stripe past the curve at each
-    // end). On paper the list is block layout in manifest order, so
-    // `:first-child` is the first row painted — which it is not on screen,
-    // where an alarmed row is `order-first` and the card still clips.
-    const { container } = renderList({ divers: roster() });
-    for (const row of container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")) {
-      expect(row).toHaveClass(
-        "border-l-4",
-        "print:first:rounded-t-[calc(var(--radius-panel)-1px)]",
-        "print:last:rounded-b-[calc(var(--radius-panel)-1px)]",
-      );
-      expect(row.className).not.toMatch(/(^|\s)(first|last):rounded/);
     }
   });
 

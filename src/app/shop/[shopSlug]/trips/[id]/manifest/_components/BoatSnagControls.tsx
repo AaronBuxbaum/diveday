@@ -57,7 +57,7 @@ export function SnagAnswer({
 }) {
   const [result, formAction, isPending] = useActionState(action, null);
   return (
-    <form action={formAction} className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
+    <form action={formAction} className="mt-2 flex flex-wrap items-center gap-2">
       <input type="hidden" name="snagId" value={snagId} />
       <button
         type="submit"
@@ -113,7 +113,7 @@ export function SnagNoteForm({
   const errorId = `${fieldId}-error`;
   const refused = result !== null && !result.ok;
   return (
-    <details className="group/snag px-4 py-3 print:hidden">
+    <details className="group/snag px-4 py-3">
       <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
         <SummaryCaret className="group-open/snag:rotate-90" />
         {copy.noteProblem}

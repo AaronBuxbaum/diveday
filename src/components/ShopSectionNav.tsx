@@ -234,7 +234,7 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
       data-staff-tabbar=""
       data-staff-tab-scroll-state={scrollCue}
       data-staff-chrome="true"
-      className="fixed inset-x-0 bottom-0 z-30 overflow-x-clip border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 overflow-x-clip border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <div className="mx-auto flex h-(--tabbar-h) w-full max-w-xl items-stretch">
         <div

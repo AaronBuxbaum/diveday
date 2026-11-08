@@ -9,7 +9,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 export function TodayUpdated({ t, time }: { t: StaffTranslator; time: string }) {
   return (
     <>
-      <p className="mt-1 text-xs text-muted print:hidden" data-testid="today-updated">
+      <p className="mt-1 text-xs text-muted" data-testid="today-updated">
         {t("shopHome.updatedAt", { time })}
       </p>
       <LiveRefresh />

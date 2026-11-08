@@ -2035,15 +2035,15 @@ export async function captureFolded(page: Page, name: string, scheme: "light") {
 }
 
 /**
- * Capture a surface as it renders for the printer. Emulating `print` media
- * applies the whole `@media print` treatment — monochrome tokens, page
- * padding, `print:hidden` chrome removed — so the baseline is the document a
- * shop actually prints, not the interactive page. One shot at the current
- * (Letter-width) viewport: print output is scheme- and viewport-independent, so
- * the light and dark widths the on-screen `capture` runs would be
- * three identical copies here. `@page` margins never show in a screenshot; the
- * padding visible in the baseline is the container's own (`print:px-*`), the
- * gutter that survives a "None margins" print dialog.
+ * Capture a document as it comes out of the printer. **Only a page that
+ * holds a sheet is a document** (issue #2745): a screen never prints, and has
+ * no print face to photograph, so a page with no `.paper-sheet` is refused.
+ * Emulating `print` media leaves the page's sheets and nothing of its screen
+ * (`globals.css`), so the baseline is the paper a shop actually prints. One
+ * shot at the current (Letter-width) viewport: print output is scheme- and
+ * viewport-independent, so the light and dark widths the on-screen `capture`
+ * runs would be three identical copies here. `@page` margins never show in a
+ * screenshot.
  *
  * `globals.css`'s `@page` rule (real, unmodified for actual printing) combines
  * with `break-inside: avoid` on each row to push a row that would otherwise
@@ -2076,6 +2076,13 @@ export async function capturePrint(page: Page, name: string) {
   // the same class of race as the resize in `capture()`. Both `emulateMedia`
   // calls, and the resize a wide sheet needs, sit inside the switch-off for
   // that reason.
+  if ((await page.locator(".paper-sheet").count()) === 0) {
+    throw new Error(
+      `visual: ${page.url()} holds no .paper-sheet, so it is a screen, and a screen never ` +
+        "prints (issue #2745). Capture it with `capture`; if people print it, make it a " +
+        "sheet document (`SheetDocument`, `PaperSheet`) first.",
+    );
+  }
   await withTransitionsOff(page, async () => {
     await page.emulateMedia({ media: "print" });
     if (process.env.VISUAL_EXHAUSTIVE_AUDIT === "1") {

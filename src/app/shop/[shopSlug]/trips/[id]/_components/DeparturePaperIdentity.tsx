@@ -44,6 +44,8 @@ export function departurePaperRule(
 ): string {
   pageName = pageName.toLowerCase();
   if (!/^departure-[a-z0-9-]+$/.test(pageName)) throw new Error("Invalid departure page name");
+  // `display: block` on paper: a named page applies to a box, and on screen
+  // the wrapper is `contents`.
   // Reserve space for wrapping rather than painting a fixed overlay over roster rows.
   // At 8pt a conservative 60 characters fit in the printable width of A4/Letter.
   const facts = identity.flatMap(paperFactLines);
@@ -52,7 +54,7 @@ export function departurePaperRule(
   // A standalone log owns the body too: returning to an unnamed page after its
   // last content otherwise makes Chromium append a page containing only a counter.
   const bodyRule = standaloneLog ? `body:has([data-departure-log]){page:${pageName}}` : "";
-  return `@media print{[data-departure-paper="${pageName}"]{page:${pageName}}${bodyRule}}
+  return `@media print{[data-departure-paper="${pageName}"]{display:block;page:${pageName}}${bodyRule}}
 @page ${pageName}{margin-top:${margin}mm;margin-bottom:20mm;
 @top-left{content:${paperCssString(facts.join("\n"))};white-space:pre-wrap;overflow-wrap:anywhere;font:8pt/1.35 sans-serif;vertical-align:middle;width:100%}
 @bottom-left{content:${paperCssString(normalizePaperFact(printed))};font:8pt/1.35 sans-serif;white-space:pre-wrap;width:80%}
@@ -74,7 +76,7 @@ export function DeparturePaperIdentity({
   standaloneLog?: boolean;
 }) {
   return (
-    <div data-departure-paper={pageName.toLowerCase()} className="contents print:block">
+    <div data-departure-paper={pageName.toLowerCase()} className="contents">
       <style>{departurePaperRule(pageName, identity, printed, standaloneLog)}</style>
       {children}
     </div>

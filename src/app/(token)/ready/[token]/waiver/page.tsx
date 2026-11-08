@@ -102,6 +102,8 @@ export default async function ThreadWaiverPage({
   return waiverSigningForm({
     db,
     record: state.record,
+    // The thread's own draft, never one a counter code or a mailed link saved (issue #4130).
+    draft: state.draft,
     shop,
     locale,
     t,

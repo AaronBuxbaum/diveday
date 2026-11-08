@@ -19,7 +19,6 @@ export function TodayPrintDoor({ shopSlug, t }: { shopSlug: string; t: StaffTran
       className={buttonClass({
         variant: "secondary",
         size: "sm",
-        className: "print:hidden",
       })}
     >
       {t("shared.printPacket.dayDoor")}

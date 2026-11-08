@@ -15,6 +15,7 @@ import { issueWaiverRequest } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
 import {
   clearAnswers,
+  draftsOf,
   medicalReferralAnswers,
   now,
   waiverContextFor,
@@ -266,20 +267,21 @@ describe("shop questions on the waiver", () => {
       }),
     ).toBe(true);
     const record = await recordFor(db, token);
+    const [draft] = await draftsOf(db, record.id);
     // A number box keeps what was typed (review 2, S6); a choice that is not
     // one of the options is dropped.
-    expect(record.draftShopAnswers).toEqual({ [dives.id]: "lots", [fitToDive.id]: false });
+    expect(draft?.shopAnswers).toEqual({ [dives.id]: "lots", [fitToDive.id]: false });
     // A draft whose value no longer fits its question is dropped on load.
     expect(
       restoreDraftShopAnswers([{ ...heard, options: ["Our hotel", "Online search"] }, fitToDive], {
-        ...record.draftShopAnswers,
+        ...draft?.shopAnswers,
         [heard.id]: "A friend",
         vanished0001: 3,
       }),
     ).toEqual({ [fitToDive.id]: false });
     // A save without the section leaves the draft as it was.
     await recordWaiverDraft(db, token, { acknowledged: false, medicalAnswers: clearAnswers, now });
-    expect((await recordFor(db, token)).draftShopAnswers).toEqual(record.draftShopAnswers);
+    expect((await draftsOf(db, record.id))[0]?.shopAnswers).toEqual(draft?.shopAnswers);
   });
 
   it("is destroyed by erasure, and the erased release still verifies under version 2", async () => {
@@ -324,7 +326,7 @@ describe("shop questions on the waiver", () => {
       now,
     });
     const record = await recordFor(db, token);
-    expect(record.draftShopAnswers).toBeNull();
+    expect(await draftsOf(db, record.id)).toEqual([]);
     expect(record.shopAnswers).toEqual([{ ...heard, answer: "Online search" }]);
   });
 
@@ -341,9 +343,11 @@ describe("shop questions on the waiver", () => {
       (await anonymizeDiver(db, { shopId: shop.id, personId: person.id, actorPersonId: owner })).ok,
     ).toBe(true);
     const [erased] = await db
-      .select({ draft: waiverRecords.draftShopAnswers, answers: waiverRecords.shopAnswers })
+      .select({ id: waiverRecords.id, answers: waiverRecords.shopAnswers })
       .from(waiverRecords)
       .where(eq(waiverRecords.personId, person.id));
-    expect(erased).toEqual({ draft: null, answers: null });
+    if (!erased) throw new Error("record missing");
+    expect(erased.answers).toBeNull();
+    expect(await draftsOf(db, erased.id)).toEqual([]);
   });
 });

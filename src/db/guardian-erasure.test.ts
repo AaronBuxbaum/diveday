@@ -29,7 +29,11 @@ import {
   issueWaiverRequest,
   recordWaiverDraft,
 } from "./waivers";
-import { medicalReferralAnswers, recordMedicalEvaluationForShop } from "./waivers-test-fixtures";
+import {
+  draftsOf,
+  medicalReferralAnswers,
+  recordMedicalEvaluationForShop,
+} from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -227,7 +231,8 @@ describe("eraseGuardianEmail", () => {
       }),
     ).toEqual({ ok: true, erased: 1 });
     const after = await readRecord(db, issued.recordId);
-    expect(after.draftGuardian).toMatchObject({ name: "Jonas Fischer", email: null });
+    const [draft] = await draftsOf(db, issued.recordId);
+    expect(draft?.guardian).toMatchObject({ name: "Jonas Fischer", email: null });
     // No stamp on a draft: the guardian may still finish it and give an address.
     expect(after.guardianEmailErasedAt).toBeNull();
     expect(await listGuardianEmails(db, shop.id, seat.person.id)).toEqual([]);

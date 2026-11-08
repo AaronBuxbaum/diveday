@@ -24,7 +24,9 @@ export function isShopQuestionRefusal(field: string | undefined): boolean {
  */
 export async function shopQuestionsForPage(
   db: DbExecutor,
-  record: { shopId: string; templateId: string; draftShopAnswers: DraftShopAnswers | null },
+  record: { shopId: string; templateId: string },
+  /** The shop answers this door saved, or null. */
+  saved: DraftShopAnswers | null,
   refusal: {
     field: string | undefined;
     q: string | undefined;
@@ -41,7 +43,7 @@ export async function shopQuestionsForPage(
   pacing: { initialRequiredRemaining: number; initialReached: boolean } | undefined;
 }> {
   const questions = await getWaiverTemplateQuestions(db, record.shopId, record.templateId);
-  const draft = restoreDraftShopAnswers(questions, record.draftShopAnswers);
+  const draft = restoreDraftShopAnswers(questions, saved);
   const { field, q, fieldError } = refusal;
   const named =
     isShopQuestionRefusal(field) &&

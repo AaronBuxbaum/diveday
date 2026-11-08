@@ -41,7 +41,7 @@ export function TomorrowFromTonight({
         className={buttonClass({
           variant: "secondary",
           size: "sm",
-          className: "mt-3 print:hidden",
+          className: "mt-3",
         })}
       >
         {t("closeout.loadOut.print")}

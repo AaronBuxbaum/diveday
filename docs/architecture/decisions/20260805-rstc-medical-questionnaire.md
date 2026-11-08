@@ -29,7 +29,7 @@ The result is an operational status, not medical advice: `completed` means the q
 
 ## Storage and access control
 
-Responses are stored server-side in the existing `waiver_records.medical_answers` JSONB value, alongside the questionnaire id and version. A draft is held in `draft_medical_answers` so “save for later” does not lose the diver’s work. This is intentional product policy: storing the participant’s yes/no answers is permitted for this workflow.
+Responses are stored server-side in the existing `waiver_records.medical_answers` JSONB value, alongside the questionnaire id and version. A draft is held per door in `waiver_drafts.medical_answers` (issue #4130) so “save for later” does not lose the diver’s work. This is intentional product policy: storing the participant’s yes/no answers is permitted for this workflow.
 
 The existing controls remain mandatory:
 

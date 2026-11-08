@@ -38,8 +38,6 @@ describe("Table", () => {
     const shell = scrollRegion?.parentElement;
     expect(scrollRegion).toHaveClass("overflow-x-auto");
     expect(shell).toHaveClass("overflow-hidden");
-    // Paper opts out of the scroll rule.
-    expect(shell).toHaveClass("print:overflow-visible");
     // Semantics: a header cell that screen readers can map to its column.
     expect(screen.getByRole("columnheader", { name: "Diver" })).toHaveAttribute("scope", "col");
     expect(screen.getByRole("cell", { name: "Ana Reyes" })).toBeInTheDocument();
@@ -65,7 +63,6 @@ describe("Table", () => {
     // ...but the sideways-scroll behavior is not chrome and never leaves.
     expect(scrollRegion).toHaveClass("overflow-x-auto");
     expect(shell).toHaveClass("overflow-hidden");
-    expect(shell).toHaveClass("print:overflow-visible");
   });
 
   it("names a row's leading cell as that row's header, without the header row's voice", () => {
@@ -113,14 +110,13 @@ describe("Table", () => {
       join(dirname(fileURLToPath(import.meta.url)), "../../app/globals.css"),
       "utf8",
     ).replace(/\/\*[\s\S]*?\*\//g, "");
-    const rule = css.match(/\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
+    const rule = css.match(/(?<!\.paper-sheet )\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(rule).toMatch(/animation-timeline:\s*scroll\(self inline\)/);
     expect(rule).toMatch(/mask-image:/);
-    // Other print rules can precede the table override in the same block.
-    const printBlocks = css.match(/^@media print\s*\{[\s\S]*?^\}/gm) ?? [];
-    const print = printBlocks.join("\n").match(/\.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
-    expect(print).toMatch(/mask-image:\s*none/);
-    expect(print).toMatch(/animation:\s*none/);
+    // On a sheet the table is the paper's width: no scroll, so no fade.
+    const sheet = css.match(/\.paper-sheet \.table-scroll-shell\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(sheet).toMatch(/mask-image:\s*none/);
+    expect(sheet).toMatch(/animation:\s*none/);
   });
 });
 

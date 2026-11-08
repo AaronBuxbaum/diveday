@@ -117,6 +117,7 @@
   "src/db/standing-sailed-roll-call.ts": 100,
   "src/db/trips-manifest.ts": 100,
   "src/db/waiver-issue.ts": 83.33,
+  "src/db/waiver-drafts.ts": 91.66,
   "src/db/waiver-record-columns.ts": 100,
   "src/db/waiver-refile.ts": 100,
   "src/db/waiver-seal-acknowledgements.ts": 86.95,

@@ -18,7 +18,7 @@ export function SailedRebookLine({
   offerAction: (formData: FormData) => Promise<void>;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-3 text-sm print:hidden">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-3 text-sm">
       <p className="text-muted">{copy.line}</p>
       {copy.add ? (
         <Link

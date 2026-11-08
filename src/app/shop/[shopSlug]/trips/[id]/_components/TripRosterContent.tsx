@@ -273,7 +273,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
             className={buttonClass({
               variant: "secondary",
               size: "sm",
-              className: "mt-3 print:hidden",
+              className: "mt-3",
             })}
           >
             {t("trips.guests.scheduleAnotherDeparture")}
@@ -556,7 +556,7 @@ export function TripPromoteAndActivity({
   const canOffer = !cancelled && spotsRemaining(seatsOnSale(trip)) > 0;
   return (
     // A shop's taps and its audit trail, not the departure a staffer prints.
-    <div className="print:hidden">
+    <div>
       <DisclosureRowList>
         {showPromote ? (
           <AutoOpenDetails openOnHash="last-minute-deal" className="group/promote scroll-mt-6">
@@ -639,7 +639,7 @@ function CarryWaitlistForm({
   t: StaffTranslator;
 }) {
   return (
-    <form action={action} className="mt-4 flex flex-col gap-3 print:hidden">
+    <form action={action} className="mt-4 flex flex-col gap-3">
       <FieldGrid columns={1}>
         <Field label={t("trips.guests.carryWaitlistTo")} htmlFor="carry-waitlist-to">
           <select id="carry-waitlist-to" name="toTripId" required className={controlClass}>

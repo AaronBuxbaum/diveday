@@ -64,13 +64,11 @@ describe("Switch", () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
-  it("keeps the dock-test target and stays off paper", () => {
+  it("keeps the dock-test target", () => {
     const { container } = render(<Switch checked={false} onChange={() => {}} label="Vibrate" />);
     const label = container.querySelector("label");
-    // 44px and `print:hidden` are the two rules a call site would otherwise
-    // have to remember, and the two that went missing when this was a class
-    // string copied between files.
+    // 44px is the rule a call site would otherwise have to remember, and it
+    // went missing when this was a class string copied between files.
     expect(label?.className).toContain("min-h-11");
-    expect(label?.className).toContain("print:hidden");
   });
 });

@@ -62,7 +62,7 @@ export function rowHeader(seat: RowHeaderInput) {
           read this way. Hover restores the link cue. */}
       <Link
         href={`/shop/${shopSlug}/divers/${person.id}`}
-        className="inline-flex min-h-11 items-center font-semibold leading-tight text-base text-foreground hover:text-primary hover:underline print:min-h-7"
+        className="inline-flex min-h-11 items-center font-semibold leading-tight text-base text-foreground hover:text-primary hover:underline"
       >
         {person.fullName}
       </Link>

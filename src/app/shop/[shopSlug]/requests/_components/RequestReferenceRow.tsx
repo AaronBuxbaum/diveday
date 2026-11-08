@@ -74,7 +74,6 @@ export function RequestReferenceRow({
               variant: "link",
               size: "sm",
               flush: true,
-              className: "print:hidden",
             })}
           >
             {openDeparture.label}

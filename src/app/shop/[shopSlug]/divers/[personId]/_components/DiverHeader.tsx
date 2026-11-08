@@ -162,7 +162,7 @@ export function DiverHeader({
       {moment}
       {status?.tone === "success" ? <DiverFormStatus status={status} className="-mt-4" /> : null}
       {book || menu ? (
-        <div className="mt-1 flex flex-wrap items-start gap-2 print:hidden">
+        <div className="mt-1 flex flex-wrap items-start gap-2">
           {book}
           {menu}
         </div>

@@ -22,7 +22,7 @@ export function PrepBackFromBoat({
   if (units.length === 0) return null;
   const headingId = scopedId(idPrefix, "back-from-boat-heading");
   return (
-    <section aria-labelledby={headingId} className="print:hidden">
+    <section aria-labelledby={headingId}>
       <h2 id={headingId} className={SECTION_TITLE_CLASS}>
         {t("gear.prep.backHeading")}
       </h2>

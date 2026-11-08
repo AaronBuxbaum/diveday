@@ -77,7 +77,7 @@ export function OfflineCheckpointNav({
         ))}
       </nav>
       {asking && prompt ? (
-        <div className={`mt-3 ${TONE_PANEL_CLASS} border-danger/60 bg-surface print:hidden`}>
+        <div className={`mt-3 ${TONE_PANEL_CLASS} border-danger/60 bg-surface`}>
           <p ref={lineRef} tabIndex={-1} role="alert" className="text-base font-bold text-danger">
             {checkpointGapLine(t, prompt)}
           </p>
@@ -106,7 +106,7 @@ export function OfflineCheckpointNav({
       {/* The count before this one is still open: said on the checkpoint it
           leads to, so the warning holds after "Open anyway". */}
       {openedGap ? (
-        <p className="mt-3 text-base font-bold text-danger print:hidden">
+        <p className="mt-3 text-base font-bold text-danger">
           {checkpointGapLine(t, openedGap)}{" "}
           <button
             type="button"

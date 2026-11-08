@@ -211,11 +211,11 @@ export function rowOutstanding(seat: RowOutstandingInput) {
   const counterLeadId = partyLeadId ?? (counterSeat ? booking.id : null);
   const waiverRemedy =
     waiverControl.action || (counterLeadId && !record) ? (
-      <div className="mt-3 print:hidden">
+      <div className="mt-3">
         {counterLeadId && !record ? (
           <Link
             href={shopPath(shopSlug, "trips", tripId, "party", counterLeadId, "waivers")}
-            className="me-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline print:hidden"
+            className="me-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
           >
             {partyLeadId ? t("trips.partyWaiverQueue.review") : t("trips.partyWaiverQueue.counter")}
           </Link>
@@ -275,7 +275,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
   ) ? (
     <Link
       href={`/shop/${shopSlug}/divers/${person.id}#cards`}
-      className="mt-2 -mb-3 inline-flex min-h-11 items-center align-bottom text-sm font-semibold text-primary hover:underline print:hidden"
+      className="mt-2 -mb-3 inline-flex min-h-11 items-center align-bottom text-sm font-semibold text-primary hover:underline"
     >
       {t("trips.roster.reviewCertificationsLink")}
     </Link>

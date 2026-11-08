@@ -250,9 +250,9 @@ export function SegmentedControl({
   // with `mb-*` would stack the two margins instead of taking the larger —
   // +28px of phantom space the old hand-rolled navs (all block-level) never
   // had. Content width comes from `w-fit`, not from being inline. A wrapped
-  // grid spans its room. The `display` is a class, never an inline style,
-  // which outranks `print:hidden` and printed the track; only the column
-  // count is inline.
+  // grid spans its room. The `display` is a class, never an inline style, so
+  // a caller's display utility still decides it; only the column count is
+  // inline.
   //
   // **Every option is the same width** (Aaron, 2026-10-03: a tab one label
   // longer than its neighbours made the row's targets jump). One line is a
@@ -265,7 +265,7 @@ export function SegmentedControl({
     columns !== null
       ? segmentedGridTrackClass
       : `${segmentedGridTrackClass} grid-flow-col auto-cols-fr${fill ? "" : " w-fit max-w-full"}`
-  } print:hidden ${className}`
+  } ${className}`
     .replace(/\s+/g, " ")
     .trim();
   return (

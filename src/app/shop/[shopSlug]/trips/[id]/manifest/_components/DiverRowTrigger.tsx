@@ -19,6 +19,7 @@ export function DiverRowTrigger({
   typeBadge,
   lateAt,
   checkedInAtDesk = false,
+  paper = false,
   locale,
   timezone,
   t,
@@ -32,20 +33,29 @@ export function DiverRowTrigger({
   lateAt: Date | null;
   /** The desk checked this diver in and the crew has said nothing yet (`diverRowState`). */
   checkedInAtDesk?: boolean;
+  /** On a sheet: the wide layout, whatever the viewport, as the sheet is its paper's width. */
+  paper?: boolean;
   locale: string;
   timezone: string;
   t: StaffTranslator;
 }) {
   // A held seat's release may be somebody else's: no chip (H-20260724-one-person-per-email).
   const alerted = Boolean(diver.medicalAlert) && !diver.identityWithheld;
+  const flagged = Boolean(capsule || typeBadge || diver.notHere || alerted);
+  const nameColumn = flagged ? (paper ? "flex-initial" : "sm:flex-initial") : "";
+  const flagLine = paper
+    ? `flex flex-1 flex-wrap items-center gap-2 ${diver.welcomeCue || lateAt ? "self-start" : ""}`
+    : `order-last flex basis-full flex-wrap items-center gap-2 sm:order-none sm:flex-1 sm:basis-auto ${
+        // Level with the name's line: the top of a
+        // two-line column, the middle of a one-line one.
+        diver.welcomeCue || lateAt ? "sm:self-start" : ""
+      }`;
   return (
     <>
       <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
         {String(index + 1).padStart(2, "0")}
       </span>
-      <span
-        className={`min-w-0 flex-1 ${capsule || typeBadge || diver.notHere || alerted ? "sm:flex-initial print:flex-initial" : ""}`}
-      >
+      <span className={`min-w-0 flex-1 ${nameColumn}`}>
         <span className={`block ${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
           {diver.fullName}
         </span>
@@ -70,19 +80,13 @@ export function DiverRowTrigger({
         `order-last` puts it under the caret's line, which
         `PersonSheet` renders after this fragment.
 
-        From `sm` up, and on paper, the name column is wide
+        From `sm` up, and on a sheet (`paper`), the name column is wide
         enough, so the capsule goes back beside the name's
         first line: a second line there only made every
         flagged row taller, and on paper it cost the packet
         pages (e2e/paper-day). */}
-      {capsule || typeBadge || diver.notHere || alerted ? (
-        <span
-          className={`order-last flex basis-full flex-wrap items-center gap-2 sm:order-none sm:flex-1 sm:basis-auto print:order-none print:flex-1 print:basis-auto ${
-            // Level with the name's line: the top of a
-            // two-line column, the middle of a one-line one.
-            diver.welcomeCue || lateAt ? "sm:self-start print:self-start" : ""
-          }`}
-        >
+      {flagged ? (
+        <span className={flagLine}>
           {capsule}
           {typeBadge}
           {/* **The diver wrote a medical alert for the crew** (issue #2960):

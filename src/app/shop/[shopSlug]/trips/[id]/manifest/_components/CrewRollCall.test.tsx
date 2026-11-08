@@ -180,32 +180,6 @@ describe("a crew row obeys the diver row's gestures", () => {
 });
 
 /**
- * **On paper the rows take the card's inner corner.** The print packets lift
- * every `overflow` clip on purpose, so the card's rounded corner stopped
- * cutting the rows and a crew row's 4px state stripe stood square across it
- * (pixel probe, day-packet-print). The corners are print-only because on
- * screen the card still clips.
- */
-describe("the crew rows on paper", () => {
-  it("rounds the first row's top corners and the last row's bottom ones, in print only", () => {
-    renderCrew({
-      members: [
-        crew(),
-        crew({ id: "00000000-0000-4000-8000-0000000000c2", fullName: "Sal Moretti" }),
-      ],
-    });
-    for (const row of screen.getAllByRole("listitem")) {
-      expect(row).toHaveClass(
-        "border-l-4",
-        "break-inside-avoid",
-        "print:first:rounded-t-[calc(var(--radius-panel)-1px)]",
-        "print:last:rounded-b-[calc(var(--radius-panel)-1px)]",
-      );
-    }
-  });
-});
-
-/**
  * **The mark keeps room for its focus ring on the last row.** The roll-call
  * card is `overflow-hidden`. While glare's 44px floor shrank the name button
  * to 52px (#1981), the mark column set the
@@ -262,10 +236,8 @@ describe("the crew list's hairlines", () => {
     expect(rows[0]?.parentElement?.className).not.toMatch(/(^|\s)divide-/);
     const rule = (row: HTMLElement | undefined) => row?.firstElementChild?.className ?? "";
     expect(rule(rows[0])).toContain("border-t-0");
-    expect(rule(rows[0])).toContain("print:border-t-0");
     expect(rule(rows[1])).toMatch(/(^|\s)border-t(\s|$)/);
     expect(rule(rows[1])).toContain("border-border");
-    expect(rule(rows[1])).toContain("print:border-t");
     // The tone keeps its colour on the row's own box, whose one border is the
     // stripe.
     expect(rows[1]?.className).toContain("border-danger");

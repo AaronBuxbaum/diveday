@@ -31,9 +31,7 @@ describe("a diver's staff notes on the manifest", () => {
         t={t}
       />,
     );
-    const section = screen.getByRole("region", { name: t("manifest.diverNotesHeading") });
-    // Never on the sheet that goes ashore.
-    expect(section.className).toContain("print:hidden");
+    expect(screen.getByRole("region", { name: t("manifest.diverNotesHeading") })).toBeVisible();
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent("Keiko Tanaka");

@@ -112,7 +112,6 @@ export function OfflineRollCallSection({
             variant: "link",
             size: "sm",
             flush: true,
-            className: "print:hidden",
           })}
         >
           {t("manifest.emergency.heading")}

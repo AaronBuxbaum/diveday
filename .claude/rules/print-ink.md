@@ -13,8 +13,18 @@ paths:
 
 A customer pays for every drop. Paper is **black ink on white paper**, and structure comes from type,
 space and thin outlines. Status comes from its word (design principle 6), never from a fill or a hue.
-This holds for every printed thing: sheets (`PaperSheet`), packets, the roster and manifest, the
-logbook, the doctor referral, waivers, passes, cards, and any ordinary page a person prints.
+This holds for every printed thing, and every printed thing is a sheet: `PaperSheet` behind
+`SheetDocument` (packets, the manifest, the departure log, passes, cards, the blank and signed releases) or a
+page's own sheet (the logbook, the doctor referral, the public trip, course and schedule).
+
+## A screen never prints
+
+No component wears a print face: no `print:` variant, no `@media print` rule for a screen
+(`src/app/paper-face.test.ts` fails on one). A page that holds a sheet prints its sheets and nothing
+of its screen (`globals.css`); a page with none prints as the browser draws it, and offers no Print.
+A surface people print becomes a sheet. A screen whose raw print would be unsafe paper (the offline
+roll call, whose sheet is the dated boarding source) renders `ScreenNotPrinted`, so Ctrl+P gets one
+line.
 
 ## A violation is any of these on paper
 
@@ -47,10 +57,11 @@ it is not.
 
 ## How it is enforced
 
-- `src/app/globals.css` `@media print`: strips every background and shadow, thick edge bars,
-  `print-color-adjust: economy`; a sheet's `--sheet-*` tokens are achromatic.
+- `src/app/globals.css` `.paper-sheet`: inside a sheet, on screen and paper alike, no background,
+  shadow or thick edge bar, `print-color-adjust: economy`, and achromatic `--sheet-*` tokens.
   `src/app/paper-face.test.ts` pins the CSS.
 - `e2e/print-ink.ts` `assertPrintInk` reads the computed style of every drawn element in print media
   and fails on each violation above. `capturePrint` (`e2e/visual-harness.ts`) runs it, so every
-  `e2e/visual-print*.spec.ts` capture is audited. A new printed surface needs a capture.
+  `e2e/visual-print*.spec.ts` capture is audited, and it refuses a page with no sheet. A new
+  printed surface needs a capture.
 - A fix is never to widen the audit: change the style so the element prints as ink on white.

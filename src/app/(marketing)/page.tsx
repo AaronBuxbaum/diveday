@@ -239,8 +239,8 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
 
   return (
     <main className="flex-1">
-      <section className="relative overflow-hidden border-b border-border print:overflow-visible">
-        <div className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-12 lg:py-16 print:block print:py-4">
+      <section className="relative overflow-hidden border-b border-border">
+        <div className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-12 lg:py-16">
           <div className="max-w-2xl">
             <Eyebrow>{t("marketing.home.eyebrow")}</Eyebrow>
             <h1 className="mt-4 text-5xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl lg:text-7xl">
@@ -260,7 +260,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
             <DiverDoor t={t} />
           </div>
           <MarketingHeroMotion>
-            <div className="mx-auto w-full max-w-sm lg:max-w-md print:hidden">
+            <div className="mx-auto w-full max-w-sm lg:max-w-md">
               <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} locale={locale} />
               <div className="relative z-10 mx-auto -mt-5 w-[88%] rounded-inset border border-border bg-surface px-4 py-3">
                 <Eyebrow>{t("marketing.home.dockEyebrow")}</Eyebrow>
@@ -275,7 +275,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
           alternating rows, each a marker, a title, two of the builder's notes
           and the feature page's name beside a large drawing (`STEPS`). */}
       <MarketingReveal>
-        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28 print:py-6">
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">
             {/* One sentence and no lede: the rows beneath are the whole of
                 what the band has to say. */}
@@ -287,7 +287,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
           {/* 96px between steps at every width, against 20px inside one below
               `lg`, so a phone reads each step as one unit rather than a
               drawing floating between two (design review, 2026-10-05). */}
-          <ol className="mt-12 space-y-16 lg:mt-16 lg:space-y-20 print:mt-6 print:space-y-6">
+          <ol className="mt-12 space-y-16 lg:mt-16 lg:space-y-20">
             {STEPS.map((step, index) => {
               const page = getFeaturePage(step.feature);
               if (!page) return null;
@@ -295,10 +295,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
                 // One list item per step, so a screen reader hears the
                 // booking as the sequence it is; the step's `<h3>` names it
                 // in the outline.
-                <li
-                  key={step.id}
-                  className="grid items-center gap-5 lg:grid-cols-11 lg:gap-14 print:grid-cols-2 print:gap-5"
-                >
+                <li key={step.id} className="grid items-center gap-5 lg:grid-cols-11 lg:gap-14">
                   {/* **Below `lg` the copy column dissolves** (`contents`), so
                       its parts and the screen stack in reading order: what
                       happens, the screen that does it, the notes on that
@@ -309,7 +306,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
                       it is a column beside the screen again, every `order`
                       reset, and the alternation is the column's own. */}
                   <div
-                    className={`contents lg:col-span-5 lg:flex lg:flex-col print:flex print:flex-col ${index % 2 === 1 ? "lg:order-last" : ""}`}
+                    className={`contents lg:col-span-5 lg:flex lg:flex-col ${index % 2 === 1 ? "lg:order-last" : ""}`}
                   >
                     <div>
                       <SectionMarker>{t(`marketing.home.steps.${step.id}.when`)}</SectionMarker>
@@ -319,7 +316,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
                     </div>
                     <MarginNotes
                       notes={step.notes.map((key) => t(key))}
-                      className="order-2 max-w-lg lg:order-none lg:mt-5 print:mt-3 print:order-none"
+                      className="order-2 max-w-lg lg:order-none lg:mt-5"
                     />
                     {/* The page's own name is the link's words: the reader
                         has just read what the step does, and the name says
@@ -341,7 +338,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
                       })}
                     </Link>
                   </div>
-                  <div className="order-1 lg:order-none lg:col-span-6 print:order-none">
+                  <div className="order-1 lg:order-none lg:col-span-6">
                     <MarketingMockup label={t(step.label)}>{step.screen(locale)}</MarketingMockup>
                   </div>
                 </li>
@@ -352,7 +349,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
       </MarketingReveal>
 
       {/* The product directory holds the full feature list. */}
-      <div className="mx-auto w-full max-w-7xl px-6 pb-12 print:hidden">
+      <div className="mx-auto w-full max-w-7xl px-6 pb-12">
         <Link href="/product#full-list" className={buttonClass({ variant: "link", flush: true })}>
           {t("marketing.home.featuresLink")}
         </Link>
@@ -365,12 +362,12 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
           visual-right split it shares with the hero and the steps.
           Arriving reads first (docs/product/marketing.md). */}
       <MarketingReveal>
-        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28 print:py-6">
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
           <h2 className={`max-w-3xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.home.exportTitle")}
           </h2>
 
-          <div className="mt-12 grid gap-12 lg:mt-16 lg:grid-cols-2 lg:gap-0 print:mt-6 print:gap-5">
+          <div className="mt-12 grid gap-12 lg:mt-16 lg:grid-cols-2 lg:gap-0">
             <div className="flex flex-col gap-5 lg:pr-14">
               <SectionMarker as="h3">{t("marketing.home.arrivingLabel")}</SectionMarker>
               <p className="leading-7 text-muted">{t("marketing.home.exportDescription1")}</p>
@@ -415,7 +412,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
 
           {/* The full-width rule closes both portability columns before the
               switching hub link, keeping it distinct from the spreadsheet link. */}
-          <div className="mt-12 border-t border-border pt-6 print:hidden">
+          <div className="mt-12 border-t border-border pt-6">
             <Link
               href={switchingHref("/switching", "home-records")}
               className={buttonClass({ variant: "link", flush: true, className: "text-left" })}

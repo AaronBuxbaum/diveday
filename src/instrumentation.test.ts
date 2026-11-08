@@ -127,7 +127,11 @@ describe("Sentry on the server", () => {
 
     expect(fake.init).toHaveBeenCalledTimes(1);
     const options = fake.init.mock.calls[0]?.[0];
-    expect(options).toMatchObject({ tracesSampleRate: 0, defaultIntegrations: false });
+    expect(options).toMatchObject({
+      tracesSampleRate: 0,
+      defaultIntegrations: false,
+      enableOpenTelemetrySetup: false,
+    });
     // The SDK's own collection switch stays the first layer of redaction.
     expect(options.dataCollection).toEqual(SENTRY_DATA_COLLECTION);
     expect(options.beforeSend).toBeTypeOf("function");

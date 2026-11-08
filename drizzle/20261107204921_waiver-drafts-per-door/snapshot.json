@@ -1,0 +1,434 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "38f21911-6f53-4201-95d8-43f1f963b200",
+  "prevIds": [
+    "59191828-0b4d-4ff7-ab42-5566444f4749"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "waiver_draft_door"
+      ],
+      "writes": [
+        "s|enum|public.waiver_draft_door",
+        "n|enum|public.waiver_draft_door",
+        "e|enum|public.waiver_draft_door",
+        "n|type|public.waiver_draft_door"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "waiver_drafts"
+      ],
+      "writes": [
+        "s|tbl|public.waiver_drafts",
+        "n|tbl|public.waiver_drafts",
+        "e|tbl|public.waiver_drafts",
+        "n|rel|public.waiver_drafts",
+        "n|type|public.waiver_drafts",
+        "n|rel|public.waiver_drafts_pkey",
+        "n|rel|public.waiver_drafts_door_unique"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.waiver_draft_door"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "waiver_drafts",
+        "waiver_drafts_shop_idx"
+      ],
+      "writes": [
+        "s|idx|public.waiver_drafts_shop_idx",
+        "n|idx|public.waiver_drafts_shop_idx",
+        "e|idx|public.waiver_drafts_shop_idx",
+        "n|rel|public.waiver_drafts_shop_idx"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_drafts",
+        "n|sch|public",
+        "n|col|public.waiver_drafts.shop_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "waiver_drafts"
+      ],
+      "writes": [
+        "s|fk|public.waiver_drafts.waiver_drafts_shop_id_shops_id_fkey",
+        "n|fk|public.waiver_drafts.waiver_drafts_shop_id_shops_id_fkey",
+        "e|fk|public.waiver_drafts.waiver_drafts_shop_id_shops_id_fkey",
+        "n|con|public.waiver_drafts.waiver_drafts_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_drafts",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.waiver_drafts.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "waiver_drafts"
+      ],
+      "writes": [
+        "s|fk|public.waiver_drafts.waiver_drafts_waiver_record_id_waiver_records_id_fkey",
+        "n|fk|public.waiver_drafts.waiver_drafts_waiver_record_id_waiver_records_id_fkey",
+        "e|fk|public.waiver_drafts.waiver_drafts_waiver_record_id_waiver_records_id_fkey",
+        "n|con|public.waiver_drafts.waiver_drafts_waiver_record_id_waiver_records_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.waiver_drafts",
+        "n|sch|public",
+        "n|tbl|public.waiver_records",
+        "n|sch|public",
+        "n|col|public.waiver_drafts.waiver_record_id",
+        "n|col|public.waiver_records.id",
+        "e|uniqueness|public.waiver_records.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "waiver_drafts",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "waiver_draft_door",
+        "values": [
+          "thread",
+          "counter",
+          "release"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "waiver_record_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "door",
+        "type": "waiver_draft_door",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "link_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "signer_name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "acknowledged",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "medical_answers",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "guardian",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "shop_answers",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "medical_alert",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "saved_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "waiver_drafts_shop_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "waiver_drafts_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "waiver_drafts_waiver_record_id_waiver_records_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "waiver_record_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "waiver_records",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "waiver_drafts_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "waiver_drafts_door_unique",
+        "nameExplicit": true,
+        "columns": [
+          "waiver_record_id",
+          "door",
+          "link_id"
+        ],
+        "nullsNotDistinct": true,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "waiver_drafts",
+        "name": "waiver_drafts_link_matches_door",
+        "value": "(\"door\" = 'thread') = (\"link_id\" is null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

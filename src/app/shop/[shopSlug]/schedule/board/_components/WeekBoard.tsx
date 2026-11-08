@@ -20,7 +20,6 @@ import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
 import type { WeekAsk } from "./builder-types";
 import { CopyLastYear, LastYearTally, type LastYearWeekView } from "./CopyLastYear";
-import { WeekPaperDate } from "./WeekPaperDate";
 import { WEEK_DAY_GRID_CLASS, WEEK_EMPTY_DAY_CLASS, WEEK_ROW_BOX_CLASS } from "./week-geometry";
 import { weekRows } from "./week-rows";
 
@@ -113,7 +112,6 @@ export type WeekDay = {
   weekday: string;
   dayNumber: string;
   label: string;
-  paperLabel: string;
   isToday: boolean;
   /** The shop's own calendar day is already behind this one. */
   isPast: boolean;
@@ -266,10 +264,7 @@ function RowActions({
   ];
   return (
     // `data-row-menu` is the copy-free hook a spec asks "is this list open?" with.
-    <div
-      ref={rootRef}
-      className={`${open ? "z-30" : "z-10"} relative print:hidden ${className}`.trim()}
-    >
+    <div ref={rootRef} className={`${open ? "z-30" : "z-10"} relative ${className}`.trim()}>
       <button
         type="button"
         ref={(el) => {
@@ -509,10 +504,8 @@ function WeekBoat({
   time,
   runs,
   crewLine,
-  paperDate,
 }: {
   board: WeekBoatBoard;
-  paperDate: string;
   departure: WeekDeparture;
   seats: WeekSeats;
   seatsLabel: string;
@@ -571,7 +564,6 @@ function WeekBoat({
           {time}
         </p>
         <div className="col-span-full row-start-2 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1 md:pt-1">
-          <WeekPaperDate label={paperDate} />
           {/* **Two lines, never one clipped one.** A week's titles share their
               prefix — "Dawn Two-Tank — …", "Morning Two-Tank — …" — so a
               truncation eats exactly the half that says which boat this is.
@@ -795,7 +787,7 @@ export function WeekBoard({
           — in a test, in a spec, in a screen reader's rotor — would get seven
           days plus their boats and have to say which it meant. The headings
           are the structure. */}
-      <div className="flex flex-col print:block">
+      <div className="flex flex-col">
         {weekRows(week.days, (day) => day.entries.length === 0 && !spansByDay.has(day.dateIso)).map(
           (row) => {
             if (row.kind === "quiet") {
@@ -846,7 +838,7 @@ export function WeekBoard({
                   className={buttonClass({
                     variant: "ghost",
                     size: "sm",
-                    className: "shrink-0 print:hidden",
+                    className: "shrink-0",
                   })}
                 >
                   <span aria-hidden="true">+</span> {copy.add}
@@ -865,7 +857,6 @@ export function WeekBoard({
               <li key={departure.tripId}>
                 <WeekBoat
                   departure={departure}
-                  paperDate={day.paperLabel}
                   seats={row.seats}
                   seatsLabel={row.seatsLabel}
                   meta={row.meta}
@@ -880,17 +871,13 @@ export function WeekBoard({
               </li>
             );
             return (
-              <div
-                data-week-day={day.dateIso}
-                key={day.dateIso}
-                className="border-b border-border print:break-inside-avoid"
-              >
+              <div data-week-day={day.dateIso} key={day.dateIso} className="border-b border-border">
                 {/* One rail, 72px, at every width — sized, and shared with
                   the loading skeleton, in `week-geometry.ts`. */}
-                <div className={`${WEEK_DAY_GRID_CLASS} print:block`}>
+                <div className={`${WEEK_DAY_GRID_CLASS}`}>
                   <h2
                     id={`week-day-${day.dateIso}`}
-                    className="sticky top-(--chrome-h) z-10 self-start bg-background py-2 print:static"
+                    className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
                   >
                     <span className="sr-only">{day.label}</span>
                     <span aria-hidden="true" className="flex min-h-8 items-center gap-1.5">
@@ -1013,7 +1000,7 @@ export function WeekBoard({
                       variant: "ghost",
                       size: "sm",
                       flush: true,
-                      className: "shrink-0 print:hidden",
+                      className: "shrink-0",
                     })}
                   >
                     {copy.addDeparture}

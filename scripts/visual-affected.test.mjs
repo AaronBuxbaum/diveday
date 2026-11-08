@@ -816,16 +816,6 @@ describe("the pieces", () => {
               suites: [],
             },
             {
-              file: "e2e/visual-print-filter-context.spec.ts",
-              specs: [
-                {
-                  id: "print-filter-id",
-                  title: "printed roster states its visible subset rather than a web page number",
-                },
-              ],
-              suites: [],
-            },
-            {
               file: "e2e/visual-print.spec.ts",
               specs: [
                 {

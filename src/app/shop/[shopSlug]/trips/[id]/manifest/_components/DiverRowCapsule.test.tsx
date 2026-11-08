@@ -52,26 +52,25 @@ describe("the earlier-refusal capsule", () => {
   it("gives way to a rider's riding-only warning, which the row and its details both say (H-20261009-rider-snorkeler-medical)", () => {
     // A clean release over an older "no", and a later "no" the rider boards
     // under: both warnings stand, and the riding-only one takes the row.
-    const { container } = renderList({
-      divers: [
-        diver({
-          participantType: "rider",
-          medicalWaiver: refusedBefore,
-          riderMedicalHold: {
-            kind: "not_cleared",
-            at: new Date("2026-09-05T12:00:00.000Z"),
-            evaluatedOn: "2026-09-04",
-          },
-        }),
-      ],
-    });
+    const divers = [
+      diver({
+        participantType: "rider",
+        medicalWaiver: refusedBefore,
+        riderMedicalHold: {
+          kind: "not_cleared",
+          at: new Date("2026-09-05T12:00:00.000Z"),
+          evaluatedOn: "2026-09-04",
+        },
+      }),
+    ];
+    const { container } = renderList({ divers });
     expect(capsuleOf(container)).toHaveTextContent("Riding only: MD said no");
     expect(capsuleOf(container)).not.toHaveTextContent(CAPSULE);
-    expect(container.textContent).toMatch(
+    const sheet = renderList({ divers, paper: true }).container;
+    expect(sheet.textContent).toMatch(
       /A physician did not clear this person on Sep\s4,\s2026: riding only, not in the water/,
     );
-    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
-    expect(within(printed as HTMLElement).getByText(CAPSULE)).toBeDefined();
+    expect(within(sheet).getByText(CAPSULE)).toBeDefined();
   });
 
   it("is short in Spanish too", () => {
@@ -111,19 +110,20 @@ describe("the earlier-refusal capsule", () => {
   });
 
   it("outranks the minor, depth and birthday capsules, and the minor flag still shows", () => {
-    renderList({
-      divers: [
-        diver({
-          medicalWaiver: refusedBefore,
-          age: 13,
-          minor: true,
-          birthday: { status: "today" },
-        }),
-      ],
-    });
+    const divers = [
+      diver({
+        medicalWaiver: refusedBefore,
+        age: 13,
+        minor: true,
+        birthday: { status: "today" },
+      }),
+    ];
+    const screenFace = renderList({ divers });
     const row = screen.getByRole("listitem");
     expect(row.querySelector(".basis-full")).toHaveTextContent(CAPSULE);
     expect(row.querySelector(".basis-full")).not.toHaveTextContent("Minor");
+    screenFace.unmount();
+    renderList({ divers, paper: true });
     expect(screen.getAllByText("Minor · age 13").length).toBeGreaterThan(0);
   });
 
@@ -135,28 +135,24 @@ describe("the earlier-refusal capsule", () => {
    * sentence with the minor flag beside it.
    */
   it("gives a not-back minor's refusal no capsule on screen, the age in the panel, and the sentence on paper", () => {
-    const { container } = renderList({
-      divers: [
-        diver({
-          medicalWaiver: refusedBefore,
-          age: 13,
-          minor: true,
-          boardedEarlier: true,
-          rollCall: notBackAt(),
-        }),
-      ],
-    });
-    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
-    if (!printed) throw new Error("no printed block");
-    const onScreen = (text: string | RegExp) =>
-      screen.queryAllByText(text).filter((element) => !printed.contains(element));
+    const divers = [
+      diver({
+        medicalWaiver: refusedBefore,
+        age: 13,
+        minor: true,
+        boardedEarlier: true,
+        rollCall: notBackAt(),
+      }),
+    ];
+    const { container } = renderList({ divers });
     expect(capsuleOf(container)).toBeNull();
-    expect(onScreen(CAPSULE)).toHaveLength(0);
-    expect(onScreen(/Minor/)).toHaveLength(0);
+    expect(screen.queryAllByText(CAPSULE)).toHaveLength(0);
+    expect(screen.queryAllByText(/Minor/)).toHaveLength(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
     expect(within(screen.getByRole("dialog")).getByText("Minor · age 13")).toBeDefined();
 
+    const printed = renderList({ divers, paper: true }).container;
     expect(printed).toHaveTextContent(
       /A physician did not clear this person on .* \(earlier waiver\)/,
     );
@@ -171,20 +167,19 @@ describe("the earlier-refusal capsule", () => {
    * second time beside the one already on the summary line.
    */
   it("prints the refusal once when a teamless buddy alert gives it the row", () => {
-    const { container } = renderList({
-      checkpoint: "departure",
-      divers: [
-        diver({
-          medicalWaiver: refusedBefore,
-          buddyAlert: "separated_dock",
-          buddyTeam: null,
-          rollCall: boardedAt(),
-        }),
-      ],
-    });
+    const divers = [
+      diver({
+        medicalWaiver: refusedBefore,
+        buddyAlert: "separated_dock",
+        buddyTeam: null,
+        rollCall: boardedAt(),
+      }),
+    ];
+    const { container } = renderList({ checkpoint: "departure", divers });
     expect(capsuleOf(container)).toHaveTextContent(CAPSULE);
-    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
-    expect(within(printed as HTMLElement).queryAllByText(CAPSULE)).toHaveLength(0);
+    const printed = renderList({ checkpoint: "departure", divers, paper: true }).container;
+    // Once, on the summary line the row drew; the restated facts add no second.
+    expect(within(printed).queryAllByText(CAPSULE)).toHaveLength(1);
   });
 
   it("dates the refusal by the physician's evaluation, with the year", () => {
@@ -196,7 +191,10 @@ describe("the earlier-refusal capsule", () => {
         evaluatedOn: "2026-08-03",
       },
     } as TripManifest["divers"][number]["medicalWaiver"];
-    const { container } = renderList({ divers: [diver({ medicalWaiver: evaluated })] });
+    const { container } = renderList({
+      divers: [diver({ medicalWaiver: evaluated })],
+      paper: true,
+    });
     expect(container.textContent).toMatch(/did not clear this person on Aug\s3,\s2026/);
   });
 });
@@ -261,9 +259,7 @@ describe("a blocked diver marked aboard at the dock", () => {
   const SEPARATED_AT_DOCK = t("shared.buddyTeam.separatedDock");
 
   function onScreen(text: string) {
-    return screen
-      .queryAllByText(text)
-      .filter((element) => !element.closest(".hidden.print\\:block"));
+    return screen.queryAllByText(text);
   }
 
   it("says Blocked over a teammate still ashore", () => {
@@ -326,7 +322,8 @@ describe("the unresolved-referral capsule", () => {
   it("puts a warning capsule on the row, and dates the referral with its year", () => {
     const { container } = renderList({ divers: [diver({ medicalWaiver: referred })] });
     expect(container.querySelector(".basis-full")).toHaveTextContent("Referral still open");
-    expect(container.textContent).toMatch(
+    const sheet = renderList({ divers: [diver({ medicalWaiver: referred })], paper: true });
+    expect(sheet.container.textContent).toMatch(
       /Referred to a physician on Jun\s10,\s2026; re-signed with no physician clearance on file/,
     );
   });

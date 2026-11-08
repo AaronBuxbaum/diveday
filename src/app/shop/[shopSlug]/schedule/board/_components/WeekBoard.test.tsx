@@ -100,7 +100,6 @@ function week(overrides: Partial<BuilderWeek> = {}, entries: WeekEntry[] = []): 
       weekday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index] ?? "",
       dayNumber: String(24 + index),
       label: `Day ${24 + index}`,
-      paperLabel: `${dateIso} · America/New_York`,
       isToday: dateIso === "2026-08-27",
       isPast: dateIso < "2026-08-27",
       boatWarning: null,
@@ -320,7 +319,7 @@ describe("an asked-for day's row (K-333, K-338)", () => {
         variant: "ghost",
         size: "sm",
         flush: true,
-        className: "shrink-0 print:hidden",
+        className: "shrink-0",
       }),
     );
   });

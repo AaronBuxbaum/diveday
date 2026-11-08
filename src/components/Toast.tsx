@@ -191,9 +191,9 @@ export function ToastShell({
     </div>
   );
   return placement === "inline" ? (
-    <div className="my-2 min-w-0 print:hidden">{toast}</div>
+    <div className="my-2 min-w-0">{toast}</div>
   ) : (
-    <div className="fixed inset-x-0 bottom-[calc(1rem+var(--tabbar-h))] z-50 flex justify-center px-4 print:hidden">
+    <div className="fixed inset-x-0 bottom-[calc(1rem+var(--tabbar-h))] z-50 flex justify-center px-4">
       {toast}
     </div>
   );

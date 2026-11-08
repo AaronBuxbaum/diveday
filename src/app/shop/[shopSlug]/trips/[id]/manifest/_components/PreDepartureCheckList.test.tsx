@@ -49,7 +49,7 @@ const items = [
 /**
  * **The sheet a captain carries prints each mark in front of its own line.**
  *
- * The printed list is restated outside the disclosure so paper still says
+ * On a sheet the list is stated, never a disclosure, so paper still says
  * what was checked. Its mark was a bare `StatusMark`, which preflight makes a
  * block, so on paper every box stood on a line of its own above the words it
  * belonged to (K-15) — a list of boxes and a list of sentences, interleaved.
@@ -60,11 +60,15 @@ const items = [
 describe("the printed pre-departure list", () => {
   function printedRows() {
     const { container } = render(
-      <PreDepartureCheckList action={async () => null} items={items} copy={copy} atDeparture />,
+      <PreDepartureCheckList
+        action={async () => null}
+        items={items}
+        copy={copy}
+        atDeparture
+        paper
+      />,
     );
-    const printed = container.querySelector(".print\\:block");
-    if (!printed) throw new Error("no printed list");
-    return Array.from(printed.querySelectorAll("li"));
+    return Array.from(container.querySelectorAll("li"));
   }
 
   it("opens each line with its mark, standing in the line rather than above it", () => {
@@ -343,6 +347,17 @@ describe("the boat's snags (fifth-loop ideas, item 1)", () => {
     expect(screen.getByRole("button", { name: "Fixed" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Still there" })).toBeInTheDocument();
     // The sheet the boat carries says it too.
+    cleanup();
+    render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={items}
+        copy={copy}
+        atDeparture={false}
+        carried={carried}
+        paper
+      />,
+    );
     expect(screen.getByText(carried[0]?.printLine ?? "")).toBeInTheDocument();
   });
 

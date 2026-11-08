@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBookingParty } from "@/db/bookings";
 import { capabilities, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { claimedDevice, issueCounterLink, openOnDevice } from "@/db/waivers-test-fixtures";
+import {
+  claimedDevice,
+  draftsOf,
+  issueCounterLink,
+  openOnDevice,
+} from "@/db/waivers-test-fixtures";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
@@ -106,7 +111,9 @@ describe("saving a counter draft on each step (issue 3985)", () => {
 
     const [record] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
     expect(record?.status).toBe("pending");
-    expect(record?.draftMedicalAnswers).not.toBeNull();
+    const [draft] = await draftsOf(db, recordId);
+    expect(draft).toMatchObject({ door: "counter" });
+    expect(draft?.medicalAnswers).not.toBeNull();
   });
 
   it("spends the code's own budget, not the shop Wi-Fi's", async () => {
@@ -167,8 +174,7 @@ describe("saving a counter draft on each step (issue 3985)", () => {
       .where(eq(capabilities.tokenHash, hashBearerToken(token)));
 
     expect(await autosaveWaiverDraftAction(token, firstStep(shop))).toBe("closed");
-    const [record] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
-    expect(record?.draftMedicalAnswers).toBeNull();
+    expect(await draftsOf(db, recordId)).toEqual([]);
   });
 
   it("names the shop behind a counter code that has closed, and nothing behind a live one", async () => {

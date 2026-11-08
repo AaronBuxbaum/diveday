@@ -37,12 +37,9 @@ describe("the print with medical alerts", () => {
       /\/\*[\s\S]*?\*\//g,
       "",
     );
-    const reveals = [
-      ...css.matchAll(/([^{}]*\[data-print-only\][^{}]*)\{\s*display:\s*block/g),
-    ].map((match) => match[1]?.trim());
-    // A sheet shows its paper rows on screen, so this packet keeps its sheets
-    // off the screen altogether.
-    expect(reveals).toEqual([".paper-sheet [data-print-only]"]);
+    // A sheet is one face: its rows are on screen as on paper (issue #2745),
+    // so this packet keeps its sheets off the screen altogether.
+    expect(css).not.toContain("[data-print-only]");
     expect(SOURCE).toContain("printOnly={");
     const document = readFileSync(
       path.join(SRC, "app/shop/[shopSlug]/print/_components/SheetDocument.tsx"),

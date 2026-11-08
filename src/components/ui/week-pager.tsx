@@ -48,7 +48,7 @@ export function WeekPager({
         href={previousHref}
         scroll={false}
         aria-label={words.previous}
-        className={buttonClass({ variant: "secondary", size: "icon", className: "print:hidden" })}
+        className={buttonClass({ variant: "secondary", size: "icon" })}
       >
         <DiveDayIcon name="chevron-left" />
       </Link>
@@ -61,11 +61,11 @@ export function WeekPager({
         // at a time through it since the day stream's cursor pager went
         // (#1923).
         data-week-step="next"
-        className={buttonClass({ variant: "secondary", size: "icon", className: "print:hidden" })}
+        className={buttonClass({ variant: "secondary", size: "icon" })}
       >
         <DiveDayIcon name="chevron-right" />
       </Link>
-      <p className="ms-2 text-base print:ms-0 font-semibold tracking-tight whitespace-nowrap tabular-nums">
+      <p className="ms-2 text-base font-semibold tracking-tight whitespace-nowrap tabular-nums">
         {rangeLabel}
       </p>
       {thisWeekHref ? (
@@ -75,7 +75,7 @@ export function WeekPager({
           className={buttonClass({
             variant: "link",
             size: "md",
-            className: "whitespace-nowrap print:hidden",
+            className: "whitespace-nowrap",
           })}
         >
           {words.thisWeek}

@@ -182,6 +182,26 @@ describe("GET /api/cron/shop-tick", () => {
     expect(lastCheckInStatus()).toBe("error");
   });
 
+  it("logs a failed reminder's error class and SQLSTATE without its private message", async () => {
+    const output = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("query included diver@example.com", {
+      cause: Object.assign(new Error("private bound parameters"), { code: "23505" }),
+    });
+    vi.mocked(sendDueReminders).mockRejectedValue(failure);
+    await GET(cronRequest());
+    const lines = output.mock.calls.map(([line]) => JSON.parse(String(line)));
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "cron_shop_tick.scan_failed",
+        scan: "trip-reminders",
+        errorClass: "Error",
+        errorCode: "23505",
+      }),
+    );
+    expect(JSON.stringify(lines)).not.toMatch(/diver@example.com|private bound parameters/);
+    expect(lastCheckInStatus()).toBe("error");
+  });
+
   it("pages when a filed missing-diver report is still untold, even though every scan ran", async () => {
     vi.mocked(sendMissingDiverAlerts).mockResolvedValue({
       checked: 1,

@@ -108,7 +108,7 @@ function CourseFormsQrDialog({
     router.refresh();
   };
   return (
-    <Dialog open onClose={close} title={copy.title} className="print:hidden">
+    <Dialog open onClose={close} title={copy.title}>
       <p className="font-semibold">{selected.name}</p>
       <p className="mt-2">{copy.scan}</p>
       {result === null ? (

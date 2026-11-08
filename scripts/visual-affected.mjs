@@ -974,10 +974,6 @@ const NO_SCREENSHOT_TESTS = new Map([
     new Set(["the party link disclosure shows the complete claim URL"]),
   ],
   [
-    "visual-print-filter-context.spec.ts",
-    new Set(["printed roster states its visible subset rather than a web page number"]),
-  ],
-  [
     "visual-print.spec.ts",
     new Set(["every sheet of an expanded crew rota renders context and warning ink"]),
   ],

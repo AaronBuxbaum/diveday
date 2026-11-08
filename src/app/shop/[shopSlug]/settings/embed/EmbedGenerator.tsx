@@ -280,10 +280,7 @@ export function EmbedGenerator({
                       radio's tap target, so it takes the 44px floor
                       (`min-h-11`, as `SegmentedControl`'s own options do):
                       it was `min-h-9`, 36px. */}
-                    <p className="hidden text-sm print:block">
-                      {look === "site" ? copy.lookSite : copy.lookLight}
-                    </p>
-                    <div className={`${segmentedTrackClass} print:hidden`}>
+                    <div className={`${segmentedTrackClass}`}>
                       {(["site", "light"] as const).map((value) => (
                         <label
                           key={value}
@@ -309,7 +306,7 @@ export function EmbedGenerator({
                       id={ids.language}
                       value={lang}
                       onChange={(event) => setLang(event.target.value)}
-                      className={`${controlClass} print:hidden`}
+                      className={`${controlClass}`}
                     >
                       <option value="auto">{copy.languageAuto}</option>
                       {locales.map((locale) => (
@@ -318,16 +315,13 @@ export function EmbedGenerator({
                         </option>
                       ))}
                     </select>
-                    <span className="hidden text-sm print:block">
-                      {lang === "auto" ? copy.languageAuto : (copy.languages[lang] ?? lang)}
-                    </span>
                   </Field>
                 </FieldGrid>
               ) : null}
             </div>
 
             {!showMissing ? (
-              <div className={`@container ${FRAMED.has(kind) ? "print:hidden" : ""}`}>
+              <div className="@container">
                 <p className={`mb-2 text-sm font-medium ${previewDrawn ? "" : "sr-only"}`}>
                   {copy.preview}
                 </p>
@@ -410,8 +404,7 @@ export function EmbedGenerator({
           {/* Each chip is its radio's tap target, so it takes the 44px floor
               the kind tiles and Look segments take; it was `min-h-9`, 36px,
               4px from the next (K-443). */}
-          <p className="mb-4 hidden text-sm print:block">{copy.platforms[platform]}</p>
-          <div className="mb-4 flex flex-wrap gap-2 print:hidden">
+          <div className="mb-4 flex flex-wrap gap-2">
             {PLATFORMS.map((p) => (
               <label
                 key={p}

@@ -109,19 +109,10 @@ export function rollCallRowTone(
  * red on a boarded or missing one (pixel-craft class 12). So the rule goes on
  * the row's inner wrapper, whose border nothing tones, in the rule colour.
  *
- * It is skipped above whichever row each medium shows first, and the two can
- * differ: on screen an alarmed diver row is `order-first`, while the printed
- * list is block layout in manifest order (`print:order-none`). A list that
- * never reorders passes the same answer for both.
+ * It is skipped above the row its list shows first. On screen that is the
+ * first alarmed diver row, which is `order-first`; on a sheet, which never
+ * reorders, it is the top of the manifest.
  */
-export function rollCallRuleClass({
-  firstOnScreen,
-  firstOnPaper,
-}: {
-  firstOnScreen: boolean;
-  firstOnPaper: boolean;
-}): string {
-  return `${firstOnScreen ? "border-t-0" : "border-t"} border-border ${
-    firstOnPaper ? "print:border-t-0" : "print:border-t"
-  }`;
+export function rollCallRuleClass(first: boolean): string {
+  return `${first ? "border-t-0" : "border-t"} border-border`;
 }

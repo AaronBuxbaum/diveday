@@ -372,7 +372,7 @@ export async function ShopSidebarSlot({ params }: { params: Promise<{ shopSlug: 
 }
 
 const SIDEBAR_CLASS =
-  "sticky top-(--chrome-h) hidden h-[calc(100dvh-var(--chrome-h))] w-(--sidebar-w) shrink-0 overflow-y-auto border-e border-border bg-surface lg:block print:hidden";
+  "sticky top-(--chrome-h) hidden h-[calc(100dvh-var(--chrome-h))] w-(--sidebar-w) shrink-0 overflow-y-auto border-e border-border bg-surface lg:block";
 
 /**
  * The sidebar's own width, held while the chrome streams in. Marked as a

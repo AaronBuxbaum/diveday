@@ -35,9 +35,15 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import { recordDiverActivity } from "./operations";
-import type { DraftGuardian, MedicalAnswers, WaiverSignedVia } from "./schema";
+import type { DraftGuardian, MedicalAnswers, WaiverDraft, WaiverSignedVia } from "./schema";
 import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
+import {
+  clearWaiverDrafts,
+  type DraftDoor,
+  readWaiverDraft,
+  recordDoorDraft,
+} from "./waiver-drafts";
 import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
 import { doctorPageOpen } from "./waivers-medical";
 import {
@@ -48,7 +54,12 @@ import {
 
 export type TokenWaiverState =
   | { state: "unavailable" }
-  | { state: "available"; record: typeof waiverRecords.$inferSelect }
+  | {
+      state: "available";
+      record: typeof waiverRecords.$inferSelect;
+      /** What this door saved, and only this door (issue #4130); null when it saved nothing. */
+      draft: WaiverDraft | null;
+    }
   | { state: "completed"; record: typeof waiverRecords.$inferSelect };
 
 /**
@@ -504,7 +515,17 @@ export async function getWaiverForToken(
   // A held seat (`identity_unconfirmed_at`) is reached by no key: its link may
   // be in someone else's hands, so it opens no form, names nobody and takes
   // no draft or signature until the desk confirms who it is (issue #2125).
-  return { state: "available", record };
+  return { state: "available", record, draft: await readWaiverDraft(db, draftDoorOf(token)) };
+}
+
+/**
+ * **The draft row a key reads and writes** (issue #4130): the thread's own
+ * (the diver's link and a party lead's on the seat share it), or one link's.
+ */
+function draftDoorOf(token: WaiverKey): DraftDoor {
+  const base = { shopId: token.shopId, recordId: token.recordId };
+  if (token.kind === "thread") return { ...base, door: "thread", linkId: null };
+  return { ...base, door: token.kind, linkId: token.linkId };
 }
 
 /**
@@ -602,23 +623,23 @@ async function saveWaiverDraftLocked(
     return false;
   const [saved] = await db
     .update(waiverRecords)
-    .set({
-      startedAt: state.record.startedAt ?? now,
-      draftSignerName: input.signerName?.trim() || null,
-      draftAcknowledged: input.acknowledged,
-      draftMedicalAnswers: input.medicalAnswers,
-      // A link gets back only the medical answers saved through it (dock
-      // review B1; issue #3983 review): never another phone's, and never a
-      // draft left on an earlier link months ago.
-      draftViaLinkId: token.kind === "thread" ? null : token.linkId,
-      ...(input.guardian === undefined ? {} : { draftGuardian: input.guardian }),
-      ...(draftShopAnswers === undefined ? {} : { draftShopAnswers }),
-      ...(input.medicalAlert === undefined
-        ? {}
-        : { draftMedicalAlert: readDraftMedicalAlert(input.medicalAlert) }),
-    })
+    .set({ startedAt: state.record.startedAt ?? now })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id });
+  // Each door keeps its own draft (issue #4130): a link gets back only what
+  // was saved through it (dock review B1; issue #3983 review), and a save
+  // here never touches what another door typed.
+  if (saved)
+    await recordDoorDraft(db, draftDoorOf(token), {
+      signerName: input.signerName?.trim() || null,
+      acknowledged: input.acknowledged,
+      medicalAnswers: input.medicalAnswers,
+      guardian: input.guardian,
+      shopAnswers: draftShopAnswers,
+      medicalAlert:
+        input.medicalAlert === undefined ? undefined : readDraftMedicalAlert(input.medicalAlert),
+      now,
+    });
   if (saved && input.emergencyContact) {
     if (state.record.bookingId)
       await saveEmergencyContact(db, state.record.bookingId, input.emergencyContact);
@@ -1184,10 +1205,7 @@ async function completeWaiverLocked(
       // Which kind of door signed (issue #4045), sealed with the signature.
       signedVia: signedViaFor(token),
       completedAt: now,
-      // The guardian's half, on a minor's release only. The draft goes with
-      // the rest of the unsubmitted state: what was typed is now what was
-      // signed, and a draft of a signed section is a second copy of personal
-      // data with no reader.
+      // The guardian's half, on a minor's release only.
       ...(guardian?.ok
         ? {
             guardianName: guardian.name,
@@ -1198,13 +1216,14 @@ async function completeWaiverLocked(
             guardianSignedAt: guardian.signedAt,
           }
         : {}),
-      draftGuardian: null,
-      draftShopAnswers: null,
-      draftMedicalAlert: null,
     })
     .where(and(eq(waiverRecords.id, state.record.id), eq(waiverRecords.status, "pending")))
     .returning({ id: waiverRecords.id, status: waiverRecords.status });
   if (saved) {
+    // Every door's draft goes with the signature (issue #4130): what was typed
+    // is now what was signed, and a draft of a signed release is a second copy
+    // of personal and medical data with no reader.
+    await clearWaiverDrafts(db, state.record.shopId, [saved.id]);
     const [signedRecord] = await db
       .select()
       .from(waiverRecords)

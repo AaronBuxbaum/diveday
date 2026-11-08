@@ -979,32 +979,6 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 /*
- * Print / Save-as-PDF. Three things make a dive-day document read well on a
- * shop's (usually black-and-white) printer, and none of them should touch the
- * on-screen app:
- *
- * 1. Ink. The screen palette — lagoon links, coral accent, amber/red status
- *    fills — prints as muddy color a shop neither wants nor pays for. Because
- *    every surface is drawn from semantic tokens (ADR-0004), redefining those
- *    tokens here re-skins the whole app to black-on-white for print with no
- *    per-component print classes. Status still reads: the words ("Blocked",
- *    "Waiver has not been sent") and a row's left rule carry the meaning color
- *    did on screen. Set on `.boat-mode` too — the manifest runs in it, and a
- *    custom property resolves from the nearest ancestor that sets it, so the
- *    `:root` override alone would never reach a boat-mode descendant.
- *
- * 2. Padding. `@page` margins give each printed page its gutters — but the
- *    print dialog's "None"/"Minimum" margin setting zeroes them, and that is
- *    exactly when content slams into the paper edge. Side padding on the
- *    printed surface itself (the trip shell's `print:px-*`) is content, so it
- *    survives that setting; `@page` still owns the top/bottom gutter that has
- *    to repeat across a multi-page manifest, which container padding can't.
- *
- * 3. Scale. The rem base steps down: the app's spacing and type are tuned for a
- *    boat-deck touchscreen at arm's length, which reads oversized on paper held
- *    at reading distance — shrinking the base rescales both at once.
- */
-/*
  * **Paper is one face** — ADR 20260908-one-hand, decision 6, lever X; issue
  * #2745.
  *
@@ -1024,8 +998,10 @@ select:not([multiple]):not([size]):dir(rtl) {
  * 1. **It wears its own face, on screen and on paper alike.** Inside
  *    `.paper-sheet` every semantic token is the sheet's (`--sheet-*`), so the
  *    page a staffer reviews before printing is the page that comes out, in
- *    the light scheme whatever the device's, and nothing under it is repainted
- *    for print. The `@media print` block below leaves a sheet alone.
+ *    the light scheme whatever the device's. Nothing inside it draws a fill,
+ *    a shadow or an edge bar, on screen as on paper, and nothing is repainted
+ *    for print: a screen never prints, so there is no print face for one, and
+ *    no component wears a second face (`print:` variants) for paper.
  * 2. **The band is ruled, never filled.** A sheet carries no brand colour and
  *    no fill: ink on white is what the customer's printer is asked for.
  * 3. **A sheet is a box in millimetres**, sized to its paper less the `@page`
@@ -1041,6 +1017,9 @@ select:not([multiple]):not([size]):dir(rtl) {
   display: flex;
   justify-content: center;
   overflow-x: auto;
+  /* Ink for what a document names outside its sheets (its screen-reader
+     title): the frame is paper's, whatever the device's scheme. */
+  color: #000000;
   background: var(--surface-sunken);
   padding: 1.5rem 1rem;
 }
@@ -1113,8 +1092,8 @@ select:not([multiple]):not([size]):dir(rtl) {
    screen never reaches the printer beside its document: not the chrome, not
    a page's own controls, and not a diver's screen when the browser prints
    without firing `beforeprint` (a share-sheet print on some phones). One
-   rule, by structure, in place of a `print:hidden` on each control. A page
-   with no sheet is not a document and prints as the browser draws it.
+   rule, by structure: no control knows paper exists. A page with no sheet
+   is not a document and prints as the browser draws it.
    A sheet kept alive on a hidden route (Cache Components) does not count.
    Unlayered and `!important`, so no display utility can bring a screen back. */
 @media print {
@@ -1131,10 +1110,40 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 }
 
-/* Paper's own rows, which the live manifest keeps for its print-only
-   fallback (`data-print-only`): inside a sheet they are the content. */
-.paper-sheet [data-print-only] {
-  display: block;
+/* **On paper, the ancestors of a sheet are only its frame's way in.** The
+   staff shell's padding, a sidebar layout's grid and the page's ground stay
+   on screen, so a sheet prints at the paper's margin and nothing of the
+   screen's ink reaches the page. Not for a sheet kept alive on a hidden
+   route: that wrapper keeps its own `display: none`. The body keeps its
+   padding, which a capability page sets as its paper margin
+   (`capabilityPagePrintRule`). */
+@media print {
+  body:has(.paper-sheet-frame:not([style*="display: none"] *)) {
+    /* the screen's ground is not the paper's, whatever the device's scheme */
+    background: transparent !important;
+  }
+
+  body:has(.paper-sheet-frame:not([style*="display: none"] *))
+    :has(.paper-sheet-frame:not([style*="display: none"] *)) {
+    /* a page's own layout utilities must not reach the paper around a sheet */
+    display: block !important;
+    /* a page's own layout utilities must not reach the paper around a sheet */
+    max-width: none !important;
+    /* a page's own layout utilities must not reach the paper around a sheet */
+    min-height: 0 !important;
+    /* a page's own layout utilities must not reach the paper around a sheet */
+    margin: 0 !important;
+    /* a page's own layout utilities must not reach the paper around a sheet */
+    padding-inline: 0 !important;
+    /* a page's own layout utilities must not reach the paper around a sheet */
+    padding-block: 0 !important;
+    /* a page's own layout utilities must not reach the paper around a sheet */
+    border: 0 !important;
+    /* a page's own layout utilities must not reach the paper around a sheet */
+    background: transparent !important;
+    /* a page's own layout utilities must not reach the paper around a sheet */
+    box-shadow: none !important;
+  }
 }
 
 .paper-sheet-band {
@@ -1203,6 +1212,73 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 }
 
+/*
+ * **Ink-light paper** (`.claude/rules/print-ink.md`), on screen and on paper
+ * alike. White paper, black ink, nothing else: no fill (not even grey), no
+ * shadow (a ring is one), never white on a dark ground. A customer pays for
+ * every drop, so structure comes from type, space and thin outlines, and
+ * status from its word (design principle 6). Unlayered, so it beats the
+ * utilities a shared component paints with (a tinted row, a badge's wash).
+ */
+.paper-sheet *,
+.paper-sheet *::before,
+.paper-sheet *::after {
+  background: transparent;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/*
+ * **A bar is a block.** A 2px-or-thicker rule down a row's edge is a solid
+ * strip of ink repeated on every row, so on a sheet it is nothing; the row's
+ * word carries its state. The one exception is critical safety information
+ * (`data-print-critical`, below), which is drawn as an outline instead.
+ */
+.paper-sheet
+  :where(
+    [class*="border-l-2"],
+    [class*="border-l-4"],
+    [class*="border-l-8"],
+    [class*="border-s-2"],
+    [class*="border-s-4"],
+    [class*="border-s-8"]
+  ) {
+  border-inline-start-width: 0;
+}
+
+/*
+ * **Critical information is outlined, never filled.** What a reader must not
+ * lose on paper — a diver in the water, a medical alert, a blocked boarding —
+ * keeps a heavier outline round it and its words and symbol; the
+ * `.claude/rules/print-ink.md` rule lists what counts. Mark an element with
+ * `data-print-critical`; nothing else on a sheet is heavier than a hairline.
+ */
+.paper-sheet [data-print-critical] {
+  border: 2px solid var(--sheet-ink);
+  border-radius: 0.25rem;
+  /* Weight carries it where a fill used to: it survives a photocopy. */
+  font-weight: 700;
+}
+
+/* A sheet is its paper's width, so a table on it never scrolls sideways and
+   never fades an edge: its scroll floor and its fade are a screen's. */
+.paper-sheet .table-scroll-shell {
+  overflow: visible;
+  mask-image: none;
+  animation: none;
+}
+
+.paper-sheet .table-scroll-shell > table {
+  min-width: 0;
+}
+
+/* A sheet's table is set for paper: half the screen's cell gutter, so a
+   departure log's every column fits a page without a phone number running
+   past its cell (the five-dive log, #2745). */
+.paper-sheet :is(th, td) {
+  padding-inline: 0.5rem;
+}
+
 @media print {
   @layer base {
     /* A session lock protects the page on paper as well as on screen. */
@@ -1215,170 +1291,10 @@ select:not([multiple]):not([size]):dir(rtl) {
     }
   }
 
-  /* The saved departure details are a paper ledger, not a set of tap targets. */
-  [data-trip-details-paper] {
-    overflow: visible;
-    border-radius: 0;
-  }
-
-  [data-trip-details-paper] > div {
-    padding: 0;
-  }
-
-  [data-trip-details-paper] > div > div {
-    margin-inline: 0;
-  }
-
-  [data-trip-details-paper] [data-trip-detail-row] {
-    display: grid;
-    grid-template-columns: 9rem minmax(0, 1fr);
-    gap: 1rem;
-    padding: 0.5rem 0;
-    break-inside: avoid;
-  }
-
-  /*
-   * **A submit button is an act, never a fact.** Its words only ever say what
-   * a tap would do — Remove, Send waiver, Request, Save — and on paper each one
-   * read as an instruction nobody holding the sheet could follow. Everywhere,
-   * not only in the packet: a staffer prints a page to carry what it says, and
-   * a form's facts live in its fields, which stay.
-   */
-  button[type="submit"] {
-    display: none;
-  }
-
-  /* The paper margin already supplies the bottom gutter. Screen padding can
-     otherwise fragment into a trailing sheet containing only its page number. */
-  #shop-main-content main {
-    /* Beat the trip shell's print:py-8 utility without changing its top gutter. */
-    padding-bottom: 0 !important;
-  }
-
-  /* Save/unsaved-status bars have no paper action; their empty border and
-     padding remain after submit controls disappear unless the row goes too. */
-  #shop-main-content [data-sticky-actions]:not(:has([data-print-content])) {
-    display: none;
-  }
-
-  #shop-main-content [data-sticky-actions]:has([data-print-content]) {
-    position: static;
-  }
-
-  #shop-main-content [data-sticky-actions]:has([data-print-content]) > :not([data-print-content]) {
-    display: none;
-  }
-
-  /* Editors already start inside the page margin. Their extra screen gutter
-     can leave the last field's empty layout extent on a sheet of its own. */
-  #shop-main-content main:has([data-sticky-actions]) {
-    /* Beat the shared staff-page screen inset at every print viewport. */
-    padding-top: 0 !important;
-  }
-
-  :root,
-  :root.boat-mode,
-  .boat-mode {
-    color-scheme: light;
-    --background: #ffffff;
-    --surface: #ffffff;
-    --surface-sunken: #ffffff;
-    --border: #999999;
-    --border-strong: #444444;
-    --foreground: #000000;
-    --muted: #333333;
-    --primary: #111111;
-    --primary-hover: #000000;
-    /* Ink, not white: the rule below strips every fill, so a label written
-       for a primary fill lands on white paper (K-141, the manifest's stage). */
-    --primary-foreground: #000000;
-    --accent: #333333;
-    --accent-foreground: #000000;
-    --success: #111111;
-    --warning: #111111;
-    --danger: #000000;
-    --info: #111111;
-  }
-
-  html {
-    font-size: 13px;
-  }
-
-  /*
-   * **Ink-light paper** (`.claude/rules/print-ink.md`). White paper, black
-   * ink, nothing else: no fill (not even grey), no colour, no shadow, no
-   * thick bar, and never white on a dark ground. A customer pays for every
-   * drop, so structure comes from type, space and thin outlines, and status
-   * from its word (design principle 6). This has to beat the utilities that
-   * paint those fills (bg-surface, the tinted bg-danger/10 rows, the badge
-   * pills), so it wins with !important the way the reduced-motion
-   * kill-switch below does. It applies to a `PaperSheet` as much as to a
-   * screen: a sheet's tokens are already ink on white, so this is the net.
-   */
-  *,
-  *::before,
-  *::after {
-    /* print must strip every ink-heavy fill to keep the page white */
-    background: transparent !important;
-    /* a shadow (and a ring, which is one) prints as grey haze, never as depth */
-    box-shadow: none !important;
-    text-shadow: none !important;
-    /* the browser's own default for a customer who left "background graphics" off */
-    print-color-adjust: economy;
-    -webkit-print-color-adjust: economy;
-    /* A shop's brand is set inline on its storefront's root (`brandThemeProperties`),
-       which beats the tokens above; paper takes none of it. */
-    --primary: #111111 !important;
-    --primary-hover: #000000 !important;
-    --primary-tint: #ffffff !important;
-    --primary-foreground: #000000 !important;
-    --focus-ring: #000000 !important;
-  }
-
-  /*
-   * **A bar is a block.** A 2px-or-thicker rule down a row's edge is a solid
-   * strip of ink repeated on every row, so it goes; the row's word carries
-   * its state. The one exception is critical safety information
-   * (`data-print-critical`, below), which is drawn as an outline instead.
-   */
-  :where(
-    [class*="border-l-2"],
-    [class*="border-l-4"],
-    [class*="border-l-8"],
-    [class*="border-s-2"],
-    [class*="border-s-4"],
-    [class*="border-s-8"]
-  ) {
-    border-inline-start-width: 0;
-  }
-
-  /*
-   * **Critical information is outlined, never filled.** What a reader must
-   * not lose on paper — a diver in the water, a medical alert, a blocked
-   * boarding — keeps a heavier outline round it and its words and symbol;
-   * the `.claude/rules/print-ink.md` rule lists what counts. Mark an element
-   * with `data-print-critical`; nothing else on paper may be heavier than a
-   * hairline.
-   */
-  [data-print-critical] {
-    border: 2px solid #000000 !important;
-    border-radius: 0.25rem;
-    /* Weight carries it where a fill used to: it survives a photocopy. */
-    font-weight: 700;
-  }
-
   /* Keep a diver's row, a summary card, or a kit line whole — a card split at
      the foot of a page is how a name gets skipped on the deck. */
-  li,
-  tr,
-  thead {
+  .paper-sheet :is(li, tr, thead) {
     break-inside: avoid;
-  }
-
-  /* A switching-guide phase may be longer than a page; its own list of
-     numbered steps keeps each step intact without wasting a sheet per phase. */
-  .switching-move-phase {
-    break-inside: auto;
   }
 
   /*
@@ -1387,10 +1303,7 @@ select:not([multiple]):not([size]):dir(rtl) {
    * heading with nothing under it — which is exactly how a crew concludes
    * there is nothing to pull.
    */
-  h1,
-  h2,
-  h3,
-  h4 {
+  .paper-sheet :is(h1, h2, h3, h4) {
     break-after: avoid;
     break-inside: avoid;
   }
@@ -1398,12 +1311,12 @@ select:not([multiple]):not([size]):dir(rtl) {
   /*
    * **A long table repeats its own column names.** `<thead>` is a header group
    * by default, but only a table the UA can fragment reprints it — and every
-   * table here sits in the two nested `overflow` boxes the on-screen scroll
+   * table sits in the two nested `overflow` boxes the on-screen scroll
    * strategy needs (`Table`), which stop the fragmentation and take the
    * header with it. Stated rather than inherited, beside the rule that opens
    * those boxes.
    */
-  thead {
+  .paper-sheet thead {
     display: table-header-group;
   }
 
@@ -1411,8 +1324,7 @@ select:not([multiple]):not([size]):dir(rtl) {
    * **Nothing on a sheet clips at a page boundary.** A clipped overflow box
    * is not a scroll region on paper — it is a box whose second half does not
    * exist, and a page break inside one is where a manifest row or half a
-   * packing table silently disappears. Screen chrome (rounded card corners, a
-   * sideways-scrolling table) is what those boxes buy, and paper wants neither.
+   * packing table silently disappears.
    */
   .paper-sheet,
   .paper-sheet * {
@@ -1420,10 +1332,18 @@ select:not([multiple]):not([size]):dir(rtl) {
     overflow: visible !important;
   }
 
+  /* A card or list a page break cuts closes its border on each page, rather
+     than running an open box into the margin. */
+  .paper-sheet * {
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
   /* On paper the frame stops being a frame, and every sheet starts a page. */
   .paper-sheet-frame {
     display: block;
     padding: 0;
+    background: none;
   }
 
   .paper-sheet-frame > div {
@@ -2162,8 +2082,9 @@ details[open]::details-content {
  * reads the region's own sideways scroll. A table that fits has nothing to
  * scroll, so its timeline is inactive, the animation applies nothing, and the
  * mask's stop sits at its `0px` initial value — no fade. Nothing moves here; the
- * fade follows the hand, so it needs no reduced-motion stop of its own. Paper
- * prints the whole table (`print:overflow-visible`) and gets no fade.
+ * fade follows the hand, so it needs no reduced-motion stop of its own. A
+ * table on a sheet never scrolls and gets no fade (`.paper-sheet
+ * .table-scroll-shell`).
  */
 @property --table-scroll-fade {
   syntax: "<length>";
@@ -2210,11 +2131,6 @@ details[open]::details-content {
 
   .marketing-capability-lines summary svg {
     display: none;
-  }
-
-  .table-scroll-shell {
-    mask-image: none;
-    animation: none;
   }
 }
 

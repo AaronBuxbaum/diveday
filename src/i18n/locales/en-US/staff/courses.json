@@ -22,8 +22,7 @@
       "notYet": "Not yet"
     },
     "pagination": {
-      "total": "{count, plural, one {# course} other {# courses}}",
-      "paperSubset": "{total, plural, one {{shown} of # course shown} other {{shown} of # courses shown}}"
+      "total": "{count, plural, one {# course} other {# courses}}"
     },
     "formsAwaitingTextSummary": "{count, plural, one {# course needs its agency form wording.} other {# courses need their agency form wording.}}",
     "formsAwaitingTextDoor": "Start with {title}"
