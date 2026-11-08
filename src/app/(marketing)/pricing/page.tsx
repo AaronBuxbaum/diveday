@@ -9,7 +9,7 @@ import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
-import { requestPricingOffer } from "@/features/pricing-arm-request";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -56,14 +56,14 @@ export default async function PricingPage() {
 
 /**
  * Cached per negotiated locale (DIVER_LOCALES — two entries) and per offer:
- * the pricing arm and its numbers (ADR 20261022-pricing-ab-test), so a changed
+ * the configured offer and its numbers (ADR 20261022-pricing-ab-test), so a changed
  * `PRICING_*` value is a new cache entry. No session-scoped content.
  */
 async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: PlanTerms }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
-  // The percent arm's own lines replace every flat-only one: the figure, its
+  // The percentage offer’s own lines replace every flat-only one: the figure, its
   // cadence, the invoice's "cut" row, the anchor's answer and the closing line.
   const percentArm = offer.plan === "percent_of_volume";
   const { params, figure, cadence } = offerFigure(t, offer, locale);

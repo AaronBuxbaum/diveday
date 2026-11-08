@@ -16,13 +16,6 @@ import {
 } from "@/features/content-security-policy";
 import { COURSE_PREVIEW_PARAM, coursePreviewIsValid } from "@/features/course-preview-gate";
 import { classifyDatabaseFailure } from "@/features/db-failure";
-import {
-  PRICING_ARM_COOKIE,
-  PRICING_ARM_COOKIE_MAX_AGE,
-  PRICING_ARM_HEADER,
-  visitorPricingArm,
-} from "@/features/pricing-arm";
-import { pricingConfig } from "@/features/pricing-flags";
 import { rememberedPublicRouteLookup } from "@/features/public-route-existence";
 import {
   type PublicRouteQuery,
@@ -291,50 +284,6 @@ function keepBookingConfirmationPrivate(req: NextRequest, res: Response): void {
   if (!shopSlugFromPublicPath(req.nextUrl.pathname)) return;
   if (!req.nextUrl.searchParams.has("booking")) return;
   res.headers.set("Cache-Control", "private, no-store");
-}
-
-/**
- * **The pricing arm** (ADR 20261022-pricing-ab-test): while `PRICING_TEST=on`,
- * a page view (GET or HEAD) of a page that states a price
- * (`isPricingMarketingPath`) without a valid `dd_pricing` cookie is given an
- * arm at the configured split; another method passes on only the cookie's.
- * The answer is handed to the page as `PRICING_ARM_HEADER` (always
- * overwritten, so a client cannot send one) on this same request, because the
- * cookie set here only arrives with the next one. Off, it writes nothing and passes on nothing.
- *
- * Unlike the referral cookies this one carries nothing a database trusts as
- * proof of anything, so it needs no navigation check: an `<img>` that plants
- * an arm on someone changes which of two public price pages they read. It is
- * `HttpOnly` and `SameSite=Lax` all the same, and every response that carries an arm is
- * `private, no-store`, so no shared cache hands one visitor's arm to another.
- */
-function pricingArmDecision(req: NextRequest) {
-  return visitorPricingArm({
-    pathname: req.nextUrl.pathname,
-    cookie: req.cookies.get(PRICING_ARM_COOKIE)?.value,
-    config: pricingConfig(),
-    method: req.method,
-  });
-}
-
-function rememberPricingArm(
-  res: Response,
-  decision: ReturnType<typeof visitorPricingArm>,
-): string | null {
-  if (!decision.arm) return null;
-  if (decision.setCookie && res instanceof NextResponse) {
-    res.cookies.set(PRICING_ARM_COOKIE, decision.arm, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: runtimeMode().secureSessionCookies,
-      path: "/",
-      maxAge: PRICING_ARM_COOKIE_MAX_AGE,
-    });
-  }
-  // A page rendered for one arm is never a shared cache's to replay, for a
-  // returning visitor as much as a new one.
-  res.headers.set("Cache-Control", "private, no-store");
-  return decision.arm;
 }
 
 /**
@@ -717,7 +666,6 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // used to guard against no longer exists at this layer. The one Set-Cookie
   // this function issues is the partner referral below, which is not a
   // credential and carries nothing about who the reader is.
-  const pricingDecision = pricingArmDecision(req);
   const forwardedHeaders = requestHeaders(req, {
     [EMBED_REQUEST_HEADER]: isEmbedRequest ? "1" : "",
     [EMBED_BRAND_HEADER]: embedBrand ?? "",
@@ -729,7 +677,6 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     [REFUSED_SHOP_SLUG_HEADER]: isRefusalRender
       ? (req.headers.get(REFUSED_SHOP_SLUG_HEADER) ?? "")
       : (refused?.liveShopSlug ?? ""),
-    [PRICING_ARM_HEADER]: pricingDecision.arm ?? "",
   });
   const authResponse = refused ? undefined : await authGateResponse(req);
   // NextResponse.next/rewrite compile request forwarding metadata from these
@@ -768,7 +715,6 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   if (refused || isRefusalRender) res.headers.set("Cache-Control", "no-store");
   rememberPartnerReferral(req, res);
   rememberBuddyReferral(req, res);
-  rememberPricingArm(res, pricingDecision);
   keepBookingConfirmationPrivate(req, res);
   // Deny framing everywhere by default (clickjacking on staff/sign-in surfaces);
   // an actual embed request is the one deliberate exception, so a shop can

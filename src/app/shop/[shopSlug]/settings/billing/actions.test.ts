@@ -165,7 +165,7 @@ describe("Add a card", () => {
   it("refuses the percent plan while its metered price is not configured", async () => {
     const { db, shop, owner, signIn } = await context();
     configure();
-    vi.stubEnv("PRICING_TEST", "on");
+    vi.stubEnv("PRICING_BASIS_POINTS", "300");
     signIn(owner);
     await db.insert(shopSubscriptions).values({
       shopId: shop.id,
@@ -181,8 +181,8 @@ describe("Add a card", () => {
   it("sells the percent plan on its metered price and snapshots its rate", async () => {
     const { db, shop, owner, signIn } = await context();
     configure();
-    vi.stubEnv("PRICING_TEST", "on");
-    vi.stubEnv("PRICING_PERCENT_BASIS_POINTS", "250");
+    vi.stubEnv("PRICING_BASIS_POINTS", "300");
+    vi.stubEnv("PRICING_BASIS_POINTS", "250");
     vi.stubEnv("BILLING_STRIPE_PERCENT_PRICE_ID", "price_metered");
     vi.stubEnv("BILLING_STRIPE_PERCENT_METER_EVENT", "diveday_fee_cents");
     signIn(owner);

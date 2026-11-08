@@ -419,7 +419,7 @@ script again.
 | 20261019-single-address-token-table | Address confirmations and alerts use… |
 | 20261021-setup-request-receipts | Bound requester receipts to saved… |
 | 20261022-one-shared-basemap | Draw every map on one… (proposed) |
-| 20261022-pricing-ab-test | Test a percent-of-volume plan against… |
+| 20261022-pricing-ab-test | ~~Test percent-of-volume against the flat…~~ → 20261108-configured-pricing |
 | 20261023-claude-call-content | DiveDay keeps what each Claude… |
 | 20261023-last-known-dive | A diver's last known dive… |
 | 20261024-diver-sent-doctors-form | A referred diver sends the… |
@@ -456,5 +456,6 @@ script again.
 | 20261105-gh-stack-is-the-stack | Stacks are made and moved… |
 | 20261105-waiver-folds-into-the-thread | Hand a seat's release over… |
 | 20261108-concept-leaves | Move substrate leaves by concept… |
+| 20261108-configured-pricing | Configure one monthly and percentage… |
 
 <!-- adr-index:end -->

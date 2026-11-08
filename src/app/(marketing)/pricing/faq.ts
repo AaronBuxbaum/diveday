@@ -6,8 +6,8 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 /**
  * The pricing card's figure and cadence for an offer (ADR
- * 20261022-pricing-ab-test): the flat arm's canonical price and cadence, or
- * the percent arm's rate with its base-fee line. Beside the page for the
+ * 20261022-pricing-ab-test): the monthly-only offer’s canonical price and cadence, or
+ * the percentage offer’s rate with its base-fee line. Beside the page for the
  * same baseline reason as the FAQ.
  */
 export function offerFigure(t: DiverTranslator, offer: PlanTerms, locale: string) {
@@ -43,7 +43,7 @@ export function pricingFaq(
   offer: PlanTerms,
   locale: string,
 ): readonly PricingFaqRow[] {
-  // The percent arm's one extra row, right after billing: what the share is
+  // The percentage offer’s one extra row, right after billing: what the share is
   // of (ADR 20261022-pricing-ab-test), in the words of `cardMoneyThroughDiveDayCents`.
   const percentRow: PricingFaqRow[] =
     offer.plan === "percent_of_volume"

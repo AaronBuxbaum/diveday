@@ -1,24 +1,10 @@
-import { createHash } from "node:crypto";
 import { earlyAccessPriceAmount } from "@/lib/marketing";
 
-/**
- * **The pricing A/B test's two plans** (ADR 20261022-pricing-ab-test): what a
- * shop pays DiveDay, either a flat monthly fee or a share of the card money it
- * took through DiveDay that month, optionally on top of a smaller monthly base
- * fee.
- *
- * Pure. The numbers come from the `PRICING_*` environment variables, read by
- * `@/lib/pricing-flags`; this module decides which plan a shop is on and what
- * it owes from what is stored, those numbers and the shop's id. The pages, the
- * cron and the scripts only ask. With the variables unset or any of them
- * invalid the numbers are `DEFAULT_PRICING_CONFIG`: the test off and the flat
- * price every shop pays today.
- */
-
+/** Configured monthly fee plus a share of card payments collected through DiveDay. */
 export const PRICING_PLANS = ["flat_monthly", "percent_of_volume"] as const;
 export type PricingPlan = (typeof PRICING_PLANS)[number];
 
-/** Who put a stored plan on a shop: the arm it was assigned, or a person by hand. */
+/** Who put a stored plan on a shop: the offer it was assigned, or a person by hand. */
 export const PRICING_PLAN_SOURCES = ["assigned", "override"] as const;
 export type PricingPlanSource = (typeof PRICING_PLAN_SOURCES)[number];
 
@@ -33,25 +19,14 @@ export const FLAT_MONTHLY_CENTS = Math.round(Number(earlyAccessPriceAmount) * 10
 export const PRICING_BOUNDS = {
   monthlyCents: { min: 0, max: 100_000 },
   basisPoints: { min: 0, max: 1_000 },
-  split: { min: 0, max: 100 },
 } as const;
 
-/** The numbers the test runs on. */
-export type PricingConfig = {
-  /** Whether the percent arm exists at all. Off, everyone is on the flat plan. */
-  test: boolean;
-  /** Percent of new visitors and shops put in the percent arm, 0–100. */
-  split: number;
-  flat: { monthlyCents: number };
-  /** `basisPoints` of the month's volume (300 is 3%), plus `monthlyCents` as a base fee. */
-  percent: { basisPoints: number; monthlyCents: number };
-};
+/** The single offer used for new subscriptions and public pricing. */
+export type PricingConfig = { monthlyCents: number; basisPoints: number };
 
 export const DEFAULT_PRICING_CONFIG: PricingConfig = {
-  test: false,
-  split: 50,
-  flat: { monthlyCents: FLAT_MONTHLY_CENTS },
-  percent: { basisPoints: 300, monthlyCents: 0 },
+  monthlyCents: FLAT_MONTHLY_CENTS,
+  basisPoints: 0,
 };
 
 /** What one shop pays: a monthly fee, and a share of its volume (0 on the flat plan). */
@@ -67,13 +42,16 @@ export function isPricingPlan(value: unknown): value is PricingPlan {
 
 /** The config's numbers for one plan. */
 export function termsFor(plan: PricingPlan, config: PricingConfig): PlanTerms {
-  return plan === "flat_monthly"
-    ? { plan, monthlyCents: config.flat.monthlyCents, basisPoints: 0 }
-    : {
-        plan,
-        monthlyCents: config.percent.monthlyCents,
-        basisPoints: config.percent.basisPoints,
-      };
+  return {
+    plan,
+    monthlyCents: config.monthlyCents,
+    basisPoints: plan === "percent_of_volume" ? config.basisPoints : 0,
+  };
+}
+
+/** Every new subscriber sees the same terms; a percentage adds to any monthly fee. */
+export function configuredPricing(config: PricingConfig): PlanTerms {
+  return termsFor(config.basisPoints > 0 ? "percent_of_volume" : "flat_monthly", config);
 }
 
 /**
@@ -87,25 +65,6 @@ export function isTodaysPrice(terms: PlanTerms): boolean {
   );
 }
 
-/** A key's bucket, 0–99, from the first four bytes of its SHA-256. */
-export function pricingBucket(key: string): number {
-  return createHash("sha256").update(key).digest().readUInt32BE(0) % 100;
-}
-
-/**
- * A deterministic split: the key's bucket below `split` is the percent arm.
- * The same key always lands in the same arm at the same split, so a shop with
- * nothing stored reads one plan on every page and every run of the cron.
- */
-export function pricingPlanForKey(key: string, split: number): PricingPlan {
-  return pricingBucket(key) < split ? "percent_of_volume" : "flat_monthly";
-}
-
-/** A random arm for a new visitor, at the config's split. */
-export function randomPricingPlan(split: number, random: () => number = Math.random): PricingPlan {
-  return Math.floor(random() * 100) < split ? "percent_of_volume" : "flat_monthly";
-}
-
 /** What `shop_subscriptions` holds about a shop's plan. */
 export type StoredPricing = {
   plan: string | null;
@@ -115,20 +74,7 @@ export type StoredPricing = {
   basisPoints: number | null;
 };
 
-/**
- * The plan and numbers a shop is on, in this order:
- *
- * 1. **A live subscription keeps what it was sold** (grandfathering): its
- *    snapshot, or, with none, today's flat price, because a subscription with
- *    no snapshot was opened before the test existed on the one price there was.
- * 2. **An override is a deal made by hand** and stands whether or not the test
- *    is on: its snapshot, or the config's numbers for that plan.
- * 3. **Test off**: the flat plan at the config's flat fee. A stored arm is kept,
- *    so turning the test back on restores it.
- * 4. The stored arm, on the config's numbers for that plan. A shop with none
- *    stays flat: arms go only to new set-up requests (`shop-signup.ts`), and a
- *    shop from before the test is never moved by turning it on (#2947).
- */
+/** Live subscriptions and explicit deals retain their terms; other shops use the configured offer. */
 export function effectivePricing(input: {
   stored: StoredPricing | null;
   config: PricingConfig;
@@ -150,8 +96,7 @@ export function effectivePricing(input: {
   if (storedPlan && stored?.source === "override") {
     return snapshot(storedPlan) ?? termsFor(storedPlan, config);
   }
-  if (!config.test) return termsFor("flat_monthly", config);
-  return termsFor(storedPlan ?? "flat_monthly", config);
+  return configuredPricing(config);
 }
 
 /**

@@ -10,7 +10,7 @@ import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { BANNER_TITLE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
-import { requestPricingArm } from "@/features/pricing-arm-request";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -68,8 +68,8 @@ export async function generateMetadata({
   const { competitor } = await params;
   const found = getMigrationGuide(competitor);
   if (!found) return { title: "Switching to DiveDay" };
-  // Per pricing arm; while the test is off this reads nothing from the request.
-  const guide = guideForPlan(found, await requestPricingArm());
+  // For the configured offer; this reads nothing from the request.
+  const guide = guideForPlan(found, (await requestPricingOffer()).plan);
   // Fixed to the default locale, like the hub page's static `metadata`:
   // negotiating here would read request headers inside `generateMetadata` and
   // cost the registered slugs their prerendered shells.
@@ -157,9 +157,9 @@ async function GuideRoute({ params }: { params: Promise<{ competitor: string }> 
 }
 
 async function LocalizedGuideBody({ guide: registered }: { guide: MigrationGuide }) {
-  const [locale, arm] = await Promise.all([requestLocale(), requestPricingArm()]);
-  // The guide as this reader's pricing arm reads it, so the cache keys on it.
-  const guide = guideForPlan(registered, arm);
+  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
+  // The guide as this configured offer reads it, so the cache keys on it.
+  const guide = guideForPlan(registered, offer.plan);
   const t = diverTranslator(locale);
   const label = t("switching.common.openImportCta");
   const importCta = <SwitchingImportCta label={label} from={guide.slug} />;

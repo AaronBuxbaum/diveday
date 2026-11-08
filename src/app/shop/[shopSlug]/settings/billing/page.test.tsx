@@ -177,12 +177,12 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
   };
   const configurePercent = () => {
     configure();
-    vi.stubEnv("PRICING_TEST", "on");
+    vi.stubEnv("PRICING_BASIS_POINTS", "300");
     vi.stubEnv("BILLING_STRIPE_PERCENT_PRICE_ID", "price_metered");
     vi.stubEnv("BILLING_STRIPE_PERCENT_METER_EVENT", "diveday_fee_cents");
   };
 
-  it("states today's flat price while the test is off, whatever arm is stored", async () => {
+  it("states today's flat price for the default configuration, whatever plan is stored", async () => {
     configure();
     const { lines } = await render(percentShop);
     expect(lines).toContain("DiveDay, $99 a month");
@@ -198,7 +198,7 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
 
   it("states a base fee when the percent plan carries one", async () => {
     configurePercent();
-    vi.stubEnv("PRICING_PERCENT_MONTHLY_CENTS", "2900");
+    vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
     const { lines } = await render(percentShop);
     expect(lines).toContain("DiveDay, 3% of card money taken through DiveDay plus $29 a month");
   });
@@ -219,7 +219,7 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
 
   it("offers no card while the percent plan's Stripe side is not configured", async () => {
     configure();
-    vi.stubEnv("PRICING_TEST", "on");
+    vi.stubEnv("PRICING_BASIS_POINTS", "300");
     const { card, forms } = await render(percentShop);
     expect(card.props.description).toBe(COPY.plan.percentNotConfigured);
     expect(forms).toHaveLength(0);

@@ -92,8 +92,8 @@ function refuse(slug: string, notice: BillingNotice): never {
 
 /**
  * "Add a card": mint (or reuse) the shop's Stripe Customer, then open
- * Checkout for the shop's plan (today's one price, unless the pricing test
- * put the shop on other numbers), with the first charge deferred to the end
+ * Checkout for the shop's agreed terms (or the configured offer),
+ * with the first charge deferred to the end
  * of whatever free time the shop has left.
  *
  * Two guards keep a shop to one subscription, both decided on the row rather

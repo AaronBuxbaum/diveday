@@ -48,7 +48,7 @@ export async function recordSetupRequest(
     receiptPending?: boolean;
     source: FunnelSource | "unknown";
     locale: string;
-    /** The pricing arm the reader was shown; null while the test is off. */
+    /** The configured plan shown when the request was submitted. */
     pricingPlan?: PricingPlan | null;
     at?: Date;
   },

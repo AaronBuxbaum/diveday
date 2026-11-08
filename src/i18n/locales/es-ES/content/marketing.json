@@ -972,7 +972,7 @@
     },
     "percentPlan": {
       "heading": "Planes con precio en un porcentaje de los pagos con tarjeta",
-      "intro": "A un centro que se da de alta con una solicitud nueva le podemos ofrecer un plan con precio en una parte del dinero que recibe en pagos con tarjeta a través de DiveDay, en lugar del precio fijo. Los centros que ya usan DiveDay siguen con el precio fijo mensual. En ese plan:",
+      "intro": "Estas condiciones se aplican si el plan acordado para tu centro incluye un porcentaje de los pagos con tarjeta. Tu suscripción conserva el porcentaje y la cuota mensual que acordaste.",
       "feeTerm": "La tarifa",
       "feeBody": "el {percent} del dinero que tu centro recibe en pagos con tarjeta a través de DiveDay en un mes calendario{hasBase, select, yes {, con una cuota base de {base} cada mes además} other {}}. El mes sigue la zona horaria de tu centro.",
       "countsTerm": "Qué cuenta",
@@ -984,7 +984,8 @@
       "whoPaysTerm": "Quién paga la tarifa",
       "whoPaysBody": "el centro, nunca el buceador. DiveDay no suma nada al precio ni al pago del buceador.",
       "noticeTerm": "Cambios en el plan",
-      "noticeBody": "avisamos a tu centro con al menos 30 días de anticipación antes de cambiar la tasa, la cuota base o lo que cuenta para la tarifa."
+      "noticeBody": "avisamos a tu centro con al menos 30 días de anticipación antes de cambiar la tasa, la cuota base o lo que cuenta para la tarifa.",
+      "feeBodyAgreed": "El porcentaje y cualquier cuota mensual acordados para tu centro se aplican al dinero que tu centro recibe en pagos con tarjeta a través de DiveDay en un mes calendario. El mes sigue la zona horaria de tu centro."
     },
     "data": {
       "heading": "De quién son los datos",

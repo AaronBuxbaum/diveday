@@ -36,9 +36,9 @@ const INVENTORY_ROW_CLASS =
   "flex gap-3 border-b border-border py-3.5 leading-6 first:border-t sm:[&:nth-child(2)]:border-t";
 
 /**
- * The feature page's sentences that state the plan's terms, per pricing arm
- * (ADR 20261022-pricing-ab-test). The flat arm's are today's, word for word.
- * The percent arm's say its own terms, and on the payments page, where the
+ * The feature page's sentences that state the plan's terms, for the configured offer
+ * (ADR 20261022-pricing-ab-test). The monthly-only offer’s are today's, word for word.
+ * The percentage offer’s say its own terms, and on the payments page, where the
  * note and the first question say DiveDay takes no percentage, they say what
  * it takes and when.
  */
@@ -95,7 +95,7 @@ export async function FeaturePageBody({
 }: {
   slug: FeaturePageSlug;
   locale: DiverLocale;
-  /** The reader's pricing arm and its numbers (ADR 20261022-pricing-ab-test). */
+  /** The configured offer and its numbers (ADR 20261022-pricing-ab-test). */
   offer: PlanTerms;
 }) {
   "use cache";

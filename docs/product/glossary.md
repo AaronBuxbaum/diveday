@@ -175,7 +175,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Pass-through fee
 - Payments restricted
 - Payout
-- Pricing arm
+- Pricing configuration
 - Room charge
 - Stale package invoice
 - Subscription (DiveDay billing)

@@ -5,6 +5,7 @@ import type { AppDb, DbExecutor } from "../../db/client";
 import { isUniqueConstraintViolation } from "../../db/query-helpers";
 import { shopSubscriptions, shops } from "../../db/schema/index";
 import {
+  configuredPricing,
   effectivePricing,
   type PlanTerms,
   type PricingConfig,
@@ -27,9 +28,9 @@ import { nowDate } from "../../lib/clock";
  *   subscription's state.
  * - `setShopFreeTerm` — `pnpm billing:free-term`, a person granting free
  *   months by hand.
- * - `setShopPricingPlan` and `snapshotShopPricing` — the pricing test's plan
+ * - `setShopPricingPlan` and `snapshotShopPricing` — the configured plan
  *   (ADR 20261022-pricing-ab-test): a person by hand, and "Add a card"
- *   recording the numbers Checkout sells. Sign-up writes the assigned arm in
+ *   recording the numbers Checkout sells. Sign-up writes the configured plan in
  *   `createSignedUpShop`.
  *
  * Every read and write is keyed by the shop (from the session) or by the
@@ -304,7 +305,7 @@ export async function applyBillingEffect(
           sameCustomer,
           eq(shopSubscriptions.stripeSubscriptionId, effect.subscriptionId),
         );
-        // What the shop has paid DiveDay, the pricing test's revenue (ADR
+        // What the shop has paid DiveDay (ADR
         // 20261022-pricing-ab-test). Every paid invoice adds once: the
         // webhook's event ledger claims each delivery before this runs, and
         // the writes share one transaction, so a failure after the increment
@@ -419,7 +420,7 @@ export function soldPricing(row: ShopSubscriptionRow | null, config: PricingConf
 /**
  * Snapshot the numbers Checkout is about to sell (grandfathering): the plan
  * and its fee and rate, so a later change to the `PRICING_*` environment never
- * moves what a subscriber pays. An arm already stored keeps its source.
+ * moves what a subscriber pays. A stored plan keeps its source.
  */
 export async function snapshotShopPricing(
   db: AppDb,
@@ -461,8 +462,7 @@ export type SetPricingPlanOutcome =
 
 /**
  * `pnpm billing:pricing-plan`: put a shop on a plan by hand (`override`),
- * optionally with its own numbers, or (`plan: null`, "auto") back on the arm
- * it was assigned.
+ * optionally with its own numbers, or (`plan: null`, "auto") back on the configured offer.
  *
  * Refused while the shop holds a live subscription and the change would move
  * its plan or its monthly fee: Stripe is billing that subscription on the
@@ -516,7 +516,7 @@ export async function setShopPricingPlan(
     planBasisPoints: number | null;
   };
   if (input.plan === null) {
-    const assigned = row?.assignedPricingPlan ?? null;
+    const assigned = live ? (row?.pricingPlan ?? null) : configuredPricing(config).plan;
     next = {
       pricingPlan: assigned,
       pricingPlanSource: assigned ? "assigned" : null,

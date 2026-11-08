@@ -54,10 +54,9 @@ export const metadata: Metadata = {
  * figure is a worse problem than a terms page that does not quote one.
  *
  * The percent plan's clause (#2947, ADR 20261022-pricing-ab-test) does quote
- * its rate, because the rate is the clause; it reads the one source the
- * billing reads (`pricingConfig`), so the page and the bill cannot disagree.
- * It shows whether or not `PRICING_TEST` is on: a shop can be on that plan by
- * a deal made by hand while the public test is off.
+ * the public rate when one is configured. Other percentage agreements keep
+ * their agreed rates rather than inheriting a later public offer.
+ * It also covers a shop’s agreed percentage deal when the public offer is monthly-only.
  *
  * Linked from the marketing footer, which carries both legal pages, and from
  * nowhere else — not the marketing nav, not `/onboard`. See the note on
@@ -79,7 +78,7 @@ export default async function TermsPage() {
 
 /**
  * Cached per negotiated locale and per percent-plan numbers, so a changed
- * `PRICING_PERCENT_*` value is a new cache entry. No session-scoped content.
+ * `PRICING_*` value is a new cache entry. No session-scoped content.
  */
 async function TermsBody({ locale, percentPlan }: { locale: DiverLocale; percentPlan: PlanTerms }) {
   "use cache";
@@ -121,7 +120,11 @@ async function TermsBody({ locale, percentPlan }: { locale: DiverLocale; percent
         <p>{p("percentPlan.intro")}</p>
         <LegalTermList
           items={[
-            { term: percent("feeTerm"), body: percent("feeBody") },
+            {
+              term: percent("feeTerm"),
+              body:
+                percentPlan.basisPoints > 0 ? percent("feeBody") : p("percentPlan.feeBodyAgreed"),
+            },
             { term: percent("countsTerm"), body: percent("countsBody") },
             { term: percent("refundsTerm"), body: percent("refundsBody") },
             { term: percent("statementTerm"), body: percent("statementBody") },

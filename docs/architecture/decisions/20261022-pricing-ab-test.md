@@ -1,6 +1,6 @@
-# 20261022-pricing-ab-test — Test a percent-of-volume plan against the flat price, off by default
+# 20261022-pricing-ab-test — Test percent-of-volume against the flat price, off by default
 
-- **Status:** Accepted
+- **Status:** Superseded by 20261108-configured-pricing
 - **Date:** 2026-10-22
 - **Amends:** [20261007-subscription-billing](20261007-subscription-billing.md)
 

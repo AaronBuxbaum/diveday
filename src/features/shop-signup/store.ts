@@ -5,13 +5,12 @@ import type { AppDb } from "../../db/client";
 import { createPerson } from "../../db/people";
 import {
   preDepartureChecklistItems,
-  setupRequests,
   shopSubscriptions,
   shops,
   userAccounts,
   waiverTemplates,
 } from "../../db/schema/index";
-import { type PricingConfig, pricingPlanForKey } from "../../lib/billing/pricing-plans";
+import { configuredPricing, type PricingConfig } from "../../lib/billing/pricing-plans";
 import { nowDate } from "../../lib/clock";
 import { shopDefaultsForTimeZone } from "../../lib/curated-defaults";
 import { hashPassword } from "../../lib/password-hashing";
@@ -119,33 +118,19 @@ export async function createSignedUpShop(
         })
         .returning();
       if (!shop) throw new Error("Failed to create shop");
-      const link = await recordSetupLinkShop(tx, String(signup.setupToken), shop.id);
+      await recordSetupLinkShop(tx, String(signup.setupToken), shop.id);
 
-      // **The pricing arm** (ADR 20261022-pricing-ab-test): the one the
-      // set-up request's reader was shown, or, with none recorded while the
-      // test is on, the shop id's bucket. Nothing is written while the test is
-      // off and the request saw no arm, so the row stays as lazy as it was.
-      const [request] = link
-        ? await tx
-            .select({ pricingPlan: setupRequests.pricingPlan })
-            .from(setupRequests)
-            .where(eq(setupRequests.id, link.setupRequestId))
-            .limit(1)
-        : [];
-      const arm =
-        request?.pricingPlan ?? (pricing.test ? pricingPlanForKey(shop.id, pricing.split) : null);
-      if (arm) {
-        const now = nowDate();
-        await tx.insert(shopSubscriptions).values({
-          shopId: shop.id,
-          pricingPlan: arm,
-          pricingPlanSource: "assigned",
-          assignedPricingPlan: arm,
-          pricingPlanSetAt: now,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
+      const terms = configuredPricing(pricing);
+      const pricingSetAt = nowDate();
+      await tx.insert(shopSubscriptions).values({
+        shopId: shop.id,
+        pricingPlan: terms.plan,
+        pricingPlanSource: "assigned",
+        assignedPricingPlan: terms.plan,
+        pricingPlanSetAt: pricingSetAt,
+        createdAt: pricingSetAt,
+        updatedAt: pricingSetAt,
+      });
 
       // No placeholder emergency contact: a literal "On file" reads as a real
       // contact on the manifest and hides the gap. Left null until captured.

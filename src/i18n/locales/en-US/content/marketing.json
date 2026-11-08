@@ -972,7 +972,7 @@
     },
     "percentPlan": {
       "heading": "Plans priced as a percentage of card payments",
-      "intro": "A shop set up from a new request may be offered a plan priced as a share of the card money it takes through DiveDay, in place of the flat price. Shops already on DiveDay stay on the flat monthly price. On that plan:",
+      "intro": "These terms apply if your shop’s agreed plan includes a percentage of card payments. Your subscription keeps the rate and monthly fee you agreed to.",
       "feeTerm": "The fee",
       "feeBody": "{percent} of the card money your shop takes through DiveDay in a calendar month{hasBase, select, yes {, with a base fee of {base} each month on top} other {}}. The month follows your shop’s own timezone.",
       "countsTerm": "What counts",
@@ -984,7 +984,8 @@
       "whoPaysTerm": "Who pays the fee",
       "whoPaysBody": "the shop, never the diver. DiveDay adds nothing to a diver’s price or checkout.",
       "noticeTerm": "Changes to the plan",
-      "noticeBody": "we tell your shop at least 30 days before we change the rate, the base fee or what counts toward the fee."
+      "noticeBody": "we tell your shop at least 30 days before we change the rate, the base fee or what counts toward the fee.",
+      "feeBodyAgreed": "The percentage and any monthly base fee agreed for your shop apply to the card money your shop takes through DiveDay in a calendar month. The month follows your shop’s own timezone."
     },
     "data": {
       "heading": "Whose data it is",

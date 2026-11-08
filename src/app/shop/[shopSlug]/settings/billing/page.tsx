@@ -92,9 +92,8 @@ export default async function BillingSettingsPage({
   const banner = noticeFromParam(notice, billingNoticeMessages(t));
   const { subscription: row } = await getBillingPage(db, shop.id);
   const now = nowDate();
-  // The shop's plan and numbers (ADR 20261022-pricing-ab-test): today's flat
-  // price for everyone while the pricing test is off. The percent plan is
-  // sellable only once its metered price and meter are configured too.
+  // Resolve the configured offer, preserving this shop’s subscription terms.
+  // Percentage billing also requires its metered price and meter.
   const terms = shopPricing(row, pricingConfig());
   const percentPlan = terms.plan === "percent_of_volume";
   const billingOn = billingConfigFromEnvironment() !== null;

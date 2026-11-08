@@ -19,7 +19,7 @@ async function signUp(
   db: Db,
   shopName: string,
   slug: string,
-  pricing: { arm?: PricingPlan | null; config?: PricingConfig } = {},
+  pricing: { previousPlan?: PricingPlan | null; config?: PricingConfig } = {},
 ) {
   const request = await recordSetupRequest(db, {
     shopName,
@@ -31,7 +31,7 @@ async function signUp(
     phone: null,
     source: "pricing",
     locale: "en-US",
-    pricingPlan: pricing.arm ?? null,
+    pricingPlan: pricing.previousPlan ?? null,
   });
   const link = await issueSetupLink(db, { setupRequestId: request.id });
   const outcome = await createSignedUpShop(
@@ -81,15 +81,12 @@ describe("a shop name held for review at sign-up", () => {
   });
 });
 
-/** ADR 20261022-pricing-ab-test: the new shop is put on the arm its request saw. */
-describe("the pricing arm at sign-up", () => {
-  const on = { ...DEFAULT_PRICING_CONFIG, test: true };
-
-  it("stores the arm the set-up request recorded, as assigned", async () => {
+describe("configured pricing at sign-up", () => {
+  it("assigns the configured offer regardless of a previous offer", async () => {
     const db = await unseededTestDb();
-    const shop = await signUp(db, "Reef Line", "reef-line-arm", {
-      arm: "percent_of_volume",
-      config: { ...on, split: 0 },
+    const shop = await signUp(db, "Reef Line", "reef-line-configured", {
+      previousPlan: "flat_monthly",
+      config: { monthlyCents: 2900, basisPoints: 250 },
     });
     expect(await getShopSubscription(db, shop.id)).toMatchObject({
       pricingPlan: "percent_of_volume",
@@ -100,17 +97,9 @@ describe("the pricing arm at sign-up", () => {
     });
   });
 
-  it("falls back to the shop id's bucket while the test is on", async () => {
+  it("assigns the monthly offer with the default configuration", async () => {
     const db = await unseededTestDb();
-    const shop = await signUp(db, "Reef Line", "reef-line-bucket", {
-      config: { ...on, split: 100 },
-    });
-    expect((await getShopSubscription(db, shop.id))?.pricingPlan).toBe("percent_of_volume");
-  });
-
-  it("writes nothing while the test is off and the request saw no arm", async () => {
-    const db = await unseededTestDb();
-    const shop = await signUp(db, "Reef Line", "reef-line-off");
-    expect(await getShopSubscription(db, shop.id)).toBeNull();
+    const shop = await signUp(db, "Reef Line", "reef-line-monthly");
+    expect((await getShopSubscription(db, shop.id))?.pricingPlan).toBe("flat_monthly");
   });
 });
