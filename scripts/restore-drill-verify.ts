@@ -5,8 +5,8 @@
  *
  *   RESTORE_DATABASE_URL=<the scratch branch's restore_drill database> pnpm exec tsx scripts/restore-drill-verify.ts
  *
- * `scripts/restore-drill.mjs` runs it after `pg_restore`; a human can run it the same way against a
- * branch they restored by hand. It reads and never writes.
+ * `scripts/restore-drill.mjs` runs it after `pg_restore` and committed migrations; a human can run
+ * it the same way against a branch they restored and migrated by hand. It reads and never writes.
  *
  * **It opens its own pool rather than calling `getDb()`.** `getDb()` seeds the demo shop on first
  * open, so a restore that lost the staffer's account would be repaired by the seed before this

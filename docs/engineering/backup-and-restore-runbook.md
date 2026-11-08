@@ -546,7 +546,8 @@ On the 2nd of each month at 07:00 UTC, and on demand from the workflow's **Run w
    --exit-on-error`, in the dump job's own Postgres major (`postgres:17-alpine`, pinned by digest
    in `POSTGRES_IMAGE`), printing only fixed failure categories and counts, because a Postgres
    error, `DETAIL` or `CONTEXT` line can quote row values;
-4. runs `scripts/restore-drill-verify.ts` against it: the seeded owner signs in through
+4. applies committed migrations with `scripts/restore-drill-migrate.ts` to align the weekly dump with the current application's schema. It rechecks the scratch branch, requires the actual database to be `restore_drill` and the restored core tables and nonempty migration ledger to exist, and never seeds demo records. A migration failure stops verification and still deletes the branch; this proves recovery plus schema upgrade, not that the historical dump already has today's schema;
+5. runs `scripts/restore-drill-verify.ts` against it: the seeded owner signs in through
    `verifyCredentials`, the function sign-in calls; production holds no seeded owner, so when that
    sign-in is refused it reads the restored records instead (an active account, its live person, the
    shop and a staff role, with no password check) and says so in the log. Then every departure
@@ -555,7 +556,7 @@ On the 2nd of each month at 07:00 UTC, and on demand from the workflow's **Run w
    opens its own connection rather than `getDb()`, because `getDb()` seeds the demo shop and would
    repair a restore before checking it, and it pins that connection's `search_path` to `public`,
    because `pg_restore` leaves an empty one on the scratch branch;
-5. deletes the branch, and writes the timings and a log row to the run's step summary.
+6. deletes the branch, and writes the timings and a log row to the run's step summary.
 
 The branch is created with a Neon expiry three hours out, and the workflow's `if: always()` step
 (`node scripts/restore-drill.mjs --sweep`) deletes this run's branch and any `restore-drill-*`

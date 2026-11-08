@@ -343,3 +343,15 @@ describe("dockerDiagnostics", () => {
     expect(dockerDiagnostics(undefined)).toEqual([]);
   });
 });
+
+describe("restore schema alignment", () => {
+  it("migrates after restore succeeds and before current-app verification, without seeding", () => {
+    const source = readFileSync(new URL("./restore-drill.mjs", import.meta.url), "utf8");
+    const restored = source.indexOf('throw new Error("pg_restore did not complete.")');
+    const migrate = source.indexOf('"scripts/restore-drill-migrate.ts"');
+    const verified = source.indexOf('"scripts/restore-drill-verify.ts"');
+    expect(migrate).toBeGreaterThan(restored);
+    expect(verified).toBeGreaterThan(migrate);
+    expect(source).toContain("if (migration.status !== 0)");
+  });
+});
