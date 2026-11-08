@@ -1,4 +1,4 @@
-import webpush from "web-push";
+import * as webpush from "web-push";
 
 /**
  * Web Push transport for the manifest's third refresh trigger (ADR
