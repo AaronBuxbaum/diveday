@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { AppDb } from "../../db/client";
+import type { AppDb } from "@/db/client";
 import {
   people,
   pricingVolumeStatements,
   shopSubscriptions,
   shops,
   userAccounts,
-} from "../../db/schema/index";
-import { unseededTestDb } from "../../test/db";
-import { recordSetupRequest } from "../funnel/store";
-import { pricingTestByArm } from "./store";
+} from "@/db/schema";
+import { recordSetupRequest } from "@/features/funnel";
+import { unseededTestDb } from "@/test/db";
+import { pricingByPlan } from "./store";
 
 const PAID_AT = new Date("2031-06-15T12:00:00Z");
 let seq = 0;
@@ -24,7 +24,7 @@ async function shopOn(
     .insert(shops)
     .values({
       name: "Arm Shop",
-      slug: `arm-shop-${seq}`,
+      slug: `plan-shop-${seq}`,
       timezone: "UTC",
       isDemo: options.isDemo ?? false,
     })
@@ -38,14 +38,14 @@ async function shopOn(
     if (!owner) throw new Error("person insert failed");
     await db
       .insert(userAccounts)
-      .values({ personId: owner.id, email: `arm-${seq}@example.test`, hashedPassword: "x" });
+      .values({ personId: owner.id, email: `plan-${seq}@example.test`, hashedPassword: "x" });
   }
   await db.insert(shopSubscriptions).values({ shopId: shop.id, ...values });
   return shop.id;
 }
 
-describe("pricingTestByArm", () => {
-  it("counts each arm's funnel, revenue and volume, real shops only", async () => {
+describe("pricingByPlan", () => {
+  it("counts each plan's funnel, revenue and volume, real shops only", async () => {
     const db = await unseededTestDb();
     const request = {
       shopName: "X",
@@ -95,7 +95,7 @@ describe("pricingTestByArm", () => {
       firstPaidAt: PAID_AT,
       paidTotalCents: 4_500,
     });
-    // Moved by hand to flat: still counted in the arm it was assigned.
+    // A hand-set deal counts under the plan the shop actually holds.
     await shopOn(db, { ...percent, pricingPlan: "flat_monthly", pricingPlanSource: "override" });
     // Never counted: a demo, and a row nobody can sign into.
     await shopOn(db, { ...flat, paidTotalCents: 99_900 }, { isDemo: true });
@@ -109,11 +109,11 @@ describe("pricingTestByArm", () => {
       stripeMeterIdentifier: "id",
     });
 
-    expect(await pricingTestByArm(db)).toEqual([
+    expect(await pricingByPlan(db)).toEqual([
       {
-        arm: "flat_monthly",
+        plan: "flat_monthly",
         setupRequests: 1,
-        shops: 3,
+        shops: 4,
         cardsAdded: 2,
         firstPaid: 2,
         activeNow: 1,
@@ -123,9 +123,9 @@ describe("pricingTestByArm", () => {
         volumeCents: 0,
       },
       {
-        arm: "percent_of_volume",
+        plan: "percent_of_volume",
         setupRequests: 2,
-        shops: 2,
+        shops: 1,
         cardsAdded: 1,
         firstPaid: 1,
         activeNow: 1,

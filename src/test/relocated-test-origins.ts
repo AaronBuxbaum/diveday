@@ -122,7 +122,7 @@ export const RELOCATED_TEST_ORIGINS: Readonly<Record<string, string>> = {
   "src/features/payments/refund-failure-reason.test.ts":
     "src/lib/payments/refund-failure-reason.test.ts",
   "src/features/payments/webhook.test.ts": "src/lib/payments/webhook.test.ts",
-  "src/features/pricing-test-report/store.test.ts": "src/db/pricing-test-report.test.ts",
+  "src/features/pricing-report/store.test.ts": "src/db/pricing-test-report.test.ts",
   "src/features/print-pass/store.test.ts": "src/db/print-pass.test.ts",
   "src/features/public-route-existence/store.test.ts": "src/db/public-route-existence.test.ts",
   "src/features/quiet-demo-device/rules.test.ts": "src/lib/quiet-demo-device.test.ts",
@@ -489,7 +489,7 @@ export const RELOCATED_TEST_PROJECTS: Readonly<Record<string, string>> = {
   "src/features/payments/payout-summary.test.ts": "lib",
   "src/features/payments/refund-failure-reason.test.ts": "lib",
   "src/features/payments/webhook.test.ts": "lib",
-  "src/features/pricing-test-report/store.test.ts": "db",
+  "src/features/pricing-report/store.test.ts": "db",
   "src/features/print-pass/store.test.ts": "db",
   "src/features/public-route-existence/store.test.ts": "db",
   "src/features/quiet-demo-device/rules.test.ts": "lib",

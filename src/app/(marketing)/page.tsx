@@ -19,7 +19,7 @@ import {
 import { CaptainPhoneFrame, MarginNotes, MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
-import { requestPricingOffer } from "@/features/pricing-arm-request";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -96,7 +96,7 @@ async function LocalizedHomeBody() {
   const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
   return (
     <>
-      {/* Per pricing arm, so it streams with the body (`homeSoftwareJsonLd`). */}
+      {/* For the configured offer, so it streams with the body (`homeSoftwareJsonLd`). */}
       <JsonLd data={homeSoftwareJsonLd(offer)} />
       <HomeBody locale={locale} offer={offer} />
     </>

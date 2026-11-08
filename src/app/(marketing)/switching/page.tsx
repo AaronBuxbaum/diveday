@@ -12,7 +12,7 @@ import {
   DISPLAY_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
-import { requestPricingArm } from "@/features/pricing-arm-request";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -97,12 +97,12 @@ export default function SwitchHubPage() {
 }
 
 async function LocalizedSwitchHubBody() {
-  const [locale, arm] = await Promise.all([requestLocale(), requestPricingArm()]);
-  return <SwitchHubBody locale={locale} arm={arm} />;
+  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
+  return <SwitchHubBody locale={locale} arm={offer.plan} />;
 }
 
 /**
- * Cached per negotiated locale (DIVER_LOCALES — two entries) and pricing arm
+ * Cached per negotiated locale (DIVER_LOCALES — two entries) and configured offer
  * — no session-scoped content.
  *
  * The hub has exactly one job: **help a shop owner recognize themselves.** So
@@ -130,7 +130,7 @@ async function SwitchHubBody({ locale, arm }: { locale: DiverLocale; arm: Pricin
     ...MIGRATION_GUIDES.map((guide) => ({
       href: `/switching/${guide.slug}`,
       title: t("switching.hub.switchingFrom", { competitor: guide.competitor }),
-      // Per pricing arm (ADR 20261022-pricing-ab-test).
+      // For the configured offer (ADR 20261022-pricing-ab-test).
       summary: t(guideForPlan(guide, arm).cardSummary),
     })),
   ];

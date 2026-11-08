@@ -6,32 +6,16 @@ import {
 import { log } from "../../lib/log";
 
 /**
- * **The pricing test's numbers, from the environment** (ADR
- * 20261022-pricing-ab-test, amendment 3). Changing one is an edit to the value
- * in Vercel and a redeploy; nothing else runs to serve them.
- *
- * | Variable | Values | Default |
- * | --- | --- | --- |
- * | `PRICING_TEST` | `on`; anything else is off | off |
- * | `PRICING_PERCENT_SPLIT` | 0–100, percent of new visitors and shops in the percent arm | 50 |
- * | `PRICING_FLAT_MONTHLY_CENTS` | 0–100000 | 9900 |
- * | `PRICING_PERCENT_BASIS_POINTS` | 0–1000 (300 is 3%) | 300 |
- * | `PRICING_PERCENT_MONTHLY_CENTS` | 0–100000, a base fee on top of the percent | 0 |
- *
- * Each is optional and takes its default when unset or blank. **One invalid
- * value refuses them all**: the whole config falls back to the defaults with
- * the test off, because half a configuration read as a whole one could put a
- * shop on numbers nobody chose. The refusal is logged once per process, naming
- * the variables but never their values.
+ * PRICING_MONTHLY_CENTS (0–100000) and PRICING_BASIS_POINTS (0–1000).
+ * Neither set preserves the published monthly price. When either is set, an
+ * omitted component is zero. Invalid values refuse the entire configuration.
  */
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
 const NUMBER_VARIABLES = {
-  PRICING_PERCENT_SPLIT: "split",
-  PRICING_FLAT_MONTHLY_CENTS: "monthlyCents",
-  PRICING_PERCENT_BASIS_POINTS: "basisPoints",
-  PRICING_PERCENT_MONTHLY_CENTS: "monthlyCents",
+  PRICING_MONTHLY_CENTS: "monthlyCents",
+  PRICING_BASIS_POINTS: "basisPoints",
 } as const satisfies Record<string, keyof typeof PRICING_BOUNDS>;
 
 type NumberVariable = keyof typeof NUMBER_VARIABLES;
@@ -42,7 +26,7 @@ export type PricingFlagsRead = {
   invalid: NumberVariable[];
 };
 
-/** Read the five variables. Pure: no logging, no cache. */
+/** Read both optional components. Pure: no logging, no cache. */
 export function readPricingFlags(env: Environment): PricingFlagsRead {
   const values = {} as Record<NumberVariable, number | null>;
   const invalid: NumberVariable[] = [];
@@ -64,16 +48,13 @@ export function readPricingFlags(env: Environment): PricingFlagsRead {
     }
   }
   if (invalid.length > 0) return { config: DEFAULT_PRICING_CONFIG, invalid };
-  const defaults = DEFAULT_PRICING_CONFIG;
+  if (values.PRICING_MONTHLY_CENTS === null && values.PRICING_BASIS_POINTS === null) {
+    return { config: DEFAULT_PRICING_CONFIG, invalid: [] };
+  }
   return {
     config: {
-      test: env.PRICING_TEST?.trim() === "on",
-      split: values.PRICING_PERCENT_SPLIT ?? defaults.split,
-      flat: { monthlyCents: values.PRICING_FLAT_MONTHLY_CENTS ?? defaults.flat.monthlyCents },
-      percent: {
-        basisPoints: values.PRICING_PERCENT_BASIS_POINTS ?? defaults.percent.basisPoints,
-        monthlyCents: values.PRICING_PERCENT_MONTHLY_CENTS ?? defaults.percent.monthlyCents,
-      },
+      monthlyCents: values.PRICING_MONTHLY_CENTS ?? 0,
+      basisPoints: values.PRICING_BASIS_POINTS ?? 0,
     },
     invalid: [],
   };

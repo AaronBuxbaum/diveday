@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { requestPricingArm } from "@/features/pricing-arm-request";
-import { pricingConfig } from "@/features/pricing-flags";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { sharedLinkCard } from "@/lib/marketing";
 
-/** /pricing's metadata, per pricing arm; kept beside the page so the route file stays under its baseline. */
+/** /pricing's metadata, for the configured offer; kept beside the page so the route file stays under its baseline. */
 const flatMetadata: Metadata = {
   title: "Pricing — one flat price per shop | DiveDay",
   description:
@@ -30,9 +29,9 @@ const flatMetadata: Metadata = {
 };
 
 /**
- * The percent arm's metadata (ADR 20261022-pricing-ab-test): the flat arm's
+ * The percentage offer’s metadata (ADR 20261022-pricing-ab-test): the monthly-only offer’s
  * "one flat price" and "no cut of your bookings" are not true of it, so it
- * says what both arms share and names no figure, like the flat arm's.
+ * says what both arms share and names no figure, like the monthly-only offer’s.
  */
 const percentMetadata: Metadata = {
   title: "Pricing — one plan per shop, line by line | DiveDay",
@@ -52,12 +51,7 @@ const percentMetadata: Metadata = {
   },
 };
 
-/**
- * Per arm. While the pricing test is off this reads nothing from the request
- * and is the flat arm's metadata, exactly as the static export was.
- */
+/** Metadata follows the configured offer without reading visitor state. */
 export async function generateMetadata(): Promise<Metadata> {
-  const config = pricingConfig();
-  if (!config.test) return flatMetadata;
-  return (await requestPricingArm(config)) === "percent_of_volume" ? percentMetadata : flatMetadata;
+  return (await requestPricingOffer()).basisPoints > 0 ? percentMetadata : flatMetadata;
 }

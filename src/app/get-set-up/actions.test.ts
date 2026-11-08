@@ -35,8 +35,12 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.9") }));
-vi.mock("../../features/pricing-arm-request/rules", () => ({
-  requestVisitorArm: vi.fn(async (): Promise<string | null> => null),
+vi.mock("@/features/pricing-offer", () => ({
+  requestPricingOffer: vi.fn(async () => ({
+    plan: "flat_monthly",
+    monthlyCents: 9900,
+    basisPoints: 0,
+  })),
 }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
@@ -151,15 +155,19 @@ describe("submitSetupRequestAction", () => {
     expect(alert).not.toHaveProperty("sender.replyTo");
   });
 
-  it("records no pricing arm while the test is off", async () => {
+  it("records the configured monthly plan", async () => {
     await submit(setUpForm());
     const [row] = await db.select().from(setupRequests);
-    expect(row?.pricingPlan).toBeNull();
+    expect(row?.pricingPlan).toBe("flat_monthly");
   });
 
-  it("records the pricing arm the reader was shown (ADR 20261022-pricing-ab-test)", async () => {
-    const { requestVisitorArm } = await import("../../features/pricing-arm-request/rules");
-    vi.mocked(requestVisitorArm).mockResolvedValueOnce("percent_of_volume");
+  it("records the configured percentage plan", async () => {
+    const { requestPricingOffer } = await import("@/features/pricing-offer");
+    vi.mocked(requestPricingOffer).mockResolvedValueOnce({
+      plan: "percent_of_volume",
+      monthlyCents: 0,
+      basisPoints: 300,
+    });
     await submit(setUpForm());
     const [row] = await db.select().from(setupRequests);
     expect(row?.pricingPlan).toBe("percent_of_volume");

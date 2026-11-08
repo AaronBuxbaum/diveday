@@ -10,7 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { BANNER_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { planCopyParams } from "@/features/billing";
-import { requestPricingOffer } from "@/features/pricing-arm-request";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -88,8 +88,8 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
-  // "One price" and "no cut of your bookings" are the flat arm's alone; the
-  // percent arm's card and door say its own terms.
+  // "One price" and "no cut of your bookings" are the monthly-only offer’s alone; the
+  // percentage offer's card and door say its own terms.
   const percentArm = offer.plan === "percent_of_volume";
   const params = planCopyParams(offer, locale);
   const flatPrice = { price: params.price, cadence: t(earlyAccessPrice.cadenceKey) };

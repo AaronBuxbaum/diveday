@@ -274,7 +274,7 @@ describe("stripeBillingProvider", () => {
   });
 });
 
-describe("the pricing test's Stripe side (ADR 20261022-pricing-ab-test)", () => {
+describe("configured pricing in Stripe", () => {
   it("reads the percent plan's price and meter together, or not at all", () => {
     expect(
       percentBillingFromEnvironment({

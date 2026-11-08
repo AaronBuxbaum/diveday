@@ -19,6 +19,16 @@ has no separate team, tooling, or CMS: copy is code, reviewed like code, tested 
 `schema.ts` is governed by the schema-change skill. A session editing these pages carries both
 jobs — marketer and maintainer — and must leave both the pages and this rulebook consistent.
 
+## Configured pricing (2026-11-08)
+
+Every visitor sees the same configured offer. `PRICING_MONTHLY_CENTS` and
+`PRICING_BASIS_POINTS` independently set the monthly fee and percentage of eligible card receipts
+collected through DiveDay. Omit either component when configuring the other to charge only that
+component. With both unset, the published monthly default applies; explicit zeroes mean free.
+Copy names only the components charged, and percentage offers never claim no cut of bookings.
+Existing subscribers keep their sold terms. This supersedes references below to a universal flat
+price; see [configured pricing](../architecture/decisions/20261108-configured-pricing.md).
+
 ## One page per feature, and every section sells (decided 2026-10-05, H-20261005-public-pages-sell)
 
 The owner's brief on 2026-10-05 was that the pages were not selling, and that every interesting

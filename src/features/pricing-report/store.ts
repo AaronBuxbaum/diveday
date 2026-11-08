@@ -1,26 +1,12 @@
 import { and, count, eq, isNotNull, sql } from "drizzle-orm";
+import type { DbExecutor } from "@/db/client";
+import { pricingVolumeStatements, setupRequests, shopSubscriptions, shops } from "@/db/schema";
 import { realShop } from "@/features/founder-metrics";
-import type { DbExecutor } from "../../db/client";
-import {
-  pricingVolumeStatements,
-  setupRequests,
-  shopSubscriptions,
-  shops,
-} from "../../db/schema/index";
-import { PRICING_PLANS, type PricingPlan } from "../../lib/billing/pricing-plans";
+import { PRICING_PLANS, type PricingPlan } from "@/lib/billing/pricing-plans";
 
-/**
- * **The pricing test, per arm** (ADR 20261022-pricing-ab-test), for
- * `pnpm billing:pricing-test`. Real shops only, on founder metrics' own test
- * (`realShop`): a demo or a seeded row nobody can sign into is never counted.
- *
- * A shop counts in the arm it was **assigned** (the set-up request's, or its
- * bucket), not the plan an override moved it to, so a hand-made deal does not
- * move a shop between arms after the fact; a shop with no assigned arm counts
- * in the plan it holds.
- */
-export type PricingArmRow = {
-  arm: PricingPlan;
+/** Billing performance by the plan each shop currently holds; real shops only. */
+export type PricingPlanRow = {
+  plan: PricingPlan;
   setupRequests: number;
   shops: number;
   cardsAdded: number;
@@ -32,16 +18,16 @@ export type PricingArmRow = {
   volumeCents: number;
 };
 
-export async function pricingTestByArm(db: DbExecutor): Promise<PricingArmRow[]> {
-  const arm = sql<PricingPlan>`coalesce(${shopSubscriptions.assignedPricingPlan}, ${shopSubscriptions.pricingPlan})`;
+export async function pricingByPlan(db: DbExecutor): Promise<PricingPlanRow[]> {
+  const plan = sql<PricingPlan>`${shopSubscriptions.pricingPlan}`;
   const requests = await db
-    .select({ arm: setupRequests.pricingPlan, count: count() })
+    .select({ plan: setupRequests.pricingPlan, count: count() })
     .from(setupRequests)
     .where(isNotNull(setupRequests.pricingPlan))
     .groupBy(setupRequests.pricingPlan);
   const shopRows = await db
     .select({
-      arm,
+      plan,
       shops: count(),
       cardsAdded: sql<number>`count(*) filter (where ${shopSubscriptions.stripeSubscriptionId} is not null)`,
       firstPaid: sql<number>`count(*) filter (where ${shopSubscriptions.firstPaidAt} is not null)`,
@@ -52,24 +38,24 @@ export async function pricingTestByArm(db: DbExecutor): Promise<PricingArmRow[]>
     })
     .from(shopSubscriptions)
     .innerJoin(shops, eq(shops.id, shopSubscriptions.shopId))
-    .where(and(realShop(), sql`${arm} is not null`))
-    .groupBy(arm);
+    .where(and(realShop(), sql`${plan} is not null`))
+    .groupBy(plan);
   const volumeRows = await db
     .select({
-      arm,
+      plan,
       volumeCents: sql<string>`coalesce(sum(${pricingVolumeStatements.volumeCents}), 0)`,
     })
     .from(pricingVolumeStatements)
     .innerJoin(shopSubscriptions, eq(shopSubscriptions.shopId, pricingVolumeStatements.shopId))
     .innerJoin(shops, eq(shops.id, pricingVolumeStatements.shopId))
     .where(realShop())
-    .groupBy(arm);
+    .groupBy(plan);
 
   return PRICING_PLANS.map((plan) => {
-    const shopRow = shopRows.find((row) => row.arm === plan);
+    const shopRow = shopRows.find((row) => row.plan === plan);
     return {
-      arm: plan,
-      setupRequests: Number(requests.find((row) => row.arm === plan)?.count ?? 0),
+      plan: plan,
+      setupRequests: Number(requests.find((row) => row.plan === plan)?.count ?? 0),
       shops: Number(shopRow?.shops ?? 0),
       cardsAdded: Number(shopRow?.cardsAdded ?? 0),
       firstPaid: Number(shopRow?.firstPaid ?? 0),
@@ -77,7 +63,7 @@ export async function pricingTestByArm(db: DbExecutor): Promise<PricingArmRow[]>
       canceled: Number(shopRow?.canceled ?? 0),
       revenueCents: Number(shopRow?.revenueCents ?? 0),
       payingShops: Number(shopRow?.payingShops ?? 0),
-      volumeCents: Number(volumeRows.find((row) => row.arm === plan)?.volumeCents ?? 0),
+      volumeCents: Number(volumeRows.find((row) => row.plan === plan)?.volumeCents ?? 0),
     };
   });
 }

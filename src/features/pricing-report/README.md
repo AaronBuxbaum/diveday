@@ -1,6 +1,6 @@
-# pricing-test-report
+# pricing-report
 
-This module owns the pricing test report use case and publishes its contract through `index.ts`.
+This module owns the billing performance report use case and publishes its contract through `index.ts`.
 
 ## Owns
 

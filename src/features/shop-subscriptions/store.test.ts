@@ -2,7 +2,6 @@ import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "../../db/client";
 import { shopMilestones, shopSubscriptions, shops } from "../../db/schema/index";
-import { DEFAULT_PRICING_CONFIG } from "../../lib/billing/pricing-plans";
 import { fileScopedShopContext, seededShopContext } from "../../test/db";
 import type { BillingEventEffect } from "../billing/events";
 import {
@@ -429,7 +428,7 @@ describe("setShopFreeTerm", () => {
 });
 
 describe("the pricing plan (ADR 20261022-pricing-ab-test)", () => {
-  const ON = { ...DEFAULT_PRICING_CONFIG, test: true };
+  const ON = { monthlyCents: 9900, basisPoints: 300 };
 
   async function slugOf(db: AppDb, shopId: string): Promise<string> {
     const [row] = await db.select({ slug: shops.slug }).from(shops).where(eq(shops.id, shopId));
@@ -438,7 +437,7 @@ describe("the pricing plan (ADR 20261022-pricing-ab-test)", () => {
     return row.slug;
   }
 
-  it("sets a deal by hand and undoes it back to the assigned arm", async () => {
+  it("sets a deal by hand and resets it to the configured offer", async () => {
     const { db, shop } = ctx;
     const slug = await slugOf(db, shop.id);
     await db.insert(shopSubscriptions).values({
@@ -470,9 +469,12 @@ describe("the pricing plan (ADR 20261022-pricing-ab-test)", () => {
         { shopSlug: slug, plan: null, monthlyCents: null, basisPoints: null },
         ON,
       ),
-    ).toMatchObject({ status: "set", terms: { plan: "flat_monthly", monthlyCents: 9_900 } });
+    ).toMatchObject({
+      status: "set",
+      terms: { plan: "percent_of_volume", monthlyCents: 9_900, basisPoints: 300 },
+    });
     expect(await getShopSubscription(db, shop.id)).toMatchObject({
-      pricingPlan: "flat_monthly",
+      pricingPlan: "percent_of_volume",
       pricingPlanSource: "assigned",
       planMonthlyCents: null,
     });
@@ -570,7 +572,7 @@ describe("the pricing plan (ADR 20261022-pricing-ab-test)", () => {
       basisPoints: 300,
     });
     await applyBillingEffect(db, changed());
-    const raised = { ...ON, percent: { basisPoints: 600, monthlyCents: 2_000 } };
+    const raised = { basisPoints: 600, monthlyCents: 2_000 };
     expect(shopPricing(await getShopSubscription(db, shop.id), raised)).toEqual({
       plan: "percent_of_volume",
       monthlyCents: 0,

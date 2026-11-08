@@ -2,13 +2,13 @@ import { isValidElement, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The marketing pages outside `/pricing` per pricing arm (ADR
+ * The marketing pages outside `/pricing` for the configured offer (ADR
  * 20261022-pricing-ab-test): `/about`, `/product`, a feature page, the
  * switching hub and a switching guide, and the home page's structured data.
  * Each page is invoked with the request stubbed, and the server components
  * named below are rendered as they are met, so what is asserted is what the
- * page would cache for that locale and arm. With the test off, every page says
- * what it says today, whatever arm a request claims.
+ * page would cache for that locale and offer. Visitor headers never change
+ * the configured price.
  */
 
 const request = vi.hoisted(() => ({ headers: new Headers() }));
@@ -26,7 +26,7 @@ const { default: GuidePage, generateMetadata: guideMetadata } = await import(
   "./(marketing)/switching/[competitor]/page"
 );
 const { homeSoftwareJsonLd } = await import("./_components/home-json-ld");
-const { requestPricingOffer } = await import("../features/pricing-arm-request/rules");
+const { requestPricingOffer } = await import("@/features/pricing-offer");
 const { earlyAccessPriceAmount } = await import("@/lib/marketing");
 
 /** The server components between a page and its words, rendered when met. */
@@ -98,7 +98,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("with the test off", () => {
+describe("with default pricing", () => {
   it("/about says today's price, whatever arm a request claims", async () => {
     asReader("percent_of_volume");
     const text = await pageText("about");
@@ -150,19 +150,21 @@ describe("with the test off", () => {
   });
 });
 
-describe("with the test on", () => {
+describe("with percentage pricing", () => {
   beforeEach(() => {
-    vi.stubEnv("PRICING_TEST", "on");
+    vi.stubEnv("PRICING_BASIS_POINTS", "300");
   });
 
-  it("gives the flat arm today's words", async () => {
+  it("gives the monthly-only offer today's words", async () => {
+    vi.stubEnv("PRICING_BASIS_POINTS", "0");
+    vi.stubEnv("PRICING_MONTHLY_CENTS", "9900");
     asReader("flat_monthly");
     expect(await pageText("about")).toContain("We take no cut of your bookings.");
     expect(await pageText("payments")).toContain("No. DiveDay is one flat monthly price.");
     expect(await pageText("rezdy")).toContain("Or leave the monthly fee and the per-booking cut");
   });
 
-  it("gives the percent arm its own terms on /about, /product and a feature page", async () => {
+  it("gives the percentage offer its own terms on /about, /product and a feature page", async () => {
     asReader("percent_of_volume");
     const about = await pageText("about");
     expect(about).toContain("One plan covers the shop");
@@ -189,7 +191,7 @@ describe("with the test on", () => {
   });
 
   it("follows a base fee", async () => {
-    vi.stubEnv("PRICING_PERCENT_MONTHLY_CENTS", "2900");
+    vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
     asReader("percent_of_volume");
     expect(await pageText("about")).toContain(
       "of the card money taken through DiveDay plus $29 a month, and it covers",
@@ -200,7 +202,7 @@ describe("with the test on", () => {
     );
   });
 
-  it("takes the fee contrast off the switching pages for the percent arm", async () => {
+  it("takes the fee contrast off the switching pages for the percentage offer", async () => {
     asReader("percent_of_volume");
     const hub = await pageText("switching");
     expect(hub).toContain("Keep it for distribution, or take the booking here too.");
@@ -214,7 +216,7 @@ describe("with the test on", () => {
     }
   });
 
-  it("says the percent arm's terms in es-ES", async () => {
+  it("says the percentage offer’s terms in es-ES", async () => {
     asReader("percent_of_volume", "es-ES");
     const about = await pageText("about");
     expect(about).toContain("Un plan cubre el centro");
@@ -231,7 +233,7 @@ describe("with the test on", () => {
     expect(rezdy).not.toContain("O deja atrás la cuota mensual");
   });
 
-  it("leaves the percent arm's structured data without an Offer", async () => {
+  it("leaves the percentage offer’s structured data without an Offer", async () => {
     asReader("percent_of_volume");
     expect(homeSoftwareJsonLd(await requestPricingOffer()).offers).toBeUndefined();
   });

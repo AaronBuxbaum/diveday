@@ -133,8 +133,8 @@ export function FunnelCtas({
 }
 
 /**
- * The price line under a hero's doors, per pricing arm (ADR
- * 20261022-pricing-ab-test). "No cut of your bookings" is the flat arm's alone.
+ * The price line under a hero's doors, for the configured offer (ADR
+ * 20261022-pricing-ab-test). "No cut of your bookings" is the monthly-only offer’s alone.
  */
 export function heroPriceLine(t: DiverTranslator, offer: PlanTerms, locale: string): string {
   const params = planCopyParams(offer, locale);

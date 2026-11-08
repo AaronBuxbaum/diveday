@@ -1,20 +1,14 @@
-/**
- * `pnpm billing:pricing-test` — the pricing A/B test, one row per arm (ADR
- * 20261022-pricing-ab-test): set-up requests, shops, cards added, first paid,
- * active now, canceled, DiveDay revenue in total and per paying shop, and the
- * percent arm's card volume. Real shops only. Read-only; runs against whatever
- * database `getDb()` resolves, like `pnpm billing:free-term`.
- */
+/** Read-only billing performance by current plan: pnpm billing:pricing-report. */
 import { getDb } from "@/db/client";
-import { pricingTestByArm } from "@/features/pricing-test-report";
+import { pricingByPlan } from "@/features/pricing-report";
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 async function main(): Promise<number> {
-  const rows = await pricingTestByArm(await getDb());
+  const rows = await pricingByPlan(await getDb());
   console.table(
     rows.map((row) => ({
-      arm: row.arm,
+      plan: row.plan,
       "set-up requests": row.setupRequests,
       shops: row.shops,
       "cards added": row.cardsAdded,

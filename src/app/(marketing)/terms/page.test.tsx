@@ -53,8 +53,8 @@ describe("/terms percent-plan clause", () => {
   it("states the fee, what counts, refunds, the statement, who pays and the notice", async () => {
     const text = await termsText();
     expect(text).toContain("Plans priced as a percentage of card payments");
-    expect(text).toContain("3% of the card money your shop takes through DiveDay");
-    expect(text).toContain("Shops already on DiveDay stay on the flat monthly price.");
+    expect(text).toContain("The percentage and any monthly base fee agreed for your shop");
+    expect(text).toContain("Your subscription keeps the rate and monthly fee you agreed to.");
     for (const excluded of ["Tips", "tax", "pass-through fees", "counter", "imported"]) {
       expect(text).toContain(excluded);
     }
@@ -67,9 +67,9 @@ describe("/terms percent-plan clause", () => {
     expect(text).toContain("30 days");
   });
 
-  it("follows the configured rate and base fee, test on or off", async () => {
-    vi.stubEnv("PRICING_PERCENT_BASIS_POINTS", "250");
-    vi.stubEnv("PRICING_PERCENT_MONTHLY_CENTS", "2900");
+  it("follows the configured rate and base fee, independently of visitor state", async () => {
+    vi.stubEnv("PRICING_BASIS_POINTS", "250");
+    vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
     const text = await termsText();
     expect(text).toContain("2.5% of the card money your shop takes through DiveDay");
     expect(text).toContain("with a base fee of $29 each month");
@@ -78,9 +78,7 @@ describe("/terms percent-plan clause", () => {
   it("says the same in es-ES", async () => {
     const text = await termsText("es-ES");
     expect(text).toContain("Planes con precio en un porcentaje de los pagos con tarjeta");
-    expect(text).toMatch(
-      /3\s?% del dinero que tu centro recibe en pagos con tarjeta a través de DiveDay/,
-    );
+    expect(text).toContain("El porcentaje y cualquier cuota mensual acordados para tu centro");
     expect(text).toContain("nunca el buceador");
     expect(text).toContain("30 días");
   });
