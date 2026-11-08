@@ -27,9 +27,9 @@ describe("configured pricing", () => {
     });
   });
 
-  it("defaults to the published monthly amount", () => {
-    expect(DEFAULT_PRICING_CONFIG).toEqual({ monthlyCents: FLAT_MONTHLY_CENTS, basisPoints: 0 });
-    expect(isTodaysPrice(configuredPricing(DEFAULT_PRICING_CONFIG))).toBe(true);
+  it("defaults new subscriptions to no monthly fee and three percent", () => {
+    expect(DEFAULT_PRICING_CONFIG).toEqual({ monthlyCents: 0, basisPoints: 300 });
+    expect(isTodaysPrice(configuredPricing(DEFAULT_PRICING_CONFIG))).toBe(false);
     expect(isTodaysPrice(configuredPricing({ monthlyCents: 9900, basisPoints: 300 }))).toBe(false);
     expect(PRICING_PLANS).toEqual(["flat_monthly", "percent_of_volume"]);
     expect(isPricingPlan("bogus")).toBe(false);
@@ -69,10 +69,22 @@ describe("effectivePricing", () => {
     ).toEqual({ plan: "percent_of_volume", monthlyCents: 0, basisPoints: 300 });
   });
 
+  it("keeps a live flat subscriber on its sold terms under the new default", () => {
+    expect(
+      effectivePricing({
+        stored: { plan: "flat_monthly", source: "assigned", monthlyCents: 9900, basisPoints: 0 },
+        config: DEFAULT_PRICING_CONFIG,
+        hasLiveSubscription: true,
+      }),
+    ).toEqual({ plan: "flat_monthly", monthlyCents: 9900, basisPoints: 0 });
+  });
+
   it("keeps an existing subscriber without a snapshot on the original monthly price", () => {
-    expect(effectivePricing({ stored: null, config, hasLiveSubscription: true })).toEqual(
-      configuredPricing(DEFAULT_PRICING_CONFIG),
-    );
+    expect(effectivePricing({ stored: null, config, hasLiveSubscription: true })).toEqual({
+      plan: "flat_monthly",
+      monthlyCents: FLAT_MONTHLY_CENTS,
+      basisPoints: 0,
+    });
   });
 
   it("honors an explicit deal before subscription", () => {

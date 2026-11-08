@@ -98,7 +98,11 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("with default pricing", () => {
+describe("with the original monthly-only pricing", () => {
+  beforeEach(() => {
+    vi.stubEnv("PRICING_MONTHLY_CENTS", "9900");
+    vi.stubEnv("PRICING_BASIS_POINTS", "0");
+  });
   it("/about says today's price, whatever arm a request claims", async () => {
     asReader("percent_of_volume");
     const text = await pageText("about");
@@ -150,9 +154,10 @@ describe("with default pricing", () => {
   });
 });
 
-describe("with percentage pricing", () => {
+describe("with default percentage pricing", () => {
   beforeEach(() => {
-    vi.stubEnv("PRICING_BASIS_POINTS", "300");
+    vi.stubEnv("PRICING_MONTHLY_CENTS", "");
+    vi.stubEnv("PRICING_BASIS_POINTS", "");
   });
 
   it("gives the monthly-only offer today's words", async () => {
@@ -191,6 +196,7 @@ describe("with percentage pricing", () => {
   });
 
   it("follows a base fee", async () => {
+    vi.stubEnv("PRICING_BASIS_POINTS", "300");
     vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
     asReader("percent_of_volume");
     expect(await pageText("about")).toContain(

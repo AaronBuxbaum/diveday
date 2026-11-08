@@ -63,7 +63,11 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("/pricing with default pricing", () => {
+describe("/pricing with the original monthly-only pricing", () => {
+  beforeEach(() => {
+    vi.stubEnv("PRICING_MONTHLY_CENTS", "9900");
+    vi.stubEnv("PRICING_BASIS_POINTS", "0");
+  });
   it("is the flat price, word for word, whatever arm a request claims", async () => {
     const { offer, text } = await pricingBody("percent_of_volume");
     expect(offer).toEqual({ plan: "flat_monthly", monthlyCents: 9_900, basisPoints: 0 });
@@ -87,9 +91,10 @@ describe("/pricing with default pricing", () => {
   });
 });
 
-describe("/pricing with percentage pricing", () => {
+describe("/pricing with default percentage pricing", () => {
   beforeEach(() => {
-    vi.stubEnv("PRICING_BASIS_POINTS", "300");
+    vi.stubEnv("PRICING_MONTHLY_CENTS", "");
+    vi.stubEnv("PRICING_BASIS_POINTS", "");
   });
 
   it("shows the percentage offer its own lines, and none of the monthly-only offer’s", async () => {

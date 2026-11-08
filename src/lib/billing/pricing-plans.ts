@@ -9,9 +9,9 @@ export const PRICING_PLAN_SOURCES = ["assigned", "override"] as const;
 export type PricingPlanSource = (typeof PRICING_PLAN_SOURCES)[number];
 
 /**
- * Today's flat monthly amount in cents, derived from the one published price
+ * The original flat monthly amount in cents, derived from the original published price
  * (`earlyAccessPrice`, H-20260724-public-founding-shop-price's single source), never restated. The config's
- * default, and the amount the existing `BILLING_STRIPE_PRICE_ID` charges.
+ * legacy fallback, and the amount the existing `BILLING_STRIPE_PRICE_ID` charges.
  */
 export const FLAT_MONTHLY_CENTS = Math.round(Number(earlyAccessPriceAmount) * 100);
 
@@ -25,8 +25,8 @@ export const PRICING_BOUNDS = {
 export type PricingConfig = { monthlyCents: number; basisPoints: number };
 
 export const DEFAULT_PRICING_CONFIG: PricingConfig = {
-  monthlyCents: FLAT_MONTHLY_CENTS,
-  basisPoints: 0,
+  monthlyCents: 0,
+  basisPoints: 300,
 };
 
 /** What one shop pays: a monthly fee, and a share of its volume (0 on the flat plan). */
@@ -55,9 +55,8 @@ export function configuredPricing(config: PricingConfig): PlanTerms {
 }
 
 /**
- * Whether terms are exactly today's: the flat plan at the published price.
- * Those terms render the canonical figure and check out on the existing
- * Stripe price, so the defaults change nothing anyone sees or pays.
+ * Whether terms match the original flat offer. Those terms render the legacy
+ * canonical figure and check out on the existing Stripe price.
  */
 export function isTodaysPrice(terms: PlanTerms): boolean {
   return (
@@ -91,7 +90,13 @@ export function effectivePricing(input: {
         }
       : null;
   if (input.hasLiveSubscription) {
-    return (storedPlan && snapshot(storedPlan)) ?? termsFor("flat_monthly", DEFAULT_PRICING_CONFIG);
+    return (
+      (storedPlan && snapshot(storedPlan)) ?? {
+        plan: "flat_monthly",
+        monthlyCents: FLAT_MONTHLY_CENTS,
+        basisPoints: 0,
+      }
+    );
   }
   if (storedPlan && stored?.source === "override") {
     return snapshot(storedPlan) ?? termsFor(storedPlan, config);

@@ -14,8 +14,7 @@ with copy matching the configured components, instead of a pricing experiment.
 - Publish one offer for everyone. Remove randomized assignment, pricing cookies, visitor headers,
   experiment switches and split settings.
 - Read `PRICING_MONTHLY_CENTS` (0–100000) and `PRICING_BASIS_POINTS` (0–1000; 300 means 3%).
-  Setting either makes the omitted component zero. Both unset or blank retain the published
-  monthly default. Explicit zeroes mean free. Invalid input rejects the entire configuration and
+  Setting either makes the omitted component zero. Both unset or blank use $0/month plus 3%, as requested after the initial implementation. Explicit zeroes mean free. Invalid input rejects the entire configuration and
   restores the default, logging variable names only.
 - Derive the internal billing plan from the percentage: a positive percentage uses the metered
   plan; otherwise use monthly billing. Existing Stripe meter, monthly statements, fee arithmetic
@@ -34,7 +33,9 @@ with copy matching the configured components, instead of a pricing experiment.
 
 ## Consequences
 
-Operators replace the five experiment variables with two values and redeploy. The monthly default
-is unchanged when neither is configured. Percentage billing still requires the existing Stripe
+Operators replace the five experiment variables with two values and redeploy. The default offer is $0/month plus 3% when neither is configured. Existing subscribers without a
+terms snapshot retain the original $99 monthly price, independently of the new-offer default. Percentage billing still requires the existing Stripe
 meter configuration. Revisit if shops need a self-service plan selector; that would require new
 presentation and subscription-change behavior rather than restoring random assignment.
+
+Setup and test-mode verification: [percentage billing setup](../../engineering/percentage-billing-setup.md).
