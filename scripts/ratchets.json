@@ -919,12 +919,6 @@
           "src/features/no-show/store.test.ts": "1156 -> 1158",
           "src/db/self-declared-cards.test.ts": "1849 -> 1869"
         }
-      },
-      {
-        "why": "label-maps.test.ts holds one table row per message-key map; the packing list's rental item keys (#2796) added one",
-        "files": {
-          "src/i18n/label-maps.test.ts": "1259 -> 1268"
-        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 952,
@@ -980,7 +974,7 @@
     "src/features/today/today.test.ts": 1274,
     "src/features/work-order-follow-up/store.test.ts": 1177,
     "src/features/work-orders/store.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1268,
+    "src/i18n/label-maps.test.ts": 1236,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1935,
     "src/lib/import.test.ts": 1403,

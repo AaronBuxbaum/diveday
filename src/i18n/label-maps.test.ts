@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MediaDeletionKind, PaymentOperationKind, WorkOrderLineKindValue } from "@/db/schema";
@@ -36,6 +36,7 @@ import {
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
 import { stripComments } from "@/test/source";
+import { labelModuleSources, messageKeyMaps } from "../../scripts/label-map-source.mjs";
 import { boatWorkText } from "../features/boat-work/labels";
 import type { BoatWorkCode } from "../features/boat-work/rules";
 import {
@@ -456,7 +457,7 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
-    module: "boat-work-labels.ts",
+    module: "../features/boat-work/labels.ts",
     map: "BOAT_WORK_KEYS",
     rows: codeRows(BOAT_WORK_CODES, (locale, code) =>
       boatWorkText(staffTranslator(locale), { code, count: 2, tone: "work" }),
@@ -533,28 +534,28 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
-    module: "dive-intent-labels.ts",
+    module: "../features/dive-intent/labels.ts",
     map: "DIVER_DIVE_INTENT_KEYS",
     rows: codeRows(keysOf(DIVER_DIVE_INTENT_KEYS), (locale, intent) =>
       diverTranslator(locale)(DIVER_DIVE_INTENT_KEYS[intent]),
     ),
   },
   {
-    module: "dive-intent-labels.ts",
+    module: "../features/dive-intent/labels.ts",
     map: "DIVER_RE_ENTRY_KEYS",
     rows: codeRows(keysOf(DIVER_RE_ENTRY_KEYS), (locale, ask) =>
       diverTranslator(locale)(DIVER_RE_ENTRY_KEYS[ask]),
     ),
   },
   {
-    module: "dive-intent-labels.ts",
+    module: "../features/dive-intent/labels.ts",
     map: "STAFF_RE_ENTRY_KEYS",
     rows: codeRows(keysOf(STAFF_RE_ENTRY_KEYS), (locale, ask) =>
       staffTranslator(locale)(STAFF_RE_ENTRY_KEYS[ask]),
     ),
   },
   {
-    module: "dive-intent-labels.ts",
+    module: "../features/dive-intent/labels.ts",
     map: "STAFF_DIVE_INTENT_KEYS",
     rows: codeRows(DIVE_INTENTS, (locale, intent) =>
       staffDiveIntentLine(staffTranslator(locale), [{ intent, count: 2 }], locale),
@@ -1189,7 +1190,7 @@ describe.each(CASES)("$module › $map", ({ rows, map }) => {
  * **The half a guard is good at.**
  *
  * A table proves what is in it. This finds every `Record<…MessageKey…>` in the
- * directory and requires the table to hold exactly those maps, so a map added
+ * copy directory and feature labels, and requires the table to hold exactly those maps, so a map added
  * tomorrow fails here rather than joining the twenty-four that had no proof
  * for months. It is a text scan for the same reason
  * `scripts/check-intl-providers.mjs` is: the maps it looks for are private to their
@@ -1197,46 +1198,13 @@ describe.each(CASES)("$module › $map", ({ rows, map }) => {
  */
 const I18N_DIR = path.join(process.cwd(), "src/i18n");
 
-/**
- * Every `const NAME: Record<…>` whose type arguments name a message key.
- *
- * The type arguments are read by balancing angle brackets rather than by
- * matching up to the first `>`: `Record<Exclude<ThreadStepState, "done">,
- * DiverMessageKey>` closes its first `>` inside the key type, and a scan that
- * stopped there would miss the map and report the directory clean.
- */
-function messageKeyMaps(source: string): string[] {
-  const found: string[] = [];
-  for (const match of source.matchAll(/\bconst\s+([A-Za-z0-9_]+)\s*:\s*Record</g)) {
-    const name = match[1];
-    let depth = 0;
-    let end = source.indexOf("<", match.index);
-    for (let index = end; index < source.length; index += 1) {
-      if (source[index] === "<") depth += 1;
-      else if (source[index] === ">") {
-        depth -= 1;
-        if (depth === 0) {
-          end = index;
-          break;
-        }
-      }
-    }
-    if (source.slice(match.index, end).includes("MessageKey")) found.push(name);
-  }
-  return found;
-}
-
 describe("the directory's message-key maps", () => {
   it("accounts for every one of them, and holds the table to exactly them", async () => {
     const accounted = new Set(CASES.map((entry) => `${entry.module} ${entry.map}`));
     const found: string[] = [];
     const unaccounted: string[] = [];
-    const modules = (await readdir(I18N_DIR)).filter(
-      (name) => name.endsWith(".ts") && !name.endsWith(".test.ts") && !name.endsWith(".d.ts"),
-    );
-
-    for (const module of modules.sort()) {
-      const source = stripComments(await readFile(path.join(I18N_DIR, module), "utf8"));
+    for (const [module, rawSource] of await labelModuleSources(process.cwd())) {
+      const source = stripComments(rawSource);
       for (const map of messageKeyMaps(source)) {
         found.push(`${module} ${map}`);
         if (!accounted.has(`${module} ${map}`)) unaccounted.push(`${module} ${map}`);

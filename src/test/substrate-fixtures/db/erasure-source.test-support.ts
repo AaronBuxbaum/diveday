@@ -1,3 +1,5 @@
+import path from "node:path";
+
 /**
  * Reading `anonymize.ts` as source, shared by the erasure guards
  * (`erasure-coverage.test.ts`, `erasure-registry.test.ts`): the static reads see
@@ -97,4 +99,86 @@ export function sweepContaining(strippedSource: string, index: number): string |
     if (index > start && index < end) return match[1] as string;
   }
   return null;
+}
+
+/** The selected function only, with prose/literals blanked before matching calls or writes. */
+function functionBody(raw: string, name: string): string {
+  const source = stripCommentsAndStrings(raw);
+  const start = source.search(new RegExp(`^(?:export )?(?:async )?function ${name}\\(`, "m"));
+  return start < 0 ? "" : source.slice(start, source.indexOf("\n}\n", start));
+}
+
+type SourceReader = (file: string) => string | undefined;
+
+/** An exact named import/re-export: never expand a whole module or an export star. */
+function namedLink(raw: string, name: string, kind: "import" | "export") {
+  const code = stripCommentsAndStrings(raw);
+  const pattern = new RegExp(`${kind}\\s*\\{([^}]+)\\}\\s*from\\s*["']([^"']+)["']`, "g");
+  for (const match of raw.matchAll(pattern)) {
+    if (code.slice(match.index, match.index + kind.length) !== kind) continue;
+    for (const member of (match[1] as string).split(",")) {
+      const parts = member.trim().split(/\s+as\s+/);
+      const original = parts[0];
+      if (!original || original.startsWith("type ")) continue;
+      const selected = parts[1] ?? original;
+      if (selected === name) return { name: original, from: match[2] as string };
+    }
+  }
+  return undefined;
+}
+
+function linkedSource(file: string, from: string, read: SourceReader) {
+  const base = from.startsWith("@/")
+    ? `src/${from.slice(2)}`
+    : from.startsWith(".")
+      ? path.posix.normalize(path.posix.join(path.posix.dirname(file), from))
+      : undefined;
+  if (!base?.startsWith("src/")) return undefined;
+  return [base, `${base}.ts`, `${base}/index.ts`].find(
+    (candidate) => read(candidate) !== undefined,
+  );
+}
+
+function exportedBody(
+  file: string,
+  name: string,
+  read: SourceReader,
+  seen = new Set<string>(),
+): string {
+  const key = `${file}:${name}`;
+  if (seen.has(key)) return "";
+  seen.add(key);
+  const raw = read(file);
+  if (!raw) return "";
+  const body = functionBody(raw, name);
+  if (
+    body &&
+    new RegExp(`^export (?:async )?function ${name}\\(`, "m").test(stripCommentsAndStrings(raw))
+  )
+    return body;
+  const link = namedLink(raw, name, "export");
+  const next = link && linkedSource(file, link.from, read);
+  return link && next ? exportedBody(next, link.name, read, seen) : "";
+}
+
+/** A sweep plus the exact local/imported helpers it directly calls; neighbors never supply proof. */
+export function erasureSweepText(file: string, sweep: string, read: SourceReader): string {
+  const raw = read(file);
+  if (!raw) return "";
+  const body = functionBody(raw, sweep);
+  const parts = [body];
+  for (const name of new Set(
+    [...body.matchAll(/\b([a-z][A-Za-z0-9]*)\(/g)].map((m) => m[1] as string),
+  )) {
+    if (name === sweep) continue;
+    const local = functionBody(raw, name);
+    if (local) {
+      parts.push(local);
+      continue;
+    }
+    const link = namedLink(raw, name, "import");
+    const next = link && linkedSource(file, link.from, read);
+    if (link && next) parts.push(exportedBody(next, link.name, read));
+  }
+  return parts.join("\n");
 }

@@ -132,7 +132,6 @@
   "src/db/waivers-requests.ts": 94.05,
   "src/db/waivers-templates.ts": 78.43,
   "src/db/waivers-trip-status.ts": 50,
-  "src/db/waivers.ts": 100,
   "src/features/today/today-roll-call-rows.ts": 81.48,
   "src/features/anonymization/rules.ts": 100,
   "src/features/cert-scan/rules.ts": 85.1,

@@ -147,11 +147,12 @@ describe("reads that look filtered but are not (security review of layer 2, S2)"
 });
 
 describe("which files are guarded", () => {
-  it("guards source outside src/db, tests aside", () => {
+  it("guards application and feature source, tests aside", () => {
     expect(guardsFile("src/app/s/[shopSlug]/page.tsx")).toBe(true);
     expect(guardsFile("src/features/weekly-digest/digest.ts")).toBe(true);
     expect(guardsFile("src/lib/catch-up.ts")).toBe(true);
-    expect(guardsFile("src/features/today-catch-up/store.ts")).toBe(false);
+    expect(guardsFile("src/features/today-catch-up/store.ts")).toBe(true);
+    expect(guardsFile("src/features/today-catch-up/store.test.ts")).toBe(false);
     expect(guardsFile("src/features/weekly-digest/digest.test.ts")).toBe(false);
     expect(guardsFile("src/app/page.css")).toBe(false);
   });

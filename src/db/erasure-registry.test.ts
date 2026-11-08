@@ -8,6 +8,7 @@ import { schemaTableNameOf } from "@/test/schema-tables";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { ERASURE_KEEPS } from "../test/substrate-fixtures/db/erasure-coverage-keeps.test-support";
 import {
+  erasureSweepText,
   registryDeletesRun,
   stripCommentsAndStrings,
 } from "../test/substrate-fixtures/db/erasure-source.test-support";
@@ -22,43 +23,17 @@ import { bookings, people, personRoles } from "./schema";
 
 const ctx = fileScopedShopContext({ history: true });
 
-/** The body of the function `name` in `source` (comments and strings stripped), or "". */
-function functionBody(source: string, name: string): string {
-  const start = source.search(new RegExp(`^(?:export )?async function ${name}\\(`, "m"));
-  return start < 0 ? "" : source.slice(start, source.indexOf("\n}\n", start));
-}
-
-/**
- * The text an `anonymize.ts` sweep runs: its own body, plus, one step out, the
- * body of each function it calls, local or imported from a sibling module
- * (`scrubTrainingPlans` writes through `forgetTrainingPlanPeople`). Only those
- * functions, never the whole sibling file, so a helper cannot lend a sweep the
- * writes of its neighbours.
- */
+/** Follow the sweep's actual module location, including named feature contracts. */
 function sweepText(sweep: string): string {
-  const raw = readFileSync("src/features/anonymize/store.ts", "utf8");
-  const source = stripCommentsAndStrings(raw);
-  const body = functionBody(source, sweep);
-  const parts = [body];
-  for (const name of new Set(
-    [...body.matchAll(/\b([a-z][A-Za-z0-9]*)\(/g)].map((m) => m[1] as string),
-  )) {
-    if (name === sweep) continue;
-    const local = functionBody(source, name);
-    if (local) {
-      parts.push(local);
-      continue;
+  return erasureSweepText("src/features/anonymize/store.ts", sweep, (file) => {
+    try {
+      return readFileSync(file, "utf8");
+    } catch (error) {
+      if (["ENOENT", "EISDIR"].includes((error as NodeJS.ErrnoException).code ?? ""))
+        return undefined;
+      throw error;
     }
-    const from = raw.match(
-      new RegExp(`import \\{[^}]*\\b${name}\\b[^}]*\\} from "\\./([a-z0-9-]+)";`),
-    )?.[1];
-    if (from) {
-      parts.push(
-        functionBody(stripCommentsAndStrings(readFileSync(`src/db/${from}.ts`, "utf8")), name),
-      );
-    }
-  }
-  return parts.join("\n");
+  });
 }
 
 /** The schema identifiers (`waiverRecords`) a database table name is exported as. */
@@ -302,5 +277,71 @@ describe("the registry's erase fates", () => {
     // below proves the loop left somebody else's rows, not that there were none.
     const otherLeft = await left(other.personId);
     expect(Object.entries(otherLeft).filter(([, n]) => n === 0)).toEqual([]);
+  });
+});
+
+describe("sweep helper write proof", () => {
+  const entry = "src/features/anonymize/store.ts";
+  const fixture = new Map([
+    [
+      entry,
+      `import { forgetPeople as clearPeople } from "@/features/plans";
+async function scrubPlans(tx) {
+  await clearPeople(tx);
+}
+`,
+    ],
+    ["src/features/plans/index.ts", 'export { clearPlans as forgetPeople } from "./store";'],
+    [
+      "src/features/plans/store.ts",
+      `export async function clearPlans(tx) {
+  await tx.update(bookings).set({ instructor: null }).where(eq(bookings.personId, id));
+}
+export async function unusedNeighbor(tx) {
+  await tx.delete(tripAssignments).where(eq(tripAssignments.personId, id));
+}
+`,
+    ],
+  ]);
+  const proof = (sources: Map<string, string>) =>
+    erasureSweepText(entry, "scrubPlans", (file) => sources.get(file));
+
+  it("follows the called named helper through its feature contract, including aliases", () => {
+    const text = proof(fixture);
+    expect(text).toContain(".update(bookings)");
+    expect(text).toContain("bookings.personId");
+    expect(text).not.toContain(".delete(tripAssignments)");
+  });
+
+  it("does not borrow a neighboring writer when the selected helper stops erasing", () => {
+    const broken = new Map(fixture);
+    broken.set(
+      "src/features/plans/store.ts",
+      `export async function clearPlans(tx) {
+  return [];
+}
+export async function unusedNeighbor(tx) {
+  await tx.update(bookings).where(eq(bookings.personId, id));
+}
+`,
+    );
+    expect(proof(broken)).not.toContain(".update(bookings)");
+  });
+
+  it("does not credit an uncalled import, a quoted call, or a re-export cycle", () => {
+    const uncalled = new Map(fixture);
+    uncalled.set(
+      entry,
+      `import { forgetPeople as clearPeople } from "@/features/plans";
+async function scrubPlans(tx) {
+  // await clearPeople(tx);
+  const example = "clearPeople(tx)";
+}
+`,
+    );
+    expect(proof(uncalled)).not.toContain(".update(bookings)");
+    const cyclic = new Map(fixture);
+    cyclic.set("src/features/plans/index.ts", 'export { forgetPeople } from "./index";');
+    expect(proof(cyclic)).not.toContain(".update(bookings)");
   });
 });
