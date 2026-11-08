@@ -527,9 +527,9 @@ describe("the rail keeps the current row in view", () => {
    * under it: on Trip tags the bottom half of "Trip packing
    * checklist" showed under "YOUR SHOP", a state only a hand could have left
    * the rail in. The rail finishes the move on a row's edge: the first row
-   * the label would cut starts where a row starts under its label at rest.
+   * the label would cut starts at the label's bottom edge.
    */
-  it("lands a whole row under the label stuck at the box's top", () => {
+  it.each([0, 8, 16])("lands a whole row under the stuck label with a %ipx margin", (margin) => {
     // The deepest sub-route on the map, far below the box's fold.
     const deepest = railGroups()
       .flatMap((group) => group.rows)
@@ -574,7 +574,14 @@ describe("the rail keeps the current row in view", () => {
       }
       return rect(0, 0);
     });
-    renderRail();
+    render(
+      <>
+        {/* Include the desktop mb-2 gap (8px), no gap, and a larger gap.
+            Tailwind is absent in jsdom, so supply this part of the layout. */}
+        <style>{`.settings-rail-label { margin-bottom: ${margin}px; }`}</style>
+        {rail()}
+      </>,
+    );
 
     const top = scroller().scrollTop;
     expect(top, "the box never moved").toBeGreaterThan(0);

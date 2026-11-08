@@ -59,7 +59,7 @@ describe("DiveSiteMap's route ends", () => {
     const { container } = render(<DiveSiteMap site={SITE} t={t} />);
     const dots = [...container.querySelectorAll("span.rounded-full")] as HTMLElement[];
     expect(dots).toHaveLength(2);
-    for (const dot of dots) expect(dot.style.scale).toBe(String(1 / (focus?.scale ?? 1)));
+    for (const dot of dots) expect(dot).toHaveStyle({ scale: String(1 / (focus?.scale ?? 1)) });
   });
 });
 

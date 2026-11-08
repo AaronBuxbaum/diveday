@@ -260,7 +260,7 @@ describe("a track too narrow for one line", () => {
     // though no single option is wider than its share.
     const nav = renderInRoom(450);
     expect(nav).not.toHaveClass("grid-flow-col");
-    expect(nav.style.gridTemplateColumns).toBe("repeat(4, minmax(0, 1fr))".replace("4", "3"));
+    expect(nav).toHaveStyle({ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" });
   });
 
   it("lays wrapped options on columns every line shares, balanced across the lines", () => {
@@ -269,7 +269,7 @@ describe("a track too narrow for one line", () => {
     const nav = renderInRoom(300);
     expect(nav).toHaveClass("grid");
     expect(nav).not.toHaveClass("flex");
-    expect(nav.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 1fr))");
+    expect(nav).toHaveStyle({ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" });
     // A grid spans its room; the content-width track's `w-fit` would shrink it.
     expect(nav).not.toHaveClass("w-fit");
   });
@@ -289,7 +289,7 @@ describe("a track too narrow for one line", () => {
   it("never lays a column narrower than its widest option", () => {
     // 150px options in 300px: two columns, never three that would overlap.
     const nav = renderInRoom(300, 150);
-    expect(nav.style.gridTemplateColumns).toBe("repeat(2, minmax(0, 1fr))");
+    expect(nav).toHaveStyle({ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" });
   });
 
   it("leaves the track's measuring styles behind it", () => {
