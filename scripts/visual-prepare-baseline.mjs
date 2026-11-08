@@ -92,6 +92,11 @@ async function fetchBaseline({ bucket, key, version, fetchImpl, actualDir, selec
   if (version && version !== reportVersion) {
     throw new Error("baseline report version does not match the published marker");
   }
+  // PR reports intentionally omit passed PNGs. Their uploaded subset is useful for review,
+  // but cannot stand in for the complete baseline of a later stacked layer.
+  if (report.partialActual === true) {
+    throw new MissingBaselineObject(`baseline ${key} publishes only a partial screenshot set`);
+  }
   const names = reportNames(report);
   const plan = actualDir
     ? planBaselineReuse({
