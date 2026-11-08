@@ -240,7 +240,7 @@ export default async function ManageTripPage({
           badge={
             <TripHeaderBadges {...{ trip, sailed, tabsCopy, t }} stage={shown?.stage ?? null} />
           }
-          extraMeta={<TripDeskConnectivity active={Boolean(desk)} t={t} />}
+          extraMeta={desk ? <TripDeskConnectivity active t={t} /> : undefined}
           price={tripHeaderPrice(trip, shop.currency, locale, t)}
           daySpan={tripHeaderDaySpan(scheduleDays, locale, shop.timezone, t)}
           // A full boat's wait list stays in the roster's Add band.
