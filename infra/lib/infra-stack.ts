@@ -3245,6 +3245,28 @@ exports.handler = async (event) => {
     );
     cdkDiffRole.addToPolicy(
       new iam.PolicyStatement({
+        sid: "PassExecutionRoleForDiff",
+        actions: ["iam:PassRole"],
+        resources: bootstrapRoleArns("cfn-exec-role"),
+        conditions: {
+          StringEquals: { "iam:PassedToService": "cloudformation.amazonaws.com" },
+        },
+      }),
+    );
+    // CDK inspects bootstrap outputs before publishing the template. This is
+    // read-only and does not grant change-set operations on the toolkit stack.
+    cdkDiffRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadBootstrapStackForDiff",
+        actions: ["cloudformation:DescribeStacks"],
+        resources: deploymentRegions.map(
+          (region) =>
+            `arn:${this.partition}:cloudformation:${region}:${this.account}:stack/CDKToolkit/*`,
+        ),
+      }),
+    );
+    cdkDiffRole.addToPolicy(
+      new iam.PolicyStatement({
         sid: "ReadBootstrapVersion",
         actions: ["ssm:GetParameter"],
         resources: bootstrapVersionParameterArns,

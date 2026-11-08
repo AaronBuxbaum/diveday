@@ -161,11 +161,14 @@ jobs:
       # is a quiet passthrough here. `tee` keeps the run log readable while the
       # file is what the next steps and the artifact read; `shell: bash` is
       # what turns on `pipefail`, so a failing `cdk diff` still fails the step.
+      # The destructive-change check below depends on accurate replacement
+      # information. Refuse a template-only fallback, and include the reason
+      # change-set creation failed in the run log and uploaded diff artifact.
       - name: cdk diff
         id: cdk-diff
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         shell: bash
-        run: pnpm infra:diff --no-color 2>&1 | tee cdk-diff.txt
+        run: pnpm infra:diff --method=change-set --verbose --no-color 2>&1 | tee cdk-diff.txt
       # **One resource type, and it is here because the type has no
       # non-destructive edit at all.** `Budget` -- the nested object holding
       # the limit and the notifications -- is a Replacement-only property of
