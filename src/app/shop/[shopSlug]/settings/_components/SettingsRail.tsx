@@ -285,8 +285,8 @@ function revealCurrentRow(scroller: HTMLElement) {
  * wherever the arithmetic fell, and the label stuck at its top cut whichever
  * row was passing under it — half of "Trip packing checklist" under "YOUR
  * SHOP", a state only a hand could have left the rail in. So the first row the
- * stuck label would cut is brought down to where a row starts under its label
- * at rest, the label's own bottom margin below it. That is less than a row, so
+ * stuck label would cut is brought down to the label's bottom edge. Adding
+ * its margin would expose the preceding row in that gap. This is less than a row, so
  * the centred row stays in the box.
  */
 function settleOnRowEdge(scroller: HTMLElement, box: DOMRect) {
@@ -295,11 +295,10 @@ function settleOnRowEdge(scroller: HTMLElement, box: DOMRect) {
   );
   if (!stuck) return;
   const labelBottom = stuck.getBoundingClientRect().bottom;
-  const edge = labelBottom + (Number.parseFloat(getComputedStyle(stuck).marginBottom) || 0);
   const cut = Array.from(scroller.querySelectorAll("li"))
     .map((item) => item.getBoundingClientRect())
     .find((item) => item.bottom > labelBottom);
-  if (cut && cut.top < edge) scroller.scrollTop -= edge - cut.top;
+  if (cut && cut.top < labelBottom) scroller.scrollTop -= labelBottom - cut.top;
 }
 
 function RailLink({

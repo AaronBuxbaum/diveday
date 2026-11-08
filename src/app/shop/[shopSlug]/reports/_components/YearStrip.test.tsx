@@ -124,7 +124,8 @@ describe("YearStrip", () => {
     });
     const { container } = render(<YearStrip cells={month.strip} copy={COPY} row={{ days: 30 }} />);
     const grid = container.firstElementChild as HTMLElement;
-    expect(grid.style.gridTemplateColumns).toBe("repeat(30, minmax(0, 1fr))");
+    // Compare CSS semantics, not the DOM serializer's spelling of zero lengths.
+    expect(grid).toHaveStyle({ gridTemplateColumns: "repeat(30, minmax(0, 1fr))" });
     expect(grid).toHaveAttribute("aria-hidden", "true");
     // April 1 (a Wednesday) to today, every one a day: padding is the weeks' shape only.
     const squares = [...grid.querySelectorAll("span")];

@@ -149,7 +149,7 @@ describe("LanguagePicker viewport placement", () => {
     const panel = await openPicker();
     expect(panel).toHaveAttribute("data-side", "below");
     expect(panel.style.top).toBe("48px");
-    expect(panel.style.transformOrigin).toBe("top right");
+    expect(panel).toHaveStyle({ transformOrigin: "top right" });
   });
 
   it("flips above before paint when the lower side would clip it", async () => {
@@ -157,7 +157,7 @@ describe("LanguagePicker viewport placement", () => {
     const panel = await openPicker();
     expect(panel).toHaveAttribute("data-side", "above");
     expect(panel.style.top).toBe("-124px");
-    expect(panel.style.transformOrigin).toBe("bottom right");
+    expect(panel).toHaveStyle({ transformOrigin: "bottom right" });
   });
 
   it("caps a longer list to the larger side and keeps its content scrollable", async () => {
