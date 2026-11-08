@@ -7,6 +7,7 @@ import {
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_ERASED,
   WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
+  WAIVER_INTEGRITY_VERSION_MOVED,
 } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
@@ -111,6 +112,83 @@ async function readRecord(db: AppDb, id: string) {
 }
 
 describe("eraseGuardianEmail", () => {
+  it("lists each mailbox once across refiled releases, ignoring blank addresses", async () => {
+    const { db, shop, roster, owner } = await fixtures();
+    const [first, second] = roster;
+    if (!first || !second) throw new Error("seats missing");
+    const id = await coSignedRelease(db, shop.id, first, "Jonas@Example.com");
+    await coSignedRelease(db, shop.id, second, "jonas@example.com");
+    await db.transaction((tx) =>
+      refileWaiverRecords(tx, {
+        shopId: shop.id,
+        fromPersonId: first.person.id,
+        toPersonId: second.person.id,
+        actorPersonId: owner,
+        now,
+      }),
+    );
+    const emails = await listGuardianEmails(db, shop.id, second.person.id);
+    expect(emails).toHaveLength(1);
+    expect(emails[0]?.toLowerCase()).toBe("jonas@example.com");
+    await db.update(waiverRecords).set({ guardianEmail: "   " }).where(eq(waiverRecords.id, id));
+    expect(await listGuardianEmails(db, shop.id, second.person.id)).toEqual(["jonas@example.com"]);
+  });
+
+  it("erases an address after a refile and preserves a valid redacted seal", async () => {
+    const { db, shop, roster, owner } = await fixtures();
+    const [first, second] = roster;
+    if (!first || !second) throw new Error("seats missing");
+    const id = await coSignedRelease(db, shop.id, first, "jonas@example.com");
+    await db.transaction((tx) =>
+      refileWaiverRecords(tx, {
+        shopId: shop.id,
+        fromPersonId: first.person.id,
+        toPersonId: second.person.id,
+        actorPersonId: owner,
+        now,
+      }),
+    );
+    expect((await readRecord(db, id)).integrityVersion).toBe(WAIVER_INTEGRITY_VERSION_MOVED);
+    expect(
+      await eraseGuardianEmail(db, {
+        shopId: shop.id,
+        personId: second.person.id,
+        email: "jonas@example.com",
+        actorPersonId: owner,
+        now,
+      }),
+    ).toEqual({ ok: true, erased: 1 });
+    const after = await readRecord(db, id);
+    expect(after.guardianEmail).toBeNull();
+    expect(after.integrityVersion).toBe(WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED);
+    expect(verifyWaiverIntegrity(after)).toBe("valid");
+  });
+
+  it("erases an unsealed address without minting a seal", async () => {
+    const { db, shop, roster, owner } = await fixtures();
+    const [seat] = roster;
+    if (!seat) throw new Error("seat missing");
+    const id = await coSignedRelease(db, shop.id, seat, "jonas@example.com");
+    await db
+      .update(waiverRecords)
+      .set({ integrityHash: null, integrityVersion: null })
+      .where(eq(waiverRecords.id, id));
+    expect(
+      await eraseGuardianEmail(db, {
+        shopId: shop.id,
+        personId: seat.person.id,
+        email: "jonas@example.com",
+        actorPersonId: owner,
+        now,
+      }),
+    ).toEqual({ ok: true, erased: 1 });
+    expect(await readRecord(db, id)).toMatchObject({
+      guardianEmail: null,
+      integrityHash: null,
+      integrityVersion: null,
+    });
+  });
+
   it("takes the address off and leaves a release that verifies as redacted", async () => {
     const { db, shop, roster, owner } = await fixtures();
     const [seat] = roster;

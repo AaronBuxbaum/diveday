@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { defineConfig, devices } from "@playwright/test";
 import { chromiumLaunchOptions } from "./e2e/browser";
 import {
@@ -18,7 +18,7 @@ import {
 // e2e/visual-recap.spec.ts mints a signed recap token in this process (signRecapToken)
 // and a worker server verifies it. Pin one resolved value into the environment
 // before anything.
-process.env.AUTH_SECRET ??= "diveday-e2e-secret";
+process.env.AUTH_SECRET ??= randomBytes(32).toString("base64");
 // The runner creates this once; its workers inherit the same atlas run.
 if (process.env.PIXEL_PROBE === "1") {
   process.env.PIXEL_PROBE_RUN_ID ??= `${Date.now()}-${randomUUID()}`;
@@ -62,10 +62,8 @@ const serverEnv = {
   // above, ignores it whenever a real DATABASE_URL is set.
   DIVEDAY_RATE_LIMIT_DISABLED: "1",
   AUTH_TRUST_HOST: "true",
-  AUTH_SECRET: process.env.AUTH_SECRET ?? "diveday-e2e-secret",
-  // Booking links refuse a signing secret under 32 bytes, and the AUTH_SECRET
-  // pin above is shorter (recap tokens minted in this process depend on its
-  // value), so the e2e servers sign booking links under their own v2 key
+  AUTH_SECRET: process.env.AUTH_SECRET,
+  // The e2e servers sign booking links under their own v2 key
   // (ADR 20261104-derived-booking-link-tokens). A fixed test-only value.
   BOOKING_LINK_SECRET:
     process.env.BOOKING_LINK_SECRET ?? "v2:diveday-e2e-booking-link-secret-not-for-production",
