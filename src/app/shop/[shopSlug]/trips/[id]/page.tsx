@@ -333,6 +333,7 @@ export default async function ManageTripPage({
               }
             />
             <ConservationPanel
+              shopSlug={shopSlug}
               panel={manifest.conservation}
               tripId={tripId}
               t={t}
@@ -390,14 +391,13 @@ export default async function ManageTripPage({
               foldLabel={(count) => t("trips.pulse.needsYou", { count })}
             />
 
-            {coursePulse ? (
-              <CoursePulse
-                pulse={coursePulse}
-                tripId={tripId}
-                locale={locale}
-                timeZone={shop.timezone}
-              />
-            ) : null}
+            <CoursePulse
+              shopSlug={shopSlug}
+              pulse={coursePulse}
+              tripId={tripId}
+              locale={locale}
+              timeZone={shop.timezone}
+            />
 
             <TripRosterContent
               context={{

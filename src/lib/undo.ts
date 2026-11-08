@@ -28,7 +28,13 @@ import { isUuid } from "./uuid";
  * so each payload is a strict schema, every id a uuid, and the inverse re-runs
  * the same live gate as the removal it reverses.
  */
-export const UNDO_KINDS = ["diver-card", "diver-note", "diver-removal"] as const;
+export const UNDO_KINDS = [
+  "diver-card",
+  "diver-note",
+  "diver-removal",
+  "trip-conservation",
+  "course-teaching-note",
+] as const;
 export type UndoKind = (typeof UNDO_KINDS)[number];
 
 /** Where a diver's removal was undone from, so the answer lands on the same page. */
@@ -37,8 +43,24 @@ export const UNDO_REMOVAL_FROM = ["record", "roster"] as const;
 /** Any uuid the rest of the app accepts (`isUuid`), not only an RFC version zod's `z.uuid()` knows. */
 const id = () => z.string().refine(isUuid);
 const person = id();
+const revision = () =>
+  z
+    .string()
+    .regex(/^[1-9][0-9]*$/)
+    .refine((value) => Number.isSafeInteger(Number(value)) && Number(value) <= 2_147_483_647);
 
 const UNDO_PAYLOADS = {
+  "trip-conservation": z.strictObject({
+    undo: z.literal("trip-conservation"),
+    undoTrip: id(),
+    undoRecord: id(),
+    undoRevision: revision(),
+  }),
+  "course-teaching-note": z.strictObject({
+    undo: z.literal("course-teaching-note"),
+    undoTrip: id(),
+    undoRevision: revision(),
+  }),
   /** A level, specialty or nitrox card archived from the record (`deleteCertificationAction`). */
   "diver-card": z.strictObject({
     undo: z.literal("diver-card"),
@@ -64,6 +86,8 @@ const undoOffer = z.discriminatedUnion("undo", [
   UNDO_PAYLOADS["diver-card"],
   UNDO_PAYLOADS["diver-note"],
   UNDO_PAYLOADS["diver-removal"],
+  UNDO_PAYLOADS["trip-conservation"],
+  UNDO_PAYLOADS["course-teaching-note"],
 ]);
 
 /** One offer of Undo: the kind and the fields its inverse needs. */
@@ -71,7 +95,17 @@ export type UndoOffer = z.infer<typeof undoOffer>;
 export type UndoOfferOf<K extends UndoKind> = Extract<UndoOffer, { undo: K }>;
 
 /** The query params (and the toast's hidden fields) that carry an offer. */
-export const UNDO_PARAMS = ["undo", "undoPerson", "undoCard", "cardType", "undoNote", "undoFrom"];
+export const UNDO_PARAMS = [
+  "undo",
+  "undoPerson",
+  "undoCard",
+  "cardType",
+  "undoNote",
+  "undoFrom",
+  "undoTrip",
+  "undoRecord",
+  "undoRevision",
+];
 
 /**
  * The offer as flat strings, for the landing's query and the toast's hidden

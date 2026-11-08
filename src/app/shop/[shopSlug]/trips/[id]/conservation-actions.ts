@@ -7,11 +7,16 @@ import { type ConservationResult, recordTripConservation } from "@/db/trip-conse
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
+export type ConservationActionResult = ConservationResult & {
+  targetId?: string;
+  undo?: { id: string; revision: number };
+};
+
 export async function recordConservationAction(
   tripId: string,
-  _previous: ConservationResult | null,
+  _previous: ConservationActionResult | null,
   form: FormData,
-): Promise<ConservationResult> {
+): Promise<ConservationActionResult> {
   const session = await requireStaffSession();
   const id = form.get("id");
   const operation = form.get("operation") ?? "record";
@@ -19,10 +24,10 @@ export async function recordConservationAction(
   if (
     !z.uuid().safeParse(tripId).success ||
     (id && !z.uuid().safeParse(id).success) ||
-    (operation !== "record" && operation !== "delete") ||
+    (operation !== "record" && operation !== "delete" && operation !== "restore") ||
     (id && !z.coerce.number().int().positive().safeParse(revision).success)
   )
-    return { ok: false, reason: "invalid" };
+    return { ok: false, reason: "invalid", targetId: typeof id === "string" ? id : undefined };
   const result = await recordTripConservation(await getDb(), {
     shopId: session.user.shopId,
     personId: session.user.personId,
@@ -39,5 +44,11 @@ export async function recordConservationAction(
     revalidatePath("/ready/[token]", "page");
     revalidatePath("/recap/[token]", "page");
   }
-  return result;
+  return {
+    ...result,
+    targetId: typeof id === "string" ? id : undefined,
+    ...(result.ok && operation === "delete" && typeof id === "string"
+      ? { undo: { id, revision: Number(revision) + 1 } }
+      : {}),
+  };
 }

@@ -182,7 +182,9 @@ export default async function DiverDetailPage({
   // offers are drawn here.
   const offered = readUndoOffer(query);
   const undo =
-    offered?.undoPerson === personId &&
+    offered &&
+    "undoPerson" in offered &&
+    offered.undoPerson === personId &&
     ((offered.undo === "diver-card" && notice === "card-deleted") ||
       (offered.undo === "diver-note" && notice === "note-deleted"))
       ? offered

@@ -16,7 +16,7 @@ import { checkoutSeatTerms } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
-import { connectionForRoute } from "@/lib/observability/render-connection";
+import { connectionForRoute } from "@/lib/observability";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicTripPath } from "@/lib/public-routes";
 import { unionRequirements } from "@/lib/requirement";

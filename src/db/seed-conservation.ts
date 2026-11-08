@@ -1,23 +1,26 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, lt } from "drizzle-orm";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { bookings, tripConservation, trips } from "./schema";
-import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
-import { liveTrip } from "./trips-live";
+import { tripConservation, trips } from "./schema";
+import { liveTrip, notRehearsal } from "./trips-live";
 
-/** One recorded cleanup on the demo recap; no readiness or boarding rows change. */
+/** One recorded cleanup on a returned reef departure; no readiness or boarding rows change. */
 export async function seedConservation(db: DbExecutor, shopId: string, recorderId: string) {
   const [trip] = await db
     .select({ id: trips.id, endsAt: trips.endsAt })
     .from(trips)
-    .innerJoin(bookings, eq(bookings.tripId, trips.id))
     .where(
       and(
         eq(trips.shopId, shopId),
-        eq(bookings.shopId, shopId),
-        eq(bookings.id, DEMO_RECAP_BOOKING_ID),
+        eq(trips.title, "Two-Tank Reef — Molasses & French"),
+        eq(trips.status, "scheduled"),
+        lt(trips.endsAt, new Date(nowDate().getTime() - DAY_MS)),
+        notRehearsal(),
         liveTrip(),
       ),
     )
+    // diveday:allow-time-id-order: seed selects one matching history departure; no ordered list is shown.
+    .orderBy(desc(trips.endsAt), desc(trips.id))
     .limit(1);
   if (!trip) return;
   const [existing] = await db

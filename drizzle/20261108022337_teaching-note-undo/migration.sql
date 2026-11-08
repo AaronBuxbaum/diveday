@@ -1,0 +1,2 @@
+ALTER TABLE "trips" ADD COLUMN "course_teaching_note_revision" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "trips" ADD COLUMN "course_teaching_note_deleted_at" timestamp with time zone;

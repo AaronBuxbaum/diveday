@@ -974,7 +974,8 @@
       "cancelled": "This departure was canceled.",
       "not_found": "This departure is no longer available.",
       "not_a_course_session": "This departure has no course."
-    }
+    },
+    "undoFailed": "This note could not be restored. It may have changed, or Undo is no longer available."
   },
   "conservation": {
     "heading": "Conservation records",
@@ -988,7 +989,6 @@
     "save": "Save changes",
     "add": "Record an action",
     "delete": "Delete",
-    "confirmDelete": "Delete this conservation record?",
     "saved": "Conservation record saved.",
     "edit": "Edit record",
     "recorded": "Recorded {when} · {zone}",
@@ -1003,6 +1003,8 @@
       "unavailable": "This departure or feature is no longer available.",
       "not_returned": "Record actions after the departure has returned.",
       "stale": "This record changed. Refresh the page before editing it again."
-    }
+    },
+    "deleted": "Conservation record deleted.",
+    "undoFailed": "This record could not be restored. It may have changed, or Undo is no longer available."
   }
 }

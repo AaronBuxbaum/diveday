@@ -424,7 +424,7 @@ export async function getRecapPageState(
   const leftAtDock = dock.then(leftAtTheDockOf);
   const [bySeat, loaded] = await Promise.all([
     recapClosedBySeat(db, row, bookingId, now, leftAtDock),
-    loadRecapPageData(db, row, bookingId, dock),
+    loadRecapPageData(db, row, bookingId, dock, now),
   ]);
   if (bySeat) return closedRecapState(bySeat, shop);
   if (!loaded) return { kind: "dead", shop };
@@ -816,6 +816,7 @@ async function loadRecapPageData(
   row: RecapRow,
   bookingId: string,
   dock: Promise<DockEvidence>,
+  now: Date,
 ): Promise<{
   data: Omit<RecapPageData, "tip">;
   latestTip: Awaited<ReturnType<typeof getLatestTipForBooking>>;
@@ -837,6 +838,7 @@ async function loadRecapPageData(
     sessionCertifications,
     nextStepAuthors,
     tappedSightings,
+    conservation,
     dockEvidence,
   ] = await Promise.all([
     getTripWithBooked(db, row.shopId, row.tripId),
@@ -923,6 +925,7 @@ async function loadRecapPageData(
           .limit(1)
       : Promise.resolve([]),
     listTripSightings(db, row.shopId, row.tripId),
+    tripConservationFacts(db, row.shopId, row.tripId, now),
     dock,
   ]);
   if (!trip) return null;
@@ -1037,7 +1040,7 @@ async function loadRecapPageData(
     (nextStepAuthorRow?.consentAt && nextStepAuthorRow.publicName?.trim()) || null;
 
   const data: Omit<RecapPageData, "tip"> = {
-    conservation: await tripConservationFacts(db, row.shopId, row.tripId),
+    conservation,
     shop: {
       id: row.shopId,
       name: row.shopName,

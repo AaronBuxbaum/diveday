@@ -96,6 +96,7 @@ describe("the Features page's save", () => {
       "hotelPickup",
       "publicConditions",
       "fieldGuide",
+      "conservation",
       "dateRequests",
       "privateCharters",
       "lastMinuteList",
@@ -118,6 +119,7 @@ describe("the Features page's save", () => {
       "weekOutReminder",
       "helpRequests",
       "crewSchedule",
+      "coursePulse",
       "workOrders",
       "lostFound",
       "claudeSuggestions",
@@ -165,6 +167,8 @@ describe("the Features page's save", () => {
     );
     expect(await getShopById(db, shop.id)).toMatchObject({
       reviewsEnabled: false,
+      conservationEnabled: false,
+      coursePulseEnabled: false,
       tipsEnabled: false,
       dateRequestsEnabled: true,
       lastMinuteListEnabled: true,
@@ -184,6 +188,8 @@ describe("the Features page's save", () => {
     await redirectedTo(() => saveFeaturesAction(allOn()));
     expect(await getShopById(db, shop.id)).toMatchObject({
       reviewsEnabled: true,
+      conservationEnabled: true,
+      coursePulseEnabled: true,
       tipsEnabled: true,
       padiChecksEnabled: true,
       crewScheduleEnabled: true,

@@ -14,9 +14,11 @@ import {
   trips,
 } from "@/db/schema";
 import { DEMO_RECAP_BOOKING_ID } from "@/db/seed";
+import { recordTripConservation } from "@/db/trip-conservation";
 import { listStaff } from "@/db/trips";
 import { MINUTE_MS } from "@/lib/clock";
 import { FactRefused } from "./refusal";
+import { sendADepartureOut } from "./send-a-departure-out";
 
 /**
  * **The demo recap's day, in the states only a crew's record can put it in.**
@@ -256,4 +258,25 @@ export async function findTheOtherSharedPhoto(db: AppDb, shopId: string) {
     .limit(1);
   if (!photo) throw new FactRefused("no_secondary_photo", 404);
   return { bookingId: photo.bookingId };
+}
+
+/** A returned pinned recap with a measured fact, only when a test requests it. */
+export async function returnTheConservationRecap(db: AppDb, shopId: string, now: Date) {
+  const booking = await recapBooking(db, shopId);
+  await sendADepartureOut(db, shopId, { tripId: booking.tripId, minutesAgo: 2 * 24 * 60 }, now);
+  const result = await recordTripConservation(db, {
+    shopId,
+    tripId: booking.tripId,
+    personId: await firstStaff(db, shopId),
+    operation: "record",
+    fact: {
+      kind: "litter_kg",
+      quantity: 1.8,
+      location: "Molasses Reef",
+      note: "Discarded fishing gear and plastic collected by the crew.",
+    },
+    now,
+  });
+  if (!result.ok) throw new FactRefused(result.reason);
+  return { tripId: booking.tripId };
 }

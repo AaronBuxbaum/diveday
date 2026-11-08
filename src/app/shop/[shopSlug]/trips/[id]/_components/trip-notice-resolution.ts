@@ -7,6 +7,7 @@ import { tripGateBinding, verifyTripAdmissionGate } from "@/lib/trip-admission-g
 import { DETAILS_SAVE_NOTICES } from "./details-save-notices";
 import { MOVE_SEAT_NOTICES } from "./move-seat-notices";
 import { DETAILS_FORMS, ROSTER_FORMS } from "./trip-notice-tabs";
+import { TRIP_UNDO_NOTICES } from "./trip-undo-notices";
 
 /**
  * One entry per notice code, carrying its own tone, message key(s), and the
@@ -42,6 +43,7 @@ const NOTICE_KEYS: Record<
     onKey?: StaffMessageKey;
   }
 > = {
+  ...TRIP_UNDO_NOTICES,
   saved: { form: "details", tone: "success", key: "trips.notices.saved" },
   "saved-fly-safe-unreached": {
     form: "details",

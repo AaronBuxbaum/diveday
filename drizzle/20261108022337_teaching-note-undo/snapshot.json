@@ -1,0 +1,82 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7a88f297-4af4-4db9-9379-83ccce557b2c",
+  "prevIds": [
+    "7a62b6d4-d6d5-4776-b017-43a8c6042a5c",
+    "9a34cf15-11f9-4cff-af28-1448946f2e42"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trips",
+        "course_teaching_note_revision"
+      ],
+      "writes": [
+        "s|col|public.trips.course_teaching_note_revision",
+        "n|col|public.trips.course_teaching_note_revision",
+        "e|col|public.trips.course_teaching_note_revision"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trips",
+        "course_teaching_note_deleted_at"
+      ],
+      "writes": [
+        "s|col|public.trips.course_teaching_note_deleted_at",
+        "n|col|public.trips.course_teaching_note_deleted_at",
+        "e|col|public.trips.course_teaching_note_deleted_at"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "course_teaching_note_revision",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "course_teaching_note_deleted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { and, eq, isNull, or, sql } from "drizzle-orm";
-import { nowDate } from "@/lib/clock";
+import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { COURSE_TEACHING_NOTE_MAX, coursePrepItems } from "@/lib/course-pulse";
 import { readLearningMaterials } from "@/lib/courses";
 import { seatName } from "@/lib/held-seat";
@@ -86,6 +86,7 @@ export async function getCoursePulse(
   const [privateNote] = await db
     .select({
       note: trips.courseTeachingNote,
+      deletedAt: trips.courseTeachingNoteDeletedAt,
       at: trips.courseTeachingNoteAt,
       by: trips.courseTeachingNoteByPersonId,
     })
@@ -103,15 +104,15 @@ export async function getCoursePulse(
   return {
     rows,
     complete: rows.filter((row) => row.items.length === 0).length,
-    note: privateNote.note,
-    noteAt: privateNote.at,
-    noteBy: author?.fullName ?? null,
+    note: privateNote.deletedAt ? null : privateNote.note,
+    noteAt: privateNote.deletedAt ? null : privateNote.at,
+    noteBy: privateNote.deletedAt ? null : (author?.fullName ?? null),
   };
 }
 
 export type CoursePulse = NonNullable<Awaited<ReturnType<typeof getCoursePulse>>>;
 export type CourseTeachingNoteResult =
-  | { ok: true; note: string | null }
+  | { ok: true; note: string | null; deletedRevision?: number }
   | {
       ok: false;
       reason:
@@ -134,6 +135,7 @@ export async function recordCourseTeachingNote(
     personId: string;
     note: string;
     expectedNote: string | null;
+    restoreRevision?: number;
   },
 ): Promise<CourseTeachingNoteResult> {
   const [trip] = await db
@@ -142,6 +144,9 @@ export async function recordCourseTeachingNote(
       courseId: trips.courseId,
       status: trips.status,
       enabled: shops.coursePulseEnabled,
+      note: trips.courseTeachingNote,
+      noteDeletedAt: trips.courseTeachingNoteDeletedAt,
+      noteRevision: trips.courseTeachingNoteRevision,
     })
     .from(trips)
     .innerJoin(shops, eq(shops.id, trips.shopId))
@@ -154,25 +159,50 @@ export async function recordCourseTeachingNote(
   }
   if (!trip.courseId) return { ok: false, reason: "not_a_course_session" };
   if (trip.status === "cancelled") return { ok: false, reason: "cancelled" };
-  const note = input.note.trim() || null;
+  const now = nowDate();
+  const restoring = input.restoreRevision !== undefined;
+  if (
+    restoring &&
+    (!trip.noteDeletedAt ||
+      !trip.note ||
+      trip.noteRevision !== input.restoreRevision ||
+      now.getTime() - trip.noteDeletedAt.getTime() > 15 * MINUTE_MS)
+  )
+    return { ok: false, reason: "changed" };
+  const note = restoring ? trip.note : input.note.trim() || null;
+  const deleting = !note && !!trip.note && !trip.noteDeletedAt;
+  if (!note && trip.noteDeletedAt && !restoring) return { ok: true, note: null };
   if (note && note.length > COURSE_TEACHING_NOTE_MAX) return { ok: false, reason: "too_long" };
   const [recorded] = await db
     .update(trips)
     .set({
-      courseTeachingNote: note,
-      courseTeachingNoteAt: note ? nowDate() : null,
-      courseTeachingNoteByPersonId: note ? input.personId : null,
+      ...(deleting || restoring
+        ? {}
+        : {
+            courseTeachingNote: note,
+            courseTeachingNoteAt: note ? now : null,
+            courseTeachingNoteByPersonId: note ? input.personId : null,
+          }),
+      courseTeachingNoteDeletedAt: deleting ? now : null,
+      courseTeachingNoteRevision: sql`${trips.courseTeachingNoteRevision} + 1`,
     })
     .where(
       and(
         eq(trips.id, input.tripId),
         eq(trips.shopId, input.shopId),
         eq(trips.courseId, trip.courseId),
-        sql`${trips.courseTeachingNote} is not distinct from ${input.expectedNote}`,
+        restoring
+          ? and(
+              eq(trips.courseTeachingNoteRevision, input.restoreRevision ?? 0),
+              sql`${trips.courseTeachingNoteDeletedAt} is not null`,
+            )
+          : sql`(case when ${trips.courseTeachingNoteDeletedAt} is null then ${trips.courseTeachingNote} else null end) is not distinct from ${input.expectedNote}`,
         eq(trips.status, trip.status),
         liveTrip(),
       ),
     )
-    .returning({ id: trips.id });
-  return recorded ? { ok: true, note } : { ok: false, reason: "changed" };
+    .returning({ id: trips.id, noteRevision: trips.courseTeachingNoteRevision });
+  return recorded
+    ? { ok: true, note, ...(deleting ? { deletedRevision: recorded.noteRevision } : {}) }
+    : { ok: false, reason: "changed" };
 }

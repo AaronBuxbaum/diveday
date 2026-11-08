@@ -48,7 +48,7 @@ describe("private course preparation", () => {
     ).toEqual({ ok: false, reason: "changed" });
     expect(
       await recordCourseTeachingNote(db, { ...input, note: "", expectedNote: pulse?.note ?? null }),
-    ).toEqual({ ok: true, note: null });
+    ).toEqual({ ok: true, note: null, deletedRevision: expect.any(Number) });
     const cleared = await getCoursePulse(db, shop.id, course.id, personId);
     expect([cleared?.note, cleared?.noteAt, cleared?.noteBy]).toEqual([null, null, null]);
   });
@@ -63,6 +63,9 @@ describe("private course preparation", () => {
     });
     expect(await getTripWithBooked(db, shop.id, course.id)).not.toHaveProperty(
       "courseTeachingNote",
+    );
+    expect(await getTripWithBooked(db, shop.id, course.id)).not.toHaveProperty(
+      "courseTeachingNoteDeletedAt",
     );
     await db.update(shops).set({ coursePulseEnabled: false }).where(eq(shops.id, shop.id));
     expect(await getCoursePulse(db, shop.id, course.id, personId)).toBeNull();
@@ -168,4 +171,37 @@ describe("private course preparation", () => {
     await db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, course.id));
     expect(await recordCourseTeachingNote(db, input)).toEqual({ ok: false, reason: "not_found" });
   });
+});
+
+it("undo restores only the retained deleted note and refuses replacement and disabled features", async () => {
+  const { db, shop, course, personId } = await fixture();
+  const input = { shopId: shop.id, tripId: course.id, personId };
+  await recordCourseTeachingNote(db, { ...input, note: "Original lesson", expectedNote: null });
+  const deleted = await recordCourseTeachingNote(db, {
+    ...input,
+    note: "",
+    expectedNote: "Original lesson",
+  });
+  if (!deleted.ok || !deleted.deletedRevision) throw new Error("Expected retained note deletion");
+  const restore = {
+    ...input,
+    note: "",
+    expectedNote: null,
+    restoreRevision: deleted.deletedRevision,
+  };
+  expect((await getCoursePulse(db, shop.id, course.id, personId))?.note).toBeNull();
+  await db.update(shops).set({ coursePulseEnabled: false }).where(eq(shops.id, shop.id));
+  expect(await recordCourseTeachingNote(db, restore)).toEqual({ ok: false, reason: "disabled" });
+  await db.update(shops).set({ coursePulseEnabled: true }).where(eq(shops.id, shop.id));
+  expect(await recordCourseTeachingNote(db, restore)).toEqual({
+    ok: true,
+    note: "Original lesson",
+  });
+  expect(await recordCourseTeachingNote(db, restore)).toEqual({ ok: false, reason: "changed" });
+  await recordCourseTeachingNote(db, { ...input, note: "", expectedNote: "Original lesson" });
+  await recordCourseTeachingNote(db, { ...input, note: "New lesson", expectedNote: null });
+  expect(await recordCourseTeachingNote(db, restore)).toEqual({ ok: false, reason: "changed" });
+  expect((await getCoursePulse(db, shop.id, course.id, personId))?.note).toBe("New lesson");
+  await recordCourseTeachingNote(db, { ...input, note: "", expectedNote: "New lesson" });
+  expect(await recordCourseTeachingNote(db, restore)).toEqual({ ok: false, reason: "changed" });
 });

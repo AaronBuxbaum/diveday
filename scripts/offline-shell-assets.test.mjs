@@ -84,6 +84,63 @@ describe("collectOfflineShellAssets", () => {
     ]);
   });
 
+  it("reads webpack page chunks and only its reachable async imports without entryJSFiles", () => {
+    const page = "static/chunks/app/offline-manifest/page-abcd.js";
+    const child = "static/chunks/child.js";
+    const grandchild = "static/chunks/grandchild.js";
+    build({
+      ...GOOD,
+      manifest: {
+        entryCSSFiles: GOOD.manifest.entryCSSFiles,
+        clientModules: {
+          "/project/src/app/root-client.tsx": {
+            chunks: ["12", "static/chunks/layout.js", "42", page],
+          },
+        },
+      },
+      files: [...GOOD.files, page, child, grandchild, "static/chunks/other-page.js"],
+    });
+    touch(
+      "react-loadable-manifest.json",
+      JSON.stringify({
+        "app/root-client.tsx -> ./child": { files: [child] },
+        "app/child.tsx -> ./grandchild": { files: [grandchild] },
+        "app/other-page.tsx -> ./unrelated": { files: ["static/chunks/other-page.js"] },
+      }),
+    );
+    const assets = collectOfflineShellAssets(dist);
+    expect(assets).toContain(`/_next/${page}`);
+    expect(assets).toContain(`/_next/${child}`);
+    expect(assets).toContain(`/_next/${grandchild}`);
+    expect(assets).not.toContain("/_next/static/chunks/other-page.js");
+  });
+
+  it("refuses webpack output naming another route instead of the offline page", () => {
+    build({
+      ...GOOD,
+      manifest: {
+        clientModules: {
+          "/project/src/app/root-client.tsx": {
+            chunks: ["static/chunks/app/other/page-abcd.js"],
+          },
+        },
+      },
+    });
+    expect(() => collectOfflineShellAssets(dist)).toThrow(/no page chunks/);
+  });
+
+  it("refuses webpack output without its async import manifest", () => {
+    const page = "static/chunks/app/offline-manifest/page-abcd.js";
+    build({
+      ...GOOD,
+      manifest: { clientModules: { "/project/src/app/root-client.tsx": { chunks: [page] } } },
+      files: [...GOOD.files, page],
+    });
+    expect(() => collectOfflineShellAssets(dist)).toThrow(
+      /react-loadable-manifest.json is missing/,
+    );
+  });
+
   it("fails when the route manifest is missing", () => {
     expect(() => collectOfflineShellAssets(dist)).toThrow(/is missing/);
   });

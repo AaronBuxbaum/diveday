@@ -21,5 +21,9 @@ test("course preparation and a private teaching note (light)", async ({ page }) 
     );
   await page.getByRole("button", { name: t("trips.coursePulse.save"), exact: true }).click();
   await expect(page.getByText(t("trips.coursePulse.saved"), { exact: true })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(
+    page.getByRole("status").filter({ hasText: t("trips.coursePulse.saved") }),
+  ).toBeHidden();
   await capture(page, "course-preparation-note", "light");
 });

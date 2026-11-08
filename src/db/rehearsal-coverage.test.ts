@@ -133,9 +133,9 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
     why: "`tripExistsForShop`: the edge refuses a rehearsal's public URL",
   },
   {
-    file: "src/app/s/[shopSlug]/trips/[id]/page.tsx",
+    file: "src/app/s/[shopSlug]/trips/[id]/TripDetail.tsx",
     holds: "trip.isRehearsal",
-    why: "the public trip page answers not-found",
+    why: "the shared public and embedded trip content answers not-found",
   },
   {
     file: "src/app/s/[shopSlug]/trips/[id]/_lib/page-metadata.ts",

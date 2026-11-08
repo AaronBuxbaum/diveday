@@ -171,3 +171,33 @@ describe("trip conservation records", () => {
     expect(await tripConservationFacts(db, shop.id, trip.id)).toEqual([]);
   });
 });
+
+it("undo restores only the exact deleted revision and rechecks the feature switch", async () => {
+  const { db, shop, trip, input } = await fixture();
+  await recordTripConservation(db, input);
+  const panel = await getTripConservationPanel(db, shop.id, trip.id, input.personId);
+  const row = panel?.rows[0];
+  if (!row) throw new Error("Expected recorded conservation fact");
+  await recordTripConservation(db, {
+    ...input,
+    operation: "delete",
+    id: row.id,
+    revision: row.revision,
+  });
+  const restore = {
+    ...input,
+    operation: "restore" as const,
+    id: row.id,
+    revision: row.revision + 1,
+  };
+  expect(await recordTripConservation(db, { ...restore, revision: row.revision })).toEqual({
+    ok: false,
+    reason: "stale",
+  });
+  await db.update(shops).set({ conservationEnabled: false }).where(eq(shops.id, shop.id));
+  expect(await recordTripConservation(db, restore)).toEqual({ ok: false, reason: "unavailable" });
+  await db.update(shops).set({ conservationEnabled: true }).where(eq(shops.id, shop.id));
+  expect(await recordTripConservation(db, restore)).toEqual({ ok: true });
+  expect(await tripConservationFacts(db, shop.id, trip.id)).toEqual([{ id: row.id, ...fact }]);
+  expect(await recordTripConservation(db, restore)).toEqual({ ok: false, reason: "stale" });
+});

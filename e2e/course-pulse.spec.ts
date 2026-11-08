@@ -47,6 +47,14 @@ test("an instructor edits a private course departure note without losing a stale
   await page.getByRole("button", { name: t("trips.coursePulse.delete"), exact: true }).click();
   await expect(page.getByText(t("trips.coursePulse.deleted"), { exact: true })).toBeVisible();
   await expect(note).toHaveValue("");
+  await page.getByRole("button", { name: t("shared.undoToast.undo"), exact: true }).click();
+  await expect(note).toHaveValue("Practice compass headings before the next dive.");
+  await page.reload();
+  await expect(note).toHaveValue("Practice compass headings before the next dive.");
+  await page.getByRole("button", { name: t("trips.coursePulse.delete"), exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: t("shared.undoToast.undo"), exact: true }),
+  ).toBeVisible();
   await page.reload();
   await expect(note).toHaveValue("");
 });

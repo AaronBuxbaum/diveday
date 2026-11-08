@@ -10,14 +10,17 @@ import { CourseTeachingNoteForm } from "./CourseTeachingNoteForm";
 export function CoursePulse({
   pulse,
   tripId,
+  shopSlug,
   locale,
   timeZone,
 }: {
-  pulse: CoursePulseData;
+  pulse: CoursePulseData | null;
   tripId: string;
+  shopSlug: string;
   locale: string;
   timeZone: string;
 }) {
+  if (!pulse) return null;
   const t = staffTranslator(locale);
   const errors = {
     invalid: t("trips.coursePulse.errors.invalid"),
@@ -43,8 +46,14 @@ export function CoursePulse({
       {pulse.rows.length ? (
         <ul className="mt-3 space-y-2 text-base">
           {pulse.rows.map((row) => (
-            <li key={row.bookingId} className="flex flex-wrap justify-between gap-x-4 gap-y-1">
-              <Link href={`#booking-${row.bookingId}`} className="underline underline-offset-4">
+            <li
+              key={row.bookingId}
+              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1"
+            >
+              <Link
+                href={`#booking-${row.bookingId}`}
+                className="inline-flex min-h-11 items-center underline underline-offset-4"
+              >
                 {row.fullName}
               </Link>
               <span className="text-muted">
@@ -59,6 +68,8 @@ export function CoursePulse({
         <p className="mt-3 text-sm text-muted">{t("trips.coursePulse.empty")}</p>
       )}
       <CourseTeachingNoteForm
+        shopSlug={shopSlug}
+        tripId={tripId}
         note={pulse.note}
         action={saveCourseTeachingNoteAction.bind(null, tripId)}
         words={{
@@ -69,6 +80,8 @@ export function CoursePulse({
           busy: t("words.busy.saving"),
           saved: t("trips.coursePulse.saved"),
           deleted: t("trips.coursePulse.deleted"),
+          undo: t("shared.undoToast.undo"),
+          dismiss: t("shared.undoToast.dismiss"),
           errors,
         }}
       />

@@ -292,3 +292,89 @@ describe("Try the checks' nested sample-result status", () => {
     expect(settledEntryFor(flag, [{ ...entry, captures: undefined }], record)).toBeNull();
   });
 });
+
+function recapPanels(padding = 20) {
+  const heading = (label, x) => ({
+    tag: "h2",
+    cls: "text-2xl font-semibold tracking-tight",
+    label,
+    x,
+    heading: true,
+    text: [[x, 0, 160, 32]],
+  });
+  const card = {
+    tag: "section",
+    cls: "rounded-panel border border-border bg-surface p-5 sm:p-6",
+    pad: [padding, padding, padding, padding],
+    bw: [1, 1, 1, 1],
+  };
+  return snapshotOf([
+    [-1, { tag: "main" }],
+    [0, card],
+    [1, { cls: "flex flex-wrap items-baseline" }],
+    [2, { cls: "min-w-0" }],
+    [3, heading("How was your day?", 16 + padding + 1)],
+    [0, card],
+    [5, { cls: "flex flex-wrap items-baseline" }],
+    [6, { cls: "min-w-0" }],
+    [7, heading("Your next dive", 16 + padding + 1)],
+    [0, { ...card, cls: "mt-10 rounded-panel bg-surface-sunken p-5 sm:p-6", bw: [0, 0, 0, 0] }],
+    [9, heading("Bring a buddy next time", 16 + padding)],
+  ]);
+}
+const recapFlag = (padding = 20) => ({
+  check: "ragged-edges",
+  sig: "h2.font-semibold text-2xl tracking-tight",
+  csig: "headings",
+  label: "Bring a buddy next time",
+  el: 10,
+  measure: { kind: "headings", count: 3, starts: [16 + padding, 17 + padding] },
+});
+
+describe("the recap's independent bordered and borderless panels", () => {
+  it("settles only the three known headings with exactly border-accounted ink edges", () => {
+    for (const padding of [20, 24]) {
+      for (const capture of ["recap", "conservation-recap"]) {
+        expect(
+          settledEntryFor(recapFlag(padding), settled, recordFor(recapPanels(padding), capture))
+            ?.context,
+        ).toBe("recap-independent-panels");
+      }
+    }
+  });
+
+  it("leaves changed padding, borders, heading positions and extra headings open", () => {
+    const altered = (index, patch) => {
+      const snapshot = recapPanels();
+      Object.assign(snapshot.elements[index], patch);
+      return snapshot;
+    };
+    for (const snapshot of [
+      altered(9, { pad: [20, 22, 20, 22] }),
+      altered(9, { bw: [1, 1, 1, 1] }),
+      altered(1, { bw: [0, 0, 0, 0] }),
+      altered(10, { text: [[38, 0, 160, 32]] }),
+      altered(8, { text: [[39, 0, 160, 32]] }),
+      altered(10, { label: "An unrelated heading" }),
+    ]) {
+      expect(settledEntryFor(recapFlag(), settled, recordFor(snapshot, "recap"))).toBeNull();
+    }
+    const extra = recapPanels();
+    extra.elements.push({ ...extra.elements[10], i: 11 });
+    expect(settledEntryFor(recapFlag(), settled, recordFor(extra, "recap"))).toBeNull();
+  });
+
+  it("does not settle another capture or an older record without structural evidence", () => {
+    expect(
+      settledEntryFor(recapFlag(), settled, recordFor(recapPanels(), "public-trip")),
+    ).toBeNull();
+    expect(settledEntryFor(recapFlag(), settled, { capture: "recap" })).toBeNull();
+    expect(
+      settledEntryFor(
+        { ...recapFlag(), measure: { kind: "headings", count: 3, starts: [36, 38] } },
+        settled,
+        recordFor(recapPanels(), "recap"),
+      ),
+    ).toBeNull();
+  });
+});

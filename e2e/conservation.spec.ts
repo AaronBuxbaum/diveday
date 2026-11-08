@@ -39,8 +39,18 @@ test("staff record, correct and delete measured conservation actions after a dep
   await page.reload();
   await expect(item.locator("p").first()).toContainText("3.25");
   await item.locator("summary").click();
-  page.once("dialog", (dialog) => dialog.accept());
   await item.getByRole("button", { name: t("trips.conservation.delete"), exact: true }).click();
   await expect(page.getByText(t("trips.conservation.empty"), { exact: true })).toBeVisible();
+  await expect(item).toHaveCount(0);
+  await page.getByRole("button", { name: t("shared.undoToast.undo"), exact: true }).click();
+  await expect(item).toHaveCount(1);
+  await expect(item.locator("p").first()).toContainText("3.25");
+  await item.locator("summary").click();
+  await item.getByRole("button", { name: t("trips.conservation.delete"), exact: true }).click();
+  await expect(item).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: t("shared.undoToast.undo"), exact: true }),
+  ).toBeVisible();
+  await page.reload();
   await expect(item).toHaveCount(0);
 });

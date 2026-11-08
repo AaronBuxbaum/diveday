@@ -4,17 +4,20 @@ import type { getTripConservationPanel } from "@/db/trip-conservation";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
+import { ConservationActions } from "./ConservationActions";
 import { type ConservationCopy, ConservationForm } from "./ConservationForm";
 
 export function ConservationPanel({
   panel,
   tripId,
+  shopSlug,
   t,
   locale,
   timeZone,
 }: {
   panel: Awaited<ReturnType<typeof getTripConservationPanel>>;
   tripId: string;
+  shopSlug: string;
   t: StaffTranslator;
   locale: string;
   timeZone: string;
@@ -29,7 +32,9 @@ export function ConservationPanel({
     add: t("trips.conservation.add"),
     pending: t("words.busy.saving"),
     delete: t("trips.conservation.delete"),
-    confirmDelete: t("trips.conservation.confirmDelete"),
+    deleted: t("trips.conservation.deleted"),
+    undo: t("shared.undoToast.undo"),
+    dismiss: t("shared.undoToast.dismiss"),
     saved: t("trips.conservation.saved"),
     kinds: {
       litter_kg: t("trips.conservation.kinds.litter_kg"),
@@ -50,42 +55,44 @@ export function ConservationPanel({
         {t("trips.conservation.heading")}
       </h2>
       <p className="max-w-prose text-sm text-muted">{t("trips.conservation.hint")}</p>
-      {panel.rows.length === 0 ? (
-        <p className="text-sm text-muted">{t("trips.conservation.empty")}</p>
-      ) : (
-        <ul className="divide-y divide-border">
-          {panel.rows.map((row) => (
-            <li key={row.id} className="space-y-2 py-4">
-              <p className="font-medium">
-                {copy.kinds[row.kind]} ·{" "}
-                {cachedFormatter("number", Intl.NumberFormat, locale, {
-                  maximumFractionDigits: 2,
-                }).format(row.quantity)}
-                {row.location ? ` · ${row.location}` : ""}
-              </p>
-              {row.note ? <p className="text-sm">{row.note}</p> : null}
-              <p className="text-xs text-muted">
-                {t("trips.conservation.recorded", {
-                  when: formatDateTimeTz(row.updatedAt, locale, timeZone),
-                  zone: timeZone,
-                })}
-              </p>
-              {panel.editable ? (
-                <Disclosure id={`conservation-${row.id}`} heading={t("trips.conservation.edit")}>
-                  <ConservationForm key={row.revision} tripId={tripId} row={row} copy={copy} />
-                </Disclosure>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-      {panel.editable ? (
-        <Disclosure id="conservation-add" heading={t("trips.conservation.add")}>
-          <ConservationForm tripId={tripId} copy={copy} />
-        </Disclosure>
-      ) : (
-        <p className="text-sm text-muted">{t("trips.conservation.afterReturn")}</p>
-      )}
+      <ConservationActions tripId={tripId} shopSlug={shopSlug} copy={copy}>
+        {panel.rows.length === 0 ? (
+          <p className="text-sm text-muted">{t("trips.conservation.empty")}</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {panel.rows.map((row) => (
+              <li key={row.id} className="space-y-2 py-4">
+                <p className="font-medium">
+                  {copy.kinds[row.kind]} ·{" "}
+                  {cachedFormatter("number", Intl.NumberFormat, locale, {
+                    maximumFractionDigits: 2,
+                  }).format(row.quantity)}
+                  {row.location ? ` · ${row.location}` : ""}
+                </p>
+                {row.note ? <p className="text-sm">{row.note}</p> : null}
+                <p className="text-xs text-muted">
+                  {t("trips.conservation.recorded", {
+                    when: formatDateTimeTz(row.updatedAt, locale, timeZone),
+                    zone: timeZone,
+                  })}
+                </p>
+                {panel.editable ? (
+                  <Disclosure id={`conservation-${row.id}`} heading={t("trips.conservation.edit")}>
+                    <ConservationForm key={row.revision} tripId={tripId} row={row} copy={copy} />
+                  </Disclosure>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+        {panel.editable ? (
+          <Disclosure id="conservation-add" heading={t("trips.conservation.add")}>
+            <ConservationForm tripId={tripId} copy={copy} />
+          </Disclosure>
+        ) : (
+          <p className="text-sm text-muted">{t("trips.conservation.afterReturn")}</p>
+        )}
+      </ConservationActions>
     </section>
   );
 }

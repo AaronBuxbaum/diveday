@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/form";
 import type { ConservationResult } from "@/db/trip-conservation";
 import { CONSERVATION_KINDS, type ConservationKind } from "@/lib/conservation";
-import { recordConservationAction } from "../conservation-actions";
+import { useConservationActions } from "./ConservationActions";
 
 export type ConservationCopy = {
   kind: string;
@@ -24,14 +24,15 @@ export type ConservationCopy = {
   add: string;
   pending: string;
   delete: string;
-  confirmDelete: string;
+  deleted: string;
+  undo: string;
+  dismiss: string;
   saved: string;
   kinds: Record<ConservationKind, string>;
   errors: Record<Exclude<ConservationResult, { ok: true }>["reason"], string>;
 };
 
 export function ConservationForm({
-  tripId,
   row,
   copy,
 }: {
@@ -46,7 +47,8 @@ export function ConservationForm({
   };
   copy: ConservationCopy;
 }) {
-  const [state, action] = useActionState(recordConservationAction.bind(null, tripId), null);
+  const { result, action } = useConservationActions();
+  const state = result?.targetId === row?.id ? result : null;
   const [kind, setKind] = useState(row?.kind ?? "litter_kg");
   const [quantity, setQuantity] = useState(row ? String(row.quantity) : "");
   const [location, setLocation] = useState(row?.location ?? "");
@@ -129,7 +131,6 @@ export function ConservationForm({
             value="delete"
             formNoValidate
             pendingLabel={copy.pending}
-            confirmMessage={copy.confirmDelete}
             className={buttonClass({ variant: "danger" })}
           >
             {copy.delete}
@@ -137,7 +138,7 @@ export function ConservationForm({
         ) : null}
       </FieldActions>
       <FormStatus tone={state?.ok ? "success" : "danger"}>
-        {state ? (state.ok ? copy.saved : copy.errors[state.reason]) : null}
+        {state?.ok && !state.undo ? copy.saved : null}
       </FormStatus>
     </form>
   );

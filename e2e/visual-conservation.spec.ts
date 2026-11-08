@@ -4,6 +4,7 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, tripPathByTitle } from "./helpers";
+import { seedFacts } from "./shop-facts";
 import { capture, installVisualBuildGuard, SURFACE_TIMEOUT_MS } from "./visual-harness";
 
 installVisualBuildGuard();
@@ -35,11 +36,16 @@ test("recorded conservation action and its editor (light)", async ({ page }) => 
     .filter({ hasText: "Loose litter collected during the dive." })
     .filter({ has: page.locator('details[id^="conservation-"]') });
   await expect(item).toHaveCount(1);
+  await page.mouse.move(0, 0);
+  await expect(
+    page.getByRole("status").filter({ hasText: t("trips.conservation.saved") }),
+  ).toBeHidden();
   await item.locator("summary").click();
   await capture(page, "conservation-editor", "light");
 });
 
-test("a diver recap names the recorded conservation facts (light)", async ({ page }) => {
+test("a diver recap names the recorded conservation facts (light)", async ({ page, request }) => {
+  await seedFacts(request, ["returnedConservationRecap"]);
   const d = diverTranslator("en-US");
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);
   await expect(page.getByRole("region", { name: d("recap.conservation.heading") })).toBeVisible();

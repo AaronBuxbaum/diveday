@@ -587,6 +587,11 @@ export const trips = pgTable(
     recapShoutout: text("recap_shoutout"),
     /** Private to the course's assigned instructors and shop management. */
     courseTeachingNote: text("course_teaching_note"),
+    courseTeachingNoteRevision: integer("course_teaching_note_revision").notNull().default(1),
+    /** Retains the private words for an id-based, stale-safe Undo. */
+    courseTeachingNoteDeletedAt: timestamp("course_teaching_note_deleted_at", {
+      withTimezone: true,
+    }),
     courseTeachingNoteAt: timestamp("course_teaching_note_at", { withTimezone: true }),
     courseTeachingNoteByPersonId: uuid("course_teaching_note_by_person_id").references(
       () => people.id,

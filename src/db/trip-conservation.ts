@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { type ConservationFact, conservationFactSchema } from "@/lib/conservation";
@@ -68,25 +68,42 @@ export async function tripConservationFacts(
   tripId: string,
   now = nowDate(),
 ): Promise<ConservationFact[]> {
-  const [trip] = await db
-    .select({ endsAt: trips.endsAt })
-    .from(trips)
+  // One scoped read for the public projection, beside the recap's other reads. Joining the
+  // departure and switch here keeps both gates live without a second sequential round trip.
+  const rows = await db
+    .select({
+      id: tripConservation.id,
+      kind: tripConservation.kind,
+      quantity: tripConservation.quantity,
+      location: tripConservation.location,
+      note: tripConservation.note,
+      endsAt: trips.endsAt,
+    })
+    .from(tripConservation)
+    .innerJoin(trips, eq(trips.id, tripConservation.tripId))
     .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(
       and(
+        eq(tripConservation.shopId, shopId),
+        eq(tripConservation.tripId, tripId),
+        isNull(tripConservation.deletedAt),
         eq(trips.shopId, shopId),
-        eq(trips.id, tripId),
         liveTrip(),
         notRehearsal(),
         eq(trips.status, "scheduled"),
         eq(shops.conservationEnabled, true),
       ),
     )
-    .limit(1);
-  if (!trip || !hasReturned(trip.endsAt, now)) return [];
-  return (await conservationRows(db, shopId, tripId)).map(
-    ({ id, kind, quantity, location, note }) => ({ id, kind, quantity, location, note }),
-  );
+    .orderBy(
+      asc(tripConservation.recordedAt),
+      asc(tripConservation.kind),
+      asc(tripConservation.location),
+      asc(tripConservation.quantity),
+      asc(tripConservation.id),
+    );
+  return rows
+    .filter(({ endsAt }) => hasReturned(endsAt, now))
+    .map(({ id, kind, quantity, location, note }) => ({ id, kind, quantity, location, note }));
 }
 
 export type ConservationResult =
@@ -100,7 +117,7 @@ export async function recordTripConservation(
     shopId: string;
     tripId: string;
     personId: string;
-    operation: "record" | "delete";
+    operation: "record" | "delete" | "restore";
     id?: string;
     revision?: number;
     fact?: unknown;
@@ -109,7 +126,7 @@ export async function recordTripConservation(
 ): Promise<ConservationResult> {
   const parsed = input.operation === "record" ? conservationFactSchema.safeParse(input.fact) : null;
   if (parsed && !parsed.success) return { ok: false, reason: "invalid" };
-  if (input.operation === "delete" && !input.id) return { ok: false, reason: "invalid" };
+  if (input.operation !== "record" && !input.id) return { ok: false, reason: "invalid" };
   const now = input.now ?? nowDate();
   return db.transaction(async (tx): Promise<ConservationResult> => {
     const roles = await readActiveStaffRoles(tx, input.shopId, input.personId);
@@ -135,7 +152,9 @@ export async function recordTripConservation(
         .set(
           input.operation === "delete"
             ? { deletedAt: now, updatedAt: now, revision: (input.revision ?? 0) + 1 }
-            : { ...parsed?.data, updatedAt: now, revision: (input.revision ?? 0) + 1 },
+            : input.operation === "restore"
+              ? { deletedAt: null, updatedAt: now, revision: (input.revision ?? 0) + 1 }
+              : { ...parsed?.data, updatedAt: now, revision: (input.revision ?? 0) + 1 },
         )
         .where(
           and(
@@ -143,7 +162,9 @@ export async function recordTripConservation(
             eq(tripConservation.shopId, input.shopId),
             eq(tripConservation.tripId, input.tripId),
             eq(tripConservation.revision, input.revision ?? 0),
-            isNull(tripConservation.deletedAt),
+            input.operation === "restore"
+              ? isNotNull(tripConservation.deletedAt)
+              : isNull(tripConservation.deletedAt),
           ),
         )
         .returning({ id: tripConservation.id });

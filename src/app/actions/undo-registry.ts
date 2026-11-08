@@ -3,6 +3,10 @@ import {
   restoreDiverNote,
   restoreDiverRemoval,
 } from "@/app/shop/[shopSlug]/divers/[personId]/undo-inverses";
+import {
+  restoreConservationRecord,
+  restoreTeachingNote,
+} from "@/app/shop/[shopSlug]/trips/[id]/undo-inverses";
 import type { UndoKind, UndoOffer, UndoOfferOf } from "@/lib/undo";
 
 /**
@@ -22,6 +26,8 @@ const UNDO_INVERSES: {
   "diver-card": restoreDiverCard,
   "diver-note": restoreDiverNote,
   "diver-removal": restoreDiverRemoval,
+  "trip-conservation": restoreConservationRecord,
+  "course-teaching-note": restoreTeachingNote,
 };
 
 /** Runs the offer's inverse. */

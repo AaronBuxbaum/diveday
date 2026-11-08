@@ -196,6 +196,8 @@ export async function getTripWithBooked(db: DbExecutor, shopId: string, tripId: 
   const {
     courseTeachingNote: _note,
     courseTeachingNoteAt: _at,
+    courseTeachingNoteDeletedAt: _deletedAt,
+    courseTeachingNoteRevision: _noteRevision,
     courseTeachingNoteByPersonId: _by,
     ...publicTrip
   } = row.trip;

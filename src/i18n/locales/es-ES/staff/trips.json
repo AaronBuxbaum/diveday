@@ -974,7 +974,8 @@
       "cancelled": "Esta salida fue cancelada.",
       "not_found": "Esta salida ya no está disponible.",
       "not_a_course_session": "Esta salida no tiene un curso."
-    }
+    },
+    "undoFailed": "No se pudo restaurar esta nota. Puede haber cambiado o la opción Deshacer ya no está disponible."
   },
   "conservation": {
     "heading": "Registros de conservación",
@@ -988,7 +989,6 @@
     "save": "Guardar cambios",
     "add": "Registrar una acción",
     "delete": "Eliminar",
-    "confirmDelete": "¿Eliminar este registro de conservación?",
     "saved": "Registro de conservación guardado.",
     "edit": "Editar registro",
     "recorded": "Registrado {when} · {zone}",
@@ -1003,6 +1003,8 @@
       "unavailable": "Esta salida o función ya no está disponible.",
       "not_returned": "Registra acciones después del regreso de la salida.",
       "stale": "Este registro cambió. Actualiza la página antes de volver a editarlo."
-    }
+    },
+    "deleted": "Registro de conservación eliminado.",
+    "undoFailed": "No se pudo restaurar este registro. Puede haber cambiado o la opción Deshacer ya no está disponible."
   }
 }
