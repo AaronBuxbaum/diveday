@@ -6,7 +6,7 @@
  * (`day.spec.ts`) does the driving and hands its findings back here.
  */
 
-import { DAY_STATES as WORLD_DAY_STATES } from "../../src/lib/world.ts";
+import { DAY_STATES as WORLD_DAY_STATES } from "@/features/world";
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -30,7 +30,7 @@ export const EVENING_AFTER_MS = 2 * HOUR_MS;
 
 /**
  * Every state the day must reach, in the order it is reached: the list lives in
- * `src/lib/world.ts`, which `pnpm check:route-coverage` reads too (issue #2752).
+ * `src/features/world/rules.ts`, which `pnpm check:route-coverage` reads too (issue #2752).
  * `day.spec.ts` walks it and refuses to skip a state, so a day that cannot reach
  * one fails at it by name.
  */

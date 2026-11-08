@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  hasTestRouteGuardImport,
   namedFacts,
   namedTestRoutes,
   registeredHandlers,
@@ -219,5 +220,33 @@ describe("the one test door's callers (issue #2759)", () => {
         ].join("\n"),
       ),
     ).toEqual(["stripeAccount", "bookingCheckout", "operationalTrust", "evening", "gearOut"]);
+  });
+});
+
+describe("test-route authorization import", () => {
+  it("accepts only the published feature authorization contract", () => {
+    expect(
+      hasTestRouteGuardImport(
+        'import { e2eTestRouteAuthorized } from "@/features/e2e-test-routes";',
+      ),
+    ).toBe(true);
+    for (const module of [
+      "@/lib/e2e-test-routes",
+      "@/features/e2e-test-routes/rules",
+      "@/features/unrelated",
+    ]) {
+      expect(hasTestRouteGuardImport(`import { e2eTestRouteAuthorized } from "${module}";`)).toBe(
+        false,
+      );
+    }
+  });
+
+  it("rejects another export or a call without the trusted import", () => {
+    expect(
+      hasTestRouteGuardImport('import { testRouteRefused } from "@/features/e2e-test-routes";'),
+    ).toBe(false);
+    expect(
+      hasTestRouteGuardImport("if (!e2eTestRouteAuthorized(request)) return testRouteRefused();"),
+    ).toBe(false);
   });
 });

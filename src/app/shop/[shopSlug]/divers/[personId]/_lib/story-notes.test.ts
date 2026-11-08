@@ -166,7 +166,7 @@ describe("which seats count toward the first dive", () => {
  * review of the demo layer). The story read "sailed" off the booking and the
  * trip alone, so a seat the crew marked `not_boarded` at the dock read
  * "sailed", could be the diver's "first dive with us", and was credited with
- * the gear and the stars. The rule is `seatSailed` (src/lib/seat-sailed.ts), the
+ * the gear and the stars. The rule is `seatSailed` (src/features/seat-sailed/rules.ts), the
  * one every count of who the boat carried already reads.
  */
 describe("a seat the crew marked ashore at the dock", () => {

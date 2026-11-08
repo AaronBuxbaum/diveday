@@ -5,14 +5,15 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail, fakeSms } from "@/test/fakes";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { markBookingNoShow } from "../features/no-show/store";
+import { sendDueReminders } from "../features/reminders/store";
+import { turnBookingAway } from "../features/turn-away/store";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
-import { markBookingNoShow } from "./no-show";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { getBookingReadiness } from "./readiness";
 import { refundBookingOnCancellation } from "./refunds";
-import { sendDueReminders } from "./reminders";
 import {
   activityEvents,
   bookingCheckouts,
@@ -24,7 +25,6 @@ import {
 } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { editTrip, listStaff, upcomingTripsWithCounts } from "./trips";
-import { turnBookingAway } from "./turn-away";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

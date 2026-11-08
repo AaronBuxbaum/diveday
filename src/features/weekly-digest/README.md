@@ -11,8 +11,8 @@ Module shape: [20260730-feature-module-contracts](../../../docs/architecture/dec
 
 ## Does not own
 
-- Who receives it, each staffer's on/off choice and the opt-out link: `src/db/weekly-digest.ts`,
-  because the unsubscribe page (`src/db/unsubscribe.ts`) reads them from below.
+- Who receives it, each staffer's on/off choice and the opt-out link: `src/features/weekly-digest/store.ts`,
+  because the unsubscribe page (`src/features/unsubscribe/store.ts`) reads them from below.
 - What goes in it and how it is graded: `src/lib/weekly-digest.ts`. The words:
   `src/lib/notifications/weekly-digest-email.ts`.
 - Today's queue, which it reads through `@/features/today`.

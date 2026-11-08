@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { requireStaffSession } from "@/features/session";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   connectProviderFromEnvironment,
@@ -9,7 +10,6 @@ import {
   stripeConnectCallbackUrl,
 } from "@/lib/payments/connect";
 import { runtimeMode } from "@/lib/runtime-mode";
-import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /**

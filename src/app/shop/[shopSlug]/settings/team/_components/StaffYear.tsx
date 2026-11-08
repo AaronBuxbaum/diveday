@@ -1,5 +1,5 @@
 import type { DbExecutor } from "@/db/client";
-import { type CrewYear, crewYearFacts } from "@/db/reporting";
+import { type CrewYear, crewYearFacts } from "@/features/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { joinFacts } from "@/lib/format";
 import { utcToWallTime } from "@/lib/zoned";

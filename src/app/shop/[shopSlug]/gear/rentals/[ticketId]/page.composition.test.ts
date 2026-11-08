@@ -11,7 +11,10 @@ import { routeSource } from "@/test/route-source";
 const SOURCE = routeSource(import.meta.dirname, "page.tsx");
 const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 /** The page's one reader (issue #2757): where the ticket's reads now live. */
-const READER = readFileSync(join(process.cwd(), "src/db/counter-rental-ticket-page.ts"), "utf8");
+const READER = readFileSync(
+  join(process.cwd(), "src/features/counter-rental-ticket-page/store.ts"),
+  "utf8",
+);
 
 describe("the counter-rental ticket", () => {
   /**

@@ -6,20 +6,20 @@ import { getDb } from "@/db/client";
 import type { WorkOrderLine } from "@/db/schema";
 import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
+import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import {
   billWorkOrder,
   recordWorkOrderCounterPayment,
   sendWorkOrderReadyNotice,
   setCustomerGearReminders,
-} from "@/db/work-order-follow-up";
-import { getWorkOrderDetail } from "@/db/work-orders";
-import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+} from "@/features/work-order-follow-up";
+import { getWorkOrderDetail } from "@/features/work-orders";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { billLinesForWorkOrder } from "@/lib/work-order-follow-up";
 import { workOrderQuantityInput } from "@/lib/work-orders";

@@ -269,7 +269,7 @@ describe("prepareContactImport — safety rules", () => {
     ].join("\n");
     const [row] = prepareContactImport(csv).rows;
     // The prepared card carries the prior-shop provenance; the DB write lands it
-    // `verified` + flagged imported (see src/db/import.test.ts).
+    // `verified` + flagged imported (see src/features/import/store.test.ts).
     expect(row.cert).toEqual({
       agency: "padi",
       level: "rescue",

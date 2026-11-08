@@ -172,7 +172,7 @@ export async function verifyCalendarFeed(
   // verified identity must never be trusted past that check.
   if (row.personShopId !== feed.shopId) return null;
   // Disabling an account revokes sign-in but deliberately keeps the person's
-  // roles (`setStaffAccountStatus` in src/db/staff-accounts.ts), so a
+  // roles (`setStaffAccountStatus` in src/features/staff-accounts/store.ts), so a
   // roles-only check would leave a suspended staff member's calendar quietly
   // updating with the shop's schedule. "No longer has access" has to mean
   // every door, including the one that needs no password.

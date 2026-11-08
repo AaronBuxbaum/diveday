@@ -1,4 +1,4 @@
-import type { KnownDiver } from "@/db/booking-handoff";
+import type { KnownDiver } from "@/features/booking-handoff";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import type { DiverLocale } from "@/i18n/settings";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { createDiver, getDiverProfile } from "./divers";
+import { createDiver, getDiverProfile } from "../features/divers/store";
 import { cards } from "./schema";
 
 const ctx = fileScopedShopContext();

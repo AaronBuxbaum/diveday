@@ -1,14 +1,14 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { consumeAccountToken, issueAccountToken } from "./account-tokens";
-import { userAccounts } from "./schema";
 import {
   cancelStaffInvite,
   inviteStaffMember,
   listShopStaff,
   restoreStaffMember,
-} from "./staff-accounts";
+} from "../features/staff-accounts/store";
+import { consumeAccountToken, issueAccountToken } from "./account-tokens";
+import { userAccounts } from "./schema";
 
 const ctx = fileScopedShopContext();
 

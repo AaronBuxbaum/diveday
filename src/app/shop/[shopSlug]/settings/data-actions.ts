@@ -5,9 +5,9 @@ import { z } from "zod";
 import { canPersonErasePersonalData, canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { retryMediaDeletion } from "@/db/media-deletions";
-import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
-import { parseForm, readForm, single, text } from "@/lib/form-parse";
-import { requireStaffSession } from "@/lib/session";
+import { parseForm, readForm, single, text } from "@/features/form-parse";
+import { dischargeProcessorErasure, retryProcessorErasure } from "@/features/processor-erasure";
+import { requireStaffSession } from "@/features/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /* -------------------------------------------------------------------------- *

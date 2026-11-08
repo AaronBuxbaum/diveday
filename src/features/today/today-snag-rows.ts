@@ -1,6 +1,6 @@
+import { urgencyFor } from "@/features/today-urgency";
 import { boatSnagDetailText, openBoatCheckActionText } from "@/i18n/today-labels";
 import { shopPath } from "@/lib/staff-notices";
-import { urgencyFor } from "@/lib/today-urgency";
 import type { TodayAction } from "./today";
 import type { TodayRowsContext } from "./today-rows-context";
 

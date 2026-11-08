@@ -1,5 +1,5 @@
 // i18n-exempt-file: shared text layout for the terminal email/SMS renderers
-// (src/db/reminders.ts) — resolves its own
+// (src/features/reminders/store.ts) — resolves its own
 // words via diverTranslator rather than handing back a code (docs ADR
 // 20260731-notification-locale).
 import type { DiverTranslator } from "@/i18n/messages";
@@ -11,12 +11,12 @@ import type { TemperatureUnit } from "@/lib/temperature-units";
 
 /**
  * The night-before brief, shared by both channels (`src/lib/notifications/email.ts`
- * and `src/db/reminders.ts`'s SMS composer). The evening-before reminder
+ * and `src/features/reminders/store.ts`'s SMS composer). The evening-before reminder
  * (`trip_reminder_24h`) is the single cheapest cancellation-prevention tool a
  * shop has: most day-of no-shows are anxiety plus logistics confusion, not lost
  * interest. These helpers turn what the shop already knows — the crew's read on
  * conditions, the packing list, the dock-call time — into a warm, plain-language
- * brief. The DB layer (`src/db/reminders.ts`) gathers the inputs; this file lays
+ * brief. The DB layer (`src/features/reminders/store.ts`) gathers the inputs; this file lays
  * them out into text, in the recipient shop's locale (docs ADR
  * 20260731-notification-locale — this and `email.ts` are the terminal renderer
  * for their content, so unlike most of `src/lib` they resolve their own words

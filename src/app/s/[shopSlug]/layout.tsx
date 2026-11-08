@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { RetryReturningDiverMemory } from "@/app/_components/RetryReturningDiverMemory";
+import { connectionForRoute } from "@/features/render-connection";
 import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 import { diverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { connectionForRoute } from "@/lib/observability/render-connection";
 import { PublicShopMainContent } from "./_components/PublicShopMainContent";
 import {
   PublicShopBrand,

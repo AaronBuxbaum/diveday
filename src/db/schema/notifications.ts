@@ -86,7 +86,7 @@ export const notificationKind = pgEnum("notification_kind", [
   // message, so a shop can see who was told.
   "trip_minimum_not_met",
   // One seat canceled, by the diver or the shop, with what happened to the
-  // money (src/db/booking-cancelled-notice.ts). Tracked per booking so the
+  // money (src/features/booking-cancelled-notice/store.ts). Tracked per booking so the
   // shop can see the diver was told.
   "booking_cancelled",
   // The departure moved: old time, new time, where to go if that moved too
@@ -283,7 +283,7 @@ export const notificationSendQueue = pgTable(
     /**
      * Six auxiliary columns, lifted out of the payload because it is sealed and
      * no `->>` can reach inside it (issue #1297). Legal erasure matches on them:
-     * `scrub` (src/db/anonymize.ts) drops a person's queued mail by
+     * `scrub` (src/features/anonymize/store.ts) drops a person's queued mail by
      * `recipient_email`, `subject_email` and `booking_id`, and the merge sweep by
      * `recipient_person_id`. As typed columns those matches cannot silently miss
      * a row whose payload shape drifted. All nullable, because a kind may carry
@@ -401,8 +401,8 @@ export const notificationSendQueue = pgTable(
 /**
  * A keyed claim with an expiry (`next_allowed_at`), not a per-second rate
  * limit. Two claims use it: the once-per-period usage alert
- * (`claimUsageAlert` in src/db/usage-alert-ledger.ts) and the founder weekly
- * digest (`claimFounderDigest` in src/db/founder-metrics.ts). The name is
+ * (`claimUsageAlert` in src/features/usage-alert-ledger/store.ts) and the founder weekly
+ * digest (`claimFounderDigest` in src/features/founder-metrics/store.ts). The name is
  * historical. The provider permit clock it was made for is not used, because
  * SES's SDK retry/backoff covers that need (20260803-ses-sole-email-provider).
  */

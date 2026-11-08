@@ -34,7 +34,7 @@ describe("the /onboard trial note", () => {
   it.each(LOCALES)("answers day 22 rather than stopping at the window in %s", (_l, messages) => {
     // The half the review found missing: "free for 3 weeks" with no word about
     // what happens on the 22nd day reads, to a burned buyer, as a card wall.
-    // Soft expiry is real (src/lib/trial.ts switches nothing off), so the door
+    // Soft expiry is real (src/features/trial/rules.ts switches nothing off), so the door
     // is allowed to say it.
     expect(messages.account.onboard.trialNote).toMatch(/3/);
     expect(messages.account.onboard.trialNote.length).toBeGreaterThan(40);

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BookableDiver } from "@/db/divers";
 import type { DateInterestRow } from "@/db/interest-dates";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { BookableDiver } from "../../../../../../lib/diver-choice-types";
 import { addBandFor, seatRequestBand } from "./seat-request-band";
 
 vi.mock("next/navigation", () => ({

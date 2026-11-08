@@ -21,7 +21,7 @@ import { canonicalAgency } from "@/lib/courses";
  *
  * - **The rows arrive sorted and are never re-sorted here.** Progression order
  *   — a taster, then the entry certification, then everything it opens — is
- *   `progressionOrder` in `src/db/courses.ts`, and it is agency-major from
+ *   `progressionOrder` in `src/features/courses/store.ts`, and it is agency-major from
  *   there so a group cannot interleave across a page boundary. This component
  *   walks the run and starts a new group whenever the canonical agency
  *   changes; an alphabetical or otherwise re-ordered render here would silently

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { MonthMoneyDetail as Detail } from "@/db/report-lines";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { MonthMoneyDetail as Detail } from "../../../../../features/report-lines/store";
 import { BuddyReferrerLines, MoneyByLine, MonthFootnotes } from "./MonthMoneyDetail";
 
 afterEach(cleanup);

@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { submittedValues } from "@/lib/dive-sites";
+import { submittedValues } from "../../../../../features/dive-sites/rules";
 import { type SiteFormAction, SiteFormShell, type SiteSaveRefusal } from "./SiteFormShell";
 
 afterEach(cleanup);

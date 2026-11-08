@@ -1,10 +1,13 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  issueShoreAlertConfirmation,
+  issueShoreAlertStopToken,
+} from "../features/shore-alert-tokens/store";
 import { capabilities, people, personRoles, shops } from "./schema";
 import { setShopShoreAlertContact } from "./shops";
-import { issueShoreAlertConfirmation, issueShoreAlertStopToken } from "./shore-alert-tokens";
 
 /**
  * Erasure reaches the shore contact's address (H-20261014-stale-roll-call-recipients security review). A diver

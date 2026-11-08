@@ -5,7 +5,7 @@ import { DIVER_EMAIL_MAX } from "./person-fields";
  * **The shore contact as a recipient** (H-20261014-stale-roll-call-recipients, decided 2026-10-15): the one
  * person outside the shop's accounts who hears, by email, when an after-dive
  * roll call is still open after the boat was due back
- * (`sendStaleRollCallAlerts`, `src/db/roll-call-alerts.ts`).
+ * (`sendStaleRollCallAlerts`, `src/features/roll-call-alerts/store.ts`).
  *
  * One thing stands between an address and the first alert (#4060):
  *
@@ -19,7 +19,7 @@ import { DIVER_EMAIL_MAX } from "./person-fields";
  *    address and its consent together in the table.
  *
  * The inbox's own confirmation is a badge, not a gate. Saving a new or changed
- * address sends a link (`src/db/shore-alert-tokens.ts`); opening it sets
+ * address sends a link (`src/features/shore-alert-tokens/store.ts`); opening it sets
  * `confirmedAt`, which the settings page shows. Alerts go from the save, so a
  * shop is never believed covered while it is not, and every alert carries a
  * link that takes the address off the shop.

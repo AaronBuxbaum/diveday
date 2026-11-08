@@ -17,12 +17,12 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { canPersonManageBoats, getBoatsPage } from "@/db/boats-page";
+import { canPersonManageBoats, getBoatsPage } from "@/features/boats-page";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { registerPaneClass } from "../_components/register-pane";
 import { BoatPaperFacts, BoatPaperFields } from "./_components/BoatPaperFields";

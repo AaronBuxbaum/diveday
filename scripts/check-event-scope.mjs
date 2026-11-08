@@ -52,7 +52,7 @@ const EXTRA_TABLES = ["executedDives", "recapPhotos", "tripRecapPhotos"];
  * writes the tables rather than reading them.
  */
 const SKIPPED_FILES = new Set(
-  ["src/db/retention.ts", "src/db/seed.ts"].map((file) => path.normalize(file)),
+  ["src/features/retention/store.ts", "src/db/seed.ts"].map((file) => path.normalize(file)),
 );
 
 /** The event tables a schema file declares with a `shopId` column. */

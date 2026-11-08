@@ -3,7 +3,7 @@ import { groupLabelClass } from "@/components/ui/group-label";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { isRehearsalTrip, rehearsalsWithEvidence } from "@/db/rehearsals";
-import { shopBySlugCached } from "@/db/shops-cached";
+import { shopBySlugCached } from "@/features/shops-cached";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { REHEARSAL_KEPT_DAYS } from "@/lib/rehearsal-clearing";

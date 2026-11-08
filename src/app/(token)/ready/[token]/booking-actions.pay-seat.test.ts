@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * Issue #2474: a party lead pays for one seat they added, from a bearer-token
  * page. The action spends the per-IP booking bucket, honours the page's own
  * gate, and hands the db function the lead and the seat; which seats are
- * chargeable is pinned in `src/db/party-seat-checkout.test.ts`.
+ * chargeable is pinned in `src/features/party-seat-checkout/store.test.ts`.
  */
 
 vi.mock("next/navigation", () => ({
@@ -12,7 +12,9 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${path}`);
   }),
 }));
-vi.mock("@/db/party-seat-checkout", () => ({ startPartySeatCheckout: vi.fn() }));
+vi.mock("../../../../features/party-seat-checkout/store", () => ({
+  startPartySeatCheckout: vi.fn(),
+}));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/notifications", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/notifications")>();
@@ -27,7 +29,7 @@ vi.mock("./action-helpers", async (importOriginal) => {
   return { ...actual, contextFor: vi.fn() };
 });
 
-const { startPartySeatCheckout } = await import("@/db/party-seat-checkout");
+const { startPartySeatCheckout } = await import("../../../../features/party-seat-checkout/store");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { contextFor } = await import("./action-helpers");
 const { payForPartySeatFromReady } = await import("./booking-actions");

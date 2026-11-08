@@ -20,7 +20,7 @@ Today, notifications, offline manifests, auth). What they do not say:
 - **Codes and deals** both resolve in `bookSpot`, and Stripe owns the arithmetic.
 - **Today and the close-out are a feature**, `src/features/today` (issue #2756): they read every
   other module, so nothing in `src/lib`, `src/db` or `src/i18n` imports them. Closing the day is a
-  recorded act, never a gate, and the open head counts have one detector, `src/db/roll-call-gaps.ts`
+  recorded act, never a gate, and the open head counts have one detector, `src/features/roll-call-gaps/store.ts`
   (ADR 20260804-day-closeout). What a substrate module needs from Today is a small file below it:
   `today-kinds.ts`, `today-urgency.ts`, `today-job.ts`, `roll-call-gaps.ts`, `closeout-kinds.ts`,
   `blockers.ts`, `seat-sailed.ts`, `shop-day.ts`; import those, not the queue.

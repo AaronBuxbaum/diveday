@@ -1,5 +1,5 @@
+import type { DiverStatusRow } from "@/features/diver-status";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { statusRowText } from "./DiverStatusLedger";
 

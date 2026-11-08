@@ -4,21 +4,21 @@ import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { DeadLink } from "@/components/DeadLink";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { getDb } from "@/db/client";
 import {
   checkBookkeeperConfirmation,
   isBookkeeperToken,
   wasBookkeeperConfirmed,
-} from "@/db/bookkeeper";
-import { getDb } from "@/db/client";
+} from "@/features/bookkeeper";
 import {
   checkShopContactEmailConfirmation,
   wasShopContactEmailConfirmed,
-} from "@/db/shop-contact-email";
+} from "@/features/shop-contact-email";
 import {
   checkShoreAlertConfirmation,
   isShoreAlertToken,
   wasShoreAlertConfirmed,
-} from "@/db/shore-alert-tokens";
+} from "@/features/shore-alert-tokens";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";

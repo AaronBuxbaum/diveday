@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { shops } from "@/db/schema";
-import { e2eClaudeFixtureProvider } from "@/lib/assists/e2e-fixtures";
 import { fileScopedShopContext } from "@/test/db";
+import { e2eClaudeFixtureProvider } from "../../../../features/assists/e2e-fixtures";
 
 const ctx = fileScopedShopContext();
 

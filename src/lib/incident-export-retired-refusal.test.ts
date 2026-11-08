@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { WaiverRecord } from "@/db/schema";
 import {
+  baseInput,
+  completedWaiver,
+} from "../test/substrate-fixtures/lib/incident-export-test-fixtures";
+import {
   buildIncidentExport,
   INCIDENT_EXPORT_HASH_VERSION,
   type IncidentExportHashVersion,
   incidentExportContentHash,
 } from "./incident-export";
-import { baseInput, completedWaiver } from "./incident-export-test-fixtures";
 
 /**
  * **A retired refusal governing a seat prints as the refusal** (issue #3774).

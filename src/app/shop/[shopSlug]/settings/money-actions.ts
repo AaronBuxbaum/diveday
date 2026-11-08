@@ -8,8 +8,8 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import { trimmedText } from "@/features/form-parse";
 import { defineAction, land } from "@/features/server-action";
-import { trimmedText } from "@/lib/form-parse";
 import { majorToMinor } from "@/lib/money";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";

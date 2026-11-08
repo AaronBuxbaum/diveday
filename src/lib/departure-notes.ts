@@ -32,7 +32,7 @@ export function foldDepartureNote(body: string): string {
 
 /**
  * Whether text carries anything a reader's phone would turn into a link (the
- * lost-and-found description is still held to it, `src/db/lost-items.ts`): a
+ * lost-and-found description is still held to it, `src/features/lost-items/store.ts`): a
  * scheme, a `www.`, an address, or a bare domain (`elks.org`, `bit.ly/x`). A
  * dot between two letter runs is enough, so "park at the Elks.Meet" is refused
  * too; the fix is the space the sentence wanted anyway. "a.m." and "e.g."

@@ -6,17 +6,17 @@ import {
   invoicingProviderFromEnvironment,
   promotionProviderFromEnvironment,
 } from "@/db/stripe-providers";
-import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
-import { nowMs } from "../clock";
+import { verifyStripeWebhook } from "../../features/payments/webhook";
 import {
   STRIPE_EVENT_FIXTURES,
   stripeEventFixture,
   stripeEventFixtureRaw,
   stripeObjectFixture,
-} from "./__fixtures__/stripe";
+} from "../../test/substrate-fixtures/lib/payments/__fixtures__/stripe/index";
+import { stripeResponse } from "../../test/substrate-fixtures/lib/payments/__fixtures__/stripe-response";
+import { nowMs } from "../clock";
 import { connectProviderFromEnvironment } from "./connect";
 import { allocateSettledTotal, netOfPercentDiscount } from "./settlement";
-import { verifyStripeWebhook } from "./webhook";
 
 /**
  * The contract half of the payments tests (TEST-M2).

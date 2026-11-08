@@ -1,9 +1,5 @@
-import { listBoats } from "@/db/boats";
 import type { AppDb } from "@/db/client";
-import { listActiveCourses } from "@/db/courses";
 import { tripRequirementSummaries } from "@/db/readiness";
-import { getShopReviewAggregate } from "@/db/reviews";
-import { listTripLenses } from "@/db/trip-lenses";
 import {
   countShopTrips,
   nextSessionStartByCourse,
@@ -11,6 +7,10 @@ import {
   tripDiveSiteSummaries,
   upcomingScheduleRange,
 } from "@/db/trips";
+import { listBoats } from "@/features/boats";
+import { listActiveCourses } from "@/features/courses";
+import { getShopReviewAggregate } from "@/features/reviews";
+import { listTripLenses } from "@/features/trip-lenses";
 import { EMPTY_REVIEW_AGGREGATE } from "@/lib/reviews";
 import { resolveLens } from "@/lib/trip-lenses";
 import { seatsOnSale } from "@/lib/trips";

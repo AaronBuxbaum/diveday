@@ -6,12 +6,14 @@ import { tripRescheduledEmail } from "@/lib/notifications/email";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
+import { moveSeat } from "../features/seat-diver/store";
+import { initializeTodayCatchUp, readTodayCatchUp } from "../features/today-catch-up/store";
+import { addInterest } from "../test/substrate-fixtures/db/interest-dates-fixtures";
 import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
 import { formBuddyTeam } from "./buddy-teams";
 import type { AppDb } from "./client";
 import { recordFlySafeTold } from "./fly-safe-correction";
 import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
-import { addInterest } from "./interest-dates-fixtures";
 import { associateDateRequestOfferBooking } from "./interests";
 import { listTripActivity } from "./operations";
 import {
@@ -27,8 +29,6 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
-import { moveSeat } from "./seat-diver";
-import { initializeTodayCatchUp, readTodayCatchUp } from "./today-catch-up";
 import { listCatchUpSince, markTripCaughtUp } from "./trip-read-marks";
 import {
   createTrip,

@@ -85,8 +85,8 @@ export async function markEmailVerified(
  * Accepts a transaction so a caller can pair this with the token claim that
  * authorized it (see consumeAccountToken). Also revokes every session
  * already issued for this account — the same reasoning
- * `setStaffAccountStatus`/`removeStaffMember` (src/db/staff-accounts.ts) and
- * person erasure (src/db/anonymize.ts) already apply on disable/removal:
+ * `setStaffAccountStatus`/`removeStaffMember` (src/features/staff-accounts/store.ts) and
+ * person erasure (src/features/anonymize/store.ts) already apply on disable/removal:
  * "I think someone has my password" is the whole point of a reset, and a
  * session issued before it must not keep working after (security review
  * finding).

@@ -81,7 +81,7 @@
  * transaction below. One shop's real roster (a few thousand divers) fits
  * comfortably under these; a bigger migration is a deliberately out-of-scope
  * "split the file" case, not a reason to remove the atomic single-transaction
- * commit in src/db/import.ts.
+ * commit in src/features/import/store.ts.
  */
 import Papa from "papaparse";
 import type { CertificationAgency, DiveSpecialty } from "@/db/schema";
@@ -746,7 +746,7 @@ export type PreparedNitrox = {
  * clearance) at a prior shop (ADR 20260724-import-waiver-acceptance).
  * `signedAt` is a validated calendar date when the row gives one; otherwise
  * the commit stamps the import time instead of guessing one. The document
- * URLs are raw, staff-pasted text at this stage — `src/db/import.ts` fetches
+ * URLs are raw, staff-pasted text at this stage — `src/features/import/store.ts` fetches
  * and re-stores them (or drops them) before anything is written.
  */
 export type PreparedWaiver = {

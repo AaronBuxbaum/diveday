@@ -3,7 +3,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MediaDeletionKind, PaymentOperationKind, WorkOrderLineKindValue } from "@/db/schema";
 import { BOAT_PAPERS, MUST_CARRY_KIT_KINDS } from "@/lib/boat-safety";
-import type { BoatWorkCode } from "@/lib/boat-work";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
 import type { DepthUnit } from "@/lib/depth-units";
 import { DESK_PAYMENTS } from "@/lib/desk-payment";
@@ -37,9 +36,16 @@ import {
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
 import { stripComments } from "@/test/source";
+import { boatWorkText } from "../features/boat-work/labels";
+import type { BoatWorkCode } from "../features/boat-work/rules";
+import {
+  DIVER_DIVE_INTENT_KEYS,
+  DIVER_RE_ENTRY_KEYS,
+  STAFF_RE_ENTRY_KEYS,
+  staffDiveIntentLine,
+} from "../features/dive-intent/labels";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
-import { boatWorkText } from "./boat-work-labels";
 import {
   CARD_STATUS_KEYS,
   CERTIFICATION_ROW_STATE_BADGE,
@@ -53,12 +59,6 @@ import {
 import { compassText } from "./compass-labels";
 import { customerGearDueText, customerGearPieceText } from "./customer-gear-labels";
 import { DESK_PAYMENT_KEYS } from "./desk-payment-labels";
-import {
-  DIVER_DIVE_INTENT_KEYS,
-  DIVER_RE_ENTRY_KEYS,
-  STAFF_RE_ENTRY_KEYS,
-  staffDiveIntentLine,
-} from "./dive-intent-labels";
 import { diveSiteDifficultyLabel } from "./dive-site-labels";
 import {
   gearItemKindLabel,

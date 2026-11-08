@@ -269,8 +269,8 @@ providers.
    - `AWS::Budgets::Budget` (`MonthlyCostGuardrail`) evaluates actual and forecasted AWS charges against the $90 limit, emailing `alerts@dive.day` at $30 actual, $70 actual, $90 forecasted, $90 actual, and $180 actual. The thresholds are absolute dollars rather than percentages because the account's fixed floor had grown past the old cap ($43.55 with Business Support+, $18.55 since it was dropped) — ADR 20260802-aws-cost-guardrails, amended 2026-09-10 and 2026-11-05.
    - `AWS::CE::AnomalyMonitor` monitors service-by-service spending spikes daily with a $1.00 impact threshold.
 2. **Multi-Vendor In-App Monitor (`/api/cron/usage`)**:
-   - `fetchVercelSpend` (`src/lib/usage/vercel.ts`): Queries Vercel's Billing API using FOCUS v1.3 format.
-   - `fetchNeonUsage` (`src/lib/usage/neon.ts`): Queries Neon consumption history for compute units, storage byte-months, and egress bytes.
+   - `fetchVercelSpend` (`src/features/usage/vercel.ts`): Queries Vercel's Billing API using FOCUS v1.3 format.
+   - `fetchNeonUsage` (`src/features/usage/neon.ts`): Queries Neon consumption history for compute units, storage byte-months, and egress bytes.
    - Deduplicated alerts sent to `OPS_ALERT_EMAIL` via SES when any ceiling crosses its `warnAt` or `1.0` ratio.
 
 ### Running Live Cost & Risk Reports

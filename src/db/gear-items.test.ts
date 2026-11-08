@@ -2,6 +2,14 @@ import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import {
+  gearShopContext,
+  mustCreate,
+  rivalShop,
+  SETUP_PICK,
+  shopBooking,
+  TODAY,
+} from "../test/substrate-fixtures/db/gear-test-fixtures";
+import {
   countGearItems,
   createGearItem,
   deleteGearItem,
@@ -21,14 +29,6 @@ import {
   returnGearReservation,
 } from "./gear-reservations";
 import { listGearServiceEvents, recordGearService } from "./gear-service";
-import {
-  gearShopContext,
-  mustCreate,
-  rivalShop,
-  SETUP_PICK,
-  shopBooking,
-  TODAY,
-} from "./gear-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

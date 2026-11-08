@@ -10,6 +10,7 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import type { listSiteBottomTimeOverrides } from "@/db/dive-sites";
+import { MIN_TURNAROUND_LIMITS } from "@/features/move-preflight";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import {
   DOCK_DAY_FIELDS,
@@ -20,7 +21,6 @@ import {
 import { CREW_LEAD_LIMITS } from "@/lib/dock-call";
 import { EMERGENCY_LINE_SLOTS } from "@/lib/emergency-reference";
 import { formatDateTimeTz } from "@/lib/format";
-import { MIN_TURNAROUND_LIMITS } from "@/lib/move-preflight";
 import {
   resendShoreAlertConfirmationAction,
   saveEmergencyReferenceAction,

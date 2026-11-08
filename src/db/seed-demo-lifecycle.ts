@@ -354,7 +354,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
    * final `delete(shops)` throw 23503 and stranded that shop past its TTL —
    * forever, since every later reap hit the same row. Not hypothetical: staff
    * seating a diver writes an `activity_events` row on the way through
-   * (src/db/seat-diver.ts), so *any* demo where someone used the Guests tab was
+   * (src/features/seat-diver/store.ts), so *any* demo where someone used the Guests tab was
    * already unreapable.
    *
    * All seven were invisible to `reap-demos.test.ts`, whose cases are

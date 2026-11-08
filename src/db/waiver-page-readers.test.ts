@@ -1,9 +1,9 @@
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { getSignedWaiverPage } from "../features/signed-waiver-page/store";
+import { getWaiversPage } from "../features/waivers-page/store";
 import { people, personRoles, waiverRecords } from "./schema";
-import { getSignedWaiverPage } from "./signed-waiver-page";
-import { getWaiversPage } from "./waivers-page";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

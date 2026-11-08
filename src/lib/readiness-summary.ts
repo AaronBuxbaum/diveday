@@ -273,7 +273,7 @@ export function buildDiverChecklist(
  * Only the codes a diver can act on before the dock — a "waiting" blocker
  * (verification, medical review) is the shop's to finish, so it never appears
  * here as a to-do the diver can't complete. A code, never a phrase: the
- * caller (`src/db/reminders.ts`'s SMS/email composition) resolves each one
+ * caller (`src/features/reminders/store.ts`'s SMS/email composition) resolves each one
  * through `src/i18n/reminder-labels.ts` against the recipient shop's locale
  * (docs ADR 20260731-notification-locale).
  *
@@ -284,7 +284,7 @@ export function buildDiverChecklist(
  *
  * Every code here is safe to name *because a reminder never carries a waiver
  * token*: the only link either channel sends is `readinessUrl`, a `readiness`
- * capability minted fresh at send time (`src/db/reminders.ts`), whose page
+ * capability minted fresh at send time (`src/features/reminders/store.ts`), whose page
  * opens the release in place. Any future change that embeds a waiver link in a
  * reminder must mint it fresh; mailing a diver a link that already opens
  * nothing is the failure mode this note exists to prevent.

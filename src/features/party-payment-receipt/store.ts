@@ -1,0 +1,150 @@
+import { and, eq } from "drizzle-orm";
+import { bookingRecipient } from "../../db/booking-address";
+import { settledPartyPayment } from "../../db/checkouts";
+import type { AppDb } from "../../db/client";
+import { sendNotification } from "../../db/notifications";
+import {
+  type BookingCheckout,
+  bookingCheckoutBookings,
+  bookings,
+  people,
+  shops,
+  trips,
+} from "../../db/schema/index";
+import { log } from "../../lib/log";
+import { type NotificationProvider, recipientLocale } from "../../lib/notifications/index";
+
+/**
+ * **A group's card checkout, told to the lead once Stripe says it is paid**
+ * (#2566, Aaron's option A). The booking confirmation goes out at booking time,
+ * before Stripe reports the payment, so it cannot name the total; this is the
+ * one short receipt that does.
+ *
+ * Called by the Stripe webhook only on the call that completed the checkout
+ * (`markCheckoutPaidBySessionId`'s `firstCompletion`), so a replayed or
+ * redelivered event sends nothing; the notification's own key is per checkout
+ * as well. The figure is what `settledPartyPayment` reads, Stripe's reported
+ * total, and it must equal the checkout's own settled total: if the two ever
+ * disagree, or Stripe reported no total, nothing is sent. Nothing is computed
+ * from the asked price. Nothing is sent either when Stripe's total was more than
+ * could have been asked (the recorded figure was clamped), when the session's
+ * currency is not the checkout's, or when the lead's latest checkout is a
+ * different one.
+ *
+ * Group checkouts only (a lead plus at least one covered seat), and not a
+ * deposit, which is not "what the seats cost". A single seat's card checkout
+ * already gets Stripe's own receipt. Best-effort and never thrown at the
+ * webhook: the money is recorded either way. Codes, never sentences.
+ */
+export type PartyPaymentReceiptOutcome =
+  | "sent"
+  | "not_sent"
+  | "not_a_group"
+  | "no_settled_total"
+  | "not_trusted"
+  | "no_address";
+
+/**
+ * What the completing Stripe event itself said, beside what DiveDay recorded:
+ * the receipt reads a figure back to a person, so it sends only when the two
+ * agree. `currency` is the session's own (absent counts as a mismatch), and
+ * `overCeiling` says Stripe's total was more than could have been asked, so
+ * the recorded figure was clamped and is not Stripe's.
+ */
+export type ReportedSettlement = { currency: string | null; overCeiling: boolean };
+
+export async function sendPartyPaymentReceipt(
+  db: AppDb,
+  checkout: Pick<BookingCheckout, "id" | "shopId" | "isDeposit" | "settledTotalCents">,
+  reported: ReportedSettlement,
+  options: { provider?: NotificationProvider } = {},
+): Promise<PartyPaymentReceiptOutcome> {
+  try {
+    return await send(db, checkout, reported, options);
+  } catch (error) {
+    log("party_payment_receipt.failed", "error", {
+      checkoutId: checkout.id,
+      shopId: checkout.shopId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    return "not_sent";
+  }
+}
+
+async function send(
+  db: AppDb,
+  checkout: Pick<BookingCheckout, "id" | "shopId" | "isDeposit" | "settledTotalCents">,
+  reported: ReportedSettlement,
+  options: { provider?: NotificationProvider },
+): Promise<PartyPaymentReceiptOutcome> {
+  if (checkout.isDeposit) return "not_a_group";
+  if (!checkout.settledTotalCents) return "no_settled_total";
+  if (reported.overCeiling) return "not_trusted";
+  // One shop-scoped read: a covered seat whose booking is missing or another
+  // shop's comes back null-extended, counts as covered, and is never a lead.
+  const covered = await db
+    .select({ id: bookings.id, partyLeadBookingId: bookings.partyLeadBookingId })
+    .from(bookingCheckoutBookings)
+    // diveday:any-checkout-purpose: the seats of the fare the webhook just settled; tips never reach the receipt
+    .leftJoin(
+      bookings,
+      and(
+        eq(bookings.id, bookingCheckoutBookings.bookingId),
+        eq(bookings.shopId, bookingCheckoutBookings.shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(bookingCheckoutBookings.checkoutId, checkout.id),
+        eq(bookingCheckoutBookings.shopId, checkout.shopId),
+      ),
+    );
+  if (covered.length < 2) return "not_a_group";
+  const leadIds = covered.flatMap((seat) =>
+    seat.id !== null && seat.partyLeadBookingId === null ? [seat.id] : [],
+  );
+  const leadId = leadIds.length === 1 ? leadIds[0] : undefined;
+  if (!leadId) return "not_a_group";
+
+  const paid = await settledPartyPayment(db, checkout.shopId, leadId);
+  if (!paid || paid.amountCents !== checkout.settledTotalCents) return "no_settled_total";
+  // The lead's latest checkout must be this one: a newer attempt would read
+  // another checkout's figure back under this one's name.
+  if (paid.checkoutId !== checkout.id) return "not_trusted";
+  // A figure in one currency read back in another is worse than no receipt.
+  if (!reported.currency || reported.currency.toLowerCase() !== paid.currency.toLowerCase()) {
+    return "not_trusted";
+  }
+
+  const [row] = await db
+    .select({ booking: bookings, person: bookingRecipient, trip: trips, shop: shops })
+    .from(bookings)
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .where(and(eq(bookings.id, leadId), eq(bookings.shopId, checkout.shopId)))
+    .limit(1);
+  if (!row || row.booking.status === "cancelled") return "not_sent";
+  if (!row.person.email) return "no_address";
+
+  const delivery = await sendNotification(
+    db,
+    {
+      kind: "party_payment_receipt",
+      checkoutId: checkout.id,
+      shopId: checkout.shopId,
+      to: row.person.email,
+      locale: recipientLocale(row.person.locale, row.shop.defaultLocale),
+      diverName: row.person.fullName,
+      shopName: row.shop.name,
+      tripTitle: row.trip.title,
+      startsAt: row.trip.startsAt,
+      timezone: row.shop.timezone,
+      seats: paid.seats,
+      amountCents: paid.amountCents,
+      currency: paid.currency,
+    },
+    options.provider,
+  );
+  return delivery.status === "sent" ? "sent" : "not_sent";
+}

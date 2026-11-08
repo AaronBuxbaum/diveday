@@ -3,9 +3,9 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
 import { capabilities, people, personRoles, shops, userAccounts } from "@/db/schema";
-import { removeStaffMember, setStaffRoles } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { removeStaffMember, setStaffRoles } from "../staff-accounts/store";
 import { issueCalendarFeed } from "./feed-store";
 
 /**

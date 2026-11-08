@@ -7,7 +7,7 @@ import { hasNumberWord, numbersCameFrom, sameNumberWords } from "./facts";
 /**
  * **The inbox assists** (ADR 20261018-claude-assists): inbox-sort, translate
  * and inbox-draft. Framework-free: each function builds one structured call
- * or checks one answer, and `src/db/inbox-assists.ts` runs them.
+ * or checks one answer, and `src/features/inbox-assists/store.ts` runs them.
  *
  * What reaches Claude is the message the diver wrote, the shop's public facts
  * (schedule, open seats, prices, desk hours) and, for a draft, the thread's

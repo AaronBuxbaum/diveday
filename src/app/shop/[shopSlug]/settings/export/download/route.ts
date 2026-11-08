@@ -1,7 +1,9 @@
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadShopExportBundleInput } from "@/db/export";
 import { recordMedicalAnswersExported } from "@/db/operations";
-import { hasRequiredStepUp } from "@/db/step-up";
+import { stepUpChallengeUrl } from "@/features/security-step-up";
+import { requireStaffSession } from "@/features/session";
+import { hasRequiredStepUp } from "@/features/step-up";
 import { nowDate } from "@/lib/clock";
 import {
   buildExportBundle,
@@ -9,8 +11,6 @@ import {
   fetchExportPhotos,
   zipExportBundle,
 } from "@/lib/export";
-import { stepUpChallengeUrl } from "@/lib/security-step-up";
-import { requireStaffSession } from "@/lib/session";
 
 /**
  * Returns the full-shop export ZIP (ADR 20260722-full-shop-export). The shop

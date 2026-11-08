@@ -119,7 +119,7 @@ export function tileWidthFor(boxes: number | readonly number[]): number {
  * Returns its argument unchanged everywhere except an e2e capture, so this is
  * invisible to production by construction rather than by care: the same
  * harness-boundary shape as `DIVEDAY_CLOCK` and as the synthetic tide turns in
- * `src/lib/tide-predictions.ts`, and read only in server components, so there
+ * `src/features/tide-predictions/rules.ts`, and read only in server components, so there
  * is no `NEXT_PUBLIC_` copy of the flag for a bundle to inline as `undefined`.
  *
  * Pass **every** box the surface renders, not just the widest. A capture has no

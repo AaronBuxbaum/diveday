@@ -87,7 +87,7 @@ code back, leave the schema".
 (add/rename/archive) and a boat picker on the trip form (`trips/new`, `trips/[id]`,
 `ScheduleBuilder` add panel) that prefills capacity from `default_capacity` and shows a *warning*
 (never a refusal) when typed capacity exceeds `max_passengers`. Impact: `src/db/schema.ts`, one
-new `src/db/boats.ts`, trip create/edit actions, new i18n keys in every locale, unit tests, one
+new `src/features/boats/store.ts`, trip create/edit actions, new i18n keys in every locale, unit tests, one
 settings visual capture. **Nothing else changes**: booking transaction, readiness, Today, public
 pages, seed, and all existing baselines untouched. A boat-less shop sees nothing new outside the
 optional picker.

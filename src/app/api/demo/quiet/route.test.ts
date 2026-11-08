@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DEV_DEMO_QUIET_KEY, isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/lib/quiet-demo-device";
+import {
+  DEV_DEMO_QUIET_KEY,
+  isQuietDemoDevice,
+  QUIET_DEMO_COOKIE,
+} from "../../../../features/quiet-demo-device/rules";
 import { GET } from "./route";
 
 function open(query: string) {

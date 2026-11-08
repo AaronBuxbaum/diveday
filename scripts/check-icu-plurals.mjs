@@ -126,7 +126,7 @@ const COUNT_THEN_PLURAL =
 const allowed = new Map([
   [
     "src/i18n/locales/en-US/staff/schedule.json:builder.patternFilled",
-    "The weekday pattern is read from at least three days (`PATTERN_MIN_AGREEING` in src/lib/weekday-pattern.ts); fewer is no pattern and no sentence.",
+    "The weekday pattern is read from at least three days (`PATTERN_MIN_AGREEING` in src/features/weekday-pattern/rules.ts); fewer is no pattern and no sentence.",
   ],
   ["src/i18n/locales/es-ES/staff/schedule.json:builder.patternFilled", "The same bound, Spanish."],
   [

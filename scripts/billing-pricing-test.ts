@@ -6,7 +6,7 @@
  * database `getDb()` resolves, like `pnpm billing:free-term`.
  */
 import { getDb } from "@/db/client";
-import { pricingTestByArm } from "@/db/pricing-test-report";
+import { pricingTestByArm } from "@/features/pricing-test-report";
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 

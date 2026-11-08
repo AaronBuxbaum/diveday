@@ -19,7 +19,7 @@ Before every commit:
 3. **`pnpm test <file> --reporter=dot`** for each test file you touched or whose module you touched.
    After any edit under `src/db/schema/`, also the four schema guards, which nothing you edit
    selects:
-   `pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot`
+   `pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/features/retention/store.test.ts --reporter=dot`
 4. **A flow, a page or its copy changed**: `pnpm e2e:affected` names the specs that read what
    you changed, plus five smoke tests; run them with `pnpm e2e <spec…> --reporter=line`
    (section 2).

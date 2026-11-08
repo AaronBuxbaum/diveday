@@ -1,9 +1,9 @@
+import { urgencyFor } from "@/features/today-urgency";
 import { emergencyCardBlankText, lostItemsWaitingText } from "@/i18n/today-labels";
 import { HOUR_MS } from "@/lib/clock";
 import { formatRelativeDay } from "@/lib/format";
 import { staffDestination, staffDestinationHref, staffShopRoot } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { urgencyFor } from "@/lib/today-urgency";
 import { hasSailed } from "@/lib/trips";
 import { departureClockOrder, type TodayAction } from "./today";
 import type { TodayRowsContext } from "./today-rows-context";

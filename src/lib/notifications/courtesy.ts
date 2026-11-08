@@ -12,7 +12,7 @@ function channelSignal(overallSignal?: AbortSignal): AbortSignal {
 /**
  * The courtesy text channel: the short message that rides alongside a trip
  * reminder or recap email, and *becomes* the tracked channel for a diver who
- * gave a phone number but no email (`src/db/reminders.ts`, `src/db/recap.ts`).
+ * gave a phone number but no email (`src/features/reminders/store.ts`, `src/features/recap/store.ts`).
  *
  * There are two ways to deliver it and they are not interchangeable:
  *

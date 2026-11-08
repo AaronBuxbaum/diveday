@@ -14,7 +14,7 @@ import { AgencyCheck } from "./AgencyCheck";
  * "Check with SSI": the agency's own public verification page, in a new tab,
  * beside a card that is waiting for somebody to confirm it. DiveDay's servers
  * never call the agency (H-20261007-request-supported-c-card). Renders nothing for an agency with no lookup
- * (`src/lib/agency-verification.ts`). The words say what the far side is
+ * (`src/features/agency-verification/rules.ts`). The words say what the far side is
  * (`agencyLinkLabel`): a portal with gaps is "searched", and a member sign-in
  * is named before the staffer meets the login form.
  *

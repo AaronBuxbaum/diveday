@@ -14,7 +14,7 @@ import { pathToFileURL } from "node:url";
  * `revalidatePath` calls (another shop's board, Today, its public course page)
  * and the redirect that carries a notice. `requireStaffSession()` says only
  * "this is somebody's live staff"; `requireShopSurface(shopSlug)`
- * (`src/lib/session.ts`) also refuses, with a 404, a slug that is not theirs.
+ * (`src/features/session/rules.ts`) also refuses, with a 404, a slug that is not theirs.
  * #2367 fixed the diver record; the 2026-10-11 review found the same shape in
  * fifteen more actions across five files.
  *
@@ -324,7 +324,7 @@ async function resolveImport(file, specifier) {
 async function importedCalls(file, source) {
   const found = { importedGates: [], importedStaffGates: [], importedSignIns: [] };
   for (const imported of repositoryImports(source)) {
-    if (imported.from === "@/lib/session") continue;
+    if (imported.from === "../src/features/session/rules.ts") continue;
     const target = await resolveImport(file, imported.from);
     if (!target) continue;
     if (exportReaches(target.source, imported.name, SURFACE))
@@ -365,7 +365,7 @@ async function main() {
         .join("\n")}`,
     );
     console.error(
-      "Open the action with `requireShopSurface(shopSlug)` (src/lib/session.ts), or call a helper (in this module or imported) that does. Checking the slug against session.user.shopSlug by hand, calling auth() directly, or checking nothing, all leave the slug steering another shop's revalidation and redirect.",
+      "Open the action with `requireShopSurface(shopSlug)` (src/features/session/rules.ts), or call a helper (in this module or imported) that does. Checking the slug against session.user.shopSlug by hand, calling auth() directly, or checking nothing, all leave the slug steering another shop's revalidation and redirect.",
     );
   }
   if (violations.length > 0) {
@@ -375,7 +375,7 @@ async function main() {
         .join("\n")}`,
     );
     console.error(
-      "Open the action with `requireShopSurface(shopSlug)` (src/lib/session.ts), which is a 404 for a slug that is not the session's shop, or drop the slug and build paths from `session.user.shopSlug`. Writes scoped by session.user.shopId are not enough: the slug still steers the revalidation and the redirect.",
+      "Open the action with `requireShopSurface(shopSlug)` (src/features/session/rules.ts), which is a 404 for a slug that is not the session's shop, or drop the slug and build paths from `session.user.shopSlug`. Writes scoped by session.user.shopId are not enough: the slug still steers the revalidation and the redirect.",
     );
   }
   if (violations.length > 0 || unproven.length > 0) process.exit(1);

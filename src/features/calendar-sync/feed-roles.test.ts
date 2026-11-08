@@ -2,9 +2,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
 import { capabilities, people, personRoles, userAccounts } from "@/db/schema";
-import { setStaffAccountStatus, setStaffRoles } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
+import { setStaffAccountStatus, setStaffRoles } from "../staff-accounts/store";
 import { issueCalendarFeed, verifyCalendarFeed } from "./feed-store";
 
 /**

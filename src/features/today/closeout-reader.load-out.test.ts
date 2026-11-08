@@ -1,10 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { trips } from "@/db/schema";
-import { getTripPrep } from "@/db/trip-prep";
 import { listShopDayDepartures } from "@/db/trips";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { getTripPrep } from "../trip-prep/store";
 import { getDayCloseout, readDayLoadOut } from "./closeout-reader";
 
 // One seeded database for the file and a rolled-back transaction per test.

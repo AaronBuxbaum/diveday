@@ -816,7 +816,7 @@ function applyDevDefaults(env = process.env) {
   // Sign-in is rate-limited eight attempts per email per fifteen minutes, which
   // `scripts/screenshot.mjs` can spend in one run of captures across four roles.
   env.DIVEDAY_RATE_LIMIT_DISABLED ??= "1";
-  // The Sentry DSN is compiled in (`src/lib/sentry-dsn.ts`), so without this
+  // The Sentry DSN is compiled in (`src/features/sentry-dsn/rules.ts`), so without this
   // every error raised by half-finished local code is reported to the
   // production project. `pnpm e2e:build` has always emptied it for the same
   // reason; there is no reason dev should differ.

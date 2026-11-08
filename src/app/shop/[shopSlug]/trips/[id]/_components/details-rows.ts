@@ -1,9 +1,7 @@
 import type { AppDb } from "@/db/client";
-import { getTripOpenSeatsDebrief } from "@/db/open-seats";
-import { lastAtSites } from "@/db/site-history";
 import type { SeriesYardLine } from "@/db/trips";
-import { openSeatsDebriefText } from "@/i18n/open-seats-labels";
-import { siteHistoryText } from "@/i18n/site-history-labels";
+import { getTripOpenSeatsDebrief, openSeatsDebriefText } from "@/features/open-seats";
+import { lastAtSites, siteHistoryText } from "@/features/site-history";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";

@@ -7,7 +7,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/db/trips", () => ({ rollAllSeriesForward: vi.fn() }));
 vi.mock("@/db/shops", () => ({ clearPassedReopensOn: vi.fn(async () => 0) }));
 vi.mock("@/db/rehearsals", () => ({ clearFinishedRehearsals: vi.fn() }));
-vi.mock("@/db/stale-package-invoices", () => ({
+vi.mock("../../../../features/stale-package-invoices/store", () => ({
   voidStalePublicPackageInvoices: vi.fn(async () => ({
     considered: 2,
     voided: 1,
@@ -17,11 +17,13 @@ vi.mock("@/db/stale-package-invoices", () => ({
     stuck: 0,
   })),
 }));
-vi.mock("@/db/interest-roll", () => ({
+vi.mock("../../../../features/interest-roll/store", () => ({
   rollSailedSeriesInterests: vi.fn(async () => ({ rolled: 0, invited: 0 })),
 }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),
@@ -32,7 +34,9 @@ const { getDb } = await import("@/db/client");
 const { rollAllSeriesForward } = await import("@/db/trips");
 const { clearPassedReopensOn } = await import("@/db/shops");
 const { clearFinishedRehearsals } = await import("@/db/rehearsals");
-const { voidStalePublicPackageInvoices } = await import("@/db/stale-package-invoices");
+const { voidStalePublicPackageInvoices } = await import(
+  "../../../../features/stale-package-invoices/store"
+);
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 

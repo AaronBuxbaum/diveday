@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { canPersonReadPrivateRecapPulse } from "@/db/authz";
 import type { AppDb } from "@/db/client";
-import { listOpenRecapPulses } from "@/db/recap-pulses";
+import { listOpenRecapPulses } from "@/features/recap";
 import { shopPath } from "@/lib/staff-notices";
 
 /**
@@ -16,7 +16,7 @@ import { shopPath } from "@/lib/staff-notices";
  * **Reviews switched off** (the Features page): the tab is gone, and so is the
  * page, which lands on the inbox, unless a diver's private pulse still waits
  * on a reader who may act on it. Pulses are not reviews and keep arriving
- * (src/db/recap-pulses.ts).
+ * (src/features/recap/recap-pulses.store.ts).
  */
 export async function pulseReaderOrInbox(
   db: AppDb,

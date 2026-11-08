@@ -4,11 +4,11 @@ import { nowMs } from "@/lib/clock";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
+import { moveParty as moveSeatParty } from "../features/seat-diver/store";
 import { createBooking, moveParty } from "./bookings";
 import { formBuddyTeam } from "./buddy-teams";
 import type { AppDb } from "./client";
 import { activityEvents, bookings } from "./schema";
-import { moveParty as moveSeatParty } from "./seat-diver";
 import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**

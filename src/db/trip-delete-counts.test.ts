@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { countDeparturesByBoat, createBoat } from "./boats";
+import { countDeparturesByBoat, createBoat } from "../features/boats/store";
+import { countDeparturesByTripLens, createTripLens } from "../features/trip-lenses/store";
 import { createBooking } from "./bookings";
 import { crewSubject } from "./roll-call-subject";
 import { bookings, rollCallEvents, tripAssignments, trips } from "./schema";
-import { countDeparturesByTripLens, createTripLens } from "./trip-lenses";
 import { getTripRoster, listStaff } from "./trips";
 import { createTrip } from "./trips-create";
 

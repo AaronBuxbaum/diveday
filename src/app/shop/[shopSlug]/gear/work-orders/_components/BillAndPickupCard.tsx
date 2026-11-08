@@ -8,7 +8,7 @@ import { FormStatus } from "@/components/ui/form";
 import type { NoticeTone } from "@/components/ui/tone";
 import type { DbExecutor } from "@/db/client";
 import type { CustomerGearNotice, WorkOrder } from "@/db/schema";
-import { billAndPickupFacts } from "@/db/work-order-follow-up";
+import { billAndPickupFacts } from "@/features/work-order-follow-up";
 import {
   ORDER_COLLECTION_KEYS,
   ORDER_STATUS_KEYS,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
+import { stripeResponse } from "../../test/substrate-fixtures/lib/payments/__fixtures__/stripe-response";
 import { connectProviderFromEnvironment, stripeConnectCallbackUrl } from "./connect";
 
 /** The `stripe_api.request_threw` lines a case wrote, parsed. */

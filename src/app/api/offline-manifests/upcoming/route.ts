@@ -6,14 +6,14 @@ import {
 import { canPersonReadMedicalAlertOnTrip } from "@/db/authz";
 import { lockBoardingCertificationEvidence } from "@/db/boarding-certification-snapshot";
 import { departureBoatSafetyFor } from "@/db/boat-safety";
-import { departureVessels } from "@/db/boats";
 import type { AppDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
-import { nextOfflineManifestSnapshotRevision } from "@/db/offline-manifest-snapshots";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { getShopOfflineErasureEpoch } from "@/db/shops";
 import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
+import { departureVessels } from "@/features/boats";
+import { nextOfflineManifestSnapshotRevision } from "@/features/offline-manifest-snapshots";
 import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";

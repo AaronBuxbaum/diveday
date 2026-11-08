@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { RecapSite } from "@/db/recap";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
+import type { RecapSite } from "../../../../../features/recap/store";
 import { AfterState, type AfterStateProps } from "./AfterState";
 import { props } from "./after-state-test-fixtures";
 import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";

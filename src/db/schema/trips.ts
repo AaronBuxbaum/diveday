@@ -608,7 +608,7 @@ export const trips = pgTable(
      * RFC 5545 `SEQUENCE` by both calendar surfaces — the diver's one-off
      * `.ics` (`src/app/s/[shopSlug]/trips/[id]/calendar/route.ts`) and the
      * staff subscription feed (`src/features/calendar-sync`), through
-     * `src/lib/trip-calendar.ts` (issue #1165, delight report D05).
+     * `src/features/trip-calendar/rules.ts` (issue #1165, delight report D05).
      *
      * **Exactly two edits bump it**: a change to `starts_at`, and a change to
      * the list of dive sites the day visits (`src/lib/trip-revision.ts` holds
@@ -682,7 +682,7 @@ export const trips = pgTable(
     isRehearsal: boolean("is_rehearsal").notNull().default(false),
     /**
      * **When the stale-roll-call alert went out for this departure** (batch
-     * 6, item 6; `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts): an
+     * 6, item 6; `sendStaleRollCallAlerts`, src/features/roll-call-alerts/store.ts): an
      * after-dive roll call still open half an hour after the boat was due
      * back. The hourly pass claims it with a conditional update, so the alert
      * goes once per departure however many passes see the count still open.
@@ -730,14 +730,14 @@ export const trips = pgTable(
     // `(starts_at)` index would have to read every trip in the window across
     // every shop and re-check `status` per row.
     //
-    // `sendDueReminders` (src/db/reminders.ts): scheduled trips departing
+    // `sendDueReminders` (src/features/reminders/store.ts): scheduled trips departing
     // between now and the reminder horizon.
     index("trips_status_starts_idx").on(table.status, table.startsAt),
-    // `sendDueRecaps` (src/db/recap.ts): scheduled trips that came home at
+    // `sendDueRecaps` (src/features/recap/store.ts): scheduled trips that came home at
     // least four hours ago inside the recap lookback — the same shape one
     // column over, on `ends_at`.
     index("trips_status_ends_idx").on(table.status, table.endsAt),
-    // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
+    // Backs the command-palette leading-wildcard ILIKE search (src/features/search/store.ts, CR-018).
     index("trips_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
     check("trips_capacity_range", sql`${table.capacity} between 1 and 60`),
     check(

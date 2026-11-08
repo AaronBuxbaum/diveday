@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { inHorizonReadiness } from "@/db/blockers";
 import { getTripManifest } from "@/db/manifests";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "@/db/trips";
-import { turnBookingAway } from "@/db/turn-away";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import { inHorizonReadiness } from "../blockers/store";
+import { shopClock } from "../shop-clock/rules";
+import { turnBookingAway } from "../turn-away/store";
 import { getTodayWork } from "./index";
 
 // One seeded database for the file and a rolled-back transaction per test.

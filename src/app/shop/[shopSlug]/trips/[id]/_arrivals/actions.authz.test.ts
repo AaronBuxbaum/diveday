@@ -48,10 +48,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../../features/session/rules");
 const {
   checkInAction,
   markNoShowAction,
@@ -151,7 +151,7 @@ describe("who may run each action at the counter", () => {
 /**
  * The same six, refused. `requireShopSurface` throws for a caller who is not
  * this shop's live staff — a redirect to sign-in, or `notFound()` for a stale
- * tenant claim (`src/lib/session.ts`) — and an action that swallowed that, or
+ * tenant claim (`src/features/session/rules.ts`) — and an action that swallowed that, or
  * never called it, would read the database anyway.
  */
 describe("a refused session at the counter", () => {

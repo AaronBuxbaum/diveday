@@ -125,7 +125,7 @@ export const shopSubscriptions = pgTable(
  * (`processedVolumeCents`), the fee on it, and whether that fee has reached
  * Stripe as a meter event.
  *
- * Written by the monthly cron alone (`src/db/pricing-volume.ts`). The unique `(shop_id, month)` is the
+ * Written by the monthly cron alone (`src/features/pricing-volume/store.ts`). The unique `(shop_id, month)` is the
  * month's idempotency: a re-run finds the row and, once `reported_at` is set,
  * does nothing; a run that wrote the row but failed to report retries the
  * report with the same figures and the same `stripe_meter_identifier`, which

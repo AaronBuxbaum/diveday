@@ -1,16 +1,24 @@
 import { and, eq, getTableColumns, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
-import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { FLY_SAFE_EXPORT_EXCLUSIONS } from "@/test/export-fly-safe-exclusions";
 import { schemaTableNames } from "@/test/schema-tables";
-import { anonymizeDiver } from "./anonymize";
-import { createDiver, deleteDiver } from "./divers";
+import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { createDiver, deleteDiver } from "../features/divers/store";
+import {
+  EXCLUDED_TABLES,
+  GLOBAL_SEQ_TABLES,
+} from "../test/substrate-fixtures/db/export-table-classification.test-support";
+import {
+  EXPECTED_FILES,
+  EXPORTED_TABLES,
+  ROLL_CALL_SPLIT,
+} from "../test/substrate-fixtures/db/export-test-fixtures";
 import { canPersonExportShopData, loadShopExportBundleInput } from "./export";
-import { EXCLUDED_TABLES, GLOBAL_SEQ_TABLES } from "./export-table-classification.test-support";
-import { EXPECTED_FILES, EXPORTED_TABLES, ROLL_CALL_SPLIT } from "./export-test-fixtures";
+import { table } from "./export-bundle-table.test-support";
 import * as schema from "./schema";
 import {
   activityEvents,
@@ -199,7 +207,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // A DiveDay-side discriminator, not a fact about the diver: it separates a
     // row that states a fit from one holding only their note (schema.ts,
     // `fit_stated_at`). The import rebuilds it correctly on its own — a row
-    // carrying any size is a stated fit and `src/db/import.ts` stamps it — so
+    // carrying any size is a stated fit and `src/features/import/store.ts` stamps it — so
     // exporting it would carry an internal flag out and re-derive it anyway.
     "fit_stated_at",
   ],
@@ -265,14 +273,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // The digest is recomputed from the original on import: not the shop's words.
   shop_text_translations: ["id", "shop_id", "source_digest", "created_at"],
 };
-function table(
-  input: NonNullable<Awaited<ReturnType<typeof loadShopExportBundleInput>>>,
-  file: string,
-) {
-  const found = input.tables.find((candidate) => candidate.file === file);
-  if (!found) throw new Error(`missing table ${file}`);
-  return found;
-}
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.

@@ -37,7 +37,7 @@ order-dependent failure, which `pnpm test:lib --sequence.shuffle` reproduces.
 
 A focused `pnpm test <file>` runs the tests you can name. The **coverage guards** are the ones you
 cannot: `src/db/export.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts`
-and `src/db/retention.test.ts` assert over the schema (`src/db/schema/`) from files whose whole job is to
+and `src/features/retention/store.test.ts` assert over the schema (`src/db/schema/`) from files whose whole job is to
 notice something you added
 *elsewhere*. Nothing you touch selects them, so they go red on CI instead — four times in one
 afternoon on 2026-09-05: slice 16g's four columns, 16i's `recap_pulses` table and its

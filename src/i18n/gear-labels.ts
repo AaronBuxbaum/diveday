@@ -65,7 +65,7 @@ export function gearStatusLabel(t: StaffTranslator, status: GearItemStatus): str
 
 /**
  * Every gear status, worded — for a caller that has to render all of them and
- * cannot ask one at a time. The palette is the case: `src/db/search.ts` returns
+ * cannot ask one at a time. The palette is the case: `src/features/search/store.ts` returns
  * the status *code* with each gear hit (domain returns codes), and the words
  * have to be resolved once, server-side, before crossing into the client
  * component (issue #719).

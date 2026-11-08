@@ -22,13 +22,13 @@ import {
   listDiveSiteMapRows,
   listDiveSitesPage,
 } from "@/db/dive-sites";
+import { requireShopSurface } from "@/features/session";
 import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { CatalogView } from "./_components/CatalogView";
 import { NewSitePanel } from "./_components/NewSitePanel";

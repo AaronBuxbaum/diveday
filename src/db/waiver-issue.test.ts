@@ -5,6 +5,8 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { DEFAULT_WAIVER_BODY, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
+import { getDiverProfile } from "../features/divers/store";
+import { shopStaffer } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { revokeBookingCapabilities, verifyBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import {
@@ -13,7 +15,6 @@ import {
   setCourseFormRequirements,
   signCourseForm,
 } from "./course-forms";
-import { getDiverProfile } from "./divers";
 import {
   applyProviderEmailEvent,
   bookingConfirmationMailState,
@@ -46,7 +47,6 @@ import {
   recordWaiverTemplate,
   waiverLinkDoor,
 } from "./waivers";
-import { shopStaffer } from "./waivers-test-fixtures";
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
 vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {

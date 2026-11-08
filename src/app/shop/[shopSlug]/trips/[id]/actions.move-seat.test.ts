@@ -22,22 +22,22 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
-vi.mock("@/db/seat-diver", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/seat-diver")>();
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/seat-diver/store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../../features/seat-diver/store")>();
   return { ...actual, moveSeat: vi.fn(), moveParty: vi.fn() };
 });
-vi.mock("@/db/interest-roll", () => ({ carryInterests: vi.fn() }));
+vi.mock("../../../../../features/interest-roll/store", () => ({ carryInterests: vi.fn() }));
 vi.mock("./roster-booking", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./roster-booking")>();
   return { ...actual, requireRosterBooking: vi.fn() };
 });
 
 const { getDb } = await import("@/db/client");
-const { moveParty, moveSeat } = await import("@/db/seat-diver");
-const { requireShopSurface } = await import("@/lib/session");
+const { moveParty, moveSeat } = await import("../../../../../features/seat-diver/store");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { requireRosterBooking } = await import("./roster-booking");
-const { carryInterests } = await import("@/db/interest-roll");
+const { carryInterests } = await import("../../../../../features/interest-roll/store");
 const { carryWaitlistAction, moveSeatAction } = await import("./roster-seating-actions");
 
 const SHOP_SLUG = "reef-life";

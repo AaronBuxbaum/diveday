@@ -14,7 +14,7 @@ import { hasSailed } from "./trips";
  * It **gates nothing**. Readiness, admission, boarding, roll call and the
  * no-show door never read it: a diver who said they were late and then never
  * came is still a no-show the desk decides, and one who said nothing is no
- * less welcome. Pure and framework-free; `src/db/running-late.ts` writes it.
+ * less welcome. Pure and framework-free; `src/features/running-late/store.ts` writes it.
  */
 
 /**

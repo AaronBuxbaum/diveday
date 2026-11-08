@@ -3,7 +3,17 @@ import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { demoteOwnerToManager } from "@/test/staff-session";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { pruneExpiredRecords } from "../features/retention/store";
+import {
+  blank,
+  complete,
+  draftsBy,
+  fixture,
+  OCCURRED_AT,
+  OTHER_SHOP,
+  OTHER_TRIP,
+} from "../test/substrate-fixtures/db/incident-reports-test-fixtures";
 import { loadShopExportBundleInput } from "./export";
 import {
   addIncidentAddendum,
@@ -21,16 +31,6 @@ import {
   setIncidentLegalHold,
   startIncidentReport,
 } from "./incident-reports";
-import {
-  blank,
-  complete,
-  draftsBy,
-  fixture,
-  OCCURRED_AT,
-  OTHER_SHOP,
-  OTHER_TRIP,
-} from "./incident-reports-test-fixtures";
-import { pruneExpiredRecords } from "./retention";
 import {
   activityEvents,
   bookings,

@@ -2,7 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  clearAnswers,
+  now,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import type { DbExecutor } from "./client";
 import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
 import {
@@ -17,7 +22,6 @@ import { acknowledgeBrokenWaiverSeal, waiverSealStateDigest } from "./waiver-sea
 import { recheckWaiverSeals, waiverSealPassHealthy } from "./waiver-seal-checks";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
 /**
  * **A broken seal someone has looked into** (#3891). The nightly check stays

@@ -1,6 +1,10 @@
 import { after } from "next/server";
 import type { AppDb } from "@/db/client";
-import { heldSeatOnTrip, tellPartyNotBooked, tellSeatAlreadyHeld } from "@/db/seat-already-held";
+import {
+  heldSeatOnTrip,
+  tellPartyNotBooked,
+  tellSeatAlreadyHeld,
+} from "@/features/seat-already-held";
 import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { log } from "@/lib/log";

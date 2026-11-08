@@ -4,13 +4,13 @@ import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
+import { requireStaffSession } from "@/features/session";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   connectProviderFromEnvironment,
   STRIPE_CONNECT_STATE_COOKIE,
   stripeConnectCallbackUrl,
 } from "@/lib/payments/connect";
-import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /**

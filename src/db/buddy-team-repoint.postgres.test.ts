@@ -2,13 +2,13 @@ import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { repointHeldBooking } from "../features/identity-repoint/store";
 import {
   addBuddyTeamMember,
   dissolveBuddyTeam,
   formBuddyTeam,
   removeBuddyTeamMember,
 } from "./buddy-teams";
-import { repointHeldBooking } from "./identity-repoint";
 import { bookings, people, personRoles, shops, trips, userAccounts } from "./schema";
 
 type Operation = "form" | "add" | "remove" | "dissolve";

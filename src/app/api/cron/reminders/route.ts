@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { sendDueCheckoutRecoveries } from "@/db/checkout-recovery";
 import { getDb } from "@/db/client";
 import { retryPendingMediaDeletions } from "@/db/media-deletions";
 import { drainNotificationRetries } from "@/db/notifications";
-import { retryPendingProcessorErasures } from "@/db/processor-erasure";
 import { reapExpiredDemoShops } from "@/db/seed";
+import { sendDueCheckoutRecoveries } from "@/features/checkout-recovery";
+import { requireCronSecret } from "@/features/cron-auth";
+import { flushLogs } from "@/features/log-shipping";
+import { retryPendingProcessorErasures } from "@/features/processor-erasure";
+import { reportScrubbedError, sentry } from "@/features/sentry-server";
 import { DAY_MS } from "@/lib/clock";
-import { requireCronSecret } from "@/lib/cron-auth";
 import { DAILY_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
-import { flushLogs, reportScrubbedError } from "@/lib/observability";
-import { sentry } from "@/lib/observability/sentry";
 
 /**
  * Six scans run one after another, several of which can send email/SMS through a

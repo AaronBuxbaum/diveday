@@ -14,7 +14,7 @@
  * change (the subscription's trial end), not a DiveDay one.
  */
 import { getDb } from "@/db/client";
-import { setShopFreeTerm } from "@/db/shop-subscriptions";
+import { setShopFreeTerm } from "@/features/shop-subscriptions";
 
 const USAGE = "Usage: pnpm billing:free-term <shop-slug> <YYYY-MM-DD | none>";
 

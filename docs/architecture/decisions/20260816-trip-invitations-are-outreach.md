@@ -63,7 +63,7 @@ count as one, known party sizes are summed, and the suggested capacity rounds up
 with a bounded maximum. Its result is labeled as a planning suggestion, not a boat assignment or a
 boarding decision.
 
-The advisor is an injected function (`src/lib/request-advisor.ts`), so a later transparent scoring
+The advisor is an injected function (`src/features/request-advisor/rules.ts`), so a later transparent scoring
 rule or a separately approved language model can be added without coupling Requests to a provider.
 Any future model may summarize or rank leads, but it may not clear certification, waiver, medical,
 payment or readiness requirements, and it must remain optional and cost-bounded.

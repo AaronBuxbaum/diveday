@@ -2,11 +2,11 @@ import { Suspense } from "react";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
-import { monthSightings } from "@/db/month-sightings";
+import type { MonthSightings } from "@/features/month-sightings";
+import { monthSightings } from "@/features/month-sightings";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { monthNames } from "@/lib/format";
-import type { MonthSightings } from "@/lib/month-sightings";
 
 /**
  * The shelf as the shopfront places it: read behind its own `<Suspense>`, so a

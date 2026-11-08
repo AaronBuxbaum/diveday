@@ -91,7 +91,7 @@ slice updates the `e2e/marketing.spec.ts` assertions it moves — deliberately.
 
 - **Trial terms at the CTA pair** (both positions), sibling to the demo note: **"The trial is a
   shop of your own — free for 3 weeks, no card, and nothing switches off when the window
-  ends."** (Soft expiry per `src/lib/trial.ts`; the FAQ row keeps the depth and the
+  ends."** (Soft expiry per `src/features/trial/rules.ts`; the FAQ row keeps the depth and the
   `onboarding@dive.day` address.)
 - **The two-year lock moves under the figure** — directly beneath "per location / month":
   **"Locked for two years for founding shops."** `item5` trims so the claim isn't inventoried

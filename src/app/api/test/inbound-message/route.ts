@@ -3,11 +3,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordInboundMessage } from "@/db/inbound-messages";
-import { handleInboundReplyKeyword } from "@/db/reply-keywords";
 import { people } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import {
+  e2eTestRouteAuthorized,
+  requireDemoTenant,
+  testRouteRefused,
+} from "@/features/e2e-test-routes";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
+import { handleInboundReplyKeyword } from "../../../../features/reply-keywords/store";
 
 /**
  * **Delivers one inbound message as if a provider had** (ADR

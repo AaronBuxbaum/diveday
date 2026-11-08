@@ -1,10 +1,10 @@
 import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { recordSetupRequest } from "@/db/funnel";
 import { setupRequests } from "@/db/schema";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { fileScopedShopContext } from "@/test/db";
+import { recordSetupRequest } from "../funnel/store";
 
 vi.mock("@/db/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/db/client")>()),
@@ -200,7 +200,7 @@ describe("requester receipt saved-ID boundary", () => {
     });
     await sendSetupRequestReceipt(old.id);
     const gone = await saved("en-US", "gone@reef.mail");
-    const { deleteSetupRequestsByEmail } = await import("@/db/funnel");
+    const { deleteSetupRequestsByEmail } = await import("../funnel/store");
     await deleteSetupRequestsByEmail(db, gone.email);
     await sendSetupRequestReceipt(gone.id);
     expect(send).toHaveBeenCalledTimes(1);

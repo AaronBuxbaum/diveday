@@ -888,7 +888,7 @@ Does promos, review moderation, settings, and reports on Monday afternoons.
 
 **What she hits today.** The Reviews page's "Waiting on you: N" stat has no corresponding
 filter — the list is strictly chronological, so she scans for grey badges
-(`src/db/reviews.ts` orders by `createdAt` only). Hiding a published review (which changes the
+(`src/features/reviews/store.ts` orders by `createdAt` only). Hiding a published review (which changes the
 public rating) has no confirmation, while resending a waiver does — the consequence hierarchy
 is inverted. A 5★ review renders identically to a 1★: zero celebration on the one surface
 where the shop's best news arrives. On Promos, a `failed` code has no retry or delete; codes
@@ -901,7 +901,7 @@ adjacent "Preview" link discards every unsaved edit without warning.
 ### Tasks
 
 84. **[S] Float unmoderated reviews to the top.** Add "waiting first" ordering (or a filter
-    tab) to the reviews query in `src/db/reviews.ts` + `reviews/page.tsx`, linked from the
+    tab) to the reviews query in `src/features/reviews/store.ts` + `reviews/page.tsx`, linked from the
     "Waiting on you" stat.
     **Done — this PR.**
 85. **[S] Confirm hiding a published review.** Add the same confirm treatment other
@@ -1010,7 +1010,7 @@ best asset — is sold as a blind button with no preview of what's inside.
 101. **[M] Answer the migration fears in the guides.** Add a short "Cutover without drama"
     section to each switching guide (`src/lib/migration-guides.ts` + the shared template):
     run both systems in parallel, switch in the off-season, what to do on a bad import
-    (re-import updates in place — verify against `src/db/import.ts` behavior first and
+    (re-import updates in place — verify against `src/features/import/store.ts` behavior first and
     document what's actually true), and a rough time estimate per step. Conversion-sensitive:
     run the `conversion-reviewer` agent after drafting.
     **Done — PR #274.** The `conversion-reviewer` agent pass is still outstanding on this PR.
@@ -1408,7 +1408,7 @@ direction.
 147. **[M] Reconcile wait list and last-minute list.** Make the deal send offer wait-listed
     divers first (they hold "a place in line" the deal can currently sell out from under),
     and cross-reference the two diver forms ("Want any-trip deal alerts instead?"). Read
-    `src/db/trip-promos.ts` + waitlist logic in `src/db/bookings.ts` first; tests on the
+    `src/features/trip-promos/store.ts` + waitlist logic in `src/db/bookings.ts` first; tests on the
     ordering.
     **Done — PR #270.**
 148. **[S] One page listing every live discount.** Add a read-only "Trip deals" section to
@@ -1488,7 +1488,7 @@ direction.
     **Done — PR #270.**
 162. **[M] Widen the command palette.** Add every gated nav destination (check-in,
     staffing, dive sites, courses, reviews, reports, promos, orders) to the go-to list,
-    and dive sites + courses + orders to `searchShop` in `src/db/search.ts`.
+    and dive sites + courses + orders to `searchShop` in `src/features/search/store.ts`.
     **Done — PR #270.**
 163. **[S] Connect import and the switching guides.** `settings/import` offers "Coming
     from EVE / DiveShop360 / a spreadsheet?" links to the matching guide; each guide's CTA

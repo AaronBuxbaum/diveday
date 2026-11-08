@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { shops } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
+import { listShopStaff } from "../../../../features/staff-accounts/store";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 
 const ctx = fileScopedShopContext();

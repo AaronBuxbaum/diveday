@@ -64,7 +64,7 @@ booking spine asks:
 
 ## What is already true and helps
 
-- `bookings` is a single spine with one writer for consequences (`src/db/seat-diver.ts`), so a type
+- `bookings` is a single spine with one writer for consequences (`src/features/seat-diver/store.ts`), so a type
   column has one place to be honoured rather than six.
 - Order line items already carry a `kind`, so per-type pricing has somewhere to land without a new
   money concept.

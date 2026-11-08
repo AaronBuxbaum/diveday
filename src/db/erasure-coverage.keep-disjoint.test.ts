@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ERASURE_KEEPS } from "./erasure-coverage-keeps.test-support";
-import { OUTSIDE_CLOSURE_REASONS } from "./erasure-outside-closure-classification.test-support";
+import { ERASURE_KEEPS } from "../test/substrate-fixtures/db/erasure-coverage-keeps.test-support";
+import { OUTSIDE_CLOSURE_REASONS } from "../test/substrate-fixtures/db/erasure-outside-closure-classification.test-support";
 
 describe("erasure coverage, the two classifications", () => {
   it("never lists a table both as a keep and as outside the closure", () => {

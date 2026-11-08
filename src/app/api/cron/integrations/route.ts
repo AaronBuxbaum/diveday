@@ -1,10 +1,10 @@
 import { getDb } from "@/db/client";
+import { cronRoute } from "@/features/cron-route";
 import {
   dispatchDueIntegrationDeliveries,
   INTEGRATIONS_CRON_BUDGET_MS,
   INTEGRATIONS_CRON_CRONTAB,
 } from "@/features/integrations";
-import { cronRoute } from "@/lib/cron-route";
 
 export const maxDuration = 300;
 

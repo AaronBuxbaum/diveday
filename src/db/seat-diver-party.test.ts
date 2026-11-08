@@ -3,6 +3,8 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { seatParty } from "../features/seat-diver/store";
+import { clearAnswers, now } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import type { AppDb } from "./client";
 import { getBookingReadiness } from "./readiness";
 import {
@@ -14,11 +16,9 @@ import {
   tripRequirements,
   trips as tripsTable,
 } from "./schema";
-import { seatParty } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { clearAnswers, now } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.

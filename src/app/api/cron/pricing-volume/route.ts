@@ -1,12 +1,9 @@
 import { getDb } from "@/db/client";
+import { billingProviderFromEnvironment, percentBillingFromEnvironment } from "@/features/billing";
+import { cronRoute } from "@/features/cron-route";
+import { pricingConfig } from "@/features/pricing-flags";
 import { PRICING_CLOSE_CRONTAB } from "@/lib/billing/pricing-plans";
-import {
-  billingProviderFromEnvironment,
-  percentBillingFromEnvironment,
-} from "@/lib/billing/stripe-billing";
 import { nowDate } from "@/lib/clock";
-import { cronRoute } from "@/lib/cron-route";
-import { pricingConfig } from "@/lib/pricing-flags";
 import { closePercentMonths } from "./close-pass";
 
 /** One statement and at most one Stripe call per percent-plan shop. */

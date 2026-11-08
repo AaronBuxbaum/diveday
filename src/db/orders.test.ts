@@ -17,8 +17,9 @@ import {
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
 } from "@/test/staff-session";
+import { editCourse } from "../features/courses/store";
+import { recordStripeDispute } from "../features/payment-disputes/store";
 import { createBooking } from "./bookings";
-import { editCourse } from "./courses";
 import { countSpendableDives, createDivePackage, deleteDivePackage } from "./dive-packages";
 import {
   countOpenTripOrders,
@@ -41,7 +42,6 @@ import {
   voidCounterOrder,
   voidOrder,
 } from "./orders";
-import { recordStripeDispute } from "./payment-disputes";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import {

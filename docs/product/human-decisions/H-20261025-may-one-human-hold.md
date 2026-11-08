@@ -13,6 +13,6 @@ A yes or no on whether an identity may span shops, and if yes, which shape.
 
 ## Unblocks / follow-up
 
-Nothing is blocked today. Both (b) and (c) re-plumb the thing that currently makes tenant isolation cheap here: every `session.user.shopId` read becomes "which shop is this session acting as", and one mistake there is a cross-tenant bug — so `requireShopSurface` (`src/lib/session.ts`), `src/lib/authz.ts`, the nav and the demo role switcher are all in the blast radius. Do not start without an answer.
+Nothing is blocked today. Both (b) and (c) re-plumb the thing that currently makes tenant isolation cheap here: every `session.user.shopId` read becomes "which shop is this session acting as", and one mistake there is a cross-tenant bug — so `requireShopSurface` (`src/features/session/rules.ts`), `src/lib/authz.ts`, the nav and the demo role switcher are all in the blast radius. Do not start without an answer.
 
 Part of the [human decision log](README.md#decision-register).

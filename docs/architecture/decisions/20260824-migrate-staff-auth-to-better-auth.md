@@ -73,7 +73,7 @@ Postgres/PGlite this app already runs. No new infrastructure.
   session, is path-scoped to `/s/` so it never travels with a staff request, and is minted only on a
   document navigation — none of which is what the deleted module guarded against.)
 - **Everything downstream of `auth()` is unchanged.** `src/lib/auth.ts` keeps exporting an
-  `auth()` async function of the same shape; `src/lib/session.ts`'s `requireStaffSession()` and
+  `auth()` async function of the same shape; `src/features/session/rules.ts`'s `requireStaffSession()` and
   the H-20260724-staff-role-reach live-role gates in `src/db/authz.ts` (which already re-read roles from the database
   rather than trusting the session) needed no changes at all.
 

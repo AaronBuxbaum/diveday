@@ -16,7 +16,7 @@ March goes stale by November and a date invites a diver to invent precision.
 - **`people.last_dive_on`**, a calendar day a staff member writes on the record: a dive anywhere,
   read off a logbook or a computer at the counter. A day stays true, so it does not go stale the way
   a band does. Staff-only; no diver-facing writer.
-- **The record shows the latest of three** (`lastKnownDive`, `src/db/last-dive.ts`): the recorded
+- **The record shows the latest of three** (`lastKnownDive`, `src/features/last-dive/store.ts`): the recorded
   day, the diver's own last dive day with the shop (`numberedDiveDay`, on a departure that is back,
   pool sessions excluded, on the day it came back), and the latest imported visit that happened
   (`priorVisitStanding`). A trip with the shop moves it forward with nobody typing; nothing moves it

@@ -4,7 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 
 const liveReleaseIsSample = vi.fn();
-vi.mock("@/db/first-run", () => ({ liveReleaseIsSample: () => liveReleaseIsSample() }));
+vi.mock("../../../../../features/first-run/store", () => ({
+  liveReleaseIsSample: () => liveReleaseIsSample(),
+}));
 
 const { ReleaseStillSample } = await import("./ReleaseStillSample");
 

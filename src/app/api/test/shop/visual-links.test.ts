@@ -1,20 +1,20 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ownerLogins } from "@/db/owner-logins";
+import { shops } from "@/db/schema";
+import { nowDate } from "@/lib/clock";
+import { fileScopedShopContext } from "@/test/db";
 import {
   checkBookkeeperConfirmation,
   isBookkeeperToken,
   resolveBookkeeperStopToken,
-} from "@/db/bookkeeper";
-import { ownerLogins } from "@/db/owner-logins";
-import { shops } from "@/db/schema";
+} from "../../../../features/bookkeeper/store";
 import {
   checkShoreAlertConfirmation,
   isShoreAlertToken,
   resolveShoreAlertStopToken,
-} from "@/db/shore-alert-tokens";
-import { resolveWeeklyDigestUnsubscribeToken } from "@/db/weekly-digest";
-import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+} from "../../../../features/shore-alert-tokens/store";
+import { resolveWeeklyDigestUnsubscribeToken } from "../../../../features/weekly-digest/store";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();

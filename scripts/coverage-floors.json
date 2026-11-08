@@ -4,7 +4,7 @@
     {
       "why": "Floors for the newly matched files were seeded on 2026-11-01 from older measurements; these three files changed on main since and this re-land touches none of them",
       "files": {
-        "src/db/anonymize.ts": "91.79 -> 91.77",
+        "src/features/anonymize/store.ts": "91.79 -> 91.77",
         "src/db/waivers-requests.ts": "92.7 -> 92.3",
         "src/lib/offline-manifest-store.ts": "74.57 -> 73.31"
       }
@@ -19,7 +19,7 @@
     {
       "why": "Issue #2722 (card ledger, #3733): anonymize.ts and readiness.ts read one cards table instead of three; promo-caps.ts and refunds.ts changed on the base layer this stack merged. Measured by CI on #3733 at 9db4a0d4; the coverage artifact cannot be downloaded from an agent session, so the values are copied from the job log",
       "files": {
-        "src/db/anonymize.ts": "91.77 -> 91.55",
+        "src/features/anonymize/store.ts": "91.77 -> 91.55",
         "src/db/promo-caps.ts": "75 -> 73.33",
         "src/db/refunds.ts": "84.18 -> 83.76",
         "src/lib/readiness.ts": "99.06 -> 99.05"
@@ -28,7 +28,7 @@
     {
       "why": "Main CI went red on the coverage floors after merges that added untested branches (run 41740948676 at ef6d0693). Measured values copied from the job log because the coverage artifact cannot be downloaded from an agent session. booking-gates.ts and trip-admission.ts fell by several points; restoring tests is tracked in a follow-up issue",
       "files": {
-        "src/db/anonymize.ts": "91.55 -> 90.79",
+        "src/features/anonymize/store.ts": "91.55 -> 90.79",
         "src/db/checkouts.ts": "87.54 -> 87.5",
         "src/lib/booking-gates.ts": "93.75 -> 86.66",
         "src/lib/trip-admission.ts": "98.64 -> 95.52"
@@ -56,7 +56,7 @@
       "why": "Roll call by meeting day (#2557): manifests.ts and roll-call-alerts.ts now fold marks per meeting day, and the single-day path skips the later-day branches (an earlier day's missing diver held past the cut, a claim compared to a later day's end). Those branches are tested where the fold lives, in src/lib/roll-call-days.test.ts and the two-Saturday suites.",
       "files": {
         "src/db/manifests.ts": "88.88 -> 87.91",
-        "src/db/roll-call-alerts.ts": "90.47 -> 89.02"
+        "src/features/roll-call-alerts/store.ts": "90.47 -> 89.02"
       }
     },
     {
@@ -66,45 +66,45 @@
       }
     },
     {
-      "why": "The walk-in branches left src/db/seat-diver.ts with the walk-in door (the entry case and the owes-confirmation entry check were both covered), so the same untested remainder is a larger share. No branch was added untested. Measured by CI on #3972; the coverage artifact cannot be downloaded from an agent session, so the value is copied from the job log",
+      "why": "The walk-in branches left src/features/seat-diver/store.ts with the walk-in door (the entry case and the owes-confirmation entry check were both covered), so the same untested remainder is a larger share. No branch was added untested. Measured by CI on #3972; the coverage artifact cannot be downloaded from an agent session, so the value is copied from the job log",
       "files": {
-        "src/db/seat-diver.ts": "79.59 -> 79.38"
+        "src/features/seat-diver/store.ts": "79.59 -> 79.38"
       }
     }
   ],
   "src/db/aboard-at-sea.ts": 94.82,
   "src/db/account-security.ts": 94.2,
-  "src/db/anonymize.ts": 92.57,
+  "src/features/anonymize/store.ts": 92.57,
   "src/db/boarding-certification-snapshot.ts": 83.33,
   "src/db/bookings.ts": 89.52,
-  "src/db/card-restore.ts": 76.92,
+  "src/features/card-restore/store.ts": 76.92,
   "src/db/certification-evidence.ts": 50,
-  "src/db/certification-junior.ts": 88.23,
+  "src/features/certification-junior/store.ts": 88.23,
   "src/db/certifications-in-training.ts": 50,
-  "src/db/check-in.ts": 91.71,
+  "src/features/check-in/store.ts": 91.71,
   "src/db/checkouts.ts": 88.14,
-  "src/db/course-certified.ts": 70.21,
+  "src/features/course-certified/store.ts": 70.21,
   "src/db/erasure-coordinated-send.ts": 90.19,
   "src/db/export-crew-roll-call.ts": 50,
-  "src/db/facts/manifest-overcapacity-state.ts": 0,
-  "src/db/facts/mark-mixed-waiver-delivery.ts": 50,
-  "src/db/facts/party-waiver-capacity-state.ts": 50,
-  "src/db/facts/read-the-waiver-request.ts": 0,
-  "src/db/guardian-erasure.ts": 95.65,
+  "src/test/shop-facts/manifest-overcapacity-state.ts": 0,
+  "src/test/shop-facts/mark-mixed-waiver-delivery.ts": 50,
+  "src/test/shop-facts/party-waiver-capacity-state.ts": 50,
+  "src/test/shop-facts/read-the-waiver-request.ts": 0,
+  "src/features/guardian-erasure/store.ts": 95.65,
   "src/db/manifest-events.ts": 75.92,
   "src/db/manifests.ts": 88.59,
   "src/db/medical-alerts.ts": 93.65,
   "src/db/nitrox.ts": 83.6,
-  "src/db/offline-manifest-snapshots.ts": 70,
-  "src/db/party-waiver-queue.ts": 100,
+  "src/features/offline-manifest-snapshots/store.ts": 70,
+  "src/features/party-waiver-queue/store.ts": 100,
   "src/db/pre-departure-check.ts": 84.88,
-  "src/db/processor-erasure.ts": 88.88,
+  "src/features/processor-erasure/store.ts": 88.88,
   "src/db/promo-caps.ts": 87.5,
-  "src/db/readiness-link-rescue.ts": 77.77,
+  "src/features/readiness-link-rescue/store.ts": 77.77,
   "src/db/readiness.ts": 86.45,
   "src/db/refunds.ts": 84.26,
-  "src/db/roll-call-alerts.ts": 89.02,
-  "src/db/roll-call-gaps.ts": 84.22,
+  "src/features/roll-call-alerts/store.ts": 89.02,
+  "src/features/roll-call-gaps/store.ts": 84.22,
   "src/db/roll-call-history.ts": 50,
   "src/db/roll-call-order.ts": 100,
   "src/db/roll-call-subject.ts": 93.75,
@@ -112,9 +112,9 @@
   "src/db/schema/erasure.ts": 100,
   "src/db/schema/offline-manifests.ts": 100,
   "src/db/schema/waivers.ts": 100,
-  "src/db/seat-diver.ts": 86.86,
-  "src/db/signed-waiver-page.ts": 100,
-  "src/db/standing-sailed-roll-call.ts": 100,
+  "src/features/seat-diver/store.ts": 86.86,
+  "src/features/signed-waiver-page/store.ts": 100,
+  "src/features/standing-sailed-roll-call/store.ts": 100,
   "src/db/trips-manifest.ts": 100,
   "src/db/waiver-issue.ts": 83.33,
   "src/db/waiver-drafts.ts": 91.66,
@@ -128,18 +128,18 @@
   "src/db/waivers-delivery-status.ts": 97.67,
   "src/db/waivers-in-person.ts": 87.3,
   "src/db/waivers-medical.ts": 89.03,
-  "src/db/waivers-page.ts": 100,
+  "src/features/waivers-page/store.ts": 100,
   "src/db/waivers-requests.ts": 94.05,
   "src/db/waivers-templates.ts": 78.43,
   "src/db/waivers-trip-status.ts": 50,
   "src/db/waivers.ts": 100,
   "src/features/today/today-roll-call-rows.ts": 81.48,
-  "src/lib/anonymization.ts": 100,
-  "src/lib/assists/cert-scan.ts": 85.1,
-  "src/lib/assists/waiver-draft.ts": 100,
+  "src/features/anonymization/rules.ts": 100,
+  "src/features/cert-scan/rules.ts": 85.1,
+  "src/features/waiver-draft/rules.ts": 100,
   "src/lib/authz.ts": 100,
   "src/lib/booking-gates.ts": 100,
-  "src/lib/card-undo.ts": 100,
+  "src/features/card-undo/rules.ts": 100,
   "src/lib/cert-check-extension.ts": 87.69,
   "src/lib/certification-cards.ts": 100,
   "src/lib/certification-levels.ts": 100,
@@ -153,7 +153,7 @@
   "src/lib/medical-alert.ts": 100,
   "src/lib/medical.ts": 90,
   "src/lib/nitrox-fill.ts": 100,
-  "src/lib/nitrox-mod.ts": 100,
+  "src/features/nitrox-mod/rules.ts": 100,
   "src/lib/notifications/roll-call-emails.ts": 100,
   "src/lib/notifications/waiver-text.ts": 100,
   "src/lib/offline-erasure-epoch.ts": 88.23,
@@ -165,7 +165,7 @@
   "src/lib/readiness-summary.ts": 96.15,
   "src/lib/readiness.ts": 100,
   "src/lib/requirement.ts": 91.66,
-  "src/lib/roll-call-alerts.ts": 100,
+  "src/features/roll-call-alerts/rules.ts": 100,
   "src/lib/roll-call-days.ts": 96.2,
   "src/lib/roll-call-gaps.ts": 100,
   "src/lib/roll-call-population.ts": 100,
@@ -177,5 +177,9 @@
   "src/lib/trips.ts": 100,
   "src/lib/waiver-integrity.ts": 100,
   "src/lib/waiver-questions.ts": 90.41,
-  "src/lib/waivers.ts": 96.4
+  "src/lib/waivers.ts": 96.4,
+  "src/features/check-in/rules.ts": 100,
+  "src/features/check-in/arrival-elsewhere.store.ts": 80,
+  "src/features/requirement-form/store.ts": 100,
+  "src/features/waiver-guardian-copy/store.ts": 80
 }

@@ -5,9 +5,12 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { schemaTableNameOf } from "@/test/schema-tables";
-import { anonymizeDiver } from "./anonymize";
-import { ERASURE_KEEPS } from "./erasure-coverage-keeps.test-support";
-import { registryDeletesRun, stripCommentsAndStrings } from "./erasure-source.test-support";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { ERASURE_KEEPS } from "../test/substrate-fixtures/db/erasure-coverage-keeps.test-support";
+import {
+  registryDeletesRun,
+  stripCommentsAndStrings,
+} from "../test/substrate-fixtures/db/erasure-source.test-support";
 import {
   erasedPersonRowDeletes,
   eraseFate,
@@ -33,7 +36,7 @@ function functionBody(source: string, name: string): string {
  * writes of its neighbours.
  */
 function sweepText(sweep: string): string {
-  const raw = readFileSync("src/db/anonymize.ts", "utf8");
+  const raw = readFileSync("src/features/anonymize/store.ts", "utf8");
   const source = stripCommentsAndStrings(raw);
   const body = functionBody(source, sweep);
   const parts = [body];
@@ -108,9 +111,11 @@ const NEVER_PLAIN_DELETED = [
  */
 describe("the registry's erase fates", () => {
   const sweeps = new Set(
-    [...readFileSync("src/db/anonymize.ts", "utf8").matchAll(/^async function (scrub\w+)\(/gm)].map(
-      (match) => match[1] as string,
-    ),
+    [
+      ...readFileSync("src/features/anonymize/store.ts", "utf8").matchAll(
+        /^async function (scrub\w+)\(/gm,
+      ),
+    ].map((match) => match[1] as string),
   );
 
   it("gives every column a fate", () => {
@@ -177,7 +182,7 @@ describe("the registry's erase fates", () => {
   it("runs its plain deletes, and only on tables scoped to one shop", () => {
     const plain = erasedPersonRowDeletes();
     expect(plain.length).toBeGreaterThan(2);
-    const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
+    const source = stripCommentsAndStrings(readFileSync("src/features/anonymize/store.ts", "utf8"));
     expect(registryDeletesRun(source)).toBe(true);
     expect(plain.filter(({ table }) => NEVER_PLAIN_DELETED.includes(table))).toEqual([]);
     // Adversarial: a plain delete on anything but the subject's own rows refuses to list.

@@ -1,9 +1,9 @@
 import { GroupLabel } from "@/components/ui/group-label";
 import { FIGURE_CLASS } from "@/components/ui/typography";
+import { formatReportMoney } from "@/features/reporting";
 import type { DayTakings as DayTakingsReading } from "@/features/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatTime } from "@/lib/format";
-import { formatReportMoney } from "@/lib/reporting";
 
 /**
  * **What today made** — the evening's one money reading, above the closing

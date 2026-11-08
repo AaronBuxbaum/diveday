@@ -172,13 +172,13 @@ Read, in this order, before writing code:
    acceptance tests, and the must-nots.
 4. The current code the slice touches: src/app/(token)/ready/[token]/page.tsx and
    src/app/s/[shopSlug]/trips/[id]/_components/TripActions.tsx (where Add to calendar lives),
-   src/db/booking-capabilities.ts (verifyBookingCapability), src/db/ready.ts (getReadyPageData),
-   src/db/trip-stages.ts (latestTripStage), src/lib/trip-calendar.ts and src/lib/trip-revision.ts
+   src/db/booking-capabilities.ts (verifyBookingCapability), src/features/ready/store.ts (getReadyPageData),
+   src/features/trip-stages/store.ts (latestTripStage), src/features/trip-calendar/rules.ts and src/lib/trip-revision.ts
    (how the calendar reads trips.revision), src/lib/brand.ts (deriveBrandTheme),
    src/lib/bearer-tokens.ts, src/features/calendar-sync/ (the feature-module shape and README to
    copy), src/app/api/cron/trip-series/route.ts (the cron pattern: CRON_SECRET gate, Sentry
    monitor), config/env-registry.mjs, the manual-actions registry in infra/lib/infra-stack.ts §17,
-   infra/lib/observability.ts, src/db/anonymize.ts (the erasure hook),
+   infra/lib/observability.ts, src/features/anonymize/store.ts (the erasure hook),
    docs/engineering/capability-telemetry-runbook.md.
 5. Only then the artboard docs/design/canvases/20260907-nothing-from-nowhere/Pass.dc.html. The
    ADR outranks the spec, the spec outranks the artboard, and shipped code outranks a drawing for

@@ -3,16 +3,15 @@ import { RequirementFields } from "@/components/RequirementFields";
 import { DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
+import { MAX_PLANNING_NOTE_LENGTH, planningNoteIsFresh } from "@/features/dive-site-memory";
+import type { TideStationEcho } from "@/features/tide-stations";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
-
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
-import { MAX_PLANNING_NOTE_LENGTH, planningNoteIsFresh } from "@/lib/dive-site-memory";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import { formatDateWithYear } from "@/lib/format";
 import type { CertificationLevel } from "@/lib/readiness";
-import type { TideStationEcho } from "@/lib/tide-stations";
 import type { TidePreference } from "@/lib/tides";
 import { ClosedEditorSection, OpenEditorSection } from "./EditorSections";
 import {

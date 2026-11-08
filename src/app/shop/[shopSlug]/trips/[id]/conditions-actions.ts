@@ -10,13 +10,13 @@ import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getShopById } from "@/db/shops";
 import { editTripConditions, listTripDiverContacts } from "@/db/trips";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface } from "@/features/session";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripPath } from "@/lib/public-routes";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import {
   maxEnteredTemperature,

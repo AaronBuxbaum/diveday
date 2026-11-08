@@ -82,7 +82,7 @@ export function EntryDone(props: {
   `account.onboard.trialNote` ("Free for 3 weeks, no card — and nothing switches off when the
   window ends.", the day-22 answer from
   [marketing-review-20260827.md](../../../product/marketing-review-20260827.md); soft expiry per
-  `src/lib/trial.ts`) — and the four old keys delete from the call site and **both** locales in
+  `src/features/trial/rules.ts`) — and the four old keys delete from the call site and **both** locales in
   the same change.
 - The slug field's hint becomes the live URL line: "Your schedule will live at
   **diveday.com/s/&lt;slug&gt;**", rendering the current normalized slug from the same client

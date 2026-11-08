@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StaffingView } from "@/db/staffing";
+import type { StaffingView } from "../../../../../features/staffing/store";
 
 const staffingView = vi.hoisted(() => vi.fn());
 const awayRead = vi.hoisted(() => vi.fn());
 
 // The week's one reader (issue #2757), assembled from the same two reads it
 // makes, so the roster still comes from the staffing view alone.
-vi.mock("@/db/staffing", () => ({
+vi.mock("../../../../../features/staffing/store", () => ({
   getStaffingPage: vi.fn(async () => ({
     view: await staffingView(),
     ...(await awayRead()),
@@ -16,14 +16,14 @@ vi.mock("@/db/staffing", () => ({
   })),
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((to: string) => {
     throw new Error(`redirect ${to}`);
   }),
 }));
 
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { default: StaffingPrintPage } = await import("./page");
 
 const PERSON_ID = "22222222-2222-4222-8222-222222222222";

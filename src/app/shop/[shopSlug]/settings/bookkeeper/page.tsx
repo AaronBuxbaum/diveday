@@ -1,7 +1,7 @@
 import { canPersonExportShopData } from "@/db/export";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { requireShopSurface } from "@/lib/session";
 import { MonthEndSection } from "../../reports/_components/MonthEndSection";
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";
 

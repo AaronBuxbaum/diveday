@@ -13,7 +13,9 @@ vi.mock("next/og", () => ({
 
 const mocks = vi.hoisted(() => ({ allowSvgRasterization: vi.fn() }));
 
-vi.mock("@/lib/og-rasterizer", () => ({ allowSvgRasterization: mocks.allowSvgRasterization }));
+vi.mock("../../features/og-rasterizer/rules", () => ({
+  allowSvgRasterization: mocks.allowSvgRasterization,
+}));
 
 import { LINK_CARD_SIZE, sharedLinkCardImage } from "@/lib/site-metadata";
 import { GET } from "./route";

@@ -1,9 +1,9 @@
 import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandidateFacts";
 import { legendClass, radioClass, radioRingClass } from "@/components/ui/form";
-import type { SimilarDiver } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { PARTY_NEW_PERSON, partyMemberField } from "@/lib/seat-party-form";
+import type { SimilarDiver } from "../../../../../lib/diver-choice-types";
 
 /** One party row the on-file check stopped on: the name typed, and who it reads like. */
 export type PartyOnFileRow = { row: number; typedName: string; matches: SimilarDiver[] };

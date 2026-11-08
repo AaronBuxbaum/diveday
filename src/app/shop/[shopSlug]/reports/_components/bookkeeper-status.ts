@@ -1,4 +1,4 @@
-import type { BookkeeperSetting } from "@/db/bookkeeper";
+import type { BookkeeperSetting } from "@/features/bookkeeper";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateWithYear } from "@/lib/format";
 

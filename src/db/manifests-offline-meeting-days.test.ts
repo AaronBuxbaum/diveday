@@ -2,8 +2,8 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { log } from "@/lib/log";
+import { manifestContext } from "../test/substrate-fixtures/db/manifests-test-fixtures";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
-import { manifestContext } from "./manifests-test-fixtures";
 import { tripAssignments, tripScheduleDays } from "./schema";
 
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));

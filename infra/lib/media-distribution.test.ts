@@ -259,7 +259,7 @@ describe("media distribution", () => {
    * reaches the one place that gets written down.
    */
   /**
-   * **The app's own security headers stop at Next.** `src/lib/security-headers.ts`
+   * **The app's own security headers stop at Next.** `src/features/security-headers/rules.ts`
    * is a `headers()` rule, so nothing it sets reaches a response CloudFront
    * serves -- and this behaviour used the AWS-managed CORS policy alone, which
    * adds `Access-Control-Allow-Origin: *` and no `nosniff`.

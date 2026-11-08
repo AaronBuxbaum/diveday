@@ -6,7 +6,6 @@ import { recordNotificationDelivery } from "@/db/notifications";
 import { listTripReadiness } from "@/db/readiness";
 import { boats, diveSites, shops as shopsTable, tripAssignments, tripDives } from "@/db/schema";
 import { markShopUnitsConfirmed } from "@/db/shops";
-import { recordTripStage } from "@/db/trip-stages";
 import {
   createTrip,
   getTripRoster,
@@ -18,9 +17,10 @@ import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { shopClock } from "@/lib/shop-clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
+import { shopClock } from "../shop-clock/rules";
+import { recordTripStage } from "../trip-stages/store";
 import { getTodayWork } from "./today-reader";
 
 const EN = staffTranslator("en-US");

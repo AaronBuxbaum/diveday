@@ -1,13 +1,13 @@
 import { and, count, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { summarizeMonth } from "@/lib/reporting";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
+import { recapClosedReason } from "../features/recap/store";
+import { summarizeMonth } from "../features/reporting/rules";
+import { getMonthlyReport } from "../features/reporting/store";
 import type { AppDb } from "./client";
 import { refreshCanonicalDemoSchedule } from "./demo-refresh";
-import { recapClosedReason } from "./recap";
-import { getMonthlyReport } from "./reporting";
 import { bookingCheckouts, bookings, people, recapPhotos, tripReviews, trips } from "./schema";
 import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 import { seedRecentRecaps } from "./seed-recent-recaps";

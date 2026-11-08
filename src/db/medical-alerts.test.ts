@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  clearAnswers,
+  now,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import type { AppDb } from "./client";
 import { getTripManifest } from "./manifests";
 import {
@@ -26,7 +31,6 @@ import {
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
-import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const fileCtx = fileScopedShopContext();

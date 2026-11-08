@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { activityEvents, people, personRoles, shops } from "@/db/schema";
 import { createDemoShop } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { readTodayCatchUp } from "@/db/today-catch-up";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import { readTodayCatchUp } from "../../../../features/today-catch-up/store";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();

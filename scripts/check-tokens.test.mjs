@@ -99,6 +99,31 @@ describe("palette-scale classes", () => {
 });
 
 describe("the tree walk", () => {
+  it("exempts exact bitmap palette and raster fixture paths, while checking their neighbors", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "check-tokens-bitmap-"));
+    const files = {
+      "src/features/year-card/rules.ts": 'const ink = "#fffdf8";',
+      "src/features/year-card/rules.test.ts": 'expect(ink).toBe("#ffffff");',
+      "src/features/og-rasterizer/rules.test.ts": 'const fixture = { background: "#ff0000" };',
+      "src/features/year-card/other.ts": 'const ink = "#fffdf8";',
+      "src/features/year-card/other.test.ts": 'const ink = "#fffdf8";',
+      "src/features/og-rasterizer/rules.ts": 'const ink = "#ff0000";',
+      "src/features/og-rasterizer/other.test.ts": 'const ink = "#ff0000";',
+      "src/features/another/rules.test.ts": 'const ink = "#ff0000";',
+    };
+    for (const [relative, contents] of Object.entries(files)) {
+      await mkdir(path.join(root, path.dirname(relative)), { recursive: true });
+      await writeFile(path.join(root, relative), contents);
+    }
+    expect([...(await scanTree(root)).keys()].sort()).toEqual([
+      "src/features/another/rules.test.ts",
+      "src/features/og-rasterizer/other.test.ts",
+      "src/features/og-rasterizer/rules.ts",
+      "src/features/year-card/other.test.ts",
+      "src/features/year-card/other.ts",
+    ]);
+  });
+
   it("skips Next metadata-file conventions and .d.ts, and reports everything else per file", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "check-tokens-"));
     const files = {

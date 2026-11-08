@@ -1,14 +1,11 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus, textareaClassFor } from "@/components/ui/form";
-import {
-  MAX_RECAP_PULSE_NOTE_LENGTH,
-  RECAP_PULSE_CATEGORIES,
-  type RecapPulseCategory,
-} from "@/db/recap-pulses";
+import { MAX_RECAP_PULSE_NOTE_LENGTH, RECAP_PULSE_CATEGORIES } from "@/features/recap";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { RECAP_PULSE_CATEGORY_KEYS } from "@/i18n/next-dive-labels";
 import { noticeFromParam } from "@/lib/staff-notices";
+import type { RecapPulseCategory } from "../../../../../lib/recap-pulse-category";
 
 /**
  * **The other door** — delight report D40 (issue #1200), slice 16i of ADR
@@ -29,7 +26,7 @@ import { noticeFromParam } from "@/lib/staff-notices";
  * question twice at equal weight. A complaint is a minority act at a minority
  * moment, which is what disclosure is for (principle 8).
  *
- * Words come from the bundle and codes from `src/db/recap-pulses.ts`; the five
+ * Words come from the bundle and codes from `src/features/recap/recap-pulses.store.ts`; the five
  * chips are `RECAP_PULSE_CATEGORIES` in the enum's own order, so a sixth
  * category is a compile error here rather than a chip nobody added.
  */
@@ -142,7 +139,7 @@ export function RecapPulse({
       {/* **The way back**, and only once there is something to take back.
           A form of its own rather than a second button in the one above, because
           what withdraws a pulse is a submit carrying no `category` at all
-          (`submitRecapPulse`, src/db/recap-pulses.ts) — and a button inside that
+          (`submitRecapPulse`, src/features/recap/recap-pulses.store.ts) — and a button inside that
           form would carry whichever chips are ticked. Two forms, two posts, one
           action, and the difference between them is exactly the difference the
           writer reads. */}

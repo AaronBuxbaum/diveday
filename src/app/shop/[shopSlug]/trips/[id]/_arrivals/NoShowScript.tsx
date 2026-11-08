@@ -7,7 +7,7 @@ import { RowActionForm } from "./RowActionForm";
  * Localized native disclosure for recording a diver as not here. Its closed
  * label is the factual "Not here"; confirmation is explicit, undoable, and
  * names the diver accessibly. Rebooking and seat-salvage precedence is
- * resolved upstream (`src/lib/no-show.ts`, `src/db/no-show.ts`); fare decisions
+ * resolved upstream (`src/lib/no-show.ts`, `src/features/no-show/store.ts`); fare decisions
  * are described in copy, with no charge or refund action here. ADR
  * 20260730-staff-copy-localization covers page-resolved staff copy.
  */
@@ -82,7 +82,7 @@ export function NoShowScript({
  * What the shop can still do once the seat is released, already worded.
  *
  * The precedence — wait list, then a rebooking for the diver who missed, then
- * nothing — is decided in `src/lib/no-show.ts` and read in `src/db/no-show.ts`;
+ * nothing — is decided in `src/lib/no-show.ts` and read in `src/features/no-show/store.ts`;
  * `salvage-copy.ts` turns it into these strings a layer up, where the
  * translator and the shop's timezone both are.
  */

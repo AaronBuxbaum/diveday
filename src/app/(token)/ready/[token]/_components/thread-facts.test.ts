@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { ReadyPageData } from "@/db/ready";
 import type { TripRequirement } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import type { ThreadStep } from "@/lib/thread-steps";
+import type { ReadyPageData } from "../../../../../features/ready/store";
 import { boatStageLine, readyStepLine, readyThreadFacts } from "./thread-facts";
 
 const [ENGLISH] = DIVER_LOCALES;

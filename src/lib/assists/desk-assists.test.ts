@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { callStructured } from "@/lib/claude/structured";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { RENTAL_NOTE_SYSTEM, rentalNoteCall, rentalNoteFields } from "./rental-note";
-import { samePersonCall, samePersonRead } from "./same-person";
+import {
+  RENTAL_NOTE_SYSTEM,
+  rentalNoteCall,
+  rentalNoteFields,
+} from "../../features/rental-note/rules";
+import { samePersonCall, samePersonRead } from "../../features/same-person/rules";
 
 function answering(value: unknown) {
   return fakeClaude({ reply: () => fakeClaudeMessage({ text: JSON.stringify(value) }) });

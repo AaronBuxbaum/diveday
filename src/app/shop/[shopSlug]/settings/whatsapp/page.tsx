@@ -7,17 +7,17 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { NoticeTone } from "@/components/ui/tone";
 import type { WhatsAppConnectRefusal } from "@/db/whatsapp-accounts";
+import { requireShopSurface } from "@/features/session";
 import {
   canPersonManageMessagingSettings,
   getWhatsAppSettingsPage,
-} from "@/db/whatsapp-settings-page";
+} from "@/features/whatsapp-settings-page";
+import { whatsAppSignupConfigFromEnvironment } from "@/features/whatsapp-signup";
 import { requestLocale } from "@/i18n/request";
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { whatsAppSignupConfigFromEnvironment } from "@/lib/notifications/whatsapp-signup";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
-import { requireShopSurface } from "@/lib/session";
 import type { NoticeCodeOf } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import {

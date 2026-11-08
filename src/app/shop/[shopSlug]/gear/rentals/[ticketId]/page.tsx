@@ -8,7 +8,8 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import type { NoticeTone } from "@/components/ui/tone";
-import { getCounterRentalTicketPage } from "@/db/counter-rental-ticket-page";
+import { getCounterRentalTicketPage } from "@/features/counter-rental-ticket-page";
+import { requireShopSurface } from "@/features/session";
 import {
   gearItemKindLabel,
   gearPhaseLabel,
@@ -21,7 +22,6 @@ import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date"
 import { nowDate } from "@/lib/clock";
 import { reservationPhase } from "@/lib/gear";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeCountParam, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";

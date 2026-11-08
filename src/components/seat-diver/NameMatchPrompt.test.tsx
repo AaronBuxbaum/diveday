@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { SimilarDiver } from "@/db/divers";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { SimilarDiver } from "../../lib/diver-choice-types";
 import { NameMatchPrompt } from "./NameMatchPrompt";
 
 afterEach(cleanup);

@@ -1,5 +1,5 @@
 import { canPersonConfigureTrips } from "@/db/authz";
-import { requireShopSurface } from "@/lib/session";
+import { requireShopSurface } from "@/features/session";
 
 /**
  * Trip *definition* — what the dive is and who it admits (details, admission

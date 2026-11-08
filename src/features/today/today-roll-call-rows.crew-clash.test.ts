@@ -11,9 +11,9 @@ import {
 import { createTrip, listStaff, moveTrip, setTripCrew, setTripStatus } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
+import { shopClock } from "../shop-clock/rules";
 import { assembleDaySpine, sortStationRows } from "./today";
 import { getTodayWork } from "./today-reader";
 

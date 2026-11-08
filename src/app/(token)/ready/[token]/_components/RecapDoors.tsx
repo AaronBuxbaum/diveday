@@ -5,7 +5,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, FormStatus } from "@/components/ui/form";
-import type { RecapPageData } from "@/db/recap";
+import type { RecapPageData } from "@/features/recap";
 import type { AfterStateProps } from "@/features/recap-after-state";
 import type { fieldGuideCards } from "@/i18n/marine-life-labels";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";

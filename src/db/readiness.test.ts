@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
+import { readinessFixturesFor } from "../test/substrate-fixtures/db/readiness-test-fixtures";
 import { createBooking, createBookingParty } from "./bookings";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import {
@@ -22,7 +23,6 @@ import {
   tripRequirementSummaries,
   upsertTripRequirements,
 } from "./readiness";
-import { readinessFixturesFor } from "./readiness-test-fixtures";
 import { cards, courses, diveSites, people, shops, tripAssignments, trips } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import {

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { cancelBooking } from "@/db/bookings";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { crewSubject } from "@/db/roll-call-subject";
-import { boardAtDeparture, HOUR, returnedTrip } from "@/db/roll-call-test-fixtures";
 import {
   rollCallEvents as rollCallEventsTable,
   rollCallEvents as rollCallMarksTable,
@@ -12,8 +11,13 @@ import {
 import { listStaff } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowMs } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  boardAtDeparture,
+  HOUR,
+  returnedTrip,
+} from "../../test/substrate-fixtures/db/roll-call-test-fixtures";
+import { shopClock } from "../shop-clock/rules";
 import type { TodayAction } from "./today";
 import { sortStationRows } from "./today";
 import { getTodayWork } from "./today-reader";

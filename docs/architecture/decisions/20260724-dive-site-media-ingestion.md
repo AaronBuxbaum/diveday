@@ -19,7 +19,7 @@ remaining scope is dive-site media only.
 
 ## Decision
 
-- **Ingest at save time, not at render time.** `src/lib/storage/ingest-url.ts`'s `ingestImageUrl`
+- **Ingest at save time, not at render time.** `src/features/storage/ingest-url.ts`'s `ingestImageUrl`
   fetches a staff-pasted URL once, server-side, and re-stores it through the same
   validate/decode/strip-metadata/re-encode/upload pipeline (`storeImage` in `src/lib/storage/
   index.ts`) every direct upload already goes through — reusing CR-012's machinery rather than
@@ -70,7 +70,7 @@ remaining scope is dive-site media only.
 
 ## Consequences
 
-- `src/lib/storage/ingest-url.test.ts`, `src/lib/storage/ingest-dive-site-media.test.ts` cover the
+- `src/features/storage/ingest-url.test.ts`, `src/lib/storage/ingest-dive-site-media.test.ts` cover the
   SSRF defenses (private/reserved ranges for both address families, redirect refusal, DNS-failure
   handling), the size bounds (Content-Length pre-check and streamed abort), and the
   not-configured/rejected distinction deterministically, without a real network call.
@@ -94,7 +94,7 @@ save time and 404s (or changes) six months later, on a briefing page a diver rea
 What went with it: `src/lib/storage/ingest-dive-site-media.ts`, `splitMediaUrls`, and
 `src/lib/dive-site-media.ts`'s bundled-Commons resolver, whose only caller was the ingest path (the
 seeded demo rows write their local `/dive-sites/…` paths directly). What stays: `ingestImageUrl` and
-every SSRF defense in it, because contact-import waiver documents (`src/db/import.ts`, ADR
+every SSRF defense in it, because contact-import waiver documents (`src/features/import/store.ts`, ADR
 20260724-import-verified-cards) genuinely arrive as URLs in a CSV and have no upload path to take.
 
 No migration and no compatibility read: the three columns still hold first-party URLs, they are just
@@ -103,8 +103,8 @@ course photos do (a new `dive_site_photo` kind), so a superseded blob is not sil
 
 ## Amendment 2026-11-01 — the address is checked where the socket connects
 
-The rebinding gap above is closed (issue #3267). `src/lib/net/public-address.ts` now holds the
-address rules, and `src/lib/net/public-fetch.ts` is a `fetch`-shaped request over `node:http` and
+The rebinding gap above is closed (issue #3267). `src/features/net/public-address.ts` now holds the
+address rules, and `src/features/net/public-fetch.ts` is a `fetch`-shaped request over `node:http` and
 `node:https` whose socket resolver (`lookup`) is the check: it resolves the name, refuses the whole
 name if any answer is not public, and hands the socket exactly the answers it checked. A literal IP
 host, for which Node skips `lookup`, is checked before the request. It never follows a redirect.

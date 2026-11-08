@@ -110,7 +110,7 @@ export type SendStaffReplyResult =
  *
  * The caller has already decided *who may* (`replyToDiverAction`'s live staff
  * check, or — for an automatic reply — the evidence rules in
- * `src/db/reply-keywords.ts`); this decides whether the message can be
+ * `src/features/reply-keywords/store.ts`); this decides whether the message can be
  * answered at all, and on what.
  */
 export async function sendStaffReply(

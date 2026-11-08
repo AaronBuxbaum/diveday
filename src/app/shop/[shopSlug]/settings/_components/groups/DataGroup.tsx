@@ -5,11 +5,11 @@ import { InsetGroup } from "@/components/ui/ledger";
 import { ShopNotice } from "@/components/ui/outcome";
 import { canPersonErasePersonalData } from "@/db/authz";
 import type { AppDb } from "@/db/client";
-import { readShopConnections } from "@/db/connections";
 import type { MediaDeletionKind, ProcessorErasureTarget } from "@/db/schema";
 import { readUnfinished } from "@/db/unfinished";
+import type { ConnectionProvider } from "@/features/connections";
+import { readShopConnections } from "@/features/connections";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import type { ConnectionProvider } from "@/lib/connections";
 import { formatShortDate } from "@/lib/format";
 import { type ErasureFailure, erasureFailureOf } from "@/lib/payments/erasure-failure";
 import {

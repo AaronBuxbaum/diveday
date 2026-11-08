@@ -75,7 +75,7 @@ describe("when a claim expires", () => {
       comments: [
         {
           createdAt: "2026-10-10T09:46:10Z",
-          body: "## Claim\n\n- Branch: `claude/project-thread-f9bes8` (sub-branch `claude/project-thread-f9bes8-l2-core`)\n- Worktree: `/home/claude/wt-rfa8-core`\n- Started: 2026-10-10T09:46Z\n- Owned paths: server actions under src/app (formData.get -> parseForm), src/lib/form-parse.ts\n",
+          body: "## Claim\n\n- Branch: `claude/project-thread-f9bes8` (sub-branch `claude/project-thread-f9bes8-l2-core`)\n- Worktree: `/home/claude/wt-rfa8-core`\n- Started: 2026-10-10T09:46Z\n- Owned paths: server actions under src/app (formData.get -> parseForm), src/features/form-parse/rules.ts\n",
         },
       ],
     };

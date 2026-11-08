@@ -19,12 +19,12 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { LedgerRow } from "@/components/ui/ledger";
-import { getWorkOrderNewPage } from "@/db/work-order-new-page";
+import type { ShopSurface } from "@/features/session";
+import { getWorkOrderNewPage } from "@/features/work-order-new-page";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ADD_ONE, ADD_PARAM, addPanelHref } from "@/lib/add-panel";
 import { GEAR_KIND_ORDER } from "@/lib/gear";
-import type { ShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { WORK_ORDER_TEXT_LIMITS } from "@/lib/work-orders";

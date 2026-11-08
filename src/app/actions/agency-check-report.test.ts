@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));
 
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../features/session/rules");
 const { log } = await import("@/lib/log");
 const { reportAgencyCheckPageAction } = await import("./agency-check-report");
 const { RATE_LIMITS } = await import("@/lib/rate-limit");

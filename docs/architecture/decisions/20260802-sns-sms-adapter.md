@@ -16,7 +16,7 @@ instead of onboarding a second vendor (Twilio) for a channel that hasn't gone li
 account to register, and it reuses the same AWS billing/IAM/least-privilege posture already built out
 for SES. The `SmsProvider` interface itself is kept exactly as designed — a swappable seam, so a
 different provider (Twilio again, or another) can be substituted later without touching call sites in
-`src/db/reminders.ts`/`recap.ts` if a real need for it appears.
+`src/features/reminders/store.ts`/`recap.ts` if a real need for it appears.
 
 WhatsApp is dropped from this seam entirely, not carried forward: AWS SNS has no WhatsApp delivery
 path at all (that's a distinct Meta Business API integration Twilio happened to front as a
@@ -88,4 +88,4 @@ explicitly requested.
   SNS itself has no such delivery path to fall back to.
 - Revisit if a real need for a second texting provider (or WhatsApp specifically) appears — the
   `SmsProvider` interface's whole purpose is to make that a new implementation behind the existing
-  seam, not a rewrite of `src/db/reminders.ts`/`recap.ts`.
+  seam, not a rewrite of `src/features/reminders/store.ts`/`recap.ts`.

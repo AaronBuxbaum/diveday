@@ -101,7 +101,7 @@ Fourth UX review, items 18 and 19. Two gaps in "money the shop took":
   does not offer Void on one. Money taken back over the counter after such a settle is not
   recordable yet.
 - **A bench ticket paid at pickup.** `recordWorkOrderCounterPayment`
-  (`src/db/work-order-follow-up.ts`) records the ticket's lines through `recordCounterOrder` and
+  (`src/features/work-order-follow-up/store.ts`) records the ticket's lines through `recordCounterOrder` and
   links the order as the ticket's bill. One bill per ticket is re-checked under the ticket's lock;
   the loser of a double tap is voided by `voidPaidCounterOrder` (the void without its role gate,
   the system undoing its own race rather than anyone's decision).
@@ -124,7 +124,7 @@ same claim, and the same out-of-band mark to Stripe, so the diver is not asked t
 writes the room with the method and a released claim clears both. Counter rentals and bench
 tickets stay cash and card machine. The activity log says `order_paid_room_charge`; the Orders
 index tells an owner or manager the month's room charges per hotel ("Room charges in October: Reef
-Hotel $1,840 on 14 orders", `src/db/room-charges.ts`), net of refunds; the CSV method code is
+Hotel $1,840 on 14 orders", `src/features/room-charges/store.ts`), net of refunds; the CSV method code is
 `room_charge`. This does not revive hotel rate cards (#1237).
 
 ## Amendment 2026-10-17: Reports says counter money is tax included (issue #2674)
@@ -132,7 +132,7 @@ Hotel $1,840 on 14 orders", `src/db/room-charges.ts`), net of refunds; the CSV m
 DiveDay holds no tax rate for a shop, so counter money stays written with `tax_cents = 0` and counted
 whole. Aaron chose option (a): Reports' month and year pages say so in one line under the tax
 figure ("Counter sales are not split into tax, so Tax collected leaves them out."), shown only when
-the counter took money in that window: `counterTaxIncludedCents` in `getMonthMoneyDetail` (`src/db/report-lines.ts`), orders on any
+the counter took money in that window: `counterTaxIncludedCents` in `getMonthMoneyDetail` (`src/features/report-lines/store.ts`), orders on any
 collection but `stripe_invoice`, paid in the month, with no tax of their own. No schema. A per-shop
 counter tax rate (option b) waits until a shop asks; reading a rate from Stripe Tax for an
 off-Stripe sale stays out (ADR 20260826-stripe-tax-is-opt-in-and-provider-owned).

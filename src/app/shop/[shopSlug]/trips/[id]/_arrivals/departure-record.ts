@@ -5,8 +5,8 @@ import {
   listDepartureRollCallByTrip,
   readAfterDiveRollCallByTrip,
 } from "@/db/manifests";
-import type { SailedRollCall } from "@/db/sailed-rebooking";
-import { type latestTripStage, readDepartureStage } from "@/db/trip-stages";
+import type { SailedRollCall } from "@/features/sailed-rebooking";
+import { type latestTripStage, readDepartureStage } from "@/features/trip-stages";
 import type { MeetingWindow } from "@/lib/trip-phase";
 import type { RosterRecord } from "../_components/roster-model";
 import { buildArrivalDesk } from "./arrival-desk";

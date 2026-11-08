@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
+import { listBookableDivers } from "../features/divers/store";
 import { createBooking } from "./bookings";
-import { listBookableDivers } from "./divers";
 import { deliverSeatOffer, offerDepartureToDiver } from "./interest-offers";
 import { ensureDepartureInterest, listDepartureInterests } from "./interests";
 import {

@@ -130,7 +130,7 @@ Emergency kit moves between hulls, but the gear register assigns a unit to one b
 (`gear_items.aboard_boat_id`), so a departure on the second hull can show an O2 kit that is on the
 first. The owner chose a prompt over per-departure kit assignment: **every new shop starts with one
 pre-departure line, "O2 kit aboard and cylinder full"**, written by `createSignedUpShop`
-(`src/db/shop-signup.ts`) in the shop's language from `settings.safetyChecklist.defaultLine`.
+(`src/features/shop-signup/store.ts`) in the shop's language from `settings.safetyChecklist.defaultLine`.
 
 - It is an ordinary row of `pre_departure_checklist_items` from the moment it exists: the shop may
   reword it, reorder it or delete it, and it informs, never gates.

@@ -5,7 +5,6 @@ import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
 import type { MedicalAnswers, waiverRecords } from "@/db/schema";
 import { getShopById } from "@/db/shops";
-import { sendGuardianReleaseCopy } from "@/db/waiver-guardian-copy";
 import { getWaiverSignerOnFile } from "@/db/waiver-signing";
 import {
   completeWaiver,
@@ -15,6 +14,9 @@ import {
   refuseSignedElsewhere,
   type WaiverKey,
 } from "@/db/waivers";
+import { formValue, parseForm } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { sendGuardianReleaseCopy } from "@/features/waiver-guardian-copy";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
@@ -23,7 +25,6 @@ import {
   emergencyContactSchema,
   readEmergencyContact,
 } from "@/lib/contact";
-import { formValue, parseForm } from "@/lib/form-parse";
 import { GUARDIAN_RELATIONSHIPS, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import {
@@ -32,7 +33,6 @@ import {
   readMedicalAnswers,
 } from "@/lib/medical";
 import { MEDICAL_ALERT_FIELD, readMedicalAlert } from "@/lib/medical-alert";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { buildShopAnswers, type ShopQuestion, shopAnswerField } from "@/lib/waiver-questions";
 import { WAIVER_FIELD_ERROR, type WaiverInvalidField } from "./waiver-fields";
 

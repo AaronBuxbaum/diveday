@@ -1,13 +1,13 @@
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { activityLine } from "@/i18n/activity-labels";
-import { rollCallCheckpointText } from "@/i18n/manifest-labels";
-import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type {
   DisputeRollCallResult,
   DisputeSheet,
   DisputeSignatureMethod,
-} from "@/lib/dispute-sheet";
+} from "@/features/dispute-sheet";
+import { activityLine } from "@/i18n/activity-labels";
+import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import {
   formatDateTimeTz,
   formatDateWithYear,
@@ -32,7 +32,7 @@ const METHOD_KEYS: Record<DisputeSignatureMethod, StaffMessageKey> = {
  * **What a seat's dispute sheet says** (issue #2390), inside the shop's sheet:
  * the order, the release the diver signed, the check-in and every roll-call
  * result. It prints the `DisputeSheet` it is handed and nothing else: what may
- * appear is decided in `assembleDisputeSheet` (src/lib/dispute-sheet.ts), so it
+ * appear is decided in `assembleDisputeSheet` (src/features/dispute-sheet/rules.ts), so it
  * cannot show a medical answer it never receives. Pure, and holds no control.
  */
 export function DisputeSheetPaper({

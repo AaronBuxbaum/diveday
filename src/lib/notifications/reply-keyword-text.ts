@@ -5,7 +5,7 @@ import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 // (`C`, `M`, `LATE` and a confirmation code), on the same footing as
 // `./desk-notes.ts`: nothing downstream picks words for a sent answer, so this
 // resolves its own words in the diver's locale (ADR 20260731-notification-locale).
-// `src/db/reply-keywords.ts` decides what happened and hands over a code.
+// `src/features/reply-keywords/store.ts` decides what happened and hands over a code.
 
 /** The departure an answer names. */
 export type ReplyKeywordDeparture = { tripTitle: string; startsAt: Date; endsAt: Date };

@@ -8,7 +8,7 @@ import { cards } from "./schema";
  * **One diver's live cert evidence at this shop** — the same rows readiness
  * reads, and the only thing `decideTripAdmission` is ever handed.
  *
- * The booking transaction and the recap's next-dive card (`src/db/next-dive.ts`)
+ * The booking transaction and the recap's next-dive card (`src/features/next-dive/store.ts`)
  * both read it, so "what this shop knows about this diver's cards" is written
  * once and one surface cannot admit what another refuses. One statement over
  * the card ledger (issue #2722), sorted into the three lists the gates take.

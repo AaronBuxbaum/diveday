@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { boardedAt, crewMember, notBoardedAt, trip } from "./manifest-test-fixtures";
+import {
+  boardedAt,
+  crewMember,
+  notBoardedAt,
+  trip,
+} from "../test/substrate-fixtures/lib/manifest-test-fixtures";
 import {
   blockedAtDock,
   buildTripManifest,
@@ -19,6 +24,7 @@ import {
   rollCallRecordedTone,
   rollCallRowState,
 } from "./manifests";
+import { record } from "./manifests.test-support";
 
 describe("manifestAtCheckpoint", () => {
   const manifests = rollCallCheckpoints(trip.plannedDives).map((checkpoint) =>
@@ -841,14 +847,6 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
 });
 
 describe("rollCallRecordedTone", () => {
-  const at = new Date("2026-08-15T12:00:00Z");
-  const record = (state: RollCallRecord["state"], implied?: boolean): RollCallRecord => ({
-    state,
-    occurredAt: at,
-    recordedByName: "Nora Quinn",
-    ...(implied === undefined ? {} : { implied }),
-  });
-
   it("has no tone until somebody has said something", () => {
     // The caller owns what an untouched row looks like, because a diver's
     // depends on readiness at the dock and a crew member's never does.

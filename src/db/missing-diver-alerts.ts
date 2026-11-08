@@ -20,7 +20,7 @@ import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 /**
  * **A filed report of a missing diver tells the owners at once** (H-20261016-missing-diver-report-alerts,
  * decided 2026-10-16; the stale roll-call alert it rides beside is H-20261014-stale-roll-call-recipients,
- * `src/db/roll-call-alerts.ts`). Whoever filed the report chose "missing
+ * `src/features/roll-call-alerts/store.ts`). Whoever filed the report chose "missing
  * diver" on purpose, so the shop does not wait for the roll call to go stale:
  * every active owner gets one email, and the devices following the
  * departure's manifest one push, for each report.

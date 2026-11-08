@@ -1,28 +1,27 @@
 import type { ReactNode } from "react";
-import { issueBookingHandoff } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
-import { type BookedDeparture, bookedDepartures, nextDiveForBooking } from "@/db/next-dive";
+import { tipPresetsMajor } from "@/db/tips";
+import { pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { handoffHref, issueBookingHandoff } from "@/features/booking-handoff";
+import { BUDDY_PARAM } from "@/features/buddy-links";
+import { buddyReferralId } from "@/features/buddy-tokens";
+import type { DiveRecordComparison } from "@/features/dive-record";
+import { type BookedDeparture, bookedDepartures, nextDiveForBooking } from "@/features/next-dive";
 import {
+  getRecapPulseForBooking,
   MAX_RECAP_PHOTOS_PER_BOOKING,
   type RecapPageData,
   type RecapPhotoView,
   type RecapSite,
-} from "@/db/recap";
-import { getRecapPulseForBooking, type RecapPulseCategory } from "@/db/recap-pulses";
-import { getReviewForBooking } from "@/db/reviews";
-import { tipPresetsMajor } from "@/db/tips";
-import { pagedUpcomingTripsWithCounts } from "@/db/trips";
+} from "@/features/recap";
+import { getReviewForBooking } from "@/features/reviews";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERT_LEVEL_KEYS, NEXT_DIVE_REASON_KEYS } from "@/i18n/next-dive-labels";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
-import { handoffHref } from "@/lib/booking-handoff";
 import type { BrandDisplayFontCode } from "@/lib/brand";
-import { BUDDY_PARAM } from "@/lib/buddy-links";
-import { buddyReferralId } from "@/lib/buddy-tokens";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
-import type { DiveRecordComparison } from "@/lib/dive-record";
 import type { FlySafeAnchor, FlySafeReason } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
@@ -39,6 +38,7 @@ import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { type SiteMarkCode, siteMarkFor } from "@/lib/site-mark";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
 import { visitMilestone } from "@/lib/visit-milestones";
+import type { RecapPulseCategory } from "../../lib/recap-pulse-category";
 
 /**
  * Everything `AfterState` (`src/app/(token)/ready/[token]/_components/AfterState.tsx`)
@@ -347,7 +347,7 @@ export async function buildAfterStateProps(input: {
     // **The server-side-only fields on `RecapPageData` are read here and
     // nowhere else** (`trip.id`, `trip.courseId`, `trip.lensId`, `personId`,
     // and `seenThatDay` below — see their own
-    // note in src/db/recap.ts). They never reach `AfterStateProps`: this props
+    // note in src/features/recap/store.ts). They never reach `AfterStateProps`: this props
     // object names every field explicitly rather than spreading `data`, which
     // is what keeps a person uuid off a client-visible bearer-token page.
     nextDiveForBooking(db, {

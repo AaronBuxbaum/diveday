@@ -3,13 +3,13 @@ import { describe, expect, it } from "vitest";
 
 import { STAFF_ROLES } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
-import { people, personRoles, shops, tripAssignments } from "./schema";
 import {
   listShopStaff,
   setCrewPublicConsent,
   setStaffAccountStatus,
   setStaffLanguages,
-} from "./staff-accounts";
+} from "../features/staff-accounts/store";
+import { people, personRoles, shops, tripAssignments } from "./schema";
 import {
   listStaff,
   setTripCrew,

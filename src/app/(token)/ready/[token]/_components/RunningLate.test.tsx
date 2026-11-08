@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ReadyPageData } from "@/db/ready";
 import { diverTranslator } from "@/i18n/messages";
+import type { ReadyPageData } from "../../../../../features/ready/store";
 import { RunningLate } from "./RunningLate";
 
 vi.mock("../day-of-actions", () => ({

@@ -21,7 +21,7 @@ gates ask on, and `src/lib` takes only types from `src/db` (`pnpm check:architec
 
 ## Does not own
 
-- The session and the tenant (`src/lib/session.ts`): `requireStaffSession` re-reads the account
+- The session and the tenant (`src/features/session/rules.ts`): `requireStaffSession` re-reads the account
   live; every path a declared action lands on is built from the session's own shop.
 - The permission predicates (`src/db/authz.ts`) and each area's gates
   (`src/app/shop/[shopSlug]/settings/action-gates.ts`).

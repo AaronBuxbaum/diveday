@@ -8,16 +8,16 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { NoticeTone } from "@/components/ui/tone";
+import { requireShopSurface } from "@/features/session";
 import {
   canPersonManageWaiverTemplates,
   getWaiversPage,
   signedRecordViewParam,
-} from "@/db/waivers-page";
+} from "@/features/waivers-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { BlankReleaseLink } from "./_components/BlankReleaseLink";

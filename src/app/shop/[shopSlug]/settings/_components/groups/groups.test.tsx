@@ -1,10 +1,10 @@
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
-import { listShopStaff } from "@/db/staff-accounts";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements, hrefsIn } from "@/test/jsx-inspect";
+import { listShopStaff } from "../../../../../../features/staff-accounts/store";
 import { SETTINGS_GROUPS } from "../../settings-groups";
 import { SettingsRow } from "../SettingsRows";
 import {

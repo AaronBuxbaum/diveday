@@ -6,7 +6,7 @@ import { signInAs } from "./helpers";
 /**
  * **Issue #701.** Sessions are stateless 30-day JWTs with no built-in
  * re-validation. Before `requireStaffSession()` re-read the account live
- * (`src/lib/session.ts`), disabling a staff account from the team page left
+ * (`src/features/session/rules.ts`), disabling a staff account from the team page left
  * their already-issued session working on every ordinary `/shop/**` surface
  * for up to 30 days — closed here, and the fix's own failure mode (an
  * infinite redirect loop between the edge proxy's stale-JWT shortcut and the

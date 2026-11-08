@@ -482,7 +482,7 @@ export const HELD_SEND_TIMEOUT_MS = 20_000;
  * holder as their own thread link, `/ready/<token>/waiver`, and never to a
  * staff clipboard (ADR 20261105-waiver-folds-into-the-thread); e2e has no
  * email provider, so the test door reads the link the email carries
- * (`waiverRequestLink`, `src/db/facts/read-the-waiver-request.ts`). Waits out
+ * (`waiverRequestLink`, `src/test/shop-facts/read-the-waiver-request.ts`). Waits out
  * the held send first: the door refuses a seat nobody has sent to.
  */
 export async function waiverRequestLinkAfterSend(page: Page, row: Locator): Promise<string> {

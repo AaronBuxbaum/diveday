@@ -83,13 +83,13 @@ the diver-profile booking flow (`TripNoticeBanner.tsx`, `schedule/[id]/_componen
 `divers/[personId]/_components/NoticeBanner.tsx`).
 
 **The agency check matters, not just for correctness in principle:** `courses.agency` is shop-set
-free text (`src/db/courses.ts`), so an SSI (or NAUI, etc.) Open Water course is a real, ordinary
+free text (`src/features/courses/store.ts`), so an SSI (or NAUI, etc.) Open Water course is a real, ordinary
 row in this schema today, not a hypothetical. The sourced ratio above is a PADI figure; DiveDay has
 not independently sourced an SSI number. Applying PADI's ratio to a non-PADI course would be a
 wrong-but-confident safety control — worse than the pre-existing state (capacity-only) — so
 non-PADI ungated courses fall back to capacity alone, same as before this gate existed. This is
 resolved with a code check (`course.agency === "padi"`) and a dedicated test
-(`src/db/courses.test.ts` — "does not ratio-gate an ungated course from a non-PADI agency").
+(`src/features/courses/store.test.ts` — "does not ratio-gate an ungated course from a non-PADI agency").
 
 **The trip's currently-assigned crew is re-read at every booking**, so the ratio ceiling can also
 *fall* after divers are already booked — a manager pulling the assigned Divemaster or instructor
@@ -208,7 +208,7 @@ scope and machinery around that figure, not the figure itself.
 - Which booking-cap ratio (if any) a session carries is decided by `courseRatioKind()`,
   with `courseRatioRule()`/`courseSeatCapacity()` on top of it — consumed by booking and staffing
   advisory callers (`src/db/bookings.ts` for both `createBookingRecord` and `restoreBooking`, and
-  `courseCrewGap`'s consumers in `src/db/staffing.ts`, `src/features/today/today-reader.ts`, and the trip Overview
+  `courseCrewGap`'s consumers in `src/features/staffing/store.ts`, `src/features/today/today-reader.ts`, and the trip Overview
   page). The predicate was previously written inline in three of those, which is how it would
   drift again.
 - **Every seat-granting write answers to the cap, including undo.** `restoreBooking` (the undo of a

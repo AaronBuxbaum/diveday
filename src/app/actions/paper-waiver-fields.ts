@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { InPersonWaiverOutcome } from "@/db/waivers";
-import { checkbox, formValue, readForm } from "@/lib/form-parse";
+import { checkbox, formValue, readForm } from "@/features/form-parse";
 import type {
   PaperWaiverFormState,
   PaperWaiverRefusal,

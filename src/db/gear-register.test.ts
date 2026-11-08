@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  gearShopContext,
+  mustCreate,
+  SETUP_PICK,
+  shopBooking,
+  TODAY,
+} from "../test/substrate-fixtures/db/gear-test-fixtures";
 import { createGearItem } from "./gear-items";
 import { gearRegisterGroups } from "./gear-register";
 import { checkOutGearReservation, reserveGearUnit } from "./gear-reservations";
-import { gearShopContext, mustCreate, SETUP_PICK, shopBooking, TODAY } from "./gear-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

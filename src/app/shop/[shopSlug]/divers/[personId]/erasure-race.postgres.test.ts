@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
-import { anonymizeDiver } from "@/db/anonymize";
 import type { AppDb } from "@/db/client";
 import { mergeDiverRecords } from "@/db/diver-merge";
 import { cards, people, personRoles, shops, userAccounts } from "@/db/schema";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { redirectedTo, staffSession } from "@/test/staff-session";
+import { anonymizeDiver } from "../../../../../features/anonymize/store";
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((to: string) => {
@@ -21,12 +21,12 @@ vi.mock("@/db/client", async (original) => ({
   ...(await original<typeof import("@/db/client")>()),
   getDb: vi.fn(),
 }));
-vi.mock("@/lib/session", async () =>
+vi.mock("../../../../../features/session/rules", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { erasePersonAction, mergeDiverAction, deletePersonAction } = await import(
   "@/app/shop/[shopSlug]/divers/[personId]/record-actions"
 );

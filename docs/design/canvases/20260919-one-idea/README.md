@@ -146,7 +146,7 @@ below; nothing in that slice changed it.
 The row names six families and treats them as one session's work. Reading them one at a time, they
 are not the same size, and two needed nothing:
 
-- **staffing** was **already done before Tide** and must not be re-done. `src/lib/staffing-week.ts`
+- **staffing** was **already done before Tide** and must not be re-done. `src/features/staffing-week/rules.ts`
   and `/shop/[shopSlug]/staffing` read as a week — people as rows, the shop's seven days as columns,
   shifts as chips, a departure needing crew in its own day cell — which is ADR
   20260827-the-shops-shelves decision 3.

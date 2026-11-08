@@ -151,7 +151,7 @@ describe("which files are guarded", () => {
     expect(guardsFile("src/app/s/[shopSlug]/page.tsx")).toBe(true);
     expect(guardsFile("src/features/weekly-digest/digest.ts")).toBe(true);
     expect(guardsFile("src/lib/catch-up.ts")).toBe(true);
-    expect(guardsFile("src/db/today-catch-up.ts")).toBe(false);
+    expect(guardsFile("src/features/today-catch-up/store.ts")).toBe(false);
     expect(guardsFile("src/features/weekly-digest/digest.test.ts")).toBe(false);
     expect(guardsFile("src/app/page.css")).toBe(false);
   });

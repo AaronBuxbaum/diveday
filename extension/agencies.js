@@ -1,5 +1,5 @@
 // The lookup pages this extension fills in, one per agency. The addresses are
-// the ones the DiveDay app links to (src/lib/agency-verification.ts), and
+// the ones the DiveDay app links to (src/features/agency-verification/rules.ts), and
 // src/lib/cert-check-extension.test.ts fails if they drift. `fields` lists
 // what the form is filled with, in the order the agency's form asks for it.
 // `dateFormat` is how a typed (not date-picker) birth-date box wants it.

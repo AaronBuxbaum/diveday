@@ -336,7 +336,7 @@ days after the boat came home, so this is four further weeks of any signal, any 
 that recorded it, any push the worker wakes on; longer than a liveaboard charter, a crew rotation, or
 a tablet away for repair. And it is short enough that "indefinitely" stops being true: 42 days from
 the save at the very worst, 35 from the trip itself, with the grace period landing just under the 30
-days `RETENTION_DAYS.push_subscriptions` gives the closest analogue in `src/lib/retention.ts` — a
+days `RETENTION_DAYS.push_subscriptions` gives the closest analogue in `src/features/retention/rules.ts` — a
 device credential, useful only while its trip is near, pure blast radius afterwards. Both bounds are
 asserted by tests rather than left to this paragraph, the way `retentionWindowsOutlastStripeRetries`
 is.

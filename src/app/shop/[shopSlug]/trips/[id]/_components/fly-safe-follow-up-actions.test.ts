@@ -2,11 +2,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/db/fly-safe-correction", () => ({ acknowledgeFlySafeFollowUp: vi.fn() }));
 
 const { acknowledgeFlySafeFollowUp } = await import("@/db/fly-safe-correction");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../../features/session/rules");
 const { acknowledgeFlySafeAction } = await import("./fly-safe-follow-up-actions");
 const shopId = "11111111-1111-4111-8111-111111111111";
 const actorPersonId = "22222222-2222-4222-8222-222222222222";

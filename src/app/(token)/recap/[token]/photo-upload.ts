@@ -2,16 +2,16 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
+import { openRecapLink } from "@/db/recap-links";
+import { parseForm } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
 import {
   addRecapPhoto,
   canAddRecapPhoto,
   isRecapOpen,
   MAX_RECAP_PHOTOS_PER_BOOKING,
-} from "@/db/recap";
-import { openRecapLink } from "@/db/recap-links";
+} from "@/features/recap";
 import { requestFirstHandLocale } from "@/i18n/request";
-import { parseForm } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";

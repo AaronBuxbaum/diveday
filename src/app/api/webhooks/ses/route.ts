@@ -1,17 +1,17 @@
-import { recordBookkeeperDeliveryOutcome } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
 import { optOutAddressAfterComplaint } from "@/db/courtesy-email";
-import { recordEmailBounces } from "@/db/email-bounces";
 import { applyProviderEmailEvent } from "@/db/notifications";
-import { nowDate } from "@/lib/clock";
-import { log } from "@/lib/log";
+import { recordBookkeeperDeliveryOutcome } from "@/features/bookkeeper";
+import { recordEmailBounces } from "@/features/email-bounces";
 import {
   parseSesEventData,
   sesBookkeeperOutcomesFromData,
   sesBounceReportsFromData,
   sesEmailEventFromData,
-} from "@/lib/notifications/ses-events";
-import { gateSnsWebhook } from "@/lib/notifications/sns-webhook";
+} from "@/features/email-events";
+import { gateSnsWebhook } from "@/features/sns-webhook";
+import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 
 /**
  * The SES delivery-outcome webhook (ADR 20260802-ses-adapter-and-webhook,

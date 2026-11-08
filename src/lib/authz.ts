@@ -176,7 +176,7 @@ export function canViewShopActivity(roles: readonly Role[] | undefined): boolean
  * {@link canExportShopData}: it is a diver's attendance record leaving the shop
  * on the strength of a money argument, and the crew who run the water have no
  * part in that argument. It carries no medical answer at any role
- * (`assembleDisputeSheet`, src/lib/dispute-sheet.ts).
+ * (`assembleDisputeSheet`, src/features/dispute-sheet/rules.ts).
  */
 export function canExportDisputeSheet(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);

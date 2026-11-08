@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { loadActiveStaffRoles } from "@/db/authz";
-import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
 import { offlineSyncTripsBelongToShop } from "@/db/trips";
+import { checkInBooking, undoCheckInBooking } from "@/features/check-in";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";

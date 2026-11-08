@@ -5,8 +5,8 @@ import {
   departureAfterLateBoarding,
   getRecapPageState,
   type RecapPageState,
-} from "@/db/recap";
-import { isAfterTheDive } from "@/lib/seat-ladder";
+} from "@/features/recap";
+import { isAfterTheDive } from "@/features/seat-ladder";
 import { theBoatIsHome } from "@/lib/thread-steps";
 
 /**
@@ -18,7 +18,7 @@ import { theBoatIsHome } from "@/lib/thread-steps";
  * get the afterglow from the clock alone: issue #3822), and the four-hour
  * recap floor where none exists
  * (`isAfterTheDive`, the seat ladder's question for the diver's page,
- * src/lib/seat-ladder.ts). Neither is read until the boat is scheduled home, so a
+ * src/features/seat-ladder/rules.ts). Neither is read until the boat is scheduled home, so a
  * night-before load never pays for them.
  *
  * **The recap is read beside the roll call, not after it** (code review

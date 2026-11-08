@@ -7,24 +7,24 @@ import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { recordMoveAsk } from "@/db/inbound-messages";
 import { isLockWaitRefusal } from "@/db/lock-bounds";
-import { alertStaffToMoveAsk } from "@/db/move-ask-alerts";
-import { strandedMoveAsk } from "@/db/move-offer";
-import { startPartySeatCheckout } from "@/db/party-seat-checkout";
+import { getShopById } from "@/db/shops";
+import { formValue, parseForm, readForm, single, text } from "@/features/form-parse";
+import { alertStaffToMoveAsk } from "@/features/move-ask-alerts";
+import { strandedMoveAsk } from "@/features/move-offer";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { startPartySeatCheckout } from "@/features/party-seat-checkout";
 import {
   planReadinessLinkRescue,
   type ReadinessLinkRescue,
   sendPlannedReadinessLink,
-} from "@/db/readiness-link-rescue";
-import { settleReleasedPartySeats, settleSelfCancelledSeat } from "@/db/self-cancel-settle";
-import { getShopById } from "@/db/shops";
+} from "@/features/readiness-link-rescue";
+import { settleReleasedPartySeats, settleSelfCancelledSeat } from "@/features/self-cancel-settle";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { formValue, parseForm, readForm, single, text } from "@/lib/form-parse";
 import { formatPlannedDateTimeTz } from "@/lib/format";
 import { log } from "@/lib/log";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { diverNameSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";

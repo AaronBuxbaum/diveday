@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { CARD_PROCESSING_SINCE, type CardToProcess } from "@/db/agency-processing";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DAY_MS } from "@/lib/clock";
+import {
+  CARD_PROCESSING_SINCE,
+  type CardToProcess,
+} from "../../../../../features/agency-processing/store";
 import { CardsToProcess } from "./CardsToProcess";
 
 afterEach(cleanup);

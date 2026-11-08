@@ -3,7 +3,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { describe, expect, it } from "vitest";
-import { publicRouteShape } from "@/lib/public-route-shape";
+import { publicRouteShape } from "../features/public-route-shape/rules";
 
 const APP_DIR = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(APP_DIR, "..", "..", "public");
@@ -143,7 +143,7 @@ describe("the edge refusal covers the public route tree", () => {
       return [
         `${route}: publicRouteShape has no opinion about ${probePath(route)}, so an unknown ` +
           `slug answers 200 with the not-found page in the body and a crawler keeps the URL. ` +
-          `Teach src/lib/public-route-shape.ts what this route claims to name, or add it to ` +
+          `Teach src/features/public-route-shape/rules.ts what this route claims to name, or add it to ` +
           `EDGE_EXEMPT with a reason.`,
       ];
     });
@@ -161,7 +161,7 @@ describe("the edge refusal covers the public route tree", () => {
         (route) =>
           `${route}: the edge refuses a static route, which would take a shipped page off ` +
           `the internet. It is most likely being read as a miss from the closed list of a ` +
-          `dynamic sibling — see STATIC_SIBLINGS in src/lib/public-route-shape.ts.`,
+          `dynamic sibling — see STATIC_SIBLINGS in src/features/public-route-shape/rules.ts.`,
       );
     expect(failures).toEqual([]);
   });
@@ -229,7 +229,7 @@ describe("the edge refusal leaves every storefront route served", () => {
         (route) =>
           `${route}: publicRouteShape calls ${storefrontProbe(route)} malformed, so the edge ` +
           `refuses a page that would have rendered. Teach shopNamespaceShape in ` +
-          `src/lib/public-route-shape.ts the new route.`,
+          `src/features/public-route-shape/rules.ts the new route.`,
       );
     expect(failures).toEqual([]);
   });

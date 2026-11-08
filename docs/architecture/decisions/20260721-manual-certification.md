@@ -58,7 +58,7 @@ even though it never fired. The cost was real; the benefit was hypothetical.
 
 A card waiting for a check (pending, self-declared, or imported and unconfirmed) carries a **Check
 with <agency>** link that opens the agency's own public verification page in a new tab, from one
-registry, `src/lib/agency-verification.ts` (market audit 2026-10-07, item 30). It is a link and
+registry, `src/features/agency-verification/rules.ts` (market audit 2026-10-07, item 30). It is a link and
 nothing more: DiveDay never fetches, scrapes or posts to the agency, never prefills a diver's
 details into the URL (no agency documents a parameter for it), and the staffer still marks the card
 certified here. Agencies with a confirmed public lookup get "Check with <agency>"; the CMAS portal,

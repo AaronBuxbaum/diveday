@@ -1,8 +1,8 @@
 import { createServer as createHttpServer, type IncomingHttpHeaders } from "node:http";
 import { type AddressInfo, createServer as createTcpServer, type LookupFunction } from "node:net";
 import { describe, expect, it, vi } from "vitest";
-import type { ResolvedAddress } from "@/lib/net/public-address";
-import { fetchOverNode, publicOnlyFetch } from "@/lib/net/public-fetch";
+import type { ResolvedAddress } from "../net/public-address";
+import { fetchOverNode, publicOnlyFetch } from "../net/public-fetch";
 import { backupEndpointRefusal } from "./destination-store";
 import { encodeS3KeyPath, putS3Object, s3ObjectUrl, signS3Request } from "./s3-client";
 

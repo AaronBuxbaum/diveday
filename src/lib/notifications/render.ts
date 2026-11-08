@@ -285,7 +285,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
  * same reminder plus the reply line for the one text channel that can hear an
  * answer. Which of the two goes out is `sendCourtesyMessage`'s call, and it may
  * still fall back to SMS after a failed WhatsApp send, which is why both travel
- * together (ADR 20260909-reply-keywords). `src/db/reminders.ts` hands over the
+ * together (ADR 20260909-reply-keywords). `src/features/reminders/store.ts` hands over the
  * facts and never composes the words.
  */
 export function reminderTexts(

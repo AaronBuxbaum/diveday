@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { AGENCY_PAGE_FIXTURES } from "./__fixtures__/agency-pages";
+import { AGENCY_PAGE_FIXTURES } from "../test/substrate-fixtures/lib/__fixtures__/agency-pages";
 import { judgeAgencyPage } from "./agency-check";
 
 /**
  * The judge on each reachable agency's own page furniture (NAUI, SDI, CMAS,
  * GUE), with stand-in results where the page draws them by script. Where the
- * fixtures come from: `src/lib/__fixtures__/agency-pages.ts`.
+ * fixtures come from: `src/test/substrate-fixtures/lib/__fixtures__/agency-pages.ts`.
  */
 describe("judgeAgencyPage on the agencies' own pages", () => {
   it.each(AGENCY_PAGE_FIXTURES.map((fixture) => [fixture.name, fixture] as const))(

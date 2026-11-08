@@ -16,7 +16,7 @@ import { shops } from "./core";
 
 /**
  * **Every Claude call, one row each** (ADR 20261018-claude-assists,
- * `src/db/assists.ts`). The per-shop monthly cap sums `cost_micro_usd` over the
+ * `src/features/assists/store.ts`). The per-shop monthly cap sums `cost_micro_usd` over the
  * shop's rows since the first of the UTC month, and the usage guardrail sums it
  * across shops against the platform ceiling (`src/lib/cost-guardrails.ts`).
  *
@@ -64,7 +64,7 @@ export const claudeUsage = pgTable(
 /**
  * **What one Claude call said, kept 30 days to debug it** (Aaron, 2026-10-23;
  * ADR 20261023-claude-call-content): one row per
- * `claude_usage` row, written by `runAssist` (`src/db/assists.ts`) beside the
+ * `claude_usage` row, written by `runAssist` (`src/features/assists/store.ts`) beside the
  * usage row's settle. The fixed instructions, the cached shop context, the
  * per-request content and the model's answer text, as text.
  *
@@ -110,7 +110,7 @@ export const claudeCallContent = pgTable(
 /**
  * **When a shop last erased anyone, as `claude_call_content` needs to know**
  * (security review, 2026-10-23): one row per shop, moved forward by every
- * erasure path (`forgetClaudeCallContent`, `src/db/claude-call-content.ts`),
+ * erasure path (`forgetClaudeCallContent`, `src/features/claude-call-content/store.ts`),
  * whether or not the person erased has a record. A call whose words were read
  * before an erasure committed keeps nothing when it finishes after it. A shop
  * and an instant, no person.
@@ -128,7 +128,7 @@ export const claudeCallContentErasures = pgTable("claude_call_content_erasures",
  * by the reaper and by the mint cap, and their `claude_usage` rows cascade
  * with them, so a sum over live demos would forget a deleted demo's spend and
  * refill the allowance (security review, 2026-10-23). This row has no shop and
- * survives every delete; `src/db/assists.ts` adds each demo reservation and
+ * survives every delete; `src/features/assists/store.ts` adds each demo reservation and
  * settles it under the demo lock. A month and a number, no person.
  */
 export const claudeDemoSpend = pgTable("claude_demo_spend", {

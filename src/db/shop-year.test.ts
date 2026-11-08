@@ -1,14 +1,15 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
-import { summarizeMonth } from "@/lib/reporting";
 import { currentShopSeason, seasonStartInstant, shopSeasonOf } from "@/lib/season";
-import { summarizeShopYear } from "@/lib/shop-year";
 import { shiftInstantByCalendarDays } from "@/lib/zoned";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
+import { summarizeMonth } from "../features/reporting/rules";
+import { getShopYear, getYearMonthInputs, getYearToDate } from "../features/reporting/store";
+import { seasonScale } from "../features/season-scale/store";
+import { summarizeShopYear } from "../features/shop-year/rules";
 import type { AppDb } from "./client";
 import { paymentEntries } from "./payments";
-import { getShopYear, getYearMonthInputs, getYearToDate } from "./reporting";
 import {
   boats,
   bookingPaymentEvents,
@@ -19,7 +20,6 @@ import {
   tripDives,
   trips,
 } from "./schema";
-import { seasonScale } from "./season-scale";
 
 /**
  * The shop's year and its money (`getShopYear`, `getYearToDate`,

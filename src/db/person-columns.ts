@@ -550,7 +550,7 @@ const rows = [
     merge: "refuse",
     erase: "keep",
   },
-  // The Monday email's claims (`src/db/weekly-digest.ts`). Only somebody with
+  // The Monday email's claims (`src/features/weekly-digest/store.ts`). Only somebody with
   // a staff login is ever sent one, so a record holding one is a staff record
   // and the merge is refused, like a calendar feed capability.
   {

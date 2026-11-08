@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MonthlyReport } from "@/lib/reporting";
+import type { MonthlyReport } from "../../../../../features/reporting/rules";
 import { yearReportCsv } from "./year-report-csv";
 
 function report(over: Partial<MonthlyReport>): MonthlyReport {

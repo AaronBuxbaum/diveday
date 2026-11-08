@@ -2,10 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
+import { tripCalendarFile } from "@/features/trip-calendar";
 import { requestTranslator } from "@/i18n/request";
 import { formatTime } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
-import { tripCalendarFile } from "@/lib/trip-calendar";
 
 /**
  * **The diver's "add to my calendar" download** — a living anchor for the day

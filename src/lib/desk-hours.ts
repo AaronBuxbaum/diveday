@@ -16,7 +16,7 @@ import { addCalendarDays, utcToWallTime, type WallTime, wallTimeToUtc } from "./
  *   person per interval, whatever arrives in it.
  *
  * The ping itself carries a count and a link, never a sender or a word of the
- * message (`src/db/desk-pings.ts`).
+ * message (`src/features/desk-pings/store.ts`).
  */
 
 /** Minutes after shop-local midnight: opens inclusive, closes exclusive. */

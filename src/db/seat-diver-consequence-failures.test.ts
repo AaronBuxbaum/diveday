@@ -53,8 +53,8 @@ vi.mock("./waiver-issue", async (importOriginal) => {
   };
 });
 
+import { seatDiver } from "../features/seat-diver/store";
 import { activityEvents, bookings, people, personRoles, waiverRecords } from "./schema";
-import { seatDiver } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
 
 /** The same two seeded departures `bookings.test.ts` works against. */

@@ -4,9 +4,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonBackfillIntegrations, canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { runIntegrationBackfill } from "@/db/integration-backfill";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
+import { formValue, parseForm, readForm, single, text, trimmedText } from "@/features/form-parse";
+import { runIntegrationBackfill } from "@/features/integration-backfill";
 import {
   createIntegrationOAuthState,
   disconnectShopIntegration,
@@ -26,11 +27,10 @@ import {
   shopifyConfigFromEnvironment,
   syncShopifyCatalog,
 } from "@/features/integrations";
-import { formValue, parseForm, readForm, single, text, trimmedText } from "@/lib/form-parse";
-import { type NoticeRedirect, revalidateWithNotice } from "@/lib/navigation";
+import { type NoticeRedirect, revalidateWithNotice } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import { publicAppUrl } from "@/lib/notifications";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { backfillSince } from "./earlier-checkouts";
 

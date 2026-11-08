@@ -7,29 +7,30 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import {
+  billingConfigFromEnvironment,
+  percentBillingFromEnvironment,
+  planCopyParams,
+  planMoney,
+} from "@/features/billing";
+import {
   canPersonManageBilling,
   getBillingPage,
   getBillingPercentMonth,
   holdsLiveSubscription,
   shopPricing,
   subscriptionSnapshot,
-} from "@/db/billing-page";
+} from "@/features/billing-page";
+import { pricingConfig } from "@/features/pricing-flags";
+import { requireShopSurface } from "@/features/session";
+import { trialDaysRemaining, trialEndsAt } from "@/features/trial";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { planCopyParams, planMoney } from "@/lib/billing/plan-display";
 import { percentFeeCents } from "@/lib/billing/pricing-plans";
 import { type BillingStatus, billingStanding, freeTimeEndsAt } from "@/lib/billing/standing";
-import {
-  billingConfigFromEnvironment,
-  percentBillingFromEnvironment,
-} from "@/lib/billing/stripe-billing";
 import { formatCalendarDate, formatCalendarMonth } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear, formatMoneyCents } from "@/lib/format";
-import { pricingConfig } from "@/lib/pricing-flags";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { trialDaysRemaining, trialEndsAt } from "@/lib/trial";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { billingNoticeMessages } from "../sub-page-notices";

@@ -5,17 +5,17 @@ import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow, ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
-import { awayDatesText } from "@/i18n/away-labels";
-import { fill } from "@/i18n/fill";
-import type { AvailabilityBlock } from "@/lib/crew-requests";
-import { formatTimeRangeTz } from "@/lib/format";
 import {
   GAP_TONE,
   type PlacedGap,
   type PlacedTrip,
   type StaffWeek,
   type WeekShift,
-} from "@/lib/staffing-week";
+} from "@/features/staffing-week";
+import { awayDatesText } from "@/i18n/away-labels";
+import { fill } from "@/i18n/fill";
+import type { AvailabilityBlock } from "@/lib/crew-requests";
+import { formatTimeRangeTz } from "@/lib/format";
 import { StaffingDepartureCrew } from "./StaffingDepartureCrew";
 import { StaffingPersonalRows } from "./StaffingPersonalRows";
 import { StaffingWeekHeader } from "./StaffingWeekHeader";

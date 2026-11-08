@@ -1,7 +1,7 @@
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
+import type { StaffWeek } from "@/features/staffing-week";
 import { fill } from "@/i18n/fill";
-import type { StaffWeek } from "@/lib/staffing-week";
 import { ShiftRemoveMenu } from "./ShiftRemoveMenu";
 import type { StaffingWeekWords } from "./StaffingWeek";
 import { ShiftFace } from "./staffing-shift-face";

@@ -12,9 +12,9 @@ import {
   ITEM_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
+import { planCopyParams } from "@/features/billing";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { planCopyParams } from "@/lib/billing/plan-display";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import {
   type FeaturePageKey,

@@ -1,10 +1,10 @@
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { readPlannedFlySafe } from "@/db/fly-safe-plan";
-import { getReadyPageData } from "@/db/ready";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { listTripDives } from "@/db/trips";
+import { getReadyPageData } from "@/features/ready";
 import { requestLocale } from "@/i18n/request";
 import { nowMs } from "@/lib/clock";
 import { packingConfidence } from "@/lib/diver-planning";

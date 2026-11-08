@@ -1,4 +1,4 @@
-import type { TideStationEcho } from "@/lib/tide-stations";
+import type { TideStationEcho } from "@/features/tide-stations";
 import type { SiteFieldValues } from "./SiteFields";
 
 /** Carysfort Reef beside Molasses Reef: the pairing a Key Largo shop actually wants. */

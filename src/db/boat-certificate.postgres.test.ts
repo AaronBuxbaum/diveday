@@ -3,7 +3,7 @@ import { and, count, eq, ne, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { createBoat, editBoatWithinCertificate } from "./boats";
+import { createBoat, editBoatWithinCertificate } from "../features/boats/store";
 import { createBooking } from "./bookings";
 import { boats, bookings, shops, trips } from "./schema";
 

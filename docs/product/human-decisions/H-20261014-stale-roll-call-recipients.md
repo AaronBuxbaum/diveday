@@ -37,8 +37,8 @@ Whether the shore contact should become a structured, consented recipient (a pho
 
 ## Recommendation (2026-10-14)
 
-Keep owners only until a shop asks. A structured shore contact is a settings field, a consent line and one more recipient in `sendStaleRollCallAlerts` (`src/db/roll-call-alerts.ts`).
+Keep owners only until a shop asks. A structured shore contact is a settings field, a consent line and one more recipient in `sendStaleRollCallAlerts` (`src/features/roll-call-alerts/store.ts`).
 
 ## Unblocks / follow-up
 
-Nothing waits on it: the owner alert and the shore contact's are live. Still open, for whoever asks: SMS to the shore contact, and managers as recipients. H-20261014-physician-form-for-referral recorded the shore contact's structured, consented form again on 2026-10-16. The window is `STALE_ROLL_CALL_AFTER_MS` in `src/lib/roll-call-alerts.ts`.
+Nothing waits on it: the owner alert and the shore contact's are live. Still open, for whoever asks: SMS to the shore contact, and managers as recipients. H-20261014-physician-form-for-referral recorded the shore contact's structured, consented form again on 2026-10-16. The window is `STALE_ROLL_CALL_AFTER_MS` in `src/features/roll-call-alerts/rules.ts`.

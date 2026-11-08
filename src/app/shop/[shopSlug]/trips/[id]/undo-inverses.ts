@@ -1,10 +1,10 @@
 import { revalidatePath } from "next/cache";
-import { recordCourseTeachingNote } from "@/db/course-pulse";
-import { recordTripConservation } from "@/db/trip-conservation";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireShopSurface } from "@/lib/session";
+import { recordTripConservation } from "@/features/conservation";
+import { recordCourseTeachingNote } from "@/features/course-pulse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface } from "@/features/session";
+import type { UndoOfferOf } from "@/features/undo";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import type { UndoOfferOf } from "@/lib/undo";
 
 /** Registry-only inverses: every store rechecks the live audience, feature and CAS. */
 export async function restoreConservationRecord(

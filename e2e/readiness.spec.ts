@@ -268,7 +268,7 @@ test.describe("staff-prepared trip", () => {
     // released their seat must not be mailed a working link back into it — nor
     // may anyone holding their old URL trigger one. That refusal is the half
     // worth driving through a real browser; the successful send is covered in
-    // `src/db/readiness-link-rescue.test.ts`, where the mail can be inspected.
+    // `src/features/readiness-link-rescue/store.test.ts`, where the mail can be inspected.
     await page.getByRole("button", { name: "Email me a fresh link" }).click();
     await expect(page.getByText(/can.t send a new link for this booking/)).toBeVisible();
     // **Nothing about the diver came back with it.** The refusal names no

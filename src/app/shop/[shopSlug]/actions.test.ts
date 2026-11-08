@@ -14,13 +14,13 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
-vi.mock("@/db/help-requests", () => ({
+vi.mock("../../../features/help-requests/store", () => ({
   assignHelpRequestHelper: vi.fn(),
   completeHelpRequest: vi.fn(),
   undoHelpRequestCompletion: vi.fn(),
 }));
 vi.mock("@/db/user-accounts", () => ({ dismissOrientation: vi.fn() }));
-vi.mock("@/db/recap", () => ({
+vi.mock("../../../features/recap/store", () => ({
   addCrewRecapPhoto: vi.fn(),
   canAddCrewRecapPhoto: vi.fn(),
   deleteCrewRecapPhoto: vi.fn(),
@@ -31,21 +31,21 @@ vi.mock("@/db/recap", () => ({
   setTripRecapShoutout: vi.fn(),
   unpauseTripRecapAutoSend: vi.fn(),
 }));
-vi.mock("@/lib/navigation", () => ({
+vi.mock("../../../features/navigation/rules", () => ({
   revalidateAndRedirect: vi.fn((path: string, to: string = path) => {
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { assignHelpRequestHelper, completeHelpRequest, undoHelpRequestCompletion } = await import(
-  "@/db/help-requests"
+  "../../../features/help-requests/store"
 );
 const { revalidatePath } = await import("next/cache");
 const { dismissOrientation } = await import("@/db/user-accounts");
-const { revalidateAndRedirect } = await import("@/lib/navigation");
-const { requireStaffSession } = await import("@/lib/session");
+const { revalidateAndRedirect } = await import("../../../features/navigation/rules");
+const { requireStaffSession } = await import("../../../features/session/rules");
 const {
   deleteCrewRecapPhotoAction,
   deleteRecapPhotoAction,

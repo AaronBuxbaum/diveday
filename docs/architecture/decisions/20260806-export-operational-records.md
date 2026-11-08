@@ -115,7 +115,7 @@ joins is exported (as `buddy_team_members.id`).
   unlinked-with-an-address, and unlinked-with-no-address — which is also the first visible fixture
   for the residue [20260802-diver-data-erasure](20260802-diver-data-erasure.md) records: a lead with
   no email can never be reached by an erasure that starts from one.
-- **It does not add an importer.** These files round-trip nothing; `src/db/import.ts` still reads
+- **It does not add an importer.** These files round-trip nothing; `src/features/import/store.ts` still reads
   contacts only. Portability here means "you leave with your history", not "you can put it back".
 - **It does not decide retention.** How long these trails are kept is
   [20260803-append-only-retention](20260803-append-only-retention.md)'s `RETENTION_DAYS`, and a

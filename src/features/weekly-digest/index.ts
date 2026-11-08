@@ -17,3 +17,17 @@ export {
   type WeeklyDigestShopSummary,
   weeklyDigestSettingsPath,
 } from "./digest";
+export type {
+  WeeklyDigestRecipient,
+  WeeklyDigestShop,
+  WeeklyDigestUnsubscribeContext,
+} from "./store";
+export {
+  issueWeeklyDigestUnsubscribeToken,
+  listWeeklyDigestRecipients,
+  readWeeklyDigestChoice,
+  resolveWeeklyDigestUnsubscribeToken,
+  setWeeklyDigestChoice,
+  staffLogins,
+  turnOffWeeklyDigestByToken,
+} from "./store";

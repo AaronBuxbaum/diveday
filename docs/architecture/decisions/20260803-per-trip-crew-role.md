@@ -17,7 +17,7 @@ gate that refuses enrolment on an unstaffed course session.
 
 The rule itself — instructor = holds `instructor`; certified assistant = holds `divemaster` and not
 `instructor`; `captain`/`crew` count as neither — was written out **five times in three idioms**
-(two SQL, three in-memory): `src/db/bookings.ts`, twice in `src/features/today/today-reader.ts`, `src/db/staffing.ts`,
+(two SQL, three in-memory): `src/db/bookings.ts`, twice in `src/features/today/today-reader.ts`, `src/features/staffing/store.ts`,
 and the trip page. The concept "in-water certified assistant" was named nowhere in `src/lib`.
 
 Two write paths could silently discard a new column: `setTripCrew` is delete-all-then-insert, and

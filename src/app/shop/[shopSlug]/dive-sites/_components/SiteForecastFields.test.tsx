@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
-import type { TideStationEcho } from "@/lib/tide-stations";
+import type { TideStationEcho } from "../../../../../features/tide-stations/rules";
 import type { SiteFieldValues } from "./SiteFields";
 import { SiteForecastFields } from "./SiteForecastFields";
 import { FAR, NEAR, STORED } from "./site-fields-test-fixtures";

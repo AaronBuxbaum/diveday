@@ -1,7 +1,7 @@
 import { getDb } from "@/db/client";
 import { recheckWaiverSeals, waiverSealPassHealthy } from "@/db/waiver-seal-checks";
+import { cronRoute } from "@/features/cron-route";
 import { nowDate } from "@/lib/clock";
-import { cronRoute } from "@/lib/cron-route";
 import { WAIVER_SEAL_CHECK_CRONTAB } from "@/lib/waiver-integrity";
 
 /** A capped pass's few thousand HMACs take seconds; the rest is the row reads. */

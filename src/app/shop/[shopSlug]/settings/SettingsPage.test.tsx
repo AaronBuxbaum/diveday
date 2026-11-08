@@ -9,10 +9,8 @@ import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { boats, mediaDeletionAttempts, processorErasureObligations, shops } from "@/db/schema";
 import { getShopBySlug, setShopCrewScheduleEnabled, setShopDivingOptions } from "@/db/shops";
-import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
-import { CONNECTION_PROVIDERS, CONNECTION_STATES } from "@/lib/connections";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -25,6 +23,8 @@ import {
 } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
+import { CONNECTION_PROVIDERS, CONNECTION_STATES } from "../../../../features/connections/rules";
+import { listShopStaff } from "../../../../features/staff-accounts/store";
 import { SettingsSelection } from "./_components/SettingsSelection";
 import { CounterQrCard } from "./CounterQrCard";
 import { SETTINGS_RAIL_ROWS, type SectionId, settingsSectionFragment } from "./settings-groups";

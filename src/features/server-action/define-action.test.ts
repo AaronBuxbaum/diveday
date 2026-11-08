@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/db/client", () => ({ getDb: mocks.getDb }));
-vi.mock("@/lib/session", () => ({ requireStaffSession: mocks.requireStaffSession }));
+vi.mock("../session/rules", () => ({ requireStaffSession: mocks.requireStaffSession }));
 
 const { actionContext, defineAction, land } = await import("./define-action");
 type ActionGate = import("./define-action").ActionGate;

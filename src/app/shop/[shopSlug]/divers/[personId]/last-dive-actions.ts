@@ -1,8 +1,8 @@
 "use server";
 
-import { recordLastDive } from "@/db/last-dive";
+import { recordLastDive } from "@/features/last-dive";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { nowDate } from "@/lib/clock";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { backTo, requireDiverActionContext } from "./action-helpers";
 
 /**

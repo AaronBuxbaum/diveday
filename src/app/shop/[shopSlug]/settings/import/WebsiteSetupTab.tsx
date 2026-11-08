@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
-import { listActiveCourses } from "@/db/courses";
-import { readWebsiteSetup } from "@/db/website-setup";
+import { listActiveCourses } from "@/features/courses";
+import { readWebsiteSetup } from "@/features/website-setup";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { WebsiteSetupPanel } from "./WebsiteSetupPanel";

@@ -115,7 +115,7 @@ export type NoShowGateInput = {
    * the direction that stops a shop doing its work.
    *
    * **The writer and the door now feed this the same answer.** `markBookingNoShow`
-   * (src/db/no-show.ts) asks `onTheWaterByRollCall` under the booking's lock;
+   * (src/features/no-show/store.ts) asks `onTheWaterByRollCall` under the booking's lock;
    * the check-in page passes `CheckInQueueRow.onTheWater`, which is the
    * departure-boarded set plus every seat spoken for at sea
    * (`listAfterDiveRollCallByTrip`). For one slice the door was fed the

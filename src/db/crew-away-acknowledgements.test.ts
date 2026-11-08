@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { crewAwayByTrip } from "./crew-away";
+import { crewAwayByTrip } from "../features/crew-away/store";
 import {
   acknowledgeCrewAway,
   listCrewAwayAcknowledgements,

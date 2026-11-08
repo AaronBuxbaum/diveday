@@ -2,6 +2,17 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
+import {
+  addCrewRecapPhoto,
+  addRecapPhoto,
+  canAddCrewRecapPhoto,
+  canAddRecapPhoto,
+  deleteRecapPhoto,
+  getRecapPageData,
+  listRecapPhotosForTrips,
+} from "../features/recap/store";
+import { getMonthlyReport } from "../features/reporting/store";
+import { getTripGuests } from "../features/trip-guests/store";
 import { createBookingParty } from "./bookings";
 import {
   createDiveSite,
@@ -18,16 +29,6 @@ import { deliverSeatOffer, offerDepartureToDiver } from "./interest-offers";
 import { askForDeparture } from "./interests";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
 import {
-  addCrewRecapPhoto,
-  addRecapPhoto,
-  canAddCrewRecapPhoto,
-  canAddRecapPhoto,
-  deleteRecapPhoto,
-  getRecapPageData,
-  listRecapPhotosForTrips,
-} from "./recap";
-import { getMonthlyReport } from "./reporting";
-import {
   bookings,
   diveSites,
   executedDives,
@@ -39,7 +40,6 @@ import {
   shops,
   trips,
 } from "./schema";
-import { getTripGuests } from "./trip-guests";
 import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { complete, fixture } from "../test/substrate-fixtures/db/incident-reports-test-fixtures";
 import {
   discardIncidentDraft,
   getIncidentReport,
@@ -10,7 +11,6 @@ import {
   recordIncidentDraft,
   startIncidentReport,
 } from "./incident-reports";
-import { complete, fixture } from "./incident-reports-test-fixtures";
 import { activityEvents, incidentReports, trips } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test.

@@ -27,7 +27,7 @@ export function reminderForecast(
  * accompanies it (docs ADR 20260731-per-person-notification-locale) — no
  * downstream renderer picks words for a sent text, so this terminal renderer
  * composes its own (docs ADR 20260731-notification-locale);
- * `src/db/reminders.ts` decides who is reminded and hands over the facts.
+ * `src/features/reminders/store.ts` decides who is reminded and hands over the facts.
  */
 export function reminderSmsBody(
   locale: DiverLocale,

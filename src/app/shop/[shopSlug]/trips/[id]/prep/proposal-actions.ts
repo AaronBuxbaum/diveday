@@ -5,10 +5,10 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { reserveGearUnit } from "@/db/gear";
 import { getShopById } from "@/db/shops";
-import { screenGearPicks } from "@/db/trip-prep";
 import { getTripWithBooked } from "@/db/trips";
+import { requireStaffSession } from "@/features/session";
+import { screenGearPicks } from "@/features/trip-prep";
 import { tripReservationWindow } from "@/lib/gear";
-import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /**

@@ -10,11 +10,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * anything the request carries.
  */
 
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/shops", () => ({ getShopById: vi.fn() }));
 
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../features/session/rules");
 const { getShopById } = await import("@/db/shops");
 const { GET } = await import("./route");
 

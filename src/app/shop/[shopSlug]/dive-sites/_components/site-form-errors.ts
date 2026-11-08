@@ -3,7 +3,7 @@ import type { SiteSaveRefusal } from "./SiteFormShell";
 
 /**
  * The words for every refusal a site briefing can come back with — the one
- * place `src/lib/dive-sites.ts`'s codes become sentences, for both the create
+ * place `src/features/dive-sites/rules.ts`'s codes become sentences, for both the create
  * and the edit form.
  *
  * Resolved on the server and handed to `SiteFormShell` as a prop, because staff

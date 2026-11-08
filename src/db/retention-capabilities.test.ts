@@ -1,9 +1,9 @@
 import { inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { RETENTION_DAYS } from "@/lib/retention";
 import { fileScopedShopContext } from "@/test/db";
+import { RETENTION_DAYS } from "../features/retention/rules";
+import { pruneExpiredRecords } from "../features/retention/store";
 import { findOrCreatePerson } from "./people";
-import { pruneExpiredRecords } from "./retention";
 import { capabilities } from "./schema";
 
 /**

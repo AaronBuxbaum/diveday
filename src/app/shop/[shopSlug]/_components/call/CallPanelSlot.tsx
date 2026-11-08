@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import { getDb } from "@/db/client";
 import { shopByIdCached } from "@/db/shops";
+import type { requireStaffSession } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { requireStaffSession } from "@/lib/session";
 import { CallPanel, type CallPanelSearch } from "./CallPanel";
 
 /** What the shop home's URL says about the panel: `call=1` opens it. */

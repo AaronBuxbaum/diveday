@@ -55,7 +55,7 @@ failing when sharp was added for the upload pipeline (`835b2b0`). Before that,
 
 Call `sharp.unblock({ operation: ["VipsForeignLoadSvg"] })` on the render path of
 every `ImageResponse` surface, via `allowSvgRasterization()` in
-`src/lib/og-rasterizer.ts`.
+`src/features/og-rasterizer/rules.ts`.
 
 On the render path, not at startup: Next's `block()` runs lazily on first
 optimization and would simply overwrite an earlier unblock.
@@ -78,7 +78,7 @@ Because the exposure is accepted rather than eliminated, a `security-reviewer`
 pass is warranted on any future change that widens what `process-image.ts`
 accepts, or that adds a new caller feeding user-supplied bytes to sharp.
 
-`src/lib/og-rasterizer.test.ts` reproduces the optimizer's exact block sequence
+`src/features/og-rasterizer/rules.test.ts` reproduces the optimizer's exact block sequence
 against real sharp. If a Next upgrade changes that list, it fails there — in a
 unit test that names the cause — rather than as a severed socket in production.
 

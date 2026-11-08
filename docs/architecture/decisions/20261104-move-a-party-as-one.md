@@ -22,7 +22,7 @@ and keeps `party_lead_booking_id`. It amends the seat-move ADR; the rest of that
   rolls the whole party back and names the seat that stopped it.
 - **Still refused:** a seat on a buddy team (teams are rebuilt on the boat), at roll call, already
   checked in, or a no-show. A cancelled follower is not part of the party and stays behind.
-- **Each person is told once.** `moveParty` in `src/db/seat-diver.ts` gives every seat what a
+- **Each person is told once.** `moveParty` in `src/features/seat-diver/store.ts` gives every seat what a
   single moved seat gets: its own waiver, `trip_rescheduled` notice, fly-safe correction and trail
   lines. Manifests refresh once per trip.
 - **The door** is the lead's own "Move to another departure": its form names the party of N, offers

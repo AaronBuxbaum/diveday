@@ -14,7 +14,7 @@ saying what Stripe paid into the bank, when, or for which days, and Stripe's fee
 ## Decision
 
 - **The Connect endpoint subscribes to `payout.paid`, `payout.failed` and `payout.canceled`.** One
-  `stripe_payouts` row per Stripe payout, upserted by `recordStripePayout` (`src/db/payouts.ts`).
+  `stripe_payouts` row per Stripe payout, upserted by `recordStripePayout` (`src/features/payouts/store.ts`).
   The shop is the one holding the event's own `account`; nothing in the body chooses it, and a row
   never moves to another account. Events are ordered by `created`; `failed` and `canceled` are
   terminal, so a `paid` after either changes nothing. `payout.updated` is not subscribed.

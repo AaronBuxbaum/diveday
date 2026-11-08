@@ -135,7 +135,7 @@ export const shops = pgTable(
      * Turning it off is a real statement: a shore-and-pool operation has no
      * hull, so the Boats row disappears from settings, `boat` leaves the
      * builder's dive-mode choices, and the Requests planner stops sizing a day
-     * against a boat it does not have (`src/lib/request-advisor.ts`). It does
+     * against a boat it does not have (`src/features/request-advisor/rules.ts`). It does
      * **not** rewrite departures already on the board — an existing boat trip
      * keeps its mode and still renders, because a settings tick is not a
      * schedule edit.
@@ -467,7 +467,7 @@ export const shops = pgTable(
      * **What Claude should know when it drafts a reply** (Aaron, 2026-10-22):
      * plain text in the shop's words, like where to park or which wetsuits it
      * rents. The `inbox-draft` assist reads it beside the schedule, prices and
-     * desk hours (`replyFacts`, `src/db/inbox-assists.ts`), so a number in it
+     * desk hours (`replyFacts`, `src/features/inbox-assists/store.ts`), so a number in it
      * is one a draft may quote. Never a diver's details; null is no notes.
      * Replaced saved answers and their `{name}`/`{trip}` markers.
      */
@@ -516,7 +516,7 @@ export const shops = pgTable(
      * **The shore contact's address for a stale roll call** (H-20261014-stale-roll-call-recipients, decided
      * 2026-10-15): the one person outside the shop's accounts who hears when an
      * after-dive roll call is still open after the boat was due back
-     * (`sendStaleRollCallAlerts`, `src/db/roll-call-alerts.ts`). Email only.
+     * (`sendStaleRollCallAlerts`, `src/features/roll-call-alerts/store.ts`). Email only.
      *
      * Beside `emergency_reference.shoreContact`, never instead of it: that is
      * free text a crew reads in an emergency, and this is an address DiveDay
@@ -669,7 +669,7 @@ export const shops = pgTable(
     /**
      * **When the shop is back on the water**, as a shop-local calendar date, or
      * null for nothing to say. Read only while the public board has nothing in
-     * its quiet window (`src/lib/off-season.ts`): a scheduled departure always
+     * its quiet window (`src/features/off-season/rules.ts`): a scheduled departure always
      * outranks it, and once the date has passed it says nothing, so a date
      * nobody updated goes quiet by itself rather than misleading anybody.
      */
@@ -678,7 +678,7 @@ export const shops = pgTable(
      * **When somebody is at the desk**, as minutes after shop-local midnight:
      * opens inclusive, closes exclusive, the same window every day. A diver
      * message that lands outside it pings the staff who asked to hear
-     * (`src/lib/desk-hours.ts`, `src/db/desk-pings.ts`). 08:00–18:00 until the
+     * (`src/lib/desk-hours.ts`, `src/features/desk-pings/store.ts`). 08:00–18:00 until the
      * shop says otherwise; a desk that never closes has no "after hours", so
      * the staff who want no pings turn their own off rather than the shop
      * pretending to keep 24-hour hours.
@@ -1108,7 +1108,7 @@ export const people = pgTable(
      * (`bookings.last_dived_band`, ADR 20260821-currency-is-what-catches-people).
      *
      * Never read alone. The record shows the later of this and the diver's
-     * own last dive day with the shop (`lastKnownDive`, src/db/last-dive.ts),
+     * own last dive day with the shop (`lastKnownDive`, src/features/last-dive/store.ts),
      * so a trip with the shop moves the date forward without anybody typing
      * it, and nothing moves it back. **Gates nothing**, like the band: a
      * refresher is a divemaster's conversation, not a refusal. Null is "not
@@ -1437,7 +1437,7 @@ export const diveSpecialty = pgEnum("dive_specialty", [
 
 /**
  * `invited`: a staff invite created this row (`inviteStaffMember`,
- * src/db/staff-accounts.ts) but the invitee hasn't accepted yet — an unusable
+ * src/features/staff-accounts/store.ts) but the invitee hasn't accepted yet — an unusable
  * random password hash, no sign-in, excluded from `verifyCredentials` and
  * `loadActiveStaffRoles` exactly like `disabled` (both already gate on
  * `status === "active"`). Accepting the invite at `/invite/[token]` flips it

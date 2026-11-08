@@ -1,10 +1,10 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
+import type { ReferralPaper } from "@/features/referral-student";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CertificationLevel } from "@/lib/certification-levels";
-import type { ReferralPaper } from "@/lib/referral-student";
 
 /** A referral student's line and its two papers, worded by the row (loop 5, row 10). */
 export type ReferralControls = {

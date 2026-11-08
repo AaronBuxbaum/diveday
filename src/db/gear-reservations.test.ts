@@ -3,6 +3,15 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import {
+  deskStaffer,
+  gearShopContext,
+  mustCreate,
+  rivalShop,
+  SETUP_PICK,
+  shopBooking,
+  storedReservation,
+} from "../test/substrate-fixtures/db/gear-test-fixtures";
 import { cancelBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { listAvailableGearUnits, listTripGearAssignments } from "./gear-availability";
@@ -15,15 +24,6 @@ import {
   returnGearReservation,
 } from "./gear-reservations";
 import { recordGearService } from "./gear-service";
-import {
-  deskStaffer,
-  gearShopContext,
-  mustCreate,
-  rivalShop,
-  SETUP_PICK,
-  shopBooking,
-  storedReservation,
-} from "./gear-test-fixtures";
 import { bookings, gearReservations, trips } from "./schema";
 import { moveTrip, setTripStatus } from "./trips";
 

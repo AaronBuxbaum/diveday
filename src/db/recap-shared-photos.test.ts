@@ -2,14 +2,14 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createBookingParty } from "./bookings";
 import {
   addRecapPhoto,
   getRecapPageData,
   getRecapPageState,
   listRecapPhotosForTrips,
   unshareRecapPhoto,
-} from "./recap";
+} from "../features/recap/store";
+import { createBookingParty } from "./bookings";
 import { bookings, people, rollCallEvents } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 

@@ -9,11 +9,11 @@
 import { notFound } from "next/navigation";
 import { loadActiveStaffRoles } from "@/db/authz";
 import type { AppDb } from "@/db/client";
-import { diverRecordIsClear } from "@/db/diver-record";
 import { getMergedIntoPersonId } from "@/db/people";
+import { diverRecordIsClear } from "@/features/diver-record";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface } from "@/features/session";
 import { isStaff } from "@/lib/authz";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 

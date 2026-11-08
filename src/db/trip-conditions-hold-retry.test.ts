@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { drainNotificationRetries, sendNotification } from "./notifications";

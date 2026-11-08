@@ -3,9 +3,6 @@ import { describe, expect, it } from "vitest";
 import { standingArrivalStatus } from "@/db/arrival-provenance";
 import type { AppDb } from "@/db/client";
 import { recordRollCall } from "@/db/manifests";
-import { markBookingNoShow } from "@/db/no-show";
-import { getTripOpenSeatsDebrief } from "@/db/open-seats";
-import { addCrewRecapPhoto } from "@/db/recap";
 import { crewSubject } from "@/db/roll-call-subject";
 import {
   bookingArrivalEvents,
@@ -16,12 +13,15 @@ import {
   trips as tripsTable,
 } from "@/db/schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed-more-trips";
-import { recordTripStage } from "@/db/trip-stages";
 import { listStaff } from "@/db/trips";
 import { nowMs } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
+import { markBookingNoShow } from "../no-show/store";
+import { getTripOpenSeatsDebrief } from "../open-seats/store";
+import { addCrewRecapPhoto } from "../recap/store";
+import { recordTripStage } from "../trip-stages/store";
 import { assembleEveningClose } from "./closeout";
 import { getDayCloseout, listHeadCountCloses } from "./closeout-reader";
 

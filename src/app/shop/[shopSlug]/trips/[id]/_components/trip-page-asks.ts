@@ -1,5 +1,5 @@
 import type { AppDb } from "@/db/client";
-import { previewPartyPayment } from "@/db/payment-marks";
+import { previewPartyPayment } from "@/features/payment-marks";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { readMarkRetry, readPartyAsk } from "@/lib/payment-marks";
 import { type FormNotice, noticeForForm } from "@/lib/staff-notices";

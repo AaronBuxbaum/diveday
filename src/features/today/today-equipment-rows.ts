@@ -1,3 +1,4 @@
+import { urgencyFor } from "@/features/today-urgency";
 import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import { gearServiceKindLabel } from "@/i18n/gear-labels";
 import {
@@ -27,7 +28,6 @@ import {
 } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { urgencyFor } from "@/lib/today-urgency";
 import { wallTimeToUtc } from "@/lib/zoned";
 import type { TodayAction } from "./today";
 import type { TodayRowsContext } from "./today-rows-context";

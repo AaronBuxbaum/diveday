@@ -1,5 +1,5 @@
 import type { CodeOutcome } from "@/db/shop-promos";
-import type { DealOutcome, OutstandingLastMinutePromo } from "@/db/trip-promos";
+import type { DealOutcome, OutstandingLastMinutePromo } from "@/features/trip-promos";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatMoneyCents } from "@/lib/format";
 import { promoDiscountText } from "./PromoDiscountFields";
@@ -7,7 +7,7 @@ import type { TripDealRow } from "./PromoLedger";
 
 // **What each deal and code sold** (fifth loop, item 28), worded: "Sent to 8
 // divers · 2 booked · $142 in seats" and "Redeemed 3 times · $28.50 off $285
-// of seats". Read by the page's reader (`getPromosPage`, src/db/promos-page.ts).
+// of seats". Read by the page's reader (`getPromosPage`, src/features/promos-page/store.ts).
 
 /** A code's outcome line, or nothing before its first redemption. */
 export function codeOutcomeFact(

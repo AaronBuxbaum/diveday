@@ -761,7 +761,7 @@ export const DIVER_ACTIVITY_PAGE_SIZE = PAGE_SIZE.section;
  * first, one page at a time.
  *
  * Three things make an event theirs, and the set is not arbitrary — it is
- * exactly the predicate `anonymizeDiver` redacts under (`src/db/anonymize.ts`),
+ * exactly the predicate `anonymizeDiver` redacts under (`src/features/anonymize/store.ts`),
  * so the set a shop can read here and the set an erasure destroys are the same
  * set by construction:
  *

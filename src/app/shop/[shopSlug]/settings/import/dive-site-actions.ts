@@ -1,16 +1,16 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { commitDiveSiteImport } from "@/db/dive-site-import";
 import { diveSitePhotoUrlsHeldByShop } from "@/db/dive-site-photos";
-import { canPersonImportShopData } from "@/db/import";
 import {
+  commitDiveSiteImport,
   isDiveSiteCreaturesCsv,
   prepareDiveSiteCreaturesImport,
   prepareDiveSiteImport,
-} from "@/lib/dive-site-import";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+} from "@/features/dive-sites";
+import { canPersonImportShopData } from "@/features/import";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
 import type { AppDb } from "./client";
 import {
   activityEvents,

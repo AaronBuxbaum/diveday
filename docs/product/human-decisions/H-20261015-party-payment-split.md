@@ -21,7 +21,7 @@ The order the money lands in, what happens when it runs out, and what happens wh
 - **A seat paid online or from a package that still owes refuses the whole party**, as it refuses the single mark, so a staffer is never unsure what was taken. A paid-online seat that owes nothing is skipped.
 - **The split is previewed, then confirmed.** The first step shows the server's own division, seat by seat; the confirm works it out again from the database, in one transaction, and each seat gets its own activity line (`party_marked_paid`).
 
-`src/lib/payment-marks.test.ts` pins the split, `src/db/payment-marks.party.test.ts` the transaction and tenant scoping, and `actions.authz.test.ts` the roles.
+`src/lib/payment-marks.test.ts` pins the split, `src/features/payment-marks/store.party.test.ts` the transaction and tenant scoping, and `actions.authz.test.ts` the roles.
 
 ## Unblocks / follow-up
 

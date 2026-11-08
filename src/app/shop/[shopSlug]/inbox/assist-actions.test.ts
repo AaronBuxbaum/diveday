@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { readFormDraft, recordFormDraft } from "@/db/form-drafts";
 import { formDrafts } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -8,6 +7,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { readFormDraft, recordFormDraft } from "../../../../features/form-drafts/store";
 
 const ctx = fileScopedShopContext();
 
@@ -23,12 +23,14 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
-// The reading itself is `src/db/booking-ask-assists.test.ts`; this is the hand-off.
-vi.mock("@/db/booking-ask-assists", () => ({ bookingAskFromMessage: vi.fn() }));
+vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+// The reading itself is `src/features/booking-ask-assists/store.test.ts`; this is the hand-off.
+vi.mock("../../../../features/booking-ask-assists/store", () => ({
+  bookingAskFromMessage: vi.fn(),
+}));
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
-const { bookingAskFromMessage } = await import("@/db/booking-ask-assists");
+const { requireStaffSession } = await import("../../../../features/session/rules");
+const { bookingAskFromMessage } = await import("../../../../features/booking-ask-assists/store");
 const { requestFromMessageAction } = await import("./assist-actions");
 
 const MESSAGE_ID = "8f000000-1111-4222-8333-444444444444";

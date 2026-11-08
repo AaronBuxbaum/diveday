@@ -41,7 +41,7 @@ export function managedStorageOrigins(env: StorageEnvironment = process.env): st
  * **A bucket name is interpolated into a hostname, so it is checked like one.**
  *
  * AWS's own naming rules, and the same principle `rumConnectHosts` and
- * `MEDIA_IMAGE_HOSTS` apply in `src/lib/content-security-policy.ts`: a value
+ * `MEDIA_IMAGE_HOSTS` apply in `src/features/content-security-policy/rules.ts`: a value
  * spliced into a host position must not be able to introduce a *different*
  * host. Without this, a bucket configured as `x@attacker.example/` builds the
  * string `https://x@attacker.example/.s3.amazonaws.com` — which

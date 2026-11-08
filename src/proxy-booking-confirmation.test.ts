@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 // so no shared cache may keep it. The database is stubbed away at the module
 // boundary; every route exists.
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
-vi.mock("@/db/public-route-existence", () => ({
+vi.mock("./features/public-route-existence/store", () => ({
   rememberedPublicRouteLookup: async () => ({ exists: true, shopExists: true, hidden: false }),
 }));
 

@@ -1,6 +1,6 @@
 import { CallNoteAssist } from "@/components/assists/CallNoteAssist";
-import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
+import { assistsAvailable } from "@/features/assists";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { readCallNoteAction } from "../../call-assist-actions";
 

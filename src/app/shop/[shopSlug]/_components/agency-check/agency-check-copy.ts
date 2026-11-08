@@ -1,5 +1,9 @@
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import type { CertificationAgency } from "@/db/schema";
+import {
+  type AgencyVerificationPage,
+  agencyVerificationPage,
+} from "@/features/agency-verification";
 import { fill } from "@/i18n/fill";
 import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
@@ -9,7 +13,6 @@ import {
   type CheckableAgency,
   isCheckableAgency,
 } from "@/lib/agency-check";
-import { type AgencyVerificationPage, agencyVerificationPage } from "@/lib/agency-verification";
 
 /**
  * **The agency check's words, once** (H-20261008-cert-check-extension): the diver record's card, a row

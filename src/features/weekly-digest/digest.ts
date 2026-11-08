@@ -10,14 +10,9 @@
  * Today's queue, which is why it sits above Today rather than in `src/db`.
  */
 import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
-import { inHorizonReadiness } from "@/db/blockers";
 import type { AppDb, DbExecutor } from "@/db/client";
-import { mondayReadFor } from "@/db/monday-read";
 import { sendNotification } from "@/db/notifications";
-import { readOwed } from "@/db/owed";
 import { queryAll } from "@/db/query-helpers";
-import { getMonthlyReport } from "@/db/reporting";
-import { readReviewsAwaitingModeration } from "@/db/reviews";
 import {
   activityEvents,
   bookings,
@@ -28,16 +23,16 @@ import {
   trips,
   weeklyDigestSends,
 } from "@/db/schema";
-import { tripIdsNeverSentLastMinuteDeal, tripIdsSuitedToADeal } from "@/db/trip-promos";
 import { liveTrip, notRehearsal, seatNotCancelled } from "@/db/trips";
-import {
-  issueWeeklyDigestUnsubscribeToken,
-  listWeeklyDigestRecipients,
-  staffLogins,
-  type WeeklyDigestRecipient,
-  type WeeklyDigestShop,
-} from "@/db/weekly-digest";
+import { inHorizonReadiness } from "@/features/blockers";
+import { mondayReadFor } from "@/features/monday-read";
+import { readOwed } from "@/features/owed";
+import { getMonthlyReport } from "@/features/reporting";
+import { readReviewsAwaitingModeration } from "@/features/reviews";
+import { shopClock } from "@/features/shop-clock";
 import { getTodayWork } from "@/features/today";
+import { countsAsJob } from "@/features/today-job";
+import { tripIdsNeverSentLastMinuteDeal, tripIdsSuitedToADeal } from "@/features/trip-promos";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { errorClassToken } from "@/lib/error-token";
@@ -51,9 +46,7 @@ import {
   type WeeklyDigestEmailSection,
 } from "@/lib/notifications";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
-import { shopClock } from "@/lib/shop-clock";
 import { shopPath } from "@/lib/staff-notices";
-import { countsAsJob } from "@/lib/today-job";
 import type { TodayActionKind } from "@/lib/today-kinds";
 import {
   type DigestWeeks,
@@ -74,6 +67,13 @@ import {
   weeklyDigestGrade,
   weeklyDigestSections,
 } from "@/lib/weekly-digest";
+import {
+  issueWeeklyDigestUnsubscribeToken,
+  listWeeklyDigestRecipients,
+  staffLogins,
+  type WeeklyDigestRecipient,
+  type WeeklyDigestShop,
+} from "./store";
 
 async function countBookingsMade(
   db: DbExecutor,

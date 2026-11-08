@@ -1,0 +1,204 @@
+import { and, eq, isNull, notExists } from "drizzle-orm";
+import { liveTrip } from "@/db/trips";
+import { readAssistResult, recordAssistResult } from "@/features/assist-results";
+import { type AssistOptions, runAssist, runAssistOutcome } from "@/features/assists";
+import { RECAP_LINE_FEATURE, type RecapLog, recapLine, recapLineCall } from "@/features/recap-line";
+import type { AppDb } from "../../db/client";
+import { incidentReports, shops, tripSightings, trips } from "../../db/schema/index";
+import { DIVER_LOCALES } from "../../i18n/settings";
+import { sourceDigest } from "../../lib/assists/shop-translate";
+import { temperatureInUnit, temperatureUnitFor } from "../../lib/temperature-units";
+
+/**
+ * **recap**: the recap's highlight line, drafted from what the crew logged on
+ * the boat: the sites and the sightings by name, and the water they recorded.
+ * Never the crew's free-text notes and never anything about a diver: the
+ * line is about the reef. It may name only species the crew logged, and only
+ * by the names DiveDay gives them (`recapLine` refuses any other species in
+ * any of the app's languages).
+ */
+
+/**
+ * The catalogue's species names in one language, by slug. The caller passes it in
+ * (`marineLifeNamesIn` in `src/i18n`): words are chosen in a renderer, and `src/db` takes them.
+ */
+export type MarineLifeNamesIn = (locale: string | null | undefined) => Map<string, string>;
+
+/** Every catalog species with its names in each language the app writes, for the refusal check. */
+function catalogNames(namesIn: MarineLifeNamesIn): { slug: string; names: string[] }[] {
+  const byLocale = DIVER_LOCALES.map((locale) => namesIn(locale));
+  return [...(byLocale[0] ?? [])].map(([slug]) => ({
+    slug,
+    names: [...new Set(byLocale.flatMap((names) => names.get(slug) ?? []))],
+  }));
+}
+
+/** What the crew logged on this departure, as the line's facts, or null with no sightings. */
+export async function recapLogFor(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  namesIn: MarineLifeNamesIn,
+): Promise<RecapLog | null> {
+  const [row] = await db
+    .select({ trip: trips, shop: shops })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  // Sightings switched off on Features: nothing logged is read into a line,
+  // so neither "Draft it" nor the send-time highlight has facts to write from.
+  if (!row?.shop.sightingsEnabled) return null;
+  const sightings = await db
+    .select({
+      slug: tripSightings.speciesSlug,
+      count: tripSightings.count,
+      site: tripSightings.diveSiteName,
+    })
+    .from(tripSightings)
+    .where(
+      and(
+        eq(tripSightings.tripId, tripId),
+        eq(tripSightings.shopId, shopId),
+        isNull(tripSightings.deletedAt),
+      ),
+    );
+  if (sightings.length === 0) return null;
+  const locale = row.shop.defaultLocale;
+  const names = namesIn(locale);
+  // Grouped by the site they were logged at, so the line cannot move a
+  // creature to another reef; a count is summed only within its own site.
+  const bySite = new Map<string, Map<string, number>>();
+  for (const sighting of sightings) {
+    if (!names.has(sighting.slug)) continue;
+    const counts = bySite.get(sighting.site) ?? new Map<string, number>();
+    counts.set(sighting.slug, (counts.get(sighting.slug) ?? 0) + sighting.count);
+    bySite.set(sighting.site, counts);
+  }
+  if (bySite.size === 0) return null;
+  const conditions: Record<string, string> = {};
+  if (typeof row.trip.waterTemperatureC === "number") {
+    const unit = temperatureUnitFor(row.shop);
+    conditions.waterTemp = `${temperatureInUnit(row.trip.waterTemperatureC, unit)}°${unit === "fahrenheit" ? "F" : "C"}`;
+  }
+  return {
+    locale,
+    sites: [...bySite].map(([name, counts]) => ({
+      name,
+      species: [...counts].map(([slug, count]) => ({ slug, name: names.get(slug) ?? slug, count })),
+    })),
+    conditions,
+  };
+}
+
+/** The highlight line for this departure, or null when there is nothing to say or the assist is dark. */
+export async function draftRecapLine(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  namesIn: MarineLifeNamesIn,
+  options: AssistOptions = {},
+): Promise<string | null> {
+  const log = await recapLogFor(db, shopId, tripId, namesIn);
+  if (!log) return null;
+  const value = await runAssist(db, {
+    ...options,
+    shopId,
+    feature: RECAP_LINE_FEATURE,
+    call: recapLineCall(log),
+  });
+  return recapLine(value, log, catalogNames(namesIn));
+}
+
+async function hasLiveIncidentReport(db: AppDb, shopId: string, tripId: string) {
+  const [report] = await db
+    .select({ id: incidentReports.id })
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        eq(incidentReports.tripId, tripId),
+        isNull(incidentReports.deletedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(report);
+}
+
+/**
+ * The shop's "Recap highlights" switch, at send time: a departure whose crew
+ * left the highlight blank gets Claude's line, written to the trip as if the
+ * crew had saved it, so the page and the email read one text. Only a blank
+ * one: a crew's own words are never replaced, and never on a departure with a
+ * live incident report. Returns whether it wrote.
+ */
+export async function autoFillRecapLine(
+  db: AppDb,
+  trip: { id: string; shopId: string; recapShoutout: string | null },
+  shop: { recapAssistAutoApprove: boolean },
+  namesIn: MarineLifeNamesIn,
+  options: AssistOptions = {},
+): Promise<boolean> {
+  if (!shop.recapAssistAutoApprove || trip.recapShoutout?.trim()) return false;
+  // A recap is never held up by its highlight: any failure here is no line.
+  try {
+    // A departure with an incident report gets no line nobody read: the recap
+    // may reach the diver it is about, or their family. The crew can still
+    // draft one on Today and send it themselves.
+    if (await hasLiveIncidentReport(db, trip.shopId, trip.id)) return false;
+    const log = await recapLogFor(db, trip.shopId, trip.id, namesIn);
+    if (!log) return false;
+    // A line refused or thrown away for these sightings is remembered, so
+    // each send pass does not pay for the same refusal again. A staffer's
+    // Draft on Today still asks.
+    const digest = sourceDigest(JSON.stringify(log));
+    const refused = await readAssistResult(db, trip.shopId, RECAP_LINE_FEATURE, trip.id);
+    if (refused?.inputDigest === digest) return false;
+    const { status, value } = await runAssistOutcome(db, {
+      ...options,
+      shopId: trip.shopId,
+      feature: RECAP_LINE_FEATURE,
+      call: recapLineCall(log),
+    });
+    if (status === "skipped") return false;
+    const line = recapLine(value, log, catalogNames(namesIn));
+    if (!line) {
+      await recordAssistResult(db, {
+        shopId: trip.shopId,
+        feature: RECAP_LINE_FEATURE,
+        subjectKey: trip.id,
+        value: { text: null },
+        inputDigest: digest,
+      });
+      return false;
+    }
+    // Asked again in the write itself: the call above takes seconds, and a
+    // report filed meanwhile must still keep the line off this departure.
+    const [written] = await db
+      .update(trips)
+      .set({ recapShoutout: line })
+      .where(
+        and(
+          eq(trips.id, trip.id),
+          eq(trips.shopId, trip.shopId),
+          isNull(trips.recapShoutout),
+          notExists(
+            db
+              .select({ id: incidentReports.id })
+              .from(incidentReports)
+              .where(
+                and(
+                  eq(incidentReports.shopId, trip.shopId),
+                  eq(incidentReports.tripId, trip.id),
+                  isNull(incidentReports.deletedAt),
+                ),
+              ),
+          ),
+        ),
+      )
+      .returning({ id: trips.id });
+    return Boolean(written);
+  } catch {
+    return false;
+  }
+}

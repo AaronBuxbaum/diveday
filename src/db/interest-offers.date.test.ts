@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import type { Notification } from "@/lib/notifications/kinds";
 import { fileScopedShopContext } from "@/test/db";
-import { addInterest } from "./interest-dates-fixtures";
+import { addInterest } from "../test/substrate-fixtures/db/interest-dates-fixtures";
 
 const ctx = fileScopedShopContext();
 

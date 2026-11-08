@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { requestPricingArm } from "@/features/pricing-arm-request";
+import { pricingConfig } from "@/features/pricing-flags";
 import { sharedLinkCard } from "@/lib/marketing";
-import { requestPricingArm } from "@/lib/pricing-arm-request";
-import { pricingConfig } from "@/lib/pricing-flags";
 
 /** /pricing's metadata, per pricing arm; kept beside the page so the route file stays under its baseline. */
 const flatMetadata: Metadata = {

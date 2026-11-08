@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
-import type { TripPrepShop } from "@/db/trip-prep";
 import { listShopDayDepartures } from "@/db/trips";
+import type { TripPrepShop } from "@/features/trip-prep";
 import { readDayLoadOut } from "./closeout-reader";
 
 /**

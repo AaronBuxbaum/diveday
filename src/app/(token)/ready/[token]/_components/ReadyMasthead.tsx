@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ThreadShell } from "@/components/thread/ThreadShell";
-import type { ReadyPageData } from "@/db/ready";
+import type { ReadyPageData } from "@/features/ready";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -25,7 +25,7 @@ import type { DiveDayMilestone } from "@/lib/visit-milestones";
  * which departure, when, and when to be there. Both of the page's openings
  * read them, the ordinary masthead and the "You've got a seat" card a booking
  * lands on, and both can be built from one narrow row (`getBookedCard`,
- * src/db/ready.ts) as well as from the full loader, which is what lets the
+ * src/features/ready/store.ts) as well as from the full loader, which is what lets the
  * booked card paint before the thread's reads have finished (UX review
  * 2026-10-10, item 7).
  */

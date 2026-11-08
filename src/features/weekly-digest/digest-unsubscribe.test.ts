@@ -1,15 +1,15 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { capabilities, people, shops, userAccounts, weeklyDigestSends } from "@/db/schema";
+import type { Notification, NotificationProvider } from "@/lib/notifications";
+import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { sendWeeklyDigestForShop } from "./digest";
 import {
   listWeeklyDigestRecipients,
   resolveWeeklyDigestUnsubscribeToken,
   turnOffWeeklyDigestByToken,
   type WeeklyDigestShop,
-} from "@/db/weekly-digest";
-import type { Notification, NotificationProvider } from "@/lib/notifications";
-import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
-import { sendWeeklyDigestForShop } from "./digest";
+} from "./store";
 
 /**
  * The Monday email's way out (issue #3721, security-sensitive: a bearer

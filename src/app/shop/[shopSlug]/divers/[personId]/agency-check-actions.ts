@@ -2,6 +2,9 @@
 
 import { refresh, revalidatePath } from "next/cache";
 import { z } from "zod";
+import { reviewNitroxCertification } from "@/db/nitrox";
+import { reviewCertification, reviewSpecialtyCertification } from "@/db/readiness";
+import { diveSpecialty } from "@/db/schema";
 import {
   addAgencyListedCards,
   agencyListedKindsHeld,
@@ -9,10 +12,8 @@ import {
   certificationForAgencyOffer,
   listedCardForAgencyCheck,
   undoAgencyCheck,
-} from "@/db/agency-check";
-import { reviewNitroxCertification } from "@/db/nitrox";
-import { reviewCertification, reviewSpecialtyCertification } from "@/db/readiness";
-import { diveSpecialty } from "@/db/schema";
+} from "@/features/agency-check";
+import { readForm } from "@/features/form-parse";
 import {
   type AgencyListedKind,
   agencyListedCards,
@@ -22,7 +23,6 @@ import {
 } from "@/lib/agency-check";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { readForm } from "@/lib/form-parse";
 import { requireDiverActionContext } from "./action-helpers";
 import type { MarkCertifiedResult } from "./card-actions";
 import { cardForm, cardIdFromForm } from "./card-form";

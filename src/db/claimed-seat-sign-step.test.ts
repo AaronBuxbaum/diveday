@@ -2,15 +2,15 @@ import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { createBookingParty } from "./bookings";
-import * as readinessDb from "./readiness";
-import { bookings, waiverRecords } from "./schema";
 import {
   claimPartySeat,
   claimPartySeatRecord,
   issuePartySeatClaims,
   settleClaimedSeat,
-} from "./seat-claims";
+} from "../features/seat-claims/store";
+import { createBookingParty } from "./bookings";
+import * as readinessDb from "./readiness";
+import { bookings, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { issueWaiverOnJoin } from "./waiver-issue";
 import { threadWaiverKey } from "./waivers";

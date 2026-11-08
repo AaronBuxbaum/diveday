@@ -4,7 +4,8 @@ import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
-import { getCounterRentalNewPage } from "@/db/counter-rental-new-page";
+import { getCounterRentalNewPage } from "@/features/counter-rental-new-page";
+import type { ShopSurface } from "@/features/session";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import type { DiverLocale } from "@/i18n/settings";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -23,7 +24,6 @@ import {
 } from "@/lib/counter-rentals";
 import { GEAR_KIND_ORDER, type GearItemKind, gearServiceKeepsUnitBack } from "@/lib/gear";
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
-import type { ShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";

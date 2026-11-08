@@ -277,7 +277,7 @@ export const courses = pgTable(
     ),
     uniqueIndex("courses_shop_slug_unique").on(table.shopId, table.slug),
     index("courses_shop_active_idx").on(table.shopId, table.isActive),
-    // Backs the command-palette's courses arm (src/db/search.ts) — a leading
+    // Backs the command-palette's courses arm (src/features/search/store.ts) — a leading
     // wildcard `ilike '%query%'`, which the (shop_id, title) unique btree above
     // cannot serve however tempting it looks: that index answers equality and
     // prefixes, never an interior substring (DATA-L6).

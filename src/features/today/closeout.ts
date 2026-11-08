@@ -1,3 +1,4 @@
+import type { MonthlyReport } from "@/features/reporting";
 import { nowDate } from "@/lib/clock";
 import type {
   CloseoutDepartureStatus,
@@ -6,7 +7,6 @@ import type {
   OpenCount,
 } from "@/lib/closeout-kinds";
 import { type CrewRollCallSubject, crewIsAccountedFor, crewRollCallCounts } from "@/lib/manifests";
-import type { MonthlyReport } from "@/lib/reporting";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { AFTER_DIVE_GAP_REASONS, type RollCallGapReason } from "@/lib/roll-call-gaps";
 import { shopDayOf } from "@/lib/shop-day";
@@ -28,7 +28,7 @@ import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
  *
  * It is an *assembly*, never a second detector. Every fact here is composed
  * from the outputs the source-of-truth modules already produce — the roll-call
- * gaps `src/db/roll-call-gaps.ts`'s `listRollCallGaps` chases. Re-deriving that rule
+ * gaps `src/features/roll-call-gaps/store.ts`'s `listRollCallGaps` chases. Re-deriving that rule
  * here is the failure mode this docblock exists to forbid: an evening that
  * counts a head count differently than the queue that chases it would let the
  * two disagree about whether a person is accounted for.
@@ -101,7 +101,7 @@ export type CloseoutTripInput = {
    *
    * Its own field rather than a narrowing of `booked`, because the readers
    * either side of it want the roster: the departure's open-seats debrief
-   * (`src/db/open-seats.ts`) subtracts seats from capacity, and a released
+   * (`src/features/open-seats/store.ts`) subtracts seats from capacity, and a released
    * seat never came back to the shelf. The homecoming
    * sentence is the one reader asking who was *aboard*, and it counted a diver
    * left standing on the dock as having gone out and come home because both
@@ -171,7 +171,7 @@ export type CloseoutTripInput = {
 };
 
 /**
- * The slice of `src/db/roll-call-gaps.ts`'s `OpenRollCall` this module reads.
+ * The slice of `src/features/roll-call-gaps/store.ts`'s `OpenRollCall` this module reads.
  * Structural on purpose: `src/lib` does not import `src/db`, and the gap rows
  * are passed in, never re-derived.
  */
@@ -794,7 +794,7 @@ export function loadOutDue(departures: readonly { endsAt: Date }[], now: Date): 
  * night of its life, which is the wallpaper DOM-H3 warns about — a reading
  * nobody reads, in the one place the day's real work is being finished. The
  * same restraint `partnerReferredSeats` and `monthHasActivity` already
- * practise (both in `src/lib/reporting.ts`): nothing to say, so nothing is said.
+ * practise (both in `src/features/reporting/rules.ts`): nothing to say, so nothing is said.
  *
  * **Tips stay beside revenue, never inside it.** `MonthlyReportInput.tipsCents`
  * carries the reason — a tip is 100% the shop's, charged on its own Stripe
@@ -823,7 +823,7 @@ export function dayTakings(
 }
 
 /**
- * One departure's paid tips (`tipsByDeparture`, `src/db/crew-tips.ts`): the
+ * One departure's paid tips (`tipsByDeparture`, `src/features/crew-tips/store.ts`): the
  * per-boat line under the day's tips, so the crew of each boat can see what
  * the divers left them (UX review 2026-10-11, item 18).
  */

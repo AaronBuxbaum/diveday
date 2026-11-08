@@ -2,15 +2,15 @@ import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { bookings, people, personRoles, shops, trips, userAccounts, waiverRecords } from "./schema";
-import { completeWaiver } from "./waivers-completion";
-import { issueWaiverRequest } from "./waivers-requests";
-import { recordWaiverTemplate } from "./waivers-templates";
 import {
   clearAnswers,
   medicalReferralAnswers,
   recordMedicalEvaluationForShop,
-} from "./waivers-test-fixtures";
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
+import { bookings, people, personRoles, shops, trips, userAccounts, waiverRecords } from "./schema";
+import { completeWaiver } from "./waivers-completion";
+import { issueWaiverRequest } from "./waivers-requests";
+import { recordWaiverTemplate } from "./waivers-templates";
 
 describePostgres("person-scoped waiver issuance against a physician update", () => {
   it("serializes the resend decision with clearing a booking referral", async () => {

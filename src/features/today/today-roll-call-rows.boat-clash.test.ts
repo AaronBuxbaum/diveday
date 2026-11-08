@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createBoat } from "@/db/boats";
 import { trips } from "@/db/schema";
 import { createTrip, moveTrip, setTripStatus } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import { createBoat } from "../boats/store";
+import { shopClock } from "../shop-clock/rules";
 import { getTodayWork } from "./today-reader";
 
 const ctx = fileScopedShopContext();

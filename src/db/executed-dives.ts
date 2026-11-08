@@ -113,7 +113,7 @@ export async function listExecutedDives(db: DbExecutor, shopId: string, tripId: 
  * recorded. Requiring a row here would have made today's boat speak from the
  * plan and yesterday's fall silent — which at a busy dock is the *normal*
  * case, and it fails toward the shorter advice. So the rule is the one
- * `src/db/recap.ts` already uses for the prior-visit count: a live booking,
+ * `src/features/recap/store.ts` already uses for the prior-visit count: a live booking,
  * on a live departure the shop still says ran.
  *
  * **The boat's roll call outranks a status word written later at a desk**
@@ -135,7 +135,7 @@ export async function listExecutedDives(db: DbExecutor, shopId: string, tripId: 
  * this reader calls its two halves apart so the roll call can outrank the
  * desk's, and that escape is the only way it may disagree with the others.
  * It deliberately makes the opposite trade from the counter's identity prompt
- * in `src/db/divers.ts`, which would rather ask a human than assume. That
+ * in `src/features/divers/store.ts`, which would rather ask a human than assume. That
  * reader decides whether to *interrupt* someone; this one decides how long a
  * diver waits before flying.
  */

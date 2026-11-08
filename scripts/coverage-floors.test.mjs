@@ -94,18 +94,18 @@ describe("coverage-floors", () => {
     }
   });
 
-  it("requires a floor for every non-test lib and db file the safety reviewer patterns match", () => {
+  it("requires a floor for every non-test substrate and feature file the safety reviewer patterns match", () => {
     const fixture = [
       "src/db/readiness.ts",
       "src/db/readiness.test.ts",
-      "src/db/seat-diver.ts",
+      "src/features/seat-diver/store.ts",
       "src/db/seed-nitrox.ts",
       "src/db/seed-medical-alert.ts",
-      "src/db/waiver-guardian-copy.ts",
-      "src/db/erasure-coverage-keeps.test-support.ts",
-      "src/db/guardian-erasure.ts",
+      "src/features/waiver-guardian-copy/store.ts",
+      "src/test/substrate-fixtures/db/erasure-coverage-keeps.test-support.ts",
+      "src/features/guardian-erasure/store.ts",
       "src/db/schema/erasure.ts",
-      "src/lib/anonymization.ts",
+      "src/features/anonymization/rules.ts",
       "src/lib/payments/erasure-failure.ts",
       "src/lib/waiver-copy.ts",
       "src/lib/format-date.ts",
@@ -115,11 +115,12 @@ describe("coverage-floors", () => {
       "scripts/manifest-thing.mjs",
     ];
     expect(matchedSafetyFiles(fixture)).toEqual([
-      "src/db/guardian-erasure.ts",
       "src/db/readiness.ts",
       "src/db/schema/erasure.ts",
-      "src/db/seat-diver.ts",
-      "src/lib/anonymization.ts",
+      "src/features/anonymization/rules.ts",
+      "src/features/guardian-erasure/store.ts",
+      "src/features/seat-diver/store.ts",
+      "src/features/waiver-guardian-copy/store.ts",
       "src/lib/payments/erasure-failure.ts",
     ]);
   });
@@ -131,5 +132,39 @@ describe("coverage-floors", () => {
       expect(SAFETY_FILES).toContain(file);
       expect(typeof floors[file], file).toBe("number");
     }
+  });
+});
+
+describe("feature safety ownership", () => {
+  it("keeps moved and future feature logic under coverage floors", () => {
+    expect(
+      matchedSafetyFiles([
+        "src/features/check-in/store.ts",
+        "src/features/card-restore/store.ts",
+        "src/features/future-medical/store.ts",
+        "src/features/future-medical/store.test.ts",
+      ]),
+    ).toEqual([
+      "src/features/card-restore/store.ts",
+      "src/features/check-in/store.ts",
+      "src/features/future-medical/store.ts",
+    ]);
+  });
+});
+
+describe("branchless public contracts", () => {
+  it("excludes only source-proven re-exports, retaining executable indexes", async () => {
+    const { isReexportOnlyContract } = await import("./coverage-safety-files.mjs");
+    expect(
+      isReexportOnlyContract(
+        '/** contract */\nexport { recordThing, type Thing } from "./store";\nexport type { Kind } from "./rules";',
+      ),
+    ).toBe(true);
+    for (const source of [
+      'export function readThing(input) { return input ? "yes" : "no"; }',
+      "export const cap = process.env.CAP ? 1 : 2;",
+      'import "./side-effects"; export { recordThing } from "./store";',
+    ])
+      expect(isReexportOnlyContract(source)).toBe(false);
   });
 });

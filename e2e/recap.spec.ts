@@ -9,7 +9,7 @@ import { seedFacts } from "./shop-facts";
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
 // token and reveal nothing. The happy-path rendering is covered by the
-// getRecapPageData integration tests (src/db/recap.test.ts); here we prove the
+// getRecapPageData integration tests (src/features/recap/store.test.ts); here we prove the
 // route is wired and the fail-closed notice shows.
 //
 // Since slice 7d (ADR 20260827-the-divers-thread, decision 4) this URL renders
@@ -103,14 +103,14 @@ test("the recap link hands out no share affordance, and its unfurl card reveals 
 
   // This request used to *prime* the optimizer, deliberately: `next/image`'s
   // optimizer disables libvips' SVG loader process-wide the first time it runs,
-  // and satori's output is SVG — so before src/lib/og-rasterizer.ts that
+  // and satori's output is SVG — so before src/features/og-rasterizer/rules.ts that
   // ordering took the card down (ADR 20260804-og-svg-rasterizer), and forcing
   // it here removed the luck of which earlier test happened to optimize an
   // image. The e2e build now runs `images.unoptimized` (next.config.ts):
   // sharp's lossy re-encodes are not bit-reproducible between runs, so every
   // optimized photo was a permanent visual-regression coin flip. With no
   // optimizer there is no sharp-first ordering to force — the hazard itself is
-  // production-only now, and `src/lib/og-rasterizer.test.ts` (which was always
+  // production-only now, and `src/features/og-rasterizer/rules.test.ts` (which was always
   // the deterministic guard; this prime skipped itself on a warm cache) is
   // what holds it. What this asserts instead is that the determinism flag is
   // actually on: an optimizer that starts answering here means the e2e build

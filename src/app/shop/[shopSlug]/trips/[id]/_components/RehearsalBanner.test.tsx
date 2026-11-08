@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  */
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/db/shops-cached", () => ({
+vi.mock("../../../../../../features/shops-cached/store", () => ({
   shopBySlugCached: vi.fn(async () => ({ id: "shop-1", defaultLocale: "en-US" })),
 }));
 vi.mock("@/db/rehearsals", () => ({

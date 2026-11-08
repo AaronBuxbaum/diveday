@@ -3,7 +3,7 @@ import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
-import type { SameNamePerson } from "@/db/identity-repoint";
+import type { SameNamePerson } from "@/features/identity-repoint";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";

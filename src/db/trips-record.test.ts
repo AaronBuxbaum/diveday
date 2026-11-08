@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { createBoat, deleteBoat } from "./boats";
+import { createBoat, deleteBoat } from "../features/boats/store";
+import {
+  boatTripFixture,
+  tripBoatPatch,
+} from "../test/substrate-fixtures/db/trip-boat-test-fixtures";
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
 import { crewSubject } from "./roll-call-subject";
@@ -16,8 +20,8 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { boatTripFixture, tripBoatPatch } from "./trip-boat-test-fixtures";
 import { listTripChangeEvents } from "./trip-change-events";
+import { basePatch, revisionOf } from "./trip-revision.test-support";
 import {
   createTrip,
   editTrip,
@@ -680,17 +684,6 @@ describe("editTrip and the calendar revision", () => {
     if (!trip) throw new Error("trip not created");
     return { db, shop, trip };
   }
-
-  const basePatch = (trip: { title: string; startsAt: Date; endsAt: Date; capacity: number }) => ({
-    title: trip.title,
-    startsAt: trip.startsAt,
-    endsAt: trip.endsAt,
-    capacity: trip.capacity,
-    plannedDives: 2,
-  });
-
-  const revisionOf = async (db: AppDb, shopId: string, tripId: string) =>
-    (await getTripWithBooked(db, shopId, tripId))?.revision;
 
   it("bumps when the departure time changes", async () => {
     const { db, shop, trip } = await departure();

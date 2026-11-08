@@ -9,8 +9,8 @@ import {
   type MarkTrainingDiveOutcome,
   markTrainingDive,
 } from "@/db/training-marks";
-import { readForm, text } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { readForm, text } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { requireRosterBooking, tripPath } from "./roster-booking";

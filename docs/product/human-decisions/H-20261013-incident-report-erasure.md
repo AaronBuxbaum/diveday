@@ -27,6 +27,6 @@ Which option, and whether the diver's own export should carry the reports.
 
 ## Unblocks / follow-up
 
-Built as decided: `scrubIncidentReports` (`src/db/anonymize.ts`) redacts only the outsider row. The export (`src/db/export-tables.ts`) changes only if counsel answers the export question differently.
+Built as decided: `scrubIncidentReports` (`src/features/anonymize/store.ts`) redacts only the outsider row. The export (`src/db/export-tables.ts`) changes only if counsel answers the export question differently.
 
 Part of the [human decision log](README.md#decision-register).

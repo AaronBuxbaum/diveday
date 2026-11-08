@@ -1,0 +1,177 @@
+import { and, eq, inArray } from "drizzle-orm";
+import { liveTrip, seatNotCancelled } from "@/db/trips";
+import { sharedInHorizonReadiness } from "@/features/blockers";
+import { hasSailed } from "@/lib/trips";
+import type { AppDb } from "../../db/client";
+import { bookings, orders, people, priorVisits, trips } from "../../db/schema/index";
+
+import { nowDate } from "../../lib/clock";
+import { type AboardBlockerKind, aboardBlockerKind } from "../../lib/readiness";
+
+/**
+ * **The four facts a roster row carries beside a name** — ADR
+ * 20260827-people-not-lists, decision 2: the roster is one ledger whose rows
+ * are "name (the row is the door) + only exceptional badges + quiet last-visit
+ * fact".
+ *
+ * Nothing existing supplied them. `listDiverSummaries` counted certification
+ * cards, which is what the retired Level and Needs-attention columns were made
+ * of; the row now says when this diver was last on a boat, when they are next
+ * on one, and — exceptionally — that they cannot board it or that an invoice
+ * is standing open.
+ *
+ * **No second detector.** `blocker` comes out of the same
+ * `inHorizonReadiness` pass the Today queue and the nav badge read, reduced
+ * per person by `aboardBlockerKind` — the same worst-first reduction the day
+ * spine's station rows use. A roster that computed "blocked" its own way would
+ * be a third answer to a question two surfaces already agree on.
+ */
+export type RosterFacts = {
+  /** The latest departure this diver actually sailed on, or null. */
+  lastAboardAt: Date | null;
+  /** The soonest departure still ahead of them, or null. */
+  nextBookingAt: Date | null;
+  /**
+   * Their whole history came across from another system: prior visits on file
+   * and not one booking here. The row says so rather than reading as a diver
+   * who has never been out (ADR 20260725-import-prior-visits).
+   */
+  importedOnly: boolean;
+  /**
+   * They put themselves on file at the shop's counter QR, and when (issue
+   * #1236). Null for every record the shop typed in or imported itself.
+   */
+  selfRegisteredAt: Date | null;
+  /** An invoice raised against this diver is still `open`. */
+  openBalance: boolean;
+  /** Why they cannot board the departure they are on, worst-first — or null. */
+  blocker: AboardBlockerKind | null;
+};
+
+const EMPTY: RosterFacts = {
+  lastAboardAt: null,
+  nextBookingAt: null,
+  importedOnly: false,
+  selfRegisteredAt: null,
+  openBalance: false,
+  blocker: null,
+};
+
+/**
+ * Every roster fact for one page of divers, in four batched reads plus the
+ * shared readiness pass.
+ *
+ * `personIds` is a page, never the roster: the caller hands in the ~25 ids
+ * `listDiverSummaries` just returned, and the four queries are all
+ * `inArray`-bounded by it. The readiness pass is the exception and is
+ * deliberately shop-wide — it is keyed by departure rather than by person, and
+ * it is the *same* call the staff shell's blocked-diver badge already makes,
+ * so narrowing it here would mean a second, differently-scoped answer to
+ * "who is blocked".
+ *
+ * `now` rather than a timezone: nothing decided here is calendar-day
+ * granular. Which side of the buffer a departure falls on is an instant
+ * comparison, and the words a row is set in — "last aboard Wed, Aug 26" — are
+ * formatted by the surface in the shop's own zone.
+ */
+export async function rosterFacts(
+  db: AppDb,
+  shopId: string,
+  personIds: readonly string[],
+  options: { now?: Date } = {},
+): Promise<Map<string, RosterFacts>> {
+  const facts = new Map<string, RosterFacts>();
+  if (personIds.length === 0) return facts;
+  const now = options.now ?? nowDate();
+  const ids = [...personIds];
+
+  const [seats, visits, openOrders, evidence, registrations] = await Promise.all([
+    db
+      .select({ personId: bookings.personId, startsAt: trips.startsAt })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(bookings.personId, ids),
+          seatNotCancelled,
+          // A cancelled departure is not a visit and not a booking ahead —
+          // it is the thing that stopped being either.
+          eq(trips.status, "scheduled"),
+          liveTrip(),
+        ),
+      ),
+    db
+      .select({ personId: priorVisits.personId })
+      .from(priorVisits)
+      .where(and(eq(priorVisits.shopId, shopId), inArray(priorVisits.personId, ids))),
+    // "Open balance" is a *raised* invoice still standing open — the narrower
+    // half of the record's own money reading (`unpaidBookingCount`, which also
+    // counts an un-invoiced counter seat sitting at `unpaid`). Deliberately the
+    // narrow one: this badge is read in a scan of a hundred names, and the
+    // fact it has to be true about is "somebody was billed and has not paid".
+    db
+      .select({ personId: orders.personId })
+      .from(orders)
+      .where(
+        and(eq(orders.shopId, shopId), inArray(orders.personId, ids), eq(orders.status, "open")),
+      ),
+    sharedInHorizonReadiness(db, shopId, now),
+    // The counter QR's own mark (issue #1236). One column off `people`, read
+    // here rather than joined into the roster query, so the fact reaches every
+    // surface that asks for roster facts rather than only the list.
+    db
+      .select({ id: people.id, origin: people.origin, createdAt: people.createdAt })
+      .from(people)
+      // diveday:allow-deleted-people: facts for people already on this roster.
+      .where(and(eq(people.shopId, shopId), inArray(people.id, ids))),
+  ]);
+
+  const importedIds = new Set(visits.map((row) => row.personId));
+  const registeredAt = new Map(
+    registrations
+      .filter((row) => row.origin === "self_registration")
+      .map((row) => [row.id, row.createdAt] as const),
+  );
+  const owingIds = new Set(openOrders.map((row) => row.personId));
+
+  // Every seat in the horizon that cannot board. A diver is pooled across all
+  // of them before being reduced — so a person blocked on Thursday for a card
+  // and on Friday for a medical hold reads as the medical hold. Pooling and
+  // then calling `aboardBlockerKind` once keeps the worst-first ordering in the
+  // one place that owns it (`ABOARD_KIND_ORDER`, src/lib/readiness.ts) rather
+  // than re-spelling it as a comparator here.
+  const blockedSeats = evidence.trips.flatMap((trip) =>
+    (evidence.readinessByTrip.get(trip.id) ?? []).filter(
+      (row) => row.readiness.status === "blocked",
+    ),
+  );
+
+  for (const id of ids) facts.set(id, { ...EMPTY });
+  for (const seat of seats) {
+    const entry = facts.get(seat.personId);
+    if (!entry) continue;
+    const ahead = !hasSailed(seat.startsAt, now);
+    if (ahead) {
+      if (!entry.nextBookingAt || seat.startsAt < entry.nextBookingAt) {
+        entry.nextBookingAt = seat.startsAt;
+      }
+    } else if (!entry.lastAboardAt || seat.startsAt > entry.lastAboardAt) {
+      entry.lastAboardAt = seat.startsAt;
+    }
+  }
+  const seated = new Set(seats.map((seat) => seat.personId));
+  for (const id of ids) {
+    const entry = facts.get(id);
+    if (!entry) continue;
+    entry.importedOnly = importedIds.has(id) && !seated.has(id);
+    // Provenance, like `importedOnly`, and suppressed by the same thing: a
+    // diver who has been on a boat has a better fact to say.
+    entry.selfRegisteredAt = seated.has(id) ? null : (registeredAt.get(id) ?? null);
+    entry.openBalance = owingIds.has(id);
+    entry.blocker = aboardBlockerKind(
+      blockedSeats.filter((row) => row.person.id === id).flatMap((row) => row.readiness.blockers),
+    );
+  }
+  return facts;
+}

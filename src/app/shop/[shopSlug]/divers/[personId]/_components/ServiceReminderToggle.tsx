@@ -1,6 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import type { ServiceReminderState } from "@/db/work-order-follow-up";
+import type { ServiceReminderState } from "@/features/work-order-follow-up";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { setCustomerGearRemindersAction } from "../../../gear/work-orders/follow-up-actions";

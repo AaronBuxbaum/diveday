@@ -2,9 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  boardAtDeparture,
+  HOUR,
+  returnedTrip,
+} from "../test/substrate-fixtures/db/roll-call-test-fixtures";
 import { cancelBooking } from "./bookings";
 import { listUnaccountedForByTrip } from "./manifests";
-import { boardAtDeparture, HOUR, returnedTrip } from "./roll-call-test-fixtures";
 import { bookings as bookingsTable, rollCallEvents } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test.

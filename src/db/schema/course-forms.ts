@@ -139,7 +139,7 @@ export const courseFormRequirements = pgTable(
  * 20261008-course-forms). Immutable once written — the title, version and body
  * are snapshots, so a later edit to the form never alters what was signed.
  * Two writers update a record, and neither touches what the student signed:
- * erasure (`src/db/anonymize.ts`), which strips the names and keeps the fact,
+ * erasure (`src/features/anonymize/store.ts`), which strips the names and keeps the fact,
  * and a guardian completing a minor's signature that has none (the guardian
  * columns, filled once where they are null, never overwritten).
  *

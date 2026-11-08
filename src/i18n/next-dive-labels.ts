@@ -1,9 +1,9 @@
-import type { RecapPulseCategory } from "@/db/recap-pulses";
 // **The leaf, not `@/lib/readiness`** — the same bundle rule
 // `src/i18n/readiness-labels.ts` states at its own first import. This module is
 // read by the recap, one of the pages a diver opens on a boat.
 import type { CertificationLevel } from "@/lib/certification-levels";
 import type { NextDiveReason } from "@/lib/next-dive";
+import type { RecapPulseCategory } from "../lib/recap-pulse-category";
 import type { DiverMessageKey } from "./messages";
 import type { StaffMessageKey } from "./staff-messages";
 

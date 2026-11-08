@@ -6,7 +6,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/db/founder-metrics", () => ({
+vi.mock("../../../../features/founder-metrics/store", () => ({
   claimFounderDigest: vi.fn(),
   departureRollCallEvents: vi.fn(),
   listShopActivation: vi.fn(),
@@ -14,10 +14,10 @@ vi.mock("@/db/founder-metrics", () => ({
   releaseFounderDigest: vi.fn(),
   syncShopMilestones: vi.fn(),
 }));
-vi.mock("@/db/email-bounces", () => ({
+vi.mock("../../../../features/email-bounces/store", () => ({
   listEmailBounces: vi.fn().mockResolvedValue({ total: 0, lines: [] }),
 }));
-vi.mock("@/db/funnel", () => ({
+vi.mock("../../../../features/funnel/store", () => ({
   countDemoEntriesBySource: vi.fn(),
   countSetupRequestsBySource: vi.fn(),
   countUnnotifiedSetupRequests: vi.fn(),
@@ -28,7 +28,9 @@ vi.mock("@/lib/clock", async (importOriginal) => {
 });
 vi.mock("@/lib/notifications", () => ({ notify: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),
@@ -36,8 +38,8 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 const { getDb } = await import("@/db/client");
-const metrics = await import("@/db/founder-metrics");
-const funnel = await import("@/db/funnel");
+const metrics = await import("../../../../features/founder-metrics/store");
+const funnel = await import("../../../../features/funnel/store");
 const { nowDate } = await import("@/lib/clock");
 const { notify } = await import("@/lib/notifications");
 const Sentry = await import("@sentry/nextjs");

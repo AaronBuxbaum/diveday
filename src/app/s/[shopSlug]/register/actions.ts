@@ -4,11 +4,12 @@ import { after } from "next/server";
 import { z } from "zod";
 
 import { getDb } from "@/db/client";
-import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "@/db/self-registration";
 import { getShopBySlug } from "@/db/shops";
+import { blankAsAbsent, parseForm } from "@/features/form-parse";
+import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "@/features/self-registration";
+import { selfRegistrationReleaseDelivery } from "@/features/self-registration-delivery";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { blankAsAbsent, parseForm } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
@@ -20,7 +21,6 @@ import {
   SELF_REGISTRATION_DONE,
   type SelfRegistrationFormState,
 } from "@/lib/self-registration";
-import { selfRegistrationReleaseDelivery } from "@/lib/self-registration-delivery";
 
 const registrationSchema = z.object({
   // Blank reads as absent, and a name is required.

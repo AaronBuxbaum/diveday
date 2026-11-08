@@ -11,7 +11,7 @@ SMS goes through AWS SNS from DiveDay's own account (ADR 20260802-sns-sms-adapte
 
 - **One US toll-free number for the platform**, verified once, not 10DLC. Every shop's texts leave from it. Under 10DLC a platform sending for many businesses registers each one as its own brand; toll-free is one registration. The request and registration are manual action `sns-sms-account-limits`.
 - **HELP and STOP are answered by AWS** from keyword replies set on the number (`put-keyword`), the same for every diver. The app sends no replies.
-- **The number is two-way only for keywords.** It forwards every inbound text to the existing `diveday-sms-delivery-receipts` topic, through a role this stack creates (`diveday-sms-two-way`). `/api/webhooks/sms` already verifies that topic's envelopes; `parseSmsReply` (`src/lib/notifications/sms-replies.ts`) reads STOP and its carrier synonyms, and START, as the *whole* reply. Everything else, HELP included, is acknowledged and dropped. Conversation over SMS stays out of scope.
+- **The number is two-way only for keywords.** It forwards every inbound text to the existing `diveday-sms-delivery-receipts` topic, through a role this stack creates (`diveday-sms-two-way`). `/api/webhooks/sms` already verifies that topic's envelopes; `parseSmsReply` (`src/features/sms-webhook/replies.ts`) reads STOP and its carrier synonyms, and START, as the *whole* reply. Everything else, HELP included, is acknowledged and dropped. Conversation over SMS stays out of scope.
 - **The app keeps its own STOP list**, `sms_opt_outs`, keyed by E.164 number and platform-wide because the number is. Each row is the number's last keyword, STOP or START, with the time SNS signed it; a reply older than the stored one changes nothing, so a retried START never undoes a newer STOP. `stopListedSmsProvider` (`src/db/sms-opt-outs.ts`) wraps the SNS sender at every caller, so a listed number is refused before AWS is asked, as a non-retryable `failed` with code `opted_out`. No row is removed by retention, erasure or a shop reset.
 - **Every SMS ends with the STOP line**, in the diver's language. `sendCourtesyMessage` takes it as a required `smsStopLine` and appends it to the SMS only; a WhatsApp send never carries it.
 - **Every phone field a diver fills in for themselves says what giving it means**, through one component, `SmsConsentNote`: the booking form's lead phone, self-registration, and the seat claim. The privacy page says mobile numbers are used only for booking texts and never shared for anyone's marketing.
@@ -38,7 +38,7 @@ SMS goes through AWS SNS from DiveDay's own account (ADR 20260802-sns-sms-adapte
 
 One word beyond the carriers' is read from the forwarded replies: `LATE` (`TARDE` in Spanish),
 which the night-before brief's text teaches on a boat day. It marks the soonest open seat held under exactly that E.164 number, in whichever
-shop, as **running late** (`markPhoneRunningLate`, `src/db/running-late.ts`), at the time SNS
+shop, as **running late** (`markPhoneRunningLate`, `src/features/running-late/store.ts`), at the time SNS
 signed. Nothing is answered over SMS and nothing about the booking reaches the sender, so the
 number stays one-way for conversation (20260907-two-way-inbox, decision 7); the statement gates
 nothing, which is why a carrier-vouched number is enough to make it.

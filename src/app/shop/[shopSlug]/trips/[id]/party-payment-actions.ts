@@ -3,12 +3,12 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { markPartyPaid, previewPartyPayment } from "@/db/payment-marks";
 import { getShopCurrency } from "@/db/stripe-accounts";
-import { formValue, readForm, text } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { formValue, readForm, text } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { markPartyPaid, previewPartyPayment } from "@/features/payment-marks";
+import { requireShopSurface } from "@/features/session";
 import { readManualPaymentMark } from "@/lib/payment-marks";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { requireRosterBooking, tripPath } from "./roster-booking";
 

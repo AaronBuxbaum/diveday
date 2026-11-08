@@ -10,17 +10,17 @@ live and the rules a change must keep. Read `foo.test.ts` before `foo.ts`; tests
 | --- | --- |
 | Domain terms | `docs/product/glossary.md` (index) and the domain files in `docs/product/glossary/` |
 | Decisions | grep `docs/architecture/decisions/` for the ADR id (each record is `<id>.md`) or a word of the decision; skip the README's index |
-| Staff pages (auth-gated, all of `/shop/**`) | `src/app/shop/`, gated by `requireShopSurface` in `src/lib/session.ts` |
+| Staff pages (auth-gated, all of `/shop/**`) | `src/app/shop/`, gated by `requireShopSurface` in `src/features/session/rules.ts` |
 | Public shop pages (no auth anywhere) | `src/app/s/[shopSlug]/` |
 | Bearer-token pages (the URL is the capability) | `src/app/(token)/waivers/[token]`, `ready/[token]`, `recap/[token]`, `verify/[token]`, `reset-password/[token]`, `calendar/[token]` |
-| Auth, authz, the edge check | `src/lib/auth.ts`, `src/lib/authz.ts`, `src/lib/session.ts`, `src/proxy.ts` |
+| Auth, authz, the edge check | `src/lib/auth.ts`, `src/lib/authz.ts`, `src/features/session/rules.ts`, `src/proxy.ts` |
 | May a diver buy a seat vs. board | `src/lib/trip-admission.ts` (booking, weaker) and `src/lib/readiness.ts` (boarding); admission never refuses someone readiness would clear |
 | Manifests, roll call, buddy teams | `src/lib/manifests.ts`, `src/db/manifests.ts`, `src/db/buddy-teams.ts`, `src/app/shop/[shopSlug]/trips/[id]/manifest/` |
 | Offline manifests | `src/lib/offline-manifests.ts`, `src/lib/offline-manifest-store.ts`, `src/worker/manifest-sw.ts` |
-| Seating a diver (every staff door) | `src/db/seat-diver.ts` via `src/app/actions/seat-diver.ts` |
+| Seating a diver (every staff door) | `src/features/seat-diver/store.ts` via `src/app/actions/seat-diver.ts` |
 | The booking transaction | `src/db/bookings.ts` |
 | Schema (never `drizzle/`) | `src/db/schema/` |
-| Export, import, backups | `src/db/export.ts`, `src/db/import.ts`, `src/features/backup-export/` |
+| Export, import, backups | `src/db/export.ts`, `src/features/import/store.ts`, `src/features/backup-export/` |
 | Payments | `src/lib/payments/`, `src/db/orders.ts`, `src/db/payments.ts`, `src/db/refunds.ts` |
 | Copy | `src/i18n/` bundles; readiness words in `src/i18n/readiness-labels.ts` |
 | Domain logic (framework-free) | `src/lib/`; dates in `src/lib/format.ts` |

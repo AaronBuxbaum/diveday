@@ -512,7 +512,7 @@ export const arrivalStatus = pgEnum("arrival_status", ["arrived", "cleared"]);
  * 20261104-arrival-is-a-trail): `bookings.status` says what the shop decided
  * about the seat and has no arrival word to mirror it with. A reader asks
  * `seatCheckedIn` (`src/db/arrival-provenance.ts`); the only writers are
- * `checkInBooking` / `undoCheckInBooking` (`src/db/check-in.ts`). A projection
+ * `checkInBooking` / `undoCheckInBooking` (`src/features/check-in/store.ts`). A projection
  * could not answer the three questions an offline queue asks — has this exact
  * tap already been applied, is the device's copy older than what stands now,
  * and is the arrival this undo names still the one standing — which is why the
@@ -668,7 +668,7 @@ export const buddyTeamEventAction = pgEnum("buddy_team_event_action", [
  * denormalised: its whole job is to outlive the rows it describes, so it cannot
  * resolve them by id afterwards.
  *
- * **Deliberately not pruned** (`RETENTION_DAYS`, src/lib/retention.ts). It is
+ * **Deliberately not pruned** (`RETENTION_DAYS`, src/features/retention/rules.ts). It is
  * safety evidence about a departure, in the same class as `roll_call_events`,
  * which is not pruned either — a window here
  * would put an expiry on the answer to "who was this diver with?" precisely

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { GLOBAL_SEQ_TABLES } from "../test/substrate-fixtures/db/export-table-classification.test-support";
 import { loadShopExportBundleInput } from "./export";
-import { GLOBAL_SEQ_TABLES } from "./export-table-classification.test-support";
 
 // The bundle's shape guards: split from export.test.ts, which holds the column decisions.
 const ctx = fileScopedShopContext();

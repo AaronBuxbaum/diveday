@@ -32,9 +32,9 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/headers", () => nextHeadersStub());
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { disableTotpAction, revokeSessionAction, verifyStepUpAction } = await import("./actions");
 
 const ctx = fileScopedShopContext();

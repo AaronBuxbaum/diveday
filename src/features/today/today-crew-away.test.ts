@@ -5,8 +5,8 @@ import { createTrip, listStaff, setTripCrew } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowMs } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import { shopClock } from "../shop-clock/rules";
 import { getTodayWork } from "./today-reader";
 
 /** Today's `crew_away` row (fourth review, item 12; issue #2678), apart from `today.test.ts`. */

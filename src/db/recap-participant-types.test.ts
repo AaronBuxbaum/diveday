@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
+import { getRecapPageData, sendDueRecaps } from "../features/recap/store";
 import { createBookingParty, setBookingParticipantType } from "./bookings";
 import { upsertExecutedDive } from "./executed-dives";
-import { getRecapPageData, sendDueRecaps } from "./recap";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ORIGIN = "https://diveday.test";

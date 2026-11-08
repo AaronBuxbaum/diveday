@@ -3,12 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { bookings, trips } from "@/db/schema";
 import { getShopBySlug, setShopCurrency, setShopTaxEnabled } from "@/db/shops";
-import { listShopStaff } from "@/db/staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements, inputNamesIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
+import { listShopStaff } from "../../../../../features/staff-accounts/store";
 
 const ctx = fileScopedShopContext();
 
@@ -32,7 +32,7 @@ const { InvoiceForm } = await import("./InvoiceForm");
 const { invoiceTargetKey } = await import("../_lib/order-form");
 const { NewOrderPanel } = await import("./NewOrderPanel");
 const { InvoiceAddressFields } = await import("./InvoiceAddressFields");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { staffTranslator } = await import("@/i18n/staff-messages");
 
 const SHOP_SLUG = "blue-mantis";

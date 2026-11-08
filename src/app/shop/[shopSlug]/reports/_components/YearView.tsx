@@ -4,22 +4,22 @@ import { buttonClass } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { weatherCallsInWindow } from "@/db/blowouts";
 import type { DbExecutor } from "@/db/client";
-import { counterTaxIncluded } from "@/db/report-lines";
+import { counterTaxIncluded } from "@/features/report-lines";
 import {
   certifiedHere,
   earliestReportedTripStart,
   getShopYear,
   getYearToDate,
-} from "@/db/reporting";
+  summarizeMonth,
+} from "@/features/reporting";
+import { summarizeShopYear } from "@/features/shop-year";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import { joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { summarizeMonth } from "@/lib/reporting";
 import { currentShopSeason, type ShopSeason, shopSeasonLabel, shopSeasonOf } from "@/lib/season";
 import type { ShopSwitchFlags } from "@/lib/shop-features";
-import { summarizeShopYear } from "@/lib/shop-year";
 import { shopPath } from "@/lib/staff-notices";
 import { sameMomentYearBefore, shopDaysBounds } from "@/lib/zoned";
 import { StaffSectionTabs } from "../../_components/StaffSectionTabs";

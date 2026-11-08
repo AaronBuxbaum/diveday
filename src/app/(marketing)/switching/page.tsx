@@ -12,6 +12,7 @@ import {
   DISPLAY_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
+import { requestPricingArm } from "@/features/pricing-arm-request";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -19,7 +20,6 @@ import type { PricingPlan } from "@/lib/billing/pricing-plans";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { sharedLinkCard } from "@/lib/marketing";
 import { guideForPlan, MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { requestPricingArm } from "@/lib/pricing-arm-request";
 import { HubGuideRow } from "./_components/HubGuideRow";
 import {
   HUB_CLOSING_ROW_CLASS,

@@ -194,7 +194,7 @@ describe("the departTrip fact", () => {
     const { readFileSync } = await import("node:fs");
     const path = await import("node:path");
     const source = readFileSync(
-      path.join(process.cwd(), "src/db/facts/send-a-departure-out.ts"),
+      path.join(process.cwd(), "src/test/shop-facts/send-a-departure-out.ts"),
       "utf8",
     );
     expect(source).toContain(".update(trips)");

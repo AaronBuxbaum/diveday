@@ -1,4 +1,4 @@
-import type { HorizonReadinessEvidence } from "@/db/blockers";
+import type { HorizonReadinessEvidence } from "@/features/blockers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { TodayWave } from "./today-reader";
 

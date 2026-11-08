@@ -4,6 +4,8 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { filesUnder } from "./files-under.mjs";
 import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
+import { collectSubstrateLeaves } from "./substrate-leaves.mjs";
+import { isDataModule, surfaceReaders } from "./surface-readers.mjs";
 
 /**
  * Layout invariants (docs ADR 20260730-feature-module-contracts).
@@ -87,6 +89,12 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  *    import graph is the only thing keeping it out, and this walks it. The walk stops at a
  *    `"use server"` module (a Server Action file): a client file gets a call stub for it, and
  *    nothing it imports reaches the browser (issue #3635).
+ *
+ * 8. **Substrate leaves own a concept** (issue #2753, ADR 20261108-concept-leaves).
+ *    A production file with no other production substrate importer belongs in a feature,
+ *    unless its exact path explains a retained primitive in substrate-primitives.json.
+ *    Type-only, dynamic, nested and index imports count; tests and fixtures do not.
+ *    The separate architecture-leaves ratchet cannot hide new boundary debt.
  *
  * ## The ratchet
  *
@@ -221,10 +229,10 @@ export const seams = [
 
 /** Modules a client bundle must never reach, by value import, at any depth. */
 export const SERVER_ONLY_MODULES = [
-  "src/lib/phone-line-type.ts",
+  "src/features/phone-line-type/rules.ts",
   "src/lib/payments/stripe-keys.ts",
   "src/lib/payments/stripe-client.ts",
-  "src/lib/payments/webhook.ts",
+  "src/features/payments/webhook.ts",
 ];
 const SERVER_ONLY_PACKAGE = /^libphonenumber-js(?:\/|$)/;
 
@@ -354,7 +362,7 @@ function startsWithDirective(contents, directive) {
 const isTestFile = (file) => {
   const posix = file.replaceAll(path.sep, "/");
   return (
-    /\.test\.[cm]?[jt]sx?$/.test(posix) ||
+    /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(posix) ||
     posix.startsWith("src/test/") ||
     posix.startsWith("src/app/api/test/")
   );
@@ -457,6 +465,7 @@ export async function collectViolations(root = ROOT) {
   // 1. Dependency direction.
   for (const { root: layerRoot, banned } of forbidden) {
     for (const file of await walk(root, layerRoot)) {
+      if (isTestFile(file)) continue;
       const contents = await readFile(path.join(root, file), "utf8");
       for (const match of contents.matchAll(importPattern)) {
         const specifier = match[1] ?? match[2];
@@ -509,12 +518,7 @@ export async function collectViolations(root = ROOT) {
   // 6. A staff page reads through one reader.
   for (const file of await walk(root, STAFF_PAGES_ROOT)) {
     if (isTestFile(file) || path.basename(file) !== "page.tsx") continue;
-    const readers = new Set();
-    for (const { specifier, typeOnly } of importsOf(
-      await readFile(path.join(root, file), "utf8"),
-    )) {
-      if (!typeOnly && /^@\/db\//.test(specifier)) readers.add(specifier);
-    }
+    const readers = await surfaceReaders(root, file, { importsOf, resolveSpecifier });
     if (readers.size > 1) {
       const posix = file.replaceAll(path.sep, "/");
       for (const specifier of [...readers].sort().slice(1)) {
@@ -526,15 +530,22 @@ export async function collectViolations(root = ROOT) {
     }
   }
 
-  // 7. A table module writes by transition.
-  for (const file of await walk(root, "src/db")) {
-    if (isTestFile(file)) continue;
-    const contents = await readFile(path.join(root, file), "utf8");
-    for (const match of contents.matchAll(VAGUE_WRITER)) {
-      record(
-        file,
-        `${file.replaceAll(path.sep, "/")}: exports ${match[1]} — name a write by its transition (record, mark, issue, claim, release, consume, restore, cancel, edit…), never update or save`,
-      );
+  // 7. Data transitions retain their names when a table module moves into a feature.
+  for (const layer of ["src/db", "src/features"]) {
+    for (const file of await walk(root, layer)) {
+      if (isTestFile(file)) continue;
+      const contents = await readFile(path.join(root, file), "utf8");
+      if (
+        layer === "src/features" &&
+        !isDataModule(file, contents, { importsOf, resolveSpecifier })
+      )
+        continue;
+      for (const match of contents.matchAll(VAGUE_WRITER)) {
+        record(
+          file,
+          `${file.replaceAll(path.sep, "/")}: exports ${match[1]} — name a write by its transition (record, mark, issue, claim, release, consume, restore, cancel, edit…), never update or save`,
+        );
+      }
     }
   }
 
@@ -571,6 +582,7 @@ export async function collectViolations(root = ROOT) {
   // boundary with unwatched gaps is not a boundary.
   for (const scanRoot of ["src", "e2e", "scripts"]) {
     for (const file of await walk(root, scanRoot)) {
+      if (isTestFile(file)) continue;
       const importerFeature = featureOf(path.normalize(file));
       const contents = await readFile(path.join(root, file), "utf8");
       for (const match of contents.matchAll(importPattern)) {
@@ -582,7 +594,12 @@ export async function collectViolations(root = ROOT) {
         // Inside the same module, any internal file is fair game.
         if (importerFeature === targetFeature) continue;
         const index = path.normalize(`${FEATURES_DIR}/${targetFeature}`);
-        if (target !== index && target !== path.join(index, "index")) {
+        // Plain Node tooling names index.ts explicitly; it is the same public door.
+        const published =
+          target === index ||
+          (path.dirname(target) === index &&
+            /^index(?:\.[cm]?[jt]sx?)?$/.test(path.basename(target)));
+        if (!published) {
           record(
             file,
             `${file}: deep-imports ${specifier} — import from "@/features/${targetFeature}" instead`,
@@ -630,42 +647,50 @@ export function auditBaseline(violations, baselineCounts) {
 }
 
 async function main() {
-  const violations = await collectViolations(ROOT);
-  const { counts: baselineCounts, exists: baselineExists } = await readCounts(ROOT, "architecture");
+  const primitives = JSON.parse(
+    await readFile(path.join(ROOT, "scripts/substrate-primitives.json"), "utf8"),
+  );
+  const groups = [
+    { guard: "architecture", violations: await collectViolations(ROOT) },
+    {
+      guard: "architecture-leaves",
+      violations: await collectSubstrateLeaves(ROOT, { importsOf, resolveSpecifier }, primitives),
+    },
+  ];
   const { write, absorb } = ratchetFlags();
-  if (write || absorb !== null) {
-    process.exit(
-      await bankCounts({
+  let failed = false;
+  for (const { guard, violations } of groups) {
+    const { counts, exists } = await readCounts(ROOT, guard);
+    if (write || absorb !== null) {
+      const code = await bankCounts({
         root: ROOT,
-        guard: "architecture",
+        guard,
+        script: "check-architecture",
         counts: violations,
-        allowed: baselineCounts,
-        exists: baselineExists,
-        note: "Pre-existing architecture-boundary violations, per file. Written by `node scripts/check-architecture.mjs --write`. This number may only go down — see scripts/check-architecture.mjs.",
-        refusal: "The ratchet only turns one way — fix the imports instead",
+        allowed: counts,
+        exists,
+        note: `${guard}: per-file architecture debt; node scripts/check-architecture.mjs --write banks a fall. See ADR 20261108-concept-leaves.`,
+        refusal: "The ratchet only turns one way — fix ownership and imports instead",
         absorb,
         summary: (files, total) => `${files} files, ${total} violations still to unwind`,
-      }),
+      });
+      failed ||= code !== 0;
+      continue;
+    }
+    const failures = auditBaseline(violations, counts);
+    if (failures.length > 0) {
+      console.error(`${guard} violations:\n${failures.map((item) => `- ${item}`).join("\n")}`);
+      failed = true;
+      continue;
+    }
+    const total = [...violations.values()].reduce((sum, messages) => sum + messages.length, 0);
+    console.log(
+      total > 0
+        ? `${guard}: no new violations — ${total} pre-existing across ${violations.size} files still to unwind`
+        : `${guard}: valid`,
     );
   }
-
-  const failures = auditBaseline(violations, baselineCounts);
-  if (failures.length > 0) {
-    console.error(
-      `Architecture boundary violations:\n${failures.map((item) => `- ${item}`).join("\n")}`,
-    );
-    console.error(
-      "Domain code must not import from src/app or src/features, src/components and src/i18n must not import from src/app, a feature module, or a src/lib or src/db directory with an index.ts, is reachable only through its index.ts, src/lib takes only types from src/db, src/app never imports drizzle-orm, the trips modules are reached through @/db/trips, and the seed scenarios through @/db/seed. See docs/architecture/decisions/20260730-feature-module-contracts.md and the header of scripts/check-architecture.mjs.",
-    );
-    process.exit(1);
-  }
-
-  const remaining = [...violations.values()].reduce((sum, messages) => sum + messages.length, 0);
-  console.log(
-    remaining > 0
-      ? `architecture: no new boundary violations — ${remaining} pre-existing across ${violations.size} files still to unwind`
-      : "architecture: layer boundaries and feature-module contracts valid",
-  );
+  if (failed) process.exitCode = 1;
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();

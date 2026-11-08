@@ -2,9 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { accountSessions } from "@/db/schema";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/features/e2e-test-routes";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
-import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 
 /** Age only the calling test's session; never enabled with a real database. */

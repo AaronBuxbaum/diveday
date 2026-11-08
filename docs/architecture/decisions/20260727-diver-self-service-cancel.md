@@ -156,7 +156,7 @@ trip fills, or was never actually available, between page load and submit.
   (new mutation surface behind an existing token) before merge, per AGENTS.md's hard rules for
   safety-critical and security-sensitive changes.
 - Known gap (Codex finding, accepted for now): the reschedule picker (`rescheduleCandidates` in
-  `src/db/ready.ts`) filters candidate trips by raw capacity only, not by the course
+  `src/features/ready/store.ts`) filters candidate trips by raw capacity only, not by the course
   prerequisite/instructor-ratio/minimum-age gates `rescheduleBooking`'s `createBookingRecord` call
   enforces at commit time. An ineligible trip can therefore appear as a clickable option (and could
   crowd out an eligible one, since the list is capped) — but selecting it always fails safely, since
@@ -210,7 +210,7 @@ trip fills, or was never actually available, between page load and submit.
   successful refund, not surface as an error page with no way for the diver to tell the (already
   irreversible) cancellation succeeded.
 - The "Need to change your plans?" section is now gated on `canManageBooking` — a plain `booked` seat
-  on a trip that hasn't started (`src/db/ready.ts`) — not shown unconditionally (Codex finding). A
+  on a trip that hasn't started (`src/features/ready/store.ts`) — not shown unconditionally (Codex finding). A
   `checked_in`/`no_show` booking or a departed trip always fails `rescheduleBooking`/
   `selfCancelBooking` server-side (`not_cancellable`/`trip_departed`), so a diver who hasn't opened
   the page since boarding no longer sees change/cancel controls that can only ever fail.

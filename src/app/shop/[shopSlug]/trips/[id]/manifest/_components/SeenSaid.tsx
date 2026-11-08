@@ -3,7 +3,7 @@
 import { useId, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
-import type { SightingMatch } from "@/lib/assists/sightings-match";
+import type { SightingMatch } from "@/features/sightings-match";
 import type { SightingResult } from "../actions";
 
 export type SeenSaidCopy = {

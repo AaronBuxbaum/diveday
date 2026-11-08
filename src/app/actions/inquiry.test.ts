@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { getCourseBySlug } from "@/db/courses";
 import { listOpenDateInterests } from "@/db/interest-dates";
 import { courses, shops } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
@@ -9,6 +8,7 @@ import { nowDate } from "@/lib/clock";
 import type { InquiryFormState } from "@/lib/course-inquiry";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+import { getCourseBySlug } from "../../features/courses/store";
 
 const ctx = fileScopedShopContext();
 

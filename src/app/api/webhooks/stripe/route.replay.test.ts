@@ -7,6 +7,15 @@ import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout } from "@/test/fakes";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+import {
+  asyncFailed,
+  asyncSucceeded,
+  completedPaid,
+  completedUnpaid,
+  invoicePaid,
+  invoiceVoided,
+  sessionExpired,
+} from "./replay-events.test-support";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -39,7 +48,9 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
@@ -56,7 +67,7 @@ const { recordPaymentOperationStripeObject, resolvePaymentOperation, startPaymen
   await import("@/db/payment-operations");
 const { paymentOperationIntents } = await import("@/db/schema");
 const { refundBookingOnShopCancellation } = await import("@/db/refunds");
-const { listOpenPaymentDisputes } = await import("@/db/payment-disputes");
+const { listOpenPaymentDisputes } = await import("../../../../features/payment-disputes/store");
 const { getShopStripeAccount, setShopStripeAccountStatus, upsertShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
@@ -84,75 +95,6 @@ async function deliver(event: Record<string, unknown>): Promise<Response> {
       body: payload,
     }),
   );
-}
-
-function completedPaid(id: string, sessionId: string, amountTotal: number | null = null) {
-  return {
-    id,
-    type: "checkout.session.completed",
-    created: Math.floor(nowMs() / 1000),
-    data: {
-      object: {
-        id: sessionId,
-        payment_status: "paid",
-        ...(amountTotal !== null ? { amount_total: amountTotal } : {}),
-      },
-    },
-  };
-}
-
-function completedUnpaid(id: string, sessionId: string) {
-  return {
-    id,
-    type: "checkout.session.completed",
-    created: Math.floor(nowMs() / 1000),
-    data: { object: { id: sessionId, payment_status: "unpaid" } },
-  };
-}
-
-function asyncSucceeded(id: string, sessionId: string, amountTotal: number) {
-  return {
-    id,
-    type: "checkout.session.async_payment_succeeded",
-    created: Math.floor(nowMs() / 1000),
-    data: { object: { id: sessionId, amount_total: amountTotal } },
-  };
-}
-
-function asyncFailed(id: string, sessionId: string) {
-  return {
-    id,
-    type: "checkout.session.async_payment_failed",
-    created: Math.floor(nowMs() / 1000),
-    data: { object: { id: sessionId } },
-  };
-}
-
-function sessionExpired(id: string, sessionId: string) {
-  return {
-    id,
-    type: "checkout.session.expired",
-    created: Math.floor(nowMs() / 1000),
-    data: { object: { id: sessionId } },
-  };
-}
-
-function invoicePaid(id: string, invoiceId: string, amountPaid: number) {
-  return {
-    id,
-    type: "invoice.paid",
-    created: Math.floor(nowMs() / 1000),
-    data: { object: { id: invoiceId, amount_paid: amountPaid } },
-  };
-}
-
-function invoiceVoided(id: string, invoiceId: string) {
-  return {
-    id,
-    type: "invoice.voided",
-    created: Math.floor(nowMs() / 1000),
-    data: { object: { id: invoiceId } },
-  };
 }
 
 /** A connected, charges-enabled shop wired as the route's own database. */

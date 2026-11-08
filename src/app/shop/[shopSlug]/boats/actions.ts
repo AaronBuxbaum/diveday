@@ -4,16 +4,19 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageBoats } from "@/db/authz";
+import { getDb } from "@/db/client";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
+import { getShopById } from "@/db/shops";
 import {
   type BoatPapersInput,
   createBoat,
   deleteBoat,
   editBoatWithinCertificate,
   replaceBoatPhoto,
-} from "@/db/boats";
-import { getDb } from "@/db/client";
-import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { getShopById } from "@/db/shops";
+} from "@/features/boats";
+import { formValue, readForm, trimmedText } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import {
@@ -21,10 +24,7 @@ import {
   normalizeMmsi,
   normalizeWorkingChannel,
 } from "@/lib/emergency-reference";
-import { formValue, readForm, trimmedText } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { parseServiceWindow } from "@/lib/service-window";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { MAX_SHOP_HERO_BYTES, storeShopHeroImage } from "@/lib/storage";
 import { uuidParam } from "@/lib/uuid";

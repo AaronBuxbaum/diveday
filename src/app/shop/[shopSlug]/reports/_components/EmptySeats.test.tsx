@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { departuresWithEmptySeats } from "@/lib/open-seats";
+import { departuresWithEmptySeats } from "../../../../../features/open-seats/rules";
 import { EmptySeats } from "./EmptySeats";
 
 afterEach(cleanup);

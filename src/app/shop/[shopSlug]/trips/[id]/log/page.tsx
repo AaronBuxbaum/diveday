@@ -4,7 +4,8 @@ import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components
 import { ShopStat } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { getTripLogPage } from "@/db/incident-export";
+import { getTripLogPage } from "@/features/incident-export";
+import { requireShopSurface } from "@/features/session";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -12,7 +13,6 @@ import { formatEvidenceDateTimeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { SheetDocument } from "../../../print/_components/SheetDocument";

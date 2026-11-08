@@ -4,11 +4,11 @@ import { redirect } from "next/navigation";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { recordShopActivity } from "@/db/shop-activity";
 import { copyWeekFromYearBefore } from "@/db/trips";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface } from "@/features/session";
 import { trackEvent } from "@/lib/analytics";
 import { calendarDateWeekday, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /**

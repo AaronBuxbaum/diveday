@@ -1,5 +1,5 @@
 import type { AppDb } from "@/db/client";
-import { courseNextStepForBooking } from "@/db/course-next-step";
+import { courseNextStepForBooking } from "@/features/course-next-step";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**

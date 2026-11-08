@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { ConnectivityStatus, type ConnectivityStatusCopy } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { SightingMatch } from "@/lib/assists/sightings-match";
+import type { SightingMatch } from "@/features/sightings-match";
 import { scopedId } from "@/lib/element-id";
 import type { SightingResult } from "../actions";
 import { SeenSaid, type SeenSaidCopy } from "./SeenSaid";

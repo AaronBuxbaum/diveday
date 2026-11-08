@@ -8,9 +8,9 @@ import {
   setShopProfile,
   setShopSearchListing,
 } from "@/db/shops";
+import { allValues, checkbox, formValue, text, trimmedText } from "@/features/form-parse";
 import { defineAction, land, type NoticeOf } from "@/features/server-action";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
-import { allValues, checkbox, formValue, text, trimmedText } from "@/lib/form-parse";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
 import { MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE, MAX_SHOPFRONT_PHOTOS } from "@/lib/storage/limits";

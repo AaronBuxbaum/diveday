@@ -1,10 +1,10 @@
 import { arrivalCardFacts, arrivalDockCallLine } from "@/components/arrival-card-facts";
 import type { TripChangeEvent } from "@/db/trip-change-events";
+import { arrivalCardDocument, escapeHtml, htmlDocument } from "@/features/arrival-card-document";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { PERSONAL_GEAR_KEYS } from "@/i18n/packing-labels";
 import { CHECKLIST_DETAIL_KEYS } from "@/i18n/readiness-summary-labels";
 import { tripChangeEntries } from "@/i18n/trip-change-entries";
-import { arrivalCardDocument, escapeHtml, htmlDocument } from "@/lib/arrival-card-document";
 import type { PersonalGearCode } from "@/lib/diver-planning";
 import { type PlannedFlySafe, plannedFlySafeMessageKey } from "@/lib/fly-safe";
 import {

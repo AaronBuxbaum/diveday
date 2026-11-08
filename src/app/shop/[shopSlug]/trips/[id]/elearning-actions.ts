@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { recordCourseMaterialsDone } from "@/db/course-materials";
-import { seatForElearningCheck } from "@/db/elearning-check";
+import { recordCourseMaterialsDone } from "@/features/course-materials";
+import { seatForElearningCheck } from "@/features/elearning-check";
+import { formValue, readForm, text } from "@/features/form-parse";
+import { requireShopSurface } from "@/features/session";
 import { ELEARNING_PAGE_TEXT_MAX_LENGTH, judgeElearningPage } from "@/lib/elearning-check";
-import { formValue, readForm, text } from "@/lib/form-parse";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { tripPath } from "./roster-booking";
 

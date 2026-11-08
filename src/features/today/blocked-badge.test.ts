@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { inHorizonReadiness } from "@/db/blockers";
 import { upsertTripRequirements } from "@/db/readiness";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
+import { inHorizonReadiness } from "../blockers/store";
+import { shopClock } from "../shop-clock/rules";
 import { countBlockedDiversNextBoatDay } from "./index";
 
 const ctx = fileScopedShopContext();

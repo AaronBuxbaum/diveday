@@ -7,8 +7,8 @@ import {
   markSeat,
   seatBlockerCodes,
 } from "@/test/training-mark-context";
+import { createDiver } from "../features/divers/store";
 import { cancelBooking, createBooking } from "./bookings";
-import { createDiver } from "./divers";
 import { getBookingReadiness } from "./readiness";
 import { crewSubject } from "./roll-call-subject";
 import {

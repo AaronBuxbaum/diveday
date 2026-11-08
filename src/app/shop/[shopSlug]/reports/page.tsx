@@ -8,7 +8,19 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { ShopNotice } from "@/components/ui/outcome";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { canPersonViewShopReports, getReportsFloor, getReportsMonth } from "@/db/reports-page";
+import {
+  compareMonthlyReports,
+  formatReportMoney,
+  type MonthComparison,
+  monthHasActivity,
+  summarizeMonth,
+} from "@/features/reporting";
+import {
+  canPersonViewShopReports,
+  getReportsFloor,
+  getReportsMonth,
+} from "@/features/reports-page";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -24,14 +36,6 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatMonthDay } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import {
-  compareMonthlyReports,
-  formatReportMoney,
-  type MonthComparison,
-  monthHasActivity,
-  summarizeMonth,
-} from "@/lib/reporting";
-import { requireShopSurface } from "@/lib/session";
 import { sameMomentYearBefore, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLedger";
@@ -51,6 +55,7 @@ import { LeadTimes, OwnerLines, readMonthOwner } from "./_components/MonthOwnerL
 import { monthFigureBasis, monthFigureList } from "./_components/month-figure-list";
 import { MonthReportActions } from "./_components/ReportExportMenu";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
+import { reportFloorMonth } from "./_components/report-floor-month";
 import { YearView } from "./_components/YearView";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — this segment's
@@ -63,10 +68,6 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Reports — DiveDay",
 };
-
-function earlierMonth(left: MonthRef, right: MonthRef): MonthRef {
-  return compareMonths(left, right) > 0 ? right : left;
-}
 
 /**
  * Owner reporting — the buyer's "how's my month" over data DiveDay already
@@ -160,20 +161,12 @@ export default async function ReportsPage({
     shop.id,
     currency,
   );
-  const earliestWall = earliestTripStart ? utcToWallTime(earliestTripStart, tz) : null;
-  const earliestTripMonth: MonthRef = earliestWall
-    ? { year: earliestWall.year, month: earliestWall.month }
-    : thisMonth;
-  const earliestImportedMonth = earliestImportedFinancialDate
-    ? {
-        year: Number(earliestImportedFinancialDate.slice(0, 4)),
-        month: Number(earliestImportedFinancialDate.slice(5, 7)),
-      }
-    : thisMonth;
-  const floorMonth = [earliestTripMonth, earliestImportedMonth, thisMonth].reduce(
-    earlierMonth,
+  const floorMonth = reportFloorMonth({
+    earliestTripStart,
+    earliestImportedFinancialDate,
     thisMonth,
-  );
+    timeZone: tz,
+  });
   // No ceiling: a shop that schedules ahead can still ask for a month that has
   // not happened yet, and the page frames it honestly as one that hasn't sailed.
   const current = clampMonth(parseMonthKey(month) ?? thisMonth, floorMonth);

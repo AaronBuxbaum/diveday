@@ -1,7 +1,8 @@
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import type { getTripOverview } from "@/db/trip-overview";
+import type { requireShopSurface } from "@/features/session";
+import type { getTripOverview } from "@/features/trip-overview";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,
@@ -10,7 +11,6 @@ import type { getTripOverview } from "@/db/trip-overview";
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { requireShopSurface } from "@/lib/session";
 import type { FormNotice } from "@/lib/staff-notices";
 import { cancelTripAction } from "../details-actions";
 import {

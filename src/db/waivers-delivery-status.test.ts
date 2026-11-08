@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { waiverContextFor } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import {
   getDiverWaiverChannelStates,
   getDiverWaiverRequestStatus,
   recordWaiverDelivery,
 } from "./waivers-delivery-status";
 import { issueWaiverRequest } from "./waivers-requests";
-import { waiverContextFor } from "./waivers-test-fixtures";
 
 /**
  * How a signing request reached the diver, as the diver record reads it: one

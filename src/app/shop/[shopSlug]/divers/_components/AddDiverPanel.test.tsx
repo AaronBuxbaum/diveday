@@ -20,16 +20,19 @@ vi.mock("@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions", () => ({
   addToWaitlistAction: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/db/divers", () => ({ createDiver: vi.fn(), findSimilarDivers: vi.fn() }));
-vi.mock("@/db/form-drafts", () => ({
+vi.mock("../../../../../features/divers/store", () => ({
+  createDiver: vi.fn(),
+  findSimilarDivers: vi.fn(),
+}));
+vi.mock("../../../../../features/form-drafts/store", () => ({
   discardFormDraft: vi.fn(),
   readFormDraft: vi.fn(async () => null),
 }));
-vi.mock("@/lib/session", () => ({
+vi.mock("../../../../../features/session/rules", () => ({
   requireStaffSession: vi.fn(),
 }));
 
-const { findSimilarDivers } = await import("@/db/divers");
+const { findSimilarDivers } = await import("../../../../../features/divers/store");
 const { AddDiverPanel, addDiverCloseHref } = await import("./AddDiverPanel");
 
 const t = Object.assign((key: string) => key, {

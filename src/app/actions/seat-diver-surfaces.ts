@@ -1,9 +1,13 @@
-import type { SeatDiverEntry, SeatDiverRefusal, SeatDiverRefusalDetail } from "@/db/seat-diver";
+import type {
+  SeatDiverEntry,
+  SeatDiverRefusal,
+  SeatDiverRefusalDetail,
+} from "@/features/seat-diver";
 import { shopPath } from "@/lib/staff-notices";
 import type { TripAdmissionGateScope } from "@/lib/trip-admission-gate";
 
 /**
- * The per-door half of seating a diver (`src/db/seat-diver.ts` owns the other
+ * The per-door half of seating a diver (`src/features/seat-diver/store.ts` owns the other
  * half — the consequences, which are identical everywhere).
  *
  * There are two staff doors, named for where the staffer starts: **from a
@@ -57,7 +61,7 @@ export type SeatSurface = {
   seatedNotice: string;
   /**
    * The same seating, when the waiver it triggered could not be emailed —
-   * `SeatDiverWaiver`'s `not_delivered` / `failed` (src/db/seat-diver.ts). The
+   * `SeatDiverWaiver`'s `not_delivered` / `failed` (src/features/seat-diver/store.ts). The
    * diver is seated either way, so this is still a success notice; what it adds
    * is the one fact `seatedNotice` would otherwise hide, that nothing went out
    * and the link has to be handed over from the diver's row.

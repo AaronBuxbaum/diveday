@@ -1,5 +1,4 @@
 import { personsAboveTotalPersonsAboard } from "@/lib/boat-safety";
-import { counterIsDone, isSettledAtCounter } from "@/lib/check-in";
 import { keepUnitsWhole } from "@/lib/date-parts";
 import { cachedFormatter } from "@/lib/intl-cache";
 import {
@@ -26,6 +25,7 @@ import {
   refusedOfflineArrival,
   rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
+import { counterIsDone, isSettledAtCounter } from "../../lib/check-in";
 import { offlinePreviousGaps } from "./checkpoint-gap-inputs";
 import { deviceLocale } from "./shared";
 

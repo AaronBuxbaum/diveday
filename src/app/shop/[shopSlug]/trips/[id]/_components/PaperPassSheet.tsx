@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
-import { getPassBooking } from "@/db/print-pass";
+import { getPassBooking } from "@/features/print-pass";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -9,7 +10,6 @@ import { formatDateWithYear, formatTime } from "@/lib/format";
 import { meetingPointOfRows } from "@/lib/meeting-point";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { PAPER_PASS_PAPER, passCodePayload, storefrontAddress } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { SheetCode } from "../../../print/_components/SheetCode";
 import { SheetDocument } from "../../../print/_components/SheetDocument";

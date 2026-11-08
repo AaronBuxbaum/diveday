@@ -51,3 +51,7 @@ dependency-cruiser supports TypeScript 7, or when a rule is needed that depends 
 resolved module graph, such as a cycle or reachability rule, which the script cannot express.
 The comparison config is quoted in issue #2240, so a future rerun does not have to start from
 scratch.
+
+## Extension, 2026-11-08
+
+[Concept leaves](20261108-concept-leaves.md) adds focused graph helpers; layer direction remains.

@@ -12,7 +12,7 @@ import { seatNotCancelled } from "./trips-queries";
  *
  * The readers: a diver's numbered days (the recap's count, the milestone and
  * "Your days", through {@link numberedDiveDay} below), the counter's name-match
- * prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`), and the fly-safe
+ * prompt (`SimilarDiver.lastDiveDayAt`, `src/features/divers/store.ts`), and the fly-safe
  * multi-day advisory (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`). The
  * first two call {@link diveDay} whole. The fly-safe reader calls the two
  * halves apart, because it alone lets a standing roll-call result outrank the
@@ -24,7 +24,7 @@ import { seatNotCancelled } from "./trips-queries";
  * **The part nothing outranks.** A `no_show` is never a dive day, with no
  * escape, the roll call included (issue #1558, settled by a
  * `dive-domain-expert` review on 2026-09-11): `markBookingNoShow`
- * (`src/db/no-show.ts`) is its only writer, one staffer's deliberate tap that
+ * (`src/features/no-show/store.ts`) is its only writer, one staffer's deliberate tap that
  * check-in can only precede, so any sighting is the older statement. A boarding
  * needs no escape either: both roll-call writers put a `no_show` seat back to
  * `booked` when they record one. A deleted departure is a row staff say should
@@ -63,7 +63,7 @@ export function diveDay(): SQL {
 /**
  * **A day on the diver's numbered history with the shop**: the milestone and
  * the welcome cue (`src/db/welcome-cues.ts`), the recap's ordinal
- * (`getRecapPageData`) and the rows of "Your days" (`src/db/your-days.ts`)
+ * (`getRecapPageData`) and the rows of "Your days" (`src/features/your-days/store.ts`)
  * count exactly these, so the three say one number (dive-domain review of
  * layer r5-4, second pass, F1; security review, second pass, N-b). A
  * {@link diveDay} on a **diver** seat that is **not held**: a day they rode

@@ -9,7 +9,13 @@ import {
 import { nowDate } from "@/lib/clock";
 import { verifyCourseFormIntegrity } from "@/lib/course-form-integrity";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  coursesAwaitingFormText,
+  getCourseBySlug,
+  pagedCourses,
+  pullCourseTemplateUpdates,
+} from "../features/courses/store";
 import type { AppDb } from "./client";
 import {
   attachStandardCourseForms,
@@ -26,12 +32,6 @@ import {
   setCourseFormRequirements,
   signCourseForm,
 } from "./course-forms";
-import {
-  coursesAwaitingFormText,
-  getCourseBySlug,
-  pagedCourses,
-  pullCourseTemplateUpdates,
-} from "./courses";
 import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
 import { loadDiverExportBundleInput, loadShopExportBundleInput } from "./export";
 import { getBookingReadiness } from "./readiness";

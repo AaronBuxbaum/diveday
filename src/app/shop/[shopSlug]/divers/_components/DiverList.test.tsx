@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DiverFilter, DiverSort } from "@/db/divers";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { DiverFilter, DiverSort } from "../../../../../features/divers/store";
 
 // The list drives the URL as you type, so it reaches for the app router. One
 // shared `replace` spy, so a test can assert what the debounce did (or, for the

@@ -11,7 +11,7 @@ type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
  *
  * The DiveDay browser extension (`extension/`, H-20261008-cert-check-extension, ADR
  * 20261008-cert-check-extension) runs in the staffer's own browser. It opens
- * the agency's public lookup page (`src/lib/agency-verification.ts`), fills in
+ * the agency's public lookup page (`src/features/agency-verification/rules.ts`), fills in
  * the diver's details, and hands back the text of the page that comes back.
  * Nothing in the extension decides anything: it carries words. This module is
  * where those words become a verdict, on the server, under tests.
@@ -418,7 +418,7 @@ const NO_RECORD_WORDS = [
  * **An agency's own page furniture around its results**, which is never part
  * of a diver's record: a record ends at a line that starts with one of these.
  * Each is the live page's own text (2026-10-15), held by the fixtures in
- * `src/lib/__fixtures__/agency-pages.ts`. Without it SDI's note under every
+ * `src/test/substrate-fixtures/lib/__fixtures__/agency-pages.ts`. Without it SDI's note under every
  * result, "…might not show up in this online search", read as a limiting word
  * in the record above it, and GUE's footer link "Instructor" as a trainer's
  * title, so neither page could ever match. A closed list, read only at the

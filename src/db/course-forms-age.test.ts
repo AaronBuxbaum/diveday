@@ -5,6 +5,11 @@ import { calendarDateInTimezone, shiftCalendarDateMonths } from "@/lib/calendar-
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
+  getCourseBySlug,
+  getCourseTemplateUpdate,
+  pullCourseTemplateUpdates,
+} from "../features/courses/store";
+import {
   createCourseForm,
   getCourseFormsForBooking,
   listCourseFormAgeBounds,
@@ -13,7 +18,6 @@ import {
   setCourseFormRequirements,
   signCourseForm,
 } from "./course-forms";
-import { getCourseBySlug, getCourseTemplateUpdate, pullCourseTemplateUpdates } from "./courses";
 import { getBookingReadiness } from "./readiness";
 import {
   bookings,

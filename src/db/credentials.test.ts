@@ -62,7 +62,7 @@ describe("verifyCredentials (in-memory PGlite)", () => {
     const db = ctx.db;
     const { email, password } = DEV_STAFF_LOGINS.captain;
     const { personRoles, people } = await import("@/db/schema");
-    const { deleteDiver } = await import("@/db/divers");
+    const { deleteDiver } = await import("../features/divers/store");
     const [account] = await db
       .select({ personId: userAccounts.personId })
       .from(userAccounts)

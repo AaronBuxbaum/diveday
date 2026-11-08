@@ -2,8 +2,8 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
+import { listShopStaff, setStaffAccountStatus } from "../features/staff-accounts/store";
 import { personRoles, pushSubscriptions, userAccounts } from "./schema";
-import { listShopStaff, setStaffAccountStatus } from "./staff-accounts";
 import { upcomingTripsWithCounts } from "./trips";
 
 // Mocked at the transport boundary: who is chosen, and the words, are the

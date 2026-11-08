@@ -2,13 +2,13 @@ import { cacheLife } from "next/cache";
 import { yearCardCopy } from "@/app/_og/year-card-copy";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
-import { getShopYear } from "@/db/reporting";
+import { getShopYear } from "@/features/reporting";
+import { cacheStamp, reportCacheRead } from "@/features/runtime-cache";
+import { summarizeShopYear } from "@/features/shop-year";
 import type { DiverTranslator } from "@/i18n/messages";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { cacheStamp, reportCacheRead } from "@/lib/observability/runtime-cache";
 import { currentShopSeason, type SeasonStart } from "@/lib/season";
-import { summarizeShopYear } from "@/lib/shop-year";
 
 /**
  * **The year's counts, read at most once an hour per shop and day** (code

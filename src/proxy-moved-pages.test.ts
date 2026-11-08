@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 // Apart from `proxy.test.ts`, which is at its file-length baseline. The same
 // stubs: no database, the auth cookie as a signed-in owner.
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
-vi.mock("@/db/public-route-existence", () => ({
+vi.mock("./features/public-route-existence/store", () => ({
   rememberedPublicRouteLookup: async () => ({ exists: true, shopExists: true, hidden: false }),
 }));
 vi.mock("better-auth/cookies", () => ({

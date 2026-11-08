@@ -3,7 +3,7 @@ import { StarRating } from "@/components/StarRating";
 import { Badge } from "@/components/ui/badge";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { ReviewModerationReason, StaffReview } from "@/db/reviews";
+import type { ReviewModerationReason, StaffReview } from "@/features/reviews";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { ReviewReply } from "./ReviewReply";

@@ -8,7 +8,7 @@ import { listBackupDeliveries } from "./delivery-store";
 import {
   disconnectShopBackupDestination,
   getShopBackupDestination,
-  saveShopBackupDestination,
+  recordShopBackupDestination,
 } from "./destination-store";
 import { runShopBackup } from "./run-backup";
 
@@ -44,7 +44,7 @@ async function backupContext() {
   await disconnectShopBackupDestination(db, shop.id);
   await db.delete(shopBackupDeliveryClaims).where(eq(shopBackupDeliveryClaims.shopId, shop.id));
   await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shop.id));
-  const saved = await saveShopBackupDestination(
+  const saved = await recordShopBackupDestination(
     db,
     { shopId: shop.id, ...DESTINATION },
     { key: KEY },

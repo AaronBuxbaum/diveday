@@ -24,7 +24,7 @@ import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
-import type { FirstBooking } from "@/db/first-booking";
+import type { FirstBooking } from "@/features/first-booking";
 import type { DayTakings as DayTakingsReading, EveningClose } from "@/features/today";
 import {
   type DaySpine as DaySpineData,

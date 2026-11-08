@@ -2,7 +2,7 @@ import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
+import { STAFF_RE_ENTRY_KEYS } from "@/features/dive-intent";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { heldSeatBlockers } from "@/lib/identity-match";

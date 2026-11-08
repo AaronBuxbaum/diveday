@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+  boardedAt,
+  crewMember,
+  notBoardedAt,
+  trip,
+} from "../test/substrate-fixtures/lib/manifest-test-fixtures";
 import { EMPTY_EMERGENCY_REFERENCE } from "./emergency-reference";
-import { boardedAt, crewMember, notBoardedAt, trip } from "./manifest-test-fixtures";
 import {
   buddyAlertFor,
   buildTripManifest,

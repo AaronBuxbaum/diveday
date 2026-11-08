@@ -1,5 +1,12 @@
-import { type BoatWork, type BoatWorkDiver, boatWorkFor } from "@/db/boat-work";
-import { boatWorkSentence } from "@/i18n/boat-work-labels";
+import {
+  type BoatWork,
+  type BoatWorkDiver,
+  type BoatWorkItem,
+  boatWorkFor,
+  boatWorkItems,
+  boatWorkSentence,
+} from "@/features/boat-work";
+import { urgencyFor } from "@/features/today-urgency";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   boatWorkItemText,
@@ -15,12 +22,10 @@ import {
   seatWantedDetailText,
   ungatedNitroxNamedDetailText,
 } from "@/i18n/today-labels";
-import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/interests";
 import { publicTripPath } from "@/lib/public-routes";
 import { shopPath } from "@/lib/staff-notices";
-import { urgencyFor } from "@/lib/today-urgency";
 import {
   blockedDiverActions,
   collapseEmailDeliveries,

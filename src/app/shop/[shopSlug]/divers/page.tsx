@@ -9,7 +9,9 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ShopNotice } from "@/components/ui/outcome";
 import type { NoticeTone } from "@/components/ui/tone";
-import { getDiversPage } from "@/db/divers-page";
+import { getDiversPage } from "@/features/divers-page";
+import { requireShopSurface } from "@/features/session";
+import { readUndoOffer, UNDO_PARAMS } from "@/features/undo";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { addPanelOpen } from "@/lib/add-panel";
@@ -18,9 +20,7 @@ import { formatShortDate, formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import type { AboardBlockerKind } from "@/lib/readiness";
 import { rosterLetter, rosterRowFact } from "@/lib/roster-rows";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { readUndoOffer, UNDO_PARAMS } from "@/lib/undo";
 import { AddDiverPanel, type AddDiverSearch, addDiverCloseHref } from "./_components/AddDiverPanel";
 import { DiverList, type RosterBadge, type RosterRow } from "./_components/DiverList";
 import { RosterOrderLine, rosterHref } from "./_components/RosterOrderLine";
@@ -71,7 +71,7 @@ export default async function DiversPage({
       /** `1`: the add-diver panel is open (`AddDiverPanel`). */
       add?: string;
       notice?: string;
-      /** The removal's Undo offer (`src/lib/undo.ts`). */
+      /** The removal's Undo offer (`src/features/undo/rules.ts`). */
       undo?: string;
       undoPerson?: string;
       undoFrom?: string;

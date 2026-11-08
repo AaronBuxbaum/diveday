@@ -4,7 +4,6 @@ import { cleanup, render } from "@testing-library/react";
 import { and, eq } from "drizzle-orm";
 import { isValidElement, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { listCheckInQueue } from "@/db/check-in";
 import { createCertification } from "@/db/readiness";
 import { bookings, cards, lostItems, people, trips } from "@/db/schema";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
@@ -13,6 +12,7 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import { turnAwayReasons } from "@/lib/turn-away";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
+import { listCheckInQueue } from "../../../../../../features/check-in/store";
 
 const ctx = fileScopedShopContext();
 // Unmount each test's rows: a row's links schedule React work that would

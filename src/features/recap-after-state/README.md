@@ -15,8 +15,8 @@ Module shape: [20260730-feature-module-contracts](../../../docs/architecture/dec
 
 ## Does not own
 
-- The reads themselves, which stay in `src/db/`: `src/db/recap.ts`, `src/db/reviews.ts`,
-  `src/db/tips.ts`, `src/db/recap-pulses.ts`, `src/db/booking-handoff.ts`, `src/db/next-dive.ts`
+- The reads themselves, which stay in `src/db/`: `src/features/recap/store.ts`, `src/features/reviews/store.ts`,
+  `src/db/tips.ts`, `src/features/recap/recap-pulses.store.ts`, `src/features/booking-handoff/store.ts`, `src/features/next-dive/store.ts`
   and the `trips` barrel.
 - The bearer-token check, which each page makes before it calls in here.
 - The words: every sentence comes from the diver bundle through the translator the page passes.

@@ -289,7 +289,7 @@ for (const scheme of ["light", "dark"] as const) {
        * really about, and the one a seeded demo never shows: every seeded
        * diver has a card, a signature or a balance waiting on somebody. The
        * status section renders *nothing at all* here, which is the pinned rule
-       * (`src/lib/diver-status.test.ts`), and this is the only baseline that can catch
+       * (`src/features/diver-status/rules.test.ts`), and this is the only baseline that can catch
        * a heading or an "all clear" line creeping back in above the story.
        *
        * Built rather than seeded: a fresh diver has no cards, no bookings and

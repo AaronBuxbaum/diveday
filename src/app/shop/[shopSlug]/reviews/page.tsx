@@ -8,16 +8,20 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/group-label";
-import type { ReviewModerationReason, StaffReview } from "@/db/reviews";
-import { getReviewsPage, REVIEW_MODERATION_REASONS, staffReviewNarrow } from "@/db/reviews-page";
+import type { StaffReview } from "@/features/reviews";
+import {
+  getReviewsPage,
+  REVIEW_MODERATION_REASONS,
+  staffReviewNarrow,
+} from "@/features/reviews-page";
+import { requireShopSurface } from "@/features/session";
 import { STAFF_PULSE_CATEGORY_KEYS } from "@/i18n/next-dive-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffListPagination } from "../_components/StaffListPagination";
@@ -34,6 +38,7 @@ import { ReviewNarrowChips, reviewsPageHref } from "./_components/ReviewNarrowCh
 import { ReviewRowProvider } from "./_components/ReviewRowActions";
 import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
 import { loadReviewAssists, ReviewThemes, reviewFlagWords } from "./_components/review-assists";
+import { PULSE_NOTICES, REVIEW_REASON_KEYS } from "./_components/review-page-copy";
 import { reviewReplyContext } from "./_components/review-reply-context";
 import { reviewRowCopy } from "./_components/review-row-copy";
 import { pulseReaderOrInbox } from "./_lib/pulse-reader";
@@ -48,46 +53,6 @@ export const instant = true;
 
 export const metadata: Metadata = {
   title: "Reviews — DiveDay",
-};
-
-/**
- * The reason codes as words. `src/db` returns codes and this picks the
- * sentences, the same division every other domain code on this page follows
- * (ADR 20260731-domain-layer-copy-leaks).
- */
-const REVIEW_REASON_KEYS: Record<ReviewModerationReason, StaffMessageKey> = {
-  abusive: "reviews.hideReason.abusive",
-  names_a_person: "reviews.hideReason.namesAPerson",
-  wrong_subject: "reviews.hideReason.wrongSubject",
-  spam: "reviews.hideReason.spam",
-  other: "reviews.hideReason.other",
-};
-
-/*
- * **This page has no `?notice=` map any more, and nothing here redirects.**
- *
- * Every outcome on this list used to arrive as a query parameter on a fresh
- * navigation — publish, hide, standout, bulk publish and their four refusals —
- * which meant a full-page bounce per tap and a staffer working down a queue
- * being thrown back to the top of it each time. The controls now settle in
- * place and report beside themselves (`ReviewRowActions`, `PublishAllStatus`),
- * so the map, the `?published=` count it had to defend against tampering, and
- * the page banner they fed are all gone with the redirects that wrote them.
- * The one banner left is `ratingWithheld`, which is a fact about the page
- * rather than the outcome of a tap.
- *
- * **One exception, added with the private pulse** (slice 16i). Marking a pulse
- * addressed takes its row out of a panel that is itself gone once the last one
- * goes, so a settle-in-place control would settle into nothing and a staffer
- * who just acted on somebody's complaint would watch the page go quiet. That
- * one act redirects with a `?notice=`, read below through `noticeFromParam`.
- */
-const PULSE_NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
-  "pulse-addressed": { tone: "success", key: "reviews.notice.pulseAddressed" },
-  "pulse-not-authorized": { tone: "danger", key: "reviews.notice.pulseNotAuthorized" },
-  error: { tone: "danger", key: "reviews.notice.error" },
-  "review-url-saved": { tone: "success", key: "settings.main.notice.reviewUrlSaved" },
-  "review-url-invalid": { tone: "danger", key: "settings.main.notice.reviewUrlInvalid" },
 };
 
 /**
@@ -134,7 +99,7 @@ export default async function ReviewsPage({
   // **The worklist is read whole, not paged.** It is the reason to open this
   // page, and a queue split across pages is a queue you cannot see the end
   // of. `MAX_BULK_PUBLISH` is the ceiling because it is also the ceiling on
-  // what one pass may release (`src/db/reviews.ts`) — the rows on screen and
+  // what one pass may release (`src/features/reviews/store.ts`) — the rows on screen and
   // the rows the header act touches are the same set by construction.
   //
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
@@ -142,7 +107,7 @@ export default async function ReviewsPage({
   //
   // **What divers asked this shop to fix, privately** (D40, issue #1200).
   // Never a review and never public: nothing here reaches the aggregate,
-  // the public list, or the suppression share (src/db/recap-pulses.ts).
+  // the public list, or the suppression share (src/features/recap/recap-pulses.store.ts).
   // Owner/manager only, and unread rather than merely unrendered for
   // everybody else (issue #1410).
   const { can, waitingPage, moderatedPage, aggregate, monthAggregate, groups, openPulses } =

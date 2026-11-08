@@ -1,10 +1,10 @@
+import { isLiveShopStaff, requireShopSurface } from "@/features/session";
 import { previewWeeklyDigest } from "@/features/weekly-digest";
 import { recipientLocale } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { wrapEmailHtml } from "@/lib/notifications/email";
 import { messageFor } from "@/lib/notifications/render";
 import { weeklyDigestQuietWeekEmail } from "@/lib/notifications/weekly-digest-email";
-import { isLiveShopStaff, requireShopSurface } from "@/lib/session";
 import { staffShopName } from "../../../_components/staff-shop-name";
 
 /**

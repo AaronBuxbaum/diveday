@@ -1,5 +1,3 @@
-import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents } from "@/lib/format";
 import {
   formatPercent,
   formatPercentChange,
@@ -8,7 +6,9 @@ import {
   hasComparableBaseline,
   type MonthComparison,
   type MonthlyReport,
-} from "@/lib/reporting";
+} from "@/features/reporting";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatMoneyCents } from "@/lib/format";
 import type { MonthFigure } from "./MonthFigures";
 
 /**

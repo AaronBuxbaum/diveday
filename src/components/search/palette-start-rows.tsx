@@ -1,5 +1,5 @@
-import type { DiverHit, GearHit, OrderHit, SearchResults, TripHit } from "@/db/search";
 import type { RecentKind } from "@/lib/recent-refs";
+import type { DiverHit, GearHit, OrderHit, SearchResults, TripHit } from "../../lib/search-results";
 import type { CommandPaletteCopy, PaletteGroup, PaletteItem } from "./CommandPalette";
 import { PaletteGlyph } from "./PaletteGlyph";
 import type { StoredRecent } from "./palette-recents";

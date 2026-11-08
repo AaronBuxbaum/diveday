@@ -7,7 +7,7 @@ vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
 vi.mock("@/db/booking-capabilities", () => ({
   verifyBookingCapability: (...args: unknown[]) => verifyBookingCapability(...args),
 }));
-vi.mock("@/db/ready", () => ({
+vi.mock("../../../../../features/ready/store", () => ({
   getReadyPageData: (...args: unknown[]) => getReadyPageData(...args),
 }));
 const checkRateLimit = vi.fn();

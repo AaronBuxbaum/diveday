@@ -1,9 +1,9 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { deleteSafetyDrill, recordSafetyDrill } from "@/db/safety-drills";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { deleteSafetyDrill, recordSafetyDrill } from "@/features/safety-drills";
+import { requireStaffSession } from "@/features/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 

@@ -2,9 +2,9 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { TripPrep } from "@/db/trip-prep";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import type { PrepGrouping } from "@/lib/dive-prep";
+import type { TripPrep } from "../../../../../../../features/trip-prep/store";
 import { PrepKitList } from "./PrepKitList";
 import { KIT_PHONE_ROW_CLASS } from "./prep-lines";
 import {

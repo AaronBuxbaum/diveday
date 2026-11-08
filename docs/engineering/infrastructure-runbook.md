@@ -427,7 +427,7 @@ identity does not exist rather than that the region is wrong.
 **What's written now (app side):** an SES adapter (`sesNotificationProvider` /
 `notificationProviderFromEnvironment` in `src/lib/notifications/index.ts`, using
 `@aws-sdk/client-sesv2`) and `/api/webhooks/ses` (verifying SNS message signatures by hand in
-`src/lib/notifications/sns.ts`, translating SES events in `src/lib/notifications/ses-events.ts`).
+`src/features/sns-webhook/rules.ts`, translating SES events in `src/features/email-events/rules.ts`).
 The code path is live and unconditional; it just has nothing to send through until the AWS-side steps
 below are done — until then, missing/invalid credentials mean every send resolves to
 `not_configured`. Relevant env vars:
@@ -936,7 +936,7 @@ deploy costs a window in which every photo 404s, because the deploy is what flip
   now asserts it, including the better-auth switches that would turn it on. The `__Secure-` prefix
   does not forbid a `Domain` — only `__Host-` does — so this is a guard rather than a property.
 - **The media behaviours carry `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox`.**
-  `src/lib/security-headers.ts` is a Next `headers()` rule and reaches nothing CloudFront serves, and
+  `src/features/security-headers/rules.ts` is a Next `headers()` rule and reaches nothing CloudFront serves, and
   the behaviour previously used the AWS-managed CORS policy alone, which sets neither. Nothing
   attacker-controlled can be stored under the public prefixes — every object goes through
   `processImage`, which refuses anything outside the image content types and re-encodes to JPEG — but

@@ -3,16 +3,16 @@ import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
-import { getDiverRecord } from "@/db/diver-record";
+import { getDiverRecord } from "@/features/diver-record";
+import { diverStanding } from "@/features/diver-standing";
+import { splitDiverStatus } from "@/features/diver-status";
+import { requireShopSurface } from "@/features/session";
+import { readUndoOffer } from "@/features/undo";
 import { resolveDiverNotice } from "@/i18n/diver-notice-text";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { diverStanding } from "@/lib/diver-standing";
-import { splitDiverStatus } from "@/lib/diver-status";
-import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
-import { readUndoOffer } from "@/lib/undo";
 import { uuidParam } from "@/lib/uuid";
 import { OfferedUndo } from "../../_components/OfferedUndo";
 import { BookActivity } from "./_components/BookActivity";
@@ -79,7 +79,7 @@ export default async function DiverDetailPage({
   params: Promise<{ shopSlug: string; personId: string }>;
   searchParams: Promise<{
     notice?: string;
-    /** The Undo the last removal offered (`src/lib/undo.ts`), with its payload fields. */
+    /** The Undo the last removal offered (`src/features/undo/rules.ts`), with its payload fields. */
     undo?: string;
     undoPerson?: string;
     undoCard?: string;

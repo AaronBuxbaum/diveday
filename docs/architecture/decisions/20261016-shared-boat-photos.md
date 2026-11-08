@@ -24,7 +24,7 @@ default, with staff able to delete (H-20261014-share-photo-with-boat).
    departure, so it never reaches another departure or another shop.
 3. **It leaves when the sharer leaves the boat.** The read requires the sharer's seat to be one a
    recap would show (not cancelled, not a no-show, not left at the dock, not held) and the person
-   neither deleted nor erased. Erasure already deletes the photo rows (`src/db/anonymize.ts`).
+   neither deleted nor erased. Erasure already deletes the photo rows (`src/features/anonymize/store.ts`).
 4. **Moderation is the delete staff already have.** The close-out gallery marks a shared photo, and
    its delete asks whether to remove it from every recap on this boat. No approval queue.
 5. **The cap counts the sharer's own photos.** Photos shared by others never use up a diver's room.

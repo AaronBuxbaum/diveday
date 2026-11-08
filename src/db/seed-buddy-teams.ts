@@ -142,7 +142,7 @@ export async function seedBuddyPairs(
  * order, the last three a trio when the count is odd, formed at the dock
  * before the lines came off. Read from the roll call's standing result at the
  * dock rather than the roster (the newest word per booking, a `cleared` undo
- * leaving none: `standing()` in `src/lib/safety-report.ts`), so a diver
+ * leaving none: `standing()` in `src/features/safety-report/rules.ts`), so a diver
  * turned away at the dock is never on a team that went in. Their after-dive
  * counts are all "boarded", so no team reads split.
  */

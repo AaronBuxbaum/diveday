@@ -9,7 +9,7 @@ import {
   listBackupDeliveries,
   listShopsDueForBackup,
 } from "./delivery-store";
-import { saveShopBackupDestination } from "./destination-store";
+import { recordShopBackupDestination } from "./destination-store";
 
 const ctx = fileScopedShopContext();
 
@@ -182,7 +182,7 @@ describe("listBackupDeliveries", () => {
 describe("listShopsDueForBackup", () => {
   it("lists a destination-holding shop until its scheduled delivery succeeds", async () => {
     const { db, shop } = await bareShop("due");
-    await saveShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
+    await recordShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
 
     const dueBefore = await listShopsDueForBackup(db, PERIOD);
     expect(dueBefore.map((entry) => entry.destination.shopId)).toContain(shop.id);
@@ -208,7 +208,7 @@ describe("listShopsDueForBackup", () => {
 
   it("keeps a shop whose last attempt failed on the due list — the next week is the retry", async () => {
     const { db, shop } = await bareShop("due-failed");
-    await saveShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
+    await recordShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
     const row = await beginBackupDelivery(db, {
       shopId: shop.id,
       periodKey: PERIOD,

@@ -19,7 +19,7 @@ shop actually reasons with is a ratio — 5:1, six to a guide — and it is the 
 outing is a two-tank morning, a shore dive off the beach, or an Open Water session. Storing the
 coarse form meant the ratio had to be re-derived, or guessed, everywhere it mattered.
 
-**Almost nothing read it.** One caller: the Requests planner (`src/lib/request-advisor.ts`), which
+**Almost nothing read it.** One caller: the Requests planner (`src/features/request-advisor/rules.ts`), which
 divided a day's requested divers by it to invent a departure count. On a beach, "two departures" is
 an object the shop does not have — there is no hull to fill twice, only more or fewer guides in the
 water.

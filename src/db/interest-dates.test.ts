@@ -4,9 +4,14 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { fileScopedShopContext } from "@/test/db";
+import { getCourseBySlug } from "../features/courses/store";
+import { createDiver } from "../features/divers/store";
+import {
+  addInterest,
+  interestRow,
+  ownerId,
+} from "../test/substrate-fixtures/db/interest-dates-fixtures";
 import type { AppDb } from "./client";
-import { getCourseBySlug } from "./courses";
-import { createDiver } from "./divers";
 import {
   DATE_REQUESTS_PAGE_SIZE,
   listClosedDateInterests,
@@ -15,7 +20,6 @@ import {
   listOpenDateInterests,
   listOpenDateInterestsForDates,
 } from "./interest-dates";
-import { addInterest, interestRow, ownerId } from "./interest-dates-fixtures";
 import {
   askForDate,
   attachDateInterestsToDeparture,

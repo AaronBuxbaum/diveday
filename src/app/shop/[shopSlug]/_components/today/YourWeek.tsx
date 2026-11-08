@@ -1,11 +1,11 @@
 import { staffingGapWords } from "@/app/shop/[shopSlug]/staffing/_components/gap-words";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
-import { type CrewWeekLine, crewWeekFor } from "@/db/crew-week";
+import { type CrewWeekLine, crewWeekFor } from "@/features/crew-week";
+import { GAP_TONE } from "@/features/staffing-week";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabel } from "@/i18n/staff-role-labels";
 import { formatShortDate, formatTime, formatWeekdayTime, isSameCalendarDay } from "@/lib/format";
-import { GAP_TONE } from "@/lib/staffing-week";
 import { addCalendarDays, shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /** Tomorrow and the six days after it: the week a crew member checks the night before. */

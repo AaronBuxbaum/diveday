@@ -32,7 +32,7 @@ blocked on HD-10/HD-11 (counsel's view on erasure versus signed evidence).
 ## Decision
 
 Add a second, distinct removal operation: **anonymize and keep** (`anonymizeDiver`,
-`src/db/anonymize.ts`). It destroys identity and medical content across the shop's tables and
+`src/features/anonymize/store.ts`). It destroys identity and medical content across the shop's tables and
 preserves the *evidence skeleton* of every signed release — timestamps, template snapshot, trip
 linkage, signature method, attesting staff member, and a seal.
 
@@ -135,7 +135,7 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `internal_notes` | rows deleted — `body` is NOT NULL with a non-blank check, so there is nothing to redact it *to*, and staff prose about a person is personal data end to end |
 | `activity_events` | the row is rewritten to `ACTIVITY_REDACTED` — `code` → `redacted`, `params` → `{}` — so the line reads `[redacted]` in the reader's own language; the row, its actor, and its timestamp stay. (Until 20260910-the-trail-is-a-code-and-names this was a free-text `message` column replaced with the literal `[redacted]`; the outcome is unchanged, and redacting the payload alone would have left the verb standing.) Swept four ways — by booking, by actor, by `subject_person_id` (the person a line is *about* where no seat carries it: a note written on the diver's record), and by **matching the stored name on word boundaries** (`~*` with `\y`, case-insensitive, over `params` as text) as a backstop for a row that names the diver while hanging off someone else's seat or none at all. The name match used to be the *only* handle on a record-scoped note, whose subject lived solely inside the message text; `subject_person_id` carries it outright as of #615. The first three are exactly the predicate `pagedDiverActivity` reads under (`src/db/operations.ts`) — they move together or not at all, so what a shop can read about a person and what an erasure destroys stay one set by construction. See "Bounding the name match" below: the match is anchored and has a minimum length, and its match count is logged. One line is field-level instead (issue #2315, product owner 2026-10-13): an `order_refunded` line about the erased customer, written by someone else, keeps its row, code and actor; `subject_person_id` → null and `params` → the actor's name alone, so the shop still knows who refunded. That treatment is limited to `order_refunded` on purpose: every other money line (`seat_refunded`, `payment_marked_refunded`, `payment_waived`, `payment_balance_written_off`, `party_marked_paid`, `dashboard_refund_matched`) hangs off a seat, and a seat's line goes whole with the seat, so after an erasure the log no longer says which staffer acted on that seat's money. The payment trail (`booking_payment_events`) keeps the amounts and operations, and has no actor column. A known limit, accepted on review 2026-10-16. |
 | `trips`, `trip_series` | untouched. A title that mentions the diver is the shop's own word (amendment 2026-11-01; formerly issue #2315). Past `departure_retitled_by_erasure` activity lines stay, as a real past act. |
-| `trip_change_events` | untouched. Values are staff-typed plan text; a mention of the diver is not redacted (amendment 2026-11-01). Kept for ever (`src/lib/retention.ts`). |
+| `trip_change_events` | untouched. Values are staff-typed plan text; a mention of the diver is not redacted (amendment 2026-11-01). Kept for ever (`src/features/retention/rules.ts`). |
 | `review_moderation_events` | `reason_note` → `[redacted]` on the diver's own reviews; the action, reason code and moderator stay. A note on someone else's review that names them stays (amendment 2026-11-01). |
 | `roll_call_events` | `note` → null; the boarding fact stays. Offline notes on a retained booking are accepted when their shop/trip/snapshot-bound signature matches the current erasure epoch. Text from an older epoch is omitted only when the seat's diver is the one erased; a stale note about anybody else stays (issue #3569). Unverifiable text is always omitted. Status and tap time stay either way. |
 | `staff_credentials`, `staff_credential_history`, `roll_call_crew_events` | For the directly erased person, credential fields (`name`, `issuing_body`, `identifier`, issue/renewal dates and review note) are cleared and credential history rows are deleted; their own crew roll-call fact stays while the private note, credential snapshot and capture timestamps are cleared. A note on another crew member's row that mentions the diver is staff prose and stays (amendment 2026-11-01). Roll-call and checklist note writes share the shop erasure fence. The fence orders the diver's own note against the sweep. Each successful erasure advances a shop-wide epoch in that same transaction. Offline snapshot issuance signs the epoch and a monotone per-trip snapshot revision with a server-issued snapshot id while reading the roster under the shared fence. A late older same-epoch response cannot replace a newer device copy. Diver and crew writers compare that epoch under the shared fence: an old queued event about the erased person (their seat, or their own crew row) still writes its roll-call mark and tap time but omits its free-text note and reports the disposition; one about anybody else keeps its note (issue #3569). The device clears that note only after acknowledging the result. Both live and offline notices identify affected records by short non-name references and checkpoint or checklist location; stale snapshot names are never used. Device clocks and editable event timestamps do not establish the cutoff. Merge pointers and audit stamps stay on the shells. |
@@ -213,7 +213,7 @@ run `%an%` across the shop's whole operational history and irreversibly replaced
 `[redacted]`, inside the erasure transaction. The blast radius of that over-reach was not "a line of
 history" — it was the log.
 
-Two bounds, both in `src/db/anonymize.ts`:
+Two bounds, both in `src/features/anonymize/store.ts`:
 
 - **Word-boundary match.** `~*` with a `\y`-anchored, regex-escaped pattern, so `An` matches the word
   `An` and nothing inside `Dana`, `manifest` or `changed`. The anchors are applied only where the
@@ -265,7 +265,7 @@ still in `waiver_records` — is the worst outcome available.
 
 Six of the rows above were added on one day by running a sweep rather than by anyone reading the
 code, and that is the point of this amendment. Until then the only thing checking this promise was
-`src/db/anonymize.test.ts`: per-table cases somebody thought to write, so a new table holding a
+`src/features/anonymize/store.test.ts`: per-table cases somebody thought to write, so a new table holding a
 diver's details was invisible until a person thought of that table. Two had already been found that
 way and only by a `security-reviewer` pass on unrelated work (`auth_provider_accounts`, then
 `auth_verifications`); a third, `trip_last_minute_promo_recipients`, was live rather than latent.
@@ -421,7 +421,7 @@ erased record from an incomplete one.
 Makes hard: nothing about the erased diver can be recovered or re-verified, including by the diver.
 A shop's public review average moves when an erased diver's review is unpublished. Any future
 column holding personal data must be added to `scrub()` **and** its per-table assertion in
-`src/db/divers.test.ts`; a new column that is missed is a silent leak, which is why the test asserts
+`src/features/divers/store.test.ts`; a new column that is missed is a silent leak, which is why the test asserts
 table by table rather than through a read helper that might filter it out of view.
 
 Commits us to: `waiver_records.integrity_version` as a real, dispatched-on version number, and to

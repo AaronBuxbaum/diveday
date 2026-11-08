@@ -1,17 +1,17 @@
 "use server";
 
-import { runAssist } from "@/db/assists";
-import { marineLifeCatalogCards } from "@/i18n/marine-life-labels";
-import { diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
+import { runAssist } from "@/features/assists";
+import { requireShopSurface } from "@/features/session";
 import {
   SIGHTINGS_MATCH_FEATURE,
   SIGHTINGS_MAX_SAID,
   type SightingMatch,
   sightingMatches,
   sightingsMatchCall,
-} from "@/lib/assists/sightings-match";
-import { requireShopSurface } from "@/lib/session";
+} from "@/features/sightings-match";
+import { marineLifeCatalogCards } from "@/i18n/marine-life-labels";
+import { diverTranslator } from "@/i18n/messages";
+import { requestLocale } from "@/i18n/request";
 import type { SightingActionContext } from "./actions";
 
 /**

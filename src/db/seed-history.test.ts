@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { getMonthlyReport, getShopYear } from "../features/reporting/store";
 import { getTripManifest } from "./manifests";
-import { getMonthlyReport, getShopYear } from "./reporting";
 import {
   bookings,
   cards,

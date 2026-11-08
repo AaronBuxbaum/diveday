@@ -1,5 +1,5 @@
-import type { ReadyPageData } from "@/db/ready";
-import type { latestTripStage } from "@/db/trip-stages";
+import type { ReadyPageData } from "@/features/ready";
+import type { latestTripStage } from "@/features/trip-stages";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERTIFICATION_LEVEL_KEYS, DIVER_DIVE_RECENCY_KEYS } from "@/i18n/readiness-labels";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";

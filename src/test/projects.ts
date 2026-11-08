@@ -1,5 +1,6 @@
 import { globSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { originalTestPath } from "./relocated-test-origins.ts";
 
 /**
  * **Which Vitest project a test file runs in** (vitest.config.ts).
@@ -100,7 +101,7 @@ export function isSourceGuard(source: string): boolean {
 
 /** The project one test file belongs to, from its repo-relative path and source. */
 export function classifyTestFile(file: string, source: string): ProjectName {
-  const posix = file.split(path.sep).join("/");
+  const posix = originalTestPath(file.split(path.sep).join("/"));
   if (posix.startsWith("scripts/")) return "scripts";
   if (DB_IMPORT.test(source) || DB_FACTORY.test(source)) return "db";
   if (JSDOM_DOCBLOCK.test(source)) return "ui";

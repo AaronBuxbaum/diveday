@@ -6,7 +6,12 @@ import { nowDate } from "@/lib/clock";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { charterContext, markSeat } from "@/test/training-mark-context";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  clearAnswers,
+  now,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { getTripManifest } from "./manifests";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, trips, waiverRecords } from "./schema";
@@ -16,7 +21,6 @@ import { getWaiverSignerOnFile } from "./waiver-signing";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { recordInPersonWaiver } from "./waivers-in-person";
 import { issueWaiverRequest } from "./waivers-requests";
-import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

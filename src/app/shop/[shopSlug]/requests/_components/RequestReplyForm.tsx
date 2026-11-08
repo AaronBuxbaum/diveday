@@ -3,7 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import type { ForgivingCopy } from "@/components/ui/ForgivingInput";
 import { Field, PriceField, textareaClassFor } from "@/components/ui/form";
-import { INTEREST_REPLY_MAX } from "@/lib/interest-reply";
+import { INTEREST_REPLY_MAX } from "@/features/interest-reply";
 
 export type RequestReplyCopy = {
   open: string;

@@ -12,7 +12,7 @@ import {
   FieldGrid,
   textareaClassFor,
 } from "@/components/ui/form";
-import type { WorkOrderDetail } from "@/db/work-orders";
+import type { WorkOrderDetail } from "@/features/work-orders";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {

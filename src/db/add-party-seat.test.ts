@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
+import { issuePartySeatClaims } from "../features/seat-claims/store";
 import { addPartySeat, createBooking, createBookingParty } from "./bookings";
 import { listTripActivity } from "./operations";
 import { bookings, tripRequirements, trips } from "./schema";
-import { issuePartySeatClaims } from "./seat-claims";
 import { upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test

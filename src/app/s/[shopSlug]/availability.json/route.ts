@@ -1,15 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { publicAvailabilityTrips } from "@/db/availability";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
-import { availabilityDocument } from "@/lib/availability";
+import { availabilityDocument, publicAvailabilityTrips } from "@/features/availability";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications";
 
 /**
  * `/s/<shop>/availability.json` — the shop's open seats for a reader that is
  * not a person (issue #1427). Shape and boundaries in
- * `src/lib/availability.ts`; rows from `src/db/availability.ts`. This route
+ * `src/features/availability/rules.ts`; rows from `src/features/availability/store.ts`. This route
  * decides only who may read it and for how long.
  *
  * **A shop that opted out of search is 404 here, not an empty list.** The

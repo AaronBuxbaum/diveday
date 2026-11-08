@@ -1,7 +1,5 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { createBoat } from "@/db/boats";
-import { readOwed } from "@/db/owed";
 import {
   activityEvents,
   bookings,
@@ -16,24 +14,26 @@ import {
   weeklyDigestSends,
 } from "@/db/schema";
 import { createTrip, listStaff, setTripCrew } from "@/db/trips";
-import {
-  listWeeklyDigestRecipients,
-  readWeeklyDigestChoice,
-  setWeeklyDigestChoice,
-  type WeeklyDigestShop,
-} from "@/db/weekly-digest";
 import { nowDate } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { notificationSchema } from "@/lib/notifications/kinds";
 import { messageFor } from "@/lib/notifications/render";
 import { NO_EMERGENCY_READS } from "@/lib/weekly-digest";
 import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { createBoat } from "../boats/store";
+import { readOwed } from "../owed/store";
 import {
   previewWeeklyDigest,
   readWeeklyDigestFacts,
   sendDueWeeklyDigests,
   sendWeeklyDigestForShop,
 } from "./digest";
+import {
+  listWeeklyDigestRecipients,
+  readWeeklyDigestChoice,
+  setWeeklyDigestChoice,
+  type WeeklyDigestShop,
+} from "./store";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

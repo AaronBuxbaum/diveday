@@ -1,6 +1,11 @@
+import {
+  GAP_TONE,
+  type PlacedGap,
+  type PlacedTrip,
+  type StaffWeek,
+} from "@/features/staffing-week";
 import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
-import { GAP_TONE, type PlacedGap, type PlacedTrip, type StaffWeek } from "@/lib/staffing-week";
 import { PersonFace } from "./StaffingWeek";
 import { weekDayFaces } from "./staffing-day-faces";
 import { ShiftFace } from "./staffing-shift-face";

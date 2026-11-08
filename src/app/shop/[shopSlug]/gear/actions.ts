@@ -9,10 +9,10 @@ import {
   restoreGearItem,
   returnGearReservation,
 } from "@/db/gear";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 // Copied, because `GEAR_KIND_ORDER` is `as const` so a gear kind with no

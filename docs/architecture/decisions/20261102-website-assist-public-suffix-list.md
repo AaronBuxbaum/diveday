@@ -9,7 +9,7 @@
 A website assist restricts Claude's server-side `web_fetch` to the one host an owner pasted
 (ADR 20261018-claude-assists). `allowed_domains` covers every subdomain of what it names, so a
 pasted `co.uk` or `wixsite.com` would let the call read any tenant's pages under it. Until now
-`src/lib/claude/web-fetch.ts` refused about 85 hand-picked registry and platform roots. Its own
+`src/features/claude/web-fetch.ts` refused about 85 hand-picked registry and platform roots. Its own
 comment said it was not the Public Suffix List, and the list was missing suffixes that are real
 (`b.ck`, `com.ua`, `onrender.com`, `workers.dev`).
 

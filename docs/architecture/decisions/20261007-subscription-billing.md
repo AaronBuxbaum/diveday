@@ -7,7 +7,7 @@
 ## Context
 
 DiveDay had no way for a shop to pay it. The trial ran for three weeks from `shops.created_at`
-(`src/lib/trial.ts`), Settings told the owner how many days were left, and the next step was an
+(`src/features/trial/rules.ts`), Settings told the owner how many days were left, and the next step was an
 email to `onboarding@dive.day` (H-20260724-public-founding-shop-price, 2026-08-05). The market audit (item 7) asked for the paid
 path: a card captured once, a monthly charge, and a cancel the owner can do alone.
 
@@ -25,7 +25,7 @@ Constraints that shaped this decision:
 ## Decision
 
 **Stripe Billing on DiveDay's own platform account.** Stripe is called with `fetch` and no SDK,
-the same as Connect, from `src/lib/billing/stripe-billing.ts`:
+the same as Connect, from `src/features/billing/stripe-billing.ts`:
 
 - **Checkout** (`mode=subscription`, one price) captures the card.
 - The **Customer Portal** handles card changes and cancellation. Cancel opens the Portal's

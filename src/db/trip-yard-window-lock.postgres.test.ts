@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { createBoat } from "./boats";
+import { createBoat } from "../features/boats/store";
 import { boats, shops, trips } from "./schema";
 import { createTrip, createTripOrRefusal, editTripSection } from "./trips";
 

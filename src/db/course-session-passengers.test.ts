@@ -4,12 +4,13 @@ import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { ParticipantType } from "@/lib/participant-types";
 import { fileScopedShopContext } from "@/test/db";
+import { markBookingNoShow, undoBookingNoShow } from "../features/no-show/store";
+import { getTripOverview } from "../features/trip-overview/store";
 import { createBooking, moveBooking, setBookingParticipantType } from "./bookings";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
 import { tripRatioGapNeedsInstructor } from "./crew-requests";
 import { departureOpenToDiver, invitableSeats } from "./interest-offers";
-import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import {
   issueShopCertification,
   issueShopNitroxCertification,
@@ -17,7 +18,6 @@ import {
   studentOnSeat,
 } from "./readiness";
 import { bookings, courses, people, shops, trips } from "./schema";
-import { getTripOverview } from "./trip-overview";
 import { createTrip, listStaff, setTripCrew, setTripParticipantTerms } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.

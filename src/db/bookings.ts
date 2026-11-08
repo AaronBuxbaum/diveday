@@ -136,7 +136,7 @@ import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
  *
  * Email is optional on the name path: a counter walk-in the crew can't wait
  * to ask for an address gets a fresh person row with no email on file, the
- * same as `createDiver` (src/db/divers.ts) already allows outside a booking —
+ * same as `createDiver` (src/features/divers/store.ts) already allows outside a booking —
  * `people.email` is nullable precisely for this (schema.ts). There is
  * nothing to dedup against without one, so a later booking with the same name
  * and still no email creates its own row rather than guessing an identity.
@@ -636,7 +636,7 @@ class PartyBookingError extends Error {
  * definition of that, shared with Today, the staffing window, and the trip page.
  * One query for every seat-granting path, so the undo of a roster removal can
  * never read a looser crew than the booking that preceded it. Exported for the
- * counter's other seat-granting undo, `undoBookingNoShow` (src/db/no-show.ts):
+ * counter's other seat-granting undo, `undoBookingNoShow` (src/features/no-show/store.ts):
  * a second copy of this query is a second chance for the two undos to disagree
  * about who is in the water.
  *
@@ -740,7 +740,7 @@ export async function readCourseSession(
  * nothing here to read (see `TripAdmissionInput.courseSession`).
  *
  * Exported for exactly one other caller: the seat-claim path
- * (src/db/seat-claims.ts), which re-runs this same gate for the claimant so a
+ * (src/features/seat-claims/store.ts), which re-runs this same gate for the claimant so a
  * claimed seat is admitted on the claimant's own evidence, never the
  * placeholder's (docs ADR 20260804-seat-claim-links). Any new caller should be
  * another door that puts a specific person on a specific trip.
@@ -1539,7 +1539,7 @@ async function resolveBookingPerson(
         pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
       }
     } else {
-      // No email to dedup against — matching createDiver (src/db/divers.ts),
+      // No email to dedup against — matching createDiver (src/features/divers/store.ts),
       // this always gets a fresh person row rather than guessing an identity.
       pendingInsert = { fullName: req.fullName.trim(), email: null, phone: req.phone };
     }

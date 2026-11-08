@@ -3,7 +3,7 @@ import { and, eq, getTableName, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { schemaTableNameOf } from "@/test/schema-tables";
-import { stripCommentsAndStrings } from "./erasure-source.test-support";
+import { stripCommentsAndStrings } from "../test/substrate-fixtures/db/erasure-source.test-support";
 import { loadDiverExportBundleInput } from "./export";
 import { diverOwnRows, EXPORT_TABLES, type ExportTableRead } from "./export-tables";
 import { addDiverNote } from "./operations";

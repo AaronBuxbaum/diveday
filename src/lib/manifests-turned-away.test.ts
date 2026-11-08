@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { boardedAt, notBoardedAt, trip } from "./manifest-test-fixtures";
+import {
+  boardedAt,
+  notBoardedAt,
+  trip,
+} from "../test/substrate-fixtures/lib/manifest-test-fixtures";
 import {
   buildTripManifest,
   isTurnedAwayOffBoat,

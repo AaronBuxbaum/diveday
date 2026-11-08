@@ -1,10 +1,10 @@
 "use server";
 
 import QRCode from "qrcode";
-import { issueCounterCourseForms } from "@/db/course-counter-qr";
+import { issueCounterCourseForms } from "@/features/course-counter-qr";
+import { requireShopSurface } from "@/features/session";
 import { courseFormsLinkPath } from "@/lib/booking-capabilities";
 import { publicAppUrl } from "@/lib/notifications/app-url";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
 /** One forms-only capability, encoded locally; the raw URL never becomes UI copy. */

@@ -1,8 +1,9 @@
 import type { AppDb } from "@/db/client";
 import { dateRequestPartyOnDeparture } from "@/db/date-request-offer-bookings";
-import { type BookableDiver, getBookableDiver, isSeatedOnTrip } from "@/db/divers";
 import { type DateInterestRow, listDateInterestsByIds } from "@/db/interest-dates";
+import { getBookableDiver, isSeatedOnTrip } from "@/features/divers";
 import { uuidParam } from "@/lib/uuid";
+import type { BookableDiver } from "../../../../../../lib/diver-choice-types";
 
 /**
  * The date request a departure's add band was opened from (`?add=1&request=`,

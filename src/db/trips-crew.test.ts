@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { fileScopedShopContext } from "@/test/db";
+import { deleteDiver } from "../features/divers/store";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { deleteDiver } from "./divers";
 import { getTripManifest, recordCrewRollCall } from "./manifests";
 import type { Course } from "./schema";
 import { bookings, courses, crewAvailabilityBlocks, people, personRoles, shops } from "./schema";
@@ -410,7 +410,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
    * the printed manifest.
    *
    * 180 days out keeps the synthetic session clear of the seeded instructor
-   * calendar, as in `src/db/courses.test.ts`.
+   * calendar, as in `src/features/courses/store.test.ts`.
    */
   const CREW_TEST_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
 

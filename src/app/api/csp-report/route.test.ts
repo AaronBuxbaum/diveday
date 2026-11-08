@@ -5,7 +5,7 @@ import { POST } from "./route";
 /**
  * The report endpoint is public, unauthenticated, and writes to a paid log
  * stream — the same posture `api/vitals`'s own test file states. What is
- * different here (see `src/lib/csp-reports.ts` and its test) is that a
+ * different here (see `src/features/csp-reports/rules.ts` and its test) is that a
  * violation report is also a browser sitting on a page whose URL can itself
  * be a bearer token, so most of this file is about what gets there redacted
  * rather than dropped outright.

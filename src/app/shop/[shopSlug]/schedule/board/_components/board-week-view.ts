@@ -1,7 +1,8 @@
 import type { listOpenDateInterestsForDates } from "@/db/interest-dates";
-import type { openAfterDiveRollCalls } from "@/db/roll-call-gaps";
-import type { LastYearWeek, WeekCrew } from "@/db/schedule-board-page";
 import type { weekBoard } from "@/db/trips";
+import { maxConcurrentTrips, overlappingBoatIds } from "@/features/boats";
+import type { openAfterDiveRollCalls } from "@/features/roll-call-gaps";
+import type { LastYearWeek, WeekCrew } from "@/features/schedule-board-page";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,
@@ -11,7 +12,6 @@ import type { weekBoard } from "@/db/trips";
 // 20260804-instant-navigation.
 import { awayDatesText } from "@/i18n/away-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { maxConcurrentTrips, overlappingBoatIds } from "@/lib/boats";
 import { calendarDateInTimezone, calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { addDepartureHref, groupDateRequests } from "@/lib/date-requests";

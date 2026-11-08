@@ -1,7 +1,7 @@
 // i18n-exempt-file: test fixture; only the ScheduleBuilder tests import it, and its words stand in for the bundle's.
 import { cleanup } from "@testing-library/react";
 import { vi } from "vitest";
-import type { MovePreflight } from "@/lib/move-preflight";
+import type { MovePreflight } from "@/features/move-preflight";
 import type { BuilderCopy, BuilderMoreOptions, BuilderPriceInput } from "./ScheduleBuilder";
 import type { BuilderWeek } from "./WeekBoard";
 

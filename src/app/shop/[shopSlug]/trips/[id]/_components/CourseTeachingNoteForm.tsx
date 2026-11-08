@@ -6,7 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { Field, FieldActions, FormStatus, textareaClassFor } from "@/components/ui/form";
-import type { CourseTeachingNoteResult } from "@/db/course-pulse";
+import type { CourseTeachingNoteResult } from "@/features/course-pulse";
 import { COURSE_TEACHING_NOTE_MAX } from "@/lib/course-pulse";
 
 export function CourseTeachingNoteForm({

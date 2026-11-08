@@ -4,8 +4,8 @@ import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { parseForm } from "@/features/form-parse";
 import { getAuth } from "@/lib/auth";
-import { parseForm } from "@/lib/form-parse";
 import { shopPath } from "@/lib/staff-notices";
 
 // Rate limiting lives in the custom credentials plugin's endpoint handler

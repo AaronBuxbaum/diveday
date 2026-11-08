@@ -28,8 +28,8 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
 });
 
 const { sendNotification } = await import("./notifications");
-const { getCourseBySlug } = await import("./courses");
-const { listBookableDivers } = await import("./divers");
+const { getCourseBySlug } = await import("../features/courses/store");
+const { listBookableDivers } = await import("../features/divers/store");
 const { capabilities, notificationSendQueue, interests, people } = await import("./schema");
 const { deliverSeatOffer } = await import("./interest-offers");
 const { ensureDepartureInterest } = await import("./interests");

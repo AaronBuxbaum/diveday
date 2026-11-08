@@ -5,6 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { serializeManifests } from "@/lib/offline-manifests";
 import type { ParticipantType } from "@/lib/participant-types";
 import { fileScopedShopContext } from "@/test/db";
+import { getReadyPageData } from "../features/ready/store";
 import {
   cancelBooking,
   createBooking,
@@ -20,7 +21,6 @@ import { getTripManifest, recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
 import { setBookingPayment } from "./payments";
 import { listTripReadiness } from "./readiness";
-import { getReadyPageData } from "./ready";
 import { recordRentalFit } from "./rental-fit";
 import {
   activityEvents,

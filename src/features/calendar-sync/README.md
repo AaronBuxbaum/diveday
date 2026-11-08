@@ -18,7 +18,7 @@ Module shape: [20260730-feature-module-contracts](../../../docs/architecture/dec
 - The `capabilities` table *definition* and its policy (`src/lib/capabilities.ts`); the table
   lives in `src/db/schema/` with every other table — one schema file stays the source of truth
   (ADR-0005).
-- The iCalendar primitives (`src/lib/trip-calendar.ts`), shared with the diver's one-off `.ics`
+- The iCalendar primitives (`src/features/trip-calendar/rules.ts`), shared with the diver's one-off `.ics`
   download.
 - Route wiring and staff UI, which live under `src/app/` and import this module's `index.ts`.
 

@@ -8,7 +8,7 @@ import { openSettingsRow, openTripAbout, seededTripId } from "./helpers";
  *
  * What this guards is the join, and the fact that the join is **advice**. The
  * arithmetic has unit tests (`src/lib/divemaster-ratio.test.ts`) and so does
- * the planner that reads it (`src/lib/request-advisor.test.ts`), but neither
+ * the planner that reads it (`src/features/request-advisor/rules.test.ts`), but neither
  * can see the two things that actually matter here: that a number a shop
  * types reaches the departure page at all, and that being under target
  * refuses nothing — the crew panel still edits, the roster still seats.

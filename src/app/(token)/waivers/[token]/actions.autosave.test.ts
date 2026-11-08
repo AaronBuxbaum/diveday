@@ -3,16 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBookingParty } from "@/db/bookings";
 import { capabilities, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import { hashBearerToken } from "@/lib/bearer-tokens";
+import { nowDate } from "@/lib/clock";
+import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
+import { fileScopedShopContext } from "@/test/db";
 import {
   claimedDevice,
   draftsOf,
   issueCounterLink,
   openOnDevice,
-} from "@/db/waivers-test-fixtures";
-import { hashBearerToken } from "@/lib/bearer-tokens";
-import { nowDate } from "@/lib/clock";
-import { medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
-import { fileScopedShopContext } from "@/test/db";
+} from "../../../../test/substrate-fixtures/db/waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
 

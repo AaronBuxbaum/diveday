@@ -1,0 +1,870 @@
+// @vitest-environment node
+import { and, eq, inArray, ne } from "drizzle-orm";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AppDb } from "../../db/client";
+import { nowDate } from "../../lib/clock";
+import type { CertificationLevel } from "../../lib/readiness";
+import { fileScopedShopContext } from "../../test/db";
+
+const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
+vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@aws-sdk/client-sesv2")>();
+  return {
+    ...actual,
+    SESv2Client: vi.fn().mockImplementation(function SESv2Client() {
+      return { send: sesSend };
+    }),
+  };
+});
+
+import {
+  activityEvents,
+  bookings,
+  cards,
+  people,
+  personRoles,
+  tripRequirements,
+  trips as tripsTable,
+  waiverRecords,
+  waiverTemplates,
+} from "../../db/schema/index";
+import { upcomingTripsWithCounts } from "../../db/trips";
+import { levelShort } from "../../test/admission-refusals";
+import { seatDiver } from "./store";
+
+/** The same two seeded departures `bookings.test.ts` works against. */
+async function context() {
+  const { db, shop } = ctx;
+  const trips = await upcomingTripsWithCounts(db, shop.id);
+  const open = trips.find((trip) => trip.title === "Two-Tank Reef — Christ of the Abyss");
+  const fullTrip = trips.find((trip) => trip.title === "Wreck Trip — Spiegel Grove");
+  if (!open || !fullTrip) throw new Error("expected seeded trips missing");
+  const [staff] = await db
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shop.id), inArray(personRoles.role, ["owner", "manager"])))
+    .limit(1);
+  if (!staff) throw new Error("seed has no staff actor");
+  return { db, shop, open, fullTrip, actorPersonId: staff.id };
+}
+
+/**
+ * A seeded diver who is not already on `tripId` — the returning-diver picker's
+ * own precondition, so a test can seat one by identity the way every picker
+ * does.
+ */
+async function bookableDiver(db: AppDb, shopId: string, tripId: string) {
+  const booked = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+  const bookedIds = new Set(booked.map((row) => row.personId));
+  const rows = await db
+    .select({ id: people.id, fullName: people.fullName })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "diver")));
+  const person = rows.find((row) => !bookedIds.has(row.id));
+  if (!person) throw new Error("seed has no bookable diver");
+  return person;
+}
+
+async function activityLines(db: AppDb, tripId: string) {
+  return await db
+    .select({ code: activityEvents.code, params: activityEvents.params })
+    .from(activityEvents)
+    .where(eq(activityEvents.tripId, tripId));
+}
+
+async function waiverCount(db: AppDb, bookingId: string) {
+  const rows = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(eq(waiverRecords.bookingId, bookingId));
+  return rows.length;
+}
+
+async function bookingIdentityHold(db: AppDb, bookingId: string) {
+  const [row] = await db
+    .select({ at: bookings.identityUnconfirmedAt })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  return row?.at ?? null;
+}
+
+const UNKNOWN_ID = "00000000-0000-4000-8000-000000000000";
+
+/** A non-reserved address the reserved-test-domain guard lets through. */
+const DELIVERABLE_EMAIL = "delivered@dive.day";
+
+/** Stub a shop whose waiver email can actually go out, and capture the send. */
+function deliverableEmailEnv() {
+  vi.stubEnv("APP_HOST", "https://diveday.example");
+  vi.stubEnv("SES_AWS_REGION", "us-east-1");
+  vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+  vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+  vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+  sesSend.mockReset().mockResolvedValue({ MessageId: "ses-id" });
+  return sesSend;
+}
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+// A demo shop sends no mail; these tests are about mail.
+const ctx = fileScopedShopContext({ realShop: true });
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("seatDiver (the one consequence path behind every staff door)", () => {
+  it("refuses an unavailable date-request offer before creating the seat", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+      dateRequestInterestId: "00000000-0000-4000-8000-000000000000",
+    });
+
+    expect(result).toEqual({ ok: false, reason: "date_request_offer_unavailable" });
+    expect(
+      await db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.shopId, shop.id),
+            eq(bookings.tripId, open.id),
+            eq(bookings.personId, diver.id),
+          ),
+        ),
+    ).toEqual([]);
+  });
+
+  /**
+   * The bug this extraction exists for. Booking a diver from their own record
+   * called `createBooking` and stopped there — no waiver, ever — so a diver
+   * seated that way reached the dock unsigned and nothing upstream said why.
+   * The diver-record door is `entry: "roster"` seating an existing person by
+   * id: exactly this call.
+   */
+  it("issues the waiver when a returning diver is seated by identity", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    // The record itself is what this test is about; *what became of it* is the
+    // separate contract exercised below.
+    expect(result).toMatchObject({ ok: true, personId: diver.id });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await waiverCount(db, result.bookingId)).toBe(1);
+  });
+
+  it("leaves the trip's activity trail, phrased for the roster door", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(await activityLines(db, open.id)).toContainEqual({
+      code: "seat_added",
+      params: expect.objectContaining({ diver: diver.fullName }),
+    });
+  });
+
+  it("takes a diver with no email, and says so on the trail", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // A name and nothing else.
+      diver: { fullName: "Counter Cass" },
+      entry: "roster",
+      refusals: "coarse",
+    });
+
+    // `not_delivered`, not "issued": a diver with no address on file has a
+    // waiver link and no way to have received it. This assertion used to read
+    // `waiver: "issued"` and was pinning the bug it was meant to catch.
+    expect(result).toMatchObject({ ok: true, personName: "Counter Cass", waiver: "not_delivered" });
+    expect(await activityLines(db, open.id)).toContainEqual({
+      code: "seat_added",
+      params: expect.objectContaining({ diver: "Counter Cass" }),
+    });
+  });
+
+  it("names the person on the trail even when the door submitted no name", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "coarse",
+    });
+
+    expect(result).toMatchObject({ ok: true, personName: diver.fullName });
+    expect(await activityLines(db, open.id)).toContainEqual({
+      code: "seat_added",
+      params: expect.objectContaining({ diver: diver.fullName }),
+    });
+  });
+
+  it("never stacks a second waiver link on a booking that already has one", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    const first = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+    });
+    if (!first.ok) throw new Error("expected the diver to be seated");
+
+    // Re-seating the same diver is refused outright, which is the guarantee
+    // that matters: a retried submission cannot issue a second link.
+    const second = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(second).toEqual({ ok: false, reason: "already_booked" });
+    expect(await waiverCount(db, first.bookingId)).toBe(1);
+  });
+
+  it("records nothing at all when the booking itself is refused", async () => {
+    const { db, shop, fullTrip, actorPersonId } = await context();
+    const before = await activityLines(db, fullTrip.id);
+
+    await seatDiver(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      actorPersonId,
+      diver: { fullName: "Turned Away Tara" },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(await activityLines(db, fullTrip.id)).toEqual(before);
+  });
+});
+
+/**
+ * `waiver` is the only thing telling a door whether its staffer can walk away,
+ * so every value has to be earned rather than inferred from "a result came
+ * back". The bug these cover: `issueWaiverOnJoin`'s result was read as a
+ * boolean, so a link that was issued and then *not* mailed — the no-email
+ * counter walk-in, the shop with no email set up, an outright failure to issue
+ * — all reported the same success as a delivered email. The staffer saw
+ * "Added…", the diver's readiness sat waiting for a signature, and nobody had
+ * asked for one.
+ */
+describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
+  it("reports sent only when the email actually went out", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Mailed Mira", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "sent" });
+    expect(send).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * The normal counter case, and the one the old boolean got most wrong: the
+   * walk-in door takes a diver on a name alone precisely so a queue keeps
+   * moving, which means no address, which means no email — every time.
+   */
+  it("reports not_delivered for a walk-in with no address on file", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "No Email Nell" },
+      entry: "roster",
+      refusals: "coarse",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "not_delivered" });
+    // Seated regardless — a waiver that could not be mailed never costs a seat.
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await waiverCount(db, result.bookingId)).toBe(1);
+  });
+
+  it("reports not_delivered when the shop has no email delivery set up", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("SES_AWS_REGION", "");
+    vi.stubEnv("SES_FROM_EMAIL", "");
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // An address on file is not enough; nothing can carry the link.
+      diver: { fullName: "Unconfigured Uma", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "not_delivered" });
+  });
+
+  it("reports not_needed when the trip gates no waiver", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    deliverableEmailEnv();
+    await db
+      .update(tripRequirements)
+      .set({ requiresWaiver: false })
+      .where(eq(tripRequirements.tripId, open.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "No Waiver Nadia", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "not_needed" });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await waiverCount(db, result.bookingId)).toBe(0);
+  });
+
+  /**
+   * The failure path a shop can actually reach: the trip demands a waiver and
+   * the shop has no active template to issue one from. Nothing exists to hand
+   * over, which is a different sentence at the desk than "we have a link you
+   * must pass along" — hence its own code.
+   */
+  it("reports failed when no waiver could be issued at all", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    deliverableEmailEnv();
+    await db
+      .update(waiverTemplates)
+      .set({ deletedAt: nowDate() })
+      .where(eq(waiverTemplates.shopId, shop.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "No Template Tam", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "failed" });
+    // Still seated: the diver's place on the boat never depends on this.
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await waiverCount(db, result.bookingId)).toBe(0);
+  });
+});
+
+/**
+ * **A diver booked by phone hears what an online booker hears** (fourth UX
+ * review, item 3). A staff seating for a departure that has not sailed sends
+ * the booking confirmation with the waiver riding in it, one email; only the
+ * walk-in counter's seat on today's boat keeps the counter's path, the diver
+ * standing at the desk.
+ */
+describe("seatDiver confirmation (fourth UX review, item 3)", () => {
+  /** The SES message bodies sent so far, as text. */
+  const sentBodies = (send: ReturnType<typeof deliverableEmailEnv>) =>
+    send.mock.calls.map((call) => JSON.stringify(call[0]?.input ?? call[0]));
+
+  it("sends a later day's seat its confirmation, with the waiver inside it", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Phoned Pia", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
+    // One seating, one email, one link: the confirmation carries the waiver as
+    // its readiness link's Sign step, never a waiver link (issue #2743).
+    expect(send).toHaveBeenCalledOnce();
+    expect(sentBodies(send)[0]).toMatch(/\/ready\/[A-Za-z0-9._-]+\/waiver/);
+    expect(sentBodies(send)[0]).not.toContain("/waivers/");
+    expect(sentBodies(send)[0]).toContain(open.title);
+  });
+
+  it("still confirms a later day's seat when no waiver is owed", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+    await db
+      .update(tripRequirements)
+      .set({ requiresWaiver: false })
+      .where(eq(tripRequirements.tripId, open.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Regular Rex", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "not_needed" });
+    expect(send).toHaveBeenCalledOnce();
+    expect(sentBodies(send)[0]).not.toContain("/waivers/");
+    expect(sentBodies(send)[0]).not.toMatch(/\/ready\/[A-Za-z0-9._-]+\/waiver/);
+  });
+
+  it("confirms the counter seat on today's boat, the waiver riding in it", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+    // The frozen test clock is 09:30 in the shop's zone; this boat leaves at 11:30.
+    const startsAt = new Date(nowDate().getTime() + 2 * 60 * 60 * 1000);
+    await db
+      .update(tripsTable)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(tripsTable.id, open.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Counter Cleo", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "coarse",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
+    expect(send).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * Dive-domain review F2 of layer r4-1: "Can you get me on the 1:30?" at
+   * 9 AM is the commonest phone booking a shop takes. The counter cannot tell
+   * it from a diver at the desk, so every door confirms any departure that has
+   * not sailed.
+   */
+  it("confirms a phoned-in seat on today's boat", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+    const startsAt = new Date(nowDate().getTime() + 4 * 60 * 60 * 1000);
+    await db
+      .update(tripsTable)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(tripsTable.id, open.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Phoned Paz", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "sent", waiver: "sent" });
+    expect(send).toHaveBeenCalledOnce();
+    expect(sentBodies(send)[0]).toMatch(/\/ready\/[A-Za-z0-9._-]+\/waiver/);
+    expect(sentBodies(send)[0]).not.toContain("/waivers/");
+  });
+
+  it("confirms a counter seat on a boat that has not sailed", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Counter Cato", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "coarse",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "sent" });
+    expect(send).toHaveBeenCalledOnce();
+  });
+
+  it("reports not_sent, and hands the waiver link over, when the diver has no address", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "No Address Ned" },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "not_sent", waiver: "not_delivered" });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(result.waiverPath).toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * `identityUnconfirmed` is the second thing a door is not allowed to hide.
+ *
+ * A seat taken off the counter's "is this the same diver?" prompt attaches
+ * itself to an existing person on a guess, and the boarding gate refuses it
+ * until a staffer confirms the identity (H-20260724-one-person-per-email, issue #1556). Every door used to
+ * answer that with a plain "Added", and the staffer learned the seat was held
+ * one tap later — `checkInBooking` refusing `not_ready` with the diver at the
+ * counter (`dive-domain-expert`, 2026-09-11). A door can only say so if the
+ * consequence path tells it, so this is the contract that lets it.
+ */
+describe("seatDiver identity reporting (what a door is allowed to claim)", () => {
+  it("reports a held seat when the name prompt's tap disagrees with the row", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // What the counter submits: the candidate's id, plus the name the staffer
+      // actually typed. A different human under a similar spelling is the case
+      // the flag exists for.
+      diver: { personId: diver.id, fromNameMatch: { typedName: "Someone Else Entirely" } },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, identityUnconfirmed: true });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    // Held, never refused: the seat is real and the gate is what waits.
+    expect(await bookingIdentityHold(db, result.bookingId)).not.toBeNull();
+  });
+
+  it("reports an ordinary seat when a staffer picked the diver by identity", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    // "Enter once, reuse everywhere" has to keep costing nothing: a diver found
+    // in the search by a staffer who went looking is not a guess.
+    expect(result).toMatchObject({ ok: true, identityUnconfirmed: false });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await bookingIdentityHold(db, result.bookingId)).toBeNull();
+  });
+
+  /**
+   * **A seat picked from the counter's search list lands released, by
+   * decision** (H-20260916-unconfirmed-identity-withhold-cost, issue #1790). That list is a search a staffer went
+   * looking in, not a guess the product offered, and holding it would put a
+   * held seat and an extra tap on every ordinary search-and-seat. It stays so
+   * when the search is the kind most likely to have found the wrong row: a
+   * namesake on file, which on the name prompt would hold the seat, and a
+   * phone-arm match since #1765 widened it. The db cannot see which arm
+   * matched, which is the point: the door decides, by carrying no
+   * `fromNameMatch`, and this pins what that door gets.
+   */
+  it("holds nothing on a search-list seat, even with a namesake on file", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    const [namesake] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: diver.fullName, phone: "+447700900123" })
+      .returning({ id: people.id });
+    if (!namesake) throw new Error("namesake insert returned no row");
+    await db.insert(personRoles).values({ personId: namesake.id, role: "diver" });
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // What the counter's "divers not booked today" seat link submits: the
+      // row's id and nothing else.
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "coarse",
+    });
+
+    expect(result).toMatchObject({ ok: true, identityUnconfirmed: false });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await bookingIdentityHold(db, result.bookingId)).toBeNull();
+  });
+
+  it("seats a name typed against someone else's address on a record of its own", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    await db.update(people).set({ email: DELIVERABLE_EMAIL }).where(eq(people.id, diver.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // Hand entry on an address another diver holds, under another name: a
+      // shared inbox, so another diver, held for nobody.
+      diver: { fullName: "Not That Diver", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, identityUnconfirmed: false });
+    if (!result.ok) throw new Error("seat refused");
+    expect(result.personId).not.toBe(diver.id);
+  });
+});
+
+describe("seatDiver refusal granularity (the per-surface parameter)", () => {
+  it("keeps each refusal distinct for a surface that asked for specifics", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+
+    const unknownPerson = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: UNKNOWN_ID },
+      entry: "roster",
+      refusals: "specific",
+    });
+    const unknownTrip = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: UNKNOWN_ID,
+      actorPersonId,
+      diver: { fullName: "Nobody Home" },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(unknownPerson).toEqual({ ok: false, reason: "person_not_found" });
+    expect(unknownTrip).toEqual({ ok: false, reason: "trip_unavailable" });
+  });
+
+  it("collapses those same refusals to one honest code for the counter", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+
+    const unknownPerson = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: UNKNOWN_ID },
+      entry: "roster",
+      refusals: "coarse",
+    });
+    const unknownTrip = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: UNKNOWN_ID,
+      actorPersonId,
+      diver: { fullName: "Nobody Home" },
+      entry: "roster",
+      refusals: "coarse",
+    });
+
+    expect(unknownPerson).toEqual({ ok: false, reason: "unavailable" });
+    expect(unknownTrip).toEqual({ ok: false, reason: "unavailable" });
+  });
+
+  /**
+   * "This boat is full" and "they're already on it" are the two refusals a
+   * staffer at the counter acts on differently — one sends them to the wait
+   * list, the other is a shrug — so the collapse deliberately lets both
+   * through. Collapsing them too would be the counter losing information it
+   * uses, rather than being spared information it does not.
+   */
+  it("never collapses the two refusals the counter still acts on", async () => {
+    const { db, shop, open, fullTrip, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "coarse",
+    });
+
+    const again = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "coarse",
+    });
+    const onFullBoat = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      actorPersonId,
+      diver: { fullName: "Counter Cass" },
+      entry: "roster",
+      refusals: "coarse",
+    });
+
+    expect(again).toEqual({ ok: false, reason: "already_booked" });
+    expect(onFullBoat).toEqual({ ok: false, reason: "trip_full" });
+  });
+});
+
+/**
+ * The staff doors and the boat's own cert gate (DOM-M6). `seatDiver` never
+ * re-implements it — it inherits it from `createBooking` — so what these
+ * assert is that all four doors really do reach it and that the counter's
+ * deliberate collapse still applies to it.
+ */
+describe("seatDiver trip admission (the boat's own cert gate reaches every staff door)", () => {
+  /** Put one verified card on file, so the shop has actually adjudicated this diver. */
+  async function card(db: AppDb, shopId: string, personId: string, level: CertificationLevel) {
+    await db.insert(cards).values({
+      kind: "level",
+      shopId,
+      personId,
+      agency: "padi",
+      level,
+      identifier: `C-${Math.random().toString(36).slice(2, 10)}`,
+      status: "verified",
+    });
+  }
+
+  async function demandOf(
+    db: AppDb,
+    shopId: string,
+    tripId: string,
+    level: CertificationLevel | null,
+  ) {
+    await db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: level, requiredSpecialties: [], requiresNitrox: false })
+      .where(and(eq(tripRequirements.tripId, tripId), eq(tripRequirements.shopId, shopId)));
+  }
+
+  it("refuses a staff seating for a diver whose cards cannot reach the trip's requirement", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    await card(db, shop.id, diver.id, "open_water");
+    await demandOf(db, shop.id, open.id, "divemaster");
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    // The structured detail rides along, because the staff surface's sentence
+    // depends on it: "they are not a Divemaster" and "their Deep card isn't on
+    // file" call for opposite advice, and only one of them is fixed by adding a
+    // card (src/i18n/readiness-labels.ts `tripAdmissionRefusalText`).
+    expect(result).toEqual({
+      ok: false,
+      reason: "trip_prerequisite",
+      refusal: [levelShort("divemaster", "open_water")],
+    });
+    // Refused seatings owe no consequences at all — no seat, no waiver, no trail.
+    const seats = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, open.id), eq(bookings.personId, diver.id)));
+    expect(seats).toHaveLength(0);
+    expect(await activityLines(db, open.id)).toEqual([]);
+  });
+
+  it("collapses the same refusal to the counter's one blunt code", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    await card(db, shop.id, diver.id, "open_water");
+    await demandOf(db, shop.id, open.id, "divemaster");
+
+    await expect(
+      seatDiver(db, {
+        shopId: shop.id,
+        tripId: open.id,
+        actorPersonId,
+        diver: { personId: diver.id },
+        entry: "roster",
+        refusals: "coarse",
+      }),
+      // `toEqual`, not `toMatchObject`: the collapse must also drop the
+      // structured detail, or the counter's deliberately blunt one-code
+      // vocabulary would grow a specific reason through the back door.
+    ).resolves.toEqual({ ok: false, reason: "unavailable" });
+  });
+
+  it("still seats the hand-entered walk-in the shop has never carded", async () => {
+    // The counter's normal case, and the gate's documented limit: an unknown
+    // diver is admitted here and stopped by readiness at the dock instead.
+    const { db, shop, open, actorPersonId } = await context();
+    await demandOf(db, shop.id, open.id, "divemaster");
+
+    await expect(
+      seatDiver(db, {
+        shopId: shop.id,
+        tripId: open.id,
+        actorPersonId,
+        diver: { fullName: "Counter Cass" },
+        entry: "roster",
+        refusals: "coarse",
+      }),
+    ).resolves.toMatchObject({ ok: true, personName: "Counter Cass" });
+  });
+});
+
+/**
+ * **A failing mail never unseats a diver.** Every consequence after the seat
+ * commits is best-effort, and what the door may claim is what actually
+ * happened: a confirmation that threw is `not_sent`, a waiver that could not be
+ * issued is `failed`. A thrown value that is not an `Error` is logged as
+ * unknown, never rethrown.
+ */

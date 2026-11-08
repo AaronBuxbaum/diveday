@@ -6,7 +6,7 @@ answered that way. Decision:
 
 ## What is kept
 
-Every call `runAssist` (`src/db/assists.ts`) sends writes two rows:
+Every call `runAssist` (`src/features/assists/store.ts`) sends writes two rows:
 
 | Table | Holds | Kept |
 | --- | --- | --- |

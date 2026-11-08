@@ -3,10 +3,10 @@ import { expect, it } from "vitest";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { charterContext, markSeat, seatBlockerCodes } from "@/test/training-mark-context";
+import { trainingPlanView } from "../features/training-plan-view/store";
+import { readTrainingPlan, setTrainingPlanAssignment } from "../features/training-plans/store";
 import { recordCrewRollCall } from "./manifests";
 import { courses, people, personRoles, tripAssignments } from "./schema";
-import { trainingPlanView } from "./training-plan-view";
-import { readTrainingPlan, setTrainingPlanAssignment } from "./training-plans";
 
 const ctx = fileScopedShopContext();
 

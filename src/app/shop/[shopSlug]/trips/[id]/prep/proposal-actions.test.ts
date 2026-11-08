@@ -5,13 +5,13 @@ import { createBooking } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { createGearItem } from "@/db/gear";
 import { bookings, gearReservations, shops } from "@/db/schema";
-import { getTripPrep } from "@/db/trip-prep";
 import { setTripStatus, upcomingTripsWithCounts } from "@/db/trips";
 import { createTrip } from "@/db/trips-create";
 import { nowDate } from "@/lib/clock";
 import { gearKindIsLifeSupport, tripReservationWindow } from "@/lib/gear";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
+import { getTripPrep } from "../../../../../../features/trip-prep/store";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -34,12 +34,12 @@ vi.mock("@/db/gear", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/gear")>();
   return { ...actual, reserveGearUnit: vi.fn(actual.reserveGearUnit) };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { revalidatePath } = await import("next/cache");
 const { getDb } = await import("@/db/client");
 const { reserveGearUnit } = await import("@/db/gear");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../../features/session/rules");
 const { confirmProposedGearUnits } = await import("./proposal-actions");
 const { assignGearUnit } = await import("./actions");
 

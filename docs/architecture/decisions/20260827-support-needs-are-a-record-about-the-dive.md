@@ -95,8 +95,8 @@ accessible is a claim about shops, not software.
 
 ### What it owes
 
-Health-adjacent personal data, so the build owes rows in `src/db/export.ts`, `src/db/anonymize.ts`,
-`src/lib/retention.ts` and `src/db/delete-path-coverage.test.ts`, and a `security-reviewer` review.
+Health-adjacent personal data, so the build owes rows in `src/db/export.ts`, `src/features/anonymize/store.ts`,
+`src/features/retention/rules.ts` and `src/db/delete-path-coverage.test.ts`, and a `security-reviewer` review.
 Copy in both locale bundles.
 
 ## Alternatives considered
@@ -265,7 +265,7 @@ and buddy-team constraint, not prose", which is why it is its own column. It is 
 because the diver is answering on a bearer-token page about somebody the shop may have no record of
 at all. Resolving it to a booking is the later addition, and is not v1.
 
-**Nothing was added to `src/lib/retention.ts`.** The design lists it beside `export.ts` and
+**Nothing was added to `src/features/retention/rules.ts`.** The design lists it beside `export.ts` and
 `anonymize.ts` under "what it owes", and that turns out to be the wrong file. `RETENTION_DAYS` is a
 bounded prune over **append-only trails**, and every window is measured from a row's own event time;
 this is a living preference on a person with no event time and one row per diver, exactly like

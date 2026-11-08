@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { createBoat, deleteBoat, editBoat, getBoatById } from "../features/boats/store";
 import {
   departureBoatSafety,
   departureBoatSafetyFor,
   departureKitRecord,
   todayBoatSafety,
 } from "./boat-safety";
-import { createBoat, deleteBoat, editBoat, getBoatById } from "./boats";
 import type { AppDb } from "./client";
 import {
   createGearItem,

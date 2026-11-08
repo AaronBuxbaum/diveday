@@ -10,7 +10,7 @@ import {
   listChecklistItems,
   reorderChecklistItems,
 } from "@/db/pre-departure-check";
-import { requireShopSurface } from "@/lib/session";
+import { requireShopSurface } from "@/features/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { registerBlock } from "../register-block";
 

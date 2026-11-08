@@ -1,4 +1,4 @@
-import { type CalendarEvent, calendarDocument } from "@/lib/trip-calendar";
+import { type CalendarEvent, calendarDocument } from "@/features/trip-calendar";
 import { FEED_REFRESH_MINUTES } from "./feed-token";
 
 /**

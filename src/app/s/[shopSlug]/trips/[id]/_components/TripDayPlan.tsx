@@ -8,14 +8,14 @@ import {
   ledgerRowOpenBoxClass,
 } from "@/components/ui/ledger";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
-import type { SiteReview } from "@/db/reviews";
+import { dayProfileRows } from "@/features/day-profile";
+import type { SiteReview } from "@/features/reviews";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { includedGearList, includesScubaUnitOnly } from "@/i18n/packing-labels";
 import { courseDepthFormat, diveSiteDepthText } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
 import { type CourseScheduleDay, formatScheduleDayTime, resolveCourseDepths } from "@/lib/courses";
-import { dayProfileRows } from "@/lib/day-profile";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type DiveMode, type DockDayRhythm, dockDayTimeline } from "@/lib/diver-planning";
 import { formatShortDate, formatTime } from "@/lib/format";

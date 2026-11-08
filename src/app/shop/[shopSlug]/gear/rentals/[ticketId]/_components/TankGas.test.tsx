@@ -2,8 +2,8 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CounterRentalUnit } from "@/db/gear-counter-rentals";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { CounterRentalUnit } from "../../../../../../../features/gear-counter-rentals/store";
 import { TankGas, TankGasCorrections } from "./TankGas";
 
 vi.mock("../../actions", () => ({ correctCounterTankFillAction: vi.fn() }));

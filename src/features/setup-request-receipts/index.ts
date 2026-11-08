@@ -1,12 +1,12 @@
 import { getDb } from "@/db/client";
+import { log } from "@/lib/log";
+import { notificationProviderFromEnvironment, notify, recipientLocale } from "@/lib/notifications";
+import { type SetupReceiptOutcome, setupReceiptOutcome } from "@/lib/setup-request-receipts";
 import {
   claimSetupRequestReceipt,
   finishSetupRequestReceipt,
   readClaimedSetupRequestReceipt,
-} from "@/db/setup-request-receipts";
-import { log } from "@/lib/log";
-import { notificationProviderFromEnvironment, notify, recipientLocale } from "@/lib/notifications";
-import { type SetupReceiptOutcome, setupReceiptOutcome } from "@/lib/setup-request-receipts";
+} from "./store";
 
 /**
  * Server-only after-work, invoked by the setup request action: never add "use server" or expose a
@@ -48,3 +48,8 @@ export async function sendSetupRequestReceipt(id: string): Promise<void> {
     log("setup_request.receipt_unresolved", "warn", { requestId: id, errorCode: "storage_error" });
   }
 }
+export {
+  claimSetupRequestReceipt,
+  finishSetupRequestReceipt,
+  readClaimedSetupRequestReceipt,
+} from "./store";

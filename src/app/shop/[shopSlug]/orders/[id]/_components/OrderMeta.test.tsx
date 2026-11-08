@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { OpenPaymentDispute } from "@/db/payment-disputes";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { OpenPaymentDispute } from "../../../../../../features/payment-disputes/store";
 import { OrderDisputeBanner, OrderLostDisputes, OrderMeta } from "./OrderMeta";
 
 const t = staffTranslator("en-US");

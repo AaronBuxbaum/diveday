@@ -5,6 +5,7 @@ import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/chec
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
+import { getActiveTripPromoByCode } from "../features/trip-promos/store";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import type { AppDb } from "./client";
@@ -21,7 +22,6 @@ import { bookingPaymentEvents, paymentOperationIntents, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getActiveTripPromoByCode } from "./trip-promos";
 import { editTrip, getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import { reinstateTrip } from "./trips-minimum";
 import { listUnfinished, type UnfinishedOptions } from "./unfinished";

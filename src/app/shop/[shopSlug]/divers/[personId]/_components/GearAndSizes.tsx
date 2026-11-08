@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
-import type { CounterRentalTicket } from "@/db/gear-counter-rentals";
+import type { CounterRentalTicket } from "@/features/gear-counter-rentals";
 import { rentableItemLabel, rentalFitLineText, rentalItemLabel } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { suitChoiceLabel } from "@/i18n/suit-choice-labels";

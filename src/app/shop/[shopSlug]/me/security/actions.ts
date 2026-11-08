@@ -15,14 +15,14 @@ import {
   verifyAccountSecondFactor,
 } from "@/db/account-security";
 import { getAccountIdForPerson } from "@/db/user-accounts";
-import { parseForm, readForm, single, text } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { parseForm, readForm, single, text } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { isStepUpPurpose, safeStepUpReturnPath } from "@/features/security-step-up";
+import { requireShopSurface } from "@/features/session";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { runtimeMode } from "@/lib/runtime-mode";
 import { sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import { isStepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 const RECOVERY_CODES_COOKIE = "diveday_totp_recovery_codes";

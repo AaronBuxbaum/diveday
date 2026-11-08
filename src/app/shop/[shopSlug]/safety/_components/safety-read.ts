@@ -1,4 +1,5 @@
-import { earliestReportedTripStart, getSafetyPage } from "@/db/safety-report";
+import { earliestReportedTripStart, getSafetyPage } from "@/features/safety-report";
+import type { ShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -12,7 +13,6 @@ import {
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear, formatMonthDay, formatTimeZoneName } from "@/lib/format";
-import type { ShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { MonthFigure } from "../../reports/_components/MonthFigures";

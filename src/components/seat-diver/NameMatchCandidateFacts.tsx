@@ -1,9 +1,9 @@
-import type { SimilarDiver } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatShortDate } from "@/lib/format";
 import { candidateBirthDate } from "@/lib/name-match-evidence";
+import type { SimilarDiver } from "../../lib/diver-choice-types";
 
 /**
  * What one candidate on the counter's "is this the same person?" prompt

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { signRecapToken } from "@/lib/recap-links";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { createDiver, editDiver } from "../features/divers/store";
+import { shopStaffer } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { createBooking } from "./bookings";
-import { createDiver, editDiver } from "./divers";
 import { openRecapLink, recapTokenFor } from "./recap-links";
 import { upcomingTripsWithCounts } from "./trips";
-import { shopStaffer } from "./waivers-test-fixtures";
 
 /**
  * **A corrected contact takes the recap link with it** (issue #3982, option A).

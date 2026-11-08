@@ -429,11 +429,11 @@ describe("every Stripe adapter", () => {
     const { sdk, host } = stripeSources(path.join(process.cwd(), "src"));
     // The client, and the webhook's signature check. A third file loading the
     // SDK would be a client built without the policies above.
-    expect(sdk).toEqual(["src/lib/payments/stripe-client.ts", "src/lib/payments/webhook.ts"]);
+    expect(sdk).toEqual(["src/lib/payments/stripe-client.ts", "src/features/payments/webhook.ts"]);
     // No file fetches a Stripe host by hand: only the client names one beside
     // a fetch, and that fetch is the SDK's transport.
     expect(host).toEqual(["src/lib/payments/stripe-client.ts"]);
-    const webhook = readFileSync("src/lib/payments/webhook.ts", "utf8");
+    const webhook = readFileSync("src/features/payments/webhook.ts", "utf8");
     expect(webhook).not.toMatch(/new Stripe\(/);
   });
 });

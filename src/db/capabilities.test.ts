@@ -9,7 +9,8 @@ import {
   personPurposesThatMerge,
 } from "@/lib/capabilities";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { recordSetupRequest } from "../features/funnel/store";
 import {
   issueCapability,
   mintCapability,
@@ -22,7 +23,6 @@ import {
 } from "./capabilities";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { mergeDiverRecords } from "./diver-merge";
-import { recordSetupRequest } from "./funnel";
 import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
 import { capabilities, people, personRoles, shops, userAccounts } from "./schema";

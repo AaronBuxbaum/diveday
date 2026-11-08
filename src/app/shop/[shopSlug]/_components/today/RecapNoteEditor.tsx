@@ -69,7 +69,7 @@ export type RecapNoteEditorContext = {
  *
  * The note rides out on every diver's recap, which the dedicated hourly scan
  * sends no earlier than four hours after the trip ends (`sendDueRecaps`,
- * src/db/recap.ts) — so the evening the boat came back is both the last moment
+ * src/features/recap/store.ts) — so the evening the boat came back is both the last moment
  * to add one and the only moment anyone can still name the highlight. It used
  * to live only on the trip's setup page and only *before* the trip, which is to
  * say it asked for the highlight of a day that had not happened.

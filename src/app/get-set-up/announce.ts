@@ -1,7 +1,7 @@
 import { getDb } from "@/db/client";
-import { markSetupRequestNotified } from "@/db/funnel";
 import type { SetupRequest } from "@/db/schema";
-import { issueSetupLink } from "@/db/setup-links";
+import { markSetupRequestNotified } from "@/features/funnel";
+import { issueSetupLink } from "@/features/setup-links";
 import { trackEvent } from "@/lib/analytics";
 import { eventSource } from "@/lib/funnel";
 import { log } from "@/lib/log";

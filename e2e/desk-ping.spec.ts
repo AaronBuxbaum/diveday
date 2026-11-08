@@ -4,7 +4,7 @@ import { expect, signedInAs, test } from "./fixtures";
  * **The desk is pinged when divers write in after hours** (D4, Aaron
  * 2026-10-09): the shop's desk hours under Settings → Messages, and each
  * staffer's own answer to the ping on their Email settings. Who gets pinged,
- * when, and what the email says are `src/db/desk-pings.test.ts`; what is
+ * when, and what the email says are `src/features/desk-pings/store.test.ts`; what is
  * pinned here is that both doors exist and save.
  *
  * Both write state the per-test reset does not restore (`shops.desk_*` and

@@ -20,23 +20,26 @@ vi.mock("@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions", () => ({
   addToWaitlistAction: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
-vi.mock("@/db/divers", () => ({ createDiver: vi.fn(), findSimilarDivers: vi.fn() }));
-vi.mock("@/db/form-drafts", () => ({ discardFormDraft: vi.fn() }));
-vi.mock("@/lib/navigation", () => ({
+vi.mock("../../../../features/divers/store", () => ({
+  createDiver: vi.fn(),
+  findSimilarDivers: vi.fn(),
+}));
+vi.mock("../../../../features/form-drafts/store", () => ({ discardFormDraft: vi.fn() }));
+vi.mock("../../../../features/navigation/rules", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { seatNewDiverAction, seatPartyAction } = await import("@/app/actions/seat-diver");
 const { addToWaitlistAction } = await import(
   "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions"
 );
-const { createDiver, findSimilarDivers } = await import("@/db/divers");
-const { discardFormDraft } = await import("@/db/form-drafts");
-const { revalidateAndRedirect } = await import("@/lib/navigation");
-const { requireStaffSession } = await import("@/lib/session");
+const { createDiver, findSimilarDivers } = await import("../../../../features/divers/store");
+const { discardFormDraft } = await import("../../../../features/form-drafts/store");
+const { revalidateAndRedirect } = await import("../../../../features/navigation/rules");
+const { requireStaffSession } = await import("../../../../features/session/rules");
 const { createDiverFormAction } = await import("./add-diver-actions");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";

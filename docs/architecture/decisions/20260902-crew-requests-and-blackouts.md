@@ -48,7 +48,7 @@ Two shapes are load-bearing:
 
 - **A blackout is calendar dates, not instants.** "I am away the week of the 14th" has no clock in
   it. Storing a timestamp would make the range shift under a reader in another zone, and the week's
-  own columns are already calendar dates (`src/lib/staffing-week.ts`).
+  own columns are already calendar dates (`src/features/staffing-week/rules.ts`).
 - **A decided request is kept, not deleted.** "I asked and was turned down" is the fact the crew
   member came back to check, and a shop declining the same person three Saturdays running should be
   able to see that it did. Deleting is *withdrawing*, and only the asker may do it. (2026-10-12,

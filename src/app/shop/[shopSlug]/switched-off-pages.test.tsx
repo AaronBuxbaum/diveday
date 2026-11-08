@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { shops } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { redirectedTo } from "@/test/staff-session";
+import { listShopStaff } from "../../../features/staff-accounts/store";
 
 /**
  * **No dead ends** (Aaron, 2026-10-23): a direct URL to a staff page whose

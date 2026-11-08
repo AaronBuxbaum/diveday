@@ -6,11 +6,11 @@ import {
   type FeedScope,
   listCalendarFeeds,
 } from "@/features/calendar-sync";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { StaffIntlProvider } from "@/i18n/StaffIntlProvider";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { requireShopSurface } from "@/lib/session";
 import { staffPageClass } from "../../_components/staff-page";
 import { CalendarFeedPanel } from "./CalendarFeedPanel";
 import type { FeedScopeView } from "./feed-panel-types";

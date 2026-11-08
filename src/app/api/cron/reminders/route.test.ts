@@ -4,23 +4,31 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/db/checkout-recovery", () => ({ sendDueCheckoutRecoveries: vi.fn() }));
+vi.mock("../../../../features/checkout-recovery/store", () => ({
+  sendDueCheckoutRecoveries: vi.fn(),
+}));
 vi.mock("@/db/media-deletions", () => ({ retryPendingMediaDeletions: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
-vi.mock("@/db/processor-erasure", () => ({ retryPendingProcessorErasures: vi.fn() }));
+vi.mock("../../../../features/processor-erasure/store", () => ({
+  retryPendingProcessorErasures: vi.fn(),
+}));
 vi.mock("@/db/seed", () => ({ reapExpiredDemoShops: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),
 }));
 
 const { getDb } = await import("@/db/client");
-const { sendDueCheckoutRecoveries } = await import("@/db/checkout-recovery");
+const { sendDueCheckoutRecoveries } = await import("../../../../features/checkout-recovery/store");
 const { retryPendingMediaDeletions } = await import("@/db/media-deletions");
 const { drainNotificationRetries } = await import("@/db/notifications");
-const { retryPendingProcessorErasures } = await import("@/db/processor-erasure");
+const { retryPendingProcessorErasures } = await import(
+  "../../../../features/processor-erasure/store"
+);
 const { reapExpiredDemoShops } = await import("@/db/seed");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");

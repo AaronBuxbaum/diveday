@@ -14,12 +14,12 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/db/bookings", () => ({ addPartySeat: vi.fn(), selfCancelBooking: vi.fn() }));
 vi.mock("@/db/inbound-messages", () => ({ recordMoveAsk: vi.fn() }));
-vi.mock("@/db/move-ask-alerts", () => ({ alertStaffToMoveAsk: vi.fn() }));
-vi.mock("@/db/move-offer", () => ({ strandedMoveAsk: vi.fn() }));
+vi.mock("../../../../features/move-ask-alerts/store", () => ({ alertStaffToMoveAsk: vi.fn() }));
+vi.mock("../../../../features/move-offer/store", () => ({ strandedMoveAsk: vi.fn() }));
 vi.mock("@/db/shops", () => ({ getShopById: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
-vi.mock("@/lib/navigation", () => ({
+vi.mock("../../../../features/navigation/rules", () => ({
   revalidateAndRedirect: vi.fn((_path: string, target: string) => {
     throw new Error(`REDIRECT:${target}`);
   }),
@@ -34,8 +34,8 @@ vi.mock("./action-helpers", async (importOriginal) => {
 });
 
 const { recordMoveAsk } = await import("@/db/inbound-messages");
-const { alertStaffToMoveAsk } = await import("@/db/move-ask-alerts");
-const { strandedMoveAsk } = await import("@/db/move-offer");
+const { alertStaffToMoveAsk } = await import("../../../../features/move-ask-alerts/store");
+const { strandedMoveAsk } = await import("../../../../features/move-offer/store");
 const { getShopById } = await import("@/db/shops");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { contextFor, strandedContextFor } = await import("./action-helpers");

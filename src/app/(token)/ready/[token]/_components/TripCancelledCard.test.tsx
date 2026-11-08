@@ -2,8 +2,8 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { getDb } from "@/db/client";
-import type { ReadyPageData } from "@/db/ready";
 import { diverTranslator } from "@/i18n/messages";
+import type { ReadyPageData } from "../../../../../features/ready/store";
 import { TripCancelledCard } from "./TripCancelledCard";
 
 vi.mock("./CarriedPreparation", () => ({ CarriedPreparation: () => <p>carried</p> }));

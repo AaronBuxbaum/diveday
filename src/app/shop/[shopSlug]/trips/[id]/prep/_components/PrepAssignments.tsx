@@ -3,12 +3,12 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { proposalKey } from "@/features/gear-proposals";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { scopedId } from "@/lib/element-id";
-import { proposalKey } from "@/lib/gear-proposals";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopPath } from "@/lib/staff-notices";
 import {

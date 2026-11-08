@@ -22,12 +22,16 @@ vi.mock("@/app/actions/inquiry", () => ({
   ),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/db/courses", () => ({ getCourseBySlug: vi.fn() }));
-vi.mock("@/db/shops-cached", () => ({ shopBySlugCached: vi.fn() }));
+vi.mock("../../../../../features/courses/store", () => ({ getCourseBySlug: vi.fn() }));
+vi.mock("../../../../../features/shops-cached/store", () => ({ shopBySlugCached: vi.fn() }));
 vi.mock("@/db/trips", () => ({ listUpcomingSessionsForCourse: vi.fn() }));
-vi.mock("@/db/crew-away-diver", () => ({ diverCrewWithAway: vi.fn(async () => []) }));
+vi.mock("../../../../../features/crew-away-diver/store", () => ({
+  diverCrewWithAway: vi.fn(async () => []),
+}));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn(async () => null) }));
-vi.mock("@/lib/session", () => ({ isLiveShopStaff: vi.fn(async () => false) }));
+vi.mock("../../../../../features/session/rules", () => ({
+  isLiveShopStaff: vi.fn(async () => false),
+}));
 vi.mock("@/i18n/request", () => ({
   requestTranslator: async () => ({
     locale: request.locale,
@@ -36,8 +40,8 @@ vi.mock("@/i18n/request", () => ({
 }));
 
 const { submitInquiryAction } = await import("@/app/actions/inquiry");
-const { getCourseBySlug } = await import("@/db/courses");
-const { shopBySlugCached } = await import("@/db/shops-cached");
+const { getCourseBySlug } = await import("../../../../../features/courses/store");
+const { shopBySlugCached } = await import("../../../../../features/shops-cached/store");
 const { listUpcomingSessionsForCourse } = await import("@/db/trips");
 const { default: CoursePage } = await import("./page");
 

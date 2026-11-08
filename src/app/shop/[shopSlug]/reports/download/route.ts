@@ -1,15 +1,19 @@
 import { getDb } from "@/db/client";
-import { canPersonViewShopReports, getYearMonthInputs } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
+import {
+  canPersonViewShopReports,
+  formatReportMoney,
+  getYearMonthInputs,
+  summarizeMonth,
+} from "@/features/reporting";
+import { requireStaffSession } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type MonthRef, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { exportDateStamp } from "@/lib/export";
 import { toShopCurrency } from "@/lib/money";
-import { formatReportMoney, summarizeMonth } from "@/lib/reporting";
 import { currentShopSeason, shopSeasonOf } from "@/lib/season";
-import { requireStaffSession } from "@/lib/session";
 import { utcToWallTime } from "@/lib/zoned";
 import { monthReportFile } from "./month-report-file";
 import { yearReportCsv } from "./year-report-csv";

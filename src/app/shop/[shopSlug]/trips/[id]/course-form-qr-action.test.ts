@@ -1,7 +1,6 @@
 import { and, eq, gt, isNotNull, ne } from "drizzle-orm";
 import QRCode from "qrcode";
 import { describe, expect, it, vi } from "vitest";
-import { issueCounterCourseForms } from "@/db/course-counter-qr";
 import { createCourseForm, setCourseFormRequirements } from "@/db/course-forms";
 import { bookings, people, trips } from "@/db/schema";
 import { listStaff } from "@/db/trips";
@@ -9,6 +8,7 @@ import { courseFormsLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
+import { issueCounterCourseForms } from "../../../../../features/course-counter-qr/store";
 
 vi.mock("next/navigation", () => ({
   notFound: () => {
@@ -19,11 +19,11 @@ vi.mock("@/db/client", async (load) => ({
   ...(await load<typeof import("@/db/client")>()),
   getDb: vi.fn(),
 }));
-vi.mock("@/lib/session", async () =>
+vi.mock("../../../../../features/session/rules", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { issueCourseFormQrAction } = await import("./course-form-qr-action");
 const ctx = fileScopedShopContext();
 

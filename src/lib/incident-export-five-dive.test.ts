@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import {
+  baseInput,
+  diver,
+  TRIP,
+} from "../test/substrate-fixtures/lib/incident-export-test-fixtures";
 import { buildIncidentExport } from "./incident-export";
-import { baseInput, diver, TRIP } from "./incident-export-test-fixtures";
 import { buildTripManifest, rollCallCheckpoints } from "./manifests";
 
 describe("a five-dive departure log", () => {

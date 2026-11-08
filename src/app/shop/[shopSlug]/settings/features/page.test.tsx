@@ -7,12 +7,12 @@ import {
   setShopDivingOptions,
   setShopFeature,
 } from "@/db/shops";
-import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements, hrefsIn, inputNamesIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
+import { listShopStaff } from "../../../../../features/staff-accounts/store";
 
 const ctx = fileScopedShopContext();
 

@@ -120,6 +120,6 @@
     "visual": ["party-waiver-held-medical", "party-waiver-queue"]
   },
   "/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/[bookingId]/doctor": {
-    "exempt": "The same DoctorReferralSheet the diver's doctor's page prints, which the waiver-doctor capture photographs; only the door differs (the desk's counter queue, issue #3984), and src/db/party-waiver-queue.test.ts holds its reader (getCounterDoctorReferral) against a real record: the seat on the queue, waiting on a physician, its answers off the paper."
+    "exempt": "The same DoctorReferralSheet the diver's doctor's page prints, which the waiver-doctor capture photographs; only the door differs (the desk's counter queue, issue #3984), and src/features/party-waiver-queue/store.test.ts holds its reader (getCounterDoctorReferral) against a real record: the seat on the queue, waiting on a physician, its answers off the paper."
   }
 }

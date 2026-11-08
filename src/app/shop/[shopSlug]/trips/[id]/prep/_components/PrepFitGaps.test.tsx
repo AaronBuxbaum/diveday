@@ -2,8 +2,8 @@
 
 import { cleanup, render, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { TripPrep } from "@/db/trip-prep";
 import { buildDivePrepChecklist } from "@/lib/dive-prep";
+import type { TripPrep } from "../../../../../../../features/trip-prep/store";
 import { PrepFitGaps } from "./PrepFitGaps";
 import { byText, diver, everyPanelPrep, heldPrep, t, tokens, viewOf } from "./prep-test-fixtures";
 

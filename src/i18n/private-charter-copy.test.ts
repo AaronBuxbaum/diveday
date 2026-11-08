@@ -6,8 +6,8 @@ import { STAFF_MESSAGES } from "./staff-messages";
  * **What "Private charter" actually buys a shop** (issue #1465).
  *
  * The box writes one column, `trips.is_private`, and every public *listing*
- * honours it — `src/db/trip-stages.ts`, `src/db/dive-sites.ts` and
- * `src/db/booking-handoff.ts` all filter `eq(trips.isPrivate, false)`. The
+ * honours it — `src/features/trip-stages/store.ts`, `src/db/dive-sites.ts` and
+ * `src/features/booking-handoff/store.ts` all filter `eq(trips.isPrivate, false)`. The
  * departure's own page does not: `getTripWithBooked` (src/db/trips-record.ts)
  * keys on id, shop and `liveTrip()` and nothing else, so
  * `/s/{shop}/trips/{id}` renders the site, the times, the crew and the price

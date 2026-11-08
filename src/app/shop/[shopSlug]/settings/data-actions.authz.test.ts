@@ -1,7 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { recordProcessorErasureObligations } from "@/db/processor-erasure";
 import { people, processorErasureObligations, userAccounts } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -11,6 +10,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { recordProcessorErasureObligations } from "../../../../features/processor-erasure/store";
 
 /**
  * The two processor-erasure actions are owner-only (`canPersonErasePersonalData`),
@@ -32,19 +32,20 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", async () =>
+vi.mock("../../../../features/session/rules", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 // Never reach Stripe: a refused retry must not call it, and an allowed one is
 // not what this file proves.
-vi.mock("@/db/processor-erasure", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/processor-erasure")>();
+vi.mock("../../../../features/processor-erasure/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../features/processor-erasure/store")>();
   return { ...actual, retryProcessorErasure: vi.fn(actual.retryProcessorErasure) };
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
-const { retryProcessorErasure } = await import("@/db/processor-erasure");
+const { requireStaffSession } = await import("../../../../features/session/rules");
+const { retryProcessorErasure } = await import("../../../../features/processor-erasure/store");
 const { dischargeProcessorErasureAction, retryProcessorErasureAction } = await import(
   "./data-actions"
 );

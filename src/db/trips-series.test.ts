@@ -7,6 +7,7 @@ import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-tim
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail } from "@/test/fakes";
+import { createTripLens } from "../features/trip-lenses/store";
 import { callTripBlowout, getTripBlowout } from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { listDiveSites } from "./dive-sites";
@@ -22,7 +23,6 @@ import {
   trips,
 } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { createTripLens } from "./trip-lenses";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,

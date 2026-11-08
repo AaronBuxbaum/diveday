@@ -9,7 +9,7 @@ import {
   postgresTestDb,
   waitForLockWaiters,
 } from "@/test/postgres";
-import { offerBookingHandoffByEmail } from "./booking-handoff";
+import { offerBookingHandoffByEmail } from "../features/booking-handoff/store";
 import { latestDeliveryOnly } from "./latest-delivery";
 import { drainNotificationRetries } from "./notifications";
 import {

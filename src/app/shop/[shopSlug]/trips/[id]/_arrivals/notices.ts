@@ -1,6 +1,10 @@
-import type { ArrivalOfflineRefusal, CheckInOutcome, UndoCheckInOutcome } from "@/db/check-in";
-import type { MarkNoShowOutcome, UndoNoShowOutcome } from "@/db/no-show";
-import type { TurnAwayOutcome } from "@/db/turn-away";
+import type {
+  ArrivalOfflineRefusal,
+  CheckInOutcome,
+  UndoCheckInOutcome,
+} from "@/features/check-in";
+import type { MarkNoShowOutcome, UndoNoShowOutcome } from "@/features/no-show";
+import type { TurnAwayOutcome } from "@/features/turn-away";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 

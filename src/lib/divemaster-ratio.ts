@@ -104,7 +104,7 @@ export function divemasterRatioGap(input: {
   divemasterCount: number;
   /**
    * The shop's target, or null when the shop does not plan its crew in
-   * DiveDay (`shopCrewTarget`, src/lib/crew-schedule.ts) — a shop that keeps
+   * DiveDay (`shopCrewTarget`, src/features/crew-schedule/rules.ts) — a shop that keeps
    * no roster is never told its roster is short.
    */
   diversPerDivemaster: number | null;

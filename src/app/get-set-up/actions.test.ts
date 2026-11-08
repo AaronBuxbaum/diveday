@@ -1,13 +1,13 @@
 import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { recordSetupRequest } from "@/db/funnel";
 import { setupRequests } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { SETUP_REQUESTS_PER_HOUR } from "@/lib/setup-requests";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+import { recordSetupRequest } from "../../features/funnel/store";
 
 const ctx = fileScopedShopContext();
 
@@ -35,7 +35,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.9") }));
-vi.mock("@/lib/pricing-arm-request", () => ({
+vi.mock("../../features/pricing-arm-request/rules", () => ({
   requestVisitorArm: vi.fn(async (): Promise<string | null> => null),
 }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
@@ -158,7 +158,7 @@ describe("submitSetupRequestAction", () => {
   });
 
   it("records the pricing arm the reader was shown (ADR 20261022-pricing-ab-test)", async () => {
-    const { requestVisitorArm } = await import("@/lib/pricing-arm-request");
+    const { requestVisitorArm } = await import("../../features/pricing-arm-request/rules");
     vi.mocked(requestVisitorArm).mockResolvedValueOnce("percent_of_volume");
     await submit(setUpForm());
     const [row] = await db.select().from(setupRequests);
@@ -197,7 +197,7 @@ describe("submitSetupRequestAction", () => {
    * request's answers. The reader of the thank-you page is never handed it.
    */
   it("mails onboarding a setup link that opens the form for this request, once", async () => {
-    const { openSetupLink, spendSetupLink } = await import("@/db/setup-links");
+    const { openSetupLink, spendSetupLink } = await import("../../features/setup-links/store");
     expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
     const sent = vi
       .mocked(notify)

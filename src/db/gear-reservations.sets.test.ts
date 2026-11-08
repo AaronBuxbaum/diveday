@@ -1,6 +1,13 @@
 import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  aSetOut,
+  gearShopContext,
+  mustCreate,
+  SETUP_PICK,
+  shopBooking,
+} from "../test/substrate-fixtures/db/gear-test-fixtures";
 import { cancelBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { listAvailableGearUnits } from "./gear-availability";
@@ -12,13 +19,6 @@ import {
   returnGearReservation,
   returnTripGearSet,
 } from "./gear-reservations";
-import {
-  aSetOut,
-  gearShopContext,
-  mustCreate,
-  SETUP_PICK,
-  shopBooking,
-} from "./gear-test-fixtures";
 import { gearItems, gearReservations, gearServiceEvents } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test

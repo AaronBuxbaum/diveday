@@ -5,7 +5,11 @@ import { getDb } from "@/db/client";
 import { countPendingCrewNotices, previewCrewNotices } from "@/db/crew-notices";
 import { people } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
+import {
+  e2eTestRouteAuthorized,
+  requireDemoTenant,
+  testRouteRefused,
+} from "@/features/e2e-test-routes";
 
 /**
  * **What a crew member would be told, without telling them** (ADR

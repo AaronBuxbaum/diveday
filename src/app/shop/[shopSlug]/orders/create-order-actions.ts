@@ -7,14 +7,14 @@ import { getDb } from "@/db/client";
 import { createOrder, type NewOrderLineItem } from "@/db/orders";
 import { orderLineItemKind } from "@/db/schema";
 import { getShopCurrency, getShopTaxEnabled } from "@/db/stripe-accounts";
+import { formValue, readForm, text, trimmedText } from "@/features/form-parse";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { customerAddressFromForm } from "@/features/payments";
+import { requireStaffSession } from "@/features/session";
 import { addPanelHref } from "@/lib/add-panel";
-import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { majorToMinor } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { customerAddressFromForm } from "@/lib/payments/customer-address-form";
 import type { InvoiceCustomerAddress } from "@/lib/payments/invoicing";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   invoiceAttemptFromForm,

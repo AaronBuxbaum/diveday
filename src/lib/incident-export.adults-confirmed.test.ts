@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import {
+  baseInput,
+  diver,
+  manifestsFor,
+} from "../test/substrate-fixtures/lib/incident-export-test-fixtures";
 import { buildIncidentExport } from "./incident-export";
-import { baseInput, diver, manifestsFor } from "./incident-export-test-fixtures";
 
 /**
  * Issue 2808: a team "Team up each party" made on a staffer's word that

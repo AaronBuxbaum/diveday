@@ -5,13 +5,13 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
 import { commitContactImport } from "@/test/words-wiring";
+import { createDiver, editDiver } from "../features/divers/store";
+import { registerDiverAtShop } from "../features/self-registration/store";
 import { createBooking } from "./bookings";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { createDiver, editDiver } from "./divers";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
 import { people, shops, userAccounts } from "./schema";
-import { registerDiverAtShop } from "./self-registration";
 import { upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();

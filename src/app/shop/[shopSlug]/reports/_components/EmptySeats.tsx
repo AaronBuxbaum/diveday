@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import type { departuresWithEmptySeats } from "@/features/open-seats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
-import type { departuresWithEmptySeats } from "@/lib/open-seats";
 
 /** The emptiest departures named; the ledger below lists every one of the month's. */
 const LISTED = 8;

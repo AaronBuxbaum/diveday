@@ -4,13 +4,13 @@ import { Suspense } from "react";
 import { LegalDocument, LegalSection, LegalTermList } from "@/components/LegalDocument";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { proseLinkClass } from "@/components/ui/button";
+import { planCopyParams } from "@/features/billing";
+import { pricingConfig } from "@/features/pricing-flags";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { planCopyParams } from "@/lib/billing/plan-display";
 import { type PlanTerms, termsFor } from "@/lib/billing/pricing-plans";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
-import { pricingConfig } from "@/lib/pricing-flags";
 import { openGraphSite } from "@/lib/site-metadata";
 
 // `instant = true` — see the note on `/privacy`, and ADR

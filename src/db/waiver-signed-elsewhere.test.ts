@@ -2,6 +2,15 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MINUTE_MS } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  clearAnswers,
+  issueCounterLink,
+  medicalReferralAnswers,
+  now,
+  openOnDevice,
+  shopStaffer,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { activityEvents, capabilities, people, waiverRecords } from "./schema";
 import { issueAndDeliverPersonWaiver } from "./waiver-issue";
 import {
@@ -11,15 +20,6 @@ import {
   threadWaiverKey,
 } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import {
-  clearAnswers,
-  issueCounterLink,
-  medicalReferralAnswers,
-  now,
-  openOnDevice,
-  shopStaffer,
-  waiverContextFor,
-} from "./waivers-test-fixtures";
 
 /**
  * **Answers that came in after another door signed** (issue #4044). Since

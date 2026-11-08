@@ -35,7 +35,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 // The packet compares the shop it was handed with the shop's identity rows, so
 // this surface needs the whole shop row, not the id and slug the shared mock hands back.
-vi.mock("@/lib/session", async () => {
+vi.mock("../../../../../../features/session/rules", async () => {
   const base = await (await import("@/test/staff-session")).sessionMockOverStaffSession();
   const requireShopSurface = vi.fn(async (shopSlug: string) => ({
     ...(await base.requireShopSurface(shopSlug)),
@@ -43,18 +43,22 @@ vi.mock("@/lib/session", async () => {
   }));
   return { ...base, requireShopSurface };
 });
-vi.mock("@/db/trip-paper-identity", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/trip-paper-identity")>();
+vi.mock("../../../../../../features/trip-paper-identity/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../../../features/trip-paper-identity/store")>();
   return { ...actual, readTripPaperIdentity: vi.fn(actual.readTripPaperIdentity) };
 });
-vi.mock("@/db/trip-overview", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/trip-overview")>();
+vi.mock("../../../../../../features/trip-overview/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../../../features/trip-overview/store")>();
   return { ...actual, getTripOverview: vi.fn(actual.getTripOverview) };
 });
 const { getDb } = await import("@/db/client");
-const { readTripPaperIdentity } = await import("@/db/trip-paper-identity");
-const { getTripOverview } = await import("@/db/trip-overview");
-const { requireStaffSession } = await import("@/lib/session");
+const { readTripPaperIdentity } = await import(
+  "../../../../../../features/trip-paper-identity/store"
+);
+const { getTripOverview } = await import("../../../../../../features/trip-overview/store");
+const { requireStaffSession } = await import("../../../../../../features/session/rules");
 const { MedicalAlertsPacketSheet } = await import("./MedicalAlertsPacketSheet");
 
 async function ownerOnTheAlertDeparture() {

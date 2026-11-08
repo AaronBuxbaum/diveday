@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { getWorkOrderDetail } from "@/db/work-orders";
+import { requireShopSurface } from "@/features/session";
+import { getWorkOrderDetail } from "@/features/work-orders";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -8,7 +9,6 @@ import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date"
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { SheetDocument } from "../../../../print/_components/SheetDocument";

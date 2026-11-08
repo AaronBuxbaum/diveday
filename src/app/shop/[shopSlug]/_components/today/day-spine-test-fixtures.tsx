@@ -1,6 +1,6 @@
 // i18n-exempt-file: test fixture; only the day spine's tests import it, and its words are seeded data.
 import { render } from "@testing-library/react";
-import type { FirstBooking } from "@/db/first-booking";
+import type { FirstBooking } from "@/features/first-booking";
 import {
   assembleDaySpine,
   assembleEveningClose,

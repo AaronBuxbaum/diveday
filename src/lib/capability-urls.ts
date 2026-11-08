@@ -127,7 +127,7 @@ const CAPABILITY_QUERY_PARAMS = [
    */
   "setup",
   /**
-   * The founder's demo-quiet key (`src/lib/quiet-demo-device.ts`), carried as
+   * The founder's demo-quiet key (`src/features/quiet-demo-device/rules.ts`), carried as
    * `/api/demo/quiet?key=<key>`. It opens nothing but a quiet browser, and it is
    * still a standing secret. `quiet-demo-device.test.ts` asserts it is blanked.
    */

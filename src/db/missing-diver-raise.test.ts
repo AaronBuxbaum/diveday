@@ -3,6 +3,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  complete,
+  OTHER_SHOP,
+  OTHER_TRIP,
+} from "../test/substrate-fixtures/db/incident-reports-test-fixtures";
+import {
+  type Fixture,
+  MARKED_AT,
+  mark,
+  missingSeat,
+  recorder,
+  stateOf,
+} from "../test/substrate-fixtures/db/missing-diver-test-fixtures";
 import type { AppDb } from "./client";
 import {
   discardIncidentDraft,
@@ -13,16 +26,7 @@ import {
   removeIncidentPerson,
   startMissingDiverReport,
 } from "./incident-reports";
-import { complete, OTHER_SHOP, OTHER_TRIP } from "./incident-reports-test-fixtures";
 import { sendMissingDiverAlerts } from "./missing-diver-alerts";
-import {
-  type Fixture,
-  MARKED_AT,
-  mark,
-  missingSeat,
-  recorder,
-  stateOf,
-} from "./missing-diver-test-fixtures";
 import { ownerLogins } from "./owner-logins";
 import { activityEvents, incidentReportPeople, incidentReports, personRoles } from "./schema";
 

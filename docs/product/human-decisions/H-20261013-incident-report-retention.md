@@ -18,7 +18,7 @@ Which option.
 
 **Decided 2026-10-13 (Product owner: Aaron Buxbaum, in the project thread):** (b). The seven-year window is kept. Unbounded retention was built and considered the same day (PR #2529), then reversed: "I like the prior retention policy."
 
-- `RETENTION_DAYS.incident_reports` (2555 days, `src/lib/retention.ts`) and its prune arm in `src/db/retention.ts` stay as ADR [20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md) set them; the report's people and addenda go with it by cascade.
+- `RETENTION_DAYS.incident_reports` (2555 days, `src/features/retention/rules.ts`) and its prune arm in `src/features/retention/store.ts` stay as ADR [20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md) set them; the report's people and addenda go with it by cascade.
 - **Erasure is unchanged** ([H-20261013-incident-report-erasure](H-20261013-incident-report-erasure.md)): `anonymizeDiver` removes a named diver's identity from a kept report at once, and the seven-year window ends what name matching misses.
 - The privacy page says it in `privacy.keep.safety`.
 

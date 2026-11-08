@@ -25,7 +25,7 @@ teaching shop unable to enrol anyone.
   demo shop set it true, because they are where every crew surface is photographed and tested.
 - The switch is a row in Settings → Team ("Crew schedule"), and the divemaster target moved into
   it from "Diving options": the target is only ever read while the switch is on.
-- `src/lib/crew-schedule.ts` is the one place the rule lives. `shopCrewTarget(shop)` hands every
+- `src/features/crew-schedule/rules.ts` is the one place the rule lives. `shopCrewTarget(shop)` hands every
   reader of the target `null` when the switch is off, and `divemasterRatioGap` reads `null` as
   "never short" — so Today, the trip page and the planner cannot disagree.
 - **Off** removes: the Crew tab (and `/staffing`, which redirects to the week), the palette's

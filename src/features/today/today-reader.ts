@@ -12,33 +12,19 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import { listAgencyCheckableCards } from "@/db/agency-check";
-import {
-  blockedOnNextBoatDay,
-  type HorizonReadinessEvidence,
-  inHorizonReadiness,
-  type NextBoatDayBlocked,
-  sharedInHorizonReadiness,
-} from "@/db/blockers";
 import { todayBoatSafety } from "@/db/boat-safety";
-import { openSnagsForShop } from "@/db/boat-snags";
-import { readBoatWork } from "@/db/boat-work";
 import type { AppDb } from "@/db/client";
 import { courseCrewCountsByTrip } from "@/db/course-crew-counts";
-import { crewAwayByTrip } from "@/db/crew-away";
-import { diveIntentTallyForTrips } from "@/db/dive-intent";
 import {
   listFitAdjustedReturns,
   listGearDueBack,
   listGearServiceDue,
   listOverdueGearReservations,
 } from "@/db/gear";
-import { type HandledHelpRequest, listTodayHelpWork } from "@/db/help-requests";
 import { countUnansweredMessages } from "@/db/inbound-messages";
 import { listUnfiledIncidentDrafts } from "@/db/incident-reports";
 import { countWaitingDateInterests } from "@/db/interest-dates";
 import { listOpenAnytimeWindows } from "@/db/interests";
-import { countOpenLostItems } from "@/db/lost-items";
 import {
   listBoardedAtAnyCheckpointByTrip,
   listDepartureCrewRollCallByTrip,
@@ -46,10 +32,7 @@ import {
 } from "@/db/manifests";
 import { listNotificationDeliveryIssues } from "@/db/notifications";
 import { openOrdersForBookings } from "@/db/orders";
-import { listOpenPaymentDisputes } from "@/db/payment-disputes";
 import { listTripsReadiness } from "@/db/readiness";
-import { readReviewsAwaitingModeration } from "@/db/reviews";
-import { listRollCallGaps } from "@/db/roll-call-gaps";
 import { newestMarkFirst } from "@/db/roll-call-order";
 import { markBookingId, seatMarks } from "@/db/roll-call-subject";
 import {
@@ -71,8 +54,6 @@ import {
   shopStripeAccountForRender,
 } from "@/db/stripe-accounts";
 import { currentMeetingDayMarks, meetingWindowsByTrip } from "@/db/trip-meeting-windows";
-import { plannedSitesByTrip } from "@/db/trip-planned-sites";
-import { latestTripStagesByTrip } from "@/db/trip-stages";
 import {
   boatClashesByTrip,
   countShopTrips,
@@ -83,7 +64,27 @@ import {
 } from "@/db/trips";
 import { listUnfinished } from "@/db/unfinished";
 import { sharedWelcomeSeatsByTrip } from "@/db/welcome-cues";
-import { listWorkOrdersNeedingAttention } from "@/db/work-order-follow-up";
+import { listAgencyCheckableCards } from "@/features/agency-check";
+import {
+  blockedOnNextBoatDay,
+  type HorizonReadinessEvidence,
+  inHorizonReadiness,
+  type NextBoatDayBlocked,
+  sharedInHorizonReadiness,
+} from "@/features/blockers";
+import { openSnagsForShop } from "@/features/boat-snags";
+import { readBoatWork } from "@/features/boat-work";
+import { crewAwayByTrip } from "@/features/crew-away";
+import { diveIntentTallyForTrips } from "@/features/dive-intent";
+import { type HandledHelpRequest, listTodayHelpWork } from "@/features/help-requests";
+import { countOpenLostItems } from "@/features/lost-items";
+import { listOpenPaymentDisputes } from "@/features/payment-disputes";
+import { readReviewsAwaitingModeration } from "@/features/reviews";
+import { listRollCallGaps } from "@/features/roll-call-gaps";
+import type { ShopClock } from "@/features/shop-clock";
+import { plannedSitesByTrip } from "@/features/trip-planned-sites";
+import { latestTripStagesByTrip } from "@/features/trip-stages";
+import { listWorkOrdersNeedingAttention } from "@/features/work-order-follow-up";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   highWindAlertDetailText,
@@ -113,7 +114,6 @@ import {
 } from "@/lib/marine-forecast";
 import { operationalWindow } from "@/lib/operational-window";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
-import type { ShopClock } from "@/lib/shop-clock";
 import { meetsOnShopDay } from "@/lib/trip-days";
 import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
 import type { TripStageReading } from "@/lib/trip-stages";

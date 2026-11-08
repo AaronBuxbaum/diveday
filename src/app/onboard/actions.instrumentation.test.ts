@@ -59,8 +59,8 @@ const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { sendNotification } = await import("@/db/notifications");
 const { onboardAction } = await import("./actions");
-const { recordSetupRequest } = await import("@/db/funnel");
-const { issueSetupLink } = await import("@/db/setup-links");
+const { recordSetupRequest } = await import("../../features/funnel/store");
+const { issueSetupLink } = await import("../../features/setup-links/store");
 
 type TestDb = Awaited<ReturnType<typeof seededTestDb>>;
 

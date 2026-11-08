@@ -4,10 +4,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { demoteOwnerToManager } from "@/test/staff-session";
+import {
+  MARKED_AT,
+  mark,
+  missingSeat,
+  recorder,
+  stateOf,
+} from "../test/substrate-fixtures/db/missing-diver-test-fixtures";
 import type { AppDb } from "./client";
 import { markMissingDiverFound, raiseMissingDiverAlert } from "./incident-reports";
 import { sendMissingDiverAlerts, sendMissingDiverAllClear } from "./missing-diver-alerts";
-import { MARKED_AT, mark, missingSeat, recorder, stateOf } from "./missing-diver-test-fixtures";
 import { incidentReports, personRoles, userAccounts } from "./schema";
 
 // The boat's followers are pushed by the alarm; never sent here.

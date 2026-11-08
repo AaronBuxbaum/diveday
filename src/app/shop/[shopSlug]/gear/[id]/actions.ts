@@ -12,9 +12,11 @@ import {
   setGearItemStatus,
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
+import { checkbox, parseForm, single } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { checkbox, parseForm, single } from "@/lib/form-parse";
 import {
   GEAR_KIND_ORDER,
   GEAR_SERVICE_KINDS,
@@ -22,9 +24,7 @@ import {
   type GearServiceKind,
   parseWetsuitThicknessMm,
 } from "@/lib/gear";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 // Copied, because `GEAR_KIND_ORDER` is `as const` so a gear kind with no

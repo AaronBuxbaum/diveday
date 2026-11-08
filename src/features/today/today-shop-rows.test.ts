@@ -6,10 +6,8 @@ import { markInboundAnswered, recordInboundMessage } from "@/db/inbound-messages
 import { startIncidentReport } from "@/db/incident-reports";
 import { setDateInterestOutcome } from "@/db/interests";
 import { queueMediaDeletion, resolveMediaDeletion } from "@/db/media-deletions";
-import { recordStripeDispute } from "@/db/payment-disputes";
 import { startPaymentOperation } from "@/db/payment-operations";
 import { setBookingPayment } from "@/db/payments";
-import { submitTripReview } from "@/db/reviews";
 import {
   inboundMessages,
   incidentReports,
@@ -26,8 +24,10 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { unansweredMessagesSubjectText } from "@/i18n/today-labels";
 import { nowDate, nowMs } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
-import { shopClock } from "@/lib/shop-clock";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
+import { recordStripeDispute } from "../payment-disputes/store";
+import { submitTripReview } from "../reviews/store";
+import { shopClock } from "../shop-clock/rules";
 import type { TodayAction } from "./today";
 import { getTodayWork } from "./today-reader";
 import { rowsContext } from "./today-rows-test-fixtures";

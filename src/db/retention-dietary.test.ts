@@ -2,13 +2,13 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { DAY_MS, nowDate } from "@/lib/clock";
-import { DIETARY_NOTE_RETENTION_DAYS } from "@/lib/retention";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { DIETARY_NOTE_RETENTION_DAYS } from "../features/retention/rules";
 import {
   clearExpiredDietaryNotes,
   drainExpiredDietaryNotes,
   pruneExpiredRecords,
-} from "./retention";
+} from "../features/retention/store";
 import { bookings, people, trips } from "./schema";
 
 const ctx = fileScopedShopContext();

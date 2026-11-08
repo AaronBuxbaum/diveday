@@ -170,7 +170,7 @@ export function guardianSignatureMissing(
 /**
  * The guardian half of a record, for a surface that shows a signature — or
  * null when nobody co-signed, or when erasure has taken the name
- * (`src/db/anonymize.ts` strips it and keeps the fact of the signature).
+ * (`src/features/anonymize/store.ts` strips it and keeps the fact of the signature).
  */
 export function guardianSignatureOf(
   record: Pick<WaiverRecord, "guardianSignedAt" | "guardianName" | "guardianRelationship">,

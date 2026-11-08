@@ -1,6 +1,6 @@
+import { verifyScheduleMoveResult } from "@/features/schedule-move-result";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
-import { verifyScheduleMoveResult } from "@/lib/schedule-move-result";
 import { noticeFromParam } from "@/lib/staff-notices";
 
 /**

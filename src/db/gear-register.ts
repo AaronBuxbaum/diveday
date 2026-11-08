@@ -47,7 +47,7 @@ export type GearRowReservation = {
   reservationId: string;
   /**
    * The seat this unit rides on, or null for a **counter rental** — a unit
-   * lent to a person who is not on a boat (`src/db/gear-counter-rentals.ts`).
+   * lent to a person who is not on a boat (`src/features/gear-counter-rentals/store.ts`).
    * The holder's name reads the same either way.
    */
   bookingId: string | null;

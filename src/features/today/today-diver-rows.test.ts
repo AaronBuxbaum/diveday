@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { ReadinessBlocker } from "@/lib/readiness";
-import { urgencyFor } from "@/lib/today-urgency";
+import { urgencyFor } from "../today-urgency/rules";
 import {
   BOAT_ROWS_SHOWN,
   blockedDiverActions,

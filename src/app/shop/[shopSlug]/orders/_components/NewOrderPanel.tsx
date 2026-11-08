@@ -1,13 +1,13 @@
 import { AddPanel } from "@/components/AddPanel";
 import { keptTypedScope } from "@/components/kept-typed-scope";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { getOrderNewPage } from "@/db/order-new-page";
+import { getOrderNewPage } from "@/features/order-new-page";
+import type { ShopSurface } from "@/features/session";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
 import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
-import type { ShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { invoiceTargetKey } from "../_lib/order-form";

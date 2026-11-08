@@ -2,10 +2,10 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { unseededTestDb } from "@/test/db";
-import { recordSetupRequest } from "./funnel";
+import { recordSetupRequest } from "../features/funnel/store";
+import { issueSetupLink } from "../features/setup-links/store";
+import { createSignedUpShop } from "../features/shop-signup/store";
 import { preDepartureChecklistItems } from "./schema";
-import { issueSetupLink } from "./setup-links";
-import { createSignedUpShop } from "./shop-signup";
 
 async function signUp(slug: string) {
   const db = await unseededTestDb();

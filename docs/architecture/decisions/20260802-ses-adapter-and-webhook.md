@@ -58,7 +58,7 @@ still signs *something* without actually being correct.
   `DeliveryDelay`/`Reject`/`RenderingFailure` events translate onto the identical `ProviderEmailStatus`
   union, so the dashboard/issue-surfacing code downstream needs no changes at all to support a second
   provider.
-- **SNS message verification is hand-rolled** (`src/lib/notifications/sns.ts`), because there is no
+- **SNS message verification is hand-rolled** (`src/features/sns-webhook/rules.ts`), because there is no
   official AWS SDK helper for verifying an inbound SNS HTTP(S) notification's signature — the SDK
   signs *outbound* AWS API calls, which is a different problem than verifying a message SNS sent
   *to* us. This is genuinely security-sensitive, hand-written code and gets a `security-reviewer` pass

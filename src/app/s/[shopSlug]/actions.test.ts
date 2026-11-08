@@ -30,7 +30,7 @@ vi.mock("next/server", () => ({
 }));
 
 const sendFindMyBookingLinks = vi.fn((..._args: unknown[]) => new Promise(() => {}));
-vi.mock("@/db/find-my-booking", () => ({ sendFindMyBookingLinks }));
+vi.mock("../../../features/find-my-booking/store", () => ({ sendFindMyBookingLinks }));
 
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 

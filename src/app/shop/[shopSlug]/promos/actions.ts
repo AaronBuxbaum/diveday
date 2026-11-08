@@ -11,10 +11,10 @@ import {
   setShopPromoEnabled,
 } from "@/db/shop-promos";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
-import { checkbox, formValue, readForm, text } from "@/lib/form-parse";
+import { checkbox, formValue, readForm, text } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import { majorToMinor, minorToMajor, toShopCurrency } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**

@@ -25,7 +25,7 @@ export function ArrivalMap({ title, src }: { title: string; src: string }) {
        **`no-referrer`, not `strict-origin-when-cross-origin`.** An element's
        own `referrerpolicy` overrides the document's, and the one caller is
        `/ready/[token]`, which `TOKEN_ROUTE_PREFIXES`
-       (`src/lib/security-headers.ts`) serves under `Referrer-Policy:
+       (`src/features/security-headers/rules.ts`) serves under `Referrer-Policy:
        no-referrer` precisely because a bearer-token route has "no legitimate
        cross-origin use" for a referrer at all, not even the origin-only form.
        A map embed needs no referrer, so it asks for none

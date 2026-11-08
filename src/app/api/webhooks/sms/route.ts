@@ -1,13 +1,12 @@
 import { getDb } from "@/db/client";
 import { applyProviderEmailEvent } from "@/db/notifications";
-import { markPhoneRunningLate } from "@/db/running-late";
 import { recordSmsKeyword } from "@/db/sms-opt-outs";
-import { shopForSmsSender } from "@/db/sms-sender";
+import { markPhoneRunningLate } from "@/features/running-late";
+import { shopForSmsSender } from "@/features/sms-sender";
+import { parseSmsDeliveryEvent, parseSmsReply } from "@/features/sms-webhook";
+import { gateSnsWebhook } from "@/features/sns-webhook";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
-import { parseSmsDeliveryEvent } from "@/lib/notifications/sms-events";
-import { parseSmsReply } from "@/lib/notifications/sms-replies";
-import { gateSnsWebhook } from "@/lib/notifications/sns-webhook";
 
 /**
  * SMS delivery receipts (docs ADR 20260802-sms-delivery-receipts), and the

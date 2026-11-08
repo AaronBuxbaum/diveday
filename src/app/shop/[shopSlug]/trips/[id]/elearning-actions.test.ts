@@ -25,10 +25,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { elearningCheckAction } = await import("./elearning-actions");
 
 const EMAIL = "lena.ortiz@example.com";
@@ -322,7 +322,7 @@ describe("elearningCheckAction", () => {
 describe("the course roster's eLearning check", () => {
   it("is offered only at a shop that turned PADI checks on", async () => {
     const { db, shop, tripId, bookingId } = await context();
-    const { getTripGuests } = await import("@/db/trip-guests");
+    const { getTripGuests } = await import("../../../../../features/trip-guests/store");
 
     const on = await getTripGuests(db, { ...shop, padiChecksEnabled: true }, tripId);
     const off = await getTripGuests(db, { ...shop, padiChecksEnabled: false }, tripId);

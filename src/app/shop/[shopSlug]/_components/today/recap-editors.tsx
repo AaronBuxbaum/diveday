@@ -6,12 +6,12 @@ import {
   toggleRecapAutoSendPauseAction,
   uploadCrewRecapPhotoAction,
 } from "@/app/shop/[shopSlug]/actions";
-import { assistsAvailable } from "@/db/assists";
 import type { AppDb } from "@/db/client";
+import { assistsAvailable } from "@/features/assists";
+import { recapAutoSendAt } from "@/features/recap";
 import type { getDayCloseout } from "@/features/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { recapAutoSendAt } from "@/lib/recap-schedule";
 import { draftRecapLineAction } from "../../recap-assist-action";
 import { RecapNoteEditor } from "./RecapNoteEditor";
 import { recapStatusLine } from "./recap-status";

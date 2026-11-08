@@ -5,20 +5,20 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
 import { getShopById } from "@/db/shops";
-import { hasRequiredStepUp } from "@/db/step-up";
 import {
   disconnectShopBackupDestination,
+  recordShopBackupDestination,
   runShopBackup,
   type SaveBackupDestinationRefusal,
-  saveShopBackupDestination,
 } from "@/features/backup-export";
+import { parseForm, single } from "@/features/form-parse";
+import { type NoticeRedirect, revalidateWithNotice } from "@/features/navigation";
+import { stepUpChallengeUrl } from "@/features/security-step-up";
+import { requireStaffSession } from "@/features/session";
+import { hasRequiredStepUp } from "@/features/step-up";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { parseForm, single } from "@/lib/form-parse";
-import { type NoticeRedirect, revalidateWithNotice } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications/app-url";
-import { stepUpChallengeUrl } from "@/lib/security-step-up";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**
@@ -110,7 +110,7 @@ export async function saveBackupDestinationAction(formData: FormData): Promise<v
   const parsed = parseForm(destinationSchema, formData);
   if (!parsed.ok) done(path, "invalid");
 
-  const result = await saveShopBackupDestination(db, { shopId, ...parsed.data });
+  const result = await recordShopBackupDestination(db, { shopId, ...parsed.data });
   if (result.status === "refused") done(path, result.reason);
   done(path, "saved");
 }

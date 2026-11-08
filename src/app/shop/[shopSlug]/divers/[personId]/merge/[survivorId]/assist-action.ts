@@ -1,12 +1,12 @@
 "use server";
 
-import { runAssist } from "@/db/assists";
 import { canPersonMergeDiver } from "@/db/authz";
-import { readUnsurePair } from "@/db/desk-assists";
+import { runAssist } from "@/features/assists";
+import { readUnsurePair } from "@/features/desk-assists";
+import { SAME_PERSON_FEATURE, samePersonCall, samePersonRead } from "@/features/same-person";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { SAME_PERSON_FEATURE, samePersonCall, samePersonRead } from "@/lib/assists/same-person";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
 /**

@@ -1,9 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { DIVE_SITE_IMPORT_COLUMNS, prepareDiveSiteImport } from "@/lib/dive-site-import";
 import { buildCsv } from "@/lib/export";
 import { unseededTestDb } from "@/test/db";
-import { commitDiveSiteImport } from "./dive-site-import";
+import {
+  DIVE_SITE_IMPORT_COLUMNS,
+  prepareDiveSiteImport,
+} from "../features/dive-sites/dive-site-import.rules";
+import { commitDiveSiteImport } from "../features/dive-sites/dive-site-import.store";
 import { diveSites, people, shops } from "./schema";
 
 async function bareContext() {

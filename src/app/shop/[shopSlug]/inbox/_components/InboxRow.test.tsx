@@ -3,9 +3,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
-import type { InboxSeat } from "@/db/inbox-seats";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
+import type { InboxSeat } from "../../../../../features/inbox-seats/store";
 import { InboxRow } from "./InboxRow";
 
 afterEach(cleanup);

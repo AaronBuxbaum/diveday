@@ -6,7 +6,7 @@
 // manifests, roll call, readiness, cert gating, medical flags and erasure; `security-reviewer`
 // for auth, tokens, personal or medical data, and export/import. Nothing checked it. Between
 // 2026-10-07 and 2026-10-10, 17 of 85 merged pull requests mentioned a reviewer anywhere, while
-// `src/lib/manifests.ts`, `src/db/seat-diver.ts` and the course-form seal all changed. A launch
+// `src/lib/manifests.ts`, `src/features/seat-diver/store.ts` and the course-form seal all changed. A launch
 // that is not written down cannot be told from one that never happened, so the body is where
 // it is recorded (`.github/pull_request_template.md`), and this reads it.
 //
@@ -62,6 +62,11 @@ const WAIVER_SURFACES = {
 };
 
 /** The security reviewer's waiver modules (their tests are not security surfaces). */
+const FEATURE_SAFETY_MODULES =
+  /^src\/features\/(?:check-in|aboard-at-sea|guardian[^/]*|course-certified[^/]*|pre-departure[^/]*|staff-gates[^/]*|signatures[^/]*|depth-ceiling[^/]*|requirement[^/]*|bookings|booking-gates[^/]*|course-admission[^/]*|cert-actions[^/]*|card-(?:restore|undo)[^/]*)(?:\/|$)/;
+const FEATURE_SECURITY_MODULES =
+  /^src\/features\/(?:auth|authz|auth-secret|session|card-(?:restore|undo)[^/]*|export[^/]*|import[^/]*|payments|waivers?[^/]*)(?:\/|$)/;
+
 const WAIVER_MODULES = /^src\/(db|lib)\/waivers?[^/]*\.ts$/;
 
 /** The framing of a safety review, named on its "Reviews launched" line (one run, not two: experience over speculative hardening, 2026-11-06). */
@@ -81,6 +86,7 @@ export const REVIEWS = [
     surface:
       "safety-critical (manifests, roll call, readiness, cert gating, medical, waivers, erasure, the booking transaction)",
     patterns: [
+      /^src\/features\/check-in\//,
       /manifest/,
       /roll-?call/,
       /readiness/,
@@ -93,6 +99,8 @@ export const REVIEWS = [
       /seat-diver/,
       /nitrox/,
       WAIVER_SURFACES,
+      FEATURE_SAFETY_MODULES,
+      /^src\/features\/cert-scan\/.*\.ts$/,
       // Modules that decide a seat's or a signature's standing without naming a waiver or a
       // manifest (reviews 1, 2026-11-01).
       /^src\/(db|lib)\/check-in[^/]*\.ts$/,
@@ -135,6 +143,7 @@ export const REVIEWS = [
       /medical/,
       /erase|erasure|anonymi[sz]/,
       WAIVER_MODULES,
+      FEATURE_SECURITY_MODULES,
       /^src\/lib\/payments\//,
       /^src\/app\/api\/webhooks\//,
     ],

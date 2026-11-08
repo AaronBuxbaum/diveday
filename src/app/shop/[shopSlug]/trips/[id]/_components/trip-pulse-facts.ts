@@ -1,15 +1,14 @@
 import { quietIcon } from "@/app/shop/[shopSlug]/_components/today/row-glyph";
 import { rowLine } from "@/app/shop/[shopSlug]/_components/today/spine-reading";
-import type { getTripOverview } from "@/db/trip-overview";
+import { type BoatWorkItem, boatWorkItems, boatWorkText } from "@/features/boat-work";
 import { rowTone, type TodayAction } from "@/features/today";
-import { boatWorkText } from "@/i18n/boat-work-labels";
+import { countsAsJob } from "@/features/today-job";
+import type { getTripOverview } from "@/features/trip-overview";
 import { overRatioPulseKey } from "@/i18n/crew-gap-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
-import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
-import { countsAsJob } from "@/lib/today-job";
 import type { TodayActionKind } from "@/lib/today-kinds";
 
 // `instant = true` asserts that navigating *into* this page paints

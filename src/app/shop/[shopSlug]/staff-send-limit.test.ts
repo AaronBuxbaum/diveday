@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { bookings, userAccounts } from "@/db/schema";
-import { inviteStaffMember } from "@/db/staff-accounts";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -10,6 +9,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { inviteStaffMember } from "../../../features/staff-accounts/store";
 
 /**
  * **A staff member past the hourly send bound** (`RATE_LIMITS.staffSendByActor`)
@@ -52,8 +52,8 @@ vi.mock("@/db/staff-reply", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/staff-reply")>();
   return { ...actual, sendStaffReply: vi.fn() };
 });
-vi.mock("@/db/interest-replies", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/interest-replies")>();
+vi.mock("../../../features/interest-replies/store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../features/interest-replies/store")>();
   return { ...actual, sendInterestReply: vi.fn() };
 });
 vi.mock("@/db/orders", async (importOriginal) => {
@@ -64,8 +64,8 @@ vi.mock("@/db/waiver-issue", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/waiver-issue")>();
   return { ...actual, deliverWaiverBatch: vi.fn() };
 });
-vi.mock("@/db/recap", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/recap")>();
+vi.mock("../../../features/recap/store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../features/recap/store")>();
   return { ...actual, sendTripRecaps: vi.fn() };
 });
 vi.mock("@/db/held-sends", async (importOriginal) => {
@@ -82,7 +82,7 @@ const { auth } = await import("@/lib/auth");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { sendNotification } = await import("@/db/notifications");
 const { sendStaffReply } = await import("@/db/staff-reply");
-const { sendInterestReply } = await import("@/db/interest-replies");
+const { sendInterestReply } = await import("../../../features/interest-replies/store");
 const { resendOrderInvoice } = await import("@/db/orders");
 const { deliverWaiverBatch } = await import("@/db/waiver-issue");
 const { retireMedicalRefusal } = await import("@/db/waivers");
@@ -90,7 +90,7 @@ const { sendNewWaiverAction } = await import("./trips/[id]/roster-waiver-actions
 const { replyToDiverAction } = await import("./divers/[personId]/details-actions");
 const { inviteStaffAction, resendInviteAction } = await import("./settings/team/actions");
 const { resendInvoiceAction } = await import("@/app/actions/invoices");
-const { sendTripRecaps } = await import("@/db/recap");
+const { sendTripRecaps } = await import("../../../features/recap/store");
 const { holdSend } = await import("@/db/held-sends");
 const { sendRecapAction } = await import("./actions");
 const { replyToRequestAction } = await import("./requests/actions");

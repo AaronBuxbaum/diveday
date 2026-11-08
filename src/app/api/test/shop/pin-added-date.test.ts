@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createDiver } from "@/db/divers";
 import { people, shops } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { createDiver } from "../../../../features/divers/store";
 
 const ctx = fileScopedShopContext();
 

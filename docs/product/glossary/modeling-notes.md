@@ -152,7 +152,7 @@
   The list (`otherSameNamePeople`) offers the shop's other live people with exactly that name (trimmed,
   lower-cased; not removed, erased or merged) **by name only**, each beside a link to their record
   for the staffer to check, and never pre-picks one. `repointHeldBooking`
-  (`src/db/identity-repoint.ts`) moves the booking, its gear and its unsigned links to the chosen
+  (`src/features/identity-repoint/store.ts`) moves the booking, its gear and its unsigned links to the chosen
   person in one transaction and **keeps the seat held**: it confirms nothing, and "Same person" is
   then asked of the new match. Otherwise it is the split's: the booker's other same-name held seats
   move along when ticked, a medical hold refuses the lot, every release is superseded and every

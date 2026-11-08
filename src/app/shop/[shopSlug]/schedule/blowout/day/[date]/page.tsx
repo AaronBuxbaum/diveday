@@ -17,6 +17,7 @@ import {
   type DayBlowoutDepartureRow,
   listDayBlowoutDepartures,
 } from "@/db/blowouts";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
@@ -31,7 +32,6 @@ import {
   isDayBlowoutPick,
 } from "@/lib/day-blowout";
 import { formatTimeRangeTz } from "@/lib/format";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { blowoutPath } from "../../../../trips/[id]/_components/blowout/blowout-path";

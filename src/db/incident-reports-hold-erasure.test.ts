@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { complete, fixture } from "../test/substrate-fixtures/db/incident-reports-test-fixtures";
 import {
   fileIncidentReport,
   getIncidentReport,
@@ -9,7 +10,6 @@ import {
   setIncidentLegalHold,
   startIncidentReport,
 } from "./incident-reports";
-import { complete, fixture } from "./incident-reports-test-fixtures";
 import { incidentReports } from "./schema";
 
 const ctx = fileScopedShopContext();

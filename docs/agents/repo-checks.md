@@ -45,11 +45,11 @@ The CI-change-detection one (`scripts/check-ci-change-detection.mjs`) reads the 
 
 ### sentry-imports
 
-The sentry-imports one (`scripts/check-sentry-imports.mjs`) refuses any static import of `@sentry/nextjs` under `src/app` that binds a value: a namespace, a default or a named binding. `import type`, a dynamic `import()` and test files pass. Fifteen cron routes and both webhooks opened with `import * as Sentry from "@sentry/nextjs"`, so every cold start of every cron evaluated the SDK and its 1.2 MB server chunk before the route had checked its bearer token, in builds with no DSN too (code review 2026-10-13, item 28). A route reports through `sentry` in `src/lib/observability/sentry.ts`, which imports the SDK on first use and only when a DSN is configured, the shape `src/instrumentation.ts` already had; the root `global-error.tsx` imports it inside its handler.
+The sentry-imports one (`scripts/check-sentry-imports.mjs`) refuses any static import of `@sentry/nextjs` under `src/app` that binds a value: a namespace, a default or a named binding. `import type`, a dynamic `import()` and test files pass. Fifteen cron routes and both webhooks opened with `import * as Sentry from "@sentry/nextjs"`, so every cold start of every cron evaluated the SDK and its 1.2 MB server chunk before the route had checked its bearer token, in builds with no DSN too (code review 2026-10-13, item 28). A route reports through `sentry` in `src/features/sentry-server/rules.ts`, which imports the SDK on first use and only when a DSN is configured, the shape `src/instrumentation.ts` already had; the root `global-error.tsx` imports it inside its handler.
 
 ### assist-prompts
 
-The assist-prompts one (`scripts/check-assist-prompts.mjs`) holds the Claude assists' rule that a medical answer never reaches a prompt (ADR 20261018-claude-assists). Nothing in the seam can enforce it, because `runAssist` sends whatever its caller built, so the guard is on what a prompt-building module can reach: every module under src/lib/assists, and every module that imports `@/db/assists`, may not import a module whose path names `medical`, `questionnaire` or `waiver-records`, nor `@/lib/waivers` or `@/db/waivers`, and may not name `medicalAnswers` at all. Tests and `src/db/assists.ts` itself pass. It came from the L1 security review (note N2): the rule was in the plan and nowhere else.
+The assist-prompts one (`scripts/check-assist-prompts.mjs`) holds the Claude assists' rule that a medical answer never reaches a prompt (ADR 20261018-claude-assists). Nothing in the seam can enforce it, because `runAssist` sends whatever its caller built, so the guard is on what a prompt-building module can reach: every module under src/lib/assists, and every module that imports `@/db/assists`, may not import a module whose path names `medical`, `questionnaire` or `waiver-records`, nor `@/lib/waivers` or `@/db/waivers`, and may not name `medicalAnswers` at all. Tests and `src/features/assists/store.ts` itself pass. It came from the L1 security review (note N2): the rule was in the plan and nowhere else.
 
 ### infra-ASCII
 
@@ -344,7 +344,7 @@ The live-people-read one (`scripts/check-live-people.mjs`) fails a `.from(people
 
 ### event-scope
 
-The event-scope one (`scripts/check-event-scope.mjs`) fails a `.from(<table>)` on an append-only event table that does not name `<table>.shopId` inside the query, before the next `.from(`, and does not say `diveday:allow-unscoped-event: <why>`. The tables are every `export const <name>Events = pgTable` in `src/db/schema/` that declares `shopId`, plus `executedDives`, `recapPhotos` and `tripRecapPhotos`; each index leads with `shop_id`. A read by trip or parent id alone is right today, because the id belongs to one shop, but the tenant boundary then rests on the id rather than on the column that states it, and the read misses the index. The 2026-10-11 review fixed two roll-call reads of that shape; the next day `src/db/rehearsals.ts`, which a nightly cron runs across every shop, wrote it again, and the 2026-10-13 review found three siblings from 2026-10-05 (`trips-crew.ts`, `recap.ts`, `pre-departure-check.ts`). Writing the guard found six more (the review-moderation trail, the work-order trail, the diver recap-photo counts). `src/db/retention.ts` is skipped whole: the prune is across shops by design.
+The event-scope one (`scripts/check-event-scope.mjs`) fails a `.from(<table>)` on an append-only event table that does not name `<table>.shopId` inside the query, before the next `.from(`, and does not say `diveday:allow-unscoped-event: <why>`. The tables are every `export const <name>Events = pgTable` in `src/db/schema/` that declares `shopId`, plus `executedDives`, `recapPhotos` and `tripRecapPhotos`; each index leads with `shop_id`. A read by trip or parent id alone is right today, because the id belongs to one shop, but the tenant boundary then rests on the id rather than on the column that states it, and the read misses the index. The 2026-10-11 review fixed two roll-call reads of that shape; the next day `src/db/rehearsals.ts`, which a nightly cron runs across every shop, wrote it again, and the 2026-10-13 review found three siblings from 2026-10-05 (`trips-crew.ts`, `recap.ts`, `pre-departure-check.ts`). Writing the guard found six more (the review-moderation trail, the work-order trail, the diver recap-photo counts). `src/features/retention/store.ts` is skipped whole: the prune is across shops by design.
 
 ### staff-events
 
@@ -356,7 +356,7 @@ The roll-call-subject one (`scripts/check-roll-call-subject.mjs`) fails a query 
 
 ### slug-action
 
-The slug-action one (`scripts/check-slug-actions.mjs`) fails a `"use server"` module whose exported action takes `shopSlug` and reaches `requireStaffSession(`, in its own body or through a function of the same module it calls. A slug carried inside a parameter counts too: `ctx.shopSlug` read off a parameter, or a parameter handed to a same-module function that takes the slug (`manifestPath(ctx)` destructuring `{ shopSlug }`). The security review of the 2026-10-11 work found thirteen manifest actions that the parameter-name test could not see. A server action's arguments are whatever the browser posts, a slug bound into a form included. The writes behind these actions are scoped by `session.user.shopId`, so a foreign slug never reached another tenant's rows, but it steered the rest: `revalidatePath` on another shop's board, Today and public course page, and the redirect that carries a notice. `requireShopSurface(shopSlug)` (`src/lib/session.ts`) is a 404 for a slug that is not the session's shop; an action that takes no slug builds its paths from `session.user.shopSlug` and keeps `requireStaffSession`. #2367 fixed the diver record by hand; the 2026-10-11 review found fifteen more actions in five files with the same shape, and writing the guard found four more (`resendInvoiceAction`, `resendConfirmationAction`, both seat-diver actions), which is the argument for a guard over a sweep. Since the 2026-10-13 review it also has a positive half: a slug-taking export in a module under `src/app/shop/`, or one that calls `auth(` itself, must reach `requireShopSurface(` directly, through a function of the same module, or through a helper imported from another module of the repository whose own body reaches it (the diver record's `requireDiverActionContext`, which compared the slug to the JWT by hand until then). Without it an action that checked the slug by hand, called `auth()`, or checked nothing passed. Public actions under `src/app/s/` read no session and are outside the rule; the demo role switch, which is how a visitor first gets a shop, says `diveday:slug-action-before-sign-in: <why>`. It reads text, not a syntax tree: top-level declarations at column zero, with comments and string contents blanked first so a doc comment naming the gate is not a call.
+The slug-action one (`scripts/check-slug-actions.mjs`) fails a `"use server"` module whose exported action takes `shopSlug` and reaches `requireStaffSession(`, in its own body or through a function of the same module it calls. A slug carried inside a parameter counts too: `ctx.shopSlug` read off a parameter, or a parameter handed to a same-module function that takes the slug (`manifestPath(ctx)` destructuring `{ shopSlug }`). The security review of the 2026-10-11 work found thirteen manifest actions that the parameter-name test could not see. A server action's arguments are whatever the browser posts, a slug bound into a form included. The writes behind these actions are scoped by `session.user.shopId`, so a foreign slug never reached another tenant's rows, but it steered the rest: `revalidatePath` on another shop's board, Today and public course page, and the redirect that carries a notice. `requireShopSurface(shopSlug)` (`src/features/session/rules.ts`) is a 404 for a slug that is not the session's shop; an action that takes no slug builds its paths from `session.user.shopSlug` and keeps `requireStaffSession`. #2367 fixed the diver record by hand; the 2026-10-11 review found fifteen more actions in five files with the same shape, and writing the guard found four more (`resendInvoiceAction`, `resendConfirmationAction`, both seat-diver actions), which is the argument for a guard over a sweep. Since the 2026-10-13 review it also has a positive half: a slug-taking export in a module under `src/app/shop/`, or one that calls `auth(` itself, must reach `requireShopSurface(` directly, through a function of the same module, or through a helper imported from another module of the repository whose own body reaches it (the diver record's `requireDiverActionContext`, which compared the slug to the JWT by hand until then). Without it an action that checked the slug by hand, called `auth()`, or checked nothing passed. Public actions under `src/app/s/` read no session and are outside the rule; the demo role switch, which is how a visitor first gets a shop, says `diveday:slug-action-before-sign-in: <why>`. It reads text, not a syntax tree: top-level declarations at column zero, with comments and string contents blanked first so a doc comment naming the gate is not a call.
 
 ### harness-env
 
@@ -372,7 +372,7 @@ The env-reads one (`scripts/check-env-reads.mjs`, also `pnpm check:env-reads`) f
 The action-pins one (`scripts/check-action-pins.mjs`, also `pnpm check:action-pins`) fails any `uses:` under `.github/` that is not a local action and not pinned to a full 40-character commit SHA with a `# vX.Y.Z` comment beside it. One reference is exempt: `AaronBuxbaum/diveday/.github/workflows/reg-suit-publish.yml@main`, exactly. Its OIDC role trusts only the `job_workflow_ref` that call mints, so a SHA a pull request picks is the thing AWS refuses, and `main` is protected (issue #3274; ADR 20260729-reg-suit-visual-regression, amendment 2026-11-07). A `docker://` image needs a digest. A tag is a pointer its owner can move: `corymhall/cdk-diff-action@v2` ran in the infra diff job after `configure-aws-credentials` had exported a role that can write the CDK staging bucket a later deploy reads, so a moved tag would have run someone else's code with those credentials (the tj-actions class of incident; 2026-10-13 review, row 14). The comment is what tells a reader, and Dependabot's `github-actions` updates, which version the SHA is; Dependabot bumps the SHA and the comment together. To pin a new action, `git ls-remote --tags https://github.com/<owner>/<repo>` gives the commit each tag points at.
 ### trip-revision
 
-The trip-revision one (`scripts/check-trip-revision.mjs`) fails any `.update(trips)` whose `.set()` literal writes `startsAt` without also writing `revision`. `trips.revision` is published as the RFC 5545 `SEQUENCE` on both calendar surfaces (`src/lib/trip-calendar.ts`), and a client that re-fetches an event whose `SEQUENCE` has not moved treats it as the event it already holds — so a departure that slides an hour with a flat revision leaves every subscribed calendar on the old `DTSTART`, and a diver on the dock at the old time. That is issue #1165, which was fixed at the two writers that existed then; nothing made the third one carry it.
+The trip-revision one (`scripts/check-trip-revision.mjs`) fails any `.update(trips)` whose `.set()` literal writes `startsAt` without also writing `revision`. `trips.revision` is published as the RFC 5545 `SEQUENCE` on both calendar surfaces (`src/features/trip-calendar/rules.ts`), and a client that re-fetches an event whose `SEQUENCE` has not moved treats it as the event it already holds — so a departure that slides an hour with a flat revision leaves every subscribed calendar on the old `DTSTART`, and a diver on the dock at the old time. That is issue #1165, which was fixed at the two writers that existed then; nothing made the third one carry it.
 
 The anchor is the table rather than the column, and that is the whole reason the rule is affordable. `moveTrip` bumps the trip and then shifts each of its child days — `.update(tripScheduleDays).set({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) })`, three statements below its own bump — and a rule anchored on `startsAt` would have failed that correct line on day one. A schedule day has no `SEQUENCE` of its own; only the trip does. A `.set()` that never mentions `startsAt` is not a calendar move and is not inspected further, which is what keeps the status writers, the minimum sweep, the recap writers, the series cancellations and the soft delete outside the gate.
 
@@ -536,7 +536,7 @@ It also requires `Closes #n` in the body for every open `in-progress` issue whos
 
 It also reads `## Seen filled in` (issue #3650): a diff that changes a `.tsx` screen of the departure log or manifest (`trips/[id]/log`, `trips/[id]/manifest`) or any `src/app` screen whose path names readiness, waiver or medical fails unless that section says something other than "none", "n/a", "yes" or "no": the filled state the screen was seen in (the seeded dawn boat's log with its boat-safety snapshot, a signed waiver, a flagged medical) and the capture, or "no filled state because <reason>". Until 2026-11-02 the demo's departure log read "No record of the boat's papers and safety kit was kept" because both seeds deleted snapshots and wrote none, so the section was only ever reviewed empty.
 
-It exists because AGENTS.md's "launched, never skipped" was a rule nothing read: between 2026-10-07 and 2026-10-10, 17 of 85 merged pull requests mentioned a reviewer anywhere, while `src/lib/manifests.ts`, `src/db/seat-diver.ts` and the course-form seal changed. It checks that a launch is *recorded*, never that the review was good. The section comes from `.github/pull_request_template.md`, whose other headings (Before / After, What, How, Visual diffs, Follow-ups filed, ADRs and glossary, Stack position) are what a human reviewer reads first; only the Reviews section is enforced. Locally: `node scripts/check-pr-body.mjs --body-file <draft.md>` diffs against `origin/main`.
+It exists because AGENTS.md's "launched, never skipped" was a rule nothing read: between 2026-10-07 and 2026-10-10, 17 of 85 merged pull requests mentioned a reviewer anywhere, while `src/lib/manifests.ts`, `src/features/seat-diver/store.ts` and the course-form seal changed. It checks that a launch is *recorded*, never that the review was good. The section comes from `.github/pull_request_template.md`, whose other headings (Before / After, What, How, Visual diffs, Follow-ups filed, ADRs and glossary, Stack position) are what a human reviewer reads first; only the Reviews section is enforced. Locally: `node scripts/check-pr-body.mjs --body-file <draft.md>` diffs against `origin/main`.
 
 ## Now Biome rules
 
@@ -608,10 +608,10 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   read [docs/engineering/capability-telemetry-runbook.md](../engineering/capability-telemetry-runbook.md)
   before touching. Never structured data or telemetry that could carry the token.
 - **The four lines every staff page opens with**: one helper, `requireShopSurface` in
-  `src/lib/session.ts`: `requireStaffSession()` → the shop row read by `session.user.shopId` (never
+  `src/features/session/rules.ts`: `requireStaffSession()` → the shop row read by `session.user.shopId` (never
   the URL slug) → `notFound()` when it is missing **or** disagrees with the slug → an optional live
   `src/db/authz.ts` gate → a `?notice=` refusal redirect. Every refusal *throws*; there is no path
-  that returns after deciding against the caller, and `src/lib/session.test.ts` pins that. Never
+  that returns after deciding against the caller, and `src/features/session/rules.test.ts` pins that. Never
   `return null`, `redirect("/")`, or a bounce to the shop home for a cross-tenant miss — all of those
   are now `notFound()`.
 - **Server actions**: a sibling `*-actions.ts` with a file-level `"use server"` (every one in the
@@ -620,7 +620,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   mutation is a `defineAction` declaration (`src/features/server-action`) in the areas that have
   moved to it, the settings pages first; its notice codes are typed (`NoticeOf`), so its page's
   map fails to compile on a code with no words. A removal that offers Undo lands with an undo
-  offer (`src/lib/undo.ts`), and its inverse is a row of `src/app/actions/undo-registry.ts`. **Seating a diver** from any surface goes through `src/app/actions/seat-diver.ts`
+  offer (`src/features/undo/rules.ts`), and its inverse is a row of `src/app/actions/undo-registry.ts`. **Seating a diver** from any surface goes through `src/app/actions/seat-diver.ts`
   and the per-surface table in `seat-diver-surfaces.ts`. "Add a booking" is the departure's add band
   (`/trips/[id]?add=1`) when the boat is known, else the shop home's panel (`/shop/[slug]?call=1`),
   whose picker leads to that band; there is no `/new` route for it (#2737).
@@ -682,7 +682,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   `where`, `having`, `now`), or the pager promises pages that render nothing.
 - **Link previews and icons** (`ImageResponse`): every surface that rasterizes at request time —
   DiveDay's own card at `link-card/route.tsx`, the three `opengraph-image.tsx` cards under
-  `/recap/` and `/s/`, `pwa-icon-maskable/route.tsx` and `/shop/[shopSlug]/reports/card` — calls `allowSvgRasterization()` (`src/lib/og-rasterizer.ts`)
+  `/recap/` and `/s/`, `pwa-icon-maskable/route.tsx` and `/shop/[shopSlug]/reports/card` — calls `allowSvgRasterization()` (`src/features/og-rasterizer/rules.ts`)
   first, and so does any new one: `next/image` disables libvips' SVG loader process-wide on first
   use and satori's output is SVG, so without it the card severs the socket mid-stream (ADR
   20260804-og-svg-rasterizer). **A metadata module that imports `next/og` reaches every page entry
@@ -812,8 +812,8 @@ A publish toggle is "Hidden", not deleted. The full rule and its exceptions are 
 #### A panel that only renders when something has gone wrong
 
 is photographed through a fact on `/api/test/shop`
-(`src/app/api/test/shop/route.ts`, the registry in `src/db/facts/index.ts`), never by seeding the failure into the demo shop:
-add it as a named fact in `src/db/facts/index.ts` and a capture beside the surface's calm one. A demo permanently
+(`src/app/api/test/shop/route.ts`, the registry in `src/test/shop-facts/index.ts`), never by seeding the failure into the demo shop:
+add it as a named fact in `src/test/shop-facts/index.ts` and a capture beside the surface's calm one. A demo permanently
 shouting that four payments are broken is a worse demo. Mutating is safe because each Playwright
 worker owns its own database and resets it before every test (`e2e/servers.ts`).
 
@@ -845,10 +845,10 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
   a fact on `/api/test/shop`); `src/db/seed-front-desk.ts` says so at the row it deliberately
   seeds `succeeded`.
 - **The booking transaction** (capacity enforcement): `src/db/bookings.ts` — read its tests first.
-- **Staff seating a diver**: one consequence path, `src/db/seat-diver.ts` (booking + waiver-on-join
+- **Staff seating a diver**: one consequence path, `src/features/seat-diver/store.ts` (booking + waiver-on-join
   + activity trail + analytics). Never re-implement the post-booking side effects at a call site.
-- **Retention / pruning of append-only tables**: `src/lib/retention.ts` holds `RETENTION_DAYS` (the
-  one table a human edits; the values are HD-11's call), `src/db/retention.ts` runs the bounded
+- **Retention / pruning of append-only tables**: `src/features/retention/rules.ts` holds `RETENTION_DAYS` (the
+  one table a human edits; the values are HD-11's call), `src/features/retention/store.ts` runs the bounded
   prune, `src/app/api/cron/retention/` is the weekly surface. The `stripe_webhook_events` window is
   asserted against Stripe's retry horizon, not merely commented.
 - **Recurring trips**: materialization in `src/db/trips-series.ts`, cadence math in
@@ -878,7 +878,7 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
 - **Date interests** (`interests` with `scope = 'date'`, `src/db/interests.ts`, `src/db/interest-dates.ts`): `course_id`
   is nullable and `interests_scope_columns` refuses a row naming neither a course nor an interest (ADR
   20261017-one-interest-with-a-scope).
-- **Integrations**: rows in `src/db/integrations.ts` (credentials sealed by `src/lib/secret-box.ts`)
+- **Integrations**: rows in `src/features/integrations/store.ts` (credentials sealed by `src/lib/secret-box.ts`)
   and `src/db/integration-events.ts` (the at-least-once outbox); OAuth state in
   `integration_oauth_states`, consumed once and bound to the shop **and** the person who started it.
 
@@ -958,7 +958,7 @@ failure is silent and public: an unfiltered read shows an anonymous visitor a de
 took off the board. `deleted_at` is the only spelling in the tree, internal names included.
 
 A departure that *moves* has a second obligation: `trips.revision` is published as the RFC 5545
-`SEQUENCE` (`src/lib/trip-calendar.ts`), so a write of `trips.starts_at` that leaves the revision
+`SEQUENCE` (`src/features/trip-calendar/rules.ts`), so a write of `trips.starts_at` that leaves the revision
 flat leaves every subscribed calendar on the old `DTSTART` (issue #1165).
 `scripts/check-trip-revision.mjs` (also in `pnpm check:repo`) fails any `.update(trips)` writing
 `startsAt` whose `.set()` neither bumps `revision` nor says `diveday:allow-flat-revision: <why>`
@@ -986,7 +986,7 @@ For `src/lib/` and `src/features/`; the rules themselves are in `.claude/rules/d
 - **Payments and orders** (Stripe Connect): `src/lib/payments/` (checkout, connect, invoicing,
   promotions, webhook); order/refund state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`,
   `refunds.ts`, `stripe-accounts.ts`. Discount codes: shop-wide in `src/lib/promo-codes.ts` +
-  `src/db/shop-promos.ts`; one-trip last-minute deals in `src/db/trip-promos.ts`. Both resolve in
+  `src/db/shop-promos.ts`; one-trip last-minute deals in `src/features/trip-promos/store.ts`. Both resolve in
   `bookSpot`; Stripe owns the arithmetic.
 - **The Today work queue**: `src/features/today/today.ts` / `src/features/today/today-reader.ts`. `assembleDaySpine` re-files what
   `getTodayWork` ranked; no second detector. The end-of-day close-out composes from Today's own
@@ -1010,7 +1010,7 @@ For `src/lib/` and `src/features/`; the rules themselves are in `.claude/rules/d
   only falls back to its keyword sniff when there is none.
 - **Recurrence**: `src/lib/recurrence.ts` is a pure `seriesOccurrenceDates`; materialization lives in
   `src/db/trips-series.ts` (see the db rules).
-- **Retention windows**: `src/lib/retention.ts` — `RETENTION_DAYS` is the one table a human edits.
+- **Retention windows**: `src/features/retention/rules.ts` — `RETENTION_DAYS` is the one table a human edits.
 - **Course content**: shapes and parsers in `src/lib/courses.ts`. A depth in course prose is a
   **marker**, not words: `{depth18}` reads "18 meters" or "60 feet" by the shop's `depth_unit`,
   resolved once per page by `resolveCourseContentDepths` as a lookup into the agency pairs. A
@@ -1156,7 +1156,7 @@ For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
   323 seeded orders, no pager, no baseline at all.
 - **A panel that only renders when something has gone wrong** is photographed through
   a fact on `/api/test/shop`, never by seeding the failure into the demo shop. Add it as a fact in
-  `src/db/facts/index.ts` (the route applies `?facts=name,…`) and a capture beside the surface's calm one.
+  `src/test/shop-facts/index.ts` (the route applies `?facts=name,…`) and a capture beside the surface's calm one.
 - **Route coverage**: every `src/app/**/page.tsx` route has a spec and an `e2e/visual-*.spec.ts`
   capture, or a written `exempt` reason. Coverage is derived from the path literals in `e2e/`
   (a spec that names the route's URL covers it; a capture after that URL inside one `test(`

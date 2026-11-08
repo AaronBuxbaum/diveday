@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { SesBounceReport } from "@/lib/notifications/ses-events";
 import { fileScopedShopContext } from "@/test/db";
-import { recordEmailBounces } from "./email-bounces";
+import { recordEmailBounces } from "../features/email-bounces/store";
+import type { SesBounceReport } from "../features/email-events/rules";
 import { recipientSuppressed } from "./send-holds";
 
 const ctx = fileScopedShopContext();

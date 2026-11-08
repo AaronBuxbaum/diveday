@@ -63,7 +63,7 @@ const { createBookingParty } = await import("@/db/bookings");
 const { verifyBookingCapability } = await import("@/db/booking-capabilities");
 const { bookings, people, waiverRecords } = await import("@/db/schema");
 const { nowDate } = await import("@/lib/clock");
-const { issuePartySeatClaims } = await import("@/db/seat-claims");
+const { issuePartySeatClaims } = await import("../../../../features/seat-claims/store");
 const { upcomingTripsWithCounts } = await import("@/db/trips");
 const { claimSeatAction } = await import("./actions");
 

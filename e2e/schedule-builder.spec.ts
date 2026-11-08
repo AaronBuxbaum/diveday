@@ -51,7 +51,7 @@ test.describe("schedule builder", () => {
    * nothing by saying it** (issue #1203, D43).
    *
    * The boundary is the feature: the panel reads, and the move that follows is
-   * not conditioned on what it read. `src/db/move-preflight.test.ts` proves that
+   * not conditioned on what it read. `src/features/move-preflight/store.test.ts` proves that
    * at the row level — the departure, its seats, its gear reservations and its
    * whole delivery log are byte-identical across a preflight. What this covers
    * is the flow a staff member actually runs: open Move, read the consequences,

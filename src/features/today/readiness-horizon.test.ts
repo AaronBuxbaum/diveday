@@ -1,13 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { inHorizonReadiness } from "@/db/blockers";
-import { listCheckInQueue } from "@/db/check-in";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { arrivalsWindow } from "@/lib/departure-clock";
 import { type OperationalWindow, operationalWindow } from "@/lib/operational-window";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { inHorizonReadiness } from "../blockers/store";
+import { listCheckInQueue } from "../check-in/store";
+import { shopClock } from "../shop-clock/rules";
 import { countBlockedDiversNextBoatDay, getTodayWork } from "./index";
 
 const ctx = fileScopedShopContext();

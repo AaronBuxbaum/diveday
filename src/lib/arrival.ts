@@ -16,7 +16,7 @@
  * the one failure this whole feature is built to make impossible. So the
  * offline counter's statuses are the two below and there is no third; there is
  * no checkpoint on an arrival event; and the writer these events reach
- * (`checkInBooking`/`undoCheckInBooking`, `src/db/check-in.ts`) touches
+ * (`checkInBooking`/`undoCheckInBooking`, `src/features/check-in/store.ts`) touches
  * `bookings.status` and `booking_arrival_events` and cannot reach
  * `roll_call_events` at all. A person on the boat is a person somebody saw.
  */

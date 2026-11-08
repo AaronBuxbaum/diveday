@@ -84,7 +84,7 @@ export function seasonRow(view: SettingsView) {
         </FieldActions>
       </FieldGrid>
       {/* The other date a season has: when the boat goes back out. Only
-              the public page's empty board reads it (`src/lib/off-season.ts`),
+              the public page's empty board reads it (`src/features/off-season/rules.ts`),
               and only while it is still ahead, so it is its own small form
               rather than a third field the counting would have to ignore. */}
       <FieldGrid as="form" action={saveReopensOnAction} columns={2} className="mt-6">

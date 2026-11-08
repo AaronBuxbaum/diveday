@@ -9,7 +9,7 @@
 A website assist gives Claude's `web_fetch` tool `allowed_domains: [host]`, and that allowance
 covers every subdomain, so a pasted registry or builder root (`co.uk`, `wixsite.com`) would let one
 call read any tenant under it (ADR [20261018-claude-assists](20261018-claude-assists.md), security
-review N4). `src/lib/claude/web-fetch.ts` refused 77 hand-picked roots and missed every
+review N4). `src/features/claude/web-fetch.ts` refused 77 hand-picked roots and missed every
 other suffix, wildcard rules such as `*.ck` and `*.kawasaki.jp` included. Issue #3338; Aaron chose
 the Public Suffix List on 2026-11-02.
 
@@ -36,7 +36,7 @@ service rules.
 
 Provenance: npm `tldts`, MIT, sole maintainer Rémi Berson (`remusao`), source
 github.com/remusao/tldts; it compiles the Public Suffix List into its own `tldts-core`. Used only
-on the server (`src/db/website-setup.ts`).
+on the server (`src/features/website-setup/store.ts`).
 
 ## Alternatives considered
 

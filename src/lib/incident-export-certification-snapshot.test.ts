@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import {
+  baseInput,
+  verifiedCard,
+} from "../test/substrate-fixtures/lib/incident-export-test-fixtures";
 import { buildIncidentExport, incidentExportContentHash } from "./incident-export";
-import { baseInput, verifiedCard } from "./incident-export-test-fixtures";
 
 describe("departure-log certification evidence", () => {
   it("distinguishes an empty capture from unavailable evidence and refuses to seal it with an older recipe", () => {

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { DAY_MS, nowDate } from "@/lib/clock";
+import type { BookableDiver, SimilarDiver } from "../../../../../../lib/diver-choice-types";
 import { AddDiverSection } from "./AddDiverSection";
 
 vi.mock("next/navigation", () => ({

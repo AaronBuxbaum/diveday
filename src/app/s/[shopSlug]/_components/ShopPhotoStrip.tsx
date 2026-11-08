@@ -1,7 +1,7 @@
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { sectionCardClass } from "@/components/ui/card";
 import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { Boat } from "@/db/boats";
+import type { Boat } from "@/features/boats";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**

@@ -9,7 +9,10 @@ import { describe, expect, it } from "vitest";
 const SOURCE = readFileSync(join(__dirname, "RentOutPanel.tsx"), "utf8");
 const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 /** The panel's one reader (issue #2757): where the form's reads now live. */
-const READER = readFileSync(join(process.cwd(), "src/db/counter-rental-new-page.ts"), "utf8");
+const READER = readFileSync(
+  join(process.cwd(), "src/features/counter-rental-new-page/store.ts"),
+  "utf8",
+);
 
 describe("the new-rental form", () => {
   /**

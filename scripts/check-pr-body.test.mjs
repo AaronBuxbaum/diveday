@@ -37,7 +37,7 @@ describe("which reviewer a diff needs", () => {
       "src/lib/trip-admission.ts",
       "src/db/schema/certifications.ts",
       "src/components/MedicalClearanceControl.tsx",
-      "src/db/seat-diver.ts",
+      "src/features/seat-diver/store.ts",
       "src/db/bookings.ts",
       "src/db/waivers.ts",
       "src/lib/waivers.ts",
@@ -48,8 +48,8 @@ describe("which reviewer a diff needs", () => {
   });
 
   it.each([
-    "src/db/card-restore.ts",
-    "src/lib/card-undo.ts",
+    "src/features/card-restore/store.ts",
+    "src/features/card-undo/rules.ts",
     "src/app/shop/[shopSlug]/divers/[personId]/undo-inverses.ts",
     "src/db/schema/activity.ts",
   ])("asks both reviewers for the card-undo path %s", (file) => {
@@ -68,7 +68,7 @@ describe("which reviewer a diff needs", () => {
     "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts",
     "src/app/shop/[shopSlug]/waivers/actions.ts",
     "src/app/waivers/[token]/doctor/actions.ts",
-    "src/db/party-waiver-queue.ts",
+    "src/features/party-waiver-queue/store.ts",
     "src/lib/paper-waiver-form.ts",
   ])("asks dive-domain-expert for the waiver path %s", (file) => {
     expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
@@ -78,7 +78,7 @@ describe("which reviewer a diff needs", () => {
     for (const file of [
       "src/app/waivers/[token]/doctor/referral-labels.ts",
       "src/app/shop/[shopSlug]/waivers/page.tsx",
-      "src/db/waiver-guardian-copy.ts",
+      "src/features/waiver-guardian-copy/store.ts",
     ]) {
       expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
     }
@@ -88,7 +88,7 @@ describe("which reviewer a diff needs", () => {
     "src/db/waivers.test.ts",
     "src/db/waivers-expiry-before-write.test.ts",
     "src/lib/paper-waiver-form.test.ts",
-    "src/db/waivers-test-fixtures.ts",
+    "src/test/substrate-fixtures/db/waivers-test-fixtures.ts",
     "src/test/waiver-history.ts",
     "src/app/waivers/[token]/doctor/actions.test.ts",
   ])("asks dive-domain-expert for a waiver's test or fixture %s", (file) => {
@@ -110,19 +110,19 @@ describe("which reviewer a diff needs", () => {
   // Reviews 1 (2026-11-01): modules that decide what a diver signed or may board matched nothing.
   it.each([
     "src/lib/check-in.ts",
-    "src/db/check-in.ts",
+    "src/features/check-in/store.ts",
     "src/db/aboard-at-sea.ts",
     "src/lib/booking-gates.ts",
     "src/app/ready/[token]/cert-actions.ts",
     "src/lib/guardian.ts",
-    "src/db/course-certified.ts",
+    "src/features/course-certified/store.ts",
     "src/db/pre-departure-check.ts",
     "src/app/shop/[shopSlug]/trips/[id]/_lib/staff-gates.ts",
     "src/lib/signatures.ts",
     "src/lib/depth-ceiling.ts",
     "src/lib/requirement.ts",
     "src/app/ready/[token]/paperwork-actions.ts",
-    "src/lib/assists/cert-scan.ts",
+    "src/features/cert-scan/rules.ts",
     "src/i18n/waiver-labels.ts",
   ])("asks dive-domain-expert for the gate module %s", (file) => {
     expect(reviewsNeeded([file]).map((r) => r.agent)).toContain("dive-domain-expert");
@@ -455,5 +455,27 @@ describe("seen filled in (issue #3650)", () => {
       bodyProblems({ body: TEMPLATE, files: ["src/app/shop/[shopSlug]/orders/page.tsx"] }),
     ).toEqual([]);
     expect(seenFilledAnswered(null)).toBe(false);
+  });
+});
+
+describe("feature reviewer ownership", () => {
+  it.each([
+    "src/features/check-in/store.ts",
+    "src/features/aboard-at-sea/rules.ts",
+    "src/features/course-certified/store.ts",
+    "src/features/guardian/new-reader.store.ts",
+    "src/features/requirements/rules.ts",
+    "src/features/bookings/future-reader.store.ts",
+  ])("keeps the domain review on %s", (file) => {
+    expect(reviewsNeeded([file]).map((review) => review.agent)).toContain("dive-domain-expert");
+  });
+
+  it.each([
+    "src/features/export/store.ts",
+    "src/features/import/future-reader.store.ts",
+    "src/features/payments/webhook.ts",
+    "src/features/waivers/store.ts",
+  ])("keeps the security review on %s", (file) => {
+    expect(reviewsNeeded([file]).map((review) => review.agent)).toContain("security-reviewer");
   });
 });

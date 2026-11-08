@@ -16,10 +16,10 @@ export type NotificationDeliveryKind = (typeof notificationKind.enumValues)[numb
  *   from Today replaces the failed outcome, and `bookingConfirmationMailState`
  *   reads the one row.
  * - `trip_reminder_7d`, `trip_reminder_24h`: the reminder pass sends a cadence
- *   only while no `sent` row exists for it (`src/db/reminders.ts`); a move
+ *   only while no `sent` row exists for it (`src/features/reminders/store.ts`); a move
  *   re-arms them by marking the rows superseded (`src/db/reminder-rearm.ts`).
  * - `trip_recap`: the recap pass sends only while no `sent` row exists
- *   (`src/db/recap.ts`).
+ *   (`src/features/recap/store.ts`).
  *
  * Every other kind may legitimately go more than once (a fresh waiver link, a
  * rescued trip-prep link, a second reschedule, a retried blow-out notice) and

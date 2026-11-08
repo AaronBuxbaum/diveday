@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/notifications/app-url", () => ({ publicAppUrl: () => "https://diveday.test" }));
-vi.mock("@/db/party-waiver-queue", () => ({ issuePartyWaiver: vi.fn() }));
-const { requireShopSurface } = await import("@/lib/session");
-const { issuePartyWaiver } = await import("@/db/party-waiver-queue");
+vi.mock("../../../../../../../../features/party-waiver-queue/store", () => ({
+  issuePartyWaiver: vi.fn(),
+}));
+const { requireShopSurface } = await import("../../../../../../../../features/session/rules");
+const { issuePartyWaiver } = await import(
+  "../../../../../../../../features/party-waiver-queue/store"
+);
 const { issuePartyWaiverQrAction } = await import("./actions");
 const tripId = "33333333-3333-4333-8333-333333333333";
 const leadId = "44444444-4444-4444-8444-444444444444";

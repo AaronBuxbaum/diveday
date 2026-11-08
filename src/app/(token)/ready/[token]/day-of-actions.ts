@@ -9,15 +9,15 @@ import {
   setBookingLastDived,
   setBookingReEntryAsk,
 } from "@/db/bookings";
-import { recordHelpRequest } from "@/db/help-requests";
 import { recordRentalFitNote } from "@/db/rental-fit";
-import { clearBookingRunningLate, markBookingRunningLate } from "@/db/running-late";
 import { setWelcomeConsent } from "@/db/welcome-cues";
+import { recordHelpRequest } from "@/features/help-requests";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { clearBookingRunningLate, markBookingRunningLate } from "@/features/running-late";
 import { nowDate } from "@/lib/clock";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { cleanDietaryNote, DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { isDiver } from "@/lib/participant-types";
 import { RE_ENTRY_ASKS, reEntryOffersFor } from "@/lib/re-entry";
 import { WELCOME_HELLOS } from "@/lib/welcome-cue";

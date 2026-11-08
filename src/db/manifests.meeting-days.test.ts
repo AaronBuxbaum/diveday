@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { departureCounts } from "./departure-counts";
+import { departureCounts } from "../features/departure-counts/store";
 import {
   getTripManifest,
   listBoardedAtAnyCheckpointByTrip,

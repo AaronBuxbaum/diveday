@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
-import type { RentalLookupFleet } from "../src/db/facts/rental-lookup-state";
 import { gearItemKindLabel } from "../src/i18n/gear-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import type { RentalLookupFleet } from "../src/test/shop-facts/rental-lookup-state";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { seedFacts } from "./shop-facts";
 

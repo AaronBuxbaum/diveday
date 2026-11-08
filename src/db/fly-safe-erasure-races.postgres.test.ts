@@ -4,7 +4,8 @@ import { HOUR_MS } from "@/lib/clock";
 import type { NotificationProvider } from "@/lib/notifications";
 import { fakeEmail } from "@/test/fakes";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { repointHeldBooking } from "../features/identity-repoint/store";
 import { createBookingParty } from "./bookings";
 import {
   acknowledgeFlySafeFollowUp,
@@ -12,7 +13,6 @@ import {
   recordFlySafeTold,
   sendFlySafeCorrections,
 } from "./fly-safe-correction";
-import { repointHeldBooking } from "./identity-repoint";
 import { bookings, notificationSendQueue, people, personRoles, trips } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";

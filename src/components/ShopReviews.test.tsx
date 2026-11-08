@@ -2,8 +2,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
-import type { PublicReview } from "@/db/reviews";
 import { diverTranslator } from "@/i18n/messages";
+import type { PublicReview } from "../lib/public-review";
 import { ReviewLedger, ShopReviews } from "./ShopReviews";
 
 /**

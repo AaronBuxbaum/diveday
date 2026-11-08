@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { changedAdmissionFields, type DiveSiteAdmission } from "../features/dive-sites/rules";
 import { feetToMeters } from "./depth-units";
-import { changedAdmissionFields, type DiveSiteAdmission } from "./dive-sites";
 
 /**
  * **What a crew member may not change on a dive site** (issue #3706): the

@@ -143,7 +143,7 @@ describe("desk lines never reach a diver-facing read", () => {
 describe("diver-facing route modules", () => {
   const STAFF_READERS = [
     "@/db/trip-read-marks",
-    "@/db/today-catch-up",
+    "../features/today-catch-up/store.ts",
     "@/db/shop-activity",
     "listTripActivity",
     "pagedDiverActivity",

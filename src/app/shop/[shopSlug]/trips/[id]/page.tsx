@@ -1,24 +1,17 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
-import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
-import { TONE_PANEL_CLASS } from "@/components/ui/card";
-import { FormStatus } from "@/components/ui/form";
-import { getTripManifest } from "@/db/trip-page";
-import { getDepartureNeeds } from "@/features/today";
+import { requireShopSurface } from "@/features/session";
+import { readTripPage } from "@/features/trip-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
-import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
-import { blowoutPath } from "./_components/blowout/blowout-path";
 import { ConservationPanel } from "./_components/ConservationPanel";
 import { CoursePulse } from "./_components/CoursePulse";
 import { DeskRefresh } from "./_components/DeskRefresh";
@@ -33,6 +26,7 @@ import { addBandFor } from "./_components/seat-request-band";
 import { TripAboutLinks } from "./_components/TripAboutLinks";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { TripAddBookingLink } from "./_components/TripAddBookingLink";
+import { TripCancellation } from "./_components/TripCancellation";
 import { TripDeskConnectivity } from "./_components/TripDeskConnectivity";
 import { TripHeaderBadges } from "./_components/TripHeaderBadges";
 import { TripIncidentReports } from "./_components/TripIncidentReports";
@@ -49,7 +43,6 @@ import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
 import { type TripPageSearchParams, tripFlashParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import { readStaffGates } from "./_lib/staff-gates";
-import { reinstateTripAction } from "./details-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -110,14 +103,17 @@ export default async function ManageTripPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const now = nowDate();
-  // Today's queue for this boat, awaited only if the pulse needs it.
-  const departureNeeds =
-    view === "details" ? null : getDepartureNeeds(db, shop, tripId, { now, t, locale, session });
+  const reading = readTripPage(db, shop, tripId, {
+    now,
+    t,
+    locale,
+    session,
+    details: view === "details",
+    filters: { diverQuery: diverq, confirmName },
+  });
+  const { departureNeeds } = reading;
   const [manifest, staffGates] = await Promise.all([
-    getTripManifest(db, shop, tripId, {
-      session,
-      filters: { diverQuery: diverq, confirmName },
-    }),
+    reading.manifest,
     readStaffGates(db, shop.id, session.user.personId),
   ]);
   if (!manifest) notFound();
@@ -268,35 +264,9 @@ export default async function ManageTripPage({
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
         <FlySafeFollowUps {...{ db, shop, shopSlug, tripId, now, locale }} />
 
-        {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
-          // A card in a tone: the card's radius, bed and inset, so its words start
-          // where the cards around it do; only border and fill differ (pixel-craft 3, 12).
-          <section className={`${TONE_PANEL_CLASS} border-danger/40 bg-danger/10`}>
-            <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
-              {lifecycleStatus?.text}
-            </FormStatus>
-            <div className="flex flex-wrap items-center gap-3">
-              {canConfigure ? (
-                <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
-                  <SubmitButton
-                    pendingLabel={t("trips.detail.reinstating")}
-                    className={buttonClass()}
-                  >
-                    {t("trips.detail.reinstate")}
-                  </SubmitButton>
-                </form>
-              ) : null}
-              {blowoutCalled ? (
-                <Link
-                  href={blowoutPath(shopSlug, tripId)}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("trips.detail.viewBlowout", { cause: blowoutCalled })}
-                </Link>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
+        <TripCancellation
+          {...{ cancelled, canConfigure, blowoutCalled, lifecycleStatus, shopSlug, tripId, t }}
+        />
 
         {showDetails ? (
           <>

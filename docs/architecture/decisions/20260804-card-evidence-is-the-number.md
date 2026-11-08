@@ -16,7 +16,7 @@ staffer looking the number up with the issuing agency and pressing **Mark certif
 act, and the only act, that lets the card count toward readiness (`reviewCertification`). A
 snapshot of the plastic is a second artefact nobody verifies against, and one that costs real
 things to hold: personal data in blob storage that erasure has to reach into
-(`src/db/anonymize.ts`), rows in every export bundle, an upload path to validate (CR-011/CR-012),
+(`src/features/anonymize/store.ts`), rows in every export bundle, an upload path to validate (CR-011/CR-012),
 and one more field between a front-desk staffer and a captured card.
 
 ## Decision

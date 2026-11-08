@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import type { PlatformComponent } from "@/lib/platform-status";
+import type { PlatformComponent } from "../../../../features/platform-status/rules";
 import { StatusReport, StatusReportFallback } from "./StatusReport";
 
 afterEach(cleanup);

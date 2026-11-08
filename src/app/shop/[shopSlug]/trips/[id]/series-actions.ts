@@ -14,11 +14,11 @@ import {
   setSeriesRepeat,
   setSeriesStandingCrew,
 } from "@/db/trips";
+import { checkbox, formValue, readForm } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { log } from "@/lib/log";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   isValidWeekdaySet,
   MAX_INTERVAL_WEEKS,

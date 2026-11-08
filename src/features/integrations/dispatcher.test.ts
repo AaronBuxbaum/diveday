@@ -4,12 +4,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { enqueueOrderIntegrationEvent } from "@/db/integration-events";
-import { recordShopIntegration } from "@/db/integrations";
 import { integrationDeliveries, orders, shopIntegrations } from "@/db/schema";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { responseJsonWithinDeadline, untilAborted } from "./delivery-deadline";
 import { dispatchDueIntegrationDeliveries, INTEGRATIONS_CRON_CRONTAB } from "./dispatcher";
+import { recordShopIntegration } from "./store";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`). The overlapping-passes race

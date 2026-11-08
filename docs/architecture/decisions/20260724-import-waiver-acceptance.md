@@ -93,12 +93,12 @@ resolve them — it only decides what an *import* does, not what DiveDay's own w
 ## Security review notes (2026-07-24)
 
 - Document fetches run at a bounded concurrency (`DOCUMENT_FETCH_CONCURRENCY = 6` in
-  `src/db/import.ts`), not one `Promise.all` per document across the whole batch — an unbounded
+  `src/features/import/store.ts`), not one `Promise.all` per document across the whole batch — an unbounded
   fan-out over up to 5,000 rows × 2 URLs each would open thousands of simultaneous outbound
   connections from a single staff submission.
 - `ingestImageUrl` short-circuits an already-`isManagedBlobUrl` document URL to "unchanged" (no
   re-fetch, no ownership check) — the same behavior every other pasted-URL field in this codebase
-  already has (`src/lib/storage/ingest-url.ts`). A staff member could in principle paste another
+  already has (`src/features/storage/ingest-url.ts`). A staff member could in principle paste another
   shop's already-public blob URL as a document link; nothing confidential is newly exposed (the
   object is already public-by-URL), but the resulting `importSourceDocumentUrl` would not actually
   belong to the importing shop's own evidence. Accepted as consistent with existing precedent, not

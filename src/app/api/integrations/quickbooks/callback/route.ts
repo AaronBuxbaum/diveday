@@ -11,8 +11,8 @@ import {
   quickBooksConfigFromEnvironment,
   recordShopIntegration,
 } from "@/features/integrations";
+import { requireStaffSession } from "@/features/session";
 import { publicAppUrl } from "@/lib/notifications";
-import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 function destination(request: Request, slug: string, notice: string) {

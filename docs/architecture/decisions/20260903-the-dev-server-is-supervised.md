@@ -182,7 +182,7 @@ Two smaller things ride along, both of which the supervision made visible:
   using available port 3001") is called out. A session that keeps reading 3000 gets whatever other
   project owns that port, which reads exactly like a change not taking effect.
 - `pnpm dev` now sets `NEXT_PUBLIC_SENTRY_DSN=` the way `pnpm e2e:build` already did. The DSN is
-  compiled in (`src/lib/sentry-dsn.ts`), so until now every error raised by half-finished local code
+  compiled in (`src/features/sentry-dsn/rules.ts`), so until now every error raised by half-finished local code
   was reported to the production Sentry project.
 
 ## Alternatives considered

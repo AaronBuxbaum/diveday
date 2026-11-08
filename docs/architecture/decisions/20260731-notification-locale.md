@@ -11,7 +11,7 @@ diver or staff member renders in a browser. Asked directly "have we ensured no h
 in messages coming from the backend and displayed to the user?", the honest answer was no: every
 transactional email `src/lib/notifications/email.ts` sends (13 templates — booking confirmation,
 waiver request, trip reminders, recap, account lifecycle, staff invite, …) and the pre-trip SMS
-`src/db/reminders.ts` composes are hardcoded English, with every date/time formatted against a
+`src/features/reminders/store.ts` composes are hardcoded English, with every date/time formatted against a
 literal `"en-US"`. `src/lib/readiness-summary.ts`'s `REMINDER_ACTION` map already carried an
 honest comment flagging this as deferred, separate work — this ADR is that work.
 
@@ -34,7 +34,7 @@ time — a Cozumel shop's diver gets Spanish email the same way they get a Spani
 internal ops tool would). The caller constructing the notification already has (or can cheaply
 fetch) the shop row, so this is one more field alongside `shopName`/`timezone`, not a new query.
 
-**`email.ts` and `src/db/reminders.ts`'s `reminderSmsBody` resolve their own text**, via
+**`email.ts` and `src/features/reminders/store.ts`'s `reminderSmsBody` resolve their own text**, via
 `diverTranslator(locale)`, rather than returning codes for something else to translate. This is a
 deliberate, narrow exception to "`src/lib`/`src/db` return codes, `src/app`/`src/components` choose
 words": these two are the *terminal* renderer for their content — there is no downstream React

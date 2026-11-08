@@ -1,5 +1,5 @@
 import { InsetGroup } from "@/components/ui/ledger";
-import type { SentMessage } from "@/db/person-sent-messages";
+import type { SentMessage } from "@/features/person-sent-messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";

@@ -1,6 +1,6 @@
 import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES, PDF_CONTENT_TYPE } from "./limits";
 
-export { MAX_IMAGE_MB } from "./limits";
+export { MAX_IMAGE_BYTES, MAX_IMAGE_MB } from "./limits";
 
 import { processImage } from "./process-image";
 import { deleteS3Image, s3ImageStorageProvider, s3StorageConfigSchema } from "./s3";
@@ -216,7 +216,7 @@ export async function storeRecapImage(
 /**
  * Store a dive-site briefing photo (satellite/route/gallery). Same
  * validation as the others, its own `dive-sites` key prefix. The only
- * caller is `src/lib/storage/ingest-url.ts` (CR-020) — a staff-pasted
+ * caller is `src/features/storage/ingest-url.ts` (CR-020) — a staff-pasted
  * third-party URL is fetched once server-side and re-stored here rather
  * than rendered directly, so public dive-site pages never make a live
  * request to a host outside this app.
@@ -292,7 +292,7 @@ export async function storeArrivalImage(
  * Store a contact-import waiver or medical document scan. Its own
  * `import-waivers` key prefix so imported evidence never shares a namespace with
  * a brochure, shop logo, or diver's own recap photo. Only called from the
- * server-side commit path (`src/db/import.ts`), on a URL a staff member pasted
+ * server-side commit path (`src/features/import/store.ts`), on a URL a staff member pasted
  * into an import row — never rendered from that raw URL directly (ADR
  * 20260724-import-waiver-acceptance).
  *

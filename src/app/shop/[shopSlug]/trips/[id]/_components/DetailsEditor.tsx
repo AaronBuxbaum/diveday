@@ -1,6 +1,6 @@
 import { AssistFillButton } from "@/components/assists/AssistFillButton";
-import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
+import { assistsAvailable } from "@/features/assists";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RescheduleNotice } from "../../../_components/RescheduleNotice";
 import { loadTranslationBox, ShopTextTranslation } from "../../../_components/ShopTextTranslation";

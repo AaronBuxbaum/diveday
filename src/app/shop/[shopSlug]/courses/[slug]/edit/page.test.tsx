@@ -45,13 +45,13 @@ vi.mock("@/db/authz", () => ({
   canPersonConfigureTrips: vi.fn(async () => true),
   canPersonManageWaiverTemplates: vi.fn(async () => true),
 }));
-vi.mock("@/db/courses", () => ({
+vi.mock("../../../../../../features/courses/store", () => ({
   getCourseBySlug: vi.fn(),
   courseIdsEverOnBoard: vi.fn(async () => new Set<string>()),
   getCourseTemplateUpdate: vi.fn(),
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/storage/limits", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/storage/limits")>()),
   MAX_IMAGE_MB: 5,
@@ -66,8 +66,10 @@ vi.mock("@/i18n/staff-messages", () => ({
   },
 }));
 
-const { getCourseBySlug, getCourseTemplateUpdate } = await import("@/db/courses");
-const { requireShopSurface } = await import("@/lib/session");
+const { getCourseBySlug, getCourseTemplateUpdate } = await import(
+  "../../../../../../features/courses/store"
+);
+const { requireShopSurface } = await import("../../../../../../features/session/rules");
 const { default: EditCoursePage } = await import("./page");
 const { loadTranslationBox } = await import("../../../_components/ShopTextTranslation");
 

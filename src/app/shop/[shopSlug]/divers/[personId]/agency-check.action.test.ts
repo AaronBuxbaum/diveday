@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { addAgencyListedCards } from "@/db/agency-check";
 import type { AppDb } from "@/db/client";
 import { reviewNitroxCertification, unreviewNitroxCertification } from "@/db/nitrox";
 import { cards, people, shops } from "@/db/schema";
@@ -12,6 +11,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { addAgencyListedCards } from "../../../../../features/agency-check/store";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -39,14 +39,14 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", async () =>
+vi.mock("../../../../../features/session/rules", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { refresh } = await import("next/cache");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { addAgencyListedCardsAction, agencyCheckAction } = await import("./agency-check-actions");
 
 const NAUI_PAGE = "Verify Diver Certification\nLena Ortiz\n1990-04-12\nAdvanced Scuba Diver";

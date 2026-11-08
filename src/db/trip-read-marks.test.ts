@@ -2,7 +2,7 @@ import { and, eq, isNotNull, isNull, ne, notExists } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
 import { seatCheckedIn } from "./arrival-provenance";
 import type { DbExecutor } from "./client";
 import { recordActivityRow, recordDeskLine } from "./operations";

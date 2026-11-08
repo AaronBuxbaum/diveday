@@ -1,5 +1,5 @@
 import type { FormDraftProps } from "@/components/FormDraft";
-import type { FormDraft } from "@/db/form-drafts";
+import type { FormDraft } from "@/features/form-drafts";
 import type { DiveDaySession } from "@/lib/auth";
 import { formatTime } from "@/lib/format";
 import { discardFormDraftAction, saveFormDraftAction } from "./form-drafts";

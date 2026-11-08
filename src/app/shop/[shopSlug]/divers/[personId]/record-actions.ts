@@ -1,16 +1,16 @@
 "use server";
 import { z } from "zod";
-import { anonymizeDiver } from "@/db/anonymize";
 import { canPersonDeleteDiver, canPersonErasePersonalData, canPersonMergeDiver } from "@/db/authz";
 import { DIVER_MERGE_FIELDS, type DiverMergeChoices, mergeDiverRecords } from "@/db/diver-merge";
-import { deleteDiver, getDiverProfile } from "@/db/divers";
-import { eraseGuardianEmail } from "@/db/guardian-erasure";
 import { getMergedIntoPersonId } from "@/db/people";
 import { countCrewDeparturesNotHome } from "@/db/trips";
-import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { anonymizeDiver } from "@/features/anonymize";
+import { deleteDiver, getDiverProfile } from "@/features/divers";
+import { formValue, readForm, text, trimmedText } from "@/features/form-parse";
+import { eraseGuardianEmail } from "@/features/guardian-erasure";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { undoParams } from "@/features/undo";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { undoParams } from "@/lib/undo";
 import { uuidParam } from "@/lib/uuid";
 import { backTo, requireDiverActionContext } from "./action-helpers";
 

@@ -6,8 +6,8 @@
 ## Context
 
 [The 2026-07-23 codebase review](../../product/archive/codebase-review-20260723.md) (CR-018)
-found that the command palette (`src/db/search.ts`) and diver roster/booking picker
-(`src/db/divers.ts`) both search with a leading-wildcard `ilike '%query%'`, while their own
+found that the command palette (`src/features/search/store.ts`) and diver roster/booking picker
+(`src/features/divers/store.ts`) both search with a leading-wildcard `ilike '%query%'`, while their own
 comments claimed the columns were "indexed `ilike`." No such index existed — a plain btree index
 cannot serve a leading-wildcard predicate, so every one of those searches was a full scan of
 `people`, `trips`, and `dive_sites`. Result limits (`PER_GROUP = 8`) cap what comes *back*, not how
@@ -54,7 +54,7 @@ much the database has to scan to find it.
   index scan as the seeded dataset grows past the planner's small-table threshold; this repo has no
   standing connection to a production/staging Neon database to capture a real before/after
   `EXPLAIN`, so that capture is deferred to whoever next operates against a populated Neon database
-  — `src/db/search.test.ts` instead asserts structurally (via `pg_indexes`/`pg_extension`) that the
+  — `src/features/search/store.test.ts` instead asserts structurally (via `pg_indexes`/`pg_extension`) that the
   indexes and extension exist, which PGlite can verify today.
 - Every future PGlite-backed test database (via `createTestDb`, the shared test-template builder, or
   its per-test restore) must keep passing `extensions: { pg_trgm }` at construction — a call site

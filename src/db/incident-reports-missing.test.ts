@@ -2,6 +2,13 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, HOUR_MS, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  complete,
+  draftsBy,
+  fixture,
+  OTHER_SHOP,
+  OTHER_TRIP,
+} from "../test/substrate-fixtures/db/incident-reports-test-fixtures";
 import type { AppDb } from "./client";
 import {
   addIncidentPerson,
@@ -10,13 +17,6 @@ import {
   startIncidentReport,
   startMissingDiverReport,
 } from "./incident-reports";
-import {
-  complete,
-  draftsBy,
-  fixture,
-  OTHER_SHOP,
-  OTHER_TRIP,
-} from "./incident-reports-test-fixtures";
 import { crewSubject } from "./roll-call-subject";
 import {
   incidentReportPeople,

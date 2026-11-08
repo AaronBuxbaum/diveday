@@ -1,6 +1,6 @@
+import type { ShopYearSummary } from "@/features/shop-year";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatMonthDay, monthNames } from "@/lib/format";
-import type { ShopYearSummary } from "@/lib/shop-year";
 import type { YearCardCopy } from "./year-card";
 
 /**

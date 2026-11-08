@@ -1,13 +1,13 @@
 import { and, eq, gt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { countOpenLostItems, openLostItemsByPerson, recordLostItem } from "@/db/lost-items";
 import { lostItems, shops, trips as tripRows } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import { countOpenLostItems, openLostItemsByPerson, recordLostItem } from "../lost-items/store";
+import { shopClock } from "../shop-clock/rules";
 import { groupByDeparture } from "./today";
 import { getTodayWork } from "./today-reader";
 

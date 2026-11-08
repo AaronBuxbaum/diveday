@@ -9,7 +9,7 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  * A read of `people` says whether it means removed people too.
  *
  * Removing a diver sets `people.deleted_at` rather than deleting the row
- * (`deleteDiver`, src/db/divers.ts), and a staff member who also dives holds
+ * (`deleteDiver`, src/features/divers/store.ts), and a staff member who also dives holds
  * the `diver` role, so a removed person can still hold a staff role. A read
  * that forgets the filter does not throw: the 2026-10-11 review found the
  * staff list behind every crew picker, the crew-change eligibility read and
@@ -58,7 +58,7 @@ const GUARD = "live-people";
  */
 export const CARRIERS = {
   "src/db/diver-merge.ts": ["activeDiverWhere"],
-  "src/db/divers.ts": ["removalScope", "rosterScope", "scope"],
+  "src/features/divers/store.ts": ["removalScope", "rosterScope", "scope"],
   "src/db/inbound-messages.ts": ["live"],
 };
 

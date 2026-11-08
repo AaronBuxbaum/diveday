@@ -10,7 +10,7 @@ import {
   getShopBackupDestination,
   markShopBackupVerified,
   openBackupCredentials,
-  saveShopBackupDestination,
+  recordShopBackupDestination,
 } from "./destination-store";
 
 const ctx = fileScopedShopContext();
@@ -77,10 +77,10 @@ describe("backupEndpointRefusal", () => {
   });
 });
 
-describe("saveShopBackupDestination", () => {
+describe("recordShopBackupDestination", () => {
   it("seals the secret before it reaches the column, and it opens back with the key", async () => {
     const { db, shop } = await bareShopContext();
-    const result = await saveShopBackupDestination(
+    const result = await recordShopBackupDestination(
       db,
       { shopId: shop.id, ...DESTINATION },
       { key: KEY },
@@ -98,7 +98,7 @@ describe("saveShopBackupDestination", () => {
 
   it("refuses the first save without a secret", async () => {
     const { db, shop } = await bareShopContext();
-    const result = await saveShopBackupDestination(
+    const result = await recordShopBackupDestination(
       db,
       { shopId: shop.id, ...DESTINATION, secretAccessKey: "  " },
       { key: KEY },
@@ -109,8 +109,8 @@ describe("saveShopBackupDestination", () => {
 
   it("keeps the stored secret when an update leaves the field blank", async () => {
     const { db, shop } = await bareShopContext();
-    await saveShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
-    const result = await saveShopBackupDestination(
+    await recordShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
+    const result = await recordShopBackupDestination(
       db,
       { shopId: shop.id, ...DESTINATION, bucket: "renamed-bucket", secretAccessKey: null },
       { key: KEY },
@@ -124,11 +124,11 @@ describe("saveShopBackupDestination", () => {
 
   it("re-seals when an update supplies a new secret, and drops verifiedAt until re-proven", async () => {
     const { db, shop } = await bareShopContext();
-    await saveShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
+    await recordShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
     await markShopBackupVerified(db, shop.id);
     expect((await getShopBackupDestination(db, shop.id))?.verifiedAt).not.toBeNull();
 
-    const result = await saveShopBackupDestination(
+    const result = await recordShopBackupDestination(
       db,
       { shopId: shop.id, ...DESTINATION, secretAccessKey: "rotated-secret" },
       { key: KEY },
@@ -141,7 +141,7 @@ describe("saveShopBackupDestination", () => {
 
   it("refuses when no sealing key is configured, before anything is written", async () => {
     const { db, shop } = await bareShopContext();
-    const result = await saveShopBackupDestination(
+    const result = await recordShopBackupDestination(
       db,
       { shopId: shop.id, ...DESTINATION },
       { key: null },
@@ -152,7 +152,7 @@ describe("saveShopBackupDestination", () => {
 
   it("refuses a private-host endpoint before touching the key or the row", async () => {
     const { db, shop } = await bareShopContext();
-    const result = await saveShopBackupDestination(
+    const result = await recordShopBackupDestination(
       db,
       { shopId: shop.id, ...DESTINATION, endpoint: "https://169.254.169.254" },
       { key: null },
@@ -163,7 +163,7 @@ describe("saveShopBackupDestination", () => {
   it("preserves endpoint-first refusal when the environment key is malformed", async () => {
     vi.stubEnv("SECRET_ENCRYPTION_KEY", "invalid");
     const { db, shop } = await bareShopContext();
-    const result = await saveShopBackupDestination(db, {
+    const result = await recordShopBackupDestination(db, {
       shopId: shop.id,
       ...DESTINATION,
       endpoint: "https://127.0.0.1",
@@ -174,7 +174,7 @@ describe("saveShopBackupDestination", () => {
   it("maps a malformed environment key to the existing refusal code", async () => {
     vi.stubEnv("SECRET_ENCRYPTION_KEY", "invalid");
     const { db, shop } = await bareShopContext();
-    expect(await saveShopBackupDestination(db, { shopId: shop.id, ...DESTINATION })).toEqual({
+    expect(await recordShopBackupDestination(db, { shopId: shop.id, ...DESTINATION })).toEqual({
       status: "refused",
       reason: "encryption_key_invalid",
     });
@@ -182,7 +182,7 @@ describe("saveShopBackupDestination", () => {
 
   it("normalizes the endpoint's trailing slash and the prefix's surrounding slashes", async () => {
     const { db, shop } = await bareShopContext();
-    await saveShopBackupDestination(
+    await recordShopBackupDestination(
       db,
       {
         shopId: shop.id,
@@ -201,7 +201,7 @@ describe("saveShopBackupDestination", () => {
 describe("openBackupCredentials", () => {
   it("returns the credentials only to a caller holding the right key", async () => {
     const { db, shop } = await bareShopContext();
-    await saveShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
+    await recordShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
     const row = await getShopBackupDestination(db, shop.id);
     if (!row) throw new Error("destination missing");
 
@@ -217,7 +217,7 @@ describe("openBackupCredentials", () => {
 describe("disconnectShopBackupDestination", () => {
   it("deletes the row so no revoked credential is retained", async () => {
     const { db, shop } = await bareShopContext();
-    await saveShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
+    await recordShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
     expect(await disconnectShopBackupDestination(db, shop.id)).toBe(true);
     expect(await getShopBackupDestination(db, shop.id)).toBeNull();
     expect(await disconnectShopBackupDestination(db, shop.id)).toBe(false);
@@ -230,8 +230,8 @@ describe("disconnectShopBackupDestination", () => {
       .values({ name: "Other", slug: "other-shop-backup-test", timezone: "UTC" })
       .returning();
     if (!other) throw new Error("other shop insert failed");
-    await saveShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
-    await saveShopBackupDestination(db, { shopId: other.id, ...DESTINATION }, { key: KEY });
+    await recordShopBackupDestination(db, { shopId: shop.id, ...DESTINATION }, { key: KEY });
+    await recordShopBackupDestination(db, { shopId: other.id, ...DESTINATION }, { key: KEY });
 
     await disconnectShopBackupDestination(db, shop.id);
     expect(await getShopBackupDestination(db, shop.id)).toBeNull();

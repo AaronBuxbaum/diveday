@@ -3,10 +3,10 @@ import { CARD_STYLE, OG_CACHE, OG_COLORS, OG_WORDMARK, ogCredit, ogFooter } from
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
+import { allowSvgRasterization } from "@/features/og-rasterizer";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 
@@ -55,7 +55,7 @@ export default async function TripOpenGraphImage({
   if (!uuidParam(tripId)) return genericCard();
   // Before any ImageResponse is built: Next's image optimizer disables
   // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
-  // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
+  // through. See src/features/og-rasterizer/rules.ts — the failure mode is a severed
   // socket, not an error page.
   await allowSvgRasterization();
   const db = await getDb();

@@ -106,7 +106,7 @@ water, and the code now says otherwise; the decision itself stands.
   sailed**, and this state also asserts **this person dived it**, which no clock knows. The switch
   now reads the crew's own departure roll call where a shop kept one (`not_boarded` never sees the
   after-state; `boarded` opens it at the buffer) and otherwise waits the four hours the recap
-  *send* has always waited (`isAfterTheDive`, `src/lib/seat-ladder.ts`). Nothing but recorded
+  *send* has always waited (`isAfterTheDive`, `src/features/seat-ladder/rules.ts`). Nothing but recorded
   evidence or that floor may open a page saying somebody dived.
 - *"the diver's dive count"* — DiveDay holds no record of dives **performed**, and this keepsake
   prints, with a signature rule. `trips.planned_dives` is what a shop typed on the trip row and

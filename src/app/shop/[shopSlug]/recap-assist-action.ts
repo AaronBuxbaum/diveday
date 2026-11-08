@@ -1,10 +1,9 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { hasSentTripRecap } from "@/db/recap";
-import { draftRecapLine } from "@/db/recap-assist";
+import { draftRecapLine, hasSentTripRecap } from "@/features/recap";
+import { requireStaffSession } from "@/features/session";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
-import { requireStaffSession } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
 /**

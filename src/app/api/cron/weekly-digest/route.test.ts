@@ -6,7 +6,9 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/features/weekly-digest", () => ({ sendDueWeeklyDigests: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),

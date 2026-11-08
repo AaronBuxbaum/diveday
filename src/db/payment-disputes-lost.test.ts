@@ -2,9 +2,13 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  type DisputeEvent,
+  listLostDisputes,
+  recordStripeDispute,
+} from "../features/payment-disputes/store";
+import { getMonthMoneyDetail } from "../features/report-lines/store";
 import type { AppDb } from "./client";
-import { type DisputeEvent, listLostDisputes, recordStripeDispute } from "./payment-disputes";
-import { getMonthMoneyDetail } from "./report-lines";
 import { orders, people } from "./schema";
 
 /**

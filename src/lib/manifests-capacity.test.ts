@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { boardedAt, crewMember, notBoardedAt, trip } from "./manifest-test-fixtures";
+import {
+  boardedAt,
+  crewMember,
+  notBoardedAt,
+  trip,
+} from "../test/substrate-fixtures/lib/manifest-test-fixtures";
 import { buildTripManifest, type ManifestDiverInput } from "./manifests";
 
 function boardedPassenger(

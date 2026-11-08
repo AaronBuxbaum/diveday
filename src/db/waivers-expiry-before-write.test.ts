@@ -2,16 +2,16 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DAY_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { people, waiverDrafts, waiverRecords } from "./schema";
-import { completeWaiver, recordWaiverDraft } from "./waivers-completion";
-import { issueWaiverRequest } from "./waivers-requests";
-import * as templates from "./waivers-templates";
 import {
   clearAnswers,
   issueCounterLink,
   openOnDevice,
   waiverContextFor,
-} from "./waivers-test-fixtures";
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
+import { people, waiverDrafts, waiverRecords } from "./schema";
+import { completeWaiver, recordWaiverDraft } from "./waivers-completion";
+import { issueWaiverRequest } from "./waivers-requests";
+import * as templates from "./waivers-templates";
 
 const ctx = fileScopedShopContext();
 const context = waiverContextFor(ctx);

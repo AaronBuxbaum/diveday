@@ -6,8 +6,8 @@ import type { Notification } from "@/lib/notifications/kinds";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { addInterest } from "../test/substrate-fixtures/db/interest-dates-fixtures";
 import { cancelBooking, createBooking, moveBooking } from "./bookings";
-import { addInterest } from "./interest-dates-fixtures";
 
 const ctx = fileScopedShopContext();
 

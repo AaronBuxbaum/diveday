@@ -119,7 +119,7 @@ function setField(form: HTMLFormElement, name: string, value: string) {
  * of the search a correctness matter rather than a convenience: a shop
  * searches for itself by **name** far more readily than it recites its own
  * street address, so the lookup answers businesses, not only streets (see
- * `src/lib/address-lookup-aws.ts`).
+ * `src/features/address-lookup-aws/rules.ts`).
  *
  * A pick **replaces** the whole address rather than merging into it
  * (`toShopAddressFields` returns every field, empty ones included). Merging

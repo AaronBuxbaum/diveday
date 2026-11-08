@@ -487,7 +487,7 @@ the last of which is the surprising one:
   transaction on a failed statement (`current transaction is aborted, commands ignored until end of
   transaction block`, 25P02), so every line after an expected `.rejects.toThrow()` fails too — or
   worse, a second expected refusal passes for the wrong reason. In autocommit only the failing
-  statement fails. `src/db/divers.test.ts`'s erasure test and `src/db/shop-subscriptions.test.ts`'s
+  statement fails. `src/features/divers/store.test.ts`'s erasure test and `src/features/shop-subscriptions/store.test.ts`'s
   two "another shop holds this Stripe id" tests take their own for this reason.
 
 A file whose tests mock `getDb` or hydrate an *unseeded* database (`unseededTestDb()`, for the seed
@@ -713,7 +713,7 @@ the full suite locally with identical pass counts across repeated runs.
   imports `test`/`expect` from `e2e/fixtures.ts`, not `@playwright/test` directly — the fixtures
   point each worker at its own server and reset the demo shop's schedule (`POST /api/test/reset`)
   before each test. A server's first reset is a real `resetDemoSchedule` and copies what it wrote;
-  every later one runs the delete half and replays that copy (`src/db/demo-reset-snapshot.ts`, ADR
+  every later one runs the delete half and replays that copy (`src/features/demo-reset-snapshot/store.ts`, ADR
   20261024-e2e-reset-replays-a-snapshot), and says in a `Server-Timing` header how it was served and
   what it cost. Iterating on a
   single spec, `playwright test <spec>` reuses the existing build; `next start`'s production runtime
@@ -733,7 +733,7 @@ the full suite locally with identical pass counts across repeated runs.
 - **Every `/api/test/*` route is guarded, and that is enforced.** The harness's own endpoints
   (`reset`, `depart-trip`, plus the `seed-*` routes) reset and seed state and mint real tokens — `seed-account-token`
   hands back a valid password-reset or invite token for any account by email — so each handler must
-  open with `e2eTestRouteAuthorized(request)` (`src/lib/e2e-test-routes.ts`: env predicate plus a
+  open with `e2eTestRouteAuthorized(request)` (`src/features/e2e-test-routes/rules.ts`: env predicate plus a
   `DIVEDAY_E2E_SECRET` bearer token, failing closed). `pnpm check:e2e-fixtures` fails when a handler
   under `src/app/api/test/**` doesn't call it, and each route carries auth-gate unit tests asserting
   the refusal lands before any database work. A route that writes to a shop reaches it through

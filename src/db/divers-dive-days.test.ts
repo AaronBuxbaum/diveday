@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { getDiverProfile } from "./divers";
+import { getDiverProfile } from "../features/divers/store";
 import { bookings, trips } from "./schema";
 
 /**

@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { type CourseTeachingNoteResult, recordCourseTeachingNote } from "@/db/course-pulse";
-import { requireStaffSession } from "@/lib/session";
+import { type CourseTeachingNoteResult, recordCourseTeachingNote } from "@/features/course-pulse";
+import { requireStaffSession } from "@/features/session";
 import { shopPath } from "@/lib/staff-notices";
 
 export async function saveCourseTeachingNoteAction(

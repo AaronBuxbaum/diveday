@@ -2,25 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import {
-  type BookkeeperChange,
-  issueBookkeeperConfirmation,
-  setBookkeeper,
-  tellOwnersAboutBookkeeper,
-} from "@/db/bookkeeper";
 import type { AppDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
 import { sendNotification } from "@/db/notifications";
 import { recordShopActivity } from "@/db/shop-activity";
-import { hasRequiredStepUp } from "@/db/step-up";
+import {
+  type BookkeeperChange,
+  bookkeeperAddress,
+  issueBookkeeperConfirmation,
+  setBookkeeper,
+  tellOwnersAboutBookkeeper,
+} from "@/features/bookkeeper";
+import { confirmContactLinkPath } from "@/features/contact-email-confirmation";
+import { stepUpChallengeUrl } from "@/features/security-step-up";
+import { requireShopSurface } from "@/features/session";
+import { hasRequiredStepUp } from "@/features/step-up";
 import { toDiverLocale } from "@/i18n/settings";
-import { bookkeeperAddress } from "@/lib/bookkeeper";
 import { nowDate } from "@/lib/clock";
-import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { stepUpChallengeUrl } from "@/lib/security-step-up";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /** What the form says after a save; the words are the component's. */

@@ -1,10 +1,10 @@
 "use server";
 
 import { CALL_NOTE_MAX, type CallNoteReading } from "@/components/assists/call-note";
-import { bookingAskFromNote } from "@/db/booking-ask-assists";
+import { bookingAskFromNote } from "@/features/booking-ask-assists";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /** The Took-a-call note's own limit (`callSchema.message`). */

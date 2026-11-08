@@ -6,7 +6,8 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import type { NotificationProvider } from "@/lib/notifications";
 import type { CourtesyProviders } from "@/lib/notifications/courtesy";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { openOnDevice, shopStaffer } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { mintCapability } from "./capabilities";
 import { revokeLinksSentToOldContact } from "./contact-change";
 import {
@@ -28,7 +29,6 @@ import {
   waiverLinkDoor,
 } from "./waivers";
 import { openWaiverInThread } from "./waivers-requests";
-import { openOnDevice, shopStaffer } from "./waivers-test-fixtures";
 
 /**
  * **A release with no seat, and the two links that open it** (issue #3983).

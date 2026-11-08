@@ -11,8 +11,8 @@ import {
   issueCalendarFeed,
   revokeCalendarFeeds,
 } from "@/features/calendar-sync";
-import { parseForm } from "@/lib/form-parse";
-import { requireStaffSession } from "@/lib/session";
+import { parseForm } from "@/features/form-parse";
+import { requireStaffSession } from "@/features/session";
 import { shopPath } from "@/lib/staff-notices";
 import type { FeedIssueState } from "./feed-panel-types";
 

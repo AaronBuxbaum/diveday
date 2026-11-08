@@ -1,6 +1,6 @@
 import type { DbExecutor } from "@/db/client";
 import { ratingCredentialsByPerson } from "@/db/staff-credentials";
-import type { getStaffingView } from "@/db/staffing";
+import type { getStaffingView } from "@/features/staffing";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { staffingWarningText } from "@/i18n/staffing-warning-labels";
 import { shopPath } from "@/lib/staff-notices";

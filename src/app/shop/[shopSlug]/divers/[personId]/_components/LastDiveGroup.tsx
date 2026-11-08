@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DateField, Field } from "@/components/ui/form";
-import { EARLIEST_LAST_DIVE, type LastKnownDive } from "@/db/last-dive";
+import { EARLIEST_LAST_DIVE, type LastKnownDive } from "@/features/last-dive";
 import { STAFF_DIVE_RECENCY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";

@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { createDiver } from "@/db/divers";
 import { interests, trips } from "@/db/schema";
 import { createTrip } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
@@ -12,6 +11,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { createDiver } from "../../../../../features/divers/store";
 
 const ctx = fileScopedShopContext();
 
@@ -32,11 +32,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { addDepartureAction } = await import("./actions");
 
 const pad = (value: number) => String(value).padStart(2, "0");

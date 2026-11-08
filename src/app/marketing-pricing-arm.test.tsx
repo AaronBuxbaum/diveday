@@ -26,7 +26,7 @@ const { default: GuidePage, generateMetadata: guideMetadata } = await import(
   "./(marketing)/switching/[competitor]/page"
 );
 const { homeSoftwareJsonLd } = await import("./_components/home-json-ld");
-const { requestPricingOffer } = await import("@/lib/pricing-arm-request");
+const { requestPricingOffer } = await import("../features/pricing-arm-request/rules");
 const { earlyAccessPriceAmount } = await import("@/lib/marketing");
 
 /** The server components between a page and its words, rendered when met. */

@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
-import type { CounterRentalUnit } from "@/db/gear-counter-rentals";
+import type { CounterRentalUnit } from "@/features/gear-counter-rentals";
 import { tankFillLabel, tankFillOptions } from "@/i18n/gear-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { correctCounterTankFillAction } from "../../actions";

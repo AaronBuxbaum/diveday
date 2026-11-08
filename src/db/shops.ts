@@ -205,7 +205,7 @@ export async function setShopSeasonStart(db: AppDb, shopId: string, season: Seas
 /**
  * The shop's "back on the water" date, or null to say nothing. The public
  * off-season line reads it only while the board is empty and the date is ahead
- * (`src/lib/off-season.ts`); the caller validates the date.
+ * (`src/features/off-season/rules.ts`); the caller validates the date.
  */
 export async function setShopReopensOn(db: AppDb, shopId: string, reopensOn: CalendarDate | null) {
   const [shop] = await db

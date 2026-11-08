@@ -6,6 +6,7 @@ import type {
   SpecialtyCertification,
   TripRequirement,
 } from "@/db/schema";
+import { asksNoMoreThan } from "../features/worth-a-look/rules";
 import { ranksBelow } from "./interests";
 import { PARTICIPANT_TYPES, type ParticipantType } from "./participant-types";
 import { type CertificationLevel, calculateReadiness, combineSiteRequirements } from "./readiness";
@@ -21,7 +22,6 @@ import {
   unionRequirements,
 } from "./requirement";
 import { decideTripAdmission, type TripAdmissionEvidence } from "./trip-admission";
-import { asksNoMoreThan } from "./worth-a-look";
 
 /**
  * **The one Requirement shape, and every gate that reads it** (issue #2821).

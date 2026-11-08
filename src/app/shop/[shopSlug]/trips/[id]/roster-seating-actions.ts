@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonOverrideCertBlock, canPersonRefund } from "@/db/authz";
-import { sendBookingCancelledNotice } from "@/db/booking-cancelled-notice";
 import {
   type RestoreBookingOutcome,
   restoreBooking,
@@ -14,28 +13,29 @@ import {
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deliverSeatOffer, type SeatOfferDelivery } from "@/db/interest-offers";
-import { carryInterests } from "@/db/interest-roll";
 import {
   askForDeparture,
   askForDepartureAsKnownDiver,
   type DepartureAskOutcome,
   ensureDepartureInterest,
 } from "@/db/interests";
-import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
 import { getBookingPayment } from "@/db/payments";
 import { refundBookingOnCancellation } from "@/db/refunds";
-import { type MoveSeatRefusal, moveParty, moveSeat } from "@/db/seat-diver";
 import { recordShopActivity } from "@/db/shop-activity";
 import { shopHasFeatureOn } from "@/db/shops";
+import { sendBookingCancelledNotice } from "@/features/booking-cancelled-notice";
+import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/features/form-parse";
+import { carryInterests } from "@/features/interest-roll";
+import { createInvitationUnderCooldown } from "@/features/invite-suggestions";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { type MoveSeatRefusal, moveParty, moveSeat } from "@/features/seat-diver";
+import { requireShopSurface } from "@/features/session";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/lib/form-parse";
 import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { signTripAdmissionGate, tripGateBinding } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";

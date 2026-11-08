@@ -32,7 +32,7 @@ if (process.env.PIXEL_PROBE === "1") {
 //   - DIVEDAY_E2E re-opens /api/test/reset, which is otherwise closed in a
 //     production runtime (see src/app/api/test/reset/route.ts).
 //   - DIVEDAY_E2E_SECRET is the bearer token every /api/test/* route also
-//     requires (src/lib/e2e-test-routes.ts) — sent on every outgoing test
+//     requires (src/features/e2e-test-routes/rules.ts) — sent on every outgoing test
 //     request below via `use.extraHTTPHeaders` and global-setup.ts's own
 //     manual request context.
 const serverEnv = {
@@ -245,7 +245,7 @@ export default defineConfig({
     // e2e/browser.ts for why each one is there and what it costs.
     launchOptions: chromiumLaunchOptions(),
     // Every /api/test/* route now requires this bearer token in addition to
-    // its env-var predicate (src/lib/e2e-test-routes.ts). Setting it here
+    // its env-var predicate (src/features/e2e-test-routes/rules.ts). Setting it here
     // once covers every spec's `request`/`context`/`page` fixture (including
     // e2e/fixtures.ts's auto `demoReset` reset) without touching each call
     // site; it's a harmless extra header on ordinary page navigations, which

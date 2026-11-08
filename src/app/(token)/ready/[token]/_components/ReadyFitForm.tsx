@@ -1,5 +1,5 @@
 import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
-import type { ReadyPageData } from "@/db/ready";
+import type { ReadyPageData } from "@/features/ready";
 import { toShopCurrency } from "@/lib/money";
 import type { seatRentalItems } from "@/lib/participant-types";
 import { saveFitFromReady } from "../gear-actions";

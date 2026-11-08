@@ -6,14 +6,14 @@ import { SectionCard } from "@/components/ui/card";
 import { ReadinessBar } from "@/components/ui/ProgressBar";
 import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
+import { staffDiveIntentLine } from "@/features/dive-intent";
 import type { DayStation as DayStationData } from "@/features/today";
-import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
+import { STAGE_TONE } from "@/features/trip-stage-tone";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { sayHelloSentences } from "@/i18n/welcome-cue-labels";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { formatMoneyScanned, formatTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
-import { STAGE_TONE } from "@/lib/trip-stage-tone";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 
 /**

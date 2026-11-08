@@ -1,5 +1,5 @@
+import type { WeekShift } from "@/features/staffing-week";
 import { formatTimeRange } from "@/lib/format";
-import type { WeekShift } from "@/lib/staffing-week";
 
 /**
  * A shift at rest: the range, and the note if there is one. `text-muted` on a

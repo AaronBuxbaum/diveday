@@ -1,5 +1,5 @@
 import type { AppDb } from "@/db/client";
-import { sendWorkOrderReadyNotice } from "@/db/work-order-follow-up";
+import { sendWorkOrderReadyNotice } from "@/features/work-order-follow-up";
 import { log } from "@/lib/log";
 
 /**

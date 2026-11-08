@@ -95,7 +95,7 @@ be forgotten, never usefully reconsidered.
 
 - **A deployment with no `PLACES_AWS_*` credentials can no longer set a shop address from the UI.**
   That is the ordinary local and self-hosted case, and it was a real loss for self-hosters, who
-  previously had five plain text boxes. The address remains settable by import (`src/db/import.ts`)
+  previously had five plain text boxes. The address remains settable by import (`src/features/import/store.ts`)
   and by seed. This was left open as a follow-up here, on the reasoning that the alternatives — a
   second hand-entry path, or a no-credential geocoder — were both larger than this change and
   neither obviously right.

@@ -6,7 +6,6 @@ import { addDiverNote, listDiverRecordNotes } from "@/db/operations";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
 import { activityEvents, cards, internalNotes, people } from "@/db/schema";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
-import { readUndoOffer } from "@/lib/undo";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -15,6 +14,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { readUndoOffer } from "../../features/undo/rules";
 
 /**
  * **One Undo, three removals** (issue #2764). Each removal on the diver record
@@ -41,13 +41,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", async () =>
+vi.mock("../../features/session/rules", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../features/session/rules");
 const { undoAction } = await import("./undo");
 const { deleteCertificationAction, deleteSpecialtyAction } = await import(
   "@/app/shop/[shopSlug]/divers/[personId]/card-actions"

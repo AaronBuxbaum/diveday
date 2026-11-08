@@ -1,6 +1,6 @@
 import type { DbExecutor } from "@/db/client";
 import { getDb } from "@/db/client";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**

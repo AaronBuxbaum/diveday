@@ -507,7 +507,7 @@ export async function listBoardedAtAnyCheckpointByTrip(
  * drops the checkpoint out, the same supersession every reader here applies.
  *
  * **Two callers, and they are why it exists** (dive-domain-expert review, issue
- * #1704). `seatSailed` (src/lib/seat-sailed.ts) ranked the dock alone, so the
+ * #1704). `seatSailed` (src/features/seat-sailed/rules.ts) ranked the dock alone, so the
  * evening said "0 out, 0 back" about a one-diver boat carrying a missing diver:
  * the desk's `no_show` stood, no dock result contradicted it, and the after-dive
  * `not_boarded` the day was raising a top-severity row about was invisible to
@@ -777,7 +777,7 @@ export async function listCountedAboardBlockedByTrip(
  * nothing at all.
  *
  * It exists because the thread's after-state must never assert that somebody
- * dived on the strength of a clock (`isAfterTheDive`, src/lib/seat-ladder.ts).
+ * dived on the strength of a clock (`isAfterTheDive`, src/features/seat-ladder/rules.ts).
  * A departure roll call is the only direct evidence DiveDay holds about who
  * actually got on the boat, and this is the narrowest possible read of it —
  * one booking, and only the answer, never the recorder, the note or the `seq`.
@@ -1836,7 +1836,7 @@ async function gateOfflineRollCallNote(
  * **The crew boarded somebody the counter had written off, so the seat is
  * theirs again.**
  *
- * `markBookingNoShow` (src/db/no-show.ts) releases a seat the instant a staffer
+ * `markBookingNoShow` (src/features/no-show/store.ts) releases a seat the instant a staffer
  * confirms the diver did not come: `no_show` stops holding the seat, the
  * boat reads one seat lighter, and a walk-in can buy it. Readiness never reads
  * booking status and `getTripRoster` drops only cancelled rows, so that released
@@ -1894,7 +1894,7 @@ async function reclaimReleasedSeat(
   },
 ): Promise<void> {
   // The seat comes back held, exactly as `undoBookingNoShow` puts it back
-  // (src/db/no-show.ts). Whether the desk saw the diver is the arrival trail's,
+  // (src/features/no-show/store.ts). Whether the desk saw the diver is the arrival trail's,
   // which the release never touched, so a diver the counter had checked in
   // reads as checked in again with nothing written here (issues #1838, #2702).
   const [updated] = await tx

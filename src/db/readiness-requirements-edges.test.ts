@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { readinessFixturesFor } from "../test/substrate-fixtures/db/readiness-test-fixtures";
 import { getTripRequirements, listTripsReadiness, upsertTripRequirements } from "./readiness";
-import { readinessFixturesFor } from "./readiness-test-fixtures";
 
 const ctx = fileScopedShopContext();
 const { readinessContext } = readinessFixturesFor(ctx);

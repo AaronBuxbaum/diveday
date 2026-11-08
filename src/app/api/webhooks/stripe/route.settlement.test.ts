@@ -7,7 +7,7 @@ import { nowMs } from "@/lib/clock";
  * settled figure to the completion, and (#2566) tell a group's lead the total
  * exactly once. Dispatch only, every handler mocked; the sibling
  * `route.test.ts` covers the rest of the route, and
- * `src/db/party-payment-receipt.test.ts` covers the receipt itself.
+ * `src/features/party-payment-receipt/store.test.ts` covers the receipt itself.
  */
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -20,21 +20,27 @@ vi.mock("@/db/checkouts", () => ({
   recordCheckoutStripeCustomer: vi.fn(),
   recordCheckoutPaymentIntent: vi.fn(),
 }));
-vi.mock("@/db/party-payment-receipt", () => ({ sendPartyPaymentReceipt: vi.fn() }));
-vi.mock("@/db/webhook-events", () => ({
+vi.mock("../../../../features/party-payment-receipt/store", () => ({
+  sendPartyPaymentReceipt: vi.fn(),
+}));
+vi.mock("../../../../features/webhook-events/store", () => ({
   claimStripeWebhookEvent: vi.fn(),
   hasNewerAccountUpdate: vi.fn(),
   releaseStripeWebhookEventClaim: vi.fn(),
 }));
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { markCheckoutPaidBySessionId, recordCheckoutPaymentIntent, recordCheckoutStripeCustomer } =
   await import("@/db/checkouts");
-const { sendPartyPaymentReceipt } = await import("@/db/party-payment-receipt");
+const { sendPartyPaymentReceipt } = await import(
+  "../../../../features/party-payment-receipt/store"
+);
 const { claimStripeWebhookEvent, hasNewerAccountUpdate, releaseStripeWebhookEventClaim } =
-  await import("@/db/webhook-events");
+  await import("../../../../features/webhook-events/store");
 const { POST } = await import("./route");
 
 const secret = "whsec_test";

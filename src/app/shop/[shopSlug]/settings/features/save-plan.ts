@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { FeaturesPageWrite, ShopSwitches } from "@/db/shops";
+import { allValues, checkbox, formValue, readForm } from "@/features/form-parse";
 import { REPLY_NOTES_MAX_LENGTH } from "@/lib/assists/inbox";
-import { allValues, checkbox, formValue, readForm } from "@/lib/form-parse";
 import { SHOP_FEATURE_COLUMNS } from "@/lib/shop-features";
 import {
   FEATURE_ROWS,

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ReadyPageData } from "@/db/ready";
 import { diverTranslator } from "@/i18n/messages";
+import type { ReadyPageData } from "../../../../../features/ready/store";
 import { CourseMaterials } from "./CourseMaterials";
 
 /**

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { sectionTabClass, WRAPPING_SECTION_TAB_LIST_CLASS } from "@/components/SectionTabs";
 import { Badge } from "@/components/ui/badge";
-import { STAGE_TONE } from "@/lib/trip-stage-tone";
+import { STAGE_TONE } from "@/features/trip-stage-tone";
 import type { TripStage } from "@/lib/trip-stages";
 
 /**

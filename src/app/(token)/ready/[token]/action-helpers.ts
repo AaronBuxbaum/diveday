@@ -5,7 +5,7 @@ import {
 } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
-import { getReadyPageData, type ReadyPageData } from "@/db/ready";
+import { getReadyPageData, type ReadyPageData } from "@/features/ready";
 import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";

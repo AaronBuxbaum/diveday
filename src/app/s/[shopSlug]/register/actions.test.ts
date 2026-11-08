@@ -11,13 +11,13 @@ vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/shops", () => ({
   getShopBySlug: vi.fn(async () => ({ id: "shop", selfRegistrationEnabled: true })),
 }));
-vi.mock("@/db/self-registration", () => ({
+vi.mock("../../../../features/self-registration/store", () => ({
   registerDiverAtShop: vi.fn(async () => ({ personId: "person" })),
   deliverSelfRegistrationWaiver: vi.fn(),
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.9") }));
-vi.mock("@/lib/self-registration-delivery", () => ({
+vi.mock("../../../../features/self-registration-delivery/rules", () => ({
   selfRegistrationReleaseDelivery: vi.fn(async () => "send"),
 }));
 vi.mock("@/lib/rate-limit", async (original) => ({
@@ -25,7 +25,7 @@ vi.mock("@/lib/rate-limit", async (original) => ({
   checkRateLimit: vi.fn(async () => ({ allowed: true })),
 }));
 const { registerAtShopAction } = await import("./actions");
-const { registerDiverAtShop } = await import("@/db/self-registration");
+const { registerDiverAtShop } = await import("../../../../features/self-registration/store");
 const t = diverTranslator("en-US");
 beforeEach(() => vi.clearAllMocks());
 function form(agency = "") {

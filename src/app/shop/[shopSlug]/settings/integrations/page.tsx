@@ -5,18 +5,18 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
-import { canPersonBackfillIntegrations, canPersonManageShopSettings } from "@/db/authz";
 import {
-  listIntegrationSummaries,
+  getIntegrationSettingsPage,
+  INTEGRATION_SETTINGS_GATE,
   quickBooksConfigFromEnvironment,
   shopifyConfigFromEnvironment,
 } from "@/features/integrations";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
-import { requireShopSurface } from "@/lib/session";
 import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
 import { DataTabs } from "../_components/DataTabs";
 import { settingsPaneClass } from "../_components/settings-pane";
@@ -67,14 +67,14 @@ export default async function IntegrationsSettingsPage({
 }) {
   const { shopSlug } = await params;
   const { notice, count, backfill, since } = await searchParams;
-  const { db, session, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonManageShopSettings,
-    refusal: { notice: "integrations-not-authorized" },
-  });
+  const { db, session, shop } = await requireShopSurface(shopSlug, INTEGRATION_SETTINGS_GATE);
+  const { summaries, ownerBackfill } = await getIntegrationSettingsPage(
+    db,
+    shop.id,
+    session.user.personId,
+  );
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const summaries = await listIntegrationSummaries(db, shop.id);
-  const ownerBackfill = await canPersonBackfillIntegrations(db, shop.id, session.user.personId);
   const shopify = summaries.find((row) => row.provider === "shopify");
   const quickbooks = summaries.find((row) => row.provider === "quickbooks");
   const zapier = summaries.find((row) => row.provider === "zapier");

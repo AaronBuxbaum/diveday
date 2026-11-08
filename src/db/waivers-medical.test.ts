@@ -10,7 +10,14 @@ import {
   waiverStanding,
 } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  clearAnswers,
+  medicalReferralAnswers,
+  now,
+  recordMedicalEvaluationForShop as recordMedicalEvaluation,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { bookings, people, personRoles, shops, userAccounts, waiverRecords } from "./schema";
 import { createTrip, listStaff } from "./trips";
@@ -19,13 +26,6 @@ import { completeWaiver } from "./waivers-completion";
 import { getMedicalClearanceDocument, hasUnansweredMedicalHold } from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
 import { getCurrentWaiverTemplate } from "./waivers-templates";
-import {
-  clearAnswers,
-  medicalReferralAnswers,
-  now,
-  recordMedicalEvaluationForShop as recordMedicalEvaluation,
-  waiverContextFor,
-} from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -758,7 +758,7 @@ describe("physician medical clearance", () => {
 
     // The locked door the sentence must not point at: nothing can be sent
     // against the seat that was refused. The record page offers no send at all
-    // for a held release (`src/lib/diver-status.ts`), and the writer
+    // for a held release (`src/features/diver-status/rules.ts`), and the writer
     // agrees — this booking already carries a record that is not pending.
     const later = new Date(now.getTime() + 120_000);
     expect(

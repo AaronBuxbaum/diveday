@@ -1,11 +1,11 @@
 import { ImageResponse } from "next/og";
 import { CARD_STYLE, OG_COLORS, OG_WORDMARK, ogFooter } from "@/app/_og/card";
 import { getDb } from "@/db/client";
-import { getRecapPageData } from "@/db/recap";
 import { openRecapLink } from "@/db/recap-links";
+import { allowSvgRasterization } from "@/features/og-rasterizer";
+import { getRecapPageData } from "@/features/recap";
 import { formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { allowSvgRasterization } from "@/lib/og-rasterizer";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
 // locale context, the same carve-out as `src/app/link-card/route.tsx`.
@@ -50,7 +50,7 @@ export default async function RecapOpenGraphImage({
   const { token } = await params;
   // Before any ImageResponse is built: Next's image optimizer disables
   // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
-  // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
+  // through. See src/features/og-rasterizer/rules.ts — the failure mode is a severed
   // socket, not an error page.
   await allowSvgRasterization();
   const bookingId = await openRecapLink(await getDb(), token);

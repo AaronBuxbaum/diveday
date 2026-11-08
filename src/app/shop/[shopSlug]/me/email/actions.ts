@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { setAfterHoursPingChoice } from "@/db/desk-pings";
-import { setWeeklyDigestChoice } from "@/db/weekly-digest";
-import { requireShopSurface } from "@/lib/session";
+import { setAfterHoursPingChoice } from "@/features/desk-pings";
+import { requireShopSurface } from "@/features/session";
+import { setWeeklyDigestChoice } from "@/features/weekly-digest";
 import { shopPath } from "@/lib/staff-notices";
 
 /**

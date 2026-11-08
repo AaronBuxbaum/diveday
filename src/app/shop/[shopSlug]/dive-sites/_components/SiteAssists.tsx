@@ -1,6 +1,6 @@
 import { AssistFillButton } from "@/components/assists/AssistFillButton";
-import { assistsAvailable } from "@/db/assists";
 import type { AppDb } from "@/db/client";
+import { assistsAvailable } from "@/features/assists";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { translationBoxId } from "@/lib/assists/shop-translate";
 import { loadTranslationBox, type TranslationBox } from "../../_components/ShopTextTranslation";

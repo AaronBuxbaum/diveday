@@ -119,7 +119,7 @@ should be retired, gated, or paused — not extended:
   `global_dive_site_versions`, `source_template_version`) — heavy provenance machinery for a
   DiveDay-maintained catalog whose real inventory is the hardcoded content above.
 - ~~**Two parallel payment paths.**~~ ✅ **Done (2026-07-20).** The superseded Stripe **Checkout**
-  seam (`src/lib/payments/index.ts`) was removed; the Connect + invoicing order flow the UI actually
+  seam (`src/features/payments/index.ts`) was removed; the Connect + invoicing order flow the UI actually
   uses is the single payment path.
 - ~~**The cert-verification agency-gateway plumbing**~~ ✅ **Removed (2026-07-21).** No agency
   exposed such an API ([H-20261007-request-supported-c-card](../human-decisions/README.md)), so the per-agency PADI/SSI/NAUI plumbing always

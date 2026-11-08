@@ -13,12 +13,12 @@ vi.mock("next/navigation", () => ({
     throw new Error(url);
   },
 }));
-vi.mock("@/lib/navigation", () => ({
+vi.mock("../../../../features/navigation/rules", () => ({
   revalidateAndRedirect: (_page: string, url: string) => {
     throw new Error(url);
   },
 }));
-vi.mock("@/lib/session", () => ({
+vi.mock("../../../../features/session/rules", () => ({
   requireStaffSession: async () => ({
     user: { shopSlug: "blue-mantis", shopId: "our-shop", personId: "staff" },
   }),
@@ -27,7 +27,7 @@ vi.mock("../register-block", () => ({ registerBlock: mocks.block }));
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
 vi.mock("@/db/authz", () => ({ canPersonManageBoats: vi.fn() }));
 vi.mock("@/db/shops", () => ({ getShopById: async () => ({ timezone: "UTC" }) }));
-vi.mock("@/db/boats", () => ({
+vi.mock("../../../../features/boats/store", () => ({
   createBoat: vi.fn(),
   deleteBoat: vi.fn(),
   editBoatWithinCertificate: mocks.save,

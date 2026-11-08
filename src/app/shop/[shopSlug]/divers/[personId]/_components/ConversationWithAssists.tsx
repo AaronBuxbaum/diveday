@@ -1,9 +1,13 @@
 import { after } from "next/server";
 import type { ComponentProps } from "react";
 import { languageName } from "@/components/assists/language-name";
-import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
-import { awaitsTriage, diverReplyLanguage, triageInboundMessagesSafely } from "@/db/inbox-assists";
+import { assistsAvailable } from "@/features/assists";
+import {
+  awaitsTriage,
+  diverReplyLanguage,
+  triageInboundMessagesSafely,
+} from "@/features/inbox-assists";
 import { requestFromMessageAction } from "../../../inbox/assist-actions";
 import { draftReplyAction, translateReplyAction } from "../assist-actions";
 import { ConversationSection } from "./ConversationSection";

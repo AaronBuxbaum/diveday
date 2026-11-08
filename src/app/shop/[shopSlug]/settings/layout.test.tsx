@@ -19,7 +19,7 @@ vi.mock("next/headers", () => nextHeadersStub());
 vi.mock("next/navigation", () => ({
   usePathname: () => "/shop/blue-mantis/settings",
 }));
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/db/authz", () => ({
   canPersonManageShopSettings: vi.fn(),
   canPersonManagePaymentSettings: vi.fn(async () => false),
@@ -29,7 +29,7 @@ vi.mock("@/db/stripe-accounts", () => ({
   getShopStripeAccount: vi.fn(async () => null),
 }));
 
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../features/session/rules");
 const { canPersonManageShopSettings } = await import("@/db/authz");
 const { default: SettingsLayout } = await import("./layout");
 

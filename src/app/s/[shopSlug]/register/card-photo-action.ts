@@ -1,17 +1,17 @@
 "use server";
 
-import { runAssist } from "@/db/assists";
 import { getDb } from "@/db/client";
-import { shopBySlugCached } from "@/db/shops-cached";
-import { diverTranslator } from "@/i18n/messages";
-import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
+import { runAssist } from "@/features/assists";
 import {
   CERT_SCAN_FEATURE,
   certScanCall,
   certScanFields,
   parseCardImage,
   scanCard,
-} from "@/lib/assists/cert-scan";
+} from "@/features/cert-scan";
+import { shopBySlugCached } from "@/features/shops-cached";
+import { diverTranslator } from "@/i18n/messages";
+import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import { checkRateLimitFailClosed, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { SELF_DECLARED_AGENCIES, SELF_DECLARED_LEVELS } from "@/lib/self-registration";

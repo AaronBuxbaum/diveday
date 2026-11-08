@@ -4,13 +4,13 @@ import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { PrintButton } from "@/components/PrintButton";
 import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
-import { getCounterDoctorReferral } from "@/db/party-waiver-queue";
+import { getCounterDoctorReferral } from "@/features/party-waiver-queue";
+import { requireShopSurface } from "@/features/session";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { recipientLocale } from "@/lib/notifications";
 import { capabilityPagePrintRule } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
 export const instant = true;

@@ -2,7 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { trainingPlanView } from "@/db/training-plan-view";
+import type { trainingPlanView } from "@/features/training-plan-view";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 type Plan = NonNullable<Awaited<ReturnType<typeof trainingPlanView>>>;

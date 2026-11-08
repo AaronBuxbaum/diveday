@@ -1,0 +1,807 @@
+import { type CalendarDate, calendarDateInTimezone } from "../../lib/calendar-date";
+import {
+  type CourseCrewGap,
+  type CourseCrewGapCourse,
+  courseCrewGap,
+} from "../../lib/course-ratios";
+import {
+  type AvailabilityBlock,
+  blockCoversDay,
+  type CrewAssignmentRequest,
+  crewRequestRefusal,
+  overlappingBlocks,
+} from "../../lib/crew-requests";
+import type { InWaterCrewCount } from "../../lib/crew-roles";
+import {
+  type DivemasterRatioGap,
+  divemasterRatioGap,
+  inWaterDivemasterCount,
+} from "../../lib/divemaster-ratio";
+import { hasReturned } from "../../lib/trips";
+import { weekDates } from "../../lib/week-board";
+
+/**
+ * **Staffing read as a week** — people down the side, the shop's seven days
+ * across the top, and the departures that still need somebody in the day cell
+ * where the work actually is.
+ *
+ * This module must not drift from ADR 20260827-the-shops-shelves, decision 3
+ * ("Staffing reads as a week: people as rows, days as columns, shifts as quiet
+ * chips; a departure needing crew renders in its day cell with the warning word
+ * **and its act**"). It is the assembly half only: pure, framework-free, and
+ * reading no wall clock of its own — the caller passes `today` (from
+ * `nowDate()`, through the shop's zone) so the frozen e2e clock reaches this
+ * the same way it reaches every other surface.
+ *
+ * **Every bucket is a shop-local day.** A shift is filed under
+ * `calendarDateInTimezone(startsAt, shop.timezone)`, never under the host's
+ * day: on a UTC CI box a 6:30 PM Key Largo shift starts at 22:30 UTC and a
+ * 9:00 PM one starts *tomorrow*, so bucketing by the host would quietly move
+ * half a shop's evening work into the next column. The week's own boundaries
+ * are the same arithmetic run by the caller, which turns this week's Monday and
+ * the following Monday into the UTC instants the reader is scoped by.
+ *
+ * **A departure is placed by the days it meets, never by `starts_at` alone.**
+ * `trips.starts_at`/`ends_at` bound the whole run of a multi-day course, so
+ * bucketing by the start put a Thursday-to-Saturday class in one column and
+ * dropped a class that began the previous Sunday out of the week it is
+ * actually running in. The meeting windows come from `trip_schedule_days` —
+ * the same rows the schedule board's week reads for the same reason.
+ *
+ * The `?week=` grammar itself is not redefined here: it is
+ * `src/lib/week-board.ts`, shared with the schedule board (ADR
+ * 20260827-clearwater-surface-language, decision 5). One spelling, two
+ * surfaces.
+ */
+
+/**
+ * Why a departure in this week is short-handed, in the vocabulary of the two
+ * surfaces that can *fix* it: `courseCrewGap` (src/lib/course-ratios.ts) for
+ * the agency training ratio, and `divemasterRatioGap`
+ * (src/lib/divemaster-ratio.ts) for the shop's own target, whose two cases
+ * Today already words as `uncrewed_departure` and `crew_below_target`.
+ *
+ * There is deliberately no code for "this departure has no `trip_assignments`
+ * row". That is not a judgement about whether anybody is in the water — a
+ * captain is a row and supervises nobody, an empty boat is no rows and needs
+ * nobody — and having one here is how this surface came to draw an all-clear
+ * on a twelve-diver charter with nothing but a captain aboard.
+ */
+export type StaffGapCode =
+  | "no_instructor"
+  | "over_ratio"
+  // An **intro/DSD** session past its ratio, kept apart from `over_ratio`
+  // because the two are different phone calls (issue #1339). The entry-level
+  // cap is instructor-plus-assistant, so "Over student ratio" correctly
+  // invites rostering a divemaster; the intro cap is instructor-to-student
+  // alone and a divemaster does not move it by one seat. One word for both
+  // sent a divemaster to press "Ask for this one" on the one gap their being
+  // aboard cannot close.
+  | "over_intro_ratio"
+  // An entry-level session booked past its **per-instructor ceiling** (12
+  // students per instructor, whatever the assistants): an assistant buys no
+  // seat there either, so it is the instructor's phone call, like the intro
+  // cap (`remedy`, src/lib/course-ratios.ts; dive-domain review of #1677).
+  | "over_ratio_instructor"
+  // A course session with nobody in the water: both `no_instructor` and the
+  // zero-crew case at once (issue #1338). It is its own code rather than
+  // either of them because the chip is the entire information budget of a
+  // 135px cell, and the two words a manager needs are different phone calls —
+  // "No crew" invites rostering any divemaster, and a divemaster cannot run a
+  // training dive or sign anybody off. One row, both facts.
+  | "uncrewed_course"
+  | "uncrewed_departure"
+  | "crew_below_target";
+
+/**
+ * How loudly a gap is drawn — Today's own tone for the same code
+ * (`KIND_TONE`, src/features/today/today.ts), not a second judgement about the same
+ * departure.
+ *
+ * `crew_below_target` is deliberately quiet: the shop's target "binds
+ * nothing" (src/lib/divemaster-ratio.ts), so it is advice rather than a
+ * problem, and paying for it in the warning ink this surface reserves for a
+ * boat with nobody in the water is how a warning channel stops meaning
+ * anything. A code, never copy — the words come from the message bundle.
+ */
+export const GAP_TONE: Record<StaffGapCode, "warning" | "neutral"> = {
+  no_instructor: "warning",
+  over_ratio: "warning",
+  over_intro_ratio: "warning",
+  over_ratio_instructor: "warning",
+  uncrewed_course: "warning",
+  uncrewed_departure: "warning",
+  crew_below_target: "neutral",
+};
+
+/**
+ * The one place a course gap's *ratio kind* becomes a chip code.
+ *
+ * `courseCrewGap` (src/lib/course-ratios.ts) has always carried `ratio` on
+ * `over_ratio` — the entry-level rule and the far tighter intro one measure
+ * different things — and every caller but this surface already words the two
+ * apart (`trips.detail.overRatioWarningIntro`, and `overRatioIntroDetailText`
+ * in src/features/today/today-reader.ts). The staffing week collapsed them by placing
+ * `courseGap.code` verbatim, which is how it came to offer a divemaster the one
+ * ask that cannot help (issue #1339). Pure and exported so `src/features/staffing/store.ts`
+ * and the tests read the same mapping.
+ *
+ * Null for `none`: not a gap, so not a code.
+ */
+export function staffGapForCourseGap(gap: CourseCrewGap): StaffGapCode | null {
+  if (gap.code === "none") return null;
+  if (gap.code === "no_instructor") return "no_instructor";
+  if (gap.ratio === "intro") return "over_intro_ratio";
+  return gap.remedy === "instructor" ? "over_ratio_instructor" : "over_ratio";
+}
+
+/** A departure's crew gap, and the two rules it was decided from. */
+export type CrewGap = {
+  /** The one code for the departure, or null when its crew is enough. */
+  code: StaffGapCode | null;
+  /** The agency training ratio's own answer, for the words a caller draws. */
+  courseGap: CourseCrewGap;
+  /** The shop's own target's answer, likewise. */
+  ratioGap: DivemasterRatioGap;
+  /** Divers aboard to supervise and nobody in the water to supervise them. */
+  uncrewed: boolean;
+};
+
+/**
+ * **The one decision of a departure's crew gap** (issue #2482), read by the
+ * staffing week (`src/features/staffing/store.ts`) and Today's crew rows
+ * (`src/features/today/today-crew-gap-rows.ts`), so the two cannot disagree about whether
+ * a boat is short. Pure: the counts come in, a code comes out.
+ *
+ * The agency training ratio first (`courseCrewGap`): a course session missing
+ * its instructor is the more precise fact, and firing the shop's own target
+ * underneath it would name one gap in two vocabularies. Then the shop's own
+ * target (`divemasterRatioGap`), which reaches every departure it runs rather
+ * than only the courses, and owns the two exemptions: a self-guided departure,
+ * and one with nobody booked. Divers only (ADR 20261007-participant-types):
+ * the ratio is a scuba-guiding ratio, and a snorkeler or a rider is not
+ * supervised underwater.
+ *
+ * **No crew outranks the instructor gap** (issue #1338). A course session with
+ * no crew at all satisfies both rules, and issue #732 settled that a departure
+ * carries one row; the course gap winning outright meant an empty boat read as
+ * "Course needs instructor", which a staffer takes to mean a divemaster is
+ * already aboard. `divemasterRatioGap` decides, not a bare zero count, because
+ * the count alone is also true where "No crew" would be wrong: a self-guided
+ * departure wants no supervisor, and one with nobody booked has no one to
+ * supervise. Both keep the instructor gap, which stays true and actionable.
+ *
+ * Which zero-crew code is the course/fun-dive split, read off `courseGap`
+ * rather than the course so the two cannot disagree: with nobody in the water
+ * `courseCrewGap` returns `no_instructor` for exactly the sessions with a
+ * course. `uncrewed_course` says both words, because only an instructor closes
+ * a course gap.
+ *
+ * Two things this is safe because of. Neither ratio code can be suppressed by
+ * the zero-crew case: both require `instructorCount >= 1`
+ * (src/lib/course-ratios.ts), which forces a non-zero in-water count. And the
+ * shop's `diversPerDivemaster` cannot route a departure between the rows: with
+ * divers aboard and nobody in the water, `ceil(divers / ratio) >= 1` across the
+ * whole legal range, so `under_target` always holds and only the two
+ * exemptions decide.
+ */
+export function crewGapFor(input: {
+  course: CourseCrewGapCourse;
+  counts: InWaterCrewCount;
+  /** Everyone booked. */
+  booked: number;
+  /**
+   * Divers only, for the shop's scuba-guiding target and a course session's
+   * ratio: its students are its divers, and a priced snorkeler or rider
+   * beside them is a passenger (G5 of #2226).
+   */
+  bookedDivers: number;
+  diversPerDivemaster: number | null;
+  selfGuided: boolean;
+}): CrewGap {
+  const courseGap = courseCrewGap({
+    course: input.course,
+    instructorCount: input.counts.instructorCount,
+    assistantCount: input.counts.assistantCount,
+    booked: input.bookedDivers,
+  });
+  const ratioGap = divemasterRatioGap({
+    divers: input.bookedDivers,
+    divemasterCount: inWaterDivemasterCount(input.counts),
+    diversPerDivemaster: input.diversPerDivemaster,
+    selfGuided: input.selfGuided,
+  });
+  const uncrewed = ratioGap.code === "under_target" && ratioGap.divemasterCount === 0;
+  const decided = (code: StaffGapCode | null): CrewGap => ({
+    code,
+    courseGap,
+    ratioGap,
+    uncrewed,
+  });
+  if (uncrewed) {
+    return decided(courseGap.code === "no_instructor" ? "uncrewed_course" : "uncrewed_departure");
+  }
+  // Through the mapper, not `courseGap.code`: the chip keeps the intro cap
+  // apart from the entry-level one (issue #1339, `staffGapForCourseGap`).
+  const courseGapCode = staffGapForCourseGap(courseGap);
+  if (courseGapCode) return decided(courseGapCode);
+  // Short of the shop's target but not empty: the zero case returned above.
+  return decided(ratioGap.code === "none" ? null : "crew_below_target");
+}
+
+/** The gap codes only another instructor's seat closes. */
+function onlyAnInstructorCloses(code: StaffGapCode): boolean {
+  return code === "over_intro_ratio" || code === "over_ratio_instructor";
+}
+
+/** A shift, reduced to what a week cell has to draw. */
+export type WeekShift = { id: string; startsAt: Date; endsAt: Date; note: string | null };
+
+/**
+ * One window a departure actually meets in.
+ *
+ * A departure is a *run*, not a point: `trips.starts_at`/`ends_at` bound the
+ * whole of a three-day course, and `trip_schedule_days` says which mornings it
+ * meets on. The week takes the windows, so a Thursday-to-Saturday class
+ * occupies three columns with each day's real hours in it rather than one
+ * column claiming the run is an 08:00–17:00 outing.
+ */
+export type TripMeeting = { startsAt: Date; endsAt: Date };
+
+/** A departure this person is on the crew of, across every day it meets. */
+export type WeekCrewing = { tripId: string; title: string; meetings: readonly TripMeeting[] };
+
+/** A departure in this week that still needs somebody. */
+export type WeekGap = {
+  tripId: string;
+  title: string;
+  gap: StaffGapCode;
+  meetings: readonly TripMeeting[];
+  /**
+   * Somebody rostered on it counts for less than their role says, because
+   * every rating the shop recorded for them lapses before the departure
+   * (issue #1853). Absent reads as no.
+   */
+  ratingLapsed?: boolean;
+  ratingUnverified?: boolean;
+};
+
+/** Another departure the same person crews at the same hours as this one. */
+export type CrewClash = { tripId: string; title: string };
+
+/**
+ * Every other departure this person crews whose hours overlap `window`.
+ *
+ * **The window, not the day**, and the same half-open predicate
+ * `setTripCrew` refuses on (`src/db/trips-crew.ts`): a morning two-tank and an
+ * afternoon single are an ordinary double shift for a divemaster, and calling
+ * that a clash is the saturation failure #757 and #1203 already paid for once.
+ * A departure that ties up exactly as the next one sails is not a clash either.
+ *
+ * Asked per **placed meeting** rather than once per run, unlike the blackout
+ * above it: a course clashing on its Tuesday leg is not clashing on its Monday,
+ * and the week's whole claim is that a chip states its own day's commitment.
+ *
+ * **Nothing at all once that meeting is home** (`hasReturned`, the same hour of
+ * grace `src/features/staffing/store.ts`'s gap walk drops a sailed departure by, and the
+ * same reading `weekBoard` takes). The week deliberately shows up to six days
+ * behind the shop's own today and `trip_status` stays `scheduled` after a boat
+ * comes back, so without this bound a Friday afternoon carries a full warning
+ * about two hulls that both came home on Monday. A *past* clash is permanent —
+ * nobody moves last Monday's boat — which makes it exactly the saturation
+ * failure #757 and #1203 paid for, re-entered by a side door. Asked of the
+ * chip's own meeting, not of the run: a course still mid-week keeps the mark on
+ * the legs that are still ahead.
+ */
+/**
+ * **One warning per clash** (UX audit 2026-10-07, item 34). A clash is a pair
+ * of departures, and both of them name the other, so one person's day said the
+ * same fact twice, once under each boat, side by side. The earlier departure
+ * keeps the line and the later one drops the clash it already shares; a
+ * clash with a departure not placed on this day still draws, since nothing
+ * else in the column says it. Takes the day's crewing already in start order.
+ */
+export function sayEachClashOnce(crewing: readonly PlacedTrip[]): PlacedTrip[] {
+  const said = new Set<string>();
+  return crewing.map((trip) => {
+    const clashes = trip.clashes.filter((clash) => !said.has(`${clash.tripId}|${trip.tripId}`));
+    for (const clash of clashes) said.add(`${trip.tripId}|${clash.tripId}`);
+    return clashes.length === trip.clashes.length ? trip : { ...trip, clashes };
+  });
+}
+
+export function clashingDepartures(
+  window: TripMeeting,
+  tripId: string,
+  crewing: readonly WeekCrewing[],
+  now: Date,
+): CrewClash[] {
+  if (hasReturned(window.endsAt, now)) return [];
+  const clashes: CrewClash[] = [];
+  for (const other of crewing) {
+    if (other.tripId === tripId || clashes.some((found) => found.tripId === other.tripId)) continue;
+    if (
+      other.meetings.some(
+        (meeting) => meeting.startsAt < window.endsAt && meeting.endsAt > window.startsAt,
+      )
+    ) {
+      clashes.push({ tripId: other.tripId, title: other.title });
+    }
+  }
+  return clashes;
+}
+
+/**
+ * A departure placed in one day cell, carrying that day's own hours.
+ *
+ * `awayBlocks` are this person's own blackouts that overlap the run (issue
+ * #1235). It **informs, never gates**: nobody is taken off a boat, and the
+ * owner's assignment is not refused — the week says the crew member told the
+ * shop they were away, and the conversation is the shop's to have. Empty for
+ * almost every chip.
+ *
+ * `clashes` are the other departures this same person crews at these very
+ * hours (issue #1695) — a state `setTripCrew` refuses to write and three doors
+ * manufacture anyway, of which `moveTrip` is only the loudest (they are named
+ * on `crewClashes`, src/db/trips-crew.ts). Until now nothing said so outside
+ * the Move panel that made it. Informs, never gates, for the reason #1345
+ * settled: the owner assigns crew. Empty for every honest chip, and empty
+ * again once the meeting is home.
+ */
+export type PlacedTrip = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  /**
+   * **The shop day this window began on, when it is not this column's** (UX
+   * review 2026-10-13, item 21): a night boat out at 11:30 PM and back at 3:00
+   * AM covers both days, and its second-day chip printed "11:30 PM – 3:00 AM"
+   * above that morning's 7:00 AM boat, which read as two night boats. A chip
+   * carrying this says what is true of its own day ("until 3:00 AM · from
+   * Monday") instead of the whole window. Null on the day it starts.
+   */
+  continuesFrom: CalendarDate | null;
+  /** Whether the window ends on this column's day — false only for a middle day of a run. */
+  endsThisDay: boolean;
+  awayBlocks: readonly AvailabilityBlock[];
+  clashes: readonly CrewClash[];
+};
+
+/**
+ * A placed gap: the departure, the day's hours, why it is short, and — since
+ * #1235 — who has asked to work it.
+ *
+ * `viewerMayRequest` is the same rule `crewRequestRefusal` gives the write, so
+ * the affordance is never offered for something the transaction will turn down;
+ * `viewerRefusal` is why, when there is a reason worth saying.
+ */
+export type PlacedGap = PlacedTrip & {
+  gap: StaffGapCode;
+  /**
+   * **The gap is a lapse, not an empty seat** (issue #1853). The count behind
+   * `gap` reads each rostered professional's recorded ratings, so a crew list
+   * that names an instructor can still say "Course needs instructor"; the chip
+   * says why under the code rather than showing one more shortfall. It informs:
+   * the departure still sells and seats on the roster's claim (H-20260825-staff-credentials-renewal-clock).
+   */
+  ratingLapsed: boolean;
+  ratingUnverified?: boolean;
+  requests: readonly PlacedGapRequest[];
+  viewerMayRequest: boolean;
+  /**
+   * The reader is in this departure's story — they may ask for it, they have
+   * asked, or they are already on its crew — and their being aboard will not
+   * close it (issue #1339): an intro session's cap is instructor-to-student,
+   * and they hold no instructor role.
+   *
+   * **It informs, never gates** — the same rule `src/lib/crew-requests.ts`
+   * states for a blackout. The owner chose to warn rather than refuse: a
+   * divemaster on a DSD session is a legitimate ask (a second pair of hands in
+   * the water is worth having), so `viewerMayRequest` is untouched by this and
+   * the write is unchanged. What the line stops is the roster *reading* as
+   * closed once the request is approved.
+   *
+   * Deliberately **not** tied to the button being on screen. It shipped as
+   * "may request and would not close it", so the divemaster read it once,
+   * tapped, and `already_requested` took it away at the moment the belief it
+   * corrects ("I asked, so that shift is answered") sets in — and somebody
+   * already rostered on an over-ratio intro session, the most operationally
+   * live case there is, never saw it at all. A genuine blackout still hides it,
+   * because there is nothing there for the reader to be wrong about.
+   */
+  viewerAskWontClose: boolean;
+};
+
+/**
+ * A request as the week draws it: the ask, plus whether approving it leaves the
+ * gap exactly where it is (issue #1339).
+ *
+ * The requester was warned before they tapped; the owner or manager working the
+ * queue is the person who can actually close an intro-ratio gap, and saw only a
+ * name and two buttons. `inWaterRole` rides on the request
+ * (src/lib/crew-requests.ts) so the same sentence can sit beside Approve.
+ */
+export type PlacedGapRequest = CrewAssignmentRequest & {
+  /** Pending, on an intro-ratio gap, from somebody who is not an instructor. */
+  askWontClose: boolean;
+};
+
+/** One person's week, before it is placed into days. */
+export type WeekPerson = {
+  personId: string;
+  name: string;
+  roles: readonly string[];
+  shifts: readonly WeekShift[];
+  crewingTrips: readonly WeekCrewing[];
+};
+
+/** A column: the day, and where it sits relative to the shop's own today. */
+export type StaffWeekDay = { date: CalendarDate; isToday: boolean; isPast: boolean };
+
+/**
+ * One cell of a person's row. **Shifts and crewed departures are kept apart**
+ * rather than merged into one list of "things on this day": a person crewing a
+ * boat they have no shift for is exactly the state the cross-link exists to
+ * make visible (task 165), and merging them would hide it behind a chip that
+ * looks like every other chip.
+ */
+export type StaffWeekPersonDay = {
+  date: CalendarDate;
+  shifts: WeekShift[];
+  crewing: PlacedTrip[];
+  /** The blackouts this person has covering this day. Quiet, and theirs alone. */
+  away: AvailabilityBlock[];
+};
+
+/**
+ * A row: the person, and their seven cells.
+ *
+ * **Everyone on the roster gets a row, including whoever has nothing all
+ * week.** A week that quietly drops the people with no shifts answers "who is
+ * working" and refuses the other half of the question a manager opens this
+ * page with — the empty row is the fact.
+ */
+export type StaffWeekPerson = {
+  personId: string;
+  name: string;
+  roles: readonly string[];
+  days: StaffWeekPersonDay[];
+};
+
+/**
+ * **One person's week, summed** (fifth-loop ideas, item 52): "6 days · 8
+ * boats · 34 h" under each name, so the owner balancing the long-range day
+ * reads one figure instead of seven columns. Days are the columns with a
+ * shift or a crewed departure in them; boats are distinct departures; time is
+ * the union of their shifts and crewed windows, so a shift that covers the
+ * boat it works is counted once. A day away alone is not a working day.
+ */
+export type PersonWeekTotals = { days: number; boats: number; minutes: number };
+
+export function personWeekTotals(person: StaffWeekPerson): PersonWeekTotals {
+  const windows = new Map<string, { from: number; to: number }>();
+  const boats = new Set<string>();
+  let days = 0;
+  for (const day of person.days) {
+    if (day.shifts.length > 0 || day.crewing.length > 0) days += 1;
+    for (const window of [...day.shifts, ...day.crewing]) {
+      const from = window.startsAt.getTime();
+      const to = window.endsAt.getTime();
+      if (to > from) windows.set(`${from}-${to}`, { from, to });
+    }
+    for (const trip of day.crewing) boats.add(trip.tripId);
+  }
+  let minutes = 0;
+  let reach = Number.NEGATIVE_INFINITY;
+  for (const { from, to } of [...windows.values()].sort((a, b) => a.from - b.from)) {
+    const start = Math.max(from, reach);
+    if (to > start) minutes += (to - start) / 60_000;
+    reach = Math.max(reach, to);
+  }
+  return { days, boats: boats.size, minutes: Math.round(minutes) };
+}
+
+/** The gap row's cell for one day. */
+export type StaffWeekGapDay = { date: CalendarDate; gaps: PlacedGap[] };
+
+export type StaffWeek = {
+  /** Seven days, Monday first, from `weekStart`. */
+  days: StaffWeekDay[];
+  people: StaffWeekPerson[];
+  /** Always seven, aligned with `days`, so the gap row is drawn like any other. */
+  gapDays: StaffWeekGapDay[];
+  /** Whether the gap row has anything to say. It renders only when it does. */
+  hasGaps: boolean;
+};
+
+/** The shop-local day something starts on, or `null` when it falls outside the week. */
+function dayOf(startsAt: Date, timeZone: string, within: Set<CalendarDate>): CalendarDate | null {
+  const date = calendarDateInTimezone(startsAt, timeZone);
+  return within.has(date) ? date : null;
+}
+
+/**
+ * What a cell sorts by: when it starts, then the title the reader sees, then
+ * the row's own id (issue #2176). Start time alone left two boats at the same
+ * minute in whatever order they arrived, and a stable sort over an unordered
+ * source is still unordered, so the week traded them between loads. A shift
+ * has no title and falls straight through to its id; a departure's id is its
+ * `tripId`. Code-unit comparison, as `src/features/staffing/store.ts` does, so the order
+ * cannot vary with the host's collation.
+ */
+type StartOrdered = { startsAt: Date; title?: string; tripId?: string; id?: string };
+
+function byStart(a: StartOrdered, b: StartOrdered): number {
+  const byTime = a.startsAt.getTime() - b.startsAt.getTime();
+  if (byTime !== 0) return byTime;
+  const titleA = a.title ?? "";
+  const titleB = b.title ?? "";
+  if (titleA !== titleB) return titleA < titleB ? -1 : 1;
+  const idA = a.tripId ?? a.id ?? "";
+  const idB = b.tripId ?? b.id ?? "";
+  return idA < idB ? -1 : idA > idB ? 1 : 0;
+}
+
+/**
+ * Which of the week's own days one window `[startsAt, endsAt)` covers.
+ *
+ * Asked of the seven columns rather than walked forward from the window's
+ * start, which is what keeps it bounded and total: a run that began weeks ago
+ * or has no end anybody typed sensibly cannot spin, and cannot lose the days
+ * it does cover to a truncated walk.
+ *
+ * `endsAt` is exclusive, so a meeting that runs to midnight belongs to the day
+ * it started in and not to the one it hands over to. One that genuinely crosses
+ * midnight — a night dive back at 00:30 — covers both, which is what the crew's
+ * own night looked like.
+ */
+function daysCovered(
+  meeting: TripMeeting,
+  timeZone: string,
+  dates: readonly CalendarDate[],
+): CalendarDate[] {
+  const first = calendarDateInTimezone(meeting.startsAt, timeZone);
+  const lastMs = meeting.endsAt.getTime() - 1;
+  const last =
+    Number.isFinite(lastMs) && lastMs > meeting.startsAt.getTime()
+      ? calendarDateInTimezone(new Date(lastMs), timeZone)
+      : first;
+  // Calendar dates are ISO `YYYY-MM-DD`, so the ordering is the string's.
+  return dates.filter((date) => date >= first && date <= last);
+}
+
+/**
+ * Every day of this week a departure covers, each carrying the window it is
+ * covered by — the placement both the crewing chips and the gap chips are
+ * built from, in the week's own order.
+ *
+ * A departure is placed by the days it **meets**, never by `startsAt` alone.
+ * That single read fixed three things at once: a Thursday-to-Saturday course
+ * showed its instructor busy on Thursday and free for the rest of the class; a
+ * session that began last Sunday and runs Monday to Wednesday was fetched,
+ * counted as needing crew, and then rendered in no column at all; and each
+ * chip prints its own day's hours instead of a clock-time range spanning three
+ * dates, which is a plain falsehood about the commitment.
+ *
+ * One chip per day per departure: where two meetings of the same run touch one
+ * day, the earlier claims it, because two chips naming one boat is the same
+ * fact said twice.
+ */
+function placements(
+  trip: { tripId: string; title: string; meetings: readonly TripMeeting[] },
+  timeZone: string,
+  dates: readonly CalendarDate[],
+  awayBlocks: readonly AvailabilityBlock[] = [],
+  /** The clash, per meeting — a fact about that day's hours, not about the run. */
+  clashesFor: (meeting: TripMeeting) => readonly CrewClash[] = () => [],
+): { date: CalendarDate; placed: PlacedTrip }[] {
+  const byDate = new Map<CalendarDate, PlacedTrip>();
+  for (const meeting of [...trip.meetings].sort(byStart)) {
+    const covered = daysCovered(meeting, timeZone, dates);
+    const startDay = calendarDateInTimezone(meeting.startsAt, timeZone);
+    const lastDay = covered[covered.length - 1];
+    for (const date of covered) {
+      if (byDate.has(date)) continue;
+      byDate.set(date, {
+        tripId: trip.tripId,
+        title: trip.title,
+        startsAt: meeting.startsAt,
+        endsAt: meeting.endsAt,
+        continuesFrom: date === startDay ? null : startDay,
+        endsThisDay:
+          date === lastDay &&
+          calendarDateInTimezone(new Date(meeting.endsAt.getTime() - 1), timeZone) === date,
+        awayBlocks,
+        clashes: clashesFor(meeting),
+      });
+    }
+  }
+  return dates.flatMap((date) => {
+    const placed = byDate.get(date);
+    return placed ? [{ date, placed }] : [];
+  });
+}
+
+/**
+ * Place a week's people, their shifts, the departures they crew and the
+ * departures nobody crews into seven shop-local days.
+ *
+ * **A shift is a point; a departure is a run.** A shift is filed by the day it
+ * starts on, and one falling outside the week is dropped rather than clamped
+ * to an edge column — the reader queries one week at a time, and a shift that
+ * leaked in from a query window an hour wide on either side belongs to the
+ * week it actually starts in. A departure is placed by every day it *meets*
+ * within the week (`placements`), which is a different question and has a
+ * different answer: a course that began before this Monday is still running on
+ * it.
+ */
+export function staffWeek(input: {
+  people: readonly WeekPerson[];
+  gaps: readonly WeekGap[];
+  weekStart: CalendarDate;
+  timeZone: string;
+  /** The shop's own calendar date — from `nowDate()` through the shop's zone. */
+  today: CalendarDate;
+  /** Every live blackout touching this week, whoever's (issue #1235). */
+  blocks?: readonly AvailabilityBlock[];
+  /** Live requests against this week's departures. */
+  requests?: readonly CrewAssignmentRequest[];
+  /**
+   * Who is reading, and what the page will let them do. Absent on a caller
+   * that has no viewer to speak of — every test written before #1235, and the
+   * assembly's own unit tests.
+   */
+  viewer?: {
+    personId: string;
+    isCrew: boolean;
+    /** Whether they can close an instructor-to-student gap themselves (#1339). */
+    holdsInstructorRole: boolean;
+  };
+  /**
+   * The instant `crewRequestRefusal` measures a sailed departure against, and
+   * the one `clashingDepartures` drops a clash on a meeting already home by.
+   * The epoch default holds every fixture written before either rule ahead of
+   * the shop's clock, which is the conservative answer for both: the ask is
+   * still open and the clash still worth saying.
+   */
+  now?: Date;
+}): StaffWeek {
+  const blocks = input.blocks ?? [];
+  const requests = input.requests ?? [];
+  const now = input.now ?? new Date(0);
+  const dates = weekDates(input.weekStart);
+  const within = new Set(dates);
+  const days: StaffWeekDay[] = dates.map((date) => ({
+    date,
+    isToday: date === input.today,
+    isPast: date < input.today,
+  }));
+
+  const people: StaffWeekPerson[] = input.people.map((person) => {
+    const shiftsByDay = new Map<CalendarDate, WeekShift[]>();
+    for (const shift of person.shifts) {
+      const date = dayOf(shift.startsAt, input.timeZone, within);
+      if (!date) continue;
+      shiftsByDay.set(date, [...(shiftsByDay.get(date) ?? []), shift]);
+    }
+    // Every day the departure meets in, not just the one it starts on: a
+    // person teaching a Thursday-to-Saturday course is busy on all three, and
+    // a week that says otherwise is what double-books them onto a boat.
+    const crewingByDay = new Map<CalendarDate, PlacedTrip[]>();
+    for (const trip of person.crewingTrips) {
+      // The warning word an overlapping blackout earns, resolved once per
+      // departure rather than per column: it is a fact about the run.
+      const away = overlappingBlocks(blocks, person.personId, trip.meetings, input.timeZone);
+      // The clash is read off this person's own crewing list, which is already
+      // scheduled, live departures only (`getStaffingView`) — the same rule the
+      // departure page's `crewClashes` asks in SQL. **A clash is drawn in the
+      // week the overlap falls in**, which is not always a week both boats are
+      // fetched for: a Sunday 22:00 night dive back at 01:00 overlaps a Monday
+      // 00:30 departure that this week's query stops one instant short of, so
+      // the Sunday chip is silent and the fact draws on next week's Monday
+      // column. The limit is acceptable because it is not the only reader —
+      // `crewClashes` on the departure page has no week bound at all, so the
+      // boat's own Crew panel always tells the truth.
+      for (const { date, placed } of placements(trip, input.timeZone, dates, away, (meeting) =>
+        clashingDepartures(meeting, trip.tripId, person.crewingTrips, now),
+      )) {
+        crewingByDay.set(date, [...(crewingByDay.get(date) ?? []), placed]);
+      }
+    }
+    const ownBlocks = blocks.filter((block) => block.personId === person.personId);
+    const personDays = dates.map((date) => ({
+      date,
+      shifts: (shiftsByDay.get(date) ?? []).sort(byStart),
+      crewing: sayEachClashOnce((crewingByDay.get(date) ?? []).sort(byStart)),
+      away: ownBlocks.filter((block) => blockCoversDay(block, date)),
+    }));
+    return {
+      personId: person.personId,
+      name: person.name,
+      roles: person.roles,
+      days: personDays,
+    };
+  });
+
+  // **The first day of the run this week can see, and only that one.** A crew
+  // gap is a fact about the departure, not about each of its mornings —
+  // `trip_assignments` is per trip, so one Assign fixes the whole run — and
+  // drawing the same warning in three columns would be principle 9's
+  // wallpaper. Taking the *first visible* meeting rather than the run's own
+  // first day is what puts a course that began last Sunday on this week's
+  // Monday instead of nowhere.
+  const gapsByDay = new Map<CalendarDate, PlacedGap[]>();
+  const crewIdsByTrip = new Map<string, string[]>();
+  for (const person of input.people) {
+    for (const trip of person.crewingTrips) {
+      crewIdsByTrip.set(trip.tripId, [...(crewIdsByTrip.get(trip.tripId) ?? []), person.personId]);
+    }
+  }
+  for (const gap of input.gaps) {
+    const [first] = placements(gap, input.timeZone, dates);
+    if (!first) continue;
+    const tripRequests = requests.filter((request) => request.tripId === gap.tripId);
+    const viewer = input.viewer;
+    // The same rule the write applies, evaluated here so the affordance is
+    // never offered for something the transaction will refuse.
+    const viewerRefusal = viewer?.isCrew
+      ? crewRequestRefusal({
+          personId: viewer.personId,
+          meetings: gap.meetings,
+          crewPersonIds: crewIdsByTrip.get(gap.tripId) ?? [],
+          livePendingOrDecidedPersonIds: tripRequests.map((request) => request.personId),
+          blocks,
+          timeZone: input.timeZone,
+          now,
+        })
+      : null;
+    const viewerMayRequest = Boolean(viewer?.isCrew) && viewerRefusal === null;
+    // **The fact belongs to the departure, not to the button** (issue #1339).
+    // A reader is in this gap's story when they may ask for it, when they have
+    // asked, and — the case that never had the line at all — when they are
+    // already on its crew. `unavailable` and `past` are the two refusals that
+    // do take it away: the ask is not theirs to make, so there is no belief
+    // here to correct. Advisory either way; `viewerMayRequest` is untouched.
+    const viewerInvolved =
+      viewerMayRequest ||
+      viewerRefusal === "already_requested" ||
+      viewerRefusal === "already_crewing";
+    const viewerAskWontClose =
+      viewerInvolved && onlyAnInstructorCloses(gap.gap) && !viewer?.holdsInstructorRole;
+    gapsByDay.set(first.date, [
+      ...(gapsByDay.get(first.date) ?? []),
+      {
+        ...first.placed,
+        gap: gap.gap,
+        ratingLapsed: gap.ratingLapsed ?? false,
+        ...(gap.ratingUnverified ? { ratingUnverified: true } : {}),
+        // The same fact the reader's own line states, said to the person who
+        // can act on it: a pending ask from somebody who is not an instructor
+        // does not move an intro session's instructor-to-student cap. Only
+        // while it is pending — an answered request is history, and the gap
+        // chip above it already says the session is still short.
+        requests: tripRequests.map((request) => ({
+          ...request,
+          askWontClose:
+            request.state === "pending" &&
+            onlyAnInstructorCloses(gap.gap) &&
+            request.inWaterRole !== "instructor",
+        })),
+        viewerMayRequest,
+        viewerAskWontClose,
+      },
+    ]);
+  }
+  const gapDays = dates.map((date) => ({
+    date,
+    gaps: (gapsByDay.get(date) ?? []).sort(byStart),
+  }));
+
+  return {
+    days,
+    people,
+    gapDays,
+    hasGaps: gapDays.some((day) => day.gaps.length > 0),
+  };
+}

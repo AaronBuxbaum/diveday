@@ -49,7 +49,7 @@ export const DEFAULT_WAIVER_BODY = [
  * **The live release is still DiveDay's starting text, byte for byte.**
  *
  * Sign-up publishes {@link DEFAULT_WAIVER_BODY} as a new shop's version 1
- * (`src/db/shop-signup.ts`), so divers can sign it the hour the shop goes
+ * (`src/features/shop-signup/store.ts`), so divers can sign it the hour the shop goes
  * live. Until somebody at the shop publishes their own words, the Waivers page
  * says the text is sample wording and the first-run checklist keeps "Read your
  * release" open. A shop with no release at all reads as sample too: the editor

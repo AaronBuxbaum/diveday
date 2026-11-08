@@ -1,18 +1,18 @@
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
-import { applyBillingEffect } from "@/db/shop-subscriptions";
-import { claimStripeWebhookEvent, releaseStripeWebhookEventClaim } from "@/db/webhook-events";
-import { readBillingEvent } from "@/lib/billing/events";
 import {
   BILLING_LEDGER_PREFIX,
   billingConfigFromEnvironment,
   billingKeyIsLive,
-} from "@/lib/billing/stripe-billing";
+  readBillingEvent,
+} from "@/features/billing";
+import { verifyStripeWebhook } from "@/features/payments";
+import { reportScrubbedError } from "@/features/sentry-server";
+import { applyBillingEffect } from "@/features/shop-subscriptions";
+import { claimStripeWebhookEvent, releaseStripeWebhookEventClaim } from "@/features/webhook-events";
+import { logWebhookRefusal } from "@/features/webhook-refusal";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
-import { reportScrubbedError } from "@/lib/observability/sentry";
-import { verifyStripeWebhook } from "@/lib/payments/webhook";
-import { logWebhookRefusal } from "@/lib/webhook-refusal";
 
 /**
  * DiveDay's own subscription webhook: what a shop pays DiveDay, on DiveDay's

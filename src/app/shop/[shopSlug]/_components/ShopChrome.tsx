@@ -10,17 +10,18 @@ import { ShopNav, ShopNavSidebar } from "@/components/ShopNav";
 import { SkipLink } from "@/components/SkipLink";
 import { StaffActivity } from "@/components/StaffActivity";
 import { getDb } from "@/db/client";
-import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { countGearItems } from "@/db/gear";
-import { listShopRolesPresent } from "@/db/shop-roles";
-import { shopBySlugCached } from "@/db/shops-cached";
-import { countWorkOrders } from "@/db/work-orders";
+import { hasActiveCourses } from "@/features/courses";
+import { shopClock } from "@/features/shop-clock";
+import { listShopRolesPresent } from "@/features/shop-roles";
+import { shopBySlugCached } from "@/features/shops-cached";
 import {
   countBlockedDiversNextBoatDay,
   nextOfTodaysDepartures,
   todaysDepartures,
 } from "@/features/today";
+import { countWorkOrders } from "@/features/work-orders";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -30,7 +31,6 @@ import { nowDate } from "@/lib/clock";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
-import { shopClock } from "@/lib/shop-clock";
 import { ALL_SWITCHES_ON, shopSwitchesOn } from "@/lib/shop-features";
 import { settingsShortcutsFor } from "../settings/settings-groups";
 import { staffShopName } from "./staff-shop-name";
@@ -58,7 +58,7 @@ import { staffShopName } from "./staff-shop-name";
  * **The tenant gate moved with it, and that is safe because it was never the
  * only copy** — not because this component is careful. Every staff *page*
  * below gates itself: 43 of the 47 call `requireShopSurface`
- * (`src/lib/session.ts`), which `notFound()`s when the session's shop
+ * (`src/features/session/rules.ts`), which `notFound()`s when the session's shop
  * disagrees with the slug; `courses` asserts the same two conditions inline; and the shop home does now too. The home is
  * worth naming because it did **not** before this change — it resolved its own
  * shop by `session.user.shopId` and never compared the slug, because this
@@ -93,7 +93,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   // where a later line happens to sit in this file.
   //
   // `shopBySlugCached`, the per-request memo every other reader of the shop by
-  // its slug shares (`src/db/shops-cached.ts`), so a page beside the chrome
+  // its slug shares (`src/features/shops-cached/store.ts`), so a page beside the chrome
   // that asks for the same slug in the same pass costs no second read (code
   // review 2026-10-10, item 26).
   const [shop, session] = await Promise.all([shopBySlugCached(shopSlug), auth()]);
@@ -119,7 +119,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   // under a foreign-looking URL — not a leak, but a phishing-shaped breach of
   // the "slug and session agree" invariant above.
   if (session?.user && !shop) notFound();
-  // The shell renders in a pass of its own (`src/db/blockers.ts`), so it
+  // The shell renders in a pass of its own (`src/features/blockers/store.ts`), so it
   // reports its own line; see `src/lib/observability/query-timing.ts`.
   if (ownShop) reportRenderQueries("/shop/[shopSlug] (chrome)", after, { fallback: true });
 
@@ -168,7 +168,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   //
   // **The count stays here rather than streaming into the badge separately.**
   // It is the chrome's one expensive read — about ten queries and ~37ms on the
-  // seeded fixture (`src/db/blockers.ts`) — so a slot was the obvious next
+  // seeded fixture (`src/features/blockers/store.ts`) — so a slot was the obvious next
   // optimisation, and it is the wrong one: the number is also the `{count}` of
   // the badge's pluralised accessible label (`shared.shopNavLinks.badgeBlocked`
   // in `ShopNavLinks`), so an opaque ReactNode would leave a screen reader

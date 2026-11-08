@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/db/interests", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/interests")>();
@@ -28,7 +28,7 @@ vi.mock("@/db/interests", async (importOriginal) => {
 });
 
 const { askForDeparture, askForDepartureAsKnownDiver } = await import("@/db/interests");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { addKnownDiverToWaitlistAction, addToWaitlistAction } = await import(
   "./roster-seating-actions"
 );

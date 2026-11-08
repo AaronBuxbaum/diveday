@@ -1,5 +1,5 @@
+import { UNDO_PARAMS } from "@/features/undo";
 import { shopPath } from "@/lib/staff-notices";
-import { UNDO_PARAMS } from "@/lib/undo";
 
 /** Consumed once by FlashParams, never restored by the record's pager links. */
 export const DIVER_RECORD_FLASH_PARAMS = ["notice", ...UNDO_PARAMS, "by", "form", "edit"];

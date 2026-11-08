@@ -1,9 +1,9 @@
 import { getDb } from "@/db/client";
 import { medicalAlertsForOfflineSave } from "@/db/medical-alerts";
 import { getShopById } from "@/db/shops";
+import { isCrossSiteRequest } from "@/features/same-origin";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import { isCrossSiteRequest } from "@/lib/same-origin";
 import { uuidParam } from "@/lib/uuid";
 
 /** Per-session and medical: never held by any cache. */

@@ -6,12 +6,16 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { acknowledgeCrewAway } from "@/db/crew-away-acknowledgements";
 import { fitAdjustedReturnTeaching } from "@/db/gear";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
+import { confirmRentalFitSize } from "@/db/rental-fit";
+import { dismissOrientation } from "@/db/user-accounts";
+import { parseForm } from "@/features/form-parse";
 import {
   assignHelpRequestHelper,
   completeHelpRequest,
   undoHelpRequestCompletion,
-} from "@/db/help-requests";
-import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
+} from "@/features/help-requests";
+import { revalidateAndRedirect } from "@/features/navigation";
 import {
   addCrewRecapPhoto,
   canAddCrewRecapPhoto,
@@ -22,14 +26,10 @@ import {
   sendTripRecaps,
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
-} from "@/db/recap";
-import { confirmRentalFitSize } from "@/db/rental-fit";
-import { dismissOrientation } from "@/db/user-accounts";
+} from "@/features/recap";
+import { requireStaffSession } from "@/features/session";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
-import { parseForm } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 import { uuidParam } from "@/lib/uuid";

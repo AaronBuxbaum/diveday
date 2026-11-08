@@ -3,8 +3,8 @@ import type { AppDb } from "@/db/client";
 import { shops, trips } from "@/db/schema";
 import { listShopDayDepartures } from "@/db/trips-queries";
 import { nowDate } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import { shopClock } from "../shop-clock/rules";
 import { getDayCloseout } from "./closeout-reader";
 import { todayNextDepartureTripId, todaysDepartures } from "./today-reader";
 

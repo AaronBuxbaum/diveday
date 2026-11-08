@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { AppDb } from "@/db/client";
 import { importGlobalDiveSiteTemplate } from "@/db/dive-sites";
-import { parseForm } from "@/lib/form-parse";
+import { parseForm } from "@/features/form-parse";
 
 /**
  * The dive-site pages' small form reads, through one parser (issue #2233),

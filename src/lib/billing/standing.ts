@@ -6,7 +6,7 @@ import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
  * this shop paid up?" (ADR 20261007-subscription-billing).
  *
  * Pure on purpose. Every input is a fact somebody else recorded: the shop's
- * trial window (`src/lib/trial.ts`), the free term DiveDay granted by hand
+ * trial window (`src/features/trial/rules.ts`), the free term DiveDay granted by hand
  * (`shop_subscriptions.free_term_ends_on`), and the last subscription state
  * Stripe's webhook told us. Nothing here reads a clock or a table, so the
  * Billing page, a future digest, and a future gate all ask the same question

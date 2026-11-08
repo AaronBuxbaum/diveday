@@ -1,7 +1,7 @@
 import type { getDb } from "@/db/client";
-import { carriedPreparationForDiver, type ReadyPageData } from "@/db/ready";
+import type { CarriedPreparation as CarriedPreparationItem } from "@/features/carried-preparation";
+import { carriedPreparationForDiver, type ReadyPageData } from "@/features/ready";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
-import type { CarriedPreparation as CarriedPreparationItem } from "@/lib/carried-preparation";
 
 /**
  * **What survived a day that did not happen** (issue #1197, delight report D37).

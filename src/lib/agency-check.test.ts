@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { AGENCY_VERIFICATION_PAGES } from "../features/agency-verification/rules";
 import {
   AGENCY_CHECKS,
   type AgencyListedKind,
@@ -11,7 +12,6 @@ import {
   judgeAgencyPage,
   LISTED_CARD_WORDING,
 } from "./agency-check";
-import { AGENCY_VERIFICATION_PAGES } from "./agency-verification";
 
 const lena = {
   firstName: "Lena",

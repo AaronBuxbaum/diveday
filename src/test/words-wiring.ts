@@ -4,17 +4,17 @@
  * lookup at every call site; a test of the wording itself passes its own.
  */
 
-import { commitContactImport as commitContactImportWith } from "@/db/import";
+import { commitContactImport as commitContactImportWith } from "../features/import/store";
 
-export { canPersonImportShopData } from "@/db/import";
+export { canPersonImportShopData } from "../features/import/store";
 
+import { declinedSizeNote } from "@/i18n/import-notes";
+import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import {
   type SendDueRecapsOptions,
   sendDueRecaps as sendDueRecapsWith,
   sendTripRecaps as sendTripRecapsWith,
-} from "@/db/recap";
-import { declinedSizeNote } from "@/i18n/import-notes";
-import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
+} from "../features/recap/store";
 
 type Db = Parameters<typeof sendDueRecapsWith>[0];
 type TestSendOptions = Omit<SendDueRecapsOptions, "marineLifeNamesIn">;

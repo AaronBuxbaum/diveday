@@ -65,7 +65,7 @@ import { livePerson } from "./trips-live";
  *
  * The log shows what the trails still hold; it keeps nothing. An
  * `activity_events` line leaves it the night `RETENTION_DAYS` prunes it
- * (`src/lib/retention.ts`); a moderation or plan-change row is kept for ever by
+ * (`src/features/retention/rules.ts`); a moderation or plan-change row is kept for ever by
  * decision (issue #2316), and so is its line here.
  */
 

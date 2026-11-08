@@ -2,10 +2,9 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { MonthMoneyDetail as Detail } from "@/db/report-lines";
-import { payoutSentence } from "@/i18n/payout-labels";
+import { payoutSentence } from "@/features/payouts";
+import type { MonthMoneyDetail as Detail, RevenueLine } from "@/features/report-lines";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { RevenueLine } from "@/lib/report-lines";
 import { shopPath } from "@/lib/staff-notices";
 
 /** Each revenue line's name in the staff bundle. */

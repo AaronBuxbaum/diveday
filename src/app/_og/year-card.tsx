@@ -1,10 +1,10 @@
-import type { ShopYearSummary } from "@/lib/shop-year";
+import type { ShopYearSummary } from "@/features/shop-year";
 import {
   YEAR_CARD_SIZE,
   type YearCardPalette,
   yearCardBackground,
   yearCardPalette,
-} from "@/lib/year-card";
+} from "@/features/year-card";
 
 /**
  * **The shop's year as one 3:2 image** (ADR 20260908-one-hand, decision 6,
@@ -20,7 +20,7 @@ import {
  *
  * Hex and `rgba` values, deliberately: there is no stylesheet behind a satori
  * render, so a custom property has nothing to resolve against. They all come
- * from `src/lib/year-card.ts`, which is where the shop's colour becomes a sea.
+ * from `src/features/year-card/rules.ts`, which is where the shop's colour becomes a sea.
  */
 
 /** Every string on the card, resolved by the route that renders it. */

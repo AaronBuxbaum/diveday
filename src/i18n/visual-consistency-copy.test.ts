@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { BoatWorkCode } from "@/lib/boat-work";
-import { boatWorkSentence, boatWorkText } from "./boat-work-labels";
+import { boatWorkSentence, boatWorkText } from "../features/boat-work/labels";
+import type { BoatWorkCode } from "../features/boat-work/rules";
 import en from "./locales/en-US/diver.json";
 import es from "./locales/es-ES/diver.json";
 import { staffTranslator } from "./staff-messages";

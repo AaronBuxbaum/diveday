@@ -57,7 +57,7 @@ export function levelCardCheck(
  * card that is confirmed through a card sighting instead (a diver's own tick,
  * a card the shop issued, a listed card with no number), where the page does
  * not stand in for the card in a staffer's hand. The same rule the action
- * judges by (`checkableListedQuery`, src/db/agency-check.ts).
+ * judges by (`checkableListedQuery`, src/features/agency-check/store.ts).
  */
 export function listedCardCheck(
   card: CheckedCard & {

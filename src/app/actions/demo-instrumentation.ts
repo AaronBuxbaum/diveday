@@ -1,7 +1,7 @@
 import { getDb } from "@/db/client";
-import { recordDemoEntry } from "@/db/funnel";
 import { sendNotification } from "@/db/notifications";
 import { getShopBySlug } from "@/db/shops";
+import { recordDemoEntry } from "@/features/funnel";
 import { trackEvent } from "@/lib/analytics";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import type { FunnelSource } from "@/lib/funnel";

@@ -7,6 +7,11 @@ import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { insertTip, tipsOf } from "@/test/tips";
 import { waiverTemplateHistory } from "@/test/waiver-history";
+import {
+  issueShoreAlertConfirmation,
+  issueShoreAlertStopToken,
+} from "../features/shore-alert-tokens/store";
+import { inviteStaffMember } from "../features/staff-accounts/store";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { askForDeparture } from "./interests";
@@ -38,8 +43,6 @@ import {
   listShopPromoCodes,
   setShopPromoEnabled,
 } from "./shop-promos";
-import { issueShoreAlertConfirmation, issueShoreAlertStopToken } from "./shore-alert-tokens";
-import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { getCurrentWaiverTemplate, recordWaiverTemplate } from "./waivers";
@@ -580,7 +583,7 @@ describe("resetDemoSchedule", () => {
     if (!outcome.ok) throw new Error("expected booking to succeed");
 
     // A non-staff diver can carry a login (user_accounts.person_id) — contact
-    // import (src/db/import.ts) and diver signup both mint one. Before the reset
+    // import (src/features/import/store.ts) and diver signup both mint one. Before the reset
     // cleared it, that login blocked the delete of its owner with an FK
     // violation (23503) and aborted the whole reset, leaking the churned
     // schedule into every later e2e spec's fixture.

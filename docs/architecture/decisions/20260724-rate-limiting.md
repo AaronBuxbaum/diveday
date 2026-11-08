@@ -116,5 +116,5 @@ Vercel's own docs identify it as strictly more robust with no downside in the st
 `capabilityAction`'s shared-IP budget was raised 30→60/hour on the same review's separate,
 legitimate observation that a boat/dock WiFi's one shared IP can carry several divers each
 running multiple readiness/waiver actions on a busy morning. The review also re-confirmed the
-already-disclosed DNS-rebinding gap in `src/lib/storage/ingest-url.ts` (CR-020, see that ticket's
+already-disclosed DNS-rebinding gap in `src/features/storage/ingest-url.ts` (CR-020, see that ticket's
 own ADR) without finding anything new to fix there.

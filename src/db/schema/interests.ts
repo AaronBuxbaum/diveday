@@ -320,7 +320,7 @@ export const interestReplyStatus = pgEnum("interest_reply_status", [
  * words, where they went, who sent them and what the provider said. One row per
  * attempt, so a reply that did not go is on record beside the one that did; the
  * request closes as `replied` when the reply is claimed and reopens on a send
- * that did not go (`sendInterestReply`, src/db/interest-replies.ts).
+ * that did not go (`sendInterestReply`, src/features/interest-replies/store.ts).
  *
  * Its own table rather than a `staff_replies` row, because a date interest is
  * deliberately person-less (H-20260724-one-person-per-email) and that table is
@@ -360,7 +360,7 @@ export const interestReplies = pgTable(
       columns: [table.shopId, table.interestId],
       foreignColumns: [interests.shopId, interests.id],
     }).onDelete("cascade"),
-    // `INTEREST_REPLY_MAX` (src/lib/interest-reply.ts), held here too.
+    // `INTEREST_REPLY_MAX` (src/features/interest-reply/rules.ts), held here too.
     check(
       "interest_replies_body_bounded",
       sql`${table.body} is null or (length(btrim(${table.body})) > 0 and length(${table.body}) <= 1000)`,

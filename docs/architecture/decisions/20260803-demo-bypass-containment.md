@@ -62,7 +62,7 @@ a constant-work compare and a named constant respectively.
      verification link. Flipping `is_demo` on a real tenant now grants nothing.
      **The two real-account writers enforce this rather than merely implying it** (amended
      2026-08-04, security review): `onboardAction` (`src/app/onboard/actions.ts`) and
-     `inviteStaffMember` (`src/db/staff-accounts.ts`) each refuse an address in the namespace
+     `inviteStaffMember` (`src/features/staff-accounts/store.ts`) each refuse an address in the namespace
      outright — `email_reserved` — so the namespace is an invariant of the write path and not a
      consequence of nobody wanting an unroutable address.
 - **The environment gate takes its environment as a parameter**, typed as a plain string map rather

@@ -2,15 +2,15 @@ import { ImageResponse } from "next/og";
 import { NextResponse } from "next/server";
 import { YEAR_CARD_SIZE, YearCard } from "@/app/_og/year-card";
 import { yearCardCopy } from "@/app/_og/year-card-copy";
-import { canPersonViewShopReports, getShopYear } from "@/db/reporting";
+import { allowSvgRasterization } from "@/features/og-rasterizer";
+import { canPersonViewShopReports, getShopYear } from "@/features/reporting";
+import { requireShopSurface } from "@/features/session";
+import { summarizeShopYear } from "@/features/shop-year";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { isoDate, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { currentShopSeason, shopSeasonOf } from "@/lib/season";
-import { requireShopSurface } from "@/lib/session";
-import { summarizeShopYear } from "@/lib/shop-year";
 
 /**
  * **Print the card** (ADR 20260908-one-hand, decision 6, lever T) — the shop's
@@ -67,7 +67,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
   const copy = yearCardCopy({ shopName: shop.name, year, t: diverTranslator(locale), locale });
   // Before any ImageResponse is built: Next's image optimizer disables
   // libvips' SVG loader process-wide, which is what satori rasterizes through.
-  // See src/lib/og-rasterizer.ts — the failure mode is a severed socket.
+  // See src/features/og-rasterizer/rules.ts — the failure mode is a severed socket.
   await allowSvgRasterization();
   return new ImageResponse(
     <YearCard

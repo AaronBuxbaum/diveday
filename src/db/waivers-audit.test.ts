@@ -1,10 +1,16 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { verifyWaiverIntegrity, WAIVER_INTEGRITY_VERSION_ERASED } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
+import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  clearAnswers,
+  medicalReferralAnswers,
+  now,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { bookings, people, shops, waiverRecords, waiverTemplates } from "./schema";
 import { recheckWaiverSeals } from "./waiver-seal-checks";
 import {
@@ -15,12 +21,6 @@ import {
 } from "./waivers-audit";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import {
-  clearAnswers,
-  medicalReferralAnswers,
-  now,
-  waiverContextFor,
-} from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

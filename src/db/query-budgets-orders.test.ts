@@ -1,6 +1,5 @@
 import { asc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { getOrdersIndex } from "@/db/orders-index";
 import { people, trips } from "@/db/schema";
 import { countingShopContext } from "@/test/query-count";
 import {
@@ -8,6 +7,7 @@ import {
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
 } from "@/test/staff-session";
+import { getOrdersIndex } from "../features/orders-index/store";
 
 /**
  * What the Orders index costs (issue #2757): the page reads through one call,

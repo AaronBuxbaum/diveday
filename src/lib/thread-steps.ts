@@ -290,7 +290,7 @@ export function isDiveDay(input: {
  * start: a diver reading their page on the surface interval is still on their
  * day. This is the clock question and the whole of what a clock can answer —
  * "has the day finished", never "did this person dive it". {@link isDiveDay}
- * stops exactly here, and `isAfterTheDive` (src/lib/seat-ladder.ts) starts from
+ * stops exactly here, and `isAfterTheDive` (src/features/seat-ladder/rules.ts) starts from
  * here.
  */
 export function theBoatIsHome(input: { endsAt: Date; now?: Date }): boolean {

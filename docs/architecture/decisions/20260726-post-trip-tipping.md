@@ -50,7 +50,7 @@ merchant-of-record model bookings use.
 - **A `no_show` booking gets no recap at all, tip included (Codex finding — supersedes this ADR's
   original, narrower decision).** A no-show never dived, so "how was your dive?", the tip ask, and the
   review ask are all equally inapplicable — not just `canTip`/`reviewUrl` in isolation. `getRecapPageData`
-  (`src/db/recap.ts`) now returns `null` for a `no_show` booking the same way it already does for
+  (`src/features/recap/store.ts`) now returns `null` for a `no_show` booking the same way it already does for
   `cancelled`, and `sendDueRecaps`'s eligibility query excludes `no_show` alongside `cancelled` at the
   source, so one never even gets the recap link to begin with. `startTipCheckout` also refuses a
   `no_show` booking directly, the same defense-in-depth the `cancelled` check already gets, so a

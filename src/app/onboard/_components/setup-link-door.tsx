@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { getDb } from "@/db/client";
-import { type OpenSetupLink, openSetupLink } from "@/db/setup-links";
+import { type OpenSetupLink, openSetupLink } from "@/features/setup-links";
 import { SETUP_LINK_COOKIE, SETUP_LINK_PARAM } from "@/lib/setup-links";
 
 /**

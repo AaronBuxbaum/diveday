@@ -1,0 +1,504 @@
+import { and, asc, eq } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import { recordRollCall } from "../../db/manifests";
+import { countTripOrders } from "../../db/orders";
+import { getBookingReadiness } from "../../db/readiness";
+import {
+  bookings,
+  gearReservations,
+  notificationDeliveries,
+  notificationKind,
+  rollCallEvents,
+  shops,
+  trips,
+} from "../../db/schema/index";
+import {
+  createTrip,
+  getTripRoster,
+  listStaff,
+  moveTrip,
+  setTripCrew,
+  upcomingTripsWithCounts,
+} from "../../db/trips";
+import { fileScopedShopContext } from "../../test/db";
+import { createBoat } from "../boats/store";
+import { DELIVERY_KIND_CLASSIFICATION, getMovePreflight } from "./store";
+
+const ctx = fileScopedShopContext();
+
+/** The seeded departure with the most seats on it — the one with consequences. */
+async function busiestTrip() {
+  const upcoming = await upcomingTripsWithCounts(ctx.db, ctx.shop.id, new Date(0));
+  const busiest = [...upcoming].sort((a, b) => b.booked - a.booked)[0];
+  if (!busiest) throw new Error("seed has no upcoming departures");
+  return busiest;
+}
+
+/**
+ * Everything the preview reads, as it stands right now. Compared before and
+ * after a call to prove the preflight path writes nothing — the boundary this
+ * feature's ticket is actually about (#1203: "no writes at all in the
+ * preflight path"), and the one a comment saying "read-only" cannot establish.
+ */
+async function writableState(shopId: string, tripId: string) {
+  const [trip] = await ctx.db.select().from(trips).where(eq(trips.id, tripId));
+  const [seats, reservations, deliveries, rollCall] = await Promise.all([
+    ctx.db
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId)))
+      .orderBy(asc(bookings.id)),
+    ctx.db
+      .select()
+      .from(gearReservations)
+      .where(eq(gearReservations.shopId, shopId))
+      .orderBy(asc(gearReservations.id)),
+    ctx.db
+      .select()
+      .from(notificationDeliveries)
+      .where(eq(notificationDeliveries.shopId, shopId))
+      .orderBy(asc(notificationDeliveries.id)),
+    ctx.db
+      .select()
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
+      .orderBy(asc(rollCallEvents.id)),
+  ]);
+  return { trip, seats, reservations, deliveries, rollCall };
+}
+
+/** Mark one seat as having been sent a message naming the date it now holds. */
+async function markTold(
+  shopId: string,
+  bookingId: string,
+  kind: "booking_confirmation" | "trip_reminder_7d" | "trip_reminder_24h",
+) {
+  await ctx.db.insert(notificationDeliveries).values({
+    shopId,
+    bookingId,
+    kind,
+    status: "sent",
+    attemptedAt: new Date("2026-09-01T12:00:00.000Z"),
+  });
+}
+
+describe("getMovePreflight", () => {
+  it("has no preview for a departure that is not this shop's", async () => {
+    const trip = await busiestTrip();
+    const [other] = await ctx.db
+      .insert(shops)
+      .values({ name: "Another Shop", slug: "another-shop-preflight", timezone: "UTC" })
+      .returning();
+    expect(await getMovePreflight(ctx.db, other.id, trip.id)).toBeNull();
+  });
+
+  /**
+   * The design constraint from the ticket's triage, made a test: the preview
+   * must not become a second source of truth. Each number is asserted against
+   * the reader the real path uses, so a preview that quietly grew its own
+   * definition of "on this trip" fails here rather than in a shop's hands.
+   */
+  it("counts exactly what the readers the move itself uses count", async () => {
+    const trip = await busiestTrip();
+    const [roster, paid] = await Promise.all([
+      getTripRoster(ctx.db, ctx.shop.id, trip.id),
+      countTripOrders(ctx.db, ctx.shop.id, trip.id, "paid"),
+    ]);
+    // Every seat told, so the `told` section reports the roster's own count.
+    for (const row of roster) await markTold(ctx.shop.id, row.booking.id, "trip_reminder_7d");
+
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, trip.id);
+    const told = preflight?.sections.find((section) => section.kind === "told");
+    expect(told).toEqual({ kind: "told", reminded: roster.length });
+
+    // Crew is deliberately not a section — see `src/features/move-preflight/rules.ts`.
+    expect(preflight?.sections.map((section) => section.kind)).not.toContain("crew");
+
+    const money = preflight?.sections.find((section) => section.kind === "money");
+    expect(money?.paid ?? 0).toBe(paid);
+  });
+
+  /**
+   * `notification_deliveries` holds one row per (booking, kind), so a diver who
+   * has had a confirmation *and* a reminder is still one person to write to.
+   * Counting rows here would overstate the work by a factor of three on the
+   * night before a trip, which is exactly when a shop reads this.
+   */
+  it("counts a diver who has had several messages once", async () => {
+    const trip = await busiestTrip();
+    const roster = await getTripRoster(ctx.db, ctx.shop.id, trip.id);
+    const [first] = roster;
+    expect(first).toBeDefined();
+    await markTold(ctx.shop.id, first.booking.id, "booking_confirmation");
+    await markTold(ctx.shop.id, first.booking.id, "trip_reminder_24h");
+
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, trip.id);
+    const told = preflight?.sections.find((section) => section.kind === "told");
+    expect(told).toEqual({ kind: "told", reminded: 1 });
+    expect(roster.length).toBeGreaterThan(1);
+  });
+
+  /**
+   * The correction that made this feature honest, pinned. `booking_confirmation`
+   * prints the departure's date and time as their own paragraph, so a diver
+   * holding one has been told the date as squarely as one holding a reminder —
+   * and it is the message a departure actually accumulates, since the reminder
+   * cadences only fire inside the last week.
+   */
+  it("counts a booking confirmation as having been told the date", async () => {
+    const trip = await busiestTrip();
+    const roster = await getTripRoster(ctx.db, ctx.shop.id, trip.id);
+    await markTold(ctx.shop.id, roster[0].booking.id, "booking_confirmation");
+
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, trip.id);
+    expect(preflight?.sections).toContainEqual({ kind: "told", reminded: 1 });
+  });
+
+  /**
+   * The other half of the same judgement. A recap speaks about a day that is
+   * already over, so nothing it said is invalidated by moving the departure —
+   * counting it would send a shop chasing divers who need no telling.
+   */
+  it("does not count a message that named no future date", async () => {
+    const trip = await busiestTrip();
+    const roster = await getTripRoster(ctx.db, ctx.shop.id, trip.id);
+    await ctx.db.insert(notificationDeliveries).values({
+      shopId: ctx.shop.id,
+      bookingId: roster[0].booking.id,
+      kind: "trip_recap",
+      status: "sent",
+      attemptedAt: new Date("2026-09-01T12:00:00.000Z"),
+    });
+
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, trip.id);
+    expect(preflight?.sections.some((section) => section.kind === "told")).toBe(false);
+  });
+
+  /**
+   * The classification has to be **total**. A kind added to the enum and left
+   * out of both lists would silently read as "nobody was told", which is the
+   * one way this number can be wrong without anything looking broken.
+   */
+  it("classifies every delivery kind the schema allows", () => {
+    const { toldTheDate, notAFutureDate } = DELIVERY_KIND_CLASSIFICATION;
+    expect([...toldTheDate, ...notAFutureDate].sort()).toEqual(
+      [...notificationKind.enumValues].sort(),
+    );
+    // Disjoint, so a kind cannot be counted and excused at once.
+    expect(toldTheDate.filter((kind) => notAFutureDate.some((other) => other === kind))).toEqual(
+      [],
+    );
+  });
+
+  it("says nothing about a departure nobody has been told about", async () => {
+    const trip = await busiestTrip();
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, trip.id);
+    expect(preflight?.sections.some((section) => section.kind === "told")).toBe(false);
+  });
+
+  /**
+   * The claim that makes the preview trustworthy: its refusal and `moveTrip`'s
+   * are the same answer, because they ask the same function. Asserted by
+   * running both against one departure rather than by reading the code.
+   */
+  it("refuses in step with the mutation once a roll call exists", async () => {
+    const trip = await busiestTrip();
+    expect((await getMovePreflight(ctx.db, ctx.shop.id, trip.id))?.blocked).toBeNull();
+
+    // Written through the real recorder, not an insert of my own: the guard is
+    // about evidence the crew actually left, and a hand-built row could satisfy
+    // a count while being a shape `recordRollCall` never produces.
+    const roster = await getTripRoster(ctx.db, ctx.shop.id, trip.id);
+    const [recorder] = await listStaff(ctx.db, ctx.shop.id);
+    // A seat that may board: boarding a blocked one is refused at departure,
+    // which is a different guard from the one this test is about.
+    let boardable: string | undefined;
+    for (const row of roster) {
+      const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, row.booking.id);
+      if (readiness?.status === "ready") {
+        boardable = row.booking.id;
+        break;
+      }
+    }
+    if (!boardable) throw new Error("the busiest departure has nobody ready to board");
+    expect(
+      await recordRollCall(ctx.db, {
+        shopId: ctx.shop.id,
+        tripId: trip.id,
+        bookingId: boardable,
+        recordedByPersonId: recorder.person.id,
+        status: "boarded",
+      }),
+    ).toMatchObject({ ok: true });
+
+    expect((await getMovePreflight(ctx.db, ctx.shop.id, trip.id))?.blocked).toBe("already_sailed");
+    expect(
+      await moveTrip(ctx.db, ctx.shop.id, trip.id, new Date("2099-07-04T13:00:00.000Z")),
+    ).toEqual({ ok: false, reason: "already_sailed" });
+  });
+
+  it("says a canceled departure cannot move, as the mutation does", async () => {
+    const trip = await busiestTrip();
+    await ctx.db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
+
+    expect((await getMovePreflight(ctx.db, ctx.shop.id, trip.id))?.blocked).toBe("not_scheduled");
+    expect(
+      await moveTrip(ctx.db, ctx.shop.id, trip.id, new Date("2099-07-04T13:00:00.000Z")),
+    ).toEqual({ ok: false, reason: "not_scheduled" });
+  });
+
+  /**
+   * The boundary, stated as state rather than as intent: nothing about the
+   * departure, its seats, its reservations or its delivery log differs by one
+   * byte across a preflight. In particular no gear reservation has been
+   * re-windowed and no notification row invented — the two writes the real move
+   * and the real reminder pass make.
+   */
+  it("writes nothing", async () => {
+    const trip = await busiestTrip();
+    const roster = await getTripRoster(ctx.db, ctx.shop.id, trip.id);
+    await markTold(ctx.shop.id, roster[0].booking.id, "trip_reminder_7d");
+
+    const before = await writableState(ctx.shop.id, trip.id);
+    await getMovePreflight(ctx.db, ctx.shop.id, trip.id);
+    await getMovePreflight(ctx.db, ctx.shop.id, trip.id);
+    const after = await writableState(ctx.shop.id, trip.id);
+
+    expect(after).toEqual(before);
+  });
+
+  /**
+   * **The seam the target has to cross.** The two crew lines are the only
+   * facts here that depend on where the departure is going, so they are the
+   * only ones a refactor can silently drop by forgetting to thread an argument
+   * — and the failure would be invisible: a preview that never mentions crew
+   * looks exactly like a shop whose crew are free.
+   */
+  it("carries the crew clash for the hours it is being moved into, and only then", async () => {
+    const [first] = await listStaff(ctx.db, ctx.shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+    const timeZone = "Pacific/Honolulu";
+    await ctx.db.update(shops).set({ timezone: timeZone }).where(eq(shops.id, ctx.shop.id));
+
+    const moving = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "The one being moved",
+      startsAt: new Date("2030-08-01T18:00:00Z"),
+      endsAt: new Date("2030-08-01T22:00:00Z"),
+      capacity: 6,
+    });
+    const other = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "Thursday's other boat",
+      startsAt: new Date("2030-08-05T18:00:00Z"),
+      endsAt: new Date("2030-08-05T22:00:00Z"),
+      capacity: 6,
+    });
+    if (!moving || !other) throw new Error("departures not created");
+    await setTripCrew(ctx.db, ctx.shop.id, moving.id, [first.person.id]);
+    await setTripCrew(ctx.db, ctx.shop.id, other.id, [first.person.id]);
+
+    // No target: the panel as it opens, before anything has been chosen. The
+    // clash exists in the data and is deliberately not reported, because
+    // nothing is moving anywhere yet.
+    const onOpen = await getMovePreflight(ctx.db, ctx.shop.id, moving.id);
+    expect(onOpen?.sections.some((section) => section.kind === "crew")).toBe(false);
+
+    const intoIt = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, {
+      startsAt: new Date("2030-08-05T18:00:00Z"),
+      timeZone,
+    });
+    expect(intoIt?.sections[0]).toEqual({
+      kind: "crew",
+      clashes: [{ name: first.person.fullName, departure: "Thursday's other boat" }],
+    });
+
+    // The same day, six hours later: an ordinary double shift, and silent.
+    const afterIt = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, {
+      startsAt: new Date("2030-08-06T00:00:00Z"),
+      timeZone,
+    });
+    expect(afterIt?.sections.some((section) => section.kind === "crew")).toBe(false);
+  });
+
+  /**
+   * **One hull, one departure at a time** (H-20260916-may-one-hull-carry, issue #1780). The boat line
+   * crosses the same seam the crew lines do, and leads them.
+   */
+  it("carries the boat clash for the hours it is being moved into, ahead of the crew", async () => {
+    const timeZone = "Pacific/Honolulu";
+    await ctx.db.update(shops).set({ timezone: timeZone }).where(eq(shops.id, ctx.shop.id));
+    const hull = await createBoat(ctx.db, ctx.shop.id, "Preflight Hull", 20);
+    const moving = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "The hull being moved",
+      startsAt: new Date("2030-08-01T18:00:00Z"),
+      endsAt: new Date("2030-08-01T22:00:00Z"),
+      capacity: 6,
+      boatId: hull.id,
+    });
+    const other = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "Thursday's charter",
+      startsAt: new Date("2030-08-05T18:00:00Z"),
+      endsAt: new Date("2030-08-05T22:00:00Z"),
+      capacity: 6,
+      boatId: hull.id,
+    });
+    if (!moving || !other) throw new Error("departures not created");
+
+    const onOpen = await getMovePreflight(ctx.db, ctx.shop.id, moving.id);
+    expect(onOpen?.sections.some((section) => section.kind === "boat")).toBe(false);
+
+    const intoIt = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, {
+      startsAt: new Date("2030-08-05T18:00:00Z"),
+      timeZone,
+    });
+    expect(intoIt?.sections[0]).toEqual({
+      kind: "boat",
+      clashes: [{ boat: "Preflight Hull", departure: "Thursday's charter" }],
+    });
+  });
+});
+
+/**
+ * **A tight turnaround, on the Move panel only** (issue #2141, Aaron's
+ * decision (b)): a shop setting with a default of 30 minutes, advice and never
+ * a refusal, crew only when the two departures meet in different places.
+ * H-20260916-may-one-hull-carry's half-open overlap is untouched: nose to tail is still no clash.
+ */
+describe("getMovePreflight's turnaround line", () => {
+  const timeZone = "UTC";
+  // The moved departure lands 08:00–12:00 on the 5th.
+  const target = { startsAt: new Date("2030-08-05T08:00:00Z"), timeZone };
+
+  async function departure(
+    title: string,
+    startsAt: string,
+    endsAt: string,
+    extra: { boatId?: string } = {},
+  ) {
+    const trip = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title,
+      startsAt: new Date(startsAt),
+      endsAt: new Date(endsAt),
+      capacity: 6,
+      ...extra,
+    });
+    if (!trip) throw new Error("departure not created");
+    return trip;
+  }
+
+  async function hullPair(otherStartsAt: string, otherEndsAt: string, sameHull = true) {
+    await ctx.db.update(shops).set({ timezone: timeZone }).where(eq(shops.id, ctx.shop.id));
+    const hull = await createBoat(ctx.db, ctx.shop.id, "Turnaround Hull", 20);
+    const otherHull = await createBoat(ctx.db, ctx.shop.id, "Other Hull", 20);
+    const moving = await departure("Morning Reef", "2030-08-01T08:00:00Z", "2030-08-01T12:00:00Z", {
+      boatId: hull.id,
+    });
+    const other = await departure("Afternoon Wreck", otherStartsAt, otherEndsAt, {
+      boatId: sameHull ? hull.id : otherHull.id,
+    });
+    return { moving, other };
+  }
+
+  const turnaroundOf = (preflight: Awaited<ReturnType<typeof getMovePreflight>>) =>
+    preflight?.sections.find((section) => section.kind === "turnaround");
+
+  it("names the departure on the same hull one minute under the gap, and the minutes", async () => {
+    const { moving } = await hullPair("2030-08-05T12:29:00Z", "2030-08-05T16:00:00Z");
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toEqual({
+      kind: "turnaround",
+      items: [{ kind: "boat", name: "Turnaround Hull", departure: "Afternoon Wreck", minutes: 29 }],
+    });
+    expect(preflight?.blocked).toBeNull();
+    // Not a clash: H-20260916-may-one-hull-carry's line stays quiet.
+    expect(preflight?.sections.some((section) => section.kind === "boat")).toBe(false);
+  });
+
+  it("is quiet exactly at the gap", async () => {
+    const { moving } = await hullPair("2030-08-05T12:30:00Z", "2030-08-05T16:00:00Z");
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toBeUndefined();
+  });
+
+  it("speaks for nose to tail, which stays no clash", async () => {
+    const { moving } = await hullPair("2030-08-05T12:00:00Z", "2030-08-05T16:00:00Z");
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toMatchObject({ items: [{ minutes: 0 }] });
+    expect(preflight?.sections.some((section) => section.kind === "boat")).toBe(false);
+  });
+
+  it("is quiet for a different hull", async () => {
+    const { moving } = await hullPair("2030-08-05T12:10:00Z", "2030-08-05T16:00:00Z", false);
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toBeUndefined();
+  });
+
+  it("is quiet for a cancelled departure", async () => {
+    const { moving, other } = await hullPair("2030-08-05T12:10:00Z", "2030-08-05T16:00:00Z");
+    await ctx.db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, other.id));
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toBeUndefined();
+  });
+
+  it("is quiet before a time is chosen, and leaves an overlap to the clash line", async () => {
+    const { moving } = await hullPair("2030-08-05T11:00:00Z", "2030-08-05T16:00:00Z");
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id))).toBeUndefined();
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toBeUndefined();
+    expect(preflight?.sections[0]?.kind).toBe("boat");
+  });
+
+  it("reads the shop's own gap, and none at all when it is zero", async () => {
+    const { moving } = await hullPair("2030-08-05T12:45:00Z", "2030-08-05T16:00:00Z");
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target))).toBe(
+      undefined,
+    );
+    await ctx.db.update(shops).set({ minTurnaroundMinutes: 60 }).where(eq(shops.id, ctx.shop.id));
+    expect(
+      turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target)),
+    ).toMatchObject({ items: [{ kind: "boat", minutes: 45 }] });
+    await ctx.db.update(shops).set({ minTurnaroundMinutes: 0 }).where(eq(shops.id, ctx.shop.id));
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target))).toBe(
+      undefined,
+    );
+  });
+
+  it("names a crew member leaving from a different meeting point, and not one on the same dock", async () => {
+    await ctx.db.update(shops).set({ timezone: timeZone }).where(eq(shops.id, ctx.shop.id));
+    const [first] = await listStaff(ctx.db, ctx.shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+    const moving = await departure("Morning Reef", "2030-08-01T08:00:00Z", "2030-08-01T12:00:00Z");
+    const other = await departure(
+      "Afternoon Shore",
+      "2030-08-05T12:20:00Z",
+      "2030-08-05T15:00:00Z",
+    );
+    await setTripCrew(ctx.db, ctx.shop.id, moving.id, [first.person.id]);
+    await setTripCrew(ctx.db, ctx.shop.id, other.id, [first.person.id]);
+
+    // Both meet at the shop: the same-dock hand-off stays quiet.
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target))).toBe(
+      undefined,
+    );
+
+    await ctx.db
+      .update(trips)
+      .set({ meetingPointLabel: "North Beach car park" })
+      .where(eq(trips.id, other.id));
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target))).toEqual({
+      kind: "turnaround",
+      items: [
+        {
+          kind: "crew",
+          name: first.person.fullName,
+          departure: "Afternoon Shore",
+          minutes: 20,
+        },
+      ],
+    });
+  });
+});

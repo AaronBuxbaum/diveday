@@ -7,7 +7,6 @@ import {
   startIncidentReport,
   startMissingDiverReport,
 } from "@/db/incident-reports";
-import { complete } from "@/db/incident-reports-test-fixtures";
 import { bookings, incidentReports, rollCallEvents, tripAssignments, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -19,6 +18,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { complete } from "../../../../../../test/substrate-fixtures/db/incident-reports-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -43,11 +43,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../../features/session/rules");
 const {
   discardIncidentDraftAction,
   saveIncidentDraftAction,

@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import { activityEvents, tripAssignments, trips, userAccounts, waiverRecords } from "@/db/schema";
 import { completeWaiver } from "@/db/waivers-completion";
 import { issueWaiverRequest } from "@/db/waivers-requests";
-import { clearAnswers, now, waiverContextFor } from "@/db/waivers-test-fixtures";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { advanceClock } from "@/test/clock";
@@ -14,6 +13,11 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import {
+  clearAnswers,
+  now,
+  waiverContextFor,
+} from "../../../../../../test/substrate-fixtures/db/waivers-test-fixtures";
 
 // The request's own headers, per test: the emergency read refuses a cross-site call.
 const request = vi.hoisted(() => ({ headers: new Headers() }));
@@ -35,11 +39,11 @@ vi.mock("@/db/operations", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/operations")>();
   return { ...actual, recordDiverActivity: vi.fn(actual.recordDiverActivity) };
 });
-vi.mock("@/lib/session", async () =>
+vi.mock("../../../../../../features/session/rules", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../../features/session/rules");
 const { recordDiverActivity } = await import("@/db/operations");
 const { emergencyShowSeatMedicalAlertAction, showSeatMedicalAlertAction } = await import(
   "./medical-alert-action"

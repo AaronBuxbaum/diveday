@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { DiverStatusRow } from "@/lib/diver-status";
+import type { DiverStatusRow } from "../../../../../../features/diver-status/rules";
 import { CertificationsGroup } from "./CertificationsGroup";
 import { DiverStatusLedger } from "./DiverStatusLedger";
 import type { DiverProfile, Shop } from "./shared";

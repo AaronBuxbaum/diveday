@@ -155,7 +155,7 @@ filter admits.
   The security reviewer reads the undo path, since a deleted queue row must not leave a sent
   receipt behind.
 - **A drafts table** keyed by person, form and target, pruned at twenty-four hours through the
-  retention path (`src/lib/retention.ts` gains a row), holding form fields only and never a
+  retention path (`src/features/retention/rules.ts` gains a row), holding form fields only and never a
   payment or medical answer, which the schema check enforces by column allowlist.
 - **The handoff** from a diver's capability URL to the booking page is a revocable, ten-minute
   `booking_capabilities` row (purpose `handoff`) minted by the **thread page only** and consumed by

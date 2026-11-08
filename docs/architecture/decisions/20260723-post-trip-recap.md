@@ -19,7 +19,7 @@ The recap must not introduce a second scheduler or a new dedup mechanism.
   one-row-per-`(booking, kind)` unique index makes each booking's recap send at most once with no new
   machinery; it routes through the same `notify()`/`recordNotificationDelivery` path as every other
   message.
-- **A departed-trip scan, not a cadence bucket.** `sendDueRecaps(db, { now })` (`src/db/recap.ts`)
+- **A departed-trip scan, not a cadence bucket.** `sendDueRecaps(db, { now })` (`src/features/recap/store.ts`)
   selects active bookings on scheduled trips whose `endsAt` falls in `(now - 48h, now]` and sends the
   recap to any not already delivered. The 48h lookback is ≥ the daily cron interval with a full
   missed-run of slack; the delivery-row dedup means an overlapping window never double-sends.
@@ -59,7 +59,7 @@ The original daily scan could send a recap as soon as a trip ended and could not
 countdown honest. A post-dive recap must now be sent **at least four hours after the departure
 ends**, whether a staff member presses “Send recap now” or the scheduled worker sends it.
 
-- `recapEligibleAt` / `recapIsEligible` in `src/lib/recap-schedule.ts` are the one timing rule.
+- `recapEligibleAt` / `recapIsEligible` in `src/features/recap/recap-schedule.ts` are the one timing rule.
   `sendDueRecaps` selects only departures at or past that floor, and `sendTripRecaps` repeats the
   same check for the staff action; a crafted request cannot bypass it.
 - `/api/cron/recaps` runs hourly under the existing `CRON_SECRET`, with its own `diveday-recaps`

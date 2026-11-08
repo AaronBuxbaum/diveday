@@ -1,9 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { standingArrivalStatus } from "@/db/arrival-provenance";
-import { inHorizonReadiness } from "@/db/blockers";
 import { getGearItemDetail } from "@/db/gear-register";
-import { listGearRentals } from "@/db/gear-rentals";
 import { getTripManifest } from "@/db/manifests";
 import { listTripReadiness } from "@/db/readiness";
 import { bookings, people, shops, trips } from "@/db/schema";
@@ -16,6 +14,8 @@ import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { benchReturnConcerns } from "@/lib/gear";
 import { markArrived } from "@/test/arrivals";
 import { seededShopContext } from "@/test/db";
+import { inHorizonReadiness } from "../../../../features/blockers/store";
+import { listGearRentals } from "../../../../features/gear-rentals/store";
 
 /**
  * **The one test door** (issue #2759): a shop's state is a list of named facts.
@@ -330,7 +330,7 @@ describe("POST /api/test/shop", () => {
     }, 60_000);
 
     it("writes in the registry's order whatever order the caller names", async () => {
-      const { resolveFacts } = await import("@/db/facts");
+      const { resolveFacts } = await import("../../../../test/shop-facts/index");
       const forward = resolveFacts(["gearOut", "troublePanels", "bench"]);
       const reversed = resolveFacts(["bench", "troublePanels", "gearOut"]);
       expect(forward).toEqual(reversed);

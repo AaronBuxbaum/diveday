@@ -2,8 +2,8 @@
 
 import { getDb } from "@/db/client";
 import { getTripWithBooked } from "@/db/trips";
+import { requireShopSurface } from "@/features/session";
 import { trackEvent } from "@/lib/analytics";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
 /**

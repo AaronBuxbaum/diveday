@@ -5,14 +5,16 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/usage/collect", () => ({ collectUsageSamples: vi.fn() }));
-vi.mock("@/db/usage-alert-ledger", () => ({
+vi.mock("../../../../features/usage/collect", () => ({ collectUsageSamples: vi.fn() }));
+vi.mock("../../../../features/usage-alert-ledger/store", () => ({
   claimUsageAlert: vi.fn(),
   releaseUsageAlert: vi.fn(),
 }));
 vi.mock("@/lib/notifications", () => ({ notify: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),
@@ -20,8 +22,10 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 const { getDb } = await import("@/db/client");
-const { collectUsageSamples } = await import("@/lib/usage/collect");
-const { claimUsageAlert, releaseUsageAlert } = await import("@/db/usage-alert-ledger");
+const { collectUsageSamples } = await import("../../../../features/usage/collect");
+const { claimUsageAlert, releaseUsageAlert } = await import(
+  "../../../../features/usage-alert-ledger/store"
+);
 const { notify } = await import("@/lib/notifications");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");

@@ -2,9 +2,9 @@ import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { charterContext, markSeat } from "@/test/training-mark-context";
+import { readTrainingPlan, setTrainingPlanAssignment } from "../features/training-plans/store";
 import { moveBooking } from "./bookings";
 import { bookings, tripAssignments, tripRequirements, trips } from "./schema";
-import { readTrainingPlan, setTrainingPlanAssignment } from "./training-plans";
 
 const ctx = fileScopedShopContext();
 

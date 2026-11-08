@@ -136,7 +136,7 @@ Auditor's baseline — explicitly checked and found sound (no task needed): bear
 entropy and hashing (256-bit CSPRNG, SHA-256 at rest, single-use consume with atomic `WHERE`,
 supersession, disabled-account re-check); Svix and Stripe signature verification (timing-safe,
 fail-closed, 300s replay tolerance); CSV export formula-injection escaping and per-shop scoping;
-SSRF guarding in `src/lib/storage/ingest-url.ts` (DNS + private-range checks + no redirects +
+SSRF guarding in `src/features/storage/ingest-url.ts` (DNS + private-range checks + no redirects +
 bounded reads); tenant isolation in server actions (mutations consistently use
 `session.user.shopId`, never the URL slug); the embed/frame-header logic in `src/proxy.ts`; and
 observability URL redaction of token path segments. Every task below is security-sensitive and

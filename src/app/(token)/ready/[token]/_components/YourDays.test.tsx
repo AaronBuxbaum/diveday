@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
-import type { ReadyPageData } from "@/db/ready";
 import { diverTranslator } from "@/i18n/messages";
+import type { ReadyPageData } from "../../../../../features/ready/store";
 import { YourDays } from "./YourDays";
 
 /**

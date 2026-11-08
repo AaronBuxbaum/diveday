@@ -50,8 +50,8 @@ vi.mock("@/lib/auth", () => ({
     },
   })),
 }));
-vi.mock("@/lib/session", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/session")>();
+vi.mock("../../features/session/rules", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../features/session/rules")>();
   return { ...actual, requireStaffSession: hoisted.requireStaffSession };
 });
 vi.mock("@/db/client", async (importOriginal) => {
@@ -62,7 +62,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { auth } = await import("@/lib/auth");
 const { cookies } = await import("next/headers");
-const { DEMO_SEAT_COOKIE, signDemoSeat } = await import("@/lib/demo-seat");
+const { DEMO_SEAT_COOKIE, signDemoSeat } = await import("../../features/demo-seat/rules");
 const { resetDemoAction, switchDemoRoleAction } = await import("./demo");
 const { people, personRoles, trips, userAccounts } = await import("@/db/schema");
 

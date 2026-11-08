@@ -12,13 +12,13 @@ import { shops } from "./schema";
  * record it belongs to (`phoneMatches`) and what a shop's export hands to any
  * other system. **Every** writer of `people.phone` goes through this or through
  * its pure half (`phoneForStorage`, for the importer, which already holds the
- * shop row): `createDiver` and `editDiver` (src/db/divers.ts),
+ * shop row): `createDiver` and `editDiver` (src/features/divers/store.ts),
  * `findOrCreatePerson` (src/db/people.ts) and therefore the public booking,
  * wait-list, last-minute-list and self-registration doors,
- * `createPhoneOnlyPerson` (src/db/self-registration.ts), the no-email booking
+ * `createPhoneOnlyPerson` (src/features/self-registration/store.ts), the no-email booking
  * insert (src/db/bookings.ts), the seat claimant's contact write
- * (src/db/seat-claims.ts), and both halves of the contact importer
- * (src/db/import.ts). That list is the contract; a new writer joins it.
+ * (src/features/seat-claims/store.ts), and both halves of the contact importer
+ * (src/features/import/store.ts). That list is the contract; a new writer joins it.
  *
  * It was not always all of them, and the gap was not cosmetic. The stored side
  * used to be re-resolved against the shop's country on **every** inbound
