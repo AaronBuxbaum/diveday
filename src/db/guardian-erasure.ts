@@ -173,7 +173,7 @@ export async function listGuardianEmails(
   personId: string,
 ): Promise<string[]> {
   const signed = await db
-    .select({ email: waiverRecords.guardianEmail })
+    .select({ email: sql<string>`${waiverRecords.guardianEmail}` })
     .from(waiverRecords)
     .where(
       and(
@@ -184,7 +184,7 @@ export async function listGuardianEmails(
     );
   // Every door's draft of this diver's releases (issue #4130).
   const drafted = await db
-    .select({ email: sql<string | null>`${waiverDrafts.guardian}->>'email'` })
+    .select({ email: sql<string>`${waiverDrafts.guardian}->>'email'` })
     .from(waiverDrafts)
     .innerJoin(
       waiverRecords,
@@ -203,8 +203,9 @@ export async function listGuardianEmails(
   const rows = [...signed, ...drafted];
   const seen = new Map<string, string>();
   for (const { email } of rows) {
-    const key = email ? normalized(email) : "";
-    if (email && key && !seen.has(key)) seen.set(key, email.trim());
+    // Both queries exclude null emails; signed rows may still contain whitespace.
+    const key = normalized(email);
+    if (key && !seen.has(key)) seen.set(key, email.trim());
   }
   return [...seen.values()];
 }
