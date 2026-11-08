@@ -767,18 +767,16 @@ for (const scheme of ["light", "dark"] as const) {
        * and are never billed, so `blue-mantis` (the seeded demo shop the
        * other settings captures use) can never show a trial's standing. Both
        * images contain the shop's slug — the first-run checklist renders the
-       * public schedule URL. A second test would have to onboard a *second*
-       * shop, because `/api/test/reset` reseeds the demo shop and purges
-       * minted demo shops but does not delete one created through `/onboard`,
-       * so the slug would have to differ — and a different slug is different
-       * pixels in every baseline. Splitting here would move a baseline to buy
-       * isolation, which is the wrong trade; the captures are one
-       * onboarded session anyway. The trial's standing is clock-anchored and
+       * public schedule URL. The onboardForm fixture owns the setup link and
+       * tears down only the shop that link created, so all five nightly repeats
+       * use the same visible slug without leaking a real shop. The captures
+       * share one onboarded session. The trial's standing is clock-anchored and
        * deterministic: this shop's `created_at` is the harness's one frozen
        * instant, so "21 days left" and the end date never drift between runs.
        */
       test(`a freshly onboarded shop's Today tab renders true to the design (${scheme})`, async ({
         page,
+        onboardForm,
       }) => {
         // A real sign-up flow, then two captures.
         test.setTimeout(FLOW_TIMEOUT_MS);
@@ -786,11 +784,10 @@ for (const scheme of ["light", "dark"] as const) {
         // "Share your public schedule" URL), and neither DIVEDAY_CLOCK nor the
         // browser-context clock fixture freezes a value read in the Node.js
         // test process itself — a wall-clock slug here is a permanent visual
-        // diff between CI runs, not a real regression. `scheme` alone
-        // (light/dark) is unique enough since this test runs once per scheme
-        // and the suite has no retries (playwright.config.ts).
+        // diff between CI runs, not a real regression. The onboardForm fixture
+        // tears down only its own signup, so repeat-each can reuse the pixels.
         const unique = `today-empty-${scheme}`;
-        await page.goto(await mintOnboardFormPath(page));
+        await page.goto(onboardForm);
         await page
           .locator('input[name="shopName"]')
           .filter({ visible: true })
@@ -901,10 +898,13 @@ for (const scheme of ["light", "dark"] as const) {
        * slug reasoning) as the `today-empty` capture above: the slug renders
        * inside the card, so it must not contain a wall-clock stamp.
        */
-      test(`the first bookable moment renders true to the design (${scheme})`, async ({ page }) => {
+      test(`the first bookable moment renders true to the design (${scheme})`, async ({
+        page,
+        onboardForm,
+      }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const unique = `bookable-${scheme}`;
-        await page.goto(await mintOnboardFormPath(page));
+        await page.goto(onboardForm);
         await page
           .locator('input[name="shopName"]')
           .filter({ visible: true })

@@ -101,8 +101,9 @@ export function SettingsRail({
     // The first reveal measures a page that is still settling: a logo, a font or
     // a late banner moves the rows after it, and the current one then sits in the
     // box's bottom fade or off its edge (a flaky `settings-findability` on CI).
-    // So the move repeats whenever the rail's content changes size, until the
-    // reader's own hand has touched the box. Their scroll is never overridden.
+    // Observe the box too: late chrome can shrink its CSS maximum without
+    // changing the list's dimensions. Stop resettling once the reader touches
+    // the box; their scroll is never overridden.
     const scroller = scrollerRef.current;
     let handled = false;
     const markHandled = () => {
@@ -114,6 +115,7 @@ export function SettingsRail({
     const hand = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
     for (const type of hand) scroller?.addEventListener(type, markHandled, { passive: true });
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resettle);
+    if (scroller) observer?.observe(scroller);
     if (scroller?.firstElementChild) observer?.observe(scroller.firstElementChild);
     window.addEventListener("load", resettle);
     return () => {

@@ -154,7 +154,9 @@ export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
  *
  * Never call this on the canonical blue-mantis demo, or on any shop somebody
  * uses. Its caller is the reaper below, which only ever passes a minted demo
- * (`isDemo`, non-canonical slug).
+ * (`isDemo`, non-canonical slug). The gated test door also releases fixtures
+ * it owns: a real-shaped mint or a signup proven by a test-created setup link
+ * held in server memory. A supplied real-shop slug alone is never ownership.
  */
 export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Promise<void> {
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));

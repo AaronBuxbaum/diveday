@@ -9,6 +9,7 @@ import { issueSetupLink } from "../../features/setup-links/store";
 import { issueShopContactEmailConfirmation } from "../../features/shop-contact-email/store";
 import { DEFAULT_DIVER_LOCALE } from "../../i18n/settings";
 import { setupLinkPath } from "../../lib/setup-links";
+import { holdOnboardFixture } from "../onboard-fixture";
 import { FactRefused } from "./refusal";
 
 /**
@@ -153,5 +154,6 @@ export async function mintASetupLink(db: AppDb) {
     .returning({ id: setupRequests.id });
   if (!row) throw new Error("setup link fixture: insert failed");
   const issued = await issueSetupLink(db, { setupRequestId: row.id });
+  holdOnboardFixture(issued.token, row.id);
   return { path: setupLinkPath(issued.token), expiresAt: issued.expiresAt.toISOString() };
 }
