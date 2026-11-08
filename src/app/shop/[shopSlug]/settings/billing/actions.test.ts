@@ -67,6 +67,8 @@ function configure() {
   vi.stubEnv("BILLING_STRIPE_SECRET_KEY", "sk_test_billing");
   vi.stubEnv("BILLING_STRIPE_WEBHOOK_SECRET", "whsec_billing");
   vi.stubEnv("BILLING_STRIPE_PRICE_ID", "price_monthly");
+  vi.stubEnv("BILLING_STRIPE_PERCENT_PRICE_ID", "price_metered");
+  vi.stubEnv("BILLING_STRIPE_PERCENT_METER_EVENT", "diveday_percent_fee");
   vi.stubEnv("APP_HOST", "https://dive.day");
 }
 
@@ -152,19 +154,22 @@ describe("Add a card", () => {
     expect(checkoutBody.get("success_url")).toBe(
       "https://dive.day/shop/blue-mantis/settings/billing?notice=card-added",
     );
-    // Today's price, on the one existing price, snapshotted for the subscription.
-    expect(checkoutBody.get("line_items[0][price]")).toBe("price_monthly");
-    expect(checkoutBody.get("line_items[0][quantity]")).toBe("1");
+    // The default percentage offer uses only the meter and snapshots its terms.
+    expect(checkoutBody.get("line_items[0][price]")).toBe("price_metered");
+    expect(checkoutBody.has("line_items[0][quantity]")).toBe(false);
+    expect(checkoutBody.has("line_items[1][price]")).toBe(false);
     expect(await getShopSubscription(db, shop.id)).toMatchObject({
-      pricingPlan: "flat_monthly",
-      planMonthlyCents: 9_900,
-      planBasisPoints: 0,
+      pricingPlan: "percent_of_volume",
+      planMonthlyCents: 0,
+      planBasisPoints: 300,
     });
   });
 
   it("refuses the percent plan while its metered price is not configured", async () => {
     const { db, shop, owner, signIn } = await context();
     configure();
+    vi.stubEnv("BILLING_STRIPE_PERCENT_PRICE_ID", "");
+    vi.stubEnv("BILLING_STRIPE_PERCENT_METER_EVENT", "");
     vi.stubEnv("PRICING_BASIS_POINTS", "300");
     signIn(owner);
     await db.insert(shopSubscriptions).values({

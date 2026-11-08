@@ -37,3 +37,5 @@ Operators replace the five experiment variables with two values and redeploy. Th
 terms snapshot retain the original $99 monthly price, independently of the new-offer default. Percentage billing still requires the existing Stripe
 meter configuration. Revisit if shops need a self-service plan selector; that would require new
 presentation and subscription-change behavior rather than restoring random assignment.
+
+Setup and test-mode verification: [percentage billing setup](../../engineering/percentage-billing-setup.md).
