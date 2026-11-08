@@ -7,13 +7,16 @@ import { listTripReadiness } from "@/db/readiness";
 import { bookings, people, shops, trips } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
 import { listUnfinished } from "@/db/unfinished";
+import { createSignedUpShop } from "@/features/shop-signup";
 import { getShopDayDepartures } from "@/features/today";
+import { DEFAULT_PRICING_CONFIG } from "@/lib/billing/pricing-plans";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { benchReturnConcerns } from "@/lib/gear";
 import { markArrived } from "@/test/arrivals";
-import { seededShopContext } from "@/test/db";
+import { seededShopContext, unseededTestDb } from "@/test/db";
+import { mintASetupLink } from "@/test/shop-facts/mint-tokens";
 import { inHorizonReadiness } from "../../../../features/blockers/store";
 import { listGearRentals } from "../../../../features/gear-rentals/store";
 
@@ -456,5 +459,53 @@ describe("POST /api/test/shop", () => {
       );
       expect(await dropped.json()).toEqual({ ok: true, dropped: true });
     }, 60_000);
+  });
+});
+
+describe("onboarding teardown", () => {
+  function drop(body: unknown, bearer = true) {
+    return new Request("http://localhost/api/test/shop", {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        ...(bearer ? { authorization: `Bearer ${secret}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("refuses a missing bearer, a real database and malformed or shop-selecting bodies before lookup", async () => {
+    vi.mocked(getDb).mockClear();
+    expect((await DELETE(drop({ setupToken: "test-token" }, false))).status).toBe(404);
+    expect((await DELETE(drop({ setupToken: "" }))).status).toBe(400);
+    expect((await DELETE(drop({ setupToken: "test-token", slug: "real-shop" }))).status).toBe(400);
+    vi.stubEnv("DATABASE_URL", "postgres://example.invalid/real");
+    expect((await DELETE(drop({ setupToken: "test-token" }))).status).toBe(404);
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("deletes the signup owned by its test link, and repeated teardown is a no-op", async () => {
+    const db = await unseededTestDb();
+    vi.mocked(getDb).mockResolvedValue(db);
+    const link = await mintASetupLink(db);
+    const setupToken = new URL(link.path, "http://localhost").searchParams.get("setup");
+    if (!setupToken) throw new Error("setup fixture has no token");
+    const result = await createSignedUpShop(
+      db,
+      {
+        setupToken,
+        shopName: "Fresh Shop E2E",
+        shopSlug: "teardown-route-fixture",
+        timezone: "America/New_York",
+        ownerName: "Nour Haddad",
+        ownerEmail: "teardown@example.com",
+        ownerPassword: "trial-pass-123",
+        firstChecklistLine: "Oxygen is aboard",
+      },
+      DEFAULT_PRICING_CONFIG,
+    );
+    expect(result.ok).toBe(true);
+    expect(await (await DELETE(drop({ setupToken }))).json()).toEqual({ ok: true, dropped: true });
+    expect(await (await DELETE(drop({ setupToken }))).json()).toEqual({ ok: true, dropped: false });
   });
 });

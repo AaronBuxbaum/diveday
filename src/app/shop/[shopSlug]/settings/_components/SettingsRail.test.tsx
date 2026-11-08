@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   currentSettingsRailRowId,
@@ -424,6 +424,59 @@ describe("the rail keeps the current row in view", () => {
     renderRail();
 
     expect(railScroller().scrollTop).toBeGreaterThan(0);
+  });
+
+  it("resettles when chrome shrinks the scroll box without resizing its content", () => {
+    pathname = `${BASE}/settings/team`;
+    const callbacks: { callback: ResizeObserverCallback; elements: Set<Element> }[] = [];
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        elements = new Set<Element>();
+        constructor(callback: ResizeObserverCallback) {
+          callbacks.push({ callback, elements: this.elements });
+        }
+        observe(element: Element) {
+          this.elements.add(element);
+        }
+        disconnect = disconnect;
+      },
+    );
+    const boxes: Boxes = {
+      scroller: { top: 56, height: 744 },
+      row: { top: 650, height: 56 },
+      label: { top: 56, height: 24 },
+    };
+    stubBoxes(boxes);
+    const { unmount } = renderRail();
+    const scroller = railScroller();
+    expect(scroller.scrollTop).toBe(0);
+
+    // Late chrome reduces the CSS-sized viewport, not the size of the list.
+    boxes.scroller = { top: 125, height: 595 };
+    boxes.row = { top: 719, height: 56 };
+    const resizeBox = () =>
+      act(() => {
+        for (const { callback, elements } of callbacks) {
+          if (elements.has(scroller)) callback([], {} as ResizeObserver);
+        }
+      });
+    resizeBox();
+    expect(scroller.scrollTop).toBeGreaterThan(0);
+    const settledTop = scroller.scrollTop;
+    boxes.row = { top: 400, height: 56 };
+    resizeBox();
+    expect(scroller.scrollTop).toBe(settledTop);
+
+    // Once the reader scrolls, a further resize must not pull them back.
+    fireEvent.wheel(scroller);
+    scroller.scrollTop = 123;
+    boxes.row = { top: 900, height: 56 };
+    resizeBox();
+    expect(scroller.scrollTop).toBe(123);
+    unmount();
+    expect(disconnect).toHaveBeenCalled();
   });
 
   it("reveals the selected destination again after the viewport changes axis", () => {

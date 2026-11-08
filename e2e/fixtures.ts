@@ -9,6 +9,7 @@ import { shopDayBounds } from "../src/lib/zoned";
 import { BROWSER_CLOCK_COOKIE, pinBrowserClock } from "./browser-clock";
 import { currentStaffStorageStateGeneration, signInAs } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
+import { mintOnboardFormPath } from "./setup-link";
 import type { FactRequest } from "./shop-facts";
 
 type StaffRole = keyof typeof DEV_STAFF_LOGINS;
@@ -300,6 +301,7 @@ export const test = base.extend<
     demoReset: undefined;
     browserActivity: undefined;
     privateShop: PrivateShop;
+    onboardForm: string;
     privateShopSlug: string | null;
     privateShopBrand: boolean;
     privateShopDemo: boolean;
@@ -638,6 +640,17 @@ export const test = base.extend<
         await to(new Date(endOfDay.getTime() - 30 * 60 * 1000));
       },
     });
+  },
+
+  // The real signup flow, with teardown proven by its test-owned setup link.
+  // Fixed visual slugs can repeat without ever deleting a shop by name.
+  onboardForm: async ({ demoReset, page, request }, use) => {
+    void demoReset;
+    const path = await mintOnboardFormPath(page);
+    const setupToken = new URL(path, "http://localhost").searchParams.get("setup");
+    await use(path);
+    const response = await request.delete("/api/test/shop", { data: { setupToken } });
+    if (!response.ok()) throw new Error(`onboarding fixture teardown failed: ${response.status()}`);
   },
 
   privateShop: async (

@@ -425,6 +425,11 @@ test("a full boat refuses another add with the wait-list nudge", async ({ page }
   await find.press("Enter");
   await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
   await page.waitForURL(/\/divers\?add=1/);
+  // This form hydrates separately from the staff header.
+  await expect(page.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
   await page.getByLabel("Full name").fill("Fills The Boat");
   await page.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
@@ -436,6 +441,12 @@ test("a full boat refuses another add with the wait-list nudge", async ({ page }
   // The boat is now full — another add onto it is refused, not silently
   // dropped, and points the crew at the wait list instead.
   await page.goto(addDiverFormPath("blue-mantis", tripId));
+  // The form streams separately from the staff header. A pre-hydration submit
+  // left Tara on the unsubmitted form in the nightly flake hunt (#3641).
+  await expect(page.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
   await page.getByLabel("Full name").fill("Turned Away Tara");
   await page.getByRole("button", { name: "Add to trip" }).click();
 

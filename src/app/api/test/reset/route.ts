@@ -118,10 +118,12 @@ export async function POST(request: Request) {
  * Asked again on 2026-08-15, about a different suspect, and answered no.
  *
  * Around a dozen specs go through `/onboard` and create a **real** trial shop
- * (`isDemo: false`). Nothing clears those: `resetDemoSchedule` is scoped to
- * blue-mantis and `purgeMintedDemoShops` takes only `isDemo` shops, so they
- * accumulate for the life of the worker's server. The question was whether that
- * accumulation is part of why a long combined run gets slower. It is not.
+ * (`isDemo: false`). This reset leaves those alone: `resetDemoSchedule` is
+ * scoped to blue-mantis and `purgeMintedDemoShops` takes only `isDemo` shops,
+ * so an unowned signup remains for the life of the worker's server. Visual
+ * specs now use the onboardForm fixture, whose teardown proves ownership
+ * through its setup link. The question was whether that accumulation is part
+ * of why a long combined run gets slower. It is not.
  *
  * Method, the same one as above: a full combined `pnpm exec playwright test`
  * (599 tests, 5 workers, 11.7 minutes) with this route reporting its own
@@ -156,8 +158,9 @@ export async function POST(request: Request) {
  * refuse anything but a minted demo, and `deleteDemoShopCascade`'s docblock
  * says never to call it on a real shop.
  *
- * The one rule the onboarding specs do owe: **their slugs must be unique per
- * run**. Nothing collects them, so a fixed slug collides with itself the moment
+ * Unowned onboarding specs owe **slugs unique per run**. The onboardForm
+ * fixture instead tears down exactly its own signup, allowing stable visual
+ * slugs to repeat (#3641). Without that ownership, a fixed slug collides when
  * the same database sees the spec twice — a local rerun against a
  * `reuseExistingServer` fleet, for one. `demo.spec.ts` and `nitrox.spec.ts`
  * were both fixed slugs until 2026-08-15; both carry `Date.now()` + pid now.

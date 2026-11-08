@@ -15,6 +15,7 @@ import {
 } from "@/features/e2e-test-routes";
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
+import { dropOnboardFixture } from "@/test/onboard-fixture";
 import { armClaudeFixtures, claudeFixturesArmed } from "../../../../features/assists/e2e-fixtures";
 import {
   applyFacts,
@@ -52,6 +53,10 @@ import {
  * (issue #2783) that this server remembers so its teardown may drop it. The
  * answer adds the owner's email and the published password its staff sign in
  * with, and the facts in the same request are written to the new shop.
+ *
+ * **`DELETE` with `{ setupToken }`** releases only the signup made with a
+ * setup link the test fact minted and remembers, never an ordinary link.
+ * This lets visual onboarding repeat a stable slug without weakening reset.
  *
  * **`DELETE ?slug=`** drops a shop this door minted: a demo, or a shop this
  * server itself made real-shaped (`holdNonDemoFixture`), never the canonical
@@ -193,6 +198,17 @@ export async function POST(request: Request) {
  */
 export async function DELETE(request: Request) {
   if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
+  // A capture owns its setup link, not an arbitrary real-shop slug. The
+  // server remembers which links its setupLink fact minted (#3641).
+  if (request.headers.get("content-type")?.includes("application/json")) {
+    const parsed = z
+      .object({ setupToken: z.string().min(1) })
+      .strict()
+      .safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+    const dropped = await dropOnboardFixture(await getDb(), parsed.data.setupToken);
+    return NextResponse.json({ ok: true, dropped });
+  }
   const slug = new URL(request.url).searchParams.get("slug");
   if (!slug || slug === DEMO_SHOP_SLUG) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
