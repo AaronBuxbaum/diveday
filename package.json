@@ -107,7 +107,7 @@
     "db:reset": "node scripts/db-reset.mjs",
     "billing:free-term": "dotenv -c -- tsx scripts/billing-free-term.ts",
     "billing:pricing-plan": "dotenv -c -- tsx scripts/billing-pricing-plan.ts",
-    "billing:pricing-test": "dotenv -c -- tsx scripts/billing-pricing-test.ts",
+    "billing:pricing-report": "dotenv -c -- tsx scripts/billing-pricing-report.ts",
     "build:sw": "node scripts/build-service-worker.mjs",
     "build:sw:assets": "node scripts/build-service-worker.mjs --assets",
     "brand:icons": "tsx scripts/render-brand-icons.tsx",

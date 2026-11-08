@@ -1,7 +1,7 @@
 /**
  * `pnpm billing:pricing-plan <shop-slug> <flat|percent|auto> [--monthly-cents N] [--basis-points N]`
  * — put one shop on a pricing plan by hand, optionally on its own numbers, or
- * (`auto`) back on the arm it was assigned (ADR 20261022-pricing-ab-test).
+ * (`auto`) back on the configured offer (ADR 20261022-pricing-ab-test).
  *
  * The pattern of `pnpm billing:free-term`: it runs against whatever database
  * `getDb()` resolves (`DATABASE_URL` through `dotenv -c`, else the dev PGlite
@@ -25,7 +25,7 @@ const ARG_ERRORS: Record<string, string> = {
   usage: USAGE,
   monthly_cents: `--monthly-cents takes a whole number from 0 to 100000. ${USAGE}`,
   basis_points: `--basis-points takes a whole number from 0 to 1000 (300 is 3%). ${USAGE}`,
-  auto_takes_no_numbers: `auto puts the shop back on its assigned arm and takes no numbers. ${USAGE}`,
+  auto_takes_no_numbers: `auto puts the shop back on the configured offer and takes no numbers. ${USAGE}`,
   flat_takes_no_basis_points: `The flat plan has no percentage. ${USAGE}`,
 };
 
@@ -68,7 +68,7 @@ async function main(argv: readonly string[]): Promise<number> {
     case "set":
       console.log(
         args.plan === null
-          ? `${args.shopSlug} is back on its assigned arm: ${describe(outcome.terms)}.`
+          ? `${args.shopSlug} is back on the configured offer: ${describe(outcome.terms)}.`
           : `${args.shopSlug} is on ${describe(outcome.terms)}, set by hand.`,
       );
       return 0;

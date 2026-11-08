@@ -6,7 +6,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { formValue, parseForm } from "@/features/form-parse";
 import { countSetupRequestsSince, recordSetupRequest } from "@/features/funnel";
-import { requestVisitorArm } from "@/features/pricing-arm-request";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { sendSetupRequestReceipt } from "@/features/setup-request-receipts";
 import { requestLocale } from "@/i18n/request";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -123,9 +123,8 @@ export async function submitSetupRequestAction(
     source: eventSource(form.data.source),
     locale: await requestLocale(),
     receiptPending: true,
-    // The pricing arm this reader was shown (ADR 20261022-pricing-ab-test),
-    // so the shop the request becomes is put on it. Null while the test is off.
-    pricingPlan: await requestVisitorArm(),
+    // Record the configured plan shown with this request.
+    pricingPlan: (await requestPricingOffer()).plan,
   });
   after(() => announceSetupRequest(row));
   after(() => sendSetupRequestReceipt(row.id));

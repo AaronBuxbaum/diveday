@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { requestPricingOffer } from "@/features/pricing-arm-request";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";

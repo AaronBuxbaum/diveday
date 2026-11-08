@@ -14,7 +14,7 @@ export const CALLOUT_LINK_CLASS = `${tapTargetLinkClass} font-medium text-primar
 
 /**
  * The coexist band's "or leave it" box: drop the channel and take the booking
- * in DiveDay. Only the pricing test's flat arm shows it (ADR
+ * in DiveDay. Only the monthly-only offer shows it (ADR
  * 20261022-pricing-ab-test), because its argument is the incumbent's
  * per-booking fee against a flat price.
  *

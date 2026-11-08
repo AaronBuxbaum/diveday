@@ -20,7 +20,7 @@ import { closePercentMonths, lastClosedMonth } from "./close-pass";
  * real shop in UTC, created well before June 2031 so its trial is over.
  */
 const NOW = new Date("2031-07-02T14:13:00Z");
-const ON = { ...DEFAULT_PRICING_CONFIG, test: true };
+const ON = { monthlyCents: 0, basisPoints: 300 };
 const PERCENT = { priceId: "price_metered", meterEventName: "diveday_fee_cents" };
 let seq = 0;
 
@@ -320,7 +320,7 @@ describe("closePercentMonths", () => {
 
   it("bills a percent shop's final month up to the cancel, on what it was sold", async () => {
     const db = await unseededTestDb();
-    // Canceled on 20 June, with the test switched off since: the snapshot still holds.
+    // Canceled on 20 June, with the public offer changed since: the snapshot still holds.
     const shopId = await percentShop(db, {
       stripeStatus: "canceled",
       lastSubscriptionEventAt: new Date("2031-06-20T00:00:00Z"),

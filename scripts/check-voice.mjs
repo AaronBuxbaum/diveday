@@ -867,7 +867,7 @@ export const HOUSE_PHRASE_ALLOWLIST = new Set([
   "lee una persona",
   "la lista completa",
   "comisión por reserva",
-  // The pricing test's percent arm names its fee base the same way on every
+  // Percentage pricing names its fee base the same way on every
   // page that states it (ADR 20261022-pricing-ab-test, "Volume"): a defined
   // term, like "no setup fee", that must not drift from page to page.
   "the card money",

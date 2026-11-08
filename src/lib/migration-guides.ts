@@ -82,7 +82,7 @@ export type CoexistFraming = {
   /**
    * The alternative path: drop the channel entirely and take the booking in
    * DiveDay. Its argument is the incumbent's per-booking fee against a flat
-   * price, so the pricing test's percent arm has none ({@link guideForPlan}).
+   * price, so the percentage offer has none ({@link guideForPlan}).
    */
   replace?: { heading: DiverMessageKey; body: DiverMessageKey };
 };
@@ -160,7 +160,7 @@ export type MigrationGuide = {
   heroLede: DiverMessageKey;
 
   /**
-   * The pricing test's percent arm (ADR 20261022-pricing-ab-test): the
+   * The percentage offer (ADR 20261022-pricing-ab-test): the
    * sentences that set the incumbent's per-booking fee against a flat price,
    * with the contrast taken out. Only the booking-channel guides carry one.
    */
@@ -821,8 +821,8 @@ export function getMigrationGuide(slug: string): MigrationGuide | null {
 }
 
 /**
- * A guide as the reader's pricing arm reads it (ADR 20261022-pricing-ab-test).
- * The flat arm's is the guide itself. The percent arm's swaps in the
+ * A guide as the configured offer reads it (ADR 20261022-pricing-ab-test).
+ * The monthly-only offer’s is the guide itself. The percentage offer’s swaps in the
  * sentences without the per-booking-fee contrast and drops the "leave the fee
  * behind" box, a comparison that holds only against a flat price.
  */

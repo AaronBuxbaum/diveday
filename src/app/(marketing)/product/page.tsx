@@ -9,7 +9,7 @@ import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { FeatureDirectory } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
-import { requestPricingOffer } from "@/features/pricing-arm-request";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
