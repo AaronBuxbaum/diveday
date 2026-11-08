@@ -62,6 +62,7 @@ export const STAFF_ROUTES = {
   "divers/[personId]": {},
   "divers/[personId]/merge/[survivorId]": {},
   "divers/[personId]/waivers/[recordId]": { upHash: "#waiver" },
+  "divers/[personId]/waivers/[recordId]/print": {},
   gear: {},
   "gear/[id]": {},
   "gear/rentals/[ticketId]": {},

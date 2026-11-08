@@ -62,6 +62,7 @@ export function renderList({
   locale = ENGLISH,
   exceedsNoDecoLimits,
   crew = [],
+  paper = false,
 }: {
   divers: TripManifest["divers"];
   checkpoint?: RollCallCheckpoint;
@@ -69,11 +70,13 @@ export function renderList({
   locale?: TestLocale;
   exceedsNoDecoLimits?: boolean;
   crew?: TripManifest["crew"];
+  paper?: boolean;
 }) {
   return render(
     <DiverRollCall
       context={{
         divers,
+        paper,
         crew,
         checkpoint,
         isDeparture: checkpoint === "departure",

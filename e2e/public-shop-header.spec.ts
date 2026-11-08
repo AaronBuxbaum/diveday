@@ -407,10 +407,10 @@ test.describe("leaving the public layout as a shop owner", () => {
 
 test.describe("public header print integration", () => {
   test.use({ locale: "es-ES", viewport: { width: 390, height: 844 } });
-  test("paper hides the open header menu and screen restores measured offsets", async ({
+  test("a schedule sheet hides the open header menu and screen restores measured offsets", async ({
     page,
   }) => {
-    await page.goto("/s/blue-mantis/register");
+    await page.goto("/s/blue-mantis");
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "200%";
     });
@@ -429,9 +429,7 @@ test.describe("public header print integration", () => {
         page.evaluate(() => document.documentElement.style.getPropertyValue("--public-chrome-h")),
       )
       .toBe("");
-    expect(
-      await page.locator("footer").evaluate((element) => getComputedStyle(element).breakInside),
-    ).toBe("avoid");
+    await expect(page.locator(".paper-sheet")).toBeVisible();
     await page.screenshot({
       path: test.info().outputPath("header-print-hidden.png"),
       animations: "disabled",

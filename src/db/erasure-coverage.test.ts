@@ -198,6 +198,8 @@ function erasureHardDeleteOrder(): string[] {
  * indirection is visible rather than looking like a write nobody declared.
  */
 const WRITTEN_VIA_HELPER: Record<string, string> = {
+  waiver_drafts:
+    "`clearWaiverDrafts` (./waiver-drafts) deletes every door's unsubmitted answers for the erased person's releases",
   trip_assignments:
     "`forgetTrainingPlanPeople` (./training-plan-privacy) clears personal instructor/author handles and timestamps while preserving the operational crew assignment; erasure refuses staff-role identities",
   claude_call_content:

@@ -67,11 +67,26 @@ describe("the earlier-refusal capsule", () => {
     });
     expect(capsuleOf(container)).toHaveTextContent("Riding only: MD said no");
     expect(capsuleOf(container)).not.toHaveTextContent(CAPSULE);
-    expect(container.textContent).toMatch(
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(screen.getByRole("dialog").textContent).toMatch(
       /A physician did not clear this person on Sep\s4,\s2026: riding only, not in the water/,
     );
-    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
-    expect(within(printed as HTMLElement).getByText(CAPSULE)).toBeDefined();
+    cleanup();
+    const paper = renderList({
+      paper: true,
+      divers: [
+        diver({
+          participantType: "rider",
+          medicalWaiver: refusedBefore,
+          riderMedicalHold: {
+            kind: "not_cleared",
+            at: new Date("2026-09-05T12:00:00.000Z"),
+            evaluatedOn: "2026-09-04",
+          },
+        }),
+      ],
+    });
+    expect(within(paper.container).getByText(CAPSULE)).toBeDefined();
   });
 
   it("is short in Spanish too", () => {
@@ -124,6 +139,7 @@ describe("the earlier-refusal capsule", () => {
     const row = screen.getByRole("listitem");
     expect(row.querySelector(".basis-full")).toHaveTextContent(CAPSULE);
     expect(row.querySelector(".basis-full")).not.toHaveTextContent("Minor");
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
     expect(screen.getAllByText("Minor · age 13").length).toBeGreaterThan(0);
   });
 
@@ -146,17 +162,27 @@ describe("the earlier-refusal capsule", () => {
         }),
       ],
     });
-    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
-    if (!printed) throw new Error("no printed block");
-    const onScreen = (text: string | RegExp) =>
-      screen.queryAllByText(text).filter((element) => !printed.contains(element));
     expect(capsuleOf(container)).toBeNull();
-    expect(onScreen(CAPSULE)).toHaveLength(0);
-    expect(onScreen(/Minor/)).toHaveLength(0);
+    expect(screen.queryAllByText(CAPSULE)).toHaveLength(0);
+    expect(screen.queryAllByText(/Minor/)).toHaveLength(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
     expect(within(screen.getByRole("dialog")).getByText("Minor · age 13")).toBeDefined();
 
+    cleanup();
+    const paper = renderList({
+      paper: true,
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          age: 13,
+          minor: true,
+          boardedEarlier: true,
+          rollCall: notBackAt(),
+        }),
+      ],
+    });
+    const printed = within(paper.container).getByRole("listitem");
     expect(printed).toHaveTextContent(
       /A physician did not clear this person on .* \(earlier waiver\)/,
     );
@@ -183,8 +209,20 @@ describe("the earlier-refusal capsule", () => {
       ],
     });
     expect(capsuleOf(container)).toHaveTextContent(CAPSULE);
-    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
-    expect(within(printed as HTMLElement).queryAllByText(CAPSULE)).toHaveLength(0);
+    cleanup();
+    const paper = renderList({
+      paper: true,
+      checkpoint: "departure",
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          buddyAlert: "separated_dock",
+          buddyTeam: null,
+          rollCall: boardedAt(),
+        }),
+      ],
+    });
+    expect(within(paper.container).getAllByText(CAPSULE)).toHaveLength(1);
   });
 
   it("dates the refusal by the physician's evaluation, with the year", () => {
@@ -196,8 +234,11 @@ describe("the earlier-refusal capsule", () => {
         evaluatedOn: "2026-08-03",
       },
     } as TripManifest["divers"][number]["medicalWaiver"];
-    const { container } = renderList({ divers: [diver({ medicalWaiver: evaluated })] });
-    expect(container.textContent).toMatch(/did not clear this person on Aug\s3,\s2026/);
+    renderList({ divers: [diver({ medicalWaiver: evaluated })] });
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(screen.getByRole("dialog").textContent).toMatch(
+      /did not clear this person on Aug\s3,\s2026/,
+    );
   });
 });
 
@@ -326,7 +367,8 @@ describe("the unresolved-referral capsule", () => {
   it("puts a warning capsule on the row, and dates the referral with its year", () => {
     const { container } = renderList({ divers: [diver({ medicalWaiver: referred })] });
     expect(container.querySelector(".basis-full")).toHaveTextContent("Referral still open");
-    expect(container.textContent).toMatch(
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(screen.getByRole("dialog").textContent).toMatch(
       /Referred to a physician on Jun\s10,\s2026; re-signed with no physician clearance on file/,
     );
   });

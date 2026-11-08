@@ -62,10 +62,12 @@ describe("an unanswered referral's warning", () => {
       clearance: null,
       guardian: null,
     } as unknown as TripManifest["divers"][number]["medicalWaiver"];
-    const { container } = renderList({ divers: [diver({ medicalWaiver: refusedBefore })] });
-    const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
+    const paper = renderList({ paper: true, divers: [diver({ medicalWaiver: refusedBefore })] });
+    const printed = within(paper.container).getByRole("listitem");
     expect(printed).toHaveTextContent(/A physician did not clear this person/);
-    expect(within(printed as HTMLElement).queryAllByRole("link")).toHaveLength(0);
+    expect(within(printed).queryAllByRole("link")).toHaveLength(0);
+    paper.unmount();
+    renderList({ divers: [diver({ medicalWaiver: refusedBefore })] });
     expect(screen.queryByRole("link", { name: "View the physician’s decision" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
@@ -117,9 +119,10 @@ describe("an unanswered referral's warning", () => {
  * which is the half a screen-only test would miss.
  */
 describe("a held seat on the manifest", () => {
-  const heldSeat = (checkpoint: RollCallCheckpoint = "departure") =>
+  const heldSeat = (checkpoint: RollCallCheckpoint = "departure", paper = true) =>
     renderList({
       checkpoint,
+      paper,
       divers: [
         diver({
           age: 13,
@@ -144,9 +147,8 @@ describe("a held seat on the manifest", () => {
     expect(everything).not.toContain(
       "A medical answer needs a doctor’s sign-off before this diver dives.",
     );
-    // The print-only block says why, rather than "Not on file".
-    const printed = container.querySelector<HTMLElement>(".print\\:block");
-    expect(printed).not.toBeNull();
+    // The paper row says why, rather than "Not on file".
+    const printed = within(container).getAllByRole("listitem")[0];
     expect(printed).toHaveTextContent(
       "Their contact, age and other details wait until the desk confirms who this is.",
     );
@@ -173,7 +175,7 @@ describe("a held seat on the manifest", () => {
     const crewLine =
       "Not confirmed. The desk must settle who this is before boarding. Other holds may still apply.";
     expect(container.textContent).toContain(crewLine);
-    const printed = container.querySelector<HTMLElement>(".print\\:block");
+    const printed = within(container).getAllByRole("listitem")[0];
     expect(printed).toHaveTextContent(crewLine);
     expect(container.textContent?.toLowerCase()).not.toContain("medical");
     expect(printed?.textContent?.toLowerCase()).not.toContain("medical");
@@ -182,6 +184,7 @@ describe("a held seat on the manifest", () => {
 
   it("says nothing of other holds when the identity question is the only one", () => {
     const { container } = renderList({
+      paper: true,
       checkpoint: "departure",
       divers: [
         diver({
@@ -197,7 +200,7 @@ describe("a held seat on the manifest", () => {
   });
 
   it("says the same in the person's own panel", () => {
-    heldSeat("after_dive_1");
+    heldSeat("after_dive_1", false);
     fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent(
@@ -209,6 +212,7 @@ describe("a held seat on the manifest", () => {
 
   it("shows everything again once the desk has confirmed who this is", () => {
     const { container } = renderList({
+      paper: true,
       checkpoint: "departure",
       divers: [
         diver({
@@ -230,6 +234,7 @@ describe("a held seat on the manifest", () => {
 
   it("says it in Spanish too", () => {
     const { container } = renderList({
+      paper: true,
       locale: "es-ES",
       checkpoint: "departure",
       divers: [
