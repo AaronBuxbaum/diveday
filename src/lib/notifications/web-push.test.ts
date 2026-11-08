@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { sendNotification } from "web-push";
 import {
   isAllowedPushEndpoint,
   sendWebPush,
@@ -9,6 +10,16 @@ import {
 
 const config = { publicKey: "pub", privateKey: "priv", subject: "mailto:ops@dive.day" };
 const target = { endpoint: "https://fcm.googleapis.com/fcm/send/abc", p256dh: "p", auth: "a" };
+
+describe("web-push package integration", () => {
+  it("loads the real transport and safely rejects invalid signing keys", async () => {
+    // No injected sender: exercise the installed package export without network I/O.
+    expect(sendNotification).toBeTypeOf("function");
+    await expect(sendWebPush(target, { refresh: true }, config)).resolves.toEqual({
+      status: "failed",
+    });
+  });
+});
 
 describe("webPushConfig", () => {
   it("returns null when unconfigured rather than throwing", () => {
