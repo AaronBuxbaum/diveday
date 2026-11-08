@@ -1,0 +1,660 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9a34cf15-11f9-4cff-af28-1448946f2e42",
+  "prevIds": [
+    "38f21911-6f53-4201-95d8-43f1f963b200"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_conservation"
+      ],
+      "writes": [
+        "s|tbl|public.trip_conservation",
+        "n|tbl|public.trip_conservation",
+        "e|tbl|public.trip_conservation",
+        "n|rel|public.trip_conservation",
+        "n|type|public.trip_conservation",
+        "n|rel|public.trip_conservation_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "conservation_enabled"
+      ],
+      "writes": [
+        "s|col|public.shops.conservation_enabled",
+        "n|col|public.shops.conservation_enabled",
+        "e|col|public.shops.conservation_enabled"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "course_pulse_enabled"
+      ],
+      "writes": [
+        "s|col|public.shops.course_pulse_enabled",
+        "n|col|public.shops.course_pulse_enabled",
+        "e|col|public.shops.course_pulse_enabled"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trips",
+        "course_teaching_note"
+      ],
+      "writes": [
+        "s|col|public.trips.course_teaching_note",
+        "n|col|public.trips.course_teaching_note",
+        "e|col|public.trips.course_teaching_note"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trips",
+        "course_teaching_note_at"
+      ],
+      "writes": [
+        "s|col|public.trips.course_teaching_note_at",
+        "n|col|public.trips.course_teaching_note_at",
+        "e|col|public.trips.course_teaching_note_at"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trips",
+        "course_teaching_note_by_person_id"
+      ],
+      "writes": [
+        "s|col|public.trips.course_teaching_note_by_person_id",
+        "n|col|public.trips.course_teaching_note_by_person_id",
+        "e|col|public.trips.course_teaching_note_by_person_id"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "trip_conservation",
+        "trip_conservation_live_idx"
+      ],
+      "writes": [
+        "s|idx|public.trip_conservation_live_idx",
+        "n|idx|public.trip_conservation_live_idx",
+        "e|idx|public.trip_conservation_live_idx",
+        "n|rel|public.trip_conservation_live_idx"
+      ],
+      "reads": [
+        "n|tbl|public.trip_conservation",
+        "n|sch|public",
+        "n|col|public.trip_conservation.shop_id",
+        "n|col|public.trip_conservation.trip_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trips"
+      ],
+      "writes": [
+        "s|fk|public.trips.trips_course_teaching_note_by_person_id_people_id_fkey",
+        "n|fk|public.trips.trips_course_teaching_note_by_person_id_people_id_fkey",
+        "e|fk|public.trips.trips_course_teaching_note_by_person_id_people_id_fkey",
+        "n|con|public.trips.trips_course_teaching_note_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.trips.course_teaching_note_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_conservation"
+      ],
+      "writes": [
+        "s|fk|public.trip_conservation.trip_conservation_shop_id_shops_id_fkey",
+        "n|fk|public.trip_conservation.trip_conservation_shop_id_shops_id_fkey",
+        "e|fk|public.trip_conservation.trip_conservation_shop_id_shops_id_fkey",
+        "n|con|public.trip_conservation.trip_conservation_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trip_conservation",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.trip_conservation.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_conservation"
+      ],
+      "writes": [
+        "s|fk|public.trip_conservation.trip_conservation_trip_id_trips_id_fkey",
+        "n|fk|public.trip_conservation.trip_conservation_trip_id_trips_id_fkey",
+        "e|fk|public.trip_conservation.trip_conservation_trip_id_trips_id_fkey",
+        "n|con|public.trip_conservation.trip_conservation_trip_id_trips_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trip_conservation",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.trip_conservation.trip_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_conservation"
+      ],
+      "writes": [
+        "s|fk|public.trip_conservation.trip_conservation_recorded_by_person_id_people_id_fkey",
+        "n|fk|public.trip_conservation.trip_conservation_recorded_by_person_id_people_id_fkey",
+        "e|fk|public.trip_conservation.trip_conservation_recorded_by_person_id_people_id_fkey",
+        "n|con|public.trip_conservation.trip_conservation_recorded_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.trip_conservation",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.trip_conservation.recorded_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "trip_conservation",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "conservation_enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "course_pulse_enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "course_teaching_note",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "course_teaching_note_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "course_teaching_note_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "kind",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "quantity",
+        "type": "double precision",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "location",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "''",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "note",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "''",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "recorded_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "recorded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "revision",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "deleted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "trip_conservation_live_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "trip_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"deleted_at\" is null",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "trips_course_teaching_note_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "course_teaching_note_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "trip_conservation_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "trip_conservation_trip_id_trips_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "trip_conservation_recorded_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "recorded_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "trip_conservation_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "trip_conservation_kind",
+        "value": "\"kind\" in ('litter_kg', 'litter_items', 'line_m')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_conservation",
+        "name": "trip_conservation_quantity",
+        "value": "\"quantity\" > 0 and \"quantity\" <= 100000 and (\"kind\" <> 'litter_items' or \"quantity\" = trunc(\"quantity\"::numeric))",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

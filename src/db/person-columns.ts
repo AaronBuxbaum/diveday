@@ -144,6 +144,14 @@ export type PersonColumn = {
 };
 
 const rows = [
+  {
+    table: "trips",
+    column: "course_teaching_note_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "instructor attribution on a departure, not a diver record",
+    export: "withheld",
+  },
   // ---- Moved: the diver's own history, repointed at the survivor (bare `person_id`, in this order).
   // What the bench told this diver about their own gear (ADR
   // 20261008-work-order-follow-up). It follows the gear and the tickets to the
@@ -1263,6 +1271,13 @@ const rows = [
     kind: "actor",
     merge: "leave",
     why: "who uploaded the photo",
+  },
+  {
+    table: "trip_conservation",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staff member recorded the departure conservation action",
   },
   {
     table: "trip_sightings",

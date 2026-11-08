@@ -1530,7 +1530,7 @@
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 306,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 302,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 332,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 327,
     "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/reporting.ts#getMonthlyReport": 319,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
@@ -1597,7 +1597,6 @@
     "src/app/(marketing)/page.tsx": 433,
     "src/app/(token)/ready/[token]/page.tsx": 617,
     "src/app/s/[shopSlug]/page.tsx": 644,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 464,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 571,
     "src/app/shop/[shopSlug]/page.tsx": 578,
@@ -1606,7 +1605,7 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 409,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 569,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 452
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 448
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

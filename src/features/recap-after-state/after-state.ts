@@ -46,6 +46,7 @@ import { visitMilestone } from "@/lib/visit-milestones";
  * one assembler so this module never reaches up into a route for its shape.
  */
 export type AfterStateProps = {
+  conservation?: RecapPageData["conservation"];
   t: DiverTranslator;
   /** The negotiated request locale, for every figure and date on the page. */
   locale: string;
@@ -428,6 +429,7 @@ export async function buildAfterStateProps(input: {
       : null,
     fieldGuide: data.fieldGuide,
     observedSpecies: data.observedSpecies,
+    conservation: data.conservation,
     shoutout: data.shoutout,
     photos: data.photos,
     maxPhotos: MAX_RECAP_PHOTOS_PER_BOOKING,

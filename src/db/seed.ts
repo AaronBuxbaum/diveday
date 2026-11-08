@@ -94,6 +94,7 @@ import {
   tripBlowoutDivers,
   tripBlowouts,
   tripChangeEvents,
+  tripConservation,
   tripDives,
   tripHelpRequests,
   tripRecapPhotos,
@@ -907,6 +908,7 @@ export async function clearDemoSchedule(
   // The crew's own tally of what the day saw, beside the dive log it sits under
   // on the manifest — per-departure history keyed on trips that are about to
   // go, so a spec that tapped a chip does not leave it standing for the next.
+  await db.delete(tripConservation).where(eq(tripConservation.shopId, shopId));
   await db.delete(tripSightings).where(eq(tripSightings.shopId, shopId));
   // These records can contain order/customer payloads and point at schedule
   // data that is about to be replaced, so they must not survive a demo reset.

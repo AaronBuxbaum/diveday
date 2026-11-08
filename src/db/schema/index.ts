@@ -16,6 +16,7 @@ export * from "./billing";
 export * from "./bookings";
 export * from "./capabilities";
 export * from "./certifications";
+export * from "./conservation";
 export * from "./core";
 export * from "./course-forms";
 export * from "./courses";

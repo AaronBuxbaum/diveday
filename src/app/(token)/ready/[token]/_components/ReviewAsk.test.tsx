@@ -51,5 +51,6 @@ describe("ReviewAsk", () => {
     expect(screen.getByText("reviews.savedPublished")).toBeTruthy();
     expect(screen.getByText("reviews.yourRating(4)")).toBeTruthy();
     expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Great crew");
+    expect(screen.getByRole("textbox")).toHaveAccessibleDescription("reviews.usageHint");
   });
 });

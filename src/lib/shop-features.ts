@@ -28,6 +28,8 @@
  */
 export const SHOP_FEATURES = [
   "reviews",
+  "conservation",
+  "coursePulse",
   "dateRequests",
   "lastMinuteList",
   "tips",
@@ -68,6 +70,8 @@ export const OFF_BY_DECISION: readonly ShopFeature[] = ["seatSoldAlerts"];
 /** The `shops` columns behind each feature, as Drizzle names them. */
 export const SHOP_FEATURE_COLUMNS = {
   reviews: "reviewsEnabled",
+  conservation: "conservationEnabled",
+  coursePulse: "coursePulseEnabled",
   dateRequests: "dateRequestsEnabled",
   lastMinuteList: "lastMinuteListEnabled",
   tips: "tipsEnabled",

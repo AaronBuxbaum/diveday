@@ -18,6 +18,7 @@ import type { BrandDisplayFontCode } from "@/lib/brand";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import type { ConservationFact } from "@/lib/conservation";
 import { crewThanksChoice } from "@/lib/crew-thanks-choice";
 import { rungOffsetMs } from "@/lib/departure-clock";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -85,6 +86,7 @@ import {
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking } from "./tips";
+import { tripConservationFacts } from "./trip-conservation";
 import { listTripSightings } from "./trip-sightings";
 import { getTripWithBooked, listTripDives, seatNotCancelled } from "./trips";
 import { tripCrewByTrip } from "./trips-crew";
@@ -143,6 +145,7 @@ export type RecapSite = {
 };
 
 export type RecapPageData = {
+  conservation: ConservationFact[];
   shop: {
     /**
      * The shop this booking belongs to. Carried so the thread's after-state
@@ -1034,6 +1037,7 @@ async function loadRecapPageData(
     (nextStepAuthorRow?.consentAt && nextStepAuthorRow.publicName?.trim()) || null;
 
   const data: Omit<RecapPageData, "tip"> = {
+    conservation: await tripConservationFacts(db, row.shopId, row.tripId),
     shop: {
       id: row.shopId,
       name: row.shopName,

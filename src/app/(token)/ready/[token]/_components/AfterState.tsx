@@ -9,6 +9,7 @@ import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typograp
 import type { AfterStateProps } from "@/features/recap-after-state";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { flySafeMessageKey } from "@/lib/fly-safe";
+import { cachedFormatter } from "@/lib/intl-cache";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { afterNotices } from "./after-notices";
 import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";
@@ -109,6 +110,7 @@ export function AfterState({
     flySafe,
     fieldGuide,
     observedSpecies,
+    conservation = [],
     course,
     shoutout,
     photos,
@@ -233,6 +235,29 @@ export function AfterState({
           course={course}
           logFilePath={logFilePath}
         />
+
+        {conservation.length > 0 ? (
+          <section className="mt-10" aria-label={t("recap.conservation.heading")}>
+            <p className="text-sm text-muted">
+              {t("recap.conservation.byShop", { shopName: shop.name })}
+            </p>
+            <ul className="mt-2 space-y-2">
+              {conservation.map((fact) => (
+                <li key={fact.id}>
+                  <p>
+                    {t(`recap.conservation.${fact.kind}`, {
+                      quantity: cachedFormatter("number", Intl.NumberFormat, locale, {
+                        maximumFractionDigits: 2,
+                      }).format(fact.quantity),
+                    })}
+                    {fact.location ? ` · ${fact.location}` : ""}
+                  </p>
+                  {fact.note ? <p className="text-sm text-muted">{fact.note}</p> : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {/* The one line the diver's body still needs after the record is closed
           (issue #1425): when they may fly, in the shop's zone, with the hours

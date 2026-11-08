@@ -178,3 +178,12 @@
   departures for one local day. Each reader has an independent first-view snapshot and acknowledges
   only the events shown; their own actions are not news to them. Today marks are separate from the
   per-reader, per-departure manifest catch-up marks, so acknowledging one does not clear the other.
+
+- **Conservation record** — a shop-attributed, quantified action on a returned departure: litter
+  collected in kilograms or whole items, or fishing line removed in meters. Staff can record,
+  correct and delete entries in the departure’s Details tab. A revision refuses stale edits;
+  deletion is soft. Live entries appear on that departure’s diver recap with the shop’s optional
+  location and collection note, never as an inferred ecological benefit or a diver’s achievement.
+  Settings → Features controls every editor and recap door without deleting the records.
+  The shop export includes the record, recorder, revision and deletion state. This is independent
+  of standing shop commitments, site briefing notes and conservation fees.

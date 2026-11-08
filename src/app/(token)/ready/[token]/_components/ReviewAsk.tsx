@@ -53,8 +53,12 @@ export function ReviewAsk({
           maxLength={MAX_REVIEW_COMMENT_LENGTH}
           defaultValue={ownReview?.comment ?? ""}
           placeholder={t("reviews.commentPlaceholder")}
+          aria-describedby="review-usage"
           className={textareaClassFor(3)}
         />
+        <p id="review-usage" className="text-xs text-muted">
+          {t("reviews.usageHint")}
+        </p>
         {/* **Thank someone by name** (loop 5, row 6): one optional line for one
             of the crew, seen only by them and the shop, never published. */}
         {crewChoices.length > 0 ? (

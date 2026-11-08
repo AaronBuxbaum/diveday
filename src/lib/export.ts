@@ -95,6 +95,8 @@ export const EXPORT_FILE_NOTES = {
     "Which seats each checkout was paying for, one row per seat, with the rental gear charged on that seat. A checkout covers a whole party, so a single attempt in booking_checkouts.csv can carry several rows here — and the per-seat gear figure lives nowhere else, since the checkout total has it already folded in. A tip's row (purpose tip in booking_checkouts.csv) links the one booking it was left on and carries no trip or gear figure: it pays for no seat.",
   "executed_dives.csv":
     "What each dive actually recorded after the boat left: site, times, depth, observed conditions, and fields explicitly not recorded.",
+  "trip_conservation.csv":
+    "Measured conservation actions recorded by the shop for each departure, including corrections and soft-deleted records.",
   "trip_sightings.csv":
     "What the crew tapped after each dive: one row per species per site per departure, with how many they counted, who recorded it and when. Read it as a record of a moment, never as a claim about a place — dive_site_creatures.csv is the shop's standing field guide for a site, and this is people saying they saw a thing on one day. It is what the shop's own trip pages summarize as \"seen here this month\"; a deleted_at row was a mis-tap the crew took back and should not be counted.",
   "booking_arrival_events.csv":

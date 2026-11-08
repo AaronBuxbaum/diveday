@@ -80,6 +80,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // and a fixed one is part of that boat's history, read like a logged dive.
   "boat_snags",
   "trip_sightings",
+  "trip_conservation",
   "trip_assignments",
   // "Working it anyway" on one crew assignment (issue #2678): current state of
   // the departure's crew, read with it, and gone when the person comes off it.

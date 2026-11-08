@@ -663,6 +663,7 @@
     "thanksHint": "Solo lo ven esa persona y los propietarios y encargados del centro. No forma parte de tu reseña.",
     "commentLabel": "¿Algo que le contarías a otro buceador?",
     "commentPlaceholder": "La tripulación, los puntos, cómo fue la jornada",
+    "usageHint": "Tu puntuación puede aparecer públicamente. El centro revisa tus palabras antes de publicarlas con tu nombre y la inicial de tu apellido.",
     "submit": "Enviar mi opinión",
     "savedPublished": "Gracias. Tu puntuación ya está publicada.",
     "savedPending": "Gracias. El centro leerá tus palabras antes de publicarlas.",
@@ -813,7 +814,14 @@
     "nextDiveSameSite": "De vuelta a {site}",
     "nextDiveSoonest": "La próxima con plazas",
     "nextDiveLevelCovers": "Tu certificación {level} lo cubre.",
-    "nextDiveSeats": "{count, plural, one {# plaza} other {# plazas}}"
+    "nextDiveSeats": "{count, plural, one {# plaza} other {# plazas}}",
+    "conservation": {
+      "heading": "Acciones de conservación registradas",
+      "byShop": "Registrado por {shopName}",
+      "litter_kg": "{quantity} kg de residuos recogidos",
+      "litter_items": "{quantity} objetos recogidos",
+      "line_m": "{quantity} m de sedal recogido"
+    }
   },
   "register": {
     "title": "Regístrate en {shop}",

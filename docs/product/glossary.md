@@ -64,6 +64,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Confirm to clear
 - Course admission
 - Course ladder
+- Course preparation and instructor note
 - Declared uncertified
 - Depth ceiling
 - Depth marker
@@ -114,6 +115,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Blow-out
 - Change ledger
 - Conditions hold
+- Conservation record
 - Day load-out
 - Day sheet
 - Day-of help request

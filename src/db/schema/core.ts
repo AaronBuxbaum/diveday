@@ -193,6 +193,8 @@ export const shops = pgTable(
      *   waters and an awkward ask in others.
      */
     reviewsEnabled: boolean("reviews_enabled").notNull().default(true),
+    conservationEnabled: boolean("conservation_enabled").notNull().default(true),
+    coursePulseEnabled: boolean("course_pulse_enabled").notNull().default(true),
     dateRequestsEnabled: boolean("date_requests_enabled").notNull().default(true),
     lastMinuteListEnabled: boolean("last_minute_list_enabled").notNull().default(true),
     tipsEnabled: boolean("tips_enabled").notNull().default(true),

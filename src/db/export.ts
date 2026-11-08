@@ -182,6 +182,14 @@ export function loadShopExportBundleInput(
  * incident reports with their people and dated notes (ADR
  * 20261012-incident-reports — the shop bundle only, never a diver's own).
  */
+async function readDepartureRecords(tx: AppTransaction, scope: ShopExportScope) {
+  return {
+    executedDiveRows: await readScoped(tx, "executedDives", scope),
+    sightingRows: await readScoped(tx, "tripSightings", scope),
+    conservationRows: await readScoped(tx, "tripConservation", scope),
+  };
+}
+
 async function readSafetyRecordRows(tx: AppTransaction, scope: ShopExportScope) {
   return {
     staffCredentialRows: await readScoped(tx, "staffCredentials", scope),
@@ -519,9 +527,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const checkoutRows = await readScoped(tx, "bookingCheckouts", scope);
 
-  const executedDiveRows = await readScoped(tx, "executedDives", scope);
-
-  const sightingRows = await readScoped(tx, "tripSightings", scope);
+  const departureRecords = await readDepartureRecords(tx, scope);
 
   const checkoutBookingRows = await readScoped(tx, "bookingCheckoutBookings", scope);
 
@@ -701,8 +707,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     buddyReferralByBooking,
     paymentEventRows,
     checkoutRows,
-    executedDiveRows,
-    sightingRows,
+    ...departureRecords,
     checkoutBookingRows,
     noteRows,
     activityRows,
@@ -1347,6 +1352,7 @@ export async function loadShopExportCounts(
     "booking_checkouts.csv": await countShopScoped(db, "bookingCheckouts", shopId),
     "booking_checkout_bookings.csv": await countShopScoped(db, "bookingCheckoutBookings", shopId),
     "executed_dives.csv": await countShopScoped(db, "executedDives", shopId),
+    "trip_conservation.csv": await countShopScoped(db, "tripConservation", shopId),
     "trip_sightings.csv": await countShopScoped(db, "tripSightings", shopId),
     "internal_notes.csv": await countShopScoped(db, "internalNotes", shopId),
     "incident_reports.csv": await countShopScoped(db, "incidentReports", shopId),

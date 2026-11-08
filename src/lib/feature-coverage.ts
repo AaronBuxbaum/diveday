@@ -66,6 +66,8 @@ export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
   hasPoolDiving: "divingOptions",
   crewScheduleEnabled: "crewSchedule",
   reviewsEnabled: "reviews",
+  conservationEnabled: "conservation",
+  coursePulseEnabled: "coursePulse",
   dateRequestsEnabled: "dateRequests",
   lastMinuteListEnabled: "lastMinuteList",
   tipsEnabled: "tips",

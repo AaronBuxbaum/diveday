@@ -545,7 +545,17 @@
         "label": "Llevar una guía de campo para cada sitio",
         "description": "Las especies que eliges para cada sitio de buceo, en su página pública."
       },
-      "door": "Activar o desactivar funciones"
+      "door": "Activar o desactivar funciones",
+      "coursePulse": {
+        "heading": "Preparación del curso",
+        "description": "Muestra a los instructores asignados un resumen de la preparación de sus estudiantes y una nota privada en cada salida de curso.",
+        "label": "Mostrar la preparación del curso"
+      },
+      "conservation": {
+        "heading": "Registros de conservación",
+        "description": "Registra acciones de limpieza de cada salida y muestra los datos medidos en los resúmenes de los buceadores.",
+        "label": "Registros de conservación"
+      }
     },
     "crewSchedule": {
       "heading": "Turnos de la tripulación",
@@ -919,7 +929,8 @@
       "dive_package_entitlements": "Inmersiones de paquetes pendientes y usadas",
       "shop_promo_codes": "Códigos de descuento",
       "courses": "Catálogo de cursos",
-      "shop_text_translations": "Traducciones del centro"
+      "shop_text_translations": "Traducciones del centro",
+      "trip_conservation": "Acciones de conservación medidas por salida, con su estado de corrección y eliminación."
     }
   },
   "crewSheet": {
