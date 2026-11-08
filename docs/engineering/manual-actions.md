@@ -131,11 +131,11 @@ this file is the checklist, not the argument.
     store    GitHub repository Actions secrets: REG_SUIT_S3_BUCKET_NAME. Actions variables: AWS_REG_SUIT_ROLE_ARN. CI uses GitHub OIDC to assume the stack role; do not add REG_SUIT_AWS_REGION, REG_SUIT_AWS_ACCESS_KEY_ID or REG_SUIT_AWS_SECRET_ACCESS_KEY as GitHub secrets.
     verify   Push a branch and confirm the visual job uploads a report rather than skipping.
 
-[12] Make the Neon API credentials available to infra deploys
-    when     once before the first infra workflow deploy, and again after rotating the Neon API key or project
-    why      GitHub environment secrets are scoped to one environment. The existing NEON_API_KEY and NEON_PROJECT_ID are on restore-drill, so the infra-deploy job cannot read them while it provisions the direct dump connection after deployment.
+[12] Make the Neon API credentials available to backup setup
+    when     once before the first backup setup run, and again after rotating the Neon API key or project
+    why      GitHub environment secrets are scoped to one environment. The existing NEON_API_KEY and NEON_PROJECT_ID are on restore-drill, so the Backup setup workflow needs its own environment copy to provision the direct dump connection.
     run      In GitHub Settings -> Environments -> infra-deploy, add the existing NEON_API_KEY value as an environment secret and the existing NEON_PROJECT_ID value as an environment variable.
-    produces The approved infra deploy can retrieve Neon's direct connection URI, store it in Secrets Manager, and start the first dump when that secret is still unset.
+    produces The approved Backup setup workflow can retrieve Neon's direct connection URI, store it in Secrets Manager, and start the first dump when that secret is still unset.
     store    GitHub repository AaronBuxbaum/diveday -> Environments -> infra-deploy -> environment secret NEON_API_KEY and environment variable NEON_PROJECT_ID. Keep the existing restore-drill values in that environment too.
     verify   GitHub Settings -> Environments -> infra-deploy -> confirm NEON_API_KEY is listed under environment secrets and NEON_PROJECT_ID under environment variables, without revealing either value.
     note     GitHub cannot reveal an already-saved secret. Use the original API key source; if that is unavailable, create a replacement Neon API key and update both environments. The connection URI itself is never stored in GitHub.

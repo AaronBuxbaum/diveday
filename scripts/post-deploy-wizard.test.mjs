@@ -1017,13 +1017,13 @@ describe("the deploy job's credential pre-flight", () => {
   );
   const deployJob = workflow.slice(workflow.indexOf("\n  deploy:\n"));
   const preFlight = deployJob.slice(
-    deployJob.indexOf("- name: Confirm post-deploy and Neon dump credentials are set"),
+    deployJob.indexOf("- name: Confirm post-deploy credentials are set"),
   );
 
   it("checks every credential the wizard's deploy step is handed", () => {
     const wizardStep = deployJob.slice(
       deployJob.indexOf("- run: pnpm infra:deploy"),
-      deployJob.indexOf("- name: Provision the direct Neon dump connection"),
+      deployJob.length,
     );
     const wizardEnvironment = wizardStep.matchAll(/^ +(\w+): \$\{\{ secrets\.(\w+) \}\}$/gm);
     const handed = [...wizardEnvironment].map(([, variable, secret]) => {
@@ -1036,7 +1036,10 @@ describe("the deploy job's credential pre-flight", () => {
     expect(handed).toEqual(["GH_TOKEN", "VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID"]);
     const checked = [...preFlight.matchAll(/^ +require (\w+) "\$\1"/gm)].map(([, name]) => name);
     expect(checked.slice(0, handed.length)).toEqual(handed);
-    expect(checked.slice(handed.length)).toEqual(["NEON_API_KEY", "NEON_PROJECT_ID"]);
+    expect(checked).toEqual(handed);
+    expect(deployJob).not.toContain("NEON_API_KEY");
+    expect(deployJob).not.toContain("provision-database-dump-connection");
+    expect(deployJob).not.toContain("aws codebuild start-build");
   });
 
   it("names both the empty variable and the manual action that supplies it", () => {
@@ -1047,7 +1050,7 @@ describe("the deploy job's credential pre-flight", () => {
     expect(preFlight).toContain("environment setting named $1");
     expect(preFlight).toContain("ci-github-admin-token");
     expect(preFlight).toContain("ci-vercel-deploy-token");
-    expect(preFlight).toContain("neon-dump-provisioning-credentials");
+    expect(preFlight).not.toContain("neon-dump-provisioning-credentials");
     expect(preFlight).toContain("docs/engineering/manual-actions.md");
   });
 
@@ -1056,9 +1059,7 @@ describe("the deploy job's credential pre-flight", () => {
     // an unfinished setup should leave nothing half-deployed. It also exits
     // non-zero rather than skipping a step, which ADR 20260811-ci-deploy-full-wizard
     // rejects.
-    const preFlightAt = deployJob.indexOf(
-      "- name: Confirm post-deploy and Neon dump credentials are set",
-    );
+    const preFlightAt = deployJob.indexOf("- name: Confirm post-deploy credentials are set");
     const awsCredentialsAt = deployJob.indexOf("aws-actions/configure-aws-credentials");
     expect(preFlightAt).toBeGreaterThan(-1);
     expect(preFlightAt).toBeLessThan(awsCredentialsAt);

@@ -161,11 +161,14 @@ jobs:
       # is a quiet passthrough here. `tee` keeps the run log readable while the
       # file is what the next steps and the artifact read; `shell: bash` is
       # what turns on `pipefail`, so a failing `cdk diff` still fails the step.
+      # The destructive-change check below depends on accurate replacement
+      # information. Refuse a template-only fallback, and include the reason
+      # change-set creation failed in the run log and uploaded diff artifact.
       - name: cdk diff
         id: cdk-diff
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         shell: bash
-        run: pnpm infra:diff --no-color 2>&1 | tee cdk-diff.txt
+        run: pnpm infra:diff --method=change-set --verbose --no-color 2>&1 | tee cdk-diff.txt
       # **One resource type, and it is here because the type has no
       # non-destructive edit at all.** `Budget` -- the nested object holding
       # the limit and the notifications -- is a Replacement-only property of
@@ -337,8 +340,7 @@ jobs:
           echo "::error::AWS_CDK_DEPLOY_ROLE_ARN repository variable is not set. Complete manual action \"github-actions-cdk-oidc\" in docs/engineering/manual-actions.md, then set it to the GitHubActionsCdkDeployRoleArn stack output."
           exit 1
       # The same shape as the step above, for the four post-deploy wizard
-      # credentials plus the Neon API key and project ID used to provision the
-      # database dump connection.
+      # credentials used by the deploy wizard.
       #
       # GitHub resolves an absent secret to the empty string with no warning of
       # any kind, so three quite different situations are indistinguishable from
@@ -355,21 +357,19 @@ jobs:
       # `pnpm infra:deploy`: an unfinished setup refuses the run outright
       # instead of leaving it half-done. Naming the variable, not only the
       # manual action, is what makes a name mismatch legible as one. Checking
-      # all six before exiting means one run tells the operator everything
+      # all four before exiting means one run tells the operator everything
       # that is missing.
       #
       # Nothing here skips a credential-less wizard step and continues: ADR
       # 20260811-ci-deploy-full-wizard rejects that partial-success shape, and
       # this changes only the error a human reads, never whether the wizard
       # fails.
-      - name: Confirm post-deploy and Neon dump credentials are set
+      - name: Confirm post-deploy credentials are set
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
         run: |
           set -uo pipefail
           missing=0
@@ -383,10 +383,8 @@ jobs:
           require VERCEL_TOKEN "$VERCEL_TOKEN" ci-vercel-deploy-token
           require VERCEL_ORG_ID "$VERCEL_ORG_ID" ci-vercel-deploy-token
           require VERCEL_PROJECT_ID "$VERCEL_PROJECT_ID" ci-vercel-deploy-token
-          require NEON_API_KEY "$NEON_API_KEY" neon-dump-provisioning-credentials
-          require NEON_PROJECT_ID "$NEON_PROJECT_ID" neon-dump-provisioning-credentials
           if [ "$missing" -ne 0 ]; then
-            echo "::error::Refusing to deploy: the post-deploy wizard or Neon dump provisioning would run without required credentials. Nothing has been deployed by this run."
+            echo "::error::Refusing to deploy: the post-deploy wizard would run without required credentials. Nothing has been deployed by this run."
             exit 1
           fi
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -421,27 +419,15 @@ jobs:
       # that region was bootstrapped with (manual action `cdk-bootstrap`, which
       # does every region in config/aws-regions.mjs).
       #
-      # The wizard's four credentials and NEON_API_KEY are `secrets.` on the
+      # The wizard's four credentials are `secrets.` on the
       # `infra-deploy` *environment*, rather than repository-level secrets. The
-      # project id is an environment variable. The environment is
-      # already this job's approval gate, so scoping them to it means they do
+      # environment is already this job's approval gate, so scoping them to it means they do
       # not exist for any other job in this repository -- and the names being
       # identical on both sides of the `:` is what stops the wizard values from
-      # drifting apart. The Neon values are copied once from restore-drill
-      # because GitHub does not share environment secrets across jobs. This
-      # preflight checks every value by name before this job touches AWS.
+      # drifting apart. This preflight checks every value before this job touches AWS.
       - run: pnpm infra:deploy DiveDay DiveDayEmail DiveDayGlobal --require-approval never --ci-unattended
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      - name: Provision the direct Neon dump connection
-        id: provision-dump-connection
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
-        run: node scripts/provision-database-dump-connection.mjs
-      - name: Start the first database dump
-        if: steps.provision-dump-connection.outputs.first_seed == 'true'
-        run: aws codebuild start-build --project-name diveday-database-dump --region us-east-1 --query 'build.id' --output text

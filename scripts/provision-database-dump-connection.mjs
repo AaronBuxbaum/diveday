@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fill the pg_dump secret from Neon's Management API after an infra deployment. The URI is
+// Fill the pg_dump secret from Neon's Management API from the explicit backup setup workflow. The URI is
 // retrieved directly from Neon, masked in the workflow, held in process memory, and passed to the
 // AWS CLI through a short-lived mode-0600 file rather than argv or CloudFormation state.
 
@@ -15,12 +15,22 @@ const SECRET_ID = "diveday/database-url-unpooled";
 const NEON_API_ORIGIN = "https://console.neon.tech";
 const NEON_API_TIMEOUT_MS = 30_000;
 
-export function connectionUriRequestUrl(projectId) {
+export function connectionUriRequestUrl(projectId, { databaseName, roleName, branchId } = {}) {
   const id = String(projectId ?? "").trim();
   if (!/^[a-z0-9-]{1,60}$/.test(id)) {
     throw new Error("NEON_PROJECT_ID must be a Neon project ID.");
   }
   const url = new URL(`/api/v2/projects/${encodeURIComponent(id)}/connection_uri`, NEON_API_ORIGIN);
+  for (const [key, value] of Object.entries({
+    database_name: databaseName,
+    role_name: roleName,
+    branch_id: branchId,
+  })) {
+    if (typeof value !== "string" || !value.trim() || /[\r\n]/.test(value)) {
+      throw new Error(`Neon ${key} is required and must be a single line.`);
+    }
+    url.searchParams.set(key, value.trim());
+  }
   url.searchParams.set("pooled", "false");
   return url;
 }
@@ -43,8 +53,8 @@ export function shouldUpdateConnectionUri(current, desired) {
   return typeof current !== "string" || current.trim() !== desired;
 }
 
-async function fetchDirectConnectionUri(apiKey, projectId) {
-  const response = await fetch(connectionUriRequestUrl(projectId), {
+export async function fetchDirectConnectionUri(apiKey, projectId, target) {
+  const response = await fetch(connectionUriRequestUrl(projectId, target), {
     headers: { Accept: "application/json", Authorization: `Bearer ${apiKey}` },
     signal: AbortSignal.timeout(NEON_API_TIMEOUT_MS),
   });
@@ -76,6 +86,9 @@ function awsEnvironment() {
   const env = { ...process.env };
   delete env.NEON_API_KEY;
   delete env.NEON_PROJECT_ID;
+  delete env.NEON_DATABASE_NAME;
+  delete env.NEON_ROLE_NAME;
+  delete env.NEON_BRANCH_ID;
   return env;
 }
 
@@ -136,9 +149,9 @@ function writeGitHubOutput(key, value) {
   if (path) writeFileSync(path, `${key}=${value}\n`, { encoding: "utf8", flag: "a", mode: 0o600 });
 }
 
-export async function provisionDatabaseDumpConnection({ apiKey, projectId }) {
+export async function provisionDatabaseDumpConnection({ apiKey, projectId, ...target }) {
   if (!String(apiKey ?? "").trim()) throw new Error("NEON_API_KEY is required.");
-  const uri = await fetchDirectConnectionUri(apiKey.trim(), projectId);
+  const uri = await fetchDirectConnectionUri(apiKey.trim(), projectId, target);
   maskInGitHub(uri);
 
   const current = readStoredConnectionUri();
@@ -159,6 +172,9 @@ async function main() {
     await provisionDatabaseDumpConnection({
       apiKey: process.env.NEON_API_KEY,
       projectId: process.env.NEON_PROJECT_ID,
+      databaseName: process.env.NEON_DATABASE_NAME,
+      roleName: process.env.NEON_ROLE_NAME,
+      branchId: process.env.NEON_BRANCH_ID,
     });
   } catch (error) {
     // API bodies, AWS stderr and connection values can all contain sensitive data; report a

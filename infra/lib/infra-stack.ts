@@ -2605,15 +2605,15 @@ exports.handler = async (event) => {
       },
       {
         id: "neon-dump-provisioning-credentials",
-        title: "Make the Neon API credentials available to infra deploys",
+        title: "Make the Neon API credentials available to backup setup",
         category: "Credentials",
-        when: "once before the first infra workflow deploy, and again after rotating the Neon API key or project",
-        why: "GitHub environment secrets are scoped to one environment. The existing NEON_API_KEY and NEON_PROJECT_ID are on restore-drill, so the infra-deploy job cannot read them while it provisions the direct dump connection after deployment.",
+        when: "once before the first backup setup run, and again after rotating the Neon API key or project",
+        why: "GitHub environment secrets are scoped to one environment. The existing NEON_API_KEY and NEON_PROJECT_ID are on restore-drill, so the Backup setup workflow needs its own environment copy to provision the direct dump connection.",
         run: [
           "In GitHub Settings -> Environments -> infra-deploy, add the existing NEON_API_KEY value as an environment secret and the existing NEON_PROJECT_ID value as an environment variable.",
         ],
         produces:
-          "The approved infra deploy can retrieve Neon's direct connection URI, store it in Secrets Manager, and start the first dump when that secret is still unset.",
+          "The approved Backup setup workflow can retrieve Neon's direct connection URI, store it in Secrets Manager, and start the first dump when that secret is still unset.",
         store:
           "GitHub repository AaronBuxbaum/diveday -> Environments -> infra-deploy -> environment secret NEON_API_KEY and environment variable NEON_PROJECT_ID. Keep the existing restore-drill values in that environment too.",
         verify: [
@@ -2972,8 +2972,8 @@ exports.handler = async (event) => {
         // (H-20261021-deploy-gate-from-first): the deploy gate's token, plus the switch it turns on.
         "production-deploy-gate",
         // Same class again: GitHub environment secrets do not cross environment
-        // boundaries. The infra-deploy job needs the existing Neon API key on
-        // its own environment to provision the dump connection automatically.
+        // boundaries. Backup setup reuses infra-deploy and needs the Neon API
+        // key there to provision the dump connection explicitly.
         "neon-dump-provisioning-credentials",
         "ses-production-access",
         "sns-sms-account-limits",
@@ -3241,6 +3241,28 @@ exports.handler = async (event) => {
           "cloudformation:DeleteChangeSet",
         ],
         resources: cdkStackArns,
+      }),
+    );
+    cdkDiffRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "PassExecutionRoleForDiff",
+        actions: ["iam:PassRole"],
+        resources: bootstrapRoleArns("cfn-exec-role"),
+        conditions: {
+          StringEquals: { "iam:PassedToService": "cloudformation.amazonaws.com" },
+        },
+      }),
+    );
+    // CDK inspects bootstrap outputs before publishing the template. This is
+    // read-only and does not grant change-set operations on the toolkit stack.
+    cdkDiffRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadBootstrapStackForDiff",
+        actions: ["cloudformation:DescribeStacks"],
+        resources: deploymentRegions.map(
+          (region) =>
+            `arn:${this.partition}:cloudformation:${region}:${this.account}:stack/CDKToolkit/*`,
+        ),
       }),
     );
     cdkDiffRole.addToPolicy(

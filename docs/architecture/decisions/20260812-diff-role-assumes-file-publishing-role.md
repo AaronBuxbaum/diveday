@@ -10,6 +10,13 @@
 
 ## Context
 
+Amended 2026-11-07: change-set creation also needs `iam:PassRole` on the bootstrap
+`cfn-exec-role`, restricted by `iam:PassedToService` to `cloudformation.amazonaws.com`.
+The diff role passes that role to CloudFormation; it cannot assume it or execute the change set.
+Read-only `DescribeStacks` on `CDKToolkit` lets CDK inspect bootstrap outputs before publishing.
+Neither grant permits changing the toolkit stack or assuming the bootstrap deploy role.
+The workflow now requires a change set rather than accepting a template-only fallback.
+
 Once [20260812-github-oidc-sub-embeds-immutable-ids](20260812-github-oidc-sub-embeds-immutable-ids.md)
 let `GitHubActionsCdkDiffRole` actually assume its role via OIDC for the first time, `cdk diff` failed
 a step further in, on something that had been invisible until then:

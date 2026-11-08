@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { CourseTeachingNoteForm } from "./CourseTeachingNoteForm";
@@ -41,7 +41,7 @@ it("offers an id-based Undo for a deleted note without sending its words back", 
   );
   await userEvent.setup().click(screen.getByRole("button", { name: "Delete" }));
   expect(await screen.findByRole("button", { name: "Undo" })).toBeVisible();
-  expect(screen.getByRole("textbox")).toHaveValue("");
+  await waitFor(() => expect(screen.getByRole("textbox")).toHaveValue(""));
   await userEvent.setup().click(screen.getByRole("button", { name: "Undo" }));
   const form = undo.mock.calls.at(-1)?.[1] as FormData;
   expect(Object.fromEntries(form)).toEqual({
