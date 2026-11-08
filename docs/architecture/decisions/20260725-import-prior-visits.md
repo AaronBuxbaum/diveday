@@ -57,7 +57,7 @@ dive is a wrong answer to a question the dock actually asks.
 - **It is inert by construction, not by convention.** A prior visit points at no trip and no booking,
   so there is nothing to fabricate. Nothing in readiness, capacity, trip prep, manifests, roll call,
   or owner reporting reads this table; the only consumer is `getDiverProfile`, and
-  `commitContactImport` writes it and no operational table (asserted in `src/db/import.test.ts`).
+  `commitContactImport` writes it and no operational table (asserted in `src/features/import/store.test.ts`).
 - **The source's status word is carried verbatim and never mapped** to a DiveDay booking status. The
   vocabularies are not the same, and a row that says "Cancelled" must keep saying it. The profile
   strikes such a row through (`priorVisitStanding`, deliberately conservative — anything unrecognized

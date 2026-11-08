@@ -3,14 +3,14 @@ import type { AppDb } from "@/db/client";
 import { nowDate } from "@/lib/clock";
 
 vi.mock("@/db/manifests", () => ({ departureRollCallForBooking: vi.fn() }));
-vi.mock("@/db/recap", () => ({
+vi.mock("../../../../../features/recap/store", () => ({
   bookingsNeverCountedAtRollCall: vi.fn(async () => new Set<string>()),
   departureAfterLateBoarding: vi.fn(),
   getRecapPageState: vi.fn(async () => ({ kind: "recap" })),
 }));
 
 const manifests = await import("@/db/manifests");
-const recap = await import("@/db/recap");
+const recap = await import("../../../../../features/recap/store");
 const { readAfterTheDive } = await import("./after-dive-reads");
 
 const db = {} as AppDb;

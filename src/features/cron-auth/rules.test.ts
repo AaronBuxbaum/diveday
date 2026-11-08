@@ -1,0 +1,108 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { requireCronSecret } from "./rules";
+
+const SECRET = "cron-secret-for-tests";
+
+function request(authorization?: string): Request {
+  const headers = new Headers();
+  if (authorization !== undefined) headers.set("authorization", authorization);
+  return new Request("https://dive.day/api/cron/reminders", { headers });
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("requireCronSecret", () => {
+  it("fails closed with 503 not_configured when no secret is set, whatever is presented", async () => {
+    for (const secret of [undefined, ""]) {
+      for (const presented of [undefined, "Bearer ", "Bearer undefined", `Bearer ${SECRET}`]) {
+        const refusal = requireCronSecret(request(presented), secret);
+
+        expect(refusal?.status).toBe(503);
+        expect(await refusal?.json()).toEqual({ error: "not_configured" });
+      }
+    }
+  });
+
+  it("reads CRON_SECRET from the environment by default", () => {
+    vi.stubEnv("CRON_SECRET", "");
+    expect(requireCronSecret(request(`Bearer ${SECRET}`))?.status).toBe(503);
+
+    vi.stubEnv("CRON_SECRET", SECRET);
+    expect(requireCronSecret(request(`Bearer ${SECRET}`))).toBeNull();
+  });
+
+  it("refuses a missing authorization header with a bodiless 401", async () => {
+    const refusal = requireCronSecret(request(), SECRET);
+
+    expect(refusal?.status).toBe(401);
+    expect(await refusal?.text()).toBe("");
+  });
+
+  it("refuses a wrong secret of the same length", () => {
+    const wrong = SECRET.replace(/.$/, "X");
+    expect(wrong).toHaveLength(SECRET.length);
+
+    expect(requireCronSecret(request(`Bearer ${wrong}`), SECRET)?.status).toBe(401);
+  });
+
+  it("refuses a presented value of a different length without throwing", () => {
+    // timingSafeEqual throws on unequal-length buffers; the digests keep the
+    // lengths equal, so a short or long guess is a 401 and never a 500.
+    for (const presented of ["Bearer", `Bearer ${SECRET}x`, `Bearer ${SECRET.slice(0, 3)}`, "x"]) {
+      expect(requireCronSecret(request(presented), SECRET)?.status).toBe(401);
+    }
+  });
+
+  it("refuses the right secret without the Bearer scheme", () => {
+    expect(requireCronSecret(request(SECRET), SECRET)?.status).toBe(401);
+  });
+
+  it("lets the right bearer token through", () => {
+    expect(requireCronSecret(request(`Bearer ${SECRET}`), SECRET)).toBeNull();
+  });
+});
+
+// A mention in a comment is not a call: the guard below reads code only.
+function withoutComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/[^\n]*/g, "$1");
+}
+
+const GATE_CALL = /\b(?:requireCronSecret|cronRoute)\(/;
+
+describe("the cron gate source guard", () => {
+  it("counts a real call and ignores a comment that only names one", () => {
+    expect(withoutComments("export const GET = cronRoute({ name: 'x' });")).toMatch(GATE_CALL);
+    expect(withoutComments("const denied = requireCronSecret(request);")).toMatch(GATE_CALL);
+    expect(withoutComments("// uses cronRoute( later\nexport const GET = () => ok();")).not.toMatch(
+      GATE_CALL,
+    );
+    expect(withoutComments("/* requireCronSecret( */ export const GET = () => ok();")).not.toMatch(
+      GATE_CALL,
+    );
+  });
+});
+
+describe("every cron route", () => {
+  // Two routes once compared the bearer header with `!==` and leaked the secret's
+  // length through timing; the shared gate is the one place that comparison lives.
+  it("is gated by requireCronSecret, never a hand-rolled header compare", async () => {
+    const { readdirSync, readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const root = join(process.cwd(), "src/app/api/cron");
+    const routes = readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => join(root, entry.name, "route.ts"));
+
+    expect(routes.length).toBeGreaterThan(0);
+    for (const route of routes) {
+      const source = readFileSync(route, "utf8");
+      // `cronRoute` opens with the same gate; src/features/cron-route/rules.test.ts proves it refuses
+      // before any check-in or work.
+      const code = withoutComments(source);
+      expect(code, route).toMatch(GATE_CALL);
+      expect(code, route).not.toMatch(/authorization[^\n]*[!=]==/i);
+    }
+  });
+});

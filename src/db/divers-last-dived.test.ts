@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
+import { createDiver, listDiverSummaries, notBackCutoff } from "../features/divers/store";
 import type { AppDb } from "./client";
-import { createDiver, listDiverSummaries, notBackCutoff } from "./divers";
 import { bookings, priorVisits, shops, trips } from "./schema";
 
 /**

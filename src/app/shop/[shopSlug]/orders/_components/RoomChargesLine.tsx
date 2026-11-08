@@ -1,4 +1,4 @@
-import type { RoomChargeTotal } from "@/db/room-charges";
+import type { RoomChargeTotal } from "@/features/room-charges";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, joinFacts } from "@/lib/format";
 

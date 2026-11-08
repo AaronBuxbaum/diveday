@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -8,7 +9,6 @@ import { formatDateWithYear } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { COUNTER_CARD_PAPER } from "@/lib/print-sheets";
 import { publicShopRegisterPath } from "@/lib/public-routes";
-import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { SheetCode } from "../_components/SheetCode";

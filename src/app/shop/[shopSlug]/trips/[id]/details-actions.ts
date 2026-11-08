@@ -11,14 +11,12 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { cancelDeparture } from "@/db/aboard-at-sea";
-import { getBoatById } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { flushUrgentCrewNotices } from "@/db/crew-notices";
 import { publishManifestEvent } from "@/db/manifest-events";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getTripRequirements } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
-import { getTripLens } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   editTrip,
@@ -29,15 +27,17 @@ import {
   type TripPatch,
   type UpdateTripOutcome,
 } from "@/db/trips";
+import { getBoatById } from "@/features/boats";
+import { checkbox, formValue, readForm } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface } from "@/features/session";
+import { getTripLens } from "@/features/trip-lenses";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
-import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { parseWetsuitThicknessMm } from "@/lib/gear";
 import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { minorToMajor } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { deleteStoredImage, storeArrivalImage } from "@/lib/storage";
 import { laterHoursFromForm, MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";

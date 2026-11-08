@@ -3,16 +3,16 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { getCourseBySlug } from "@/db/courses";
 import { askForDate } from "@/db/interests";
 import { sendNotification } from "@/db/notifications";
 import { getShopBySlug } from "@/db/shops";
+import { getCourseBySlug } from "@/features/courses";
+import { blankAsAbsent, formValue, parseForm } from "@/features/form-parse";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { toDiverLocale } from "@/i18n/settings";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE, type InquiryFormState } from "@/lib/course-inquiry";
-import { blankAsAbsent, formValue, parseForm } from "@/lib/form-parse";
 import { deliverableShopContactEmail } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";

@@ -1,14 +1,14 @@
 import { eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { listBoats } from "@/db/boats";
 import { courses, diveSites, trips } from "@/db/schema";
-import { listTripLenses } from "@/db/trip-lenses";
-import { getTripOverview } from "@/db/trip-overview";
 import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CoursePricing } from "@/lib/courses";
 import { fileScopedShopContext } from "@/test/db";
+import { listBoats } from "../../../../../../features/boats/store";
+import { listTripLenses } from "../../../../../../features/trip-lenses/store";
+import { getTripOverview } from "../../../../../../features/trip-overview/store";
 import { tripAboutRows } from "./trip-about-rows";
 
 const ctx = fileScopedShopContext();

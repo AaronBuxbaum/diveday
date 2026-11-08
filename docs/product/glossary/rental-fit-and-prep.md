@@ -246,7 +246,7 @@
   assigned to anyone, because most agencies accept a standard regulator up to 40%, and a refusal
   here would be a boarding gate in disguise.
 - **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
-  instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
+  instead of choose (`proposeRentalUnits`, `src/features/gear-proposals/rules.ts`). A proposal is never a
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
   Assign, and the exclusion constraint still decides availability at write time. A sized kind is
   proposed only from units *exactly* the size on file; a sizeless kind only from units with no
@@ -295,7 +295,7 @@
   out inside the month — which asks what a unit *needs* rather than where it *is*, and is the one
   reading no group absorbs. **Rentals** sits on the same chip row for the same reason: every open
   reservation (not yet returned, the ones starting later included) under the person who holds it,
-  trip-held and counter-held in one list (`listGearRentals`, `src/db/gear-rentals.ts`). It asks
+  trip-held and counter-held in one list (`listGearRentals`, `src/features/gear-rentals/store.ts`). It asks
   *who* has the fleet rather than where a unit is; a **rental** there is the units one holder took
   under one booking or over the counter, worded with the phase vocabulary above and the booking's
   own money word, and the list pages by holder so one diver's set never splits.
@@ -472,4 +472,4 @@
 - **Service reminder** — the message a customer gets about a month before each of a piece's due
   dates, once per piece, clock and date, so a cylinder can get a visual-inspection reminder and a
   hydro-test reminder. It is on by default and switched off per piece on the diver record.
-- **Nitrox planning line** — on the diver's `/ready` page, "32%: stay above 33 m / 110 ft" (loop 5, row 9): the oxygen limit (MOD) of 32%, and only 32%, at a ppO2 of 1.4, at the table convention of 10 m of seawater per bar, each figure rounded toward the surface. It is the gas's limit, never the diver's depth: the line says their certification and the briefing's limits still apply, and that a richer mix is shallower. Metres and feet are both shown, on purpose, for a travelling diver whose computer may be set to either. It names 32% alone because a card records no oxygen range and the shop no fill mixes, so a diver trained to EAN32 only never reads a 36% line beside a verified card; a richer mix waits for a card's range or the shop's fills, never inferred from the agency (#3916). Shown only when the diver asked for nitrox on this seat, the seat can be given it, and a verified card authorizes the fill. A planning aid for the briefing and the diver's own computer, **never a fill authorization**: the fill gate is `authorizesNitroxFill`, the mix breathed is the one the diver analyzes at the dock, and nothing reads the line. `src/lib/nitrox-mod.ts`.
+- **Nitrox planning line** — on the diver's `/ready` page, "32%: stay above 33 m / 110 ft" (loop 5, row 9): the oxygen limit (MOD) of 32%, and only 32%, at a ppO2 of 1.4, at the table convention of 10 m of seawater per bar, each figure rounded toward the surface. It is the gas's limit, never the diver's depth: the line says their certification and the briefing's limits still apply, and that a richer mix is shallower. Metres and feet are both shown, on purpose, for a travelling diver whose computer may be set to either. It names 32% alone because a card records no oxygen range and the shop no fill mixes, so a diver trained to EAN32 only never reads a 36% line beside a verified card; a richer mix waits for a card's range or the shop's fills, never inferred from the agency (#3916). Shown only when the diver asked for nitrox on this seat, the seat can be given it, and a verified card authorizes the fill. A planning aid for the briefing and the diver's own computer, **never a fill authorization**: the fill gate is `authorizesNitroxFill`, the mix breathed is the one the diver analyzes at the dock, and nothing reads the line. `src/features/nitrox-mod/rules.ts`.

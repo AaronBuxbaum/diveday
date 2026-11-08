@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { callStructured } from "@/lib/claude/structured";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { RECAP_LINE_SYSTEM, recapLine, recapLineCall } from "./recap-line";
-import { sightingMatches, sightingsMatchCall, sightingsMatchFixture } from "./sightings-match";
+import { RECAP_LINE_SYSTEM, recapLine, recapLineCall } from "../../features/recap-line/rules";
+import {
+  sightingMatches,
+  sightingsMatchCall,
+  sightingsMatchFixture,
+} from "../../features/sightings-match/rules";
 
 const chips = [
   { slug: "green-sea-turtle", name: "Green sea turtle" },

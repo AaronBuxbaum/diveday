@@ -8,6 +8,9 @@ import { recordDoorDraft } from "@/db/waiver-drafts";
 import { completeWaiver, recordWaiverDraft, threadWaiverKey } from "@/db/waivers-completion";
 import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
+import { diverTranslator } from "@/i18n/messages";
+import { nowDate } from "@/lib/clock";
+import { fileScopedShopContext } from "@/test/db";
 import {
   claimedDevice,
   clearAnswers,
@@ -16,10 +19,7 @@ import {
   now,
   openOnDevice,
   waiverContextFor,
-} from "@/db/waivers-test-fixtures";
-import { diverTranslator } from "@/i18n/messages";
-import { nowDate } from "@/lib/clock";
-import { fileScopedShopContext } from "@/test/db";
+} from "../../../../test/substrate-fixtures/db/waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
 const context = waiverContextFor(ctx);
@@ -32,7 +32,7 @@ vi.mock("next/headers", () => ({
     },
   })),
 }));
-vi.mock("@/lib/observability/render-connection", () => ({
+vi.mock("../../../../features/render-connection/rules", () => ({
   connectionForRoute: vi.fn(async () => undefined),
 }));
 vi.mock("@/db/client", async (original) => ({

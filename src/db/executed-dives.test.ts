@@ -4,8 +4,9 @@ import { HOUR_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { DEFAULT_FLY_SAFE_HOURS, flySafeFrom } from "@/lib/fly-safe";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { checkInBooking } from "../features/check-in/store";
+import { markBookingNoShow } from "../features/no-show/store";
 import { createBookingParty } from "./bookings";
-import { checkInBooking } from "./check-in";
 import type { AppDb } from "./client";
 import {
   diveDaysBefore,
@@ -15,7 +16,6 @@ import {
 } from "./executed-dives";
 import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
-import { markBookingNoShow } from "./no-show";
 import {
   activityEvents,
   bookingArrivalEvents,

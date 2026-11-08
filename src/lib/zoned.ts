@@ -117,7 +117,7 @@ export function addCalendarDays(wall: WallTime, days: number): WallTime {
  * The exact UTC instants that bracket the shop's own calendar day containing
  * `now` — `from` inclusive, `to` exclusive.
  *
- * A shop surface reads this pair as `clock.day` (`src/lib/shop-clock.ts`).
+ * A shop surface reads this pair as `clock.day` (`src/features/shop-clock/rules.ts`).
  */
 export function shopDayBounds(now: Date, timeZone: string): { from: Date; to: Date } {
   const wall = utcToWallTime(now, timeZone);

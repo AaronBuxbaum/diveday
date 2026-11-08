@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next/headers", () => ({
   cookies: vi.fn(),
 }));
-vi.mock("@/lib/session", () => ({
+vi.mock("../../../../../features/session/rules", () => ({
   requireStaffSession: vi.fn(),
 }));
 vi.mock("@/db/authz", () => ({
@@ -29,7 +29,7 @@ vi.mock("@/lib/payments/connect", () => ({
 }));
 
 const { cookies } = await import("next/headers");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { canPersonManagePaymentSettings } = await import("@/db/authz");
 const { getDb } = await import("@/db/client");
 const { getShopById } = await import("@/db/shops");

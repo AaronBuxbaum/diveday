@@ -6,7 +6,6 @@ import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { convertImportedSiteProseToUnit, shopSearchAnchor } from "@/db/dive-sites";
 import { sendNotification } from "@/db/notifications";
-import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
   lockShopDepthUnit,
@@ -21,7 +20,12 @@ import {
   setShopTemperatureUnit,
   setShopTimezone,
 } from "@/db/shops";
+import { confirmContactLinkPath } from "@/features/contact-email-confirmation";
+import { formValue, trimmedText } from "@/features/form-parse";
+import { reopensOnTooFar } from "@/features/off-season";
 import { actionContext, arrive, defineAction, land } from "@/features/server-action";
+import { requireStaffSession } from "@/features/session";
+import { issueShopContactEmailConfirmation } from "@/features/shop-contact-email";
 import { toDiverLocale } from "@/i18n/settings";
 import {
   type AddressLookupResult,
@@ -30,16 +34,12 @@ import {
 } from "@/lib/address-lookup";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
-import { formValue, trimmedText } from "@/lib/form-parse";
 import { isValidTimeZone } from "@/lib/format";
 import { isShopCurrency, type ShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import { reopensOnTooFar } from "@/lib/off-season";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { parseSeasonStart } from "@/lib/season";
-import { requireStaffSession } from "@/lib/session";
 import { timeZoneAnchor } from "@/lib/timezones";
 import { PAYMENT_SETTINGS_GATE, SETTINGS_GATE } from "./action-gates";
 
@@ -480,6 +480,6 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
 
   // Imported here rather than at module scope so a deployment with no
   // credentials never loads the AWS SDK at all.
-  const { awsAddressLookupProvider } = await import("@/lib/address-lookup-aws");
+  const { awsAddressLookupProvider } = await import("@/features/address-lookup-aws");
   return awsAddressLookupProvider(config).suggest(query, { bias });
 }

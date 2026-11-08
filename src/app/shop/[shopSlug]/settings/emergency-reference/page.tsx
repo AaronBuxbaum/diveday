@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import {
   canPersonManageShopSettings,
   getEmergencyReferencePage,
-} from "@/db/emergency-reference-page";
+} from "@/features/emergency-reference-page";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { EmergencyReferenceForm } from "../_components/editors/BoatsSitesEditors";
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";

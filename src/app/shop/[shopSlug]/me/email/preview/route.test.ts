@@ -8,14 +8,14 @@ import { describe, expect, it, vi } from "vitest";
  * preview, and nothing is read.
  */
 
-vi.mock("@/lib/session", () => ({
+vi.mock("../../../../../../features/session/rules", () => ({
   requireShopSurface: vi.fn(),
   isLiveShopStaff: vi.fn(async () => true),
 }));
 vi.mock("@/lib/notifications/app-url", () => ({ publicAppUrl: vi.fn(() => null) }));
 vi.mock("@/features/weekly-digest", () => ({ previewWeeklyDigest: vi.fn() }));
 
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../../features/session/rules");
 const { previewWeeklyDigest } = await import("@/features/weekly-digest");
 const { GET } = await import("./route");
 

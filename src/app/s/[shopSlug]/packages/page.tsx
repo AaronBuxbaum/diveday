@@ -7,7 +7,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listPackagesOnSale } from "@/db/dive-packages";
-import { shopBySlugCached } from "@/db/shops-cached";
+import { shopBySlugCached } from "@/features/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestTranslator } from "@/i18n/request";
 import { formatCalendarDate } from "@/lib/calendar-date";

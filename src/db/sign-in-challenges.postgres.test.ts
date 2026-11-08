@@ -7,8 +7,9 @@ import { hashPassword } from "@/lib/password-hashing";
 import { createPendingHandle, hashPendingHandle } from "@/lib/pending-sign-in";
 import { totpCode } from "@/lib/totp";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { removeStaffMember, setStaffAccountStatus } from "../features/staff-accounts/store";
 import { beginTotpEnrollment, disableTotp, enableTotp } from "./account-security";
-import { anonymizeDiver } from "./anonymize";
 import type { AppDb, AppTransaction } from "./client";
 import {
   accountSecurity,
@@ -21,7 +22,6 @@ import {
 } from "./schema";
 import { deleteDemoShopCascade } from "./seed";
 import { completePendingSignIn, startCredentialSignIn } from "./sign-in-challenges";
-import { removeStaffMember, setStaffAccountStatus } from "./staff-accounts";
 import { setAccountPassword } from "./user-accounts";
 
 async function persist(tx: AppTransaction, verified: VerifiedUser) {

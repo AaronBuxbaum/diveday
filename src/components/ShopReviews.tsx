@@ -6,11 +6,11 @@ import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import { LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { Bone, Pending } from "@/components/ui/pending";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { PublicReview } from "@/db/reviews";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatShortDate } from "@/lib/format";
 import { publicReviewsPath } from "@/lib/public-routes";
 import type { ReviewAggregate } from "@/lib/reviews";
+import type { PublicReview } from "../lib/public-review";
 
 /** How many quotes the storefront's shelf carries before it hands over to the archive. */
 const SHELF_QUOTES = 2;

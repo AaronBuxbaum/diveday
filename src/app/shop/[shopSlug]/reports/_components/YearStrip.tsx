@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment } from "react";
-import type { ShopYearCell, ShopYearFill } from "@/lib/shop-year";
+import type { ShopYearCell, ShopYearFill } from "@/features/shop-year";
 
 /**
  * **The year as fifty-odd weeks of days** (ADR 20260908-one-hand, decision 6,

@@ -83,7 +83,7 @@ CR-002 and CR-003 need the same primitive, so this is one decision, not two.
 - A future "revoke this link" staff action is a single `revokeBookingCapabilities` call away; none
   exists yet because no ticket asked for the UI, but the seam is there and tested.
 - Every call site that used to build a readiness link synchronously from a bare booking id
-  (`src/db/reminders.ts`, `src/db/notifications.ts`, the booking-confirmation email) now issues a
+  (`src/features/reminders/store.ts`, `src/db/notifications.ts`, the booking-confirmation email) now issues a
   capability from the database instead, and the removed
   `src/lib/readiness-links.ts` no longer depends on `AUTH_SECRET` for this flow at all.
 - **Escape hatch:** if concurrent-link proliferation ever becomes a real cost (many outstanding rows

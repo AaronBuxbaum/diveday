@@ -309,7 +309,7 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // the same booking (src/lib/readiness.ts) and fails closed on it, so the
   // seat cannot board until a staffer confirms it is the same human — and
   // once they do, the cards are read here on the claimant's own record
-  // (src/db/seat-claims.ts) or by readiness at the rail. The roster withholds
+  // (src/features/seat-claims/store.ts) or by readiness at the rail. The roster withholds
   // that person's details until the same confirmation (`RosterSection.tsx`).
   if (input.identityUnconfirmed) return ADMITTED;
 

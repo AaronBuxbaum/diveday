@@ -1,8 +1,8 @@
 import { SectionCard } from "@/components/ui/card";
+import type { OffSeason } from "@/features/off-season";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatShortDate } from "@/lib/format";
-import type { OffSeason } from "@/lib/off-season";
 
 /**
  * The one sentence the card is allowed, already zoned and already worded.
@@ -43,7 +43,7 @@ export function offSeasonLine(
  *
  * **At most one date, and never one this page invents.** `line` is composed by
  * the page from either a departure the shop scheduled or a season it wrote
- * (`src/lib/off-season.ts`); a shop that has said neither gets the heading
+ * (`src/features/off-season/rules.ts`); a shop that has said neither gets the heading
  * alone rather than a reassuring sentence about a spring nobody has committed
  * to. There is deliberately no "check back soon" and no apology for the quiet:
  * the composer under it is the thing to do next, and a card saying so as well

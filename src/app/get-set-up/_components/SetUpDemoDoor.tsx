@@ -16,7 +16,7 @@ import type { FunnelSource } from "@/lib/funnel";
  * demo's staff screens and its email preview wear it; blank, the demo keeps the
  * name it generated. The storefront never wears it. Nothing typed here is
  * stored: it rides in a cookie bound to the minted shop
- * (`src/lib/demo-shop-name.ts`). Its one line says what it is for (visual
+ * (`src/features/demo-shop-name/rules.ts`). Its one line says what it is for (visual
  * review 2026-10-24, B45): a bare "optional" field before the demo read as a
  * form to fill in.
  */

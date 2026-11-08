@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { ANONYMIZED_PERSON_NAME } from "./anonymization";
+import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
 import {
   appendOfflineChecklistCheck,
   appendOfflineRollCall,

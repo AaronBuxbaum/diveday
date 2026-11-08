@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { restoreCard } from "../features/card-restore/store";
+import { getTripPrep } from "../features/trip-prep/store";
 import { cancelBooking, createBooking } from "./bookings";
-import { restoreCard } from "./card-restore";
 import type { AppDb } from "./client";
 import {
   createNitroxCertification,
@@ -14,7 +15,6 @@ import {
 } from "./nitrox";
 import { bookings, cards, people } from "./schema";
 import { setShopRentalItems } from "./shops";
-import { getTripPrep } from "./trip-prep";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {

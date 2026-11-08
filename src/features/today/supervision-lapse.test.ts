@@ -11,16 +11,16 @@ import {
   staffCredentials,
   tripAssignments,
 } from "@/db/schema";
-import { getStaffingView } from "@/db/staffing";
-import { getTripOverview } from "@/db/trip-overview";
 import { createTrip } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { lastDayOfDeparture } from "@/lib/crew-roles";
-import { shopClock } from "@/lib/shop-clock";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
+import { shopClock } from "../shop-clock/rules";
+import { getStaffingView } from "../staffing/store";
+import { getTripOverview } from "../trip-overview/store";
 import { getTodayWork } from "./index";
 
 // One seeded database for the file and a rolled-back transaction per test

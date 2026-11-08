@@ -3,7 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { restoreDraftShopAnswers, type ShopQuestion } from "@/lib/waiver-questions";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  clearAnswers,
+  draftsOf,
+  medicalReferralAnswers,
+  now,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { people, personRoles, waiverRecords } from "./schema";
 import {
   completeWaiver,
@@ -13,13 +20,6 @@ import {
 } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
-import {
-  clearAnswers,
-  draftsOf,
-  medicalReferralAnswers,
-  now,
-  waiverContextFor,
-} from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`), as in waivers-completion.test.ts.

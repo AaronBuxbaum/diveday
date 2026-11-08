@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * few routes that are not state (`reset` has its own colocated route.test.ts, which
  * also covers its success path). Every case here is a *refusal*: the shared
  * guard
- * (`src/lib/e2e-test-routes.ts`) must close these routes before they touch the
+ * (`src/features/e2e-test-routes/rules.ts`) must close these routes before they touch the
  * database, so none of these tests needs a hydrated PGlite — a stubbed `getDb`
  * that is asserted never to have been called is the assertion.
  *
@@ -25,7 +25,7 @@ vi.mock("@/db/shops", () => ({ getShopBySlug: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { getShopBySlug } = await import("@/db/shops");
 const shopDoor = await import("./shop/route");
-const { knownFactNames, resolveFacts } = await import("@/db/facts");
+const { knownFactNames, resolveFacts } = await import("../../../test/shop-facts/index");
 
 const secret = "e2e-test-secret";
 
@@ -297,7 +297,7 @@ describe("POST /api/test/shop — the caller-supplied slug", () => {
 /**
  * **One demo-fixture gate, one refusal** (issue #2751). Every fact, and every
  * route that reads a shop, reaches it through `requireDemoTenant`
- * (`src/lib/e2e-test-routes.ts`; `check:e2e-fixtures` refuses one that does
+ * (`src/features/e2e-test-routes/rules.ts`; `check:e2e-fixtures` refuses one that does
  * not): past the bearer guard, a real shop and a missing one get the same
  * `not_available` 404 the guard itself answers with, so a caller holding the
  * secret cannot tell a real tenant's slug from no shop at all, and nothing is

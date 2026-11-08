@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { enqueueIntegrationEvent } from "@/db/integration-events";
-import { recordShopIntegration, upsertIntegrationSyncRecord } from "@/db/integrations";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { IntegrationDeliveryDeadlineError } from "./delivery-deadline";
 import { deliverQuickBooksEvent } from "./quickbooks";
+import { recordShopIntegration, upsertIntegrationSyncRecord } from "./store";
 
 const ctx = fileScopedShopContext();
 

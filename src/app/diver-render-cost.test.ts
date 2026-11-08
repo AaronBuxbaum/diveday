@@ -6,8 +6,6 @@ import { readAfterTheDive } from "@/app/(token)/ready/[token]/_components/after-
 import { readSchedulePage } from "@/app/s/[shopSlug]/_components/schedule-reads";
 import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb } from "@/db/client";
-import { getReadyPageData } from "@/db/ready";
-import { getRecapPageState } from "@/db/recap";
 import { bookings, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { createTripSeries, listRunningPublicSeries } from "@/db/trips";
@@ -19,6 +17,8 @@ import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-tim
 import { EVERY_WEEKDAY } from "@/lib/recurrence";
 import { seededShopContext } from "@/test/db";
 import { phaseCountingDb, report } from "@/test/render-phases";
+import { getReadyPageData } from "../features/ready/store";
+import { getRecapPageState } from "../features/recap/store";
 
 vi.mock("next/server", () => ({ after: vi.fn() }));
 

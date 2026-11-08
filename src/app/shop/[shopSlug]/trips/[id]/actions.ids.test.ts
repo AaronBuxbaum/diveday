@@ -27,7 +27,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/db/bookings", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/bookings")>();
@@ -41,7 +41,7 @@ vi.mock("@/db/waivers", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { cancelBooking, getShopBookingTripId } = await import("@/db/bookings");
 const { recordInPersonWaiver } = await import("@/db/waivers");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const {
   addKnownDiverToWaitlistAction,
   addToWaitlistAction,

@@ -15,14 +15,14 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/features/calendar-sync", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/calendar-sync")>();
   return { ...actual, revokeCalendarFeeds: vi.fn(async () => undefined) };
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { revokeCalendarFeeds } = await import("@/features/calendar-sync");
 const { calendarFeedAction } = await import("./actions");
 

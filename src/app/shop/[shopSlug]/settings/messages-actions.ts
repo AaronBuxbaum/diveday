@@ -1,11 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { setShopDeskHours } from "@/db/desk-pings";
 import { setShopReviewUrl } from "@/db/shops";
+import { setShopDeskHours } from "@/features/desk-pings";
+import { formValue, text } from "@/features/form-parse";
 import { defineAction, land } from "@/features/server-action";
 import { parseDeskHours } from "@/lib/desk-hours";
-import { formValue, text } from "@/lib/form-parse";
 import { SETTINGS_GATE } from "./action-gates";
 
 const reviewUrlSchema = z.object({

@@ -20,7 +20,7 @@ export type ActivityLogEntry = { id: string; message: string; occurredAt: Date }
  * read its own history in English all day.
  *
  * An erased diver's lines already read `[redacted]` in the table, rewritten
- * inside the erasure transaction (`src/db/anonymize.ts`) — there is no
+ * inside the erasure transaction (`src/features/anonymize/store.ts`) — there is no
  * read-time filter here, and there must not be one: a second copy of that rule
  * is the copy that gets forgotten.
  *

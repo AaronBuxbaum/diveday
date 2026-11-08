@@ -18,7 +18,7 @@ Detail: [ai-ml.md](../../product/features/ai-ml.md#claude-assists-in-detail).
 - **Seam**: `src/lib/claude/` holds the provider, the dark rules, the price table and
   `callStructured`: the answer zod-constrained and validated again. Every failure returns `null`;
   nothing throws.
-- **Running**: every feature calls `runAssist` (`src/db/assists.ts`). It is **dark** with no
+- **Running**: every feature calls `runAssist` (`src/features/assists/store.ts`). It is **dark** with no
   `ANTHROPIC_API_KEY`, with `DIVEDAY_DISABLE_EXTERNAL_HTTP=1`, when the shop's "AI
   suggestions" switch is off, or past the shop's monthly cap ($15;
   `DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD`); demos $1, all together $10.

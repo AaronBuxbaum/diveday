@@ -1,15 +1,18 @@
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { paletteAnswerFacts } from "@/db/palette-answer";
-import { EMPTY_RESULTS, resolveRecentRecords, searchShop } from "@/db/search";
 import { getShopById } from "@/db/shops";
+import {
+  paletteAnswerFacts,
+  paletteAnswerView,
+  paletteQueryNames,
+} from "@/features/palette-answer";
+import { EMPTY_RESULTS, resolveRecentRecords, searchShop } from "@/features/search";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { paletteAnswerView, paletteQueryNames } from "@/lib/palette-answer";
 import { parseRecentParam } from "@/lib/recent-refs";
 
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;

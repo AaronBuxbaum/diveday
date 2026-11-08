@@ -31,7 +31,7 @@ practical — no background job or async delivery is needed.
   DiveDay's own `*.public.blob.vercel-storage.com` objects) — never an external link a shop pasted
   before uploads existed, and never a bundled template asset path like `/dive-sites/default.jpg`.
   This keeps the export from ever making a live request to a host outside DiveDay's own storage, the
-  same constraint `src/lib/storage/ingest-url.ts` already enforces for staff-pasted URLs.
+  same constraint `src/features/storage/ingest-url.ts` already enforces for staff-pasted URLs.
 - **Best-effort, never fatal.** A single photo that fails to fetch (timeout, 404, deleted object) is
   silently absent from `photos/`; the export otherwise completes. The CSV's own `image_url` column is
   unchanged either way — it remains the fallback if the account is still active when the file is

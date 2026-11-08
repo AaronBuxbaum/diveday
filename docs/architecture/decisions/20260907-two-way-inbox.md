@@ -59,7 +59,7 @@ URL the app then acts on without checking it against what the stack provisioned.
    exactly as the delivery webhook does, refuses a bucket other than the one the stack provisioned,
    resolves the token to a shop, and only then reads the object with the SES sender's own
    credentials (one more grant, no fourth key). Text is taken from the `text/plain` part by an
-   in-house reader (`src/lib/inbound-email.ts`) — headers unfolded, RFC 2047 words decoded,
+   in-house reader (`src/features/inbound-email/rules.ts`) — headers unfolded, RFC 2047 words decoded,
    base64 and quoted-printable transfer encodings, the first `text/plain` of any nesting, HTML
    reduced to text when there is nothing else, the quoted history cut, attachments counted and
    never decoded. No parsing dependency: what the shop reads is a diver's reply, and that shape
@@ -117,7 +117,7 @@ URL the app then acts on without checking it against what the stack provisioned.
    to clear it. The inbox row gains a Delete, and only that row does: a row with a record already
    has both doors and is finished by answering it. The answer is delete rather than seat-and-answer
    because a roster row is never minted from an unauthenticated sender's address: seating a diver
-   stays the staff-driven consequence path in `src/db/seat-diver.ts`, and decision 9's one-composer
+   stays the staff-driven consequence path in `src/features/seat-diver/store.ts`, and decision 9's one-composer
    rule stands unbent. Mechanically it is one write: `deleteStrangerInboundMessage` stamps
    `deleted_at`, and `liveMessage` is inside both `pagedInboxMessages` and
    `countUnansweredMessages`, so the row leaves the worklist and the Today row clears together.

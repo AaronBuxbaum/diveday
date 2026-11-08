@@ -8,7 +8,6 @@ import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/group-label";
 import { LayerScrim } from "@/components/ui/layer";
 import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
-import type { SearchResults } from "@/db/search";
 import type { GearItemStatus } from "@/lib/gear";
 import { motionMs } from "@/lib/motion";
 import {
@@ -18,6 +17,7 @@ import {
   staffDestinationHref,
   staffPaletteDestinations,
 } from "@/lib/staff-destinations";
+import type { SearchResults } from "../../lib/search-results";
 import { forgetThisDevice } from "../forget-device";
 import { PaletteGlyph } from "./PaletteGlyph";
 import { hintKeyClass, PaletteLegend } from "./PaletteLegend";

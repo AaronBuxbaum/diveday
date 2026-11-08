@@ -309,7 +309,7 @@ describe("the sign step's actions", () => {
 describe("a held seat's greeting", () => {
   it("greets the booked-as name without automatically saving identity", () => {
     // The booked card greets `getBookedCard`'s name, which applies the held
-    // rule itself (src/db/ready.test.ts holds it to the full loader's).
+    // rule itself (src/features/ready/store.test.ts holds it to the full loader's).
     expect(MASTHEAD).toContain("greetingName={card.greetingName}");
     expect(MASTHEAD).toContain("firstNameOf(greetingName,");
     expect(SOURCE).not.toContain("RememberBooker");

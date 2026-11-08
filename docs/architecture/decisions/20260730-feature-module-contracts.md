@@ -89,3 +89,8 @@ next candidate.
 - **Revisit if** two features need to share non-trivial logic. Today the answer is to push it down
   into `src/lib/`; if that starts producing a `src/lib/` full of two-caller helpers, feature-to-
   feature imports through indexes (already allowed by the check) may need explicit guidance.
+
+## Extension, 2026-11-08
+
+[Concept leaves](20261108-concept-leaves.md) adds resolved importer-first ownership checks and
+focused hand-written graph helpers. Existing layer direction and public feature contracts remain.

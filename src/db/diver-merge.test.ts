@@ -8,6 +8,7 @@ import {
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
+import { getIncidentExport } from "../features/incident-export/store";
 import { listTripBuddyTeams } from "./buddy-teams";
 import {
   DIVER_HISTORY_TABLES,
@@ -17,7 +18,6 @@ import {
   listDiverMergeDuplicateIds,
   mergeDiverRecords,
 } from "./diver-merge";
-import { getIncidentExport } from "./incident-export";
 import { survivingPersonNames } from "./people";
 import { getBookingReadiness } from "./readiness";
 import {

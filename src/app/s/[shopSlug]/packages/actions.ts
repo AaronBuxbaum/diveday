@@ -6,9 +6,9 @@ import { getDb } from "@/db/client";
 import { listPackagesOnSale } from "@/db/dive-packages";
 import { createDiverPackageOrder } from "@/db/orders";
 import { getShopBySlug } from "@/db/shops";
+import { parseForm } from "@/features/form-parse";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { parseForm } from "@/lib/form-parse";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 

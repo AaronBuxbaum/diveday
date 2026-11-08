@@ -1,18 +1,23 @@
 import { and, asc, eq, gt, gte, isNotNull, lt, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
-import { moneyByBoat, moneyByKind } from "@/lib/departure-money";
-import { summarizeShopYear } from "@/lib/shop-year";
 import { sameMomentYearBefore, shopDayBounds, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
+import { moneyByBoat, moneyByKind } from "../features/departure-money/rules";
+import { openLostItemsByPerson } from "../features/lost-items/store";
+import { getMonthMoneyDetail } from "../features/report-lines/store";
+import {
+  bookingLeadTimes,
+  certifiedHere,
+  getMonthlyReport,
+  getShopYear,
+} from "../features/reporting/store";
+import { getSafetyMonth } from "../features/safety-report/store";
+import { summarizeShopYear } from "../features/shop-year/rules";
 import { seatCheckedIn } from "./arrival-provenance";
 import { weatherCallsInWindow } from "./blowouts";
 import { diverPackageBalance } from "./dive-packages";
-import { openLostItemsByPerson } from "./lost-items";
 import { listTripReadiness } from "./readiness";
-import { getMonthMoneyDetail } from "./report-lines";
-import { bookingLeadTimes, certifiedHere, getMonthlyReport, getShopYear } from "./reporting";
-import { getSafetyMonth } from "./safety-report";
 import {
   bookingPayments,
   bookings,

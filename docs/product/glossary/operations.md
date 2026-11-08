@@ -8,7 +8,7 @@
   diver blocked aboard a boat still out, whose departure the horizon dropped an hour after it
   sailed. That is the sum of the day's cards' "N blocked" plus the Aboard rows in Needs you, and the
   blocked clause of the summary under the date says the same figure in words
-  (`blockedOnNextBoatDay`, `src/db/blockers.ts`). Anything past the horizon is Schedule's job, not
+  (`blockedOnNextBoatDay`, `src/features/blockers/store.ts`). Anything past the horizon is Schedule's job, not
   a triage list's. Defined once in `src/lib/operational-window.ts`; each
   surface derives its bounds from there rather than declaring its own. Reports is deliberately
   outside this model — a calendar month is genuinely its job.
@@ -86,7 +86,7 @@
   `crewIsAccountedFor` (issue #1346). Roll-call gaps stay as they were: tightening those would
   raise a danger-toned row on every departure of every shop that has not adopted crew roll call,
   so the moment is what narrows, not the chase.
-- **Shop clock** — the one frozen value (`ShopClock`, `src/lib/shop-clock.ts`) that answers "what
+- **Shop clock** — the one frozen value (`ShopClock`, `src/features/shop-clock/rules.ts`) that answers "what
   time is it at this shop" for a request: the instant, the shop's zone, its calendar date
   (`today`), the exact UTC pair around that date (`day`), its wall-clock time and whether a guest
   message may go out now. `requireShopSurface` mints one beside the shop row, and a domain function takes a clock
@@ -169,7 +169,7 @@
 - **Running late** — a diver's own statement, before the boat sails, that they are on the way and
   behind (J3). Said by tapping "Running late" on their `/ready` link or by replying `LATE` (`TARDE`
   in Spanish) to a shop's WhatsApp, email or the **night-before brief**'s text, and stored as one
-  instant, `bookings.running_late_at` (`src/db/running-late.ts`). Open only on a booked seat not yet
+  instant, `bookings.running_late_at` (`src/features/running-late/store.ts`). Open only on a booked seat not yet
   checked in, from when the night-before brief goes out (24 hours ahead) until the boat has sailed
   (`hasSailed`: the scheduled time plus the departure buffer), on a scheduled departure
   (`canSayRunningLate`); the first statement stands. Only a boat day's brief teaches the word
@@ -183,7 +183,7 @@
   gone. A row the crew recorded as not boarded keeps it. **It gates nothing** and it is not a **no-show**: the
   diver still has to arrive, and a diver who said it and never came is still the desk's call.
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
-  `bookings.status = "no_show"`, written by `markBookingNoShow` (`src/db/no-show.ts`), behind
+  `bookings.status = "no_show"`, written by `markBookingNoShow` (`src/features/no-show/store.ts`), behind
   the Divers tab's "Not here" disclosure (inside the arrivals window, on any row the gate allows, blocked or not) and its confirm tap. **It is not the three things it is most easily mistaken
   for.** Not a **cancellation**: a diver who told the shop they were not coming gave the seat up
   themselves, and the mark is refused on that booking (`not_booked`), because the difference between
@@ -231,7 +231,7 @@
   a **dive day**, in any of the four readers that count them. The same status, with a reason, is
   also how a seat is **turned away**.
 - **Turned away** — the desk saw a diver readiness would not board and sent them home (H-20261015-who-may-turn-someone). Its
-  writer, `turnBookingAway` (`src/db/turn-away.ts`), sets `bookings.status = "no_show"`,
+  writer, `turnBookingAway` (`src/features/turn-away/store.ts`), sets `bookings.status = "no_show"`,
   `bookings.turned_away_at` (the fact) and `bookings.turned_away_reason` (the category), so the seat
   is released exactly as a **no-show**'s is, and every reader that leaves a no-show out (capacity,
   recap, tips, dive days) leaves this seat out too. What differs is the statement: seen and refused,
@@ -294,7 +294,7 @@
   away, crew asking for a departure), the crew line on the week, and the nudges measured against
   its **Target diver:divemaster ratio**. Off, all of that is gone. Every departure keeps its crew
   editor either way, because who is aboard is manifest data (the crew roll call, the souls-on-board
-  count) and a course session's agency ratio gates enrolment from it (`src/lib/crew-schedule.ts`,
+  count) and a course session's agency ratio gates enrolment from it (`src/features/crew-schedule/rules.ts`,
   ADR 20261005-crew-schedule-is-a-setting).
 - **Optional feature** — a feature a shop can switch off on the **Features** page of Settings (`/settings/features`, which also holds the crew schedule, Stripe Tax and the kinds of diving a shop runs): diver reviews, date
   requests, the last-minute list, tips, "Our year", the **PADI checks**, Claude suggestions,
@@ -338,7 +338,7 @@
   (`crew_availability_blocks`, ADR 20260902-crew-requests-and-blackouts). Informs, never gates. Its
   optional note is read only by the person and by owners and managers (issue #2673); everyone else
   sees the dates. A rostered crew member away on a day a departure meets raises Today's `crew_away`
-  row and reads "to be confirmed" on the diver pages (`crewAwayByTrip`, `src/db/crew-away.ts`).
+  row and reads "to be confirmed" on the diver pages (`crewAwayByTrip`, `src/features/crew-away/store.ts`).
 - **Working it anyway** — a staffer saying an away crew member is working one departure all the
   same (`crew_away_acknowledgements`, issue #2678), tapped on Today's `crew_away` row. Per crew
   assignment, and only while the person is away on a day the departure meets; never said by the
@@ -363,7 +363,7 @@
   settings page; 0 turns it off) between one departure due back and the next leaving, on the same
   hull or for a crew member leaving from a different meeting point. Said on the Move panel only, as
   one muted line naming the other departure and the minutes, under any clash line
-  (`moveTurnarounds` in `src/db/move-preflight.ts`). Advice, never a refusal; nose to tail stays no
+  (`moveTurnarounds` in `src/features/move-preflight/store.ts`). Advice, never a refusal; nose to tail stays no
   clash under H-20260916-may-one-hull-carry's predicate, and a crew hand-off on the same dock stays quiet.
 - **Crew news** — what a crew member is told when their boats change: put on a departure, taken off
   one, given a different role on one, the departure called off, or an answer to their own request.
@@ -429,7 +429,7 @@
   `courseCrewGap` wins when both would apply to the same course session, **except where nobody is in
   the water at all, which takes the slot as `uncrewed_course`** (issue #1338). A course session past
   its ratio splits once more on *which* cap it broke: `staffGapForCourseGap`
-  (`src/lib/staffing-week.ts`) reads `courseCrewGap.ratio` and words an intro session as
+  (`src/features/staffing-week/rules.ts`) reads `courseCrewGap.ratio` and words an intro session as
   `over_intro_ratio`, every other course as `over_ratio` (issue #1339) — the entry-level cap takes a
   certified assistant and the intro one takes only another instructor, so one word for both sent a
   divemaster to ask for the single gap their being aboard cannot close. One departure still
@@ -597,7 +597,7 @@
   that preserves the active party together; a one-seat move is refused while other active members
   would remain behind. The booking form carries the request explicitly and never guesses group
   membership from a diver's name or email (issue #3102).
-- **Wait-list roll** — the wait list following the divers rather than staying on a day that is gone or full. Nightly, beside the series roll, a series date that sailed hands every interest nobody invited to the next public date of the run that takes a seat (a date on a conditions hold or made private is passed over). The existing wait-list invite then goes out to that date's whole queue in the order people asked, while it has seats nobody has been invited to, measured as a sale would measure them (sellable seats, the divers-only limit, a course's instructor and ratio); a **wait-list party** is invited only when its whole party fits, and a smaller interest behind it may still be. The rolled invite says so in its own sentence ("Sat, Oct 17 has sailed. Sat, Oct 24 has room": a date can sail with a seat free), never as though the diver had asked for the new date. An interest staff already invited stays where they left it. From a full departure's demand banner, or under the wait list of a full departure with even one interest, "Carry the wait list" hands every interest to a departure staff choose (each offered with the seats it has left), with no message until staff invite. Entries are copied, keep the time the diver first asked and their party, skip anyone already seated there, and never rank anybody. `src/db/interest-roll.ts`.
+- **Wait-list roll** — the wait list following the divers rather than staying on a day that is gone or full. Nightly, beside the series roll, a series date that sailed hands every interest nobody invited to the next public date of the run that takes a seat (a date on a conditions hold or made private is passed over). The existing wait-list invite then goes out to that date's whole queue in the order people asked, while it has seats nobody has been invited to, measured as a sale would measure them (sellable seats, the divers-only limit, a course's instructor and ratio); a **wait-list party** is invited only when its whole party fits, and a smaller interest behind it may still be. The rolled invite says so in its own sentence ("Sat, Oct 17 has sailed. Sat, Oct 24 has room": a date can sail with a seat free), never as though the diver had asked for the new date. An interest staff already invited stays where they left it. From a full departure's demand banner, or under the wait list of a full departure with even one interest, "Carry the wait list" hands every interest to a departure staff choose (each offered with the seats it has left), with no message until staff invite. Entries are copied, keep the time the diver first asked and their party, skip anyone already seated there, and never rank anybody. `src/features/interest-roll/store.ts`.
 - **Last-minute list** — the diver-facing name of an `anytime` **interest**: a shop-wide (not per-trip) opt-in of divers who want to hear about
   last-minute deals, each with an optional date range they said they're around. Distinct from the
   **wait list**: the wait list is per-trip interest in a charter that's already *full*; the
@@ -617,7 +617,7 @@
   [20261103-a-deal-is-one-row](../../architecture/decisions/20261103-a-deal-is-one-row.md).
 - **Thin boat** — a departure in the next 14 days (`THIN_BOATS_HORIZON_DAYS`) that could use
   divers: short of the minimum it must reach to run while that call is still ahead, or, with no
-  minimum, less than half of its sellable seats sold (`thinBoatNeed`, `src/lib/thin-boats.ts`).
+  minimum, less than half of its sellable seats sold (`thinBoatNeed`, `src/features/thin-boats/rules.ts`).
   Listed on a quiet Today. A boat short of its minimum says it cancels itself and has a door to the
   minimum; the deal door shows only inside three days of sailing; a fun dive offers its **invite
   suggestions** and a course session points at the **course ladder** instead.
@@ -741,7 +741,7 @@
   *place* rather than as digits nobody can check. CO-OPS covers **US waters only**; a shop with no
   station near it gets no echo and no tide sentence, which is the right answer rather than a gap.
 - **Implausible-station advisory** — the sentence on that same field when the station sits further
-  than `IMPLAUSIBLE_STATION_DISTANCE_KM` (40 km, `src/lib/tide-stations.ts`) from the site's own
+  than `IMPLAUSIBLE_STATION_DISTANCE_KM` (40 km, `src/features/tide-stations/rules.ts`) from the site's own
   coordinates. It names what the distance costs on the water rather than the distance alone: the
   turn that station predicts can reach this water up to an hour early or late, stacked on a number
   that is already a height turn and not slack. Forty is calibrated on the mistake the demo's own
@@ -950,7 +950,7 @@
   presence, like the rest of the register, and it **informs, never gates**: roll call and boarding
   go on.
 - **Departure count** — one departure's passenger count as one record (`DepartureCount`,
-  `src/db/departure-counts.ts`, issue #2785), read by `departureCounts` from the roster and the
+  `src/features/departure-counts/store.ts`, issue #2785), read by `departureCounts` from the roster and the
   roll call, never added up by a surface. Seven numbers, each defined once: **capacity** (the
   places offered); **booked** (seats held, so a no-show is out, unlike the close-out's roster
   count); **sailed** (by `seatSailed`, below); **boarded** (counted aboard at the dock); **back**
@@ -965,9 +965,9 @@
   says everyone is home from this record without the crew roll call. The trip page's pulse is its
   first reader, and only of `boarded` and `blocked` before the boat leaves; the board, the counter
   and the evening station follow.
-- **Seat ladder** — one reading of where a seat stands on the day (`readSeatLadder`, `src/lib/seat-ladder.ts`, issue #2784): **booked**, **arrived** (the desk saw them), **released** (the desk's no-show), **ashore** (the crew's `not_boarded` at the dock, and no after-dive word since), **out** (the crew counted them on the boat: `boarded` at the dock, or any word standing at an after-dive checkpoint) and **missing** (recorded not back after a dive and not counted since), each with the record that put it there. **Out is not back**: a diver counted at the dock and not yet named at the next after-dive checkpoint is out, and is still the **Unfinished head count**; no rung says back. Writes stay where they are; the ladder only reads. **Arrival never reads as aboard**: only a crew count reaches out, and an arrival lifts a seat from booked to arrived and changes nothing else (ADR 20260907-the-counter-survives-offline). The rung is evidence; **Sailed** (below) is the count's rule (`countsAsSailed`), which presumes a seat nobody spoke for went and lets the dock win where it spoke, so a chase-boat diver (left at the dock, counted at a site) is out by the rung and not sailed by the count. The diver's own afterglow asks the ladder's `isAfterTheDive`, which reads the dock word only, and never opens on the clock for a seat nobody counted (**Not counted at the dock**, below) on a departure whose roll call was taken, nor does the recap send (`bookingsNeverCountedAtRollCall`, issue #3822); a departure with no roll call at all keeps the four-hour floor; the hold while someone is not back aboard is the recap's `waiting` state (`src/db/recap.ts`). First reader: the finished departure's **record**.
+- **Seat ladder** — one reading of where a seat stands on the day (`readSeatLadder`, `src/features/seat-ladder/rules.ts`, issue #2784): **booked**, **arrived** (the desk saw them), **released** (the desk's no-show), **ashore** (the crew's `not_boarded` at the dock, and no after-dive word since), **out** (the crew counted them on the boat: `boarded` at the dock, or any word standing at an after-dive checkpoint) and **missing** (recorded not back after a dive and not counted since), each with the record that put it there. **Out is not back**: a diver counted at the dock and not yet named at the next after-dive checkpoint is out, and is still the **Unfinished head count**; no rung says back. Writes stay where they are; the ladder only reads. **Arrival never reads as aboard**: only a crew count reaches out, and an arrival lifts a seat from booked to arrived and changes nothing else (ADR 20260907-the-counter-survives-offline). The rung is evidence; **Sailed** (below) is the count's rule (`countsAsSailed`), which presumes a seat nobody spoke for went and lets the dock win where it spoke, so a chase-boat diver (left at the dock, counted at a site) is out by the rung and not sailed by the count. The diver's own afterglow asks the ladder's `isAfterTheDive`, which reads the dock word only, and never opens on the clock for a seat nobody counted (**Not counted at the dock**, below) on a departure whose roll call was taken, nor does the recap send (`bookingsNeverCountedAtRollCall`, issue #3822); a departure with no roll call at all keeps the four-hour floor; the hold while someone is not back aboard is the recap's `waiting` state (`src/features/recap/store.ts`). First reader: the finished departure's **record**.
 - **Sailed** — how many of a departure's booked divers the boat actually **carried**, as distinct
-  from the roster it sold. One rule answers it per seat (`seatSailed`, `src/lib/seat-sailed.ts`),
+  from the roster it sold. One rule answers it per seat (`seatSailed`, `src/features/seat-sailed/rules.ts`),
   reading the shop's statements about that seat strongest first: the crew's own result at the
   `departure` **roll-call** checkpoint, where `boarded` counts and `not_boarded` ("never left the
   dock") does not; then any result standing at an *after-dive* checkpoint, either word of which
@@ -1004,7 +1004,7 @@
 - **Didn't sail** — a finished departure's record band for the seats somebody *said* did not go:
   the crew's `not_boarded` at the `departure` roll-call checkpoint, or a released seat (`no_show`)
   nobody counted aboard at any checkpoint. Only a statement files a seat here (`seatSailed`,
-  `src/lib/seat-sailed.ts`; `recordGroups` in the trip's `roster-model.ts`). It used to take every seat
+  `src/features/seat-sailed/rules.ts`; `recordGroups` in the trip's `roster-model.ts`). It used to take every seat
   without a dock `boarded` once one seat boarded, which filed a diver picked up at a later site, and
   a seat nobody counted, as not having sailed (dive-domain review of UX batch 1). Spanish: "No
   zarparon".
@@ -1013,11 +1013,11 @@
   the second site; issue #3823). The vessel did not leave with them, so they are not **Sailed**;
   they dived, so they are not **Didn't sail**. The **Seat ladder** puts them on `out`, and the recap
   and the diver's page welcome them back (`joinedAtADiveSite`, `leftAtTheDock`,
-  `src/lib/seat-ladder.ts`). Spanish: "Se unieron en el sitio de buceo".
+  `src/features/seat-ladder/rules.ts`). Spanish: "Se unieron en el sitio de buceo".
 - **Not counted after dive N** — a finished departure's record band, above **Sailed**, for a seat
   an after-dive count somebody started never included, and no later count did either: the crew
   tapped Home with that count open (`notCountedAfterDive`, `readDepartureStage`,
-  `src/db/trip-stages.ts`; issue #3895). N is the first such dive. It names a gap in the count,
+  `src/features/trip-stages/store.ts`; issue #3895). N is the first such dive. It names a gap in the count,
   not a missing diver: nobody said they were not back, so they are never filed under **Not back
   aboard**. Crew left out of a started count are named on a line of their own beneath it ("Crew
   not counted after dive N: …"). A dive nobody started counting (one called off with the plan
@@ -1132,7 +1132,7 @@
   from the save (#4060); the link DiveDay mails it only adds a confirmed badge. Changing the address asks
   for both again; clearing it clears them. Their copy names the shop and its phone, the departure,
   the dive and the counts, in the shop's language, with no names and one link, the one that takes
-  the address off the shop (H-20261014-stale-roll-call-recipients, `src/lib/shore-alert-contact.ts`, `src/db/shore-alert-tokens.ts`).
+  the address off the shop (H-20261014-stale-roll-call-recipients, `src/lib/shore-alert-contact.ts`, `src/features/shore-alert-tokens/store.ts`).
 - **Stale roll call** — an after-dive roll call still open after its departure was due back. The
   hourly crew-notices pass asks from 30 minutes past the end; a count nobody started is open only
   once the boat is due home (the end plus the one-hour return buffer), so it alerts at the first
@@ -1179,7 +1179,7 @@
   crew was never recorded at all, and would bury the rows that mean a person is in the water. The manifest states it; the queue chases what somebody
   actually recorded.
   **Roll-call closure** is the same rule read once per departure that is home, on the Reports
-  **Safety** tab (`rollCallClosure`, `src/lib/safety-report.ts`; the population predicate is
+  **Safety** tab (`rollCallClosure`, `src/features/safety-report/rules.ts`; the population predicate is
   `src/lib/roll-call-population.ts`): **closed** when every seat has a dock result and everybody in
   each after-dive count, divers and crew alike, is recorded back aboard; **open** when any of that
   is missing; **none** when the departure has no roll-call event of either kind. A date nobody
@@ -1511,7 +1511,7 @@
   stage: a departure nobody tapped has none, renders nothing, and never renders "Unknown"; and
   DiveDay follows no vessel, because a position is a promise this app cannot keep. Only an active
   staff member of that shop, on a live departure, records one (`recordTripStage`,
-  `src/db/trip-stages.ts`), and records rather than edits: `trip_stage_events` is append-only, a
+  `src/features/trip-stages/store.ts`), and records rather than edits: `trip_stage_events` is append-only, a
   crew that taps the wrong word taps the right one, and the newest row wins. **A stage goes stale
   rather than wrong** — on the anonymous surfaces (the storefront, the follow link, the diver link)
   it stops speaking two late-arrival buffers past the departure's own end (`liveStageOf`, the
@@ -1897,7 +1897,7 @@
   number, Shopify, QuickBooks, Zapier, the backup bucket, and the staff calendar feeds. Each keeps its
   own credential table; one state word (`notConnected` · `connected` · `needsAttention` ·
   `disconnected`) is derived from each table's own columns by `connectionState()` in
-  `src/lib/connections.ts`, with no state column of its own (issue #2741). Settings lists them
+  `src/features/connections/rules.ts`, with no state column of its own (issue #2741). Settings lists them
   read-only in the Data group.
 - **Connected Stripe account** — a shop's own Standard Stripe account, authorized once via OAuth.
   The shop keeps its own Stripe dashboard, payouts, and tax reporting; DiveDay never holds the money
@@ -1927,7 +1927,7 @@
   nothing the second time, and a refused write appends nothing at all, so a row here always means
   something material changed (the same mark by another staffer counts) — otherwise the money ledger would slowly become a delivery log.
 - **Retention window** — how long one append-only table's rows are kept before the weekly prune
-  deletes them. Set per table in `RETENTION_DAYS` (`src/lib/retention.ts`), which is the only place
+  deletes them. Set per table in `RETENTION_DAYS` (`src/features/retention/rules.ts`), which is the only place
   a human edits. Most windows are a preference; `stripe_webhook_events` is not — its rows are the
   chronological evidence an out-of-order Stripe account update is checked against, so its window has
   a floor that a test enforces against Stripe's own retry horizon.
@@ -1988,8 +1988,8 @@
   external scheduler drives an idempotent cron endpoint; the app holds no timer. See
   [20260721-scheduled-reminder-cadence](../../architecture/decisions/20260721-scheduled-reminder-cadence.md).
 - **Reschedule notice** — the message sent to booked seats when a staffer moves a departure, on the board (Move) or by changing the start on the trip page. Notification kind `trip_rescheduled`: it gives the current date and time, the meeting point when it moved in the same save, and the diver's own trip-prep link. Delivery history is not tracked per seat, so it does not state a prior time or claim that the recipient already knows the current one. A save that moves only the meeting point says where to meet and gives the current schedule (#2443), by the diver's usual channel (email with a courtesy text, or the text alone for a phone-only diver). The move *holds* it as a **held send** (a held row of `notification_send_queue`, the eight seconds and Undo every staff send takes, ADR 20260906-before-you-ask); a second move inside the hold folds into the first, and a move back to the recorded time sends nothing unless the meeting point moved. A move also re-arms the seat's trip reminders for the new date (#2444). Addressed only to each seat's own person record (a `booked` seat, checked in or not, never a seat whose identity is still held), read off the trip when the hold drains. Rule in `src/lib/held-sends.ts`, the send in `src/db/trip-rescheduled.ts`.
-- **Seat move** — a staffer moving one booked seat to another departure from its roster row ("Move to another departure"). The same booking row changes trip, so its order, payment, waiver, `/ready` link and notes go with it; nothing is charged or refunded, and a paid seat that now lists higher is said back as owed. What was said about the old day (the conditions briefing, the "Anything changed?" answer, a pickup time, running late) is cleared, and a standing **Ask to move** is answered, so the new date's page may be asked about afresh. The new seat is measured as a new staff seat (capacity, divers-only limit, course ratio, a course's card and age on the new session's date, and the certification gate, which refuses), only between departures of the same kind, and never for a seat at roll call, on a buddy team or leading a party. The diver gets a **reschedule notice** worded for a seat ("we moved your seat to…"), sent at once rather than held. `moveBooking` in `src/db/bookings.ts`, consequences in `moveSeat` (`src/db/seat-diver.ts`); see [20261013-staff-move-a-seat](../../architecture/decisions/20261013-staff-move-a-seat.md).
-- **Inbox seat** (the seat an Inbox message is about) — the open seats a staff Inbox row names for a diver's message. Inside the **running late** window it is the one seat about to sail, and only there may the row offer "Mark running late". Outside it, every seat the sender held when they wrote (booked, on a scheduled departure that has not sailed), soonest first; with more than one, each is named and each gets its own "Move" naming its departure, because only the desk can tell which seat the words are about. A seat booked after the message, a canceled seat and a stranger's message name nothing. Naming a seat opens its roster row; nothing on the Inbox moves a seat (**seat move** does). `inboxSeats` in `src/db/inbox-seats.ts`.
+- **Seat move** — a staffer moving one booked seat to another departure from its roster row ("Move to another departure"). The same booking row changes trip, so its order, payment, waiver, `/ready` link and notes go with it; nothing is charged or refunded, and a paid seat that now lists higher is said back as owed. What was said about the old day (the conditions briefing, the "Anything changed?" answer, a pickup time, running late) is cleared, and a standing **Ask to move** is answered, so the new date's page may be asked about afresh. The new seat is measured as a new staff seat (capacity, divers-only limit, course ratio, a course's card and age on the new session's date, and the certification gate, which refuses), only between departures of the same kind, and never for a seat at roll call, on a buddy team or leading a party. The diver gets a **reschedule notice** worded for a seat ("we moved your seat to…"), sent at once rather than held. `moveBooking` in `src/db/bookings.ts`, consequences in `moveSeat` (`src/features/seat-diver/store.ts`); see [20261013-staff-move-a-seat](../../architecture/decisions/20261013-staff-move-a-seat.md).
+- **Inbox seat** (the seat an Inbox message is about) — the open seats a staff Inbox row names for a diver's message. Inside the **running late** window it is the one seat about to sail, and only there may the row offer "Mark running late". Outside it, every seat the sender held when they wrote (booked, on a scheduled departure that has not sailed), soonest first; with more than one, each is named and each gets its own "Move" naming its departure, because only the desk can tell which seat the words are about. A seat booked after the message, a canceled seat and a stranger's message name nothing. Naming a seat opens its roster row; nothing on the Inbox moves a seat (**seat move** does). `inboxSeats` in `src/features/inbox-seats/store.ts`.
 - **Night-before brief** — the 24-hour reminder's text: the crew's plain-language conditions, a
   concrete dock-arrival time and who to text on the day, read from `src/lib/notifications/night-before-brief.ts`
   and sent by SMS or WhatsApp. The 24-hour *email* is not the brief: since issue #2660 it is the
@@ -2009,8 +2009,8 @@
   `src/lib/notifications/diver-state-email.ts`. The booked message still carries the Sign step,
   the course's materials and the terms the diver agreed to, which no thread page has to repeat
   before the diver has opened it, so it keeps its own renderer.
-- **Desk hours** and the **after-hours ping** — when somebody is at the shop's desk: one window every day in the shop's own zone (`shops.desk_opens_minute`, `shops.desk_closes_minute`, 08:00–18:00 until the shop changes it under Settings → Messages; once saved, `shops.desk_hours_confirmed_at` lets the public footer print them). A diver message filed by the inbound email or WhatsApp webhook while the desk is closed sends a `desk_after_hours` email to each staffer who wants it: on by default for an owner or a manager, off for everyone else, and each staffer's own answer (`user_accounts.after_hours_ping`) wins, from their Email settings. At most one per person per half hour (`user_accounts.after_hours_pinged_at`, claimed by one conditional update), naming how many divers (distinct senders) wrote in since the desk closed and are still unanswered, with a link to the Inbox. Only a message whose sender the channel vouched for (`inbound_messages.sender_authenticated`) and that SES did not flag as spam (`inbound_messages.spam_flagged`) pings or is counted. A message batched behind a ping gets one trailing catch-up from the hourly `/api/cron/desk-pings` sweep once that staffer's half hour has run out, if it is still unanswered and the desk is still closed. The webhooks run the ping after they have answered (`after()`). Never the sender, the subject or a word of the message. Staff operational mail under H-20260724-channel-sends-booking-waiver: no unsubscribe, no postal footer, not queued for retry, and never from a demo shop. Rule in `src/lib/desk-hours.ts`, reads and the send in `src/db/desk-pings.ts`.
-- **Monday email** (weekly digest) — the owner's service email about their own shop's week, sent once per person per shop-local week on Monday between 08:00 and 20:00 shop time (`/api/cron/weekly-digest`, hourly). Sections, each a count and a link into the staff app (but one, below), appear only when they have something to say: last week's bookings made and seats filled against capacity (Reports' own query), this week's departures and seat fill and the divers still owing a waiver (the shared readiness horizon), reviews received and waiting on moderation, date requests still waiting, and Today rows that are past due. For someone Reports' gate admits, one more section is names rather than a count: **medical alerts opened in an emergency** last week (issue #2990, H-20261023-medical-alert-for-the), with the total, how many each reader opened, up to 50 lines of who opened whose alert on which departure and when, and how many more; a blank name is said as "a diver", "a staffer" or "a departure", never failing the email, and the section stays out of the `monday` assist's opening sentences. An emergency read by itself is reason enough to send. A week with none of these sends nothing. Last week's figures and Today's money and platform chores go only to someone Reports' gate admits (`canViewShopReports`, read from live roles); anyone else who opts in gets the rest. On by default for an owner, off for everyone else, and each staffer's own answer (`user_accounts.weekly_digest`) wins; it is turned off from the staffer's Email settings or the email's own one-click link (a `weekly_digest_unsubscribe` capability, kept apart from the send claim so it outlives the claim's prune). Transactional under H-20260724-channel-sends-booking-waiver (staff, about their own operation), so it carries no commercial postal footer. Demo shops never send; any staffer can preview this week's at `/shop/<slug>/me/email/preview`. Logic in `src/lib/weekly-digest.ts`, reads and the send claim (`weekly_digest_sends`) in `src/db/weekly-digest.ts`.
+- **Desk hours** and the **after-hours ping** — when somebody is at the shop's desk: one window every day in the shop's own zone (`shops.desk_opens_minute`, `shops.desk_closes_minute`, 08:00–18:00 until the shop changes it under Settings → Messages; once saved, `shops.desk_hours_confirmed_at` lets the public footer print them). A diver message filed by the inbound email or WhatsApp webhook while the desk is closed sends a `desk_after_hours` email to each staffer who wants it: on by default for an owner or a manager, off for everyone else, and each staffer's own answer (`user_accounts.after_hours_ping`) wins, from their Email settings. At most one per person per half hour (`user_accounts.after_hours_pinged_at`, claimed by one conditional update), naming how many divers (distinct senders) wrote in since the desk closed and are still unanswered, with a link to the Inbox. Only a message whose sender the channel vouched for (`inbound_messages.sender_authenticated`) and that SES did not flag as spam (`inbound_messages.spam_flagged`) pings or is counted. A message batched behind a ping gets one trailing catch-up from the hourly `/api/cron/desk-pings` sweep once that staffer's half hour has run out, if it is still unanswered and the desk is still closed. The webhooks run the ping after they have answered (`after()`). Never the sender, the subject or a word of the message. Staff operational mail under H-20260724-channel-sends-booking-waiver: no unsubscribe, no postal footer, not queued for retry, and never from a demo shop. Rule in `src/lib/desk-hours.ts`, reads and the send in `src/features/desk-pings/store.ts`.
+- **Monday email** (weekly digest) — the owner's service email about their own shop's week, sent once per person per shop-local week on Monday between 08:00 and 20:00 shop time (`/api/cron/weekly-digest`, hourly). Sections, each a count and a link into the staff app (but one, below), appear only when they have something to say: last week's bookings made and seats filled against capacity (Reports' own query), this week's departures and seat fill and the divers still owing a waiver (the shared readiness horizon), reviews received and waiting on moderation, date requests still waiting, and Today rows that are past due. For someone Reports' gate admits, one more section is names rather than a count: **medical alerts opened in an emergency** last week (issue #2990, H-20261023-medical-alert-for-the), with the total, how many each reader opened, up to 50 lines of who opened whose alert on which departure and when, and how many more; a blank name is said as "a diver", "a staffer" or "a departure", never failing the email, and the section stays out of the `monday` assist's opening sentences. An emergency read by itself is reason enough to send. A week with none of these sends nothing. Last week's figures and Today's money and platform chores go only to someone Reports' gate admits (`canViewShopReports`, read from live roles); anyone else who opts in gets the rest. On by default for an owner, off for everyone else, and each staffer's own answer (`user_accounts.weekly_digest`) wins; it is turned off from the staffer's Email settings or the email's own one-click link (a `weekly_digest_unsubscribe` capability, kept apart from the send claim so it outlives the claim's prune). Transactional under H-20260724-channel-sends-booking-waiver (staff, about their own operation), so it carries no commercial postal footer. Demo shops never send; any staffer can preview this week's at `/shop/<slug>/me/email/preview`. Logic in `src/lib/weekly-digest.ts`, reads and the send claim (`weekly_digest_sends`) in `src/features/weekly-digest/store.ts`.
 - **Post-trip recap** — the per-diver-per-trip reading of the day, delivered once per booking as the
   `trip_recap` kind no earlier than four hours after the departure ends. It rides the same
   delivery-row dedup as the reminders, and the hourly shop tick's recap scan (`/api/cron/shop-tick`) keeps
@@ -2022,7 +2022,7 @@
   cancel the booking and move its refund. **No recap for a diver left at the dock**: a booking whose
   standing departure roll call is `not_boarded` gets neither the email nor the page, unless an
   after-dive `boarded` shows they joined the boat at a later site (`bookingsLeftAtTheDock`,
-  `src/db/recap.ts`, issue #2105). A held seat gets none until staff **Confirm identity**. **Held
+  `src/features/recap/store.ts`, issue #2105). A held seat gets none until staff **Confirm identity**. **Held
   while somebody is missing**: while any diver or rostered crew member on the departure has an
   after-dive "not back aboard" standing — exactly while Today raises its missing-diver or
   missing-crew row, read through the same function (`tripsWithSomebodyMissing`,
@@ -2043,7 +2043,7 @@
   opens it once the boat is scheduled home plus the standing one-hour late-arrival buffer. A seat the crew never counted, on a departure whose roll call was taken, never opens it on the clock (issue #3822). Where a
   shop recorded no roll call it waits four hours after the scheduled return — the floor the recap
   *send* already uses, because nothing else in the product knows whether this person dived
-  (`isAfterTheDive`, `src/lib/seat-ladder.ts`). A cancelled booking, a **blow-out**, and a no-show
+  (`isAfterTheDive`, `src/features/seat-ladder/rules.ts`). A cancelled booking, a **blow-out**, and a no-show
   are each answered by their own notice before it is ever asked. **Waiting**: while somebody on the
   departure is "not back aboard" after a dive, the after-state is held for everyone aboard and the
   page says only that the recap is not ready yet, on the same link (see **Post-trip recap**). A
@@ -2072,13 +2072,13 @@
   `no_show` has no escape in any of the three readers** (issue #1558, settled the other way by a
   `dive-domain-expert` review on 2026-09-11). The fly-safe reader and the counter's name-match
   prompt used to let a standing desk sighting outrank it, to keep a close-of-day sweep from erasing
-  the 06:40 tap. No sweep exists and none is coming: `markBookingNoShow` (`src/db/no-show.ts`) is
+  the 06:40 tap. No sweep exists and none is coming: `markBookingNoShow` (`src/features/no-show/store.ts`) is
   the only writer of that status, it is one staffer's deliberate tap on one seat, and check-in
   refuses anything but a `booked` seat — so the sighting is always the older statement, and the
   escape only ever let 06:40 beat 07:15. **The rule is one predicate**, `diveDay()` in
   `src/db/dive-days.ts` (issue #1694, ruled H-20260916-may-diveday-assert-about), and every reader applies it; the recap's own count
-  (`getRecapPageData`, `src/db/recap.ts`), the counter's name-match prompt
-  (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) call `diveDay()` whole, and the fly-safe
+  (`getRecapPageData`, `src/features/recap/store.ts`), the counter's name-match prompt
+  (`SimilarDiver.lastDiveDayAt`, `src/features/divers/store.ts`) call `diveDay()` whole, and the fly-safe
   reader (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) calls its halves apart. **A cancelled departure the crew logged a
   live dive on is a dive day** to all three: a logged dive is affirmative evidence that beats a
   status changed afterwards for a refund or a blow-out called after the first tank, so the count
@@ -2115,7 +2115,7 @@
   day.
 - **Standing line** — the one line under a diver's name on their record that says what they are to
   the shop: "23 dive days since Mar 2024 · last out Sep 30 · $2,140 spent · brought 2 friends"
-  (`diverStanding` in `src/lib/diver-standing.ts`). It counts **dive days**, the milestone's and
+  (`diverStanding` in `src/features/diver-standing/rules.ts`). It counts **dive days**, the milestone's and
   the recap's unit (issue 2809): the distinct days in the shop's zone, merged across the diver's
   seats that are numbered dive days (`numberedDiveDay`, asked of each seat by `getDiverProfile`)
   and no longer ahead, and the imported visits not standing `did_not_happen`
@@ -2126,7 +2126,7 @@
   days still reads it. Spent is drawn only for a reader who may manage
   orders, in the shop's currency, net of refunds; friends brought counts the distinct other people
   whose live seats name one of this diver's seats as the one that brought them
-  (`booking_referrals`), at this shop only (`friendsBroughtBy`, `src/db/buddy-referrals.ts`).
+  (`booking_referrals`), at this shop only (`friendsBroughtBy`, `src/features/buddy-referrals/store.ts`).
 - **Shared photo** — a recap photo its diver ticked "Share with everyone on this boat" for at
   upload (`recap_photos.shared_with_boat_at`, H-20261014-share-photo-with-boat, ADR 20261016-shared-boat-photos). Off by
   default and per photo. The tick is offered, and honored, only on an upload made through the
@@ -2156,7 +2156,7 @@
   name ("Reply from Blue Reef Divers"). Plain text, at most 400 characters
   (`MAX_REVIEW_REPLY_LENGTH`), shown wherever the review is: the public reviews page, the
   storefront's reviews and the reviews embed. It goes dark with its review if the review is
-  hidden, and is blanked when the reviewer is erased (`review_replies`, `src/db/review-replies.ts`).
+  hidden, and is blanked when the reviewer is erased (`review_replies`, `src/features/review-replies/store.ts`).
 - **Review request** — a "Leave a review" section on the post-trip recap page, shown only when the
   shop has set a single, optional outbound link (`shops.review_url`) in Settings — DiveDay never
   integrates with a review platform's API, never tracks whether a diver actually left a review, and
@@ -2242,7 +2242,7 @@
   demo's spend still counts; Blue Mantis keeps a real shop's cap (Aaron, 2026-10-23). Onboarding a **trial** at `/onboard` — which only the owner's setup link opens, since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand) — creates a real shop that is *not* demo mode and is
   **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
   20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed). A trial runs
-  **3 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/lib/trial.ts`), shown to the
+  **3 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/features/trial/rules.ts`), shown to the
   owner on Settings > Billing as days left / trial ended. Expiry is **soft**: the shop keeps working
   exactly as before past the window, and nothing gates on **billing standing**. Once billing is
   turned on, the owner moves to paid by adding a card on that page (see **Subscription** under
@@ -2287,7 +2287,7 @@
   mailed to the contact on file (`booking_capabilities.delivered`), never the one a booking or a
   seat claim redirects its browser to, because that browser proved only that it typed a name and
   an address. Never on a held seat; a held seat is never one of its rows and never counted in
-  their numbers. Read in `src/db/your-days.ts`; see
+  their numbers. Read in `src/features/your-days/store.ts`; see
   [20261016-fresh-link-per-booking-row](../../architecture/decisions/20261016-fresh-link-per-booking-row.md).
 - **Returning-diver device memory** — an optional, browser-local copy of the lead booker's name
   and email used to prefill a later booking form at the same shop. It is off by default, scoped to
@@ -2310,17 +2310,17 @@
   today's boat is already badged on the spine, including one that has already sailed. Shown to any
   reader with a crew assignment, whatever their role, at a shop that plans its crew
   (`shops.crew_schedule_enabled`), less the sessions "Your sessions" already lists (fourth review
-  item 14); absent for a reader rostered on nothing. Read in `src/db/crew-week.ts`, drawn by
+  item 14); absent for a reader rostered on nothing. Read in `src/features/crew-week/store.ts`, drawn by
   `_components/today/YourWeek.tsx`.
 - **Crew month line** — a crew member's month on their Today, under the tips line: "October: 14
-  boats · 26 dives run · 31 hours on the water" (`crewMonth`, `src/db/crew-tips.ts`). It counts
+  boats · 26 dives run · 31 hours on the water" (`crewMonth`, `src/features/crew-tips/store.ts`). It counts
   the departures they crewed that are back within this shop month and that ran: scheduled, or with
   a live logged dive, never a departure called off with nothing logged. Dives are the departure's
   live logged dives, else its planned ones, and they are dives *run*, not dives this person made:
   a captain who stayed aboard is credited with the boat, not the water. Hours are the departure's
   scheduled days (`trip_schedule_days`) when it has them, else its span.
 - **Week totals** — "6 days · 8 boats · 34 h" under each name on the Crew schedule grid
-  (`personWeekTotals`, `src/lib/staffing-week.ts`). Days are the week's columns with a shift or a
+  (`personWeekTotals`, `src/features/staffing-week/rules.ts`). Days are the week's columns with a shift or a
   crewed departure; boats are distinct departures; hours are the union of shifts and crewed
   meeting windows, each a departure's own scheduled day, so a shift covering the boat it works
   counts once and a liveaboard counts its days, not its nights.
@@ -2336,7 +2336,7 @@
 - **Decompression card reminder** — one line per departure, on the staff roster, the roll call at the dock checkpoint, the printed packet and the offline copy, telling crew to check each diver's and guide's decompression card because DiveDay records no technical card ([H-20261017-decompression-departure-reminds-crew](../human-decisions/H-20261017-decompression-departure-reminds-crew.md)). Shown when the departure is marked `exceeds_no_deco_limits` and someone aboard dives; never on a finished departure's record. It informs and never gates: `needsDecompressionCardReminder` in `src/lib/decompression-reminder.ts`, read by none of readiness, trip admission or the roll-call readiness.
 - **Seat** — one passenger place, the thing a diver buys and the trip offers, said by staff and divers alike ([H-20261014-seat-is-the-word](../human-decisions/H-20261014-seat-is-the-word.md)): "3 seats left", "Book 2 seats", "Cancel my seat". Sellable seats subtract one boat-occupant place for each assigned crew member. Never "spot" for capacity. its row in `config/vocabulary.mjs` refuses "spot" in every en-US bundle (`scripts/check-vocabulary.mjs`), and its `allow` keeps words that are not the thing bought (a marine-life "spot", "on the spot").
 - **Ask to move** — a diver's request, from their own `/ready`, that the shop move their seat to another date ([H-20261014-ask-to-move](../human-decisions/H-20261014-ask-to-move.md)). Offered on a paid seat the diver may still release where cancelling would return nothing right away: past the free-cancellation window, or on a trip with none. It is a request, not a move: it files one Inbox row per booking and departure on the `page` channel, naming the booking (`inbound_messages.booking_id`, `recordMoveAsk` in `src/db/inbound-messages.ts`), and the page then says it was asked while that row stands. Staff decide, and a move is a **seat move**, which answers the ask; one staff answered or deleted no longer stands, and asking again files it anew.
-- **Reply notes** — what AI should know when it drafts a reply to a diver, in the shop's own words: where to park, which wetsuits it rents, what to bring. One box under the AI switch in Settings → Features ("Notes for AI"), drawn only while the shop's AI suggestions are lit, and an owner or manager changes it with the page’s one Save (Aaron, 2026-10-23; it began at the foot of the Inbox); and the `inbox-draft` assist reads it beside the schedule, prices and desk hours, so a time or price written there is one a draft may quote. Never a diver's details. Column `shops.reply_notes`, read by `replyFacts` (`src/db/inbox-assists.ts`).
+- **Reply notes** — what AI should know when it drafts a reply to a diver, in the shop's own words: where to park, which wetsuits it rents, what to bring. One box under the AI switch in Settings → Features ("Notes for AI"), drawn only while the shop's AI suggestions are lit, and an owner or manager changes it with the page’s one Save (Aaron, 2026-10-23; it began at the foot of the Inbox); and the `inbox-draft` assist reads it beside the schedule, prices and desk hours, so a time or price written there is one a draft may quote. Never a diver's details. Column `shops.reply_notes`, read by `replyFacts` (`src/features/inbox-assists/store.ts`).
 - **Weather day** — on Reports, a shop-local day with at least one departure the weather called
   off and that stayed called off (`weatherCallsInWindow`, `src/db/blowouts.ts`; fifth loop, item
   27). A departure reinstated after the call and sailed is not counted (dive-domain review F2). One
@@ -2344,7 +2344,7 @@
   weather call", never "days lost" (N4). "Moved to another date" counts a diver from a called-off
   departure who holds a live seat on another departure booked within 30 days of the call (N3).
 - **Days at sea** — on a teammate's card under Settings → Team, the shop-local days in the year
-  they were on the crew of a boat departure that sailed (`crewYearFacts`, `src/db/reporting.ts`;
+  they were on the crew of a boat departure that sailed (`crewYearFacts`, `src/features/reporting/store.ts`;
   fifth loop, item 32). Boats only: a shore day or a pool session is a day on the schedule, not at
   sea (dive-domain review N1). It reads the crew list, not crew roll call, so a crew member listed
   but recorded ashore still counts.
@@ -2358,7 +2358,7 @@
   type, rate limited per address and per shop. An assist is **dark** (offers nothing, says
   nothing) when there is no API key, external HTTP is off, the shop switched "Claude suggestions"
   off in Features, the shop is a demo, or the shop reached its monthly cap. Every feature with an
-  assist works the same without it. Code: `runAssist` in `src/db/assists.ts`; on screen, the
+  assist works the same without it. Code: `runAssist` in `src/features/assists/store.ts`; on screen, the
   controls in `src/components/assists/` (`AssistDraftButton` and its siblings). Not "AI": the copy
   names Claude.
 - **Unfinished work** — work DiveDay or the shop still has to finish for someone, in one grammar
@@ -2374,10 +2374,10 @@
   halves, Today the stuck payments, failed deletes and day-old cancellation refunds). The
   notification send queue is not one of them: its parked rows go to operator logging (#1826).
 
-- **Crew thanks** — the optional line a diver leaves under their review for one crew member of that departure ("Keiko made my first wreck easy"), on the recap's review form (loop 5, row 6). It is `trip_reviews.crew_thanks` with `crew_thanks_person_id`, both or neither, at most 200 characters, and it is never published: only that crew member (on their Today, beside the tips line, newest two of the last 14 days, without the diver's name) and the shop's owners and managers (the people who may reply to reviews) see it, on the reviews ledger too. A person not on the departure's crew is dropped at the write. An owner or manager can hide one from the ⋯ menu on the review row (`crew_thanks_hidden_at`, with who did it in `crew_thanks_hidden_by_person_id`; the words stay for the shop); the hide stays through any revision the diver makes, and only an owner or manager showing it lifts it. A diver's erasure clears it with their review. The words are the diver's, not the crew member's: erasing the crew member a line names keeps the line and its pointer, as erasure keeps a person's name in other people's words (Aaron, 2026-11-05, #3913). The recap's menu sends a `crewThanksChoice` (`src/lib/crew-thanks-choice.ts`), a digest of the departure and the crew member, never their person id; the writer resolves it against that departure's crew (#3912). `src/db/crew-thanks.ts`.
-- **Seat-sold alert** — one email an hour, at most, to a shop's owners and managers while seats are selling (loop 5, row 8): "3 seats sold in the last hour" with a line per departure, never a diver or an amount. It is a Features switch, `seatSoldAlerts`, and the one that starts **off** for a new shop (owner decision 2026-11-05); a seat a staffer put on the boat is not news to the desk, and a cancelled seat is not a sale. The hourly `seat-sold-alerts` scan claims `shops.seat_sold_alerted_through` with a compare-and-set so a batch is sent once, and gives it back if nobody could be reached. `src/db/seat-sold-alerts.ts`.
+- **Crew thanks** — the optional line a diver leaves under their review for one crew member of that departure ("Keiko made my first wreck easy"), on the recap's review form (loop 5, row 6). It is `trip_reviews.crew_thanks` with `crew_thanks_person_id`, both or neither, at most 200 characters, and it is never published: only that crew member (on their Today, beside the tips line, newest two of the last 14 days, without the diver's name) and the shop's owners and managers (the people who may reply to reviews) see it, on the reviews ledger too. A person not on the departure's crew is dropped at the write. An owner or manager can hide one from the ⋯ menu on the review row (`crew_thanks_hidden_at`, with who did it in `crew_thanks_hidden_by_person_id`; the words stay for the shop); the hide stays through any revision the diver makes, and only an owner or manager showing it lifts it. A diver's erasure clears it with their review. The words are the diver's, not the crew member's: erasing the crew member a line names keeps the line and its pointer, as erasure keeps a person's name in other people's words (Aaron, 2026-11-05, #3913). The recap's menu sends a `crewThanksChoice` (`src/features/crew-thanks-choice/rules.ts`), a digest of the departure and the crew member, never their person id; the writer resolves it against that departure's crew (#3912). `src/features/crew-thanks/store.ts`.
+- **Seat-sold alert** — one email an hour, at most, to a shop's owners and managers while seats are selling (loop 5, row 8): "3 seats sold in the last hour" with a line per departure, never a diver or an amount. It is a Features switch, `seatSoldAlerts`, and the one that starts **off** for a new shop (owner decision 2026-11-05); a seat a staffer put on the boat is not news to the desk, and a cancelled seat is not a sale. The hourly `seat-sold-alerts` scan claims `shops.seat_sold_alerted_through` with a compare-and-set so a batch is sent once, and gives it back if nobody could be reached. `src/features/seat-sold-alerts/store.ts`.
 - **Out of service** — a boat in the yard: one window of shop-local calendar days, both ends inclusive, with the shop's own one-line reason ("Hull repaint", at most 120 characters), set on the boat's papers under Settings → Boats (loop 5, row 5). Every path that puts a departure on that hull refuses it when any day the departure *holds the hull* is in the window: the builder's add and the pattern's second departure (`createTripOrRefusal`), a trip's details save (`boat_out_of_service` from `editTrip`/`editTripSection`), a move (`moveTrip`), a copy (`duplicateTrip`; Copy last year’s week leaves that departure off), a reinstatement of a called-off departure (`reinstateTrip`, which names the yard day; #4027), and a series, which is refused whole when any week it would put on the board lands in the window (#3915). Every refusal names the first yard day, which need not be the day the departure leaves (#4026). A trip page section save asks the yard only when it can move the days or the hull (Timing, Boat), of the stored meeting days when it does not move them; a title or meeting-point fix on a departure whose hull went to the yard later is saved. A soft-deleted hull takes no new departure at all (`validateBoat`, #4027). The nightly roll leaves a yard week off the board without storing a skip, so the week returns on the first roll after the window moves; a trip's Repeats row names the run's hull and its window's last day, those weeks, and the weeks still on the board inside the window, read within the roll's horizon when the page is drawn, and says nothing for a run whose course is archived, since its roll fails anyway (#3948, #3988, #4010); and the roll reads the window under a share lock. The week board warns, as for a window set after the departure was, on every column a departure holds the hull in the window: a one-day departure, a course bar's meeting days, a liveaboard's middle day and the morning a night dive comes back, even one that left the week before (`weekBoard`'s `held`, #4025). Saving a window never refuses: a hull that must go to the yard goes. A row naming a boat this shop does not own reads as always in the yard (`HULL_NOT_IN_SHOP`): the roll puts nothing on it and names no yard week, a move refuses it, and a series on one is refused as a bad form (#3994). Every one of those doors reads the window inside its write, under the same share lock as the roll, so a window saved mid-write makes the write wait and then refuse (#4009). It is `boats.out_of_service_from` / `_until` / `_reason`, both dates or neither. It is not readiness, admission or the manifest. `src/lib/service-window.ts`.
 - **Holds the hull** — the shop-local calendar days a departure has its boat; held is nights aboard (Aaron's decision of 2026-11-06, #3994). Each meeting day holds every day from the one it leaves the dock through the one it ties up, both inclusive, in the shop's zone. A Friday-to-Sunday liveaboard holds Saturday; a night dive back at 02:00 Sunday holds Sunday, and one back at exactly 00:00 does not. Days between meeting days are not held, so a course on two Saturdays holds those two days, not the week between. A departure with no meeting-day rows is one meeting day, its own span. What every Out of service check reads (`hullHeldSpans`). Not the roll-call *Held* mark. `src/lib/service-window.ts`.
-- **Site closure** — a dive site closed for a window of shop-local calendar days with a reason (a marine-park closure, a storm-damaged mooring; loop 5, row 5), set on the site's page under Dive sites. While the shop's own day is inside it, the public site page answers not found, the sitemap leaves it out and a departure's day plan drops the link; the week board warns on a departure that visits it. It is `dive_sites.closed_from` / `closed_until` / `closure_reason`; the window is never read by readiness or the manifest. `src/db/dive-site-closures.ts`.
-- **Referral student** — a course seat whose diver finished theory and pool with another instructor and comes here for the open-water dives (loop 5, row 10). Marked on the course roster; the desk then collects the referral form and the other instructor's training record, each stamped with who collected it and when (`bookings.referred_in_at`, `referral_form_at`, `referral_record_at`, each with its staffer). Only on a course departure. What is still owed shows on the seat until both are in. `src/lib/referral-student.ts`, `src/db/referral-students.ts`.
-- **Charter inquiry** — a date request that asks for the whole boat for a group (loop 5, row 11): a box on the date-request form when the shop dives from a boat and the `privateCharters` Features switch is on, never on a course ask (`interests.charter`). Staff answer it from Date requests with a reply that can open with a whole-boat quote in the shop's currency, written in the diver's language, from an owner or manager only (`canQuoteCharter`), and counted in the reply's 1,000 characters; the quote is recorded on the request (`charter_quote_cents`, `_currency`, `_quoted_at`, `_quoted_by_person_id`) only once the reply went. A departure built from it is private, whatever the Private box said, and the builder's brief says so; the builder's brief shows the quote under that request, above the price box, and the staffer sets the price (#3917). Inquiry to quote to booking, with the booking itself the ordinary private departure. `src/lib/charter-quote.ts`, `src/db/interest-replies.ts`.
+- **Site closure** — a dive site closed for a window of shop-local calendar days with a reason (a marine-park closure, a storm-damaged mooring; loop 5, row 5), set on the site's page under Dive sites. While the shop's own day is inside it, the public site page answers not found, the sitemap leaves it out and a departure's day plan drops the link; the week board warns on a departure that visits it. It is `dive_sites.closed_from` / `closed_until` / `closure_reason`; the window is never read by readiness or the manifest. `src/features/dive-site-closures/store.ts`.
+- **Referral student** — a course seat whose diver finished theory and pool with another instructor and comes here for the open-water dives (loop 5, row 10). Marked on the course roster; the desk then collects the referral form and the other instructor's training record, each stamped with who collected it and when (`bookings.referred_in_at`, `referral_form_at`, `referral_record_at`, each with its staffer). Only on a course departure. What is still owed shows on the seat until both are in. `src/features/referral-student/rules.ts`, `src/features/referral-students/store.ts`.
+- **Charter inquiry** — a date request that asks for the whole boat for a group (loop 5, row 11): a box on the date-request form when the shop dives from a boat and the `privateCharters` Features switch is on, never on a course ask (`interests.charter`). Staff answer it from Date requests with a reply that can open with a whole-boat quote in the shop's currency, written in the diver's language, from an owner or manager only (`canQuoteCharter`), and counted in the reply's 1,000 characters; the quote is recorded on the request (`charter_quote_cents`, `_currency`, `_quoted_at`, `_quoted_by_person_id`) only once the reply went. A departure built from it is private, whatever the Private box said, and the builder's brief says so; the builder's brief shows the quote under that request, above the price box, and the staffer sets the price (#3917). Inquiry to quote to booking, with the booking itself the ordinary private departure. `src/features/charter-quote/rules.ts`, `src/features/interest-replies/store.ts`.

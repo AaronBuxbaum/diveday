@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { loadBuddyContext } from "../test/substrate-fixtures/db/buddy-teams-test-fixtures";
 import {
   addBuddyTeamMember,
   dissolveBuddyTeam,
@@ -12,7 +13,6 @@ import {
   removeBuddyTeamMember,
   sortBuddyMemberRowsByTeam,
 } from "./buddy-teams";
-import { loadBuddyContext } from "./buddy-teams-test-fixtures";
 import { getTripManifest, getTripManifests, recordCrewRollCall, recordRollCall } from "./manifests";
 import {
   bookings,

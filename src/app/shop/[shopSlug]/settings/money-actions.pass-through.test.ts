@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("@/lib/navigation", () => ({
+vi.mock("../../../../features/navigation/rules", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
@@ -27,7 +27,9 @@ vi.mock("@/db/shops", () => ({
   getShopById: mocks.getShopById,
   setShopPassThroughFee: mocks.setShopPassThroughFee,
 }));
-vi.mock("@/lib/session", () => ({ requireStaffSession: mocks.requireStaffSession }));
+vi.mock("../../../../features/session/rules", () => ({
+  requireStaffSession: mocks.requireStaffSession,
+}));
 vi.mock("@/db/authz", () => ({
   canPersonManagePaymentSettings: mocks.canPersonManagePaymentSettings,
   canPersonManageShopSettings: vi.fn(async () => true),

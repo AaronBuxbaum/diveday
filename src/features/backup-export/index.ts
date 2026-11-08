@@ -24,10 +24,10 @@ export {
   backupEndpointRefusal,
   disconnectShopBackupDestination,
   getShopBackupDestination,
+  recordShopBackupDestination,
   type SaveBackupDestinationInput,
   type SaveBackupDestinationRefusal,
   type SaveBackupDestinationResult,
-  saveShopBackupDestination,
 } from "./destination-store";
 export {
   backupPeriodKey,
@@ -58,3 +58,5 @@ export {
   runShopBackup,
 } from "./run-backup";
 export type { BackupUploadErrorCode } from "./s3-client";
+
+export { BACKUP_SETTINGS_GATE, getBackupSettingsPage } from "./settings-page.store";

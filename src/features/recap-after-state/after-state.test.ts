@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "@/db/bookings";
-import { getRecapPageData, type RecapPageData } from "@/db/recap";
 import { bookings, diveSites, people, shops, tripSightings } from "@/db/schema";
 import { createTrip, upcomingTripsWithCounts } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { getRecapPageData, type RecapPageData } from "../recap/store";
 import { buildAfterStateProps, recapBuddyLinkUrl } from "./after-state";
 
 const ctx = fileScopedShopContext();

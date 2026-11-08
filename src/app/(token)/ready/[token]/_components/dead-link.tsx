@@ -4,9 +4,9 @@ import {
   verifyStrandedBookingCapability,
 } from "@/db/booking-capabilities";
 import type { getDb } from "@/db/client";
-import { strandedMoveAsk } from "@/db/move-offer";
-import { getReadyPageData } from "@/db/ready";
 import { getShopById } from "@/db/shops";
+import { strandedMoveAsk } from "@/features/move-offer";
+import { getReadyPageData } from "@/features/ready";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";

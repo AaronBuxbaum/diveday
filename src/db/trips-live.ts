@@ -32,7 +32,7 @@ export const liveTrip = () => isNull(trips.deletedAt);
  * "This person is still on the shop's lists." The `liveTrip()` of `people`.
  *
  * Removing a diver sets `people.deleted_at` rather than deleting the row
- * (`deleteDiver`, src/db/divers.ts), and a staff member who also dives holds
+ * (`deleteDiver`, src/features/divers/store.ts), and a staff member who also dives holds
  * the `diver` role, so a person can be removed while still holding a staff
  * role. A read that lists people a staffer acts on (the staff list behind
  * every crew picker), decides who may be put somewhere (crew eligibility), or

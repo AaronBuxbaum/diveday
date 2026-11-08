@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
-import type { TideStationEcho } from "@/lib/tide-stations";
+import type { TideStationEcho } from "../../../../../features/tide-stations/rules";
 import type { SiteFieldValues } from "./SiteFields";
 import { SitePhotoFields } from "./SitePhotoFields";
 import { STORED } from "./site-fields-test-fixtures";

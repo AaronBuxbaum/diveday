@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { SheetDocument } from "../../../print/_components/SheetDocument";
 import { PACKET_READY_SELECTOR, PacketReady, TripPacket } from "./packet/TripPacket";

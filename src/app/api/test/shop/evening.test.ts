@@ -2,7 +2,6 @@ import { and, desc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { listFitAdjustedReturns } from "@/db/gear";
 import { getTripManifest } from "@/db/manifests";
-import { listRollCallGaps } from "@/db/roll-call-gaps";
 import { bookings, rollCallEvents, type Shop, trips } from "@/db/schema";
 import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "@/db/seed-boat-at-sea";
 import { listStaff } from "@/db/trips";
@@ -10,6 +9,7 @@ import { assembleEveningClose, getDayCloseout } from "@/features/today";
 import { nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
+import { listRollCallGaps } from "../../../../features/roll-call-gaps/store";
 
 /**
  * **The one thing the `evening` fact's `heads: "closed"` exists for is a state nothing

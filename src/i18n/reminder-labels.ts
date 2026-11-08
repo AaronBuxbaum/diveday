@@ -5,7 +5,7 @@ import type { DiverMessageKey, DiverTranslator } from "./messages";
  * Every `ReminderActionCode` `reminderReadiness()` (src/lib/readiness-summary.ts)
  * can name as a diver's outstanding to-do before the dock, resolved here —
  * never earlier. Consumed by both the reminder email
- * (`src/lib/notifications/email.ts`) and the reminder SMS (`src/db/reminders.ts`),
+ * (`src/lib/notifications/email.ts`) and the reminder SMS (`src/features/reminders/store.ts`),
  * so the same imperative reads identically in both channels (docs ADR
  * 20260731-notification-locale).
  */

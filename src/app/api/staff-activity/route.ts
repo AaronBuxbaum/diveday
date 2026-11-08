@@ -1,10 +1,10 @@
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { touchStaffSession } from "@/db/session-activity";
+import { isCrossSiteHeaders } from "@/features/same-origin";
+import { touchStaffSession } from "@/features/session-activity";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { withE2EApiTiming } from "@/lib/observability/query-timing";
-import { isCrossSiteHeaders } from "@/lib/same-origin";
 
 /** Check the server's deadline without treating a background read as activity. */
 async function getStaffActivity(request: Request) {

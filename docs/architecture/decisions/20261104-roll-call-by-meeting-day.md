@@ -42,7 +42,7 @@ the first Saturday's "back aboard" closed the second's count (#2557). It amends
 
 ## Consequences
 
-- The close-out, the recap and `src/db/divers.ts` see a later day's dock count only. The check-in
+- The close-out, the recap and `src/features/divers/store.ts` see a later day's dock count only. The check-in
   queue, running late, `/ready`'s recap, help requests and the fly-safe line read the run's window;
   none raises a safety signal between days.
 - A late count past the halfway point of two same-day windows belongs to the later day.

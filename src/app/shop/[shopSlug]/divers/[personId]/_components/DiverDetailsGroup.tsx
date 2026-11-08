@@ -12,11 +12,11 @@ import {
   FieldActions,
   FieldGrid,
 } from "@/components/ui/form";
+import type { DiverStatusRow } from "@/features/diver-status";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, isMinorOnDate, maxPlausibleBirthDate } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import type { DiverStatusRow } from "@/lib/diver-status";
 import { savePersonAction } from "../details-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { fileGap } from "./file-gap";

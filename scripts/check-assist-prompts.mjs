@@ -38,14 +38,33 @@ const SENDS = /\b(?:runAssist|runAssistOutcome)\b|["'](?:@\/db|\.\.?(?:\/\.\.)*)
 // A db module named for the assists builds their inputs, whatever it imports.
 const ASSIST_DB_MODULE = /^src\/db\/[^/]*assist[^/]*\.[cm]?[jt]sx?$/;
 const MEDICAL_SPECIFIER =
-  /medical|questionnaire|waiver-records|(?:@\/lib|@\/db|^\.\.?(?:\/\.\.)*)\/waivers$/i;
+  /medical|questionnaire|waiver-records|(?:@\/lib|@\/db|@\/features|^\.\.?(?:\/\.\.)*)\/waivers$/i;
 const MEDICAL_NAME = /\bmedical_?answers\b|\b(?:draft_?)?medical_?alerts?\b/i;
 // The schema barrel, or one of its modules: where a db module takes its tables.
 const SCHEMA_SPECIFIER = /(?:^|\/)schema(?:\/[\w-]+)?$/;
 // Tables a prompt module may not take from it: the one that holds the answers
 // and the crew's medical alert.
 const MEDICAL_TABLE = /\bwaiverRecords\b/;
-const PROMPTS = "src/lib/assists/";
+const PROMPT_ROOTS = [
+  "src/lib/assists/",
+  "src/features/assists/",
+  "src/features/bench-note/",
+  "src/features/booking-request/",
+  "src/features/cert-scan/",
+  "src/features/description-draft/",
+  "src/features/monday-summary/",
+  "src/features/recap-line/",
+  "src/features/rental-note/",
+  "src/features/review-flags/",
+  "src/features/review-themes/",
+  "src/features/same-person/",
+  "src/features/sightings-match/",
+  "src/features/site-brief/",
+  "src/features/waiver-draft/",
+  "src/features/website-reading/",
+];
+const PROMPTS = PROMPT_ROOTS.join(" or ");
+const ASSIST_FEATURE_MODULE = /^src\/features\/(?:[^/]*assist[^/]*\/|[^/]+\/[^/]*assist[^/]*\.ts$)/;
 
 async function walk(relative) {
   let entries;
@@ -67,9 +86,15 @@ const violations = [];
 let scanned = 0;
 for (const file of await walk("src")) {
   const text = await readFile(path.join(ROOT, file), "utf8");
-  if (!file.startsWith(PROMPTS) && !ASSIST_DB_MODULE.test(file) && !SENDS.test(text)) continue;
+  if (
+    !PROMPT_ROOTS.some((prefix) => file.startsWith(prefix)) &&
+    !ASSIST_DB_MODULE.test(file) &&
+    !ASSIST_FEATURE_MODULE.test(file) &&
+    !SENDS.test(text)
+  )
+    continue;
   // The seam itself, and the schema barrel (whose `./assists` is the usage table).
-  if (file === "src/db/assists.ts" || file.startsWith("src/db/schema/")) continue;
+  if (file === "src/features/assists/store.ts" || file.startsWith("src/db/schema/")) continue;
   scanned += 1;
   for (const match of text.matchAll(IMPORT)) {
     const specifier = match[1] ?? match[2] ?? "";

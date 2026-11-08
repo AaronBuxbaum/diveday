@@ -1,17 +1,17 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import {
-  consumeBookkeeperConfirmation,
-  issueBookkeeperConfirmation,
-  readBookkeeper,
-  setBookkeeper,
-} from "@/db/bookkeeper";
 import { canPersonExportShopData } from "@/db/export";
 import { activityEvents, people, shops } from "@/db/schema";
 import type { Notification } from "@/lib/notifications";
 import { rateLimitKey } from "@/lib/rate-limit";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
+import {
+  consumeBookkeeperConfirmation,
+  issueBookkeeperConfirmation,
+  readBookkeeper,
+  setBookkeeper,
+} from "../../../../features/bookkeeper/store";
 
 const ctx = fileScopedShopContext();
 
@@ -31,9 +31,13 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
-vi.mock("@/db/step-up", () => ({ hasRequiredStepUp: vi.fn(async () => true) }));
-vi.mock("@/lib/security-step-up", () => ({ stepUpChallengeUrl: vi.fn(() => "/step-up") }));
+vi.mock("../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../features/step-up/store", () => ({
+  hasRequiredStepUp: vi.fn(async () => true),
+}));
+vi.mock("../../../../features/security-step-up/rules", () => ({
+  stepUpChallengeUrl: vi.fn(() => "/step-up"),
+}));
 const sent = vi.hoisted(() => ({ list: [] as Notification[] }));
 vi.mock("@/db/notifications", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/notifications")>();
@@ -61,8 +65,8 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
   return { ...actual, publicAppUrl: () => "https://diveday.example" };
 });
 
-const { requireShopSurface } = await import("@/lib/session");
-const { hasRequiredStepUp } = await import("@/db/step-up");
+const { requireShopSurface } = await import("../../../../features/session/rules");
+const { hasRequiredStepUp } = await import("../../../../features/step-up/store");
 const { saveBookkeeperAction } = await import("./bookkeeper-actions");
 
 const idle = { status: "idle" } as const;

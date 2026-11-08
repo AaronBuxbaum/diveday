@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { demoEntries } from "@/db/schema";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
-import { QUIET_DEMO_COOKIE, quietDemoToken } from "@/lib/quiet-demo-device";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+import { QUIET_DEMO_COOKIE, quietDemoToken } from "../../features/quiet-demo-device/rules";
 
 const ctx = fileScopedShopContext();
 

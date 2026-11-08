@@ -6,19 +6,19 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
 vi.mock("@/db/sms-opt-outs", () => ({ recordSmsKeyword: vi.fn() }));
-vi.mock("@/db/running-late", () => ({ markPhoneRunningLate: vi.fn() }));
-vi.mock("@/db/sms-sender", () => ({ shopForSmsSender: vi.fn() }));
-vi.mock("@/lib/notifications/sns", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/notifications/sns")>();
+vi.mock("../../../../features/running-late/store", () => ({ markPhoneRunningLate: vi.fn() }));
+vi.mock("../../../../features/sms-sender/store", () => ({ shopForSmsSender: vi.fn() }));
+vi.mock("../../../../features/sns-webhook/rules", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../features/sns-webhook/rules")>();
   return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
 });
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { recordSmsKeyword } = await import("@/db/sms-opt-outs");
-const { markPhoneRunningLate } = await import("@/db/running-late");
-const { shopForSmsSender } = await import("@/db/sms-sender");
-const { verifySnsMessage } = await import("@/lib/notifications/sns");
+const { markPhoneRunningLate } = await import("../../../../features/running-late/store");
+const { shopForSmsSender } = await import("../../../../features/sms-sender/store");
+const { verifySnsMessage } = await import("../../../../features/sns-webhook/rules");
 const { POST } = await import("./route");
 
 const FAKE_DB = { fake: "db" };

@@ -5,20 +5,23 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
-import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/db/booking-handoff";
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
-import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
 import { type CheckoutPromo, startBookingCheckout } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
-import { recordShopMilestone } from "@/db/founder-metrics";
 import { askForDeparture } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
+import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/features/booking-handoff";
+import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/features/buddy-links";
+import { recordBuddyReferral, resolveBuddyReferral } from "@/features/buddy-referrals";
+import { formValue, parseForm, readForm, trimmedText } from "@/features/form-parse";
+import { recordShopMilestone } from "@/features/founder-metrics";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { getActiveTripPromoByCode } from "@/features/trip-promos";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
@@ -26,7 +29,6 @@ import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { looksLikeBookingLinkToken } from "@/lib/booking-link-shape";
-import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/lib/buddy-links";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
   declarationWithinPersonBudget,
@@ -35,9 +37,7 @@ import {
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
 import { embedTripPath } from "@/lib/embed-routes";
-import { formValue, parseForm, readForm, trimmedText } from "@/lib/form-parse";
 import { log } from "@/lib/log";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { isDiver, parsePartyTypes, rentsKind } from "@/lib/participant-types";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";

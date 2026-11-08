@@ -21,7 +21,7 @@ import type { DemoRoleId } from "./demo-roles";
  *
  * The slug list is closed, and three things read it as such: the route's
  * `generateStaticParams` (no other slug is ever rendered), the edge refusal in
- * `src/lib/public-route-shape.ts` (any other slug is a real 404 before the
+ * `src/features/public-route-shape/rules.ts` (any other slug is a real 404 before the
  * page streams), and the funnel's `eventSource` (a tag naming any other slug
  * is clamped to "unknown").
  */

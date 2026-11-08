@@ -3,16 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { canPersonImportShopData, commitContactImport, type ImportSummary } from "@/db/import";
 import { getShopById } from "@/db/shops";
+import { parseForm } from "@/features/form-parse";
+import {
+  canPersonImportShopData,
+  commitContactImport,
+  type ImportSummary,
+} from "@/features/import";
+import { requireStaffSession } from "@/features/session";
 import { declinedSizeNote } from "@/i18n/import-notes";
 import { parseImportAssist } from "@/lib/assists/import-mapping";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { parseForm } from "@/lib/form-parse";
 import type { ImportFatalCode, ImportFatalParams } from "@/lib/import";
 import { prepareContactImport } from "@/lib/import";
-import { requireStaffSession } from "@/lib/session";
 
 /** The pasted or uploaded CSV, as text the client read off the file. */
 const contactsForm = z.object({

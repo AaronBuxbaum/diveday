@@ -1,8 +1,8 @@
 "use server";
 
-import { draftReplyFor, translateReplyFor } from "@/db/inbox-assists";
+import { draftReplyFor, translateReplyFor } from "@/features/inbox-assists";
+import { requireShopSurface } from "@/features/session";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { isLiveStaff } from "./action-helpers";
 

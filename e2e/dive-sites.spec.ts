@@ -619,7 +619,7 @@ test.describe("staff", () => {
   // ADR 20260724-dive-site-media-ingestion). `ingestImageUrl` and every
   // defense in it survive for contact-import waiver documents, which really do
   // arrive as URLs in a CSV, and are covered by
-  // src/lib/storage/ingest-url.test.ts.
+  // src/features/storage/ingest-url.test.ts.
   test("the briefing takes photos as files, never as a pasted link", async ({ page }) => {
     await page.goto("/shop/blue-mantis/dive-sites?add=1");
     // Three file inputs — map still, route still, and the gallery — and not one
@@ -950,7 +950,7 @@ test.describe("an owner's own library", () => {
  * #1772).
  *
  * Until this spec nothing the fleet ran could reach either. `fixtureTideStation`
- * (`src/lib/tide-stations.ts`) answers Carysfort Reef for *every* seven-digit
+ * (`src/features/tide-stations/rules.ts`) answers Carysfort Reef for *every* seven-digit
  * id — one station for every id is what keeps the fleet deterministic with
  * NOAA unreachable — and Carysfort is nineteen to twenty-nine kilometres from
  * the demo's Key Largo sites, well inside the 40 km threshold. So

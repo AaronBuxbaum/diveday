@@ -11,7 +11,7 @@ import type { CertificationLevel } from "@/lib/certification-levels";
  * a certification, naming the level it recorded, or that it has recorded none
  * yet. **Nothing is inferred.** The reader hands over a `certification` only
  * for a card this shop issued from this departure and marked verified
- * (`src/db/recap.ts`); everything else arrives here as null and prints the
+ * (`src/features/recap/store.ts`); everything else arrives here as null and prints the
  * plainer sentence. A recap that implied a credential nobody issued would be
  * the one failure this feature could produce, so the guard is a test rather
  * than a comment (`CourseAfterState.test.tsx`).

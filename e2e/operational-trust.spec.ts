@@ -1,7 +1,10 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import type { OperationalState, seedOperationalTrust } from "../src/db/facts/operational-trust";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { OFFLINE_MANIFEST_SHELL_VERSION } from "../src/lib/offline-manifests";
+import type {
+  OperationalState,
+  seedOperationalTrust,
+} from "../src/test/shop-facts/operational-trust";
 import { expect, test } from "./fixtures";
 import {
   manifestRow,

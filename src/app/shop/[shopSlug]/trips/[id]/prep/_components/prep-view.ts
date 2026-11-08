@@ -1,4 +1,4 @@
-import type { TripPrep } from "@/db/trip-prep";
+import type { TripPrep } from "@/features/trip-prep";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**

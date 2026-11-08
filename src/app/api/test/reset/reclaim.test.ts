@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { capturedDemoResetPlan } from "@/db/demo-reset-snapshot";
 import { seededTestDb } from "@/test/db";
+import { capturedDemoResetPlan } from "../../../../features/demo-reset-snapshot/store";
 
 // Only the db handle is stubbed: this exercises the *real* reset against a
 // real embedded Postgres, which is the only way the growth this guards

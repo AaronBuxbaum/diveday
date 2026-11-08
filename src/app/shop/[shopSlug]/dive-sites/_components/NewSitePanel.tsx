@@ -1,11 +1,11 @@
 import { UnsavedSections } from "@/components/editor/EditorRail";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { assistsAvailable } from "@/db/assists";
+import { assistsAvailable } from "@/features/assists";
+import type { ShopSurface } from "@/features/session";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { ShopSurface } from "@/lib/session";
 import { createDiveSiteAction } from "../create-site-actions";
 import { routeEditorCopy } from "./route-editor-copy";
 import { siteBriefAssist } from "./SiteAssists";

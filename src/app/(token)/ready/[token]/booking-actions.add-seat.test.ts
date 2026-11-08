@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * D3): besides the per-IP booking bucket, the seats one booking adds spend
  * from a bucket keyed by **that booking**, so one link cannot be sprayed from
  * many addresses to fill a boat. The page-data half (a lead the page could
- * charge pays first) is pinned in `src/db/ready.test.ts`.
+ * charge pays first) is pinned in `src/features/ready/store.test.ts`.
  */
 
 vi.mock("next/navigation", () => ({
@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/db/bookings", () => ({ addPartySeat: vi.fn(), selfCancelBooking: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
-vi.mock("@/lib/navigation", () => ({
+vi.mock("../../../../features/navigation/rules", () => ({
   revalidateAndRedirect: vi.fn((_path: string, target: string) => {
     throw new Error(`REDIRECT:${target}`);
   }),

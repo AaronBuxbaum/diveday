@@ -220,7 +220,7 @@
   stands down on a course session.
 - **Course ladder** — the Courses page's "N did Discover Scuba in the last 12 months · M went on to Open Water",
   with the names of those who did not and an Invite to the next course's soonest session with a
-  seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-20261014-one-to-one-invite's one-at-a-time invite under the
+  seat (`nextCourseFor`, `src/features/course-ladder/rules.ts`; H-20261014-one-to-one-invite's one-at-a-time invite under the
   **30-day invite cooldown**). The names leave out anyone holding a card at or above the level the
   next course certifies (any agency, any state) and anyone under its minimum age on the session's
   day, and the send re-checks both. Someone whose release waits on a physician's referral is
@@ -402,11 +402,11 @@
   only that, card after card. Cards reviewed before that date keep the sentence
   the old attestation wrote into their `review_note`.
 - **Card undo window** — how long a C-card a staffer deleted can come back by Undo: 15 minutes,
-  the toast's lifetime give or take (`CARD_UNDO_WINDOW_MS`, `src/lib/card-undo.ts`, issue #3701).
+  the toast's lifetime give or take (`CARD_UNDO_WINDOW_MS`, `src/features/card-undo/rules.ts`, issue #3701).
   Every card archive says who archived it (`cards.deletion_kind`): `staff` for a staffer's own
   Delete, `system` for DiveDay archiving a card in favor of other evidence (an agency check, a
   self-declared card superseded, an erasure). Only a staff archive inside the window comes back
-  (`restoreCard`, `src/db/card-restore.ts`), as the same row with the same review state, and the
+  (`restoreCard`, `src/features/card-restore/store.ts`), as the same row with the same review state, and the
   restore is an activity line under the staffer who tapped it; anything else is entered again and
   sighted. A row that does not say how it was archived is read as `system`, so it fails closed.
 - **Prior visit** — one line of a diver's history at the shop's *previous* system, brought across by
@@ -495,7 +495,7 @@
 - **Last known dive** — the latest day the shop knows this diver dived, anywhere: the later of the
   day a staff member recorded on the record (`people.last_dive_on`, off a logbook or a computer) and
   the diver's own last dive day with the shop (a departure that is back, not a pool session) or a
-  real imported visit (`lastKnownDive`, `src/db/last-dive.ts`). A trip with the shop moves it
+  real imported visit (`lastKnownDive`, `src/features/last-dive/store.ts`). A trip with the shop moves it
   forward; nothing moves it back. Not **Dive recency**, the diver's own band on a booking, which the
   record shows beside it only when it is newer. Gates nothing (ADR 20261023-last-known-dive).
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
@@ -801,7 +801,7 @@
   [20260820-shop-divemaster-ratio](../../architecture/decisions/20260820-shop-divemaster-ratio.md).
 - **Refresher / ReActivate** — short course for certified divers returning after inactivity.
 - **Certifications issued here** — the certification cards the shop's own instructors issued in a
-  window (`issued_by_shop_at`; `certifiedHere` and `crewYearFacts`, `src/db/reporting.ts`; fifth
+  window (`issued_by_shop_at`; `certifiedHere` and `crewYearFacts`, `src/features/reporting/store.ts`; fifth
   loop, item 32), on the Reports year ("Certifications issued here: 34 · 22 Open Water") and each
   instructor's Team card ("4 certifications issued this year"). It counts cards, not people: a diver
   who does Open Water and Advanced Open Water here counts twice, as agencies count (dive-domain

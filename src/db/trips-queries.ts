@@ -1279,7 +1279,7 @@ export type WeekBoardEntry = {
    * line instead of being the thing the ellipsis eats. `boatId` is not read
    * by any cell: it is what lets the caller ask the day the stream's own
    * question — more departures than boats, or one hull in two places at once
-   * (`src/lib/boats.ts`) — which is the board's whole question and had no
+   * (`src/features/boats/rules.ts`) — which is the board's whole question and had no
    * answer at desktop.
    */
   diveSiteName: string | null;

@@ -2,30 +2,19 @@ import type { PGlite } from "@electric-sql/pglite";
 import { and, asc, eq, gt, isNotNull, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { inHorizonReadiness } from "@/db/blockers";
 import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
 import { createBookingParty } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
-import { hasActiveCourses } from "@/db/courses";
-import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { packageDivesForBooking } from "@/db/dive-packages";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { countGearItems } from "@/db/gear";
 import { getBookingPayment } from "@/db/payments";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
-import { getReadyPageData } from "@/db/ready";
-import { getShopReviewAggregate } from "@/db/reviews";
 import { bookings, interests, people, personRoles, trips } from "@/db/schema";
-import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
-import { getTripGuests } from "@/db/trip-guests";
-import { getTripOverview } from "@/db/trip-overview";
-import { loadTripSharedReads } from "@/db/trip-shared-reads";
-import { siteSightings } from "@/db/trip-sightings";
-import { latestTripStage } from "@/db/trip-stages";
 import {
   createTrip,
   getTripWithBooked,
@@ -45,9 +34,20 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
-import { shopClock } from "@/lib/shop-clock";
 import { seededShopContext } from "@/test/db";
 import { phaseCountingDb, report } from "@/test/render-phases";
+import { inHorizonReadiness } from "../../../features/blockers/store";
+import { hasActiveCourses } from "../../../features/courses/store";
+import { diverCrewWithAway } from "../../../features/crew-away-diver/store";
+import { getReadyPageData } from "../../../features/ready/store";
+import { getShopReviewAggregate } from "../../../features/reviews/store";
+import { issuePartySeatClaims } from "../../../features/seat-claims/store";
+import { shopClock } from "../../../features/shop-clock/rules";
+import { getTripGuests } from "../../../features/trip-guests/store";
+import { getTripOverview } from "../../../features/trip-overview/store";
+import { loadTripSharedReads } from "../../../features/trip-shared-reads/store";
+import { siteSightings } from "../../../features/trip-sightings/store";
+import { latestTripStage } from "../../../features/trip-stages/store";
 
 /**
  * **What the three busiest staff renders cost, in statements** — the evidence
@@ -61,7 +61,7 @@ import { phaseCountingDb, report } from "@/test/render-phases";
  *
  * What a test cannot see: React's `cache()`. Vitest resolves React's client
  * build, whose `cache()` calls straight through, so the per-request memo on the
- * staff gate's session, roles and shop reads (`src/lib/session.ts`) saves
+ * staff gate's session, roles and shop reads (`src/features/session/rules.ts`) saves
  * nothing *here* — its saving is measured in the running app, by the
  * `render.db_queries` line each staff render logs. The savings below are the
  * structural ones: a reader that no longer runs twice whatever React does.
@@ -88,7 +88,7 @@ vi.mock("next/server", () => ({ after: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { auth } = await import("@/lib/auth");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../features/session/rules");
 
 async function timedSeededShop() {
   const { db: plain, shop } = await seededShopContext();
@@ -648,7 +648,7 @@ const TRIP_CEILING = 69;
  * The trip page measured 10: its shared reads, then `getTripOverview`'s four
  * steps after its fan-out. 10 → 7: the overview's dependent reads (ratings and
  * shifts on the crew, the off-cadence list, both clash reads) now chain inside
- * its one wave (`src/db/trip-overview.ts`, issue #2353).
+ * its one wave (`src/features/trip-overview/store.ts`, issue #2353).
  */
 // 7 → 8: not a new wait, an old one made visible. The marine provider now
 // answers after the database goes quiet, as a real one does, and Today's queue

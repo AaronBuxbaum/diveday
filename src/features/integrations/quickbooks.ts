@@ -1,12 +1,5 @@
 import type { DbExecutor } from "@/db/client";
 import { orderHasIntegrationEvent } from "@/db/integration-events";
-import {
-  getIntegrationSyncRecord,
-  markIntegrationHealthy,
-  readIntegrationCredentials,
-  recordShopIntegration,
-  upsertIntegrationSyncRecord,
-} from "@/db/integrations";
 import type { IntegrationCredentials, IntegrationEvent, ShopIntegration } from "@/db/schema";
 import { nowMs } from "@/lib/clock";
 import { minorToMajor } from "@/lib/money";
@@ -22,6 +15,13 @@ import {
   type SaleSource,
   saleReference,
 } from "./sale-reference";
+import {
+  getIntegrationSyncRecord,
+  markIntegrationHealthy,
+  readIntegrationCredentials,
+  recordShopIntegration,
+  upsertIntegrationSyncRecord,
+} from "./store";
 
 export const QUICKBOOKS_AUTHORIZATION_URL = "https://appcenter.intuit.com/connect/oauth2";
 export const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";

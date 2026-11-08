@@ -1,10 +1,10 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { discardFormDraft, recordFormDraft } from "@/db/form-drafts";
+import { discardFormDraft, recordFormDraft } from "@/features/form-drafts";
+import { requireStaffSession } from "@/features/session";
 import type { DiveDaySession } from "@/lib/auth";
 import { isFormDraftKind } from "@/lib/form-drafts";
-import { requireStaffSession } from "@/lib/session";
 
 type DraftOrigin = Pick<DiveDaySession["user"], "shopId" | "personId" | "sessionId">;
 

@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { createBoat } from "./boats";
+import { createBoat } from "../features/boats/store";
 import { boats, shops, trips } from "./schema";
 import { createTripSeriesOrRefusal, isSeriesBoatOutOfService, rollSeriesForward } from "./trips";
 

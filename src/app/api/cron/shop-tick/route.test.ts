@@ -10,17 +10,23 @@ vi.mock("@/db/trips", () => ({
   cancelDeparturesBelowMinimum: vi.fn(),
   listMinimumNotMetRecipients: vi.fn(),
 }));
-vi.mock("@/db/reminders", () => ({ sendDueReminders: vi.fn() }));
+vi.mock("../../../../features/reminders/store", () => ({ sendDueReminders: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
-vi.mock("@/db/work-order-follow-up", () => ({ sendDueServiceReminders: vi.fn() }));
-vi.mock("@/db/recap", () => ({ sendDueRecaps: vi.fn() }));
+vi.mock("../../../../features/work-order-follow-up/store", () => ({
+  sendDueServiceReminders: vi.fn(),
+}));
+vi.mock("../../../../features/recap/store", () => ({ sendDueRecaps: vi.fn() }));
 vi.mock("@/db/crew-notices", () => ({ sendDueCrewNotices: vi.fn() }));
-vi.mock("@/db/roll-call-alerts", () => ({ sendStaleRollCallAlerts: vi.fn() }));
+vi.mock("../../../../features/roll-call-alerts/store", () => ({
+  sendStaleRollCallAlerts: vi.fn(),
+}));
 vi.mock("@/db/missing-diver-alerts", () => ({ sendMissingDiverAlerts: vi.fn() }));
-vi.mock("@/db/desk-pings", () => ({ sendTrailingDeskPings: vi.fn() }));
-vi.mock("@/db/seat-sold-alerts", () => ({ sendSeatSoldAlerts: vi.fn() }));
+vi.mock("../../../../features/desk-pings/store", () => ({ sendTrailingDeskPings: vi.fn() }));
+vi.mock("../../../../features/seat-sold-alerts/store", () => ({ sendSeatSoldAlerts: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({
   captureCheckIn: vi.fn(() => "check-in-id"),
   captureException: vi.fn(),
@@ -29,15 +35,15 @@ vi.mock("@sentry/nextjs", () => ({
 const { getDb } = await import("@/db/client");
 const { bringDemoBoatsAtSeaHome } = await import("@/db/seed-boat-at-sea");
 const { cancelDeparturesBelowMinimum } = await import("@/db/trips");
-const { sendDueReminders } = await import("@/db/reminders");
+const { sendDueReminders } = await import("../../../../features/reminders/store");
 const { drainNotificationRetries } = await import("@/db/notifications");
-const { sendDueServiceReminders } = await import("@/db/work-order-follow-up");
-const { sendDueRecaps } = await import("@/db/recap");
+const { sendDueServiceReminders } = await import("../../../../features/work-order-follow-up/store");
+const { sendDueRecaps } = await import("../../../../features/recap/store");
 const { sendDueCrewNotices } = await import("@/db/crew-notices");
-const { sendStaleRollCallAlerts } = await import("@/db/roll-call-alerts");
+const { sendStaleRollCallAlerts } = await import("../../../../features/roll-call-alerts/store");
 const { sendMissingDiverAlerts } = await import("@/db/missing-diver-alerts");
-const { sendTrailingDeskPings } = await import("@/db/desk-pings");
-const { sendSeatSoldAlerts } = await import("@/db/seat-sold-alerts");
+const { sendTrailingDeskPings } = await import("../../../../features/desk-pings/store");
+const { sendSeatSoldAlerts } = await import("../../../../features/seat-sold-alerts/store");
 const Sentry = await import("@sentry/nextjs");
 const { SHOP_TICK_CRONTAB } = await import("@/lib/cron-schedule");
 const { nowDate } = await import("@/lib/clock");

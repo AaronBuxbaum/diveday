@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createBoat, getBoatById } from "@/db/boats";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
+import { createBoat, getBoatById } from "../../../../features/boats/store";
 
 const ctx = fileScopedShopContext();
 const fakeStorage = vi.hoisted(() => ({
@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({
     throw new Error(url);
   },
 }));
-vi.mock("@/lib/navigation", () => ({
+vi.mock("../../../../features/navigation/rules", () => ({
   revalidateAndRedirect: (_page: string, url: string) => {
     throw new Error(url);
   },
@@ -24,7 +24,7 @@ vi.mock("@/db/client", async (original) => ({
   ...(await original<typeof import("@/db/client")>()),
   getDb: vi.fn(),
 }));
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("../register-block", () => ({ registerBlock: vi.fn() }));
 vi.mock("@/lib/storage", async (original) => {
   const actual = await original<typeof import("@/lib/storage")>();
@@ -47,7 +47,7 @@ vi.mock("@/lib/storage", async (original) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../features/session/rules");
 const { updateBoatAction } = await import("./actions");
 
 beforeEach(() => {

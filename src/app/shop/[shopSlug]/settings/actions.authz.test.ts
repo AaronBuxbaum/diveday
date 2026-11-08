@@ -48,11 +48,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { revalidatePath } = await import("next/cache");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../features/session/rules");
 const { resendShoreAlertConfirmationAction, saveEmergencyReferenceAction } = await import(
   "./boat-actions"
 );

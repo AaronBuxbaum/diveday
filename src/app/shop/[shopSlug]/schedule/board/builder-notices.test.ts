@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
-import { signScheduleMoveResult } from "@/lib/schedule-move-result";
+import { signScheduleMoveResult } from "../../../../../features/schedule-move-result/rules";
 import { builderNoticeFor, builderNoticeMessage, verifiedGearMoveNotice } from "./builder-notices";
 
 const st = staffTranslator("en-US");

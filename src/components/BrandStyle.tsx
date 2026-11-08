@@ -35,7 +35,7 @@ import {
  * A shop with no brand set renders nothing, and the storefront wears DiveDay's
  * own tokens — the brand is an overlay with a default, never a requirement.
  * The chosen face loads from Google Fonts by one `<link>`, which React hoists
- * into the head; `src/lib/content-security-policy.ts` admits exactly those two
+ * into the head; `src/features/content-security-policy/rules.ts` admits exactly those two
  * hosts for it. The values here are a checked `#rrggbb` and a family from a
  * closed list, so the block is safe to render as text.
  */

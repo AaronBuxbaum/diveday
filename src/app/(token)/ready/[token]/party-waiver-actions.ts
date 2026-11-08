@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { partySeatWaiverKey } from "@/db/seat-claims";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { partySeatWaiverKey } from "@/features/seat-claims";
 import { uuidParam } from "@/lib/uuid";
 import type { DoctorAnswersState, DoctorFormState } from "../../waivers/[token]/doctor/doctor-core";
 import {

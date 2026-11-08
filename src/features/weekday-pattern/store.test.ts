@@ -1,0 +1,119 @@
+import { describe, expect, it } from "vitest";
+import { diveSites } from "../../db/schema/index";
+import { createTrip, listStaff, setTripCrew } from "../../db/trips";
+import { fileScopedShopContext } from "../../test/db";
+import { departuresOnWeekday, weekdayPatternFor } from "./store";
+
+const ctx = fileScopedShopContext();
+
+/** Six Saturdays before the frozen "now" below, in the seeded shop's own zone. */
+const NOW = new Date("2030-08-31T20:00:00Z");
+const SATURDAYS = [
+  "2030-07-20",
+  "2030-07-27",
+  "2030-08-03",
+  "2030-08-10",
+  "2030-08-17",
+  "2030-08-24",
+];
+
+async function putUp(date: string, startHour: number, title: string, crew: string[]) {
+  const trip = await createTrip(ctx.db, {
+    shopId: ctx.shop.id,
+    title,
+    startsAt: new Date(`${date}T${String(startHour + 4).padStart(2, "0")}:00:00Z`),
+    endsAt: new Date(`${date}T${String(startHour + 7).padStart(2, "0")}:30:00Z`),
+    capacity: 10,
+    plannedDives: 2,
+    priceCents: 9500,
+  });
+  if (!trip) throw new Error("createTrip refused a plain departure");
+  if (crew.length > 0)
+    expect(await setTripCrew(ctx.db, ctx.shop.id, trip.id, crew), `crew for ${date}`).toBe(true);
+  return trip;
+}
+
+/** ADR 20260906-before-you-ask, decision 3: the add panel already knows the weekday. */
+describe("departuresOnWeekday", () => {
+  it("reads the last six weeks of this weekday on the shop's clock, with each one's crew", async () => {
+    expect(ctx.shop.timezone).toBe("America/New_York");
+    const staff = await listStaff(ctx.db, ctx.shop.id);
+    const [keiko, sal] = staff.map((member) => member.person.id);
+    if (!keiko || !sal) throw new Error("seed has fewer than two staff");
+    for (const date of SATURDAYS) await putUp(date, 7, "Two-Tank Reef", [keiko, sal]);
+    // A Saturday seven weeks back is outside the window; a Sunday is not this weekday.
+    await putUp("2030-07-13", 7, "Two-Tank Reef", [keiko]);
+    await putUp("2030-08-25", 7, "Sunday Reef", [keiko]);
+
+    const rows = await departuresOnWeekday(
+      ctx.db,
+      ctx.shop.id,
+      "2030-09-07",
+      ctx.shop.timezone,
+      NOW,
+    );
+    const reef = rows.filter((row) => row.title === "Two-Tank Reef");
+    expect(reef.map((row) => row.date).sort()).toEqual(SATURDAYS);
+    expect(reef[0]).toMatchObject({
+      startTime: "07:00",
+      endTime: "10:30",
+      capacity: 10,
+      priceCents: 9500,
+      diveMode: "boat",
+    });
+    expect(new Set(reef[0]?.crewPersonIds)).toEqual(new Set([keiko, sal]));
+    expect(rows.some((row) => row.title === "Sunday Reef")).toBe(false);
+
+    const pattern = await weekdayPatternFor(
+      ctx.db,
+      ctx.shop.id,
+      "2030-09-07",
+      ctx.shop.timezone,
+      NOW,
+    );
+    expect(pattern).toMatchObject({ startTime: "07:00", title: "Two-Tank Reef" });
+    expect(new Set(pattern?.crewPersonIds)).toEqual(new Set([keiko, sal]));
+  });
+
+  it("carries every planned dive's site, in order, into the pattern", async () => {
+    const sites = await ctx.db
+      .insert(diveSites)
+      .values([
+        { shopId: ctx.shop.id, name: "Pattern One", slug: "pattern-one" },
+        { shopId: ctx.shop.id, name: "Pattern Two", slug: "pattern-two" },
+      ])
+      .returning({ id: diveSites.id, slug: diveSites.slug });
+    const one = sites.find((site) => site.slug === "pattern-one")?.id;
+    const two = sites.find((site) => site.slug === "pattern-two")?.id;
+    if (!one || !two) throw new Error("sites were not inserted");
+    for (const date of SATURDAYS) {
+      const trip = await createTrip(ctx.db, {
+        shopId: ctx.shop.id,
+        title: "Two-Site Morning",
+        startsAt: new Date(`${date}T16:00:00Z`),
+        endsAt: new Date(`${date}T19:30:00Z`),
+        capacity: 10,
+        plannedDives: 2,
+        dives: [{ diveSiteId: one }, { diveSiteId: two }],
+      });
+      if (!trip) throw new Error("createTrip refused a two-site departure");
+    }
+    const pattern = await weekdayPatternFor(
+      ctx.db,
+      ctx.shop.id,
+      "2030-09-07",
+      ctx.shop.timezone,
+      NOW,
+    );
+    expect(pattern?.title).toBe("Two-Site Morning");
+    expect(pattern?.diveSiteIds).toEqual([one, two]);
+  });
+
+  it("is nothing for a weekday the shop has not run three times", async () => {
+    // Long before the seed's first departure, so the six weeks hold nothing.
+    const then = new Date("2020-01-10T12:00:00Z");
+    expect(
+      await weekdayPatternFor(ctx.db, ctx.shop.id, "2020-01-08", ctx.shop.timezone, then),
+    ).toBeNull();
+  });
+});

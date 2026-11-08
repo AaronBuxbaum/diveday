@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { IncidentReportLine } from "@/db/incident-reports";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { SafetyMonth } from "@/lib/safety-report";
+import type { SafetyMonth } from "../../../../../features/safety-report/rules";
 import { SafetyLists } from "./SafetyLists";
 
 const t = staffTranslator("en-US");

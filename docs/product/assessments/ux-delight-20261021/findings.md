@@ -151,7 +151,7 @@ historical timestamps just to fit the board.
 and pickup ordering. The most recently picked-up old intake must appear first and remain in the
 capped group. Test equal pickup timestamps and tenant scope.
 
-**Source anchors:** [work-orders.ts](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/db/work-orders.ts), [work-orders.test.ts](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/db/work-orders.test.ts), [work-orders.ts](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/db/schema/work-orders.ts).
+**Source anchors:** [work-orders.ts](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/features/work-orders/store.ts), [work-orders.test.ts](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/features/work-orders/store.test.ts), [work-orders.ts](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/db/schema/work-orders.ts).
 
 ## UX-07 — Keep course date requests available without a shop contact email
 
@@ -200,7 +200,7 @@ shares reconcile with the exact pool and the exported crew sheet, including rema
 currencies and multiple departures with different crew. Compare the visible allocation with the crew
 export; do not 'fix' it by changing the ledger to match rounded display.
 
-**Source anchors:** [page.tsx](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/app/shop/[shopSlug]/reports/page.tsx), [MonthOwnerLines.tsx](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/app/shop/[shopSlug]/reports/_components/MonthOwnerLines.tsx), [reporting.ts](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/lib/reporting.ts).
+**Source anchors:** [page.tsx](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/app/shop/[shopSlug]/reports/page.tsx), [MonthOwnerLines.tsx](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/app/shop/[shopSlug]/reports/_components/MonthOwnerLines.tsx), [reporting.ts](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/features/reporting/rules.ts).
 
 ## UX-09 — Avoid claiming that an error report has already arrived
 

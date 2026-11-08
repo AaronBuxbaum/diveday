@@ -4,14 +4,14 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { countSetupRequestsSince, recordSetupRequest } from "@/db/funnel";
+import { formValue, parseForm } from "@/features/form-parse";
+import { countSetupRequestsSince, recordSetupRequest } from "@/features/funnel";
+import { requestVisitorArm } from "@/features/pricing-arm-request";
 import { sendSetupRequestReceipt } from "@/features/setup-request-receipts";
 import { requestLocale } from "@/i18n/request";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { formValue, parseForm } from "@/lib/form-parse";
 import { eventSource, SET_UP_SENT_PATH } from "@/lib/funnel";
 import { log } from "@/lib/log";
-import { requestVisitorArm } from "@/lib/pricing-arm-request";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import {

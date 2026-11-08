@@ -1,18 +1,18 @@
 import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
-import { summarizeShopYear } from "@/lib/shop-year";
 import { unseededTestDb } from "@/test/db";
-import { weatherCallsInWindow } from "./blowouts";
-import type { AppDb } from "./client";
-import { paymentEntries } from "./payments";
 import {
   bookingLeadTimes,
   certifiedHere,
   crewYearFacts,
   getMonthlyReport,
   getShopYear,
-} from "./reporting";
+} from "../features/reporting/store";
+import { summarizeShopYear } from "../features/shop-year/rules";
+import { weatherCallsInWindow } from "./blowouts";
+import type { AppDb } from "./client";
+import { paymentEntries } from "./payments";
 import {
   boats,
   bookingCheckoutBookings,

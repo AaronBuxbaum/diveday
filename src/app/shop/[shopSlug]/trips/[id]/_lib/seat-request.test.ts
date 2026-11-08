@@ -1,6 +1,5 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { getBookableDiver } from "@/db/divers";
 import { askForDate } from "@/db/interests";
 import {
   bookings,
@@ -13,6 +12,7 @@ import {
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { getBookableDiver } from "../../../../../../features/divers/store";
 import { addBandFor } from "../_components/seat-request-band";
 import { readSeatRequest } from "./seat-request";
 

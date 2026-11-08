@@ -1,4 +1,4 @@
-import type { HandledHelpRequest } from "@/db/help-requests";
+import type { HandledHelpRequest } from "@/features/help-requests";
 import type { TodayAction } from "@/features/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { handledHelpRequestText, helpRequestMeetingText } from "@/i18n/today-labels";

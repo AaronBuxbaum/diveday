@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto";
 import type { AppDb } from "@/db/client";
 import { recordScheduledBackupMedicalAnswers } from "@/db/operations";
 import type { BackupDeliveryTrigger } from "@/db/schema";
+import type { FeedLabels } from "@/features/calendar-sync";
 import {
   claimShopBackupDelivery,
   finishShopBackupDelivery,
   renewShopBackupDeliveryClaim,
   supersedeShopBackupDelivery,
-} from "@/db/shop-backup-delivery-claims";
-import type { FeedLabels } from "@/features/calendar-sync";
+} from "@/features/shop-backup-delivery-claims";
 import { nowDate } from "@/lib/clock";
 import { buildBackupBundle } from "./bundle";
 import {

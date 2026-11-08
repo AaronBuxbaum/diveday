@@ -48,13 +48,13 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 9a — the dive-site library and the catalog door | shipped | `src/app/shop/[shopSlug]/dive-sites/_components/SiteLibraryLedger.tsx` | `SiteLibraryLedger.test.tsx`, `src/lib/dive-sites.test.ts`, `src/db/dive-sites.test.ts`, `e2e/dive-sites.spec.ts` |
+| 9a — the dive-site library and the catalog door | shipped | `src/app/shop/[shopSlug]/dive-sites/_components/SiteLibraryLedger.tsx` | `SiteLibraryLedger.test.tsx`, `src/features/dive-sites/rules.test.ts`, `src/db/dive-sites.test.ts`, `e2e/dive-sites.spec.ts` |
 | 9b — course editor sections (rail retired 2026-10-24) | shipped | `src/components/editor/EditorSection.tsx` | `EditorSection.test.tsx`, course edit `page.test.tsx`, `UnsavedChangesGuard.test.tsx`, `e2e/courses.spec.ts` |
 | 9c — dive-site editor sections (rail retired 2026-10-24) | shipped | `src/components/editor/EditorSection.tsx` | `EditorSection.test.tsx`, `site-form-sections.test.ts`, `SiteFormShell.test.tsx`, `e2e/dive-sites.spec.ts` |
 | 9d — the gear register's one story | shipped | `src/app/shop/[shopSlug]/gear/_components/GearRegisterLedger.tsx` | `GearRegisterLedger.test.tsx`, `src/lib/gear.test.ts`, `src/db/gear.test.ts`, `e2e/gear.spec.ts` |
 | 9e — staffing as a week | shipped | `src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx` | `staffing-week.test.ts`, `StaffingWeek.test.tsx`, `StaffCardCredentials.test.tsx`, `staffing.test.ts`, `e2e/staffing.spec.ts` |
 
-(The assembly half is `src/lib/staffing-week.ts` and the credentials ledger
+(The assembly half is `src/features/staffing-week/rules.ts` and the credentials ledger
 `src/app/shop/[shopSlug]/settings/team/_components/StaffCardCredentials.tsx`; both name the ADR in their doc
 comments, as does the component in the row above, so `pnpm check:design-canvases` is satisfied when
 the row flips to `shipped`.)

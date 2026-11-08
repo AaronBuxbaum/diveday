@@ -4,11 +4,11 @@ import {
   canPersonExportDisputeSheet,
   getDisputeSheet,
   recordDisputeSheetOpened,
-} from "@/db/dispute-sheet";
+} from "@/features/dispute-sheet";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { SheetDocument } from "../../../../print/_components/SheetDocument";
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
  *
  * Owner or manager only, through `requireShopSurface`'s live gate, so a refused
  * staffer lands back on the order with a reason rather than on a blank page.
- * What may appear is decided in `assembleDisputeSheet` (src/lib/dispute-sheet.ts)
+ * What may appear is decided in `assembleDisputeSheet` (src/features/dispute-sheet/rules.ts)
  * and nowhere here: this page prints the sheet it is handed and reads nothing
  * else about the diver, so it cannot show a medical answer it never receives.
  *

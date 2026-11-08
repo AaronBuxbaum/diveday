@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { latestPricingStatement } from "@/db/pricing-volume";
 import {
   orderLineItems,
   orders,
@@ -13,6 +12,7 @@ import {
 } from "@/db/schema";
 import { DEFAULT_PRICING_CONFIG } from "@/lib/billing/pricing-plans";
 import { unseededTestDb } from "@/test/db";
+import { latestPricingStatement } from "../../../../features/pricing-volume/store";
 import { closePercentMonths, lastClosedMonth } from "./close-pass";
 
 /**

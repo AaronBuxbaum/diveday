@@ -109,7 +109,7 @@
   rider price), the notice says so and hands over the release link, and the dock gate refuses
   **Boarded** until they are ready. There is no offline path: at a dock with no signal the rider
   goes on the paper manifest. Never onto a course session, a canceled or sailed departure, or beside
-  somebody of the same name already aboard (`src/db/dock-rider.ts`).
+  somebody of the same name already aboard (`src/features/dock-rider/store.ts`).
 - **Departure note** — one short operational message ("Marina lot closed, park at the Elks") sent
   once to every held seat on a departure by that diver's usual channel: email when they have an
   address, otherwise the shop's WhatsApp or SMS. Transactional, so it is held to that: at most
@@ -125,7 +125,7 @@
   tap tells the diver by their usual channel, once. It is **open** until it goes home
   (**returned**) or the shop gives up on it (**discarded**); open items across every departure
   are listed at Lost and found. Resolved items are pruned after 90 days, and an erasure deletes
-  the diver's items outright (`src/db/lost-items.ts`). The Boat tab's "Left aboard" form opens
+  the diver's items outright (`src/features/lost-items/store.ts`). The Boat tab's "Left aboard" form opens
   at Heading in, Home, or once the departure is Back (`leftAboardOpen`; see **At sea**,
   [operations.md](operations.md)). Open items show in three more places (fifth loop, item 7): a
   Today row in The desk group ("2 things waiting to go home"), counting every open item tied to a
@@ -172,7 +172,7 @@
   live dive there in the crew's own words, or the last plan that moved elsewhere, whichever is
   later ("Molasses: last dived Mon, Oct 12 (Sal Moretti): visibility 40 ft"). Never the
   departure's own log; deleted dives and departures are left out. Informs, gates nothing
-  (`lastAtSites`, `src/lib/site-history.ts`).
+  (`lastAtSites`, `src/features/site-history/rules.ts`).
 
 - **Today shop-day catch-up** — the staff member's view of new desk lines across the shop's
   departures for one local day. Each reader has an independent first-view snapshot and acknowledges

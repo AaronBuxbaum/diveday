@@ -10,7 +10,7 @@ import process from "node:process";
  * `import * as Sentry from "@sentry/nextjs"`, so every cold start parsed the
  * SDK and its 1.2 MB server chunk before the route had checked its bearer
  * token, and in a build with no DSN at all. A route reports through
- * `src/lib/observability/sentry.ts`, which imports the SDK on first use and
+ * `src/features/sentry-server/rules.ts`, which imports the SDK on first use and
  * only when a DSN is configured; a Client Component that must report (the root
  * `global-error.tsx`) imports it dynamically, inside the handler.
  *
@@ -66,7 +66,7 @@ for (const file of await walk(SCANNED)) {
 
 if (violations.length > 0) {
   console.error(
-    `sentry-imports: ${violations.length} static import(s) of the Sentry SDK under ${SCANNED}. Report through \`sentry\` from "@/lib/observability/sentry" (loaded on first use), or import the SDK dynamically inside a client handler:\n${violations.map((v) => `- ${v}`).join("\n")}`,
+    `sentry-imports: ${violations.length} static import(s) of the Sentry SDK under ${SCANNED}. Report through \`sentry\` from "@/features/sentry-server" (loaded on first use), or import the SDK dynamically inside a client handler:\n${violations.map((v) => `- ${v}`).join("\n")}`,
   );
   process.exit(1);
 }

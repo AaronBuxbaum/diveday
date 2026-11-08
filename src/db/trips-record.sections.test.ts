@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat } from "./boats";
+import { createBoat } from "../features/boats/store";
 import { boats, rollCallEvents } from "./schema";
 import {
   createTrip,

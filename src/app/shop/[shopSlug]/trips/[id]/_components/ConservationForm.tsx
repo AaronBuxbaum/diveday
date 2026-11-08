@@ -11,7 +11,7 @@ import {
   FormStatus,
   textareaClassFor,
 } from "@/components/ui/form";
-import type { ConservationResult } from "@/db/trip-conservation";
+import type { ConservationResult } from "@/features/conservation";
 import { CONSERVATION_KINDS, type ConservationKind } from "@/lib/conservation";
 import { useConservationActions } from "./ConservationActions";
 

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
-import { isAfterTheDive, leftAtTheDock, readSeatLadder, type SeatRung } from "@/lib/seat-ladder";
+import {
+  isAfterTheDive,
+  leftAtTheDock,
+  readSeatLadder,
+  type SeatRung,
+} from "../../../../../../features/seat-ladder/rules";
 import { groupRoster, waiverControls } from "./roster-model";
 import type { ReadinessByBooking, RosterEntry, WaiverByBooking } from "./types";
 

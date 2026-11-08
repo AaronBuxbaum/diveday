@@ -9,13 +9,13 @@ import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { FeatureDirectory } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
+import { requestPricingOffer } from "@/features/pricing-arm-request";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { switchingHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
-import { requestPricingOffer } from "@/lib/pricing-arm-request";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
 // read this page makes (`requestLocale()`) sits behind this segment's

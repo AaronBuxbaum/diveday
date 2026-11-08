@@ -2,16 +2,16 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { assembleCrewSheet } from "@/lib/crew-sheet";
 import { unseededTestDb } from "@/test/db";
 import { insertTip } from "@/test/tips";
+import { assembleCrewSheet } from "../features/crew-sheet/rules";
+import { crewSheetForMonth } from "../features/crew-sheet/store";
+import { crewTipShare, tipsByDeparture } from "../features/crew-tips/store";
+import { recordStripeDispute } from "../features/payment-disputes/store";
+import { recordStripeRefundFailure } from "../features/refund-failures/store";
+import { getMonthlyReport } from "../features/reporting/store";
 import type { AppDb } from "./client";
-import { crewSheetForMonth } from "./crew-sheet";
-import { crewTipShare, tipsByDeparture } from "./crew-tips";
-import { recordStripeDispute } from "./payment-disputes";
-import { recordStripeRefundFailure } from "./refund-failures";
 import { recordStripeChargeRefund } from "./refunds";
-import { getMonthlyReport } from "./reporting";
 import { bookingCheckouts, bookings, people, shops, tripAssignments, trips } from "./schema";
 
 /**

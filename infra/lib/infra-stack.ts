@@ -4404,7 +4404,7 @@ exports.handler = async () => {
         `mediaDomainName ${JSON.stringify(domainName)} is not a hostname. It is interpolated ` +
           "into MEDIA_PUBLIC_URL_BASE, which src/lib/storage/blob-host.ts turns into an origin " +
           "allowlist, next.config.ts turns into an image-optimizer allowlist, and " +
-          "src/lib/content-security-policy.ts turns into an img-src source.",
+          "src/features/content-security-policy/rules.ts turns into an img-src source.",
       );
     }
     return domainName;
@@ -4420,7 +4420,7 @@ exports.handler = async () => {
   ): cloudfront.Distribution {
     const mediaOrigin = origins.S3BucketOrigin.withOriginAccessControl(mediaBucket);
     // **The app's own security headers do not reach here.**
-    // `src/lib/security-headers.ts` is a Next `headers()` rule, so it applies to
+    // `src/features/security-headers/rules.ts` is a Next `headers()` rule, so it applies to
     // responses Next serves and to nothing CloudFront serves. This was the
     // AWS-managed `CORS_ALLOW_ALL_ORIGINS` policy alone, which adds
     // `Access-Control-Allow-Origin: *` and no `nosniff` at all.

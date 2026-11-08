@@ -500,7 +500,7 @@ describe("crew assignment requests", () => {
 });
 
 /**
- * 180 days out, matching src/db/staffing.test.ts's reasoning: far enough past
+ * 180 days out, matching src/features/staffing/store.test.ts's reasoning: far enough past
  * the seeded demo's instructor calendar that a synthetic session never collides
  * with the seed's real crew overlaps.
  */

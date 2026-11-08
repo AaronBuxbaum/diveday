@@ -1,7 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { getDb } from "@/db/client";
 import { listGlobalDiveSiteMapRows } from "@/db/dive-sites";
-import { cacheStamp, reportCacheRead } from "@/lib/observability/runtime-cache";
+import { cacheStamp, reportCacheRead } from "@/features/runtime-cache";
 
 /**
  * Vercel shares these neutral rows across users and function instances. The

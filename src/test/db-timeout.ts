@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { originalTestPath } from "./relocated-test-origins.ts";
 
 /**
  * **Which test files get a longer ceiling than the suite's own, and how long.**
@@ -58,7 +59,7 @@ export const DB_TEST_TIMEOUT_MS = 60_000;
  */
 export function needsDatabaseTimeout(testPath: string | undefined): boolean {
   if (!testPath) return false;
-  if (/[/\\]src[/\\]db[/\\]/.test(testPath)) return true;
+  if (originalTestPath(testPath).startsWith("src/db/")) return true;
   try {
     return IMPORTS_TEST_DB.test(readFileSync(testPath, "utf8"));
   } catch {

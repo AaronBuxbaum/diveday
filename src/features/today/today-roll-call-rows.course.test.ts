@@ -1,10 +1,14 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { boardAtDeparture, HOUR, returnedTrip } from "@/db/roll-call-test-fixtures";
 import { tripScheduleDays, trips } from "@/db/schema";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  boardAtDeparture,
+  HOUR,
+  returnedTrip,
+} from "../../test/substrate-fixtures/db/roll-call-test-fixtures";
+import { shopClock } from "../shop-clock/rules";
 import { getTodayWork } from "./today-reader";
 
 const EN = staffTranslator("en-US");

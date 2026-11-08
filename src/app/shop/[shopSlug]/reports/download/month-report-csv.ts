@@ -1,4 +1,4 @@
-import type { MonthMoneyDetail } from "@/db/report-lines";
+import type { MonthMoneyDetail } from "@/features/report-lines";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { buildCsv, type CsvValue } from "@/lib/export";
 import { BY_LINE_KEYS } from "../_components/MonthMoneyDetail";

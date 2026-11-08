@@ -53,6 +53,6 @@ shop (`deals_shop_trip_fk`).
 ## Consequences
 
 - Readers say which kind they mean with `trip_id` (`shopWide` in `src/db/shop-promos.ts`, and
-  `TripLastMinutePromo` in `src/db/trip-promos.ts`, which narrows a row to a deal with a trip).
+  `TripLastMinutePromo` in `src/features/trip-promos/store.ts`, which narrows a row to a deal with a trip).
 - The review's further steps (a deal's state derived from its window, cap and switch rather than
   stored; the Stripe mint as a payment attempt) are not taken here.

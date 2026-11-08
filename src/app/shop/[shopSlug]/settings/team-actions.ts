@@ -1,20 +1,20 @@
 "use server";
 import { z } from "zod";
 import { setShopDiversPerDivemaster } from "@/db/shops";
+import { formValue } from "@/features/form-parse";
 import { defineAction, land } from "@/features/server-action";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
   MAX_DIVERS_PER_DIVEMASTER,
   MIN_DIVERS_PER_DIVEMASTER,
 } from "@/lib/divemaster-ratio";
-import { formValue } from "@/lib/form-parse";
 import { SETTINGS_GATE } from "./action-gates";
 
 const crewScheduleForm = z.object({ diversPerDivemaster: formValue() });
 
 /**
  * Saves the divemaster target the crew schedule's nudges read
- * (`src/lib/crew-schedule.ts`). The switch itself is a row of the Features page
+ * (`src/features/crew-schedule/rules.ts`). The switch itself is a row of the Features page
  * (issue #2814); only a shop that plans its crew is measured against this.
  */
 export const saveCrewScheduleAction = defineAction({

@@ -1,12 +1,12 @@
-import type { loadDiverGear } from "@/db/diver-record";
 import type { personThread } from "@/db/inbound-messages";
-import type { LastKnownDive } from "@/db/last-dive";
 import type { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
-import type { personSentMessages } from "@/db/person-sent-messages";
+import type { loadDiverGear } from "@/features/diver-record";
+import type { splitDiverStatus } from "@/features/diver-status";
+import type { LastKnownDive } from "@/features/last-dive";
+import type { personSentMessages } from "@/features/person-sent-messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { DiverNotice } from "@/lib/diver-notices";
-import type { splitDiverStatus } from "@/lib/diver-status";
 import { noticeForForm } from "@/lib/staff-notices";
 import { counterRentalFormPath } from "../../../gear/rentals/rental-form";
 import { ActivitySection } from "./ActivitySection";

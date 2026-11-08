@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { WaiverSignedVia } from "@/db/schema";
-import type { getSignedWaiverPage } from "@/db/signed-waiver-page";
+import type { getSignedWaiverPage } from "@/features/signed-waiver-page";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffTranslator } from "@/i18n/staff-messages";

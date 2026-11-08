@@ -105,7 +105,7 @@ export async function readActiveStaffRoles(
 
 /**
  * The same live check as `loadActiveStaffRoles`, without the shop scope —
- * for `requireStaffSession()` (`src/lib/session.ts`, issue #701), the one
+ * for `requireStaffSession()` (`src/features/session/rules.ts`, issue #701), the one
  * caller that runs *before* any shop has been resolved from the session's
  * own claim. A person row belongs to exactly one shop for its whole life
  * (`people.shop_id` is never reassigned), so scoping by `personId` alone is

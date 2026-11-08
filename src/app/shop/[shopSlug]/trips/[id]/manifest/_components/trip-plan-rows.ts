@@ -1,4 +1,5 @@
-import { siteHistoryText } from "@/i18n/site-history-labels";
+import type { SiteHistory } from "@/features/site-history";
+import { siteHistoryText } from "@/features/site-history";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import {
@@ -7,7 +8,6 @@ import {
   meetingPointLine,
   meetingPointOfRows,
 } from "@/lib/meeting-point";
-import type { SiteHistory } from "@/lib/site-history";
 
 /**
  * **`TripPlanSection`'s rows, worded** — where the boat meets (UX review

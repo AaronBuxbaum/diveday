@@ -95,7 +95,7 @@ export const accountSessions = pgTable(
   },
   (table) => [
     index("account_sessions_user_account_idx").on(table.userAccountId),
-    // The retention prune deletes by `expires_at` (src/db/retention.ts; issue #2357).
+    // The retention prune deletes by `expires_at` (src/features/retention/store.ts; issue #2357).
     index("account_sessions_expires_idx").on(table.expiresAt),
   ],
 );

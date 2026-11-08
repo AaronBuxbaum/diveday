@@ -7,13 +7,13 @@ vi.mock("@/db/shops", () => ({
 }));
 vi.mock("@/db/counter-payment-hold", () => ({ commitCounterPaymentHold: vi.fn() }));
 vi.mock("@/features/integrations", () => ({ dispatchIntegrationsAfterResponse: vi.fn() }));
-vi.mock("@/db/step-up", () => ({ hasRequiredStepUp: vi.fn() }));
-vi.mock("@/lib/session", () => ({
+vi.mock("../../../../../../features/step-up/store", () => ({ hasRequiredStepUp: vi.fn() }));
+vi.mock("../../../../../../features/session/rules", () => ({
   requireStaffSession: vi.fn(async () => ({ user: { shopId: "shop-1", personId: "p-1" } })),
 }));
 
 const { commitCounterPaymentHold } = await import("@/db/counter-payment-hold");
-const { hasRequiredStepUp } = await import("@/db/step-up");
+const { hasRequiredStepUp } = await import("../../../../../../features/step-up/store");
 const { dispatchIntegrationsAfterResponse } = await import("@/features/integrations");
 const { POST } = await import("./route");
 

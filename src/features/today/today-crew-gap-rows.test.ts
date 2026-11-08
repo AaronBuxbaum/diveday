@@ -7,12 +7,12 @@ import {
   tripAssignments,
   trips as tripsTable,
 } from "@/db/schema";
-import { getStaffingView } from "@/db/staffing";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowMs } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import { shopClock } from "../shop-clock/rules";
+import { getStaffingView } from "../staffing/store";
 import type { TodayAction } from "./today";
 import { pushCrewGapRows } from "./today-crew-gap-rows";
 import { getTodayWork } from "./today-reader";
@@ -233,7 +233,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
   });
 
   it("raises no crew row at all for a shop that keeps no crew schedule", async () => {
-    // `shopCrewTarget` (src/lib/crew-schedule.ts) hands the queue a null
+    // `shopCrewTarget` (src/features/crew-schedule/rules.ts) hands the queue a null
     // target when `shops.crew_schedule_enabled` is off: the same uncrewed reef
     // trip as above, and nothing about its crew.
     const { db, shop } = ctx;

@@ -84,7 +84,7 @@ const FAN_OUT_MEMBERS = new Set(["all", "allSettled"]);
 
 /**
  * For a `Promise.all` that is genuinely not over queries on that executor.
- * Nothing in the tree needs it today — `src/db/import.ts`'s bounded fetch pool
+ * Nothing in the tree needs it today — `src/features/import/store.ts`'s bounded fetch pool
  * looked like the case for it, but `mapWithConcurrency` is generic and takes no
  * executor at all, so the rule never reaches it. Kept because the shape is real
  * (a fan-out over HTTP, or over an executor the function was handed twice), and

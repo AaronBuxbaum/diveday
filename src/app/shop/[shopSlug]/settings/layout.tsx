@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -10,7 +11,6 @@ import {
   canManageStaffAccounts,
   canManageWaiverTemplates,
 } from "@/lib/authz";
-import { requireShopSurface } from "@/lib/session";
 import { SettingsRail } from "./_components/SettingsRail";
 import { SettingsRailSkeleton } from "./_components/SettingsRailSkeleton";
 import { SETTINGS_GROUPS, settingsRailGatesFor, settingsRailRowsFor } from "./settings-groups";

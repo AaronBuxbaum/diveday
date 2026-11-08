@@ -30,7 +30,7 @@ Resend delivers both over one webhook endpoint, signed with Svix.
 **One endpoint, `POST /api/webhooks/resend`**, verified before anything is handled. Signature
 verification is written by hand against the documented Svix scheme (`svix-id`, `svix-timestamp`,
 `svix-signature`; HMAC-SHA256 over `id.timestamp.body`, base64) rather than pulling in the Svix
-SDK — the same call already made for Stripe in `src/lib/payments/webhook.ts`, and the reason this
+SDK — the same call already made for Stripe in `src/features/payments/webhook.ts`, and the reason this
 change adds no runtime dependency. It fails closed: a missing secret is 503, a bad or stale
 signature is 400, and neither reaches the database.
 

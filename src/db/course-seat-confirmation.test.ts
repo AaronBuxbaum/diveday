@@ -3,10 +3,10 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
+import { seatDiver } from "../features/seat-diver/store";
 import { createBooking } from "./bookings";
 import { retryBookingConfirmation, sendCourseSeatConfirmation } from "./notifications";
 import { courses, notificationDeliveries } from "./schema";
-import { seatDiver } from "./seat-diver";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**

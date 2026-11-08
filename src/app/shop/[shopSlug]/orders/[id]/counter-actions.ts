@@ -10,12 +10,12 @@ import {
 } from "@/db/orders";
 import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
-import { hasRequiredStepUp } from "@/db/step-up";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { stepUpChallengeUrl } from "@/features/security-step-up";
+import { requireStaffSession } from "@/features/session";
+import { hasRequiredStepUp } from "@/features/step-up";
 import { nowMs } from "@/lib/clock";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { stepUpChallengeUrl } from "@/lib/security-step-up";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { recordPaymentNotice } from "./order-detail-keys";
 import { postedCollection, postedOrderId, postedRoom } from "./order-form";

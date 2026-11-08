@@ -10,8 +10,8 @@ import {
   recordMedicalEvaluation,
   rejectDiverMedicalForm,
 } from "@/db/waivers";
-import { formValue, readForm, text, trimmedText } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { formValue, readForm, text, trimmedText } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
 import type { PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { storeMedicalClearanceDocument } from "@/lib/storage";
 import { uuidParam } from "@/lib/uuid";

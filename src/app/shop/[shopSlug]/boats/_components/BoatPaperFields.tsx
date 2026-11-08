@@ -1,5 +1,5 @@
 import { controlClass, DateField, Field } from "@/components/ui/form";
-import type { Boat } from "@/db/boats";
+import type { Boat } from "@/features/boats";
 import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {

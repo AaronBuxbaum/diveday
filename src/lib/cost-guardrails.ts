@@ -222,7 +222,7 @@ export const COST_CEILINGS: readonly CostCeiling[] = [
     // `polled`, but not from Anthropic: every call records its own cost in
     // `claude_usage`, and the probe sums that table, so the reading is as good
     // as the price list in `src/lib/claude/models.ts`. Each shop is also capped
-    // at $15 a month (`src/lib/claude/dark.ts`), and that cap is the one that
+    // at $15 a month (`src/features/claude/dark.ts`), and that cap is the one that
     // switches anything off; this ceiling, like every other here, only emails.
     id: "anthropic_spend",
     provider: "anthropic",

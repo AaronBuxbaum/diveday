@@ -3,13 +3,13 @@ import { NameMatchPrompt } from "@/components/seat-diver/NameMatchPrompt";
 import { PersonCandidateList } from "@/components/seat-diver/PersonCandidateList";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { FormStatus } from "@/components/ui/form";
-import type { BookableDiver, SimilarDiver } from "@/db/divers";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { newDiverHref } from "@/lib/person-fields";
 import type { FormNotice } from "@/lib/staff-notices";
+import type { BookableDiver, SimilarDiver } from "../../../../../../lib/diver-choice-types";
 
 /** The date request a band was opened from, reduced to what the forms carry. */
 export type SeatRequestContext = {

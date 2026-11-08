@@ -188,7 +188,7 @@ describe("groupRoster", () => {
   /**
    * **A finished departure's tab is its record** (UX review 2026-10-10, item
    * 10): who sailed and who did not, nothing to clear. Each seat is filed by
-   * `seatSailed` (src/lib/seat-sailed.ts), the evening count's own rule, so the
+   * `seatSailed` (src/features/seat-sailed/rules.ts), the evening count's own rule, so the
    * record and the close-out cannot disagree about one diver (dive-domain
    * review of UX batch 1).
    */

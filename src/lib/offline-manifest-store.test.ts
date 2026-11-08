@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import { purgeAsVerifiedShop } from "@/test/offline-manifest-purge";
+import { RETENTION_DAYS } from "../features/retention/rules";
 import {
   acknowledgeDiscardedOfflineRecords,
   appendOfflineArrival,
@@ -22,7 +23,6 @@ import {
   OFFLINE_MANIFEST_MAX_RETENTION_MS,
   type OfflineManifestPayload,
 } from "./offline-manifests";
-import { RETENTION_DAYS } from "./retention";
 
 const FROZEN_MS = Date.parse(TEST_FROZEN_CLOCK);
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -593,7 +593,7 @@ describe("purgeOfflineManifestsExceptShop", () => {
 
 /**
  * The window itself, asserted rather than commented — the same discipline
- * `retentionWindowsOutlastStripeRetries` (src/lib/retention.ts) applies to the
+ * `retentionWindowsOutlastStripeRetries` (src/features/retention/rules.ts) applies to the
  * Stripe webhook window. An unbounded exception to a retention rule was the
  * finding; a bound nobody checks is the same finding one edit later.
  */
@@ -606,7 +606,7 @@ describe("OFFLINE_MANIFEST_PENDING_GRACE_MS", () => {
 
   it("stays inside the shortest window the retention table gives a device-held artifact", async () => {
     // `push_subscriptions` (30 days) is the closest analogue in
-    // `src/lib/retention.ts`: a device credential, useful only while its trip
+    // `src/features/retention/rules.ts`: a device credential, useful only while its trip
     // is near, "pure blast radius" afterwards. A dock copy holds emergency
     // contacts and medical blockers on a shared tablet, so its grace period
     // has no business being more generous than that.

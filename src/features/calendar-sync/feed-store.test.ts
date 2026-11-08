@@ -1,11 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { issueCapability } from "@/db/capabilities";
-import { deleteDiver, restoreDiver } from "@/db/divers";
 import { capabilities, people, personRoles, userAccounts } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { deleteDiver, restoreDiver } from "../divers/store";
 import {
   issueCalendarFeed,
   listCalendarFeeds,

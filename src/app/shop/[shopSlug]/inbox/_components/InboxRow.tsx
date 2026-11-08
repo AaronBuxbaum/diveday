@@ -6,7 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
-import type { InboxSeat } from "@/db/inbox-seats";
+import type { InboxSeat } from "@/features/inbox-seats";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type InboxIntent, isInboxIntent } from "@/lib/assists/inbox";
 import { formatNearDay, formatShortDate, formatTime, formatWeekdayTime } from "@/lib/format";

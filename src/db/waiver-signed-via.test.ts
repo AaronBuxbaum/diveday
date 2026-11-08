@@ -2,20 +2,20 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
-import { people, personRoles, waiverRecords } from "./schema";
-import { listStaff } from "./trips";
-import { issueAndDeliverPersonWaiver } from "./waiver-issue";
-import { completeWaiver, threadWaiverKey } from "./waivers-completion";
-import { recordInPersonWaiver } from "./waivers-in-person";
-import { issueWaiverRequest } from "./waivers-requests";
+import { anonymizeDiver } from "../features/anonymize/store";
 import {
   clearAnswers,
   issueCounterLink,
   now,
   openOnDevice,
   waiverContextFor,
-} from "./waivers-test-fixtures";
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
+import { people, personRoles, waiverRecords } from "./schema";
+import { listStaff } from "./trips";
+import { issueAndDeliverPersonWaiver } from "./waiver-issue";
+import { completeWaiver, threadWaiverKey } from "./waivers-completion";
+import { recordInPersonWaiver } from "./waivers-in-person";
+import { issueWaiverRequest } from "./waivers-requests";
 
 /**
  * **Which door signed a release** (issue #4045). A counter code and a link

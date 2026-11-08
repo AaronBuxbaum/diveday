@@ -1,24 +1,24 @@
 "use server";
 
-import { runAssist } from "@/db/assists";
-import { readGearNote } from "@/db/desk-assists";
 import { certificationAgency } from "@/db/schema";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { runAssist } from "@/features/assists";
 import {
   CERT_SCAN_FEATURE,
   certScanCall,
   certScanFields,
   parseCardImage,
   scanCard,
-} from "@/lib/assists/cert-scan";
+} from "@/features/cert-scan";
+import { readGearNote } from "@/features/desk-assists";
 import {
   offeredSizeFields,
   RENTAL_NOTE_FEATURE,
   rentalNoteCall,
   rentalNoteFields,
-} from "@/lib/assists/rental-note";
-import { requireShopSurface } from "@/lib/session";
+} from "@/features/rental-note";
+import { requireShopSurface } from "@/features/session";
+import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { uuidParam } from "@/lib/uuid";
 
 /**

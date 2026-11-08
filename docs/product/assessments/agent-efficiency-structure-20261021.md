@@ -36,7 +36,7 @@ Examples:
 | File | Lines | Natural responsibilities visible in its symbols |
 | --- | ---: | --- |
 | [bookings.ts](../../../src/db/bookings.ts) | 4,144 | Creation and parties, admission, movement/restoration, participant changes, cancellation, diver details, identity confirmation/splitting |
-| [anonymize.ts](../../../src/db/anonymize.ts) | 2,978 | Erasure orchestrator plus many domain-specific scrubbers |
+| [anonymize.ts](../../../src/features/anonymize/store.ts) | 2,978 | Erasure orchestrator plus many domain-specific scrubbers |
 | [orders.ts](../../../src/db/orders.ts) | 2,767 | Order creation/issue, counter settlement, ledger queries, provider event application |
 | [manifests.ts](../../../src/db/manifests.ts) | 2,382 | Checkpoint queries, manifest assembly, diver and crew writes, offline reconciliation |
 | [notifications/kinds.ts](../../../src/lib/notifications/kinds.ts) | 2,304 | Notification-kind definitions |
@@ -109,7 +109,7 @@ dated and distinguish its decision from the current mechanism.
 
 ## S4. Use existing successful centralization as the pattern
 
-[seat-diver.ts](../../../src/db/seat-diver.ts), lines 32–46, explains an actual recurring
+[seat-diver.ts](../../../src/features/seat-diver/store.ts), lines 32–46, explains an actual recurring
 failure: five entry points repeated booking consequences, and some omitted waiver delivery or
 activity recording. `seatDiver` gives callers one consequence path with explicit variation.
 This is more effective than reminding every future agent to remember four side effects.

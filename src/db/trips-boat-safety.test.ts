@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { deleteBoat } from "../features/boats/store";
+import {
+  boatTripFixture,
+  tripBoatPatch,
+} from "../test/substrate-fixtures/db/trip-boat-test-fixtures";
 import { captureDepartureBoatSafety, departureBoatSafetySnapshot } from "./boat-safety";
-import { deleteBoat } from "./boats";
 import { activityEvents, boats, departureBoatSafetySnapshots, trips } from "./schema";
-import { boatTripFixture, tripBoatPatch } from "./trip-boat-test-fixtures";
 import { editTrip, getTripWithBooked, listStaff } from "./trips";
 
 const ctx = fileScopedShopContext();

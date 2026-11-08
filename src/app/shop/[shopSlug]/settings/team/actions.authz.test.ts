@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, userAccounts } from "@/db/schema";
-import { listShopStaff } from "@/db/staff-accounts";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -12,6 +11,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { listShopStaff } from "../../../../../features/staff-accounts/store";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -24,7 +24,7 @@ const ctx = fileScopedShopContext();
  * form post is the privilege-escalation path in this codebase, and
  * `teamManagementBlock()` is the only thing closing it.
  *
- * `src/db/staff-accounts.ts` has no gate of its own — `setStaffRoles` and
+ * `src/features/staff-accounts/store.ts` has no gate of its own — `setStaffRoles` and
  * `removeStaffMember` write whatever they are given. Every test below therefore
  * checks the `person_roles` / `user_accounts` rows after the refusal, not just
  * the notice.
@@ -40,10 +40,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const {
   removeStaffAction,
   saveStaffEmergencyContactAction,

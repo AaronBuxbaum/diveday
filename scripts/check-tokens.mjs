@@ -88,7 +88,17 @@ const metadataFileNames = new Set(["opengraph-image.tsx", "twitter-image.tsx", "
  * from the list with the files, so an ordinary component cannot claim the
  * exemption by taking one.
  */
-const exemptPaths = new Set(["src/app/_og/card.tsx", "src/app/_brand/colors.ts"]);
+const exemptPaths = new Set([
+  "src/app/_og/card.tsx",
+  "src/app/_brand/colors.ts",
+  // Satori's year-card palette is composited into a standalone bitmap; its
+  // contrast fixtures exercise literal brand colors without a stylesheet.
+  "src/features/year-card/rules.ts",
+  "src/features/year-card/rules.test.ts",
+  // Real sharp raster fixtures prove SVG/raster loaders still work; their
+  // sample pixels are bitmap inputs, not styles rendered by the app.
+  "src/features/og-rasterizer/rules.test.ts",
+]);
 
 /**
  * A hex color: 3/4/6/8 hex digits, not continuing into an identifier — so

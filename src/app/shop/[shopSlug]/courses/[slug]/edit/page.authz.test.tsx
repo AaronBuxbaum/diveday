@@ -56,7 +56,7 @@ vi.mock("@/db/course-forms", () => ({
   listCourseFormAgeBounds: vi.fn(async () => new Map()),
   courseUpcomingEnrollment: vi.fn(async () => ({ students: 0, sessions: 0 })),
 }));
-vi.mock("@/db/courses", () => ({
+vi.mock("../../../../../../features/courses/store", () => ({
   getCourseBySlug: vi.fn(),
   courseIdsEverOnBoard: vi.fn(async () => new Set<string>()),
   getCourseTemplateUpdate: vi.fn(),
@@ -66,7 +66,7 @@ vi.mock("@/db/authz", () => ({
   canPersonManageWaiverTemplates: vi.fn(async () => false),
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
-vi.mock("@/lib/session", () => ({
+vi.mock("../../../../../../features/session/rules", () => ({
   requireShopSurface: vi.fn(),
   requireStaffSession: vi.fn(),
 }));
@@ -84,9 +84,13 @@ vi.mock("@/i18n/staff-messages", () => ({
 }));
 
 const { canPersonConfigureTrips } = await import("@/db/authz");
-const { getCourseBySlug, getCourseTemplateUpdate } = await import("@/db/courses");
+const { getCourseBySlug, getCourseTemplateUpdate } = await import(
+  "../../../../../../features/courses/store"
+);
 const { setCourseVisibilityAction } = await import("./actions");
-const { requireShopSurface, requireStaffSession } = await import("@/lib/session");
+const { requireShopSurface, requireStaffSession } = await import(
+  "../../../../../../features/session/rules"
+);
 const { default: EditCoursePage } = await import("./page");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";

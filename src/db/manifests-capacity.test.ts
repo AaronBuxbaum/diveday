@@ -1,8 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { markBookingNoShow } from "../features/no-show/store";
+import {
+  clearAnswers,
+  manifestContext,
+} from "../test/substrate-fixtures/db/manifests-test-fixtures";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
-import { clearAnswers, manifestContext } from "./manifests-test-fixtures";
-import { markBookingNoShow } from "./no-show";
 import { boats, trips } from "./schema";
 import { getTripRoster } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";

@@ -1,4 +1,4 @@
-import { assistsAvailable } from "@/db/assists";
+import { assistsAvailable } from "@/features/assists";
 
 /**
  * Whether the manifest offers an AI draft. Kept out of the page because the

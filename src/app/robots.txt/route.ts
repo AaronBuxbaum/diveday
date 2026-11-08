@@ -1,8 +1,8 @@
+import { renderRobotsTxt } from "@/features/robots";
 import { publicAppUrl } from "@/lib/notifications";
-import { renderRobotsTxt } from "@/lib/robots";
 
 /**
- * `robots.txt`, rendered from `src/lib/robots.ts` rather than Next's
+ * `robots.txt`, rendered from `src/features/robots/rules.ts` rather than Next's
  * `robots.ts` convention — the convention has no slot for the one comment
  * line that points an agent at `/llms.txt` (issue #1427). Everything else the
  * convention emitted is emitted here unchanged.

@@ -7,7 +7,7 @@ import type { TodayActionKind } from "./today-kinds";
 
 /**
  * Why one trip's head count is not closed (DOM-H3). Codes, not sentences: the
- * evidence is gathered in `src/db/roll-call-gaps.ts` and the words come from
+ * evidence is gathered in `src/features/roll-call-gaps/store.ts` and the words come from
  * `src/i18n/today-labels.ts`. They are deliberately *not* interchangeable —
  * collapsing them into one row is the defect this type exists to prevent:
  *

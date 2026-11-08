@@ -5,12 +5,12 @@ import { redirect } from "next/navigation";
 import { canPersonCallDayBlowout, canPersonRefund } from "@/db/authz";
 import { callDayBlowout, listDayBlowoutDepartures } from "@/db/blowouts";
 import { recordTripActivity } from "@/db/operations";
+import { requireShopSurface } from "@/features/session";
 import { trackEvent } from "@/lib/analytics";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { dayBlowoutBounds, dayBlowoutCallable } from "@/lib/day-blowout";
 import { log } from "@/lib/log";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 

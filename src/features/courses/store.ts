@@ -1,0 +1,726 @@
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  ne,
+  not,
+  sql,
+} from "drizzle-orm";
+import { liveTrip } from "@/db/trips";
+import {
+  courseTemplateSnapshot,
+  getCourseTemplate,
+  standardFormAgeBounds,
+} from "../../content/course-templates";
+import type { AppDb, DbExecutor } from "../../db/client";
+import { attachStandardCourseForms, courseFormsAwaitingTextByCourse } from "../../db/course-forms";
+import { offsetPage, PAGE_SIZE } from "../../db/paging";
+import type { Course } from "../../db/schema/index";
+import { courses, shops, trips } from "../../db/schema/index";
+import { HOUR_MS, nowDate } from "../../lib/clock";
+import {
+  type CourseTemplateDiff,
+  type CourseTemplateSnapshot,
+  type CourseTemplateUpdateMode,
+  courseTemplateDatabaseFields,
+  courseTemplateDiff,
+  courseTemplateSnapshotFromCourse,
+  mergedCourseTemplateSnapshot,
+  parseCourseTemplateSnapshot,
+} from "../../lib/course-template-sync";
+import { type CourseContent, canonicalAgency } from "../../lib/courses";
+import { REFRESHER_TEMPLATE_SLUGS } from "../../lib/re-entry";
+import type { CertificationLevel } from "../../lib/readiness";
+import { type RentableItemKind, toIncludedRentalKinds } from "../../lib/rentals";
+
+export type NewCourse = {
+  shopId: string;
+  title: string;
+  agency?: "padi" | "ssi";
+  description?: string;
+  slug?: string;
+  priceCents?: number | null;
+  eLearningPriceCents?: number | null;
+  privatePriceCents?: number | null;
+  minimumCertificationLevel?: CertificationLevel | null;
+  /** Whether a session of this course may run on enriched air — see the column's own note. */
+  nitroxCompatible?: boolean;
+  /** The rental kinds the course fee includes — see the column's own note. */
+  includedRentalKinds?: RentableItemKind[];
+} & Partial<CourseContent>;
+
+/**
+ * Title, agency, the cert gate, and the minimum age come from the agency's
+ * catalog; what a shop owns is what it decides for itself — its two prices,
+ * and whether it will run this course on enriched air. Everything here is a
+ * shop's own answer, which is what separates this patch from
+ * {@link CourseContentPatch}'s prose.
+ */
+export type CoursePatch = Pick<
+  NewCourse,
+  | "priceCents"
+  | "eLearningPriceCents"
+  | "privatePriceCents"
+  | "nitroxCompatible"
+  | "includedRentalKinds"
+>;
+
+/**
+ * The diver-facing page, edited on its own screen and saved in one shot. The
+ * minimum age is the agency's and never edited here, so it is not in the patch.
+ *
+ * Neither is `isIntroCourse`. It rides along on {@link CourseContent} because
+ * that is the shape a published template carries, but it is not prose a shop
+ * writes: DiveDay ships the catalogue and knows which entries are tasters, and
+ * the flag picks the tighter in-water ratio a taster is held to
+ * (src/lib/course-ratios.ts). Out of the patch means the page editor cannot
+ * send it at all — a safety cap is not a side effect of saving marketing copy.
+ */
+export type CourseContentPatch = Omit<CourseContent, "minimumAge" | "isIntroCourse">;
+
+/**
+ * Course agency is imported shop data; one stable key per company. The
+ * TypeScript twin the roster groups by is `canonicalAgency`
+ * (`src/lib/courses.ts`) — the two spell the same rule and must not drift.
+ */
+const canonicalAgencyExpression = sql<string>`lower(trim(${courses.agency}))`;
+
+/**
+ * Progression order: the sequence a shop teaches its catalog in, read off the
+ * courses themselves.
+ *
+ * `minimum_certification_level` *is* the ladder — Open Water opens Advanced,
+ * Advanced opens Rescue, Rescue opens Divemaster — and Postgres orders an enum
+ * by its declared order, which is that ladder (`certification_level` in
+ * schema.ts). Nulls sort **first**, not last: a course that admits an
+ * uncertified diver is where a diver starts, and Postgres's ASC default would
+ * otherwise bury Open Water below Divemaster. Within one rung a taster session
+ * comes before the certification it leads into (Discover Scuba, then Open
+ * Water), and title breaks the remaining ties — it is unique per shop, so the
+ * sort is total and paging is stable.
+ *
+ * Derived, never stored. The shop-built certification paths this replaced kept
+ * the same ladder in their own tables, where it could disagree with the
+ * courses and where a newly added course simply never appeared
+ * (ADR 20260805-remove-certification-paths).
+ */
+const progressionOrder = [
+  // **Agency first, and it belongs in here rather than at one call site.** The
+  // roster groups by agency now (the tab strip retired with the grouping), and
+  // a grouped list that is paged must sort group-major or one agency's run
+  // splits across a page boundary — the rule the reviews worklist states too.
+  // Slice 9g put this in front of `pagedCourses`' order alone, which silently
+  // broke the promise these three readers make: `listCourses`,
+  // `listActiveCourses` and `pagedCourses` order **identically**, so a staffer
+  // scheduling a session and a staffer reading the roster see one sequence.
+  // They had drifted, and only the test that compares the two could tell.
+  asc(canonicalAgencyExpression),
+  sql`${courses.minimumCertificationLevel} asc nulls first`,
+  desc(courses.isIntroCourse),
+  asc(courses.title),
+];
+
+function agencyScope(agency: string) {
+  return sql`lower(trim(${courses.agency})) = ${canonicalAgency(agency)}`;
+}
+
+/**
+ * Active catalog entries — what a staff member picks from when scheduling a
+ * session, and what the diver-facing catalog lists.
+ *
+ * `agency` narrows it to one agency's ladder, which is what the diver page's
+ * tab strip selects. Left off, the whole active catalog comes back in
+ * progression order; passing an agency nobody teaches returns nothing rather
+ * than everything, so a caller must have resolved it against
+ * {@link activeCourseAgencies} first.
+ */
+export async function listActiveCourses(
+  db: AppDb,
+  shopId: string,
+  options: { agency?: string } = {},
+) {
+  const scope = and(
+    eq(courses.shopId, shopId),
+    eq(courses.isActive, true),
+    ...(options.agency ? [agencyScope(options.agency)] : []),
+  );
+  return db
+    .select()
+    .from(courses)
+    .where(scope)
+    .orderBy(...progressionOrder);
+}
+
+/**
+ * Every course the shop has, hidden ones too, in progression order: the
+ * course ladder's catalog (`src/features/course-ladder/store.ts`), where a hidden taster
+ * still had students and only an active course can be a next step.
+ */
+export async function listCatalogInProgressionOrder(db: DbExecutor, shopId: string) {
+  return db
+    .select({
+      id: courses.id,
+      slug: courses.slug,
+      title: courses.title,
+      agency: courses.agency,
+      isActive: courses.isActive,
+      isIntroCourse: courses.isIntroCourse,
+      minimumCertificationLevel: courses.minimumCertificationLevel,
+      certifiesLevel: courses.certifiesLevel,
+      minimumAge: courses.minimumAge,
+    })
+    .from(courses)
+    .where(eq(courses.shopId, shopId))
+    .orderBy(...progressionOrder);
+}
+
+/**
+ * Whether this shop's public catalog has anything in it.
+ *
+ * The one fact the diver-facing header needs to decide whether a "Courses" tab
+ * has anywhere worth going, and it runs on every public page render — so it
+ * asks the database for the existence of a row rather than reading the whole
+ * catalog through {@link listActiveCourses} and counting it. Never widen this
+ * into a count: nothing shows a number, and a count cannot stop at the first
+ * row.
+ */
+export async function hasActiveCourses(db: AppDb, shopId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * Whether this shop publishes a course a diver easing back could be pointed at
+ * (ADR 20260904-reef-all-the-way-down, D18/#1178).
+ *
+ * Recognised by the DiveDay template a shop copied, never by reading its prose:
+ * a shop that wrote its own refresher under its own name is simply not
+ * recognised, which costs the diver one of three offers and never produces a
+ * wrong answer (`isRefresherCourse`).
+ *
+ * It runs on the public booking page, so it asks the database for the existence
+ * of a row rather than reading the catalog and filtering it — the same rule
+ * {@link hasActiveCourses} above states. Never widen this into a list: nothing
+ * shows which course, and a list cannot stop at the first row.
+ */
+export async function hasActiveRefresherCourse(db: AppDb, shopId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(
+      and(
+        eq(courses.shopId, shopId),
+        eq(courses.isActive, true),
+        inArray(courses.sourceTemplateSlug, [...REFRESHER_TEMPLATE_SLUGS]),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * The first try-it course this shop publishes (Discover Scuba, Try Scuba), the
+ * door `/ready` opens for a diver who said they are not certified yet (third UX
+ * review, item 23). `is_intro_course` says which entries these are, never the
+ * title. Null when the shop publishes none: the page then says only that the
+ * crew will talk to them at the dock.
+ */
+export async function firstActiveIntroCourse(
+  db: AppDb,
+  shopId: string,
+): Promise<{ slug: string; title: string } | null> {
+  const [row] = await db
+    .select({ slug: courses.slug, title: courses.title })
+    .from(courses)
+    .where(
+      and(eq(courses.shopId, shopId), eq(courses.isActive, true), eq(courses.isIntroCourse, true)),
+    )
+    .orderBy(...progressionOrder)
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Every publicly-indexable course page, for the sitemap — active courses at
+ * non-demo shops, across the whole catalog rather than one shop at a time, so
+ * this joins to `shops` for the `isDemo` filter instead of looping
+ * {@link listActiveCourses} per shop.
+ */
+export async function listActiveCoursesForSitemap(
+  db: AppDb,
+): Promise<{ shopSlug: string; courseSlug: string }[]> {
+  const rows = await db
+    .select({ shopSlug: shops.slug, courseSlug: courses.slug })
+    .from(courses)
+    .innerJoin(shops, eq(courses.shopId, shops.id))
+    // An active course *is* the readiness signal here, so this query needs no
+    // equivalent of the schedule query's "has published a departure" condition
+    // — but it honours the same opt-out, or a shop that asked not to be listed
+    // would still have its course pages in the sitemap
+    // (ADR 20260813-search-listing-is-a-choice).
+    .where(
+      and(eq(courses.isActive, true), eq(shops.isDemo, false), isNull(shops.searchListingOptOutAt)),
+    );
+  return rows;
+}
+
+/**
+ * The agencies the *publicly visible* catalog holds, alphabetically — the
+ * diver page's tab strip.
+ *
+ * A `SELECT DISTINCT` over the shop's own rows rather than a constant:
+ * `courses.agency` is free text a CSV import can carry anything into, so a
+ * hard-coded PADI/SSI pair would hide a third agency's courses behind no tab
+ * at all. Never a filter applied afterwards to the whole catalog: a shop whose
+ * SSI ladder is entirely hidden must not be offered an SSI tab that lands a
+ * diver on an empty page. Hidden courses are staff's business, and a tab is a
+ * promise that there is something behind it.
+ *
+ * The staff roster had a twin of this until slice 9g of ADR
+ * 20260827-the-shops-shelves; it groups by agency now, so it has no filter to
+ * populate.
+ */
+export async function activeCourseAgencies(db: AppDb, shopId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ agency: canonicalAgencyExpression })
+    .from(courses)
+    .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
+    .orderBy(asc(canonicalAgencyExpression));
+  return rows.map((row) => row.agency);
+}
+
+/** How many courses the staff roster (`/courses`) shows per page. */
+export const COURSE_PAGE_SIZE = PAGE_SIZE.list;
+
+export type CoursePage = {
+  courses: Course[];
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
+};
+
+/**
+ * The roster's three views beside "All" (third UX review, item 35): a course
+ * with a session ahead of it, a course on the catalog with none, and a course
+ * hidden from divers. "Scheduled" asks the question `nextSessionStartByCourse`
+ * answers for the row's "Next {date}", in the same words, so a row in that
+ * view always carries a date.
+ */
+export const COURSE_LIST_VIEWS = ["scheduled", "notYet", "hidden"] as const;
+export type CourseListView = (typeof COURSE_LIST_VIEWS)[number];
+
+export function courseListViewParam(value: string | undefined): CourseListView | undefined {
+  return COURSE_LIST_VIEWS.find((view) => view === value);
+}
+
+function courseListViewWhere(
+  db: AppDb,
+  shopId: string,
+  view: CourseListView | undefined,
+  now: Date,
+) {
+  if (!view) return undefined;
+  if (view === "hidden") return eq(courses.isActive, false);
+  const upcoming = exists(
+    db
+      .select({ one: sql`1` })
+      .from(trips)
+      .where(
+        and(
+          liveTrip(),
+          eq(trips.shopId, shopId),
+          eq(trips.courseId, courses.id),
+          eq(trips.status, "scheduled"),
+          gte(trips.startsAt, new Date(now.getTime() - HOUR_MS)),
+        ),
+      ),
+  );
+  return view === "scheduled" ? upcoming : and(eq(courses.isActive, true), not(upcoming));
+}
+
+/**
+ * The courses among `courseIds` that have ever been on the board: a session
+ * ahead, or one that ran. The roster offers "Schedule" on these and on the
+ * shop's own courses, not on every catalog entry a template put there (third
+ * UX review, item 35): 55 rows each offering Schedule read as 55 products the
+ * shop sells.
+ */
+export async function courseIdsEverOnBoard(
+  db: AppDb,
+  shopId: string,
+  courseIds: readonly string[],
+): Promise<Set<string>> {
+  if (courseIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ courseId: trips.courseId })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        inArray(trips.courseId, [...courseIds]),
+        ne(trips.status, "cancelled"),
+      ),
+    );
+  return new Set(rows.flatMap((row) => (row.courseId ? [row.courseId] : [])));
+}
+
+/**
+ * The staff roster's paginated view of the full catalog — hidden entries
+ * included, one page at a time. Callers that need the complete set for a
+ * dropdown or picker use {@link listActiveCourses}, not this.
+ *
+ * **Agency-major, then progression order.** The roster reads as one ledger
+ * grouped by agency (ADR 20260827-the-shops-shelves, decision 1), and grouping
+ * composes with the Pager rather than trading against it: sorting group-major
+ * is what keeps a group from interleaving across a page boundary, so a heading
+ * re-rendered on page 2 is the continuation of one run rather than a second
+ * PADI section below an SSI one. It replaced a `?agency=` tab strip that
+ * narrowed the whole query — the reason there is no `agency` option here any
+ * more.
+ *
+ * Progression order only means anything *inside* one agency's ladder (see
+ * {@link progressionOrder}), which is the other half of why the sort is
+ * agency-major: an unsorted mix put an Open Water directly above another Open
+ * Water with nothing saying which was which.
+ *
+ * `scope` is built once and used by **both** the count and the row query: a
+ * count taken over a wider scope than the rows would promise pages that render
+ * nothing (AGENTS.md, one-pagination-model).
+ *
+ * Offset-paged, like the roster and the orders index. It was a forward-only
+ * keyset cursor, which meant a staffer three pages into a large catalog had
+ * "Show more" and "Back to top" and nothing in between — no way back one page,
+ * and no way to see how much catalog was left
+ * (ADR 20260803-one-pagination-model).
+ */
+export async function pagedCourses(
+  db: AppDb,
+  shopId: string,
+  options: {
+    page?: number;
+    limit?: number;
+    /** A substring of the course's title (third UX review, item 35). */
+    query?: string;
+    view?: CourseListView;
+    now?: Date;
+  } = {},
+): Promise<CoursePage> {
+  const query = options.query?.trim();
+  const scope = and(
+    eq(courses.shopId, shopId),
+    query ? ilike(courses.title, `%${query}%`) : undefined,
+    courseListViewWhere(db, shopId, options.view, options.now ?? nowDate()),
+  );
+
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? COURSE_PAGE_SIZE,
+    countRows: async () => {
+      const [counted] = await db.select({ total: count() }).from(courses).where(scope);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select()
+        .from(courses)
+        .where(scope)
+        .orderBy(...progressionOrder)
+        .limit(limit)
+        .offset(offset),
+  });
+
+  return {
+    courses: paged.rows,
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
+  };
+}
+
+/**
+ * **Every course on the roster still waiting on its agency's form wording**,
+ * in the roster's own order (UX review 2026-10-10, item 16). The roster says
+ * it once, above the list, with a door to the first, rather than in amber
+ * under nearly every row: a shop that has not pasted the PDFs yet had a list
+ * it could not read. Shop-wide, never the page's slice, so the count is the
+ * same on every page of the roster and the door can point past it.
+ */
+export async function coursesAwaitingFormText(
+  db: AppDb,
+  shopId: string,
+): Promise<{ id: string; slug: string; title: string }[]> {
+  const roster = await db
+    .select({ id: courses.id, slug: courses.slug, title: courses.title })
+    .from(courses)
+    .where(eq(courses.shopId, shopId))
+    .orderBy(...progressionOrder);
+  const awaiting = await courseFormsAwaitingTextByCourse(
+    db,
+    shopId,
+    roster.map((course) => course.id),
+  );
+  return roster.filter((course) => awaiting.has(course.id));
+}
+
+export async function editCourse(db: AppDb, shopId: string, courseId: string, input: CoursePatch) {
+  const [course] = await db
+    .update(courses)
+    .set({
+      priceCents: input.priceCents ?? null,
+      eLearningPriceCents: input.eLearningPriceCents ?? null,
+      privatePriceCents: input.privatePriceCents ?? null,
+      // A checkbox that arrives absent means unticked, never "leave it alone" —
+      // the editor always renders the control, so an omitted key is a form that
+      // did not have it and the column keeps its own default rather than
+      // silently flipping.
+      ...(input.nitroxCompatible === undefined ? {} : { nitroxCompatible: input.nitroxCompatible }),
+      ...(input.includedRentalKinds === undefined
+        ? {}
+        : { includedRentalKinds: toIncludedRentalKinds(input.includedRentalKinds) }),
+    })
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .returning();
+  return course ?? null;
+}
+
+export type CourseTemplateUpdate = {
+  course: Course;
+  baseline: CourseTemplateSnapshot | null;
+  current: CourseTemplateSnapshot;
+  latest: CourseTemplateSnapshot;
+  diff: CourseTemplateDiff[];
+  latestVersion: number;
+  currentVersion: number;
+  baselineUnavailable: boolean;
+  sourceTemplateSlug: string;
+};
+
+function courseTemplateUpdateFromCourse(course: Course): CourseTemplateUpdate | null {
+  if (!course.sourceTemplateSlug) return null;
+
+  const template = getCourseTemplate(course.sourceTemplateSlug);
+  if (!template) return null;
+  const currentVersion = course.sourceTemplateVersion ?? 1;
+  const baseline = parseCourseTemplateSnapshot(course.sourceTemplateSnapshot);
+  if (template.version <= currentVersion) return null;
+
+  const current = courseTemplateSnapshotFromCourse(course);
+  const latest = courseTemplateSnapshot(template);
+  return {
+    course,
+    baseline,
+    current,
+    latest,
+    diff: courseTemplateDiff(current, baseline, latest),
+    latestVersion: template.version,
+    currentVersion,
+    baselineUnavailable: baseline === null,
+    sourceTemplateSlug: template.slug,
+  };
+}
+
+/**
+ * Return a template revision only when a course has a valid source baseline and
+ * the code-owned template has moved forward. A missing or malformed baseline
+ * is intentionally not guessed at: the safe UI simply offers no merge.
+ */
+export async function getCourseTemplateUpdate(
+  db: AppDb,
+  shopId: string,
+  courseId: string,
+): Promise<CourseTemplateUpdate | null> {
+  const [course] = await db
+    .select()
+    .from(courses)
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .limit(1);
+  if (!course) return null;
+  return courseTemplateUpdateFromCourse(course);
+}
+
+/**
+ * Apply a reviewed template revision. The update is tenant-scoped and writes
+ * the new baseline in the same statement as the merged fields, so a later
+ * revision can distinguish a shop edit from an already-applied template word.
+ */
+export async function pullCourseTemplateUpdates(
+  db: AppDb,
+  shopId: string,
+  courseId: string,
+  mode: CourseTemplateUpdateMode,
+) {
+  // The merge reads the shop's current prose and then writes a derived row.
+  // Lock that row for the whole read/merge/write so an editor save cannot land
+  // between those steps and be overwritten by an older template view.
+  return db.transaction(async (tx) => {
+    const [currentCourse] = await tx
+      .select()
+      .from(courses)
+      .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+      .for("update");
+    if (!currentCourse) return { status: "unavailable" as const };
+    const update = courseTemplateUpdateFromCourse(currentCourse);
+    if (!update) return { status: "unavailable" as const };
+
+    const merged = mergedCourseTemplateSnapshot(
+      update.current,
+      update.baseline,
+      update.latest,
+      mode,
+    );
+    const [course] = await tx
+      .update(courses)
+      .set({
+        // Bumps the editor's generation like any other writer of this prose: a
+        // template pull that left the number alone would hand the next save
+        // from an editor opened before it the silent revert `rowVersion` exists
+        // to refuse (issue #820).
+        rowVersion: sql`${courses.rowVersion} + 1`,
+        ...courseTemplateDatabaseFields(merged),
+        sourceTemplateSlug: update.sourceTemplateSlug,
+        sourceTemplateVersion: update.latestVersion,
+        sourceTemplateSnapshot: update.latest,
+      })
+      .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+      .returning();
+    if (!course) return { status: "unavailable" as const };
+    // A sync also sets up any standard form new in this template version,
+    // empty until the shop pastes the agency's wording in (ADR
+    // 20261008-course-forms). It only adds, and never re-adds a form the shop
+    // took off: keeping the shop's edits keeps its list too, so a form the
+    // previous version already named is not offered again.
+    await attachStandardCourseForms(tx, {
+      shopId,
+      courseId: course.id,
+      titles: update.latest.standardForms ?? [],
+      offeredBefore: mode === "preserve-shop-edits" ? (update.baseline?.standardForms ?? []) : [],
+      maxAgeByTitle: standardFormAgeBounds(getCourseTemplate(update.sourceTemplateSlug)),
+    });
+    return { status: "updated" as const, course, mode, diff: update.diff };
+  });
+}
+
+export async function setCourseVisibility(
+  db: AppDb,
+  shopId: string,
+  courseId: string,
+  visible: boolean,
+) {
+  const [course] = await db
+    .update(courses)
+    .set({ isActive: visible })
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .returning();
+  return course ?? null;
+}
+
+export async function getCourseBySlug(db: AppDb, shopId: string, slug: string) {
+  const [course] = await db
+    .select()
+    .from(courses)
+    .where(and(eq(courses.slug, slug), eq(courses.shopId, shopId)))
+    .limit(1);
+  return course ?? null;
+}
+
+/** What a save can come back as: it landed, or somebody else got there first. */
+export type CourseContentSave =
+  | { ok: true; course: typeof courses.$inferSelect }
+  | { ok: false; reason: "conflict" }
+  | { ok: false; reason: "missing" };
+
+/**
+ * Saves the whole marketing page at once. Pricing, the cert gate, the agency's
+ * minimum age, and the taster flag are untouched — none of those are marketing
+ * prose, and the last one is a safety cap (see {@link CourseContentPatch}).
+ *
+ * **Refuses a save that would silently revert somebody else's**, which is what
+ * "the whole page at once" costs when two people have it open. Two tabs, both
+ * loaded, both saving: the second did not overwrite one field, it reverted
+ * every section — nine of them, plus pricing, photos, the day-by-day plan and
+ * the FAQ — to whatever the row held when that tab opened, with no warning and
+ * no record that the first writer's work had existed (issue #820). An owner and
+ * a manager tidying the catalogue in one afternoon is enough to hit it.
+ *
+ * `expectedVersion` is the row's edit generation as the writer's page last saw
+ * it, carried back as a hidden field and compared here in the `where`, so the
+ * check and the write are one statement and nothing can slip between them.
+ *
+ * **Refused, never merged.** Resolution is a merge UI and this does not need
+ * one: the caller keeps every value the writer typed and offers a reload.
+ *
+ * **A null `expectedVersion` means "no information, allow."** That is about the
+ * *page*, not the row: the migration runs while the previous release is still
+ * serving (AGENTS.md's expand/contract rule), and a page rendered by that
+ * release sends no hidden field at all. Refusing those would break saves for as
+ * long as the two releases overlap.
+ *
+ * See `courses.rowVersion` in `src/db/schema/` for why the generation is a
+ * counter rather than the `updated_at` timestamp this started as — the short
+ * version is that Postgres keeps microseconds a JS `Date` cannot hold, and
+ * PGlite does not, so every test in this repository was blind to it.
+ */
+export async function editCourseContent(
+  db: AppDb,
+  shopId: string,
+  courseId: string,
+  input: CourseContentPatch,
+  options: { expectedVersion?: number | null } = {},
+): Promise<CourseContentSave> {
+  const expected = options.expectedVersion;
+  const [course] = await db
+    .update(courses)
+    .set({
+      // Every writer that rewrites this row's prose bumps it, not only this
+      // one — a template pull that leaves the number alone hands the editor's
+      // next save the same silent revert this exists to refuse.
+      rowVersion: sql`${courses.rowVersion} + 1`,
+      summary: input.summary?.trim() || null,
+      overview: input.overview?.trim() || null,
+      heroImageUrl: input.heroImageUrl?.trim() || null,
+      heroImageAlt: input.heroImageAlt?.trim() || null,
+      galleryPhotos: input.galleryPhotos,
+      durationText: input.durationText?.trim() || null,
+      groupSizeText: input.groupSizeText?.trim() || null,
+      prerequisiteNote: input.prerequisiteNote?.trim() || null,
+      includes: input.includes,
+      excludes: input.excludes,
+      scheduleDays: input.scheduleDays,
+      faqs: input.faqs,
+      learningMaterials: input.learningMaterials,
+    })
+    .where(
+      and(
+        eq(courses.id, courseId),
+        eq(courses.shopId, shopId),
+        // A null *input* means allow — that is the expand/contract half, and it
+        // is about the page, not the row: a page rendered by the previous
+        // release sends no hidden field at all.
+        expected === null || expected === undefined ? undefined : eq(courses.rowVersion, expected),
+      ),
+    )
+    .returning();
+  if (course) return { ok: true, course };
+  // The write matched nothing. Either the row is gone (or another shop's), or
+  // the generation moved — and those want different words, so ask which.
+  const [current] = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
+    .limit(1);
+  return current ? { ok: false, reason: "conflict" } : { ok: false, reason: "missing" };
+}

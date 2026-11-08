@@ -8,10 +8,10 @@ import {
 import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { buttonClass } from "@/components/ui/button";
 import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
-import { getPartyWaiverQueue, type PartyWaiverState } from "@/db/party-waiver-queue";
+import { getPartyWaiverQueue, type PartyWaiverState } from "@/features/party-waiver-queue";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { issuePartyWaiverQrAction } from "./actions";

@@ -1,4 +1,6 @@
-import type { HandledHelpRequest } from "@/db/help-requests";
+import type { HandledHelpRequest } from "@/features/help-requests";
+import { countsAsJob } from "@/features/today-job";
+import { type TodayUrgency, urgencyFor } from "@/features/today-urgency";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import {
   blockerItemText,
@@ -27,9 +29,7 @@ import type { CrewIncompleteReason } from "@/lib/manifests";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { ROLL_CALL_GAP_KINDS, type RollCallGapReason } from "@/lib/roll-call-gaps";
 import type { SeasonStart } from "@/lib/season";
-import { countsAsJob } from "@/lib/today-job";
 import { KIND_AUDIENCE, KIND_SEVERITY, type TodayActionKind } from "@/lib/today-kinds";
-import { type TodayUrgency, urgencyFor } from "@/lib/today-urgency";
 import type { TripStageReading } from "@/lib/trip-stages";
 import { hasReturned, hasSailed } from "@/lib/trips";
 import type { WelcomeCue } from "@/lib/welcome-cue";

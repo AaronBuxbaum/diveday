@@ -4,7 +4,7 @@ import type { CalendarDate } from "@/lib/calendar-date";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat } from "./boats";
+import { createBoat } from "../features/boats/store";
 import { boats, shops, trips } from "./schema";
 import { createTripSeriesOrRefusal, isSeriesBoatOutOfService, rollSeriesForward } from "./trips";
 

@@ -707,7 +707,7 @@ export const orders = pgTable(
      * package invoice, and how many times it has (issue #2304). Null and zero
      * on every order it has not refused; a refused one waits a few nights
      * before the next try, so a few invoices Stripe will never void cannot
-     * fill the sweep's batch (`src/db/stale-package-invoices.ts`).
+     * fill the sweep's batch (`src/features/stale-package-invoices/store.ts`).
      */
     autoVoidFailedAt: timestamp("auto_void_failed_at", { withTimezone: true }),
     autoVoidFailures: integer("auto_void_failures").notNull().default(0),
@@ -727,7 +727,7 @@ export const orders = pgTable(
     /** Backs listOrdersForPerson — the person-first diver workspace's payment history. */
     index("orders_shop_person_idx").on(table.shopId, table.personId),
     // Backs the command-palette's orders arm, which searches an order's own
-    // description alongside the payer's name (src/db/search.ts) — a leading
+    // description alongside the payer's name (src/features/search/store.ts) — a leading
     // wildcard, so only a trigram GIN index can serve it (DATA-L6). The payer
     // half of that `or` already rides `people_full_name_trgm_idx`; this is the
     // half that was scanning every order the shop has ever written.
@@ -753,7 +753,7 @@ export const orders = pgTable(
      * carries none, or, when it settled an invoice already sent (fourth UX
      * review, item 19), that invoice's three ids and never a PaymentIntent:
      * Stripe took no card for it. The ids stay so diver erasure still files
-     * the Stripe customer's deletion request (`src/db/anonymize.ts`).
+     * the Stripe customer's deletion request (`src/features/anonymize/store.ts`).
      */
     check(
       "orders_stripe_ids_match_collection",

@@ -1,16 +1,16 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { DbExecutor } from "@/db/client";
+import { divePackages, type IntegrationCredentials, shops } from "@/db/schema";
+import { escapeHtml } from "@/lib/html";
+import { minorToMajor, toShopCurrency } from "@/lib/money";
+import { type RentalPricing, toRentableKinds } from "@/lib/rentals";
 import {
   getIntegrationSyncRecord,
   getShopIntegration,
   markIntegrationHealthy,
   readIntegrationCredentials,
   upsertIntegrationSyncRecord,
-} from "@/db/integrations";
-import { divePackages, type IntegrationCredentials, shops } from "@/db/schema";
-import { escapeHtml } from "@/lib/html";
-import { minorToMajor, toShopCurrency } from "@/lib/money";
-import { type RentalPricing, toRentableKinds } from "@/lib/rentals";
+} from "./store";
 
 export const SHOPIFY_API_VERSION = "2026-07";
 

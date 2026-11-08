@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { AppDb } from "@/db/client";
-import { type SailedRollCall, sailedRebooking } from "@/db/sailed-rebooking";
+import { type SailedRollCall, sailedRebooking } from "@/features/sailed-rebooking";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatWeekdayTime } from "@/lib/format";
 import { offerAnotherDayAction } from "./actions";

@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { openYourDay } from "@/db/your-days";
+import { openYourDay } from "@/features/your-days";
 import { isUuid } from "@/lib/uuid";
 import { contextFor } from "./action-helpers";
 

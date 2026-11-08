@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { mergeDiverRecords } from "@/db/diver-merge";
-import { createDiver } from "@/db/divers";
 import { people, rentalFitProfiles, userAccounts } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
+import { createDiver } from "../../../../../features/divers/store";
 
 /**
  * **"Seen diving dry" through the diver record's own actions** (security
@@ -25,13 +25,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", async () =>
+vi.mock("../../../../../features/session/rules", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { recordDrysuitExperienceAction } = await import("./card-actions");
 
 const ctx = fileScopedShopContext();

@@ -3,6 +3,7 @@ import { CertificationCardRow } from "@/components/person/rows";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
+import type { DiverStatusRow } from "@/features/diver-status";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
@@ -12,7 +13,6 @@ import {
   isShopIssuedCard,
   needsImportConfirm,
 } from "@/lib/certification-cards";
-import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration, needsCardSighting } from "@/lib/readiness";
 import {

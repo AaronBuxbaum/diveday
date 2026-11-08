@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { getRecapPageData } from "../features/recap/store";
 import { createBookingParty } from "./bookings";
-import { getRecapPageData } from "./recap";
 import { createTrip, upcomingTripsWithCounts } from "./trips";
 
 /**

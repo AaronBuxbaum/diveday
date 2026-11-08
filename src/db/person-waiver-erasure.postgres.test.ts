@@ -4,10 +4,10 @@ import { afterEach, expect, it, vi } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import type { NotificationProvider } from "@/lib/notifications";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { pruneExpiredRecords } from "../features/retention/store";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { drainNotificationRetries } from "./notifications";
-import { pruneExpiredRecords } from "./retention";
 import {
   notificationSendQueue,
   people,

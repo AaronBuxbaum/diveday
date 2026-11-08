@@ -5,21 +5,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * hand the token to the one resolver, and always answer with a bare status; a
  * mail client acting on `List-Unsubscribe-Post` never reads a body. Which kind
  * a token is, and that exactly that kind is stopped, is covered against a real
- * database in `src/db/unsubscribe.test.ts`.
+ * database in `src/features/unsubscribe/store.test.ts`.
  */
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
-vi.mock("@/db/unsubscribe", () => ({ unsubscribeByToken: vi.fn() }));
+vi.mock("../../../../../features/unsubscribe/store", () => ({ unsubscribeByToken: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
   return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })) };
 });
 
-const { unsubscribeByToken } = await import("@/db/unsubscribe");
+const { unsubscribeByToken } = await import("../../../../../features/unsubscribe/store");
 const { checkRateLimit, rateLimitKey, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { POST } = await import("./route");
 

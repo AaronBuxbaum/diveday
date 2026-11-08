@@ -6,12 +6,12 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import type { ShopActivityLine } from "@/db/shop-activity";
-import { canPersonViewShopActivity, getShopActivityPage } from "@/db/shop-activity-page";
+import { requireShopSurface } from "@/features/session";
+import { canPersonViewShopActivity, getShopActivityPage } from "@/features/shop-activity-page";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "@/i18n/activity-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatDateWithYear, formatTimeZoneName } from "@/lib/format";
-import { requireShopSurface } from "@/lib/session";
 import {
   isShopActivityKind,
   SHOP_ACTIVITY_KINDS,

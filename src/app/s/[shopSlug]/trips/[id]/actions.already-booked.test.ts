@@ -57,8 +57,9 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => ({
   checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })),
 }));
 // The real senders, handed a recording provider instead of SES.
-vi.mock("@/db/seat-already-held", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/seat-already-held")>();
+vi.mock("../../../../../features/seat-already-held/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../../features/seat-already-held/store")>();
   return {
     ...actual,
     tellSeatAlreadyHeld: (db: never, input: Parameters<typeof actual.tellSeatAlreadyHeld>[1]) =>

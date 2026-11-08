@@ -1,17 +1,17 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { getBookingReadiness } from "./readiness";
-import { bookings, waiverRecords } from "./schema";
-import { listStaff } from "./trips";
-import { completeWaiver } from "./waivers-completion";
-import { issueWaiverRequest } from "./waivers-requests";
 import {
   clearAnswers,
   medicalReferralAnswers,
   now,
   waiverContextFor,
-} from "./waivers-test-fixtures";
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
+import { getBookingReadiness } from "./readiness";
+import { bookings, waiverRecords } from "./schema";
+import { listStaff } from "./trips";
+import { completeWaiver } from "./waivers-completion";
+import { issueWaiverRequest } from "./waivers-requests";
 
 const fileCtx = fileScopedShopContext();
 const waiverContext = waiverContextFor(fileCtx);

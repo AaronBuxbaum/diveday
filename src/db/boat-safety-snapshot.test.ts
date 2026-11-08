@@ -2,12 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { createBoat } from "../features/boats/store";
 import {
   captureDepartureBoatSafety,
   departureBoatSafetySnapshot,
   departureChecklistAnswer,
 } from "./boat-safety";
-import { createBoat } from "./boats";
 import type { AppDb } from "./client";
 import { createGearItem } from "./gear";
 import { recordCrewRollCall } from "./manifests";

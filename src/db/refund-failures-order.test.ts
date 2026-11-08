@@ -4,13 +4,13 @@ import { nowDate } from "@/lib/clock";
 import type { InvoicingProvider } from "@/lib/payments/invoicing";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+import { recordStripeRefundFailure } from "../features/refund-failures/store";
 import {
   createOrder,
   markOrderPaidByInvoiceId,
   recordOrderPaymentIntent,
   refundOrder,
 } from "./orders";
-import { recordStripeRefundFailure } from "./refund-failures";
 import { recordStripeChargeRefund } from "./refunds";
 import { orders } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";

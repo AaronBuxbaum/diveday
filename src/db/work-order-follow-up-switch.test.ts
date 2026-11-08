@@ -4,15 +4,18 @@ import { nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
-import { createDiver } from "./divers";
-import { shops } from "./schema";
-import { sendDueServiceReminders, sendWorkOrderReadyNotice } from "./work-order-follow-up";
+import { createDiver } from "../features/divers/store";
+import {
+  sendDueServiceReminders,
+  sendWorkOrderReadyNotice,
+} from "../features/work-order-follow-up/store";
 import {
   addCustomerGearItem,
   createWorkOrder,
   recordWorkOrder,
   setWorkOrderStatus,
-} from "./work-orders";
+} from "../features/work-orders/store";
+import { shops } from "./schema";
 
 /**
  * **Gear servicing switched off** (the Features page): no ready message and no

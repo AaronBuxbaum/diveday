@@ -50,7 +50,7 @@ test.use(VISUAL_STEP_BOUNDS);
  * Every shop the fleet holds is a demo, and a demo is dark, so each test takes
  * a minted shop and the `claudeAssists` fact (`POST /api/test/shop`) clears its
  * demo flag and arms the canned provider for it: every answer comes from
- * `src/lib/assists/e2e-fixtures.ts` and nothing leaves the machine. The
+ * `src/features/assists/e2e-fixtures.ts` and nothing leaves the machine. The
  * private-shop teardown disarms it and drops it. Light only: the assists draw with the page's own controls,
  * and dark already shoots those.
  *

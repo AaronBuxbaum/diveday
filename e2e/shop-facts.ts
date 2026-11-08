@@ -3,7 +3,7 @@ import type { APIRequestContext } from "@playwright/test";
 /**
  * One entry of a fact list: a fact or a named set by name, or a fact with its
  * arguments as `{ name, ...args }`. The names are the registry's
- * (`src/db/facts/index.ts`); `pnpm check:e2e-fixtures` refuses one it does not
+ * (`src/test/shop-facts/index.ts`); `pnpm check:e2e-fixtures` refuses one it does not
  * hold.
  */
 export type FactRequest = string | ({ name: string } & Record<string, unknown>);

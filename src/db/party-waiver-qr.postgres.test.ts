@@ -3,13 +3,13 @@ import { afterEach, expect, it, onTestFinished, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { raceShop } from "@/test/postgres-shop";
+import { issuePartyWaiver } from "../features/party-waiver-queue/store";
+import { clearAnswers, draftsOf } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
-import { issuePartyWaiver } from "./party-waiver-queue";
 import { bookings, people, tripRequirements, trips, waiverRecords } from "./schema";
 import { completeWaiver, recordWaiverDraft } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
-import { clearAnswers, draftsOf } from "./waivers-test-fixtures";
 
 afterEach(() => {
   vi.unstubAllEnvs();

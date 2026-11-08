@@ -1,9 +1,9 @@
 "use server";
 
 import QRCode from "qrcode";
-import { issuePartyWaiver } from "@/db/party-waiver-queue";
+import { issuePartyWaiver } from "@/features/party-waiver-queue";
+import { requireShopSurface } from "@/features/session";
 import { publicAppUrl } from "@/lib/notifications/app-url";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
 /**

@@ -2,17 +2,17 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { SECTION_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
-import { departureVessels } from "@/db/boats";
 import { getDb } from "@/db/client";
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
-import { getTripOverview } from "@/db/trip-overview";
-import { readTripPaperIdentity } from "@/db/trip-paper-identity";
-import { getTripPrepPage } from "@/db/trip-prep";
+import { departureVessels } from "@/features/boats";
+import type { requireShopSurface } from "@/features/session";
+import { stablePacket } from "@/features/stable-packet";
+import { getTripOverview } from "@/features/trip-overview";
+import { readTripPaperIdentity } from "@/features/trip-paper-identity";
+import { getTripPrepPage } from "@/features/trip-prep";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import type { requireShopSurface } from "@/lib/session";
-import { stablePacket } from "@/lib/stable-packet";
 import { ShopSheet } from "../../../../print/_components/ShopSheet";
 import {
   DeparturePaperIdentity,

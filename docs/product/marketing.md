@@ -33,7 +33,7 @@ and listed the rest in a closed index on `/product`.
   the boat manifest and roll call, dive sites, rental gear, the schedule and crew, courses, and
   payments. The list, its order, and each page's demo role, landing screen and three related pages
   are one registry, `src/lib/feature-pages.ts`. An unknown slug is refused at the edge
-  (`src/lib/public-route-shape.ts`), and the sitemap lists all twelve.
+  (`src/features/public-route-shape/rules.ts`), and the sitemap lists all twelve.
 - **One template**, `src/app/(marketing)/product/_components/FeaturePageBody.tsx`: the hero says what the shop
   gets in one sentence of lede beside the screen that proves it, with three builder's notes, and
   the price under its doors; then how it works in three steps; then everything the feature
@@ -214,7 +214,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   reassurance card, and the signed-in shop settings page. **Trial upgrades get their own address,**
   `onboarding@dive.day` — used only for "how do I move a trial shop to paid," on the pricing page's
   trial note (the Notes list beside the invoice), the sign-up form's trial note, and the shop Settings trial-status card (3-week trial,
-  soft expiry — see `src/lib/trial.ts`). Both addresses are hosted mailboxes reaching the same
+  soft expiry — see `src/features/trial/rules.ts`). Both addresses are hosted mailboxes reaching the same
   people as `aaron@dive.day` always did; see
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md#divedays-own-addresses).
 - **A third service commitment was authorized 2026-10-07 (H-20261007-continuity-promise): the continuity promise.** Aaron Buxbaum, in the project thread: "We can publish that exact promise." The sentence is "If DiveDay ever shuts down, you get 90 days' notice, your export, and your backups keep running until the last day." It answers the objection the demo cannot (a new vendor closing, market audit 2026-10-07 item 46), and it rests on things that ship: the one-ZIP export (`fullShopExport`) and the weekly scheduled backup to storage the shop owns (`src/features/backup-export/`). It is one shared key, `continuityPromise` in `src/lib/marketing.ts` (`marketing.export.continuity`), rendered on `/pricing` as the answer to the FAQ row "What happens to my shop if DiveDay shuts down?" (`faq.shutdown`, beside the records row) and on `/about` as the second paragraph of the "Download every record" card. Its words are the owner's: no rewording, no added timeline or refund, and no other page carries it without a new decision. `src/lib/marketing.test.ts` pins the English word for word and the three commitments in every locale.
@@ -516,7 +516,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   present in the rules band, and exactly once in `<main>`.
   **`/pricing` states the trial once beside the price, plus its FAQ answer** (2026-10-22, the
   market sheet's item 8). `marketing.pricing.trialNote` — free, three weeks, no card, and the soft
-  expiry `src/lib/trial.ts` implements — stands under the hero's pair only. The invoice's trial row,
+  expiry `src/features/trial/rules.ts` implements — stands under the hero's pair only. The invoice's trial row,
   the margin note about day 22 and the closing band's copy were deleted: the page said the trial five
   times. Card fees are the invoice's "Card processing" row and nowhere else on the page.
   **Both notes at a door carry the same weight** (`font-medium`), which on `/pricing` means the
@@ -669,12 +669,12 @@ substrate:
   unfurl renders for bystanders who never clicked the link.
 - Site-level `robots` and `sitemap` cover the public surface; tokened pages (`/waivers/*`,
   `/ready/*`, `/recap/*`, `/offline-manifest`) stay `noindex` individually. `robots.txt` is
-  rendered by `src/app/robots.txt/route.ts` from `src/lib/robots.ts` (not Next's `robots.ts`
+  rendered by `src/app/robots.txt/route.ts` from `src/features/robots/rules.ts` (not Next's `robots.ts`
   convention, which has no slot for the comment that points an agent at `/llms.txt`).
-- **The agent-ready storefront** (issue #1427, N-50): `/llms.txt` (`src/lib/llms-txt.ts`) tells a
+- **The agent-ready storefront** (issue #1427, N-50): `/llms.txt` (`src/features/llms-txt/rules.ts`) tells a
   model what DiveDay is, the public URL shapes, where availability lives and that bookings happen
   on the booking page, and lists the shops the sitemap lists; each listed shop also serves
-  `/s/<slug>/availability.json` (`src/lib/availability.ts` for the shape, `src/db/availability.ts`
+  `/s/<slug>/availability.json` (`src/features/availability/rules.ts` for the shape, `src/features/availability/store.ts`
   for the rows) — the next 14 days of public departures with a seat open, as codes and a
   `booking_url`, nothing about a person. A shop that opted out of search gets a 404 there, not an
   empty list, and its schedule JSON-LD stops naming the document (`subjectOf` → `DataFeed`).

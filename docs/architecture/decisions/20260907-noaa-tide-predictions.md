@@ -26,7 +26,7 @@ station id and a "best on" preference (`any` / `slack` / `flood` / `ebb`); a sho
 ocean-side station from NOAA's own list, since a reef is rarely a station itself (the demo's Key
 Largo sites read Carysfort Reef, 8723583).
 
-**The seam is `marine-forecast.ts`'s seam**, in `src/lib/tide-predictions.ts`: injectable fetcher,
+**The seam is `marine-forecast.ts`'s seam**, in `src/features/tide-predictions/rules.ts`: injectable fetcher,
 four-second bound, `DIVEDAY_DISABLE_EXTERNAL_HTTP` honoured, every failure answering `null`. The
 math is pure and separate (`src/lib/tides.ts`): slack is the half hour either side of a predicted
 turn, flood runs from a low to the next high, ebb the reverse, and the arrival instant is the
@@ -118,7 +118,7 @@ sentence about the wrong water on every departure, with nothing anywhere saying 
 This record's own Context rules that out: the sentence "must either be right or absent".
 
 So `mdapi/prod/webapi/stations/<id>.json` is read for the station's **own name and position**, in
-`src/lib/tide-stations.ts`, behind the same seam shape as `tide-predictions.ts`: injectable fetcher,
+`src/features/tide-stations/rules.ts`, behind the same seam shape as `tide-predictions.ts`: injectable fetcher,
 four-second bound, `DIVEDAY_DISABLE_EXTERNAL_HTTP` honoured with a deterministic fixture for the
 e2e fleet and an offline dev server, every failure answering `null`. Its own cache, keyed on the id
 alone and living a day rather than half of one, because a station's name and position do not depend

@@ -11,11 +11,11 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { TBody, Td, THead, Th, Tr } from "@/components/ui/table";
+import { RENTAL_TERMS_MAX_LENGTH } from "@/features/rental-terms";
 import { catalogItemLabel } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { currencySymbol, minorToMajor, toShopCurrency } from "@/lib/money";
 import { NITROX_FILL_METHODS } from "@/lib/nitrox-fill";
-import { RENTAL_TERMS_MAX_LENGTH } from "@/lib/rental-terms";
 import { SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { CUSTOMER_REGULATOR_SERVICE_MONTHS } from "@/lib/work-orders";
 import { saveRentalsAction } from "../../rental-actions";

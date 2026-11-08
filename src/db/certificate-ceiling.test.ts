@@ -1,16 +1,16 @@
 // @vitest-environment node
 import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seatsOpen } from "@/lib/availability";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
-import { publicAvailabilityTrips } from "./availability";
+import { seatsOpen } from "../features/availability/rules";
+import { publicAvailabilityTrips } from "../features/availability/store";
+import { nextDiveForBooking } from "../features/next-dive/store";
+import { markBookingNoShow, undoBookingNoShow } from "../features/no-show/store";
 import { cancelBooking, createBooking, createBookingParty, restoreBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { listUpcomingDeparturesForSite } from "./dive-sites";
 import { askForDeparture } from "./interests";
-import { nextDiveForBooking } from "./next-dive";
-import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import { boats, bookings, courses, diveSites, people, trips } from "./schema";
 import {
   applyDetailsToFutureSeries,

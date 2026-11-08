@@ -25,7 +25,7 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
 
 const { sendNotification } = await import("./notifications");
 const { offerSeats } = await import("./interest-offers");
-const { createBoat } = await import("./boats");
+const { createBoat } = await import("../features/boats/store");
 const { askAnytime, resolveInterestUnsubscribeToken } = await import("./interests");
 const { deals, interests, people } = await import("./schema");
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import("./stripe-accounts");

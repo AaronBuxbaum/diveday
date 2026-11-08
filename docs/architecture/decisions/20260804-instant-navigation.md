@@ -248,7 +248,7 @@ safety count is not a trade worth making; the whole chrome already streams, whic
 **Why the tenant gate could move, and the hole that had to be closed first.** This is the objection
 the original decision recorded, and the answer is that the refusal was never a single copy — with
 one exception, which a `security-reviewer` pass on this change found. Every staff *page* gates
-itself: 43 of the 47 through `requireShopSurface` (`src/lib/session.ts`), which `notFound()`s when
+itself: 43 of the 47 through `requireShopSurface` (`src/features/session/rules.ts`), which `notFound()`s when
 the session's shop disagrees with the slug, and `check-in`, `check-in/walk-in` and `courses` assert
 the same two conditions inline. The **shop home did not**: it resolved its own shop by
 `session.user.shopId` and never compared the slug at all, because this shell compared it on the

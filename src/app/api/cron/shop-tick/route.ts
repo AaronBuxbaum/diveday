@@ -1,4 +1,7 @@
 import { getDb } from "@/db/client";
+import { requireCronSecret } from "@/features/cron-auth";
+import { cronRoute } from "@/features/cron-route";
+import { flushLogs } from "@/features/log-shipping";
 import {
   isShopTickScan,
   runShopTick,
@@ -6,11 +9,8 @@ import {
   shopTickIsHealthy,
 } from "@/features/shop-tick";
 import { nowDate } from "@/lib/clock";
-import { requireCronSecret } from "@/lib/cron-auth";
-import { cronRoute } from "@/lib/cron-route";
 import { SHOP_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
-import { flushLogs } from "@/lib/observability";
 
 /** A whole boat's reminders or recaps can come due at once; keep the provider-bound pass bounded. */
 export const maxDuration = 300;

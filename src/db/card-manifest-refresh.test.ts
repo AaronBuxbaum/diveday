@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { restoreCard } from "./card-restore";
+import { restoreCard } from "../features/card-restore/store";
 import { cards, people } from "./schema";
 
 const ctx = fileScopedShopContext();

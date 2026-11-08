@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { advanceClock } from "@/test/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { mergeDiverRecords } from "./diver-merge";
 import { recordRollCall } from "./manifests";

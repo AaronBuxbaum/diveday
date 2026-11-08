@@ -1,4 +1,4 @@
-import { publicOnlyFetch } from "@/lib/net/public-fetch";
+import { publicOnlyFetch } from "@/features/net";
 import {
   encodeS3KeyPath,
   encodeS3KeySegment,

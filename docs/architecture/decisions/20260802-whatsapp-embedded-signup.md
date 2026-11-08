@@ -40,7 +40,7 @@ the webhook becomes ordinary work.
   to remove, and a shop that connects the hard way would be one DiveDay could not have provisioned a
   template for.
 
-- **Four server-to-server steps after the popup closes** (`src/lib/notifications/whatsapp-signup.ts`),
+- **Four server-to-server steps after the popup closes** (`src/features/whatsapp-signup/rules.ts`),
   in a fixed order because each depends on the last: exchange the one-time code for the shop's
   business token, register the phone number for Cloud API use, subscribe DiveDay's app to the WABA,
   and create the courtesy template on the shop's WABA. Not transactional and cannot be — these are

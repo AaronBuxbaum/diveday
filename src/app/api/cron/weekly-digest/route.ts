@@ -1,7 +1,7 @@
 import { getDb } from "@/db/client";
+import { cronRoute } from "@/features/cron-route";
 import { sendDueWeeklyDigests } from "@/features/weekly-digest";
 import { nowDate } from "@/lib/clock";
-import { cronRoute } from "@/lib/cron-route";
 import { WEEKLY_DIGEST_CRON_CRONTAB, weeklyDigestMayBeDueSomewhere } from "@/lib/weekly-digest";
 
 /** A Monday morning can fall due for many shops in one pass. */

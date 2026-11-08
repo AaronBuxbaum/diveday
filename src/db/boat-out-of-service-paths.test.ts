@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat, deleteBoat } from "./boats";
+import { createBoat, deleteBoat } from "../features/boats/store";
 import { boats, shops, tripSeriesSkips, trips } from "./schema";
 import {
   createTrip,

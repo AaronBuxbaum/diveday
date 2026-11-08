@@ -5,15 +5,18 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
+import { getShopById } from "@/db/shops";
 import {
   editCourse,
   editCourseContent,
   getCourseBySlug,
   pullCourseTemplateUpdates,
   setCourseVisibility,
-} from "@/db/courses";
-import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { getShopById } from "@/db/shops";
+} from "@/features/courses";
+import { checkbox, formValue, readForm, text, trimmedText } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface, requireStaffSession } from "@/features/session";
 import {
   COURSE_CONTENT_LIMITS,
   courseDepthPlaceholderIssues,
@@ -24,12 +27,9 @@ import {
   sanitizeScheduleDays,
   splitCourseImageUrls,
 } from "@/lib/courses";
-import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicCoursePath } from "@/lib/public-routes";
 import { toIncludedRentalKinds } from "@/lib/rentals";
-import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeCourseImage } from "@/lib/storage";
 import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";

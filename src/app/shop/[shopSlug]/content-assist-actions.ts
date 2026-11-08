@@ -1,19 +1,21 @@
 "use server";
 
-import { runAssist } from "@/db/assists";
 import { canPersonConfigureTrips } from "@/db/authz";
-import { courseWords, tripWords } from "@/db/content-assists";
 import type { DiveSpecialty } from "@/db/schema";
 import { recordTranslation, translatableOriginal } from "@/db/shop-text-translations";
-import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
-import { staffTranslator } from "@/i18n/staff-messages";
-import { BENCH_NOTE_FEATURE, benchNote, benchNoteCall } from "@/lib/assists/bench-note";
+import { runAssist } from "@/features/assists";
+import { BENCH_NOTE_FEATURE, benchNote, benchNoteCall } from "@/features/bench-note";
+import { courseWords, tripWords } from "@/features/content-assists";
 import {
   DESCRIPTION_DRAFT_FEATURE,
   type DescriptionFacts,
   descriptionDraft,
   descriptionDraftCall,
-} from "@/lib/assists/description-draft";
+} from "@/features/description-draft";
+import { requireShopSurface } from "@/features/session";
+import { SITE_BRIEF_FEATURE, siteBrief, siteBriefCall } from "@/features/site-brief";
+import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   isTranslatable,
   SHOP_TRANSLATE_FEATURE,
@@ -24,10 +26,8 @@ import {
   translationBoxId,
   translationSourceId,
 } from "@/lib/assists/shop-translate";
-import { SITE_BRIEF_FEATURE, siteBrief, siteBriefCall } from "@/lib/assists/site-brief";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { parseRequirement, type Requirement } from "@/lib/requirement";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
 /**

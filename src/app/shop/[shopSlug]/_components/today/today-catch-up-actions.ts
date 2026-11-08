@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { acknowledgeTodayCatchUp, initializeTodayCatchUp } from "@/db/today-catch-up";
+import { requireShopSurface } from "@/features/session";
+import { acknowledgeTodayCatchUp, initializeTodayCatchUp } from "@/features/today-catch-up";
+import { verifyTodayCatchUp } from "@/features/today-catch-up-token";
 import { nowDate } from "@/lib/clock";
-import { requireShopSurface } from "@/lib/session";
-import { verifyTodayCatchUp } from "@/lib/today-catch-up-token";
 import { shopDayBounds } from "@/lib/zoned";
 
 export async function markTodayCatchUp(

@@ -1,10 +1,10 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { importAssistFor } from "@/db/file-assists";
-import { canPersonImportShopData } from "@/db/import";
+import { importAssistFor } from "@/features/file-assists";
+import { canPersonImportShopData } from "@/features/import";
+import { requireStaffSession } from "@/features/session";
 import { type ImportAssist, MAX_IMPORT_BYTES } from "@/lib/import";
-import { requireStaffSession } from "@/lib/session";
 
 /**
  * **Map the columns the importer could not** (ADR 20261018-claude-assists; the

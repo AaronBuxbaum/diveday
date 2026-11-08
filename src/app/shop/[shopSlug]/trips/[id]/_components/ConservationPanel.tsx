@@ -1,6 +1,6 @@
 import { DisclosureRow as Disclosure } from "@/components/ui/disclosure";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { getTripConservationPanel } from "@/db/trip-conservation";
+import type { getTripConservationPanel } from "@/features/conservation";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";

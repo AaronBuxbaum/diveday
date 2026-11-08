@@ -1,7 +1,7 @@
 import type { AppDb } from "@/db/client";
-import { carryInterests } from "@/db/interest-roll";
 import { countShopTrips } from "@/db/trips";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { carryInterests } from "@/features/interest-roll";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { TripDetailsResult } from "@/lib/trip-details";
 import { uuidParam } from "@/lib/uuid";

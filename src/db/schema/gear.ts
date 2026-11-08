@@ -595,7 +595,7 @@ export const gearReservations = pgTable(
     bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "cascade" }),
     /**
      * The invoice a **counter rental** was billed on, when it was billed at
-     * all (`src/db/gear-counter-rentals.ts`). A link, never money: the price,
+     * all (`src/features/gear-counter-rentals/store.ts`). A link, never money: the price,
      * the tax and whether it was paid stay on `orders`, and a rental with no
      * order is an ordinary one (paid in cash, free, or a shop with no Stripe).
      * Null on every booking-held row — a trip rental is billed on the booking's

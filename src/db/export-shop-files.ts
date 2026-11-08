@@ -2253,7 +2253,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.routeImageUrl,
         // The drawn route travels with the site, and since issue #1771 a
         // shop that exports and re-imports really does keep the line it
-        // drew (`src/db/dive-site-import.ts`). The four columns go together
+        // drew (`src/features/dive-sites/dive-site-import.store.ts`). The four columns go together
         // or not at all: the waypoints are positions on a frame at a zoom,
         // so restoring them without the coordinates and zoom two columns
         // over draws a line over the wrong water, which is a briefing

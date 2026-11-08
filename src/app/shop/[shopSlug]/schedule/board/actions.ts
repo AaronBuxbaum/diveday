@@ -3,15 +3,10 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonConfigureTrips } from "@/db/authz";
-import { getBoatById, listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
-import { listActiveCourses } from "@/db/courses";
 import { getDiveSite, listDiveSites } from "@/db/dive-sites";
-import { discardFormDraft } from "@/db/form-drafts";
-import { getMovePreflight } from "@/db/move-preflight";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
-import { getTripLens, listTripLenses } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   createTripOrRefusal,
@@ -23,36 +18,45 @@ import {
   moveTrip,
   setTripCrew,
 } from "@/db/trips";
-import { weekdayPatternFor } from "@/db/weekday-pattern";
+import { getBoatById, listBoats } from "@/features/boats";
+import { listActiveCourses } from "@/features/courses";
+import { tideWindowsForDeparture } from "@/features/departure-tides";
+import { discardFormDraft } from "@/features/form-drafts";
+import { parseForm } from "@/features/form-parse";
+import type { MovePreflight } from "@/features/move-preflight";
+import { getMovePreflight } from "@/features/move-preflight";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { signScheduleMoveResult } from "@/features/schedule-move-result";
+import { requireShopSurface, requireStaffSession } from "@/features/session";
+import { getTripLens, listTripLenses } from "@/features/trip-lenses";
+import {
+  type PatternDeparture,
+  patternDives,
+  patternSiteFields,
+  weekdayPatternFor,
+} from "@/features/weekday-pattern";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { staffTideWindowText } from "@/i18n/tide-labels";
 import { trackEvent } from "@/lib/analytics";
 import { calendarDateWeekday, isValidCalendarDate } from "@/lib/calendar-date";
-import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
 import { formatWallTime } from "@/lib/forgiving-fields";
-import { parseForm } from "@/lib/form-parse";
 import { formatTime } from "@/lib/format";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { minorToMajor } from "@/lib/money";
-import type { MovePreflight } from "@/lib/move-preflight";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   isValidWeekdaySet,
   MAX_INTERVAL_WEEKS,
   type WeekdaySet,
   weekdaySetFrom,
 } from "@/lib/recurrence";
-import { signScheduleMoveResult } from "@/lib/schedule-move-result";
-import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { laterHoursFromForm, MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
 import { MAX_COURSE_DIVES } from "@/lib/trip-dive-limits";
 import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { uuidParam } from "@/lib/uuid";
-import { type PatternDeparture, patternDives, patternSiteFields } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { builderCourseOptions } from "./_components/builder-course-options";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";

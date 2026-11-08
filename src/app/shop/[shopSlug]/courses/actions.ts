@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { CARD_KINDS, setCardProcessed } from "@/db/agency-processing";
 import { getDb } from "@/db/client";
-import { ladderInviteRefusal } from "@/db/course-ladder";
 import { deliverSeatOffer } from "@/db/interest-offers";
-import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
+import { CARD_KINDS, setCardProcessed } from "@/features/agency-processing";
+import { ladderInviteRefusal } from "@/features/course-ladder";
+import { createInvitationUnderCooldown } from "@/features/invite-suggestions";
+import { requireShopSurface } from "@/features/session";
 import { nowDate } from "@/lib/clock";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 const inviteSchema = z.object({ personId: z.uuid(), tripId: z.uuid() });

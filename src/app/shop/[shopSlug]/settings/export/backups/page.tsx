@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import type { NoticeTone } from "@/components/ui/tone";
-import { canPersonExportShopData, PAGE_SIZE } from "@/db/export";
 import {
-  getShopBackupDestination,
-  listBackupDeliveries,
+  BACKUP_SETTINGS_GATE,
+  getBackupSettingsPage,
   type SaveBackupDestinationRefusal,
 } from "@/features/backup-export";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { requireShopSurface } from "@/lib/session";
 import type { NoticeCodeOf } from "@/lib/staff-notices";
 import { DataTabs } from "../../_components/DataTabs";
 import { settingsPaneClass } from "../../_components/settings-pane";
@@ -21,8 +20,6 @@ export const instant = true;
 
 /** Static metadata resolves before locale negotiation, so it stays English (ADR 20260729-diver-copy-localization). */
 export const metadata: Metadata = { title: "Backups — DiveDay" };
-
-const DELIVERY_PAGE_SIZE = PAGE_SIZE.section;
 
 // Every key here is also a `backup.notice.<code>` key in the staff bundle —
 // the banner below looks the words up by the code itself — so the two are
@@ -72,26 +69,13 @@ export default async function BackupsSettingsPage({
 }) {
   const { shopSlug } = await params;
 
-  // ORDER IS LOAD-BEARING: the gate is awaited to completion, alone, before a
-  // single one of this page's own reads is *started*. An unauthorized caller's
-  // request must not touch the delivery ledger or the shop's storage
-  // credentials before the refusal lands. Bounced to Today with an explanatory
-  // notice rather than teleporting silently (task 82).
-  const { session, db, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonExportShopData,
-    refusal: { notice: "export-not-authorized" },
-  });
-
   const { notice, reason, page } = await searchParams;
-
-  const [destination, deliveries, latest] = await Promise.all([
-    getShopBackupDestination(db, session.user.shopId),
-    listBackupDeliveries(db, session.user.shopId, {
-      page: Number(page) || 1,
-      pageSize: DELIVERY_PAGE_SIZE,
-    }),
-    listBackupDeliveries(db, session.user.shopId, { page: 1, pageSize: 1 }),
-  ]);
+  const { session, db, shop } = await requireShopSurface(shopSlug, BACKUP_SETTINGS_GATE);
+  const { destination, deliveries, latestDelivery } = await getBackupSettingsPage(
+    db,
+    session.user.shopId,
+    Number(page) || 1,
+  );
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -133,7 +117,7 @@ export default async function BackupsSettingsPage({
         timeZone={shop.timezone}
         destination={destination}
         deliveries={deliveries}
-        latestDelivery={latest.rows[0] ?? null}
+        latestDelivery={latestDelivery}
         expandDestination={Boolean(
           banner && !["test-delivered", "test-failed", "disconnected"].includes(banner),
         )}

@@ -1,22 +1,22 @@
 import type { AppDb } from "@/db/client";
+import type { BillingProvider, PercentBillingConfig } from "@/features/billing";
 import {
   closePricingMonth,
   listBillableShops,
   markPricingReportAttempted,
   markPricingStatementReported,
-} from "@/db/pricing-volume";
+} from "@/features/pricing-volume";
 import {
   holdsLiveSubscription,
   type ShopSubscriptionRow,
   shopPricing,
   soldPricing,
-} from "@/db/shop-subscriptions";
+} from "@/features/shop-subscriptions";
+import { trialEndsAt } from "@/features/trial";
 import type { PricingConfig } from "@/lib/billing/pricing-plans";
 import { freeTimeEndsAt } from "@/lib/billing/standing";
-import type { BillingProvider, PercentBillingConfig } from "@/lib/billing/stripe-billing";
 import { addMonths, type MonthRef, monthKey } from "@/lib/calendar";
 import { log } from "@/lib/log";
-import { trialEndsAt } from "@/lib/trial";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 
 export type PricingClosePassSummary = {

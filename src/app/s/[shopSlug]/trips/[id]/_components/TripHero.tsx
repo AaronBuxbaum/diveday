@@ -1,8 +1,8 @@
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
-import { getBoatById } from "@/db/boats";
 import type { AppDb } from "@/db/client";
-import type { PublicRun } from "@/db/series-next";
+import { getBoatById } from "@/features/boats";
+import type { PublicRun } from "@/features/series-next";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import type { MinimumSeatsState } from "@/lib/minimum-seats";

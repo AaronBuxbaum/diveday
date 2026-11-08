@@ -3,7 +3,13 @@ import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { DAY_MS, MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  clearAnswers,
+  issueCounterLink,
+  medicalReferralAnswers,
+  openOnDevice,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { createBookingParty } from "./bookings";
 import { issueCapability, mintCapability, verifyCapability } from "./capabilities";
 import { mergeDiverRecords } from "./diver-merge";
@@ -17,12 +23,6 @@ import {
   recordWaiverDraft,
   waiverLinkDoor,
 } from "./waivers-completion";
-import {
-  clearAnswers,
-  issueCounterLink,
-  medicalReferralAnswers,
-  openOnDevice,
-} from "./waivers-test-fixtures";
 
 /**
  * **The counter tablet's waiver link** (`waiver_link`, issue #2743, ADR

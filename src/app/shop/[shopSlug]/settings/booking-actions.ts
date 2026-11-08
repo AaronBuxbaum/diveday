@@ -2,8 +2,8 @@
 
 import { z } from "zod";
 import { setShopPackingList } from "@/db/shops";
+import { checkbox, text } from "@/features/form-parse";
 import { defineAction, land } from "@/features/server-action";
-import { checkbox, text } from "@/lib/form-parse";
 import { SETTINGS_GATE } from "./action-gates";
 
 const packingForm = z.object({ packingList: text(), packingLogbook: checkbox() });

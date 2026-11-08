@@ -12,7 +12,7 @@ import { redirectedTo, staffSession } from "@/test/staff-session";
  */
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/navigation", () => ({
+vi.mock("../../../../../features/navigation/rules", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
@@ -21,23 +21,27 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
-vi.mock("@/db/import", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/import")>();
+vi.mock("../../../../../features/import/store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../../features/import/store")>();
   return {
     ...actual,
     canPersonImportShopData: vi.fn(async () => true),
     commitContactImport: vi.fn(),
   };
 });
-vi.mock("@/db/gear-import", () => ({ commitGearImport: vi.fn() }));
-vi.mock("@/db/dive-site-import", () => ({ commitDiveSiteImport: vi.fn() }));
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/gear-import/store", () => ({ commitGearImport: vi.fn() }));
+vi.mock("../../../../../features/dive-sites/dive-site-import.store", () => ({
+  commitDiveSiteImport: vi.fn(),
+}));
+vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/db/shops", () => ({ getShopById: vi.fn() }));
 
-const { requireStaffSession } = await import("@/lib/session");
-const { commitContactImport } = await import("@/db/import");
-const { commitGearImport } = await import("@/db/gear-import");
-const { commitDiveSiteImport } = await import("@/db/dive-site-import");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { commitContactImport } = await import("../../../../../features/import/store");
+const { commitGearImport } = await import("../../../../../features/gear-import/store");
+const { commitDiveSiteImport } = await import(
+  "../../../../../features/dive-sites/dive-site-import.store"
+);
 const { getShopById } = await import("@/db/shops");
 const { importContactsAction } = await import("./actions");
 const { importGearServiceHistoryAction } = await import("./gear-actions");

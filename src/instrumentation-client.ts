@@ -1,7 +1,7 @@
 import { config as configureZod } from "zod/v4/core";
 import { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION } from "@/app/observability";
-import { deferSentry } from "@/lib/observability/sentry-browser";
-import { SENTRY_DSN } from "@/lib/sentry-dsn";
+import { deferSentry } from "@/features/sentry-browser";
+import { SENTRY_DSN } from "@/features/sentry-dsn";
 
 // Zod compiles a faster object parser with `new Function`, and finds out whether
 // it may by calling `new Function("")` inside a try/catch the first time any

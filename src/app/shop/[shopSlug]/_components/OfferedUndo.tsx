@@ -1,7 +1,7 @@
 import { undoAction } from "@/app/actions/undo";
 import { UndoToast } from "@/components/UndoToast";
+import type { UndoOffer } from "@/features/undo";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { UndoOffer } from "@/lib/undo";
 
 /**
  * **The Undo a removal declared** (issue #2764), drawn the one way every such

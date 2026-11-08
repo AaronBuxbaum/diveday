@@ -2,13 +2,13 @@
 
 import { getDb } from "@/db/client";
 import { createDiveSiteForForm, SITE_NAME_TAKEN } from "@/db/dive-sites";
-import { readRequiredSpecialties } from "@/db/requirement-form";
 import { getShopById } from "@/db/shops";
-import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/features/dive-sites";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { readRequiredSpecialties } from "@/features/requirement-form";
+import { requireStaffSession } from "@/features/session";
+import { uploadDiveSitePhotos } from "@/features/storage";
 import { shopPath } from "@/lib/staff-notices";
-import { uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import type { SiteFormState } from "./_components/SiteFormShell";
 import { siteFormExtras } from "./site-forms";
 

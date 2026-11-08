@@ -2,6 +2,8 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { SiteLibraryGroup } from "@/db/dive-sites";
+import { planningNoteIsFresh } from "@/features/dive-site-memory";
+import { siteFitCutsAgainstGroup, siteLibraryRequirement } from "@/features/dive-sites";
 import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -9,8 +11,6 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { SiteLibraryGroupLabel } from "@/lib/dive-site-difficulty";
-import { planningNoteIsFresh } from "@/lib/dive-site-memory";
-import { siteFitCutsAgainstGroup, siteLibraryRequirement } from "@/lib/dive-sites";
 import { type SiteFitTone, siteFit } from "@/lib/diver-planning";
 
 /**

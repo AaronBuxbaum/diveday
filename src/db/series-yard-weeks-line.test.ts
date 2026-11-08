@@ -4,7 +4,7 @@ import { weekdaySetFrom } from "@/lib/recurrence";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { countingShopContext } from "@/test/query-count";
-import { createBoat } from "./boats";
+import { createBoat } from "../features/boats/store";
 import { boats, courses, shops, tripSeries, trips } from "./schema";
 import {
   createTripSeriesOrRefusal,

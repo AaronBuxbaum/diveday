@@ -185,7 +185,7 @@ not an estimate.
   supplied shop but does not prove the trip does. It deletes assignments by `tripId` alone.
   Several child tables and read helpers rely on a parent join rather than carrying or requiring
   `shop_id`, contrary to the repository tenant-row invariant.
-- **Owned paths:** `src/db/trips.ts`, `src/db/reporting.ts`, trip-assignment/dive schema and tests,
+- **Owned paths:** `src/db/trips.ts`, `src/features/reporting/store.ts`, trip-assignment/dive schema and tests,
   relevant actions, migration, architecture documentation if the tenant-row rule is refined.
 - **Acceptance criteria:**
   - every trip-child read/write proves the parent trip belongs to the session shop in the same

@@ -6,7 +6,6 @@ import { createBookingParty } from "@/db/bookings";
 import { mintCapability } from "@/db/capabilities";
 import { bookingCapabilities, bookings, people, waiverRecords } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { draftsOf } from "@/db/waivers-test-fixtures";
 import { diverTranslator } from "@/i18n/messages";
 import {
   emptyMedicalAnswers,
@@ -14,6 +13,7 @@ import {
   questionnaireForJurisdiction,
 } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
+import { draftsOf } from "../../../../test/substrate-fixtures/db/waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
 

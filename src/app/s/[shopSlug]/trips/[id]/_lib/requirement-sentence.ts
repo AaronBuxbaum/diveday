@@ -1,6 +1,6 @@
+import type { KnownDiverFact } from "@/features/booking-handoff";
 import type { DiverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
-import type { KnownDiverFact } from "@/lib/booking-handoff";
 import { certificationRank } from "@/lib/readiness";
 
 /**

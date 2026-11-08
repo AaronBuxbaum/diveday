@@ -44,7 +44,7 @@ H-20260907-far-diveday-migrate-onto's first sequencing row.
    one-minute periods on top: roughly four minutes from outage to an email at `alerts@dive.day`,
    the mailbox every other alert already reaches.
 2. **`/api/health`** — unchanged in what it answers, and now sharing its database check with the
-   page (`src/db/health.ts`) so the two cannot drift. `"status":"ok"` in its body is from today a
+   page (`src/features/health/store.ts`) so the two cannot drift. `"status":"ok"` in its body is from today a
    contract, not a detail: the health check matches that literal as well as the status code.
 3. **`/status`** — a public page, no session, outside `/shop/**`, which runs the checks in the
    request that renders it and says what it found and when. From 2026-09-11 the marketing footer

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { OrderBookingContext } from "@/db/order-booking";
+import type { OrderBookingContext } from "@/features/order-booking";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";

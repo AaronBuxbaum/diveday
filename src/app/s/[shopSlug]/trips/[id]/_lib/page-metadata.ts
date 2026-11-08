@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { shopBySlugCached } from "@/db/shops-cached";
+import { shopBySlugCached } from "@/features/shops-cached";
 import { requestLocale } from "@/i18n/request";
 import { formatShortDate } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";

@@ -2,7 +2,6 @@ import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { countUnansweredMessages } from "@/db/inbound-messages";
-import { messageSeats } from "@/db/running-late";
 import { bookings, inboundMessages, shops } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -13,6 +12,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { messageSeats } from "../../../../features/running-late/store";
 
 const ctx = fileScopedShopContext();
 
@@ -48,9 +48,9 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../features/session/rules");
 const { deleteInboxMessageAction, markInboxSenderLateAction, setInboxMessageDoneAction } =
   await import("./actions");
 

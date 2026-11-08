@@ -1,4 +1,5 @@
 import type { BoatClash, CrewClash } from "@/db/trips";
+import { urgencyFor } from "@/features/today-urgency";
 import {
   boatClashDetailText,
   crewClashDetailText,
@@ -11,7 +12,6 @@ import {
 } from "@/i18n/today-labels";
 import { formatDateTimeTz } from "@/lib/format";
 import { ROLL_CALL_GAP_KINDS } from "@/lib/roll-call-gaps";
-import { urgencyFor } from "@/lib/today-urgency";
 import {
   blockedDiverActions,
   crewClashPhase,

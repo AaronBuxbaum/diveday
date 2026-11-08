@@ -4,7 +4,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { createDiver } from "@/db/divers";
+import { createOrder, type NewOrderLineItem, recordCounterOrder } from "@/db/orders";
+import { certificationAgency, certificationLevel } from "@/db/schema";
+import { getShopById } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { createDiver } from "@/features/divers";
+import { allValues, formValue, readForm, text } from "@/features/form-parse";
 import {
   checkOutCounterRental,
   correctCounterTankFill,
@@ -15,12 +20,11 @@ import {
   recordCounterRentalCardSighting,
   releaseCounterRental,
   returnCounterRental,
-} from "@/db/gear-counter-rentals";
-import { createOrder, type NewOrderLineItem, recordCounterOrder } from "@/db/orders";
-import { certificationAgency, certificationLevel } from "@/db/schema";
-import { getShopById } from "@/db/shops";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+} from "@/features/gear-counter-rentals";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { customerAddressFromForm } from "@/features/payments";
+import { requireStaffSession } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -32,17 +36,13 @@ import {
   isOneCoreSet,
   parseTankFill,
 } from "@/lib/counter-rentals";
-import { allValues, formValue, readForm, text } from "@/lib/form-parse";
 import { GEAR_RETURN_OUTCOMES } from "@/lib/gear";
 import { majorToMinor } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { customerAddressFromForm } from "@/lib/payments/customer-address-form";
 import {
   blankableDiverEmailSchema,
   blankableDiverNameSchema,
   diverPhoneSchema,
 } from "@/lib/person-fields";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   CONFIRM_FIELD_PREFIX,

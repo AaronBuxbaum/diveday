@@ -290,7 +290,7 @@ async function parkStripeReversal(
     /**
      * An unattributed refund's own share of that figure — what this event took
      * that no seat carries — which staff match to seats from the Orders index
-     * (`src/db/unattributed-refunds.ts`, issue #2293).
+     * (`src/features/unattributed-refunds/store.ts`, issue #2293).
      */
     unattributedCents?: number;
   },
@@ -794,7 +794,7 @@ export async function refundBookingsForShopCancelledTrip(
  * - `checkout_unattributed` — recorded against a party checkout's running
  *   total, but no single seat on it can be named as the one refunded, so no
  *   seat's payment row was guessed at. Held as an unattributed amount on the
- *   Orders index until staff pick the seat (`src/db/unattributed-refunds.ts`,
+ *   Orders index until staff pick the seat (`src/features/unattributed-refunds/store.ts`,
  *   issue #2293); never split across the seats on a rule.
  * - `already_recorded` — Stripe's figure is already in DiveDay's books: the
  *   refund was DiveDay's own, or this is an older event arriving late.

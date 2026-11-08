@@ -4,7 +4,7 @@ import { proseLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { TripLastMinutePromo, TripLastMinutePromoRecipientItem } from "@/db/trip-promos";
+import type { TripLastMinutePromo, TripLastMinutePromoRecipientItem } from "@/features/trip-promos";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatMoneyScanned } from "@/lib/format";
 import { promoDiscountOf } from "@/lib/promo-codes";

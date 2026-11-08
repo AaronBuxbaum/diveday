@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PlacedTrip } from "@/lib/staffing-week";
+import type { PlacedTrip } from "../../../../../features/staffing-week/rules";
 import { mobileDepartureGroups } from "./staffing-mobile-groups";
 
 describe("phone departure grouping", () => {

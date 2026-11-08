@@ -1,7 +1,5 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createBoat } from "@/db/boats";
-import { getIncidentExport } from "@/db/incident-export";
 import {
   preDepartureCheckEvents,
   preDepartureChecklistItems,
@@ -14,6 +12,8 @@ import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+import { createBoat } from "../../../../features/boats/store";
+import { getIncidentExport } from "../../../../features/incident-export/store";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`). Mocks as in `route.test.ts`.

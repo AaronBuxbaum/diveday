@@ -25,11 +25,11 @@ notice short of staff spotting a duplicate on the roster.
   merging two records.
 - **One shared conflict-safe helper**, not four independent retrofits: `findOrCreatePerson`
   (`src/db/people.ts`) is now the single path every walk-in-identity write goes through
-  (`src/db/bookings.ts`, `src/db/waitlist.ts`, `src/db/import.ts`). It still reads first (the
+  (`src/db/bookings.ts`, `src/db/waitlist.ts`, `src/features/import/store.ts`). It still reads first (the
   common case never touches the constraint), but on an insert that loses the race, it catches the
   unique-violation and re-reads the winner instead of throwing — two concurrent calls for the same
   email always converge on one person, never a throw the caller has to handle.
-- **`createDiver`/`editDiver`/`restoreDiver` (`src/db/divers.ts`) keep their existing
+- **`createDiver`/`editDiver`/`restoreDiver` (`src/features/divers/store.ts`) keep their existing
   create-or-refuse contract** (return `null`/`false` on a collision) rather than switching to
   reuse: staff explicitly creating a new diver record, editing one's email, or undeleting one
   should see "that email is already on file," not have their action silently redirected onto a

@@ -1,9 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
-import { createDiver } from "./divers";
-import { addInterest, interestRow, ownerId } from "./interest-dates-fixtures";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { createDiver } from "../features/divers/store";
+import {
+  addInterest,
+  interestRow,
+  ownerId,
+} from "../test/substrate-fixtures/db/interest-dates-fixtures";
 import { askForDate, attachDateInterestsToDeparture } from "./interests";
 import { interests, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";

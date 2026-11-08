@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CrewAssignmentRequest } from "@/lib/crew-requests";
-import type { WeekGap, WeekPerson } from "@/lib/staffing-week";
 import { rendersFlush } from "@/test/button-flush";
+import type { WeekGap, WeekPerson } from "../../../../../features/staffing-week/rules";
 import { weekTailRowClass } from "./StaffingWeek";
 import { KEIKO, renderWeek, THURSDAY, WORDS } from "./staffing-week-test-fixtures";
 

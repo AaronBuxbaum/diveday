@@ -2,9 +2,9 @@
 
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { waiverDraftFromPdf } from "@/db/file-assists";
-import { WAIVER_PDF_MAX_BYTES } from "@/lib/assists/waiver-draft";
-import { requireStaffSession } from "@/lib/session";
+import { waiverDraftFromPdf } from "@/features/file-assists";
+import { requireStaffSession } from "@/features/session";
+import { WAIVER_PDF_MAX_BYTES } from "@/features/waiver-draft";
 
 /**
  * **The release, drafted from the shop's current PDF** (ADR

@@ -4,6 +4,8 @@ import { after } from "next/server";
 import { Fragment } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { requireShopSurface } from "@/features/session";
+import { settleWithLimit } from "@/features/settle-with-limit";
 import { getDayPrintPage, tomorrowNoon } from "@/features/today";
 import { dayLoadOutLine } from "@/i18n/load-out-labels";
 import { requestLocale } from "@/i18n/request";
@@ -12,8 +14,6 @@ import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
-import { settleWithLimit } from "@/lib/settle-with-limit";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { formatPaperDateTime } from "../trips/[id]/_components/DeparturePaperIdentity";
@@ -39,7 +39,7 @@ export const instant = true;
  * departure: enough to keep the pool busy, small enough that one captain's
  * printout cannot hold the whole instance's database access while a twenty-boat
  * day assembles (issue #1598). The reasoning in full, and the ordering and
- * failure guarantees this relies on, are in `src/lib/settle-with-limit.ts`.
+ * failure guarantees this relies on, are in `src/features/settle-with-limit/rules.ts`.
  */
 const DEPARTURES_IN_FLIGHT = 3;
 

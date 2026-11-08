@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
  * **Every staff page asks whether the slug in the URL is its reader's own shop**
  * (issue #1446).
  *
- * `requireShopSurface` (`src/lib/session.ts`) asks two questions, not one: the
+ * `requireShopSurface` (`src/features/session/rules.ts`) asks two questions, not one: the
  * session's shop row still exists, *and* the slug in the URL names it. The
  * second is the one this guard is about, and until the staff shell became an
  * App Shell it was possible to skip it — the shell asked it above `{children}`,

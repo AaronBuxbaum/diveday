@@ -5,7 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { ImageResponse } from "next/og";
 import { BubbleMark } from "@/app/_brand/mark";
-import { allowSvgRasterization } from "@/lib/og-rasterizer";
+import { allowSvgRasterization } from "@/features/og-rasterizer";
 
 /**
  * **Renders the committed brand icons. Run by hand when the mark changes,
@@ -54,7 +54,7 @@ const icons = [
 async function main() {
   // Same libvips/SVG hazard as the OG cards, despite this being pure shapes:
   // satori still emits SVG and @vercel/og still rasterizes it through sharp.
-  // See src/lib/og-rasterizer.ts and ADR 20260804-og-svg-rasterizer.
+  // See src/features/og-rasterizer/rules.ts and ADR 20260804-og-svg-rasterizer.
   await allowSvgRasterization();
 
   for (const { size, file } of icons) {

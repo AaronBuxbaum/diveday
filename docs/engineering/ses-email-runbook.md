@@ -524,7 +524,7 @@ original send succeeded. A re-send clears the old outcome. Delivery outcomes abo
 tracked are answered 200 and change no row.
 
 **Every bounce and complaint is kept, tracked or not.** One `email_bounces` row per recipient the
-event names (`parseSesBounceReports`, `recordEmailBounces` in `src/db/email-bounces.ts`): the
+event names (`parseSesBounceReports`, `recordEmailBounces` in `src/features/email-bounces/store.ts`): the
 address, SES's `bounceType` and `bounceSubType`, the SMTP codes from the diagnostic (never its free
 text), the complaint's feedback type, and the `diveday_kind`, `diveday_purpose`, `diveday_shop` and
 `diveday_sender` tags, so each one says which email it was, which shop it was for and which staff
@@ -567,7 +567,7 @@ record. Do not remove a suppression entry merely to retry an address; first conf
 is valid and that the recipient expects the mail.
 
 Verification fails closed: SNS message signature verification happens by hand
-(`src/lib/notifications/sns.ts`) against `SigningCertURL`, which is validated against
+(`src/features/sns-webhook/rules.ts`) against `SigningCertURL`, which is validated against
 `^https://sns\.[a-zA-Z0-9-]+\.amazonaws\.com(\.cn)?/` before ever being fetched. A missing or invalid
 signature, or a `TopicArn` mismatch, is rejected before the database is touched. A 503 means
 `SES_SNS_TOPIC_ARN` isn't set.
@@ -602,11 +602,11 @@ answers 503 and the subscription sits `PendingConfirmation`, same recovery as th
 webhook above.
 
 **What the webhook does, in the order it trusts things.** Verifies the SNS envelope's signature,
-topic and freshness (`src/lib/notifications/sns.ts`); refuses a notification naming any bucket
+topic and freshness (`src/features/sns-webhook/rules.ts`); refuses a notification naming any bucket
 but the configured one; resolves the `reply+<token>` recipient to a shop
 (`shops.inbound_email_token`) and drops mail for a token nobody holds; only then reads the object
 (capped at 2 MB), takes the `text/plain` part with the quoted history cut
-(`src/lib/inbound-email.ts`), and files it against the diver whose `people.email` matches the
+(`src/features/inbound-email/rules.ts`), and files it against the diver whose `people.email` matches the
 sender inside that shop — or as an unknown sender when none does.
 
 **Which address counts as the sender is SES's call, not the message's.** The reply-to address

@@ -1,6 +1,6 @@
+import type { StaffWeekDay } from "@/features/staffing-week";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { formatDayParts, formatShortDate } from "@/lib/format";
-import type { StaffWeekDay } from "@/lib/staffing-week";
 
 /**
  * The week's seven column heads, for the screen's grid and the printed rota

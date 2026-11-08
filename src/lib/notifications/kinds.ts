@@ -1811,7 +1811,7 @@ const stripePaymentsRestrictedSchema = z.object({
 /**
  * **A diver asked to move a seat on a departure leaving within a day** (issue
  * #2667, decided by Aaron 2026-10-17; `alertStaffToMoveAsk`,
- * src/db/move-ask-alerts.ts). One email to each owner and manager login, only
+ * src/features/move-ask-alerts/store.ts). One email to each owner and manager login, only
  * when the departure is within 24 hours; farther out the Inbox is enough.
  * Staff operational mail: no unsubscribe, no postal footer, the same footing
  * as `stripe_payments_restricted`.
@@ -1842,7 +1842,7 @@ const moveAskSoonSchema = z.object({
 
 /**
  * **A roll call still open after the boat should be home** (batch 6, item 6;
- * `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts). Staff safety mail
+ * `sendStaleRollCallAlerts`, src/features/roll-call-alerts/store.ts). Staff safety mail
  * to the shop's owners, once per departure.
  *
  * **Counts and a link, never names.** Who is unaccounted for stays behind the

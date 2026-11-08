@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ageOnDate, birthdayCallout } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -14,10 +14,18 @@ import {
 } from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { markArrived } from "@/test/arrivals";
+import { checkInBooking, undoCheckInBooking } from "../features/check-in/store";
+import { markBookingNoShow } from "../features/no-show/store";
+import { listRollCallGaps } from "../features/roll-call-gaps/store";
+import {
+  clearAnswers,
+  ctx,
+  manifestContext,
+} from "../test/substrate-fixtures/db/manifests-test-fixtures";
 import { standingArrivalStatus } from "./arrival-provenance";
-import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { listAvailableGearUnits, reserveGearUnit } from "./gear";
 import { subscribeManifestEvents } from "./manifest-events";
+import { activityCodesFor, statusOf } from "./manifest-trail.test-support";
 import {
   departureRollCallForBooking,
   departureRollCallTakenTripIds,
@@ -29,12 +37,8 @@ import {
   recordCrewRollCall,
   recordRollCall,
 } from "./manifests";
-import { clearAnswers, ctx, manifestContext } from "./manifests-test-fixtures";
-import { markBookingNoShow } from "./no-show";
-import { listRollCallGaps } from "./roll-call-gaps";
 import { crewSubject } from "./roll-call-subject";
 import {
-  activityEvents,
   bookings,
   people,
   personRoles,
@@ -49,28 +53,6 @@ import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from ".
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));
-
-/** One booking's status, for the seat a no-show releases and a boarding takes back. */
-async function statusOf(db: Awaited<ReturnType<typeof manifestContext>>["db"], bookingId: string) {
-  const [row] = await db
-    .select({ status: bookings.status })
-    .from(bookings)
-    .where(eq(bookings.id, bookingId));
-  return row?.status;
-}
-
-/** Every code on this booking's trail. */
-async function activityCodesFor(
-  db: Awaited<ReturnType<typeof manifestContext>>["db"],
-  bookingId: string,
-) {
-  const rows = await db
-    .select({ code: activityEvents.code, occurredAt: activityEvents.occurredAt })
-    .from(activityEvents)
-    .where(eq(activityEvents.bookingId, bookingId))
-    .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.id));
-  return rows.map((row) => row.code);
-}
 
 /**
  * Every test here shares the file's one seeded database, each in a rolled-back
@@ -571,7 +553,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   it("answers one seat's own departure result, for the diver's own page", async () => {
     // `departureRollCallForBooking` is what keeps the thread's after-state
     // from asserting that somebody dived on the strength of a clock
-    // (`isAfterTheDive`, src/lib/seat-ladder.ts). Null is the ordinary answer
+    // (`isAfterTheDive`, src/features/seat-ladder/rules.ts). Null is the ordinary answer
     // — plenty of shops record nothing — and it is the answer that makes that
     // page wait for the four-hour recap floor instead of opening at the
     // one-hour late-arrival buffer.

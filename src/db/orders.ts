@@ -1833,7 +1833,7 @@ export async function countOpenTripOrders(
 
 /**
  * Open orders on the given seats, in one read keyed by their departure: the
- * boat's work (`src/db/boat-work.ts`) asks it for every departure on Today and
+ * boat's work (`src/features/boat-work/store.ts`) asks it for every departure on Today and
  * for the one the trip page opens, so the two can never count a boat's open
  * orders differently. Keyed by seat rather than by trip so it counts the same
  * seats as the boat's other work, which leaves out a cancelled seat's unpaid

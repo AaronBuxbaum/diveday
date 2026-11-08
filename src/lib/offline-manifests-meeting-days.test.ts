@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { crewSnapshot, snapshot } from "../test/substrate-fixtures/lib/offline-manifests-fixtures";
 import { latestOfflineCrewRollCall, latestOfflineRollCall } from "./offline-manifests";
-import { crewSnapshot, snapshot } from "./offline-manifests-fixtures";
 
 /**
  * **A course's later meeting day starts empty on the device too** (issue #3904,

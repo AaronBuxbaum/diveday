@@ -7,13 +7,14 @@ import { hashPendingHandle } from "@/lib/pending-sign-in";
 import { totpCode } from "@/lib/totp";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { removeStaffMember, setStaffAccountStatus } from "../features/staff-accounts/store";
 import {
   beginTotpEnrollment,
   disableTotp,
   enableTotp,
   revokeAllAccountSessions,
 } from "./account-security";
-import { anonymizeDiver } from "./anonymize";
 import type { AppTransaction } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
@@ -30,7 +31,6 @@ import {
   hasPendingSignIn,
   startCredentialSignIn,
 } from "./sign-in-challenges";
-import { removeStaffMember, setStaffAccountStatus } from "./staff-accounts";
 import { setAccountPassword } from "./user-accounts";
 
 const ctx = fileScopedShopContext();

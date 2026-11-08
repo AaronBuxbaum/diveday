@@ -6,11 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { getIncidentReportPage } from "@/db/incident-reports";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate, formatTimeZoneName } from "@/lib/format";
 import { incidentFilingGaps } from "@/lib/incident-reports";
-import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import {

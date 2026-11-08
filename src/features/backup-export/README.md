@@ -27,7 +27,7 @@ Operational posture: [backup-and-restore runbook](../../../docs/engineering/back
   in `bundle.ts` and shared by both runners, so the two copies of a shop's data are the same
   artifact and the runbook's restore procedure is correct for whichever one is at hand.
 - The S3-compatible upload seam — AWS SigV4 request signing, PUT only, no SDK, sent over
-  `publicOnlyFetch` (`src/lib/net/public-fetch.ts`).
+  `publicOnlyFetch` (`src/features/net/public-fetch.ts`).
   Path-style addressing for portability (R2, B2, MinIO); virtual-hosted for AWS S3 itself.
 - **Both destinations a bundle may go to**, and nothing else: the shop's own bucket
   (`run-backup.ts`) and DiveDay's `DatabaseBackupBucket` (`platform-backup.ts`, the runbook's §2

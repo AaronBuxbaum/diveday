@@ -20,7 +20,7 @@ const ROOT = path.resolve(import.meta.dirname, "../..");
 
 const BOOKING_PATH = [
   "src/db/bookings.ts",
-  "src/db/seat-diver.ts",
+  "src/features/seat-diver/store.ts",
   "src/db/seat-locks.ts",
   "src/db/trips-queries.ts",
   "src/db/readiness.ts",

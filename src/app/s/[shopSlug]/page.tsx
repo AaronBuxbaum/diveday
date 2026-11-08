@@ -7,9 +7,10 @@ import { ShopReviews } from "@/components/ShopReviews";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { PAGE_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { type AppDb, getDb } from "@/db/client";
-import { listPublishedShopReviews } from "@/db/reviews";
-import { shopBySlugCached } from "@/db/shops-cached";
 import { listRunningPublicSeries, type pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { connectionForRoute } from "@/features/render-connection";
+import { listPublishedShopReviews } from "@/features/reviews";
+import { shopBySlugCached } from "@/features/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
@@ -20,7 +21,6 @@ import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import { connectionForRoute } from "@/lib/observability/render-connection";
 import {
   publicAvailabilityPath,
   publicCoursesPath,

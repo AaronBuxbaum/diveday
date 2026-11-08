@@ -3,13 +3,13 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
+import { getRecapPageData } from "../features/recap/store";
+import { listYourDays } from "../features/your-days/store";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { getRecapPageData } from "./recap";
 import { bookings } from "./schema";
 import { createTrip } from "./trips";
 import { diveDayCountForSeat } from "./welcome-cues";
-import { listYourDays } from "./your-days";
 
 /**
  * **One number for every reader of a diver's numbered days** (glossary

@@ -1,6 +1,6 @@
 import { LedgerRow } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
-import { liveReleaseIsSample } from "@/db/first-run";
+import { liveReleaseIsSample } from "@/features/first-run";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { canManageWaiverTemplates, type Role } from "@/lib/authz";
 import { shopPath } from "@/lib/staff-notices";

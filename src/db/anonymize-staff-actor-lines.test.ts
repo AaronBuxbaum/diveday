@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
-import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
+import { anonymizeDiver } from "../features/anonymize/store";
 import { activityEvents, bookings, people, personRoles } from "./schema";
 
 /**

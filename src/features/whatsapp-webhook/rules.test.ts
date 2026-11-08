@@ -1,0 +1,356 @@
+import { createHmac } from "node:crypto";
+import { describe, expect, it } from "vitest";
+import {
+  parseWhatsAppDeliveryEvents,
+  parseWhatsAppInboundMessages,
+  verifyWhatsAppSignature,
+  whatsAppChallengeResponse,
+} from "./rules";
+
+const APP_SECRET = "diveday-meta-app-secret";
+const NOW = new Date("2026-08-02T12:00:00.000Z");
+
+function sign(payload: string, secret = APP_SECRET): string {
+  return `sha256=${createHmac("sha256", secret).update(payload, "utf8").digest("hex")}`;
+}
+
+function statusPayload(statuses: unknown[]) {
+  return JSON.stringify({
+    object: "whatsapp_business_account",
+    entry: [
+      {
+        id: "waba-1",
+        changes: [
+          {
+            field: "messages",
+            value: {
+              messaging_product: "whatsapp",
+              metadata: { display_phone_number: "13055550100", phone_number_id: "pn-1" },
+              statuses,
+            },
+          },
+        ],
+      },
+    ],
+  });
+}
+
+describe("verifyWhatsAppSignature", () => {
+  it("accepts a correctly signed payload", () => {
+    const payload = statusPayload([]);
+    expect(verifyWhatsAppSignature(payload, sign(payload), APP_SECRET)).toEqual({
+      status: "verified",
+    });
+  });
+
+  it("rejects a payload signed with a different secret", () => {
+    const payload = statusPayload([]);
+    expect(verifyWhatsAppSignature(payload, sign(payload, "wrong"), APP_SECRET)).toEqual({
+      status: "invalid_signature",
+    });
+  });
+
+  it("rejects a tampered body — the signature is over the exact bytes", () => {
+    const payload = statusPayload([]);
+    const signature = sign(payload);
+    expect(verifyWhatsAppSignature(`${payload} `, signature, APP_SECRET)).toEqual({
+      status: "invalid_signature",
+    });
+  });
+
+  it("rejects a missing, unprefixed, or malformed signature header", () => {
+    const payload = statusPayload([]);
+    for (const header of [null, "", "deadbeef", "sha1=abc", "sha256=", "sha256=zzzz"]) {
+      expect(verifyWhatsAppSignature(payload, header, APP_SECRET).status).toBe("invalid_signature");
+    }
+  });
+
+  it("reports not_configured rather than accepting anything when no secret is set", () => {
+    const payload = statusPayload([]);
+    expect(verifyWhatsAppSignature(payload, sign(payload), undefined)).toEqual({
+      status: "not_configured",
+    });
+  });
+});
+
+describe("whatsAppChallengeResponse", () => {
+  const token = "verify-token-1";
+
+  it("echoes the challenge for a correct token", () => {
+    const params = new URLSearchParams({
+      "hub.mode": "subscribe",
+      "hub.verify_token": token,
+      "hub.challenge": "1158201444",
+    });
+    expect(whatsAppChallengeResponse(params, token)).toBe("1158201444");
+  });
+
+  it("refuses a wrong token, a wrong mode, or a missing challenge", () => {
+    const base = {
+      "hub.mode": "subscribe",
+      "hub.verify_token": token,
+      "hub.challenge": "abc",
+    };
+    expect(
+      whatsAppChallengeResponse(new URLSearchParams({ ...base, "hub.verify_token": "no" }), token),
+    ).toBeNull();
+    expect(
+      whatsAppChallengeResponse(new URLSearchParams({ ...base, "hub.mode": "unsubscribe" }), token),
+    ).toBeNull();
+    const noChallenge = new URLSearchParams(base);
+    noChallenge.delete("hub.challenge");
+    expect(whatsAppChallengeResponse(noChallenge, token)).toBeNull();
+  });
+
+  it("refuses everything when no verify token is configured", () => {
+    const params = new URLSearchParams({
+      "hub.mode": "subscribe",
+      "hub.verify_token": "anything",
+      "hub.challenge": "abc",
+    });
+    expect(whatsAppChallengeResponse(params, undefined)).toBeNull();
+  });
+});
+
+describe("parseWhatsAppDeliveryEvents", () => {
+  it("maps sent, delivered, and failed onto the stored provider statuses", () => {
+    const payload = statusPayload([
+      { id: "wamid.1", status: "sent", timestamp: "1785672000" },
+      { id: "wamid.2", status: "delivered", timestamp: "1785672060" },
+      { id: "wamid.3", status: "failed", timestamp: "1785672120" },
+    ]);
+
+    const events = parseWhatsAppDeliveryEvents(payload, NOW);
+
+    expect(events.map((event) => event.status)).toEqual(["sent", "delivered", "failed"]);
+    expect(events[0].providerMessageId).toBe("wamid.1");
+    expect(events[0].occurredAt).toEqual(new Date(1785672000 * 1000));
+  });
+
+  it("carries the WABA id so the caller can scope the update to one shop", () => {
+    const payload = statusPayload([{ id: "wamid.1", status: "delivered" }]);
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].wabaId).toBe("waba-1");
+  });
+
+  it("carries the phone number id each event arrived at, the tenant key under H-20260916-may-dive-chain-share", () => {
+    const payload = statusPayload([{ id: "wamid.1", status: "delivered" }]);
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].phoneNumberId).toBe("pn-1");
+  });
+
+  it("reports a null WABA when Meta named none, rather than inventing one", () => {
+    const payload = JSON.stringify({
+      entry: [{ changes: [{ value: { statuses: [{ id: "wamid.1", status: "sent" }] } }] }],
+    });
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].wabaId).toBeNull();
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].phoneNumberId).toBeNull();
+  });
+
+  it("ignores read receipts — DiveDay does not record opens on any channel", () => {
+    const payload = statusPayload([{ id: "wamid.1", status: "read", timestamp: "1785672000" }]);
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)).toEqual([]);
+  });
+
+  // Meta's code and title, never its `details` or `message` (security review
+  // of issue #2531): those are free prose and can quote the recipient or the
+  // message, and this detail is stored on the delivery row.
+  it("keeps Meta's code and title for a failure, never its free-text details", () => {
+    const payload = statusPayload([
+      {
+        id: "wamid.1",
+        status: "failed",
+        timestamp: "1785672000",
+        errors: [
+          {
+            code: 131026,
+            title: "Message undeliverable",
+            error_data: { details: "Receiver is not a valid WhatsApp user" },
+          },
+        ],
+      },
+    ]);
+
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].detail).toBe(
+      "131026 Message undeliverable",
+    );
+  });
+
+  it("drops a message that quotes the recipient and keeps the code alone", () => {
+    const payload = statusPayload([
+      {
+        id: "wamid.1",
+        status: "failed",
+        errors: [{ code: 131026, message: "Recipient +15551234567 is not on WhatsApp" }],
+      },
+    ]);
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].detail).toBe("131026");
+  });
+
+  it("falls back to now for a missing or unparseable timestamp", () => {
+    const payload = statusPayload([
+      { id: "wamid.1", status: "sent" },
+      { id: "wamid.2", status: "sent", timestamp: "not-a-number" },
+    ]);
+    for (const event of parseWhatsAppDeliveryEvents(payload, NOW)) {
+      expect(event.occurredAt).toEqual(NOW);
+    }
+  });
+
+  it("ignores an inbound message — parseWhatsAppInboundMessages reads those", () => {
+    const payload = JSON.stringify({
+      entry: [
+        {
+          changes: [
+            {
+              field: "messages",
+              value: {
+                messages: [{ from: "13055551234", id: "wamid.in", type: "text" }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)).toEqual([]);
+  });
+
+  it("returns nothing for malformed or unrelated payloads rather than throwing", () => {
+    for (const payload of ["", "not json", "{}", '{"entry":[]}', '{"entry":"nope"}']) {
+      expect(parseWhatsAppDeliveryEvents(payload, NOW)).toEqual([]);
+    }
+  });
+
+  it("collects statuses across several entries in one batch", () => {
+    const payload = JSON.stringify({
+      entry: [
+        { changes: [{ value: { statuses: [{ id: "wamid.1", status: "delivered" }] } }] },
+        { changes: [{ value: { statuses: [{ id: "wamid.2", status: "failed" }] } }] },
+      ],
+    });
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)).toHaveLength(2);
+  });
+});
+
+describe("parseWhatsAppInboundMessages (ADR 20260907-two-way-inbox)", () => {
+  // `null` rather than `undefined` for "no WABA": an explicit `undefined`
+  // argument still takes a default parameter's value, so the omitted-id case
+  // would quietly test the ordinary one.
+  function messagesPayload(messages: unknown[], wabaId: string | null = "waba-1") {
+    return JSON.stringify({
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          ...(wabaId ? { id: wabaId } : {}),
+          changes: [
+            {
+              field: "messages",
+              value: {
+                messaging_product: "whatsapp",
+                metadata: { display_phone_number: "13055550100", phone_number_id: "pn-1" },
+                messages,
+              },
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  it("reads a text message with its sender, id, and Meta's timestamp", () => {
+    const payload = messagesPayload([
+      {
+        from: "13055551234",
+        id: "wamid.in1",
+        timestamp: "1785672000",
+        type: "text",
+        text: { body: "  Running 10 minutes late  " },
+      },
+    ]);
+    expect(parseWhatsAppInboundMessages(payload, NOW)).toEqual([
+      {
+        wabaId: "waba-1",
+        phoneNumberId: "pn-1",
+        providerMessageId: "wamid.in1",
+        from: "13055551234",
+        body: "Running 10 minutes late",
+        mediaCount: 0,
+        receivedAt: new Date(1785672000 * 1000),
+      },
+    ]);
+  });
+
+  it("records that media arrived, with its caption, and never a file id to fetch", () => {
+    const payload = messagesPayload([
+      {
+        from: "13055551234",
+        id: "wamid.img",
+        type: "image",
+        image: { id: "media-123", mime_type: "image/jpeg", caption: "my card" },
+      },
+      { from: "13055551234", id: "wamid.aud", type: "audio", audio: { id: "media-456" } },
+    ]);
+    const messages = parseWhatsAppInboundMessages(payload, NOW);
+    expect(messages).toHaveLength(2);
+    expect(messages[0]).toMatchObject({ body: "my card", mediaCount: 1, receivedAt: NOW });
+    expect(messages[1]).toMatchObject({ body: "", mediaCount: 1 });
+    expect(JSON.stringify(messages)).not.toContain("media-123");
+  });
+
+  it("skips what a staffer cannot answer: reactions, locations, deleted messages, empty text", () => {
+    const payload = messagesPayload([
+      { from: "1", id: "wamid.r", type: "reaction", reaction: { emoji: "👍" } },
+      { from: "1", id: "wamid.l", type: "location", location: { latitude: 1, longitude: 2 } },
+      { from: "1", id: "wamid.u", type: "unsupported" },
+      { from: "1", id: "wamid.e", type: "text", text: { body: "   " } },
+    ]);
+    expect(parseWhatsAppInboundMessages(payload, NOW)).toEqual([]);
+  });
+
+  it("ignores statuses, and reports a null WABA rather than inventing one", () => {
+    expect(parseWhatsAppInboundMessages(statusPayload([{ id: "x", status: "sent" }]), NOW)).toEqual(
+      [],
+    );
+    const payload = messagesPayload(
+      [{ from: "1", id: "wamid.n", type: "text", text: { body: "hi" } }],
+      null,
+    );
+    expect(parseWhatsAppInboundMessages(payload, NOW)[0].wabaId).toBeNull();
+  });
+
+  it("keeps each change's own number apart when one WABA's delivery carries two", () => {
+    // A chain sharing one Business account (H-20260916-may-dive-chain-share): Meta may batch changes for
+    // two of its numbers under one entry, and each message must keep its own.
+    const payload = JSON.stringify({
+      entry: [
+        {
+          id: "waba-chain",
+          changes: [
+            {
+              value: {
+                metadata: { phone_number_id: "pn-north" },
+                messages: [{ from: "1", id: "wamid.a", type: "text", text: { body: "north" } }],
+              },
+            },
+            {
+              value: {
+                metadata: { phone_number_id: "pn-south" },
+                messages: [{ from: "2", id: "wamid.b", type: "text", text: { body: "south" } }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(
+      parseWhatsAppInboundMessages(payload, NOW).map((m) => [m.body, m.phoneNumberId, m.wabaId]),
+    ).toEqual([
+      ["north", "pn-north", "waba-chain"],
+      ["south", "pn-south", "waba-chain"],
+    ]);
+  });
+
+  it("returns nothing for malformed payloads rather than throwing", () => {
+    for (const payload of ["", "not json", "{}", '{"entry":"nope"}']) {
+      expect(parseWhatsAppInboundMessages(payload, NOW)).toEqual([]);
+    }
+  });
+});

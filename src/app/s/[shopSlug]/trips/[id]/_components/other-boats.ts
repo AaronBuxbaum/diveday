@@ -1,10 +1,10 @@
+import { asksNoMoreThan, worthALook } from "@/features/worth-a-look";
 import type { DiverLocale } from "@/i18n/settings";
 import { embedTripPath } from "@/lib/embed-routes";
 import { formatDayParts, formatShortDate, formatTime } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
 import { similarDepartures } from "@/lib/similar-departures";
 import { spotsRemaining } from "@/lib/trips";
-import { asksNoMoreThan, worthALook } from "@/lib/worth-a-look";
 import type { publicTripRecord, readTripPage } from "../_lib/page-reads";
 
 type PublicTrip = NonNullable<Awaited<ReturnType<typeof publicTripRecord>>>;

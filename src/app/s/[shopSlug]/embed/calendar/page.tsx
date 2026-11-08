@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { getDb } from "@/db/client";
-import { shopBySlugCached } from "@/db/shops-cached";
+import { shopBySlugCached } from "@/features/shops-cached";
 import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { nowDate } from "@/lib/clock";

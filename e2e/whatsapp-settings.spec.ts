@@ -13,7 +13,7 @@ const WHATSAPP_SETTINGS = "/shop/blue-mantis/settings/whatsapp";
  * states it, no connection action is offered, and the surface is still owner/manager work.
  *
  * The signup exchange itself is covered by unit tests against an injected fetch
- * (`src/lib/notifications/whatsapp-signup.test.ts`); it cannot be exercised here
+ * (`src/features/whatsapp-signup/rules.test.ts`); it cannot be exercised here
  * without a live Meta app, and the fleet blocks external HTTP on purpose.
  *
  * READ_ONLY holds here — and matters more than usual: `shop_whatsapp_accounts` is

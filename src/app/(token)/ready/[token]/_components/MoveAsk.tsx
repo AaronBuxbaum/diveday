@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
-import type { ReadyPageData } from "@/db/ready";
+import type { ReadyPageData } from "@/features/ready";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { formatDateTimeTz } from "@/lib/format";

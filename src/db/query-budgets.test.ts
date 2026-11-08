@@ -1,13 +1,13 @@
 import { and, asc, eq, gt, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { getDiverRecord } from "@/db/diver-record";
 import { pagedOrdersByDay } from "@/db/orders";
 import { listTripsReadiness } from "@/db/readiness";
 import { bookings, people, personRoles, trips } from "@/db/schema";
-import { getTripManifest } from "@/db/trip-page";
 import { liveTrip } from "@/db/trips-live";
 import { nowDate } from "@/lib/clock";
 import { countingShopContext } from "@/test/query-count";
+import { getDiverRecord } from "../features/diver-record/store";
+import { getTripManifest } from "../features/trip-page/store";
 
 /** The seeded shop's owner: the reader whose gates open every door on these pages. */
 async function seededOwner(ctx: Awaited<ReturnType<typeof countingShopContext>>) {

@@ -281,7 +281,7 @@ The live instance of this: `20260815001735_gray_human_torch` drops `NOT NULL` fr
 `certifications.identifier` and `nitrox_certifications.identifier` (the tables `cards` replaced), so a self-declared card can
 exist without inventing a card number. Forward is provably safe — every writer in the *previous*
 release sets a non-null identifier, so nothing it does can violate the new `CHECK`. Backward is not:
-`src/db/import.ts` builds its dedupe map by calling `.toLowerCase()` on every live card's
+`src/features/import/store.ts` builds its dedupe map by calling `.toLowerCase()` on every live card's
 identifier, so the first CSV import after a rollback 500s for the owner.
 
 **Before Instant Rollback, ask whether the target release predates a nullability widening whose

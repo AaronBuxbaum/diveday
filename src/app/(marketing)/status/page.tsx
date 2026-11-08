@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { checkDatabase } from "@/db/health";
+import { checkDatabase } from "@/features/health";
+import { overallPlatformStatus, type PlatformComponent } from "@/features/platform-status";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
-import { overallPlatformStatus, type PlatformComponent } from "@/lib/platform-status";
 import { openGraphSite } from "@/lib/site-metadata";
 import { StatusReport, StatusReportFallback } from "./_components/StatusReport";
 

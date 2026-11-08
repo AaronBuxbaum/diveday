@@ -431,7 +431,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByText("Today’s price, locked for two years for founding shops."),
   ).toBeVisible();
   // The trial's own terms, once, in the notes beside the price — free, three
-  // weeks, no card, and the soft expiry that src/lib/trial.ts actually
+  // weeks, no card, and the soft expiry that src/features/trial/rules.ts actually
   // implements. The FAQ's trial row went with the visual review of 2026-10-24
   // (B11: the FAQ keeps only what the table and notes do not answer), and card
   // fees are the invoice's own row, nowhere else. The note also says how a

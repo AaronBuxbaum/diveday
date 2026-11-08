@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { openWaiverInThread, threadWaiverKey } from "@/db/waivers";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { revalidateAndRedirect } from "@/features/navigation";
 import type { DoctorAnswersState, DoctorFormState } from "../../waivers/[token]/doctor/doctor-core";
 import {
   revealDoctorAnswersFor,

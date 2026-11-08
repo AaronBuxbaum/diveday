@@ -109,7 +109,7 @@ always reported what is on record *so far* rather than claiming a day is finishe
 The refusal moved with it: a non-owner reaching the route lands on `close-out?notice=log-not-authorized`
 rather than on the manifest, for the same "land somewhere with a reason" rule as before.
 
-Internal module names (`src/lib/incident-export.ts`, `src/db/incident-export.ts`,
+Internal module names (`src/lib/incident-export.ts`, `src/features/incident-export/store.ts`,
 `canExportIncidentRecord`, and the `incidentExport` message namespace) keep the older word
 deliberately. They name *why the document exists* — evidence, if a departure is ever asked about —
 which is exactly the fact this ADR turns on and the fact the softer product word is chosen to avoid

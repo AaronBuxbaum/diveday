@@ -3,7 +3,6 @@
 import { notFound } from "next/navigation";
 import { canPersonEditDiveSiteAdmission } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { recordDiveSiteClosure } from "@/db/dive-site-closures";
 import { planDiveSitePhotoRelease } from "@/db/dive-site-photos";
 import {
   deleteDiveSite,
@@ -15,20 +14,21 @@ import {
   undoDiveSiteTemplateUpdate,
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { readRequiredSpecialties } from "@/db/requirement-form";
 import { getShopById } from "@/db/shops";
-import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
+import { recordDiveSiteClosure } from "@/features/dive-site-closures";
 import {
   changedAdmissionFields,
   type DiveSiteAdmission,
   parseDiveSiteForm,
   submittedValues,
-} from "@/lib/dive-sites";
-import { revalidateAndRedirect } from "@/lib/navigation";
+} from "@/features/dive-sites";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { readRequiredSpecialties } from "@/features/requirement-form";
+import { requireStaffSession } from "@/features/session";
+import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/features/storage";
+import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
 import { parseServiceWindow } from "@/lib/service-window";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { uuidParam } from "@/lib/uuid";
 import type { SiteFormState, SiteSaveRefusal } from "../_components/SiteFormShell";
 import { siteFormExtras, templatePullMode } from "../site-forms";

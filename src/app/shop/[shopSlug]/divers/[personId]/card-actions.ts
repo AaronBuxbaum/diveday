@@ -3,13 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { recordJuniorCardStatus } from "@/db/certification-junior";
 import type { AppDb } from "@/db/client";
-import {
-  clearDrysuitExperienceSeen,
-  type RecordDrysuitExperienceOutcome,
-  recordDrysuitExperienceSeen,
-} from "@/db/drysuit-experience";
 import {
   createNitroxCertification,
   deleteNitroxCertification,
@@ -32,12 +26,18 @@ import {
 } from "@/db/readiness";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
+import { recordJuniorCardStatus } from "@/features/certification-junior";
+import {
+  clearDrysuitExperienceSeen,
+  type RecordDrysuitExperienceOutcome,
+  recordDrysuitExperienceSeen,
+} from "@/features/drysuit-experience";
+import { formValue, readForm } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { undoParams } from "@/features/undo";
 import { isPlausibleCardNumber } from "@/lib/card-number";
-import { formValue, readForm } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { unreviewedCardState } from "@/lib/readiness";
 import { noticeUrl } from "@/lib/staff-notices";
-import { undoParams } from "@/lib/undo";
 import { backTo, requireDiverActionContext, successUrl } from "./action-helpers";
 import { cardForm, cardIdFromForm } from "./card-form";
 

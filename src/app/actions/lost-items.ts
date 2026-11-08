@@ -5,17 +5,17 @@ import { z } from "zod";
 import type { RecordLostItemState } from "@/components/lost-found/LostItemForm";
 import type { LostItemRowState } from "@/components/lost-found/LostItemRow";
 import { type AppDb, getDb } from "@/db/client";
-import { recordLostItem, setLostItemStatus, tellLostItemOwner } from "@/db/lost-items";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
-import { parseForm, readForm, single, text } from "@/lib/form-parse";
-import { requireStaffSession } from "@/lib/session";
+import { parseForm, readForm, single, text } from "@/features/form-parse";
+import { recordLostItem, setLostItemStatus, tellLostItemOwner } from "@/features/lost-items";
+import { requireStaffSession } from "@/features/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /**
  * **Lost and found** (batch 4, J2): recorded from a departure's Boat tab,
  * worked from there or from the shop's open list. The shop comes off the
  * session, never the form; the ids that do come off the form are re-scoped
- * by it in `src/db/lost-items.ts`.
+ * by it in `src/features/lost-items/store.ts`.
  */
 
 /** Under the session's own shop's slug, never one the page bound in. */

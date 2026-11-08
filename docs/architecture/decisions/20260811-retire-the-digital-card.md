@@ -41,7 +41,7 @@ the impression that DiveDay holds a verified credential artefact, which is exact
   `20260812001834_retire-card-image-url` drops the column from `certifications` and
   `specialty_certifications`, each statement carrying the `diveday:allow-destructive` marker the
   migration guard requires (ADR 20260806-destructive-migration-guard). The two
-  `retire("certification_card", …)` calls leave `src/db/anonymize.ts`, the column leaves both CSVs
+  `retire("certification_card", …)` calls leave `src/features/anonymize/store.ts`, the column leaves both CSVs
   and the export bundle's photo manifest, and the `certification_card` media-deletion kind becomes
   unreachable.
 

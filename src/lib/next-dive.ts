@@ -37,7 +37,7 @@ export const NEXT_DIVE_REASONS = [
 /**
  * One departure the diver could actually take, as the db layer hands it up:
  * already public, already live, already future-with-buffer, already holding a
- * seat, and already past `decideTripAdmission` (src/db/next-dive.ts).
+ * seat, and already past `decideTripAdmission` (src/features/next-dive/store.ts).
  */
 export type NextDiveCandidate = {
   tripId: string;

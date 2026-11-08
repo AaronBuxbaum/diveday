@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { listEmailBounces } from "@/db/email-bounces";
+import { requireCronSecret } from "@/features/cron-auth";
+import { listEmailBounces } from "@/features/email-bounces";
 import {
   claimFounderDigest,
   departureRollCallEvents,
@@ -8,15 +9,16 @@ import {
   markStallsAlerted,
   releaseFounderDigest,
   syncShopMilestones,
-} from "@/db/founder-metrics";
+} from "@/features/founder-metrics";
 import {
   countDemoEntriesBySource,
   countSetupRequestsBySource,
   countUnnotifiedSetupRequests,
-} from "@/db/funnel";
+} from "@/features/funnel";
+import { flushLogs } from "@/features/log-shipping";
+import { reportScrubbedError, sentry } from "@/features/sentry-server";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { requireCronSecret } from "@/lib/cron-auth";
 import {
   activationStall,
   countDiveDays,
@@ -27,8 +29,6 @@ import {
 } from "@/lib/founder-metrics";
 import { log } from "@/lib/log";
 import { notify } from "@/lib/notifications";
-import { flushLogs, reportScrubbedError } from "@/lib/observability";
-import { sentry } from "@/lib/observability/sentry";
 import { founderDigestRecipient } from "@/lib/platform-mail";
 
 /** A handful of grouped reads and, on Mondays, one mail. */
@@ -71,7 +71,7 @@ const CRON_MONITOR_CONFIG = {
  *
  * Fails closed like every cron here: `CRON_SECRET` is required and presented
  * as a bearer token, checked before anything else, the Sentry check-in
- * included — through the shared constant-time check (`src/lib/cron-auth.ts`).
+ * included — through the shared constant-time check (`src/features/cron-auth/rules.ts`).
  */
 export async function GET(request: Request) {
   const refused = requireCronSecret(request);

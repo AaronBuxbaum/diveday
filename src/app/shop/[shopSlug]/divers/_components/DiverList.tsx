@@ -10,7 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { SearchField } from "@/components/ui/form";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
-import type { DiverFilter, DiverSort } from "@/db/divers";
+import type { DiverFilter, DiverSort } from "@/features/divers";
 import { groupByLetter } from "@/lib/roster-rows";
 
 /**
@@ -154,7 +154,7 @@ export function DiverList({
   // The three questions the counter asks of the roster, in the order a day
   // runs: who is on a boat today, whose paperwork needs a staffer, and who
   // still owes a safety contact. Each is a server-side WHERE clause
-  // (`DiverFilter`, src/db/divers.ts), so a chip narrows the count and the
+  // (`DiverFilter`, src/features/divers/store.ts), so a chip narrows the count and the
   // page together — and the chip is also what says why every row in that view
   // is there, which is why the rows themselves wear no badge for it.
   //

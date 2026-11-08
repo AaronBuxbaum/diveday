@@ -37,7 +37,7 @@ target Lambda, Kinesis, or Firehose; it cannot target SNS. So something has to c
 
 - **The forwarder republishes each log record verbatim.** It gunzips the CloudWatch batch, skips
   `CONTROL_MESSAGE`, and publishes each `logEvents[].message` as its own SNS message. It parses
-  nothing and reshapes nothing, so `src/lib/notifications/sms-events.ts` sees exactly the bytes
+  nothing and reshapes nothing, so `src/features/sms-webhook/rules.ts` sees exactly the bytes
   CloudWatch wrote and there is one place — in the app, under test — where the receipt's meaning is
   decided.
 

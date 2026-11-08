@@ -448,7 +448,7 @@ the stacked-prs skill. Batches are independent of each other.
    `src/lib/pre-departure-check.ts`, `staffing-week.ts`, `src/db/gear.ts`, the stage-event
    listener, `staff/staffing.json` and `staff/gear.json`.
 2. **The water and the diver's day** (sites, trip page, thread): N-01, N-04, N-06, N-39.
-   Owns `src/lib/dive-sites.ts`, `TripDayPlan.tsx`, `AfterState.tsx`, `night-before-brief.ts`,
+   Owns `src/features/dive-sites/rules.ts`, `TripDayPlan.tsx`, `AfterState.tsx`, `night-before-brief.ts`,
    `diver.json`.
 3. **The room** (display, sound, paper, off-season): N-23, N-26, N-27, N-45, N-54. Owns a new
    `/board/[token]` route, `src/components/sound.ts`, the trip print route, the storefront's

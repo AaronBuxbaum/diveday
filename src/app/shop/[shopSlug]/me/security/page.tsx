@@ -11,18 +11,22 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import type { NoticeTone } from "@/components/ui/tone";
 import { getAccountSecurityPage } from "@/db/account-security";
-import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
 import {
   isCurrentAccountSession,
   sessionDeviceLabel,
   sessionUserAgentDetails,
-} from "@/lib/account-session-device";
+} from "@/features/account-session-device";
+import {
+  isStepUpPurpose,
+  type StepUpPurpose,
+  safeStepUpReturnPath,
+} from "@/features/security-step-up";
+import { requireShopSurface } from "@/features/session";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz, formatRelativeDay } from "@/lib/format";
 import { openSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import { isStepUpPurpose, type StepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
-import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS, staffDestination } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { staffPageClass } from "../../_components/staff-page";

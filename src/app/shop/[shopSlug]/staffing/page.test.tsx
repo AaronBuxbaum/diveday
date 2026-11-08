@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StaffingView } from "@/db/staffing";
+import type { StaffingView } from "../../../../features/staffing/store";
 
 const OTHER_ID = "11111111-1111-4111-8111-111111111111";
 const VIEWER_ID = "22222222-2222-4222-8222-222222222222";
@@ -12,7 +12,7 @@ const awayRead = vi.hoisted(() => vi.fn());
 
 // The page's one reader (issue #2757), assembled from the same two reads it
 // makes, so the roster still comes from the staffing view alone.
-vi.mock("@/db/staffing", () => ({
+vi.mock("../../../../features/staffing/store", () => ({
   getStaffingPage: vi.fn(async () => ({
     view: await staffingView(),
     ...(await awayRead()),
@@ -25,7 +25,7 @@ vi.mock("@/db/crew-requests", () => ({
   readStaffingWeekAway: awayRead,
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("./actions", () => ({
   createShiftAction: vi.fn(),
   decideCrewRequestAction: vi.fn(),
@@ -43,7 +43,7 @@ vi.mock("./_components/StaffingWeek", () => ({
 vi.mock("./_components/CrewPageHeader", () => ({ CrewPageHeader: () => null }));
 vi.mock("../schedule/_components/ScheduleViews", () => ({ ScheduleViews: () => null }));
 
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../features/session/rules");
 const { default: StaffingPage } = await import("./page");
 
 const roster = [

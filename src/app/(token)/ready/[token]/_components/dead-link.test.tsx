@@ -22,15 +22,19 @@ vi.mock("@/db/booking-capabilities", () => ({
   staleBookingCapabilityForToken: db.staleBookingCapabilityForToken,
   verifyStrandedBookingCapability: db.verifyStrandedBookingCapability,
 }));
-vi.mock("@/db/move-offer", () => ({ strandedMoveAsk: db.strandedMoveAsk }));
+vi.mock("../../../../../features/move-offer/store", () => ({
+  strandedMoveAsk: db.strandedMoveAsk,
+}));
 vi.mock("../booking-actions", () => ({ askToMoveFromCancelledAction: vi.fn() }));
-vi.mock("@/db/ready", () => ({ getReadyPageData: db.getReadyPageData }));
+vi.mock("../../../../../features/ready/store", () => ({ getReadyPageData: db.getReadyPageData }));
 vi.mock("@/db/payments", () => ({ getBookingPayment: db.getBookingPayment }));
 vi.mock("@/db/shops", () => ({ getShopById: db.getShopById }));
-vi.mock("@/db/seat-claims", () => ({
+vi.mock("../../../../../features/seat-claims/store", () => ({
   partySeatsKeptAfterLeadCancel: db.partySeatsKeptAfterLeadCancel,
 }));
-vi.mock("@/db/series-next", () => ({ nextPublicTripInSeries: async () => null }));
+vi.mock("../../../../../features/series-next/store", () => ({
+  nextPublicTripInSeries: async () => null,
+}));
 vi.mock("@/i18n/request", () => ({ requestLocale: async () => "en-US" }));
 vi.mock("./ExpiredLink", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./ExpiredLink")>()),

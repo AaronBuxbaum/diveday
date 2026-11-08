@@ -6,7 +6,7 @@ import {
   getHelpRequestForBooking,
   recordHelpRequest,
   undoHelpRequestCompletion,
-} from "./help-requests";
+} from "../features/help-requests/store";
 import { getTripCrewAssignments, getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();

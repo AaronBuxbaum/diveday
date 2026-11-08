@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SearchResults } from "@/db/search";
 import { recentParam } from "@/lib/recent-refs";
+import type { SearchResults } from "../../lib/search-results";
 import { keepRecents, readRecents } from "./palette-recents";
 import { NO_RECENTS, type PaletteRecents } from "./palette-start-rows";
 

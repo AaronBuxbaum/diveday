@@ -6,6 +6,9 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // Native Node tools load erasable TypeScript directly and require explicit .ts paths.
+    // Next, Vitest and the worker bundler resolve those same paths without emitting TS here.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",

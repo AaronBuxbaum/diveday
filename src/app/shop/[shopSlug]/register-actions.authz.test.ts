@@ -1,6 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { listBoats } from "@/db/boats";
-import { listTripLenses } from "@/db/trip-lenses";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -9,6 +7,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { listBoats } from "../../../features/boats/store";
+import { listTripLenses } from "../../../features/trip-lenses/store";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -33,10 +33,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../features/session/rules");
 const { createBoatAction, deleteBoatAction, updateBoatAction } = await import("./boats/actions");
 const { createTripLensAction } = await import("./trip-tags/actions");
 

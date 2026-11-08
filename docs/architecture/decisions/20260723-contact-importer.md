@@ -56,7 +56,7 @@ system is not clearance under this shop's waiver.
 - Layering mirrors the export: CSV parsing, column mapping, validation, and the honesty table are
   framework-free and DB-free in `src/lib/import.ts` — the same pure preparation runs in the browser
   for an instant preview and again on the server before any write, so the client is never trusted to
-  have enforced the rules. The write is `commitContactImport` in `src/db/import.ts`, one
+  have enforced the rules. The write is `commitContactImport` in `src/features/import/store.ts`, one
   transaction, scoped by the session's shop, never the URL.
 - Access: **owner/manager only** (`canImportShopData` in `src/lib/authz.ts`, delegating to the
   export predicate), re-checked against the **database** on every commit

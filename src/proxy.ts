@@ -2,24 +2,36 @@ import { getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { rememberedPublicRouteLookup } from "@/db/public-route-existence";
-import { isStaff, type Role } from "@/lib/authz";
-import { arcgisApiKey } from "@/lib/basemap";
 import {
   BUDDY_COOKIE,
   BUDDY_COOKIE_MAX_AGE,
   BUDDY_COOKIE_PATH,
   buddyReferralFromSearchParams,
   encodeBuddyCookie,
-} from "@/lib/buddy-links";
-import { MINUTE_MS, nowMs } from "@/lib/clock";
+} from "@/features/buddy-links";
 import {
   type CspOptions,
   enforcedPolicy,
   reportingEndpointsHeader,
-} from "@/lib/content-security-policy";
-import { COURSE_PREVIEW_PARAM, coursePreviewIsValid } from "@/lib/course-preview-gate";
-import { classifyDatabaseFailure } from "@/lib/db-failure";
+} from "@/features/content-security-policy";
+import { COURSE_PREVIEW_PARAM, coursePreviewIsValid } from "@/features/course-preview-gate";
+import { classifyDatabaseFailure } from "@/features/db-failure";
+import {
+  PRICING_ARM_COOKIE,
+  PRICING_ARM_COOKIE_MAX_AGE,
+  PRICING_ARM_HEADER,
+  visitorPricingArm,
+} from "@/features/pricing-arm";
+import { pricingConfig } from "@/features/pricing-flags";
+import { rememberedPublicRouteLookup } from "@/features/public-route-existence";
+import {
+  type PublicRouteQuery,
+  type PublicRouteShape,
+  publicRouteShape,
+} from "@/features/public-route-shape";
+import { isStaff, type Role } from "@/lib/authz";
+import { arcgisApiKey } from "@/lib/basemap";
+import { MINUTE_MS, nowMs } from "@/lib/clock";
 import {
   EMBED_BRAND_HEADER,
   EMBED_FONT_HEADER,
@@ -33,18 +45,6 @@ import {
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
 import { log } from "@/lib/log";
-import {
-  PRICING_ARM_COOKIE,
-  PRICING_ARM_COOKIE_MAX_AGE,
-  PRICING_ARM_HEADER,
-  visitorPricingArm,
-} from "@/lib/pricing-arm";
-import { pricingConfig } from "@/lib/pricing-flags";
-import {
-  type PublicRouteQuery,
-  type PublicRouteShape,
-  publicRouteShape,
-} from "@/lib/public-route-shape";
 import { shopSlugFromPublicPath } from "@/lib/public-routes";
 import {
   encodeReferralCookie,
@@ -134,7 +134,7 @@ async function authGateResponse(req: NextRequest): Promise<Response | undefined>
     if (shopSlug) return NextResponse.redirect(new URL(`/shop/${shopSlug}`, req.nextUrl));
   }
   // Skipped for `?session=ended`: that param is only ever set by
-  // `requireStaffSession()` (src/lib/session.ts) after a live database check
+  // `requireStaffSession()` (src/features/session/rules.ts) after a live database check
   // found the session stale — disabled, deleted, or demoted off every staff
   // role since it was minted. The cookie cache can still read `isStaff` for
   // up to its own maxAge (or the underlying session's full life, if the
@@ -552,7 +552,7 @@ async function refusedPublicRoute(
     // they are: the editor mints the parameter where it already knows the
     // reader is this shop's live staff, and the check here is one HMAC over the
     // two segments the route resolved — no database, no session, no cookie
-    // cache. The `src/db/public-route-existence.ts` header summarizes this
+    // cache. The `src/features/public-route-existence/store.ts` header summarizes this
     // capability boundary and why session-cookie heuristics cannot replace it.
     //
     // The parameter is not an authorisation and is not treated as one. The page
@@ -776,7 +776,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   if (!isEmbedRequest) {
     res.headers.set("X-Frame-Options", "DENY");
   }
-  // The rest of the policy lives in `src/lib/content-security-policy.ts` and is
+  // The rest of the policy lives in `src/features/content-security-policy/rules.ts` and is
   // stamped here rather than in `next.config.ts`'s `headers()` for the same
   // reason `frame-ancestors` always was: it varies per request on the embed
   // exception (issue #718).

@@ -7,14 +7,14 @@ import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createCourseForm, deleteCourseForm, recordCourseFormVersion } from "@/db/course-forms";
 import { recordWaiverTemplate, standingWaiverExposure } from "@/db/waivers";
+import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import {
   COURSE_FORM_BODY_MAX,
   COURSE_FORM_BODY_MIN,
   COURSE_FORM_TITLE_MAX,
 } from "@/lib/course-forms";
-import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { readPostedShopQuestions, type ShopQuestion } from "@/lib/waiver-questions";
 import {

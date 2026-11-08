@@ -3,6 +3,15 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  aSetOut,
+  gearShopContext,
+  mustCreate,
+  rivalShop,
+  SETUP_PICK,
+  shopBooking,
+  TODAY,
+} from "../test/substrate-fixtures/db/gear-test-fixtures";
 import type { AppDb } from "./client";
 import { createGearItem, deleteGearItem } from "./gear-items";
 import { listGearItems } from "./gear-register";
@@ -17,15 +26,6 @@ import {
   listGearDueBack,
   listOverdueGearReservations,
 } from "./gear-returns";
-import {
-  aSetOut,
-  gearShopContext,
-  mustCreate,
-  rivalShop,
-  SETUP_PICK,
-  shopBooking,
-  TODAY,
-} from "./gear-test-fixtures";
 import { recordRentalFit } from "./rental-fit";
 import { bookings, gearReservations } from "./schema";
 

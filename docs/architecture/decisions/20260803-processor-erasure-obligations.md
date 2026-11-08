@@ -7,7 +7,7 @@
 
 ## Context
 
-`anonymizeDiver` ([20260802-diver-data-erasure](20260802-diver-data-erasure.md), `src/db/anonymize.ts`)
+`anonymizeDiver` ([20260802-diver-data-erasure](20260802-diver-data-erasure.md), `src/features/anonymize/store.ts`)
 empties every column DiveDay owns. It stops at two it does not. `orders.stripe_customer_id` and
 `orders.stripe_invoice_id` are both `NOT NULL` and both point into the **shop's own** Stripe
 account, where the diver's name and email are still sitting. The erasure ADR recorded this and left
@@ -70,7 +70,7 @@ decides whether DiveDay discharges it or a human does.**
 - One row per distinct `orders.stripe_customer_id` on the erased diver's orders.
 - `deleteCustomer` on a new provider seam (`src/lib/payments/customers.ts`) issues
   `DELETE /v1/customers/{id}` with a `Stripe-Account` header, fetch-based and injectable, exactly
-  like `./invoicing.ts` and `./connect.ts`. `src/db/anonymize.ts` never touches `fetch`.
+  like `./invoicing.ts` and `./connect.ts`. `src/features/anonymize/store.ts` never touches `fetch`.
 - The idempotency key follows the house shape (`idempotencyKeyFor(obligation.id, "customer-delete")`).
   Deletion is idempotent by construction, so the key buys convergence of a retried *attempt*, not
   correctness.
@@ -151,7 +151,7 @@ means Stripe created no Customer, and no obligation is raised. Guessing one woul
 front of a Retry button aimed at an object that never existed.
 
 **Which checkouts count as this diver's** is not re-decided here. The two sweeps in
-`src/db/anonymize.ts` that already blank `booking_checkouts.customer_email` — by stored address, and
+`src/features/anonymize/store.ts` that already blank `booking_checkouts.customer_email` — by stored address, and
 by booking when the checkout covers nothing but this diver's seats — now also hand back the Stripe
 handles on the rows they touched. A party checkout reached by both folds to one obligation on the
 table's `(shop_id, target, external_id)` uniqueness. For tips the handle is `tips.booking_id`: a tip

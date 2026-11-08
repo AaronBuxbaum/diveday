@@ -4,11 +4,11 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
+import { markBookingNoShow } from "../features/no-show/store";
+import { issuePartySeatClaims } from "../features/seat-claims/store";
 import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
-import { markBookingNoShow } from "./no-show";
 import { bookings } from "./schema";
-import { issuePartySeatClaims } from "./seat-claims";
 import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test

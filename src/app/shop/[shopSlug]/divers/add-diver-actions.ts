@@ -6,18 +6,18 @@ import { seatNewDiverAction, seatPartyAction } from "@/app/actions/seat-diver";
 import type { SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { getDb } from "@/db/client";
-import { createDiver, findSimilarDivers } from "@/db/divers";
-import { discardFormDraft } from "@/db/form-drafts";
+import { createDiver, findSimilarDivers } from "@/features/divers";
+import { discardFormDraft } from "@/features/form-drafts";
+import { parseForm } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import { ADD_ONE, addPanelHref } from "@/lib/add-panel";
-import { parseForm } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   blankableDiverEmailSchema,
   blankableDiverNameSchema,
   diverPhoneSchema,
 } from "@/lib/person-fields";
 import { readParty } from "@/lib/seat-party-form";
-import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 const newDiverContextForm = z.object({

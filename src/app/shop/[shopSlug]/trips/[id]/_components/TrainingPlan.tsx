@@ -1,5 +1,5 @@
 import { getDb } from "@/db/client";
-import { trainingPlanView } from "@/db/training-plan-view";
+import { trainingPlanView } from "@/features/training-plan-view";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { saveTrainingPlanAction } from "../training-plan-actions";
 import { TrainingPlanContent } from "./TrainingPlanContent";

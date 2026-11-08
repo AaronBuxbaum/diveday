@@ -1,4 +1,4 @@
-import type { PlacedGap, PlacedTrip, StaffWeek } from "@/lib/staffing-week";
+import type { PlacedGap, PlacedTrip, StaffWeek } from "@/features/staffing-week";
 
 /** Presentation only: identity and session window keep same-named boats apart. */
 export function mobileDepartureGroups(

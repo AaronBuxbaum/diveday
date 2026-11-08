@@ -1,5 +1,5 @@
+import type { SafetyMonth } from "@/features/safety-report";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { SafetyMonth } from "@/lib/safety-report";
 import type { MonthFigure } from "../../reports/_components/MonthFigures";
 import { crewSafetyValue } from "./crew-safety-value";
 import { SAFETY_LIST_IDS } from "./SafetyLists";

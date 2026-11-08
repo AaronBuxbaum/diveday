@@ -12,12 +12,6 @@ import {
 } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { completeWaiver, threadWaiverKey } from "@/db/waivers-completion";
-import {
-  claimedDevice,
-  draftsOf,
-  issueCounterLink,
-  openOnDevice,
-} from "@/db/waivers-test-fixtures";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import {
   emptyMedicalAnswers,
@@ -25,6 +19,12 @@ import {
   questionnaireForJurisdiction,
 } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  claimedDevice,
+  draftsOf,
+  issueCounterLink,
+  openOnDevice,
+} from "../../../../test/substrate-fixtures/db/waivers-test-fixtures";
 
 const ctx = fileScopedShopContext();
 
@@ -62,7 +62,7 @@ vi.mock("@/i18n/request", async (importOriginal) => {
     requestLocale: vi.fn(async () => "en-US"),
   };
 });
-vi.mock("@/lib/observability/render-connection", () => ({
+vi.mock("../../../../features/render-connection/rules", () => ({
   connectionForRoute: vi.fn(async () => undefined),
 }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));

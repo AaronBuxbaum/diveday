@@ -4,13 +4,13 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
-import type { StaffMember } from "@/db/staff-accounts";
 import { STAFF_MESSAGES } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+import type { StaffMember } from "../../../../../features/staff-accounts/store";
 
 const ctx = fileScopedShopContext();
 

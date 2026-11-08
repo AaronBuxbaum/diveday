@@ -281,7 +281,37 @@ describe("the ratchet", () => {
 describe("server-only modules stay out of client bundles", () => {
   const phone = 'import { parsePhoneNumberFromString } from "libphonenumber-js/mobile";\n';
 
-  it("refuses a use-client file that imports the line-type module directly", async () => {
+  for (const [feature, file] of [
+    ["phone-line-type", "rules.ts"],
+    ["payments", "webhook.ts"],
+  ]) {
+    const contract = {
+      [`src/features/${feature}/index.ts`]: `export { sensitive } from "./${file.slice(0, -3)}";\nexport type { Secret } from "./${file.slice(0, -3)}";`,
+      [`src/features/${feature}/${file}`]:
+        "export const sensitive = 1; export type Secret = string;",
+      [`src/features/${feature}/README.md`]: "Server-side feature fixture.",
+    };
+    it(`refuses the ${feature} public index even without a transitive package dependency`, async () => {
+      const root = await fixture({
+        ...contract,
+        "src/app/Form.tsx": `"use client";\nimport { sensitive } from "@/features/${feature}";`,
+      });
+      expect(flat(await collectViolations(root))).toEqual([
+        expect.stringContaining(`reaches server-only src/features/${feature}/${file}`),
+      ]);
+    });
+
+    it(`leaves ${feature} types and use-server action stubs out of the browser graph`, async () => {
+      const root = await fixture({
+        ...contract,
+        "src/app/actions.ts": `"use server";\nimport { sensitive } from "@/features/${feature}";`,
+        "src/app/Form.tsx": `"use client";\nimport { act } from "@/app/actions";\nimport type { Secret } from "@/features/${feature}";`,
+      });
+      expect(flat(await collectViolations(root))).toEqual([]);
+    });
+  }
+
+  it("refuses a use-client file that reaches line-type metadata through a helper", async () => {
     const root = await fixture({
       "src/lib/phone-line-type.ts": phone,
       "src/app/Form.tsx":
@@ -289,7 +319,7 @@ describe("server-only modules stay out of client bundles", () => {
     });
     expect(flat(await collectViolations(root))).toEqual([
       expect.stringContaining(
-        'src/app/Form.tsx: a "use client" file reaches server-only src/lib/phone-line-type.ts',
+        'src/app/Form.tsx: a "use client" file reaches server-only libphonenumber-js/mobile',
       ),
     ]);
   });
@@ -361,4 +391,52 @@ describe("a table module writes by transition", () => {
       expect.stringContaining("src/db/boats.ts: exports updateBoat"),
     ]);
   });
+});
+
+describe("runtime boundaries after concept migration", () => {
+  it("keeps exact integration-test subjects outside runtime dependency direction", async () => {
+    const root = await fixture({
+      "src/features/check-in/index.ts": 'export { read } from "./store";',
+      "src/features/check-in/README.md": "# check-in",
+      "src/features/check-in/store.ts": "export const read = () => 1;",
+      "src/db/counter.test.ts": 'import { read } from "@/features/check-in/store";',
+      "src/test/fixture.ts": 'import { read } from "@/features/check-in/store";',
+      "src/db/production.ts": 'import { read } from "@/features/check-in";',
+      "src/app/page.tsx": 'import { read } from "@/features/check-in/store";',
+    });
+    expect(flat(await collectViolations(root)).sort()).toEqual([
+      expect.stringContaining("src/app/page.tsx: deep-imports"),
+      "src/db/production.ts: imports @/features/check-in",
+    ]);
+  });
+
+  it("leaves pure feature state transformations outside table-write naming", async () => {
+    const root = await fixture({
+      "src/features/selection/index.ts": 'export { updateSelection } from "./rules";',
+      "src/features/selection/README.md": "# selection",
+      "src/features/selection/rules.ts": "export function updateSelection() {}",
+    });
+    expect(flat(await collectViolations(root))).toEqual([]);
+  });
+
+  it("keeps transition naming on a moved feature store", async () => {
+    const root = await fixture({
+      "src/features/notes/index.ts": 'export { saveNote } from "./store";',
+      "src/features/notes/README.md": "# notes",
+      "src/features/notes/store.ts": "export function saveNote() {}",
+    });
+    expect(flat(await collectViolations(root))).toEqual([
+      expect.stringContaining("src/features/notes/store.ts: exports saveNote"),
+    ]);
+  });
+});
+
+it("allows a native Node import of the explicit feature index extension", async () => {
+  const root = await fixture({
+    "src/features/world/index.ts": 'export { states } from "./rules";',
+    "src/features/world/README.md": "# world",
+    "src/features/world/rules.ts": "export const states = [];",
+    "scripts/states.mjs": 'import { states } from "../src/features/world/index.ts";',
+  });
+  expect(flat(await collectViolations(root))).toEqual([]);
 });

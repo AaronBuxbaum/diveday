@@ -5,7 +5,11 @@ import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { bookings, trips } from "@/db/schema";
 import { DEMO_RECAP_BOOKING_ID } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized, requireDemoTenant, testRouteRefused } from "@/lib/e2e-test-routes";
+import {
+  e2eTestRouteAuthorized,
+  requireDemoTenant,
+  testRouteRefused,
+} from "@/features/e2e-test-routes";
 
 /**
  * Returns the one demo recap fixture's trip id so the browser fleet can reach

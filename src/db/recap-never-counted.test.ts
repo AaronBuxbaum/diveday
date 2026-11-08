@@ -3,8 +3,12 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { sendDueRecaps } from "@/test/words-wiring";
+import {
+  bookingsLeftAtTheDock,
+  bookingsNeverCountedAtRollCall,
+  getRecapPageData,
+} from "../features/recap/store";
 import { createBookingParty } from "./bookings";
-import { bookingsLeftAtTheDock, bookingsNeverCountedAtRollCall, getRecapPageData } from "./recap";
 import { bookingArrivalEvents, notificationDeliveries, rollCallEvents } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 

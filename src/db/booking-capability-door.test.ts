@@ -26,8 +26,8 @@ const SQL_NAME_ALLOWED = new Set([
   // The table and its constraint names.
   "src/db/schema/bookings.ts",
   // Retention windows keyed by table name.
-  "src/lib/retention.ts",
-  "src/db/retention.ts",
+  "src/features/retention/rules.ts",
+  "src/features/retention/store.ts",
 ]);
 
 /**
@@ -35,7 +35,7 @@ const SQL_NAME_ALLOWED = new Set([
  * `{ from: bookingCapabilities, id: bookingCapabilities.id }` and deletes rows
  * by their own expiry clock, never from a token.
  */
-const REBIND_ALLOWED = new Set(["src/db/retention.ts"]);
+const REBIND_ALLOWED = new Set(["src/features/retention/store.ts"]);
 
 /** `bookingCapabilities.id` as a projection key or a sort key: reads, never filters. */
 const ALLOWED_ID_USE = [

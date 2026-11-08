@@ -63,7 +63,7 @@ describe("what is not a door", () => {
       "  };",
     ].join("\n");
 
-    expect(unboundedSizeFields("src/db/import.ts", source)).toEqual([]);
+    expect(unboundedSizeFields("src/features/import/store.ts", source)).toEqual([]);
   });
 
   it("does not read a JSX maxLength as a bound", () => {

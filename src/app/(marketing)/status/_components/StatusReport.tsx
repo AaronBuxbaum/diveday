@@ -3,9 +3,9 @@ import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { StatusMark, type StatusMarkVariant } from "@/components/ui/StatusMark";
 import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
+import type { PlatformComponent, PlatformStatus } from "@/features/platform-status";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import type { PlatformComponent, PlatformStatus } from "@/lib/platform-status";
 
 /**
  * The mark beside the headline, and the mark on each row.

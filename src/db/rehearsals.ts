@@ -112,7 +112,7 @@ function tripHandlesOf(notification: Notification): TripHandles {
  * and each is resolved inside the notification's own shop. A kind that carries
  * none of them is not held here: crew changes are dropped where they are
  * recorded (`src/db/crew-notices.ts`), a last-minute deal is refused where it
- * is composed (`src/db/trip-promos.ts`), and the rest (account mail, the
+ * is composed (`src/features/trip-promos/store.ts`), and the rest (account mail, the
  * Monday digest, gear) are not about a departure at all.
  */
 export async function notificationHeldForRehearsal(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { SafetyMonth } from "@/lib/safety-report";
+import type { SafetyMonth } from "../../../../../features/safety-report/rules";
 import { safetyMonthTiles } from "./safety-month-tiles";
 
 const t = staffTranslator("en-US");

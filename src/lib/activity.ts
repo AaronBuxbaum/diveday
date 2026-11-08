@@ -32,7 +32,7 @@ import type { TurnAwayReason } from "./turn-away";
  * Values are **names as recorded at the time**, not ids: the trail is history,
  * and a line saying who did what in March should keep saying it after the
  * person is renamed. That is also why erasure has to reach in here — see
- * {@link ACTIVITY_REDACTED} and `src/db/anonymize.ts`.
+ * {@link ACTIVITY_REDACTED} and `src/features/anonymize/store.ts`.
  */
 /**
  * **Why the system, not a person, wrote a line.** Stored in
@@ -525,7 +525,7 @@ type ActivityParamShapes = {
    *
    * A code rather than a blanked payload, so the row reads the same way it
    * always has — one word, no verb, nothing about the person who asked to be
-   * forgotten. See `src/db/anonymize.ts`.
+   * forgotten. See `src/features/anonymize/store.ts`.
    */
   redacted: Record<string, never>;
   /**
@@ -769,7 +769,7 @@ export function activityAudience(code: string): ActivityAudience {
  * trail, log, export or diver surface reads them (`onTheTrail` in
  * `src/db/operations.ts`), they carry no names (the subject is joined live),
  * and they are kept 30 days rather than the trail's years
- * (`DESK_LINE_RETENTION_DAYS`, `src/lib/retention.ts`).
+ * (`DESK_LINE_RETENTION_DAYS`, `src/features/retention/rules.ts`).
  *
  * A desk-only line may have no actor and no system reason: a diver asking for
  * a hand on their own link, or a seat given back by a path that hands down no

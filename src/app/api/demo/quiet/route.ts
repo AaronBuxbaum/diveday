@@ -5,7 +5,7 @@ import {
   QUIET_DEMO_COOKIE_MAX_AGE,
   QUIET_DEMO_PARAM,
   quietDemoToken,
-} from "@/lib/quiet-demo-device";
+} from "@/features/quiet-demo-device";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { runtimeMode } from "@/lib/runtime-mode";
@@ -14,7 +14,7 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
 /**
  * Mark this browser as the founder's, so a demo he opens from it sends no
- * alert (`src/lib/quiet-demo-device.ts`). The proof is `DEMO_QUIET_KEY`,
+ * alert (`src/features/quiet-demo-device/rules.ts`). The proof is `DEMO_QUIET_KEY`,
  * carried as `?key=`, which the telemetry redaction blanks
  * (`capability-urls.ts`).
  *

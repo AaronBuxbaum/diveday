@@ -250,7 +250,7 @@ export type DiveMode = "boat" | "shore" | "pool";
  * Exported because two surfaces read the same window from opposite ends — the
  * dock-day timeline lays it on a clock, and the departure page's day profile
  * states it as a duration before anybody has booked. `dayProfileRows`
- * (src/lib/day-profile.ts) calls it, and the arithmetic stays here.
+ * (src/features/day-profile/rules.ts) calls it, and the arithmetic stays here.
  */
 export function betweenDivesMinutes(
   rhythm: DockDayRhythm,

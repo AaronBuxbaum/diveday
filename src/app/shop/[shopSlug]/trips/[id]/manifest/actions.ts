@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { RollCallResult } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
-import { answerSnag, noteSnag } from "@/db/boat-snags";
 import {
   addBuddyTeamMember,
   type BuddyTeamMemberInput,
@@ -28,19 +27,20 @@ import {
 } from "@/db/push-subscriptions";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
 import { markTripCaughtUp } from "@/db/trip-read-marks";
-import { deleteTripSighting, recordTripSighting } from "@/db/trip-sightings";
-import { recordTripStage } from "@/db/trip-stages";
+import { answerSnag, noteSnag } from "@/features/boat-snags";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface, requireStaffSession } from "@/features/session";
+import { deleteTripSighting, recordTripSighting } from "@/features/trip-sightings";
+import { recordTripStage } from "@/features/trip-stages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters, MAX_ENTERED_DEPTH_METERS } from "@/lib/depth-units";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { teamUpRefusal } from "@/lib/party-teams";
 import { PLAN_CHANGE_NOTE_MAX, PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
-import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { TRIP_STAGES } from "@/lib/trip-stages";
 import { UUID_SOURCE } from "@/lib/uuid";

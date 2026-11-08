@@ -3,9 +3,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 
-vi.mock("@/db/series-next", () => ({ nextPublicTripInSeries: vi.fn(async () => null) }));
+vi.mock("../../../../../features/series-next/store", () => ({
+  nextPublicTripInSeries: vi.fn(async () => null),
+}));
 
-const { nextPublicTripInSeries } = await import("@/db/series-next");
+const { nextPublicTripInSeries } = await import("../../../../../features/series-next/store");
 const { cancelledNotice } = await import("./CancelledNotice");
 const { ForgetReadyCopy } = await import("./ForgetReadyCopy");
 

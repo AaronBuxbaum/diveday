@@ -1,25 +1,25 @@
 import { canPersonReadMedicalAlertOnTrip, emergencyMedicalAlertStanding } from "@/db/authz";
 import { departureKitRecord } from "@/db/boat-safety";
-import { openSnagsForTrip } from "@/db/boat-snags";
-import { departureVessels } from "@/db/boats";
 import { listTripBuddyTeams, planPartyTeams } from "@/db/buddy-teams";
 import type { AppDb } from "@/db/client";
-import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { mayStartTripIncidentReport, openMissingAlerts } from "@/db/incident-reports";
 import { rollCallOpenOnTrip } from "@/db/manifests";
-import { issueOfflineManifestSnapshot } from "@/db/offline-manifest-snapshots";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
-import { lastAtSites } from "@/db/site-history";
 import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { listCatchUpSince } from "@/db/trip-read-marks";
-import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
-import { latestTripStage } from "@/db/trip-stages";
 import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
+import { openSnagsForTrip } from "@/features/boat-snags";
+import { departureVessels } from "@/features/boats";
+import { diveIntentTallyForTrip } from "@/features/dive-intent";
+import { issueOfflineManifestSnapshot } from "@/features/offline-manifest-snapshots";
+import type { SiteHistory } from "@/features/site-history";
+import { lastAtSites } from "@/features/site-history";
+import { listShopPickedSpecies, listTripSightings } from "@/features/trip-sightings";
+import { latestTripStage } from "@/features/trip-stages";
 import { cancelledRollCall } from "@/lib/roll-call";
-import type { SiteHistory } from "@/lib/site-history";
 
 /**
  * **Everything the boat manifest reads, in the waves the page awaits them**:

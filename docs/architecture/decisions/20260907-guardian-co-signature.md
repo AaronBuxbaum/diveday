@@ -5,7 +5,7 @@
 - **Scope:** `src/lib/guardian.ts`, `waiver_records`' six guardian columns and its
   `draft_guardian` draft, `/waivers/[token]`, `src/lib/readiness.ts`'s
   `guardian_signature_missing`, `src/lib/waiver-integrity.ts` (both versions), the paper-release
-  form on the three staff surfaces that carry it, `src/db/export.ts` and `src/db/anonymize.ts`
+  form on the three staff surfaces that carry it, `src/db/export.ts` and `src/features/anonymize/store.ts`
 
 ## Context
 
@@ -248,7 +248,7 @@ So it moves. A minor's form draws a second sentence, selected by the `requiresGu
 
 Decision 8 erased the guardian's address only with the diver's own data. A parent is a third party with no record of their own, so a parent asking for their address to go had nothing to ask for but the child's erasure, and nulling the address alone made `verifyWaiverIntegrity` report tampering on a release nobody had altered (decision 5 put it inside the seal).
 
-**An owner can now erase the address on its own, from the child's record.** `eraseGuardianEmail` (`src/db/guardian-erasure.ts`) re-checks the erasure permission inside its transaction and takes the address only when it is on a release of the diver the URL names, in the staffer's own shop. It then clears it from every live release in that shop carrying it (one guardian, several children) and from any unsent guardian draft. The owner types the address back to confirm, as decision 8's erasure has them type the name.
+**An owner can now erase the address on its own, from the child's record.** `eraseGuardianEmail` (`src/features/guardian-erasure/store.ts`) re-checks the erasure permission inside its transaction and takes the address only when it is on a release of the diver the URL names, in the staffer's own shop. It then clears it from every live release in that shop carrying it (one guardian, several children) and from any unsent guardian draft. The owner types the address back to confirm, as decision 8's erasure has them type the name.
 
 **The release re-seals as version 4, with the note inside the seal.** Version 4 seals everything version 3 seals except `guardian_email`, plus `guardian_email_erased_at` and `guardian_email_erased_by_person_id`. So "this release was redacted, by whom, and when" is sealed fact, not an annotation beside the seal, and the release's staff page says so. As with versions 2 and 3, only a release whose seal verified at that moment is re-sealed: an unsealed one stays unsealed and a failing one keeps failing. A version 4 release that is refiled stays version 4 (`signedIntegrityVersionFor`), and erasing the diver still seals version 2. The `waiver_records_guardian_email_erased_stays_erased` check refuses a write that puts an address back under the stamp.
 

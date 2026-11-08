@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { activityEvents, bookings, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
-import { verifyScheduleMoveResult } from "@/lib/schedule-move-result";
 import { utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -13,6 +12,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { verifyScheduleMoveResult } from "../../../../../features/schedule-move-result/rules";
 
 const ctx = fileScopedShopContext();
 

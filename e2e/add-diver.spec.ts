@@ -376,7 +376,7 @@ async function scheduleTrip(page: Page, title: string, inDays: number, capacity 
  * Regression: booking a diver from their own record used to skip the waiver
  * entirely — that door called `createBooking` and nothing else — so a diver
  * seated there reached the dock unsigned and no staff surface said why. Every
- * door now goes through `seatDiver` (src/db/seat-diver.ts), so the evidence is
+ * door now goes through `seatDiver` (src/features/seat-diver/store.ts), so the evidence is
  * the roster's own waiver control reading "Waiver sent".
  */
 test("booking a diver from their record issues their waiver, like every other door", async ({

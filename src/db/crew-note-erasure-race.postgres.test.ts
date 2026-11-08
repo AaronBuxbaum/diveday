@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
 import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { recordPreDepartureCheck } from "./pre-departure-check";
 import {

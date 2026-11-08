@@ -6,12 +6,12 @@ import { LostItemRow } from "@/components/lost-found/LostItemRow";
 import { lostItemRowCopy } from "@/components/lost-found/lost-found-copy";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { listOpenLostItems } from "@/db/lost-items";
+import { listOpenLostItems } from "@/features/lost-items";
+import { requireShopSurface } from "@/features/session";
 import { fill } from "@/i18n/fill";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 // `instant = true`: this segment's `loading.tsx` paints while the list

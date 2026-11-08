@@ -7,9 +7,9 @@ import {
   markIntegrationDeliveryDelivered,
   markIntegrationDeliveryFailed,
 } from "@/db/integration-events";
-import { markIntegrationError, markIntegrationHealthy } from "@/db/integrations";
 import { IntegrationDeliveryDeadlineError } from "./delivery-deadline";
 import { deliverQuickBooksEvent, quickBooksConfigFromEnvironment } from "./quickbooks";
+import { markIntegrationError, markIntegrationHealthy } from "./store";
 import { deliverZapierEvent } from "./zapier";
 
 /** Leave room inside the route's 300-second platform ceiling to settle a claim. */

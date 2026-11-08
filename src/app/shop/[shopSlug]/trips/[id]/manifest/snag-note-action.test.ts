@@ -14,15 +14,16 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn(async () => ({})) };
 });
-vi.mock("@/db/boat-snags", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/boat-snags")>();
+vi.mock("../../../../../../features/boat-snags/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../../../features/boat-snags/store")>();
   return { ...actual, noteSnag: vi.fn(async () => ({ ok: true }) as const) };
 });
-vi.mock("@/lib/session", async () =>
+vi.mock("../../../../../../features/session/rules", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
-const { requireStaffSession } = await import("@/lib/session");
-const { noteSnag } = await import("@/db/boat-snags");
+const { requireStaffSession } = await import("../../../../../../features/session/rules");
+const { noteSnag } = await import("../../../../../../features/boat-snags/store");
 const { noteSnagAction } = await import("./actions");
 
 const SHOP = { id: "00000000-0000-4000-8000-000000000001", slug: "blue-mantis" };

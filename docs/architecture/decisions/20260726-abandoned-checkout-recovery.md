@@ -21,7 +21,7 @@ divers' emails may be linked).
   time. This sidesteps re-deriving "who bought this" from the party's linked bookings entirely — the
   row that needs a recipient now durably has one.
 - **Reconcile with Stripe before ever sending, and never treat a failed lookup as confirmation.**
-  `sendDueCheckoutRecoveries` (`src/db/checkout-recovery.ts`) treats a stale local `pending` row as a
+  `sendDueCheckoutRecoveries` (`src/features/checkout-recovery/store.ts`) treats a stale local `pending` row as a
   lead, not proof: every candidate is looked up directly via `checkoutProvider.retrieveCheckoutSession`
   immediately before sending. This calls the provider directly rather than reusing the confirmation
   page's `refreshCheckoutFromStripe` fallback, because that helper returns the local row *unchanged*
@@ -45,7 +45,7 @@ divers' emails may be linked).
   `"unpaid"` is counted as `settled` rather than sent — otherwise a diver who paid at the counter
   gets a link that reads as a repeat charge request.
 - **The due-rule is one framework-free function.** `dueCheckoutRecovery(checkout, now)`
-  (`src/lib/checkout-recovery.ts`) is true only for a `pending` checkout, old enough
+  (`src/features/checkout-recovery/rules.ts`) is true only for a `pending` checkout, old enough
   (`RECOVERY_DELAY_HOURS` = 2, matching FareHarbor's stated cadence), not already sent, with a Stripe
   session that hasn't itself expired (a dead link helps no one), and a known recipient.
 - **Dedup lives on the checkout row, not the shared notification-delivery table.**

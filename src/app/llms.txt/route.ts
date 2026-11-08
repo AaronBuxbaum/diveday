@@ -2,12 +2,12 @@ import { connection, type NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { diveSpecialty } from "@/db/schema";
 import { listShopsForSitemap } from "@/db/shops";
-import { renderLlmsTxt } from "@/lib/llms-txt";
+import { renderLlmsTxt } from "@/features/llms-txt";
 import { publicAppUrl } from "@/lib/notifications";
 
 /**
  * `/llms.txt` — the site-level overview an agent reads first (issue #1427).
- * Words in `src/lib/llms-txt.ts`; this route only decides which shops appear
+ * Words in `src/features/llms-txt/rules.ts`; this route only decides which shops appear
  * (the sitemap's own scope, so a shop that opted out of search is absent) and
  * how long a reader may keep the answer.
  *

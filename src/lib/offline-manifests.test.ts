@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { crewSnapshot, snapshot } from "../test/substrate-fixtures/lib/offline-manifests-fixtures";
 import { EMPTY_EMERGENCY_REFERENCE } from "./emergency-reference";
 import type { TripManifest } from "./manifests";
 import {
@@ -21,7 +22,6 @@ import {
   rejectedOfflineEventCount,
   serializeManifests,
 } from "./offline-manifests";
-import { crewSnapshot, snapshot } from "./offline-manifests-fixtures";
 
 describe("offline manifest policy", () => {
   it("labels freshness without hiding an old snapshot", () => {

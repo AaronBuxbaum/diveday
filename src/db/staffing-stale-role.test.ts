@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { createStaffShift } from "../features/staffing/store";
 import { personRoles, staffShifts } from "./schema";
-import { createStaffShift } from "./staffing";
 import { listStaff } from "./trips";
 
 const OPEN_TEST_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;

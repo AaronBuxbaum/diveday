@@ -1,10 +1,15 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  aSetOut,
+  gearShopContext,
+  mustCreate,
+  TODAY,
+} from "../test/substrate-fixtures/db/gear-test-fixtures";
 import { createGearItem, deleteGearItem } from "./gear-items";
 import { returnGearReservation } from "./gear-reservations";
 import { liveGearItem, openGearReservation, optional } from "./gear-shared";
-import { aSetOut, gearShopContext, mustCreate, TODAY } from "./gear-test-fixtures";
 import { gearItems, gearReservations } from "./schema";
 
 /**

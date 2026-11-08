@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { summarizeMonth } from "@/lib/reporting";
+import { summarizeMonth } from "../../../../../features/reporting/rules";
 import { monthFigureBasis, monthFigureList } from "./month-figure-list";
 
 const month = (overrides: Partial<Parameters<typeof summarizeMonth>[0]> = {}) =>

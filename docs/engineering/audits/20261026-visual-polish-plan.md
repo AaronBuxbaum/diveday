@@ -3119,7 +3119,7 @@ followed by site only when useful. Preserve nearest-to-now ranking.
 
 **Preserve/review:** Do not infer time from title or change tenant filtering
 
-**Source:** src/db/search.ts:256; src/components/search/palette-start-rows.tsx:92
+**Source:** src/features/search/store.ts:256; src/components/search/palette-start-rows.tsx:92
 
 **GitHub match:** exact-existing. Exact execution target: issue #3066 (in-progress). Historical or
 partial references below remain context and are not automatic closure targets.

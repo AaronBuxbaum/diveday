@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { checkpointGap } from "./checkpoint-gaps";
-import { buildIncidentExport, incidentExportContentHash } from "./incident-export";
 import {
   baseInput,
   diver,
   manifestCrew,
   manifestsFor,
   TRIP,
-} from "./incident-export-test-fixtures";
+} from "../test/substrate-fixtures/lib/incident-export-test-fixtures";
+import { checkpointGap } from "./checkpoint-gaps";
+import { buildIncidentExport, incidentExportContentHash } from "./incident-export";
 import { buildTripManifest, rollCallCheckpoints } from "./manifests";
 
 /**

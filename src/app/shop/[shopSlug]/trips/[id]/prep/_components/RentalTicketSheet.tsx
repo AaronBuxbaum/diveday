@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getRentalTicket } from "@/db/trip-prep";
+import { requireShopSurface } from "@/features/session";
+import { getRentalTicket } from "@/features/trip-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -8,7 +9,6 @@ import { nowDate } from "@/lib/clock";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { RentalSlip } from "../../../../gear/_components/RentalSlip";
 import { SheetDocument } from "../../../../print/_components/SheetDocument";

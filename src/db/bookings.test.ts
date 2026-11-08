@@ -11,6 +11,9 @@ import {
 import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
+import { createDiver } from "../features/divers/store";
+import { setDiveOneSite } from "../test/substrate-fixtures/db/trip-dives-test-fixtures";
+import { draftsOf, halfTypedDrafts } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { standingArrivalStatus } from "./arrival-provenance";
 import * as bookingCapabilitiesModule from "./booking-capabilities";
 import {
@@ -26,7 +29,6 @@ import {
   splitBookingIdentity,
 } from "./bookings";
 import type { AppDb } from "./client";
-import { createDiver } from "./divers";
 import { listTripActivity, pagedDiverActivity } from "./operations";
 import * as readinessModule from "./readiness";
 import { recordRentalFit } from "./rental-fit";
@@ -47,7 +49,6 @@ import {
   waiverRecords,
 } from "./schema";
 import * as selfDeclaredCardsModule from "./self-declared-cards";
-import { setDiveOneSite } from "./trip-dives-test-fixtures";
 import {
   changeTripCrew,
   createTrip,
@@ -59,7 +60,6 @@ import {
   upcomingTripsWithCounts,
 } from "./trips";
 import { issueWaiverRequest } from "./waivers";
-import { draftsOf, halfTypedDrafts } from "./waivers-test-fixtures";
 
 async function seededContext() {
   const { db, shop } = ctx;
@@ -847,7 +847,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
    * tap from three uncertified first-timers on one instructor — and the trip's
    * own capacity (12) never notices.
    *
-   * 180 days out for the same reason as `src/db/courses.test.ts`: clear of the
+   * 180 days out for the same reason as `src/features/courses/store.test.ts`: clear of the
    * seeded instructor's calendar, whatever hour the suite runs at.
    */
   const INTRO_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
@@ -3463,7 +3463,7 @@ describe("seat capacity counts only the seats somebody holds", () => {
 
     // The counter's own write, as a bare status change: the question here is
     // what the capacity predicate reads, not how the status got there
-    // (`src/db/no-show.test.ts` owns the writer and its gate).
+    // (`src/features/no-show/store.test.ts` owns the writer and its gate).
     const roster = await getTripRoster(db, shop.id, fullTrip.id);
     const released = roster[0];
     if (!released) throw new Error("expected the full trip to have a roster");

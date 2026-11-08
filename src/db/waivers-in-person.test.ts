@@ -2,13 +2,17 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  clearAnswers,
+  now,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, personRoles, userAccounts, waiverRecords } from "./schema";
 import { listStaff } from "./trips";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { recordInPersonWaiver } from "./waivers-in-person";
 import { issueWaiverRequest } from "./waivers-requests";
-import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

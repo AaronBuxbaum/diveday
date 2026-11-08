@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
+import { createBoat } from "../features/boats/store";
 import { captureDepartureBoatSafety } from "./boat-safety";
-import { createBoat } from "./boats";
 import type { AppDb } from "./client";
 import {
   DEMO_SCHEDULE_MIN_RUNWAY_DAYS,

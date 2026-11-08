@@ -1,10 +1,10 @@
 import { getDb } from "@/db/client";
-import { bookingLeadTimes } from "@/db/reporting";
+import { leadTimeForWeekday, wholePercent } from "@/features/lead-time";
+import { bookingLeadTimes } from "@/features/reporting";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, calendarDateWeekday } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { weekdayNames } from "@/lib/format";
-import { leadTimeForWeekday, wholePercent } from "@/lib/lead-time";
 
 const YEAR_MS = 365 * 86_400_000;
 

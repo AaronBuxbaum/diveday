@@ -3,11 +3,11 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceFieldset, ChoiceRow, FormStatus, StickyFormActions } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
-import { canPersonManageShopSettings, getDockDayPage } from "@/db/dock-day-page";
+import { canPersonManageShopSettings, getDockDayPage } from "@/features/dock-day-page";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { DeskPayment } from "@/lib/desk-payment";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import {
   CrewLeadFields,

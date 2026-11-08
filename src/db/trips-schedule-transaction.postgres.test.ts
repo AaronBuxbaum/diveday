@@ -2,7 +2,7 @@ import { and, eq, or, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { raceShop } from "@/test/postgres-shop";
-import { createBoat } from "./boats";
+import { createBoat } from "../features/boats/store";
 import { trips } from "./schema";
 import { createTrip, moveTrip } from "./trips";
 import { liveTrip } from "./trips-live";

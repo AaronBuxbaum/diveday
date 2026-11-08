@@ -3,9 +3,10 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { sendFindMyBookingLinks } from "@/db/find-my-booking";
 import { askAnytime } from "@/db/interests";
 import { getShopBySlug } from "@/db/shops";
+import { sendFindMyBookingLinks } from "@/features/find-my-booking";
+import { blankAsAbsent, parseForm } from "@/features/form-parse";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import {
@@ -14,7 +15,6 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
-import { blankAsAbsent, parseForm } from "@/lib/form-parse";
 import { publicAppUrl } from "@/lib/notifications";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";

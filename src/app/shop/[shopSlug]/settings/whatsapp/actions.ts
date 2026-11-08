@@ -10,19 +10,22 @@ import {
   type WhatsAppConnectRefusal,
   whatsAppProviderForAccount,
 } from "@/db/whatsapp-accounts";
-import { completeWhatsAppSignup, type WhatsAppSignupOutcome } from "@/db/whatsapp-signup";
+import { parseForm, single } from "@/features/form-parse";
+import { type NoticeRedirect, revalidateWithNotice } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
+import {
+  completeWhatsAppSignup,
+  type WhatsAppSignupOutcome,
+  whatsAppSignupConfigFromEnvironment,
+} from "@/features/whatsapp-signup";
 import { diverTranslator } from "@/i18n/messages";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
-import { parseForm, single } from "@/lib/form-parse";
-import { type NoticeRedirect, revalidateWithNotice } from "@/lib/navigation";
 import {
   DEFAULT_WHATSAPP_TEMPLATE_NAME,
   metaLanguageCode,
   whatsAppRecipient,
 } from "@/lib/notifications/whatsapp";
-import { whatsAppSignupConfigFromEnvironment } from "@/lib/notifications/whatsapp-signup";
-import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /**

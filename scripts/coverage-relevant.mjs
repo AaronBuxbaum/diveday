@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -40,6 +39,11 @@ export function coverageRelevant(file) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const lines = readFileSync(0, "utf8").split("\n").filter(Boolean);
+  // Actions can pipe a large diff through a nonblocking fd. Await every chunk
+  // through EOF; synchronous fd reads can throw EAGAIN before git finishes.
+  process.stdin.setEncoding("utf8");
+  let input = "";
+  for await (const chunk of process.stdin) input += chunk;
+  const lines = input.split("\n").filter(Boolean);
   for (const line of lines.filter(coverageRelevant)) console.log(line);
 }

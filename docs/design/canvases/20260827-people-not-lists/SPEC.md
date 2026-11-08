@@ -106,7 +106,7 @@ export function buildDiverStatus(
 // Today queue does — never a second detector — and hands the result in. Record-level facts
 // (no waiver on file, open balance) come off the profile. The `contact` row's trigger is no
 // emergency contact on file — the same condition as the roster's `missing_contact` filter
-// (src/db/divers.ts) — tone `warning`. Empty array when clear — and the section renders NOTHING.
+// (src/features/divers/store.ts) — tone `warning`. Empty array when clear — and the section renders NOTHING.
 ```
 
 - Order contract (from `Main.dc.html`): masthead (eyebrow=Divers back link, name, contact line
@@ -173,7 +173,7 @@ when the post-mutation status is empty; visual re-captures (the record has 6).
   fields) returns per person `lastAboardAt: Date | null` (latest sailed booking),
   `nextBookingAt: Date | null`, `importedOnly: boolean` (prior visits exist and no bookings),
   `openBalance: boolean` (any order with status `open`), and `blocker: AboardBlockerKind | null`
-  sourced from the same `inHorizonReadiness` evidence Today uses (`src/db/blockers.ts`), batched
+  sourced from the same `inHorizonReadiness` evidence Today uses (`src/features/blockers/store.ts`), batched
   for the page's ids.
 - **Tests**: no badge renders for a clear diver; one DOM list at both widths; e2e roster search →
   record unchanged.
@@ -189,7 +189,7 @@ when the post-mutation status is empty; visual re-captures (the record has 6).
   Published + Hidden through `listShopReviewsForStaff` with a **NEW** published-state-then-date
   sort; each group label's N comes from a count sharing that group's exact scope (the Pager rule).
 - Bulk publish: the selection checkboxes retire; the group-header act publishes every row in the
-  waiting group (still bounded by `MAX_BULK_PUBLISH`, `src/db/reviews.ts`), its label carrying
+  waiting group (still bounded by `MAX_BULK_PUBLISH`, `src/features/reviews/store.ts`), its label carrying
   the count ("Publish all 5"). With N = 1 the header act does not render.
 - The `FilterChips` view toggle retires (the groups are the filter); `ShopStat` tiles retire here.
 - **Tests**: group membership (a just-published row moves groups on revalidate); publish/hide undo

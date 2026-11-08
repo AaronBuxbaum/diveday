@@ -2,8 +2,6 @@ import type { BadgeTone } from "@/components/ui/badge";
 import type { CertificationAgency, PaymentStatus } from "@/db/schema";
 import type { getShopById } from "@/db/shops";
 import type { pagedUpcomingTripsWithCounts } from "@/db/trips";
-import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
-import type { StaffMessageKey } from "@/i18n/staff-messages";
 import {
   bookingMoney,
   type CardAwaitingKind,
@@ -12,7 +10,9 @@ import {
   type DiverProfile,
   firstOpenOrderId,
   unpaidBookingCount,
-} from "@/lib/diver-profile";
+} from "@/features/diver-profile";
+import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
+import type { StaffMessageKey } from "@/i18n/staff-messages";
 
 export type { CardAwaitingKind, DiverProfile };
 export {

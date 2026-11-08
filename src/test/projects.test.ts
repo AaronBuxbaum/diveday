@@ -19,7 +19,7 @@ describe("classifyTestFile", () => {
     const source = `import { seededShopContext } from "${FIXTURE}";`;
     expect(classifyTestFile("src/db/bookings.test.ts", source)).toBe("db");
     expect(classifyTestFile("src/app/api/search/route.test.ts", source)).toBe("db");
-    expect(classifyTestFile("src/lib/session.test.ts", source)).toBe("db");
+    expect(classifyTestFile("src/features/session/rules.test.ts", source)).toBe("db");
     expect(
       classifyTestFile(
         "src/db/x.test.ts",

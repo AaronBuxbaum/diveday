@@ -1,9 +1,9 @@
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
+import { type DayKind, moneyByBoat, moneyByKind } from "@/features/departure-money";
+import type { ReportTrip } from "@/features/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { type DayKind, moneyByBoat, moneyByKind } from "@/lib/departure-money";
 import { joinFacts } from "@/lib/format";
-import type { ReportTrip } from "@/lib/reporting";
 
 /**
  * **Which boats and which trips made the month's money** (fifth loop, item

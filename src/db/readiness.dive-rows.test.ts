@@ -1,13 +1,13 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { readinessFixturesFor } from "../test/substrate-fixtures/db/readiness-test-fixtures";
 import {
   getBookingReadiness,
   getTripMaxDepthMeters,
   listTripReadiness,
   listTripsReadiness,
 } from "./readiness";
-import { readinessFixturesFor } from "./readiness-test-fixtures";
 import type { DiveSpecialty } from "./schema";
 import { cards, diveSites, shops, tripDives } from "./schema";
 import { getTripRoster } from "./trips";

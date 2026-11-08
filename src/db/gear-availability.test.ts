@@ -3,6 +3,14 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  gearShopContext,
+  mustCreate,
+  rivalShop,
+  SETUP_PICK,
+  shopBooking,
+  TODAY,
+} from "../test/substrate-fixtures/db/gear-test-fixtures";
 import { listAvailableGearUnits, listTripGearAssignments } from "./gear-availability";
 import { createGearItem, deleteGearItem, setGearItemStatus } from "./gear-items";
 import { listGearItems } from "./gear-register";
@@ -12,14 +20,6 @@ import {
   returnGearReservation,
 } from "./gear-reservations";
 import { recordGearService } from "./gear-service";
-import {
-  gearShopContext,
-  mustCreate,
-  rivalShop,
-  SETUP_PICK,
-  shopBooking,
-  TODAY,
-} from "./gear-test-fixtures";
 import { gearReservations, gearServiceEvents } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test

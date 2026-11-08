@@ -1,0 +1,226 @@
+// @vitest-environment node
+import { eq } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import type { AppDb } from "../../db/client";
+import { bookings, people, priorVisits, shops, trips } from "../../db/schema/index";
+import { createTrip } from "../../db/trips";
+import { fileScopedShopContext, seededShopContext } from "../../test/db";
+import { shopFirstBooking } from "./store";
+
+const ctx = fileScopedShopContext();
+
+/**
+ * **The shop's first booking ever, while it is still the only one** — the
+ * coral moment ADR 20260827-first-light, decision 6 puts on the day spine, and
+ * the once-ever row of ADR 20260827-clearwater-surface-language's coral budget.
+ *
+ * Every case here is a *transition*: what turns the moment on, and each of the
+ * four things that turn it off forever. Nothing is stored, so nothing here
+ * writes a flag — the reader is the whole rule.
+ */
+const NOW = new Date("2026-09-01T14:00:00.000Z");
+
+async function freshShop(slug: string, { fresh = false } = {}) {
+  const db = fresh ? (await seededShopContext()).db : ctx.db;
+  const [shop] = await db
+    .insert(shops)
+    .values({ name: `Shop ${slug}`, slug, timezone: "America/New_York" })
+    .returning();
+  if (!shop) throw new Error("test shop insert failed");
+  return { db, shopId: shop.id };
+}
+
+async function aDeparture(db: AppDb, shopId: string, startsAt: Date, title = "Two-Tank Reef") {
+  const trip = await createTrip(db, {
+    shopId,
+    title,
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+    capacity: 8,
+    plannedDives: 2,
+  });
+  if (!trip) throw new Error("test trip insert failed");
+  return trip;
+}
+
+async function aSeat(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  fullName: string,
+  status: "booked" | "cancelled" | "no_show" = "booked",
+) {
+  const [person] = await db.insert(people).values({ shopId, fullName }).returning();
+  if (!person) throw new Error("test person insert failed");
+  const [booking] = await db
+    .insert(bookings)
+    .values({ bookedAs: "diver", shopId, tripId, personId: person.id, status })
+    .returning();
+  if (!booking) throw new Error("test booking insert failed");
+  return booking;
+}
+
+describe("shopFirstBooking", () => {
+  it("says nothing for a shop nobody has booked", async () => {
+    const { db, shopId } = await freshShop("first-booking-none");
+    await aDeparture(db, shopId, new Date("2026-09-05T12:30:00.000Z"));
+    expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
+  });
+
+  it("names the diver and the departure on the shop's very first seat", async () => {
+    const { db, shopId } = await freshShop("first-booking-one");
+    const trip = await aDeparture(
+      db,
+      shopId,
+      new Date("2026-09-05T12:30:00.000Z"),
+      "Two-Tank — Alligator Reef",
+    );
+    await aSeat(db, shopId, trip.id, "Ravi Chandra");
+
+    const mark = await shopFirstBooking(db, shopId, NOW);
+    expect(mark).toMatchObject({
+      tripId: trip.id,
+      tripTitle: "Two-Tank — Alligator Reef",
+      diverName: "Ravi Chandra",
+      priceCents: null,
+      currency: "usd",
+      paymentStatus: null,
+      paymentAmountCents: null,
+      paymentCurrency: null,
+      waiverSigned: false,
+    });
+  });
+
+  it("ends forever at the second booking, whichever departure it is on", async () => {
+    const { db, shopId } = await freshShop("first-booking-two");
+    const trip = await aDeparture(db, shopId, new Date("2026-09-05T12:30:00.000Z"));
+    await aSeat(db, shopId, trip.id, "Ravi Chandra");
+    await aSeat(db, shopId, trip.id, "Noor Rahman");
+    expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
+  });
+
+  /**
+   * The query has no promised row order. Holding `createdAt` equal and
+   * reversing the UUIDs still proves the observable rule: two rows end the
+   * moment, regardless of which pair `limit(2)` returns.
+   */
+  it("ends the moment on a second seat regardless of booking UUIDs", async () => {
+    const together = new Date("2026-08-20T15:00:00.000Z");
+    const lower = "00000000-0000-4000-8000-000000000001";
+    const higher = "00000000-0000-4000-8000-000000000002";
+
+    for (const [first, second] of [
+      [lower, higher],
+      [higher, lower],
+    ]) {
+      // Its own database per pass: both passes write the same two booking ids.
+      const { db, shopId } = await freshShop(`first-booking-tie-${first.slice(-1)}`, {
+        fresh: true,
+      });
+      const trip = await aDeparture(db, shopId, new Date("2026-09-05T12:30:00.000Z"));
+      const one = await aSeat(db, shopId, trip.id, "Ravi Chandra");
+      const two = await aSeat(db, shopId, trip.id, "Noor Rahman");
+      await db
+        .update(bookings)
+        .set({ createdAt: together, id: first })
+        .where(eq(bookings.id, one.id));
+      await db
+        .update(bookings)
+        .set({ createdAt: together, id: second })
+        .where(eq(bookings.id, two.id));
+
+      expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
+    }
+  });
+
+  it("counts a canceled booking against the history but never celebrates one", async () => {
+    // **Why the count is over every row rather than the live ones.** A shop on
+    // its second diver after one cancellation has exactly one *live* booking
+    // and nothing to celebrate — and its own first booking, cancelled, is not
+    // a moment either.
+    const { db, shopId } = await freshShop("first-booking-cancelled");
+    const trip = await aDeparture(db, shopId, new Date("2026-09-05T12:30:00.000Z"));
+    await aSeat(db, shopId, trip.id, "Ravi Chandra", "cancelled");
+    expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
+
+    await aSeat(db, shopId, trip.id, "Noor Rahman");
+    expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
+  });
+
+  /**
+   * **The two doors do not share a boundary** (`dive-domain-expert`,
+   * 2026-09-11, on a docblock that called `no_show` unreachable here). The
+   * counter's no-show mark opens at the scheduled departure (`noShowGate`,
+   * src/lib/no-show.ts) and this reader only calls the boat gone an hour after
+   * it (`hasSailed`), so for that hour a shop's one booking can be written off
+   * while its departure is still ahead by this reader's rule. The status test
+   * is what ends the moment there, not the clock — and the first assertion is
+   * what proves the clock has not ended it yet.
+   */
+  it("lets the counter end the moment in the hour the departure is still ahead", async () => {
+    const { db, shopId } = await freshShop("first-booking-no-show");
+    // Ten minutes past its scheduled time: the no-show door is open and the
+    // late-arrival buffer still has fifty minutes to run.
+    const trip = await aDeparture(db, shopId, new Date(NOW.getTime() - 10 * 60 * 1000));
+    const booking = await aSeat(db, shopId, trip.id, "Ravi Chandra");
+    expect(await shopFirstBooking(db, shopId, NOW)).not.toBeNull();
+
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, booking.id));
+    expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
+  });
+
+  it("holds through the late-arrival buffer, then lets the boat take the moment with it", async () => {
+    const { db, shopId } = await freshShop("first-booking-sailed");
+    // Fifty minutes ago: inside the standing one-hour buffer every "has it
+    // sailed" question in this app carries, so the boat has not gone yet.
+    const trip = await aDeparture(db, shopId, new Date(NOW.getTime() - 50 * 60 * 1000));
+    await aSeat(db, shopId, trip.id, "Ravi Chandra");
+    expect(await shopFirstBooking(db, shopId, NOW)).not.toBeNull();
+
+    const later = new Date(NOW.getTime() + 20 * 60 * 1000);
+    expect(await shopFirstBooking(db, shopId, later)).toBeNull();
+  });
+
+  it("goes with a departure the shop took off the board", async () => {
+    const { db, shopId } = await freshShop("first-booking-deleted-trip");
+    const trip = await aDeparture(db, shopId, new Date("2026-09-05T12:30:00.000Z"));
+    await aSeat(db, shopId, trip.id, "Ravi Chandra");
+    await db.update(trips).set({ deletedAt: NOW }).where(eq(trips.id, trip.id));
+    expect(await shopFirstBooking(db, shopId, NOW)).toBeNull();
+  });
+
+  it("still fires for a shop that imported ten years of history last week", async () => {
+    // **The false-fire that would have been embarrassing.** Prior visits live
+    // in `prior_visits`, not `bookings` — a shop that migrated its roster on
+    // Monday and takes its first DiveDay booking on Tuesday is still having
+    // its first booking *here*, and the reader must not confuse "we have a
+    // history" with "we have taken a seat".
+    const { db, shopId } = await freshShop("first-booking-imported");
+    const trip = await aDeparture(db, shopId, new Date("2026-09-05T12:30:00.000Z"));
+    const booking = await aSeat(db, shopId, trip.id, "Ravi Chandra");
+    const [imported] = await db
+      .insert(people)
+      .values({ shopId, fullName: "Yara Halabi" })
+      .returning();
+    if (!imported) throw new Error("test person insert failed");
+    await db.insert(priorVisits).values({
+      shopId,
+      personId: imported.id,
+      visitedOn: "2019-06-14",
+      title: "Two-tank Molasses Reef",
+      dedupeKey: "legacy-1",
+      importedAt: NOW,
+    });
+
+    const mark = await shopFirstBooking(db, shopId, NOW);
+    expect(mark?.bookingId).toBe(booking.id);
+  });
+
+  it("is not fooled by another shop's bookings", async () => {
+    // The seeded demo shop shares this database and has a boardful.
+    const { db, shopId } = await freshShop("first-booking-tenant");
+    const trip = await aDeparture(db, shopId, new Date("2026-09-05T12:30:00.000Z"));
+    await aSeat(db, shopId, trip.id, "Ravi Chandra");
+    expect(await shopFirstBooking(db, shopId, NOW)).not.toBeNull();
+  });
+});

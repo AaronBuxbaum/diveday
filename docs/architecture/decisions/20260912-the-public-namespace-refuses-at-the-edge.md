@@ -115,10 +115,10 @@ Three candidate page-level fixes die on that paragraph, and each had been propos
 boundary.** The one route that already answered a real 404 was doing this; the rest of the namespace
 joins it.
 
-1. **The shape is decided without I/O, the existence with one read.** `src/lib/public-route-shape.ts`
+1. **The shape is decided without I/O, the existence with one read.** `src/features/public-route-shape/rules.ts`
    turns a `/s/**` pathname into the thing it names (a shop, a course, a site, a departure, or a
    segment malformed on its face) using the parsers the app already holds slugs to;
-   `src/db/public-route-existence.ts` answers whether that thing exists in one indexed lookup. The
+   `src/features/public-route-existence/store.ts` answers whether that thing exists in one indexed lookup. The
    proxy asks both and returns a refusal before any shell is sent. One question, and the answer
    carries whether the shop itself is there, because the refusal is framed as that shop's (point 3)
    and asking again would make a dead URL the most expensive request in the namespace. A malformed
@@ -198,14 +198,14 @@ metric filter matching a renamed code counts zero forever without erroring. The 
 reaches the same `catch` is not an incident and must not share the alarm: a shop slug and a course
 slug go into the lookup unfiltered and length-unbounded on purpose, so `/s/%00` is a statement
 Postgres refuses (SQLSTATE 22021), once per request, free for whoever is sending it. That branch is
-`public_route.existence_query_refused` at `warn`, split by `src/lib/db-failure.ts` on SQLSTATE
+`public_route.existence_query_refused` at `warn`, split by `src/features/db-failure/rules.ts` on SQLSTATE
 class 22 — a data exception, which on this path is a value the caller sent. Everything else that
 lands in that `catch` alarms, the database being gone included but also our own credentials being
 rejected, a revoked grant, and a table the schema does not have; each leaves the namespace exactly
 as silent. That split read the other way round at first — only the classes a server raises about
 *itself* alarmed, on the reasoning that a SQLSTATE means a server answered — and issue #1750
 inverted it, which is safe only because no other class is reachable through the four constant
-statements `publicRouteLookup` issues. The argument is written out in `src/lib/db-failure.ts` and is
+statements `publicRouteLookup` issues. The argument is written out in `src/features/db-failure/rules.ts` and is
 a precondition for adding a reader here. Neither line carries the pathname or the driver's message: drizzle's wrapper
 message is the SQL followed by the bound parameters verbatim, and both were being shipped to
 CloudWatch unauthenticated at the request of a stranger. The volume was the other half of that, and
@@ -226,7 +226,7 @@ learns which unpublished drafts a shop is holding. Accepted rather than overlook
 the reader is only ever a cookie, `getSessionCookie` verifies nothing, and the snapshot
 `getCookieCache` decrypts is a five-minute cache the proxy already refuses to read as "signed out"
 — so every cheap refusal is either defeated by a forged header or 404s a staffer back from lunch.
-The three dead ends are written out in `src/db/public-route-existence.ts`'s header, the behaviour is
+The three dead ends are written out in `src/features/public-route-existence/store.ts`'s header, the behaviour is
 pinned in its test, and issue #1735 holds the mechanism that would close it: a preview capability
 the edge can verify. The private-charter departure looks like the same hole and isn’t one — a trip
 id is a random uuid with no namespace to sweep, and the trip page carries no `isPrivate` check at

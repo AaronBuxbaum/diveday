@@ -1,12 +1,15 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { type DemoReset, resetDemoFromSnapshot } from "@/db/demo-reset-snapshot";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { purgeMintedDemoShops } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
-import { restoreBootClock } from "@/lib/test-clock";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/features/e2e-test-routes";
+import {
+  type DemoReset,
+  resetDemoFromSnapshot,
+} from "../../../../features/demo-reset-snapshot/store";
+import { restoreBootClock } from "../../../../features/test-clock/rules";
 
 /**
  * Resets the seeded demo shop's schedule to its canonical fixture state.
@@ -21,7 +24,7 @@ import { restoreBootClock } from "@/lib/test-clock";
  * (env-var predicate + `DIVEDAY_E2E_SECRET` bearer token) enforcing that.
  *
  * The schedule comes back from a copy taken on this server's first reset, not
- * from a re-seed (`src/db/demo-reset-snapshot.ts`, ADR
+ * from a re-seed (`src/features/demo-reset-snapshot/store.ts`, ADR
  * 20261024-e2e-reset-replays-a-snapshot): the re-seed was most of a reset's
  * 1.2s on an idle runner and 4-5s under load. The response says how it was
  * served and what each step cost, in a `Server-Timing` header and in the body,

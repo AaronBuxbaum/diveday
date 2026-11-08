@@ -11,7 +11,8 @@ import { LedgerGroup } from "@/components/ui/ledger";
 import { ShopNotice } from "@/components/ui/outcome";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import type { NoticeTone } from "@/components/ui/tone";
-import { getOrdersIndex, ORDER_DEFAULT_RANGE_DAYS, ORDER_STATUSES } from "@/db/orders-index";
+import { getOrdersIndex, ORDER_DEFAULT_RANGE_DAYS, ORDER_STATUSES } from "@/features/orders-index";
+import { requireShopSurface } from "@/features/session";
 import { ORDER_STATUS_KEYS } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -23,7 +24,6 @@ import {
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
 import { StaffListPagination } from "../_components/StaffListPagination";

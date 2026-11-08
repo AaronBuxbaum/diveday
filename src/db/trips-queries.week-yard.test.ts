@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat } from "./boats";
+import { createBoat } from "../features/boats/store";
 import { createTrip, weekBoard } from "./trips";
 
 /**

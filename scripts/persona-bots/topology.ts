@@ -1,6 +1,6 @@
 import path from "node:path";
+import { E2E_WORKER_PORT_STRIDE } from "@/features/e2e-port";
 import { E2E_BASE_PORT } from "../../e2e/servers";
-import { E2E_WORKER_PORT_STRIDE } from "../../src/lib/e2e-port";
 
 /**
  * Where the weekly persona walk runs (N-61). Shared by its Playwright config

@@ -4,9 +4,9 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
 import { insertTip } from "@/test/tips";
+import { recordStripeDispute } from "../features/payment-disputes/store";
+import { recordStripeRefundFailure } from "../features/refund-failures/store";
 import type { AppDb } from "./client";
-import { recordStripeDispute } from "./payment-disputes";
-import { recordStripeRefundFailure } from "./refund-failures";
 import { recordStripeChargeRefund } from "./refunds";
 import { bookingCheckouts, bookings, people, shops, trips } from "./schema";
 

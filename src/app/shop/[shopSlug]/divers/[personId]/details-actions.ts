@@ -2,13 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { editDiver, isDiverRemoved } from "@/db/divers";
 import { sendStaffReply, sendWhatsAppReopen } from "@/db/staff-reply";
+import { editDiver, isDiverRemoved } from "@/features/divers";
+import { readForm, text } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { isValidCalendarDate } from "@/lib/calendar-date";
-import { readForm, text } from "@/lib/form-parse";
 import { WHATSAPP_REOPEN_MESSAGES } from "@/lib/inbox";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { uuidParam } from "@/lib/uuid";

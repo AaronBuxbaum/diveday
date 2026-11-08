@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { drainExpiredClaudeCallContent, drainExpiredDietaryNotes } from "@/db/retention";
-import { requireCronSecret } from "@/lib/cron-auth";
+import { requireCronSecret } from "@/features/cron-auth";
+import { flushLogs } from "@/features/log-shipping";
+import {
+  DIETARY_RETENTION_CRONTAB,
+  drainExpiredClaudeCallContent,
+  drainExpiredDietaryNotes,
+} from "@/features/retention";
+import { sentry } from "@/features/sentry-server";
 import { log } from "@/lib/log";
-import { flushLogs } from "@/lib/observability";
-import { sentry } from "@/lib/observability/sentry";
-import { DIETARY_RETENTION_CRONTAB } from "@/lib/retention";
 
 /** 45 seconds of batch admission leaves room for an in-flight batch and reporting. */
 export const maxDuration = 60;

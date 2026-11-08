@@ -12,7 +12,7 @@ import type { CertificationLevel } from "@/lib/readiness";
  * plan's hours, what the fee covers — is a plausible default a shop will
  * rewrite to match how it actually runs the course.
  *
- * Imported copies are independent (src/db/courses.ts); bumping a version here
+ * Imported copies are independent (src/features/courses/store.ts); bumping a version here
  * never rewrites a shop's page automatically. The staff editor can show a
  * three-way diff and explicitly apply a later version, with shop-owned fields
  * kept out of the overwrite (ADR 20260816-course-template-updates).
@@ -50,7 +50,7 @@ export type CourseTemplate = {
    * written starter pages for. A shop that teaches under any other agency
    * writes its own courses — the templates are a starting point, never a
    * gate — and the diver-facing catalog builds one tab per agency a shop
-   * teaches (`activeCourseAgencies` in src/db/courses.ts).
+   * teaches (`activeCourseAgencies` in src/features/courses/store.ts).
    */
   agency: "padi" | "ssi" | "sdi";
   description: string;

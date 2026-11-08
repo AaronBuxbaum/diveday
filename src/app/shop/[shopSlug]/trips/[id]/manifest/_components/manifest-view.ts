@@ -1,8 +1,8 @@
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
+import type { requireShopSurface } from "@/features/session";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
-import type { requireShopSurface } from "@/lib/session";
 import type { ManifestActionContext } from "../actions";
 import { bindManifestActions } from "./bound-actions";
 import { buddyBuilderView } from "./buddy-builder-view";

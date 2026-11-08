@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
+import { sendDueReminders } from "../features/reminders/store";
 import { createBookingParty } from "./bookings";
-import { sendDueReminders } from "./reminders";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**

@@ -1,10 +1,10 @@
+import type { DiverStatusRow } from "@/features/diver-status";
 import {
   CERTIFICATION_LEVEL_KEYS,
   readinessBlockerText,
   SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { DiverStatusRow } from "@/lib/diver-status";
 import type { ReadinessBlocker } from "@/lib/readiness";
 
 /**

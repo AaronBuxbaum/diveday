@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
+import { moveSeat } from "../features/seat-diver/store";
 import { createBooking } from "./bookings";
 import {
   correctFlySafeForPerson,
@@ -10,7 +11,6 @@ import {
   sendFlySafeCorrections,
 } from "./fly-safe-correction";
 import { bookings, notificationSendQueue, trips } from "./schema";
-import { moveSeat } from "./seat-diver";
 import { createTrip, listStaff } from "./trips";
 
 const ctx = fileScopedShopContext();

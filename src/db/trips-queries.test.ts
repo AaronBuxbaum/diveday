@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { createTripLens } from "../features/trip-lenses/store";
 import type { DbExecutor } from "./client";
 import { createDiveSite } from "./dive-sites";
 import { bookings, courses, shops, trips } from "./schema";
-import { createTripLens } from "./trip-lenses";
 import { tripPrimarySiteId } from "./trip-primary-site";
 import {
   countShopTrips,

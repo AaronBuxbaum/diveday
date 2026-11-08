@@ -527,7 +527,7 @@ for (const scheme of ["light", "dark"] as const) {
        * move will not happen at all.
        *
        * The issue proposed a charter whose window had already passed.
-       * `blockedReason` (`src/lib/move-preflight.ts`) does not read the clock:
+       * `blockedReason` (`src/features/move-preflight/rules.ts`) does not read the clock:
        * it refuses a cancelled departure as `not_scheduled` and one the crew
        * have counted heads against as `already_sailed`. So the seed records a
        * single boarding through `recordRollCall`, which is cheaper, is the

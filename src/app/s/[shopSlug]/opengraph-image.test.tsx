@@ -17,7 +17,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/db/shops", () => ({ getShopBySlug: mocks.getShopBySlug }));
-vi.mock("@/lib/og-rasterizer", () => ({ allowSvgRasterization: mocks.allowSvgRasterization }));
+vi.mock("../../../features/og-rasterizer/rules", () => ({
+  allowSvgRasterization: mocks.allowSvgRasterization,
+}));
 
 import ScheduleOpenGraphImage from "./opengraph-image";
 

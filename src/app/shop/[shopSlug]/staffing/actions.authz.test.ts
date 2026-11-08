@@ -17,11 +17,13 @@ vi.mock("@/db/authz", () => ({
   canPersonManageStaffAccounts: mocks.canPersonManageStaffAccounts,
 }));
 vi.mock("@/db/client", () => ({ getDb: mocks.getDb }));
-vi.mock("@/db/staffing", () => ({
+vi.mock("../../../../features/staffing/store", () => ({
   createStaffShift: mocks.createStaffShift,
   deleteStaffShift: vi.fn(),
 }));
-vi.mock("@/lib/session", () => ({ requireStaffSession: mocks.requireStaffSession }));
+vi.mock("../../../../features/session/rules", () => ({
+  requireStaffSession: mocks.requireStaffSession,
+}));
 
 const { createShiftAction } = await import("./actions");
 const shopId = "11111111-1111-4111-8111-111111111111";

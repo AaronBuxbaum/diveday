@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
  * And one for the harness's server-side half:
  *
  * 3. Every HTTP handler under `src/app/api/test/**` must call
- *    `e2eTestRouteAuthorized(request)` (`src/lib/e2e-test-routes.ts`). These
+ *    `e2eTestRouteAuthorized(request)` (`src/features/e2e-test-routes/rules.ts`). These
  *    routes exist only so the Playwright fleet can reset and seed state, and
  *    they do things no deployment may ever expose: the `accountToken` fact on
  *    `shop` mints a valid password-reset/invite token for any account by email,
@@ -53,7 +53,7 @@ import { fileURLToPath } from "node:url";
  *    one, so a nested `reset` cannot inherit the exemption below.
  * 5. Every file under `src/app/api/test/**` that reaches a shop — resolves one
  *    by slug, takes a `shopSlug`, or reads or writes `shops` — must call
- *    `requireDemoTenant(` (`src/lib/e2e-test-routes.ts`, issue #2751), or be
+ *    `requireDemoTenant(` (`src/features/e2e-test-routes/rules.ts`, issue #2751), or be
  *    in `SHOP_READERS_BY_DESIGN` with the reason it is safe without. A route
  *    that resolved a caller's slug and wrote to it with no demo check was
  *    seven routes deep before this existed (security review, 2026-11-02).
@@ -65,7 +65,7 @@ import { fileURLToPath } from "node:url";
  *    a route that exists. A folded route that a spec still calls answers 404,
  *    which `seedFacts` and most callers read as a refusal only at run time.
  * 7. Every fact a spec names (`seedFacts(request, [...])`, `privateShopFacts:
- *    [...]`) must be a name the registry holds (`src/db/facts/index.ts`'s
+ *    [...]`) must be a name the registry holds (`src/test/shop-facts/index.ts`'s
  *    `FACTS` or `FACT_SETS`), so a misspelt fact fails here rather than as a
  *    400 in a capture run.
  */
@@ -149,10 +149,14 @@ export function shopReadersWithoutDemoGate(files) {
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const guardImportPattern =
-  /import\s*\{[^}]*\be2eTestRouteAuthorized\b[^}]*\}\s*from\s*["']@\/lib\/e2e-test-routes["']/;
+  /import\s*\{[^}]*\be2eTestRouteAuthorized\b[^}]*\}\s*from\s*["']@\/features\/e2e-test-routes["']/;
 // Route handlers are the module's top-level named exports, so anchor to the
 // start of a line: `export async function POST(`, `export function GET(`, or
 // `export const DELETE = `.
+export function hasTestRouteGuardImport(contents) {
+  return guardImportPattern.test(contents);
+}
+
 const handlerPattern = new RegExp(
   String.raw`^export\s+(?:async\s+)?(?:function|const)\s+(${HTTP_METHODS.join("|")})\b`,
   "gm",
@@ -201,9 +205,9 @@ async function checkTestRouteGuards() {
     // read as registered though its URL is one no test ever calls.
     const routePath = path.dirname(path.relative(TEST_ROUTE_DIR, relativePath));
     const contents = await readFile(path.join(ROOT, relativePath), "utf8");
-    if (!guardImportPattern.test(contents)) {
+    if (!hasTestRouteGuardImport(contents)) {
       problems.push(
-        `${relativePath}: does not import e2eTestRouteAuthorized from @/lib/e2e-test-routes`,
+        `${relativePath}: does not import e2eTestRouteAuthorized from @/features/e2e-test-routes`,
       );
       continue;
     }
@@ -302,7 +306,7 @@ async function unregisteredRoutes(routeHandlers) {
   );
 }
 
-const FACT_REGISTRY = "src/db/facts/index.ts";
+const FACT_REGISTRY = "src/test/shop-facts/index.ts";
 /** The callers that name test routes and facts: the fleet and the day simulation. */
 const CALLER_DIRS = ["e2e", "scripts/simulate-day"];
 

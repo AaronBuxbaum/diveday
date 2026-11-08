@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { canPersonManageRentalSettings, getRentalSettingsPage } from "@/db/rental-settings-page";
+import {
+  canPersonManageRentalSettings,
+  getRentalSettingsPage,
+} from "@/features/rental-settings-page";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { RentalsForm } from "../_components/editors/RentalsForm";
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";

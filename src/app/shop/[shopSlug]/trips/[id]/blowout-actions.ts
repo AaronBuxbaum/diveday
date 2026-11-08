@@ -8,8 +8,8 @@ import { getDb } from "@/db/client";
 import { recordTripActivity } from "@/db/operations";
 import { refundBookingsForShopCancelledTrip } from "@/db/refunds";
 import { getTripWithBooked } from "@/db/trips";
+import { requireShopSurface } from "@/features/session";
 import { trackEvent } from "@/lib/analytics";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { blowoutPath } from "./_components/blowout/blowout-path";
 

@@ -591,7 +591,7 @@ export function SettingsRail(props: {
 ## 6h — The counter instrument
 
 **Scope.** `/shop/[shopSlug]/check-in` recomposes per `Counter.dc.html`. Readers change only where
-this contract says so: the queue reader (`src/db/check-in.ts`) gains a per-diver
+this contract says so: the queue reader (`src/features/check-in/store.ts`) gains a per-diver
 `missingEmergencyContact` flag (the same fact Today's Contact rows detect) and a batched
 `firstVisit` boolean (Delight below); `operational-window` and `CheckInActionForm`'s optimistic tap
 are untouched — the rest is composition. The walk-in pages (`check-in/walk-in`,
@@ -645,7 +645,7 @@ intended. Safety-adjacent: `dive-domain-expert` review before merge.
   regroup; the count and `SettledCheck` glyph carry the fact.
 - First visit, said quietly: the queue reader's batched `firstVisit` boolean (one grouped query
   over the queue's person ids, counting bookings **plus imported prior visits** — the merged-history
-  semantics of `src/db/recap.ts`'s visit count, so a migrated regular is never mis-greeted) renders
+  semantics of `src/features/recap/store.ts`'s visit count, so a migrated regular is never mis-greeted) renders
   as muted text after the name's meta — deliberately never a `Badge`. Key `row.firstVisit` in
   `staff/checkIn.json`, both locales. Tests: renders at exactly one visit; imported history renders
   nothing; blocked/unblocked states unaffected. `firstVisit` is the count=1 case of roadmap

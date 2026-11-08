@@ -1,6 +1,6 @@
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { ReadyPageData } from "@/db/ready";
+import type { ReadyPageData } from "@/features/ready";
 import type { DiverTranslator } from "@/i18n/messages";
 import { isLearningMaterialLink } from "@/lib/courses";
 

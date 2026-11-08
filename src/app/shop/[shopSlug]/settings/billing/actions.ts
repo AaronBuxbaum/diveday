@@ -3,6 +3,16 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageBilling } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { getShopById } from "@/db/shops";
+import {
+  billingConfigFromEnvironment,
+  billingProviderFromEnvironment,
+  checkoutLines,
+  percentBillingFromEnvironment,
+} from "@/features/billing";
+import { parseForm } from "@/features/form-parse";
+import { pricingConfig } from "@/features/pricing-flags";
+import { requireStaffSession } from "@/features/session";
 import {
   ensureShopBillingCustomer,
   getShopSubscription,
@@ -10,22 +20,12 @@ import {
   recordShopCheckoutSession,
   shopPricing,
   snapshotShopPricing,
-} from "@/db/shop-subscriptions";
-import { getShopById } from "@/db/shops";
+} from "@/features/shop-subscriptions";
+import { trialEndsAt } from "@/features/trial";
 import { freeTimeEndsAt } from "@/lib/billing/standing";
-import {
-  billingConfigFromEnvironment,
-  billingProviderFromEnvironment,
-  checkoutLines,
-  percentBillingFromEnvironment,
-} from "@/lib/billing/stripe-billing";
 import { nowDate } from "@/lib/clock";
-import { parseForm } from "@/lib/form-parse";
 import { publicAppUrl } from "@/lib/notifications";
-import { pricingConfig } from "@/lib/pricing-flags";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { trialEndsAt } from "@/lib/trial";
 
 /**
  * The two doors out to Stripe from Settings > Billing (ADR

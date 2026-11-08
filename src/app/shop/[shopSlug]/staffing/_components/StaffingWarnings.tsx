@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { getDb } from "@/db/client";
-import type { getStaffingView } from "@/db/staffing";
+import type { getStaffingView } from "@/features/staffing";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { crewWarningLines } from "./crew-warning-lines";

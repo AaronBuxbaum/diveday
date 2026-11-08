@@ -65,7 +65,7 @@ export function RecordFacts({
       <Fact label={t("recap.diverLabel")}>{diverName}</Fact>
       {/* **The peak of a course, where the diver keeps it** (fourth review,
           item 55). Only from the card this shop issued from this session
-          and marked verified (`src/db/recap.ts`, the same guard
+          and marked verified (`src/features/recap/store.ts`, the same guard
           `CourseAfterState` keeps), so the logbook sheet carries it too:
           it is something the shop wrote down, not something inferred. */}
       {course?.certification ? (

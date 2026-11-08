@@ -25,7 +25,7 @@ cadence rules and the missing scheduling mechanism.
   `notification_deliveries` unique index makes each cadence send at most once with no new dedup
   machinery. Reminders route through the same `notify()` seam and delivery recording as every other
   email.
-- **Sending is idempotent and multi-channel.** `sendDueReminders(db, { now })` (`src/db/reminders.ts`)
+- **Sending is idempotent and multi-channel.** `sendDueReminders(db, { now })` (`src/features/reminders/store.ts`)
   scans active bookings on scheduled trips inside the widest cadence lead, computes the due reminder
   per booking from what has already been delivered, and sends it — email as the tracked channel, a
   courtesy SMS on top when the diver has a textable phone

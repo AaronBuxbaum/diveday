@@ -1,4 +1,3 @@
-import { readIntegrationCredentials } from "@/db/integrations";
 import type { IntegrationEvent, ShopIntegration } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import {
@@ -7,6 +6,7 @@ import {
   untilAborted,
 } from "./delivery-deadline";
 import { INTEGRATION_PROVIDER_REGISTRY, type IntegrationEventType } from "./registry";
+import { readIntegrationCredentials } from "./store";
 
 export const ZAPIER_HOOK_HOST = "hooks.zapier.com";
 

@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { summarizeShopYear } from "@/lib/shop-year";
+import { summarizeShopYear } from "../../../../../features/shop-year/rules";
 import { YearReport } from "./YearReport";
 
 afterEach(cleanup);

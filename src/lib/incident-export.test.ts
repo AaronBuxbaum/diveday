@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { NitroxCertification } from "@/db/schema";
 import {
-  buildIncidentExport,
-  type IncidentBuddyTeamInput,
-  type IncidentExportInput,
-  incidentExportContentHash,
-} from "./incident-export";
-import {
   baseInput,
   completedWaiver,
   diver,
@@ -15,7 +9,13 @@ import {
   manifestsFor,
   TRIP,
   verifiedCard,
-} from "./incident-export-test-fixtures";
+} from "../test/substrate-fixtures/lib/incident-export-test-fixtures";
+import {
+  buildIncidentExport,
+  type IncidentBuddyTeamInput,
+  type IncidentExportInput,
+  incidentExportContentHash,
+} from "./incident-export";
 import { buildTripManifest, rollCallCheckpoints } from "./manifests";
 
 describe("buildIncidentExport", () => {

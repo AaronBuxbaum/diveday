@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SCHEDULE_MIN_RUNWAY_DAYS, refreshCanonicalDemoSchedule } from "@/db/demo-refresh";
 import { sqlStateOf } from "@/db/query-helpers";
-import { requireCronSecret } from "@/lib/cron-auth";
+import { requireCronSecret } from "@/features/cron-auth";
+import { flushLogs } from "@/features/log-shipping";
+import { reportScrubbedError, sentry } from "@/features/sentry-server";
 import { log } from "@/lib/log";
-import { flushLogs, reportScrubbedError } from "@/lib/observability";
-import { sentry } from "@/lib/observability/sentry";
 
 /**
  * Most passes are one indexed aggregate and no write at all. The pass that does

@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import type { AvailabilityBlock, CrewAssignmentRequest } from "@/lib/crew-requests";
-import { staffWeek, type WeekGap } from "@/lib/staffing-week";
+import { staffWeek, type WeekGap } from "../../../../../features/staffing-week/rules";
 import { StaffingRotaSheet } from "./StaffingRotaSheet";
 import { GAP_WORDS, KEIKO, MONDAY, THURSDAY, TZ, WORDS } from "./staffing-week-test-fixtures";
 

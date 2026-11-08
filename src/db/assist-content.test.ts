@@ -1,25 +1,34 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
-import { CERT_SCAN_FEATURE, certScanCall, certScanFields, scanCard } from "@/lib/assists/cert-scan";
 import { sourceDigest } from "@/lib/assists/shop-translate";
 import type { ClaudeProvider } from "@/lib/claude/provider";
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { readAssistResults } from "./assist-results";
-import { runAssist } from "./assists";
-import { readUnsurePair } from "./desk-assists";
-import { deleteDiveSite } from "./dive-sites";
-import { mondayReadFor } from "./monday-read";
-import { autoFillRecapLine, draftRecapLine, recapLogFor } from "./recap-assist";
+import { readAssistResults } from "../features/assist-results/store";
+import { runAssist } from "../features/assists/store";
+import {
+  CERT_SCAN_FEATURE,
+  certScanCall,
+  certScanFields,
+  scanCard,
+} from "../features/cert-scan/rules";
+import { readUnsurePair } from "../features/desk-assists/store";
+import { mondayReadFor } from "../features/monday-read/store";
+import {
+  autoFillRecapLine,
+  draftRecapLine,
+  recapLogFor,
+} from "../features/recap/recap-assist.store";
 import {
   flagWaitingReviews,
   readReviewFlags,
   readReviewThemes,
   refreshReviewThemes,
   themesMonth,
-} from "./review-assists";
+} from "../features/review-assists/store";
+import { deleteDiveSite } from "./dive-sites";
 import {
   assistResults,
   cards,

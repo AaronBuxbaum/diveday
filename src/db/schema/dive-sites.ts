@@ -122,7 +122,7 @@ export const diveSites = pgTable(
      *
      * The editor prompts a second look when the station sits further than
      * `IMPLAUSIBLE_STATION_DISTANCE_KM` from the site's own coordinates
-     * (`src/lib/tide-stations.ts`), and a genuinely remote site has no nearer
+     * (`src/features/tide-stations/rules.ts`), and a genuinely remote site has no nearer
      * one to pick: Flower Garden Banks reads Galveston at about 190 km and is
      * correct. Without an answer that shop reads "check it's the one you
      * meant" on every visit forever, and the cost lands on the *next* warning
@@ -384,7 +384,7 @@ export const diveSites = pgTable(
       "dive_sites_expected_bottom_time_positive",
       sql`${table.expectedBottomTimeMinutes} is null or ${table.expectedBottomTimeMinutes} > 0`,
     ),
-    // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
+    // Backs the command-palette leading-wildcard ILIKE search (src/features/search/store.ts, CR-018).
     index("dive_sites_name_trgm_idx").using("gin", sql`${table.name} gin_trgm_ops`),
     // The site library's own search box matches a place as well as a name
     // ("Key Largo") — `listDiveSitesPage` in src/db/dive-sites.ts ors the two,

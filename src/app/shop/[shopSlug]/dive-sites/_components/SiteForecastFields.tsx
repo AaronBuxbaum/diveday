@@ -1,7 +1,11 @@
 import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import {
+  stationDistanceInUnit,
+  stationLabel,
+  type TideStationEcho,
+} from "@/features/tide-stations";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
-import { stationDistanceInUnit, stationLabel, type TideStationEcho } from "@/lib/tide-stations";
 import { TIDE_PREFERENCES } from "@/lib/tides";
 import type { SiteFieldValues } from "./SiteFields";
 

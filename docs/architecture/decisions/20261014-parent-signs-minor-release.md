@@ -20,7 +20,7 @@ own device, as the child's parent or guardian.**
 1. **The door is the party panel on the lead's `/ready`**: "Sign {name}'s waiver", with one
    sentence saying they sign with the child. The confirmation's panel has none.
 2. **The authority is the lead's verified `readiness` capability.** The form posts a seat id only.
-   `openMinorSeatWaiver` (`src/db/seat-claims.ts`) re-reads that the seat is:
+   `openMinorSeatWaiver` (`src/features/seat-claims/store.ts`) re-reads that the seat is:
    - in this lead's party and shop, and not cancelled
    - unclaimed, declared a minor, and not held (#2125)
    - a person this booking made (`people.created_by_booking_id`, #2665): no email (or the lead's),

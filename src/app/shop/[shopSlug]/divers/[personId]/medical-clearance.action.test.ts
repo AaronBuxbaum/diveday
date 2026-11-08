@@ -5,7 +5,6 @@ import { waiverRecords } from "@/db/schema";
 import { completeWaiver } from "@/db/waivers-completion";
 import { attachDiverMedicalForm, contactOnFile } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
-import { clearAnswers, waiverContextFor } from "@/db/waivers-test-fixtures";
 import { DAY_MS, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -14,6 +13,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import {
+  clearAnswers,
+  waiverContextFor,
+} from "../../../../../test/substrate-fixtures/db/waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -36,13 +39,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", async () =>
+vi.mock("../../../../../features/session/rules", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { recordMedicalClearanceAction, rejectDiverMedicalFormAction } = await import(
   "./waiver-actions"
 );

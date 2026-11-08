@@ -4,8 +4,8 @@ import {
   DIVE_SITE_CREATURE_IMPORT_COLUMNS,
   prepareDiveSiteCreaturesImport,
   prepareDiveSiteImport,
-} from "./dive-site-import";
-import { prepareGearImport } from "./gear-import";
+} from "../features/dive-sites/dive-site-import.rules";
+import { prepareGearImport } from "../features/gear-import/rules";
 import { MAX_IMPORT_COLUMNS } from "./import";
 
 /**

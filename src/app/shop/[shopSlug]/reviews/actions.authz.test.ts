@@ -1,11 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { submitRecapPulse } from "@/db/recap-pulses";
-import { liveReviewReply } from "@/db/review-replies";
-import { setReviewPublished, submitTripReview } from "@/db/reviews";
 import { bookings, recapPulses, tripAssignments, tripReviews } from "@/db/schema";
-import { crewThanksChoice } from "@/lib/crew-thanks-choice";
 import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
@@ -15,6 +11,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { crewThanksChoice } from "../../../../features/crew-thanks-choice/rules";
+import { submitRecapPulse } from "../../../../features/recap/recap-pulses.store";
+import { liveReviewReply } from "../../../../features/review-replies/store";
+import { setReviewPublished, submitTripReview } from "../../../../features/reviews/store";
 
 const ctx = fileScopedShopContext();
 
@@ -51,10 +51,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../features/session/rules");
 const { markPulseAddressedAction, reviewReplyAction, reviewRowAction } = await import("./actions");
 
 /** The pulse row as the shop's panel would find it: open, or answered. */

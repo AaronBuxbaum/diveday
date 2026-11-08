@@ -32,13 +32,14 @@ import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrom
 import type { PublicShopNavItem } from "@/components/PublicShopNav";
 import { SkipLink } from "@/components/SkipLink";
 import { getDb } from "@/db/client";
-import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { listPackagesOnSale } from "@/db/dive-packages";
-import { listShopRolesPresent } from "@/db/shop-roles";
-import { shopBySlugCached } from "@/db/shops-cached";
-import { listShopSpokenLanguages } from "@/db/staff-accounts";
 import { shopPublicWhatsAppNumber } from "@/db/whatsapp-accounts";
+import { hasActiveCourses } from "@/features/courses";
+import { isLiveShopStaff } from "@/features/session";
+import { listShopRolesPresent } from "@/features/shop-roles";
+import { shopBySlugCached } from "@/features/shops-cached";
+import { listShopSpokenLanguages } from "@/features/staff-accounts";
 import { languageEndonym, localeEndonym } from "@/i18n/language-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLanguageFallback, requestLocale } from "@/i18n/request";
@@ -65,7 +66,6 @@ import {
   publicPackagesPath,
   publicSchedulePath,
 } from "@/lib/public-routes";
-import { isLiveShopStaff } from "@/lib/session";
 import { LazyPublicStaffPreviewBar } from "./LazyPublicStaffPreviewBar";
 import { everHadDepartureRead } from "./schedule-reads";
 

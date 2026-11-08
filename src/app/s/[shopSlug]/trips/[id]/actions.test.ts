@@ -1,12 +1,12 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
-import { issueBookingHandoff, readKnownDiver } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
 import { bookingCapabilities, bookings, cards, people, shops } from "@/db/schema";
 import { createTrip } from "@/db/trips-create";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { issueBookingHandoff, readKnownDiver } from "../../../../../features/booking-handoff/store";
 
 const capabilityIssueHook = vi.hoisted(() => ({
   beforeIssue: null as ((input: { bookingId: string; purpose: string }) => Promise<void>) | null,

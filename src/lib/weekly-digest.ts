@@ -14,7 +14,7 @@ import { wallTimeToUtc } from "@/lib/zoned";
  * (market audit item 51; H-20260724-channel-sends-booking-waiver: the owner is staff, so this is transactional,
  * not marketing). This module is the whole of *what goes in it*: which weeks
  * it reads, who gets one, when it is due, and which sections have something
- * to say. Pure and framework-free; the reads are `src/db/weekly-digest.ts`
+ * to say. Pure and framework-free; the reads are `src/features/weekly-digest/store.ts`
  * and the words are `src/lib/notifications/weekly-digest-email.ts`.
  *
  * Codes and numbers only. A section that has nothing to say is not in the

@@ -4,7 +4,7 @@ import { LostItemRow } from "@/components/lost-found/LostItemRow";
 import { lostItemFormCopy, lostItemRowCopy } from "@/components/lost-found/lost-found-copy";
 import { SectionCard } from "@/components/ui/card";
 import { getDb } from "@/db/client";
-import { listTripLostItems } from "@/db/lost-items";
+import { listTripLostItems } from "@/features/lost-items";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**

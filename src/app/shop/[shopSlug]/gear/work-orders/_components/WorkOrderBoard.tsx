@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
-import type { WorkOrderBoardGroup } from "@/db/work-orders";
+import type { WorkOrderBoardGroup } from "@/features/work-orders";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { workOrderStatusLabel, workOrderStatusTone } from "@/i18n/work-order-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";

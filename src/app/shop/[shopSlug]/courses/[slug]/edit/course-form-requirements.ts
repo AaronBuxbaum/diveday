@@ -7,7 +7,7 @@ import {
   listCourseFormRequirements,
   setCourseFormRequirements,
 } from "@/db/course-forms";
-import { readForm, text, trimmedText } from "@/lib/form-parse";
+import { readForm, text, trimmedText } from "@/features/form-parse";
 
 /** Each form's place in the order is posted as `order-<formId>`. */
 const formOrderFields = z.object({}).catchall(text());

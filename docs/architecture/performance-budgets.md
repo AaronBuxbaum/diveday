@@ -103,7 +103,7 @@ without application `cacheHandlers` configuration. That adds a network lookup an
 to each read; it does not establish that switching "Our year" improves its performance. So the
 cached scope stamps when it computed its
 value (`cacheStamp()`) and each read logs one line, `{"event":"cache.read","cache":"our_year","outcome":"hit"|"miss","ageS":…}`
-(`reportCacheRead`, `src/lib/observability/runtime-cache.ts`). Read a week of it:
+(`reportCacheRead`, `src/features/runtime-cache/rules.ts`). Read a week of it:
 
 ```
 fields outcome | filter event = "cache.read" and cache = "our_year" | stats count(*) by outcome

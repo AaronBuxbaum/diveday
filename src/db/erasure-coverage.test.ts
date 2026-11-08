@@ -5,16 +5,16 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { notificationProcessorColumns } from "@/test/notification-processor-coverage";
 import { schemaTableNameOf } from "@/test/schema-tables";
-import { anonymizeDiver } from "./anonymize";
-import type { AppDb } from "./client";
-import { ERASURE_KEEPS } from "./erasure-coverage-keeps.test-support";
-import { OUTSIDE_CLOSURE_REASONS } from "./erasure-outside-closure-classification.test-support";
+import { anonymizeDiver } from "../features/anonymize/store";
+import { ERASURE_KEEPS } from "../test/substrate-fixtures/db/erasure-coverage-keeps.test-support";
+import { OUTSIDE_CLOSURE_REASONS } from "../test/substrate-fixtures/db/erasure-outside-closure-classification.test-support";
 import {
   inRegistryDeleteFunction,
   REGISTRY_WRITE,
   registryDeletesRun,
   stripCommentsAndStrings,
-} from "./erasure-source.test-support";
+} from "../test/substrate-fixtures/db/erasure-source.test-support";
+import type { AppDb } from "./client";
 import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
 import { erasedPersonRowDeletes } from "./person-columns";
 import * as schema from "./schema";
@@ -29,7 +29,7 @@ import {
 const ctx = fileScopedShopContext({ history: true });
 
 /**
- * The structural guard on the erasure path (`src/db/anonymize.ts`, ADR
+ * The structural guard on the erasure path (`src/features/anonymize/store.ts`, ADR
  * 20260802-diver-data-erasure), in the shape of the one
  * `delete-path-coverage.test.ts` already puts over the two demo-reap orderings.
  *
@@ -153,7 +153,7 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
   // the static instrument is here to prevent, so leaving it would have been a
   // guard that reads green over the statement it stopped running (issue #1607,
   // found by a `security-reviewer` pass on the first draft of this file).
-  const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
+  const source = stripCommentsAndStrings(readFileSync("src/features/anonymize/store.ts", "utf8"));
   const written = new Set<string>();
   const unresolved: string[] = [];
   for (const match of source.matchAll(/\.(?:update|delete)\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
@@ -176,7 +176,7 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
  * into a deleted table is harmless if the referencing rows go first.
  */
 function erasureHardDeleteOrder(): string[] {
-  const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
+  const source = stripCommentsAndStrings(readFileSync("src/features/anonymize/store.ts", "utf8"));
   const order: string[] = [];
   const sites =
     /\.delete\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)|(?<!function )\bdeleteRegisteredPersonRows\(\s*tx\b/g;
@@ -484,7 +484,7 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
  * that does not was prose quoting a target in a docblock.
  */
 function erasureTargetLiterals(): Set<string> {
-  const source = readFileSync("src/db/anonymize.ts", "utf8");
+  const source = readFileSync("src/features/anonymize/store.ts", "utf8");
   const masked = stripCommentsAndStrings(source);
   const literals = new Set<string>();
   for (const match of source.matchAll(/target:\s*"([a-z_]+)"/g)) {
@@ -802,7 +802,7 @@ describe("erasure coverage", () => {
    * order the order check reads.
    */
   it("runs every scrub section, in the order the file defines them", () => {
-    const source = readFileSync("src/db/anonymize.ts", "utf8");
+    const source = readFileSync("src/features/anonymize/store.ts", "utf8");
     const defined = [...source.matchAll(/^async function (scrub\w+)\(/gm)].map((m) => m[1]);
     const list = source.match(/const SCRUB_SECTIONS = \[([^\]]*)\]/)?.[1] ?? "";
     const listed = [...list.matchAll(/\b(scrub\w+)\b/g)].map((m) => m[1]);

@@ -8,8 +8,8 @@ import {
   Field,
   textareaClassFor,
 } from "@/components/ui/form";
-import type { ReadyPageData } from "@/db/ready";
-import { DIVER_DIVE_INTENT_KEYS, DIVER_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
+import { DIVER_DIVE_INTENT_KEYS, DIVER_RE_ENTRY_KEYS } from "@/features/dive-intent";
+import type { ReadyPageData } from "@/features/ready";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_DIVE_RECENCY_KEYS } from "@/i18n/readiness-labels";
 import { DIVE_INTENTS } from "@/lib/dive-intent";

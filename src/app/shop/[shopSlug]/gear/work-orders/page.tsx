@@ -13,7 +13,8 @@ import { buttonClass } from "@/components/ui/button";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { NoticeTone } from "@/components/ui/tone";
-import { listDeletedWorkOrders, workOrderBoard } from "@/db/work-orders";
+import { requireShopSurface } from "@/features/session";
+import { listDeletedWorkOrders, workOrderBoard } from "@/features/work-orders";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
@@ -21,7 +22,6 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../../_components/StaffSectionTabs";
 import {

@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldActions, FormStatus, SearchField } from "@/components/ui/form";
 import type { NoticeTone } from "@/components/ui/tone";
-import type { listDiverSummaries } from "@/db/divers";
+import type { listDiverSummaries } from "@/features/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ADD_PARAM } from "@/lib/add-panel";
 import { diverSearchPrefill } from "@/lib/person-fields";

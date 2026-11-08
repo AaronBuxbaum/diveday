@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import { CatchUpStrip } from "@/app/shop/[shopSlug]/trips/[id]/manifest/_components/CatchUpStrip";
-import { readTodayCatchUp } from "@/db/today-catch-up";
+import { requireShopSurface } from "@/features/session";
+import { readTodayCatchUp } from "@/features/today-catch-up";
+import { signTodayCatchUp } from "@/features/today-catch-up-token";
 import { catchUpSentences } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { groupCatchUp } from "@/lib/catch-up";
 import { nowDate } from "@/lib/clock";
 import { formatTime, formatTimeTz } from "@/lib/format";
-import { requireShopSurface } from "@/lib/session";
-import { signTodayCatchUp } from "@/lib/today-catch-up-token";
 import { shopDayBounds } from "@/lib/zoned";
 import { InitializeTodayCatchUp } from "./InitializeTodayCatchUp";
 import { markTodayCatchUp } from "./today-catch-up-actions";

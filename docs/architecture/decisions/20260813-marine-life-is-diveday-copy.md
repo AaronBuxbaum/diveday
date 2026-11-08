@@ -92,7 +92,7 @@ translated and sometimes not is the half-translated guide again, arrived at one 
 also a strictly additive change later.
 
 *Resolved 2026-08-13, same day:* the escape hatch is a **request path**, not a shop-authored card.
-The picker's refusal now writes a `marine_life_requests` row (`src/db/marine-life-requests.ts`) and
+The picker's refusal now writes a `marine_life_requests` row (`src/features/marine-life-requests/store.ts`) and
 the catalog grew to cover the wider Caribbean rather than Florida alone. So a shop outside the
 catalog's water gets one card fewer and a way to say so, and every card that does render is still
 translated — which is the guarantee this ADR was written to buy, kept.

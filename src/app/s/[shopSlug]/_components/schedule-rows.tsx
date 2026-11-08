@@ -1,6 +1,6 @@
-import type { listActiveCourses } from "@/db/courses";
-import type { listTripLenses } from "@/db/trip-lenses";
 import type { nextSessionStartByCourse } from "@/db/trips";
+import type { listActiveCourses } from "@/features/courses";
+import type { listTripLenses } from "@/features/trip-lenses";
 import type { DiverTranslator } from "@/i18n/messages";
 import { tripRequirementMarkers } from "@/i18n/readiness-labels";
 import { courseDepthFormat } from "@/i18n/unit-labels";

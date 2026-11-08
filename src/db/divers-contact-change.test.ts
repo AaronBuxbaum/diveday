@@ -8,10 +8,18 @@ import { fakeEmail } from "@/test/fakes";
 import { prepareContactImport } from "@/test/import-fixture";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { commitContactImport } from "@/test/words-wiring";
+import { createDiver, editDiver } from "../features/divers/store";
+import {
+  clearAnswers,
+  draftsOf,
+  medicalReferralAnswers,
+  openOnDevice,
+  recordMedicalEvaluationForShop,
+  shopStaffer,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { mergeDiverRecords } from "./diver-merge";
-import { createDiver, editDiver } from "./divers";
 import { waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { issueAndDeliverPersonWaiver, issueAndDeliverWaiver } from "./waiver-issue";
@@ -28,14 +36,6 @@ import {
   revealDoctorReferral,
 } from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
-import {
-  clearAnswers,
-  draftsOf,
-  medicalReferralAnswers,
-  openOnDevice,
-  recordMedicalEvaluationForShop,
-  shopStaffer,
-} from "./waivers-test-fixtures";
 
 /**
  * **A corrected address takes the old links with it** (#3902). A delivered

@@ -1,0 +1,452 @@
+import { and, asc, eq, inArray, isNotNull, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+import { snagsOpenWhenSailed } from "@/features/boat-snags";
+import { canPersonExportIncidentRecord } from "../../db/authz";
+import {
+  departureBoatId,
+  departureBoatSafetySnapshot,
+  departureChecklistAnswer,
+} from "../../db/boat-safety";
+import { listTripBuddyTeamEvents, listTripBuddyTeams } from "../../db/buddy-teams";
+import type { AppDb } from "../../db/client";
+import { listExecutedDives } from "../../db/executed-dives";
+import { listDepartureLogIncidentReports } from "../../db/incident-reports";
+import { getTripManifests } from "../../db/manifests";
+import { survivingPersonNames } from "../../db/people";
+import {
+  latestPreDepartureChecksForTrip,
+  listChecklistItemsForTrip,
+} from "../../db/pre-departure-check";
+import { listTripReadiness } from "../../db/readiness";
+import { oldestMarkFirst } from "../../db/roll-call-order";
+import { asCrewMark, asSeatMark, crewMarks, seatMarks } from "../../db/roll-call-subject";
+import { activityEvents, bookings, people, rollCallEvents } from "../../db/schema/index";
+import { getShopById } from "../../db/shops";
+import { ACTIVITY_REDACTED } from "../../lib/activity";
+import { nowDate } from "../../lib/clock";
+import {
+  buildIncidentExport,
+  type IncidentBuddyTeamEventInput,
+  type IncidentBuddyTeamInput,
+  type IncidentExportDocument,
+  type IncidentRosterChangeInput,
+  type IncidentTimelineEventInput,
+  ROSTER_CHANGE_CODES,
+  rosterChangeFromActivity,
+  rosterCutoff,
+  seatBoardingInstants,
+} from "../../lib/incident-export";
+
+/** The newest departure mark owns its capture; a correction never reuses an earlier one. */
+function standingCertificationCaptures(
+  rows: readonly { event: typeof rollCallEvents.$inferSelect & { bookingId: string } }[],
+) {
+  const boardingCards = new Map<
+    string,
+    {
+      cards: NonNullable<typeof rollCallEvents.$inferSelect.certificationSnapshot>;
+      startedAt: Date;
+      capturedAt: Date;
+    } | null
+  >();
+  for (const { event } of rows) {
+    if (event.checkpoint !== "departure") continue;
+    boardingCards.set(
+      event.bookingId,
+      event.status === "boarded" &&
+        event.certificationSnapshot !== null &&
+        event.certificationSnapshotStartedAt !== null &&
+        event.certificationSnapshotCapturedAt !== null
+        ? {
+            cards: event.certificationSnapshot,
+            startedAt: event.certificationSnapshotStartedAt,
+            capturedAt: event.certificationSnapshotCapturedAt,
+          }
+        : null,
+    );
+  }
+
+  return boardingCards;
+}
+
+/**
+ * Assemble one departure's incident-ready export: the manifest roster, the
+ * complete append-only roll-call history (corrections included — the document
+ * never launders what was recorded), each diver's held certification evidence
+ * and governing waiver *status*, crew, and generation metadata.
+ *
+ * Read-only, and tenant-scoped end to end: every query here carries `shopId`,
+ * so another shop's trip id — or a generator who is not one of this shop's own
+ * people — resolves to `null` and the route 404s. The evidence itself comes
+ * from the same readers every safety surface uses (`getTripManifests`,
+ * `listTripReadiness`), so this document cannot disagree with the manifest the
+ * crew ran the day on.
+ *
+ * **Re-checks the owner-only gate itself** rather than trusting its caller, the
+ * same way `createOrder` and `anonymizeDiver` re-check theirs (src/db/authz.ts).
+ * The route above already refuses, so today this is belt and braces — but this
+ * function assembles a whole departure's evidentiary record and stamps the
+ * caller's name on it as its generator, and read-only-looking helpers acquire
+ * callers: a PDF endpoint, a cron, an "email the insurer" action. "The route
+ * forgot to check" must not be the thing standing between a captain and the
+ * document (security review 20260804).
+ */
+export async function getIncidentExport(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  generatedByPersonId: string,
+  generatedAt: Date = nowDate(),
+): Promise<IncidentExportDocument | null> {
+  if (!(await canPersonExportIncidentRecord(db, shopId, generatedByPersonId))) return null;
+  const manifests = await getTripManifests(db, shopId, tripId);
+  const departure = manifests?.[0];
+  if (!manifests || !departure) return null;
+
+  const recorders = alias(people, "recorders");
+  const [shop, generator, diverEventReads, crewEventReads, executedDiveRows] = await Promise.all([
+    getShopById(db, shopId),
+    db
+      .select({ fullName: people.fullName })
+      .from(people)
+      // diveday:allow-deleted-people: an incident document names who was there, removed since or not.
+      .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
+      .limit(1),
+    // The full history, oldest first — not the latest-per-subject reduction
+    // the live manifest shows. An incident document is the audit trail.
+    db
+      .select({
+        event: rollCallEvents,
+        subject: people,
+        recorder: recorders,
+        heldAt: bookings.identityUnconfirmedAt,
+        bookedAs: bookings.identityBookedAs,
+      })
+      .from(rollCallEvents)
+      .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
+      .where(and(eq(rollCallEvents.shopId, shopId), seatMarks(), eq(rollCallEvents.tripId, tripId)))
+      // `seq` last, for a reason sharper here than anywhere else: this
+      // document is hashed, so two orderings of the same events produce two
+      // different SHA-256 integrity codes for one departure. A tie on
+      // transaction time would make the hash a coin toss.
+      .orderBy(...oldestMarkFirst()),
+    db
+      .select({ event: rollCallEvents, subject: people, recorder: recorders })
+      .from(rollCallEvents)
+      .innerJoin(people, eq(people.id, rollCallEvents.crewPersonId))
+      .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
+      .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
+      .orderBy(...oldestMarkFirst()),
+    listExecutedDives(db, shopId, tripId),
+  ]);
+  const diverEventRows = diverEventReads.map((row) => ({ ...row, event: asSeatMark(row.event) }));
+  const crewEventRows = crewEventReads.map((row) => ({ ...row, event: asCrewMark(row.event) }));
+  if (!shop) return null;
+  const generatedByName = generator[0]?.fullName;
+  if (!generatedByName) return null;
+  // Which signature governs, and whether it still stands, as of when the boat
+  // was due out (domain re-review 2026-10-16, item 3), the instant the
+  // builder states it at: never as of the printing, which moves.
+  const cutoff = new Date(
+    rosterCutoff(departure.trip, [
+      ...diverEventRows.map(({ event }) => event),
+      ...crewEventRows.map(({ event }) => event),
+    ]),
+  );
+  // Each seat's release as it stood when that diver boarded, or at the cutoff
+  // with no departure mark (issue #3002); the terms as they stood when the
+  // last of them boarded.
+  const boardedAt = seatBoardingInstants(diverEventRows.map(({ event }) => event));
+  const lastBoarded = [...boardedAt.values()].reduce(
+    (latest, at) => (at.getTime() > latest.getTime() ? at : latest),
+    cutoff,
+  );
+  const readinessRows = await listTripReadiness(db, shopId, tripId, cutoff, {
+    recordsAsOf: (bookingId) => boardedAt.get(bookingId) ?? cutoff,
+    termsAsOf: lastBoarded,
+  });
+
+  const boardingCards = standingCertificationCaptures(diverEventRows);
+
+  // A paper waiver and a certification review are accountable staff acts, not
+  // anonymous completions. Resolve only the ids the governing evidence names,
+  // and still tenant-scope the lookup: a malformed foreign id must never
+  // become a name on this shop's owner-only incident document.
+  const accountableStaffIds = new Set<string>();
+  for (const row of readinessRows) {
+    if (row.waiver?.signatureMethod === "in_person_attested" && row.waiver.recordedByPersonId) {
+      accountableStaffIds.add(row.waiver.recordedByPersonId);
+    }
+    // A physician clearance is a third accountable staff act, and the only one
+    // that lifts a hard readiness block (issue #1252) — so the log names who.
+    if (row.waiver?.medicalClearedByPersonId) {
+      accountableStaffIds.add(row.waiver.medicalClearedByPersonId);
+    }
+    // And the same act with the opposite answer (issue #1283) — a refusal is
+    // the more consequential of the two on a document an insurer reads, so it
+    // names its staff member exactly as a clearance does.
+    if (row.waiver?.medicalClearanceDeclinedByPersonId) {
+      accountableStaffIds.add(row.waiver.medicalClearanceDeclinedByPersonId);
+    }
+    for (const card of [
+      ...row.certifications,
+      ...row.specialtyCertifications,
+      ...row.nitroxCertifications,
+    ]) {
+      if (card.reviewedByPersonId) accountableStaffIds.add(card.reviewedByPersonId);
+    }
+  }
+  const accountableStaff =
+    accountableStaffIds.size === 0
+      ? []
+      : await db
+          .select({ id: people.id, fullName: people.fullName })
+          .from(people)
+          // diveday:allow-deleted-people: an incident document names who was there, removed since or not.
+          .where(and(eq(people.shopId, shopId), inArray(people.id, [...accountableStaffIds])));
+  const accountableStaffNameById = new Map(
+    accountableStaff.map((staff) => [staff.id, staff.fullName]),
+  );
+
+  // A seat left behind on a record merged away (a cancelled seat the merge did
+  // not move, issue #2177) still joins to that record, whose name no longer
+  // appears anywhere else in the shop. It is named as the record it lives on
+  // now (issue #2333); the row itself is not rewritten.
+  const survivorNames = await survivingPersonNames(
+    db,
+    shopId,
+    diverEventRows
+      .filter(({ subject }) => subject.mergedIntoPersonId)
+      .map(({ subject }) => subject.id),
+  );
+  const events: IncidentTimelineEventInput[] = [
+    ...diverEventRows.map(({ event, subject, recorder, heldAt, bookedAs }) => ({
+      subjectKind: "diver" as const,
+      // A held seat is named as booked, the same as its roster row (issue
+      // #2128): the matched person's name is a fact about somebody else.
+      subjectName: heldAt
+        ? bookedAs?.trim() || subject.fullName
+        : (survivorNames.get(subject.id) ?? subject.fullName),
+      checkpoint: event.checkpoint,
+      status: event.status,
+      source: event.source,
+      recordedByName: recorder.fullName,
+      note: event.note,
+      occurredAt: event.occurredAt,
+      createdAt: event.createdAt,
+    })),
+    ...crewEventRows.map(({ event, subject, recorder }) => ({
+      subjectKind: "crew" as const,
+      subjectName: subject.fullName,
+      checkpoint: event.checkpoint,
+      status: event.status,
+      source: event.source,
+      recordedByName: recorder.fullName,
+      note: event.note,
+      occurredAt: event.occurredAt,
+      createdAt: event.createdAt,
+    })),
+  ];
+
+  // The teams standing on this departure, plus the append-only trail behind
+  // them. Read here rather than off the manifest, whose carried team is
+  // deliberately reduced to names so the offline snapshot cannot carry enough
+  // to compute a divergence off the boat. Team numbers come from this list's
+  // own order (`createdAt`, then `pairId`), so they are stable across
+  // regenerations and the content hash stays reproducible.
+  //
+  // A member whose seat was cancelled is dropped here for the same reason the
+  // manifest drops them: this document states the pairing as it stood for the
+  // people who were aboard, and the trail below is where a cancelled member's
+  // membership survives.
+  const [
+    teamRows,
+    teamEventRows,
+    checklistItems,
+    checklistChecks,
+    rosterRows,
+    reportRows,
+    boatSafety,
+    boatId,
+    sailedWithSnags,
+  ] = await Promise.all([
+    listTripBuddyTeams(db, shopId, tripId),
+    listTripBuddyTeamEvents(db, shopId, tripId),
+    listChecklistItemsForTrip(db, shopId, tripId),
+    latestPreDepartureChecksForTrip(db, shopId, tripId),
+    // Seats and crew places changed on this departure, as the shop's trail
+    // recorded them (safety sheet 2026-10-15, item 7); the builder keeps
+    // those from the boat being due out (`rosterCutoff`), which can be
+    // before the scheduled start. An erased line that named someone by
+    // record comes too, as a line naming nobody (auditor review 2026-10-16,
+    // item 12). `seq` breaks a tie on the instant: this document is hashed,
+    // so its order cannot be a coin toss.
+    db
+      .select({
+        code: activityEvents.code,
+        params: activityEvents.params,
+        occurredAt: activityEvents.occurredAt,
+      })
+      .from(activityEvents)
+      // diveday:allow-staff-events: The authorized incident record includes allowlisted roster changes by staff as audit evidence.
+
+      .where(
+        and(
+          eq(activityEvents.shopId, shopId),
+          eq(activityEvents.tripId, tripId),
+          inArray(activityEvents.code, [...ROSTER_CHANGE_CODES, ACTIVITY_REDACTED.code]),
+          // A line that names nobody by record, as a person or a seat, is a
+          // name erasure could not reach (security review 2026-10-16, F1):
+          // not printed.
+          or(isNotNull(activityEvents.subjectPersonId), isNotNull(activityEvents.bookingId)),
+        ),
+      )
+      .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.seq)),
+    listDepartureLogIncidentReports(db, shopId, tripId, generatedByPersonId),
+    // The boat as it stood at the departure checkpoint (#2300).
+    departureBoatSafetySnapshot(db, shopId, tripId),
+    departureBoatId(db, shopId, tripId),
+    snagsOpenWhenSailed(db, shopId, tripId),
+  ]);
+  // Everyone the export gate above admits may read this list; this is a second
+  // lock, so a gate that drifted wider fails closed rather than printing "no
+  // reports" (auditor review 2026-10-16, item 12).
+  if (reportRows === null) return null;
+  // The crew's checklist answer at the snapshot's own instant (issue 2725),
+  // read from the taps as they happened, so a tap synced after the count
+  // still counts as of when it was made.
+  const boatChecklist = boatSafety
+    ? await departureChecklistAnswer(db, shopId, tripId, boatSafety.capturedAt)
+    : null;
+  const rosterChanges = rosterRows.flatMap((row): IncidentRosterChangeInput[] => {
+    const change = rosterChangeFromActivity(row);
+    return change ? [change] : [];
+  });
+  const buddyTeams: IncidentBuddyTeamInput[] = teamRows.map((team) => ({
+    teamId: team.teamId,
+    members: team.members.flatMap((member): IncidentBuddyTeamInput["members"][number][] =>
+      member.kind === "crew"
+        ? [{ kind: "crew", personId: member.personId, fullName: member.fullName }]
+        : member.cancelled
+          ? []
+          : [{ kind: "diver", bookingId: member.bookingId, fullName: member.fullName }],
+    ),
+    recordedByName: team.recordedByName,
+    recordedAt: team.createdAt,
+  }));
+  const buddyTeamEvents: IncidentBuddyTeamEventInput[] = teamEventRows.map((event) => ({
+    teamId: event.teamId,
+    action: event.action,
+    memberNames: event.memberNames,
+    recordedByName: event.recordedByName,
+    adultsConfirmed: event.adultsConfirmed,
+    occurredAt: event.occurredAt,
+    createdAt: event.createdAt,
+  }));
+
+  return buildIncidentExport({
+    shop: {
+      name: shop.name,
+      slug: shop.slug,
+      timezone: shop.timezone,
+      depthUnit: shop.depthUnit,
+    },
+    manifests,
+    diverEvidence: readinessRows.map((row) => ({
+      bookingId: row.booking.id,
+      // The stored name is the one on the evidence when it was captured. The
+      // internal person id is removed before producing the document.
+      certificationsStartedAt: boardingCards.get(row.booking.id)?.startedAt.toISOString() ?? null,
+      certificationsCapturedAt: boardingCards.get(row.booking.id)?.capturedAt.toISOString() ?? null,
+      certificationsAtCapture:
+        boardingCards
+          .get(row.booking.id)
+          ?.cards.map(({ reviewedByPersonId: _reviewedByPersonId, ...card }) => card) ?? null,
+      certifications: row.certifications.map((card) => ({
+        ...card,
+        reviewedByName: card.reviewedByPersonId
+          ? (accountableStaffNameById.get(card.reviewedByPersonId) ?? null)
+          : null,
+      })),
+      specialtyCertifications: row.specialtyCertifications.map((card) => ({
+        ...card,
+        reviewedByName: card.reviewedByPersonId
+          ? (accountableStaffNameById.get(card.reviewedByPersonId) ?? null)
+          : null,
+      })),
+      nitroxCertifications: row.nitroxCertifications.map((card) => ({
+        ...card,
+        reviewedByName: card.reviewedByPersonId
+          ? (accountableStaffNameById.get(card.reviewedByPersonId) ?? null)
+          : null,
+      })),
+      // The governing record after the sign-once rule — the same resolution
+      // the boarding gate reads, so "signed" here always means what it meant
+      // at the dock.
+      waiver: row.waiver,
+      waiverRecordedByName: row.waiver?.recordedByPersonId
+        ? (accountableStaffNameById.get(row.waiver.recordedByPersonId) ?? null)
+        : null,
+      waiverMedicalClearedByName: row.waiver?.medicalClearedByPersonId
+        ? (accountableStaffNameById.get(row.waiver.medicalClearedByPersonId) ?? null)
+        : null,
+      waiverMedicalClearanceDeclinedByName: row.waiver?.medicalClearanceDeclinedByPersonId
+        ? (accountableStaffNameById.get(row.waiver.medicalClearanceDeclinedByPersonId) ?? null)
+        : null,
+    })),
+    events,
+    executedDives: executedDiveRows.map(({ executed, actualSite, recorder }) => ({
+      diveNumber: executed.diveNumber,
+      actualSiteName: actualSite?.name ?? null,
+      enteredAt: executed.enteredAt?.toISOString() ?? null,
+      exitedAt: executed.exitedAt?.toISOString() ?? null,
+      maxDepthMeters: executed.maxDepthMeters,
+      observedConditions: executed.observedConditions,
+      notRecorded: executed.notRecorded,
+      recordedByName: recorder?.name ?? null,
+      surfaceIntervalMinutes: null,
+    })),
+    buddyTeams,
+    buddyTeamEvents,
+    rosterChanges,
+    // A list, never a report's contents (safety sheet 2026-10-15, item 5).
+    incidentReports: reportRows.map((report) => ({
+      ...report,
+      filedAt: report.filedAt?.toISOString() ?? null,
+      createdAt: report.createdAt.toISOString(),
+      deletedAt: report.deletedAt?.toISOString() ?? null,
+    })),
+    preDepartureCheck: checklistItems.map((item) => {
+      const check = checklistChecks.get(item.id);
+      return {
+        label: item.label,
+        check: check
+          ? { occurredAt: check.occurredAt, recordedByName: check.recordedByName }
+          : undefined,
+      };
+    }),
+    sailedWithSnags,
+    boatSafety: boatSafety && { ...boatSafety, checklist: boatChecklist },
+    departureBoatId: boatId,
+    generatedAt,
+    generatedByName,
+  });
+}
+
+/**
+ * **The departure log page**: whether this staffer may generate it at all,
+ * checked against the database rather than the JWT so a demoted owner loses it
+ * at once, and only then the document. `doc` is `null` for another shop's
+ * trip; tenancy is the session's shop, never the URL.
+ */
+export async function getTripLogPage(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<{ allowed: false } | { allowed: true; doc: IncidentExportDocument | null }> {
+  if (!(await canPersonExportIncidentRecord(db, shopId, personId))) return { allowed: false };
+  return { allowed: true, doc: await getIncidentExport(db, shopId, tripId, personId) };
+}

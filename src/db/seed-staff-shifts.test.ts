@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
+import { crewShiftCoverage } from "../features/staffing/store";
 import { tripAssignments, trips } from "./schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
-import { crewShiftCoverage } from "./staffing";
 
 /**
  * **The demo's own crew are on shift for the boats it puts them on**

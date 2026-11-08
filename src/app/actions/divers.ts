@@ -3,11 +3,11 @@
 import { z } from "zod";
 import { canPersonAddDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { createDiver, findLiveDiverIdByEmail } from "@/db/divers";
-import { parseForm } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { createDiver, findLiveDiverIdByEmail } from "@/features/divers";
+import { parseForm } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import { diverSearchPrefill } from "@/lib/person-fields";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /** What the staffer typed into the search: a name, an email or a phone. */

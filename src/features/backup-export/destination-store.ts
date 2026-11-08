@@ -127,7 +127,7 @@ export type SaveBackupDestinationResult =
  * insert-or-fail: rotating a credential or fixing a mistyped bucket is the
  * same gesture as connecting for the first time.
  */
-export async function saveShopBackupDestination(
+export async function recordShopBackupDestination(
   db: DbExecutor,
   input: SaveBackupDestinationInput,
   options: BackupSecretOptions = {},

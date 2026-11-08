@@ -15,7 +15,8 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { ShopSearchField } from "@/components/ShopSearchField";
 import { buttonClass } from "@/components/ui/button";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { shopBySlugCached } from "@/db/shops-cached";
+import { shopBySlugCached } from "@/features/shops-cached";
+import { staffHomeSlug } from "@/features/staff-home";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -29,7 +30,6 @@ import {
   shopSlugFromPublicPath,
 } from "@/lib/public-routes";
 import { shopSwitchesOn } from "@/lib/shop-features";
-import { staffHomeSlug } from "@/lib/staff-home";
 import { shopPath } from "@/lib/staff-notices";
 import { LazyStaffActivity } from "./LazyStaffActivity";
 

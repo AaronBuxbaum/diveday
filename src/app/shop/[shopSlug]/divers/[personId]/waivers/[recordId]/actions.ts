@@ -4,8 +4,8 @@ import { canPersonReadMedicalAlert, canPersonReadMedicalAnswers } from "@/db/aut
 import { recordMedicalAlertTrailLine } from "@/db/medical-alerts";
 import { recordDiverActivity } from "@/db/operations";
 import { getSignedWaiverForDiver } from "@/db/waivers";
+import { requireShopSurface } from "@/features/session";
 import { type AnsweredMedicalQuestion, answeredMedicalQuestions } from "@/lib/medical";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
 export type ShowMedicalAnswersResult =

@@ -86,7 +86,7 @@ async function warmServers() {
     e2eWorkerIndexes.map(async (i) => {
       const context = await request.newContext({
         baseURL: e2eBaseURL(i),
-        // /api/test/reset now requires this bearer token (src/lib/e2e-test-routes.ts);
+        // /api/test/reset now requires this bearer token (src/features/e2e-test-routes/rules.ts);
         // this manual context is built outside Playwright's fixture system, so
         // it doesn't inherit playwright.config.ts's `use.extraHTTPHeaders`.
         extraHTTPHeaders: { authorization: `Bearer ${E2E_TEST_ROUTE_SECRET}` },
@@ -100,7 +100,7 @@ async function warmServers() {
         // 47s of wall time once other processes share the cores, so the old
         // 30s failed the whole run here ("Timeout 30000ms exceeded" at this
         // line) before a single test started. It also takes the copy every
-        // later reset replays (src/db/demo-reset-snapshot.ts), a few seconds
+        // later reset replays (src/features/demo-reset-snapshot/store.ts), a few seconds
         // more, so that cost lands here too rather than on the first test. The
         // per-test replay after it is a few hundred milliseconds and is not
         // governed by this number.

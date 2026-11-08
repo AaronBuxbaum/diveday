@@ -27,7 +27,7 @@
  *   never show a departure the home has already dropped.
  *
  * Reports is deliberately *not* here. A calendar month is genuinely its job.
- * Nor is the shop's calendar day: that is `clock.day` (`src/lib/shop-clock.ts`),
+ * Nor is the shop's calendar day: that is `clock.day` (`src/features/shop-clock/rules.ts`),
  * the exact pair, not a window.
  *
  * Codes and numbers only — the sentence that discloses the window lives in

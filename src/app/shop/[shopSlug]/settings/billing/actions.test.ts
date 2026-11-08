@@ -1,11 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { shopSubscriptions, shops } from "@/db/schema";
-import {
-  applyBillingEffect,
-  getShopSubscription,
-  recordShopCheckoutSession,
-} from "@/db/shop-subscriptions";
 import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
@@ -15,6 +10,11 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import {
+  applyBillingEffect,
+  getShopSubscription,
+  recordShopCheckoutSession,
+} from "../../../../../features/shop-subscriptions/store";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -37,10 +37,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { startBillingCheckoutAction, openBillingPortalAction } = await import("./actions");
 
 const fetchMock = vi.fn<typeof fetch>();

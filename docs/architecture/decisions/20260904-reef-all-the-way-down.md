@@ -148,7 +148,7 @@ the backlog re-triages after the first pilot boat day stands; this is what that 
   16j, issue #1165): the column bumps for a `starts_at` change and for a change to the day's dive
   sites, in `moveTrip`, `editTrip`, `applyDetailsToFutureSeries` and the demo refresh, and for
   nothing else — a conditions note and a status flip leave it where it is. Both calendar surfaces
-  read it as `SEQUENCE`, through `src/lib/trip-calendar.ts`; the rule itself is
+  read it as `SEQUENCE`, through `src/features/trip-calendar/rules.ts`; the rule itself is
   `src/lib/trip-revision.ts`.
 - **Two phrases that print to a diver.** "Dive day № 3" on the postcard's face (today's
   `visitMilestone` sentence, moved and shortened), and the crew's five stage words as the storefront

@@ -6,13 +6,13 @@ import { MINUTE_MS } from "@/lib/clock";
 import type { RosterChangeCode } from "@/lib/incident-export";
 import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
+import { getIncidentExport } from "../features/incident-export/store";
+import { turnBookingAway } from "../features/turn-away/store";
 import { cancelBooking, restoreBooking } from "./bookings";
-import { getIncidentExport } from "./incident-export";
 import { type RosterTripActivityEntry, recordTripActivity } from "./operations";
 import { getBookingReadiness } from "./readiness";
 import { activityEvents, bookings, people } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
-import { turnBookingAway } from "./turn-away";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

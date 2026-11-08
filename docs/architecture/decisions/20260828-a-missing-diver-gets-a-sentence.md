@@ -17,7 +17,7 @@ A `dive-domain-expert` review of the merged change found what went with it.
 **A roll call can now record *that* a diver did not come back, and never *what happened to them*.**
 Nothing else in the tree carries that sentence:
 
-- The **departure log** timeline (`src/db/incident-export.ts`, rendered at
+- The **departure log** timeline (`src/features/incident-export/store.ts`, rendered at
   `/shop/[shopSlug]/trips/[id]/log`) carries timestamp, checkpoint, subject, outcome and recorder.
   Seven fields, none of them prose.
 - **Close-out** (`day_closeouts`) has a machine snapshot, an actor and a timestamp. Its only free

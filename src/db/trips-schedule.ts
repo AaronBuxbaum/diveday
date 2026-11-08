@@ -135,7 +135,7 @@ export type MoveTripOutcome =
  * cleanly (review 20260803, D3).
  *
  * Exported so the schedule builder's move preview asks the *same* question the
- * guard does (`src/db/move-preflight.ts`, issue #1203). A preview with its own
+ * guard does (`src/features/move-preflight/store.ts`, issue #1203). A preview with its own
  * copy of this rule would drift, and the drift would show up as a panel
  * promising a move the mutation then refuses.
  *

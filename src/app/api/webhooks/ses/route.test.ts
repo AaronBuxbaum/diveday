@@ -6,21 +6,25 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
 vi.mock("@/db/courtesy-email", () => ({ optOutAddressAfterComplaint: vi.fn() }));
-vi.mock("@/db/email-bounces", () => ({ recordEmailBounces: vi.fn() }));
-vi.mock("@/db/bookkeeper", () => ({ recordBookkeeperDeliveryOutcome: vi.fn() }));
-vi.mock("@/lib/notifications/sns", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/notifications/sns")>();
+vi.mock("../../../../features/email-bounces/store", () => ({ recordEmailBounces: vi.fn() }));
+vi.mock("../../../../features/bookkeeper/store", () => ({
+  recordBookkeeperDeliveryOutcome: vi.fn(),
+}));
+vi.mock("../../../../features/sns-webhook/rules", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../features/sns-webhook/rules")>();
   return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
 });
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { optOutAddressAfterComplaint } = await import("@/db/courtesy-email");
-const { recordEmailBounces } = await import("@/db/email-bounces");
-const { recordBookkeeperDeliveryOutcome } = await import("@/db/bookkeeper");
-const { verifySnsMessage, confirmSnsSubscription } = await import("@/lib/notifications/sns");
+const { recordEmailBounces } = await import("../../../../features/email-bounces/store");
+const { recordBookkeeperDeliveryOutcome } = await import("../../../../features/bookkeeper/store");
+const { verifySnsMessage, confirmSnsSubscription } = await import(
+  "../../../../features/sns-webhook/rules"
+);
 const { POST } = await import("./route");
-const { forgetWebhookRefusalReports } = await import("@/lib/webhook-refusal");
+const { forgetWebhookRefusalReports } = await import("../../../../features/webhook-refusal/rules");
 
 const FAKE_DB = { fake: "db" };
 

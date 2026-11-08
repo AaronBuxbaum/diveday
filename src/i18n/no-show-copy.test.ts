@@ -9,7 +9,7 @@ import { STAFF_MESSAGES } from "./staff-messages";
  * `checkIn.noShow.consequence` is what a staffer reads while deciding whether
  * to tap over a diver who is fifteen minutes late and not answering their
  * phone. Until 2026-09-11 it ended "You can put them back." flat, and that is
- * a promise the product cannot keep: `undoBookingNoShow` (src/db/no-show.ts)
+ * a promise the product cannot keep: `undoBookingNoShow` (src/features/no-show/store.ts)
  * re-counts the boat under the lock and refuses `trip_full` —
  * `course_ratio_full` too — the moment the freed seat is taken, and the
  * salvage panel that renders one tap later exists to get it taken as fast as

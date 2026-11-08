@@ -1,5 +1,5 @@
 import { FilterChips } from "@/components/ui/FilterChips";
-import type { StaffReviewNarrow } from "@/db/reviews";
+import type { StaffReviewNarrow } from "@/features/reviews";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
@@ -7,7 +7,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  *
  * The record runs to pages, and the review an owner most needs to read, the
  * 3-star one with words, was found by paging. These narrow both groups and
- * their counts alike (`narrowWhere` in src/db/reviews.ts), so a header never
+ * their counts alike (`narrowWhere` in src/features/reviews/store.ts), so a header never
  * counts rows the list does not show. Drawn only once there is something to
  * narrow: chips over an empty page are three controls that do nothing.
  */

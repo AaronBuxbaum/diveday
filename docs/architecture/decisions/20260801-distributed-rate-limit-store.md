@@ -17,7 +17,7 @@ security audit re-confirming the gap.
 ## Decision
 
 - **Upstash Redis, via its REST API — no SDK package.** Matches this codebase's existing pattern for
-  Stripe webhook verification (`src/lib/payments/webhook.ts`) and Vercel Blob uploads
+  Stripe webhook verification (`src/features/payments/webhook.ts`) and Vercel Blob uploads
   (`src/lib/storage/index.ts`), both of which call the vendor's HTTP API directly with `fetch` rather
   than add and audit an SDK dependency for a handful of calls. Upstash's REST API is a plain
   `POST` with a JSON command array and a bearer token — no client library needed. This *is* still a

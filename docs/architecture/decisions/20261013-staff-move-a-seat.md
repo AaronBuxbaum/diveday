@@ -13,7 +13,7 @@ hand-moved payment, and breaks the diver's links.
 ## Decision
 
 **A staffer moves a seat by changing the booking's `trip_id` in one transaction
-(`moveBooking`, `src/db/bookings.ts`); `moveSeat` (`src/db/seat-diver.ts`) is the one consequence
+(`moveBooking`, `src/db/bookings.ts`); `moveSeat` (`src/features/seat-diver/store.ts`) is the one consequence
 path; the roster row's "Move to another departure" is the one door.**
 
 - **Same row.** What is keyed on the booking travels: order, payment, waiver, `/ready` link,
@@ -24,7 +24,7 @@ path; the roster row's "Move to another departure" is the one door.**
   point, not the new conditions, so `/ready` must show them unread. A handled help request stays.
 - **Money follows the invoice and payment, keyed by booking.** A completed checkout keeps the
   `trip_id` it was bought for, as the record of what was sold. The one revenue read joining a
-  checkout by trip (`src/db/report-lines.ts`) only files it under Courses or Fun dives, which a
+  checkout by trip (`src/features/report-lines/store.ts`) only files it under Courses or Fun dives, which a
   move cannot change, and counts by completion date.
 - **Measured as a new staff seat**, under the target's lock (both trips in id order, then the
   seat): both capacity limits, the course's instructor, ratio, card and age on the new date, and

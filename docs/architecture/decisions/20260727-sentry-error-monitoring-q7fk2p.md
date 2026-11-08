@@ -52,7 +52,7 @@ Zero new dependency, zero new cost.
 - `src/instrumentation-client.ts` calls it client-side; the SDK's default `GlobalHandlers`
   integration then covers uncaught exceptions and unhandled promise rejections without any manual
   listener code. *Amended 2026-10-13 (code review 2026-10-13b, item 34):* the browser SDK loads on
-  idle (`deferSentry`, `src/lib/observability/sentry-browser.ts`), not by a static import. It was
+  idle (`deferSentry`, `src/features/sentry-browser/rules.ts`), not by a static import. It was
   57 KB of the 221 KB shared first-load floor every route paid before painting; until it arrives,
   two listeners keep up to 20 uncaught errors and rejections and hand them to it, marked unhandled.
   `scripts/perf-budget.mjs` fails a build whose floor carries the SDK's `__SENTRY__` again. The

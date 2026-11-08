@@ -1,4 +1,4 @@
-import type { shopBySlugCached } from "@/db/shops-cached";
+import type { shopBySlugCached } from "@/features/shops-cached";
 import type { DiverTranslator } from "@/i18n/messages";
 import { parseBrandBadges } from "@/lib/brand";
 import type { ReviewAggregate } from "@/lib/reviews";

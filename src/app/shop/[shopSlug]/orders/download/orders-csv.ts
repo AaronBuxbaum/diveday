@@ -1,5 +1,5 @@
-import type { OrderExportLine } from "@/db/order-export";
 import type { SeatPaymentRow } from "@/db/seat-payments";
+import type { OrderExportLine } from "@/features/order-export";
 import { buildCsv, type CsvValue, exportDateStamp } from "@/lib/export";
 import { minorToMajor } from "@/lib/money";
 

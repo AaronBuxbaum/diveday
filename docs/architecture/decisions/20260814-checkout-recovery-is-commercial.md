@@ -18,7 +18,7 @@ As their schemas defined them in `src/lib/notifications/kinds.ts`:
 - `last_minute_deal` — carried `unsubscribeUrl`.
 - `checkout_recovery` — did not. Its schema ended at `checkoutUrl`.
 
-The send path matched. `src/db/checkout-recovery.ts` never read `people.courtesyEmailOptOutAt`, so a
+The send path matched. `src/features/checkout-recovery/store.ts` never read `people.courtesyEmailOptOutAt`, so a
 diver who had explicitly opted out of courtesy email — the self-serve opt-out the other two honour,
 with `opted_out` as a first-class outcome — still received this one. There was no per-recipient
 suppression of any kind on the path.

@@ -2,10 +2,18 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { boardAtDeparture, HOUR, returnedTrip } from "./roll-call-test-fixtures";
+import {
+  latestTripStage,
+  readDepartureStage,
+  recordTripStage,
+} from "../features/trip-stages/store";
+import {
+  boardAtDeparture,
+  HOUR,
+  returnedTrip,
+} from "../test/substrate-fixtures/db/roll-call-test-fixtures";
 import { rollCallEvents, tripAssignments, trips } from "./schema";
 import { resetDemoSchedule } from "./seed";
-import { latestTripStage, readDepartureStage, recordTripStage } from "./trip-stages";
 import { liveTrip } from "./trips-live";
 
 const ctx = fileScopedShopContext();

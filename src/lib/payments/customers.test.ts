@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { customerProviderFromEnvironment } from "@/db/stripe-providers";
-import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
+import { stripeResponse } from "../../test/substrate-fixtures/lib/payments/__fixtures__/stripe-response";
 import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
 
 function providerWith(env: Record<string, string | undefined>, fetchImpl: unknown) {

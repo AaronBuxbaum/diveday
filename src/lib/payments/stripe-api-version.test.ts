@@ -7,7 +7,7 @@ import {
   STRIPE_FIXTURE_DIR,
   STRIPE_OBJECT_FIXTURES,
   stripeEventFixture,
-} from "./__fixtures__/stripe";
+} from "../../test/substrate-fixtures/lib/payments/__fixtures__/stripe/index";
 
 /**
  * The guard that makes the pinned Stripe API version *visible*, and keeps a
@@ -174,7 +174,7 @@ describe("the code's pinned version and the fixtures' cannot diverge", () => {
       filesPinningAVersion(readSources()).filter((file) => file !== VERSION_HEADER_REMOVER),
       "A Stripe API version is now pinned in the payments code. Reconcile it with " +
         `STRIPE_FIXTURE_API_VERSION (${STRIPE_FIXTURE_API_VERSION}) and re-capture the fixtures — ` +
-        "see src/lib/payments/__fixtures__/stripe/README.md.",
+        "see src/test/substrate-fixtures/lib/payments/__fixtures__/stripe/README.md.",
     ).toEqual([]);
   });
 

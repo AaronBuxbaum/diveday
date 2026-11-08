@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { proseLinkClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { mixedTrainingAdvisories } from "@/db/mixed-training-advisory";
+import { mixedTrainingAdvisories } from "@/features/mixed-training-advisory";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatPlannedDateTimeTz } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";

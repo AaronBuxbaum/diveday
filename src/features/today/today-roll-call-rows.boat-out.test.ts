@@ -8,19 +8,23 @@ import {
   unreviewCertification,
   upsertTripRequirements,
 } from "@/db/readiness";
-import { boardAtDeparture, HOUR, returnedTrip } from "@/db/roll-call-test-fixtures";
 import {
   bookings as bookingsTable,
   rollCallEvents as rollCallEventsTable,
   trips as tripsTable,
 } from "@/db/schema";
-import { recordTripStage } from "@/db/trip-stages";
 import { listStaff } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  boardAtDeparture,
+  HOUR,
+  returnedTrip,
+} from "../../test/substrate-fixtures/db/roll-call-test-fixtures";
+import { shopClock } from "../shop-clock/rules";
+import { recordTripStage } from "../trip-stages/store";
 import { sortStationRows } from "./today";
 import { countBlockedDiversNextBoatDay, getTodayWork } from "./today-reader";
 import { afterDiveRow, rollCallRow, rollCallRows } from "./today-roll-call-test-fixtures";
@@ -572,7 +576,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
      * Alarm fatigue is a safety property. Crews tap "Boarded" for the people in
      * front of them and never touch the two who didn't show — there is no bulk
      * action, and the counter's no-show mark (`markBookingNoShow`,
-     * src/db/no-show.ts) writes `bookings.status`, never a `roll_call_events`
+     * src/features/no-show/store.ts) writes `bookings.status`, never a `roll_call_events`
      * row, so a walk-away arrives here with no result at any checkpoint whether
      * or not the desk released their seat. Counting those two as
      * unaccounted-for after every dive raised a danger-toned row on most real

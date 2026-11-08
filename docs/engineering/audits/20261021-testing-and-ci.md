@@ -580,8 +580,8 @@ and
 measure eleven explicit files; floors range from 75% promo-caps to 100% authz/trips.
 [src/db/bookings.ts:1-110](https://github.com/AaronBuxbaum/diveday/blob/35333db0338259eff8e93d1686e5cc5702c708c6/src/db/bookings.ts#L1)
 imports policy/consequence logic from booking-gates, boat-safety, course-ratios, participant-types,
-seat-locks, certification-evidence and other modules. `src/db/seat-claims.ts` and
-`src/db/seat-diver.ts` are substantial safety-relevant modules outside this allowlist.
+seat-locks, certification-evidence and other modules. `src/features/seat-claims/store.ts` and
+`src/features/seat-diver/store.ts` are substantial safety-relevant modules outside this allowlist.
 
 Consequence: moving a covered decision into an excluded helper can retain a green floor while
 reducing visibility into that decision. This is a scope/maintenance gap, not a claim those helpers

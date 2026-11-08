@@ -2,6 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
+import { removeStaffMember, setStaffAccountStatus } from "../features/staff-accounts/store";
 import {
   checkAccountToken,
   consumeAccountToken,
@@ -10,7 +11,6 @@ import {
 } from "./account-tokens";
 import type { AppDb } from "./client";
 import { capabilities, people, personRoles, userAccounts } from "./schema";
-import { removeStaffMember, setStaffAccountStatus } from "./staff-accounts";
 
 const ctx = fileScopedShopContext();
 let seq = 0;

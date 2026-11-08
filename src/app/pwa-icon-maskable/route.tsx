@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { BubbleMark } from "@/app/_brand/mark";
-import { allowSvgRasterization } from "@/lib/og-rasterizer";
+import { allowSvgRasterization } from "@/features/og-rasterizer";
 
 /**
  * **The launcher tile Android crops into whatever shape the phone uses.**
@@ -25,7 +25,7 @@ const SIZE = 512;
 export async function GET() {
   // Same libvips/SVG hazard as the OG cards, despite this being pure shapes:
   // satori still emits SVG and @vercel/og still rasterizes it through sharp.
-  // See src/lib/og-rasterizer.ts.
+  // See src/features/og-rasterizer/rules.ts.
   await allowSvgRasterization();
 
   return new ImageResponse(<BubbleMark size={SIZE} maskable />, {

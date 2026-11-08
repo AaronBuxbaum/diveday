@@ -5,7 +5,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
 import type { AppDb } from "./client";
 import {
   addDiverNote,
@@ -538,7 +538,7 @@ describe("a diver's own activity trail", () => {
   /**
    * The reader does no redaction of its own, and must not: an erased person's
    * lines are rewritten to `[redacted]` once, inside the erasure transaction
-   * (`src/db/anonymize.ts`). A read-time filter would be a second, weaker copy
+   * (`src/features/anonymize/store.ts`). A read-time filter would be a second, weaker copy
    * of that rule — and the weaker copy is the one that gets forgotten. This
    * asserts the outcome the staffer sees either way.
    */

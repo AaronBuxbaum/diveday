@@ -26,7 +26,7 @@ import { Pool } from "pg";
 import { storedSealings } from "@/db/account-security";
 import type { AppDb } from "@/db/client";
 import { withExplicitSslMode } from "@/db/connection-string";
-import { sealedSecretSamples } from "@/db/sealed-secret-samples";
+import { sealedSecretSamples } from "@/features/sealed-secret-samples";
 import {
   keyringOpensSamples,
   keyringOpensStored,

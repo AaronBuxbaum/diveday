@@ -2,6 +2,19 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import {
+  complete,
+  OTHER_SHOP,
+  OTHER_TRIP,
+} from "../test/substrate-fixtures/db/incident-reports-test-fixtures";
+import {
+  MARKED_AT,
+  mark,
+  missingSeat,
+  recorder,
+  secondSeat,
+  stateOf,
+} from "../test/substrate-fixtures/db/missing-diver-test-fixtures";
+import {
   addIncidentAddendum,
   fileIncidentReport,
   getIncidentReport,
@@ -12,16 +25,7 @@ import {
   recordIncidentDraft,
   startIncidentReport,
 } from "./incident-reports";
-import { complete, OTHER_SHOP, OTHER_TRIP } from "./incident-reports-test-fixtures";
 import { sendMissingDiverAlerts, sendMissingDiverAllClear } from "./missing-diver-alerts";
-import {
-  MARKED_AT,
-  mark,
-  missingSeat,
-  recorder,
-  secondSeat,
-  stateOf,
-} from "./missing-diver-test-fixtures";
 import {
   activityEvents,
   incidentReports,

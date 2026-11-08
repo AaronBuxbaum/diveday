@@ -1,0 +1,60 @@
+import { and, eq, ne } from "drizzle-orm";
+import { liveTrip, seatNotCancelled } from "@/db/trips";
+import { hasReturned } from "@/lib/trips";
+import { issueBookingCapability } from "../../db/booking-capabilities";
+import type { AppDb } from "../../db/client";
+import { getCourseFormsForBooking, lockCourseFormSeatRows } from "../../db/course-forms";
+import { bookings, trips } from "../../db/schema/index";
+
+import { nowDate } from "../../lib/clock";
+
+/** Issue only the selected live seat's forms capability; callers authenticate staff. */
+export async function issueCounterCourseForms(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    bookingId: string;
+    now?: Date;
+  },
+): Promise<{ token: string; expiresAt: Date } | null> {
+  return db.transaction(async (tx) => {
+    // Lock trips in the same order as seat moves, then both relevant seats.
+    const lockedSeat = await lockCourseFormSeatRows(tx, input.shopId, input.bookingId);
+    if (!lockedSeat) return null;
+    const [seat] = await tx
+      .select({ id: bookings.id, endsAt: trips.endsAt })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+          eq(trips.shopId, input.shopId),
+          liveTrip(),
+          ne(trips.status, "cancelled"),
+          seatNotCancelled,
+        ),
+      )
+      .limit(1);
+    if (!seat) return null;
+    const now = input.now ?? nowDate();
+    if (hasReturned(seat.endsAt, now)) return null;
+    const forms = await getCourseFormsForBooking(tx, input.shopId, seat.id, now);
+    if (
+      !forms ||
+      forms.enrollment.identityHeld ||
+      hasReturned(forms.enrollment.endsAt, now) ||
+      !forms.outstanding.length
+    )
+      return null;
+    return issueBookingCapability(tx, {
+      shopId: input.shopId,
+      bookingId: seat.id,
+      purpose: "course_forms",
+      expectedPersonId: lockedSeat.personId,
+      now,
+    });
+  });
+}

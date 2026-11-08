@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  clearAnswers,
+  now,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { createBooking } from "./bookings";
 import { getBookingReadiness, upsertTripRequirements } from "./readiness";
 import { activityEvents, bookings, people, shops, waiverRecords } from "./schema";
@@ -10,7 +15,6 @@ import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers-completion";
 import { earlierReferralForOpenHold, recordMedicalEvaluation } from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
-import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

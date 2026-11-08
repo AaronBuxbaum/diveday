@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import type { ReadyPageData } from "@/db/ready";
+import type { ReadyPageData } from "@/features/ready";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatTime } from "@/lib/format";
 import { clearRunningLateAction, sayRunningLateAction } from "../day-of-actions";

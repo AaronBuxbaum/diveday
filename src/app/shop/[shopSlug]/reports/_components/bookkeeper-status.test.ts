@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { BookkeeperSetting } from "@/db/bookkeeper";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateWithYear } from "@/lib/format";
+import type { BookkeeperSetting } from "../../../../../features/bookkeeper/store";
 import { bookkeeperStatusLine } from "./bookkeeper-status";
 
 const setting: BookkeeperSetting = {

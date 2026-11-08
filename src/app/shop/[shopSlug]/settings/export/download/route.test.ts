@@ -18,8 +18,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("@/db/step-up", () => ({ hasRequiredStepUp: vi.fn(async () => true) }));
+vi.mock("../../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../../features/step-up/store", () => ({
+  hasRequiredStepUp: vi.fn(async () => true),
+}));
 vi.mock("@/db/operations", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/operations")>();
   return { ...actual, recordMedicalAnswersExported: vi.fn(actual.recordMedicalAnswersExported) };
@@ -30,7 +32,7 @@ vi.mock("@/lib/export", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../../features/session/rules");
 const { recordMedicalAnswersExported } = await import("@/db/operations");
 const { GET } = await import("./route");
 

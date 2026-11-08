@@ -1,9 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { listTripLenses } from "../features/trip-lenses/store";
 import { tripLenses, trips } from "./schema";
 import { seedLenses } from "./seed-lenses";
-import { listTripLenses } from "./trip-lenses";
 
 const ctx = fileScopedShopContext();
 

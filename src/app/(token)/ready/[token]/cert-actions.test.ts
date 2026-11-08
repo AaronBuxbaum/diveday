@@ -1,12 +1,12 @@
 import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
-import { firstActiveIntroCourse } from "@/db/courses";
 import { createCertification } from "@/db/readiness";
-import { getReadyPageData } from "@/db/ready";
 import { bookings, cards, people, trips } from "@/db/schema";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { firstActiveIntroCourse } from "../../../../features/courses/store";
+import { getReadyPageData } from "../../../../features/ready/store";
 
 /**
  * **"I'm not certified yet" on `/ready`** (third UX review, item 23), against a

@@ -13,10 +13,10 @@
  * refuses the change when it cannot be.
  */
 import { getDb } from "@/db/client";
-import { setShopPricingPlan } from "@/db/shop-subscriptions";
+import { billingProviderFromEnvironment } from "@/features/billing";
+import { pricingConfig } from "@/features/pricing-flags";
+import { setShopPricingPlan } from "@/features/shop-subscriptions";
 import { type PlanTerms, parsePricingPlanArgs } from "@/lib/billing/pricing-plans";
-import { billingProviderFromEnvironment } from "@/lib/billing/stripe-billing";
-import { pricingConfig } from "@/lib/pricing-flags";
 
 const USAGE =
   "Usage: pnpm billing:pricing-plan <shop-slug> <flat|percent|auto> [--monthly-cents 0-100000] [--basis-points 0-1000]";

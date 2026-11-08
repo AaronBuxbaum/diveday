@@ -851,7 +851,7 @@ async function deleteStripeReversals(db: DbExecutor, shopId: string): Promise<vo
  * Two halves: {@link clearDemoSchedule} takes the shop down to what a reset
  * keeps, and {@link reseedClearedDemoSchedule} writes the seeded schedule back.
  * The e2e reset replays the second half from a copy instead of re-running it
- * (`src/db/demo-reset-snapshot.ts`); this function, which the in-app "reset demo
+ * (`src/features/demo-reset-snapshot/store.ts`); this function, which the in-app "reset demo
  * shop" action calls against real Postgres, always runs both.
  */
 export async function resetDemoSchedule(
@@ -1191,7 +1191,7 @@ export async function clearDemoSchedule(
     // before the people they belong to or the delete below FK-violates (23503),
     // aborts the whole reset mid-run, and leaks the churned schedule into the
     // next spec's fixture. A purged person carries a login whenever a flow
-    // minted one for them — contact import (src/db/import.ts), diver signup,
+    // minted one for them — contact import (src/features/import/store.ts), diver signup,
     // and staff invite/accept all do — so this is not hypothetical; it is what
     // made trips.spec flake under the full suite. deleteDemoShopCascade already
     // clears these; the per-reset path must too. Account tokens (email verify /

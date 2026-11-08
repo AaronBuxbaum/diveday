@@ -32,9 +32,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("@/db/step-up", () => ({ hasRequiredStepUp: vi.fn(async () => true) }));
-vi.mock("@/lib/security-step-up", () => ({ stepUpChallengeUrl: vi.fn(() => "/step-up") }));
+vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/step-up/store", () => ({
+  hasRequiredStepUp: vi.fn(async () => true),
+}));
+vi.mock("../../../../../features/security-step-up/rules", () => ({
+  stepUpChallengeUrl: vi.fn(() => "/step-up"),
+}));
 vi.mock("@/features/integrations", () => ({ dispatchIntegrationsAfterResponse: vi.fn() }));
 vi.mock("@/db/shop-activity", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/shop-activity")>();
@@ -50,8 +54,8 @@ vi.mock("@/db/orders", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { hasRequiredStepUp } = await import("@/db/step-up");
-const { requireStaffSession } = await import("@/lib/session");
+const { hasRequiredStepUp } = await import("../../../../../features/step-up/store");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { recordDemoPaymentOnOpenOrder, recordPaymentOnOpenOrder } = await import("@/db/orders");
 const { holdCounterPaymentAction, recordRoomChargeAction } = await import("./counter-actions");
 const { releaseHeldSendAction, undoHeldSendAction } = await import("@/app/actions/held-sends");

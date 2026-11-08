@@ -955,7 +955,7 @@ export type NotificationRetrySummary = {
  * #1719 was filed on.
  *
  * **The attempts bound is in the predicate, not in the loop**, for the reason
- * `retryPendingProcessorErasures` (src/db/processor-erasure.ts) writes down: a
+ * `retryPendingProcessorErasures` (src/features/processor-erasure/store.ts) writes down: a
  * parked row keeps a `next_attempt_at` and sits near the head of this
  * oldest-first, limited scan, so filtering after the LIMIT would let a handful
  * of permanently-dead rows crowd out every genuinely due one.

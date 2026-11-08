@@ -1,0 +1,162 @@
+import { describe, expect, it } from "vitest";
+import { parseSesInboundNotification } from "./inbound";
+
+const NOW = new Date("2026-07-21T13:30:00.000Z");
+
+function received(overrides: Record<string, unknown> = {}) {
+  return JSON.stringify({
+    notificationType: "Received",
+    receipt: {
+      timestamp: "2026-07-21T13:00:00.000Z",
+      recipients: ["reply+3f2504e0-4f89-41d3-9a0c-0305e82c3301@inbound.ses.dive.day"],
+      spamVerdict: { status: "PASS" },
+      virusVerdict: { status: "PASS" },
+      spfVerdict: { status: "PASS" },
+      dkimVerdict: { status: "PASS" },
+      dmarcVerdict: { status: "PASS" },
+      action: { type: "S3", bucketName: "diveday-inbound-mail", objectKey: "mail/abc123" },
+    },
+    mail: {
+      messageId: "abc123",
+      timestamp: "2026-07-21T12:59:58.000Z",
+      source: "priya@example.com",
+      destination: ["reply+3f2504e0-4f89-41d3-9a0c-0305e82c3301@inbound.ses.dive.day"],
+      commonHeaders: { from: ["Priya Sharma <priya@example.com>"] },
+    },
+    ...overrides,
+  });
+}
+
+describe("parseSesInboundNotification", () => {
+  it("reads where SES put the message and who it was for", () => {
+    expect(parseSesInboundNotification(received(), NOW)).toEqual({
+      kind: "received",
+      providerMessageId: "abc123",
+      bucketName: "diveday-inbound-mail",
+      objectKey: "mail/abc123",
+      recipients: ["reply+3f2504e0-4f89-41d3-9a0c-0305e82c3301@inbound.ses.dive.day"],
+      envelopeFrom: "priya@example.com",
+      sesHeaderFrom: ["Priya Sharma <priya@example.com>"],
+      fromAuthenticated: true,
+      envelopeAuthenticated: true,
+      spamFlagged: false,
+      receivedAt: new Date("2026-07-21T12:59:58.000Z"),
+    });
+  });
+
+  /**
+   * The two verdicts that say whose message this is. DMARC is the only one
+   * that authenticates the `From:` header — SPF authenticates the envelope,
+   * and DKIM's signing domain need not align with either — so they are
+   * reported separately and the route decides what each one buys.
+   */
+  it("reports SES's SPF and DMARC verdicts separately, and absent as unauthenticated", () => {
+    expect(
+      parseSesInboundNotification(
+        received({
+          receipt: {
+            spfVerdict: { status: "PASS" },
+            dmarcVerdict: { status: "FAIL" },
+            action: { type: "S3", bucketName: "b", objectKey: "k" },
+          },
+          mail: { messageId: "m" },
+        }),
+        NOW,
+      ),
+    ).toMatchObject({ fromAuthenticated: false, envelopeAuthenticated: true });
+    expect(
+      parseSesInboundNotification(
+        received({
+          receipt: { action: { type: "S3", bucketName: "b", objectKey: "k" } },
+          mail: { messageId: "m" },
+        }),
+        NOW,
+      ),
+    ).toMatchObject({ fromAuthenticated: false, envelopeAuthenticated: false });
+  });
+
+  it("refuses a message the virus scan failed, and keeps one the spam scan failed", () => {
+    const virus = received({
+      receipt: {
+        virusVerdict: { status: "FAIL" },
+        action: { type: "S3", bucketName: "b", objectKey: "k" },
+      },
+    });
+    expect(parseSesInboundNotification(virus, NOW)).toEqual({ kind: "ignored", reason: "virus" });
+    const spam = received({
+      receipt: {
+        spamVerdict: { status: "FAIL" },
+        action: { type: "S3", bucketName: "b", objectKey: "k" },
+      },
+    });
+    expect(parseSesInboundNotification(spam, NOW).kind).toBe("received");
+    // Kept, but said: the desk's after-hours ping never fires on it (#2311).
+    expect(parseSesInboundNotification(spam, NOW)).toMatchObject({ spamFlagged: true });
+  });
+
+  /**
+   * **Only a verdict SES actually passed is clean** (security review of
+   * #2311). GRAY, PROCESSING_FAILED, an unknown word or no verdict at all is a
+   * message nobody vouched for as not-spam: still filed, never a page.
+   */
+  it("flags every spam verdict but PASS, and a missing one", () => {
+    const spamVerdict = (status: string | undefined) =>
+      parseSesInboundNotification(
+        received({
+          receipt: {
+            ...(status === undefined ? {} : { spamVerdict: { status } }),
+            action: { type: "S3", bucketName: "b", objectKey: "k" },
+          },
+        }),
+        NOW,
+      );
+    expect(spamVerdict("PASS")).toMatchObject({ kind: "received", spamFlagged: false });
+    expect(spamVerdict("pass")).toMatchObject({ kind: "received", spamFlagged: false });
+    for (const status of ["FAIL", "GRAY", "PROCESSING_FAILED", "SOMETHING_NEW", undefined]) {
+      expect(spamVerdict(status)).toMatchObject({ kind: "received", spamFlagged: true });
+    }
+  });
+
+  it("ignores a delivery event, a non-S3 action, and garbage", () => {
+    expect(parseSesInboundNotification(JSON.stringify({ eventType: "Bounce" }), NOW)).toEqual({
+      kind: "ignored",
+      reason: "not_received",
+    });
+    expect(
+      parseSesInboundNotification(received({ receipt: { action: { type: "SNS" } } }), NOW),
+    ).toEqual({ kind: "ignored", reason: "not_s3" });
+    expect(parseSesInboundNotification("not json", NOW)).toEqual({
+      kind: "ignored",
+      reason: "malformed",
+    });
+    expect(parseSesInboundNotification(received({ mail: {} }), NOW)).toEqual({
+      kind: "ignored",
+      reason: "malformed",
+    });
+  });
+
+  it("falls back to now when neither timestamp parses", () => {
+    const result = parseSesInboundNotification(
+      received({
+        receipt: { action: { type: "S3", bucketName: "b", objectKey: "k" }, timestamp: "nope" },
+        mail: { messageId: "m", timestamp: "also nope" },
+      }),
+      NOW,
+    );
+    expect(result).toMatchObject({ kind: "received", receivedAt: NOW, recipients: [] });
+  });
+
+  it("reports every From SES read, and none when it read none", () => {
+    const twice = received({
+      mail: {
+        messageId: "abc123",
+        commonHeaders: { from: ["victim@diver.com", "attacker@evil.com"] },
+      },
+    });
+    expect(parseSesInboundNotification(twice, NOW)).toMatchObject({
+      sesHeaderFrom: ["victim@diver.com", "attacker@evil.com"],
+    });
+    const none = received({ mail: { messageId: "abc123" } });
+    expect(parseSesInboundNotification(none, NOW)).toMatchObject({ sesHeaderFrom: [] });
+  });
+});

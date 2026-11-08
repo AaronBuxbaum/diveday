@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { pruneExpiredRecords } from "@/db/retention";
-import { requireCronSecret } from "@/lib/cron-auth";
+import { requireCronSecret } from "@/features/cron-auth";
+import { flushLogs } from "@/features/log-shipping";
+import { pruneExpiredRecords } from "@/features/retention";
+import { reportScrubbedError, sentry } from "@/features/sentry-server";
 import { log } from "@/lib/log";
-import { flushLogs, reportScrubbedError } from "@/lib/observability";
-import { sentry } from "@/lib/observability/sentry";
 
 /** The 45s batch-admission budget is intended to leave room under the 60s
  * platform limit for the last batch and completion log; an in-flight batch can
@@ -26,7 +26,7 @@ const CRON_MONITOR_CONFIG = {
 } as const;
 
 /**
- * Weekly pruning applies the HD-11 windows in `src/lib/retention.ts` (DATA-M4/PAY-L2;
+ * Weekly pruning applies the HD-11 windows in `src/features/retention/rules.ts` (DATA-M4/PAY-L2;
  * ADR 20260803-append-only-retention). Authorization fails closed: missing
  * configuration returns 503, and a missing or wrong bearer token returns 401;
  * the gate precedes Sentry check-in and all deletion. Per-table outcomes go in

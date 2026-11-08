@@ -70,7 +70,7 @@ which is why it is stored.
 | Slot (Apple `generic` style) | Content | Source |
 | --- | --- | --- |
 | `logoText` | the shop's name | `shops.name` |
-| `headerFields[0]` | the crew-set stage word, or absent | `latestTripStage` (`src/db/trip-stages.ts`), `diver.json` stage keys |
+| `headerFields[0]` | the crew-set stage word, or absent | `latestTripStage` (`src/features/trip-stages/store.ts`), `diver.json` stage keys |
 | `primaryFields[0]` | the departure's title | `trips.title` |
 | `secondaryFields` | date · dock call · departs | `trips.startsAt`, `shops.dockCallMinutes` |
 | `auxiliaryFields` | boat · diver's name | trip boat, `people` |
@@ -216,7 +216,7 @@ and an alarm at the runbook's usual threshold; `docs/engineering/cloudwatch-obse
 gains the row.
 
 Retention: `wallet_pass_registrations` older than 30 days past their pass's expiration are pruned
-by the weekly retention cron (`src/lib/retention.ts` gains the window; `src/db/retention.ts` the
+by the weekly retention cron (`src/features/retention/rules.ts` gains the window; `src/features/retention/store.ts` the
 prune); `wallet_passes` are soft-deleted with their booking and never pruned by this slice.
 
 ### Acceptance tests

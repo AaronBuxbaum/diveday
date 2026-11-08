@@ -9,30 +9,30 @@ import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard
 import { demoRoleEmail } from "@/db/people";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
-import { auth, getAuth } from "@/lib/auth";
-import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
-import { demoLandingFrom, demoLandingPath } from "@/lib/demo-landings";
-import { DEMO_ROLE_IDS, type DemoRoleId } from "@/lib/demo-roles";
 import {
   DEMO_SEAT_COOKIE,
   DEMO_SEAT_MAX_AGE_SECONDS,
   isDemoSeatFor,
   signDemoSeat,
-} from "@/lib/demo-seat";
+} from "@/features/demo-seat";
 import {
   DEMO_SHOP_NAME_COOKIE,
   DEMO_SHOP_NAME_COOKIE_CLEAR,
   DEMO_SHOP_NAME_COOKIE_PATH,
   DEMO_SHOP_NAME_MAX_AGE_SECONDS,
   signDemoShopName,
-} from "@/lib/demo-shop-name";
+} from "@/features/demo-shop-name";
+import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/quiet-demo-device";
+import { requireStaffSession } from "@/features/session";
+import { auth, getAuth } from "@/lib/auth";
+import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
+import { demoLandingFrom, demoLandingPath } from "@/lib/demo-landings";
+import { DEMO_ROLE_IDS, type DemoRoleId } from "@/lib/demo-roles";
 import { eventSource } from "@/lib/funnel";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/lib/quiet-demo-device";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { runtimeMode } from "@/lib/runtime-mode";
-import { requireStaffSession } from "@/lib/session";
 // A plain module, deliberately not a second server action — see its own file
 // comment: exporting it from here would publish it as an unauthenticated
 // endpoint taking a caller-supplied shop slug.
@@ -81,7 +81,7 @@ async function demoSignInHeaders(): Promise<Headers> {
 }
 
 /**
- * Leave this browser a seat in demo shop `shopId` (`src/lib/demo-seat.ts`): the
+ * Leave this browser a seat in demo shop `shopId` (`src/features/demo-seat/rules.ts`): the
  * only proof the diver preview, which has no session, keeps of which shop it
  * may switch back to staff in.
  */
@@ -185,7 +185,7 @@ export async function enterDemoAction(formData?: FormData) {
   // visitor is waiting on must not queue behind a telemetry or mail round trip.
   //
   // Skipped whole for a browser the founder marked as his own
-  // (src/lib/quiet-demo-device.ts): his own demo is neither news for his inbox
+  // (src/features/quiet-demo-device/rules.ts): his own demo is neither news for his inbox
   // nor a prospect for the funnel.
   const quiet = isQuietDemoDevice((await cookies()).get(QUIET_DEMO_COOKIE)?.value);
   if (!quiet) after(() => announceDemoEntry({ slug, role, source }));

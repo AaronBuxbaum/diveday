@@ -432,7 +432,7 @@ export async function pushManifestChanged(
 /**
  * **One push about one departure to every device following its manifest,
  * now** — the stale-roll-call alert (batch 6, item 6;
- * src/db/roll-call-alerts.ts). Unlike {@link pushManifestChanged} it neither
+ * src/features/roll-call-alerts/store.ts). Unlike {@link pushManifestChanged} it neither
  * coalesces nor asks the departure window: it is sent once per departure, by
  * a pass that has already claimed it. Same ceilings, same allowlist (inside
  * `sendWebPush`), same pruning of endpoints the push service says are gone,

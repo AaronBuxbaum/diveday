@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { OrderExportLine } from "@/db/order-export";
 import type { SeatPaymentRow } from "@/db/seat-payments";
+import type { OrderExportLine } from "../../../../../features/order-export/store";
 import { ORDERS_CSV_HEADER, ordersCsv } from "./orders-csv";
 
 const ORDER: Omit<OrderExportLine, "line"> = {

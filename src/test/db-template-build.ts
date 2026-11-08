@@ -21,7 +21,7 @@ export async function buildSnapshot(variant: TemplateVariant): Promise<Buffer> {
   // the demo experience, the e2e/visual-regression fleet, and the handful of
   // reporting-shaped unit tests that ask for `{ history: true }`; everything
   // else is calibrated to the small, controlled dataset and builds its own
-  // history when it needs it (src/db/reporting.test.ts).
+  // history when it needs it (src/features/reporting/store.test.ts).
   await seedDemo(db, variant);
   const dump = await client.dumpDataDir("none");
   await closePglite(client);

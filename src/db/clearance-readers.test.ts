@@ -6,20 +6,20 @@ import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { commitContactImport } from "@/test/words-wiring";
+import { repointHeldBooking } from "../features/identity-repoint/store";
+import { physicianReferrals } from "../features/invite-suggestions/store";
+import {
+  medicalReferralAnswers,
+  recordMedicalEvaluationForShop,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { splitBookingIdentity } from "./bookings";
-import { repointHeldBooking } from "./identity-repoint";
-import { physicianReferrals } from "./invite-suggestions";
 import { createPerson } from "./people";
 import { bookings, waiverRecords } from "./schema";
 import { listWaiverIntegrityAudit } from "./waivers-audit";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { attachDiverMedicalForm, contactOnFile, hasUnansweredMedicalHold } from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
-import {
-  medicalReferralAnswers,
-  recordMedicalEvaluationForShop,
-  waiverContextFor,
-} from "./waivers-test-fixtures";
 
 /**
  * **Every reader of a clearance stamp reads the same answer** (Aaron, 2026-11-06): a recorded

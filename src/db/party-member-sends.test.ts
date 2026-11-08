@@ -4,12 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
+import { sendFindMyBookingLinks } from "../features/find-my-booking/store";
+import { sendDueReminders } from "../features/reminders/store";
+import { moveSeat } from "../features/seat-diver/store";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBookingParty } from "./bookings";
-import { sendFindMyBookingLinks } from "./find-my-booking";
-import { sendDueReminders } from "./reminders";
 import { bookingCapabilities, bookings, people } from "./schema";
-import { moveSeat } from "./seat-diver";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { issueAndDeliverWaiver, resendConfirmationWithWaiver } from "./waiver-issue";
 

@@ -46,7 +46,7 @@ with nothing left to await. That is finding **PAY-L1**, "permanent pending desyn
 
 - **Add a `payment_failed` value to the `checkout_status` enum** — the most truthful modelling, and
   rejected on blast radius: every consumer of that enum (including the hand-written union in
-  `src/lib/checkout-recovery.ts`) would have to learn a value whose behaviour is identical to
+  `src/features/checkout-recovery/rules.ts`) would have to learn a value whose behaviour is identical to
   `expired` in all of them. A nullable timestamp says the same thing additively.
 - **Write `unpaid` onto the covered bookings** — the only path by which this event could regress a
   seat a human had already marked paid or waived, in exchange for recording a state that is already

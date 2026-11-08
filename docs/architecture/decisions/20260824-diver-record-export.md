@@ -6,7 +6,7 @@
 
 ## Context
 
-`anonymizeDiver` (`src/db/anonymize.ts`, ADR 20260802-diver-data-erasure) is thorough about the
+`anonymizeDiver` (`src/features/anonymize/store.ts`, ADR 20260802-diver-data-erasure) is thorough about the
 destructive half of a diver's data rights: owner-only, deliberately stricter than `canDeleteDiver`,
 and it even tracks what the payment processor still owes after erasure
 (`processor_erasure_obligations`, ADR 20260803-processor-erasure-obligations). The constructive

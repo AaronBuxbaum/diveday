@@ -5,7 +5,7 @@ import { notificationDeliveryStatus } from "./notifications";
 
 /**
  * **One Monday email per person per week, claimed before it is sent**
- * (`src/db/weekly-digest.ts`). The unique `(person_id, week_of)` pair is the
+ * (`src/features/weekly-digest/store.ts`). The unique `(person_id, week_of)` pair is the
  * whole idempotency story: the hourly pass inserts the claim, and only the
  * pass whose insert landed sends, so a re-run, an overlapping invocation or a
  * second hour inside Monday's window can never mail the same week twice.

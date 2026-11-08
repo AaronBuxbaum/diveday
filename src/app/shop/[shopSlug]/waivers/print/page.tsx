@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { canPersonManageWaiverTemplates, getCurrentWaiverTemplate } from "@/db/waivers";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { SheetDocument } from "../../print/_components/SheetDocument";
 import { ShopSheet, sheetPrinted } from "../../print/_components/ShopSheet";

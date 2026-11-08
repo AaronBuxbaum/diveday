@@ -4,19 +4,19 @@
  * (`src/app/actions/undo-registry.ts`) rather than server actions of their own.
  *
  * Not a `"use server"` module: nothing here is callable from the client. The
- * only door is `undoAction`, which parses the offer (`src/lib/undo.ts`) and
+ * only door is `undoAction`, which parses the offer (`src/features/undo/rules.ts`) and
  * hands it here. Each inverse opens with the same preamble and the same live
  * gate as the removal it reverses, and calls the `src/db` restore that holds
  * the real re-checks.
  */
 import { canPersonDeleteDiver } from "@/db/authz";
-import { type CardRestoreOutcome, restoreCard } from "@/db/card-restore";
-import { restoreDiver } from "@/db/divers";
 import { restoreDiverNote as restoreDeletedDiverNote } from "@/db/operations";
-import { cardOwner, isPersonErased } from "@/db/undo-subjects";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { type CardRestoreOutcome, restoreCard } from "@/features/card-restore";
+import { restoreDiver } from "@/features/divers";
+import { revalidateAndRedirect } from "@/features/navigation";
+import type { UndoOfferOf } from "@/features/undo";
+import { cardOwner, isPersonErased } from "@/features/undo-subjects";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import type { UndoOfferOf } from "@/lib/undo";
 import { backTo, requireDiverActionContext } from "./action-helpers";
 
 /** Where each outcome of a card's Undo lands, beside the card list. */

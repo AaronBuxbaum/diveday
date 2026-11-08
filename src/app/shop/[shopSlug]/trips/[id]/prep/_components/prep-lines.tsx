@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { StatusMark } from "@/components/ui/StatusMark";
-import type { TripPrep } from "@/db/trip-prep";
+import type { TripPrep } from "@/features/trip-prep";
 import { gearStatusLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { rentalItemLabel } from "@/i18n/rental-labels";

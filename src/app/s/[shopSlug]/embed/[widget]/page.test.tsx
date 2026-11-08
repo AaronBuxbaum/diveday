@@ -24,17 +24,19 @@ const shopRow = {
   depthUnit: "feet",
   reviewsEnabled: true,
 };
-vi.mock("@/db/shops-cached", () => ({ shopBySlugCached: vi.fn(async () => shopRow) }));
-vi.mock("@/db/reviews", () => ({
+vi.mock("../../../../../features/shops-cached/store", () => ({
+  shopBySlugCached: vi.fn(async () => shopRow),
+}));
+vi.mock("../../../../../features/reviews/store", () => ({
   getShopReviewAggregate: vi.fn(),
   listPublishedShopReviewsPage: vi.fn(),
 }));
-vi.mock("@/db/boats", () => ({ listBoats: vi.fn(async () => []) }));
+vi.mock("../../../../../features/boats/store", () => ({ listBoats: vi.fn(async () => []) }));
 vi.mock("@/db/trips", () => ({
   getTripWithBooked: vi.fn(async () => null),
   pagedUpcomingTripsWithCounts: vi.fn(async () => ({ trips: [] })),
 }));
-vi.mock("@/db/courses", () => ({
+vi.mock("../../../../../features/courses/store", () => ({
   listActiveCourses: vi.fn(),
   activeCourseAgencies: vi.fn(async () => ["padi", "ssi"]),
 }));
@@ -43,9 +45,13 @@ vi.mock("@/i18n/request", () => ({
   requestTranslator: vi.fn(async () => ({ locale: "en-US", t: diverTranslator("en-US") })),
 }));
 
-const { activeCourseAgencies, listActiveCourses } = await import("@/db/courses");
-const { shopBySlugCached } = await import("@/db/shops-cached");
-const { getShopReviewAggregate, listPublishedShopReviewsPage } = await import("@/db/reviews");
+const { activeCourseAgencies, listActiveCourses } = await import(
+  "../../../../../features/courses/store"
+);
+const { shopBySlugCached } = await import("../../../../../features/shops-cached/store");
+const { getShopReviewAggregate, listPublishedShopReviewsPage } = await import(
+  "../../../../../features/reviews/store"
+);
 const { default: EmbedWidgetPage } = await import("./page");
 
 afterEach(cleanup);

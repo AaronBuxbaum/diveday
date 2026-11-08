@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
-import type { AppDb } from "./client";
 import {
   forgetPublicRouteLookups,
   PUBLIC_ROUTE_LOOKUP_TTL_MS,
   rememberedPublicRouteLookup,
-} from "./public-route-existence";
+} from "../features/public-route-existence/store";
+import type { AppDb } from "./client";
 import { courses, shops } from "./schema";
 
 /**

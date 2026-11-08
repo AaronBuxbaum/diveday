@@ -455,5 +455,6 @@ script again.
 | 20261105-ci-runs-on-the-top-of-the-stack | Only the top layer of… |
 | 20261105-gh-stack-is-the-stack | Stacks are made and moved… |
 | 20261105-waiver-folds-into-the-thread | Hand a seat's release over… |
+| 20261108-concept-leaves | Move substrate leaves by concept… |
 
 <!-- adr-index:end -->

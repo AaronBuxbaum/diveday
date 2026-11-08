@@ -6,7 +6,7 @@
 
 ## Context
 
-`src/lib/inbound-email.ts` carried its own header unfolding, RFC 2047 decoding, transfer
+`src/features/inbound-email/rules.ts` carried its own header unfolding, RFC 2047 decoding, transfer
 encodings, charsets and multipart walk (issue #3238). The product owner directed on 2026-11-02 that
 a maintained library replace in-house code unless review finds a major problem. The SNS, bucket,
 tenant, sender-trust, size, reply-stripping and HTML policies stay the app's.

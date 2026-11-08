@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { e2eTestRouteAuthorized, testRouteRefused } from "@/features/e2e-test-routes";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { e2eTestRouteAuthorized, testRouteRefused } from "@/lib/e2e-test-routes";
 import type { Notification } from "@/lib/notifications/kinds";
 import { messageFor } from "@/lib/notifications/render";
 

@@ -10,14 +10,14 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/db/courses", () => ({
+vi.mock("../../../../../../features/courses/store", () => ({
   getCourseBySlug: vi.fn(),
   pullCourseTemplateUpdates: vi.fn(),
   setCourseVisibility: vi.fn(),
   editCourse: vi.fn(),
   editCourseContent: vi.fn(),
 }));
-vi.mock("@/lib/navigation", () => ({
+vi.mock("../../../../../../features/navigation/rules", () => ({
   revalidateAndRedirect: vi.fn((_path: string, target: string) => {
     throw new Error(`REDIRECT:${target}`);
   }),
@@ -25,7 +25,7 @@ vi.mock("@/lib/navigation", () => ({
 // `requireShopSurface` is the gate these actions take; it stands on
 // `requireStaffSession`, which is the seam this file steers. The slug check
 // itself is exercised against the real gate in `src/app/shop/[shopSlug]/slug-actions.authz.test.ts`.
-vi.mock("@/lib/session", () => {
+vi.mock("../../../../../../features/session/rules", () => {
   const requireStaffSession = vi.fn();
   return {
     requireStaffSession,
@@ -57,9 +57,9 @@ const {
   pullCourseTemplateUpdates,
   setCourseVisibility,
   editCourseContent,
-} = await import("@/db/courses");
+} = await import("../../../../../../features/courses/store");
 const { readTranslations, recordTranslation } = await import("@/db/shop-text-translations");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../../features/session/rules");
 const { canPersonConfigureTrips, canPersonManageWaiverTemplates } = await import("@/db/authz");
 const {
   courseFormListRefusal,
@@ -250,7 +250,7 @@ describe("saveCourseContentAction, with the forms a course asks for", () => {
    * write would land after them.
    */
   it("refuses a list naming a bound on a medical form before writing the page or its prices", async () => {
-    const { editCourse } = await import("@/db/courses");
+    const { editCourse } = await import("../../../../../../features/courses/store");
     vi.mocked(editCourse).mockClear();
     vi.mocked(editCourseContent).mockClear();
     vi.mocked(setCourseFormRequirements).mockClear();

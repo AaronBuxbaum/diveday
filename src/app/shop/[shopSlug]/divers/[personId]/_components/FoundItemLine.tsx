@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { foundItemsText } from "@/i18n/lost-item-labels";
+import { foundItemsText } from "@/features/lost-items";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 

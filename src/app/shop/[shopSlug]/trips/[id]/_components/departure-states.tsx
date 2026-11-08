@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { readTripBlowout } from "@/db/blowouts";
+import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { MEDICAL_ALERTS_PRINT } from "@/lib/print-sheets";
-import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { BlowoutPageBody } from "./blowout/BlowoutPageBody";
 import { blowoutTitleKey } from "./blowout/title";

@@ -135,7 +135,7 @@ record states that were invisible before. For a shop mid-backfill, that is most 
 
 **Two more things this gate feeds that the Consequences section did not name.** `decideTripAdmission`
 is also the filter for blow-out rebooking offers (`src/lib/blowout.ts`) and for seat claims
-(`src/db/seat-claims.ts`). A claim can now shorten the alternatives a weather-cancelled diver is
+(`src/features/seat-claims/store.ts`). A claim can now shorten the alternatives a weather-cancelled diver is
 offered, silently. Nobody is endangered — readiness still holds — but a filter nobody can see is a
 poor fit for a cancellation cascade, and it should be looked at before a pilot season.
 

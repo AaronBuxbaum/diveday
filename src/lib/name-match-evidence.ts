@@ -3,7 +3,7 @@ import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
 /**
  * The counter's name-match prompt lists up to five candidates, each under the
  * last dive day this shop can put behind the name (`SimilarDiver`,
- * `src/db/divers.ts`). This is the one rule that says when a candidate with no
+ * `src/features/divers/store.ts`). This is the one rule that says when a candidate with no
  * such day gets a line of its own rather than silence, so that the three doors
  * rendering the prompt cannot answer it two ways.
  *

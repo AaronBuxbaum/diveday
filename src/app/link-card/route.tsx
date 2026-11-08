@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { CARD_STYLE, OG_COLORS, OG_WORDMARK, ogFooter } from "@/app/_og/card";
-import { allowSvgRasterization } from "@/lib/og-rasterizer";
+import { allowSvgRasterization } from "@/features/og-rasterizer";
 import { LINK_CARD_SIZE } from "@/lib/site-metadata";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
@@ -31,7 +31,7 @@ import { LINK_CARD_SIZE } from "@/lib/site-metadata";
 export async function GET() {
   // Before any ImageResponse is built: Next's image optimizer disables
   // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
-  // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
+  // through. See src/features/og-rasterizer/rules.ts — the failure mode is a severed
   // socket, not an error page.
   await allowSvgRasterization();
 

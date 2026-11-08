@@ -53,8 +53,8 @@
   "handoff": {
     "paths": [
       "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx",
-      "src/db/help-requests.test.ts",
-      "src/db/help-requests.ts"
+      "src/features/help-requests/store.test.ts",
+      "src/features/help-requests/store.ts"
     ],
     "intent": "Show the responsible person, next action and persisted outcome. Use a DB read-back to prove the saved state.",
     "visualStates": [
@@ -70,10 +70,10 @@
       "exec",
       "vitest",
       "run",
-      "src/db/help-requests.test.ts",
+      "src/features/help-requests/store.test.ts",
       "-t",
       "moves one request"
     ],
-    "testCommand": "pnpm exec vitest run src/db/help-requests.test.ts -t 'moves one request'"
+    "testCommand": "pnpm exec vitest run src/features/help-requests/store.test.ts -t 'moves one request'"
   }
 }

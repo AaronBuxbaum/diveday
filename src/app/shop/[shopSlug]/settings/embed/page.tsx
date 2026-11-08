@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { canPersonManageShopSettings, getEmbedSettingsPage } from "@/db/embed-settings-page";
+import { canPersonManageShopSettings, getEmbedSettingsPage } from "@/features/embed-settings-page";
+import { requireShopSurface } from "@/features/session";
 import { localeEndonym } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { DIVER_LOCALES } from "@/i18n/settings";
@@ -13,7 +14,6 @@ import { WEBSITE_LEDGER_ID } from "@/lib/migration-guides";
 import { publicAppUrl } from "@/lib/notifications";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { requireShopSurface } from "@/lib/session";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { EmbedGenerator, type EmbedGeneratorCopy } from "./EmbedGenerator";
 

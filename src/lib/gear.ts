@@ -503,8 +503,8 @@ export function gearServiceIsDue(
  * that has run out, or a return flagged as a service concern that nobody has
  * answered with care since (`serviceConcernStillOpen`). The one reading for
  * both places that ask it: the departure's proposals never propose such a unit
- * (`src/lib/gear-proposals.ts`), and the counter refuses to lend it as life
- * support (`src/db/gear-counter-rentals.ts`), where no crew checks it at a
+ * (`src/features/gear-proposals/rules.ts`), and the counter refuses to lend it as life
+ * support (`src/features/gear-counter-rentals/store.ts`), where no crew checks it at a
  * dock before it is used.
  */
 export function gearServiceKeepsUnitBack(unit: {

@@ -20,7 +20,6 @@ import {
   trips,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { listShopStaff } from "@/db/staff-accounts";
 import { setTripStatus } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
@@ -32,6 +31,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
+import { listShopStaff } from "../../../../features/staff-accounts/store";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { PayoutLines } from "./_components/PayoutLines";

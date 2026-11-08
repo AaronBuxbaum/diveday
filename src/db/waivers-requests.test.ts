@@ -2,6 +2,7 @@ import { and, eq, getTableColumns, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
+import { now, waiverContextFor } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { people, waiverRecords, waiverTemplates } from "./schema";
 import { setTripStatus } from "./trips";
 import { completeWaiver, getWaiverForToken, threadWaiverKey } from "./waivers-completion";
@@ -11,7 +12,6 @@ import {
   openWaiverInThread,
 } from "./waivers-requests";
 import { recordWaiverTemplate } from "./waivers-templates";
-import { now, waiverContextFor } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

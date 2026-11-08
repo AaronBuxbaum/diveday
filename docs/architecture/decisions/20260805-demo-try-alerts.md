@@ -127,7 +127,7 @@ Guesses are throttled per IP (`RATE_LIMITS.demoQuiet`). `enterDemoAction` skips 
 and no `demo_entered` event, because his own clicks are not a prospect either. A wrong key is a bare
 404. Rotating `ONBOARD_SETUP_KEY` changes the expected value and so unmarks every browser at once;
 with no key configured nothing can be marked and every try alerts. No new environment variable.
-The logic is `src/lib/quiet-demo-device.ts`; the route is `src/app/api/demo/quiet/route.ts`.
+The logic is `src/features/quiet-demo-device/rules.ts`; the route is `src/app/api/demo/quiet/route.ts`.
 
 Rejected: matching a signed-in account against a configured email, because the demo replaces the
 session it would read, and an IP allowlist, because a phone on a boat changes address hourly.

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { BookableDiver } from "@/db/divers";
+import type { BookableDiver } from "../../lib/diver-choice-types";
 
 /** Who the list offers, what seating or inviting one does, and the words for both. */
 export type PersonCandidateContext = {

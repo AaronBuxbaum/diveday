@@ -6,14 +6,14 @@ import { listStaff } from "@/db/trips";
 import { completeWaiver } from "@/db/waivers-completion";
 import { recordMedicalEvaluation } from "@/db/waivers-medical";
 import { issueWaiverRequest } from "@/db/waivers-requests";
+import { MAX_IMAGE_BYTES } from "@/lib/storage/limits";
+import { fileScopedShopContext } from "@/test/db";
 import {
   clearAnswers,
   medicalReferralAnswers,
   now,
   waiverContextFor,
-} from "@/db/waivers-test-fixtures";
-import { MAX_IMAGE_BYTES } from "@/lib/storage/limits";
-import { fileScopedShopContext } from "@/test/db";
+} from "../../../../test/substrate-fixtures/db/waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

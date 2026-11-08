@@ -21,7 +21,7 @@ Built by layer r5-6: a departure's Invite section suggests up to six past divers
 (sailed here, opted in, an email on file, not contacted with an invite in 30 days), each with its own
 Invite; the course page's "Next steps" ladder invites one diver at a time to the next course's
 soonest session. Both send the existing direct trip invitation, with its unsubscribe, and both refuse
-a diver invited inside the 30 days on the server (`src/lib/invite-suggestions.ts`,
-`src/db/invite-suggestions.ts`).
+a diver invited inside the 30 days on the server (`src/features/invite-suggestions/rules.ts`,
+`src/features/invite-suggestions/store.ts`).
 
 Part of the [human decision log](README.md#decision-register).

@@ -1,5 +1,5 @@
+import type { SafetyMonth } from "@/features/safety-report";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { SafetyMonth } from "@/lib/safety-report";
 
 /** Unknown historical records do not count as clean or as proof of no card. */
 export function crewSafetyValue(safety: SafetyMonth, t: StaffTranslator) {

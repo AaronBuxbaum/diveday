@@ -7,18 +7,6 @@
  */
 
 export {
-  consumeIntegrationOAuthState,
-  createIntegrationOAuthState,
-  disconnectShopIntegration,
-  editShopIntegrationSettings,
-  getShopIntegration,
-  type IntegrationCredentialResult,
-  type IntegrationKeyRefusal,
-  listShopIntegrations,
-  readIntegrationCredentials,
-  recordShopIntegration,
-} from "@/db/integrations";
-export {
   dispatchIntegrationsAfterResponse,
   WRITE_PATH_DISPATCH_BUDGET_MS,
   WRITE_PATH_DISPATCH_LIMIT,
@@ -61,6 +49,18 @@ export {
   syncShopifyCatalog,
 } from "./shopify";
 export {
+  consumeIntegrationOAuthState,
+  createIntegrationOAuthState,
+  disconnectShopIntegration,
+  editShopIntegrationSettings,
+  getShopIntegration,
+  type IntegrationCredentialResult,
+  type IntegrationKeyRefusal,
+  listShopIntegrations,
+  readIntegrationCredentials,
+  recordShopIntegration,
+} from "./store";
+export {
   deliverZapierEvent,
   normalizeZapierEventTypes,
   normalizeZapierWebhookUrl,
@@ -68,27 +68,18 @@ export {
   type ZapierCredentials,
 } from "./zapier";
 
-import type { DbExecutor } from "@/db/client";
-import { listShopIntegrations } from "@/db/integrations";
 import type { IntegrationProvider } from "@/db/schema";
 
 export function integrationCallbackUrl(appHost: string, provider: IntegrationProvider): string {
   return new URL(`/api/integrations/${provider}/callback`, `${appHost}/`).toString();
 }
 
-/** Safe settings projection: credentials_sealed never crosses the feature boundary to the UI. */
-export async function listIntegrationSummaries(db: DbExecutor, shopId: string) {
-  const rows = await listShopIntegrations(db, shopId);
-  return rows.map((row) => ({
-    id: row.id,
-    provider: row.provider,
-    status: row.status,
-    externalAccountId: row.externalAccountId,
-    externalLabel: row.externalLabel,
-    settings: row.settings,
-    lastSyncedAt: row.lastSyncedAt,
-    lastError: row.lastError,
-    connectedAt: row.connectedAt,
-    updatedAt: row.updatedAt,
-  }));
-}
+export { getIntegrationSettingsPage, INTEGRATION_SETTINGS_GATE } from "./settings-page.store";
+export type { IntegrationSyncKey } from "./store";
+export {
+  getIntegrationSyncRecord,
+  markIntegrationError,
+  markIntegrationHealthy,
+  upsertIntegrationSyncRecord,
+} from "./store";
+export { listIntegrationSummaries } from "./summaries";

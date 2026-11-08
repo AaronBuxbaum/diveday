@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { prepareDiveSiteCreaturesImport, prepareDiveSiteImport } from "@/lib/dive-site-import";
 import { buildCsv, type CsvValue } from "@/lib/export";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
 import { commitContactImport } from "@/test/words-wiring";
-import { commitDiveSiteImport } from "./dive-site-import";
+import {
+  prepareDiveSiteCreaturesImport,
+  prepareDiveSiteImport,
+} from "../features/dive-sites/dive-site-import.rules";
+import { commitDiveSiteImport } from "../features/dive-sites/dive-site-import.store";
 import { loadShopExportBundleInput } from "./export";
 import { people, shops } from "./schema";
 

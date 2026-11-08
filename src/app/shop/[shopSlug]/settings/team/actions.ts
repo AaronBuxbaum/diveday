@@ -9,6 +9,16 @@ import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getShopById } from "@/db/shops";
 import {
+  changeStaffCredential,
+  createStaffCredential,
+  deleteStaffCredential,
+  reviewStaffCredential,
+  STAFF_CREDENTIAL_KINDS,
+} from "@/db/staff-credentials";
+import { formValue, readForm, text } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
+import {
   cancelStaffInvite,
   getStaffRoles,
   inviteStaffMember,
@@ -19,26 +29,16 @@ import {
   setStaffEmergencyContact,
   setStaffLanguages,
   setStaffRoles,
-} from "@/db/staff-accounts";
-import {
-  changeStaffCredential,
-  createStaffCredential,
-  deleteStaffCredential,
-  reviewStaffCredential,
-  STAFF_CREDENTIAL_KINDS,
-} from "@/db/staff-credentials";
+} from "@/features/staff-accounts";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { inviteLinkPath } from "@/lib/account-tokens";
 import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { RENEWAL_DATE_REQUIRED_KINDS } from "@/lib/crew-roles";
-import { formValue, readForm, text } from "@/lib/form-parse";
 import { log } from "@/lib/log";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { requireStaffSession } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 

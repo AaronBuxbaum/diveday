@@ -123,7 +123,7 @@ export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed"
  * durable counterpart to `mediaDeletionAttempts` for records DiveDay does not
  * store itself (ADR 20260803-processor-erasure-obligations).
  *
- * Raised by `anonymizeDiver` (src/db/anonymize.ts) from all three tables that
+ * Raised by `anonymizeDiver` (src/features/anonymize/store.ts) from all three tables that
  * can hold a Stripe object standing for a person — `orders`, `tips` and
  * `booking_checkouts`. Orders contribute a `stripe_customer` row per distinct
  * `stripe_customer_id` and a `stripe_invoice_snapshot` row per distinct

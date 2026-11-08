@@ -349,7 +349,7 @@ The product owner asked for the deferred flow (2026-10-08): renting units at the
 somebody who is not on a boat, end to end. The 2026-08-25 holder shape is unchanged; this
 amendment records what was built on it and the calls the build made.
 
-- **The writer** is `createCounterRental` in `src/db/gear-counter-rentals.ts`. It takes the same
+- **The writer** is `createCounterRental` in `src/features/gear-counter-rentals/store.ts`. It takes the same
   per-unit advisory lock as `reserveGearUnit`, refuses a unit that is deleted or not in service,
   and leaves the double booking to `gear_reservations_no_overlap` (23P01, naming the unit that
   lost). A rental may not start before the shop's today and runs 31 days at most
@@ -432,7 +432,7 @@ first 2026-10-08 amendment gave the counter ticket; the reason for that absence 
 line is built.
 
 - **One column: `shops.rental_terms`**, nullable plain text, at most 1,500 characters
-  (`src/lib/rental-terms.ts`). It is the shop's own words, set in Settings beside the rental
+  (`src/features/rental-terms/rules.ts`). It is the shop's own words, set in Settings beside the rental
   prices; an empty box stores `null` and prints nothing, and DiveDay supplies no default text. The
   shop export carries it in `shop.csv`.
 - **Both tickets end the same way** (`RentalTicketReceipt`): the trip slip at

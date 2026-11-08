@@ -12,9 +12,9 @@ import {
   staleWaiverRecordForToken,
   waiverLinkDoor,
 } from "@/db/waivers";
+import { connectionForRoute } from "@/features/render-connection";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { autosaveWaiverDraftAction, completeWaiverAction, saveWaiverDraftAction } from "./actions";
 import { completedMedicalState } from "./completed-medical-state";

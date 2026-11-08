@@ -2,7 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { ShopNotice } from "@/components/ui/outcome";
-import type { LadderStep } from "@/db/course-ladder";
+import type { LadderStep } from "@/features/course-ladder";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { noticeFromParam } from "@/lib/staff-notices";

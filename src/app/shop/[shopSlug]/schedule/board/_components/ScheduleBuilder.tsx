@@ -9,9 +9,9 @@ import { buttonClass } from "@/components/ui/button";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import { ChoiceRow, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
+import type { MovePreflight, MovePreflightSection } from "@/features/move-preflight";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
-import type { MovePreflight, MovePreflightSection } from "@/lib/move-preflight";
 import { AddPanel, type AddPanelBuilder } from "./AddPanel";
 import type {
   BuilderActions,
@@ -139,7 +139,7 @@ function RemovePanel({
  * focus on mount, so the shift lands before there is any pointer target to
  * miss.
  *
- * Read-only end to end — see `src/lib/move-preflight.ts`.
+ * Read-only end to end — see `src/features/move-preflight/rules.ts`.
  */
 function MoveImpact({
   tripId,

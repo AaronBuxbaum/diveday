@@ -44,7 +44,7 @@ vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") 
 vi.mock("next/server", () => ({ after: vi.fn() }));
 // The first day the form's two optional fields describe. Stubbed so the suite
 // below can make it fail on demand.
-vi.mock("@/db/first-day", () => ({ createFirstDay: vi.fn() }));
+vi.mock("../../features/first-day/store", () => ({ createFirstDay: vi.fn() }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
   return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true })) };
@@ -52,9 +52,9 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
-const { recordSetupRequest } = await import("@/db/funnel");
-const { issueSetupLink } = await import("@/db/setup-links");
-const { createFirstDay } = await import("@/db/first-day");
+const { recordSetupRequest } = await import("../../features/funnel/store");
+const { issueSetupLink } = await import("../../features/setup-links/store");
+const { createFirstDay } = await import("../../features/first-day/store");
 const { onboardAction } = await import("./actions");
 const { unseededTestDb } = await import("@/test/db");
 const { cookies } = await import("next/headers");

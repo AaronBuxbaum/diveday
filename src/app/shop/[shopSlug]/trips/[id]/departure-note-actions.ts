@@ -9,10 +9,10 @@ import {
   departureNoteAudience,
 } from "@/db/departure-notes";
 import { holdSend } from "@/db/held-sends";
+import { readForm, text } from "@/features/form-parse";
+import { requireStaffSession } from "@/features/session";
 import { nowMs } from "@/lib/clock";
-import { readForm, text } from "@/lib/form-parse";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { requireStaffSession } from "@/lib/session";
 
 /**
  * The trip page's "Note to everyone" (batch 4, J4): the hold half of a held

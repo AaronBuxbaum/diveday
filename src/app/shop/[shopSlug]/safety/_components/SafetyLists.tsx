@@ -2,12 +2,11 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { SectionCard } from "@/components/ui/card";
 import type { IncidentReportLine } from "@/db/incident-reports";
+import type { SafetyMonth } from "@/features/safety-report";
 import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "@/i18n/incident-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-
 import { formatDateTimeTz, formatEvidenceDateTimeTz, formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import type { SafetyMonth } from "@/lib/safety-report";
 import { shopPath } from "@/lib/staff-notices";
 
 const SEVERITY_TONE = { minor: "neutral", moderate: "warning", serious: "danger" } as const;

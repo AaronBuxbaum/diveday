@@ -2,7 +2,7 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
-import type { StaffMember } from "@/db/staff-accounts";
+import type { StaffMember } from "@/features/staff-accounts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { saveStaffCredentialAction } from "../actions";
 import { CREDENTIAL_KIND_KEYS } from "../credential-kinds";

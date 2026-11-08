@@ -34,7 +34,7 @@ The fingerprint proof for this change is in its PR (#3879).
 ## Alternatives considered
 
 - **Fact registry shared with test facts** (the issue's full shape) — rejected; it couples what
-  every demo visitor receives to test convenience, and `src/db/facts/` stays test-only.
+  every demo visitor receives to test convenience, and `src/test/shop-facts/` stays test-only.
 - **Each module takes the whole context** — rejected; modules would depend on every field, and
   their tests would have to build one.
 - **Keep the flag** — rejected; it is the status quo the revisit signal named.

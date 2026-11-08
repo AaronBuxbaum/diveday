@@ -9,6 +9,7 @@ import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
+import { requestPricingOffer } from "@/features/pricing-arm-request";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -17,7 +18,6 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
-import { requestPricingOffer } from "@/lib/pricing-arm-request";
 import { PricingExportBand } from "./_components/PricingExportBand";
 import { offerFigure, pricingFaq } from "./faq";
 

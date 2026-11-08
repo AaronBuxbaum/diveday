@@ -34,8 +34,8 @@ everyone else.
   subject written. The switching guides' signed-out import door is removed, since the concierge band
   on the same page already offers a person. The demo still leads.
 - **The try-it hero is removed.** `TryItHero`, its colour suggestion and its handoff are deleted;
-  the form keeps its optional boat and first departure (`src/lib/first-day.ts`,
-  `src/db/first-day.ts`). The `home-drawn` funnel tag is retired.
+  the form keeps its optional boat and first departure (`src/features/first-day/rules.ts`,
+  `src/features/first-day/store.ts`). The `home-drawn` funnel tag is retired.
 
 The trial itself is unchanged: a shop's three weeks still start at `shops.created_at`, whoever
 filled in the form.

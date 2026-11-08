@@ -21,7 +21,7 @@ of shops, results are directional.
   (`cardMoneyThroughDiveDayCents`): Stripe invoices and online booking checkouts, less
   refunds, each netted on the next statement, never tips, tax, pass-through fees, counter money, hand-marked
   payments or imported history. Free-term money is not billed. The fee is integer cents, half up.
-- Five optional env vars, read by `src/lib/pricing-flags.ts`. Unset, the **test is off**: no
+- Five optional env vars, read by `src/features/pricing-flags/rules.ts`. Unset, the **test is off**: no
   cookie, no request read, today's copy. One invalid value resets all five.
 - The proxy gives a new marketing visitor's GET an arm cookie (`dd_pricing`, 90 days, HttpOnly)
   and a request header for the first render. The setup request stores the arm; shop creation

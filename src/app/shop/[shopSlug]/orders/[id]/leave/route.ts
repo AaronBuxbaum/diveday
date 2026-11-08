@@ -4,8 +4,8 @@ import { getDb } from "@/db/client";
 import { commitCounterPaymentHold } from "@/db/counter-payment-hold";
 import { getShopById } from "@/db/shops";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
-import { isCrossSiteHeaders } from "@/lib/same-origin";
-import { requireStaffSession } from "@/lib/session";
+import { isCrossSiteHeaders } from "@/features/same-origin";
+import { requireStaffSession } from "@/features/session";
 import { shopPath } from "@/lib/staff-notices";
 
 const body = z.object({ heldId: z.uuid() });

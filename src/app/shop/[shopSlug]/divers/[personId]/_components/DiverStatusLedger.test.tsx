@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { DiverStatusRow } from "@/lib/diver-status";
+import type { DiverStatusRow } from "../../../../../../features/diver-status/rules";
 import { DiverStatusLedger } from "./DiverStatusLedger";
 
 afterEach(cleanup);

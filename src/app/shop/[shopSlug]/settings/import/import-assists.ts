@@ -1,6 +1,6 @@
-import { assistsAvailable } from "@/db/assists";
 import { canPersonManageShopSettings } from "@/db/authz";
 import type { AppDb } from "@/db/client";
+import { assistsAvailable } from "@/features/assists";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { mapImportColumnsAction } from "./assist-actions";
 import type { ImportWizardAssist } from "./ImportWizard";

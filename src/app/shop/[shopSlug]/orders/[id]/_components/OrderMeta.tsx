@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import type { LostPaymentDispute, OpenPaymentDispute } from "@/db/payment-disputes";
+import type { LostPaymentDispute, OpenPaymentDispute } from "@/features/payment-disputes";
 import type { DiverLocale } from "@/i18n/settings";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";

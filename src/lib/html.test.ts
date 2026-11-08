@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { arrivalCardDocument, escapeHtml as arrivalCardEscapeHtml } from "./arrival-card-document";
+import {
+  arrivalCardDocument,
+  escapeHtml as arrivalCardEscapeHtml,
+} from "../features/arrival-card-document/rules";
 import { escapeHtml } from "./html";
 
 describe("escapeHtml", () => {

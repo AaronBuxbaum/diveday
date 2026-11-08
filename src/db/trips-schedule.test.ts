@@ -5,11 +5,11 @@ import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+import { createBoat } from "../features/boats/store";
+import { createTripLens, deleteTripLens } from "../features/trip-lenses/store";
 import { captureDepartureBoatSafety } from "./boat-safety";
-import { createBoat } from "./boats";
 import { crewSubject } from "./roll-call-subject";
 import { courses, departureBoatSafetySnapshots, rollCallEvents, tripDives, trips } from "./schema";
-import { createTripLens, deleteTripLens } from "./trip-lenses";
 import {
   createTrip,
   deleteTrip,

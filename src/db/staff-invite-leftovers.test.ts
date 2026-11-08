@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { removeStaffMember, restoreStaffMember } from "../features/staff-accounts/store";
 import { consumeAccountToken, issueAccountToken } from "./account-tokens";
 import type { AppDb } from "./client";
 import { people, personRoles, userAccounts } from "./schema";
-import { removeStaffMember, restoreStaffMember } from "./staff-accounts";
 
 /**
  * Leftovers of the invite hardening (issue #4013): which accounts a reset or verification link

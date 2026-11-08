@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
-import type { CourseTemplateUpdate } from "@/db/courses";
+import type { CourseTemplateUpdate } from "@/features/courses";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { courseTemplateFieldLabels } from "./template-field-labels";
 

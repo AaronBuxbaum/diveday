@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { BookingRequestContext } from "@/components/seat-diver/BookingRequestCards";
 import type { AppDb } from "@/db/client";
-import { type BookableDiver, getBookableDiver } from "@/db/divers";
+import { getBookableDiver } from "@/features/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import type { BookableDiver } from "../../../../../../lib/diver-choice-types";
 import { readSeatRequest, type SeatRequest } from "../_lib/seat-request";
 import type { SeatRequestContext } from "./AddDiverSection";
 

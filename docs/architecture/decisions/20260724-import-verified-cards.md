@@ -34,7 +34,7 @@ with no confirm at all," for all sources. Recorded as a decision in
 
 ## Decision
 
-- **Imported cards land `verified`, flagged imported.** `commitContactImport` (`src/db/import.ts`)
+- **Imported cards land `verified`, flagged imported.** `commitContactImport` (`src/features/import/store.ts`)
   inserts a level card and a nitrox card with `status: "verified"`, a non-null `importedAt`, and an
   optional `importedFromLabel` (the row's `waiver_source_name`/`prior_shop` value). Two new nullable
   columns carry this on `certifications` and `nitrox_certifications`; `specialty_certifications` is

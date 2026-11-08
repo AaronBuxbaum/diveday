@@ -1,0 +1,177 @@
+import { describe, expect, it } from "vitest";
+import {
+  departuresWithEmptySeats,
+  type OpenSeatsInput,
+  openSeatsDebrief,
+  unsoldSeats,
+} from "./rules";
+
+const TZ = "America/New_York";
+// An evening instant: 17:30 shop-local on 2026-08-04 (EDT, UTC-4).
+const now = new Date("2026-08-04T21:30:00Z");
+const HOUR = 60 * 60 * 1000;
+
+function input(overrides: Partial<OpenSeatsInput> = {}): OpenSeatsInput {
+  return {
+    capacity: 12,
+    booked: 8,
+    // Sailed 07:30 local.
+    startsAt: new Date("2026-08-04T11:30:00Z"),
+    timeZone: TZ,
+    lastBookingAt: null,
+    dealSent: true,
+    comparable: null,
+    ...overrides,
+  };
+}
+
+describe("openSeatsDebrief", () => {
+  it("says nothing about a departure that filled", () => {
+    expect(openSeatsDebrief(input({ booked: 12 }), now)).toBeNull();
+    // Over-booked is still full, not negative seats.
+    expect(openSeatsDebrief(input({ booked: 13 }), now)).toBeNull();
+  });
+
+  it("counts seats that never sold, not seats the boat sailed without", () => {
+    // Issue #1760. `booked` is every non-cancelled booking, so a diver who
+    // bought a seat and did not turn up is still counted against capacity —
+    // the seat sold. A twelve-seat boat with ten sold and one no-show sails
+    // with three empty seats and this number is two, on purpose: every other
+    // clause on the debrief asks about selling, and #1209's no-show release is
+    // where the seat-not-turned-up-for failure is answered.
+    //
+    // This is the assertion to change if that reading is ever revisited —
+    // `sailed` is on the row beside this one in src/features/today/closeout.ts.
+    const tenSoldOneNoShow = openSeatsDebrief(input({ booked: 10, dealSent: false }), now);
+    expect(tenSoldOneNoShow?.openSeats).toBe(2);
+  });
+
+  it("says nothing about a departure that has not sailed", () => {
+    // Seats on a boat still ahead of the clock are seats, not a shortfall —
+    // and the last-minute deal that has not gone out yet still can.
+    const ahead = input({
+      startsAt: new Date(now.getTime() + 2 * HOUR),
+      dealSent: false,
+      lastBookingAt: new Date(now.getTime() - HOUR),
+    });
+    expect(openSeatsDebrief(ahead, now)).toBeNull();
+  });
+
+  it("says nothing when there is no clause to make", () => {
+    // Four seats open, nobody ever booked, and the deal did go out: the shop
+    // already did the thing, so there is nothing here it can act on.
+    expect(openSeatsDebrief(input({ lastBookingAt: null, dealSent: true }), now)).toBeNull();
+  });
+
+  it("carries each clause on its own", () => {
+    const lastBooking = openSeatsDebrief(
+      input({ lastBookingAt: new Date("2026-08-01T15:00:00Z") }),
+      now,
+    );
+    expect(lastBooking).toEqual({
+      openSeats: 4,
+      lastBookingDaysOut: 3,
+      dealSent: true,
+      comparable: null,
+    });
+
+    const noDeal = openSeatsDebrief(input({ dealSent: false }), now);
+    expect(noDeal).toEqual({
+      openSeats: 4,
+      lastBookingDaysOut: null,
+      dealSent: false,
+      comparable: null,
+    });
+
+    const comparable = {
+      title: "Two-Tank Reef",
+      startsAt: new Date("2026-07-28T11:30:00Z"),
+      samePrice: true,
+    };
+    expect(openSeatsDebrief(input({ comparable }), now)?.comparable).toEqual(comparable);
+  });
+
+  it("counts the last booking in shop-local calendar days, not in elapsed hours", () => {
+    // 11 p.m. the night before a 7:30 a.m. departure is **one day out**, which
+    // is what a person means by it. Eight elapsed hours would say zero.
+    const nightBefore = openSeatsDebrief(
+      input({ lastBookingAt: new Date("2026-08-04T03:00:00Z") }),
+      now,
+    );
+    expect(nightBefore?.lastBookingDaysOut).toBe(1);
+
+    // The same morning reads as zero, and gets the sentence that says so.
+    const sameDay = openSeatsDebrief(
+      input({ lastBookingAt: new Date("2026-08-04T10:00:00Z") }),
+      now,
+    );
+    expect(sameDay?.lastBookingDaysOut).toBe(0);
+  });
+
+  it("counts calendar days across a daylight-saving change", () => {
+    // 2026-11-01 is the US fall-back: the span holds a 25-hour day, and an
+    // hours-based count would come out half a day short.
+    const debrief = openSeatsDebrief(
+      input({
+        startsAt: new Date("2026-11-03T12:30:00Z"), // 07:30 EST
+        lastBookingAt: new Date("2026-10-30T11:30:00Z"), // 07:30 EDT
+      }),
+      new Date("2026-11-03T22:30:00Z"),
+    );
+    expect(debrief?.lastBookingDaysOut).toBe(4);
+  });
+
+  it("never carries a crew figure or a rank", () => {
+    // #1207's own boundary, kept structurally: there is nothing on this shape
+    // that a leaderboard could be built from.
+    const debrief = openSeatsDebrief(input({ dealSent: false }), now);
+    expect(Object.keys(debrief ?? {}).sort()).toEqual([
+      "comparable",
+      "dealSent",
+      "lastBookingDaysOut",
+      "openSeats",
+    ]);
+  });
+});
+
+describe("departuresWithEmptySeats (Reports' monthly row, issue #2424)", () => {
+  const sailed = new Date("2026-08-02T11:30:00Z");
+  const row = (tripId: string, capacity: number, booked: number, startsAt = sailed) => ({
+    tripId,
+    title: `Trip ${tripId}`,
+    capacity,
+    booked,
+    startsAt,
+  });
+
+  it("counts the departures that sailed short and the seats that never sold, emptiest first", () => {
+    const summary = departuresWithEmptySeats(
+      [
+        row("a", 12, 8),
+        row("full", 12, 12),
+        row("b", 10, 3),
+        row("c", 6, 2, new Date("2026-08-01T11:30:00Z")),
+      ],
+      now,
+    );
+    expect(summary).toMatchObject({ departures: 3, seats: 4 + 7 + 4 });
+    expect(summary.list.map((departure) => departure.tripId)).toEqual(["b", "c", "a"]);
+  });
+
+  it("leaves out a departure that has not sailed, and a month with none short is empty", () => {
+    const ahead = row("ahead", 12, 0, new Date(now.getTime() + 2 * HOUR));
+    expect(departuresWithEmptySeats([ahead, row("full", 4, 4)], now)).toEqual({
+      departures: 0,
+      seats: 0,
+      list: [],
+    });
+  });
+
+  it("agrees with the debrief on which departures qualify and by how many seats", () => {
+    // The same definition: a sold seat nobody turned up for is still sold.
+    const sold = { capacity: 12, booked: 10, startsAt: sailed };
+    expect(unsoldSeats(sold, now)).toBe(2);
+    expect(openSeatsDebrief(input({ ...sold, dealSent: false }), now)?.openSeats).toBe(2);
+    expect(unsoldSeats({ ...sold, booked: 13 }, now)).toBe(0);
+  });
+});

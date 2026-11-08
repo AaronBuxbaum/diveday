@@ -7,6 +7,11 @@ import { DEFAULT_WAIVER_TITLE, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waiver
 import { fileScopedShopContext } from "@/test/db";
 import { waiverTemplateHistory } from "@/test/waiver-history";
 import {
+  clearAnswers,
+  now,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
+import {
   bookings,
   people,
   trips,
@@ -25,7 +30,6 @@ import {
   recordWaiverTemplate,
   standingWaiverExposure,
 } from "./waivers-templates";
-import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

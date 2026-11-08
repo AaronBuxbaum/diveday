@@ -7,8 +7,8 @@ import {
   medicalAlertForSeat,
   recordMedicalAlertTrailLine,
 } from "@/db/medical-alerts";
-import { isCrossSiteHeaders } from "@/lib/same-origin";
-import { requireShopSurface } from "@/lib/session";
+import { isCrossSiteHeaders } from "@/features/same-origin";
+import { requireShopSurface } from "@/features/session";
 import { uuidParam } from "@/lib/uuid";
 
 export type ShowSeatMedicalAlertResult =

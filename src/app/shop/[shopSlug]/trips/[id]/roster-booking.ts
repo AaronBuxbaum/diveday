@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { cancelBooking, getShopBookingTripId } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 

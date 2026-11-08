@@ -1,5 +1,5 @@
+import { joinedAtADiveSite, readSeatLadder, sailingUnsaid } from "@/features/seat-ladder";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { joinedAtADiveSite, readSeatLadder, sailingUnsaid } from "@/lib/seat-ladder";
 import type { RosterRecord } from "./roster-model";
 import type { RosterEntry } from "./types";
 
@@ -8,7 +8,7 @@ export type NotCountedAfterDiveGroup = { dive: number; entries: RosterEntry[] };
 
 /**
  * **The record's groups**, one seat at a time by its rung on the seat ladder
- * (`readSeatLadder`, src/lib/seat-ladder.ts) and `seatSailed`, the rule the
+ * (`readSeatLadder`, src/features/seat-ladder/rules.ts) and `seatSailed`, the rule the
  * evening close-out counts by (dive-domain review of UX batch 1):
  *
  * - **Sailed**: boarded at the dock, or counted at an after-dive checkpoint

@@ -12,6 +12,7 @@ import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { NoticeTone } from "@/components/ui/tone";
 import { type GearItemDetail, getGearItemDetail } from "@/db/gear";
+import { requireShopSurface } from "@/features/session";
 import {
   gearItemKindLabel,
   gearPhaseLabel,
@@ -24,7 +25,6 @@ import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { gearServiceState, reservationPhase } from "@/lib/gear";
-import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";

@@ -29,6 +29,7 @@ import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { FlashParams } from "@/components/FlashParams";
 import type { NoticeTone } from "@/components/ui/tone";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
+import { requireStaffSession } from "@/features/session";
 import {
   assembleDaySpine,
   canAcceptPayments,
@@ -51,7 +52,6 @@ import { formatMonthDay, formatTime, formatWeekday } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { requireStaffSession } from "@/lib/session";
 import { type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 import { utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
@@ -202,7 +202,7 @@ async function TodayBody({
   const locale = await requestLocale(shop?.defaultLocale);
   // A session pointing at a shop row that is gone is a page that does not
   // exist, not a blank 200. Settled on `notFound()` app-wide alongside
-  // `requireShopSurface` (src/lib/session.ts); this body cannot use that helper
+  // `requireShopSurface` (src/features/session/rules.ts); this body cannot use that helper
   // itself because it runs inside the page's `<Suspense>` boundary, with the
   // session already resolved above it.
   if (!shop) notFound();

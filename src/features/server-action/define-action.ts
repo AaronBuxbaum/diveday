@@ -2,9 +2,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
-import { parseForm } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession, type ShopSurfaceGate, type ShopSurfaceOptions } from "@/lib/session";
+import { parseForm } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import {
+  requireStaffSession,
+  type ShopSurfaceGate,
+  type ShopSurfaceOptions,
+} from "@/features/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /* -------------------------------------------------------------------------- *

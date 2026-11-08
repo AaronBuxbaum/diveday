@@ -1,7 +1,7 @@
 import { SectionCard } from "@/components/ui/card";
 import type { AppDb } from "@/db/client";
-import type { ReadyPageData } from "@/db/ready";
-import { listYourDays } from "@/db/your-days";
+import type { ReadyPageData } from "@/features/ready";
+import { listYourDays } from "@/features/your-days";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { formatOrdinal, formatShortDate, formatTime } from "@/lib/format";

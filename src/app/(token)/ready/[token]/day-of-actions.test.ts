@@ -1,13 +1,16 @@
 import { and, eq, gt, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
-import { assignHelpRequestHelper, getHelpRequestForBooking } from "@/db/help-requests";
-import { getReadyPageData } from "@/db/ready";
 import { bookings, shops, trips } from "@/db/schema";
 import { getTripCrewAssignments, listStaff } from "@/db/trips";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  assignHelpRequestHelper,
+  getHelpRequestForBooking,
+} from "../../../../features/help-requests/store";
+import { getReadyPageData } from "../../../../features/ready/store";
 
 /**
  * **Day-of details, one Save** (third UX review, item 24), against a real

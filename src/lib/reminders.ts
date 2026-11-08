@@ -2,7 +2,7 @@
  * Pre-trip reminder cadences, framework-free. A cadence is a named point in the
  * run-up to departure at which one reminder is sent. The rules here decide
  * *which* reminder (if any) is due for a booking right now; the DB layer
- * (`src/db/reminders.ts`) does the sending and per-booking dedup, and a cron
+ * (`src/features/reminders/store.ts`) does the sending and per-booking dedup, and a cron
  * caller drives the clock (docs ADR 20260721-scheduled-reminder-cadence). No
  * timer lives in the app itself.
  */

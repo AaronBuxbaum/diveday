@@ -1,12 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { consumeBookkeeperConfirmation } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
-import { consumeShopContactEmailConfirmation } from "@/db/shop-contact-email";
-import { consumeShoreAlertConfirmation } from "@/db/shore-alert-tokens";
+import { consumeBookkeeperConfirmation } from "@/features/bookkeeper";
+import { confirmContactLinkPath } from "@/features/contact-email-confirmation";
+import { consumeShopContactEmailConfirmation } from "@/features/shop-contact-email";
+import { consumeShoreAlertConfirmation } from "@/features/shore-alert-tokens";
 import { nowDate } from "@/lib/clock";
-import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 

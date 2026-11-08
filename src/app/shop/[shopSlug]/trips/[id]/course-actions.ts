@@ -3,12 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { isCardKind, setCardProcessed } from "@/db/agency-processing";
 import { getDb } from "@/db/client";
-import { tellCourseCertified } from "@/db/course-certified";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
-import { recordCourseMaterialsDone } from "@/db/course-materials";
-import { recordCourseNextStep } from "@/db/course-next-step";
 import {
   courseCertifiesOnTrip,
   issueShopCertification,
@@ -17,11 +13,15 @@ import {
   studentOnSeat,
 } from "@/db/readiness";
 import { diveSpecialty } from "@/db/schema";
+import { isCardKind, setCardProcessed } from "@/features/agency-processing";
+import { tellCourseCertified } from "@/features/course-certified";
+import { recordCourseMaterialsDone } from "@/features/course-materials";
+import { recordCourseNextStep } from "@/features/course-next-step";
+import { formValue, readForm, text } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface } from "@/features/session";
 import { nowDate } from "@/lib/clock";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
-import { formValue, readForm, text } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { requireRosterBooking, tripPath } from "./roster-booking";

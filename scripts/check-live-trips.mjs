@@ -99,7 +99,7 @@ const SKIPPED_FILES = new Set(
  * (`src/app/api/test/shop/route.ts`), one to a file. Each one stages a
  * departure for a capture and is handed a demo shop's id.
  */
-const SKIPPED_DIRECTORY = path.normalize("src/db/facts/");
+const SKIPPED_DIRECTORY = path.normalize("src/test/shop-facts/");
 
 /**
  * Every guarded read of `trips` in one file, and which of them prove nothing.

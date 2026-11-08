@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { BOOKKEEPER_CRON_CRONTAB } from "../features/bookkeeper/rules";
+import { DIETARY_RETENTION_CRONTAB } from "../features/retention/rules";
 import { PRICING_CLOSE_CRONTAB } from "./billing/pricing-plans";
-import { BOOKKEEPER_CRON_CRONTAB } from "./bookkeeper";
 import {
   DAILY_TICK_CRONTAB,
   DAILY_TICK_INTERVAL_MS,
@@ -10,7 +11,6 @@ import {
   nextDailyTickAtOrAfter,
   SHOP_TICK_CRONTAB,
 } from "./cron-schedule";
-import { DIETARY_RETENTION_CRONTAB } from "./retention";
 import { WAIVER_SEAL_CHECK_CRONTAB } from "./waiver-integrity";
 import { WEEKLY_DIGEST_CRON_CRONTAB } from "./weekly-digest";
 

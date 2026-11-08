@@ -123,14 +123,14 @@ export function primaryBlocker(blockers: readonly ReadinessBlocker[]): Readiness
  * in two places — here and `blockerFixFor` (`src/lib/blockers.ts`) — kept in
  * step by a comment saying they were kept in step. The two callers are the
  * Today queue and the by-departure blocker view, which sit one tap apart and
- * are meant to agree about a diver (`src/db/blockers.ts` says so at the read);
+ * are meant to agree about a diver (`src/features/blockers/store.ts` says so at the read);
  * the readiness *data* was already shared, the destination derived from it was
  * not. Each caller still shapes its own result — a `TodayAction` and a
  * `BlockerFix` are different objects with different jobs — but neither decides
  * where the link goes any more.
  *
  * Lives here, below Today (`src/features/today`), because the counter's and
- * the palette's fixes (`blockerFixFor`, `src/lib/palette-answer.ts`) read it
+ * the palette's fixes (`blockerFixFor`, `src/features/palette-answer/rules.ts`) read it
  * from the substrate too, and nothing in `src/lib` may import a feature.
  */
 /**

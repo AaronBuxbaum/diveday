@@ -18,7 +18,7 @@ The issue's own first instruction was to verify this before designing anything l
 step-up auth, a session list) — because if disabling an account does not actually end its access,
 that is a more urgent, narrower problem than the second-factor question the rest of the issue asks.
 
-It does not. `requireStaffSession()` (`src/lib/session.ts`) — "the four lines every staff page
+It does not. `requireStaffSession()` (`src/features/session/rules.ts`) — "the four lines every staff page
 opens with" — checked only `isStaff(session.user.roles)`, the roles cached in the JWT at sign-in.
 Nothing re-read the account. `requireShopSurface`'s own doc comment already claimed the opposite
 ("a demoted or disabled staff member loses the surface immediately"), but that was only true for

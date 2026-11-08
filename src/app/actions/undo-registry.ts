@@ -7,7 +7,7 @@ import {
   restoreConservationRecord,
   restoreTeachingNote,
 } from "@/app/shop/[shopSlug]/trips/[id]/undo-inverses";
-import type { UndoKind, UndoOffer, UndoOfferOf } from "@/lib/undo";
+import type { UndoKind, UndoOffer, UndoOfferOf } from "@/features/undo";
 
 /**
  * **Every Undo's inverse, by kind** (issue #2764) — the registry the one

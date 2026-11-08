@@ -1,5 +1,5 @@
+import { personWeekTotals, type StaffWeek } from "@/features/staffing-week";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { personWeekTotals, type StaffWeek } from "@/lib/staffing-week";
 
 /**
  * The staffing week's words, resolved on the server and handed to

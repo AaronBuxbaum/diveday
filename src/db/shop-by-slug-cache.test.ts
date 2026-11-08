@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
  * `src/app/s/[shopSlug]/_components/PublicShopShell.tsx` sit behind three
  * *separate* `<Suspense>` boundaries, and this repository has already measured
  * one place where React's `cache()` does **not** bridge a gap that looks just
- * like it — `inHorizonReadiness` (`src/db/blockers.ts`, issue #1121), where the
+ * like it — `inHorizonReadiness` (`src/features/blockers/store.ts`, issue #1121), where the
  * staff shell and the page under it turned out to be two scopes and a memo
  * bought nothing. Shipping a second memo on that evidence without checking
  * which kind of gap this one is would be guessing.
@@ -31,14 +31,18 @@ import { describe, expect, it } from "vitest";
  */
 
 const REPO = path.join(__dirname, "..", "..");
-const PROBE = path.join(__dirname, "request-cache-scope.probe.mjs");
+const PROBE = path.join(REPO, "src/test/request-cache-scope.probe.mjs");
 const SHOPS = [
   readFileSync(path.join(__dirname, "shops.ts"), "utf8"),
-  readFileSync(path.join(__dirname, "shops-cached.ts"), "utf8"),
+  readFileSync(path.join(REPO, "src/features/shops-cached/store.ts"), "utf8"),
 ].join("\n");
+const CACHED_READER_ENTRY = readFileSync(
+  path.join(REPO, "src/features/shops-cached/index.ts"),
+  "utf8",
+);
 
 /**
- * The lines of `shops.ts` and `shops-cached.ts` that mention either reader or
+ * The substrate reader and cached feature implementation lines that mention either reader or
  * React, and nothing else. Asserting over the whole 700-line module means a
  * failure prints the whole 700-line module, which buries the one line that
  * moved.
@@ -50,16 +54,22 @@ const READER_LINES = SHOPS.split("\n")
   )
   .join("\n");
 
-function cacheScope(): Record<string, number> {
-  const stdout = execFileSync(process.execPath, ["--conditions", "react-server", PROBE], {
+function cacheScope(probe = PROBE): Record<string, number> {
+  const stdout = execFileSync(process.execPath, ["--conditions", "react-server", probe], {
     cwd: REPO,
     encoding: "utf8",
+    timeout: 10_000,
+    stdio: ["ignore", "pipe", "pipe"],
   });
   return JSON.parse(stdout);
 }
 
 describe("React's cache() across the public shell's boundaries", () => {
   const counts = cacheScope();
+
+  it("refuses a missing physical probe instead of supplying assumed cache counts", () => {
+    expect(() => cacheScope(`${PROBE}.missing`)).toThrow();
+  });
 
   it("reads one row for the layout's three boundaries", () => {
     // The brand, the chrome and the footer, each inside its own <Suspense>,
@@ -75,7 +85,7 @@ describe("React's cache() across the public shell's boundaries", () => {
 
   it("reads again in a second pass, which is why five became two and not one", () => {
     // The honest ceiling. Under Cache Components the App Shell and the page it
-    // wraps render in separate passes (`src/db/blockers.ts`), so the layout's
+    // wraps render in separate passes (`src/features/blockers/store.ts`), so the layout's
     // one read and the page's one read stay two. Anything that claimed one
     // query per public render would be claiming this number is 1.
     expect(counts.twoPasses).toBe(2);
@@ -88,6 +98,9 @@ describe("React's cache() across the public shell's boundaries", () => {
 
 describe("the shipped reader has the shape the measurement covers", () => {
   it("is memoized with React's cache and takes only the slug", () => {
+    expect(CACHED_READER_ENTRY).toMatch(
+      /export\s*\{\s*shopBySlugCached\s*\}\s*from\s*["']\.\/store["']/,
+    );
     expect(READER_LINES).toContain('import { cache } from "react";');
     expect(READER_LINES).toContain('import { connection } from "next/server";');
     expect(READER_LINES).toMatch(

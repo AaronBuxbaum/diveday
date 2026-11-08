@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/lib/session", () => ({
+vi.mock("../../features/session/rules", () => ({
   requireShopSurface: vi.fn(async () => ({
     session: { user: { shopId: "shop-1", roles: ["owner"] } },
   })),

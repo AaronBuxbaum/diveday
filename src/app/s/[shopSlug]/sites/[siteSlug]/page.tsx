@@ -19,7 +19,7 @@ import {
   listUpcomingDeparturesForSite,
 } from "@/db/dive-sites";
 import { withTranslatedFields } from "@/db/shop-text-translations";
-import { shopBySlugCached } from "@/db/shops-cached";
+import { shopBySlugCached } from "@/features/shops-cached";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";

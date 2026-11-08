@@ -6,7 +6,7 @@ import type { WorkOrder } from "@/db/schema";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { BillAndPickupCard } from "./BillAndPickupCard";
 
-vi.mock("@/db/work-order-follow-up", () => ({
+vi.mock("../../../../../../features/work-order-follow-up/store", () => ({
   billAndPickupFacts: vi.fn(async () => ({
     readyNotice: null,
     bill: null,

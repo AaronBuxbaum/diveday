@@ -1,6 +1,6 @@
+import { stepUpChallengeUrl } from "@/features/security-step-up";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { stepUpChallengeUrl } from "../src/lib/security-step-up";
 import { TOTP_DRIFT_STEPS, TOTP_STEP_SECONDS, totpCode } from "../src/lib/totp";
 import { clearCourseForms } from "./course-form-only";
 import { expect, signedInAsOwner, test } from "./fixtures";

@@ -87,7 +87,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { DAY_STATES } from "../src/lib/world.ts";
+import { DAY_STATES } from "../src/features/world/index.ts";
 import { filesUnder } from "./files-under.mjs";
 import { isVisualSpec, visualSpecs } from "./visual-specs.mjs";
 
@@ -660,7 +660,7 @@ export function serializeLedger(next) {
 }
 
 /**
- * The day's states (`src/lib/world.ts`, issue #2752) against the captures: a
+ * The day's states (`src/features/world/rules.ts`, issue #2752) against the captures: a
  * state names the capture that photographs it, or says in a sentence why none
  * does. A state with neither, with both, or naming a capture no spec takes is
  * a violation that names the state.
@@ -675,7 +675,7 @@ export function auditDayStates(states, captureNames) {
       );
     } else if (!state.capture && !exempt) {
       violations.push(
-        `day state "${state.id}": no capture photographs it. Add a \`today-*\` capture and name it as \`capture\` in src/lib/world.ts, or write an \`exempt\` reason there.`,
+        `day state "${state.id}": no capture photographs it. Add a \`today-*\` capture and name it as \`capture\` in src/features/world/rules.ts, or write an \`exempt\` reason there.`,
       );
     } else if (state.capture && !captureNames.has(state.capture)) {
       violations.push(

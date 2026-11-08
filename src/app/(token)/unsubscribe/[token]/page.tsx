@@ -5,7 +5,7 @@ import { DeadLink } from "@/components/DeadLink";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { resolveUnsubscribeToken, type UnsubscribeKind } from "@/db/unsubscribe";
+import { resolveUnsubscribeToken, type UnsubscribeKind } from "@/features/unsubscribe";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { confirmUnsubscribe } from "./actions";

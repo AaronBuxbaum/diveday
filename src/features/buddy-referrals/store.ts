@@ -1,0 +1,207 @@
+import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+import { liveTrip, seatNotCancelled } from "@/db/trips";
+import { bookingIdFromBuddyReferral } from "@/features/buddy-tokens";
+import type { DbExecutor } from "../../db/client";
+import { bookingReferrals, bookings, people, shops, trips } from "../../db/schema/index";
+
+/**
+ * **Which diver's link brought this seat** (ADR 20260908-one-hand, decision 6,
+ * lever W: the buddy seat).
+ *
+ * The recap ends on "Bring a buddy next time" and the link carries a non-secret
+ * id derived from the recapping diver's own booking. This module is the two
+ * ends of that: resolve an id that arrived with a booking, and count the seats
+ * that arrived with one.
+ *
+ * **Ignoring junk is the contract, not a fallback.** A mangled paste, another
+ * shop's id, a hand-typed guess: the seat books exactly as an unreferred one
+ * does and no row is written. Nothing about a booking ever depends on this.
+ */
+
+/**
+ * The booking a `?via=` names, if it names one of *this shop's* live seats.
+ *
+ * Three conditions and each is load-bearing. The id must verify
+ * (`bookingIdFromBuddyReferral`), so a stranger cannot credit a booking they
+ * guessed. It must be this shop's — one cookie covers the whole `/s/`
+ * namespace, so a diver carrying shop A's link who books at shop B must not
+ * hand shop B a number about shop A.
+ *
+ * And it must not be **this diver's own link**, which is the condition that
+ * costs a line and buys the number its meaning (security review of this slice,
+ * finding 6). Excluding the same *booking* was never enough: a diver reads
+ * their own recap, taps their own "bring a buddy" link because it is the
+ * fastest way back to the schedule, and books their next seat — and the shop is
+ * told a friend arrived. The people are compared, so a returning regular books
+ * an ordinary seat and the count keeps saying what it says.
+ */
+export async function resolveBuddyReferral(
+  tx: DbExecutor,
+  input: { shopId: string; referralId: string | null | undefined; bookingId: string },
+): Promise<string | null> {
+  const referredByBookingId = bookingIdFromBuddyReferral(input.referralId);
+  if (!referredByBookingId || referredByBookingId === input.bookingId) return null;
+  const [row] = await tx
+    .select({ id: bookings.id, personId: bookings.personId })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), liveTrip()))
+    // A shop that switched "Bring a buddy" off credits nobody: an old link
+    // still books a seat, it just counts for no one.
+    .innerJoin(shops, and(eq(shops.id, bookings.shopId), eq(shops.buddyLinksEnabled, true)))
+    .where(and(eq(bookings.id, referredByBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!row) return null;
+  // The same person, not merely the same seat — see the docblock. One extra
+  // read, on the new booking, because the caller hands over an id rather than
+  // a diver.
+  const [self] = await tx
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (self && self.personId === row.personId) return null;
+  return row.id;
+}
+
+/**
+ * Record where a seat came from, when it came from a diver's own link.
+ *
+ * Best-effort by construction: the caller runs it after the seat is committed,
+ * and a referral that cannot be resolved or written is a count the shop does
+ * not get rather than a booking the diver does not get.
+ */
+export async function recordBuddyReferral(
+  tx: DbExecutor,
+  input: { shopId: string; bookingId: string; referredByBookingId: string },
+): Promise<void> {
+  await tx
+    .insert(bookingReferrals)
+    .values({
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      referredByBookingId: input.referredByBookingId,
+    })
+    // One row per seat. A retried submit or a reactivated booking converges on
+    // the first link that brought it rather than raising.
+    .onConflictDoNothing({ target: bookingReferrals.bookingId });
+}
+
+/**
+ * Seats this month that arrived on a diver's link — counted on the same basis
+ * as every other figure on Reports: active bookings on this month's live
+ * departures.
+ */
+export async function buddyReferredSeatsForWindow(
+  db: DbExecutor,
+  shopId: string,
+  windowStart: Date,
+  windowEnd: Date,
+): Promise<number> {
+  const [row] = await db
+    .select({ seats: sql<number>`count(*)` })
+    .from(bookingReferrals)
+    .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // Switched off, the shop's buddy counts read as none; every referral is kept.
+    .innerJoin(shops, and(eq(shops.id, bookingReferrals.shopId), eq(shops.buddyLinksEnabled, true)))
+    .where(
+      and(
+        liveTrip(),
+        eq(bookingReferrals.shopId, shopId),
+        sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
+        seatNotCancelled,
+      ),
+    );
+  return Number(row?.seats ?? 0);
+}
+
+/**
+ * **How many friends this person brought to the shop** (fifth-loop ideas,
+ * items 36 and 41): distinct people, other than them, holding a live seat that
+ * arrived on a link from one of their bookings. People, not seats: a friend who
+ * came back on the same link three times was brought once.
+ */
+export async function friendsBroughtBy(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<number> {
+  const referrer = alias(bookings, "referrer");
+  const [row] = await db
+    .select({ friends: sql<number>`count(distinct ${bookings.personId})` })
+    .from(bookingReferrals)
+    .innerJoin(referrer, eq(referrer.id, bookingReferrals.referredByBookingId))
+    .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // Switched off, the shop's buddy counts read as none; every referral is kept.
+    .innerJoin(shops, and(eq(shops.id, bookingReferrals.shopId), eq(shops.buddyLinksEnabled, true)))
+    .where(
+      and(
+        liveTrip(),
+        eq(bookingReferrals.shopId, shopId),
+        // Every joined row this shop's too, not only the referral's: the
+        // write side scopes the referrer, and the read does not lean on it
+        // (security review r5-4, N4).
+        eq(referrer.shopId, shopId),
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
+        eq(referrer.personId, personId),
+        ne(bookings.personId, personId),
+        seatNotCancelled,
+      ),
+    );
+  return Number(row?.friends ?? 0);
+}
+
+export type BuddyReferrer = { personId: string; fullName: string; friends: number };
+
+/**
+ * **Who brought this month's buddy seats**: each referring diver, by name,
+ * with the distinct friends they brought on this month's live departures, most
+ * first. The referrer is the shop's own diver, so naming them to staff is safe
+ * (unlike a partner link); an erased or removed person is left out. At most
+ * `limit`, so a busy month stays a line.
+ */
+export async function buddyReferrersForWindow(
+  db: DbExecutor,
+  shopId: string,
+  windowStart: Date,
+  windowEnd: Date,
+  limit = 3,
+): Promise<BuddyReferrer[]> {
+  const referrer = alias(bookings, "referrer");
+  const friends = sql<number>`count(distinct ${bookings.personId})`.mapWith(Number);
+  return (
+    db
+      .select({ personId: people.id, fullName: people.fullName, friends })
+      .from(bookingReferrals)
+      .innerJoin(referrer, eq(referrer.id, bookingReferrals.referredByBookingId))
+      .innerJoin(people, eq(people.id, referrer.personId))
+      .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      // Switched off, the shop's buddy counts read as none; every referral is kept.
+      .innerJoin(
+        shops,
+        and(eq(shops.id, bookingReferrals.shopId), eq(shops.buddyLinksEnabled, true)),
+      )
+      .where(
+        and(
+          liveTrip(),
+          eq(bookingReferrals.shopId, shopId),
+          eq(referrer.shopId, shopId),
+          eq(people.shopId, shopId),
+          eq(bookings.shopId, shopId),
+          eq(trips.shopId, shopId),
+          sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
+          seatNotCancelled,
+          ne(bookings.personId, referrer.personId),
+          isNull(people.deletedAt),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .groupBy(people.id, people.fullName)
+      .orderBy(desc(friends), asc(people.fullName))
+      .limit(limit)
+  );
+}

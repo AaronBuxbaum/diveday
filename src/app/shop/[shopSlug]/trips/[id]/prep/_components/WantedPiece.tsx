@@ -1,6 +1,6 @@
+import { proposalKey } from "@/features/gear-proposals";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { groupUnitsForSize } from "@/lib/gear";
-import { proposalKey } from "@/lib/gear-proposals";
 import { assignGearUnit } from "../actions";
 import { ProposedUnit } from "./ProposedUnit";
 import { kitLineOpenClass, unitLine } from "./prep-lines";

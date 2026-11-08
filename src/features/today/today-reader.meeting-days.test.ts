@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { inHorizonReadiness } from "@/db/blockers";
 import type { AppDb } from "@/db/client";
 import { shops, tripScheduleDays, trips } from "@/db/schema";
 import { listShopDayDepartures } from "@/db/trips-queries";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import { inHorizonReadiness } from "../blockers/store";
+import { shopClock } from "../shop-clock/rules";
 import {
   getShopDayDepartures,
   getTodayWork,

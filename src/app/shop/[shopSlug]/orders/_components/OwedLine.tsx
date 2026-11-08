@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { DbExecutor } from "@/db/client";
-import { owesAnything, readOwed } from "@/db/owed";
+import { owesAnything, readOwed } from "@/features/owed";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";

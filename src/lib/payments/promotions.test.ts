@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { promotionProviderFromEnvironment } from "@/db/stripe-providers";
-import { stripeResponse } from "@/lib/payments/__fixtures__/stripe-response";
+import { stripeResponse } from "../../test/substrate-fixtures/lib/payments/__fixtures__/stripe-response";
 
 /** The `stripe_api.request_threw` lines a case wrote, parsed. */
 function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {

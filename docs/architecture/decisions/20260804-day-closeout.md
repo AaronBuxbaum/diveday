@@ -14,7 +14,7 @@ it at the start.
 
 Three constraints shaped the design:
 
-- **No second detector.** `listRollCallGaps` (src/db/roll-call-gaps.ts) and `getTodayWork` (src/features/today/today-reader.ts) already decide
+- **No second detector.** `listRollCallGaps` (src/features/roll-call-gaps/store.ts) and `getTodayWork` (src/features/today/today-reader.ts) already decide
   what an open head count and an open job are. A close-out that re-derived either could disagree
   with the queue that chases them — about whether a person is accounted for.
 - **Never a gate.** Manifests and roll call are safety surfaces; the close-out is a ritual on top
@@ -136,7 +136,7 @@ leftover decisions rather than a second copy of delivery state.
 ## Consequences
 
 One new table (`day_closeouts`), append-only, roughly one row per shop per day — small enough to
-carry no retention arm; if HD-11 ever sets one, it is one entry in `src/lib/retention.ts` plus a
+carry no retention arm; if HD-11 ever sets one, it is one entry in `src/features/retention/rules.ts` plus a
 delete arm. The surface adds a `closeOut` destination to `src/lib/staff-destinations.ts` (leading
 the "Run the shop" group, palette included, ungated). The close recomputes day state on the
 server, so a stale tab records the truth at close time, not what it was looking at.

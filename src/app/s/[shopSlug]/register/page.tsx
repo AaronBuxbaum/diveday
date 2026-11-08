@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { tapTargetLinkClass } from "@/components/ui/button";
-import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
-import { shopBySlugCached } from "@/db/shops-cached";
+import { assistsAvailable } from "@/features/assists";
+import { shopBySlugCached } from "@/features/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { mailtoHref, telHref } from "@/lib/contact-links";

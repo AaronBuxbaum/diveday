@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  baseInput,
+  completedWaiver,
+  TRIP,
+  verifiedCard,
+} from "../test/substrate-fixtures/lib/incident-export-test-fixtures";
+import {
   buildIncidentExport,
   hasRollCallEntries,
   incidentExportContentHash,
   rosterChangeFromActivity,
 } from "./incident-export";
-import { baseInput, completedWaiver, TRIP, verifiedCard } from "./incident-export-test-fixtures";
 
 /**
  * **Seats changed after the boat was due out, and the reports the shop holds**

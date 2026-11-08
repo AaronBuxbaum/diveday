@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { diveIntentTally } from "@/lib/dive-intent";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { staffDiveIntentLine } from "../features/dive-intent/labels";
 import { bookings, trips } from "./schema";
 import { demoTodayDepartureStart } from "./seed-clock";
 

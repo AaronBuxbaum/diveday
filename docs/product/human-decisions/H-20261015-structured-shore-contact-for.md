@@ -18,7 +18,7 @@ The same question was answered a day earlier as part of H-20261014-stale-roll-ca
 - **Structured, with a recorded consent:** `shops.shore_alert_email`, `shore_alert_consent_at` and `shore_alert_consent_by_person_id` (who and when), with a database check that an address cannot be stored without its consent (`shops_shore_alert_consent`). Saving needs the tick; a new or changed address needs it again.
 - **Confirmed by its own inbox:** nothing goes to an address until its owner opens the link sent to it (`shore_alert_confirmed_at`), stricter than the answer asks.
 - **Staff-editable:** Settings, Emergency reference, with each set, change and clear in the activity log.
-- **Once per trip, and never without consent:** `trips.roll_call_shore_alerted_at` is its own claim; `shoreAlertRecipient` (`src/lib/shore-alert-contact.ts`) returns nothing for an address missing either its consent or its confirmation, and the tests cover both, and a rehearsal, a canceled departure and a demo shop (`src/db/roll-call-alerts.test.ts`).
+- **Once per trip, and never without consent:** `trips.roll_call_shore_alerted_at` is its own claim; `shoreAlertRecipient` (`src/lib/shore-alert-contact.ts`) returns nothing for an address missing either its consent or its confirmation, and the tests cover both, and a rehearsal, a canceled departure and a demo shop (`src/features/roll-call-alerts/store.test.ts`).
 - **The free text stays:** nothing parses it.
 
 ## What this answer adds, and what was left out

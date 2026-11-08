@@ -1,7 +1,12 @@
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
+import { anonymizeDiver } from "../features/anonymize/store";
+import {
+  clearAnswers,
+  now,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { people, shops, waiverRecords, waiverTemplates } from "./schema";
 import {
   recheckWaiverSeals,
@@ -11,7 +16,6 @@ import {
 import { listWaiverIntegrityAudit } from "./waivers-audit";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import { clearAnswers, now, waiverContextFor } from "./waivers-test-fixtures";
 
 /**
  * **The seal's cached verdict** (issue #2562): written beside every seal,

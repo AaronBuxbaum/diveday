@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { DAY_STATES } from "../src/lib/world.ts";
+import { DAY_STATES } from "../src/features/world/rules";
 import {
   auditDayStates,
   auditLedger,

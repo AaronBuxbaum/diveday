@@ -10,9 +10,13 @@ vi.mock("@/db/inbound-messages", () => ({ recordInboundMessage: vi.fn() }));
 // Stubbed rather than run, for the reason the email route's spec gives: the
 // keyword path has its own tests, and what this file owes is the handoff (ADR
 // 20260909-reply-keywords).
-vi.mock("@/db/reply-keywords", () => ({ handleInboundReplyKeyword: vi.fn() }));
-vi.mock("@/db/desk-pings", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
-vi.mock("@/db/inbox-assists", () => ({ triageInboundMessagesSafely: vi.fn() }));
+vi.mock("../../../../features/reply-keywords/store", () => ({
+  handleInboundReplyKeyword: vi.fn(),
+}));
+vi.mock("../../../../features/desk-pings/store", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
+vi.mock("../../../../features/inbox-assists/store", () => ({
+  triageInboundMessagesSafely: vi.fn(),
+}));
 // The ping runs after the response (#2311); the test runs what was deferred.
 vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();
@@ -23,8 +27,8 @@ vi.mock("@/db/whatsapp-accounts", () => ({ shopIdForWhatsAppEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { recordInboundMessage } = await import("@/db/inbound-messages");
-const { handleInboundReplyKeyword } = await import("@/db/reply-keywords");
-const { pingDeskAfterHoursSafely } = await import("@/db/desk-pings");
+const { handleInboundReplyKeyword } = await import("../../../../features/reply-keywords/store");
+const { pingDeskAfterHoursSafely } = await import("../../../../features/desk-pings/store");
 const { after } = await import("next/server");
 
 /** Run whatever the route handed to `after()`, as Next does once it has answered. */

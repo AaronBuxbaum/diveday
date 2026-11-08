@@ -1,6 +1,6 @@
+import type { PlacedTrip } from "@/features/staffing-week";
 import { fill } from "@/i18n/fill";
 import { formatTime, formatTimeRange, formatWeekday } from "@/lib/format";
-import type { PlacedTrip } from "@/lib/staffing-week";
 import type { StaffingWeekWords } from "./StaffingWeek";
 
 /**

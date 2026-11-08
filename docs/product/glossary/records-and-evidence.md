@@ -59,7 +59,7 @@
   never "all good".
 - **What you might see** — the shopfront's shelf of the species this shop's crews logged most
   often in the current calendar month, across every past season, read on the shop's clock
-  (`monthSightings`, `src/lib/month-sightings.ts`). Each line is a frequency over the month's
+  (`monthSightings`, `src/features/month-sightings/rules.ts`). Each line is a frequency over the month's
   departures that left a record, "Seen on 6 of our 9 March trips", never a promise. Silent until at
   least eight such departures exist (`MIN_MONTH_TRIPS`, so one departure moves a rate by at most
   12.5 points) and a species was seen on at least two; at most four species. Deleted departures and
@@ -151,7 +151,7 @@
 - **Day profile** — what a shop's published rhythm says a departure will *look* like, laid over that
   departure's own dives and read on the public booking page before anybody has a seat: each dive's
   planned time in the water, the gap on the surface between two of them, and each site's maximum
-  depth (`src/lib/day-profile.ts`, rendered in "The day"). Every figure is **planned, never
+  depth (`src/features/day-profile/rules.ts`, rendered in "The day"). Every figure is **planned, never
   observed** — the source is `shops.bottom_time_minutes` / `surface_interval_minutes`, a site's
   `expected_bottom_time_minutes` and a departure's `trip_dives.travel_minutes`, so the copy says
   "usually". "The day" opens with the two clock times the departure is scheduled to, when to be at
@@ -231,7 +231,7 @@
   check the card rather than calling it expired. An unknown issue date keeps the existing no-date
   behavior. A surface showing a gap the two claims disagree about names who lapsed or is unverified.
 - **Sailed with no crew on record** — a departure that went back in the month with nobody on its
-  crew counted as sailing (`SafetyMonth.noCrewDepartures`, `src/lib/safety-report.ts`; fourth
+  crew counted as sailing (`SafetyMonth.noCrewDepartures`, `src/features/safety-report/rules.ts`; fourth
   review item 13). Its own figure on the Safety report, listed by name, because a departure with no
   crew never reaches the lapsed-credential check, so the emptiest record would otherwise read as
   the cleanest. "Who was the captain?" is an insurer's first question; zero here means every boat
@@ -253,7 +253,7 @@
   drills held in it, each with who logged it and when; the Safety tab's own gate (Reports) is the
   gate to log or delete one. A wrong entry is deleted softly, and the row keeps who deleted it
   (`deleted_by_person_id`). A record for an insurer renewal; it informs and never gates. Rule in
-  `src/lib/safety-drills.ts`, writer and readers in `src/db/safety-drills.ts`.
+  `src/lib/safety-drills.ts`, writer and readers in `src/features/safety-drills/store.ts`.
 - **Safety year** — the Safety report over a whole year (`/shop/<slug>/safety?year=`; fifth loop,
   item 33), the one page an insurer or broker is handed at renewal instead of twelve. Figures only,
   each the sum of that year's month views read by their own rules (`getSafetyYear`,
@@ -285,7 +285,7 @@
   (`src/app/actions/undo-registry.ts`), never a server action of its own, and re-runs the live
   gate of the removal it reverses. The payload carries ids, never record text: a deleted note
   comes back as the same row, by id (issue #3701). The kinds and payloads are in
-  `src/lib/undo.ts`. Not a
+  `src/features/undo/rules.ts`. Not a
   **held send**: a removal has already happened, and Undo puts it back; a held send has not left
   yet, and Undo stops it.
 
@@ -295,4 +295,4 @@
   zone, the shop, the trip, the recorded sites, and the crew's water temperature, visibility and surface
   line. No depth, bottom time or gas: those are the diver's own, added in the logbook app that opens it.
   Throttled and `no-store` like every capability door; a dead link, an unopened recap and an unknown format
-  are one 404. `src/lib/dive-log-export.ts`.
+  are one 404. `src/features/dive-log-export/rules.ts`.

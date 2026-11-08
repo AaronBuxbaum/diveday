@@ -1,4 +1,4 @@
-import type { SailedRebooking } from "@/db/sailed-rebooking";
+import type { SailedRebooking } from "@/features/sailed-rebooking";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { SalvageOffer } from "@/lib/no-show";
 import { shopPath } from "@/lib/staff-notices";

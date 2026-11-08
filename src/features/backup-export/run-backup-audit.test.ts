@@ -6,7 +6,7 @@ import { getCurrentWaiverTemplate } from "@/db/waivers";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { saveShopBackupDestination } from "./destination-store";
+import { recordShopBackupDestination } from "./destination-store";
 import { runShopBackup } from "./run-backup";
 
 /**
@@ -43,7 +43,7 @@ async function answeredDiver(email: string) {
     medicalReviewRequired: false,
     medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
   });
-  const saved = await saveShopBackupDestination(
+  const saved = await recordShopBackupDestination(
     db,
     {
       shopId: shop.id,

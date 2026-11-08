@@ -1,5 +1,5 @@
 import type { captureRequestError } from "@sentry/nextjs";
-import { SENTRY_DSN } from "@/lib/sentry-dsn";
+import { SENTRY_DSN } from "@/features/sentry-dsn";
 
 /**
  * Runs once per server instance before it accepts requests. APP_HOST is
@@ -25,7 +25,7 @@ export async function register() {
   // reaches this function above and returns.
   const [{ after }, { recordLogLine, setFlushDeferrer }, { setLogSink }] = await Promise.all([
     import("next/server"),
-    import("@/lib/observability"),
+    import("@/features/log-shipping"),
     import("@/lib/log"),
   ]);
   setFlushDeferrer((task) => {

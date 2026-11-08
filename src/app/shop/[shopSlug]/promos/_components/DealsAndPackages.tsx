@@ -18,7 +18,7 @@ import { LedgerRow } from "@/components/ui/ledger";
 import { menuRowClass } from "@/components/ui/menu";
 import type { AppDb } from "@/db/client";
 import { listDivePackages } from "@/db/dive-packages";
-import { packageDivesOwedAt } from "@/db/report-lines";
+import { packageDivesOwedAt } from "@/features/report-lines";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";

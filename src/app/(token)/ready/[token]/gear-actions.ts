@@ -5,7 +5,7 @@ import { z } from "zod";
 import { confirmCarriedFacts } from "@/db/bookings";
 import { setBookingNitrox } from "@/db/nitrox";
 import { recordRentalFit } from "@/db/rental-fit";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { seatRentalAnswer } from "@/lib/participant-types";
 import { nitroxAvailableOn, RENTAL_FIT_TEXT_LIMITS, suitFlagsFromPost } from "@/lib/rentals";
 import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";

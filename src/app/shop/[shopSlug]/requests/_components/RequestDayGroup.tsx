@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
+import type { RequestAdvice } from "@/features/request-advisor";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { RequestAdvice } from "@/lib/request-advisor";
 
 /**
  * One part of a day's advice. `warning` is the one thing the planner says that
@@ -18,7 +18,7 @@ export type RequestAdviceLine = { text: string; tone?: "warning" };
 /**
  * The planner's answer for one day, as the sentence the group header shows.
  *
- * `adviseRequests` is untouched (`src/lib/request-advisor.ts`) — this only
+ * `adviseRequests` is untouched (`src/features/request-advisor/rules.ts`) — this only
  * decides which of its facts a header states. What it drops from the retired
  * "Planning suggestion" card is the head count: the group label above now
  * reads "2 groups · 5 divers", and the card's opening line said the same

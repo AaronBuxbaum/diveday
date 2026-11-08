@@ -1,6 +1,6 @@
 import { controlClass, Field, FieldGrid, legendClass } from "@/components/ui/form";
+import { CUSTOMER_ADDRESS_FIELDS } from "@/features/payments";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { CUSTOMER_ADDRESS_FIELDS } from "@/lib/payments/customer-address-form";
 
 /**
  * **Where the sale happened, for Stripe Tax** — the six billing fields every

@@ -37,7 +37,7 @@ const BUDDY_LINK_ID = "buddy-link";
  * yourself" is advice rather than a dead end.
  *
  * The link is signed and non-secret — it names a booking and authorizes nothing
- * (`src/lib/buddy-tokens.ts`) — so unlike this page's own URL it is safe in a
+ * (`src/features/buddy-tokens/rules.ts`) — so unlike this page's own URL it is safe in a
  * group chat.
  */
 export function BuddyShareButton({

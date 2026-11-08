@@ -5,13 +5,14 @@ import type {
 } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import type { AboardHold } from "@/db/aboard-at-sea";
-import type { IssuedCard } from "@/db/agency-processing";
 import type { SameNameHeldSeat } from "@/db/bookings";
-import type { CourseMaterialsDone } from "@/db/course-materials";
-import type { SameNamePerson } from "@/db/identity-repoint";
 import type { listBookingNotes } from "@/db/operations";
-import type { PaymentMarkFacts } from "@/db/payment-marks";
 import type { TrainingMarkRosterSeat } from "@/db/training-marks";
+import type { IssuedCard } from "@/features/agency-processing";
+import type { CourseMaterialsDone } from "@/features/course-materials";
+import type { SameNamePerson } from "@/features/identity-repoint";
+import type { PaymentMarkFacts } from "@/features/payment-marks";
+import { rosterRowIsBlocked } from "@/features/roster-filters";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
@@ -24,7 +25,6 @@ import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { isDiver } from "@/lib/participant-types";
 import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
 import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
-import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { type SeatWaiverStanding, seatWaiverStanding, type WaiverStanding } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
@@ -378,7 +378,7 @@ export type RosterArrival = {
  * **A finished departure's Divers tab is its record** (UX review 2026-10-10,
  * item 10): once the boat is home there is nothing to clear, check in or sell,
  * so the list says who sailed and who did not, seat by seat, by the evening
- * count's own rule (`seatSailed`, src/lib/seat-sailed.ts).
+ * count's own rule (`seatSailed`, src/features/seat-sailed/rules.ts).
  */
 export type RosterRecord = {
   /** Each seat's standing result at the dock (`listDepartureRollCallByTrip`). */
@@ -794,7 +794,7 @@ export function groupRoster({
       : hereBoarded === here.length
         ? t("checkIn.settledAllBoarded")
         : t("checkIn.settledSomeBoarded", { count: hereBoarded });
-  // The queue's own rule, stated once (src/lib/roster-filters.ts): an absent
+  // The queue's own rule, stated once (src/features/roster-filters/rules.ts): an absent
   // readiness row is not a blocked diver.
   //
   // Deliberately narrower than the "Still to clear" group above it: the

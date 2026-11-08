@@ -41,6 +41,9 @@ export {
   boatClashes,
   boatClashesByTrip,
   boatMoveClashes,
+  type DepartureWindow,
+  legWindow,
+  proposedDepartureWindows,
 } from "./trips-clashes";
 export {
   createTrip,
@@ -70,8 +73,13 @@ export {
   type TripCrewOutcome,
   tripCrewByTrip,
 } from "./trips-crew";
-export { liveTrip, notRehearsal } from "./trips-live";
-export { getTripRoster, listTripDiverContacts } from "./trips-manifest";
+export { livePerson, livePublicTripForShop, liveTrip, notRehearsal } from "./trips-live";
+export {
+  getTripRoster,
+  listTripDiverContacts,
+  tripRosterOrder,
+  tripRosterWhere,
+} from "./trips-manifest";
 export {
   cancelDeparturesBelowMinimum,
   listDeparturesAwaitingMinimumDecision,
@@ -83,21 +91,30 @@ export {
   type SweptDeparture,
 } from "./trips-minimum";
 export {
+  bookedDiversCount,
   type CourseSessionScope,
   countShopTrips,
   heldSeatCounts,
   listShopDayDepartures,
   listTripIdsInOfflineManifestWindow,
   listUpcomingSessionsForCourse,
+  liveBookingJoin,
   nextSessionStartByCourse,
   offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
   type ShopDayDeparture,
+  seatHeld,
   seatNotCancelled,
+  sellableCapacity,
+  shopDayTripsWithCounts,
   type TripWithBookedCount,
+  tripAssignedCrewCount,
+  tripBoatCapacity,
+  tripBoatCertifiedPassengers,
   tripDiveSiteSummaries,
   tripScheduleDayCounts,
+  tripSellableSeatsSql,
   type UpcomingTripOffsetPage,
   upcomingScheduleRange,
   upcomingScheduleStats,
@@ -129,12 +146,14 @@ export {
   type TripPatch,
   type TripSitePeek,
   tripCrewSpokenLanguages,
+  tripExistsForShop,
   tripPublicCrew,
   type UpdateTripOutcome,
 } from "./trips-record";
 export {
   type CopyWeekOutcome,
   copyWeekFromYearBefore,
+  countRollCallEvidence,
   type DeleteTripOutcome,
   DUPLICATE_BOAT_OUT_OF_SERVICE,
   deleteTrip,

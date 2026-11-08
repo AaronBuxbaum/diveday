@@ -1,10 +1,10 @@
-import { getStaffingPage } from "@/db/staffing";
+import type { requireShopSurface } from "@/features/session";
+import { getStaffingPage } from "@/features/staffing";
+import { staffWeek } from "@/features/staffing-week";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabels } from "@/i18n/staff-role-labels";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import type { requireShopSurface } from "@/lib/session";
-import { staffWeek } from "@/lib/staffing-week";
 import { resolveWeekStart } from "@/lib/week-board";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 

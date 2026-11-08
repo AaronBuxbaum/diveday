@@ -21,7 +21,7 @@ not alert him (`/api/demo/quiet?setup=<key>`).
 ## Decision
 
 - **One link per set-up request.** `announceSetupRequest` mints a link for the stored request
-  (`issueSetupLink`, `src/db/setup-links.ts`) and the onboarding mail carries it as
+  (`issueSetupLink`, `src/features/setup-links/store.ts`) and the onboarding mail carries it as
   `/onboard?setup=<token>`, with the date it stops working and the line "Send it only to someone
   you have spoken to." The onboarding inbox is the founder's, which is what makes minting there a
   founder-only act: a requester never sees the link unless the founder sends it. For a shop that

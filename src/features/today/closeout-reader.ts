@@ -3,8 +3,6 @@ import { canPersonExportIncidentRecord } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "@/db/manifests";
-import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "@/db/recap";
-import { listRollCallGaps, oneRowPerHalf } from "@/db/roll-call-gaps";
 import { newestMarkFirst, oldestMarkFirst } from "@/db/roll-call-order";
 import { crewMarks, markCrewPersonId, seatMarks } from "@/db/roll-call-subject";
 import {
@@ -19,16 +17,18 @@ import {
   trips,
 } from "@/db/schema";
 import { AT_SEA_DUSK_TITLE, DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "@/db/seed";
-import { getTripPrep, type TripPrepShop } from "@/db/trip-prep";
-import { latestTripStagesByTrip } from "@/db/trip-stages";
 import { listShopDayDepartures, liveTrip, notRehearsal, seatNotCancelled } from "@/db/trips";
+import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "@/features/recap";
+import { listRollCallGaps, oneRowPerHalf } from "@/features/roll-call-gaps";
+import { seatSailed } from "@/features/seat-sailed";
+import { settleWithLimit } from "@/features/settle-with-limit";
+import { getTripPrep, type TripPrepShop } from "@/features/trip-prep";
+import { latestTripStagesByTrip } from "@/features/trip-stages";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DayLoadOut } from "@/lib/closeout-kinds";
 import type { CrewRollCallSubject } from "@/lib/manifests";
 import { carryForwardNotBoarded, compareMarkOrder, rollCallCheckpoints } from "@/lib/roll-call";
-import { seatSailed } from "@/lib/seat-sailed";
-import { settleWithLimit } from "@/lib/settle-with-limit";
 import { shopDayBounds, shopDaysBounds } from "@/lib/zoned";
 import {
   assembleDayCloseout,
@@ -43,7 +43,7 @@ import {
  * The db half of the day's closing state (the shop home's evening, ADR
  * 20260827-clearwater-surface-language decision 4).
  * `getDayCloseout` gathers the day's facts through the reader that already
- * owns them — `listRollCallGaps` (src/db/roll-call-gaps.ts) — and hands them to the
+ * owns them — `listRollCallGaps` (src/features/roll-call-gaps/store.ts) — and hands them to the
  * pure assembly (src/features/today/closeout.ts). Nothing here detects anything of its
  * own: an evening that counted a head count differently from the queue that
  * chases it would let the two disagree about whether a person is accounted for.
@@ -141,7 +141,7 @@ async function dayTrips(
     // The rows themselves rather than `count()` and a `filter (where …)`,
     // because deciding whether a seat sailed takes two statements about that
     // seat and only one of them is on this row: the rule is
-    // `seatSailed` (src/lib/seat-sailed.ts) and the other half is the query
+    // `seatSailed` (src/features/seat-sailed/rules.ts) and the other half is the query
     // below. One shop day of non-cancelled bookings is bounded by the day's
     // capacity, which is the same population `listRollCallGaps` already walks
     // per booking over a thirty-day residue window.

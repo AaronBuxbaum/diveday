@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { inHorizonReadiness, sharedInHorizonReadiness } from "@/db/blockers";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { DAY_MS, nowDate } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { countQueries } from "@/test/query-count";
+import { inHorizonReadiness, sharedInHorizonReadiness } from "../blockers/store";
+import { shopClock } from "../shop-clock/rules";
 import { countBlockedDiversNextBoatDay, getShopDayDepartures, getTodayWork } from "./today-reader";
 
 // One seeded database for the file and a rolled-back transaction per test

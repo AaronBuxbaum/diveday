@@ -5,7 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
-import type { GearRentalMoney, GearRentalsPage, GearRentalUnit } from "@/db/gear-rentals";
+import type {
+  GearRental,
+  GearRentalMoney,
+  GearRentalsPage,
+  GearRentalUnit,
+  OpenRentalPhase,
+} from "@/features/gear-rentals";
+import { rentalPhaseLapsed } from "@/features/gear-rentals";
 import { gearItemKindLabel, gearPhaseLabel } from "@/i18n/gear-labels";
 import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -13,8 +20,6 @@ import { waiverRowStateText, waiverRowStateTone } from "@/i18n/waiver-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { type CounterRentalWaiverStanding, counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { formatCalendarDateRange } from "@/lib/format";
-import type { GearRental, OpenRentalPhase } from "@/lib/gear-rentals";
-import { rentalPhaseLapsed } from "@/lib/gear-rentals";
 import { shopPath } from "@/lib/staff-notices";
 import type { ShopWaiverStanding } from "@/lib/waivers";
 import {

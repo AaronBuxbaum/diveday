@@ -6,7 +6,6 @@ import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { activityEvents, trips } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -15,6 +14,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { shopClock } from "../../../../../features/shop-clock/rules";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -29,10 +29,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { markPaymentAction } = await import("./roster-payment-actions");
 const { markPartyPaidAction, previewPartyPaymentAction } = await import("./party-payment-actions");
 

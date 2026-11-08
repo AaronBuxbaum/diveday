@@ -49,7 +49,7 @@ export const cardKind = pgEnum("card_kind", ["level", "specialty", "nitrox"]);
  * other evidence (an agency check taken back, a card an agency listing
  * replaced, a self-declared claim a sighted card replaced). Only a `staff`
  * delete is undoable, and only for a short window (`cardUndoRefusal`,
- * `src/lib/card-undo.ts`); a null on an archived row is read as `system`, so a
+ * `src/features/card-undo/rules.ts`); a null on an archived row is read as `system`, so a
  * writer that forgets to say fails closed.
  */
 export const cardDeletionKind = pgEnum("card_deletion_kind", ["staff", "system"]);

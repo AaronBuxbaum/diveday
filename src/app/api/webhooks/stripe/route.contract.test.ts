@@ -5,7 +5,7 @@ import {
   type StripeEventFixture,
   stripeEventFixture,
   stripeEventFixtureRaw,
-} from "@/lib/payments/__fixtures__/stripe";
+} from "../../../../test/substrate-fixtures/lib/payments/__fixtures__/stripe/index";
 
 /**
  * The webhook route, driven by **real-shaped Stripe event payloads** instead of
@@ -42,28 +42,35 @@ vi.mock("@/db/orders", () => ({
   recordOrderPaymentIntent: vi.fn(),
 }));
 vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
-vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
-vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
-vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn(), summarizeStripePayout: vi.fn() }));
+vi.mock("../../../../features/refund-failures/store", () => ({
+  recordStripeRefundFailure: vi.fn(),
+}));
+vi.mock("../../../../features/payment-disputes/store", () => ({ recordStripeDispute: vi.fn() }));
+vi.mock("../../../../features/payouts/store", () => ({
+  recordStripePayout: vi.fn(),
+  summarizeStripePayout: vi.fn(),
+}));
 // The summary runs after the response; these cases only read what was recorded.
 vi.mock("next/server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/server")>()),
   after: vi.fn(),
 }));
-vi.mock("@/db/stripe-restricted", () => ({
+vi.mock("../../../../features/stripe-restricted/store", () => ({
   tellOwnersPaymentsRestricted: vi.fn(),
 }));
 vi.mock("@/db/stripe-accounts", () => ({
   applyStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
 }));
-vi.mock("@/db/webhook-events", () => ({
+vi.mock("../../../../features/webhook-events/store", () => ({
   claimStripeWebhookEvent: vi.fn(),
   hasNewerAccountUpdate: vi.fn(),
   releaseStripeWebhookEventClaim: vi.fn(),
 }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
@@ -77,14 +84,18 @@ const { applyInvoicePaid, markOrderVoidedByInvoiceId, recordOrderPaymentIntent }
   "@/db/orders"
 );
 const { recordStripeChargeRefund } = await import("@/db/refunds");
-const { recordStripeRefundFailure } = await import("@/db/refund-failures");
-const { recordStripeDispute } = await import("@/db/payment-disputes");
-const { recordStripePayout, summarizeStripePayout } = await import("@/db/payouts");
+const { recordStripeRefundFailure } = await import("../../../../features/refund-failures/store");
+const { recordStripeDispute } = await import("../../../../features/payment-disputes/store");
+const { recordStripePayout, summarizeStripePayout } = await import(
+  "../../../../features/payouts/store"
+);
 const { after } = await import("next/server");
 const { applyStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
-const { claimStripeWebhookEvent, hasNewerAccountUpdate } = await import("@/db/webhook-events");
+const { claimStripeWebhookEvent, hasNewerAccountUpdate } = await import(
+  "../../../../features/webhook-events/store"
+);
 const { POST } = await import("./route");
 
 const FAKE_DB = { fake: "db" };

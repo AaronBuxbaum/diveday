@@ -7,8 +7,8 @@ import {
 } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { setShopSwitches } from "@/db/shops";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { FeatureRowGate } from "./feature-rows";
 import { planFeatureSave } from "./save-plan";

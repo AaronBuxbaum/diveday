@@ -1,6 +1,6 @@
+import { formatPercent, type MonthlyReport } from "@/features/reporting";
 import { type MonthRef, monthKey } from "@/lib/calendar";
 import { buildCsv } from "@/lib/export";
-import { formatPercent, type MonthlyReport } from "@/lib/reporting";
 
 const HEADER = [
   "Month",

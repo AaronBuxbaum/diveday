@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
+import { lastMinuteDealOutcomes, tripIdsSuitedToADeal } from "../features/trip-promos/store";
 import type { AppDb } from "./client";
 import {
   bookingCheckoutBookings,
@@ -12,7 +13,6 @@ import {
   trips,
 } from "./schema";
 import { shopPromoOutcomes } from "./shop-promos";
-import { lastMinuteDealOutcomes, tripIdsSuitedToADeal } from "./trip-promos";
 
 /**
  * What a deal and a code sold (fifth loop, item 28), over an unseeded

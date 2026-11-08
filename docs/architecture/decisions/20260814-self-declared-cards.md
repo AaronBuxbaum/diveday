@@ -565,7 +565,7 @@ statement that there is no card, and leaving it to arbitrate, is the failure thi
 prevent. `people.csv` keeps the raw pair, clearance included, for anyone auditing what the shop was
 actually told.
 
-**Export only; the importer does not read it back.** `src/db/import.ts` is unchanged, and the header
+**Export only; the importer does not read it back.** `src/features/import/store.ts` is unchanged, and the header
 alias table simply ignores the new column. An imported CSV is materially more trustworthy than a
 stranger typing on a public form — that distinction is the whole reason `imported_at` and
 `self_declared_at` are separate columns — and quietly turning a CSV cell into a diver's

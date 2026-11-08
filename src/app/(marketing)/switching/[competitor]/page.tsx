@@ -10,6 +10,7 @@ import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { BANNER_TITLE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
+import { requestPricingArm } from "@/features/pricing-arm-request";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -22,7 +23,6 @@ import {
   type MigrationGuide,
   WEBSITE_LEDGER_ID,
 } from "@/lib/migration-guides";
-import { requestPricingArm } from "@/lib/pricing-arm-request";
 import {
   ClosingCta,
   DividedList,

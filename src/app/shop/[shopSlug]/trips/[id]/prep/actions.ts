@@ -14,12 +14,12 @@ import {
   TRIP_UNIT_RETURN_OUTCOMES,
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
-import { screenGearPicks } from "@/db/trip-prep";
 import { getTripWithBooked } from "@/db/trips";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
+import { screenGearPicks } from "@/features/trip-prep";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { GEAR_RETURN_OUTCOMES, tripReservationWindow } from "@/lib/gear";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
 import { type NoticeCodeOf, noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**

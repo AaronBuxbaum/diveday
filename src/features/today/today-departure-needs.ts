@@ -1,9 +1,9 @@
-import { sharedInHorizonReadiness } from "@/db/blockers";
 import type { AppDb } from "@/db/client";
+import { sharedInHorizonReadiness } from "@/features/blockers";
+import { shopCrewTarget } from "@/features/crew-schedule";
+import { shopClock } from "@/features/shop-clock";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
-import { shopCrewTarget } from "@/lib/crew-schedule";
-import { shopClock } from "@/lib/shop-clock";
 import type { TodayAction } from "./today";
 import { getTodayWork } from "./today-reader";
 

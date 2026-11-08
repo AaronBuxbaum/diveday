@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { requireStaffSession } from "@/lib/session";
+import { requireStaffSession } from "@/features/session";
 import { shopPath } from "@/lib/staff-notices";
 
 /**

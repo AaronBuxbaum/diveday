@@ -1,5 +1,5 @@
+import { planCopyParams, planMoney, planPercent } from "@/features/billing";
 import type { DiverTranslator } from "@/i18n/messages";
-import { planCopyParams, planMoney, planPercent } from "@/lib/billing/plan-display";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { continuityPromise, earlyAccessPrice } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";

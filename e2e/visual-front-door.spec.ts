@@ -948,7 +948,7 @@ for (const scheme of ["light", "dark"] as const) {
         // so no other capture in this suite can render the line.
         //
         // One hand-entered diver is enough: seating owes a waiver on join
-        // (src/db/seat-diver.ts), the departure is inside the operational
+        // (src/features/seat-diver/store.ts), the departure is inside the operational
         // horizon, so Today gains a waiver row.
         await page.goto(`/shop/${unique}?call=1`);
         // The departure card is one big link to its add band; its title is a

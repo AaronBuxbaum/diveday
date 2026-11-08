@@ -4,6 +4,12 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+import {
+  clearAnswers,
+  medicalReferralAnswers,
+  recordMedicalEvaluationForShop,
+  waiverContextFor,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { getBookingReadiness, listTripReadiness, upsertTripRequirements } from "./readiness";
 import { waiverRecords } from "./schema";
 import { WAIVER_SEALED_COLUMNS } from "./waiver-record-columns";
@@ -11,12 +17,6 @@ import { acknowledgeBrokenWaiverSeal, waiverSealStateDigest } from "./waiver-sea
 import { recheckWaiverSeals } from "./waiver-seal-checks";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
-import {
-  clearAnswers,
-  medicalReferralAnswers,
-  recordMedicalEvaluationForShop,
-  waiverContextFor,
-} from "./waivers-test-fixtures";
 
 /**
  * **A release changed after signing does not board** (issue #3885), end to

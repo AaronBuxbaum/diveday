@@ -1,5 +1,5 @@
 import { cpus } from "node:os";
-import { resolveE2EBasePort } from "@/lib/e2e-port";
+import { resolveE2EBasePort } from "@/features/e2e-port";
 
 /**
  * Shared topology for the e2e server fleet, imported by playwright.config.ts,
@@ -56,7 +56,7 @@ export const e2eWorkerIndexes: number[] = Array.from({ length: E2E_WORKER_COUNT 
 /**
  * Bearer secret the harness must present to every `/api/test/*` route
  * (specialist-optimization-audit-20260731.md §5) — `e2eTestRouteAuthorized`
- * (src/lib/e2e-test-routes.ts) fails closed without it, exactly like
+ * (src/features/e2e-test-routes/rules.ts) fails closed without it, exactly like
  * `CRON_SECRET` on the reminders cron route, so a misconfigured deployment
  * satisfying only the env-var predicate (DIVEDAY_E2E=1 left set, PGlite
  * fallback) still can't reach these routes. A fixed test-only value, pinned

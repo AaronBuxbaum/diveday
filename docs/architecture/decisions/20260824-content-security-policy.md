@@ -17,7 +17,7 @@ res.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
 
 That is clickjacking protection, it is correct, and it is the **entire** policy. No `default-src`,
 no `script-src`, no `connect-src`, no `img-src`, no `object-src`, no `base-uri`, no `form-action`.
-`src/lib/security-headers.ts` said so in its own docblock ("A full script/style-src CSP is a
+`src/features/security-headers/rules.ts` said so in its own docblock ("A full script/style-src CSP is a
 follow-up, not this pass"), and two ADRs — 20260804-aws-location-address-lookup and
 20260809-shop-drawn-dive-routes — each describe a third-party script running "under a CSP that
 currently allows none". Three comments and no owner.
@@ -41,7 +41,7 @@ answer unavailable.
 **Two headers.** `Content-Security-Policy` carries only what has been measured not to break
 anything. `Content-Security-Policy-Report-Only` carries the full policy — the one to enforce next —
 so a deployed environment reports what it would have blocked before anything actually is. Both are
-built in `src/lib/content-security-policy.ts` and stamped in `src/proxy.ts`, where
+built in `src/features/content-security-policy/rules.ts` and stamped in `src/proxy.ts`, where
 `frame-ancestors` already lived, because the policy varies per request on two axes and a
 `next.config.ts` header rule can read neither: the embed exception (a query string) and the one
 route that loads a third-party script (a path).
@@ -197,7 +197,7 @@ header.
 - Promoting was meant to flip `alarm` on that signal to `true`; it stayed `false` (see the 2026-10-17
   section below), because a public endpoint and a crawler make a daily page meaningless.
 - *Added 2026-10-07:* the measuring phase has a review date. `REPORT_ONLY_SINCE` and
-  `REPORT_ONLY_REVIEW_BY` in `src/lib/content-security-policy.ts` record it, and a unit test fails
+  `REPORT_ONLY_REVIEW_BY` in `src/features/content-security-policy/rules.ts` record it, and a unit test fails
   on the wall clock once the review date passes, telling the reader to read the `CspViolations`
   counts and either promote or move the date with a reason. The counts live in CloudWatch, so
   nothing in the repository can decide the promotion by itself.
@@ -212,7 +212,7 @@ header.
 
 Aaron promoted the full policy to `Content-Security-Policy` on 2026-10-17, two weeks ahead of the
 2026-11-01 review date. `Content-Security-Policy-Report-Only` is no longer sent; `enforcedPolicy` in
-`src/lib/content-security-policy.ts` is the whole policy, with `frame-ancestors` still dropped for a
+`src/features/content-security-policy/rules.ts` is the whole policy, with `frame-ancestors` still dropped for a
 genuine embed request and `'unsafe-eval'` still only under `development` (`NODE_ENV=development` or
 `DIVEDAY_E2E=1`). `REPORT_ONLY_SINCE`, `REPORT_ONLY_REVIEW_BY` and the review-date test are gone.
 

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import {
+  clearAnswers,
+  manifestContext,
+} from "../test/substrate-fixtures/db/manifests-test-fixtures";
 import { getTripManifests, recordRollCall } from "./manifests";
-import { clearAnswers, manifestContext } from "./manifests-test-fixtures";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));

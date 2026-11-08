@@ -3,8 +3,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
+import { undoParams } from "@/features/undo";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { undoParams } from "@/lib/undo";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
 /**
@@ -61,7 +61,7 @@ export function RestoreDiver({
       <p className="mt-2 max-w-2xl text-sm text-muted">{t("divers.removed.body")}</p>
       {canRestore ? (
         // The same Undo the roster's toast offers right after the removal
-        // (`src/lib/undo.ts`), still here once that toast is long gone.
+        // (`src/features/undo/rules.ts`), still here once that toast is long gone.
         <form
           action={undoAction.bind(null, shopSlug)}
           className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2"

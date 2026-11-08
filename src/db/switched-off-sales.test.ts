@@ -4,12 +4,12 @@ import type { InvoicingProvider } from "@/lib/payments/invoicing";
 import { fileScopedShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
+import { getActiveTripPromoByCode } from "../features/trip-promos/store";
 import { createDivePackage } from "./dive-packages";
 import { askAnytime } from "./interests";
 import { createDiverPackageOrder } from "./orders";
 import { people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getActiveTripPromoByCode } from "./trip-promos";
 import { upcomingTripsWithCounts } from "./trips";
 
 const ctx = fileScopedShopContext();

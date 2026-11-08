@@ -11,7 +11,7 @@ import { diverTranslator } from "@/i18n/messages";
 
 vi.mock("next/server", () => ({ connection: vi.fn(async () => undefined) }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/db/shops-cached", () => ({
+vi.mock("../../../../features/shops-cached/store", () => ({
   shopBySlugCached: vi.fn(async (slug: string) =>
     slug === "blue-mantis"
       ? {

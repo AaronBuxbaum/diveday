@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { addInterest } from "@/db/interest-dates-fixtures";
 import { trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { addCalendarDays, utcToWallTime } from "@/lib/zoned";
@@ -11,6 +10,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { addInterest } from "../../../../../test/substrate-fixtures/db/interest-dates-fixtures";
 
 const ctx = fileScopedShopContext();
 
@@ -30,11 +30,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
 const { addDepartureAction } = await import("./actions");
 
 const pad = (value: number) => String(value).padStart(2, "0");

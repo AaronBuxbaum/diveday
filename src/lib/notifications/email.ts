@@ -217,7 +217,7 @@ export type TripConditionsHoldEmailInput = {
 /**
  * The light-mode `--primary` token, duplicated intentionally: an email
  * document can't reference globals.css custom properties any more than a
- * satori `ImageResponse` can (see `src/lib/og-rasterizer.ts` and
+ * satori `ImageResponse` can (see `src/features/og-rasterizer/rules.ts` and
  * `scripts/check-tokens.mjs`'s exemption list).
  */
 const BRAND_PRIMARY_COLOR = "#0b6e8a";

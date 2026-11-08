@@ -1,8 +1,8 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import type { SimilarDiver } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
+import type { SimilarDiver } from "../../lib/diver-choice-types";
 import { NameMatchCandidateFacts } from "./NameMatchCandidateFacts";
 
 /**

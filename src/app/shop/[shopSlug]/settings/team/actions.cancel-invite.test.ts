@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { inviteStaffMember, listShopStaff } from "@/db/staff-accounts";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -8,6 +7,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { inviteStaffMember, listShopStaff } from "../../../../../features/staff-accounts/store";
 
 // Withdrawing a pending invite, issue #4013.
 const ctx = fileScopedShopContext();
@@ -22,10 +22,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/lib/session");
+const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { cancelInviteAction } = await import("./actions");
 
 async function pendingInvite(signInAs: "owner" | "captain") {

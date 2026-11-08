@@ -3,9 +3,12 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { shops, stripeWebhookEvents } from "@/db/schema";
-import { ensureShopBillingCustomer, getShopSubscription } from "@/db/shop-subscriptions";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  ensureShopBillingCustomer,
+  getShopSubscription,
+} from "../../../../features/shop-subscriptions/store";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -15,18 +18,23 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/db/shop-subscriptions", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/shop-subscriptions")>();
+vi.mock("../../../../features/shop-subscriptions/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../features/shop-subscriptions/store")>();
   return { ...actual, applyBillingEffect: vi.fn(actual.applyBillingEffect) };
 });
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const subscriptions = await import("@/db/shop-subscriptions");
+const subscriptions = await import("../../../../features/shop-subscriptions/store");
 const actualApply = (
-  await vi.importActual<typeof import("@/db/shop-subscriptions")>("@/db/shop-subscriptions")
+  await vi.importActual<typeof import("../../../../features/shop-subscriptions/store")>(
+    "../../../../features/shop-subscriptions/store",
+  )
 ).applyBillingEffect;
 const { POST } = await import("./route");
 const Sentry = await import("@sentry/nextjs");

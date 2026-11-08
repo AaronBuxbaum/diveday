@@ -366,7 +366,7 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 The identity-band compositions below are historical.
 
-**Extended 2026-10-12** (UX review 2026-10-11, items 11 and 12). The board's last month no longer reads as the shop's last month: under it, each open-ended public run says it keeps going in its own cadence words ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date request stands open there, its collapsed row under "More ways" standing down. On an empty board, the off-season card can now name a date the shop typed in Settings ("Back on the water", beside Season start); a scheduled departure always outranks it, and it says nothing once the date has passed (`src/lib/off-season.ts`).
+**Extended 2026-10-12** (UX review 2026-10-11, items 11 and 12). The board's last month no longer reads as the shop's last month: under it, each open-ended public run says it keeps going in its own cadence words ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date request stands open there, its collapsed row under "More ways" standing down. On an empty board, the off-season card can now name a date the shop typed in Settings ("Back on the water", beside Season start); a scheduled departure always outranks it, and it says nothing once the date has passed (`src/features/off-season/rules.ts`).
 
 **Widened 2026-10-03.** From `lg` up the next boat with space (and any other band panel) stands in a 20rem column beside the photograph, as ADR 20260827-clearwater-surface-language decision 8 drew it. Stacked, the photograph, its name band and the card filled the first screen at 1280×900 and the schedule started 1,220px down; now it starts on the first screen. A shop with no panel keeps the full-width photograph, and a phone keeps the stack.
 
@@ -740,7 +740,7 @@ the card reader is not built and no photo capture is added; the certification fo
 [its canvas](canvases/20260827-people-not-lists/README.md), built as slice 8b. This entry replaces
 the "unanswered, and known to be" record that stood here since issue #780. Two rules are pinned in
 code: the status section renders nothing when `buildDiverStatus` is empty
-(`src/lib/diver-status.test.ts`, `_components/DiverStatusLedger.test.tsx`), and exactly one
+(`src/features/diver-status/rules.test.ts`, `_components/DiverStatusLedger.test.tsx`), and exactly one
 primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 
 - **One idea:** this diver, ready or not — and the one fix if not.

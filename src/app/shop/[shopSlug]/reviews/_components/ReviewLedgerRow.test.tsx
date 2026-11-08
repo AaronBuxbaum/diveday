@@ -2,15 +2,15 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { StaffReview } from "@/db/reviews";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { StaffReview } from "../../../../../features/reviews/store";
 import { ReviewLedgerRow } from "./ReviewLedgerRow";
 import type { ReviewRowCopy } from "./ReviewRowActions";
 import { ReviewRowProvider } from "./ReviewRowActions";
 
 // The row mounts the client action bar, whose only job here is to render its
 // labels — the writes themselves are covered in `actions.test.ts` and against a
-// real database in `src/db/reviews.test.ts`.
+// real database in `src/features/reviews/store.test.ts`.
 vi.mock("../actions", () => ({ reviewRowAction: vi.fn() }));
 
 afterEach(cleanup);

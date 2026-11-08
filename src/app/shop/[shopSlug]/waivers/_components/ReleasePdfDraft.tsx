@@ -1,6 +1,6 @@
 import { PdfDraftButton } from "@/components/assists/PdfDraftButton";
-import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
+import { assistsAvailable } from "@/features/assists";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { draftWaiverFromPdfAction } from "../assist-actions";
 

@@ -29,7 +29,7 @@ import { emailButton, type NotificationEmail } from "./email";
  *   decompression diving (issue #2927), `fly_safe_correction`.
  *
  * One `notification_kind` value per state is what keeps the once-per-booking
- * dedup rows (`src/lib/reminders.ts`, `src/db/recap.ts`) exact, so a state is
+ * dedup rows (`src/lib/reminders.ts`, `src/features/recap/store.ts`) exact, so a state is
  * a kind, not a field.
  *
  * There is no greeting: a greeting is a second sentence, and the sender is

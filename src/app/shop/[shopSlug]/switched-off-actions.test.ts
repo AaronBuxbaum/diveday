@@ -1,6 +1,5 @@
 import { count, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { recordLostItem } from "@/db/lost-items";
 import {
   deals,
   divePackages,
@@ -26,6 +25,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import { recordLostItem } from "../../../features/lost-items/store";
 
 /**
  * **A switched-off feature's actions write nothing** (the Features page).
@@ -47,10 +47,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn(), requireShopSurface: vi.fn() }));
+vi.mock("../../../features/session/rules", () => ({
+  requireStaffSession: vi.fn(),
+  requireShopSurface: vi.fn(),
+}));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession, requireShopSurface } = await import("@/lib/session");
+const { requireStaffSession, requireShopSurface } = await import("../../../features/session/rules");
 const { createWorkOrderAction } = await import("./gear/work-orders/actions");
 const { resendReadyNoticeAction } = await import("./gear/work-orders/follow-up-actions");
 const { createPromoAction } = await import("./promos/actions");

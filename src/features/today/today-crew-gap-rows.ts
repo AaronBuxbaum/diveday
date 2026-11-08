@@ -1,4 +1,6 @@
 import { NO_SUPERVISION } from "@/db/course-crew-counts";
+import { crewGapFor } from "@/features/staffing-week";
+import { urgencyFor } from "@/features/today-urgency";
 import {
   crewBelowTargetDetailText,
   instructorMissingDetailText,
@@ -12,8 +14,6 @@ import {
 } from "@/i18n/today-labels";
 import type { InWaterCrewCount } from "@/lib/crew-roles";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
-import { crewGapFor } from "@/lib/staffing-week";
-import { urgencyFor } from "@/lib/today-urgency";
 import type { TodayAction } from "./today";
 import type { TodayRowsContext } from "./today-rows-context";
 
@@ -43,7 +43,7 @@ export function pushCrewGapRows(
   const { t, now, locale, diversPerDivemaster } = ctx;
   const { courseCrewCounts } = ctx.wave;
   // **One decision, shared with the staffing week** (`crewGapFor`,
-  // src/lib/staffing-week.ts; issue #2482): the agency training ratio, the
+  // src/features/staffing-week/rules.ts; issue #2482): the agency training ratio, the
   // shop's own target, and which of them a departure's one row names. The
   // trip page and the staffing coverage list read the same course crew gap
   // (Lens 17 task 151), so a session Today flags as over its ratio can

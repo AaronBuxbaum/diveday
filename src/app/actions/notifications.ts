@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { listNotificationDeliveryIssues } from "@/db/notifications";
 import { resendConfirmationWithWaiver } from "@/db/waiver-issue";
+import { requireShopSurface } from "@/features/session";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { operationalWindow } from "@/lib/operational-window";
-import { requireShopSurface } from "@/lib/session";
 import type { ResendState } from "./notification-resend-types";
 
 /**

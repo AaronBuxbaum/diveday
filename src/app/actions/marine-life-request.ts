@@ -2,8 +2,8 @@
 
 import { getDb } from "@/db/client";
 import { getDiveSite } from "@/db/dive-sites";
-import { recordMarineLifeRequest } from "@/db/marine-life-requests";
-import { requireStaffSession } from "@/lib/session";
+import { recordMarineLifeRequest } from "@/features/marine-life-requests";
+import { requireStaffSession } from "@/features/session";
 
 /**
  * "Tell us what we are missing" — a shop asking DiveDay for a species the

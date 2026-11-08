@@ -1,6 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createBoat } from "@/db/boats";
 import {
   createGearItem,
   recordGearService,
@@ -17,12 +16,13 @@ import {
 } from "@/db/schema";
 import { createStaffCredential } from "@/db/staff-credentials";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "@/db/trips";
-import { addCustomerGearItem, createWorkOrder, setWorkOrderStatus } from "@/db/work-orders";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
-import { shopClock } from "@/lib/shop-clock";
 import { fileScopedShopContext } from "@/test/db";
+import { createBoat } from "../boats/store";
+import { shopClock } from "../shop-clock/rules";
+import { addCustomerGearItem, createWorkOrder, setWorkOrderStatus } from "../work-orders/store";
 import { ACTION_KIND_META, type TodayAction } from "./today";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { getTodayWork } from "./today-reader";

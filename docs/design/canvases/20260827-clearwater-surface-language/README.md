@@ -102,7 +102,7 @@ second accent beside it), the settled group (`_components/CounterQueue.tsx` /
 `DepartureChips.test.tsx`), and the URL-carried focus with its evening default
 (`check-in/focus.ts` / `focus.test.ts`). Two facts joined the queue reader for it —
 `missingEmergencyContact` and a batched `firstVisit` over merged native + imported history — pinned
-in `src/db/check-in.test.ts`. Not built: the settled rows carry no check-in **time**, because the
+in `src/features/check-in/store.test.ts`. Not built: the settled rows carry no check-in **time**, because the
 reader holds none and this slice's contract added no third field for one; the drawn mark and the
 name are what a settled row says.
 

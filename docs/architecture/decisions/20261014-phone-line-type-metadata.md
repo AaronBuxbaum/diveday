@@ -18,7 +18,7 @@ anonymous and public, so the gate must fail toward not sending.
 
 - Add `libphonenumber-js` (MIT) as a runtime dependency, imported only as
   `libphonenumber-js/mobile`, the smallest build that knows line types.
-- `canReceiveText` (`src/lib/phone-line-type.ts`) accepts `MOBILE` or `FIXED_LINE_OR_MOBILE` and
+- `canReceiveText` (`src/features/phone-line-type/rules.ts`) accepts `MOBILE` or `FIXED_LINE_OR_MOBILE` and
   refuses everything else, unknown included. `selfRegistrationReleaseDelivery` asks it after the
   country gate and before any rate-limit bucket, so a refused number never spends the daily cap;
   the registration is kept and the shop sends the release itself.

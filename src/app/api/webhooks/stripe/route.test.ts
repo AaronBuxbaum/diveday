@@ -1,7 +1,7 @@
-import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
-import { forgetWebhookRefusalReports } from "@/lib/webhook-refusal";
+import { forgetWebhookRefusalReports } from "../../../../features/webhook-refusal/rules";
+import { eventPayload, secret, signedHeader, webhookRequest } from "./webhook-request.test-support";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -20,15 +20,20 @@ vi.mock("@/db/orders", () => ({
   recordOrderPaymentIntent: vi.fn(),
 }));
 vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
-vi.mock("@/db/refund-failures", () => ({ recordStripeRefundFailure: vi.fn() }));
-vi.mock("@/db/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
-vi.mock("@/db/payouts", () => ({ recordStripePayout: vi.fn(), summarizeStripePayout: vi.fn() }));
+vi.mock("../../../../features/refund-failures/store", () => ({
+  recordStripeRefundFailure: vi.fn(),
+}));
+vi.mock("../../../../features/payment-disputes/store", () => ({ recordStripeDispute: vi.fn() }));
+vi.mock("../../../../features/payouts/store", () => ({
+  recordStripePayout: vi.fn(),
+  summarizeStripePayout: vi.fn(),
+}));
 // A paid payout's summary runs after the response; the tests run what was handed over.
 vi.mock("next/server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/server")>()),
   after: vi.fn(),
 }));
-vi.mock("@/db/stripe-restricted", () => ({
+vi.mock("../../../../features/stripe-restricted/store", () => ({
   tellOwnersPaymentsRestricted: vi.fn(),
 }));
 vi.mock("@/db/stripe-accounts", () => ({
@@ -36,13 +41,15 @@ vi.mock("@/db/stripe-accounts", () => ({
   disconnectShopStripeAccount: vi.fn(),
   stripeAccountHolder: vi.fn(),
 }));
-vi.mock("@/db/webhook-events", () => ({
+vi.mock("../../../../features/webhook-events/store", () => ({
   claimStripeWebhookEvent: vi.fn(),
   hasNewerAccountUpdate: vi.fn(),
   releaseStripeWebhookEventClaim: vi.fn(),
 }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("../../../../features/sentry-dsn/rules", () => ({
+  SENTRY_DSN: "https://key@sentry.invalid/1",
+}));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
@@ -57,45 +64,21 @@ const { applyInvoicePaid, markOrderVoidedByInvoiceId, recordOrderPaymentIntent }
   "@/db/orders"
 );
 const { recordStripeChargeRefund } = await import("@/db/refunds");
-const { recordStripeRefundFailure } = await import("@/db/refund-failures");
-const { recordStripeDispute } = await import("@/db/payment-disputes");
-const { recordStripePayout, summarizeStripePayout } = await import("@/db/payouts");
+const { recordStripeRefundFailure } = await import("../../../../features/refund-failures/store");
+const { recordStripeDispute } = await import("../../../../features/payment-disputes/store");
+const { recordStripePayout, summarizeStripePayout } = await import(
+  "../../../../features/payouts/store"
+);
 const { after } = await import("next/server");
 const { applyStripeAccountStatus, disconnectShopStripeAccount, stripeAccountHolder } = await import(
   "@/db/stripe-accounts"
 );
 const { claimStripeWebhookEvent, hasNewerAccountUpdate, releaseStripeWebhookEventClaim } =
-  await import("@/db/webhook-events");
+  await import("../../../../features/webhook-events/store");
 const Sentry = await import("@sentry/nextjs");
 const { POST } = await import("./route");
 
-const secret = "whsec_test";
 const FAKE_DB = { fake: "db" };
-
-function signedHeader(payload: string, timestamp: number, signingSecret = secret) {
-  const signature = createHmac("sha256", signingSecret)
-    .update(`${timestamp}.${payload}`)
-    .digest("hex");
-  return `t=${timestamp},v1=${signature}`;
-}
-
-function webhookRequest(payload: string, signature: string | null) {
-  const headers: Record<string, string> = {};
-  if (signature !== null) headers["stripe-signature"] = signature;
-  return new Request("http://localhost/api/webhooks/stripe", {
-    method: "POST",
-    headers,
-    body: payload,
-  });
-}
-
-function eventPayload(event: Record<string, unknown>) {
-  // Every test in this file signs with the "live" secret (STRIPE_WEBHOOK_SECRET)
-  // unless it explicitly overrides `livemode` or signs with the test secret, so
-  // default livemode:true keeps the whole suite realistic without touching
-  // every call site individually.
-  return JSON.stringify({ livemode: true, ...event });
-}
 
 const FAKE_CHECKOUT = { id: "checkout_1" };
 
@@ -527,7 +510,9 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
   });
 
   it("account.updated tells the owners when it is the write that turned payments off", async () => {
-    const { tellOwnersPaymentsRestricted } = await import("@/db/stripe-restricted");
+    const { tellOwnersPaymentsRestricted } = await import(
+      "../../../../features/stripe-restricted/store"
+    );
     const restrictedAt = new Date("2026-10-14T12:00:00Z");
     vi.mocked(tellOwnersPaymentsRestricted).mockReset();
     vi.mocked(applyStripeAccountStatus).mockResolvedValueOnce({

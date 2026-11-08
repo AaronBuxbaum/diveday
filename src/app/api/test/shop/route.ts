@@ -3,20 +3,25 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { applyFacts, FactRefused, knownFactNames, resolveFacts } from "@/db/facts";
 import { people } from "@/db/schema";
 import { createDemoShop, deleteDemoShopCascade } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { armClaudeFixtures, claudeFixturesArmed } from "@/lib/assists/e2e-fixtures";
-import { nowDate } from "@/lib/clock";
-import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import {
   e2eTestRouteAuthorized,
   holdNonDemoFixture,
   requireDemoTenant,
   takeNonDemoFixture,
   testRouteRefused,
-} from "@/lib/e2e-test-routes";
+} from "@/features/e2e-test-routes";
+import { nowDate } from "@/lib/clock";
+import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
+import { armClaudeFixtures, claudeFixturesArmed } from "../../../../features/assists/e2e-fixtures";
+import {
+  applyFacts,
+  FactRefused,
+  knownFactNames,
+  resolveFacts,
+} from "../../../../test/shop-facts/index";
 
 /**
  * **The one test door: a shop's state is a list of named facts** (issue #2759).
@@ -27,7 +32,7 @@ import {
  *
  * answers `{ ok: true, slug, values }`, each fact's own answer keyed by its
  * name in `values` (a fact with nothing to say is left out). The facts are the
- * registry's (`src/db/facts/index.ts`) and are written in its order, never the
+ * registry's (`src/test/shop-facts/index.ts`) and are written in its order, never the
  * caller's. An unknown name or a refused argument is a 400 that says which, and
  * lists the names there are; a fact that cannot be written is its own refusal
  * (`FactRefused`), named with the fact. An empty list writes nothing.

@@ -1,0 +1,261 @@
+// @vitest-environment node
+import { and, eq } from "drizzle-orm";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createBooking } from "../../db/bookings";
+import type { AppDb } from "../../db/client";
+import { createNitroxCertification } from "../../db/nitrox";
+import { bookings, cards, shops } from "../../db/schema/index";
+import { upcomingTripsWithCounts } from "../../db/trips";
+import { nowDate } from "../../lib/clock";
+import { fileScopedShopContext } from "../../test/db";
+import { HANDOFF_TTL_MS } from "./rules";
+import {
+  consumeBookingHandoff,
+  issueBookingHandoff,
+  lastGearFor,
+  offerBookingHandoffByEmail,
+  readKnownDiver,
+} from "./store";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`).
+const ctx = fileScopedShopContext();
+
+/**
+ * **The door remembers who opened it, and only who opened it** (ADR
+ * 20260906-before-you-ask, decision 3). What matters here is the refusals: a
+ * handoff answers for its own shop and its own ten minutes, a booking consumes
+ * it, and the cold-email link goes once, to the address on file, and says
+ * nothing to the page.
+ */
+
+const APP_ORIGIN = "https://diveday.test";
+// The frozen test clock, so the delivery row the mock stamps with it and the
+// cooldown window measured from it agree.
+const NOW = nowDate();
+
+const sent = vi.fn();
+vi.mock("../../db/notifications", () => ({
+  sendAndRecordNotification: async (db: AppDb, notification: Record<string, unknown>) => {
+    sent(notification);
+    // The real one records a delivery row, which is what the cooldown reads.
+    // Hoisted factory: imports live here, not at the top of the file.
+    const { notificationDeliveries } = await import("../../db/schema/index");
+    const { nowDate: clock } = await import("../../lib/clock");
+    await db.insert(notificationDeliveries).values({
+      shopId: notification.shopId as string,
+      bookingId: notification.bookingId as string,
+      kind: "booking_handoff",
+      status: "sent",
+      attemptedAt: clock(),
+    });
+    return { status: "sent", providerMessageId: "test" };
+  },
+}));
+
+beforeEach(() => sent.mockClear());
+
+async function bookedDiver(db: AppDb, shopId: string, tripId: string, email: string) {
+  const outcome = await createBooking(db, {
+    actor: "staff",
+    shopId,
+    tripId,
+    fullName: "Yara Haddad",
+    email,
+  });
+  if (!outcome.ok) throw new Error("expected booking to succeed");
+  return outcome.bookingId;
+}
+
+async function fixture() {
+  const { db, shop } = ctx;
+  const [trip, nextTrip] = await upcomingTripsWithCounts(db, shop.id);
+  if (!trip || !nextTrip) throw new Error("expected two seeded trips");
+  const bookingId = await bookedDiver(db, shop.id, trip.id, "yara@example.com");
+  return { db, shop, trip, nextTrip, bookingId };
+}
+
+describe("booking handoff", () => {
+  it("reads the diver behind a live handoff, and nothing behind a consumed or aged one", async () => {
+    const { db, shop, bookingId } = await fixture();
+    const issued = await issueBookingHandoff(db, { shopId: shop.id, bookingId, now: NOW });
+    if (!issued) throw new Error("expected a handoff");
+    expect(issued.expiresAt.getTime()).toBe(NOW.getTime() + HANDOFF_TTL_MS);
+
+    const known = await readKnownDiver(db, { shopId: shop.id, token: issued.token, now: NOW });
+    expect(known).toMatchObject({ bookingId, fullName: "Yara Haddad", email: "yara@example.com" });
+    expect(Array.isArray(known?.facts)).toBe(true);
+
+    // Ten minutes and a second later it is no token at all.
+    expect(
+      await readKnownDiver(db, {
+        shopId: shop.id,
+        token: issued.token,
+        now: new Date(NOW.getTime() + HANDOFF_TTL_MS + 1000),
+      }),
+    ).toBeNull();
+
+    await consumeBookingHandoff(db, { shopId: shop.id, token: issued.token, now: NOW });
+    expect(await readKnownDiver(db, { shopId: shop.id, token: issued.token, now: NOW })).toBeNull();
+    // Consuming again, or consuming nothing, is a no-op.
+    await consumeBookingHandoff(db, { shopId: shop.id, token: "nope", now: NOW });
+  });
+
+  it("reads nothing behind a held seat's handoff until staff confirm who it is", async () => {
+    // Issue #2082: the matched diver record may not be whoever holds the link.
+    const { db, shop, bookingId } = await fixture();
+    const issued = await issueBookingHandoff(db, { shopId: shop.id, bookingId, now: NOW });
+    if (!issued) throw new Error("expected a handoff");
+    await db.update(bookings).set({ identityUnconfirmedAt: NOW }).where(eq(bookings.id, bookingId));
+    expect(await readKnownDiver(db, { shopId: shop.id, token: issued.token, now: NOW })).toBeNull();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, bookingId));
+    expect(
+      await readKnownDiver(db, { shopId: shop.id, token: issued.token, now: NOW }),
+    ).toMatchObject({ bookingId });
+  });
+
+  it("answers only for its own shop", async () => {
+    const { db, shop, bookingId } = await fixture();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef-handoff", timezone: "America/New_York" })
+      .returning();
+    if (!other) throw new Error("other shop insert failed");
+    const issued = await issueBookingHandoff(db, { shopId: shop.id, bookingId, now: NOW });
+    if (!issued) throw new Error("expected a handoff");
+    expect(
+      await readKnownDiver(db, { shopId: other.id, token: issued.token, now: NOW }),
+    ).toBeNull();
+  });
+
+  it("sends one link to a cold-typed address on file, then holds its tongue for an hour", async () => {
+    const { db, shop, nextTrip, bookingId } = await fixture();
+    const input = {
+      shopId: shop.id,
+      tripId: nextTrip.id,
+      email: "Yara@Example.com ",
+      origin: APP_ORIGIN,
+      requestLocale: "en-US" as const,
+      now: NOW,
+    };
+    expect(await offerBookingHandoffByEmail(db, input)).toBe("sent");
+    expect(sent).toHaveBeenCalledTimes(1);
+    const notification = sent.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(notification.kind).toBe("booking_handoff");
+    expect(notification.to).toBe("yara@example.com");
+    expect(notification.bookingId).toBe(bookingId);
+    expect(String(notification.bookingUrl)).toMatch(
+      new RegExp(`^${APP_ORIGIN}/s/${shop.slug}/trips/${nextTrip.id}\\?handoff=`),
+    );
+
+    expect(await offerBookingHandoffByEmail(db, input)).toBe("skipped");
+    expect(sent).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends nothing for an address the shop does not know, and nothing with no origin", async () => {
+    const { db, shop, nextTrip } = await fixture();
+    expect(
+      await offerBookingHandoffByEmail(db, {
+        shopId: shop.id,
+        tripId: nextTrip.id,
+        email: "stranger@example.com",
+        origin: APP_ORIGIN,
+        requestLocale: "en-US",
+        now: NOW,
+      }),
+    ).toBe("skipped");
+    expect(
+      await offerBookingHandoffByEmail(db, {
+        shopId: shop.id,
+        tripId: nextTrip.id,
+        email: "yara@example.com",
+        origin: null,
+        requestLocale: "en-US",
+        now: NOW,
+      }),
+    ).toBe("skipped");
+    expect(sent).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **"As on your last trip"** (fifth-loop ideas, item 40). The last sailed
+ * diver seat's paid gear comes across; its nitrox only while the diver's card
+ * still authorizes a fill, because a ticked box must never stand in for one.
+ */
+describe("lastGearFor", () => {
+  it("carries the last trip's paid gear, and nitrox only with a card that authorizes a fill", async () => {
+    const { db, shop, trip, bookingId } = await fixture();
+    await db
+      .update(bookings)
+      .set({ wantsNitrox: true, paidRentalKinds: ["bcd", "regulator"] })
+      .where(eq(bookings.id, bookingId));
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    const after = new Date(trip.endsAt.getTime() + 24 * 60 * 60 * 1000);
+    const read = () => lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: after });
+
+    expect(await read()).toEqual({ nitrox: false, rentedKinds: ["bcd", "regulator"] });
+
+    const card = await createNitroxCertification(db, {
+      shopId: shop.id,
+      personId: seat.personId,
+      agency: "padi",
+      identifier: "PADI-NX-40",
+    });
+    if (!card) throw new Error("card not created");
+    await db
+      .update(cards)
+      .set({ status: "verified" })
+      .where(and(eq(cards.kind, "nitrox"), eq(cards.id, card.id)));
+    expect(await read()).toEqual({ nitrox: true, rentedKinds: ["bcd", "regulator"] });
+  });
+
+  it("reads nothing before the trip has sailed, or from a canceled seat", async () => {
+    const { db, shop, trip, bookingId } = await fixture();
+    await db
+      .update(bookings)
+      .set({ paidRentalKinds: ["bcd"] })
+      .where(eq(bookings.id, bookingId));
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    expect(
+      await lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: NOW }),
+    ).toBeNull();
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    const after = new Date(trip.endsAt.getTime() + 24 * 60 * 60 * 1000);
+    expect(
+      await lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: after }),
+    ).toBeNull();
+  });
+
+  it("reads nothing from a held seat, whose gear was chosen by whoever booked it (security review r5-4, N3)", async () => {
+    const { db, shop, trip, bookingId } = await fixture();
+    await db
+      .update(bookings)
+      .set({
+        paidRentalKinds: ["bcd"],
+        identityUnconfirmedAt: NOW,
+        identityBookedAs: "S. M.",
+      })
+      .where(eq(bookings.id, bookingId));
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    const after = new Date(trip.endsAt.getTime() + 24 * 60 * 60 * 1000);
+    expect(
+      await lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: after }),
+    ).toBeNull();
+  });
+});

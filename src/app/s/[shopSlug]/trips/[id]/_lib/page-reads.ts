@@ -1,10 +1,8 @@
 import { cache } from "react";
 import { liveBookingLink, verifyBookingCapability } from "@/db/booking-capabilities";
-import { readKnownDiver } from "@/db/booking-handoff";
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
-import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { getDepartureInterestForTrip } from "@/db/interests";
 import { bookingConfirmationMailState } from "@/db/notifications";
@@ -13,14 +11,10 @@ import {
   getTripSiteRequirement,
   tripRequirementSummaries,
 } from "@/db/readiness";
-import { getShopReviewAggregate, listSiteReviews } from "@/db/reviews";
-import { publicRunOf } from "@/db/series-next";
 import { tripMayTakeACode } from "@/db/shop-promos";
 import { withTranslatedFields } from "@/db/shop-text-translations";
-import type { shopBySlugCached } from "@/db/shops-cached";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
-import { siteSightings } from "@/db/trip-sightings";
 import {
   getTripWithBooked,
   listTripDives,
@@ -28,6 +22,13 @@ import {
   pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
 } from "@/db/trips";
+import { readKnownDiver } from "@/features/booking-handoff";
+import { diverCrewWithAway } from "@/features/crew-away-diver";
+import { getShopReviewAggregate, listSiteReviews } from "@/features/reviews";
+import { publicRunOf } from "@/features/series-next";
+import { isLiveShopStaff } from "@/features/session";
+import type { shopBySlugCached } from "@/features/shops-cached";
+import { siteSightings } from "@/features/trip-sightings";
 import { requestLocale } from "@/i18n/request";
 import type { auth } from "@/lib/auth";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
@@ -35,7 +36,6 @@ import { perDiverBookingPriceCents } from "@/lib/courses";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import type { SiteCertRequirement } from "@/lib/readiness";
-import { isLiveShopStaff } from "@/lib/session";
 import { hasSailed, seatsOnSale } from "@/lib/trips";
 
 /** The trip the page hands its client booking form, projected (`booking-form-trip.ts`). */

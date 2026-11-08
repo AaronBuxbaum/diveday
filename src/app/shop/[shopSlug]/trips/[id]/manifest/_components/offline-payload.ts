@@ -1,6 +1,6 @@
-import type { OpenSnag } from "@/db/boat-snags";
-import type { issueOfflineManifestSnapshot } from "@/db/offline-manifest-snapshots";
 import type { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
+import type { OpenSnag } from "@/features/boat-snags";
+import type { issueOfflineManifestSnapshot } from "@/features/offline-manifest-snapshots";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";

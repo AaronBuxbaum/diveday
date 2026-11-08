@@ -9,13 +9,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
-vi.mock("@/db/weekly-digest", () => ({ setWeeklyDigestChoice: vi.fn() }));
-vi.mock("@/db/desk-pings", () => ({ setAfterHoursPingChoice: vi.fn() }));
+vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/weekly-digest/store", () => ({ setWeeklyDigestChoice: vi.fn() }));
+vi.mock("../../../../../features/desk-pings/store", () => ({ setAfterHoursPingChoice: vi.fn() }));
 
-const { requireShopSurface } = await import("@/lib/session");
-const { setWeeklyDigestChoice } = await import("@/db/weekly-digest");
-const { setAfterHoursPingChoice } = await import("@/db/desk-pings");
+const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { setWeeklyDigestChoice } = await import("../../../../../features/weekly-digest/store");
+const { setAfterHoursPingChoice } = await import("../../../../../features/desk-pings/store");
 const { setAfterHoursPingAction, setWeeklyDigestAction } = await import("./actions");
 
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";

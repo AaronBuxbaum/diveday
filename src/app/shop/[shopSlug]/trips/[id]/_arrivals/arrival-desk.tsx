@@ -3,14 +3,19 @@ import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FIGURE_HERO_CLASS } from "@/components/ui/typography";
-import { type CheckInQueueRow, listCheckInQueue } from "@/db/check-in";
 import type { AppDb } from "@/db/client";
-import { openLostItemsByPerson } from "@/db/lost-items";
-import { noShowSalvage } from "@/db/no-show";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
-import { partyLeadBookingIds } from "@/db/turn-away";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
-import { foundItemsText } from "@/i18n/lost-item-labels";
+import {
+  type CheckInQueueRow,
+  counterIsClear,
+  counterTally,
+  isTurnedAwayAtCounter,
+  listCheckInQueue,
+} from "@/features/check-in";
+import { foundItemsText, openLostItemsByPerson } from "@/features/lost-items";
+import { noShowSalvage } from "@/features/no-show";
+import { partyLeadBookingIds } from "@/features/turn-away";
 import { presenceText } from "@/i18n/presence-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
@@ -18,18 +23,13 @@ import {
   welcomeDockLine,
   welcomeDockLineUnchecked,
 } from "@/i18n/welcome-cue-labels";
-import {
-  counterIsClear,
-  counterTally,
-  isNoShowAtCounter,
-  isTurnedAwayAtCounter,
-} from "@/lib/check-in";
 import { arrivalsWindow } from "@/lib/departure-clock";
 import { formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { paperPassPath } from "@/lib/print-sheets";
 import { turnAwayOffer } from "@/lib/turn-away";
 import { welcomeCueFor } from "@/lib/welcome-cue";
+import { isNoShowAtCounter } from "../../../../../../lib/check-in";
 import type { RosterArrival } from "../_components/RosterSection";
 import { ArrivalTap } from "./ArrivalTap";
 import {

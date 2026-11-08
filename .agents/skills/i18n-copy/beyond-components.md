@@ -17,7 +17,7 @@ ratcheting. This was a real, previously-silent gap — see ADR
 for the fourteen files it found on first run.
 
 ```ts
-// src/db/staffing.ts
+// src/features/staffing/store.ts
 export type StaffingGapCode = "no_crew" | "course_needs_instructor" | "no_shift_coverage";
 ```
 

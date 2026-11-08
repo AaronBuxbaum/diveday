@@ -3,13 +3,13 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
-import { discardFormDraft, recordFormDraft } from "@/db/form-drafts";
 import { askForDate } from "@/db/interests";
+import { discardFormDraft, recordFormDraft } from "@/features/form-drafts";
+import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface } from "@/features/session";
 import { isValidCalendarDate } from "@/lib/calendar-date";
-import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/lib/form-parse";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
-import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   type CallOutcome,

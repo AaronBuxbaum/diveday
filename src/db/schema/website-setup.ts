@@ -8,7 +8,7 @@ import { shops } from "./core";
  * reading, replaced when the owner reads the site again. Kept so a page view
  * or an accepted line never pays for the reading twice.
  *
- * `lines` is a list of `SetupLine` (`src/lib/assists/website-setup.ts`): each
+ * `lines` is a list of `SetupLine` (`src/features/website-reading/rules.ts`): each
  * proposal, the sentence on the site it came from, and whether the owner has
  * accepted or dismissed it. Nothing in it is live: an accepted line is written
  * through the shop's own writers by the owner's tap, and a dismissed one

@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { hasRequiredStepUp } from "@/db/step-up";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
@@ -12,6 +11,7 @@ import {
 } from "@/lib/secret-box";
 import { recoveryCodeHashes, TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
 import { fileScopedShopContext } from "@/test/db";
+import { hasRequiredStepUp } from "../features/step-up/store";
 import {
   beginTotpEnrollment,
   enableTotp,

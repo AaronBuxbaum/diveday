@@ -2,8 +2,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { SearchResults } from "@/db/search";
 import type { StaffDestinationLabels } from "@/lib/staff-destinations";
+import type { SearchResults } from "../../lib/search-results";
 import { CommandPalette, type CommandPaletteCopy } from "./CommandPalette";
 
 const routerPush = vi.fn();

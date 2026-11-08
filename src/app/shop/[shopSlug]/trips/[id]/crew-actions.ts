@@ -7,8 +7,8 @@ import { withdrawCrewAwayAcknowledgement } from "@/db/crew-away-acknowledgements
 import { recordTripActivity } from "@/db/operations";
 import { getShopPersonName } from "@/db/people";
 import { changeTripCrewOutcome, type TripCrewChange } from "@/db/trips";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireShopSurface } from "@/lib/session";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface } from "@/features/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 

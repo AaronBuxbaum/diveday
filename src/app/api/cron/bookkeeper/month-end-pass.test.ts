@@ -1,5 +1,10 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { capabilities, people, personRoles, shops, userAccounts } from "@/db/schema";
+import type { Notification, NotificationProvider } from "@/lib/notifications";
+import { messageFor } from "@/lib/notifications/render";
+import { fileScopedShopContext } from "@/test/db";
+import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import {
   consumeBookkeeperConfirmation,
   issueBookkeeperConfirmation,
@@ -7,12 +12,7 @@ import {
   recordBookkeeperDeliveryOutcome,
   resolveBookkeeperStopToken,
   setBookkeeper,
-} from "@/db/bookkeeper";
-import { capabilities, people, personRoles, shops, userAccounts } from "@/db/schema";
-import type { Notification, NotificationProvider } from "@/lib/notifications";
-import { messageFor } from "@/lib/notifications/render";
-import { fileScopedShopContext } from "@/test/db";
-import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+} from "../../../../features/bookkeeper/store";
 import { sendDueMonthEndEmails } from "./month-end-pass";
 
 // The window between the claim and the send is the files being built, so a

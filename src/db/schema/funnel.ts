@@ -34,7 +34,7 @@ import { shops } from "./core";
  * founder digest's count by source.
  *
  * **It holds a person's contact details** — a name, an email, maybe a phone —
- * so it follows the standing decision at the top of `src/lib/retention.ts`:
+ * so it follows the standing decision at the top of `src/features/retention/rules.ts`:
  * pruned after 365 days or deleted sooner when the requester asks. Receipt
  * metadata is co-located, so the same erasure and retention removes it.
  *

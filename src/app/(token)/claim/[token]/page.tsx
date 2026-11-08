@@ -13,7 +13,7 @@ import { ShopNotice } from "@/components/ui/outcome";
 import { noticeRole } from "@/components/ui/tone";
 import { getDb } from "@/db/client";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
-import { type DeadClaimCause, type DeadClaimShop, getClaimPageState } from "@/db/seat-claims";
+import { type DeadClaimCause, type DeadClaimShop, getClaimPageState } from "@/features/seat-claims";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";

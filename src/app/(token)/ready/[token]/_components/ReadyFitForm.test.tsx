@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ReadyPageData } from "@/db/ready";
+import type { ReadyPageData } from "../../../../../features/ready/store";
 import { ReadyFitForm } from "./ReadyFitForm";
 
 const seen = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }));

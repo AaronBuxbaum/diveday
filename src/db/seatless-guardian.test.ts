@@ -3,12 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import type { CourtesyProviders } from "@/lib/notifications/courtesy";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  clearAnswers,
+  openOnDevice,
+  shopStaffer,
+} from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { mintCapability } from "./capabilities";
 import { activityEvents, bookings, capabilities, people, waiverRecords } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { deliverWaiverBatch, issueAndDeliverPersonWaiver } from "./waiver-issue";
 import { completeWaiver, doorNeedsDeskGuardian, waiverLinkDoor } from "./waivers-completion";
-import { clearAnswers, openOnDevice, shopStaffer } from "./waivers-test-fixtures";
 
 /**
  * **Copy link on a minor's release with no seat** (issue #4019). Signed, that

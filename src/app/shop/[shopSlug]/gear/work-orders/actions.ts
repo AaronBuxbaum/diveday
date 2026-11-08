@@ -3,6 +3,9 @@
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
+import { parseForm, single } from "@/features/form-parse";
+import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/session";
 import {
   addCustomerGearItem,
   addWorkOrderLine,
@@ -17,11 +20,10 @@ import {
   restoreWorkOrder,
   setWorkOrderStatus,
   type WorkOrderCareInput,
-} from "@/db/work-orders";
+} from "@/features/work-orders";
 import { ADD_ONE, addPanelHref } from "@/lib/add-panel";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { parseForm, single } from "@/lib/form-parse";
 import {
   GEAR_KIND_ORDER,
   GEAR_SERVICE_KINDS,
@@ -29,8 +31,6 @@ import {
   type GearServiceKind,
 } from "@/lib/gear";
 import { currencyFractionDigits, MAX_PRICE_MINOR_UNITS, majorToMinor } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
-import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   isWorkOrderOutcome,

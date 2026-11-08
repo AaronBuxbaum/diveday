@@ -4,7 +4,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 
 /**
  * **A recap that waits while somebody on the boat is "not back aboard"**
- * (issue #2123, `bookingsWaitingOnAMissingPerson` in src/db/recap.ts). Shared
+ * (issue #2123, `bookingsWaitingOnAMissingPerson` in src/features/recap/store.ts). Shared
  * by `/recap` and the after-dive `/ready`, so the two links say the same thing.
  *
  * Whoever holds the link may be family, so it says only that the recap is not

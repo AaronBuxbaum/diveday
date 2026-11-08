@@ -1,9 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished, vi } from "vitest";
-import { recordSetupRequest } from "@/db/funnel";
 import { setupRequests } from "@/db/schema";
-import { claimSetupRequestReceipt } from "@/db/setup-request-receipts";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { recordSetupRequest } from "../funnel/store";
+import { claimSetupRequestReceipt } from "./store";
 
 vi.mock("@/db/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/db/client")>()),

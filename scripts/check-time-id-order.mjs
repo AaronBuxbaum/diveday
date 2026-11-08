@@ -36,7 +36,7 @@ import { filesUnder } from "./files-under.mjs";
  *
  * A JavaScript comparator that ties on a timestamp has the same failure and no
  * mechanical signature this rule can read; it is left to review
- * (`src/lib/staffing-week.ts`'s `byStart` was one, issue #2176).
+ * (`src/features/staffing-week/rules.ts`'s `byStart` was one, issue #2176).
  *
  * ## Saying "nobody reads this order"
  *

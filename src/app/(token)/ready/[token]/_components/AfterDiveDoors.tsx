@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import type { AppDb } from "@/db/client";
 import type { Shop } from "@/db/schema";
-import { issuePartySeatClaims } from "@/db/seat-claims";
+import { issuePartySeatClaims } from "@/features/seat-claims";
 import type { DiverTranslator } from "@/i18n/messages";
 import { PartyClaimPanel } from "./PartyClaimPanel";
 import { partyClaimSeats } from "./PartySection";

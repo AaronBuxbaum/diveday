@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  */
 
 vi.mock("@/db/authz", () => ({ canPersonConfigureTrips: vi.fn() }));
-vi.mock("@/db/boats", () => ({ listBoats: vi.fn(async () => []) }));
+vi.mock("../../../../features/boats/store", () => ({ listBoats: vi.fn(async () => []) }));
 vi.mock("@/db/interest-dates", () => ({
   countWaitingDateInterests: vi.fn(async () => 0),
   listOpenDateInterests: vi.fn(),
@@ -27,13 +27,13 @@ vi.mock("@/db/interest-dates", () => ({
 }));
 vi.mock("./actions", () => ({ setRequestOutcomeAction: vi.fn(), replyToRequestAction: vi.fn() }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
-vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 
 const { canPersonConfigureTrips } = await import("@/db/authz");
 const { countWaitingDateInterests, listOpenDateInterests, listClosedDateInterests } = await import(
   "@/db/interest-dates"
 );
-const { requireShopSurface } = await import("@/lib/session");
+const { requireShopSurface } = await import("../../../../features/session/rules");
 const { default: RequestsPage } = await import("./page");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";

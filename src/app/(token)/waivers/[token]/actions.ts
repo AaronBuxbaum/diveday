@@ -10,7 +10,7 @@ import {
   type WaiverKey,
   waiverLinkDoor,
 } from "@/db/waivers";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { revalidateAndRedirect } from "@/features/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { counterDevice, keepCounterDevice } from "./counter-device";

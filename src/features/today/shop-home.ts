@@ -1,22 +1,22 @@
-import { readArrivalLookup } from "@/db/arrival-elsewhere";
 import { canPersonExportIncidentRecord } from "@/db/authz";
-import { sharedInHorizonReadiness } from "@/db/blockers";
 import { type AppDb, getDb } from "@/db/client";
-import { shopFirstBooking } from "@/db/first-booking";
-import { loadFirstRunFacts } from "@/db/first-run";
-import { listFreshFormDrafts } from "@/db/form-drafts";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
-import { canPersonViewShopReports } from "@/db/reporting";
-import { seasonScale } from "@/db/season-scale";
 import { shopByIdCached } from "@/db/shops";
 import { shopStripeAccountForRender } from "@/db/stripe-accounts";
 import { countShopTrips } from "@/db/trips";
 import { isOrientationDismissed } from "@/db/user-accounts";
+import { sharedInHorizonReadiness } from "@/features/blockers";
+import { readArrivalLookup } from "@/features/check-in";
+import { shopCrewTarget } from "@/features/crew-schedule";
+import { shopFirstBooking } from "@/features/first-booking";
+import { loadFirstRunFacts } from "@/features/first-run";
+import { listFreshFormDrafts } from "@/features/form-drafts";
+import { canPersonViewShopReports } from "@/features/reporting";
+import { seasonScale } from "@/features/season-scale";
+import { shopClock } from "@/features/shop-clock";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
-import { shopCrewTarget } from "@/lib/crew-schedule";
 import { seasonStartInstant } from "@/lib/season";
-import { shopClock } from "@/lib/shop-clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { assembleEveningClose, type DayCloseoutState, tomorrowNoon } from "./closeout";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "./closeout-reader";
@@ -24,8 +24,8 @@ import { readDayMoney } from "./day-money";
 import { roleLensFor } from "./today";
 import { getShopDayDepartures, getTodayWork } from "./today-reader";
 
-export { daySummaryBlocked } from "@/db/blockers";
 export { canAcceptPayments } from "@/db/stripe-accounts";
+export { daySummaryBlocked } from "@/features/blockers";
 
 /** The day's closeout plus the demo's separate previous dusk station. */
 function assembleTodayEveningClose(
