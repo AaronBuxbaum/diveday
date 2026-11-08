@@ -198,8 +198,6 @@ function erasureHardDeleteOrder(): string[] {
  * indirection is visible rather than looking like a write nobody declared.
  */
 const WRITTEN_VIA_HELPER: Record<string, string> = {
-  waiver_drafts:
-    "`clearWaiverDrafts` (./waiver-drafts) deletes every door's unsubmitted answers for the erased person's releases",
   trip_assignments:
     "`forgetTrainingPlanPeople` (./training-plan-privacy) clears personal instructor/author handles and timestamps while preserving the operational crew assignment; erasure refuses staff-role identities",
   claude_call_content:
@@ -208,6 +206,8 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
     "`forgetClaudeCallContent` (./claude-call-content) — the shop's erasure stamp, which keeps a call that read before the erasure from writing after it",
   media_deletion_attempts:
     "`queueMediaDeletion` (./media-deletions) — every blob the erasure retires goes through the existing durable ledger rather than a second mechanism invented here (ADR 20260723-media-validation-and-deletion)",
+  waiver_drafts:
+    "`clearWaiverDrafts` (./waiver-drafts) — whatever any door typed into a release and never signed (names, medical answers and alert, a guardian's half) is deleted with the diver's records (issue #4130)",
   processor_erasure_obligations:
     "`recordProcessorErasureObligations` (./processor-erasure) — what Stripe still holds, written inside the transaction so a crash a millisecond later cannot lose it (ADR 20260803-processor-erasure-obligations)",
 };

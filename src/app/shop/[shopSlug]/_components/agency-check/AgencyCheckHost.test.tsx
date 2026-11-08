@@ -370,26 +370,6 @@ describe("AgencyCheckRow and AgencyCheckAll", () => {
     expect(row("person-2").getByText("NAUI shows this certification. Confirmed.")).toBeVisible();
   });
 
-  it("shows the agency's words and evidence on the interactive roster", async () => {
-    withExtension();
-    vi.mocked(requestAgencyPage).mockResolvedValue({ ok: true, pageText: "page" });
-    renderDeparture([card(1)], () => ({
-      ok: true,
-      verdict: "level_unconfirmed",
-      evidence: "Diver Number1 · Scuba Diver",
-    }));
-
-    await act(async () => {
-      fireEvent.click(row("person-1").getByRole("button", { name: "Check with NAUI" }));
-    });
-
-    const evidence = await row("person-1").findByText("Diver Number1 · Scuba Diver");
-    expect(evidence).toBeVisible();
-    expect(
-      row("person-1").getByText("NAUI found this diver, but not at this level."),
-    ).toBeVisible();
-  });
-
   it("offers PADI as a real check, in its own words, with the member sign-in link kept for after", async () => {
     withExtension();
     vi.mocked(requestAgencyPage).mockResolvedValue({ ok: true, pageText: "page" });

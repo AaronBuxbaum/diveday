@@ -62,11 +62,10 @@ describe("an unanswered referral's warning", () => {
       clearance: null,
       guardian: null,
     } as unknown as TripManifest["divers"][number]["medicalWaiver"];
-    const paper = renderList({ paper: true, divers: [diver({ medicalWaiver: refusedBefore })] });
-    const printed = within(paper.container).getByRole("listitem");
-    expect(printed).toHaveTextContent(/A physician did not clear this person/);
-    expect(within(printed).queryAllByRole("link")).toHaveLength(0);
-    paper.unmount();
+    const sheet = renderList({ divers: [diver({ medicalWaiver: refusedBefore })], paper: true });
+    expect(sheet.container).toHaveTextContent(/A physician did not clear this person/);
+    expect(within(sheet.container).queryAllByRole("link")).toHaveLength(0);
+    sheet.unmount();
     renderList({ divers: [diver({ medicalWaiver: refusedBefore })] });
     expect(screen.queryByRole("link", { name: "View the physician’s decision" })).toBeNull();
 
@@ -119,10 +118,10 @@ describe("an unanswered referral's warning", () => {
  * which is the half a screen-only test would miss.
  */
 describe("a held seat on the manifest", () => {
-  const heldSeat = (checkpoint: RollCallCheckpoint = "departure", paper = true) =>
+  const heldSeat = (checkpoint: RollCallCheckpoint = "departure", paper = false) =>
     renderList({
-      checkpoint,
       paper,
+      checkpoint,
       divers: [
         diver({
           age: 13,
@@ -139,24 +138,27 @@ describe("a held seat on the manifest", () => {
     });
 
   it("withholds the contact, the age and the matched person's blockers, on paper too", () => {
-    const { container } = heldSeat();
-    const everything = container.textContent ?? "";
-    expect(everything).not.toContain("Asha Iyer");
-    expect(everything).not.toContain("+1-305-555-0231");
-    expect(everything).not.toMatch(/age 13/);
-    expect(everything).not.toContain(
-      "A medical answer needs a doctor’s sign-off before this diver dives.",
-    );
-    // The paper row says why, rather than "Not on file".
-    const printed = within(container).getAllByRole("listitem")[0];
-    expect(printed).toHaveTextContent(
+    const screenFace = heldSeat();
+    const screenText = screenFace.container.textContent ?? "";
+    screenFace.unmount();
+    const { container } = heldSeat("departure", true);
+    for (const everything of [screenText, container.textContent ?? ""]) {
+      expect(everything).not.toContain("Asha Iyer");
+      expect(everything).not.toContain("+1-305-555-0231");
+      expect(everything).not.toMatch(/age 13/);
+      expect(everything).not.toContain(
+        "A medical answer needs a doctor’s sign-off before this diver dives.",
+      );
+    }
+    // The sheet says why, rather than "Not on file".
+    expect(container).toHaveTextContent(
       "Their contact, age and other details wait until the desk confirms who this is.",
     );
-    expect(printed).not.toHaveTextContent("Not on file");
+    expect(container).not.toHaveTextContent("Not on file");
   });
 
   it("keeps the seat's own state: its name as booked, the blocked word and the pickup", () => {
-    const { container } = heldSeat();
+    const { container } = heldSeat("departure", true);
     expect(screen.getAllByText("Blocked").length).toBeGreaterThan(0);
     // Named as booked; the matched person is not named at the rail.
     expect(container.textContent).toContain("Maria");
@@ -171,15 +173,15 @@ describe("a held seat on the manifest", () => {
    * person, and "confirm who this is" on paper tells the crew to settle it.
    */
   it("flags other holds on a held seat with a medical hold, and never says medical", () => {
-    const { container } = heldSeat();
     const crewLine =
       "Not confirmed. The desk must settle who this is before boarding. Other holds may still apply.";
-    expect(container.textContent).toContain(crewLine);
-    const printed = within(container).getAllByRole("listitem")[0];
-    expect(printed).toHaveTextContent(crewLine);
+    const screenFace = heldSeat();
+    expect(screenFace.container.textContent?.toLowerCase()).not.toContain("medical");
+    expect(screenFace.container.textContent?.toLowerCase()).not.toContain("confirm who this is");
+    screenFace.unmount();
+    const { container } = heldSeat("departure", true);
+    expect(container).toHaveTextContent(crewLine);
     expect(container.textContent?.toLowerCase()).not.toContain("medical");
-    expect(printed?.textContent?.toLowerCase()).not.toContain("medical");
-    expect(container.textContent?.toLowerCase()).not.toContain("confirm who this is");
   });
 
   it("says nothing of other holds when the identity question is the only one", () => {
@@ -200,7 +202,7 @@ describe("a held seat on the manifest", () => {
   });
 
   it("says the same in the person's own panel", () => {
-    heldSeat("after_dive_1", false);
+    heldSeat("after_dive_1");
     fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent(
