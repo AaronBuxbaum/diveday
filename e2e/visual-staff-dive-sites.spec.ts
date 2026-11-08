@@ -5,6 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { waitForSelectedMapToSettle } from "./selected-map-capture";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import {
   CATALOG_MAP_SITE_COUNT,
@@ -83,44 +84,12 @@ for (const scheme of ["light", "dark"] as const) {
           .last();
         await expect(selectedPopup).toBeVisible();
         expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforePinSelection);
-        const waitForSelectedMapToSettle = () =>
-          page.waitForFunction(
-            async () => {
-              const map = document.querySelector<HTMLElement>(".leaflet-container");
-              const pane = map?.querySelector<HTMLElement>(".leaflet-map-pane");
-              const marker = map?.querySelector<HTMLElement>(".leaflet-site-marker button.ring-4");
-              const popup = map?.querySelector<HTMLElement>(".leaflet-popup");
-              if (!map || !pane || !marker || !popup) return false;
-
-              const geometry = () => {
-                const rect = (element: HTMLElement) => {
-                  const { x, y, width, height } = element.getBoundingClientRect();
-                  return [x, y, width, height];
-                };
-                return [pane.style.transform, rect(marker), rect(popup)];
-              };
-              const nextFrame = () =>
-                new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-              await nextFrame();
-              const before = geometry();
-              await nextFrame();
-              const after = geometry();
-              const tilesIdle =
-                map.querySelector(".leaflet-tile:not(.leaflet-tile-loaded)") === null;
-
-              return (
-                !pane.classList.contains("leaflet-pan-anim") &&
-                tilesIdle &&
-                JSON.stringify(before) === JSON.stringify(after)
-              );
-            },
-            undefined,
-            { timeout: 15_000 },
-          );
         let footerFocusedAtPreviousWidth = false;
         await capture(page, "dive-sites-library-pin-selected", scheme, {
-          beforeShot: async () => {
-            await waitForSelectedMapToSettle();
+          // Whole-document painting scrolls the map; settle its resulting pan
+          // and tile fade afterward, immediately before opening the shutter.
+          beforeScreenshot: async () => {
+            await waitForSelectedMapToSettle(page);
             await expectPopupInMap(page, selectedPopup);
             for (const selector of [
               ".leaflet-site-card__title",
@@ -149,6 +118,7 @@ for (const scheme of ["light", "dark"] as const) {
               }),
             ).toBe(true);
             footerFocusedAtPreviousWidth = true;
+            await waitForSelectedMapToSettle(page);
             await expectPopupInMap(page, selectedPopup);
           },
         });
@@ -157,7 +127,8 @@ for (const scheme of ["light", "dark"] as const) {
         // shop's own spot off the map, the shop is not drawn at all rather than
         // pinned to the edge (Aaron, 2026-10-23); where it does not, it stays.
         await capture(page, "dive-sites-library-site-card-edge", scheme, {
-          beforeShot: async () => {
+          beforeScreenshot: async () => {
+            await waitForSelectedMapToSettle(page);
             await expectPopupInMap(page, selectedPopup);
           },
         });
