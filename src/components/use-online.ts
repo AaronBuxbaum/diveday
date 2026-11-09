@@ -1,21 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-/** Keep the device's online signal current without changing the first render. */
+function subscribe(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+
+const getSnapshot = () => navigator.onLine;
+const getServerSnapshot = () => true;
+
+/** Subscribe to the device's online signal with a stable server snapshot. */
 export function useOnline(): boolean {
-  const [online, setOnline] = useState(true);
-
-  useEffect(() => {
-    const sync = () => setOnline(navigator.onLine);
-    sync();
-    window.addEventListener("online", sync);
-    window.addEventListener("offline", sync);
-    return () => {
-      window.removeEventListener("online", sync);
-      window.removeEventListener("offline", sync);
-    };
-  }, []);
-
-  return online;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
