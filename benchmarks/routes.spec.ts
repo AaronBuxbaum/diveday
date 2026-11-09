@@ -68,8 +68,14 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
         performance.clearResourceTimings();
         Object.assign(window, { __longTaskCosts: [] });
       });
+      let documentResponses = 0;
       const responses: Promise<{ type: string; bytes: number; failed?: boolean }>[] = [];
       const record = (response: import("@playwright/test").Response) => {
+        if (
+          response.request().isNavigationRequest() &&
+          response.request().frame() === page.mainFrame()
+        )
+          documentResponses++;
         const type = response.headers()["content-type"] ?? "";
         if (/javascript|text\/x-component/.test(type))
           responses.push(
@@ -155,18 +161,28 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
         payloads.every((payload) => !payload.failed),
         "all observed payload bodies must be readable",
       ).toBe(true);
+      const decodedRscBytes = payloads
+        .filter((payload) => payload.type.includes("text/x-component"))
+        .reduce((total, payload) => total + payload.bytes, 0);
+      if (mode.includes("navigation")) {
+        expect(documentResponses, "client transitions must not become document loads").toBe(0);
+        if (mode === "uncached-navigation")
+          expect(decodedRscBytes, "uncached navigation must fetch its target RSC").toBeGreaterThan(
+            0,
+          );
+        else expect(decodedRscBytes, "cached history navigation must reuse target RSC").toBe(0);
+      }
       // Client transitions retain source document script tags; those are not target RSC bytes.
       if (mode.includes("navigation")) Object.assign(browser, { inlineRscCarrierUtf8Bytes: null });
       samples.push({
         mode,
         elapsedMs,
+        documentResponses,
         ...browser,
         decodedJsBytes: payloads
           .filter((p) => p.type.includes("javascript"))
           .reduce((n, p) => n + p.bytes, 0),
-        decodedRscBytes: payloads
-          .filter((p) => p.type.includes("text/x-component"))
-          .reduce((n, p) => n + p.bytes, 0),
+        decodedRscBytes,
       });
     }
     await cdp.send("Fetch.disable");
