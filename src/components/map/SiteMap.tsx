@@ -297,52 +297,11 @@ export default function SiteMap({
           return;
         }
 
-        const colorClass =
-          pin.tone === "warning"
-            ? "bg-warning-strong text-surface"
-            : pin.tone === "primary"
-              ? "bg-primary text-surface"
-              : "bg-surface text-foreground";
-        const ringClass = isSelected
-          ? "ring-4 ring-primary scale-110 z-50"
-          : "ring-2 ring-surface hover:scale-105";
-        const button = createSiteButton(pin, colorClass, ringClass);
-        const icon = L.divIcon({
-          html: button,
-          className: "leaflet-site-marker",
-          iconSize: [44, 44],
-          iconAnchor: [22, 22],
-          popupAnchor: [0, -24],
+        const { button, marker } = createSiteMarker(L, mapInstance, pin, isSelected, {
+          load: loadPinDetails,
+          words: pinDetailsWords,
+          isCurrent: () => !isCancelled,
         });
-        const marker = L.marker([pin.latitude, pin.longitude], {
-          icon,
-          keyboard: false,
-          autoPanOnFocus: false,
-          zIndexOffset: isSelected ? 1000 : 100,
-        }).addTo(mapInstance);
-
-        const popupContent = createSitePopup(pin);
-        marker.bindPopup(popupContent, {
-          className: "leaflet-site-popup",
-          maxWidth: 320,
-          autoPanPaddingTopLeft: [12, 110],
-          autoPanPaddingBottomRight: [12, 12],
-        });
-        if (loadPinDetails && pinDetailsWords) {
-          let pending = false;
-          let loaded = false;
-          marker.on("popupopen", () => {
-            if (pending || loaded) return;
-            pending = true;
-            void loadSitePopupDetails(popupContent, pin, loadPinDetails, pinDetailsWords).then(
-              (ok) => {
-                loaded = ok;
-                pending = false;
-                if (!isCancelled && marker.isPopupOpen()) updateOpenPopup(marker);
-              },
-            );
-          });
-        }
         // The open card already names the selected site; its hover label
         // would only cover the card.
         if (!isSelected) bindSiteTooltip(marker, pin);
@@ -586,6 +545,66 @@ function persistMapView(
     longitude: position.lng,
     zoom: map.getZoom(),
   });
+}
+
+/** Marker appearance and popup loading are one concern, separate from viewport dealing. */
+function createSiteMarker(
+  L: typeof import("leaflet"),
+  map: LeafletMap,
+  pin: MapPin,
+  isSelected: boolean,
+  details: {
+    load: SiteMapProps["loadPinDetails"];
+    words: SiteMapProps["pinDetailsWords"];
+    isCurrent: () => boolean;
+  },
+) {
+  const { load: loadPinDetails, words: pinDetailsWords } = details;
+  const colorClass =
+    pin.tone === "warning"
+      ? "bg-warning-strong text-surface"
+      : pin.tone === "primary"
+        ? "bg-primary text-surface"
+        : "bg-surface text-foreground";
+  const ringClass = isSelected
+    ? "ring-4 ring-primary scale-110 z-50"
+    : "ring-2 ring-surface hover:scale-105";
+  const button = createSiteButton(pin, colorClass, ringClass);
+  const icon = L.divIcon({
+    html: button,
+    className: "leaflet-site-marker",
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+    popupAnchor: [0, -24],
+  });
+  const marker = L.marker([pin.latitude, pin.longitude], {
+    icon,
+    keyboard: false,
+    autoPanOnFocus: false,
+    zIndexOffset: isSelected ? 1000 : 100,
+  }).addTo(map);
+
+  const popupContent = createSitePopup(pin);
+  marker.bindPopup(popupContent, {
+    className: "leaflet-site-popup",
+    maxWidth: 320,
+    autoPanPaddingTopLeft: [12, 110],
+    autoPanPaddingBottomRight: [12, 12],
+  });
+  if (loadPinDetails && pinDetailsWords) {
+    let pending = false;
+    let loaded = false;
+    marker.on("popupopen", () => {
+      if (pending || loaded) return;
+      pending = true;
+      void loadSitePopupDetails(popupContent, pin, loadPinDetails, pinDetailsWords).then((ok) => {
+        loaded = ok;
+        pending = false;
+        if (details.isCurrent() && marker.isPopupOpen()) updateOpenPopup(marker);
+      });
+    });
+  }
+  return { button, marker };
 }
 
 function updateOpenPopup(marker: LeafletMarker) {
