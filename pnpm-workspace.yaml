@@ -14,6 +14,7 @@ minimumReleaseAgeExclude: []
 patchedDependencies:
   '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch
   next@16.4.5: patches/next@16.4.5.patch
+  reg-cli@0.18.16: patches/reg-cli@0.18.16.patch
 
 publicHoistPattern:
   - '@img/*'

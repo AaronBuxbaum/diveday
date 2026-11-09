@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { filterStep, findCiChangeDetectionViolations } from "./check-ci-change-detection.mjs";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 /**
  * The guard exists because the bug it catches is invisible: change detection
@@ -105,6 +106,34 @@ describe("the range change detection asks about", () => {
 });
 
 describe("the workflow itself", () => {
+  it("keeps auxiliary browser harness inputs selected without widening ordinary unit-only changes", async () => {
+    const condition = filterStep(await workflow())
+      .split("\n")
+      .find((line) => line.includes("if [") && line.includes("grep -Ev '[.]test[.]"));
+    expect(condition).toBeTruthy();
+    for (const [files, isPr, expected] of [
+      ["scripts/reg-report-ui/report.spec.mts", "1", "true"],
+      ["scripts/reg-report-ui/fixture.test.mts", "1", "true"],
+      ["scripts/persona-bots/onboard.test.mjs", "1", "true"],
+      ["patches/reg-cli@0.18.16.patch", "1", "true"],
+      ["pnpm-workspace.yaml", "1", "true"],
+      ["scripts/ordinary.test.mjs", "1", "false"],
+      ["scripts/ordinary.test.mjs", "", "true"],
+    ]) {
+      const result = runBounded(
+        "bash",
+        ["-c", `${condition}\nprintf false\nelse\nprintf true\nfi`],
+        {
+          encoding: "utf8",
+          timeoutMs: SUBPROCESS_TIMEOUTS.nodeScript,
+          env: { ...process.env, IS_PR: isPr, code_paths: files },
+        },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout, `${files} (PR=${isPr || "no"})`).toBe(expected);
+    }
+  });
+
   it("asks the right question", async () => {
     expect(findCiChangeDetectionViolations(await workflow())).toEqual([]);
   });

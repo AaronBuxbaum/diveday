@@ -37,6 +37,7 @@
     "visual:compare": "node scripts/visual-compare.mjs",
     "visual:layers": "node scripts/visual-diff-layers.mjs",
     "visual:report": "node scripts/visual-report.mjs",
+    "visual:report:test": "playwright test --config scripts/reg-report-ui/playwright.config.ts",
     "visual:prune": "dotenv -c -- node scripts/prune-visual-bucket.mjs",
     "infra:bootstrap": "dotenv -c -- node scripts/infra-bootstrap.mjs",
     "infra:deploy": "dotenv -c -- node scripts/infra-deploy.mjs",

@@ -74,6 +74,14 @@ describe("the CI result job", () => {
     expect(personaStep).toContain("Victor's setup link opens the onboarding form");
     expect(personaStep).not.toContain("continue-on-error");
     expect(job("changes")).toContain("grep -E '^scripts/persona-bots/'");
+    const reportStep =
+      job("playwright")
+        .split("- name: Verify generated visual-report controls")[1]
+        ?.split("\n      - ")[0] ?? "";
+    expect(reportStep).toContain("if: ${{ matrix.shard == 1 }}");
+    expect(reportStep).toContain("run: pnpm visual:report:test");
+    expect(reportStep).not.toContain("continue-on-error");
+    expect(job("changes")).toContain("grep -E '^scripts/reg-report-ui/'");
     expect(job("visual")).toContain("shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}");
     expect(job("visual")).toMatch(/^\s+E2E_WORKERS: "2"$/mu);
     for (const id of ["unit-tests", "playwright", "visual"]) {

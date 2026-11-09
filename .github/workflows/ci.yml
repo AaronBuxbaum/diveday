@@ -462,6 +462,9 @@ jobs:
       - name: Verify persona onboarding setup link
         if: ${{ matrix.shard == 1 }}
         run: pnpm exec playwright test --config scripts/persona-bots/playwright.config.ts -g "Victor's setup link opens the onboarding form" --reporter=line
+      - name: Verify generated visual-report controls
+        if: ${{ matrix.shard == 1 }}
+        run: pnpm visual:report:test
       # `--shard` is deliberately absent. Playwright's own sharding cuts the
       # sorted test list into four equal-*count* contiguous groups, and the
       # tests are nothing like equal cost: a spec minting a private shop pays
@@ -1359,7 +1362,9 @@ jobs:
             # answer. They skip exactly as on a docs-only change; the unit
             # shards, safeguards and the coverage floors still run. Fails open:
             # a push to main is `true` unless a newer main commit exists (see `superseded`).
-            if [ -n "${IS_PR}" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -E '^scripts/persona-bots/' || true)" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -Ev '[.]test[.](ts|tsx|mts|mjs)$' || true)" ]; then
+            # Auxiliary browser harnesses stay selected even when their only
+            # changed input happens to use a unit-test filename.
+            if [ -n "${IS_PR}" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -E '^scripts/persona-bots/' || true)" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -E '^scripts/reg-report-ui/' || true)" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -Ev '[.]test[.](ts|tsx|mts|mjs)$' || true)" ]; then
               echo "browser=false" >> "$GITHUB_OUTPUT"
               echo "Only unit-test files changed — the build, Playwright, fast lane and visual jobs are skipped; the unit shards still run." >> "$GITHUB_STEP_SUMMARY"
             else

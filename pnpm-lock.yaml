@@ -177,6 +177,7 @@ overrides:
 patchedDependencies:
   '@vercel/analytics@2.0.1': 8afb2828a4b18193a0ddacb12f37c3e2f4410a2d40769d704d9cbe0d294bb1a6
   next@16.4.5: f6696fbf26dc266d4e8f7a6eb51f902fe3228910a4b1a8a9cb6aa7d82b48b40e
+  reg-cli@0.18.16: a372f77d83e7b0f770ece21bebe882c1c5c695538eef37183dc8c885d04843c3
 
 importers:
 
@@ -11437,7 +11438,7 @@ snapshots:
       get-proto: 1.0.1
       which-builtin-type: 1.2.1
 
-  reg-cli@0.18.16:
+  reg-cli@0.18.16(patch_hash=a372f77d83e7b0f770ece21bebe882c1c5c695538eef37183dc8c885d04843c3):
     dependencies:
       bluebird: 3.7.2
       chalk: 4.1.2
@@ -11476,7 +11477,7 @@ snapshots:
 
   reg-suit-core@0.14.5:
     dependencies:
-      reg-cli: 0.18.16
+      reg-cli: 0.18.16(patch_hash=a372f77d83e7b0f770ece21bebe882c1c5c695538eef37183dc8c885d04843c3)
       reg-suit-util: 0.14.3
       rimraf: 5.0.10
 

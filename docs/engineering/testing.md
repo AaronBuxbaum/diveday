@@ -254,10 +254,33 @@ pnpm test          # unit + component, once
 pnpm test:watch    # during development
 pnpm e2e           # Playwright (auto-detects sandbox Chromium; CI installs its own)
 pnpm visual        # capture screenshots and run reg-suit comparison and publish to S3
+pnpm visual:report:test # generated report controls, synthetic pixels, no app build or publication
 pnpm check         # repo safeguards + lint + typecheck + unit — the pre-commit bar
 pnpm simulate:day  # one whole dive day against the built server, clock advancing (nightly)
 pnpm persona:bots  # the fifteen personas walked against the demo shop (weekly; --dry-run files nothing)
 ```
+
+### Hosted visual-report controls
+
+`pnpm visual:report:test` generates a report through the installed `reg-suit compare` chain with
+red expected (Before) and blue actual (After) fixtures, then checks rendered pixels in Chromium.
+It tests both ends of the Slide footer control, keyboard endpoints, the in-image divider, and
+Toggle, Blend, 2up and Diff. CI runs it once in the first functional Playwright shard. It needs
+the normal installed browser but no app build, database, AWS access or published baseline.
+
+`reg-suit@0.14.5` uses `reg-cli@0.18.16`, whose published bundle contains
+[report-ui v0.5.0](https://github.com/reg-viz/report-ui/tree/v0.5.0).
+The Slide value is the percentage of After revealed, but ComparisonView reverses the footer
+slider. The version-scoped `patches/reg-cli@0.18.16.patch` changes only that `reverse` option
+from true to false; it does not swap the image URLs or change the divider or other modes.
+The large diff is one changed option in a minified line, not a replacement report renderer.
+Keep this regression when upgrading reg-cli and remove the patch once the upstream bundle
+passes it unchanged. pnpm's frozen-lockfile install applies the patch before report generation.
+
+The report generator embeds its JavaScript in each `index.html`. Consequently, this fix applies
+only to reports generated with the patched dependency. Existing hosted reports remain unchanged;
+use Toggle or the raw expected/actual PNGs when reviewing an older report. Do not rewrite or
+republish old report artifacts to retrofit the fix.
 
 ### The one-day simulation
 
