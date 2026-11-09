@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 
@@ -38,9 +38,6 @@ const CLOSING_DIALOG_PANEL_PROPS = { ...DIALOG_PANEL_PROPS, inert: true } as con
  * `triggerRef` is for a layer whose opener is a known control (the manifest's name button):
  * whichever way the layer closes — Escape, the scrim, its own close control — focus lands on that
  * control rather than on whatever happened to hold focus when it opened.
- *
- * `onClose` is read through a ref, so a caller passing a fresh closure every render does not
- * re-subscribe the listener on every render.
  */
 export function useDialogBehaviour({
   open,
@@ -67,17 +64,14 @@ export function useDialogBehaviour({
   useFocusTrap(open, containerRef);
   const { mounted, closing } = useExitAnimation(open, exitMs);
 
-  const latestOnClose = useRef(onClose);
-  useEffect(() => {
-    latestOnClose.current = onClose;
-  });
+  const close = useEffectEvent(onClose);
 
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
-      latestOnClose.current();
+      close();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);

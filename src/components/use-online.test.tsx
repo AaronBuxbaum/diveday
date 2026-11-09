@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -63,5 +64,37 @@ describe("useOnline", () => {
     unmount();
     expect(remove).toHaveBeenCalledWith("online", handlers.get("online"));
     expect(remove).toHaveBeenCalledWith("offline", handlers.get("offline"));
+  });
+
+  it("keeps one subscription across rerenders and cleans up StrictMode remounts", () => {
+    setOnline(false);
+    const add = vi.spyOn(window, "addEventListener");
+    const remove = vi.spyOn(window, "removeEventListener");
+    const { rerender, unmount } = render(
+      <StrictMode>
+        <OnlineLabel />
+      </StrictMode>,
+    );
+    expect(screen.getByText("offline")).toBeInTheDocument();
+
+    const subscriptionCount = add.mock.calls.filter(([event]) => event === "online").length;
+    rerender(
+      <StrictMode>
+        <OnlineLabel />
+      </StrictMode>,
+    );
+    expect(add.mock.calls.filter(([event]) => event === "online")).toHaveLength(subscriptionCount);
+
+    setOnline(true);
+    act(() => window.dispatchEvent(new Event("online")));
+    expect(screen.getByText("online")).toBeInTheDocument();
+
+    unmount();
+    for (const event of ["online", "offline"]) {
+      const added = add.mock.calls.filter(([name]) => name === event);
+      const removed = remove.mock.calls.filter(([name]) => name === event);
+      expect(added.length).toBeGreaterThan(0);
+      expect(removed).toEqual(added);
+    }
   });
 });

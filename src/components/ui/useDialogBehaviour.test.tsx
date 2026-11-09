@@ -60,6 +60,36 @@ describe("useDialogBehaviour", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("uses the latest close callback without resubscribing while open", () => {
+    const before = vi.fn();
+    const after = vi.fn();
+    const add = vi.spyOn(document, "addEventListener");
+    const remove = vi.spyOn(document, "removeEventListener");
+    try {
+      const { rerender, unmount } = render(<Harness onClose={before} />);
+      fireEvent.click(screen.getByRole("button", { name: "Open" }));
+      const keydowns = () => add.mock.calls.filter(([event]) => event === "keydown");
+      const listeners = keydowns().length;
+
+      rerender(<Harness onClose={after} />);
+      expect(keydowns()).toHaveLength(listeners);
+
+      const escapeEvent = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+      fireEvent(document, escapeEvent);
+      expect(escapeEvent.defaultPrevented).toBe(true);
+      expect(before).not.toHaveBeenCalled();
+      expect(after).toHaveBeenCalledTimes(1);
+
+      unmount();
+      for (const [event, handler] of keydowns()) {
+        expect(remove).toHaveBeenCalledWith(event, handler);
+      }
+    } finally {
+      add.mockRestore();
+      remove.mockRestore();
+    }
+  });
+
   it("stops the page scrolling while a sheet is up, and gives it back", async () => {
     vi.useFakeTimers();
     try {
