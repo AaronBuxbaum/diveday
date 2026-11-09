@@ -74,8 +74,9 @@ a changed file whose mtime has been preserved. Neither import selection nor mtim
 can infer an arbitrary changed external database or environment; such changes require an
 explicit unconditional verification run.
 
-If incremental selection is exposed, label it an optional iteration accelerator, preserve a
-separate conservative pre-push verification command, and never feed its cache back as proof that
-full CI can be skipped. Before adopting it as a default, compare measured selected files and
-missed failures against full CI on real changes. Do not infer a repository recall rate from these
+`pnpm test:incremental <file>` now exposes this as an optional iteration accelerator; the
+[local workflow](../agents/verifying.md#local-incremental-unit-loop) documents cache use and
+unconditional fallbacks. Separate conservative pre-push verification remains available. The
+incremental cache is never proof that full CI can be skipped. Before adopting it as a default,
+compare measured selected files and missed failures against full CI on real changes. Do not infer a repository recall rate from these
 small adversarial probes or unify browser and unit models merely to share an implementation.

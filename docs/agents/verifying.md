@@ -444,6 +444,44 @@ fixture (`e2e/fixtures.ts`) mints a fully seeded one and signs in as its owner, 
 reset purges it (ADR 20260815-per-test-private-shops). Never a `finally` that puts the setting
 back: it is a convention nothing enforces, and it does not survive the failure it is there for.
 
+## Local incremental unit loop
+
+Use `pnpm test:incremental <file>` for repeated feedback on the unit tests you are editing.
+It runs `vitest run --since-last-run --reporter=dot`; pass file filters and Vitest options directly,
+without a literal `--` separator:
+
+```sh
+pnpm test:incremental src/lib/public-routes.test.ts
+# Edit an imported module, then repeat the same command.
+pnpm test:incremental src/lib/public-routes.test.ts
+# Unconditional focused verification, including each attempt to validate a flake fix:
+pnpm test src/lib/public-routes.test.ts --reporter=dot
+```
+
+The first incremental run with a cold cache runs every test in the requested scope and records
+its dependencies. Later runs select changed recorded dependencies and previously failed tests;
+an unchanged warm run can select zero tests. `pnpm test:incremental` without a filter considers
+all projects and can run the whole unit suite on a cold cache, so agents should name their files
+for the local loop. Do not assume a cache seeded for one scope covers another.
+
+Keep Vitest's cache enabled and local to the checkout; do not share an incremental cache between
+worktrees or copy it from CI. A removed cache costs a cold run. After a branch switch, dependency
+or configuration change, use an unconditional focused run (or the conservative selector for a
+broader change) before relying on warm feedback again.
+
+This mode can miss raw filesystem reads and edits that preserve modification times. Run the
+known dependent tests unconditionally when changing those inputs; use `pnpm test:affected` or
+`pnpm verify:agent` for broader Git-derived selection with source-reader expansion and conservative
+fallbacks. Environment-variable changes are an accepted limitation of this local shortcut;
+external environment or database changes still need unconditional tests when verifying behavior.
+The [evaluation](../engineering/test-incremental-evaluation.md) records the observed gaps.
+
+Report "incremental feedback passed; N files ran" (including zero), never "fully verified".
+Never use incremental runs for repeated flake validation: a passing cached test may not execute
+on the next attempt. Keep the verify skill's unconditional focused checks, the optional
+`pnpm verify:push --quick` / `pnpm verify:push` conservative verification and full CI unchanged.
+Incremental cache results do not produce a verification receipt or justify skipping CI.
+
 ## Fast feedback during editing
 
 `pnpm verify:agent --plan` explains selection for committed and uncommitted work.
