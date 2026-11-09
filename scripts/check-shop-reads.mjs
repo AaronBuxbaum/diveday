@@ -1,7 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 
 /**
  * **One shop read per pass on the public storefront** (issue #1737).
@@ -94,4 +93,4 @@ async function main() {
   console.log(`shop-reads: ${files} storefront files read the shop through one memo`);
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();
+if (import.meta.main) await main();

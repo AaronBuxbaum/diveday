@@ -1,7 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 
 /**
  * **Diver copy has a provider above it.** Every Client Component that calls
@@ -372,4 +371,4 @@ async function main() {
   console.log(`intl-providers: ${consumers} client consumers of diver copy sit under a provider`);
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();
+if (import.meta.main) await main();

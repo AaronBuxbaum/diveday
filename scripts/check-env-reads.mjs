@@ -1,7 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 import { ENV_KEYS } from "../config/env-registry.mjs";
 
 /**
@@ -83,4 +82,4 @@ async function main() {
   console.log(`env-reads: ${seen.size} environment keys read in src/, each in the registry`);
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();
+if (import.meta.main) await main();

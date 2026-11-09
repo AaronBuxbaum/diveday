@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 import { pageRoutes, sourceFiles, withoutComments } from "./source-tree.mjs";
 
 /**
@@ -199,4 +198,4 @@ Drop them from SKELETON_EXEMPT in this script.`,
   );
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();
+if (import.meta.main) await main();
