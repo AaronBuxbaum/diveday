@@ -11,7 +11,10 @@ import { seedFacts } from "./shop-facts";
  * Minted on the page's own request context, which carries the harness's
  * bearer header like every other test-route call.
  */
-export async function mintOnboardFormPath(page: Page): Promise<string> {
-  const { setupLink } = await seedFacts(page.request, ["setupLink"]);
+export async function mintOnboardFormPath(
+  page: Page,
+  options: { headers?: Record<string, string> } = {},
+): Promise<string> {
+  const { setupLink } = await seedFacts(page.request, ["setupLink"], options);
   return (setupLink as { path: string }).path;
 }

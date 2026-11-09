@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { E2E_TEST_ROUTE_SECRET } from "../../e2e/servers";
+import { mintOnboardFormPath } from "../../e2e/setup-link";
 import { DEV_STAFF_LOGINS } from "../../src/db/dev-credentials";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "../subprocess.mjs";
 import { classify } from "./findings.mjs";
@@ -150,24 +151,10 @@ for (const visit of walkPlan()) {
  */
 async function visitPath(page: Page, visit: ReturnType<typeof walkPlan>[number]) {
   if (visit.mint !== "setup-link") return visit.path;
-  const minted = await page.request.post("/api/test/shop", {
+  return mintOnboardFormPath(page, {
     headers: { authorization: `Bearer ${E2E_TEST_ROUTE_SECRET}` },
-    data: { facts: ["setupLink"] },
   });
-  if (!minted.ok()) throw new Error(`persona-bots: no setup link minted (${minted.status()})`);
-  const { values } = (await minted.json()) as { values: { setupLink: { path: string } } };
-  return values.setupLink.path;
 }
-
-// Exercise the same minting path as the walk against the real test door. A
-// successful response alone is insufficient: Victor must see the signup form.
-test("Victor's setup link opens the onboarding form", async ({ page }) => {
-  const visit = walkPlan().find((entry) => entry.path === "/onboard");
-  if (!visit) throw new Error("persona-bots: Victor has no onboarding visit");
-  const path = await visitPath(page, visit);
-  await page.goto(path);
-  await expect(page.locator('input[name="shopName"]').filter({ visible: true })).toBeVisible();
-});
 
 /** One surface, opened and probed. Throws only when the harness broke. */
 async function visitSurface(

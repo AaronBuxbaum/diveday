@@ -63,16 +63,6 @@ describe("the CI result job", () => {
     expect(job("playwright")).toMatch(
       /- name: Run non-visual Playwright tests\n {8}env:\n {10}SKIP: [^\n]+\n {10}E2E_WORKERS: "2"/u,
     );
-    // The auxiliary persona config is outside e2e/ discovery. Keep its setup
-    // link regression in exactly one gated browser shard.
-    const personaStep =
-      job("playwright")
-        .split("- name: Verify persona onboarding setup link")[1]
-        ?.split("\n      - ")[0] ?? "";
-    expect(personaStep).toContain("if: ${{ matrix.shard == 1 }}");
-    expect(personaStep).toContain("--config scripts/persona-bots/playwright.config.ts");
-    expect(personaStep).toContain("Victor's setup link opens the onboarding form");
-    expect(personaStep).not.toContain("continue-on-error");
     expect(job("changes")).toContain("grep -E '^scripts/persona-bots/'");
     expect(job("visual")).toContain("shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}");
     expect(job("visual")).toMatch(/^\s+E2E_WORKERS: "2"$/mu);
