@@ -23,6 +23,8 @@
     }
   },
   "map": {
+    "loadingDetails": "Cargando detalles del sitio…",
+    "detailsUnavailable": "Los detalles no están disponibles. Abre el sitio o selecciónalo de nuevo para reintentar.",
     "openSite": "Abrir sitio de buceo",
     "clusterLabel": "sitios de buceo"
   },

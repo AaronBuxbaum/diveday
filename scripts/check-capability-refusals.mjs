@@ -1,7 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 
 /**
  * **A refused capability never lands on DiveDay's sales homepage** (issue #914).
@@ -32,6 +31,7 @@ export const KNOWN_ROUTES = [
   "(token)/ready/[token]",
   "(token)/recap/[token]",
   "(token)/reset-password/[token]",
+  "(token)/email-sign-in/[token]",
   "(token)/unsubscribe/[token]",
   "(token)/verify/[token]",
   "(token)/waivers/[token]",
@@ -122,4 +122,4 @@ async function main() {
   console.log(`capability-refusals: ${routes} capability pages refuse in place`);
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();
+if (import.meta.main) await main();

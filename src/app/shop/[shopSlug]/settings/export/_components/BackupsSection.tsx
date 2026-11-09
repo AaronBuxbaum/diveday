@@ -50,6 +50,7 @@ const DELIVERY_ERROR_KEYS: Record<string, StaffMessageKey> = {
   credential_unreadable: "backup.deliveryError.credential_unreadable",
   shop_missing: "backup.deliveryError.shop_missing",
   bundle_failed: "backup.deliveryError.bundle_failed",
+  media_incomplete: "backup.deliveryError.media_incomplete",
   encryption_key_unset: "backup.deliveryError.encryption_key_unset",
   encryption_key_invalid: "backup.deliveryError.encryption_key_invalid",
 };

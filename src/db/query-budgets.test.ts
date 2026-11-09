@@ -1,13 +1,13 @@
-import { and, asc, eq, gt, isNotNull } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { pagedOrdersByDay } from "@/db/orders";
 import { listTripsReadiness } from "@/db/readiness";
-import { bookings, people, personRoles, trips } from "@/db/schema";
+import { bookings, people, personRoles, shops, trips } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
 import { nowDate } from "@/lib/clock";
 import { countingShopContext } from "@/test/query-count";
 import { getDiverRecord } from "../features/diver-record/store";
-import { getTripManifest } from "../features/trip-page/store";
+import { getTripDetails, getTripManifest } from "../features/trip-page/store";
 
 /** The seeded shop's owner: the reader whose gates open every door on these pages. */
 async function seededOwner(ctx: Awaited<ReturnType<typeof countingShopContext>>) {
@@ -131,6 +131,40 @@ describe("what the assembly readers cost", () => {
     expect(used, `the departure page sent ${used} queries`).toBeLessThanOrEqual(
       TRIP_PAGE_QUERY_CEILING,
     );
+  });
+
+  it("keeps Details-only reads off Divers for boat and shore shops", async () => {
+    const ctx = await countingShopContext();
+    const personId = await seededOwner(ctx);
+    const [trip] = await ctx.uncounted
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, ctx.shop.id), liveTrip(), ne(trips.status, "cancelled")))
+      .limit(1);
+    if (!trip) throw new Error("no seeded departure");
+    for (const enabled of [true, false]) {
+      await ctx.uncounted
+        .update(shops)
+        .set({ conservationEnabled: enabled })
+        .where(eq(shops.id, ctx.shop.id));
+      for (const hasBoatDiving of [true, false]) {
+        const shop = { ...ctx.shop, hasBoatDiving };
+        ctx.reset();
+        const manifest = await getTripManifest(ctx.db, shop, trip.id, {
+          session: { user: { personId, roles: ["owner"] } },
+          filters: {},
+        });
+        expect(manifest).not.toBeNull();
+        expect(
+          ctx.statements.some((sql) => /from "trip_conservation"|from "trip_lenses"/.test(sql)),
+        ).toBe(false);
+        const diversQueries = ctx.count();
+        const details = await getTripDetails(ctx.db, shop, trip.id, personId);
+        expect(ctx.count()).toBeGreaterThan(diversQueries);
+        expect(details.conservation === null).toBe(!enabled);
+        if (!hasBoatDiving) expect(details.boats).toEqual([]);
+      }
+    }
   });
 
   /**

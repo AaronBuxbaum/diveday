@@ -3,7 +3,7 @@ import type { AccountTokenPurpose } from "@/lib/account-tokens";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { mintCapability, openCapability, spendCapability, verifyCapability } from "./capabilities";
-import type { AppDb, DbExecutor } from "./client";
+import type { DbExecutor } from "./client";
 import { capabilities, personRoles, userAccounts } from "./schema";
 
 /**
@@ -43,7 +43,7 @@ async function holdsStaffRole(db: DbExecutor, userAccountId: string): Promise<bo
  * link; the table's partial unique index is the backstop.
  */
 export async function issueAccountToken(
-  db: AppDb,
+  db: DbExecutor,
   input: { userAccountId: string; purpose: AccountTokenPurpose; now?: Date },
 ): Promise<IssuedAccountToken> {
   return db.transaction(async (tx) => {
@@ -109,6 +109,8 @@ export async function wasAccountTokenConsumed(
  */
 const ACCOUNT_STATUS_SPENDING = {
   invite: eq(userAccounts.status, "invited"),
+  demo_sign_in: eq(userAccounts.status, "active"),
+  magic_sign_in: sql`${userAccounts.status} = 'active' and ${userAccounts.emailVerified} = true and ${userAccounts.emailVerifiedAt} is not null`,
   password_reset: eq(userAccounts.status, "active"),
   email_verification: ne(userAccounts.status, "disabled"),
 } as const satisfies Record<AccountTokenPurpose, SQL>;
@@ -161,6 +163,8 @@ export async function consumeAccountToken(
 const ACCOUNT_TOKEN_PURPOSES: readonly AccountTokenPurpose[] = [
   "email_verification",
   "password_reset",
+  "magic_sign_in",
+  "demo_sign_in",
   "invite",
 ];
 

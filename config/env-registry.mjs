@@ -172,8 +172,8 @@ export const ENV_GROUPS = [
       "(src/lib/waiver-integrity.ts) signs with AUTH_SECRET itself. So rotating",
       "AUTH_SECRET with these unset breaks every recap and buddy link in flight and",
       "makes every sealed waiver verify as invalid. Setting or changing one later has",
-      "the same effect on what it signs: set WAIVER_INTEGRITY_SECRET only before the",
-      "first waiver is sealed, and never rotate it without re-sealing.",
+      "the same effect on what it signs. Waiver/course evidence can retain its original",
+      "verification keys with WAIVER_INTEGRITY_KEYS; see the evidence key rotation runbook.",
     ],
     keys: [
       {
@@ -193,6 +193,24 @@ export const ENV_GROUPS = [
         from: "manual",
         targets: VERCEL,
         absent: "waiver integrity seals sign with AUTH_SECRET",
+      },
+    ],
+  },
+  {
+    seam: null,
+    doc: [
+      "Optional evidence-signing key registry: JSON with active key ID and keys object.",
+      "IDs are stable; new secrets at least 32 characters. Retain old IDs to verify old seals.",
+      "For untagged seals, retain the exact original secret under legacy (any original length).",
+      "The active ID cannot be legacy. Invalid configuration fails closed. Never bulk",
+      "re-seal evidence to rotate a key. See docs/engineering/evidence-key-rotation.md.",
+    ],
+    keys: [
+      {
+        key: "WAIVER_INTEGRITY_KEYS",
+        from: "manual",
+        targets: VERCEL,
+        absent: "existing evidence signs and verifies with WAIVER_INTEGRITY_SECRET or AUTH_SECRET",
       },
     ],
   },
@@ -1217,6 +1235,27 @@ export const ENV_GROUPS = [
         absent: "the /api/test/* routes are closed in a production runtime",
       },
       {
+        key: "DIVEDAY_TEST_DURATIONS_OUT",
+        from: "harness",
+        targets: NOWHERE,
+        absent: "duration reporter emits no artifact or measurement summary",
+      },
+      {
+        key: "DIVEDAY_TEMPLATE_CACHE_HIT",
+        from: "harness",
+        targets: NOWHERE,
+        absent:
+          "records the fixture cache restore result in CI measurements; absent means no reported hit",
+      },
+      {
+        key: "DIVEDAY_IMAGE_SMOKE",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent:
+          "the normal E2E build keeps image optimization disabled for deterministic screenshots",
+      },
+      {
         key: "DIVEDAY_E2E_SECRET",
         from: "harness",
         targets: NOWHERE,
@@ -1439,6 +1478,37 @@ export const ENV_GROUPS = [
         from: "platform",
         targets: NOWHERE,
         absent: "set by Vercel",
+      },
+      {
+        key: "ImageOS",
+        from: "platform",
+        targets: NOWHERE,
+        absent:
+          "GitHub hosted runner image identity is unavailable; duration observations use local or self-hosted strata",
+      },
+      {
+        key: "CI",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "marks hosted or self-hosted CI duration observations; absent means local weights",
+      },
+      {
+        key: "GITHUB_SHA",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "identifies the source commit of a duration artifact; absent is labeled local",
+      },
+      {
+        key: "GITHUB_RUN_ID",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "identifies a complete CI duration run; absent observations are not calibrated",
+      },
+      {
+        key: "GITHUB_STEP_SUMMARY",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "receives measurement summaries in GitHub Actions; absent prints console only",
       },
       {
         key: "GITHUB_ACTIONS",

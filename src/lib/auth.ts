@@ -19,7 +19,8 @@ import {
   cancelPendingSignIn,
   completePendingSignIn,
   startCredentialSignIn,
-} from "@/db/sign-in-challenges";
+  startMagicSignIn,
+} from "@/db/sign-in";
 import { trackEvent } from "@/lib/analytics";
 import { authSecret } from "@/lib/auth-secret";
 import { isStaff, type Role } from "@/lib/authz";
@@ -72,6 +73,50 @@ function diveDayCredentialsPlugin(db: DbExecutor) {
   return {
     id: "diveday-credentials",
     endpoints: {
+      signInDiveDayMagicLink: createAuthEndpoint(
+        "/sign-in/diveday-magic-link",
+        { method: "POST", body: z.object({ token: z.string().max(100) }) },
+        async (ctx) => {
+          if (!trustedSignInOrigin(ctx.headers, Boolean(ctx.request), origins))
+            throw new APIError("FORBIDDEN", { message: "invalid_origin" });
+          const ip = await clientIp(ctx.headers ?? null);
+          if (
+            !(
+              await checkRateLimit(rateLimitKey("magic-sign-in-redeem", ip), RATE_LIMITS.signInByIp)
+            ).allowed
+          )
+            throw new APIError("UNAUTHORIZED", { message: "invalid_credentials" });
+          const result = await startMagicSignIn(
+            db,
+            { ...ctx.body, previousHandle: readPendingHandle(ctx.headers, cookie.name) },
+            createProviderSession,
+          );
+          void trackEvent({
+            name: "sign_in_attempted",
+            outcome: result.status === "invalid" ? "invalid_credentials" : "success",
+          });
+          ctx.setCookie(cookie.name, "", { ...cookie.attributes, maxAge: 0 });
+          if (result.status === "invalid") {
+            log("auth.sign_in_refused", "warn", { code: "invalid_credentials" });
+            throw new APIError("UNAUTHORIZED", { message: "invalid_credentials" });
+          }
+          if (result.status === "pending") {
+            // A pending account must not inherit another account’s browser session.
+            deleteSessionCookie(ctx);
+            ctx.setCookie(cookie.name, result.handle, cookie.attributes);
+            return ctx.json({ pending: true as const, user: null, shopSlug: null });
+          }
+          try {
+            await setSessionCookie(ctx, result.value);
+          } catch (error) {
+            await ctx.context.internalAdapter
+              .deleteSession(result.value.session.token)
+              .catch(() => undefined);
+            throw error;
+          }
+          return ctx.json(signedInResponse(result.value));
+        },
+      ),
       signInDiveDayCredentials: createAuthEndpoint(
         "/sign-in/diveday-credentials",
         { method: "POST", body: z.object({ email: z.email(), password: z.string().min(1) }) },

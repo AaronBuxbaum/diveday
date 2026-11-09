@@ -7,6 +7,7 @@ import { nowDate } from "@/lib/clock";
 import {
   buildDiverExportBundle,
   diverExportFileName,
+  exportMediaFiles,
   fetchExportPhotos,
   zipExportBundle,
 } from "@/lib/export";
@@ -41,10 +42,7 @@ export async function GET(
   if (!input) return new NextResponse("Diver not found", { status: 404 });
 
   const photos = await fetchExportPhotos(input.photoUrls);
-  const files = [
-    ...buildDiverExportBundle(input, now),
-    ...photos.map((photo) => ({ name: photo.path, content: photo.bytes })),
-  ];
+  const files = [...buildDiverExportBundle(input, now), ...exportMediaFiles(photos)];
   const zip = zipExportBundle(files);
   const fileName = diverExportFileName(input.shopSlug, personId, now, input.timezone);
 

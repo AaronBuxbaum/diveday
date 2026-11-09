@@ -79,6 +79,7 @@
     "credential_unreadable": "La clave secreta guardada ya no se puede abrir: ingrésala de nuevo para corregirlo.",
     "shop_missing": "No se pudieron cargar los registros del centro.",
     "bundle_failed": "No se pudo armar el paquete de exportación.",
+    "media_incomplete": "La copia llegó, pero faltan archivos multimedia o documentos de origen. Consulta media-manifest.json en el paquete; esta copia está incompleta.",
     "encryption_key_unset": "Esta instancia de DiveDay no está preparada para guardar credenciales de forma segura.",
     "encryption_key_invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada.",
     "unknown": "La entrega se detuvo sin un motivo que reconozcamos. Haz una entrega de prueba abajo; si vuelve a fallar, revisa el endpoint, el bucket y la clave."

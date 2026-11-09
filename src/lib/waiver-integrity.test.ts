@@ -765,3 +765,31 @@ describe("the physician's answer", () => {
     expect(verifyWaiverIntegrity({ ...referral, ...answer })).toBe("unsealed");
   });
 });
+
+it("retains all field-version verdicts across signing-key rotation", () => {
+  const first = "a".repeat(40);
+  const second = "b".repeat(40);
+  try {
+    vi.stubEnv("WAIVER_INTEGRITY_KEYS", JSON.stringify({ active: "first", keys: { first } }));
+    const signed = {
+      ...record,
+      integrityVersion: 1,
+      integrityHash: computeWaiverIntegrityHash(record),
+    };
+    const redacted = {
+      ...erased,
+      integrityVersion: 2,
+      integrityHash: computeWaiverIntegrityHash(erased, 2),
+    };
+    vi.stubEnv(
+      "WAIVER_INTEGRITY_KEYS",
+      JSON.stringify({ active: "second", keys: { first, second } }),
+    );
+    expect(verifyWaiverIntegrity(signed)).toBe("valid");
+    expect(verifyWaiverIntegrity(redacted)).toBe("valid");
+    expect(verifyWaiverIntegrity({ ...redacted, medicalAlert: "restored" })).toBe("invalid");
+    expect(verifyWaiverIntegrity({ ...signed, signedName: "changed" })).toBe("invalid");
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});

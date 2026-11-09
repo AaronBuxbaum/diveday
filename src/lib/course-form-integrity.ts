@@ -1,5 +1,9 @@
 import type { CourseFormRecord } from "@/db/schema";
-import { type IntegrityValue, integrityDigest } from "@/lib/waiver-integrity";
+import {
+  type IntegrityValue,
+  integrityDigest,
+  verifyIntegrityDigest,
+} from "@/lib/waiver-integrity";
 
 /**
  * **The integrity seal on a signed course form** (issue #2266): the release's
@@ -132,7 +136,7 @@ export function verifyCourseFormIntegrity(
   ) {
     return "invalid";
   }
-  return computeCourseFormIntegrityHash(record, version) === record.integrityHash
+  return verifyIntegrityDigest(courseFormIntegrityMetadata(record, version), record.integrityHash)
     ? "valid"
     : "invalid";
 }

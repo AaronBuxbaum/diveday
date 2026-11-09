@@ -1,134 +1,213 @@
 // @vitest-environment node
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import {
+  inputsFingerprint,
+  TEMPLATE_INPUT_EXCLUDES,
+  TEMPLATE_INPUT_FILES,
+  TEMPLATE_INPUT_ROOTS,
+} from "./db-template-inputs";
 
-/**
- * The snapshot cache, from the reader's side.
- *
- * Investigated for #1157, whose reported symptom — PGlite fixtures reading the
- * local-day state blowing past Vitest's 20-second ceiling — did **not**
- * reproduce here (full `pnpm check` green, 8,485 tests, no timeout). What the
- * investigation did turn up is the mechanism that would produce it: the
- * fallback in `seededTestDb` costs `initdb + migrate + seed`, about 8.5s per
- * test against a hydration's ~0.7s, and both of the ways into it were silent.
- *
- * These pin the reader's half. `templateBytes` is re-imported per test because
- * it memoizes on `globalThis` and caches the *rejected* read too.
- */
-
-const CACHE_ENV = "DIVEDAY_TEST_CACHE_DIR";
-
-let cacheDir: string;
-let previousCacheDir: string | undefined;
-
-/**
- * A fresh module instance. Two caches have to be cleared, not one:
- * `CACHE_DIR` is resolved at module scope from `DIVEDAY_TEST_CACHE_DIR`, so the
- * module must be re-evaluated after the env var moves; and `templateBytes`
- * memoizes on `globalThis`, which survives that — including a *rejected* read,
- * which is exactly the value under test.
- */
-async function freshTemplateBytes() {
-  const globalForTemplate = globalThis as { divedayTestDbTemplate?: unknown };
-  globalForTemplate.divedayTestDbTemplate = undefined;
-  vi.resetModules();
-  const module = await import("./db-template-read");
-  return module.templateBytes;
-}
-
+let directory: string;
 beforeEach(async () => {
-  previousCacheDir = process.env[CACHE_ENV];
-  cacheDir = await mkdtemp(path.join(tmpdir(), "diveday-template-"));
-  process.env[CACHE_ENV] = cacheDir;
+  directory = await mkdtemp(path.join(tmpdir(), "diveday-template-"));
+  vi.stubEnv("DIVEDAY_TEST_CACHE_DIR", directory);
+  Object.assign(globalThis, {
+    divedayTestDbTemplate: undefined,
+    divedayTestDbFingerprints: undefined,
+    divedayTestDbManifests: undefined,
+  });
+  vi.resetModules();
 });
-
 afterEach(async () => {
-  if (previousCacheDir === undefined) delete process.env[CACHE_ENV];
-  else process.env[CACHE_ENV] = previousCacheDir;
-  await rm(cacheDir, { recursive: true, force: true });
+  vi.doUnmock("./db-template-inputs");
+  vi.doUnmock("./db-template-build");
+  vi.unstubAllEnvs();
+  await rm(directory, { recursive: true, force: true });
 });
 
-describe("templateBytes", () => {
-  it("reads a snapshot that is there", async () => {
-    await writeFile(path.join(cacheDir, "test-db-template.tar"), Buffer.from("not-really-a-tar"));
-    const templateBytes = await freshTemplateBytes();
-    const bytes = await templateBytes("lean");
-    expect(bytes).not.toBeNull();
-    expect(Buffer.from(bytes as Uint8Array).toString()).toBe("not-really-a-tar");
-  });
-
-  it("answers null when there is no snapshot, so the caller can seed from scratch", async () => {
-    const templateBytes = await freshTemplateBytes();
-    expect(await templateBytes("lean")).toBeNull();
-  });
-
-  /**
-   * The one that was a bug. `writeFile` truncates before it streams ~70MB, so a
-   * parallel Vitest invocation rewriting the snapshot leaves it zero-length for
-   * that whole window — and an empty `Uint8Array` is **truthy**, so it sailed
-   * past `seededTestDb`'s `if (!bytes)` guard and reached PGlite as an empty
-   * tar. Measured: that throws `Error: PGlite failed to initialize properly`,
-   * which names neither the cause nor the fix.
-   */
-  it("answers null for a zero-length snapshot rather than handing PGlite an empty tar", async () => {
-    await writeFile(path.join(cacheDir, "test-db-template.tar"), Buffer.alloc(0));
-    const templateBytes = await freshTemplateBytes();
-    expect(await templateBytes("lean")).toBeNull();
-  });
-
-  it("keeps the three variants apart", async () => {
-    await writeFile(path.join(cacheDir, "test-db-template-history.tar"), Buffer.from("history"));
-    await writeFile(path.join(cacheDir, "test-db-template-empty.tar"), Buffer.from("empty"));
-    const templateBytes = await freshTemplateBytes();
-    expect(await templateBytes("lean")).toBeNull();
-    expect(Buffer.from((await templateBytes("history")) as Uint8Array).toString()).toBe("history");
-    expect(Buffer.from((await templateBytes("empty")) as Uint8Array).toString()).toBe("empty");
-  });
+it("fingerprints helper edits, lockfiles and every declared input", async () => {
+  for (const root of TEMPLATE_INPUT_ROOTS)
+    await mkdir(path.join(directory, root), { recursive: true });
+  for (const file of TEMPLATE_INPUT_FILES) await writeFile(path.join(directory, file), "initial");
+  await mkdir(path.join(directory, "src/lib"));
+  const files = [
+    ...TEMPLATE_INPUT_FILES,
+    "src/lib/clock.ts",
+    "src/lib/capabilities.ts",
+    "config/env-registry.mjs",
+    "drizzle/migration.sql",
+  ];
+  let previous = await inputsFingerprint(directory);
+  for (const name of ["clock.test.ts", "clock.spec.ts", "clock.snap"]) {
+    await writeFile(path.join(directory, "src/lib", name), "test assertion");
+    expect(await inputsFingerprint(directory)).toBe(previous);
+  }
+  for (const file of files) {
+    await writeFile(path.join(directory, file), "changed");
+    const next = await inputsFingerprint(directory);
+    expect(next).not.toBe(previous);
+    previous = next;
+  }
 });
 
-describe("the snapshot is published atomically", () => {
-  /**
-   * `ensureTestDbTemplate` builds two 70MB snapshots, which is far too slow to
-   * run here. What this holds is the property that makes the window safe: the
-   * live path is only ever created by a rename, so a reader sees the whole old
-   * snapshot or the whole new one and never a prefix of either.
-   *
-   * AGENTS.md's *Parallel work* says to expect concurrent sessions in one
-   * working directory, and `DIVEDAY_TEST_CACHE_DIR` exists because worktrees
-   * can share a single `node_modules` volume — so this window is a real one,
-   * not a theoretical race.
-   */
-  it("writes through a sibling temp file and renames onto the live path", async () => {
-    const source = await readFile(path.join(process.cwd(), "src/test/db-template.ts"), "utf8");
-    expect(source).toContain("await rename(staging, destination);");
-    // The staging path must be a sibling, or `rename` crosses a filesystem and
-    // stops being atomic — and must be per-process, or two parallel builders
-    // clobber each other's temp file instead of the live one.
-    expect(source).toMatch(/const staging = `\$\{destination\}\.\$\{process\.pid\}\.tmp`;/);
-    // Never a direct write to the live path.
-    expect(source).not.toMatch(/writeFile\(\s*templateFile\(/);
-  });
+it("validates manifest identity and every snapshot's bytes", async () => {
+  const { readManifest, readSnapshot, manifestFile } = await import("./db-template-read");
+  const bytes = Buffer.from("snapshot bytes");
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const entry = { file: `${sha256}.tar`, size: bytes.length, sha256 };
+  const manifest = { fingerprint: "fixture", files: { lean: entry, history: entry, empty: entry } };
+  await writeFile(manifestFile("fixture"), JSON.stringify(manifest));
+  expect(await readManifest("fixture")).toEqual(manifest);
+  expect(await readSnapshot(entry)).toBeNull();
+  await writeFile(path.join(directory, entry.file), bytes);
+  expect(await readSnapshot(entry)).toEqual(new Uint8Array(bytes));
+  await writeFile(path.join(directory, entry.file), bytes.subarray(0, 3));
+  expect(await readSnapshot(entry)).toBeNull();
+  await writeFile(path.join(directory, entry.file), Buffer.alloc(bytes.length));
+  expect(await readSnapshot(entry)).toBeNull();
+  manifest.fingerprint = "another-checkout";
+  await writeFile(manifestFile("fixture"), JSON.stringify(manifest));
+  expect(await readManifest("fixture")).toBeNull();
 });
 
-it("invalidates both immutable CI caches when a fingerprint file changes", async () => {
-  const [workflow, builder] = await Promise.all([
-    readFile(path.join(process.cwd(), ".github/workflows/ci.yml"), "utf8"),
-    readFile(path.join(process.cwd(), "src/test/db-template.ts"), "utf8"),
-  ]);
+it("publishes a complete generation only after all blobs exist", async () => {
+  const buildSnapshot = vi.fn(async (variant: string) => Buffer.from(variant));
+  vi.doMock("./db-template-build", () => ({ buildSnapshot }));
+  vi.doMock("./db-template-inputs", () => ({ inputsFingerprint: async () => "generation" }));
+  const { ensureTestDbTemplate } = await import("./db-template");
+  const { readManifest, readSnapshot } = await import("./db-template-read");
+  await Promise.all([ensureTestDbTemplate(), ensureTestDbTemplate()]);
+  const manifest = await readManifest("generation");
+  expect(manifest).not.toBeNull();
+  for (const entry of Object.values(manifest?.files ?? {}))
+    expect(await readSnapshot(entry)).not.toBeNull();
+  buildSnapshot.mockClear();
+  await ensureTestDbTemplate();
+  expect(buildSnapshot).not.toHaveBeenCalled();
+  const lean = manifest?.files.lean;
+  if (!lean) throw new Error("missing lean");
+  await rm(path.join(directory, lean.file));
+  await ensureTestDbTemplate();
+  expect(buildSnapshot).toHaveBeenCalledTimes(3);
+  vi.doUnmock("./db-template-build");
+  vi.doUnmock("./db-template-inputs");
+});
+
+it("outer immutable CI caches include the same input manifest", async () => {
+  const workflow = await readFile(".github/workflows/ci.yml", "utf8");
   const keys = workflow
     .split("\n")
-    .filter((line) => line.includes("key:") && line.includes("-pglite-template-"));
+    .filter((line) => line.includes("-pglite-template-") && line.includes("key:"));
   expect(keys).toHaveLength(2);
   expect(keys[0]?.trim()).toBe(keys[1]?.trim());
-  // GitHub caches cannot overwrite an exact key hit. An input known only to
-  // the inner fingerprint rebuilds on every run and can never save that build.
-  const fingerprintFiles = [
-    ...builder.matchAll(/hash\.update\(await readFile\("([^"]+)"\)\)/g),
-  ].map((match) => match[1]);
-  expect(fingerprintFiles).toContain("src/test/db-template-build.ts");
-  for (const file of fingerprintFiles) {
+  for (const file of [
+    ...TEMPLATE_INPUT_ROOTS.map((root) => `${root}/**`),
+    ...TEMPLATE_INPUT_FILES,
+    ...TEMPLATE_INPUT_EXCLUDES,
+  ]) {
     for (const key of keys) expect(key).toContain(`'${file}'`);
   }
+});
+
+it("does not publish an interrupted generation", async () => {
+  vi.doMock("./db-template-inputs", () => ({ inputsFingerprint: async () => "interrupted" }));
+  vi.doMock("./db-template-build", () => ({
+    buildSnapshot: async (variant: string) => {
+      if (variant === "history") throw new Error("interrupted");
+      return Buffer.from(variant);
+    },
+  }));
+  const { ensureTestDbTemplate } = await import("./db-template");
+  const { readManifest } = await import("./db-template-read");
+  await expect(ensureTestDbTemplate()).rejects.toThrow("interrupted");
+  expect(await readManifest("interrupted")).toBeNull();
+  vi.doUnmock("./db-template-inputs");
+  vi.doUnmock("./db-template-build");
+});
+
+it("memoizes by cache directory and content identity, not by variant", async () => {
+  vi.doMock("./db-template-inputs", () => ({ inputsFingerprint: async () => "reader-fixture" }));
+  const publish = async (root: string, value: string) => {
+    const bytes = Buffer.from(value);
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const entry = { file: `${sha256}.tar`, size: bytes.length, sha256 };
+    await writeFile(path.join(root, entry.file), bytes);
+    await writeFile(
+      path.join(root, "reader-fixture.json"),
+      JSON.stringify({
+        fingerprint: "reader-fixture",
+        files: { lean: entry, history: entry, empty: entry },
+      }),
+    );
+  };
+  await publish(directory, "first checkout");
+  const first = await import("./db-template-read");
+  expect(Buffer.from((await first.templateBytes()) ?? []).toString()).toBe("first checkout");
+  const other = path.join(directory, "other");
+  await mkdir(other);
+  await publish(other, "second checkout");
+  vi.stubEnv("DIVEDAY_TEST_CACHE_DIR", other);
+  vi.resetModules();
+  const second = await import("./db-template-read");
+  expect(Buffer.from((await second.templateBytes()) ?? []).toString()).toBe("second checkout");
+});
+
+it("refreshes same-process reader identity after explicit ensure publishes changed inputs", async () => {
+  let identity = "first-generation";
+  vi.doMock("./db-template-inputs", () => ({ inputsFingerprint: async () => identity }));
+  vi.doMock("./db-template-build", () => ({
+    buildSnapshot: async (variant: string) => Buffer.from(`${identity}:${variant}`),
+  }));
+  const { ensureTestDbTemplate } = await import("./db-template");
+  const { templateBytes } = await import("./db-template-read");
+  await ensureTestDbTemplate();
+  expect(Buffer.from((await templateBytes()) ?? []).toString()).toBe("first-generation:lean");
+  identity = "second-generation";
+  await ensureTestDbTemplate();
+  expect(Buffer.from((await templateBytes()) ?? []).toString()).toBe("second-generation:lean");
+});
+
+it.each(["manifest", "snapshot"])(
+  "retries a cached missing %s after explicit ensure repairs the generation",
+  async (missing) => {
+    vi.doMock("./db-template-inputs", () => ({ inputsFingerprint: async () => "repaired" }));
+    vi.doMock("./db-template-build", () => ({
+      buildSnapshot: async (variant: string) => Buffer.from(variant),
+    }));
+    const { ensureTestDbTemplate } = await import("./db-template");
+    const { readManifest, templateBytes } = await import("./db-template-read");
+    if (missing === "snapshot") {
+      await ensureTestDbTemplate();
+      const manifest = await readManifest("repaired");
+      if (!manifest) throw new Error("fixture generation was not published");
+      await rm(path.join(directory, manifest.files.lean.file));
+    }
+    expect(await templateBytes()).toBeNull();
+    await ensureTestDbTemplate();
+    expect(Buffer.from((await templateBytes()) ?? []).toString()).toBe("lean");
+  },
+);
+
+it("uses a provided run generation without rehashing the checkout in each isolated worker", async () => {
+  const fingerprint = vi.fn(async () => "unexpected-worker-hash");
+  vi.doMock("./db-template-inputs", () => ({ inputsFingerprint: fingerprint }));
+  const bytes = Buffer.from("provided snapshot");
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const entry = { file: `${sha256}.tar`, size: bytes.length, sha256 };
+  const reader = await import("./db-template-read");
+  await writeFile(path.join(directory, entry.file), bytes);
+  await writeFile(
+    reader.manifestFile("run-generation"),
+    JSON.stringify({
+      fingerprint: "run-generation",
+      files: { lean: entry, history: entry, empty: entry },
+    }),
+  );
+  // Each isolated DB fork receives the same generation from Vitest's project context.
+  expect(await reader.templateBytes("lean", "run-generation")).toEqual(new Uint8Array(bytes));
+  expect(fingerprint).not.toHaveBeenCalled();
 });

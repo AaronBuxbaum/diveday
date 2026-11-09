@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { e2eBuildEnv } from "./e2e-build-env.mjs";
 import { buildFingerprint, writeBuildEvidence } from "./e2e-build-evidence.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
@@ -12,18 +13,7 @@ const fingerprint = buildFingerprint(root);
 const result = runBounded("pnpm", ["exec", "next", "build"], {
   stdio: "inherit",
   timeoutMs: SUBPROCESS_TIMEOUTS.build,
-  env: {
-    ...process.env,
-    APP_HOST: "https://e2e.diveday.example",
-    DATABASE_URL: "",
-    DATABASE_URL_UNPOOLED: "",
-    PGLITE_DATA_DIR: "memory",
-    DIVEDAY_E2E: "1",
-    // Stable legacy-offer fixture; default percentage copy is covered in marketing-pricing.test.tsx.
-    PRICING_MONTHLY_CENTS: "9900",
-    PRICING_BASIS_POINTS: "0",
-    NEXT_PUBLIC_SENTRY_DSN: "",
-  },
+  env: e2eBuildEnv(),
 });
 if (result.status !== 0) process.exit(result.status ?? 1);
 const swAssets = runBounded("pnpm", ["build:sw:assets"], {

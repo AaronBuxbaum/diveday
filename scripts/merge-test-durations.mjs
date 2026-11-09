@@ -4,6 +4,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { calibrateProfiles } from "./duration-profiles.mjs";
 
 /**
  * Folds the per-shard duration files CI uploads (`unit-durations-<n>`
@@ -12,6 +13,7 @@ import { fileURLToPath } from "node:url";
  *
  *   node scripts/merge-test-durations.mjs durations/*.json
  *   node scripts/merge-test-durations.mjs shard-1.log shard-2.log shard-3.log shard-4.log
+ *   node scripts/merge-test-durations.mjs --profiles <complete run histories…>
  *   node scripts/merge-test-durations.mjs --prune
  *
  * Each input is either an artifact's JSON or a saved job log: the reporter
@@ -21,7 +23,9 @@ import { fileURLToPath } from "node:url";
  * `return_content`; issue #2227). Save each "Unit tests shard n/4" job's log
  * and pass the files.
  *
- * The output is the union of the inputs and nothing else, so feed it every
+ * `--profiles` writes runner/coverage-stratified medians only after complete,
+ * compatible multi-run held-out validation. Ordinary mode keeps the existing
+ * fallback map: the output is the union of the inputs, so feed it every
  * shard of one green run: a file left out of the inputs drops out of the
  * committed set and falls back to its scaled estimate, which is harmless but
  * less even. A file named twice keeps the larger figure.
@@ -95,7 +99,32 @@ export function pruneMissing(map, exists) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const pruneOnly = args.includes("--prune");
-  const inputs = args.filter((arg) => arg !== "--prune");
+  const profilesOnly = args.includes("--profiles");
+  const inputs = args.filter((arg) => arg !== "--prune" && arg !== "--profiles");
+  if (profilesOnly) {
+    const profiles = calibrateProfiles(
+      await Promise.all(
+        inputs.map(async (file) => parseDurationsInput(await readFile(file, "utf8"), file)),
+      ),
+    );
+    for (const profile of Object.values(profiles.profiles))
+      profile.durations = pruneMissing(profile.durations, (file) =>
+        existsSync(path.join(ROOT, file)),
+      ).kept;
+    const target = path.join(ROOT, "scripts/test-duration-profiles.json");
+    // No complete stratum yet is not permission to erase an existing calibration.
+    const existing = existsSync(target)
+      ? JSON.parse(await readFile(target, "utf8"))
+      : { version: 2, profiles: {} };
+    await writeFile(
+      target,
+      `${JSON.stringify({ version: 2, profiles: { ...existing.profiles, ...profiles.profiles } }, null, 2)}\n`,
+    );
+    console.log(
+      `test-durations: calibrated ${Object.keys(profiles.profiles).length} compatible strata from ${inputs.length} shard observations`,
+    );
+    process.exit(0);
+  }
   if (inputs.length === 0 && !pruneOnly) {
     console.error(
       "usage: node scripts/merge-test-durations.mjs <shard-durations.json or shard job log…> — pass every unit shard of one green CI run; or --prune alone to drop the committed keys whose test file is gone.",
@@ -106,7 +135,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     inputs.length > 0
       ? mergeDurations(
           await Promise.all(
-            inputs.map(async (file) => parseDurationsInput(await readFile(file, "utf8"), file)),
+            inputs.map(async (file) => {
+              const parsed = parseDurationsInput(await readFile(file, "utf8"), file);
+              return parsed.version === 2 ? parsed.durations : parsed;
+            }),
           ),
         )
       : JSON.parse(await readFile(DURATIONS_PATH, "utf8"));

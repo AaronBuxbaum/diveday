@@ -150,7 +150,7 @@
     "noticeRestoreRefused": "Couldn’t restore that diver, because an active diver now uses their email. Change that email, then try again.",
     "removedToast": "Diver deleted",
     "noticeErased": "Personal data erased. The signed release, the trips, and the payments stay on file with the diver’s details gone. This cannot be undone.",
-    "noticeErasedProcessorOwed": "Personal data erased here, but something at Stripe isn’t finished. Open Settings to see what’s left and clear it. Until then this diver isn’t fully erased.",
+    "noticeErasedProcessorOwed": "Personal data erased here, but some stored files or processor records still need deletion. Open Settings to see what’s left and retry. Until then this diver isn’t fully erased.",
     "noticeNotAuthorized": "Deleting or restoring a diver is limited to owners and managers.",
     "noticeInvalid": "Check the diver’s name, email, and phone number.",
     "newDiverTitle": "Add a diver",
@@ -326,6 +326,7 @@
       "reviews": "Reviews",
       "gear": "Gear and sizes",
       "history": "Prior visits",
+      "media": "Removed files",
       "lists": "Lists and invitations"
     },
     "nothingToMove": "Nothing on file yet",

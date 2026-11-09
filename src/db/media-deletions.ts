@@ -5,19 +5,29 @@ import {
   type DeleteImageResult,
   deleteStoredImageTracked,
   isManagedStorageUrl,
+  purgeStoredImageTracked,
 } from "@/lib/storage";
+import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { diveSitePhotoStillHeld } from "./dive-site-photos";
-import { type MediaDeletionAttempt, type MediaDeletionKind, mediaDeletionAttempts } from "./schema";
+import { boundLockWaits } from "./lock-bounds";
+import {
+  type MediaDeletionAttempt,
+  type MediaDeletionKind,
+  mediaDeletionAttempts,
+  people,
+} from "./schema";
 import { unfinishedMediaDeletionWhere } from "./unfinished";
 
 /** Injectable so tests can assert both delete outcomes without a real Blob token. */
-type DeleteFn = (url: string) => Promise<DeleteImageResult>;
+export type DeleteFn = (url: string, purgeVersions?: boolean) => Promise<DeleteImageResult>;
 
 export type QueueMediaDeletionInput = {
   shopId: string;
   kind: MediaDeletionKind;
   url: string;
+  purgeVersions?: boolean;
+  personId?: string;
 };
 
 /**
@@ -43,12 +53,49 @@ export async function queueMediaDeletion(
   input: QueueMediaDeletionInput,
 ): Promise<MediaDeletionAttempt | null> {
   if (!isManagedStorageUrl(input.url)) return null;
-  const [attempt] = await db
-    .insert(mediaDeletionAttempts)
-    .values({ shopId: input.shopId, kind: input.kind, url: input.url })
-    .returning();
-  if (!attempt) throw new Error("queueMediaDeletion: insert returned no row");
-  return attempt;
+  return db.transaction(async (tx) => {
+    await boundLockWaits(tx);
+    let personId = input.personId;
+    let erased = false;
+    if (personId) {
+      await lockBoardingCertificationEvidence(tx, input.shopId, "rewrite");
+      const seen = new Set<string>();
+      while (personId) {
+        if (seen.has(personId) || seen.size === 256)
+          throw new Error("media_deletion_subject_chain_invalid");
+        seen.add(personId);
+        const [subject] = await tx
+          .select({
+            anonymizedAt: people.anonymizedAt,
+            mergedIntoPersonId: people.mergedIntoPersonId,
+          })
+          .from(people)
+          // diveday:allow-deleted-people: retired bytes remain attributable after removal, merge and erasure.
+          .where(and(eq(people.id, personId), eq(people.shopId, input.shopId)))
+          // diveday:allow-update-lock: the shared merge fence precedes the subject lock, matching erasure.
+          .for("update");
+        if (!subject) throw new Error("media_deletion_subject_not_found");
+        if (subject.mergedIntoPersonId) {
+          personId = subject.mergedIntoPersonId;
+          continue;
+        }
+        erased = Boolean(subject.anonymizedAt);
+        break;
+      }
+    }
+    const [attempt] = await tx
+      .insert(mediaDeletionAttempts)
+      .values({
+        shopId: input.shopId,
+        kind: input.kind,
+        url: input.url,
+        personId,
+        purgeVersions: erased || (input.purgeVersions ?? false),
+      })
+      .returning();
+    if (!attempt) throw new Error("queueMediaDeletion: insert returned no row");
+    return attempt;
+  });
 }
 
 export type ResolveMediaDeletionInput =
@@ -65,8 +112,9 @@ export async function resolveMediaDeletion(
   db: DbExecutor,
   attemptId: string,
   input: ResolveMediaDeletionInput,
-): Promise<void> {
-  await db
+  expectedPurgeVersions?: boolean,
+): Promise<boolean> {
+  const rows = await db
     .update(mediaDeletionAttempts)
     .set({
       status: input.status,
@@ -74,7 +122,16 @@ export async function resolveMediaDeletion(
       attempts: sql`${mediaDeletionAttempts.attempts} + 1`,
       resolvedAt: input.status === "succeeded" ? nowDate() : null,
     })
-    .where(eq(mediaDeletionAttempts.id, attemptId));
+    .where(
+      and(
+        eq(mediaDeletionAttempts.id, attemptId),
+        expectedPurgeVersions === undefined
+          ? undefined
+          : eq(mediaDeletionAttempts.purgeVersions, expectedPurgeVersions),
+      ),
+    )
+    .returning({ id: mediaDeletionAttempts.id });
+  return rows.length > 0;
 }
 
 /**
@@ -97,13 +154,22 @@ async function attemptMediaDeletion(
     await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.id, attempt.id));
     return false;
   }
-  const result = await deleteFn(attempt.url);
-  await resolveMediaDeletion(
+  const [current] = await db
+    .select()
+    .from(mediaDeletionAttempts)
+    .where(eq(mediaDeletionAttempts.id, attempt.id));
+  if (!current) return false;
+  attempt = current;
+  const result = await (attempt.purgeVersions
+    ? deleteFn(attempt.url, true)
+    : deleteFn(attempt.url));
+  const recorded = await resolveMediaDeletion(
     db,
     attempt.id,
     result.ok ? { status: "succeeded" } : { status: "failed", error: result.error },
+    attempt.purgeVersions,
   );
-  return result.ok;
+  return recorded && result.ok;
 }
 
 /**
@@ -117,7 +183,7 @@ async function attemptMediaDeletion(
 export async function queueAndAttemptMediaDeletion(
   db: AppDb,
   input: QueueMediaDeletionInput,
-  deleteFn: DeleteFn = deleteStoredImageTracked,
+  deleteFn: DeleteFn = deleteMedia,
 ): Promise<void> {
   const attempt = await queueMediaDeletion(db, input);
   if (!attempt) return;
@@ -135,7 +201,7 @@ export async function retryMediaDeletion(
   db: AppDb,
   shopId: string,
   attemptId: string,
-  deleteFn: DeleteFn = deleteStoredImageTracked,
+  deleteFn: DeleteFn = deleteMedia,
 ): Promise<boolean> {
   const [attempt] = await db
     .select()
@@ -158,7 +224,7 @@ export async function retryPendingMediaDeletions(
   db: AppDb,
   limit = 50,
   staleBefore: Date = defaultStaleBefore(),
-  deleteFn: DeleteFn = deleteStoredImageTracked,
+  deleteFn: DeleteFn = deleteMedia,
 ): Promise<{ attempted: number; succeeded: number }> {
   const rows = await db
     .select()
@@ -171,3 +237,6 @@ export async function retryPendingMediaDeletions(
   }
   return { attempted: rows.length, succeeded };
 }
+
+const deleteMedia: DeleteFn = (url, purgeVersions) =>
+  purgeVersions ? purgeStoredImageTracked(url) : deleteStoredImageTracked(url);

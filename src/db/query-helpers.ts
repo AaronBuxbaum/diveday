@@ -36,6 +36,22 @@ export async function queryAll<T extends readonly unknown[] | []>(
   return results as unknown as T;
 }
 
+/** Bound independent pool reads without queuing concurrent work on a pinned transaction. */
+export async function queryBatches<T>(
+  db: DbExecutor,
+  queries: readonly (() => Promise<T>)[],
+  concurrency = 4,
+): Promise<T[]> {
+  if (!Number.isInteger(concurrency) || concurrency < 1)
+    throw new RangeError("query concurrency must be a positive integer");
+  const width = isTransactionExecutor(db) ? 1 : concurrency;
+  const results: T[] = [];
+  for (let offset = 0; offset < queries.length; offset += width) {
+    results.push(...(await Promise.all(queries.slice(offset, offset + width).map((run) => run()))));
+  }
+  return results;
+}
+
 /**
  * Whether this executor is a transaction — one pinned connection — rather than
  * the pool. Both drivers' transaction classes (`NodePgTransaction` in

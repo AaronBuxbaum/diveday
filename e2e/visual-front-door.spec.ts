@@ -504,6 +504,15 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "sign-in-shop-escape", scheme);
       });
 
+      test(`email sign-in request and confirmation (${scheme})`, async ({ page }) => {
+        await page.goto("/email-sign-in");
+        await page.locator("h1").first().waitFor();
+        await capture(page, "email-sign-in", scheme);
+        await page.goto("/email-sign-in/example-token");
+        await page.locator("h1").first().waitFor();
+        await capture(page, "email-sign-in-confirm", scheme);
+      });
+
       test(`the forgot-password page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/forgot-password");
         // Streams behind a loading.tsx — wait for the page's h1 (see the

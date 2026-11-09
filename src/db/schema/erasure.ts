@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   integer,
@@ -78,8 +79,10 @@ export const mediaDeletionAttempts = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    personId: uuid("person_id").references(() => people.id),
     kind: mediaDeletionKind("kind").notNull(),
     url: text("url").notNull(),
+    purgeVersions: boolean("purge_versions").notNull().default(true),
     status: mediaDeletionStatus("status").notNull().default("pending"),
     attempts: integer("attempts").notNull().default(0),
     lastError: text("last_error"),

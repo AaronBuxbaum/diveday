@@ -59,6 +59,7 @@ export const TOKEN_ROUTE_PREFIXES = [
   "recap",
   "verify",
   "reset-password",
+  "email-sign-in",
   "invite",
   "unsubscribe",
   "calendar",

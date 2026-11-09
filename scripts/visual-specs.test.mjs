@@ -138,3 +138,21 @@ test("print and screen suffixes and disjoint schemes have separate owners", () =
   expect([...owners.keys()]).toEqual(["rider-light", "rider-print", "rider-dark"]);
   expect([...owners.values()].every((writers) => writers.length === 1)).toBe(true);
 });
+
+test("stops planning once the shared change requires every capture", () => {
+  const files = ["e2e/visual.spec.ts", "e2e/visual-sites.spec.ts"];
+  const reads = [];
+  const result = selectCaptureFiles({
+    files,
+    report: { suites: [] },
+    diff: { changed: ["src/proxy.ts"], context: {} },
+    graph: new Map(),
+    linesFor: () => new Set(),
+    readSource: (file) => {
+      if (files.includes(file)) reads.push(file);
+      return "";
+    },
+  });
+  expect(result.mode).toBe("all");
+  expect(reads).toEqual([files[0]]);
+});

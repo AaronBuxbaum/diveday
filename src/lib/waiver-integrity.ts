@@ -1,5 +1,5 @@
-import { createHmac } from "node:crypto";
 import type { WaiverRecord } from "@/db/schema";
+import { signEvidence, verifyEvidence } from "./evidence-signing";
 
 export type WaiverIntegrityState = "valid" | "invalid" | "unsealed";
 
@@ -356,23 +356,19 @@ export function waiverIntegrityMetadata(
   return signedMetadata(record);
 }
 
-function integritySecret(): string {
-  return (
-    process.env.WAIVER_INTEGRITY_SECRET ||
-    process.env.AUTH_SECRET ||
-    "diveday-development-waiver-integrity-secret"
-  );
-}
-
 /**
  * The keyed digest every signed-evidence seal is made of: the release's here,
- * and a course form record's (`src/lib/course-form-integrity.ts`). One key and
+ * and a course form record's (`src/lib/course-form-integrity.ts`). One signing registry and
  * one canonical serialization, so the two cannot drift apart; each field set
  * carries its own domain-separating key so a digest of one kind can never
  * verify as the other.
  */
 export function integrityDigest(value: IntegrityValue): string {
-  return createHmac("sha256", integritySecret()).update(stable(value)).digest("hex");
+  return signEvidence(stable(value));
+}
+
+export function verifyIntegrityDigest(value: IntegrityValue, seal: string): boolean {
+  return verifyEvidence(stable(value), seal);
 }
 
 export function computeWaiverIntegrityHash(
@@ -404,7 +400,10 @@ export function verifyWaiverIntegrity(record: WaiverSealedFields): WaiverIntegri
     (!record.guardianEmailErasedAt || record.guardianEmail !== null)
   )
     return "invalid";
-  return computeWaiverIntegrityHash(record, record.integrityVersion) === record.integrityHash
+  return verifyIntegrityDigest(
+    waiverIntegrityMetadata(record, record.integrityVersion),
+    record.integrityHash,
+  )
     ? "valid"
     : "invalid";
 }

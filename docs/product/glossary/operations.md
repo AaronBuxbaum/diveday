@@ -654,10 +654,12 @@
   verification status, nitrox flag, sizes, date of birth) shaped for another system's import
   wizard, so leaving never means hand-merging CSVs. It carries every diver's date of birth where
   one is on file, minors included — a deliberate part of "the whole record leaves with you", and
-  why the download is owner/manager-gated. Every image URL any CSV references that DiveDay's own storage
-  actually holds is also included as a real file under `photos/`, at the URL's own path, so a photo
-  or safely re-stored imported receipt survives after the account closes — a pasted external link or
-  bundled template asset stays a reference only (20260724-export-bundled-photos).
+  why the download is owner/manager-gated. Managed media references are listed in `media-manifest.json`
+  with completeness, inclusion status and checksums. Successfully fetched files live under `photos/`
+  at the URL's own path; missing files remain explicit rather than silently disappearing. A partial
+  interactive ZIP stays usable, but a scheduled backup with missing media is failed, not verified.
+  Included photos and safely re-stored imported receipts survive after the account closes; pasted
+  external links and bundled template assets stay references only (20260724-export-bundled-photos).
   Gated to owner/manager because it carries the
   roster's complete medical evidence in one file, where staff surfaces show it one signed record at a
   time (`divers/[personId]/waivers/[recordId]`). The "leave anytime"

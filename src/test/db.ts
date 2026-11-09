@@ -3,12 +3,24 @@ import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, afterEach, beforeAll, beforeEach, onTestFinished } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, inject, onTestFinished } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
 import { closePglite } from "@/db/close-pglite";
 import { seedDemo } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { type TemplateVariant, templateBytes } from "./db-template";
+import { templateBytes as readTemplateBytes, type TemplateVariant } from "./db-template";
+import { openRollbackTransaction } from "./rollback-transaction";
+
+declare module "vitest" {
+  export interface ProvidedContext {
+    divedayTemplateGeneration?: string;
+  }
+}
+
+// Keep Vitest context out of the standalone reader and profiling command.
+function templateBytes(variant: TemplateVariant) {
+  return readTemplateBytes(variant, inject("divedayTemplateGeneration"));
+}
 
 /**
  * Close the test's PGlite when the test finishes.
@@ -44,18 +56,22 @@ function closeWhenTestFinishes(client: PGlite): void {
  * Postgres for the rest of the worker's life. See {@link closeWhenTestFinishes}.
  */
 export async function unseededTestDb(): Promise<AppDb> {
+  const db = await unseededTestDbWithoutTeardown();
+  closeWhenTestFinishes(db.$client as PGlite);
+  return db;
+}
+
+async function unseededTestDbWithoutTeardown(): Promise<AppDb> {
   const bytes = await templateBytes("empty");
   if (!bytes) {
     warnAboutFullPrice("empty");
     const db = await createTestDb();
-    closeWhenTestFinishes(db.$client as PGlite);
     return db;
   }
   const client = new PGlite({
     loadDataDir: templateBlob("empty", bytes),
     extensions: { pg_trgm, btree_gist },
   });
-  closeWhenTestFinishes(client);
   return drizzle({ client });
 }
 
@@ -65,16 +81,16 @@ export async function unseededTestDb(): Promise<AppDb> {
 // call cost ~57ms each across ~900 db-backed tests. Same globalThis-keyed
 // per-worker caching as the bytes themselves (db-template.ts).
 const globalForBlob = globalThis as typeof globalThis & {
-  divedayTestDbBlob?: Partial<Record<TemplateVariant, Blob>>;
+  divedayTestDbBlob?: WeakMap<Uint8Array<ArrayBuffer>, Blob>;
 };
 
-function templateBlob(variant: TemplateVariant, bytes: Uint8Array<ArrayBuffer>): Blob {
-  globalForBlob.divedayTestDbBlob ??= {};
+function templateBlob(_variant: TemplateVariant, bytes: Uint8Array<ArrayBuffer>): Blob {
+  globalForBlob.divedayTestDbBlob ??= new WeakMap();
   const cache = globalForBlob.divedayTestDbBlob;
-  const cached = cache[variant];
+  const cached = cache.get(bytes);
   if (cached) return cached;
   const blob = new Blob([bytes], { type: "application/x-tar" });
-  cache[variant] = blob;
+  cache.set(bytes, blob);
   return blob;
 }
 
@@ -153,13 +169,6 @@ export async function seededShopContext(options: { history?: boolean } = {}) {
 }
 
 /**
- * Thrown to roll a test's transaction back. A sentinel rather than a plain
- * `Error` so the catch below can tell "the test is over, undo it" from a real
- * failure inside the transaction, which must still surface.
- */
-const ROLLBACK = Symbol("diveday:rollback");
-
-/**
  * One PGlite per **file**, and one transaction per test that is rolled back
  * afterwards.
  *
@@ -220,17 +229,47 @@ export function fileScopedShopContext(
     realShop?: boolean;
   } = {},
 ) {
-  let base: AppDb | undefined;
   let shop: Awaited<ReturnType<typeof getShopBySlug>>;
+  const context = fileScopedDbContext(
+    async () => {
+      const db = await seededTestDbWithoutTeardown(options);
+      shop = await getShopBySlug(db, "blue-mantis");
+      if (!shop) {
+        await closePglite(db.$client as PGlite);
+        throw new Error('seeded demo shop "blue-mantis" missing');
+      }
+      return db;
+    },
+    options.realShop
+      ? async (db) => {
+          await db.execute(sql`update shops set is_demo = false where slug = 'blue-mantis'`);
+        }
+      : undefined,
+  );
+  return {
+    get db() {
+      return context.db;
+    },
+    get shop(): NonNullable<Awaited<ReturnType<typeof getShopBySlug>>> {
+      if (!shop) throw new Error("fileScopedShopContext: read outside a test");
+      return shop;
+    },
+  };
+}
+
+/** Empty counterpart for read-only projections, never transaction/locking subjects. */
+export function fileScopedEmptyContext() {
+  return fileScopedDbContext(unseededTestDbWithoutTeardown);
+}
+
+function fileScopedDbContext(create: () => Promise<AppDb>, prepare?: (db: AppDb) => Promise<void>) {
+  let base: AppDb | undefined;
   /** The handle the tests read. Reassigned per test to the live transaction. */
   const handle: { db: AppDb } = { db: undefined as unknown as AppDb };
-  let finish: (() => void) | undefined;
-  let settled: Promise<void> | undefined;
+  let finish: (() => Promise<void>) | undefined;
 
   beforeAll(async () => {
-    base = await seededTestDbWithoutTeardown(options);
-    shop = await getShopBySlug(base, "blue-mantis");
-    if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
+    base = await create();
   });
 
   afterAll(async () => {
@@ -241,41 +280,19 @@ export function fileScopedShopContext(
   beforeEach(async () => {
     const db = base;
     if (!db) throw new Error("fileScopedShopContext: beforeAll did not run");
-    // `db.transaction` is callback-scoped, so the transaction is held open by
-    // parking the callback on a promise the teardown resolves. Nothing else
-    // touches this PGlite in the meantime — it is a single connection owned by
-    // one test file — so parking it blocks no other work.
-    let ready: () => void = () => {};
-    const opened = new Promise<void>((resolve) => {
-      ready = resolve;
-    });
-    settled = db
-      .transaction(async (tx) => {
-        handle.db = tx as unknown as AppDb;
-        ready();
-        await new Promise<void>((resolve) => {
-          finish = resolve;
-        });
-        // Every write this test made goes away with it.
-        throw ROLLBACK;
-      })
-      .catch((error) => {
-        if (error !== ROLLBACK) throw error;
-      });
-    await opened;
-    if (options.realShop) {
-      await handle.db.execute(sql`update shops set is_demo = false where slug = 'blue-mantis'`);
-    }
+    const transaction = await openRollbackTransaction((callback) => db.transaction(callback));
+    handle.db = transaction.db as unknown as AppDb;
+    finish = transaction.finish;
+    await prepare?.(handle.db);
   });
 
   afterEach(async () => {
-    finish?.();
-    finish = undefined;
-    // Await the rollback before the next test opens its own: overlapping them
-    // would put two top-level transactions on one connection.
-    await settled;
-    settled = undefined;
-    handle.db = undefined as unknown as AppDb;
+    try {
+      await finish?.();
+    } finally {
+      finish = undefined;
+      handle.db = undefined as unknown as AppDb;
+    }
   });
 
   return {
@@ -283,11 +300,6 @@ export function fileScopedShopContext(
     get db(): AppDb {
       if (!handle.db) throw new Error("fileScopedShopContext: read outside a test");
       return handle.db;
-    },
-    /** The seeded demo shop. Read once per file; it is never written. */
-    get shop(): NonNullable<Awaited<ReturnType<typeof getShopBySlug>>> {
-      if (!shop) throw new Error("fileScopedShopContext: read outside a test");
-      return shop;
     },
   };
 }

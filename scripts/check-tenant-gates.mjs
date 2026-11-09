@@ -1,7 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 
 /**
  * **Every staff page asks whether the slug in the URL is its reader's own shop**
@@ -166,4 +165,4 @@ async function main() {
   console.log(`tenant-gates: ${pages.length} staff pages compare the URL's shop to the session's`);
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();
+if (import.meta.main) await main();

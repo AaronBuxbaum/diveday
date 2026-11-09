@@ -1,4 +1,5 @@
 import { globSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { getTableName, isTable, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
@@ -10,7 +11,7 @@ import { unseededTestDb } from "@/test/db";
  *
  * Not a list of the three columns DATA-L6 (review 20260802) found unindexed —
  * that would close those three and let the fourth arrive the same way they did.
- * The set of searched columns is read out of `src/db/**` itself and checked
+ * The set of searched columns is read out of `src/db/**` and `src/features/**` and checked
  * against the indexes the committed migrations actually built, so adding an
  * `ilike(...)` arm without an index fails here rather than on the first shop
  * with a real order history. A plain btree cannot serve `'%query%'`, so an
@@ -18,30 +19,83 @@ import { unseededTestDb } from "@/test/db";
  * invisible on a demo shop, linear on a working one.
  */
 
-/** `ilike(<table>.<column>, …)` call sites, as `table.column` pairs. */
-const ILIKE_ARM = /\bilike\(\s*([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)/g;
-
 type SearchedColumn = { file: string; table: string; column: string };
 
-function searchedColumns(): SearchedColumn[] {
-  const files = globSync("src/db/**/*.ts", { cwd: process.cwd() }).filter(
-    (file) => !file.endsWith(".test.ts"),
-  );
-  const found: SearchedColumn[] = [];
-  for (const file of files.sort()) {
-    const source = readFileSync(path.join(process.cwd(), file), "utf8");
-    for (const [, tableRef, columnRef] of source.matchAll(ILIKE_ARM)) {
-      const table = (schema as Record<string, unknown>)[tableRef];
-      // A local alias or a subquery rather than one of the schema's own tables.
-      // Nothing today takes this branch; if something does, it is a real search
-      // arm this file can no longer vouch for, so it fails rather than skips.
-      if (!isTable(table)) throw new Error(`${file}: ilike on unknown table \`${tableRef}\``);
-      const column = (table as unknown as Record<string, { name?: string }>)[columnRef];
-      if (!column?.name) throw new Error(`${file}: ilike on unknown column \`${columnRef}\``);
-      found.push({ file, table: getTableName(table), column: column.name });
+// TypeScript 7 is a native compiler, not the old JavaScript compiler API.
+// Next already ships Babel's TypeScript parser for its own tooling. This
+// test-only adapter deliberately fails if that parser contract disappears.
+type SourceNode = { type: string; [key: string]: unknown };
+const { parse } = createRequire(import.meta.url)("next/dist/compiled/babel/parser") as {
+  parse(source: string, options: { sourceType: string; plugins: string[] }): SourceNode;
+};
+function sourceNode(value: unknown): SourceNode | undefined {
+  return value !== null &&
+    typeof value === "object" &&
+    "type" in value &&
+    typeof value.type === "string"
+    ? (value as SourceNode)
+    : undefined;
+}
+function identifier(value: unknown): string | undefined {
+  const node = sourceNode(value);
+  return node?.type === "Identifier" && typeof node.name === "string" ? node.name : undefined;
+}
+function walk(node: SourceNode, visit: (node: SourceNode) => void): void {
+  visit(node);
+  for (const value of Object.values(node)) {
+    for (const child of Array.isArray(value) ? value : [value]) {
+      const next = sourceNode(child);
+      if (next) walk(next, visit);
     }
   }
+}
+function columnsInSource(source: string, file: string): SearchedColumn[] {
+  if (!/\bilike\b/.test(source)) return [];
+  const parsed = parse(source, { sourceType: "module", plugins: ["typescript"] });
+  const ilikeNames = new Set(["ilike"]);
+  const aliases = new Map<string, string>();
+  walk(parsed, (node) => {
+    if (node.type !== "ImportSpecifier") return;
+    const original = identifier(node.imported);
+    const local = identifier(node.local);
+    if (!original || !local) return;
+    if (original === "ilike") ilikeNames.add(local);
+    if (isTable((schema as Record<string, unknown>)[original])) aliases.set(local, original);
+  });
+  walk(parsed, (node) => {
+    if (node.type !== "VariableDeclarator") return;
+    const original = identifier(node.init);
+    const local = identifier(node.id);
+    if (original && local && ilikeNames.has(original)) ilikeNames.add(local);
+  });
+  const found: SearchedColumn[] = [];
+  walk(parsed, (node) => {
+    if (node.type !== "CallExpression") return;
+    const callee = sourceNode(node.callee);
+    const name = identifier(callee);
+    const namespaceIlike =
+      callee?.type === "MemberExpression" && identifier(callee.property) === "ilike";
+    if ((!name || !ilikeNames.has(name)) && !namespaceIlike) return;
+    const arm = sourceNode(Array.isArray(node.arguments) ? node.arguments[0] : undefined);
+    const tableName =
+      arm?.type === "MemberExpression" && !arm.computed ? identifier(arm.object) : undefined;
+    const columnName = arm ? identifier(arm.property) : undefined;
+    if (!tableName || !columnName) throw new Error(`${file}: unaudited ilike expression`);
+    const tableRef = aliases.get(tableName) ?? tableName;
+    const table = (schema as Record<string, unknown>)[tableRef];
+    if (!isTable(table)) throw new Error(`${file}: ilike on unknown table ${tableRef}`);
+    const column = (table as unknown as Record<string, { name?: string }>)[columnName];
+    if (!column?.name) throw new Error(`${file}: ilike on unknown column ${columnName}`);
+    found.push({ file, table: getTableName(table), column: column.name });
+  });
   return found;
+}
+
+function searchedColumns(): SearchedColumn[] {
+  return globSync(["src/db/**/*.ts", "src/features/**/*.ts"], { cwd: process.cwd() })
+    .filter((file) => !file.endsWith(".test.ts"))
+    .sort()
+    .flatMap((file) => columnsInSource(readFileSync(path.join(process.cwd(), file), "utf8"), file));
 }
 
 /** `table.column` pairs carrying a `gin_trgm_ops` index, read from the live database. */
@@ -66,7 +120,7 @@ async function trigramIndexed(): Promise<Set<string>> {
 }
 
 describe("leading-wildcard ILIKE search is indexed (DATA-L6)", () => {
-  it("has a trigram index behind every column src/db searches with ilike", async () => {
+  it("has a trigram index behind every column src/db and src/features search with ilike", async () => {
     const searched = searchedColumns();
     const indexed = await trigramIndexed();
 
@@ -78,6 +132,36 @@ describe("leading-wildcard ILIKE search is indexed (DATA-L6)", () => {
       .filter((arm) => !indexed.has(`${arm.table}.${arm.column}`))
       .map((arm) => `${arm.table}.${arm.column} (${arm.file})`);
     expect(unindexed).toEqual([]);
+  });
+
+  it("rejects an unindexed feature-side search arm", async () => {
+    const indexed = await trigramIndexed();
+    const [arm] = columnsInSource('ilike(people.id, "%needle%")', "src/features/example/store.ts");
+    expect(arm?.file).toBe("src/features/example/store.ts");
+    expect(indexed.has(`${arm?.table}.${arm?.column}`)).toBe(false);
+    expect(searchedColumns().some((entry) => entry.file === "src/features/search/store.ts")).toBe(
+      true,
+    );
+  });
+
+  it("resolves imported aliases and refuses unknown aliases and dynamic expressions", () => {
+    expect(
+      columnsInSource(
+        'import { people as p } from "@/db/schema"; import { ilike as matches } from "drizzle-orm"; matches(p.fullName, q)',
+        "feature.ts",
+      ),
+    ).toEqual([{ file: "feature.ts", table: "people", column: "full_name" }]);
+    expect(() => columnsInSource("ilike(unknown.name, q)", "feature.ts")).toThrow("unknown table");
+    expect(() => columnsInSource("ilike(expression(), q)", "feature.ts")).toThrow(
+      "unaudited ilike expression",
+    );
+    expect(() => columnsInSource("orm.ilike(expression(), q)", "feature.ts")).toThrow(
+      "unaudited ilike expression",
+    );
+    expect(() =>
+      columnsInSource("const matches = ilike; matches(expression(), q)", "feature.ts"),
+    ).toThrow("unaudited ilike expression");
+    expect(columnsInSource("// ilike(unknown.name, q)", "feature.ts")).toEqual([]);
   });
 
   it("names the three arms DATA-L6 found scanning, and the one already covered", async () => {

@@ -31,6 +31,7 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // this.
   "verify",
   "reset-password",
+  "email-sign-in",
   // Staff-invite acceptance token (20260726-staff-invite-accounts).
   "invite",
   // Shop contact-email confirmation (issue #1288): /confirm-contact/[token]

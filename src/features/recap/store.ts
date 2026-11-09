@@ -13,6 +13,7 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
   getTripWithBooked,
   listTripDives,
@@ -1405,7 +1406,9 @@ export async function listRecapPhotosForTrips(
     .orderBy(desc(recapPhotos.createdAt));
 }
 
-export type DeleteRecapPhotoResult = { deleted: true; imageUrl: string } | { deleted: false };
+export type DeleteRecapPhotoResult =
+  | { deleted: true; imageUrl: string; personId: string }
+  | { deleted: false };
 
 /**
  * Take a photo down — the moderation seam, shop-scoped. Returns the removed
@@ -1420,8 +1423,14 @@ export async function deleteRecapPhoto(
   const [removed] = await db
     .delete(recapPhotos)
     .where(and(eq(recapPhotos.id, photoId), eq(recapPhotos.shopId, shopId)))
-    .returning({ imageUrl: recapPhotos.imageUrl });
-  return removed ? { deleted: true, imageUrl: removed.imageUrl } : { deleted: false };
+    .returning({ imageUrl: recapPhotos.imageUrl, bookingId: recapPhotos.bookingId });
+  if (!removed) return { deleted: false };
+  const [booking] = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(and(eq(bookings.id, removed.bookingId), eq(bookings.shopId, shopId)));
+  if (!booking) throw new Error("recap_photo_subject_missing");
+  return { deleted: true, imageUrl: removed.imageUrl, personId: booking.personId };
 }
 
 /**
@@ -2090,4 +2099,24 @@ async function sendRecaps(
   }
 
   return summary;
+}
+
+/** A rejected upload has no record to recover; keep its permanent cleanup attributable and retryable. */
+export async function retireRejectedRecapPhoto(
+  db: AppDb,
+  bookingId: string,
+  url: string,
+): Promise<void> {
+  const [booking] = await db
+    .select({ shopId: bookings.shopId, personId: bookings.personId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId));
+  if (!booking) throw new Error("recap_photo_subject_missing");
+  await queueAndAttemptMediaDeletion(db, {
+    shopId: booking.shopId,
+    personId: booking.personId,
+    kind: "recap_photo",
+    url,
+    purgeVersions: true,
+  });
 }

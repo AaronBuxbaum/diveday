@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { inputsFingerprint } from "./db-template-inputs";
 
 /**
  * The reader's half of the template snapshots, apart from the builder
@@ -32,49 +34,109 @@ export const VARIANTS: readonly TemplateVariant[] = ["lean", "history", "empty"]
 export const CACHE_DIR =
   process.env.DIVEDAY_TEST_CACHE_DIR ??
   path.join(process.cwd(), "node_modules", ".cache", "diveday");
-export const META_FILE = path.join(CACHE_DIR, "test-db-template.json");
 
-const TEMPLATE_FILENAME: Record<TemplateVariant, string> = {
-  lean: "test-db-template.tar",
-  history: "test-db-template-history.tar",
-  empty: "test-db-template-empty.tar",
+export type TemplateManifest = {
+  fingerprint: string;
+  files: Record<TemplateVariant, { file: string; size: number; sha256: string }>;
 };
 
-export function templateFile(variant: TemplateVariant): string {
-  return path.join(CACHE_DIR, TEMPLATE_FILENAME[variant]);
+export function manifestFile(fingerprint: string): string {
+  return path.join(CACHE_DIR, `${fingerprint}.json`);
 }
 
-// Each dump is tens of megabytes; read it once per worker process and share
-// across test files. globalThis survives per-file module isolation, module
-// state does not.
+export async function readManifest(fingerprint: string): Promise<TemplateManifest | null> {
+  try {
+    const manifest: TemplateManifest = JSON.parse(
+      await readFile(manifestFile(fingerprint), "utf8"),
+    );
+    if (
+      manifest.fingerprint !== fingerprint ||
+      !VARIANTS.every((variant) => {
+        const entry = manifest.files?.[variant];
+        return (
+          entry &&
+          /^[a-f0-9]{64}\.tar$/.test(entry.file) &&
+          entry.size > 0 &&
+          entry.file === `${entry.sha256}.tar`
+        );
+      })
+    )
+      return null;
+    return manifest;
+  } catch {
+    return null;
+  }
+}
+
+export async function readSnapshot(
+  entry: TemplateManifest["files"][TemplateVariant],
+): Promise<Uint8Array<ArrayBuffer> | null> {
+  try {
+    const bytes = await readFile(path.join(CACHE_DIR, entry.file));
+    if (
+      bytes.length !== entry.size ||
+      createHash("sha256").update(bytes).digest("hex") !== entry.sha256
+    )
+      return null;
+    return new Uint8Array(bytes);
+  } catch {
+    return null;
+  }
+}
+
+// The key includes the checkout's content identity and cache directory. Different
+// worktrees never hydrate one another's fixtures, even in a shared cache.
 const globalForTemplate = globalThis as typeof globalThis & {
-  divedayTestDbTemplate?: Partial<Record<TemplateVariant, Promise<Uint8Array<ArrayBuffer> | null>>>;
+  divedayTestDbTemplate?: Map<string, Promise<Uint8Array<ArrayBuffer> | null>>;
+  divedayTestDbFingerprints?: Map<string, Promise<string>>;
+  divedayTestDbManifests?: Map<string, Promise<TemplateManifest | null>>;
 };
 
-/**
- * Snapshot bytes for one variant, or null when global setup did not run (e.g. a
- * foreign config) — callers fall back to seeding from scratch.
- *
- * **A zero-length read is `null`, not an empty snapshot.** An empty
- * `Uint8Array` is truthy, so it sailed straight past `seededTestDb`'s
- * `if (!bytes)` fallback and reached PGlite as an empty tar, which throws
- * `Error: PGlite failed to initialize properly` — a message that names neither
- * the cause nor the fix. Nothing legitimately produces an empty snapshot, so
- * reading one always means the file is mid-write or truncated, and the honest
- * answer is the same as "no snapshot at all": seed from scratch and say so.
- */
-export function templateBytes(
+/** An explicit successful ensure may repair a prior miss or publish changed inputs. */
+export function refreshTemplateReader(fingerprint: string): void {
+  globalForTemplate.divedayTestDbFingerprints ??= new Map();
+  globalForTemplate.divedayTestDbFingerprints.set(process.cwd(), Promise.resolve(fingerprint));
+  const generationKey = `${CACHE_DIR}:${fingerprint}`;
+  globalForTemplate.divedayTestDbManifests?.delete(generationKey);
+  for (const key of globalForTemplate.divedayTestDbTemplate?.keys() ?? []) {
+    if (key.startsWith(`${generationKey}:`)) globalForTemplate.divedayTestDbTemplate?.delete(key);
+  }
+}
+
+export async function templateBytes(
   variant: TemplateVariant = "lean",
+  providedGeneration?: string,
 ): Promise<Uint8Array<ArrayBuffer> | null> {
-  globalForTemplate.divedayTestDbTemplate ??= {};
+  globalForTemplate.divedayTestDbFingerprints ??= new Map();
+  const fingerprints = globalForTemplate.divedayTestDbFingerprints;
+  // Vitest global setup already hashes and validates once per run. Standalone
+  // callers still compute the complete content fingerprint, never an mtime key.
+  let fingerprint = providedGeneration
+    ? Promise.resolve(providedGeneration)
+    : fingerprints.get(process.cwd());
+  if (!fingerprint) {
+    fingerprint = inputsFingerprint();
+    fingerprints.set(process.cwd(), fingerprint);
+  }
+  const identity = await fingerprint;
+  globalForTemplate.divedayTestDbManifests ??= new Map();
+  const manifests = globalForTemplate.divedayTestDbManifests;
+  const generationKey = `${CACHE_DIR}:${identity}`;
+  let generation = manifests.get(generationKey);
+  if (!generation) {
+    generation = readManifest(identity);
+    manifests.set(generationKey, generation);
+  }
+  const manifest = await generation;
+  if (!manifest) return null;
+  const entry = manifest.files[variant];
+  const key = `${CACHE_DIR}:${identity}:${entry.sha256}`;
+  globalForTemplate.divedayTestDbTemplate ??= new Map();
   const cache = globalForTemplate.divedayTestDbTemplate;
-  const cached = cache[variant];
-  if (cached) return cached;
-  const bytes = readFile(templateFile(variant)).then(
-    // Copy out of the Buffer so the type is a plain ArrayBuffer-backed view.
-    (buffer) => (buffer.length > 0 ? new Uint8Array(buffer) : null),
-    () => null,
-  );
-  cache[variant] = bytes;
+  let bytes = cache.get(key);
+  if (!bytes) {
+    bytes = readSnapshot(entry);
+    cache.set(key, bytes);
+  }
   return bytes;
 }

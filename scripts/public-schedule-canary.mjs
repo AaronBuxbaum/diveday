@@ -27,11 +27,12 @@ const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
  * The distinct departures a page links, from its hrefs: `/s/<slug>/trips/<id>` and nothing deeper
  * (a calendar or arrival-card link on a departure is the same departure).
  */
+export function tripHrefPattern(slug) {
+  return new RegExp(`^(?:https?://[^/]+)?/s/${escapeRegExp(slug)}/trips/(${UUID})(?:[/?#]|$)`, "i");
+}
+
 export function drawnTripIds(hrefs, slug) {
-  const pattern = new RegExp(
-    `^(?:https?://[^/]+)?/s/${escapeRegExp(slug)}/trips/(${UUID})(?:[/?#]|$)`,
-    "i",
-  );
+  const pattern = tripHrefPattern(slug);
   const ids = new Set();
   for (const href of hrefs) {
     const match = pattern.exec(String(href ?? ""));
@@ -60,6 +61,53 @@ export function judgeSchedule({ status, hrefs, text, slug }) {
   };
 }
 
+/**
+ * Runs in the browser and in DOM fixtures. Visibility is not viewport intersection:
+ * a drawn departure below the fold counts, a hidden Activity/streaming copy does not.
+ */
+export function visibleScheduleSnapshot({ pattern, emptyText, readyOnly = false }) {
+  const surface = document.querySelector("main");
+  if (!surface) return readyOnly ? false : { hrefs: [], text: "" };
+  const visible = (element) => {
+    for (let current = element; current; current = current.parentElement) {
+      if (current.hasAttribute("hidden") || current.hasAttribute("inert")) return false;
+      const style = current.ownerDocument.defaultView.getComputedStyle(current);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.visibility === "collapse" ||
+        style.opacity === "0" ||
+        style.contentVisibility === "hidden"
+      )
+        return false;
+    }
+    return Array.from(element.getClientRects()).some((rect) => rect.width > 0 && rect.height > 0);
+  };
+  const trip = new RegExp(pattern, "i");
+  const hrefs = Array.from(surface.querySelectorAll("a[href]"))
+    .filter((link) => {
+      if (!visible(link)) return false;
+      try {
+        const target = new URL(link.getAttribute("href"), document.baseURI);
+        return (
+          target.origin === new URL(document.baseURI).origin &&
+          trip.test(target.pathname + target.search + target.hash)
+        );
+      } catch {
+        return false;
+      }
+    })
+    .map((link) => link.getAttribute("href"));
+  if (hrefs.length > 0) return readyOnly ? true : { hrefs, text: "" };
+  const text = [];
+  const walker = document.createTreeWalker(surface, 4);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.parentElement && visible(node.parentElement)) text.push(node.textContent);
+  }
+  const drawnText = text.join(" ").replace(/\s+/g, " ");
+  return readyOnly ? drawnText.includes(emptyText) : { hrefs, text: drawnText };
+}
+
 function argValue(args, name) {
   const at = args.indexOf(name);
   return at >= 0 ? args[at + 1] : undefined;
@@ -79,20 +127,19 @@ async function main() {
   try {
     const page = await browser.newPage();
     const response = await page.goto(url, { waitUntil: "load", timeout: 45_000 });
-    // The shell can paint before the board does; wait for either answer, then judge.
-    await page
-      .waitForFunction(
-        (empty) =>
-          document.querySelector('a[href*="/trips/"]') !== null ||
-          document.body.innerText.includes(empty),
-        EMPTY_SCHEDULE_TEXT,
-        { timeout: 20_000 },
-      )
-      .catch(() => {});
-    const hrefs = await page.$$eval("a[href]", (links) =>
-      links.map((link) => link.getAttribute("href")),
-    );
-    const text = await page.evaluate(() => document.body.innerText);
+    // Scope readiness and the verdict to the same visible same-shop departure set.
+    const probe = { pattern: tripHrefPattern(slug).source, emptyText: EMPTY_SCHEDULE_TEXT };
+    if (response?.status() === 200)
+      await page
+        .waitForFunction(
+          visibleScheduleSnapshot,
+          { ...probe, readyOnly: true },
+          { timeout: 20_000 },
+        )
+        .catch((error) => {
+          if (error.name !== "TimeoutError") throw error;
+        });
+    const { hrefs, text } = await page.evaluate(visibleScheduleSnapshot, probe);
     const verdict = judgeSchedule({ status: response?.status() ?? 0, hrefs, text, slug });
     console.log(`public-schedule-canary: ${url}: ${verdict.reason}`);
     if (!verdict.ok) process.exitCode = 1;
