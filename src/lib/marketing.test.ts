@@ -495,3 +495,29 @@ describe("the continuity promise", () => {
     expect(source).toContain("t(continuityPromise.claimKey)");
   });
 });
+
+it.each(DIVER_LOCALES)("separates self-service embeds from website discussions in %s", (locale) => {
+  const copy = marketingMessages(locale);
+  const discussionKeys = [
+    "marketing.guides.fareharbor.website.offerBody",
+    "marketing.featurePages.website.lede",
+    "marketing.featurePages.website.faq1A",
+  ];
+  for (const key of discussionKeys) {
+    expect(copy[key]).toMatch(locale === "en-US" ? /discuss/i : /conversar/i);
+    expect(copy[key]).not.toMatch(
+      /in the price|same monthly price|free|gratis|va en el precio|mismo precio mensual/i,
+    );
+    expect(copy[key]).not.toMatch(/builds (?:it|one) with you|la (?:arma|construye) contigo/i);
+  }
+  expect(copy["marketing.price.item7"]).toMatch(
+    locale === "en-US" ? /booking buttons/ : /botones de reserva/,
+  );
+  expect(copy["marketing.price.item7"]).not.toMatch(/we build|construimos/i);
+  expect(copy["marketing.featurePages.website.step2Body"]).toMatch(
+    locale === "en-US" ? /Copy one code/ : /Copia un código/,
+  );
+  expect(copy["marketing.featurePages.website.faq2A"]).toMatch(
+    locale === "en-US" ? /one code/ : /un mismo código/,
+  );
+});

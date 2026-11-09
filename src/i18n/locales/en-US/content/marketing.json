@@ -70,7 +70,7 @@
     "name": "Founding shop",
     "cadence": "per location / month",
     "item3": "New features as they ship, with no higher tier",
-    "item7": "A storefront in your brand and embeds for your own site, or a website we build with you when you ask"
+    "item7": "A storefront in your brand, plus booking buttons and calendars for your own site"
   },
   "export": {
     "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs (divers, bookings, waiver records, payment history), led by a contacts file shaped for another system’s import wizard. Every stored photo (certification evidence, dive-site pictures, trip recaps) is in it as a file.",
@@ -563,8 +563,8 @@
           }
         },
         "sitesNote": "FareHarbor sells Sites separately and doesn’t publish the price; third parties report {sitesPrice} a year, before its SEO add-on.",
-        "offerHeading": "Or have us build the website",
-        "offerBody": "Ask, and a person at DiveDay builds it with you: your photos, your words, the booking already in it. It is in the price."
+        "offerHeading": "Talk to us about your website",
+        "offerBody": "Tell us what you need, and a person at DiveDay will discuss the website work with you. You can add our booking components to your existing site yourself."
       },
       "exportHeading": "Get your data out of FareHarbor",
       "exportIntro": "FareHarbor runs in a browser, and your data comes out of the Dashboard’s reports. There is no single “export everything” button. The goal is your people as a CSV. Menu labels shift over time, so treat these as the shape of the path rather than word-for-word buttons.",
@@ -1135,7 +1135,7 @@
       "metaTitle": "Dive shop website and booking page",
       "metaDescription": "A booking page in your shop’s color, typeface and photos, plus a Book Now button, calendar and trip grid for WordPress, Squarespace or Wix.",
       "title": "Divers book on a page in your shop’s colors, rated only by divers who dived with you",
-      "lede": "Your booking page wears your color, typeface and photos, and its buttons paste onto the site you run. With no site, ask, and a person here builds one with you, in the same monthly price.",
+      "lede": "Your booking page wears your color, typeface and photos, and its buttons paste onto the site you run. Need help with a new website? Reach out to discuss what you have in mind.",
       "screenLabel": "A shop’s public booking page: the shop’s name and rating, the next boat with space, and the week’s departures.",
       "note1": "The shop’s color, the typeface on its name and “Since 1987” are set once, in Settings.",
       "note2": "The next boat with space comes first, for the diver who wants to go out tomorrow.",
@@ -1147,7 +1147,7 @@
       "step3Title": "Let search engines read the trips",
       "step3Body": "Each trip, course and dive site page carries its price, open seats and rating in the form search engines read, and you decide whether the shop is listed.",
       "faq1Q": "I don’t have a website. Can you make one?",
-      "faq1A": "Yes. Write to us and a person here builds one with you, with booking in it from the start. It’s part of the same monthly price.",
+      "faq1A": "Reach out to discuss what you need with a person at DiveDay. If you already have a site, you can add our booking buttons, calendar and trip grid yourself.",
       "faq2Q": "Will the booking button work on WordPress, Squarespace and Wix?",
       "faq2A": "Yes. It’s one code for all three, and the embed page in Settings shows the extra line each one needs.",
       "faq3Q": "Can divers read it in Spanish?",

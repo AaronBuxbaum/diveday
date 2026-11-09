@@ -427,15 +427,18 @@ describe("the website ledger", () => {
   });
 
   /**
-   * H-20260901-canvas-direction-brand/H-20261025-built-order-website-priced: the website is built to order by a person — never a turnaround
-   * time, a page count, or "free website" as a feature.
+   * Aaron, 2026-11-09: website work starts with a discussion, without a price,
+   * turnaround time, page count or promise to build it.
    */
-  it("offers the built-to-order website as a person's commitment, not a feature", () => {
+  it("invites a website discussion without a price or delivery commitment", () => {
     for (const locale of DIVER_LOCALES) {
       const t = diverTranslator(locale);
       const body = t(website.offer.body);
       expect(body).not.toMatch(/\d+\s*(days?|weeks?|pages?|días?|semanas?|páginas?)/i);
-      expect(body).not.toMatch(/free website|web gratis|sitio gratis/i);
+      expect(body).not.toMatch(
+        /free website|web gratis|sitio gratis|in the price|va en el precio/i,
+      );
+      expect(body).toMatch(locale === "en-US" ? /discuss/ : /conversar/);
       expect(body).toMatch(locale === "en-US" ? /a person at DiveDay/ : /una persona de DiveDay/);
     }
   });
