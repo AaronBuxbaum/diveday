@@ -1617,18 +1617,13 @@ test.describe("with Accept-Language: es", () => {
       english: "Bring the spreadsheet with you",
       spanish: "Trae la hoja de cálculo contigo",
     },
-    // `/about`'s `h1` is its eyebrow, and the same words are the page's
-    // `<title>`. Next streams metadata through the body and React hoists the
-    // `<title>` into `<head>` a beat later, so for one frame the English title
-    // is body text for every reader, whatever their language, and the eyebrow
-    // would be "seen" on every run (PR #2165, Playwright shard 4/4). The
-    // marker is the hero's tie sentence instead, which is body copy and
-    // nothing else; `heading` is the Spanish `h1` that says the page has
-    // finished rendering.
+    // Use body copy rather than metadata, which Next briefly streams through the body.
     "/about": {
-      english: "That story is why we built DiveDay.",
-      spanish: "Por esa historia construimos DiveDay.",
-      heading: "Por qué existe DiveDay",
+      english:
+        "We build DiveDay for the people who prepare a departure and call everyone back aboard. Bookings, diver records and the roll call belong to the same day, not to separate lists that the crew has to reconcile.",
+      spanish:
+        "Construimos DiveDay para quienes preparan una salida y pasan lista al volver a bordo. Las reservas, las fichas de los buceadores y el pase de lista forman parte del mismo día, no de listas separadas que el equipo tiene que conciliar.",
+      heading: "Registros que van del mostrador al barco",
     },
   } as const;
 
