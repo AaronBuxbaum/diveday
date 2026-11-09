@@ -15,6 +15,11 @@ let directory: string;
 beforeEach(async () => {
   directory = await mkdtemp(path.join(tmpdir(), "diveday-template-"));
   vi.stubEnv("DIVEDAY_TEST_CACHE_DIR", directory);
+  Object.assign(globalThis, {
+    divedayTestDbTemplate: undefined,
+    divedayTestDbFingerprints: undefined,
+    divedayTestDbManifests: undefined,
+  });
   vi.resetModules();
 });
 afterEach(async () => {
@@ -150,3 +155,39 @@ it("memoizes by cache directory and content identity, not by variant", async () 
   const second = await import("./db-template-read");
   expect(Buffer.from((await second.templateBytes()) ?? []).toString()).toBe("second checkout");
 });
+
+it("refreshes same-process reader identity after explicit ensure publishes changed inputs", async () => {
+  let identity = "first-generation";
+  vi.doMock("./db-template-inputs", () => ({ inputsFingerprint: async () => identity }));
+  vi.doMock("./db-template-build", () => ({
+    buildSnapshot: async (variant: string) => Buffer.from(`${identity}:${variant}`),
+  }));
+  const { ensureTestDbTemplate } = await import("./db-template");
+  const { templateBytes } = await import("./db-template-read");
+  await ensureTestDbTemplate();
+  expect(Buffer.from((await templateBytes()) ?? []).toString()).toBe("first-generation:lean");
+  identity = "second-generation";
+  await ensureTestDbTemplate();
+  expect(Buffer.from((await templateBytes()) ?? []).toString()).toBe("second-generation:lean");
+});
+
+it.each(["manifest", "snapshot"])(
+  "retries a cached missing %s after explicit ensure repairs the generation",
+  async (missing) => {
+    vi.doMock("./db-template-inputs", () => ({ inputsFingerprint: async () => "repaired" }));
+    vi.doMock("./db-template-build", () => ({
+      buildSnapshot: async (variant: string) => Buffer.from(variant),
+    }));
+    const { ensureTestDbTemplate } = await import("./db-template");
+    const { readManifest, templateBytes } = await import("./db-template-read");
+    if (missing === "snapshot") {
+      await ensureTestDbTemplate();
+      const manifest = await readManifest("repaired");
+      if (!manifest) throw new Error("fixture generation was not published");
+      await rm(path.join(directory, manifest.files.lean.file));
+    }
+    expect(await templateBytes()).toBeNull();
+    await ensureTestDbTemplate();
+    expect(Buffer.from((await templateBytes()) ?? []).toString()).toBe("lean");
+  },
+);

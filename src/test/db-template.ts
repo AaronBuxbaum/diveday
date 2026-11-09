@@ -7,6 +7,7 @@ import {
   manifestFile,
   readManifest,
   readSnapshot,
+  refreshTemplateReader,
   type TemplateManifest,
   VARIANTS,
 } from "./db-template-read";
@@ -39,7 +40,10 @@ export async function ensureTestDbTemplate(
     durationMs: performance.now() - cacheStarted,
     cacheHit: cached,
   });
-  if (cached) return;
+  if (cached) {
+    refreshTemplateReader(fingerprint);
+    return;
+  }
 
   // A warm cache needs filesystem reads only; loading the seed graph costs seconds.
   const { buildSnapshot } = await import("./db-template-build");
@@ -77,4 +81,5 @@ export async function ensureTestDbTemplate(
   } finally {
     await rm(staging, { force: true });
   }
+  refreshTemplateReader(fingerprint);
 }

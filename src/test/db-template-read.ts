@@ -92,6 +92,17 @@ const globalForTemplate = globalThis as typeof globalThis & {
   divedayTestDbManifests?: Map<string, Promise<TemplateManifest | null>>;
 };
 
+/** An explicit successful ensure may repair a prior miss or publish changed inputs. */
+export function refreshTemplateReader(fingerprint: string): void {
+  globalForTemplate.divedayTestDbFingerprints ??= new Map();
+  globalForTemplate.divedayTestDbFingerprints.set(process.cwd(), Promise.resolve(fingerprint));
+  const generationKey = `${CACHE_DIR}:${fingerprint}`;
+  globalForTemplate.divedayTestDbManifests?.delete(generationKey);
+  for (const key of globalForTemplate.divedayTestDbTemplate?.keys() ?? []) {
+    if (key.startsWith(`${generationKey}:`)) globalForTemplate.divedayTestDbTemplate?.delete(key);
+  }
+}
+
 export async function templateBytes(
   variant: TemplateVariant = "lean",
 ): Promise<Uint8Array<ArrayBuffer> | null> {
