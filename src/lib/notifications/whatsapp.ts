@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import type { DiverLocale } from "@/i18n/settings";
 import { thrownErrorToken } from "@/lib/error-token";
@@ -157,23 +158,12 @@ function errorInfoFromResponse(status: number, rawBody: string): WhatsAppErrorIn
   };
 }
 
-function sleep(milliseconds: number, signal?: AbortSignal): Promise<void> {
-  if (signal?.aborted) return Promise.resolve();
-  return new Promise((resolve) => {
-    const timer = setTimeout(done, milliseconds);
-    function done() {
-      signal?.removeEventListener("abort", done);
-      resolve();
-    }
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        done();
-      },
-      { once: true },
-    );
-  });
+async function sleep(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  try {
+    await delay(milliseconds, undefined, { signal });
+  } catch (error) {
+    if (!(error instanceof Error && error.name === "AbortError")) throw error;
+  }
 }
 
 function retryDelayMs(attempt: number, random: () => number): number {
