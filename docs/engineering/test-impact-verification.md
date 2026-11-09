@@ -51,6 +51,11 @@ Do not report that convenience mode as historical recall.
 
 ## Incremental mode
 
+`pnpm test:incremental <file>` is the optional local unit-editing loop; see the
+[commands and cache lifecycle](../agents/verifying.md#local-incremental-unit-loop). It does not
+replace any step of `verify:agent`, `test:affected`, `verify:push` or full CI. Use unconditional
+focused tests for repeated flake validation, even after an incremental run passes.
+
 The [Vitest 5.1 evaluation](test-incremental-evaluation.md) includes a repeatable isolated probe
 and two complete runs. Incremental mode catches computed dynamic imports that native related
 selection misses, but misses raw filesystem data, environment changes and preserved-mtime edits
