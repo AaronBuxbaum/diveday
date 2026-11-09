@@ -15,7 +15,13 @@ async function renderSelectedMap(page: Page) {
 }
 
 const readiness = (page: Page) =>
-  withRendererBound(page, "map readiness regression", 15_000, page.evaluate(mapIsReady), false);
+  withRendererBound(
+    page,
+    "map readiness regression",
+    15_000,
+    page.evaluate(mapIsReady, true),
+    false,
+  );
 
 test("selected map readiness rejects loaded tiles until their fade has finished", async ({
   page,
