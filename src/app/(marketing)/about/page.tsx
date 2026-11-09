@@ -8,6 +8,7 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { CaptainPhoneFrame } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { DisclosureRow } from "@/components/ui/disclosure";
 import { BANNER_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { planCopyParams } from "@/features/billing";
 import { requestPricingOffer } from "@/features/pricing-offer";
@@ -28,7 +29,7 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Why DiveDay exists — DiveDay",
   description:
-    "The 1998 Great Barrier Reef story behind DiveDay’s roll call, the divers who build it, what every screen is held to, and how a shop gets set up.",
+    "The people who build DiveDay, the records and controls the crew can inspect, and how a shop gets set up.",
   alternates: { canonical: "/about" },
   openGraph: {
     ...sharedLinkCard,
@@ -146,30 +147,18 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
 
   return (
     <main className="flex-1">
-      {/* The hero is why DiveDay exists: the Lonergans, left behind on the
-          Great Barrier Reef in 1998 when nobody noticed two divers missing
-          (docs/product/marketing.md, "Biography is a claim like any other",
-          holds the sourcing and the limits: no operator or skipper named, no
-          adjective on the account, no sentence saying DiveDay would have
-          prevented it). The right column is the thing that story built, a
-          captain's roll call by name, one tap on each circle.
-
-          The eyebrow is the page's `h1`. The display heading over the story
-          ("Why did you build this") left on 2026-10-07 at the owner's call, so
-          the story is the first thing read and nothing stands over it; the
-          page's name stays on the one heading a screen reader lands on first,
-          and the story itself is set a step up from body text so the hero
-          still has a weight to it. Told flat, in the order it happened: the
-          story carries its own weight and the page does not sell with it. */}
       <section className="border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:py-24">
           <div className="max-w-2xl">
-            <Eyebrow as="h1">{t("marketing.about.eyebrow")}</Eyebrow>
+            <Eyebrow>{t("marketing.about.eyebrow")}</Eyebrow>
+            <h1 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
+              {t("marketing.about.introTitle")}
+            </h1>
             <p className="mt-6 max-w-2xl text-xl leading-8 sm:text-2xl sm:leading-9">
-              {t("marketing.about.heroDescription")}
+              {t("marketing.about.introBody")}
             </p>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
-              {t("marketing.about.heroP2")}
+              {t("marketing.about.safetyNote")}
             </p>
           </div>
           <CaptainPhoneFrame
@@ -248,6 +237,14 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
             heading here would restate the section it closes. Left-aligned on
             the section's rail, like the heading block and the grid. */}
         <FunnelCtas locale={locale} source="about-rules" footnotes={{ offer }} className="mt-10" />
+        <div className="mt-10 border-y border-border">
+          <DisclosureRow id="why-this-work-matters" heading={t("marketing.about.originTitle")}>
+            <div className="max-w-2xl space-y-5 text-base leading-7 text-muted">
+              <p>{t("marketing.about.heroDescription")}</p>
+              <p>{t("marketing.about.heroP2")}</p>
+            </div>
+          </DisclosureRow>
+        </div>
       </section>
 
       {/* How a shop gets set up and who answers afterwards, beside the

@@ -92,12 +92,14 @@ export function GuideHero({
   eyebrow,
   title,
   lede,
+  fareHarbor = false,
 }: {
   locale: DiverLocale;
   source: FunnelSource;
   eyebrow: string;
   title: string;
   lede: string;
+  fareHarbor?: boolean;
 }) {
   const t = diverTranslator(locale);
   return (
@@ -132,7 +134,9 @@ export function GuideHero({
             <div key={fact}>
               <dt className={groupLabelClass()}>{t(`switching.common.facts.${fact}.label`)}</dt>
               <dd className="mt-1 text-sm font-medium leading-6">
-                {t(`switching.common.facts.${fact}.value`)}
+                {fareHarbor && (fact === "moves" || fact === "time")
+                  ? t(`marketing.guides.fareharbor.transferChoice.${fact}Fact`)
+                  : t(`switching.common.facts.${fact}.value`)}
               </dd>
             </div>
           ))}
@@ -492,33 +496,66 @@ export function PhaseNotes({ notes }: { notes: string[] }) {
  * way (the exit promise, composed from `fullShopExport`'s shared keys so this
  * page, the homepage band, and the pricing FAQ can never drift apart).
  */
-export function ScopePhase({ locale, number }: { locale: DiverLocale; number: number }) {
+export function ScopePhase({
+  locale,
+  number,
+  source,
+}: {
+  locale: DiverLocale;
+  number: number;
+  source?: "fareharbor";
+}) {
   const t = diverTranslator(locale);
   const groups = [
-    { scope: "included" as const, label: t("switching.common.comesAcross") },
+    {
+      scope: "included" as const,
+      label:
+        source === "fareharbor"
+          ? t("marketing.guides.fareharbor.transferScope.supported")
+          : t("switching.common.comesAcross"),
+    },
     { scope: "stays-behind" as const, label: t("switching.common.staysBehind") },
   ];
   return (
     <MovePhase
       id="scope"
       number={number}
-      title={t("switching.common.scopeTableTitle")}
-      intro={t("switching.common.scopeTableDescription")}
+      title={
+        source === "fareharbor"
+          ? t("marketing.guides.fareharbor.transferScope.title")
+          : t("switching.common.scopeTableTitle")
+      }
+      intro={
+        source === "fareharbor"
+          ? t("marketing.guides.fareharbor.transferScope.intro")
+          : t("switching.common.scopeTableDescription")
+      }
     >
-      <div className="mt-6 space-y-4">
-        {groups.map((group) => (
-          <div key={group.scope}>
-            <h4 className={groupLabelClass()}>{group.label}</h4>
-            <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-              {IMPORT_HONESTY_TABLE.filter((row) => row.scope === group.scope).map((row) => (
-                <li key={row.id}>{t(IMPORT_SCOPE_ROW_KEYS[row.id].what)}</li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
+      {source === "fareharbor" ? (
+        <FareHarborTransferScope locale={locale} />
+      ) : (
+        <div className="mt-6 space-y-4">
+          {groups.map((group) => (
+            <div key={group.scope}>
+              <h4 className={groupLabelClass()}>{group.label}</h4>
+              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+                {IMPORT_HONESTY_TABLE.filter((row) => row.scope === group.scope).map((row) => (
+                  <li key={row.id}>{t(IMPORT_SCOPE_ROW_KEYS[row.id].what)}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="mt-6 border-y border-border">
-        <DisclosureRow id="import-reference" heading={t("switching.common.importReference")}>
+        <DisclosureRow
+          id="import-reference"
+          heading={
+            source === "fareharbor"
+              ? t("marketing.guides.fareharbor.transferScope.reference")
+              : t("switching.common.importReference")
+          }
+        >
           <div className="mt-8 space-y-8">
             {groups.map((group) => (
               <div key={group.scope}>
@@ -556,7 +593,9 @@ export function ScopePhase({ locale, number }: { locale: DiverLocale; number: nu
       <div className="mt-10 max-w-2xl">
         <h4 className={ITEM_TITLE_CLASS}>{t("switching.common.bothWaysTitle")}</h4>
         <p className="mt-2 text-sm leading-6 text-muted">
-          {t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
+          {source === "fareharbor"
+            ? t(fullShopExport.claimKey)
+            : t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
         </p>
         <p className="mt-2 text-sm leading-6 text-muted">{t(fullShopExport.termsKey)}</p>
       </div>
@@ -745,6 +784,68 @@ export function SourcesFootnote({
             </li>
           ))}
         </ul>
+      </div>
+    </section>
+  );
+}
+
+/** Source coverage is distinct from the importer’s supported input fields. */
+export function FareHarborTransferScope({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
+  return (
+    <dl className="mt-6 divide-y divide-border border-y border-border">
+      {(["contacts", "bookings", "certs", "evidence", "payments"] as const).map((row) => (
+        <div key={row} className="grid gap-2 py-5 sm:grid-cols-[13rem_1fr] sm:gap-6">
+          <dt className="font-semibold">
+            {t(`marketing.guides.fareharbor.transferScope.rows.${row}.title`)}
+          </dt>
+          <dd>
+            <p className="font-medium">
+              {t(`marketing.guides.fareharbor.transferScope.rows.${row}.route`)}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              {t(`marketing.guides.fareharbor.transferScope.rows.${row}.review`)}
+            </p>
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+export function FareHarborTransferChoice({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
+  return (
+    <section aria-labelledby="transfer-choice-title" className="border-b border-border bg-surface">
+      <div className={GUIDE_BAND_CLASS}>
+        <h2 id="transfer-choice-title" className={BANNER_TITLE_CLASS}>
+          {t("marketing.guides.fareharbor.transferChoice.title")}
+        </h2>
+        <p className="mt-4 font-semibold">{t("marketing.guides.fareharbor.transferChoice.note")}</p>
+        <div className="mt-8 grid gap-8 sm:grid-cols-2">
+          {(["keep", "move"] as const).map((choice) => (
+            <div key={choice} className="border-t border-border pt-5">
+              <h3 className={SUB_TITLE_CLASS}>
+                {t(`marketing.guides.fareharbor.transferChoice.${choice}Title`)}
+              </h3>
+              <p className="mt-3 leading-7 text-muted">
+                {t(`marketing.guides.fareharbor.transferChoice.${choice}Body`)}
+              </p>
+              <p className="mt-4 text-sm font-medium leading-6">
+                {t(`marketing.guides.fareharbor.transferChoice.${choice}Flow`)}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-muted">
+                {t(`marketing.guides.fareharbor.transferChoice.${choice}Review`)}
+              </p>
+            </div>
+          ))}
+        </div>
+        <Link
+          href="#scope"
+          className={buttonClass({ variant: "link", flush: true, className: "mt-6" })}
+        >
+          {t("marketing.guides.fareharbor.transferChoice.scopeLink")}
+        </Link>
       </div>
     </section>
   );

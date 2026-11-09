@@ -726,28 +726,17 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
 }) => {
   await page.goto("/about");
 
-  // The page opens on why DiveDay exists: the Lonergans, left behind on the
-  // Great Barrier Reef in 1998 (docs/product/marketing.md, "Biography is a
-  // claim like any other", holds the sourcing and the limits). The eyebrow is
-  // the page's `h1` since the 2026-10-07 rewrite (H-20261006-about-say-whose-voice): the display heading
-  // that stood over the story ("Why did you build this") left at the owner's
-  // call, along with the spoken register it belonged to, so the story is the
-  // first thing read and the page's name is the one heading a screen reader
-  // lands on first.
-  //
-  // The page's hero has failed the headline test four times before this one,
-  // every failure recorded here so none comes back: "Built by divers, for
-  // divers." (true of every dive-adjacent vendor), "One person owns every
-  // line of code running on this boat." (conceded smallness until it read as
-  // no infrastructure), "Small enough to answer you." (spent the line on the
-  // company's size) and "We'd rather be checked than believed." (picked a
-  // fight). The story carries its own weight and the page does not sell with
-  // it.
-  await expect(page.getByRole("heading", { level: 1, name: "Why DiveDay exists" })).toBeVisible();
-  await expect(page.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
-  // The tie from the story to the product is the company's, in the plural
-  // (Aaron, 2026-10-07: "we built DiveDay").
-  await expect(page.getByText(/That story is why we built DiveDay/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Records that travel from the desk to the boat" }),
+  ).toBeVisible();
+  await expect(page.getByText(/DiveDay supports the crew’s procedures/)).toBeVisible();
+  const origin = page.locator("#why-this-work-matters");
+  await expect(origin).not.toHaveAttribute("open");
+  await expect(page.getByText(/Tom and Eileen Lonergan/)).not.toBeVisible();
+  await origin.locator("summary").click();
+  await expect(origin.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
+  await expect(origin.getByText(/That story is why we built DiveDay/)).toBeVisible();
+  await origin.locator("summary").click();
 
   // Who is behind it, in generalities. The page names no individual and
   // states no CV: the founder's name, the employers that used to carry the
@@ -762,7 +751,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // The four standards every screen is held to, as cards under a statement
   // heading. Each is a shipped behavior a visitor can reproduce in the demo.
   await expect(
-    page.getByRole("heading", { name: "The one job on a boat that can’t go wrong" }),
+    page.getByRole("heading", { name: "Design choices the crew can inspect" }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "The roll call runs with no signal" }),
@@ -789,9 +778,9 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   for (const heading of headings)
     expect(heading, `a question heads a band: ${heading}`).not.toMatch(/\?/);
   expect(headings.indexOf("Divers who have shipped software to millions of people")).toBeLessThan(
-    headings.indexOf("The one job on a boat that can’t go wrong"),
+    headings.indexOf("Design choices the crew can inspect"),
   );
-  expect(headings.indexOf("The one job on a boat that can’t go wrong")).toBeLessThan(
+  expect(headings.indexOf("Design choices the crew can inspect")).toBeLessThan(
     headings.indexOf("We set your shop up with you"),
   );
 
@@ -806,7 +795,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // its own demo button on every marketing page (#934).
   const aboutMain = page.getByRole("main");
   const standardsBand = aboutMain.locator("section").filter({
-    has: page.getByRole("heading", { name: "The one job on a boat that can’t go wrong" }),
+    has: page.getByRole("heading", { name: "Design choices the crew can inspect" }),
   });
   await expect(standardsBand.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
   await expect(standardsBand.locator(SET_UP_DOOR)).toHaveCount(1);
@@ -994,6 +983,16 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // coexist-led: keep the storefront and run the dive day, or leave the fee —
   // then the same export/scope/import mechanics every guide shares.
   await page.goto("/switching/fareharbor");
+  await expect(
+    page.getByText(/Manual transfer: changes do not travel automatically/),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Check the transfer scope" })).toHaveAttribute(
+    "href",
+    "#scope",
+  );
+  await expect(page.locator("#scope").getByText("Not in the export described here")).toBeVisible();
+  await expect(page.locator("#import-reference")).not.toHaveAttribute("open");
+
   await expect(
     page.getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat" }),
   ).toBeVisible();

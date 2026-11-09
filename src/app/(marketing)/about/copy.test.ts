@@ -7,7 +7,7 @@ import type { DiverLocale } from "@/i18n/settings";
  * limits** (docs/product/marketing.md, "Biography is a claim like any other";
  * the 2026-10-07 rewrite is H-20261006-about-say-whose-voice in docs/product/human-decisions/README.md).
  *
- * The page opens on why DiveDay exists: Tom and Eileen Lonergan, left behind
+ * The optional origin story explains why DiveDay exists: Tom and Eileen Lonergan, left behind
  * on the Great Barrier Reef in January 1998. Only what the public record holds
  * is stated, the operator and skipper are never named, and no sentence says or
  * implies DiveDay would have prevented it. Everything after that section
@@ -39,7 +39,7 @@ function sentencesOf(about: (typeof DIVER_MESSAGES)[DiverLocale]["marketing"]["a
   return values;
 }
 
-describe("the /about hero", () => {
+describe("the /about origin story", () => {
   it.each(LOCALES)("tells the Lonergan story within the public record in %s", (_l, messages) => {
     const { heroDescription, heroP2 } = messages.marketing.about;
     expect(heroDescription).toContain("Lonergan");
@@ -146,5 +146,15 @@ describe("the rest of /about", () => {
     for (const value of sentencesOf(messages.marketing.about)) {
       expect(retired.has(value.trim()), `retired heading back on the page: ${value}`).toBe(false);
     }
+  });
+});
+
+describe("the practical /about introduction", () => {
+  it.each(LOCALES)("leads with scope, not a safety guarantee in %s", (_l, messages) => {
+    const { introTitle, introBody, safetyNote, buildTitle } = messages.marketing.about;
+    expect(introTitle).not.toContain("Lonergan");
+    expect(introBody).not.toContain("1998");
+    expect(safetyNote).toMatch(/does not replace|No sustituye/);
+    expect(buildTitle).not.toMatch(/can’t go wrong|no puede fallar/);
   });
 });

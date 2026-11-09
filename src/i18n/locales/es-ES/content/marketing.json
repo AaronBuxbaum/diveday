@@ -601,6 +601,54 @@
         "cardSummary": "Un motor de reservas para tours, no software de buceo. Consérvalo como escaparate y lleva el día de buceo que él no puede, o toma también la reserva aquí.",
         "metaDescription": "¿Estás en FareHarbor? Conserva su red de reservas y distribución y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o toma también la reserva aquí. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
         "heroLede": "FareHarbor toma la reserva online y te pone delante de su red de hoteles y revendedores. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva FareHarbor como escaparate, o toma también la reserva aquí."
+      },
+      "transferChoice": {
+        "title": "Elige cómo llegan las reservas al equipo",
+        "note": "Transferencia manual: los cambios no pasan automáticamente entre FareHarbor y DiveDay.",
+        "keepTitle": "Mantén las reservas en FareHarbor",
+        "keepBody": "Las reservas y la distribución siguen en FareHarbor. Importa contactos y visitas anteriores desde archivos CSV. Después, el equipo crea las salidas y agrega las reservas próximas en DiveDay; la importación no crea una lista operativa.",
+        "keepFlow": "CSV de contactos e historial → importación manual; reservas próximas → creación y asignación manual en DiveDay",
+        "keepReview": "El equipo concilia las nuevas reservas, los cambios y las cancelaciones en ambos sistemas. Verifica las opciones de exportación y el trabajo necesario antes de depender de este esquema.",
+        "moveTitle": "Recibe nuevas reservas en DiveDay",
+        "moveBody": "Dirige tu enlace de reservas al calendario de DiveDay y cobra mediante tu cuenta de Stripe. El equipo revisa los registros importados antes de la primera salida.",
+        "moveFlow": "Tu enlace de reservas → calendario de DiveDay → preparación de la salida",
+        "moveReview": "DiveDay no sustituye la red de distribución de FareHarbor. Evalúa esa diferencia y los precios antes de cambiar tu enlace de reservas.",
+        "scopeLink": "Revisar el alcance de la transferencia",
+        "movesFact": "Contactos e historial de reservas desde las exportaciones descritas; los demás registros necesitan otra fuente.",
+        "timeFact": "Depende de la exportación, la calidad de los registros y la revisión."
+      },
+      "transferScope": {
+        "title": "Desde las exportaciones de FareHarbor descritas aquí",
+        "intro": "Revisa las columnas de tu archivo antes de planificar el cambio. Que DiveDay acepte un campo no significa que FareHarbor lo exporte.",
+        "reference": "Todos los campos que DiveDay acepta si los proporcionas",
+        "supported": "Admitidos si los proporcionas por separado",
+        "rows": {
+          "contacts": {
+            "title": "Nombres, email y teléfono",
+            "route": "CSV de contactos",
+            "review": "Revisa la vista previa y relaciona las columnas; las opciones de exportación pueden variar."
+          },
+          "bookings": {
+            "title": "Historial de reservas",
+            "route": "CSV de reservas separado, como referencia histórica",
+            "review": "Relaciona a los buceadores por email y revisa las fechas. Las visitas importadas no crean reservas próximas, pedidos ni entradas del pase de lista."
+          },
+          "certs": {
+            "title": "Certificaciones y tallas de alquiler",
+            "route": "No están en la exportación descrita aquí",
+            "review": "Agrégalas por separado si tienes los registros. El equipo sigue verificando los requisitos de certificación."
+          },
+          "evidence": {
+            "title": "Exenciones y evidencia médica",
+            "route": "Revisa los documentos de origen por separado",
+            "review": "No supongas que están en el CSV. La evidencia importada necesita procedencia y revisión del equipo; importar no equivale a una nueva firma ni a una autorización médica."
+          },
+          "payments": {
+            "title": "Credenciales de tarjetas de pago",
+            "route": "No se transfieren",
+            "review": "No incluyas números de tarjeta ni códigos de seguridad en una importación."
+          }
+        }
       }
     },
     "rezdy": {
@@ -670,8 +718,8 @@
     "peopleP1": "Las personas que construyen DiveDay han pasado su carrera en software del que dependen millones de personas, y sus fines de semana en barcos de buceo. Conocemos el mostrador desde el lado del buceador, con la tarjeta de certificación en la mano mientras el dueño busca la exención, y la cubierta, donde un divemaster recorre un portapapeles mojado mientras el barco espera. DiveDay es la herramienta que queríamos en los dos lugares: registros en los que confiar, en una pantalla que se maneja con el pulgar mojado.",
     "peopleP2": "Los centros de buceo que conocemos llevan el día en una pizarra junto a la puerta, un portapapeles que sale en el barco, una hoja de cálculo que alguien actualiza a mano y un puñado de aplicaciones que guardan cada una su propia lista de los mismos buceadores. El dueño conoce a cada buceador por su nombre, y cada mañana parte de ese conocimiento se copia de una herramienta a otra mientras el resto viaja en su cabeza. DiveDay está hecho para que ese conocimiento se escriba una sola vez y salga con el barco en el teléfono del capitán.",
     "buildEyebrow": "Lo primero",
-    "buildTitle": "La única tarea en un barco que no puede fallar",
-    "buildDescription": "El pase de lista es el único registro de un día de buceo que tiene que salir bien a la primera, así que por ahí empieza DiveDay. La reserva, la exención, la verificación de certificación, las tallas y el pago tienen cada uno su propia pantalla, y cada una de esas pantallas existe para que el capitán abra el manifiesto con los registros en orden y lo único que quede sea leer los nombres.",
+    "buildTitle": "Decisiones de diseño que el equipo puede revisar",
+    "buildDescription": "Contar a cada persona por su nombre. Mantener visibles a quienes siguen sin confirmar. Conservar el historial registrado. El manifiesto reúne reservas, exenciones y certificaciones para que el equipo las revise, no para que el software decida si una inmersión es segura.",
     "rules": {
       "survivesDock": {
         "title": "El pase de lista funciona sin señal",
@@ -707,7 +755,11 @@
       "onePriceTitle": "Un plan cubre el centro",
       "onePriceBody": "El plan es el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {, sin cuota mensual}}, y cubre cada parte de DiveDay y una cuenta para cada persona de tu personal. Las propinas nunca cuentan. La página de precios enumera cada cosa que cubre.",
       "seeCost": "El {percent} del dinero cobrado con tarjeta{hasBase, select, yes { y {base} al mes} other { a través de DiveDay}}. Mira la lista completa"
-    }
+    },
+    "introTitle": "Registros que van del mostrador al barco",
+    "introBody": "Construimos DiveDay para quienes preparan una salida y pasan lista al volver a bordo. Las reservas, las fichas de los buceadores y el pase de lista forman parte del mismo día, no de listas separadas que el equipo tiene que conciliar.",
+    "safetyNote": "DiveDay apoya los procedimientos del equipo. No sustituye el criterio profesional, el pase de lista presencial ni las responsabilidades de seguridad del centro.",
+    "originTitle": "Por qué nos importa este trabajo"
   },
   "product": {
     "eyebrow": "Funciones",
