@@ -150,13 +150,24 @@ for (const visit of walkPlan()) {
  */
 async function visitPath(page: Page, visit: ReturnType<typeof walkPlan>[number]) {
   if (visit.mint !== "setup-link") return visit.path;
-  const minted = await page.request.post("/api/test/seed-setup-link", {
+  const minted = await page.request.post("/api/test/shop", {
     headers: { authorization: `Bearer ${E2E_TEST_ROUTE_SECRET}` },
+    data: { facts: ["setupLink"] },
   });
   if (!minted.ok()) throw new Error(`persona-bots: no setup link minted (${minted.status()})`);
-  const { path: linkPath } = (await minted.json()) as { path: string };
-  return linkPath;
+  const { values } = (await minted.json()) as { values: { setupLink: { path: string } } };
+  return values.setupLink.path;
 }
+
+// Exercise the same minting path as the walk against the real test door. A
+// successful response alone is insufficient: Victor must see the signup form.
+test("Victor's setup link opens the onboarding form", async ({ page }) => {
+  const visit = walkPlan().find((entry) => entry.path === "/onboard");
+  if (!visit) throw new Error("persona-bots: Victor has no onboarding visit");
+  const path = await visitPath(page, visit);
+  await page.goto(path);
+  await expect(page.locator('input[name="shopName"]').filter({ visible: true })).toBeVisible();
+});
 
 /** One surface, opened and probed. Throws only when the harness broke. */
 async function visitSurface(
@@ -186,9 +197,12 @@ async function visitSurface(
     findings.push({ probe, path: visit.path, personas: visit.personas, detail, impact });
   };
 
+  // Minting is harness setup, so a failure must abort the walk rather than
+  // be filed as a failure of the page that was never opened.
+  const path = await visitPath(page, visit);
   let rendered = false;
   try {
-    const response = await page.goto(await visitPath(page, visit), { waitUntil: "load" });
+    const response = await page.goto(path, { waitUntil: "load" });
     const status = response?.status() ?? 0;
     // A **refusal** surface is asked for nothing but that it render: a
     // `notFound()` reached from inside a streamed segment cannot change a

@@ -203,7 +203,7 @@ export const PERSONAS = Object.freeze([
       { path: "/switching" },
       { path: "/switching/eve" },
       // The form opens only through a single-use setup link (ADR 20261009-single-use-setup-links),
-      // so the walk mints one the way the founder's mail carries it (`/api/test/seed-setup-link`)
+      // so the walk mints one the way the founder's mail carries it (the `setupLink` fact at `/api/test/shop`)
       // and opens the form Victor would fill in (#3657). A bare visit is the closed door.
       { path: "/onboard", mint: "setup-link" },
     ],
