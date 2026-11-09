@@ -14,7 +14,7 @@ on:
   #
   # A workflow-level trigger fires *every* job in the file, so on its own this
   # would silently start running lint, typecheck, four unit shards, the build,
-  # and twelve Playwright/visual shards every night. Two reasons that is not
+  # and the Playwright/visual matrices every night. Two reasons that is not
   # merely wasteful: it roughly doubles this workflow's runner minutes for no
   # signal (the same commit already went green on merge), and `visual-publish`
   # would republish main's S3 snapshot on a run that resolved no baseline —
@@ -130,7 +130,7 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         if: ${{ !cancelled() }}
-        run: pnpm typecheck
+        run: node scripts/typecheck-ci.mjs
       # The failing guards go to the job summary by name, and every guard's
       # result to the `check-repo-results` artifact, so a catch rate per guard
       # can be read across runs (scripts/repo-check-report.mjs).
@@ -256,6 +256,7 @@ jobs:
       - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --reporter=blob ${{ needs.changes.outputs.safety != 'false' && '--coverage.enabled' || '' }} --shard=${{ matrix.shard }}/4
         env:
           DIVEDAY_TEST_DURATIONS_OUT: test-durations/shard-${{ matrix.shard }}.json
+          DIVEDAY_TEMPLATE_CACHE_HIT: ${{ steps.pglite-template.outputs.cache-hit }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
@@ -388,6 +389,8 @@ jobs:
       # SENTRY_AUTH_TOKEN configured there — that is what uploads source maps and
       # configures the release, not this job, so no Sentry token is needed here.
       - run: pnpm e2e:build
+        env:
+          DIVEDAY_CI_TYPE_GATE: "1"
       # perf:budget reads the build manifest produced immediately above.
       - run: pnpm perf:budget
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -709,7 +712,7 @@ jobs:
   # 2026-10-13, item 22). A green pull request run was 47% visual capture by
   # job-minutes, and a stack re-captured all 1,158 surfaces on every layer. So:
   #
-  # - A push to main captures everything on eight shards and publishes it, as
+  # - A push to main captures everything on the full visual matrix and publishes it, as
   #   it always did: main's snapshot is the baseline every later commit and
   #   every branch cut from it compares against, and it is never narrowed.
   # - A pull request captures what its diff can reach plus a smoke set
@@ -1318,7 +1321,7 @@ jobs:
           # the last two are the harness itself, so a change to how the proof is
           # run is also a reason to re-run it.
           db_paths=$(git diff --name-only "${base}...${head}" -- \
-            src/db src/features drizzle src/test/postgres.ts scripts/previous-release-migrations.mjs \
+            src/db src/features drizzle 'src/test/postgres*.ts' scripts/previous-release-migrations.mjs \
             .github/workflows/ci.yml)
           if [ -n "${db_paths}" ]; then
             echo "db=true" >> "$GITHUB_OUTPUT"

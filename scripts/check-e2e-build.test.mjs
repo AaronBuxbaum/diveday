@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { test } from "vitest";
+import { test, vi } from "vitest";
 import { BUILD_EVIDENCE, buildFingerprint, requireFreshBuild } from "./e2e-build-evidence.mjs";
 
 function fixture(t) {
@@ -142,4 +142,12 @@ test("cold CI runners can reuse the transferred build with the shared Node selec
   } finally {
     Object.defineProperty(process, "version", original);
   }
+});
+
+test("optimized-image and deterministic screenshot builds are not interchangeable", (t) => {
+  vi.stubEnv("DIVEDAY_IMAGE_SMOKE", "");
+  t.onTestFinished(() => vi.unstubAllEnvs());
+  const root = fixture(t);
+  vi.stubEnv("DIVEDAY_IMAGE_SMOKE", "1");
+  assert.throws(() => requireFreshBuild(root), /stale/);
 });

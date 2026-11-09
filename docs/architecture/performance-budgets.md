@@ -50,19 +50,12 @@ than no budget.
   `next.config.ts`) are inert under this app's Turbopack build (webpack-only in the SDK today), so
   that avenue is not currently available to offset the SDK's own cost.
 
-This is the floor cost paid on every staff surface — the Today queue, the manifest, the roster — so
-it is both the largest single lever and the easiest to regress without noticing. Per-route budgets
-are intentionally out of scope for now: the shared baseline dominates the experience and is the
-easiest to regress. (The old reason given here — that Turbopack emits no stable route→chunk map —
-has expired; `route-bundle-stats.json` is exactly that, and is now what the guard reads. Per-route
-budgets are a choice not to spend, no longer a thing that cannot be done.)
+This is the floor cost paid on every staff surface: the Today queue, the manifest and the roster. Representative per-route ceilings now complement it, using the same stable `route-bundle-stats.json` map. A dependency added to one route can fail that route's ceiling without moving the intersection. Runtime/RSC baselines are reported separately; they are not inferred from JavaScript bytes.
 
 ## How it runs
 
 `pnpm perf:budget` (`scripts/perf-budget.mjs`) reads `.next/diagnostics/route-bundle-stats.json`
-after a production build, gzips the shared chunks, and fails if the total exceeds the budget or a
-shared chunk carries one of the floor markers. CI runs it in the
-`checks` job right after `pnpm build`. Run without a build it prints how to produce one and exits
+after a production build, gzips the shared and named route chunks, and fails if a ceiling is exceeded or a shared chunk carries one of the floor markers. CI runs it in the `Build` job right after `pnpm e2e:build`. Run without a build it prints how to produce one and exits
 zero, so it never fails a checkout that simply hasn't built.
 
 ## Not budgeted, but watched: server round trips per page
@@ -178,3 +171,8 @@ The automated budget bounds bytes over the wire; it does not prove the page feel
 phone. Real-user vitals flow to Vercel Speed Insights (`<SpeedInsights />` in the root layout);
 V-02's outdoor field test (`docs/product/features/roadmap.md`) is where the manifest is exercised on a real
 device on real marina Wi-Fi.
+
+
+## November 9 route and runtime expansion
+
+The shared 170 KB gzip floor remains mandatory. Representative route-specific first-load JS is now measured independently by `scripts/perf-budget.mjs`; route-local growth can fail without changing the shared floor. The fixed-fixture browser lane reports JS/RSC payload, long tasks and cold/warm/cache navigation separately. Runtime samples start report-only: shared CI variability does not justify a hard millisecond gate without repeated baselines. Method, historical CI sample and limitations: [implementation record](../engineering/performance-audit-implementation.md).

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { BaseSequencer, type TestSpecification } from "vitest/node";
 
@@ -72,7 +72,7 @@ const TEST_DECLARATION =
  * `seededShopContext()` in the prose explaining why it stopped using it — the
  * same discipline `TEST_DECLARATION` needs for `// it("not a test")`.
  */
-const FILE_SCOPED_CALL = /\bfileScopedShopContext\s*\(/;
+const FILE_SCOPED_CALL = /\bfileScoped(?:Shop|Empty)Context\s*\(/;
 /**
  * Per-test hydration, taken **directly**. A file matching this pays a database
  * per test whatever else it does, so a file using both helpers — `divers.test.ts`
@@ -207,8 +207,26 @@ function isDuration(value: unknown): value is number {
  * not an error: the estimate alone still produces a valid partition, just a
  * less even one.
  */
-export function readDurations(root: string): Durations {
+export function readDurations(root: string, coverage = false): Durations {
+  const key = `${process.platform}-${process.arch}-${process.env.ImageOS ?? (process.env.CI ? "self-hosted" : "local")}|node${process.versions.node.split(".")[0]}|coverage:${coverage}`;
   try {
+    const catalog = JSON.parse(
+      readFileSync(path.join(root, "scripts/test-duration-profiles.json"), "utf8"),
+    );
+    const profile = catalog.profiles?.[key];
+    if (profile?.durations) {
+      console.log(
+        `test-weights: ${key}; source ${profile.sourceSha}, measured ${profile.measuredAt} (${Math.max(0, (Date.now() - Date.parse(profile.measuredAt)) / 86400000).toFixed(1)} days old); ${profile.runs.length} runs`,
+      );
+      return profile.durations;
+    }
+  } catch {
+    /* No calibrated matching stratum yet: deterministic legacy estimates remain valid. */
+  }
+  try {
+    console.log(
+      "test-weights: no matching calibrated runner/coverage profile; legacy weight source/age unknown, scaled estimates cover missing paths",
+    );
     const parsed: unknown = JSON.parse(readFileSync(path.join(root, DURATIONS_FILE), "utf8"));
     if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
     return parsed as Durations;
@@ -228,7 +246,18 @@ export class CostWeightedSequencer extends BaseSequencer {
       }))
       .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
       .map((entry) => ({ ...entry, estimate: estimateCost(readSource(entry.item.moduleId)) }));
-    return partition(weigh(keyed, readDurations(config.root)), index, count);
+    const durations = readDurations(config.root, config.coverage.enabled);
+    const weighted = weigh(keyed, durations);
+    const measured = keyed.filter((entry) => isDuration(durations[entry.key])).length;
+    const bins = Array.from({ length: count }, (_, i) => partition(weighted, i + 1, count));
+    const weights = new Map(weighted.map((entry) => [entry.item, entry.weight]));
+    const loads = bins.map((bin) => bin.reduce((sum, item) => sum + (weights.get(item) ?? 0), 0));
+    if (new Set(bins.flat()).size !== files.length || bins.flat().length !== files.length)
+      throw new Error("Shard partition must execute each test exactly once");
+    const summary = `test-weights: ${measured}/${keyed.length} files measured (${((100 * measured) / Math.max(1, keyed.length)).toFixed(1)}%); predicted critical path ${Math.round(Math.max(...loads))} ms, total work ${Math.round(loads.reduce((a, b) => a + b, 0))} ms\n`;
+    console.log(summary);
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+    return bins[index - 1];
   }
 }
 

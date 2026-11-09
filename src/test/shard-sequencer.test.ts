@@ -45,6 +45,16 @@ it("a", async () => { const db = await createTestDb(); });`;
    * tree, `dive-sites` (per test) and `trips-queries` (file-scoped) ran 30 and
    * 29 tests for 46.6s and 1.9s.
    */
+  it("recognizes the narrow empty rollback context as one hydration per file", () => {
+    const source = `import { fileScopedEmptyContext } from "@/test/db";
+const ctx = fileScopedEmptyContext();
+it("a", async () => {});
+it("b", async () => {});`;
+    expect(estimateCost(source)).toBe(
+      PER_FILE_FILE_SCOPED_DB_COST + 2 * PER_TEST_FILE_SCOPED_DB_COST,
+    );
+  });
+
   it("charges a file-scoped file once for its database, not once per test", () => {
     const source = `import { fileScopedShopContext } from "@/test/db";
 const ctx = fileScopedShopContext();
@@ -228,6 +238,33 @@ describe("weigh", () => {
 });
 
 describe("readDurations", () => {
+  it("selects only a compatible calibrated runner and coverage mode", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "duration-profiles-"));
+    try {
+      await mkdir(path.join(root, "scripts"));
+      await writeFile(path.join(root, DURATIONS_FILE), JSON.stringify({ fallback: 50 }));
+      const runner = `${process.platform}-${process.arch}-${process.env.ImageOS ?? (process.env.CI ? "self-hosted" : "local")}`;
+      const key = `${runner}|node${process.versions.node.split(".")[0]}|coverage:true`;
+      await writeFile(
+        path.join(root, "scripts/test-duration-profiles.json"),
+        JSON.stringify({
+          version: 2,
+          profiles: {
+            [key]: {
+              sourceSha: "training-sha",
+              measuredAt: "2026-11-09T00:00:00Z",
+              runs: [1, 2, 3],
+              durations: { measured: 10 },
+            },
+          },
+        }),
+      );
+      expect(readDurations(root, true)).toEqual({ measured: 10 });
+      expect(readDurations(root, false)).toEqual({ fallback: 50 });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it("reads the committed file, and treats a missing or malformed one as empty", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "durations-"));
     try {

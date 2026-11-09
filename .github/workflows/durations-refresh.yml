@@ -7,11 +7,11 @@ name: Durations refresh
 # committed so every shard computes the same deal, which means they go stale
 # by hand: the unit file was refreshed on 2026-10-09 and the shards already
 # spread 49% on 10-10 (code review 2026-10-10, finding 6). Every CI run
-# already uploads what it measured, so this folds the newest main run's
-# measurements back in once a week and commits them when they moved.
+# already uploads what it measured. This calibrates compatible complete unit
+# histories and refreshes the newest complete browser run once a week.
 #
-# Straight to main, not through a pull request, whenever the diff is the two
-# JSON files and nothing else (the only files this job writes; the step
+# Straight to main, not through a pull request, whenever the diff is the
+# duration-data files and nothing else (the only files this job writes; the step
 # checks rather than assumes). A pull request opened with the workflow token
 # starts no CI of its own (GitHub's rule against recursive runs) and main has
 # no required checks, so the PR this job used to open waited for someone to
@@ -64,18 +64,25 @@ jobs:
       - name: Find the run to read
         id: run
         run: |
+          ids=()
           for id in $(gh run list --workflow ci.yml --branch main --event push --status success --limit 20 --json databaseId --jq '.[].databaseId'); do
             names=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${id}/artifacts?per_page=100" --jq '.artifacts[] | select(.expired | not) | .name')
             if [ "$(grep -c '^unit-durations-' <<<"$names")" -eq 4 ]; then
-              echo "id=${id}" >> "$GITHUB_OUTPUT"
-              echo "Reading run ${id}."
-              exit 0
+              ids+=("$id")
+              if [ "${#ids[@]}" -eq 10 ]; then break; fi
             fi
           done
-          echo "::error::No successful main run in the last 20 carries all four unit-durations artifacts."
-          exit 1
+          if [ "${#ids[@]}" -eq 0 ]; then
+            echo "::error::No successful main run in the last 20 carries all four unit-durations artifacts."
+            exit 1
+          fi
+          echo "id=${ids[0]}" >> "$GITHUB_OUTPUT"
+          echo "ids=${ids[*]}" >> "$GITHUB_OUTPUT"
       - name: Download its measurements
         run: |
+          for id in ${{ steps.run.outputs.ids }}; do
+            gh run download "$id" -p 'unit-durations-*' -D "artifacts/history/$id"
+          done
           gh run download "${{ steps.run.outputs.id }}" -p 'unit-durations-*' -D artifacts/unit
           gh run download "${{ steps.run.outputs.id }}" -p 'e2e-durations-*' -D artifacts/e2e || true
           gh run download "${{ steps.run.outputs.id }}" -p 'visual-durations-*' -D artifacts/visual || true
@@ -91,6 +98,7 @@ jobs:
         run: |
           shopt -s nullglob
           node scripts/merge-test-durations.mjs artifacts/unit/*/*.json
+          node scripts/merge-test-durations.mjs --profiles artifacts/history/*/*/*.json
           jobs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${{ steps.run.outputs.id }}/jobs?per_page=100" --paginate --jq '.jobs[].name')
           shards() { grep -c "^$1 shard [0-9]*/" <<<"$jobs" || true; }
           want_functional=$(shards "Playwright")
@@ -101,18 +109,18 @@ jobs:
           if [ "$want_functional" -gt 0 ] && [ "${#functional[@]}" -eq "$want_functional" ]; then inputs+=("${functional[@]}"); else echo "::warning::${#functional[@]} of ${want_functional} Playwright shards recorded durations; keeping the committed functional figures."; fi
           if [ "$want_visual" -gt 0 ] && [ "${#visual[@]}" -eq "$want_visual" ]; then inputs+=("${visual[@]}"); else echo "::warning::${#visual[@]} of ${want_visual} visual shards recorded durations; keeping the committed visual figures."; fi
           if [ "${#inputs[@]}" -gt 0 ]; then node scripts/e2e-durations.mjs merge "${inputs[@]}"; fi
-          git diff --stat -- scripts/test-durations.json scripts/e2e-durations.json
+          git diff --stat -- scripts/test-durations.json scripts/e2e-durations.json scripts/test-duration-profiles.json
       - name: Commit to main, or open the pull request
         run: |
-          if git diff --quiet -- scripts/test-durations.json scripts/e2e-durations.json; then
+          if git diff --quiet -- scripts/test-durations.json scripts/e2e-durations.json scripts/test-duration-profiles.json; then
             echo "Nothing moved; nothing to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           message="Refresh the recorded shard durations from CI run ${{ steps.run.outputs.id }}"
-          others=$(git status --porcelain --untracked-files=no | awk '{print $2}' | grep -v -x -e scripts/test-durations.json -e scripts/e2e-durations.json || true)
-          git add scripts/test-durations.json scripts/e2e-durations.json
+          others=$(git status --porcelain --untracked-files=no | awk '{print $2}' | grep -v -x -e scripts/test-durations.json -e scripts/e2e-durations.json -e scripts/test-duration-profiles.json || true)
+          git add scripts/test-durations.json scripts/e2e-durations.json scripts/test-duration-profiles.json
           git commit -m "$message"
           if [ -z "$others" ]; then
             if git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main; }; then
@@ -128,7 +136,7 @@ jobs:
             git rebase --abort 2>/dev/null || true
             echo "::warning::Pushing to main was refused; opening a pull request instead."
           else
-            echo "::warning::The working tree changed outside the two durations files (${others//$'\n'/, }); opening a pull request instead of committing to main."
+            echo "::warning::The working tree changed outside the duration-data files (${others//$'\n'/, }); opening a pull request instead of committing to main."
           fi
           git switch -c "$BRANCH"
           git push --force origin "$BRANCH"
