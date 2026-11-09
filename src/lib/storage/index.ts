@@ -4,6 +4,7 @@ export { MAX_IMAGE_BYTES, MAX_IMAGE_MB } from "./limits";
 
 import { processImage } from "./process-image";
 import { deleteS3Image, s3ImageStorageProvider, s3StorageConfigSchema } from "./s3";
+import { purgeS3Versions } from "./s3-versions";
 
 /**
  * The image-storage seam. The provider lives behind one entry point so upload
@@ -395,4 +396,10 @@ async function storeImage(
     contentType: processed.contentType,
     bytes: processed.bytes,
   });
+}
+
+export async function purgeStoredImageTracked(url: string): Promise<DeleteImageResult> {
+  const config = mediaStorageConfigFromEnvironment();
+  if (!config.success) return { ok: false, error: "media_storage_unconfigured" };
+  return purgeS3Versions(url, config.data);
 }

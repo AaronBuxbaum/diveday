@@ -5,6 +5,7 @@ import { type FeedLabels, feedDocument, listFeedTrips } from "@/features/calenda
 import {
   buildExportBundle,
   type ExportFile,
+  exportMediaFiles,
   fetchExportPhotos,
   zipExportBundle,
 } from "@/lib/export";
@@ -48,6 +49,7 @@ export type BuildBackupBundleResult =
       ok: true;
       zip: Uint8Array;
       shopSlug: string;
+      mediaComplete: boolean;
       /**
        * Whose medical answers the bundle carries. A scheduled run writes its
        * system lines from these once the upload has landed (#3871): the line
@@ -98,13 +100,14 @@ export async function buildBackupBundle(
   const files: ExportFile[] = [
     ...buildExportBundle(bundleInput, input.now),
     { name: "trips.ics", content: ics },
-    ...photos.map((photo) => ({ name: photo.path, content: photo.bytes })),
+    ...exportMediaFiles(photos),
   ];
 
   return {
     ok: true,
     zip: zipExportBundle(files),
     shopSlug: bundleInput.shopSlug,
+    mediaComplete: photos.manifest.complete,
     medicalAnswerPersonIds: bundleInput.medicalAnswerPersonIds,
   };
 }

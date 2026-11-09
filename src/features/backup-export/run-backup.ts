@@ -42,6 +42,7 @@ export type BackupRunErrorCode =
   | "credential_unreadable"
   | "shop_missing"
   | "bundle_failed"
+  | "media_incomplete"
   | BackupUploadErrorCode;
 
 export type RunShopBackupResult =
@@ -124,6 +125,7 @@ export async function runShopBackup(
 
   let zip: Uint8Array;
   let shopSlug: string;
+  let mediaComplete: boolean;
   let medicalAnswerPersonIds: readonly string[];
   try {
     // The same assembly the platform backup uses (./bundle.ts), so both copies
@@ -139,6 +141,7 @@ export async function runShopBackup(
     if (!bundle.ok) return fail("shop_missing");
     zip = bundle.zip;
     shopSlug = bundle.shopSlug;
+    mediaComplete = bundle.mediaComplete;
     medicalAnswerPersonIds = bundle.medicalAnswerPersonIds;
   } catch {
     // A bundle that cannot be assembled is a bug worth a code in the history,
@@ -196,6 +199,9 @@ export async function runShopBackup(
       deliveryId: delivery.id,
     });
   }
+
+  // Partial bytes landed, but this must not complete the weekly claim or verify the destination.
+  if (!mediaComplete) return fail("media_incomplete");
 
   const finishedAt = input.now ?? nowDate();
   if (claim) {

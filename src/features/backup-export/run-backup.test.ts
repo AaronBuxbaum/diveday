@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { unzipSync } from "fflate";
-import { describe, expect, it, vi } from "vitest";
-import { shopBackupDeliveries, shopBackupDeliveryClaims } from "@/db/schema";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { shopBackupDeliveries, shopBackupDeliveryClaims, trips } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import { listBackupDeliveries } from "./delivery-store";
 import {
@@ -328,4 +328,42 @@ describe("runShopBackup", () => {
     const page = await listBackupDeliveries(db, shop.id, { pageSize: 5 });
     expect(JSON.stringify(page.rows)).not.toContain(DESTINATION.secretAccessKey);
   });
+});
+
+it("keeps a partial zip but never marks a backup with missing media as verified", async () => {
+  const { db, shop } = await backupContext();
+  onTestFinished(() => {
+    vi.unstubAllEnvs();
+  });
+  vi.stubEnv("MEDIA_BUCKET_NAME", "diveday-media");
+  vi.stubEnv("MEDIA_AWS_REGION", "us-east-1");
+  await db
+    .update(trips)
+    .set({
+      arrivalPhotoUrl: "https://diveday-media.s3.us-east-1.amazonaws.com/arrival/missing.jpg",
+    })
+    .where(eq(trips.shopId, shop.id));
+  let stored: Uint8Array | undefined;
+  const fetchImpl = vi.fn(async (_url: URL | RequestInfo, init?: RequestInit) => {
+    if (init?.method === "PUT") {
+      stored = new Uint8Array(init.body as Uint8Array);
+      return new Response(null, { status: 200 });
+    }
+    return new Response(null, { status: 404 });
+  }) as typeof fetch;
+  const result = await runShopBackup(db, runInput({ shopId: shop.id, fetchImpl }) as never);
+  expect(result).toMatchObject({ status: "failed", errorCode: "media_incomplete" });
+  expect(stored).toBeDefined();
+  const manifest = JSON.parse(
+    new TextDecoder().decode(unzipSync(stored ?? new Uint8Array())["media-manifest.json"]),
+  );
+  expect(manifest.complete).toBe(false);
+  const destination = await getShopBackupDestination(db, shop.id);
+  expect(destination?.verifiedAt).toBeNull();
+  const [delivery] = await db
+    .select()
+    .from(shopBackupDeliveries)
+    .where(eq(shopBackupDeliveries.shopId, shop.id));
+  expect(delivery).toMatchObject({ status: "failed", errorCode: "media_incomplete" });
+  expect(delivery.objectKey).toBeTruthy();
 });

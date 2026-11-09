@@ -66,6 +66,7 @@ export {
   pauseTripRecapAutoSend,
   RECAP_LOOKBACK_HOURS,
   recapClosedReason,
+  retireRejectedRecapPhoto,
   sendDueRecaps,
   sendTripRecaps,
   setTripRecapShoutout,

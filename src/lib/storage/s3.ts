@@ -218,7 +218,7 @@ export async function deleteS3Image(
  *
  * That leaves `prefix` as the only control over *which object*, which is why
  * it is applied to the normalized path rather than to the key — see below. IAM
- * grants `s3:GetObject` on `medical-clearances/*` and nothing else, so a key
+ * grants `s3:GetObject` only on the three private evidence namespaces, so a key
  * outside it would be refused by AWS anyway; the point of naming it here is
  * that the refusal is readable instead of arriving as a 403.
  */

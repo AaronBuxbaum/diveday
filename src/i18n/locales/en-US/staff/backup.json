@@ -79,6 +79,7 @@
     "credential_unreadable": "The stored secret key can’t be opened any more. Enter it again to fix this.",
     "shop_missing": "The shop’s records couldn’t be loaded.",
     "bundle_failed": "The export bundle couldn’t be built.",
+    "media_incomplete": "The backup arrived, but some media or source documents are missing. Check media-manifest.json in the bundle; this copy is incomplete.",
     "encryption_key_unset": "This DiveDay instance isn’t set up to hold credentials safely.",
     "encryption_key_invalid": "This DiveDay instance’s encryption key is misconfigured.",
     "unknown": "The delivery stopped and gave no reason we recognize. Run a test delivery below; if it fails again, check the endpoint, bucket and key."

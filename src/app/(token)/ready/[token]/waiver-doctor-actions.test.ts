@@ -229,6 +229,7 @@ describe("sendDoctorFormFromReady", () => {
     expect(await send(token)).toEqual({ status: "closed" });
     expect(queueAndAttemptMediaDeletion).toHaveBeenCalledWith(db, {
       shopId: shop.id,
+      personId: person.id,
       kind: "waiver_document",
       url: STORED,
     });

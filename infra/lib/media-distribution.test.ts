@@ -504,7 +504,7 @@ describe("the media uploader credential", () => {
     return mine.flatMap((policy) => policy.Properties?.PolicyDocument?.Statement ?? []);
   }
 
-  it("may read objects under medical-clearances/ and nowhere else", () => {
+  it("may read only private evidence needed by authorized document routes and exports", () => {
     const reads = uploaderStatements().filter((statement) =>
       [statement.Action].flat().includes("s3:GetObject"),
     );
@@ -512,12 +512,14 @@ describe("the media uploader credential", () => {
     // no retrieval value -- a shop stores the most sensitive document the
     // product holds and can never open it (issue #1283).
     expect(reads).toHaveLength(1);
-    expect(reads[0]?.Sid).toBe("ReadMedicalClearancesOnly");
+    expect(reads[0]?.Sid).toBe("ReadPrivateEvidenceOnly");
     // *Every* read this credential grants is scoped to that prefix. The
     // resource is a CloudFormation join around the bucket ARN; the prefix is
     // the literal that matters.
     for (const read of reads) {
-      expect(JSON.stringify(read.Resource)).toContain("/medical-clearances/*");
+      for (const prefix of ["medical-clearances", "import-waivers", "import-receipts"])
+        expect(JSON.stringify(read.Resource)).toContain(`/${prefix}/*`);
+      expect([read.Resource].flat()).toHaveLength(3);
     }
   });
 
@@ -525,8 +527,8 @@ describe("the media uploader credential", () => {
     // The widening this exists to catch, stated as the thing that must not be
     // true rather than as a property of one named statement: a GetObject whose
     // resource ends at `/*` on the bucket root would cover import-waivers/ and
-    // import-receipts/ as well, which nothing in the app has any business
-    // fetching back.
+    // every public photo as well; only private evidence needs this principal
+    // to read its bytes back.
     for (const statement of uploaderStatements()) {
       if (![statement.Action].flat().includes("s3:GetObject")) continue;
       const resource = JSON.stringify(statement.Resource);
@@ -592,6 +594,10 @@ describe("the media uploader's write grant", () => {
     expect(granted).toEqual(prefixesTheAppWrites());
   });
 
+  it("allows exact-version deletion within the same write namespaces", () => {
+    expect([writeStatement().Action].flat()).toContain("s3:DeleteObjectVersion");
+  });
+
   it("never grants write across the whole media bucket", () => {
     // Stated as the thing that must not be true rather than as a property of
     // the named statement, so a second, wider write statement added later is
@@ -599,5 +605,36 @@ describe("the media uploader's write grant", () => {
     // that made an escaped key a delete anywhere.
     const resource = JSON.stringify(writeStatement().Resource);
     expect(resource).not.toMatch(/"\/\*"/);
+  });
+});
+
+describe("media version recovery", () => {
+  it("lists versions only under managed prefixes", () => {
+    const policies = Object.values(template().findResources("AWS::IAM::Policy"));
+    const statements = policies.flatMap((policy) => policy.Properties.PolicyDocument.Statement) as {
+      Sid?: string;
+      Action: string | string[];
+      Condition?: unknown;
+    }[];
+    const list = statements.find((statement) => statement.Sid === "ListMediaVersionsOnly");
+    expect(list?.Action).toBe("s3:ListBucketVersions");
+    expect(list?.Condition).toEqual({
+      StringLike: { "s3:prefix": prefixesTheAppWrites().map((prefix) => `${prefix}/*`) },
+    });
+  });
+  it("retains noncurrent media for 30 days without expiring current evidence", () => {
+    template().hasResourceProperties("AWS::S3::Bucket", {
+      VersioningConfiguration: { Status: "Enabled" },
+      LifecycleConfiguration: {
+        Rules: [
+          {
+            Id: "abort-incomplete-media-uploads",
+            Status: "Enabled",
+            AbortIncompleteMultipartUpload: { DaysAfterInitiation: 7 },
+            NoncurrentVersionExpiration: { NoncurrentDays: 30 },
+          },
+        ],
+      },
+    });
   });
 });

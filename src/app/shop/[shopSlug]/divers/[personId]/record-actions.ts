@@ -212,7 +212,9 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
   // (ADR 20260803-processor-erasure-obligations). The outstanding work is on the
   // reports page; this notice is what sends someone to look.
   const erasedNotice =
-    result.ok && result.owedProcessorErasures > 0 ? "erased-processor-owed" : "erased";
+    result.ok && (result.owedProcessorErasures > 0 || result.owedMediaDeletions > 0)
+      ? "erased-processor-owed"
+      : "erased";
   const roster = shopPath(staff.user.shopSlug, "divers");
   revalidateAndRedirect(
     roster,

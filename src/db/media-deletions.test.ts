@@ -8,7 +8,7 @@ import {
   retryMediaDeletion,
   retryPendingMediaDeletions,
 } from "./media-deletions";
-import { diveSites, mediaDeletionAttempts, shops } from "./schema";
+import { diveSites, mediaDeletionAttempts, people, shops } from "./schema";
 import { listUnfinished } from "./unfinished";
 
 const ok = async () => ({ ok: true as const });
@@ -396,4 +396,148 @@ describe("a dive-site photo a site still holds", () => {
     );
     expect(deleteFn).toHaveBeenCalledWith(url);
   });
+});
+
+describe("media version deletion policy", () => {
+  it("persists irreversible erasure through a failed attempt and retry", async () => {
+    const { db, shop } = ctx;
+    const url = "https://diveday-media.s3.us-east-1.amazonaws.com/recap/erase.jpg";
+    const remove = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, error: "outage" })
+      .mockResolvedValueOnce({ ok: true });
+    const attempt = await queueMediaDeletion(db, {
+      shopId: shop.id,
+      kind: "recap_photo",
+      url,
+      purgeVersions: true,
+    });
+    expect(attempt?.purgeVersions).toBe(true);
+    if (!attempt) throw new Error("missing attempt");
+    expect(await retryMediaDeletion(db, shop.id, attempt.id, remove)).toBe(false);
+    expect(await retryMediaDeletion(db, shop.id, attempt.id, remove)).toBe(true);
+    expect(remove.mock.calls).toEqual([
+      [url, true],
+      [url, true],
+    ]);
+  });
+  it("ordinary removal remains recoverable", async () => {
+    const { db, shop } = ctx;
+    const attempt = await queueMediaDeletion(db, {
+      shopId: shop.id,
+      kind: "course_photo",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/courses/replaced.jpg",
+    });
+    expect(attempt?.purgeVersions).toBe(false);
+  });
+});
+
+it("cannot let an old recoverable-delete response discharge a promoted erasure", async () => {
+  const { db, shop } = ctx;
+  const attempt = await queueMediaDeletion(db, {
+    shopId: shop.id,
+    kind: "recap_photo",
+    url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/race.jpg",
+  });
+  if (!attempt) throw new Error("missing attempt");
+  const remove = vi.fn(async () => {
+    await db
+      .update(mediaDeletionAttempts)
+      .set({ purgeVersions: true, status: "pending" })
+      .where(eq(mediaDeletionAttempts.id, attempt.id));
+    return { ok: true as const };
+  });
+  expect(await retryMediaDeletion(db, shop.id, attempt.id, remove)).toBe(false);
+  const [current] = await db
+    .select()
+    .from(mediaDeletionAttempts)
+    .where(eq(mediaDeletionAttempts.id, attempt.id));
+  expect(current).toMatchObject({ purgeVersions: true, status: "pending", resolvedAt: null });
+});
+
+it("attributes a delayed retirement to the authoritative merge survivor", async () => {
+  const { db, shop } = ctx;
+  const [survivor] = await db
+    .insert(people)
+    .values({ shopId: shop.id, fullName: "Survivor" })
+    .returning();
+  if (!survivor) throw new Error("missing survivor");
+  const [shell] = await db
+    .insert(people)
+    .values({
+      shopId: shop.id,
+      fullName: "Merged source",
+      mergedIntoPersonId: survivor.id,
+      mergedAt: await dbNowPlus(db, 0),
+      deletedAt: await dbNowPlus(db, 0),
+      mergedByPersonId: survivor.id,
+    })
+    .returning();
+  if (!shell) throw new Error("missing shell");
+  const attempt = await queueMediaDeletion(db, {
+    shopId: shop.id,
+    personId: shell.id,
+    kind: "recap_photo",
+    url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/delayed.jpg",
+  });
+  expect(attempt).toMatchObject({ personId: survivor.id, purgeVersions: false });
+});
+
+it("follows a merge chain into an erased survivor and refuses cycles", async () => {
+  const { db, shop } = ctx;
+  const [survivor] = await db
+    .insert(people)
+    .values({
+      shopId: shop.id,
+      fullName: "Erased",
+      anonymizedAt: await dbNowPlus(db, 0),
+      deletedAt: await dbNowPlus(db, 0),
+    })
+    .returning();
+  if (!survivor) throw new Error("missing survivor");
+  const [middle] = await db
+    .insert(people)
+    .values({
+      shopId: shop.id,
+      fullName: "Middle",
+      mergedIntoPersonId: survivor.id,
+      mergedAt: await dbNowPlus(db, 0),
+      deletedAt: await dbNowPlus(db, 0),
+      mergedByPersonId: survivor.id,
+    })
+    .returning();
+  if (!middle) throw new Error("missing middle");
+  const [shell] = await db
+    .insert(people)
+    .values({
+      shopId: shop.id,
+      fullName: "Source",
+      mergedIntoPersonId: middle.id,
+      mergedAt: await dbNowPlus(db, 0),
+      deletedAt: await dbNowPlus(db, 0),
+      mergedByPersonId: survivor.id,
+    })
+    .returning();
+  if (!shell) throw new Error("missing source");
+  const input = {
+    shopId: shop.id,
+    personId: shell.id,
+    kind: "recap_photo" as const,
+    url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/late-erasure.jpg",
+  };
+  expect(await queueMediaDeletion(db, input)).toMatchObject({
+    personId: survivor.id,
+    purgeVersions: true,
+  });
+  await db
+    .update(people)
+    .set({
+      mergedIntoPersonId: shell.id,
+      mergedAt: await dbNowPlus(db, 0),
+      mergedByPersonId: middle.id,
+    })
+    .where(eq(people.id, survivor.id));
+  await expect(queueMediaDeletion(db, input)).rejects.toThrow(
+    "media_deletion_subject_chain_invalid",
+  );
 });

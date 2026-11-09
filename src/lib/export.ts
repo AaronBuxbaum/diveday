@@ -6,9 +6,10 @@
  * importer, scheduled backups, and read API reuse; change them deliberately.
  */
 
+import { createHash } from "node:crypto";
 import { strToU8, zipSync } from "fflate";
 import { cachedFormatter } from "./intl-cache";
-import { isManagedStorageUrl } from "./storage";
+import { isManagedStorageUrl, mediaStorageConfigFromEnvironment, readS3Object } from "./storage";
 
 /** Everything a CSV cell can hold. Dates serialize as ISO 8601 UTC. */
 export type CsvValue = string | number | boolean | Date | null | undefined;
@@ -373,9 +374,10 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
     ),
     ``,
     `Photos and imported documents: any image_url / *_url column above whose link is`,
-    `DiveDay's own storage has a byte-identical copy under photos/, at the same`,
+    `DiveDay's own storage is listed in media-manifest.json. Check complete and each file's`,
+    `status: missing entries are not copied. Included copies are under photos/, at the same`,
     `path as the URL — for example an image_url of`,
-    `https://diveday-media.s3.us-east-1.amazonaws.com/recap/ab12-photo.jpg is also at`,
+    `https://diveday-media.s3.us-east-1.amazonaws.com/recap/ab12-photo.jpg, when included, is at`,
     `photos/recap/ab12-photo.jpg in this bundle. That copy survives after this`,
     `account closes; the URL itself does not. A link the CSV carries that was`,
     `never stored through DiveDay (an external link, or a bundled template`,
@@ -437,7 +439,8 @@ export function buildDiverExportBundle(input: DiverExportBundleInput, now: Date)
     ),
     ``,
     `Photos and imported documents: any image_url / *_url column above whose link is`,
-    `DiveDay's own storage has a byte-identical copy under photos/, at the same`,
+    `DiveDay's own storage is listed in media-manifest.json. Check complete and each file's`,
+    `status: missing entries are not copied. Included copies are under photos/, at the same`,
     `path as the URL. A link that was never stored through DiveDay (an external`,
     `link, or a bundled template asset) has no file here.`,
     ``,
@@ -470,38 +473,97 @@ export function exportPhotoPath(url: string): string {
   return `photos${new URL(url).pathname}`;
 }
 
-/**
- * Best-effort fetch of every photo this shop's own blob storage holds, so the
- * bundle carries real image files rather than links that stop resolving once
- * the account closes (ADR 20260724-export-bundled-photos). Only
- * `isManagedStorageUrl` URLs are ever fetched — never an external or
- * staff-pasted link the CSVs might also carry — so this never makes a live
- * request to a host outside DiveDay's own storage. One photo failing to fetch
- * never fails the export; it is simply absent from `photos/`.
- */
+export type ExportMediaEntry =
+  | { path: string; status: "included"; bytes: number; sha256: string }
+  | {
+      path: string;
+      status: "missing";
+      reason:
+        | "http_error"
+        | "fetch_failed"
+        | "timed_out"
+        | "storage_unconfigured"
+        | "private_read_failed";
+    };
+
+export type ExportMediaManifest = {
+  version: 1;
+  expected: number;
+  included: number;
+  complete: boolean;
+  files: ExportMediaEntry[];
+};
+export type ExportMedia = { photos: ExportPhoto[]; manifest: ExportMediaManifest };
+
+/** Preserve usable downloads without disguising missing managed source documents as a complete copy. */
 export async function fetchExportPhotos(
   urls: readonly string[],
   fetchImpl: typeof fetch = fetch,
   env: Readonly<Record<string, string | undefined>> = process.env,
-): Promise<ExportPhoto[]> {
-  // Arrow rather than a bare reference: `filter` passes the index as the
-  // second argument, which would land in the predicate's `env` parameter.
+): Promise<ExportMedia> {
   const unique = [...new Set(urls)].filter((url) => isManagedStorageUrl(url, env)).sort();
   const results = await Promise.all(
-    unique.map(async (url): Promise<ExportPhoto | null> => {
+    unique.map(async (url): Promise<{ photo?: ExportPhoto; entry: ExportMediaEntry }> => {
+      const path = exportPhotoPath(url);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), PHOTO_FETCH_TIMEOUT_MS);
+      const missing = (reason: Extract<ExportMediaEntry, { status: "missing" }>["reason"]) => ({
+        entry: { path, status: "missing" as const, reason },
+      });
       try {
-        const response = await fetchImpl(url, { signal: controller.signal });
-        if (!response.ok) return null;
-        const buffer = await response.arrayBuffer();
-        return { path: exportPhotoPath(url), bytes: new Uint8Array(buffer) };
+        const prefix = new URL(url).pathname.split("/")[1];
+        let bytes: Uint8Array;
+        if (
+          prefix === "import-waivers" ||
+          prefix === "import-receipts" ||
+          prefix === "medical-clearances"
+        ) {
+          const config = mediaStorageConfigFromEnvironment(env);
+          if (!config.success) return missing("storage_unconfigured");
+          const read = await readS3Object(url, config.data, { prefix }, (input, init) =>
+            fetchImpl(input, { ...init, signal: controller.signal, redirect: "error" }),
+          );
+          if (!read.ok)
+            return missing(controller.signal.aborted ? "timed_out" : "private_read_failed");
+          bytes = new Uint8Array(read.bytes);
+        } else {
+          const response = await fetchImpl(url, { signal: controller.signal, redirect: "error" });
+          if (!response.ok) return missing("http_error");
+          bytes = new Uint8Array(await response.arrayBuffer());
+        }
+        return {
+          photo: { path, bytes },
+          entry: {
+            path,
+            status: "included",
+            bytes: bytes.byteLength,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+          },
+        };
       } catch {
-        return null;
+        return missing(controller.signal.aborted ? "timed_out" : "fetch_failed");
       } finally {
         clearTimeout(timeout);
       }
     }),
   );
-  return results.filter((photo): photo is ExportPhoto => photo !== null);
+  const photos = results.flatMap((result) => (result.photo ? [result.photo] : []));
+  return {
+    photos,
+    manifest: {
+      version: 1,
+      expected: unique.length,
+      included: photos.length,
+      complete: photos.length === unique.length,
+      files: results.map((result) => result.entry),
+    },
+  };
+}
+
+/** Paths/checksums and failure codes only; signed URLs and provider errors never enter this manifest. */
+export function exportMediaFiles(media: ExportMedia): ExportFile[] {
+  return [
+    { name: "media-manifest.json", content: `${JSON.stringify(media.manifest, null, 2)}\n` },
+    ...media.photos.map((photo) => ({ name: photo.path, content: photo.bytes })),
+  ];
 }

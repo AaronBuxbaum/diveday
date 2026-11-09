@@ -25,7 +25,13 @@ vi.mock("../../../../../../features/session/rules", () => ({ requireStaffSession
 // No network from a unit test: the bundle's photos are fetched from storage.
 vi.mock("@/lib/export", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/export")>();
-  return { ...actual, fetchExportPhotos: vi.fn(async () => []) };
+  return {
+    ...actual,
+    fetchExportPhotos: vi.fn(async () => ({
+      photos: [],
+      manifest: { version: 1, expected: 0, included: 0, complete: true, files: [] },
+    })),
+  };
 });
 
 const { getDb } = await import("@/db/client");

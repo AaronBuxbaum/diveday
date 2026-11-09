@@ -1,0 +1,124 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b4c08b60-046b-4c3a-b8c7-a9fecb52dacb",
+  "prevIds": [
+    "7a88f297-4af4-4db9-9379-83ccce557b2c"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "media_deletion_attempts",
+        "person_id"
+      ],
+      "writes": [
+        "s|col|public.media_deletion_attempts.person_id",
+        "n|col|public.media_deletion_attempts.person_id",
+        "e|col|public.media_deletion_attempts.person_id"
+      ],
+      "reads": [
+        "n|tbl|public.media_deletion_attempts",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "media_deletion_attempts",
+        "purge_versions"
+      ],
+      "writes": [
+        "s|col|public.media_deletion_attempts.purge_versions",
+        "n|col|public.media_deletion_attempts.purge_versions",
+        "e|col|public.media_deletion_attempts.purge_versions"
+      ],
+      "reads": [
+        "n|tbl|public.media_deletion_attempts",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "media_deletion_attempts"
+      ],
+      "writes": [
+        "s|fk|public.media_deletion_attempts.media_deletion_attempts_person_id_people_id_fkey",
+        "n|fk|public.media_deletion_attempts.media_deletion_attempts_person_id_people_id_fkey",
+        "e|fk|public.media_deletion_attempts.media_deletion_attempts_person_id_people_id_fkey",
+        "n|con|public.media_deletion_attempts.media_deletion_attempts_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.media_deletion_attempts",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.media_deletion_attempts.person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "media_deletion_attempts",
+        "name": "person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "media_deletion_attempts",
+        "name": "purge_versions",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "media_deletion_attempts",
+        "name": "media_deletion_attempts_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    }
+  ]
+}

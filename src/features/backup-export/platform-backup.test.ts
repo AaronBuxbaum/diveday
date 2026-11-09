@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { unzipSync } from "fflate";
-import { describe, expect, it, vi } from "vitest";
-import { platformBackupProgress, shops } from "@/db/schema";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { platformBackupProgress, shops, trips } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
   claimPlatformBackupShop,
@@ -374,4 +374,30 @@ describe("platformBackupConfigFromEnvironment", () => {
     );
     expect(platformBackupConfigFromEnvironment(padded)).toEqual(CONFIG);
   });
+});
+
+it("reports an uploaded partial platform bundle as failed so the census cannot go green", async () => {
+  const { db, shop } = ctx;
+  onTestFinished(() => {
+    vi.unstubAllEnvs();
+  });
+  vi.stubEnv("MEDIA_BUCKET_NAME", "diveday-media");
+  vi.stubEnv("MEDIA_AWS_REGION", "us-east-1");
+  await db
+    .update(trips)
+    .set({
+      arrivalPhotoUrl: "https://diveday-media.s3.us-east-1.amazonaws.com/arrival/missing.jpg",
+    })
+    .where(eq(trips.shopId, shop.id));
+  const fetchImpl = vi.fn(
+    async (_url: URL | RequestInfo, init?: RequestInit) =>
+      new Response(null, { status: init?.method === "PUT" ? 200 : 404 }),
+  ) as typeof fetch;
+  expect(
+    await runPlatformBackup(db, runInput({ shopId: shop.id, fetchImpl }) as never),
+  ).toMatchObject({ status: "failed", errorCode: "media_incomplete" });
+  expect(fetchImpl).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ method: "PUT" }),
+  );
 });

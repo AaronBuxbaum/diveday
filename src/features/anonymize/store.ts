@@ -86,7 +86,7 @@ import {
 } from "../../db/boarding-certification-snapshot";
 import type { AppDb, AppTransaction } from "../../db/client";
 import { boundLockWaits } from "../../db/lock-bounds";
-import { queueMediaDeletion } from "../../db/media-deletions";
+import { type DeleteFn, queueMediaDeletion, retryMediaDeletion } from "../../db/media-deletions";
 import { erasedPersonRowDeletes } from "../../db/person-columns";
 import { retireRecapLinks } from "../../db/recap-links";
 import { crewMarks, seatMarks } from "../../db/roll-call-subject";
@@ -121,6 +121,7 @@ import {
   incidentReports,
   interestReplies,
   interests,
+  mediaDeletionAttempts,
   notificationDeliveries,
   notificationSendQueue,
   orderLineItems,
@@ -203,6 +204,7 @@ export type AnonymizeDiverResult =
       alreadyAnonymized: boolean;
       /** Blob objects handed to the media-deletion ledger by this call. */
       queuedMediaDeletions: number;
+      owedMediaDeletions: number;
       /** Stripe customer objects this call deleted (or found already deleted). */
       dischargedProcessorErasures: number;
       /**
@@ -536,7 +538,7 @@ export async function anonymizeDiver(
     /** A public erase confirmation must still match the locked target. */
     confirmation?: { name: string; requireDeleted: true };
   },
-  options: { customerProvider?: CustomerProvider } = {},
+  options: { customerProvider?: CustomerProvider; mediaDeleteFn?: DeleteFn } = {},
 ): Promise<AnonymizeDiverResult> {
   const now = nowDate();
   const outcome = await db.transaction(async (tx) => {
@@ -581,10 +583,22 @@ export async function anonymizeDiver(
       return { ok: false, reason: "name_mismatch" } as const;
     }
     if (person.anonymizedAt) {
+      const pendingMedia = await tx
+        .select({ id: mediaDeletionAttempts.id })
+        .from(mediaDeletionAttempts)
+        .where(
+          and(
+            eq(mediaDeletionAttempts.shopId, input.shopId),
+            eq(mediaDeletionAttempts.personId, input.personId),
+            eq(mediaDeletionAttempts.purgeVersions, true),
+            ne(mediaDeletionAttempts.status, "succeeded"),
+          ),
+        );
       return {
         ok: true,
         alreadyAnonymized: true,
         queuedMediaDeletions: 0,
+        raisedMediaDeletionIds: pendingMedia.map((row) => row.id),
         raisedProcessorErasures: [] as ProcessorErasureObligation[],
         bookkeeperCleared: false,
       } as const;
@@ -630,6 +644,16 @@ export async function anonymizeDiver(
   // whatever happens from here. Every failure is recorded on its own row and
   // reported as "still owed" — none of it throws, because there is nothing left
   // to roll back and a throw would only make a completed erasure look failed.
+  let owedMediaDeletions = 0;
+  for (const id of outcome.raisedMediaDeletionIds) {
+    try {
+      if (!(await retryMediaDeletion(db, input.shopId, id, options.mediaDeleteFn)))
+        owedMediaDeletions++;
+    } catch {
+      // The durable row remains pending if recording the provider outcome fails.
+      owedMediaDeletions++;
+    }
+  }
   const { discharged, stillOwed } = await attemptProcessorErasures(
     db,
     outcome.raisedProcessorErasures,
@@ -656,6 +680,7 @@ export async function anonymizeDiver(
     ok: true,
     alreadyAnonymized: outcome.alreadyAnonymized,
     queuedMediaDeletions: outcome.queuedMediaDeletions,
+    owedMediaDeletions,
     dischargedProcessorErasures: discharged,
     owedProcessorErasures: stillOwed,
   };
@@ -674,6 +699,7 @@ type ScrubContext = {
 
 type ScrubResult = {
   queuedMediaDeletions: number;
+  raisedMediaDeletionIds: string[];
   /** The obligation rows this scrub created — the caller attempts them post-commit. */
   raisedProcessorErasures: ProcessorErasureObligation[];
   /** The diver's address was the shop's bookkeeper's; the caller tells the owners post-commit. */
@@ -3117,10 +3143,35 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   const guardianEmails = candidates.filter((address) => !stillHeld.includes(address));
 
   let queued = 0;
+  const raisedMediaDeletionIds: string[] = [];
   const retire: ScrubSectionContext["retire"] = async (kind, url) => {
     if (!url) return;
-    if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
+    const attempt = await queueMediaDeletion(tx, {
+      shopId,
+      personId,
+      kind,
+      url,
+      purgeVersions: true,
+    });
+    if (attempt) {
+      queued += 1;
+      raisedMediaDeletionIds.push(attempt.id);
+    }
   };
+  // Replaced files are no longer on the domain row, but their recovery versions still belong to this diver.
+  const priorMedia = await tx
+    .update(mediaDeletionAttempts)
+    .set({ purgeVersions: true, status: "pending", resolvedAt: null, lastError: null })
+    .where(
+      and(
+        eq(mediaDeletionAttempts.shopId, shopId),
+        eq(mediaDeletionAttempts.personId, personId),
+        eq(mediaDeletionAttempts.purgeVersions, false),
+      ),
+    )
+    .returning({ id: mediaDeletionAttempts.id });
+  raisedMediaDeletionIds.push(...priorMedia.map((row) => row.id));
+  queued += priorMedia.length;
   const found = { bookkeeperCleared: false };
   const section: ScrubSectionContext = {
     ...ctx,
@@ -3162,6 +3213,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
 
   return {
     queuedMediaDeletions: queued,
+    raisedMediaDeletionIds,
     raisedProcessorErasures,
     bookkeeperCleared: found.bookkeeperCleared,
   };

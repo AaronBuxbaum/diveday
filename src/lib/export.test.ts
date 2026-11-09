@@ -213,7 +213,7 @@ describe("fetchExportPhotos", () => {
     );
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(fetchImpl).toHaveBeenCalledWith(managed, expect.anything());
-    expect(photos).toEqual([{ path: "photos/cards/a.jpg", bytes: new Uint8Array([9, 9]) }]);
+    expect(photos.photos).toEqual([{ path: "photos/cards/a.jpg", bytes: new Uint8Array([9, 9]) }]);
   });
 
   /**
@@ -232,20 +232,104 @@ describe("fetchExportPhotos", () => {
       env,
     );
     expect(fetchImpl).not.toHaveBeenCalled();
-    expect(photos).toEqual([]);
+    expect(photos.photos).toEqual([]);
   });
 
-  it("drops a photo that fails to fetch rather than failing the whole export", async () => {
+  it("keeps a missing photo out of bytes but records its failure", async () => {
     const fetchImpl = vi.fn(async () => new Response(null, { status: 500 }));
     const photos = await fetchExportPhotos([managed], fetchImpl as unknown as typeof fetch, env);
-    expect(photos).toEqual([]);
+    expect(photos.photos).toEqual([]);
   });
 
-  it("drops a photo whose fetch throws (network error, abort)", async () => {
+  it("records a thrown photo fetch without failing the whole export", async () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error("network down");
     });
     const photos = await fetchExportPhotos([managed], fetchImpl as unknown as typeof fetch, env);
-    expect(photos).toEqual([]);
+    expect(photos.photos).toEqual([]);
+  });
+});
+
+describe("export media completeness", () => {
+  const env = { MEDIA_BUCKET_NAME: "diveday-media", MEDIA_AWS_REGION: "us-east-1" };
+  const host = "https://diveday-media.s3.us-east-1.amazonaws.com";
+
+  it("retains a coded failure alongside successful bytes without serializing URLs", async () => {
+    const result = await fetchExportPhotos(
+      [`${host}/waivers/missing.pdf?secret=private`, `${host}/cards/ok.jpg`],
+      vi.fn(async (url) =>
+        String(url).includes("missing")
+          ? new Response(null, { status: 404 })
+          : new Response(new Uint8Array([1, 2, 3])),
+      ) as typeof fetch,
+      env,
+    );
+    expect(result.manifest).toMatchObject({
+      expected: 2,
+      included: 1,
+      complete: false,
+      files: [
+        {
+          path: "photos/cards/ok.jpg",
+          status: "included",
+          bytes: 3,
+          sha256: "039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81",
+        },
+        { path: "photos/waivers/missing.pdf", status: "missing", reason: "http_error" },
+      ],
+    });
+    expect(JSON.stringify(result.manifest)).not.toContain("secret");
+    expect(result.photos).toHaveLength(1);
+  });
+
+  it("records fetch and body errors without leaking exception details", async () => {
+    const result = await fetchExportPhotos(
+      [`${host}/waivers/a.pdf`],
+      vi.fn(async () => {
+        throw new Error("private-url-and-row");
+      }) as typeof fetch,
+      env,
+    );
+    expect(result.manifest).toMatchObject({ complete: false, files: [{ reason: "fetch_failed" }] });
+    expect(JSON.stringify(result)).not.toContain("private-url-and-row");
+  });
+});
+
+it("reads private import evidence through signed S3, never a public CDN request", async () => {
+  const fetchImpl = vi.fn(async () => new Response(new Uint8Array([7, 8])));
+  const result = await fetchExportPhotos(
+    ["https://media.example.com/import-waivers/source.pdf"],
+    fetchImpl as typeof fetch,
+    {
+      MEDIA_PUBLIC_URL_BASE: "https://media.example.com",
+      MEDIA_BUCKET_NAME: "diveday-media",
+      MEDIA_AWS_REGION: "us-east-1",
+      MEDIA_AWS_ACCESS_KEY_ID: "test-access",
+      MEDIA_AWS_SECRET_ACCESS_KEY: "test-secret",
+    },
+  );
+  const [url, init] = fetchImpl.mock.calls[0] as unknown as [URL, RequestInit];
+  expect(String(url)).toBe(
+    "https://diveday-media.s3.us-east-1.amazonaws.com/import-waivers/source.pdf",
+  );
+  expect(new Headers(init.headers).get("authorization")).toMatch(/^AWS4-HMAC-SHA256 /);
+  expect(result.manifest.complete).toBe(true);
+});
+
+it("does not fall back to public reads when private evidence credentials are absent", async () => {
+  const fetchImpl = vi.fn();
+  const result = await fetchExportPhotos(
+    ["https://media.example.com/import-receipts/source.pdf"],
+    fetchImpl,
+    {
+      MEDIA_PUBLIC_URL_BASE: "https://media.example.com",
+      MEDIA_BUCKET_NAME: "diveday-media",
+      MEDIA_AWS_REGION: "us-east-1",
+    },
+  );
+  expect(fetchImpl).not.toHaveBeenCalled();
+  expect(result.manifest).toMatchObject({
+    complete: false,
+    files: [{ reason: "storage_unconfigured" }],
   });
 });

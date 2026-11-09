@@ -204,6 +204,7 @@ export async function deleteRecapPhotoAction(tripId: string, formData: FormData)
   if (result.deleted) {
     await queueAndAttemptMediaDeletion(db, {
       shopId: staff.user.shopId,
+      personId: result.personId,
       kind: "recap_photo",
       url: result.imageUrl,
     });
