@@ -26,6 +26,7 @@ import {
 import {
   ClosingCta,
   DividedList,
+  FareHarborTransferChoice,
   GUIDE_BAND_CLASS,
   GUIDE_BAND_LEDE_CLASS,
   GuideBodySkeleton,
@@ -204,7 +205,10 @@ async function GuideBody({
         eyebrow={t(guide.heroEyebrow)}
         title={t(guide.heroTitle)}
         lede={t(guide.heroLede)}
+        fareHarbor={guide.slug === "fareharbor"}
       />
+
+      {guide.slug === "fareharbor" && <FareHarborTransferChoice locale={locale} />}
 
       {/* Honest framing of the incumbent. */}
       <GuideContents locale={locale} />
@@ -326,10 +330,15 @@ async function GuideBody({
             <PhaseNotes notes={guide.exportNotes.map((note) => t(note))} />
           )}
         </MovePhase>
-        <ScopePhase locale={locale} number={2} />
+        <ScopePhase
+          locale={locale}
+          number={2}
+          source={guide.slug === "fareharbor" ? "fareharbor" : undefined}
+        />
         <ImportPhase
           locale={locale}
           number={3}
+          source={guide.slug === "fareharbor" ? "fareharbor" : undefined}
           importerNote={
             guide.importerNote && (
               <>

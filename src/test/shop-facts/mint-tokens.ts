@@ -4,6 +4,7 @@ import { issueAccountToken } from "../../db/account-tokens";
 import type { AppDb } from "../../db/client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "../../db/courtesy-email";
 import { issueInterestUnsubscribeToken } from "../../db/interests";
+import { issueMagicSignIn } from "../../db/magic-sign-in";
 import { interests, people, setupRequests, shops, userAccounts } from "../../db/schema/index";
 import { issueSetupLink } from "../../features/setup-links/store";
 import { issueShopContactEmailConfirmation } from "../../features/shop-contact-email/store";
@@ -25,7 +26,7 @@ import { FactRefused } from "./refusal";
 export const accountTokenArgs = z
   .object({
     email: z.string().trim().email(),
-    purpose: z.enum(["email_verification", "password_reset", "invite"]),
+    purpose: z.enum(["email_verification", "password_reset", "invite", "magic_sign_in"]),
   })
   .strict();
 
@@ -38,6 +39,11 @@ export const accountTokenArgs = z
  * just onboarded belongs to a new shop of its own (20260725-account-lifecycle-emails).
  */
 export async function mintAnAccountToken(db: AppDb, args: z.output<typeof accountTokenArgs>) {
+  if (args.purpose === "magic_sign_in") {
+    const issued = await issueMagicSignIn(db, args.email.toLowerCase());
+    if (!issued) throw new FactRefused("not_available", 404);
+    return { token: issued.token, expiresAt: issued.expiresAt.toISOString() };
+  }
   const [account] = await db
     .select({ id: userAccounts.id })
     .from(userAccounts)

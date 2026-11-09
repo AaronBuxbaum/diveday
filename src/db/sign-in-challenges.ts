@@ -56,7 +56,7 @@ export async function hasPendingSignIn(db: DbExecutor, handle: string | null): P
 }
 
 /** Account -> person -> security -> challenge is the completion lock order. */
-async function lockAccount(tx: AppTransaction, accountId: string) {
+export async function lockAccount(tx: AppTransaction, accountId: string) {
   const [account] = await tx
     .select()
     .from(userAccounts)
@@ -130,23 +130,7 @@ export async function startCredentialSignIn<T>(
       name: locked.person.fullName,
       roles,
     };
-    if (!locked.security?.totpEnabledAt)
-      return { status: "signed_in" as const, value: await persist(tx, verified) };
-    const expired = tx
-      .select({ id: accountSignInChallenges.id })
-      .from(accountSignInChallenges)
-      .where(lte(accountSignInChallenges.expiresAt, nowDate()))
-      .limit(50);
-    await tx.delete(accountSignInChallenges).where(inArray(accountSignInChallenges.id, expired));
-    const handle = createPendingHandle();
-    await tx.insert(accountSignInChallenges).values({
-      shopId: verified.shopId,
-      userAccountId: verified.id,
-      tokenHash: hashPendingHandle(handle),
-      expiresAt: new Date(nowMs() + PENDING_SIGN_IN_TTL_SECONDS * 1000),
-      attemptsRemaining: PENDING_SIGN_IN_ATTEMPTS,
-    });
-    return { status: "pending" as const, handle };
+    return finishFirstFactor(tx, verified, Boolean(locked.security?.totpEnabledAt), persist);
   });
 }
 
@@ -220,4 +204,30 @@ export async function completePendingSignIn<T>(
     };
     return { status: "signed_in" as const, value: await persist(tx, verified) };
   });
+}
+
+/** Shared by password and email proofs; only this path decides whether TOTP is required. */
+export async function finishFirstFactor<T>(
+  tx: AppTransaction,
+  verified: VerifiedUser,
+  needsSecondFactor: boolean,
+  persist: PersistSession<T>,
+) {
+  if (!needsSecondFactor)
+    return { status: "signed_in" as const, value: await persist(tx, verified) };
+  const expired = tx
+    .select({ id: accountSignInChallenges.id })
+    .from(accountSignInChallenges)
+    .where(lte(accountSignInChallenges.expiresAt, nowDate()))
+    .limit(50);
+  await tx.delete(accountSignInChallenges).where(inArray(accountSignInChallenges.id, expired));
+  const handle = createPendingHandle();
+  await tx.insert(accountSignInChallenges).values({
+    shopId: verified.shopId,
+    userAccountId: verified.id,
+    tokenHash: hashPendingHandle(handle),
+    expiresAt: new Date(nowMs() + PENDING_SIGN_IN_TTL_SECONDS * 1000),
+    attemptsRemaining: PENDING_SIGN_IN_ATTEMPTS,
+  });
+  return { status: "pending" as const, handle };
 }

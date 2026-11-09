@@ -206,7 +206,10 @@ test.describe("owner", () => {
    * *navigation* puts you, which is this file's subject, and because it is
    * true of every staff page rather than of a departure.
    */
-  test("a departure opened from a scrolled board starts at its own top", async ({ page }) => {
+  // diveday:quarantine #4183 until 2026-11-16: inherited scroll failed and passed on unchanged CI commit 0da5e2c07.
+  test("a departure opened from a scrolled board starts at its own top @quarantine", async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis/schedule/board");
     const departure = page.locator("[data-week-board] a[data-departure-door]").first();
     await expect(departure).toBeVisible();

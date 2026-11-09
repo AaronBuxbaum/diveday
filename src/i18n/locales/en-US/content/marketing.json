@@ -70,7 +70,7 @@
     "name": "Founding shop",
     "cadence": "per location / month",
     "item3": "New features as they ship, with no higher tier",
-    "item7": "A storefront in your brand and embeds for your own site, or a website we build with you when you ask"
+    "item7": "A storefront in your brand, plus booking buttons and calendars for your own site"
   },
   "export": {
     "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs (divers, bookings, waiver records, payment history), led by a contacts file shaped for another system’s import wizard. Every stored photo (certification evidence, dive-site pictures, trip recaps) is in it as a file.",
@@ -563,8 +563,8 @@
           }
         },
         "sitesNote": "FareHarbor sells Sites separately and doesn’t publish the price; third parties report {sitesPrice} a year, before its SEO add-on.",
-        "offerHeading": "Or have us build the website",
-        "offerBody": "Ask, and a person at DiveDay builds it with you: your photos, your words, the booking already in it. It is in the price."
+        "offerHeading": "Talk to us about your website",
+        "offerBody": "Tell us what you need, and a person at DiveDay will discuss the website work with you. You can add our booking components to your existing site yourself."
       },
       "exportHeading": "Get your data out of FareHarbor",
       "exportIntro": "FareHarbor runs in a browser, and your data comes out of the Dashboard’s reports. There is no single “export everything” button. The goal is your people as a CSV. Menu labels shift over time, so treat these as the shape of the path rather than word-for-word buttons.",
@@ -601,6 +601,74 @@
         "cardSummary": "A booking engine for tours, not dive software. Keep it for the storefront and run the dive day it cannot, or take the booking here too.",
         "metaDescription": "On FareHarbor? Keep its booking and distribution network and run the dive day it was never built for (cert checks, waivers, and the roll-call manifest), or take the booking here too. Bring your divers across with a clear picture of what comes with them.",
         "heroLede": "FareHarbor takes the online booking and puts you in front of its hotel and reseller network. Then the dive day still runs on a clipboard, because a general booking engine was never built for certification checks, waivers, or a roll call on the water. Keep FareHarbor for the storefront, or take the booking here too."
+      },
+      "transferChoice": {
+        "title": "Choose how bookings reach your crew",
+        "note": "Manual transfer: changes do not travel automatically between FareHarbor and DiveDay.",
+        "keepTitle": "Keep FareHarbor for bookings",
+        "keepBody": "Booking and distribution stay in FareHarbor. Import contacts and historical visits from CSVs. Staff then create departures and seat upcoming bookings in DiveDay; the import does not create a live roster.",
+        "keepFlow": "Contacts and history CSV → staff import; upcoming bookings → staff create and seat in DiveDay",
+        "keepReview": "Staff reconcile new bookings, changes and cancellations in both systems. Check export options and the work this requires before relying on this setup.",
+        "moveTitle": "Take new bookings in DiveDay",
+        "moveBody": "Point your booking link to DiveDay’s schedule and take payment through your Stripe account. Staff review imported records before the first trip.",
+        "moveFlow": "Your booking link → DiveDay schedule → trip preparation",
+        "moveReview": "DiveDay does not replace FareHarbor’s distribution network. Evaluate that tradeoff and the pricing before changing your booking link.",
+        "scopeLink": "Check the transfer scope",
+        "movesFact": "Contacts and booking history from the described exports; other records need a separate source.",
+        "timeFact": "Depends on your export, record quality and review."
+      },
+      "transferScope": {
+        "title": "From the FareHarbor exports described here",
+        "intro": "Check the actual columns in your export before planning the move. DiveDay accepting a field does not mean FareHarbor exports it.",
+        "reference": "All fields DiveDay can accept when supplied",
+        "supported": "Supported when supplied separately",
+        "rows": {
+          "contacts": {
+            "title": "Names, email and phone",
+            "route": "Contacts CSV",
+            "review": "Preview the file and match the columns; export availability may vary."
+          },
+          "bookings": {
+            "title": "Booking history",
+            "route": "Separate Bookings CSV, for historical reference",
+            "review": "Match divers by email and review the dates. Imported visits do not create upcoming bookings, orders or roll-call entries."
+          },
+          "certs": {
+            "title": "Certifications and rental sizes",
+            "route": "Not in the export described here",
+            "review": "Add separately if you have the records. Staff still verify certification requirements."
+          },
+          "evidence": {
+            "title": "Waivers and medical evidence",
+            "route": "Check your source documents separately",
+            "review": "Do not assume these are in the CSV. Imported evidence needs provenance and staff review; importing is not a new signature or medical clearance."
+          },
+          "payments": {
+            "title": "Payment-card credentials",
+            "route": "Do not transfer",
+            "review": "Do not include card numbers or security codes in an import."
+          }
+        }
+      },
+      "importStep": {
+        "title": "Import contacts, then prepare upcoming trips",
+        "detail": "Import the supported contact fields and review any booking history separately. These imports do not create upcoming bookings or supply the certification, rental-size, waiver and medical records missing from the described exports."
+      },
+      "cutover": {
+        "heading": "Plan the handover",
+        "intro": "The timing depends on your export, record quality, staff training and upcoming bookings.",
+        "prepare": {
+          "title": "Prepare upcoming departures in DiveDay",
+          "detail": "Create the trips and add each diver to the right departure. Collect missing records separately and check readiness before boarding; imported history is not a live booking."
+        },
+        "reconcile": {
+          "title": "Keep both systems aligned by hand",
+          "detail": "For each trip cycle, staff reconcile new bookings, changes and cancellations in FareHarbor and DiveDay. Re-importing contacts updates matched diver records; staff still update live bookings in each system."
+        },
+        "timing": {
+          "title": "Set the handover date after a trial",
+          "detail": "Try a representative file and one trip cycle first. Allow time to correct rows, gather missing records and train the crew before changing your booking link."
+        }
       }
     },
     "rezdy": {
@@ -1067,7 +1135,7 @@
       "metaTitle": "Dive shop website and booking page",
       "metaDescription": "A booking page in your shop’s color, typeface and photos, plus a Book Now button, calendar and trip grid for WordPress, Squarespace or Wix.",
       "title": "Divers book on a page in your shop’s colors, rated only by divers who dived with you",
-      "lede": "Your booking page wears your color, typeface and photos, and its buttons paste onto the site you run. With no site, ask, and a person here builds one with you, in the same monthly price.",
+      "lede": "Your booking page wears your color, typeface and photos, and its buttons paste onto the site you run. Need help with a new website? Reach out to discuss what you have in mind.",
       "screenLabel": "A shop’s public booking page: the shop’s name and rating, the next boat with space, and the week’s departures.",
       "note1": "The shop’s color, the typeface on its name and “Since 1987” are set once, in Settings.",
       "note2": "The next boat with space comes first, for the diver who wants to go out tomorrow.",
@@ -1079,7 +1147,7 @@
       "step3Title": "Let search engines read the trips",
       "step3Body": "Each trip, course and dive site page carries its price, open seats and rating in the form search engines read, and you decide whether the shop is listed.",
       "faq1Q": "I don’t have a website. Can you make one?",
-      "faq1A": "Yes. Write to us and a person here builds one with you, with booking in it from the start. It’s part of the same monthly price.",
+      "faq1A": "Reach out to discuss what you need with a person at DiveDay. If you already have a site, you can add our booking buttons, calendar and trip grid yourself.",
       "faq2Q": "Will the booking button work on WordPress, Squarespace and Wix?",
       "faq2A": "Yes. It’s one code for all three, and the embed page in Settings shows the extra line each one needs.",
       "faq3Q": "Can divers read it in Spanish?",

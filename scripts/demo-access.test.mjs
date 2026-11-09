@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { describe, expect, it, vi } from "vitest";
 import { demoCredentials, listDemos, parseDemoAccessArgs } from "./demo-access.ts";
+import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const shop = {
   id: "demo-id",
@@ -112,4 +113,19 @@ it("executes the read-only lookup against Postgres semantics", async () => {
   } finally {
     await pg.close();
   }
+});
+
+it("executes the documented tsx CLI and validates its arguments", () => {
+  const result = runBounded(
+    process.execPath,
+    ["node_modules/tsx/dist/cli.mjs", "scripts/demo-access.ts"],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, DATABASE_URL: "" },
+      encoding: "utf8",
+      timeoutMs: SUBPROCESS_TIMEOUTS.git,
+    },
+  );
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain("Usage:");
 });

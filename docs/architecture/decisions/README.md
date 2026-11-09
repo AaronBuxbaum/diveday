@@ -458,5 +458,6 @@ script again.
 | 20261108-concept-leaves | Move substrate leaves by concept… |
 | 20261108-configured-pricing | Configure one monthly and percentage… |
 | 20261109-evidence-key-history | Keep signing key identity with… (proposed) |
+| 20261109-operator-browser-and-email-sign-in | Separate database operators from account… |
 
 <!-- adr-index:end -->

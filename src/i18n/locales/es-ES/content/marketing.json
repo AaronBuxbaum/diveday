@@ -70,7 +70,7 @@
     "name": "Centro fundador",
     "cadence": "por ubicación / mes",
     "item3": "Las funciones nuevas según salen, sin un nivel superior",
-    "item7": "Un escaparate con tu marca y piezas para pegar en tu propia web, o una web que construimos contigo cuando la pidas"
+    "item7": "Un escaparate con tu marca, además de botones de reserva y calendarios para tu propia web"
   },
   "export": {
     "claim": "Ajustes → Exportación de datos descarga un ZIP con CSV simples y documentados (buceadores, reservas, registros de exenciones, historial de pagos), encabezados por un archivo de contactos con la forma que espera el asistente de importación de otro sistema. Cada foto guardada (evidencia de certificación, fotos de sitios, recapitulaciones) va dentro como archivo.",
@@ -563,8 +563,8 @@
           }
         },
         "sitesNote": "FareHarbor vende Sites por separado y no publica el precio; terceros lo sitúan en {sitesPrice} al año, antes de su complemento de SEO.",
-        "offerHeading": "O deja que construyamos la web nosotros",
-        "offerBody": "Pídelo, y una persona de DiveDay la construye contigo: tus fotos, tus palabras, la reserva ya dentro, y va en el precio."
+        "offerHeading": "Conversemos sobre una web para el centro",
+        "offerBody": "Cuéntanos qué necesitas para conversar con una persona de DiveDay sobre el proyecto. Puedes agregar nuestros componentes de reserva a tu web actual por tu cuenta."
       },
       "exportHeading": "Saca tus datos de FareHarbor",
       "exportIntro": "FareHarbor funciona en un navegador, y tus datos salen de los informes del Dashboard. No hay un único botón de “exportarlo todo”. El objetivo es tu gente en un CSV. Las etiquetas de los menús cambian con el tiempo, así que toma estos pasos como la forma del camino y no como botones palabra por palabra.",
@@ -601,6 +601,74 @@
         "cardSummary": "Un motor de reservas para tours, no software de buceo. Consérvalo como escaparate y lleva el día de buceo que él no puede, o toma también la reserva aquí.",
         "metaDescription": "¿Estás en FareHarbor? Conserva su red de reservas y distribución y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o toma también la reserva aquí. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
         "heroLede": "FareHarbor toma la reserva online y te pone delante de su red de hoteles y revendedores. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva FareHarbor como escaparate, o toma también la reserva aquí."
+      },
+      "transferChoice": {
+        "title": "Elige cómo llegan las reservas al equipo",
+        "note": "Transferencia manual: los cambios no pasan automáticamente entre FareHarbor y DiveDay.",
+        "keepTitle": "Mantén las reservas en FareHarbor",
+        "keepBody": "Las reservas y la distribución siguen en FareHarbor. Importa contactos y visitas anteriores desde archivos CSV. Después, el equipo crea las salidas y agrega las reservas próximas en DiveDay; la importación no crea una lista operativa.",
+        "keepFlow": "CSV de contactos e historial → importación manual; reservas próximas → creación y asignación manual en DiveDay",
+        "keepReview": "El equipo concilia las nuevas reservas, los cambios y las cancelaciones en ambos sistemas. Verifica las opciones de exportación y el trabajo necesario antes de depender de este esquema.",
+        "moveTitle": "Recibe nuevas reservas en DiveDay",
+        "moveBody": "Dirige tu enlace de reservas al calendario de DiveDay y cobra mediante tu cuenta de Stripe. El equipo revisa los registros importados antes de la primera salida.",
+        "moveFlow": "Tu enlace de reservas → calendario de DiveDay → preparación de la salida",
+        "moveReview": "DiveDay no sustituye la red de distribución de FareHarbor. Evalúa esa diferencia y los precios antes de cambiar tu enlace de reservas.",
+        "scopeLink": "Revisar el alcance de la transferencia",
+        "movesFact": "Contactos e historial de reservas desde las exportaciones descritas; los demás registros necesitan otra fuente.",
+        "timeFact": "Depende de la exportación, la calidad de los registros y la revisión."
+      },
+      "transferScope": {
+        "title": "Desde las exportaciones de FareHarbor descritas aquí",
+        "intro": "Revisa las columnas de tu archivo antes de planificar el cambio. Que DiveDay acepte un campo no significa que FareHarbor lo exporte.",
+        "reference": "Todos los campos que DiveDay acepta si los proporcionas",
+        "supported": "Admitidos si los proporcionas por separado",
+        "rows": {
+          "contacts": {
+            "title": "Nombres, email y teléfono",
+            "route": "CSV de contactos",
+            "review": "Revisa la vista previa y relaciona las columnas; las opciones de exportación pueden variar."
+          },
+          "bookings": {
+            "title": "Historial de reservas",
+            "route": "CSV de reservas separado, como referencia histórica",
+            "review": "Relaciona a los buceadores por email y revisa las fechas. Las visitas importadas no crean reservas próximas, pedidos ni entradas del pase de lista."
+          },
+          "certs": {
+            "title": "Certificaciones y tallas de alquiler",
+            "route": "No están en la exportación descrita aquí",
+            "review": "Agrégalas por separado si tienes los registros. El equipo sigue verificando los requisitos de certificación."
+          },
+          "evidence": {
+            "title": "Exenciones y evidencia médica",
+            "route": "Revisa los documentos de origen por separado",
+            "review": "No supongas que están en el CSV. La evidencia importada necesita procedencia y revisión del equipo; importar no equivale a una nueva firma ni a una autorización médica."
+          },
+          "payments": {
+            "title": "Credenciales de tarjetas de pago",
+            "route": "No se transfieren",
+            "review": "No incluyas números de tarjeta ni códigos de seguridad en una importación."
+          }
+        }
+      },
+      "importStep": {
+        "title": "Importa los contactos y prepara las próximas salidas",
+        "detail": "Importa los campos de contacto admitidos y revisa el historial de reservas por separado. Estas importaciones no crean reservas próximas ni aportan los registros de certificación, tallas de alquiler, exenciones y datos médicos que faltan en las exportaciones descritas."
+      },
+      "cutover": {
+        "heading": "Planifica el cambio",
+        "intro": "El tiempo necesario depende de la exportación, la calidad de los registros, la formación del personal y las próximas reservas.",
+        "prepare": {
+          "title": "Prepara las próximas salidas en DiveDay",
+          "detail": "Crea las salidas y agrega cada buceador a la que le corresponde. Reúne los registros que falten por separado y verifica la preparación antes de embarcar; importar reservas anteriores no crea reservas activas."
+        },
+        "reconcile": {
+          "title": "Mantén ambos sistemas al día de forma manual",
+          "detail": "En cada ciclo de salidas, el personal reconcilia las nuevas reservas, los cambios y las cancelaciones en FareHarbor y DiveDay. Volver a importar contactos actualiza los registros de buceadores coincidentes; el personal sigue actualizando las reservas activas en cada sistema."
+        },
+        "timing": {
+          "title": "Fija la fecha del cambio después de una prueba",
+          "detail": "Prueba primero con un archivo representativo y un ciclo de salidas. Reserva tiempo para corregir filas, reunir los registros que faltan y formar a la tripulación antes de cambiar el enlace de reservas."
+        }
       }
     },
     "rezdy": {
@@ -1067,7 +1135,7 @@
       "metaTitle": "Web y página de reservas para centros de buceo",
       "metaDescription": "Una página de reservas con el color, la tipografía y las fotos de tu centro, además de un botón de reservar, un calendario y una cuadrícula de salidas para WordPress, Squarespace o Wix.",
       "title": "Los buceadores hacen su reserva en una página con los colores de tu centro, valorada solo por quienes bucearon contigo",
-      "lede": "Tu página de reservas lleva tu color, tu tipografía y tus fotos, y sus botones se pegan en la web que ya tienes. Si no tienes web, pídela y una persona del equipo la arma contigo, dentro del mismo precio mensual.",
+      "lede": "Tu página de reservas lleva tu color, tu tipografía y tus fotos, y sus botones se pegan en la web que ya tienes. ¿Necesitas ayuda con un sitio web nuevo? Escríbenos para conversar sobre lo que tienes en mente.",
       "screenLabel": "La página pública de reservas de un centro: el nombre y la valoración del centro, el próximo barco con plazas y las salidas de la semana.",
       "note1": "El color del centro, la tipografía de su nombre y “Desde 1987” se configuran una vez, en Ajustes.",
       "note2": "El próximo barco con plazas va primero, para el buceador que quiere salir mañana.",
@@ -1079,7 +1147,7 @@
       "step3Title": "Deja que los buscadores lean las salidas",
       "step3Body": "Cada página de salida, de curso y de sitio de buceo lleva su precio, sus plazas libres y su valoración en el formato que leen los buscadores, y tú decides si el centro aparece.",
       "faq1Q": "No tengo web. ¿Me pueden hacer una?",
-      "faq1A": "Sí. Escríbenos y una persona del equipo la arma contigo, con las reservas dentro desde el principio. Entra en el mismo precio mensual.",
+      "faq1A": "Escríbenos para conversar sobre lo que necesitas con una persona de DiveDay. Si ya tienes una web, puedes agregar nuestros botones de reserva, calendario y cuadrícula de salidas por tu cuenta.",
       "faq2Q": "¿El botón de reservar funciona en WordPress, Squarespace y Wix?",
       "faq2A": "Sí. Es un mismo código para los tres, y la página para insertar en Ajustes muestra la línea extra que necesita cada uno.",
       "faq3Q": "¿Se puede leer en inglés?",

@@ -946,3 +946,15 @@ sample outcomes and actual authorization/refusal states all remain. Generic sign
 EntryShell with a home-linked wordmark and quiet escape/legal links; active authorized onboarding
 and token routes keep their existing flows. Device-grouped sessions remain unchanged pending
 fresh runtime verification rather than being restyled from a historical screenshot suggestion.
+
+## Operator shop directory and email sign-in
+
+The operator directory's one idea is to find a shop by its name or slug and act on that row.
+The operator arrives asking which demo to share, how long access lasts, and which shop a link
+opens; bounded search, a 24-hour action and a result labelled with the selected shop answer those
+questions in place. We considered a separate global recovery panel, then chose an inline result
+that receives focus so a successful generation remains visible even in a fifty-row list.
+At phone width names and slugs stack, long links wrap, and the public sample-login action stays
+secondary to generating a link. Ordinary account email sign-in keeps EntryShell, one primary
+action per step, and a 44px alternative alongside password recovery; the request and confirmation
+screens and operator result were inspected at phone and desktop widths.

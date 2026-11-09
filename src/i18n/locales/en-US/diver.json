@@ -3474,6 +3474,16 @@
         "createFailed": "Something went wrong creating your shop.",
         "signinFailed": "Your shop was created, but signing you in failed. Try signing in below."
       }
+    },
+    "magicSignIn": {
+      "confirmTitle": "Confirm sign-in",
+      "title": "Get a magic link",
+      "description": "Use your verified account email.",
+      "submit": "Email me a magic link",
+      "sentTitle": "Check your inbox",
+      "sent": "If this is a verified account email, a sign-in link is on its way.",
+      "confirm": "Continue signing in",
+      "error": "This sign-in link is unavailable. Request a new one."
     }
   },
   "nav": {
@@ -4395,6 +4405,12 @@
       "clearedByRecipient": "{email} used the link in a month-end email to stop them. No month-end files will be sent until you set an address again.",
       "clearedByErasure": "The bookkeeper’s email was removed when that person’s data was erased at their request. No month-end files will be sent until you set an address again.",
       "bounced": "The month-end files to {email} bounced, so the bookkeeper did not get them. Check the address in Settings, and save it again or change it."
+    },
+    "magicSignIn": {
+      "subject": "Your DiveDay sign-in link",
+      "body": "You requested a link to sign in to DiveDay.",
+      "choose": "Sign in",
+      "expiry": "This link expires at {expiresAt}. If you didn’t request it, ignore this email."
     }
   },
   "brand": {

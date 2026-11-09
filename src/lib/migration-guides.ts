@@ -20,11 +20,9 @@ import type { ImportScopeRowId } from "./import";
  * together. The switching pages resolve these keys through the negotiated
  * request locale's `diverTranslator`.
  *
- * The scope table is not restated here: every guide shows IMPORT_HONESTY_TABLE
- * from src/lib/import.ts verbatim (its rows resolved through
- * {@link IMPORT_SCOPE_ROW_KEYS}), because the honest answer to "what comes
- * across" is a property of the importer, not of the incumbent — and pinning it
- * to that one source keeps the marketing promise and the running code in step.
+ * Importer capabilities stay in IMPORT_HONESTY_TABLE. Source-specific export
+ * coverage is separate: FareHarbor’s guide distinguishes its described CSVs
+ * from separately supplied evidence before the generic importer disclosure.
  *
  * Legal guardrail (competitive-strategy.md): a shop migrates from files it
  * exports itself. These guides only ever describe the incumbent's own export;
@@ -648,7 +646,28 @@ const fareharbor: MigrationGuide = {
     "marketing.guides.fareharbor.exportNotes.note4",
   ],
   importerNote: "marketing.guides.fareharbor.importerNote",
-  cutover: CUTOVER_SECTION,
+  cutover: {
+    heading: "marketing.guides.fareharbor.cutover.heading",
+    intro: "marketing.guides.fareharbor.cutover.intro",
+    steps: [
+      {
+        title: "marketing.guides.shared.cutover.crewFirst.title",
+        detail: "marketing.guides.shared.cutover.crewFirst.detail",
+      },
+      {
+        title: "marketing.guides.fareharbor.cutover.prepare.title",
+        detail: "marketing.guides.fareharbor.cutover.prepare.detail",
+      },
+      {
+        title: "marketing.guides.fareharbor.cutover.reconcile.title",
+        detail: "marketing.guides.fareharbor.cutover.reconcile.detail",
+      },
+      {
+        title: "marketing.guides.fareharbor.cutover.timing.title",
+        detail: "marketing.guides.fareharbor.cutover.timing.detail",
+      },
+    ],
+  },
   sources: [
     {
       // i18n-exempt: cited source title — the document's own name is not translated

@@ -336,6 +336,7 @@ const SENDERS: Record<string, string> = {
   "src/app/actions/demo-instrumentation.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/actions/inquiry.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/forgot-password/actions.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/features/email-sign-in/store.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/onboard/actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/(token)/reset-password/[token]/actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/shop/[shopSlug]/settings/boat-actions.ts": NOT_ABOUT_A_DEPARTURE,

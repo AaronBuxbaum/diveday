@@ -3,6 +3,9 @@
   "/claim/[token]": {
     "visual": ["seat-claim"]
   },
+  "/email-sign-in": {
+    "e2e": ["account-lifecycle.spec.ts"]
+  },
   "/get-set-up/sent": {
     "e2e": ["setup-request.spec.ts"]
   },

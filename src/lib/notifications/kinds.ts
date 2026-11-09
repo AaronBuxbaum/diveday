@@ -850,6 +850,19 @@ const addressConfirmationSchema = z.discriminatedUnion("purpose", [
   }),
 ]);
 
+const magicSignInRequestSchema = z.object({
+  kind: z.literal("magic_sign_in_request"),
+  userAccountId: z.uuid(),
+  tokenId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  signInUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
 const passwordResetRequestSchema = z.object({
   kind: z.literal("password_reset_request"),
   userAccountId: z.uuid(),
@@ -2147,6 +2160,7 @@ export const notificationSchema = z
     welcomeSchema,
     addressConfirmationSchema,
     passwordResetRequestSchema,
+    magicSignInRequestSchema,
     passwordChangedSchema,
     staffInviteSchema,
     checkoutRecoverySchema,
@@ -2434,6 +2448,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // send. The purpose prefix is the old kind's key, unchanged.
     case "address_confirmation":
       return `${ADDRESS_CONFIRMATION_KEY_PREFIX[notification.purpose]}/${notification.tokenId}`;
+    case "magic_sign_in_request":
+      return `magic-sign-in-request/${notification.tokenId}`;
     case "password_reset_request":
       return `password-reset-request/${notification.tokenId}`;
     case "staff_invite":

@@ -1,3 +1,5 @@
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 /** Operator-only, read-only demo lookup. Never imported by the application. */
 import { Pool, type PoolClient } from "pg";
 import { withExplicitSslMode } from "@/db/connection-string";
@@ -154,7 +156,8 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
   }
 }
 
-if (import.meta.main) {
+// tsx imports its entry module, so import.meta.main is undefined there.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().then(
     (code) => {
       process.exitCode = code;

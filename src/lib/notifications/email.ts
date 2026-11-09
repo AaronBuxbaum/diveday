@@ -1595,6 +1595,29 @@ export function staffInviteEmail(input: StaffInviteEmailInput): NotificationEmai
   };
 }
 
+type MagicSignInEmailInput = {
+  locale: DiverLocale;
+  ownerName: string;
+  signInUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+export function magicSignInEmail(input: MagicSignInEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const greeting = notificationGreeting(t, input.ownerName);
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
+  const body = t("notifications.magicSignIn.body");
+  const choose = t("notifications.magicSignIn.choose");
+  const expiry = t("notifications.magicSignIn.expiry", { expiresAt });
+
+  return {
+    subject: t("notifications.magicSignIn.subject"),
+    text: `${greeting.text}\n\n${body} ${choose}:\n${input.signInUrl}\n\n${expiry}\n`,
+    html: `<p>${greeting.html}</p><p>${body}</p>${emailButton(input.signInUrl, choose)}<p>${t("notifications.magicSignIn.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+  };
+}
+
 type PasswordResetEmailInput = {
   locale: DiverLocale;
   ownerName: string;

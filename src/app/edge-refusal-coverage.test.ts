@@ -104,6 +104,7 @@ const EDGE_EXEMPT = new Map<string, string>(
     "/ready/[token]/waiver/doctor",
     "/recap/[token]",
     "/reset-password/[token]",
+    "/email-sign-in/[token]",
     "/unsubscribe/[token]",
     "/verify/[token]",
     "/waivers/[token]",

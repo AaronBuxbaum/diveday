@@ -3474,6 +3474,16 @@
         "createFailed": "Algo salió mal al crear tu centro.",
         "signinFailed": "Tu centro se creó, pero no pudimos iniciar tu sesión. Prueba a iniciar sesión más abajo."
       }
+    },
+    "magicSignIn": {
+      "confirmTitle": "Confirmar acceso",
+      "title": "Recibir un enlace de acceso",
+      "description": "Usa el correo verificado de tu cuenta.",
+      "submit": "Enviar enlace de acceso",
+      "sentTitle": "Revisa tu correo",
+      "sent": "Si este correo está verificado, recibirás un enlace para entrar.",
+      "confirm": "Continuar al inicio de sesión",
+      "error": "Este enlace ya no está disponible. Solicita uno nuevo."
     }
   },
   "nav": {
@@ -4395,6 +4405,12 @@
       "clearedByRecipient": "{email} usó el enlace de un correo de fin de mes para dejar de recibirlos. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección.",
       "clearedByErasure": "Se quitó el correo del contador al borrar los datos de esa persona a petición suya. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección.",
       "bounced": "Los archivos de fin de mes a {email} rebotaron, así que el contador no los recibió. Revisa la dirección en Ajustes y guárdala de nuevo o cámbiala."
+    },
+    "magicSignIn": {
+      "subject": "Tu enlace para entrar a DiveDay",
+      "body": "Solicitaste un enlace para entrar a DiveDay.",
+      "choose": "Entrar",
+      "expiry": "Este enlace vence el {expiresAt}. Si no lo solicitaste, ignora este correo."
     }
   },
   "brand": {

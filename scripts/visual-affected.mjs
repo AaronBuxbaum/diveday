@@ -1128,7 +1128,8 @@ export function selectCaptureFiles({
   linesFor,
   visualSources = new Map(),
 }) {
-  const results = files.map((file) => {
+  const results = [];
+  for (const file of files) {
     const source = readSource(file);
     const fileReport = {
       ...report,
@@ -1137,7 +1138,7 @@ export function selectCaptureFiles({
     // Another visual spec's edit is that file's own selection, never this one's.
     const changed = diff.changed.filter((name) => !files.includes(name) || name === file);
     const visualLines = linesFor(file);
-    return selectCaptures({
+    const result = selectCaptures({
       ...diff,
       changed,
       file,
@@ -1152,14 +1153,15 @@ export function selectCaptureFiles({
         ...helperBodies(source),
       ]),
     });
-  });
-  return (
-    results.find((item) => item.mode === "all") ?? {
-      mode: "affected",
-      lines: new Set(results.flatMap((item) => [...item.lines])),
-      why: new Map(results.flatMap((item) => [...item.why])),
-    }
-  );
+    // Once every capture is required, later per-file walks cannot change the answer.
+    if (result.mode === "all") return result;
+    results.push(result);
+  }
+  return {
+    mode: "affected",
+    lines: new Set(results.flatMap((item) => [...item.lines])),
+    why: new Map(results.flatMap((item) => [...item.why])),
+  };
 }
 
 async function main() {

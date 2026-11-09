@@ -31,6 +31,7 @@ export const KNOWN_ROUTES = [
   "(token)/ready/[token]",
   "(token)/recap/[token]",
   "(token)/reset-password/[token]",
+  "(token)/email-sign-in/[token]",
   "(token)/unsubscribe/[token]",
   "(token)/verify/[token]",
   "(token)/waivers/[token]",

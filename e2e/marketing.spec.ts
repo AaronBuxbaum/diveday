@@ -995,6 +995,30 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // then the same export/scope/import mechanics every guide shares.
   await page.goto("/switching/fareharbor");
   await expect(
+    page.getByText(/Manual transfer: changes do not travel automatically/),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Check the transfer scope" })).toHaveAttribute(
+    "href",
+    "#scope",
+  );
+  await expect(page.locator("#scope").getByText("Not in the export described here")).toBeVisible();
+  await expect(page.locator("#import-reference")).not.toHaveAttribute("open");
+
+  const fareharborCopy = diverTranslator("en-US");
+  await expect(
+    page
+      .locator("#import")
+      .getByText(fareharborCopy("marketing.guides.fareharbor.importStep.title"), { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("#cutover")
+      .getByText(fareharborCopy("marketing.guides.fareharbor.cutover.timing.title"), {
+        exact: true,
+      }),
+  ).toBeVisible();
+
+  await expect(
     page.getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat" }),
   ).toBeVisible();
   await expect(
@@ -1005,13 +1029,13 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   ).toBeVisible();
   // The website ledger (slice 13e): what the shop pasted from FareHarbor
   // beside the DiveDay twin, the hosted-site figure rendered from its one
-  // source with its attribution, and the built-to-order offer as a mail door.
+  // source with its attribution, and an invitation to discuss website work.
   await expect(
     page.getByRole("heading", { name: "Leaving FareHarbor does not mean rebuilding your site" }),
   ).toBeVisible();
   await expect(page.getByText("Lightframe", { exact: true })).toBeVisible();
   await expect(page.getByText(/third parties report \$5,000 a year/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Or have us build the website" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Talk to us about your website" })).toBeVisible();
   // The offer's door and the concierge section's further down are the same
   // set-up form, tagged as the concierge (2026-10-22; both were mail links).
   await expect(
@@ -1633,34 +1657,35 @@ test.describe("with Accept-Language: es", () => {
     },
   } as const;
 
-  test("a marketing page never paints a body in a language its reader did not ask for", async ({
-    page,
-  }) => {
-    await page.addInitScript(
-      (markers: string[]) => {
-        const recorder = window as unknown as { __englishBodyEverSeen?: string[] };
-        const seen: string[] = [];
-        recorder.__englishBodyEverSeen = seen;
-        const look = () => {
-          const text = document.body?.textContent ?? "";
-          for (const marker of markers) {
-            if (text.includes(marker) && !seen.includes(marker)) seen.push(marker);
-          }
-        };
-        look();
-        // Parser-inserted nodes generate mutation records too, so this sees the
-        // streamed document as it is built — including a Suspense fallback that
-        // exists for a single frame.
-        new MutationObserver(look).observe(document, {
-          childList: true,
-          subtree: true,
-          characterData: true,
-        });
-      },
-      Object.values(bodyCopy).map((copy) => copy.english),
-    );
+  // Each cold page gets the same test budget; do not make six navigations share it.
+  for (const [path, copy] of Object.entries(bodyCopy)) {
+    test(`${path} never paints a body in a language its reader did not ask for`, async ({
+      page,
+    }) => {
+      await page.addInitScript(
+        (markers: string[]) => {
+          const recorder = window as unknown as { __englishBodyEverSeen?: string[] };
+          const seen: string[] = [];
+          recorder.__englishBodyEverSeen = seen;
+          const look = () => {
+            const text = document.body?.textContent ?? "";
+            for (const marker of markers) {
+              if (text.includes(marker) && !seen.includes(marker)) seen.push(marker);
+            }
+          };
+          look();
+          // Parser-inserted nodes generate mutation records too, so this sees the
+          // streamed document as it is built — including a Suspense fallback that
+          // exists for a single frame.
+          new MutationObserver(look).observe(document, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+          });
+        },
+        Object.values(bodyCopy).map((copy) => copy.english),
+      );
 
-    for (const [path, copy] of Object.entries(bodyCopy)) {
       await page.goto(path);
       // The page is finished rendering in the reader's language — so anything
       // the recorder caught was on screen at some point before this, which is
@@ -1672,8 +1697,8 @@ test.describe("with Accept-Language: es", () => {
           (window as unknown as { __englishBodyEverSeen?: string[] }).__englishBodyEverSeen ?? [],
       );
       expect(seen, `${path} painted default-locale body copy before its own`).toEqual([]);
-    }
-  });
+    });
+  }
 
   test("/product's directory takes an es-ES reader to the feature they asked for", async ({
     page,

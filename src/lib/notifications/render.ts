@@ -28,6 +28,7 @@ import {
   guardianReleaseCopyEmail,
   interestReceivedEmail,
   lastMinuteDealEmail,
+  magicSignInEmail,
   type NotificationEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
@@ -239,6 +240,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_handoff") return bookingHandoffEmail(notification);
   if (notification.kind === "welcome") return welcomeEmail(notification);
   if (notification.kind === "address_confirmation") return addressConfirmationEmail(notification);
+  if (notification.kind === "magic_sign_in_request") return magicSignInEmail(notification);
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
