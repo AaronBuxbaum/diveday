@@ -63,6 +63,7 @@ describe("the CI result job", () => {
     expect(job("playwright")).toMatch(
       /- name: Run non-visual Playwright tests\n {8}env:\n {10}SKIP: [^\n]+\n {10}E2E_WORKERS: "2"/u,
     );
+    expect(job("changes")).toContain("grep -E '^scripts/persona-bots/'");
     expect(job("visual")).toContain("shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}");
     expect(job("visual")).toMatch(/^\s+E2E_WORKERS: "2"$/mu);
     for (const id of ["unit-tests", "playwright", "visual"]) {

@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { E2E_TEST_ROUTE_SECRET } from "../../e2e/servers";
+import { mintOnboardFormPath } from "../../e2e/setup-link";
 import { DEV_STAFF_LOGINS } from "../../src/db/dev-credentials";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "../subprocess.mjs";
 import { classify } from "./findings.mjs";
@@ -150,12 +151,9 @@ for (const visit of walkPlan()) {
  */
 async function visitPath(page: Page, visit: ReturnType<typeof walkPlan>[number]) {
   if (visit.mint !== "setup-link") return visit.path;
-  const minted = await page.request.post("/api/test/seed-setup-link", {
+  return mintOnboardFormPath(page, {
     headers: { authorization: `Bearer ${E2E_TEST_ROUTE_SECRET}` },
   });
-  if (!minted.ok()) throw new Error(`persona-bots: no setup link minted (${minted.status()})`);
-  const { path: linkPath } = (await minted.json()) as { path: string };
-  return linkPath;
 }
 
 /** One surface, opened and probed. Throws only when the harness broke. */
@@ -186,9 +184,12 @@ async function visitSurface(
     findings.push({ probe, path: visit.path, personas: visit.personas, detail, impact });
   };
 
+  // Minting is harness setup, so a failure must abort the walk rather than
+  // be filed as a failure of the page that was never opened.
+  const path = await visitPath(page, visit);
   let rendered = false;
   try {
-    const response = await page.goto(await visitPath(page, visit), { waitUntil: "load" });
+    const response = await page.goto(path, { waitUntil: "load" });
     const status = response?.status() ?? 0;
     // A **refusal** surface is asked for nothing but that it render: a
     // `notFound()` reached from inside a streamed segment cannot change a

@@ -19,9 +19,10 @@ export type FactRequest = string | ({ name: string } & Record<string, unknown>);
 export async function seedFacts(
   request: APIRequestContext,
   facts: FactRequest[],
-  options: { slug?: string } = {},
+  options: { slug?: string; headers?: Record<string, string> } = {},
 ) {
   const response = await request.post("/api/test/shop", {
+    ...(options.headers ? { headers: options.headers } : {}),
     data: { ...(options.slug ? { slug: options.slug } : {}), facts },
   });
   if (!response.ok()) {

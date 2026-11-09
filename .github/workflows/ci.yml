@@ -1353,7 +1353,7 @@ jobs:
             # answer. They skip exactly as on a docs-only change; the unit
             # shards, safeguards and the coverage floors still run. Fails open:
             # a push to main is `true` unless a newer main commit exists (see `superseded`).
-            if [ -n "${IS_PR}" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -Ev '[.]test[.](ts|tsx|mts|mjs)$' || true)" ]; then
+            if [ -n "${IS_PR}" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -E '^scripts/persona-bots/' || true)" ] && [ -z "$(printf '%s\n' "${code_paths}" | grep -Ev '[.]test[.](ts|tsx|mts|mjs)$' || true)" ]; then
               echo "browser=false" >> "$GITHUB_OUTPUT"
               echo "Only unit-test files changed — the build, Playwright, fast lane and visual jobs are skipped; the unit shards still run." >> "$GITHUB_STEP_SUMMARY"
             else
