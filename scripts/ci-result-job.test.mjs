@@ -66,7 +66,9 @@ describe("the CI result job", () => {
     // The auxiliary persona config is outside e2e/ discovery. Keep its setup
     // link regression in exactly one gated browser shard.
     const personaStep =
-      job("playwright").split("- name: Verify persona onboarding setup link")[1]?.split("\n      - ")[0] ?? "";
+      job("playwright")
+        .split("- name: Verify persona onboarding setup link")[1]
+        ?.split("\n      - ")[0] ?? "";
     expect(personaStep).toContain("if: ${{ matrix.shard == 1 }}");
     expect(personaStep).toContain("--config scripts/persona-bots/playwright.config.ts");
     expect(personaStep).toContain("Victor's setup link opens the onboarding form");
