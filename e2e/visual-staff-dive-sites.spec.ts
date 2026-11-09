@@ -46,6 +46,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.clock.install({ time: E2E_FROZEN_CLOCK });
         await capture(page, "dive-sites-library", scheme, {
           beforeShot: () => expectOverviewMapSites(page, 8),
+          beforeScreenshot: () => waitForMapTilesToSettle(page),
         });
 
         // Use a real standalone pin from this viewport; a cluster's count

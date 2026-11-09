@@ -1,11 +1,17 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import { routeFocus } from "@/lib/dive-site-route";
 import { DiveSiteMap, type DiveSiteRouteMap } from "./DiveSiteMap";
 
-afterEach(cleanup);
+// Each render starts RouteFrameMap's lazy Leaflet import. Unmount first so its
+// cancellation guard owns completion, then drain imports before Vitest destroys
+// this file's VM module executor (CI otherwise reports unhandled config errors).
+afterEach(async () => {
+  cleanup();
+  await vi.dynamicImportSettled();
+});
 
 const t = diverTranslator("en-US");
 
