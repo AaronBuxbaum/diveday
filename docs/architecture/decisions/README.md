@@ -457,5 +457,6 @@ script again.
 | 20261105-waiver-folds-into-the-thread | Hand a seat's release over… |
 | 20261108-concept-leaves | Move substrate leaves by concept… |
 | 20261108-configured-pricing | Configure one monthly and percentage… |
+| 20261109-operator-browser-and-email-sign-in | Separate database operators from account… |
 
 <!-- adr-index:end -->

@@ -58,6 +58,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "bookkeeper_confirmation":
       return notification.shopName;
     case "welcome":
+    case "magic_sign_in_request":
     case "password_reset_request":
     case "password_changed":
     case "staff_invite":

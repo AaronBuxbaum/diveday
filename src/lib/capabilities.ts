@@ -1,4 +1,9 @@
-import { EMAIL_VERIFICATION_TTL_MS, INVITE_TTL_MS, PASSWORD_RESET_TTL_MS } from "./account-tokens";
+import {
+  EMAIL_VERIFICATION_TTL_MS,
+  INVITE_TTL_MS,
+  MAGIC_SIGN_IN_TTL_MS,
+  PASSWORD_RESET_TTL_MS,
+} from "./account-tokens";
 import { DAY_MS } from "./clock";
 import { SETUP_LINK_TTL_MS } from "./setup-links";
 
@@ -45,6 +50,7 @@ export const CAPABILITY_PURPOSES = [
   "shore_alert_confirm",
   "email_verification",
   "password_reset",
+  "magic_sign_in",
   "invite",
   "shop_setup",
   "calendar_assignments",
@@ -257,6 +263,15 @@ export const CAPABILITY_POLICY = {
     use: "once",
   },
   // Sets a new password: a credential over account takeover, so an hour.
+  magic_sign_in: {
+    subject: "user_account",
+    scope: "platform",
+    lifetime: "expires",
+    ttlMs: MAGIC_SIGN_IN_TTL_MS,
+    reissue: "supersedes",
+    per: "subject",
+    use: "once",
+  },
   password_reset: {
     subject: "user_account",
     scope: "platform",

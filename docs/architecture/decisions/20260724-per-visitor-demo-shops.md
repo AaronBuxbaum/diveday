@@ -91,3 +91,36 @@ it. The "Demo shop" banner stays, and every demo shop's storefront is now `noind
 (`shopSearchListingRobots` reads `isDemo`), so a page wearing a real shop's name cannot be indexed
 as that shop. Leaving the field empty keeps the generated name, and an empty submit clears the
 cookie.
+
+## Operator-assisted recovery
+
+There is no new self-service access door and no required email before trying the demo. The
+operator uses `scripts/demo-access.ts` with an explicitly configured `DATABASE_URL`, preferably
+read-only credentials. It opens a read-only transaction, never calls the seeding database factory,
+and never changes accounts, issues tokens, or sends messages.
+
+```sh
+NODE_ENV=production pnpm exec tsx scripts/demo-access.ts list --query coral
+NODE_ENV=production pnpm exec tsx scripts/demo-access.ts list --since 2026-11-09T09:00:00Z
+NODE_ENV=production pnpm exec tsx scripts/demo-access.ts credentials --slug coral-cove-divers
+```
+
+`list` returns at most 100 recent demo matches with generated name, exact slug and creation time
+in UTC, not account emails. Narrow the query/time window when necessary. Ask the requester for
+any demo URL from browser history, a screenshot showing the URL or generated shop name, and the
+approximate time they entered. Match these before explicitly selecting the exact slug. The
+visitor's typed shop name deliberately remains only in their signed browser cookie, not the
+database; without any identifier or usable time correlation, the operator cannot reliably infer
+which demo belongs to a person. Do not guess: provide a fresh sample shop instead.
+
+`credentials` prints the selected sample owner's existing sign-in details for the operator to
+review and send manually. Its query requires a demo shop, exclusively demo-namespace owner/captain
+accounts, and exactly one live active owner. It refuses missing/reaped shops, real identities,
+disabled/deleted owners and ambiguous ownership. The deployment must still allow demo sign-in.
+Run it with the deployment's `APP_HOST` and runtime flags; do not post its output to a public issue
+or CI log. These details are reusable public sample access, not a private or revocable magic link.
+Do not enter real customer data. Demos normally expire after seven days and can be evicted earlier.
+
+Real accounts already use `/forgot-password` and the emailed single-use reset flow. Demo addresses
+are non-routable and demo mail is held, so that flow cannot recover demos. This operator tool does
+not reset a real password, disable two-factor authentication or grant access to a real shop.

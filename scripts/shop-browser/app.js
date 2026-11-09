@@ -1,0 +1,69 @@
+const secret = location.hash.slice(1);
+history.replaceState(null, "", "/");
+const status = document.querySelector("#status");
+const list = document.querySelector("#shops");
+const next = document.querySelector("#next");
+let cursor = "";
+let query = "";
+async function request(path) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${secret}` },
+  });
+  if (!response.ok) throw new Error("Request failed");
+  return response.json();
+}
+async function browse(after = "") {
+  status.textContent = "Loading shops…";
+  next.disabled = true;
+  document.querySelector("#recovery").hidden = true;
+  try {
+    const data = await request(`/shops?${new URLSearchParams({ q: query, after })}`);
+    list.replaceChildren();
+    for (const shop of data.rows) {
+      const row = document.createElement("li");
+      const name = document.createElement("strong");
+      name.textContent = shop.name;
+      const slug = document.createElement("code");
+      slug.textContent = shop.slug;
+      row.append(name, slug);
+      if (shop.is_demo) {
+        const button = document.createElement("button");
+        button.textContent = "Show demo sign-in";
+        button.onclick = async () => {
+          try {
+            const value = await request(`/demo?${new URLSearchParams({ slug: shop.slug })}`);
+            if (!value) {
+              status.textContent = "No eligible sample owner found.";
+              return;
+            }
+            document.querySelector("#details").textContent =
+              `${shop.slug}\n${value.email}\n${value.password}`;
+            document.querySelector("#recovery").hidden = false;
+          } catch {
+            status.textContent = "Recovery unavailable. Try again.";
+          }
+        };
+        row.append(button);
+      }
+      list.append(row);
+    }
+    cursor = data.next;
+    next.hidden = !cursor;
+    status.textContent = data.rows.length ? `${data.rows.length} shops` : "No shops found.";
+  } catch {
+    status.textContent =
+      "Unable to load shops. Reopen the private URL printed by the operator command.";
+  } finally {
+    next.disabled = false;
+  }
+}
+document.querySelector("#search").onsubmit = (event) => {
+  event.preventDefault();
+  query = document.querySelector("#query").value;
+  void browse();
+};
+next.onclick = () => {
+  void browse(cursor);
+};
+void browse();

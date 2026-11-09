@@ -12,7 +12,11 @@ import { DAY_MS } from "@/lib/clock";
  * `recap-links.ts`: a password-reset (or invite-acceptance) token is a
  * credential over account takeover and must be individually revocable.
  */
-export type AccountTokenPurpose = "email_verification" | "password_reset" | "invite";
+export type AccountTokenPurpose =
+  | "email_verification"
+  | "password_reset"
+  | "invite"
+  | "magic_sign_in";
 
 /** Low stakes — only confirms the address works, so a generous window. */
 export const EMAIL_VERIFICATION_TTL_MS = 3 * DAY_MS;
@@ -41,3 +45,6 @@ export function resetPasswordLinkPath(token: string): string {
 export function inviteLinkPath(token: string): string {
   return `/invite/${token}`;
 }
+
+/** Email sign-in is a short-lived authentication proof, independent of resets. */
+export const MAGIC_SIGN_IN_TTL_MS = 15 * 60 * 1000;
