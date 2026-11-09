@@ -191,3 +191,23 @@ it.each(["manifest", "snapshot"])(
     expect(Buffer.from((await templateBytes()) ?? []).toString()).toBe("lean");
   },
 );
+
+it("uses a provided run generation without rehashing the checkout in each isolated worker", async () => {
+  const fingerprint = vi.fn(async () => "unexpected-worker-hash");
+  vi.doMock("./db-template-inputs", () => ({ inputsFingerprint: fingerprint }));
+  const bytes = Buffer.from("provided snapshot");
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const entry = { file: `${sha256}.tar`, size: bytes.length, sha256 };
+  const reader = await import("./db-template-read");
+  await writeFile(path.join(directory, entry.file), bytes);
+  await writeFile(
+    reader.manifestFile("run-generation"),
+    JSON.stringify({
+      fingerprint: "run-generation",
+      files: { lean: entry, history: entry, empty: entry },
+    }),
+  );
+  // Each isolated DB fork receives the same generation from Vitest's project context.
+  expect(await reader.templateBytes("lean", "run-generation")).toEqual(new Uint8Array(bytes));
+  expect(fingerprint).not.toHaveBeenCalled();
+});

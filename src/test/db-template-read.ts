@@ -105,10 +105,15 @@ export function refreshTemplateReader(fingerprint: string): void {
 
 export async function templateBytes(
   variant: TemplateVariant = "lean",
+  providedGeneration?: string,
 ): Promise<Uint8Array<ArrayBuffer> | null> {
   globalForTemplate.divedayTestDbFingerprints ??= new Map();
   const fingerprints = globalForTemplate.divedayTestDbFingerprints;
-  let fingerprint = fingerprints.get(process.cwd());
+  // Vitest global setup already hashes and validates once per run. Standalone
+  // callers still compute the complete content fingerprint, never an mtime key.
+  let fingerprint = providedGeneration
+    ? Promise.resolve(providedGeneration)
+    : fingerprints.get(process.cwd());
   if (!fingerprint) {
     fingerprint = inputsFingerprint();
     fingerprints.set(process.cwd(), fingerprint);

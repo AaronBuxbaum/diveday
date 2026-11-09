@@ -3,13 +3,24 @@ import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, afterEach, beforeAll, beforeEach, onTestFinished } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, inject, onTestFinished } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
 import { closePglite } from "@/db/close-pglite";
 import { seedDemo } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { type TemplateVariant, templateBytes } from "./db-template";
+import { templateBytes as readTemplateBytes, type TemplateVariant } from "./db-template";
 import { openRollbackTransaction } from "./rollback-transaction";
+
+declare module "vitest" {
+  export interface ProvidedContext {
+    divedayTemplateGeneration?: string;
+  }
+}
+
+// Keep Vitest context out of the standalone reader and profiling command.
+function templateBytes(variant: TemplateVariant) {
+  return readTemplateBytes(variant, inject("divedayTemplateGeneration"));
+}
 
 /**
  * Close the test's PGlite when the test finishes.

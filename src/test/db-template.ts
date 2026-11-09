@@ -24,7 +24,7 @@ export type TemplateTiming = {
 
 export async function ensureTestDbTemplate(
   options: { onTiming?: (timing: TemplateTiming) => void } = {},
-): Promise<void> {
+): Promise<string> {
   const started = performance.now();
   const fingerprint = await inputsFingerprint();
   options.onTiming?.({ phase: "fingerprint", durationMs: performance.now() - started });
@@ -42,7 +42,7 @@ export async function ensureTestDbTemplate(
   });
   if (cached) {
     refreshTemplateReader(fingerprint);
-    return;
+    return fingerprint;
   }
 
   // A warm cache needs filesystem reads only; loading the seed graph costs seconds.
@@ -82,4 +82,5 @@ export async function ensureTestDbTemplate(
     await rm(staging, { force: true });
   }
   refreshTemplateReader(fingerprint);
+  return fingerprint;
 }
