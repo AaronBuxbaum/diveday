@@ -1,7 +1,13 @@
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
-import { isTransactionExecutor, queryAll, sqlStateOf, violatesUniqueIndex } from "./query-helpers";
+import {
+  isTransactionExecutor,
+  queryAll,
+  queryBatches,
+  sqlStateOf,
+  violatesUniqueIndex,
+} from "./query-helpers";
 
 /** A driver error as it actually arrives: wrapped, with the SQLSTATE one layer down. */
 function wrappedDriverError(fields: { code: string; constraint?: string }) {
@@ -90,5 +96,49 @@ describe("queryAll", () => {
     await db.transaction(async (tx) => {
       expect(isTransactionExecutor(tx)).toBe(true);
     });
+  });
+});
+
+describe("queryBatches", () => {
+  it("bounds pool work, preserves order and serializes transactions", async () => {
+    const db = await unseededTestDb();
+    const measure = async (executor: Parameters<typeof queryBatches>[0]) => {
+      let live = 0;
+      let peak = 0;
+      const values = await queryBatches(
+        executor,
+        Array.from({ length: 11 }, (_, index) => async () => {
+          live++;
+          peak = Math.max(peak, live);
+          await Promise.resolve();
+          live--;
+          return index;
+        }),
+        4,
+      );
+      expect(values).toEqual(Array.from({ length: 11 }, (_, index) => index));
+      return peak;
+    };
+    expect(await measure(db)).toBe(4);
+    await db.transaction(async (tx) => expect(await measure(tx)).toBe(1));
+  });
+
+  it("stops starting later batches after failure and rejects an invalid bound", async () => {
+    const db = await unseededTestDb();
+    const started: number[] = [];
+    const error = new Error("count failed");
+    await expect(
+      queryBatches(
+        db,
+        Array.from({ length: 6 }, (_, index) => async () => {
+          started.push(index);
+          if (index === 1) throw error;
+          return index;
+        }),
+        2,
+      ),
+    ).rejects.toBe(error);
+    expect(started).toEqual([0, 1]);
+    await expect(queryBatches(db, [], 0)).rejects.toThrow(RangeError);
   });
 });

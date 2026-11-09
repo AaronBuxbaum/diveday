@@ -32,16 +32,21 @@ const KEPT_AS_EVIDENCE = new Set([
   "roll_call_events.csv",
 ]);
 
+/** The same exclusion contract drives row filtering and SQL count predicates. */
+export function rehearsalExportColumns(file: string, header: readonly string[]) {
+  if (KEPT_AS_EVIDENCE.has(file)) return [];
+  const columns: { column: string; ids: keyof RehearsalIds }[] = [];
+  if (file === "trips.csv" && header.includes("id")) columns.push({ column: "id", ids: "tripIds" });
+  if (file === "bookings.csv" && header.includes("id"))
+    columns.push({ column: "id", ids: "bookingIds" });
+  if (header.includes("trip_id")) columns.push({ column: "trip_id", ids: "tripIds" });
+  if (header.includes("booking_id")) columns.push({ column: "booking_id", ids: "bookingIds" });
+  return columns;
+}
+
 export function withoutRehearsals(tables: ExportTable[], ids: RehearsalIds): ExportTable[] {
   if (ids.tripIds.size === 0 && ids.bookingIds.size === 0) return tables;
   return tables.map((table) => {
-    const own =
-      table.file === "trips.csv"
-        ? ids.tripIds
-        : table.file === "bookings.csv"
-          ? ids.bookingIds
-          : null;
-    const idColumn = own ? table.header.indexOf("id") : -1;
     const tripColumn = table.header.indexOf("trip_id");
     const bookingColumn = table.header.indexOf("booking_id");
     const names = (column: number, set: ReadonlySet<string>, row: unknown[]) =>
@@ -56,13 +61,13 @@ export function withoutRehearsals(tables: ExportTable[], ids: RehearsalIds): Exp
         rows: table.rows.map((row) => row.map((cell, index) => (blank(row, index) ? null : cell))),
       };
     }
+    const excludedColumns = rehearsalExportColumns(table.file, table.header);
     return {
       ...table,
-      rows: table.rows.filter(
-        (row) =>
-          !(own && names(idColumn, own, row)) &&
-          !names(tripColumn, ids.tripIds, row) &&
-          !names(bookingColumn, ids.bookingIds, row),
+      rows: table.rows.filter((row) =>
+        excludedColumns.every(
+          ({ column, ids: key }) => !names(table.header.indexOf(column), ids[key], row),
+        ),
       ),
     };
   });

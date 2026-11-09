@@ -1,3 +1,4 @@
+import type { SQL } from "drizzle-orm";
 import { type AnyColumn, and, count, eq, sql } from "drizzle-orm";
 import type { RollCallSubjectKind } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
@@ -86,11 +87,12 @@ export async function countRollCallMarks(
   db: DbExecutor,
   shopId: string,
   kind: RollCallSubjectKind,
+  exclusion?: SQL,
 ): Promise<number> {
   const [row] = await db
     .select({ n: count() })
     .from(rollCallEvents)
-    .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.subjectKind, kind)));
+    .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.subjectKind, kind), exclusion));
   return row?.n ?? 0;
 }
 
