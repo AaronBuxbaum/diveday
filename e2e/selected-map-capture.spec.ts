@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { selectedMapIsReady, waitForSelectedMapToSettle } from "./selected-map-capture";
+import { mapIsReady, waitForSelectedMapToSettle } from "./selected-map-capture";
 import { capture, withRendererBound } from "./visual-harness";
 
 async function renderSelectedMap(page: Page) {
@@ -15,13 +15,7 @@ async function renderSelectedMap(page: Page) {
 }
 
 const readiness = (page: Page) =>
-  withRendererBound(
-    page,
-    "map readiness regression",
-    15_000,
-    page.evaluate(selectedMapIsReady),
-    false,
-  );
+  withRendererBound(page, "map readiness regression", 15_000, page.evaluate(mapIsReady), false);
 
 test("selected map readiness rejects loaded tiles until their fade has finished", async ({
   page,
@@ -74,4 +68,35 @@ test("selected map readiness is checked again after document painting", async ({
       },
     }),
   ).rejects.toThrow("Settled after paint, before shutter");
+});
+
+test("tooltip map readiness requires opaque tiles without requiring a selected popup", async ({
+  page,
+}) => {
+  await renderSelectedMap(page);
+  await page.locator(".leaflet-popup").evaluate((popup) => popup.remove());
+  await page.locator("button").evaluate((marker) => marker.classList.remove("ring-4"));
+  const ready = () =>
+    withRendererBound(
+      page,
+      "tooltip map readiness regression",
+      15_000,
+      page.evaluate(mapIsReady, false),
+      false,
+    );
+  expect(await ready()).toBe(false);
+  await page.locator("img").evaluate((tile) => {
+    tile.style.opacity = "0.5";
+  });
+  expect(await ready()).toBe(false);
+  await page.locator("img").evaluate((tile) => {
+    tile.style.opacity = "1";
+  });
+  expect(await ready()).toBe(true);
+  // The selected-popup contract must not silently become the weaker tooltip one.
+  expect(await readiness(page)).toBe(false);
+  await page
+    .locator(".leaflet-map-pane")
+    .evaluate((pane) => pane.classList.add("leaflet-pan-anim"));
+  expect(await ready()).toBe(false);
 });

@@ -2,12 +2,12 @@ import type { Page } from "@playwright/test";
 import { withRendererBound } from "./visual-harness";
 
 /** Runs in the page: a loaded tile may still be transparent during Leaflet's fade. */
-export async function selectedMapIsReady() {
+export async function mapIsReady(requireSelection = true) {
   const map = document.querySelector<HTMLElement>(".leaflet-container");
   const pane = map?.querySelector<HTMLElement>(".leaflet-map-pane");
   const marker = map?.querySelector<HTMLElement>(".leaflet-site-marker button.ring-4");
   const popup = map?.querySelector<HTMLElement>(".leaflet-popup");
-  if (!map || !pane || !marker || !popup) return false;
+  if (!map || !pane || (requireSelection && (!marker || !popup))) return false;
   const readyTiles = () => {
     const tiles = [...map.querySelectorAll<HTMLImageElement>(".leaflet-tile")];
     return (
@@ -41,7 +41,7 @@ export async function selectedMapIsReady() {
       const { x, y, width, height } = element.getBoundingClientRect();
       return [x, y, width, height];
     };
-    return [pane.style.transform, rect(marker), rect(popup)];
+    return [pane.style.transform, marker && rect(marker), popup && rect(popup)];
   };
   const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   await nextFrame();
@@ -60,8 +60,20 @@ export async function waitForSelectedMapToSettle(page: Page) {
     page,
     "selected map pan, tile decode and fade",
     20_000,
-    page.waitForFunction(selectedMapIsReady, undefined, { timeout: 15_000 }).then(() => true),
+    page.waitForFunction(mapIsReady, true, { timeout: 15_000 }).then(() => true),
     false,
   );
   if (!settled) throw new Error("Selected map did not settle before its screenshot");
+}
+
+/** Tooltip captures have no selected popup, but still need opaque, decoded tiles. */
+export async function waitForMapTilesToSettle(page: Page) {
+  const settled = await withRendererBound(
+    page,
+    "map pan, tile decode and fade",
+    20_000,
+    page.waitForFunction(mapIsReady, false, { timeout: 15_000 }).then(() => true),
+    false,
+  );
+  if (!settled) throw new Error("Map tiles did not settle before their screenshot");
 }

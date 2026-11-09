@@ -5,7 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { waitForSelectedMapToSettle } from "./selected-map-capture";
+import { waitForMapTilesToSettle, waitForSelectedMapToSettle } from "./selected-map-capture";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import {
   CATALOG_MAP_SITE_COUNT,
@@ -149,6 +149,7 @@ for (const scheme of ["light", "dark"] as const) {
             await shop.hover();
             await expect(page.locator(".leaflet-site-tooltip")).toHaveCount(1);
             await expect(page.locator(".leaflet-site-tooltip")).toContainText("Blue Mantis Divers");
+            await waitForMapTilesToSettle(page);
           },
         });
         await capture(page, "dive-sites-library-pin-tooltip", scheme, {
@@ -168,6 +169,7 @@ for (const scheme of ["light", "dark"] as const) {
             const tooltips = page.locator(".leaflet-site-tooltip");
             await expect(tooltips).toHaveCount(1);
             await expect(tooltips.filter({ hasText: name })).toBeVisible();
+            await waitForMapTilesToSettle(page);
           },
         });
       });
