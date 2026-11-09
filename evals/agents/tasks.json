@@ -4,7 +4,7 @@
     {
       "id": "manifest-count",
       "prompt": "The boat manifest shows 11 divers but the trip has 12 confirmed bookings. Find where the count is computed and plan the fix. Plan only, change no files, and finish by listing the reviews and checks this must pass before it merges.",
-      "source": "AGENTS.md, Hard rules: safety-critical surfaces (manifests) get two dive-domain-expert runs",
+      "source": "AGENTS.md, Hard rules: safety-critical surfaces (manifests) get one dive-domain-expert run",
       "expect": {
         "agent": ["dive-domain-expert"]
       },
