@@ -1396,6 +1396,7 @@ exports.handler = async (event) => {
     const mediaBucketName = this.node.tryGetContext("mediaBucketName") || "diveday-media";
 
     const mediaBucket = new s3.Bucket(this, "MediaStorageBucket", {
+      versioned: true,
       bucketName: mediaBucketName,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -1412,6 +1413,7 @@ exports.handler = async (event) => {
       lifecycleRules: [
         {
           id: "abort-incomplete-media-uploads",
+          noncurrentVersionExpiration: cdk.Duration.days(30),
           enabled: true,
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
         },
@@ -1425,29 +1427,36 @@ exports.handler = async (event) => {
     mediaUploaderUser.addToPolicy(
       new iam.PolicyStatement({
         sid: "ManageMediaObjectsOnly",
-        actions: ["s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload"],
+        actions: [
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:DeleteObjectVersion",
+          "s3:AbortMultipartUpload",
+        ],
         resources: MEDIA_WRITE_PREFIXES.map((prefix) => mediaBucket.arnForObjects(`${prefix}/*`)),
       }),
     );
 
-    // **Read is granted on one prefix and no other** (issue #1283).
-    //
-    // Everything else this credential stores is *public* -- a dive-site photo
-    // or a shop logo reaches a reader through CloudFront, so the app never
-    // needs to fetch its own media back. A physician's evaluation is the
-    // opposite: the bucket blocks all public access and `medical-clearances/`
-    // has no CloudFront behaviour by construction, so without this grant the
-    // upload buys retention liability with no retrieval value -- a shop stores
-    // the most sensitive document the product holds and can never open it.
-    //
-    // Scoped to the prefix rather than added to the statement above, so the
-    // grant reads as what it is: this credential can *read back* medical
-    // clearances, and still cannot read a single other object in the bucket.
     mediaUploaderUser.addToPolicy(
       new iam.PolicyStatement({
-        sid: "ReadMedicalClearancesOnly",
+        sid: "ListMediaVersionsOnly",
+        actions: ["s3:ListBucketVersions"],
+        resources: [mediaBucket.bucketArn],
+        conditions: {
+          StringLike: { "s3:prefix": MEDIA_WRITE_PREFIXES.map((prefix) => `${prefix}/*`) },
+        },
+      }),
+    );
+
+    // Private evidence remains blocked at CloudFront. Only authorized server-side
+    // document routes and export assembly read these three exact namespaces.
+    mediaUploaderUser.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadPrivateEvidenceOnly",
         actions: ["s3:GetObject"],
-        resources: [mediaBucket.arnForObjects(`${MEDICAL_CLEARANCE_PREFIX}/*`)],
+        resources: [MEDICAL_CLEARANCE_PREFIX, "import-waivers", "import-receipts"].map((prefix) =>
+          mediaBucket.arnForObjects(`${prefix}/*`),
+        ),
       }),
     );
 

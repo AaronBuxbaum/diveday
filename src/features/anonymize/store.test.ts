@@ -853,7 +853,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
         ),
       );
     expect(queued.map((row) => row.url)).toEqual([`${MANAGED_BLOB_HOST}/receipts/kwame.pdf`]);
-    expect(queued.every((row) => row.status === "pending")).toBe(true);
+    expect(queued.every((row) => row.status === "failed" && row.purgeVersions)).toBe(true);
   });
 });
 

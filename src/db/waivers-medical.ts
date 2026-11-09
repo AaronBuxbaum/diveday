@@ -550,6 +550,7 @@ export async function recordMedicalEvaluation(
     if (openForm && openForm !== evidenceUrl) {
       await queueMediaDeletion(tx, {
         shopId: input.shopId,
+        personId: input.personId,
         kind: "waiver_document",
         url: openForm,
       });
@@ -861,7 +862,12 @@ export async function rejectDiverMedicalForm(
       .update(waiverRecords)
       .set({ diverMedicalFormUrl: null, diverMedicalFormSentAt: null })
       .where(eq(waiverRecords.id, input.recordId));
-    await queueMediaDeletion(tx, { shopId: input.shopId, kind: "waiver_document", url: held.url });
+    await queueMediaDeletion(tx, {
+      shopId: input.shopId,
+      personId: input.personId,
+      kind: "waiver_document",
+      url: held.url,
+    });
     if (
       !(await recordDiverActivity(tx, {
         shopId: input.shopId,

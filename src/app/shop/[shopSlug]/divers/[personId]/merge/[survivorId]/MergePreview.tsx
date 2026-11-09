@@ -48,6 +48,7 @@ const GROUP_KEYS: Record<DiverMergeCountGroup, StaffMessageKey> = {
   reviews: "divers.mergePreview.groups.reviews",
   gear: "divers.mergePreview.groups.gear",
   history: "divers.mergePreview.groups.history",
+  media: "divers.mergePreview.groups.media",
   lists: "divers.mergePreview.groups.lists",
 };
 

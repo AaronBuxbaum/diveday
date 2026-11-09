@@ -642,6 +642,17 @@ const rows = [
     why: "ephemeral staff OAuth state, consumed within minutes",
   },
   {
+    table: "media_deletion_attempts",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "keep",
+    eraseWhy:
+      "retained media versions become permanent purge obligations during erasure; identity is only the anonymized person pointer",
+    export: "withheld",
+    exportWhy: "internal storage deletion obligations, not portable diver data",
+  },
+  {
     table: "processor_erasure_obligations",
     column: "person_id",
     export: "withheld",

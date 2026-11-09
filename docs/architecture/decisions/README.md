@@ -457,5 +457,6 @@ script again.
 | 20261105-waiver-folds-into-the-thread | Hand a seat's release over… |
 | 20261108-concept-leaves | Move substrate leaves by concept… |
 | 20261108-configured-pricing | Configure one monthly and percentage… |
+| 20261109-evidence-key-history | Keep signing key identity with… (proposed) |
 
 <!-- adr-index:end -->

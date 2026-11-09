@@ -97,8 +97,6 @@ export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   claude_demo_spend: "a month and every minted demo's Claude spend; no person",
   sms_opt_outs:
     "a phone number that replied STOP, and nothing else. Keeping it after an erasure is what keeps the promise: removing it would let a later booking with that number text someone who said stop",
-  media_deletion_attempts:
-    "the blob-deletion ledger the erasure itself *writes to* — a URL, a kind and a retry count. Redacting it would be erasing the record of the erasure",
   integration_events:
     "the outbox a shop’s own integrations read. `entity_id` points at a row rather than copying it, and `payload` is built at delivery from the current record — which is the erased one by then",
   integration_deliveries: "whether one of those events reached the provider, and the error if not",

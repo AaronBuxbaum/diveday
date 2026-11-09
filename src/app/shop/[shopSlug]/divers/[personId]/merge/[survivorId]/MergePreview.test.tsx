@@ -22,6 +22,7 @@ const zeroCounts = {
   reviews: 0,
   gear: 0,
   history: 0,
+  media: 0,
   lists: 0,
 };
 
@@ -314,4 +315,9 @@ describe("the merge preview", () => {
     expect(screen.getByText(/Merge after the boat is back\./)).toBeVisible();
     expect(screen.queryByRole("button")).toBeNull();
   });
+});
+
+it("names retired media separately from prior visits when records merge", () => {
+  renderPreview(preview({ source: side({ counts: { ...zeroCounts, media: 2 } }) }));
+  expect(screen.getByText("Removed files")).toBeInTheDocument();
 });

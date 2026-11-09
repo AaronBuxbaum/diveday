@@ -959,7 +959,7 @@
     "src/features/anonymize/store.test.ts": 1626,
     "src/features/check-in/store.test.ts": 1207,
     "src/features/courses/store.test.ts": 1676,
-    "src/features/divers/store.test.ts": 3052,
+    "src/features/divers/store.test.ts": 3034,
     "src/features/import/store.test.ts": 1074,
     "src/features/no-show/store.test.ts": 1158,
     "src/features/recap/store.test.ts": 2141,

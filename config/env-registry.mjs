@@ -172,8 +172,8 @@ export const ENV_GROUPS = [
       "(src/lib/waiver-integrity.ts) signs with AUTH_SECRET itself. So rotating",
       "AUTH_SECRET with these unset breaks every recap and buddy link in flight and",
       "makes every sealed waiver verify as invalid. Setting or changing one later has",
-      "the same effect on what it signs: set WAIVER_INTEGRITY_SECRET only before the",
-      "first waiver is sealed, and never rotate it without re-sealing.",
+      "the same effect on what it signs. Waiver/course evidence can retain its original",
+      "verification keys with WAIVER_INTEGRITY_KEYS; see the evidence key rotation runbook.",
     ],
     keys: [
       {
@@ -193,6 +193,24 @@ export const ENV_GROUPS = [
         from: "manual",
         targets: VERCEL,
         absent: "waiver integrity seals sign with AUTH_SECRET",
+      },
+    ],
+  },
+  {
+    seam: null,
+    doc: [
+      "Optional evidence-signing key registry: JSON with active key ID and keys object.",
+      "IDs are stable; new secrets at least 32 characters. Retain old IDs to verify old seals.",
+      "For untagged seals, retain the exact original secret under legacy (any original length).",
+      "The active ID cannot be legacy. Invalid configuration fails closed. Never bulk",
+      "re-seal evidence to rotate a key. See docs/engineering/evidence-key-rotation.md.",
+    ],
+    keys: [
+      {
+        key: "WAIVER_INTEGRITY_KEYS",
+        from: "manual",
+        targets: VERCEL,
+        absent: "existing evidence signs and verifies with WAIVER_INTEGRITY_SECRET or AUTH_SECRET",
       },
     ],
   },

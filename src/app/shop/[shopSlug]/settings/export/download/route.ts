@@ -8,6 +8,7 @@ import { nowDate } from "@/lib/clock";
 import {
   buildExportBundle,
   exportFileName,
+  exportMediaFiles,
   fetchExportPhotos,
   zipExportBundle,
 } from "@/lib/export";
@@ -47,10 +48,7 @@ export async function GET(request: Request) {
   });
 
   const photos = await fetchExportPhotos(input.photoUrls);
-  const files = [
-    ...buildExportBundle(input, now),
-    ...photos.map((photo) => ({ name: photo.path, content: photo.bytes })),
-  ];
+  const files = [...buildExportBundle(input, now), ...exportMediaFiles(photos)];
   const zip = zipExportBundle(files);
   const fileName = exportFileName(input.shopSlug, now, input.timezone);
   return new Response(new Uint8Array(zip), {

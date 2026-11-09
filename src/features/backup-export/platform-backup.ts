@@ -39,7 +39,11 @@ import { type BackupUploadErrorCode, putS3Object } from "./s3-client";
  */
 
 /** Why a shop's bundle did not reach DiveDay's bucket. Codes, never sentences. */
-export type PlatformBackupErrorCode = "shop_missing" | "bundle_failed" | BackupUploadErrorCode;
+export type PlatformBackupErrorCode =
+  | "shop_missing"
+  | "bundle_failed"
+  | "media_incomplete"
+  | BackupUploadErrorCode;
 
 export type PlatformBackupResult =
   | { status: "stored"; objectKey: string; byteCount: number }
@@ -216,6 +220,7 @@ export async function runPlatformBackup(
 
   let zip: Uint8Array;
   let shopSlug: string;
+  let mediaComplete: boolean;
   try {
     const bundle = await buildBackupBundle(db, {
       shopId: input.shopId,
@@ -227,6 +232,7 @@ export async function runPlatformBackup(
     if (!bundle.ok) return { status: "failed", errorCode: "shop_missing" };
     zip = bundle.zip;
     shopSlug = bundle.shopSlug;
+    mediaComplete = bundle.mediaComplete;
   } catch {
     return { status: "failed", errorCode: "bundle_failed" };
   }
@@ -252,6 +258,7 @@ export async function runPlatformBackup(
   });
   if (!uploaded.ok) return { status: "failed", errorCode: uploaded.errorCode };
 
+  if (!mediaComplete) return { status: "failed", errorCode: "media_incomplete" };
   return { status: "stored", objectKey, byteCount: zip.byteLength };
 }
 

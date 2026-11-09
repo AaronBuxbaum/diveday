@@ -13,6 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * at the signature (CR-013), and no database test can tell the two apart.
  */
 
+const { retireRejectedRecapPhoto } = vi.hoisted(() => ({ retireRejectedRecapPhoto: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((path: string) => {
     // The real `redirect` throws to unwind the action; mirroring that keeps the
@@ -34,6 +36,7 @@ vi.mock("../../../../features/recap/store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../../features/recap/store")>();
   return {
     ...actual,
+    retireRejectedRecapPhoto,
     isRecapOpen: vi.fn(async () => true),
     canAddRecapPhoto: vi.fn(async () => ({ ok: true })),
     addRecapPhoto: vi.fn(async () => ({ ok: true, photo: { id: "photo" } })),
@@ -427,4 +430,20 @@ describe("unshareRecapPhotoAction", () => {
       `/recap/${TOKEN}?photo=unshared`,
     );
   });
+});
+
+it("durably retires rejected uploaded media against its verified booking", async () => {
+  vi.mocked(storeRecapImage).mockResolvedValue({
+    status: "stored",
+    url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/rejected.jpg",
+  });
+  vi.mocked(addRecapPhoto).mockResolvedValue({ ok: false, reason: "limit" });
+  const data = new FormData();
+  data.append("photo", new File(["x"], "reef.jpg", { type: "image/jpeg" }));
+  await uploadRecapPhotoAction(TOKEN, data).catch(() => undefined);
+  expect(retireRejectedRecapPhoto).toHaveBeenCalledWith(
+    expect.anything(),
+    BOOKING_ID,
+    "https://diveday-media.s3.us-east-1.amazonaws.com/recap/rejected.jpg",
+  );
 });
