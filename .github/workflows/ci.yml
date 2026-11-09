@@ -130,7 +130,9 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         if: ${{ !cancelled() }}
-        run: node scripts/typecheck-ci.mjs
+        # Match the build's condition exactly. Only a required build can own
+        # the application checker; skipped/unknown builds keep the full gate here.
+        run: node scripts/typecheck-ci.mjs ${{ needs.changes.outputs.code == 'true' && needs.changes.outputs.browser != 'false' && '--build-checks-app' || '' }}
       # The failing guards go to the job summary by name, and every guard's
       # result to the `check-repo-results` artifact, so a catch rate per guard
       # can be read across runs (scripts/repo-check-report.mjs).
@@ -389,8 +391,6 @@ jobs:
       # SENTRY_AUTH_TOKEN configured there — that is what uploads source maps and
       # configures the release, not this job, so no Sentry token is needed here.
       - run: pnpm e2e:build
-        env:
-          DIVEDAY_CI_TYPE_GATE: "1"
       # perf:budget reads the build manifest produced immediately above.
       - run: pnpm perf:budget
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

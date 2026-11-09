@@ -134,10 +134,21 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
               .join("\n"),
           ).length,
           transferBytes: resources.reduce((n, entry) => n + entry.transferSize, 0),
+          cachedScriptResources: resources.filter(
+            (entry) =>
+              /\.js(?:\?|$)/.test(entry.name) &&
+              entry.transferSize === 0 &&
+              entry.encodedBodySize > 0,
+          ).length,
           longTaskMs: tasks.reduce((n, cost) => n + cost, 0),
           longTasks: tasks.length,
         };
       });
+      if (mode === "warm-document")
+        expect(
+          browser.cachedScriptResources,
+          "warm sample must observe cached script delivery",
+        ).toBeGreaterThan(0);
       page.off("response", record);
       const payloads = await Promise.all(responses);
       expect(

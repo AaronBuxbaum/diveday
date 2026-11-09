@@ -296,14 +296,10 @@ const nextConfig: NextConfig = {
   //
   // Vercel's 8 GB builder cannot hold TypeScript 7's checker (peak near 7.7 GB;
   // exit 137, 2026-11-05), so Vercel runs no typecheck. CI typechecks every
-  // commit and the deploy gate builds only green ones. The GitHub Actions E2E
-  // build also avoids duplication: safeguards first runs next typegen in the
-  // exact same profile, then both application and service-worker tsc gates.
-  // Local builds and non-E2E CI builds retain Next's check.
-  ...(process.env.VERCEL === "1" ||
-  (process.env.GITHUB_ACTIONS === "true" && isE2EBuild && process.env.DIVEDAY_CI_TYPE_GATE === "1")
-    ? { typescript: { ignoreBuildErrors: true } }
-    : {}),
+  // commit and the deploy gate builds only green ones. CI's required build
+  // retains Next's full application/generated-type check; safeguards checks
+  // the independent service worker, or both programs when no build runs.
+  ...(process.env.VERCEL === "1" ? { typescript: { ignoreBuildErrors: true } } : {}),
   experimental: {
     useTypeScriptCli: true,
     // Static-generation workers only need to be serialized when they'd share

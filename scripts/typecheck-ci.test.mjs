@@ -17,6 +17,29 @@ describe("authoritative CI type gate", () => {
     expect(readFileSync("tsconfig.json", "utf8")).toContain('".next/types/**/*.ts"');
   });
 
+  it("checks only the independent worker when the required build owns the full app check", () => {
+    const run = vi.fn(() => ({ status: 0 }));
+    expect(typecheckCI(run, true)).toBe(0);
+    expect(run.mock.calls.map((call) => call[1])).toEqual([
+      ["exec", "tsc", "--noEmit", "-p", "src/worker"],
+    ]);
+    const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+    expect(workflow).toContain(
+      "needs.changes.outputs.code == 'true' && needs.changes.outputs.browser != 'false' && '--build-checks-app'",
+    );
+    expect(workflow).toContain(
+      "if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true' && needs.changes.outputs.browser != 'false'",
+    );
+    expect(workflow.slice(workflow.indexOf("  ci-result:"))).toContain("- build");
+    // Next's configured native CLI checks all tsconfig inputs, including tests.
+    expect(readFileSync("next.config.ts", "utf8")).toContain("useTypeScriptCli: true");
+  });
+
+  it("fails the safeguards gate on an independent worker diagnostic", () => {
+    const run = vi.fn(() => ({ status: 1 }));
+    expect(typecheckCI(run, true)).toBe(1);
+  });
+
   it("does not accept stale routes after generation fails", () => {
     const run = vi.fn(() => ({ status: 2 }));
     expect(typecheckCI(run)).toBe(2);

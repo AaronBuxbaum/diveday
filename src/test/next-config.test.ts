@@ -240,23 +240,14 @@ describe("next.config.ts typescript", () => {
     ).toBeUndefined();
   });
 
-  it("uses the authoritative generated-type gate only for GitHub's E2E build", async () => {
+  it("retains the authoritative in-build application check for every GitHub E2E build", async () => {
     const config = await loadConfig({
       ...CONFIGURED,
       VERCEL: "",
       GITHUB_ACTIONS: "true",
       DIVEDAY_E2E: "1",
-      DIVEDAY_CI_TYPE_GATE: "1",
     });
-    expect(config.typescript?.ignoreBuildErrors).toBe(true);
-    const standalone = await loadConfig({
-      ...CONFIGURED,
-      VERCEL: "",
-      GITHUB_ACTIONS: "true",
-      DIVEDAY_E2E: "1",
-      DIVEDAY_CI_TYPE_GATE: "",
-    });
-    expect(standalone.typescript?.ignoreBuildErrors).toBeUndefined();
+    expect(config.typescript?.ignoreBuildErrors).toBeUndefined();
     const ordinary = await loadConfig({
       ...CONFIGURED,
       VERCEL: "",

@@ -1230,14 +1230,6 @@ export const ENV_GROUPS = [
           "records the fixture cache restore result in CI measurements; absent means no reported hit",
       },
       {
-        key: "DIVEDAY_CI_TYPE_GATE",
-        from: "harness",
-        targets: NOWHERE,
-        forbiddenInProduction: true,
-        absent:
-          "Next build retains its TypeScript check unless CI explicitly supplies a separate generated-type gate",
-      },
-      {
         key: "DIVEDAY_IMAGE_SMOKE",
         from: "harness",
         targets: NOWHERE,
