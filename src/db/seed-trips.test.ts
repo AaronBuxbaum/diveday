@@ -2,8 +2,11 @@ import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { inWaterCrewRole } from "@/lib/crew-roles";
 import { seededShopContext } from "@/test/db";
-import { courses, people, personRoles, tripAssignments, trips } from "./schema";
+import { courses, people, personRoles, shops, tripAssignments, trips } from "./schema";
+import { createDemoShop, resetDemoSchedule } from "./seed";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
+import { DEMO_TODAY_TRIP_ID } from "./seed-identifiers";
+import { DEMO_TODAY_TRIP_TITLE } from "./seed-trips";
 import { crewClashes, setTripCrew } from "./trips-crew";
 import { listUpcomingSessionsForCourse } from "./trips-queries";
 import { tripPublicCrew } from "./trips-record";
@@ -257,5 +260,31 @@ describe("seeded Open Water session — what its course-page row names", () => {
 
     const crew = await tripPublicCrew(db, shop.id, session.id);
     expect(crew.filter((member) => member.tripRole === "instructor").length).toBeGreaterThan(0);
+  });
+});
+
+describe("public print fixture identity", () => {
+  it("pins only the canonical reef departure across resets, leaving private demo IDs independent", async () => {
+    const { db, shop } = await seededShopContext();
+    const reefIds = async (shopId: string) =>
+      (
+        await db
+          .select({ id: trips.id })
+          .from(trips)
+          .where(and(eq(trips.shopId, shopId), eq(trips.title, DEMO_TODAY_TRIP_TITLE)))
+      ).map((row) => row.id);
+    expect(await reefIds(shop.id)).toContain(DEMO_TODAY_TRIP_ID);
+    const minted = await createDemoShop(db, { shape: "lean" });
+    const [otherShop] = await db
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.slug, minted.slug));
+    if (!otherShop) throw new Error("minted shop missing");
+    const privateIds = await reefIds(otherShop.id);
+    expect(privateIds.length).toBeGreaterThan(0);
+    expect(privateIds).not.toContain(DEMO_TODAY_TRIP_ID);
+    await resetDemoSchedule(db, shop.id, "lean");
+    expect(await reefIds(shop.id)).toContain(DEMO_TODAY_TRIP_ID);
+    expect(await reefIds(otherShop.id)).toEqual(privateIds);
   });
 });

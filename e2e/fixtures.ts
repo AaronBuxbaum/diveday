@@ -86,6 +86,9 @@ export const STAFF_NAV_PROBE = "nav[data-staff-nav]";
 /** A disclosure (`AutoOpenDetails`), which draws `data-hydrated="true"` once React owns it. */
 export const DISCLOSURE_PROBE = "details[data-auto-open-details]";
 
+/** An add panel whose own focus/scroll effect has completed, independently of the header. */
+export const ADD_PANEL_PROBE = "[data-add-panel]";
+
 /** The settings hub's selection frame (`SettingsSelection`), which draws `data-hydrated` once it has chosen a setting. */
 export const SETTINGS_SELECTION_PROBE = "[data-settings-selection-root]";
 
@@ -134,6 +137,12 @@ export async function settleStaffHydration(page: Page): Promise<void> {
   await expect(
     page.locator(`${DISCLOSURE_PROBE}:not([data-hydrated="true"]):visible`),
     `${pathname} loaded, but React never took over a disclosure on it`,
+  ).toHaveCount(0);
+  // AddPanelFocus can scroll after the header hydrates, between a click's
+  // coordinate check and input (#4166). Hidden Activity panels run no effects.
+  await expect(
+    page.locator(`${ADD_PANEL_PROBE}:not([data-add-panel-settled]):visible`),
+    `${pathname} loaded, but the add panel never settled its focus and scroll`,
   ).toHaveCount(0);
   // The settings hub is server-rendered with every group and picks the selected
   // one after hydration (`SettingsSelection`), and its rail moves the current row

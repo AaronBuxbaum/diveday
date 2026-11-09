@@ -5,7 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
+import { DEMO_RECAP_BOOKING_ID, DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import { DEMO_MEDICAL_ALERT, DEMO_MEDICAL_ALERT_TRIP } from "../src/db/seed-medical-alert";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
@@ -158,12 +158,14 @@ test.describe("print", () => {
   ] as const) {
     test(`${name} prints as the departure's sheet`, async ({ page }) => {
       const id = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+      expect(id).toBe(DEMO_TODAY_TRIP_ID);
       await page.goto(`/s/blue-mantis/${path}/${id}`);
       await page.getByRole("heading", { level: 1 }).first().waitFor();
       const sheet = page.locator(".paper-sheet");
       await expect(sheet).not.toBeVisible();
       await page.emulateMedia({ media: "print" });
       await expect(sheet).toBeVisible();
+      await expect(sheet).toContainText(DEMO_TODAY_TRIP_ID);
       await expect(page.locator("#book")).not.toBeVisible();
       await page.emulateMedia({ media: "screen" });
       await capturePrint(page, name);

@@ -57,7 +57,7 @@ export function AddPanel({
         className: `mt-6 mb-8 max-w-3xl scroll-mt-24 animate-scale-in ${className}`,
       })}
     >
-      <AddPanelFocus panelId={id} closeHref={closeHref} />
+      <AddPanelFocus closeHref={closeHref} />
       <div className="flex items-start justify-between gap-3">
         <h2
           id={headingId}
