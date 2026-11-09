@@ -646,7 +646,28 @@ const fareharbor: MigrationGuide = {
     "marketing.guides.fareharbor.exportNotes.note4",
   ],
   importerNote: "marketing.guides.fareharbor.importerNote",
-  cutover: CUTOVER_SECTION,
+  cutover: {
+    heading: "marketing.guides.fareharbor.cutover.heading",
+    intro: "marketing.guides.fareharbor.cutover.intro",
+    steps: [
+      {
+        title: "marketing.guides.shared.cutover.crewFirst.title",
+        detail: "marketing.guides.shared.cutover.crewFirst.detail",
+      },
+      {
+        title: "marketing.guides.fareharbor.cutover.prepare.title",
+        detail: "marketing.guides.fareharbor.cutover.prepare.detail",
+      },
+      {
+        title: "marketing.guides.fareharbor.cutover.reconcile.title",
+        detail: "marketing.guides.fareharbor.cutover.reconcile.detail",
+      },
+      {
+        title: "marketing.guides.fareharbor.cutover.timing.title",
+        detail: "marketing.guides.fareharbor.cutover.timing.detail",
+      },
+    ],
+  },
   sources: [
     {
       // i18n-exempt: cited source title — the document's own name is not translated

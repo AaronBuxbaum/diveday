@@ -613,11 +613,13 @@ export function ScopePhase({
 export function ImportPhase({
   locale,
   number,
+  source,
   importerNote,
   children,
 }: {
   locale: DiverLocale;
   number: number;
+  source?: "fareharbor";
   importerNote?: ReactNode;
   children?: ReactNode;
 }) {
@@ -632,8 +634,16 @@ export function ImportPhase({
       detail: t("switching.common.checkPreviewBody"),
     },
     {
-      title: t("switching.common.importReadyTitle"),
-      detail: t("switching.common.importReadyBody"),
+      title: t(
+        source === "fareharbor"
+          ? "marketing.guides.fareharbor.importStep.title"
+          : "switching.common.importReadyTitle",
+      ),
+      detail: t(
+        source === "fareharbor"
+          ? "marketing.guides.fareharbor.importStep.detail"
+          : "switching.common.importReadyBody",
+      ),
     },
   ];
   return (

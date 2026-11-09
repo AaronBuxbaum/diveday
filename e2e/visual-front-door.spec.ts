@@ -617,8 +617,6 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/about");
         await capture(page, "about", scheme);
-        await page.locator("#why-this-work-matters summary").click();
-        await capture(page, "about-origin-open", scheme);
       });
 
       // The migration-guides hub: one ruled row per thing a shop might be

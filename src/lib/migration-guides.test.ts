@@ -11,6 +11,23 @@ import {
 
 const t = diverTranslator("en-US");
 
+it.each(DIVER_LOCALES)("keeps FareHarbor cutover timing conditional in %s", (locale) => {
+  const guide = getMigrationGuide("fareharbor");
+  if (!guide) throw new Error("FareHarbor guide is missing");
+  const translate = diverTranslator(locale);
+  const copy = [
+    guide.cutover.heading,
+    guide.cutover.intro,
+    ...guide.cutover.steps.flatMap((step) => [step.title, step.detail]),
+  ]
+    .map((key) => translate(key))
+    .join(" ");
+  expect(copy).toContain(locale === "en-US" ? "reconcile" : "reconcilia");
+  expect(copy).toContain(locale === "en-US" ? "trial" : "prueba");
+  expect(copy).not.toContain(translate("marketing.guides.shared.cutover.step4.title"));
+  expect(copy).not.toContain(translate("marketing.guides.shared.cutover.step3.title"));
+});
+
 /**
  * Resolve a guide's message key to its English text, and prove the key really
  * exists in the bundle: `diverTranslator`'s fallback returns the key itself
@@ -69,7 +86,10 @@ describe("help arrives before the homework", () => {
    * the placement from drifting back.
    */
   it("leads the shared cutover rail with the crew walking their screens", () => {
-    const [first, ...rest] = MIGRATION_GUIDES[0].cutover.steps;
+    const sharedGuide = MIGRATION_GUIDES.find((guide) => guide.slug !== "fareharbor");
+    if (!sharedGuide) throw new Error("Shared cutover guide is missing");
+    const sharedSteps = sharedGuide.cutover.steps;
+    const [first, ...rest] = sharedSteps;
     expect(first.title).toBe("marketing.guides.shared.cutover.crewFirst.title");
     expect(rest).toHaveLength(4);
     for (const locale of DIVER_LOCALES) {
@@ -80,10 +100,12 @@ describe("help arrives before the homework", () => {
       // before a single record moves — not to a trial, which needs an account.
       expect(t(first.detail)).toMatch(locale === "es-ES" ? /demostración/i : /demo/i);
     }
-    // One shared object, not a per-guide copy: every guide points at the same
-    // steps array, so a step added here reaches all five at once.
+    // FareHarbor has source-specific handover work; every guide still starts
+    // with the crew's walkthrough before records move.
     for (const guide of MIGRATION_GUIDES) {
-      expect(guide.cutover.steps).toBe(MIGRATION_GUIDES[0].cutover.steps);
+      expect(guide.cutover.steps[0]).toEqual(first);
+      if (guide.slug === "fareharbor") continue;
+      expect(guide.cutover.steps).toBe(sharedSteps);
     }
   });
 

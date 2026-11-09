@@ -649,6 +649,26 @@
             "review": "Do not include card numbers or security codes in an import."
           }
         }
+      },
+      "importStep": {
+        "title": "Import contacts, then prepare upcoming trips",
+        "detail": "Import the supported contact fields and review any booking history separately. These imports do not create upcoming bookings or supply the certification, rental-size, waiver and medical records missing from the described exports."
+      },
+      "cutover": {
+        "heading": "Plan the handover",
+        "intro": "The timing depends on your export, record quality, staff training and upcoming bookings.",
+        "prepare": {
+          "title": "Prepare upcoming departures in DiveDay",
+          "detail": "Create the trips and add each diver to the right departure. Collect missing records separately and check readiness before boarding; imported history is not a live booking."
+        },
+        "reconcile": {
+          "title": "Keep both systems aligned by hand",
+          "detail": "For each trip cycle, staff reconcile new bookings, changes and cancellations in FareHarbor and DiveDay. Re-importing contacts updates matched diver records; staff still update live bookings in each system."
+        },
+        "timing": {
+          "title": "Set the handover date after a trial",
+          "detail": "Try a representative file and one trip cycle first. Allow time to correct rows, gather missing records and train the crew before changing your booking link."
+        }
       }
     },
     "rezdy": {
@@ -718,8 +738,8 @@
     "peopleP1": "The people who build DiveDay have spent their careers on software that millions of people rely on, and their weekends on dive boats. We know the desk from the diver’s side, cert card out while the owner hunts for the waiver, and the deck, where a divemaster works down a wet clipboard while the boat waits. DiveDay is the tool we wanted in both places: records a shop can trust, on a screen a wet thumb can work.",
     "peopleP2": "The dive shops we know run the day on a whiteboard by the door, a clipboard that goes out on the boat, a spreadsheet somebody updates by hand, and a handful of apps that each keep their own list of the same divers. The owner knows every diver by name, and each morning some of that knowledge gets copied from one tool to the next while the rest rides along in their head. DiveDay is built so that knowledge is written down once and goes out with the boat on the captain’s phone.",
     "buildEyebrow": "What comes first",
-    "buildTitle": "Design choices the crew can inspect",
-    "buildDescription": "Count each person by name. Keep unresolved people visible. Preserve the recorded history. The manifest brings the booking, waiver and certification records together so the crew can review them, not so the software can decide whether a dive is safe.",
+    "buildTitle": "The one job on a boat that can’t go wrong",
+    "buildDescription": "The roll call is the one record on a dive day that has to be right the first time, so it is where DiveDay starts. The booking, the waiver, the certification check, the gear sizes and the payment each have a screen of their own, and every one of those screens is there so that the captain opens the manifest with the records in order and the only job left is reading the names.",
     "rules": {
       "survivesDock": {
         "title": "The roll call runs with no signal",
@@ -755,11 +775,7 @@
       "onePriceTitle": "One plan covers the shop",
       "onePriceBody": "The plan is {percent} of the card money taken through DiveDay{hasBase, select, yes { plus {base} a month} other {, with no monthly fee}}, and it covers every part of DiveDay and a login for everyone on your staff. Tips never count toward it. The pricing page lists each thing it covers.",
       "seeCost": "{percent} of card money{hasBase, select, yes { and {base} a month} other { through DiveDay}}. See the full list"
-    },
-    "introTitle": "Records that travel from the desk to the boat",
-    "introBody": "We build DiveDay for the people who prepare a departure and call everyone back aboard. Bookings, diver records and the roll call belong to the same day, not to separate lists that the crew has to reconcile.",
-    "safetyNote": "DiveDay supports the crew’s procedures. It does not replace trained judgment, a physical roll call or the shop’s safety responsibilities.",
-    "originTitle": "Why this work matters to us"
+    }
   },
   "product": {
     "eyebrow": "Features",

@@ -3476,9 +3476,10 @@
       }
     },
     "magicSignIn": {
-      "title": "Sign in by email",
+      "confirmTitle": "Confirm sign-in",
+      "title": "Get a magic link",
       "description": "Use your verified account email.",
-      "submit": "Email me a sign-in link",
+      "submit": "Email me a magic link",
       "sentTitle": "Check your inbox",
       "sent": "If this is a verified account email, a sign-in link is on its way.",
       "confirm": "Continue signing in",
@@ -4406,6 +4407,7 @@
       "bounced": "The month-end files to {email} bounced, so the bookkeeper did not get them. Check the address in Settings, and save it again or change it."
     },
     "magicSignIn": {
+      "confirmTitle": "Confirm sign-in",
       "subject": "Your DiveDay sign-in link",
       "body": "You requested a link to sign in to DiveDay.",
       "choose": "Sign in",

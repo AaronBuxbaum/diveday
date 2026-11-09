@@ -19,7 +19,7 @@ export default async function EmailSignInConfirmation({
   const { token } = await params;
   const t = diverTranslator(await requestLocale());
   return (
-    <EntryShell wordmark homeLink title={t("account.magicSignIn.title")}>
+    <EntryShell wordmark homeLink title={t("account.magicSignIn.confirmTitle")}>
       <form action={redeemMagicSignIn}>
         <input type="hidden" name="token" value={token} />
         <SubmitButton pendingLabel={t("account.signIn.signingIn")} className={buttonClass()}>

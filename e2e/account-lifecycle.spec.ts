@@ -173,6 +173,7 @@ test("email sign-in waits for human confirmation and refuses replay", async ({
   const path = `/email-sign-in/${issued.accountToken.token}`;
   await page.goto(path);
   await page.reload();
+  await expect(page.getByRole("heading", { name: "Confirm sign-in" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue signing in" })).toBeVisible();
   await page.getByRole("button", { name: "Continue signing in" }).click();
   await expect(page).toHaveURL(/\/shop\//);
@@ -183,8 +184,10 @@ test("email sign-in waits for human confirmation and refuses replay", async ({
 });
 
 test("email sign-in request shows a generic confirmation", async ({ page }) => {
-  await page.goto("/email-sign-in");
+  await page.goto("/sign-in");
+  await page.getByRole("link", { name: "Get a magic link" }).click();
+  await expect(page.getByRole("heading", { name: "Get a magic link" })).toBeVisible();
   await page.getByLabel("Email", { exact: true }).fill("missing@example.com");
-  await page.getByRole("button", { name: "Email me a sign-in link" }).click();
+  await page.getByRole("button", { name: "Email me a magic link" }).click();
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
 });

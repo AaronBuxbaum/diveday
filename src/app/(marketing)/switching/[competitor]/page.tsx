@@ -338,6 +338,7 @@ async function GuideBody({
         <ImportPhase
           locale={locale}
           number={3}
+          source={guide.slug === "fareharbor" ? "fareharbor" : undefined}
           importerNote={
             guide.importerNote && (
               <>

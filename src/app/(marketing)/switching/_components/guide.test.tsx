@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tapTargetLinkClass } from "@/components/ui/button";
+import { diverTranslator } from "@/i18n/messages";
 
 // The demo door is a Server Action; rendering the pair needs only its
 // reference, not the session and database behind it.
@@ -11,6 +12,7 @@ const {
   ClosingCta,
   ScopePhase,
   FareHarborTransferChoice,
+  ImportPhase,
   DividedList,
   GUIDE_BAND_CLASS,
   GUIDE_BAND_LEDE_CLASS,
@@ -392,6 +394,23 @@ describe("guide contents and import reference", () => {
 });
 
 describe("FareHarbor transfer honesty", () => {
+  it.each(["en-US", "es-ES"] as const)(
+    "keeps the import completion step within FareHarbor export coverage in %s",
+    (locale) => {
+      const { container } = render(<ImportPhase locale={locale} number={3} source="fareharbor" />);
+      expect(container.textContent).toContain(
+        locale === "en-US"
+          ? "Import contacts, then prepare upcoming trips"
+          : "Importa los contactos y prepara las próximas salidas",
+      );
+      expect(container.textContent).toContain(
+        locale === "en-US" ? "do not create upcoming bookings" : "no crean reservas próximas",
+      );
+      expect(container.textContent).not.toContain(
+        diverTranslator(locale)("switching.common.importReadyTitle"),
+      );
+    },
+  );
   it.each(["en-US", "es-ES"] as const)(
     "separates source coverage from supported imports in %s",
     (locale) => {

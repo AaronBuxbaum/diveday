@@ -3476,7 +3476,8 @@
       }
     },
     "magicSignIn": {
-      "title": "Entrar por correo",
+      "confirmTitle": "Confirmar acceso",
+      "title": "Recibir un enlace de acceso",
       "description": "Usa el correo verificado de tu cuenta.",
       "submit": "Enviar enlace de acceso",
       "sentTitle": "Revisa tu correo",
@@ -4406,6 +4407,7 @@
       "bounced": "Los archivos de fin de mes a {email} rebotaron, así que el contador no los recibió. Revisa la dirección en Ajustes y guárdala de nuevo o cámbiala."
     },
     "magicSignIn": {
+      "confirmTitle": "Confirmar acceso",
       "subject": "Tu enlace para entrar a DiveDay",
       "body": "Solicitaste un enlace para entrar a DiveDay.",
       "choose": "Entrar",

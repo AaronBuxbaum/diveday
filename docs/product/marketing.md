@@ -243,7 +243,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   conversation with a dive shop owner about what his systems were costing him. Anything beyond that
   list needs its own confirmation. **Confirmed by the product owner 2026-10-06:** the
   disappearance of Tom and Eileen Lonergan is the motivation for building DiveDay, and `/about`
-  originally opened on it. Only what the public record holds is stated: in January 1998 they went out on a dive
+  opens on it. Only what the public record holds is stated: in January 1998 they went out on a dive
   boat to St. Crispin's Reef on the Great Barrier Reef, the boat returned to port without them,
   nobody noticed until their bag was found aboard two days later, and neither was ever found
   ([Wikipedia](https://en.wikipedia.org/wiki/Disappearance_of_Tom_and_Eileen_Lonergan), citing the
@@ -280,8 +280,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   DiveDay"), and no longer carries the concessions band. The Lonergan section and its limits are
   unchanged. `src/app/(marketing)/about/copy.test.ts` refuses a named individual, a first-person singular, and
   the prevention claim in both locales.
-  **Amended 2026-11-09 (marketing audit M13, requested by Aaron).** Lead with the operational problem and inspectable design choices. Keep the genuine Lonergan origin story in an optional disclosure after the standards, retaining its factual limits and company voice. State that the software supports, rather than replaces, crew procedures and judgment; never promise that harm cannot occur.
-- **Source exports are not importer capabilities (M01/M10, 2026-11-09).** The FareHarbor guide distinguishes the described Contacts and Bookings CSVs from separately supplied certifications, sizes and evidence. Its generic importer reference is a separate disclosure, not a promise about a vendor export. The two operating choices state manual transfer and staff responsibility before the long guide; no live synchronization or replacement distribution network is implied.
+- **Source exports are not importer capabilities (M01/M10, 2026-11-09).** The FareHarbor guide distinguishes the described Contacts and Bookings CSVs from separately supplied certifications, sizes and evidence. Its generic importer reference is a separate disclosure, not a promise about a vendor export. The two operating choices state manual transfer and staff responsibility before the long guide; no live synchronization or replacement distribution network is implied. The import and handover steps keep that scope: staff prepare upcoming departures separately, reconcile booking changes manually, and set timing after a trial rather than promise an afternoon or a ready roster.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
   over naming the rival. Switching guides may name incumbents; they cite sources and never

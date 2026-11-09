@@ -16,19 +16,22 @@ import { Bone, Pending } from "@/components/ui/pending";
  * nothing to tap, so there is nothing to lose. Anything interactive added to
  * this file reopens that bug.
  *
- * Holds the practical introduction, its heading and the captain’s phone.
+ * Shaped like the body above the fold (the eyebrow, the story a step up from
+ * body size, its second paragraph, the captain's phone beside them, then the
+ * band on who is behind DiveDay) so the streamed page lands where the bars
+ * stood. The display heading over the story left on 2026-10-07, so the hero
+ * has no title bars; the four standards and their demo door are below the
+ * fold.
  */
 export default function AboutLoading() {
   return (
     <div className="flex flex-1 flex-col">
       <Pending as="main" className="flex-1">
-        {/* Practical introduction beside the roll-call illustration. */}
+        {/* Hero: the story on the left, the artifact it built on the right. */}
         <section className="border-b border-border">
           <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:py-24">
             <div className="max-w-2xl">
               <Bone className="h-4 w-32" />
-              <Bone className="mt-4 h-9 w-full sm:h-10" />
-              <Bone className="mt-2 h-9 w-3/4 sm:h-10" />
               {/* The story: `text-xl leading-8`, `sm:text-2xl sm:leading-9`,
                   so a 24px bar plus the 8px gap is one line below `sm` and a
                   28px bar plus the gap is one line from it. */}

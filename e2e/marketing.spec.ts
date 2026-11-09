@@ -726,17 +726,28 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
 }) => {
   await page.goto("/about");
 
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Records that travel from the desk to the boat" }),
-  ).toBeVisible();
-  await expect(page.getByText(/DiveDay supports the crew’s procedures/)).toBeVisible();
-  const origin = page.locator("#why-this-work-matters");
-  await expect(origin).not.toHaveAttribute("open");
-  await expect(page.getByText(/Tom and Eileen Lonergan/)).not.toBeVisible();
-  await origin.locator("summary").click();
-  await expect(origin.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
-  await expect(origin.getByText(/That story is why we built DiveDay/)).toBeVisible();
-  await origin.locator("summary").click();
+  // The page opens on why DiveDay exists: the Lonergans, left behind on the
+  // Great Barrier Reef in 1998 (docs/product/marketing.md, "Biography is a
+  // claim like any other", holds the sourcing and the limits). The eyebrow is
+  // the page's `h1` since the 2026-10-07 rewrite (H-20261006-about-say-whose-voice): the display heading
+  // that stood over the story ("Why did you build this") left at the owner's
+  // call, along with the spoken register it belonged to, so the story is the
+  // first thing read and the page's name is the one heading a screen reader
+  // lands on first.
+  //
+  // The page's hero has failed the headline test four times before this one,
+  // every failure recorded here so none comes back: "Built by divers, for
+  // divers." (true of every dive-adjacent vendor), "One person owns every
+  // line of code running on this boat." (conceded smallness until it read as
+  // no infrastructure), "Small enough to answer you." (spent the line on the
+  // company's size) and "We'd rather be checked than believed." (picked a
+  // fight). The story carries its own weight and the page does not sell with
+  // it.
+  await expect(page.getByRole("heading", { level: 1, name: "Why DiveDay exists" })).toBeVisible();
+  await expect(page.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
+  // The tie from the story to the product is the company's, in the plural
+  // (Aaron, 2026-10-07: "we built DiveDay").
+  await expect(page.getByText(/That story is why we built DiveDay/)).toBeVisible();
 
   // Who is behind it, in generalities. The page names no individual and
   // states no CV: the founder's name, the employers that used to carry the
@@ -751,7 +762,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // The four standards every screen is held to, as cards under a statement
   // heading. Each is a shipped behavior a visitor can reproduce in the demo.
   await expect(
-    page.getByRole("heading", { name: "Design choices the crew can inspect" }),
+    page.getByRole("heading", { name: "The one job on a boat that can’t go wrong" }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "The roll call runs with no signal" }),
@@ -778,9 +789,9 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   for (const heading of headings)
     expect(heading, `a question heads a band: ${heading}`).not.toMatch(/\?/);
   expect(headings.indexOf("Divers who have shipped software to millions of people")).toBeLessThan(
-    headings.indexOf("Design choices the crew can inspect"),
+    headings.indexOf("The one job on a boat that can’t go wrong"),
   );
-  expect(headings.indexOf("Design choices the crew can inspect")).toBeLessThan(
+  expect(headings.indexOf("The one job on a boat that can’t go wrong")).toBeLessThan(
     headings.indexOf("We set your shop up with you"),
   );
 
@@ -795,7 +806,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // its own demo button on every marketing page (#934).
   const aboutMain = page.getByRole("main");
   const standardsBand = aboutMain.locator("section").filter({
-    has: page.getByRole("heading", { name: "Design choices the crew can inspect" }),
+    has: page.getByRole("heading", { name: "The one job on a boat that can’t go wrong" }),
   });
   await expect(standardsBand.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
   await expect(standardsBand.locator(SET_UP_DOOR)).toHaveCount(1);
@@ -992,6 +1003,20 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   );
   await expect(page.locator("#scope").getByText("Not in the export described here")).toBeVisible();
   await expect(page.locator("#import-reference")).not.toHaveAttribute("open");
+
+  const fareharborCopy = diverTranslator("en-US");
+  await expect(
+    page
+      .locator("#import")
+      .getByText(fareharborCopy("marketing.guides.fareharbor.importStep.title"), { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("#cutover")
+      .getByText(fareharborCopy("marketing.guides.fareharbor.cutover.timing.title"), {
+        exact: true,
+      }),
+  ).toBeVisible();
 
   await expect(
     page.getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat" }),
@@ -1617,13 +1642,18 @@ test.describe("with Accept-Language: es", () => {
       english: "Bring the spreadsheet with you",
       spanish: "Trae la hoja de cálculo contigo",
     },
-    // Use body copy rather than metadata, which Next briefly streams through the body.
+    // `/about`'s `h1` is its eyebrow, and the same words are the page's
+    // `<title>`. Next streams metadata through the body and React hoists the
+    // `<title>` into `<head>` a beat later, so for one frame the English title
+    // is body text for every reader, whatever their language, and the eyebrow
+    // would be "seen" on every run (PR #2165, Playwright shard 4/4). The
+    // marker is the hero's tie sentence instead, which is body copy and
+    // nothing else; `heading` is the Spanish `h1` that says the page has
+    // finished rendering.
     "/about": {
-      english:
-        "We build DiveDay for the people who prepare a departure and call everyone back aboard. Bookings, diver records and the roll call belong to the same day, not to separate lists that the crew has to reconcile.",
-      spanish:
-        "Construimos DiveDay para quienes preparan una salida y pasan lista al volver a bordo. Las reservas, las fichas de los buceadores y el pase de lista forman parte del mismo día, no de listas separadas que el equipo tiene que conciliar.",
-      heading: "Registros que van del mostrador al barco",
+      english: "That story is why we built DiveDay.",
+      spanish: "Por esa historia construimos DiveDay.",
+      heading: "Por qué existe DiveDay",
     },
   } as const;
 

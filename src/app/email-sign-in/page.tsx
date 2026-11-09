@@ -9,7 +9,7 @@ import { requestLocale } from "@/i18n/request";
 import { requestMagicSignIn } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Sign in by email — DiveDay",
+  title: "Get a magic link — DiveDay",
   robots: { index: false, follow: false },
 };
 
