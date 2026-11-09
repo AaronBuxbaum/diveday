@@ -157,10 +157,10 @@ describe("a door renders one primary", () => {
     expect(primaries).toHaveLength(1);
   });
 
-  it("keeps forgot-password and challenge Back controls as text beside one primary", () => {
+  it("keeps email sign-in, forgot-password and challenge Back as text beside one primary", () => {
     const signIn = read("app/sign-in/page.tsx");
     const secondary = buttonCalls(signIn).filter((options) => options.includes("variant:"));
-    expect(secondary).toHaveLength(2);
+    expect(secondary).toHaveLength(3);
     for (const options of secondary) expect(options).toContain('variant: "link"');
   });
 });
