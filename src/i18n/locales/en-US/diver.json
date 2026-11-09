@@ -4407,7 +4407,6 @@
       "bounced": "The month-end files to {email} bounced, so the bookkeeper did not get them. Check the address in Settings, and save it again or change it."
     },
     "magicSignIn": {
-      "confirmTitle": "Confirm sign-in",
       "subject": "Your DiveDay sign-in link",
       "body": "You requested a link to sign in to DiveDay.",
       "choose": "Sign in",

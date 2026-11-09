@@ -4407,7 +4407,6 @@
       "bounced": "Los archivos de fin de mes a {email} rebotaron, así que el contador no los recibió. Revisa la dirección en Ajustes y guárdala de nuevo o cámbiala."
     },
     "magicSignIn": {
-      "confirmTitle": "Confirmar acceso",
       "subject": "Tu enlace para entrar a DiveDay",
       "body": "Solicitaste un enlace para entrar a DiveDay.",
       "choose": "Entrar",
