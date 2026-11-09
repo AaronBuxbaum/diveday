@@ -20,7 +20,7 @@ import {
   workOrderBills,
   workOrders,
 } from "../../db/schema/index";
-import { unseededTestDb } from "../../test/db";
+import { fileScopedEmptyContext } from "../../test/db";
 import { getMonthMoneyDetail } from "./store";
 
 /**
@@ -34,6 +34,9 @@ const MID_JUNE = new Date("2031-06-15T15:00:00Z");
 const NOW = new Date("2031-08-01T00:00:00Z");
 const SHOP_MONEY = { currency: "usd", timeZone: "UTC" };
 
+// Subjects only read projections; setup inserts literal rows. No commits,
+// constraints, locks or payment transitions are under test in this file.
+const context = fileScopedEmptyContext();
 let seq = 0;
 
 async function freshShop(db: AppDb) {
@@ -145,7 +148,7 @@ async function paidOrder(
 
 describe("the month's money by line", () => {
   it("puts each invoice line on its own line, a refund netted where it was paid", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     await paidOrder(db, shop, [
       { kind: "rental", cents: 4_000 },
@@ -171,7 +174,7 @@ describe("the month's money by line", () => {
   });
 
   it("bills a gear-bench job to the gear bench", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     const order = await paidOrder(db, shop, [
       { kind: "other", cents: 6_000 },
@@ -196,7 +199,7 @@ describe("the month's money by line", () => {
   });
 
   it("splits a booking checkout's seat between its departure's line and Rentals", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     const [course] = await db
       .insert(courses)
@@ -317,7 +320,7 @@ describe("what left the month's money", () => {
   }
 
   it("sums refunds, what the codes took off, and Stripe's fees on the month's payouts", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { refundedCents: 2_500 });
     await checkoutWith(db, shop.shopId, { totalCents: 20_000, refundedCents: 5_000 });
@@ -358,7 +361,7 @@ describe("what left the month's money", () => {
   });
 
   it("says nothing about fees when no payout this month said what they were", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     await payout(db, shop.shopId, {
       id: "po_manual",
@@ -379,7 +382,7 @@ describe("what left the month's money", () => {
   });
 
   it("reads payouts by the UTC calendar month their arrival day falls in, not the shop's", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     // Miami's June runs 04:00Z Jun 1 to 04:00Z Jul 1. A payout due July 1
     // (UTC midnight) falls inside those bounds but is July's; one due June 1
@@ -409,7 +412,7 @@ describe("what left the month's money", () => {
 // Issue #2674: counter money carries no tax of its own, and Reports says so.
 describe("money taken at the counter, tax included", () => {
   it("counts cash and card-machine money paid in the month, and no invoice", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     await paidOrder(db, shop, [{ kind: "rental", cents: 10_700 }], { collection: "cash" });
     await paidOrder(db, shop, [{ kind: "other", cents: 3_000 }], { collection: "card_machine" });
@@ -431,7 +434,7 @@ describe("money taken at the counter, tax included", () => {
   });
 
   it("is zero in a month that took nothing at the counter", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { taxCents: 700 });
 
@@ -443,7 +446,7 @@ describe("money taken at the counter, tax included", () => {
 // Issue #2305: the lines add up to every kind of money the month took in.
 describe("money taken outside Stripe", () => {
   it("puts a staff cash mark on its departure's line, by the day it was marked", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     const [course] = await db
       .insert(courses)
@@ -494,7 +497,7 @@ describe("money taken outside Stripe", () => {
   });
 
   it("adds the shop's imported history, net of its refunds, in the shop's currency only", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     async function imported(
       occurredOn: string,
@@ -552,7 +555,7 @@ describe("package dives the shop still owes", () => {
   }
 
   it("counts the unused dives at the price they were bought for", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     const { rows } = await soldPackage(db, shop);
     // Three spent in June, one spent in July (still owed at the end of June),
@@ -592,7 +595,7 @@ describe("package dives the shop still owes", () => {
   });
 
   it("owes nothing on a package whose money went back", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     const { order } = await soldPackage(db, shop);
     await db
@@ -606,7 +609,7 @@ describe("package dives the shop still owes", () => {
 
 describe("returning divers", () => {
   it("counts a diver who had been out before this month, once", async () => {
-    const db = await unseededTestDb();
+    const db = context.db;
     const shop = await freshShop(db);
     const may = await trip(db, shop.shopId, new Date("2031-05-10T13:00:00Z"));
     const juneOne = await trip(db, shop.shopId, new Date("2031-06-05T13:00:00Z"));

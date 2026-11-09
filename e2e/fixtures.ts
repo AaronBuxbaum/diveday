@@ -8,6 +8,7 @@ import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { shopDayBounds } from "../src/lib/zoned";
 import { BROWSER_CLOCK_COOKIE, pinBrowserClock } from "./browser-clock";
 import { currentStaffStorageStateGeneration, signInAs } from "./helpers";
+import { assertDemoReset } from "./reset-check";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 import type { FactRequest } from "./shop-facts";
@@ -233,7 +234,7 @@ export type PrivateShop = {
  * *schedule* before every test; a test that writes the shop's **settings**
  * takes a whole shop of its own through `privateShop` below.
  */
-/** How many lines of browser activity a failure carries. See `browserActivity`. */
+/** How many lines of browser activity a failure carries. See the `page` fixture. */
 const ACTIVITY_LIMIT = 400;
 
 /**
@@ -308,7 +309,6 @@ export const test = base.extend<
   {
     clock: Clock;
     demoReset: undefined;
-    browserActivity: undefined;
     privateShop: PrivateShop;
     onboardForm: string;
     privateShopSlug: string | null;
@@ -351,14 +351,7 @@ export const test = base.extend<
       // 25-spec-wide failure to notice the blow-out cascade's two tables were
       // missing from the ordering, and why the same bug class went unnoticed
       // once before (see the last-minute-unsubscribe comments in src/db/seed.ts).
-      if (!response.ok()) {
-        throw new Error(
-          `demo reset failed: POST /api/test/reset returned ${response.status()}. ` +
-            `Every later assertion in this spec would be reading a half-reset shop. ` +
-            `A 500 here is usually a missing delete in resetDemoSchedule's ordering ` +
-            `(src/db/seed.ts) for a newly added table. Body: ${await response.text()}`,
-        );
-      }
+      assertDemoReset(response, "demo reset failed");
       await use(undefined);
     },
     { auto: true },
@@ -411,151 +404,168 @@ export const test = base.extend<
    * 2 names the destination as still in flight, and case 3 names it as the
    * last failure.
    */
-  browserActivity: [
-    async ({ page }, use, testInfo) => {
-      const started = Date.now();
-      const since = () => Date.now() - started;
-      // The origin is the same two dozen characters on every line and its port
-      // changes per worker, so it is pure cost against the window above.
-      const trim = (url: string) => url.replace(/^https?:\/\/[^/]+/, "");
-      const entries: string[] = [];
-      const record = (line: string) => {
-        // Keep the *tail*: whatever happened around the failure is at the end,
-        // and the first thousand lines of a long spec are the setup nobody is
-        // asking about.
-        if (entries.length >= ACTIVITY_LIMIT) entries.shift();
-        entries.push(`${String(since()).padStart(6)}ms  ${line}`);
-      };
-      // What the verdict is counted from. `inFlight` is keyed by the request
-      // object rather than by its URL, because two navigations to one URL are
-      // two requests and the second must not close the first.
-      const inFlight = new Map<Request, string>();
-      let requests = 0;
-      let failures = 0;
-      let lastFailure = "";
-      let pageErrors = 0;
-      let lastPageError = "";
-      let consoleErrors = 0;
-      const hydrationErrors: string[] = [];
-      const noteHydration = (text: string) => {
-        if (!HYDRATION_ERROR.test(text)) return;
-        if (HYDRATION_ALLOWLIST.some((allowed) => allowed.match.test(text))) return;
-        hydrationErrors.push(text);
-      };
-      const verdict = () => {
-        const pending = [...inFlight.values()];
-        return [
-          `${requests} requests · ${failures} failed · ${pageErrors} pageerror · ${consoleErrors} console.error`,
-          pending.length === 0
-            ? "in flight when the test ended: nothing"
-            : `in flight when the test ended: ${pending.slice(-2).join(" · ")}`,
-          ...(lastFailure ? [`last router failure: ${lastFailure}`] : []),
-          // **Hoisted out of the transcript, for the same reason the counts
-          // are.** An uncaught exception is the highest-signal line this
-          // fixture ever records and it is almost never in the first four —
-          // the head is the page load, and a throw is what happened later. On
-          // 2026-09-20 a fold test failed on CI with "1 pageerror" in the
-          // verdict and the exception itself cut off, which is a count where a
-          // cause was one line away.
-          ...(lastPageError ? [`last pageerror: ${lastPageError}`] : []),
-        ].join("\n");
-      };
-      // Errors only. A page's ordinary `console.log` is the app talking to its
-      // own developers and would bury the one line that matters.
-      page.on("console", (message) => {
-        if (message.type() !== "error") return;
-        consoleErrors += 1;
-        record(`console.error  ${message.text()}`);
-        noteHydration(message.text());
-      });
-      // An uncaught exception in the client router is the leading candidate for
-      // the failure above, and it is currently invisible to the report.
-      page.on("pageerror", (error) => {
-        pageErrors += 1;
-        lastPageError = error.message;
-        record(`pageerror      ${error.message}`);
-        noteHydration(error.message);
-      });
-      // A page turn is one of these two: a document navigation, or the client
-      // router's RSC fetch for the destination. Everything this fixture was
-      // built to tell apart happens here.
-      const routerTraffic = (request: Request) =>
-        request.isNavigationRequest() || request.url().includes("_rsc=");
-      const interesting = (request: Request) =>
-        routerTraffic(request) || !request.url().includes("/_next/");
-      // **Prefetches are marked, not dropped.** Next prefetches every link in
-      // the viewport, so an unmarked transcript is forty lines of prefetch with
-      // the one navigation that matters buried among them — which is what the
-      // first version of this produced. They stay because a prefetch storm
-      // could itself be the mechanism; they are just skimmable, and only their
-      // *start* is recorded, since a prefetch aborting is ordinary (the real
-      // navigation supersedes it) and would otherwise double the noise.
-      const isPrefetch = (request: Request) =>
-        request.headers()["next-router-prefetch"] !== undefined;
-      page.on("request", (request) => {
-        if (!interesting(request)) return;
-        const what = `${request.method()} ${trim(request.url())}`;
-        if (isPrefetch(request)) {
-          record(`⋯ ${what}`);
-          return;
-        }
-        requests += 1;
-        inFlight.set(request, `${what} (started ${since()}ms)`);
-        record(`→ ${what}`);
-      });
-      page.on("requestfinished", (request) => {
-        inFlight.delete(request);
-        if (!interesting(request) || isPrefetch(request)) return;
-        record(`← ${request.method()} ${trim(request.url())}`);
-      });
-      // The third of the three cases, and the only one that says so out loud.
-      page.on("requestfailed", (request) => {
-        inFlight.delete(request);
-        failures += 1;
-        const why = `${request.method()} ${trim(request.url())} — ${request.failure()?.errorText ?? "?"}`;
-        // The *count* is every failure, because a storm of them is itself a
-        // symptom. The line naming one is the router's own traffic only: the
-        // sandbox blocks third-party analytics on every run, so an unfiltered
-        // "last failure" would spend sixty of the three hundred characters
-        // above pointing at `speed-insights/script.js` every single time.
-        if (routerTraffic(request)) lastFailure = why;
-        record(`✗ ${why}`);
-      });
+  // Next's docs (`preserving-ui-state.md`'s Testing section) say `getByRole`/
+  // `getByLabel`/`getByPlaceholder` are already visibility-safe because they
+  // query the accessibility tree, which is supposed to exclude a `display:none`
+  // route React's <Activity> keeps in the DOM for instant back-navigation
+  // (cacheComponents, see ADR 20260801-cache-components-e2e-activity-migration).
+  // Phase 2 of that ADR's migration plan proved that claim false for this app:
+  // navigating from the public schedule list (which renders
+  // `LastMinuteListForm`'s "Name" input) to a trip detail page (which renders
+  // its own "Name" input via `BookingPartyFields`) left both inputs reachable
+  // by `getByLabel("Name")` — a real strict-mode "resolved to 2 elements"
+  // failure, not a flake, confirmed by inspecting both inputs' markup against
+  // the source. `getByRole` showed the same failure independently
+  // (`getByRole("alert")` resolving to two alerts across a navigation). So all
+  // three are patched by `makeActivitySafe`, like `getByText`, at the one fixture
+  // choke point every spec already imports through, rather than trusting the
+  // docs' claim per-callsite.
+  // A spec that genuinely needs to match hidden content (e.g. asserting
+  // `toBeHidden()`) can bypass this with `page.locator(...)`, which this
+  // fixture leaves unpatched.
 
-      await use(undefined);
+  page: async ({ page }, use, testInfo) => {
+    const started = Date.now();
+    const since = () => Date.now() - started;
+    // The origin is the same two dozen characters on every line and its port
+    // changes per worker, so it is pure cost against the window above.
+    const trim = (url: string) => url.replace(/^https?:\/\/[^/]+/, "");
+    const entries: string[] = [];
+    const record = (line: string) => {
+      // Keep the *tail*: whatever happened around the failure is at the end,
+      // and the first thousand lines of a long spec are the setup nobody is
+      // asking about.
+      if (entries.length >= ACTIVITY_LIMIT) entries.shift();
+      entries.push(`${String(since()).padStart(6)}ms  ${line}`);
+    };
+    // What the verdict is counted from. `inFlight` is keyed by the request
+    // object rather than by its URL, because two navigations to one URL are
+    // two requests and the second must not close the first.
+    const inFlight = new Map<Request, string>();
+    let requests = 0;
+    let failures = 0;
+    let lastFailure = "";
+    let pageErrors = 0;
+    let lastPageError = "";
+    let consoleErrors = 0;
+    const hydrationErrors: string[] = [];
+    const noteHydration = (text: string) => {
+      if (!HYDRATION_ERROR.test(text)) return;
+      if (HYDRATION_ALLOWLIST.some((allowed) => allowed.match.test(text))) return;
+      hydrationErrors.push(text);
+    };
+    const verdict = () => {
+      const pending = [...inFlight.values()];
+      return [
+        `${requests} requests · ${failures} failed · ${pageErrors} pageerror · ${consoleErrors} console.error`,
+        pending.length === 0
+          ? "in flight when the test ended: nothing"
+          : `in flight when the test ended: ${pending.slice(-2).join(" · ")}`,
+        ...(lastFailure ? [`last router failure: ${lastFailure}`] : []),
+        // **Hoisted out of the transcript, for the same reason the counts
+        // are.** An uncaught exception is the highest-signal line this
+        // fixture ever records and it is almost never in the first four —
+        // the head is the page load, and a throw is what happened later. On
+        // 2026-09-20 a fold test failed on CI with "1 pageerror" in the
+        // verdict and the exception itself cut off, which is a count where a
+        // cause was one line away.
+        ...(lastPageError ? [`last pageerror: ${lastPageError}`] : []),
+      ].join("\n");
+    };
+    // Errors only. A page's ordinary `console.log` is the app talking to its
+    // own developers and would bury the one line that matters.
+    page.on("console", (message) => {
+      if (message.type() !== "error") return;
+      consoleErrors += 1;
+      record(`console.error  ${message.text()}`);
+      noteHydration(message.text());
+    });
+    // An uncaught exception in the client router is the leading candidate for
+    // the failure above, and it is currently invisible to the report.
+    page.on("pageerror", (error) => {
+      pageErrors += 1;
+      lastPageError = error.message;
+      record(`pageerror      ${error.message}`);
+      noteHydration(error.message);
+    });
+    // A page turn is one of these two: a document navigation, or the client
+    // router's RSC fetch for the destination. Everything this fixture was
+    // built to tell apart happens here.
+    const routerTraffic = (request: Request) =>
+      request.isNavigationRequest() || request.url().includes("_rsc=");
+    const interesting = (request: Request) =>
+      routerTraffic(request) || !request.url().includes("/_next/");
+    // **Prefetches are marked, not dropped.** Next prefetches every link in
+    // the viewport, so an unmarked transcript is forty lines of prefetch with
+    // the one navigation that matters buried among them — which is what the
+    // first version of this produced. They stay because a prefetch storm
+    // could itself be the mechanism; they are just skimmable, and only their
+    // *start* is recorded, since a prefetch aborting is ordinary (the real
+    // navigation supersedes it) and would otherwise double the noise.
+    const isPrefetch = (request: Request) =>
+      request.headers()["next-router-prefetch"] !== undefined;
+    page.on("request", (request) => {
+      if (!interesting(request)) return;
+      const what = `${request.method()} ${trim(request.url())}`;
+      if (isPrefetch(request)) {
+        record(`⋯ ${what}`);
+        return;
+      }
+      requests += 1;
+      inFlight.set(request, `${what} (started ${since()}ms)`);
+      record(`→ ${what}`);
+    });
+    page.on("requestfinished", (request) => {
+      inFlight.delete(request);
+      if (!interesting(request) || isPrefetch(request)) return;
+      record(`← ${request.method()} ${trim(request.url())}`);
+    });
+    // The third of the three cases, and the only one that says so out loud.
+    page.on("requestfailed", (request) => {
+      inFlight.delete(request);
+      failures += 1;
+      const why = `${request.method()} ${trim(request.url())} — ${request.failure()?.errorText ?? "?"}`;
+      // The *count* is every failure, because a storm of them is itself a
+      // symptom. The line naming one is the router's own traffic only: the
+      // sandbox blocks third-party analytics on every run, so an unfiltered
+      // "last failure" would spend sixty of the three hundred characters
+      // above pointing at `speed-insights/script.js` every single time.
+      if (routerTraffic(request)) lastFailure = why;
+      record(`✗ ${why}`);
+    });
 
-      // A test that passed while React threw its hydration away fails here,
-      // naming the error, with the transcript a failure always gets.
-      const hydrationFailed = testInfo.status === "passed" && hydrationErrors.length > 0;
-      if ((testInfo.status !== testInfo.expectedStatus || hydrationFailed) && entries.length > 0) {
-        // **First line: is the renderer even there?** A click stuck on "waiting
-        // for element to be visible, enabled and stable" with nothing after it
-        // reads like an app race and is not always one. On 2026-10-15 a
-        // certifications.spec.ts click sat there for 55 seconds because the
-        // renderer had stopped answering at all (Playwright's own failure
-        // screenshot and the context close each hung ~5s) — the known Chromium
-        // wedge of the visual specs, here in a functional spec that had no
-        // way to say so. Only a *timeout* is the verdict: a rejection means the
-        // page answered, with an error.
-        const wedged = (await rendererWedged(page))
-          ? `renderer: no answer to evaluate(() => true) in ${RENDERER_PROBE_MS}ms — wedged, not slow\n`
-          : "";
-        await testInfo.attach("browser-activity", {
-          body: [wedged + verdict(), "", ...entries].join("\n"),
-          contentType: "text/plain",
-        });
-      }
-      if (hydrationFailed) {
-        throw new Error(
-          `React hydration failed on this test's page (${hydrationErrors.length}x): ${hydrationErrors[0].slice(0, 300)}. ` +
-            "The server and the client rendered different markup, so React rebuilt part of the page after the test could already click it. " +
-            "Fix the markup (an element nested where HTML forbids it, a value that differs between server and client); " +
-            "HYDRATION_ALLOWLIST in e2e/fixtures.ts takes a named exception.",
-        );
-      }
-    },
-    { auto: true },
-  ],
+    await use(makeActivitySafe(page));
+
+    // A test that passed while React threw its hydration away fails here,
+    // naming the error, with the transcript a failure always gets.
+    const hydrationFailed = testInfo.status === "passed" && hydrationErrors.length > 0;
+    if ((testInfo.status !== testInfo.expectedStatus || hydrationFailed) && entries.length > 0) {
+      // **First line: is the renderer even there?** A click stuck on "waiting
+      // for element to be visible, enabled and stable" with nothing after it
+      // reads like an app race and is not always one. On 2026-10-15 a
+      // certifications.spec.ts click sat there for 55 seconds because the
+      // renderer had stopped answering at all (Playwright's own failure
+      // screenshot and the context close each hung ~5s) — the known Chromium
+      // wedge of the visual specs, here in a functional spec that had no
+      // way to say so. Only a *timeout* is the verdict: a rejection means the
+      // page answered, with an error.
+      const wedged = (await rendererWedged(page))
+        ? `renderer: no answer to evaluate(() => true) in ${RENDERER_PROBE_MS}ms — wedged, not slow\n`
+        : "";
+      await testInfo.attach("browser-activity", {
+        body: [wedged + verdict(), "", ...entries].join("\n"),
+        contentType: "text/plain",
+      });
+    }
+    if (hydrationFailed) {
+      throw new Error(
+        `React hydration failed on this test's page (${hydrationErrors.length}x): ${hydrationErrors[0].slice(0, 300)}. ` +
+          "The server and the client rendered different markup, so React rebuilt part of the page after the test could already click it. " +
+          "Fix the markup (an element nested where HTML forbids it, a value that differs between server and client); " +
+          "HYDRATION_ALLOWLIST in e2e/fixtures.ts takes a named exception.",
+      );
+    }
+  },
 
   // A whole seeded shop of this test's own, with `page` signed in as its
   // owner. Ask for it when the test writes **shop-wide** state — anything the
@@ -873,29 +883,6 @@ export const test = base.extend<
   // Point the built-in page/request fixtures at this worker's own server.
   baseURL: async ({ workerBaseURL }, use) => {
     await use(workerBaseURL);
-  },
-
-  // Next's docs (`preserving-ui-state.md`'s Testing section) say `getByRole`/
-  // `getByLabel`/`getByPlaceholder` are already visibility-safe because they
-  // query the accessibility tree, which is supposed to exclude a `display:none`
-  // route React's <Activity> keeps in the DOM for instant back-navigation
-  // (cacheComponents, see ADR 20260801-cache-components-e2e-activity-migration).
-  // Phase 2 of that ADR's migration plan proved that claim false for this app:
-  // navigating from the public schedule list (which renders
-  // `LastMinuteListForm`'s "Name" input) to a trip detail page (which renders
-  // its own "Name" input via `BookingPartyFields`) left both inputs reachable
-  // by `getByLabel("Name")` — a real strict-mode "resolved to 2 elements"
-  // failure, not a flake, confirmed by inspecting both inputs' markup against
-  // the source. `getByRole` showed the same failure independently
-  // (`getByRole("alert")` resolving to two alerts across a navigation). So all
-  // three are patched here exactly like `getByText` below, at the one fixture
-  // choke point every spec already imports through, rather than trusting the
-  // docs' claim per-callsite.
-  // A spec that genuinely needs to match hidden content (e.g. asserting
-  // `toBeHidden()`) can bypass this with `page.locator(...)`, which this
-  // fixture leaves unpatched.
-  page: async ({ page }, use) => {
-    await use(makeActivitySafe(page));
   },
 
   // One real UI sign-in per (worker, role) pair — lazy and memoized, so a

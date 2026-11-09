@@ -34,7 +34,7 @@ database when touched; `src/app/s/[shopSlug]/trips/[id]/actions.gear-fit.test.ts
 example.
 
 **Fixtures come from `src/test/`.** `db.ts` hands out the database (`fileScopedShopContext`,
-`seededShopContext`, `unseededTestDb`; [below](#the-test-database-is-a-snapshot-not-a-boot)),
+`seededShopContext`, `fileScopedEmptyContext`, `unseededTestDb`; [below](#the-test-database-is-a-snapshot-not-a-boot)),
 `fakes.ts` the providers, `staff-session.ts` a signed-in staff member, `frozen-clock.ts` the
 clock, `source.ts` the tree a guard walks. Rows come from `src/test/factories.ts` (`secondShop()`,
 `aDiver`, `aTrip`, `aBooking`, `staffWithRole`) before a raw `insert`: a cross-tenant case is then
@@ -434,11 +434,23 @@ hydrating is a few hundred milliseconds. Two rules keep this sound:
 - Don't call `createTestDb()` + `seedDemo()` directly in tests — that's the slow path the helper
   exists to avoid. (`createTestDb()` alone is fine for the rare test that wants an *unseeded* db.)
 
-The snapshot is keyed on a content hash of `drizzle/`, `src/db/` and the frozen test clock, and
-never expires: the demo seed is clock-anchored (one trip always sails *today*), but it reads time
-only through the frozen `DIVEDAY_CLOCK`, so rebuilding it tomorrow produces the same bytes. CI
-restores `node_modules/.cache/diveday/` from `actions/cache` under the same inputs, so a unit shard
-only rebuilds the two snapshots (initdb, every migration, the seed — twice) when one of them moved.
+The snapshot input manifest lives in `src/test/db-template-inputs.ts`: migrations, non-test source,
+configuration, package metadata and the lockfile. Test/spec files and snapshots are excluded identically in both cache layers. Including the remaining
+source graph deliberately
+invalidates on some unrelated edits, rather than missing a transitive seed helper. CI uses the
+same manifest. Each of the three variants (lean, history, empty) is an immutable SHA-256-named
+blob; one atomically renamed manifest publishes a complete generation for its input fingerprint.
+Readers resolve their own checkout's fingerprint, verify size and checksum, and memoize bytes by
+cache directory and content identity. A shared worktree cache cannot substitute another version.
+Global setup validates every blob before calling a generation a cache hit. The frozen clock keeps
+fixture dates deterministic; this is not a claim that Postgres dump bytes are byte-identical.
+
+After stopping every test and watch invocation sharing the cache, run
+`node --import tsx src/test/db-template-cleanup.ts --idle --keep=3` to retain the three most
+recent generations and their shared blobs. `--idle` is an explicit assertion by the operator,
+not process discovery; never run this maintenance alongside tests. The command refuses malformed
+manifests and leaves unrelated files alone. There is no opportunistic deletion under readers.
+CI cache retention separately bounds hosted storage.
 
 ### One database per file, when a file can take it
 
@@ -490,8 +502,11 @@ the last of which is the surprising one:
   statement fails. `src/features/divers/store.test.ts`'s erasure test and `src/features/shop-subscriptions/store.test.ts`'s
   two "another shop holds this Stripe id" tests take their own for this reason.
 
-A file whose tests mock `getDb` or hydrate an *unseeded* database (`unseededTestDb()`, for the seed
-itself) keeps those tests as they are; the rest of the file still shares one.
+`fileScopedEmptyContext()` is the empty counterpart for pure report projections that insert
+literal fixture rows and only read results. It obeys the same exclusions above. The report-lines
+suite uses it; seeding, money transitions, constraint failures and concurrency tests still need
+fresh databases. The shared transaction opener rejects readiness immediately when BEGIN fails,
+retains the original cause, and waits for rollback before another case starts.
 
 ### When a db-backed test suddenly takes twelve times as long
 
@@ -502,17 +517,9 @@ suite that was fine yesterday. **It now says so**, once per worker per variant, 
 
 - **Global setup did not run** — a foreign Vitest config, or a runner invoked directly. The
   documented case.
-- **The snapshot is missing, empty, or being rewritten.** This repo expects parallel sessions in one
-  working directory (AGENTS.md's *Parallel work*), and worktrees can share a single `node_modules`
-  volume — which is why `DIVEDAY_TEST_CACHE_DIR` exists. A second Vitest invocation whose fingerprint
-  misses rebuilds both ~70MB snapshots, so a reader can land mid-write.
-
-Two things make that window safe rather than mysterious, both added while investigating #1157.
-`ensureTestDbTemplate` writes to a sibling temp file and `rename`s onto the live path, so a reader
-sees the whole old snapshot or the whole new one and never a prefix of either. And `templateBytes`
-answers `null` for a **zero-length** read: an empty `Uint8Array` is truthy, so it used to sail past
-the `if (!bytes)` fallback and reach PGlite as an empty tar, which throws `Error: PGlite failed to
-initialize properly` — a message naming neither the cause nor the fix.
+- **The snapshot is missing or corrupt.** Size and SHA-256 checks reject missing, truncated or
+  altered bytes before PGlite sees them. An interrupted build cannot publish an incomplete
+  generation; a complete prior generation stays readable.
 
 Vitest defaults to the `node` environment. A test that exercises browser APIs (DOM rendering,
 IndexedDB, `navigator`) opts in with a `// @vitest-environment jsdom` docblock on line 1.
@@ -779,3 +786,11 @@ existing `guards` project. `form.test.tsx` holds the rendered behavior tests. Th
 `check-form-controls.mjs` guard still owns placeholder labels and action-submit rules, once in
 `check:repo`. Booking diver-detail queries live in `src/db/bookings-diver-details.ts`; callers
 continue importing the stable public exports from `src/db/bookings.ts`.
+
+### Request-only browser fixtures
+
+HTTP-only Playwright cases retain the automatic demo reset but do not create a browser context.
+Activity recording and hydration failure detection belong to the lazy `page` fixture, so browser
+cases retain those diagnostics. `e2e/fixture-api.spec.ts` refuses browser/context/page creation to
+hold the request-only contract. Initial and per-test reset failures report their status immediately;
+response bodies are omitted because they may include sensitive data.

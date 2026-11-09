@@ -1,5 +1,6 @@
 import { chromium, request } from "@playwright/test";
 import { chromiumLaunchOptions } from "./browser";
+import { assertDemoReset } from "./reset-check";
 import { E2E_TEST_ROUTE_SECRET, e2eBaseURL, e2eWorkerIndexes } from "./servers";
 
 /**
@@ -104,7 +105,8 @@ async function warmServers() {
         // more, so that cost lands here too rather than on the first test. The
         // per-test replay after it is a few hundred milliseconds and is not
         // governed by this number.
-        await context.post("/api/test/reset", { timeout: 120_000 });
+        const reset = await context.post("/api/test/reset", { timeout: 120_000 });
+        assertDemoReset(reset, `initial demo reset failed (worker ${i})`);
         // Warm the routes every test hits first so the first test's clock
         // doesn't absorb their one-time render cost. Best-effort.
         for (const route of ["/", "/sign-in", "/s/blue-mantis"]) {
