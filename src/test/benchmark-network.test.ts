@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "@/lib/maps";
-import { measurementNetworkPolicy } from "../../benchmarks/network-policy";
+import { createRequestWindow, measurementNetworkPolicy } from "../../benchmarks/network-policy";
 
 const origin = "http://127.0.0.1:3100";
 
@@ -37,4 +37,14 @@ it("serves the same inert external map/font fixtures without allowing live depen
 it("keeps reachability probes refused even when they are otherwise matching tiles", () => {
   for (const probe of [...MAP_REACHABILITY_PROBES, ...ARRIVAL_MAP_PROBES])
     expect(measurementNetworkPolicy(probe, origin)).toBe("abort");
+});
+
+it("excludes late responses from earlier requests without excluding new requests to the same URL", () => {
+  const window = createRequestWindow<{ url: string }>();
+  const previousDocument = { url: "/_next/static/same-chunk.js" };
+  const targetDocument = { url: previousDocument.url };
+  expect(window.contains(previousDocument)).toBe(false);
+  window.start(targetDocument);
+  expect(window.contains(previousDocument)).toBe(false);
+  expect(window.contains(targetDocument)).toBe(true);
 });

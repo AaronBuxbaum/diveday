@@ -1,7 +1,7 @@
 import { expect, STUB_BASEMAP_TILE, signedInAsOwner, test } from "../e2e/fixtures";
 import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { measurementNetworkPolicy } from "./network-policy";
+import { createRequestWindow, measurementNetworkPolicy } from "./network-policy";
 
 signedInAsOwner();
 
@@ -33,10 +33,17 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
     await page.addInitScript(() => {
       const costs: number[] = [];
-      Object.assign(window, { __longTaskCosts: costs });
+      Object.assign(window, { __longTaskCosts: costs, __measurementStartedAt: 0 });
       new PerformanceObserver((list) =>
         (window as unknown as { __longTaskCosts: number[] }).__longTaskCosts.push(
-          ...list.getEntries().map((entry) => entry.duration),
+          ...list
+            .getEntries()
+            .filter(
+              (entry) =>
+                entry.startTime >=
+                (window as unknown as { __measurementStartedAt: number }).__measurementStartedAt,
+            )
+            .map((entry) => entry.duration),
         ),
       ).observe({ type: "longtask", buffered: true });
     });
@@ -93,11 +100,21 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
       }
       await page.evaluate(() => {
         performance.clearResourceTimings();
-        Object.assign(window, { __longTaskCosts: [] });
+        Object.assign(window, { __longTaskCosts: [], __measurementStartedAt: performance.now() });
       });
       let documentResponses = 0;
-      const responses: Promise<{ type: string; bytes: number; failed?: boolean }>[] = [];
+      let priorWindowPayloadResponses = 0;
+      const requests = createRequestWindow<import("@playwright/test").Request>();
+      const recordRequest = (request: import("@playwright/test").Request) =>
+        requests.start(request);
+      const responses: Promise<{ type: string; bytes: number; url: string; failed?: string }>[] =
+        [];
       const record = (response: import("@playwright/test").Response) => {
+        if (!requests.contains(response.request())) {
+          if (/javascript|text\/x-component/.test(response.headers()["content-type"] ?? ""))
+            priorWindowPayloadResponses++;
+          return;
+        }
         if (
           response.request().isNavigationRequest() &&
           response.request().frame() === page.mainFrame()
@@ -108,10 +125,19 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
           responses.push(
             response
               .body()
-              .then((body) => ({ type, bytes: body.length }))
-              .catch(() => ({ type, bytes: 0, failed: true })),
+              .then((body) => ({ type, bytes: body.length, url: new URL(response.url()).pathname }))
+              .catch((error: unknown) => ({
+                type,
+                bytes: 0,
+                url: new URL(response.url()).pathname,
+                failed: error instanceof Error ? error.message : String(error),
+              })),
           );
       };
+      // A response can arrive after the sample starts for an old, in-flight
+      // request. Its old document can close during goto, making its body unreadable.
+      // Only requests initiated in this sample belong to its payload total.
+      page.on("request", recordRequest);
       page.on("response", record);
       const start = performance.now();
       if (mode === "cached-navigation") {
@@ -155,7 +181,11 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
       );
       const elapsedMs = performance.now() - start;
       const browser = await page.evaluate(() => {
-        const resources = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
+        const boundary =
+          (window as unknown as { __measurementStartedAt?: number }).__measurementStartedAt ?? 0;
+        const resources = (
+          performance.getEntriesByType("resource") as PerformanceResourceTiming[]
+        ).filter((entry) => entry.startTime >= boundary);
         const tasks = (window as unknown as { __longTaskCosts: number[] }).__longTaskCosts ?? [];
         return {
           inlineRscCarrierUtf8Bytes: new TextEncoder().encode(
@@ -180,15 +210,27 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
           browser.cachedScriptResources,
           "warm sample must observe cached script delivery",
         ).toBeGreaterThan(0);
+      page.off("request", recordRequest);
       page.off("response", record);
       const payloads = await Promise.all(responses);
       expect(
-        payloads.every((payload) => !payload.failed),
-        "all observed payload bodies must be readable",
-      ).toBe(true);
+        payloads.filter((payload) => payload.failed !== undefined),
+        "all payload bodies initiated in this sample must be readable",
+      ).toEqual([]);
+      const decodedJsBytes = payloads
+        .filter((payload) => payload.type.includes("javascript"))
+        .reduce((total, payload) => total + payload.bytes, 0);
       const decodedRscBytes = payloads
         .filter((payload) => payload.type.includes("text/x-component"))
         .reduce((total, payload) => total + payload.bytes, 0);
+      if (mode.includes("document")) {
+        expect(documentResponses, "document samples must observe their navigation").toBeGreaterThan(
+          0,
+        );
+        expect(decodedJsBytes, "document samples must capture their script bodies").toBeGreaterThan(
+          0,
+        );
+      }
       if (mode.includes("navigation")) {
         expect(documentResponses, "client transitions must not become document loads").toBe(0);
         if (mode === "uncached-navigation")
@@ -203,10 +245,9 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
         mode,
         elapsedMs,
         documentResponses,
+        priorWindowPayloadResponses,
         ...browser,
-        decodedJsBytes: payloads
-          .filter((p) => p.type.includes("javascript"))
-          .reduce((n, p) => n + p.bytes, 0),
+        decodedJsBytes,
         decodedRscBytes,
       });
     }

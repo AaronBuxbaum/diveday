@@ -22,3 +22,12 @@ export function measurementNetworkPolicy(
     return "tile";
   return "abort";
 }
+
+/** Identity, not URL: a new navigation may request the same cached chunk URL. */
+export function createRequestWindow<T extends object>() {
+  const requests = new WeakSet<T>();
+  return {
+    start: (request: T) => requests.add(request),
+    contains: (request: T) => requests.has(request),
+  };
+}
