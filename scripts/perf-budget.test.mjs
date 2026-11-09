@@ -4,7 +4,12 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
-import { floorMarkersIn, routeBudgetResults, sharedFirstLoadChunks } from "./perf-budget.mjs";
+import {
+  floorMarkersIn,
+  ROUTE_BUDGETS,
+  routeBudgetResults,
+  sharedFirstLoadChunks,
+} from "./perf-budget.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -122,6 +127,14 @@ describe("the budget against the real build", () => {
 });
 
 describe("representative route budgets", () => {
+  it("enforces a finite measured ceiling on every representative route", () => {
+    expect(Object.keys(ROUTE_BUDGETS)).toHaveLength(4);
+    for (const ceiling of Object.values(ROUTE_BUDGETS)) {
+      expect(Number.isFinite(ceiling)).toBe(true);
+      expect(ceiling).toBeGreaterThan(0);
+    }
+  });
+
   it("catches a route-only dependency while the shared floor does not change", () => {
     const stats = [
       { route: "/a", firstLoadChunkPaths: ["common", "only-a"] },

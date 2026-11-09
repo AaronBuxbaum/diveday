@@ -8,6 +8,14 @@ The required Next build remains the authoritative application checker, with fres
 
 An isolated diagnostic probe rejected application and generated `RouteContext` errors in Next's build and worker errors in the independent worker check. It also caught a false premise: ordinary `next typegen` plus tsc accepted synchronous dynamic-page params that `next build --webpack` rejected. Therefore the build checker is **not** disabled or replaced by typegen; no copied internal validator or experimental strict-route opt-in is used. Next's configured native TypeScript CLI checks the whole tsconfig, unlike its older compiler-API path that filtered test diagnostics. The optimization removes the duplicate standalone app run, not any checked program. Build selection still determines the critical path, so no wall-clock saving is claimed without comparable CI samples.
 
+## Fixture generation identity (TEST-01)
+
+The conservative input manifest covers non-test source/configuration/migrations and the package/lock files. A local three-sample diagnostic measured 4,693 sequential file reads at 663, 774 and 781 ms per full hash. Repeating that work in isolated DB forks is avoidable; the first combined CI run passed one unit shard in 850 seconds and exhausted the existing fifteen-minute deadline in three others. This supports the diagnosis, not a claim that hashing was the sole source of variance.
+
+Global setup validates/builds once and supplies its immutable generation identity through Vitest's supported provide/inject context. Workers still validate manifest identity, archive length and SHA256; direct/non-worker callers retain complete content hashing. Watch reruns await a new full fingerprint, but do not rebuild through the coordinator's potentially stale imported seed modules. Fresh isolated workers use a matching valid generation or seed from their freshly loaded code until a new invocation builds the new snapshot. Interrupted writers never publish partial generations. Explicit successful ensure refreshes in-process reader memoization, including repaired misses.
+
+Content-addressed generations are removed only by the explicit idle maintenance command, never while readers/writers may still need them. Complete invalidation intentionally permits more cache misses. The CI timeout, shard count, worker topology and per-test isolation are unchanged; the next exact-head run verifies whether the eliminated reads restore the margin.
+
 ## Shard calibration (CI-02)
 
 Before implementation, read twelve complete successful main runs from November 8–9 through GitHub's actual jobs/step timestamps. All twelve used Ubuntu 24.04, four unit shards and V8 coverage. No non-coverage or macOS observations were present in that sample, so it cannot establish a cross-runner or coverage-mode correction. The table lists **unit-test step elapsed seconds**, not billed minutes or summed per-file costs.
@@ -37,7 +45,18 @@ No profile has been invented from old artifacts lacking metadata. The empty init
 
 The shared 170 KB gzip floor and forbidden-module markers remain unchanged. `perf:budget` additionally sums distinct route first-load chunks for Today, manifest, public schedule and dive-site catalog. A test proves a route-local dependency fails its ceiling while leaving the shared intersection unchanged. Missing named routes/chunks fail closed. Route-specific ceilings are established from the verified build, with explicitly documented headroom rather than inherited shared-floor assumptions.
 
-`benchmarks/routes.spec.ts` reports fixed 390 px, 4× CPU, 100 ms latency and 1 Mbps samples for cold/warm documents and uncached real Next-link navigation and cached Back/Forward history restoration. It records transferred resource bytes, decoded JS and RSC bytes, elapsed navigation and browser long tasks separately. Automatic Link prefetches are blocked with native CDP Fetch interception and counted, while HTTP cache behavior is controlled independently, and a warm-document sample must observe at least one cached script resource. Cold document sampling clears the browser cache with caching enabled to populate the following warm sample. Inline RSC carrier bytes are reported only for document samples; client-navigation RSC counts only the target response body. Bytes from response bodies are **decoded**, not compressed network transfer; Resource Timing transfer size includes protocol overhead and cache effects. Runtime thresholds are report-only until repeated fixed-fixture samples support them. No bytes/CPU/latency measures are interchangeable.
+Initial ceilings use [CI build 129159418805](https://github.com/AaronBuxbaum/diveday/actions/runs/42616979577/job/129159418805) at exact source `db3280154219ca4817a64792c6bccededa939a8f`, Next 16.4.5 / Node 24.22.0 / Ubuntu 24.04, ordinary E2E image profile. Each cap rounds 105% of the observed gzip KB up to the next 5 KB. This gives roughly 5–7% route headroom without weakening the independent shared 170 KB ceiling (observed 168 KB).
+
+| Route | Observed gzip KB | Ceiling gzip KB |
+| --- | ---: | ---: |
+| Today | 279.3 | 295 |
+| Manifest | 246.7 | 260 |
+| Public schedule | 224.1 | 240 |
+| Dive-site catalog | 289.4 | 305 |
+
+These are first-load distinct-chunk sums, not whole-session or compressed RSC transfer measurements. Deferred map chunks are measured by the interaction lane, not silently included in this metric.
+
+`benchmarks/routes.spec.ts` reports fixed 390 px, 4× CPU, 100 ms latency and 1 Mbps samples for cold/warm documents and uncached real Next-link navigation and cached Back/Forward history restoration. It records transferred resource bytes, decoded JS and RSC bytes, elapsed navigation and browser long tasks separately. Automatic Link prefetches are blocked with native CDP Fetch interception and counted. Benchmark-only native stubs replace the shared fixture’s Playwright map/font routes so routing cannot disable the HTTP cache; no real provider tile/font cost is claimed, while HTTP cache behavior is controlled independently, and a warm-document sample must observe at least one cached script resource. Cold document sampling clears the browser cache with caching enabled to populate the following warm sample. Inline RSC carrier bytes are reported only for document samples; client-navigation RSC counts only the target response body. Bytes from response bodies are **decoded**, not compressed network transfer; Resource Timing transfer size includes protocol overhead and cache effects. Runtime thresholds are report-only until repeated fixed-fixture samples support them. No bytes/CPU/latency measures are interchangeable.
 
 ## Production image delivery (TEST-00)
 

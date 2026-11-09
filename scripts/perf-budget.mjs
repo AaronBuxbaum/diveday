@@ -56,11 +56,13 @@ import { gzipSync } from "node:zlib";
  */
 const SHARED_FIRST_LOAD_BUDGET_KB = 170;
 
+// Exact-head CI baseline and headroom are recorded in performance-audit-implementation.md.
+// Ceil 105% of observed gzip KB to the next 5 KB; shared 170 KB still applies independently.
 export const ROUTE_BUDGETS = {
-  "/shop/[shopSlug]": null,
-  "/shop/[shopSlug]/trips/[id]/manifest": null,
-  "/s/[shopSlug]": null,
-  "/shop/[shopSlug]/dive-sites": null,
+  "/shop/[shopSlug]": 295,
+  "/shop/[shopSlug]/trips/[id]/manifest": 260,
+  "/s/[shopSlug]": 240,
+  "/shop/[shopSlug]/dive-sites": 305,
 };
 
 /** Route-local growth must move a budget even if the shared intersection is unchanged. */

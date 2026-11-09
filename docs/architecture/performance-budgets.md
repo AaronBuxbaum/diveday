@@ -155,7 +155,7 @@ and parsing independently. Measure gzip/Brotli and RSC transfer before claiming 
 
 ## When the budget fails
 
-The shared floor regressed. In order of preference:
+Either the shared floor or a named route regressed. The error names which budget failed. A route-local regression must not be "fixed" by increasing the shared ceiling. In order of preference:
 
 1. **Trim or defer a client dependency** — the usual cause is a new package pulled into a client
    component that could be server-only or dynamically imported.
