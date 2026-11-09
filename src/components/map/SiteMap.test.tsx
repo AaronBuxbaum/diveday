@@ -72,6 +72,30 @@ async function sizedOverview(dimensions: { width: number; height: number }) {
 }
 
 describe("SiteMap labels through Leaflet", () => {
+  it("loads catalog details on selection rather than creating every marker", async () => {
+    const load = vi.fn(async () => ({ description: "Selected briefing", details: ["18 m"] }));
+    const { container } = render(
+      <SiteMap
+        center={CENTER}
+        pins={[PIN]}
+        clusterLabel="dive sites"
+        loadPinDetails={load}
+        pinDetailsWords={{ loading: "Loading", unavailable: "Unavailable" }}
+      />,
+    );
+    const button = await markerButton(container);
+    expect(load).not.toHaveBeenCalled();
+    fireEvent.click(button);
+    await waitFor(() => expect(container.textContent).toContain("Selected briefing"));
+    expect(load).toHaveBeenCalledExactlyOnceWith(PIN.id);
+    expect(container.querySelector(".leaflet-site-card__body")?.getAttribute("aria-busy")).toBe(
+      "false",
+    );
+    expect(container.querySelector(".leaflet-site-card__link")?.getAttribute("href")).toBe(
+      PIN.href,
+    );
+  });
+
   it("gives isolated site targets a 44px Leaflet hit area", async () => {
     const L = await import("leaflet");
     const getContainer = vi.spyOn(L.Map.prototype, "getContainer");

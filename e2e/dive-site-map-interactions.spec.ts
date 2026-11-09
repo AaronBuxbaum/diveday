@@ -254,3 +254,24 @@ test("All templates from a template preview restores the catalog camera", async 
   await expect.poll(() => catalogCamera(page)).toEqual(sameCamera(saved));
   await expect.poll(() => markerDrift(page, markers)).toBeLessThanOrEqual(1);
 });
+
+test("catalog pins load their briefing only after keyboard selection and keep the preview link", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/dive-sites?view=catalog");
+  await waitForMarkerLayer(page);
+  const pin = page.locator(".leaflet-site-marker button").first();
+  await expect(pin).toBeVisible();
+  const name = await pin.getAttribute("aria-label");
+  expect(name).toBeTruthy();
+  await pin.focus();
+  await pin.press("Enter");
+  const popup = page.locator(".leaflet-site-popup");
+  await expect(popup.getByRole("heading", { name: name as string, exact: true })).toBeVisible();
+  await expect(popup.locator(".leaflet-site-card__body")).toHaveAttribute("aria-busy", "false");
+  await expect(popup.getByRole("status")).toHaveCount(0);
+  const preview = popup.getByRole("link", { name: staff("diveSites.map.openSite") });
+  await expect(preview).toHaveAttribute("href", /template=/);
+  await preview.click();
+  await expect(page).toHaveURL(/template=/);
+});

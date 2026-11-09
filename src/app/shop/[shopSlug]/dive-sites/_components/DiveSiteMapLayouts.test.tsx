@@ -111,7 +111,15 @@ describe("dive-site map layouts", () => {
   it("selects a catalog pin without scrolling the page to its ledger row", () => {
     const scrollSpy = installScrollSpy();
     render(
-      <CatalogMapLayout shopAnchor={null} pins={pins} clusterLabel="dive sites">
+      <CatalogMapLayout
+        shopAnchor={null}
+        pins={pins.map((pin) => ({ ...pin, slug: "north-reef" }))}
+        catalogPageHref="/shop/demo/dive-sites?view=catalog"
+        openSiteLabel="Open site"
+        loadDetails={async () => null}
+        detailWords={{ loading: "Loading", unavailable: "Unavailable" }}
+        clusterLabel="dive sites"
+      >
         <div id="template-row-reef-1">North Reef row</div>
       </CatalogMapLayout>,
     );

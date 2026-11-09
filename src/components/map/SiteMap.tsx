@@ -13,6 +13,7 @@ import {
   createSitePopup,
   createSiteTooltip,
 } from "./map-markup";
+import { loadSitePopupDetails } from "./map-popup-details";
 import { clearMapViewport, readMapViewport, writeMapViewport } from "./map-viewport-storage";
 
 export type MapPin = {
@@ -28,6 +29,8 @@ export type MapPin = {
   tone?: "primary" | "warning" | "default";
 };
 
+export type MapPinDetails = Pick<MapPin, "details" | "description">;
+
 export type ShopAnchor = {
   latitude: number;
   longitude: number;
@@ -39,6 +42,8 @@ export type SiteMapProps = {
   zoom?: number;
   shopAnchor?: ShopAnchor | null;
   pins: MapPin[];
+  loadPinDetails?: (id: string) => Promise<MapPinDetails | null>;
+  pinDetailsWords?: { loading: string; unavailable: string };
   selectedPinId?: string | null;
   onSelectPin?: (id: string | null) => void;
   className?: string;
@@ -59,6 +64,8 @@ export default function SiteMap({
   zoom = 11,
   shopAnchor,
   pins,
+  loadPinDetails,
+  pinDetailsWords,
   selectedPinId,
   onSelectPin,
   className = "h-full w-full",
@@ -314,12 +321,28 @@ export default function SiteMap({
           zIndexOffset: isSelected ? 1000 : 100,
         }).addTo(mapInstance);
 
-        marker.bindPopup(createSitePopup(pin), {
+        const popupContent = createSitePopup(pin);
+        marker.bindPopup(popupContent, {
           className: "leaflet-site-popup",
           maxWidth: 320,
           autoPanPaddingTopLeft: [12, 110],
           autoPanPaddingBottomRight: [12, 12],
         });
+        if (loadPinDetails && pinDetailsWords) {
+          let pending = false;
+          let loaded = false;
+          marker.on("popupopen", () => {
+            if (pending || loaded) return;
+            pending = true;
+            void loadSitePopupDetails(popupContent, pin, loadPinDetails, pinDetailsWords).then(
+              (ok) => {
+                loaded = ok;
+                pending = false;
+                if (!isCancelled && marker.isPopupOpen()) updateOpenPopup(marker);
+              },
+            );
+          });
+        }
         // The open card already names the selected site; its hover label
         // would only cover the card.
         if (!isSelected) bindSiteTooltip(marker, pin);
@@ -390,7 +413,16 @@ export default function SiteMap({
       mapInstance.off("popupopen", handlePopupOpen);
       mapInstance.off("popupclose", handlePopupClose);
     };
-  }, [clusterLabel, mapInstance, onSelectPin, pins, shopAnchor, shopLabel]);
+  }, [
+    clusterLabel,
+    mapInstance,
+    onSelectPin,
+    pins,
+    shopAnchor,
+    shopLabel,
+    loadPinDetails,
+    pinDetailsWords,
+  ]);
 
   // Selecting a site moves only the map. It never scrolls the page to the list.
   useEffect(() => {

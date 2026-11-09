@@ -23,6 +23,8 @@
     }
   },
   "map": {
+    "loadingDetails": "Loading site details…",
+    "detailsUnavailable": "Details are unavailable. Open the site or select it again to retry.",
     "openSite": "Open site",
     "clusterLabel": "dive sites"
   },

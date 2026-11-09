@@ -147,9 +147,18 @@ separates keys by build/deployment identity. Cache eviction or a cold deployment
 Each read reports `cache.read` as `dive_site_catalog_map` using the same timestamp observation as
 "Our year". Inspect hit rate, entry age and database duration before claiming a production latency
 improvement. Warm hits skip the full map-row query; authentication, catalog paging/counting and
-the small revision aggregate still run. Caching does not shrink the client payload. The checked-in
-catalog's 1,126 map rows projected to about 564 KB of JSON on 2026-10-21; actual cached serialization
-must remain below Vercel's 2 MB item limit as the catalog grows.
+the small revision aggregate still run. The cached neutral rows are not the client payload:
+`compactCatalogPins` now sends only identity, name, slug and coordinates for every published pin.
+The client shares the preview URL prefix, label and tone once; a selected pin reads its current
+published briefing through a live-authorized action. Loading and failed reads keep the preview link
+usable, and selecting again retries a failed read. Successful detail reads are held only for that
+render's pin set. The selected popup updates in place so its link retains keyboard focus. Catalog
+paging, global overview/clustering, viewport persistence and direct preview URLs are unchanged.
+
+The checked-in catalog's 1,126 full map rows projected to about 564 KB of JSON on 2026-10-21. That is
+a historical raw-data figure, not current transfer timing. Cache entries still contain neutral
+briefing rows and must remain below Vercel's 2 MB item limit; compact client props reduce bandwidth
+and parsing independently. Measure gzip/Brotli and RSC transfer before claiming a production gain.
 
 ## When the budget fails
 
