@@ -210,6 +210,11 @@ for (const scheme of ["light", "dark"] as const) {
       // holds the unsigned waiver line and its Send waiver (issue #2346).
       test(`the rent-out form renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear?add=rental&q=Priya");
+        // This panel may stream after the header; wait for its own focus/scroll.
+        await expect(page.locator("[data-add-panel]:visible")).toHaveAttribute(
+          "data-add-panel-settled",
+          "",
+        );
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
         await page.getByRole("group", { name: "Kind of gear" }).waitFor();
         // Two picks and a payment, so the bill, its total and the bar are in frame.

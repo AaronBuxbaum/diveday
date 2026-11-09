@@ -6,6 +6,9 @@
 /** The seeded reef booking whose recap link is deterministic. */
 export const DEMO_RECAP_BOOKING_ID = "0de3c0de-1eaf-4b0a-9c0f-000000000001";
 
+/** The canonical demo reef departure whose genuine URL is printed on public sheets. */
+export const DEMO_TODAY_TRIP_ID = "0de3c0de-1eaf-4b0a-9c0f-000000000002";
+
 /** Listed shops beside the canonical demo, with no staff or bookings. */
 export const LISTED_SHOP_SLUGS = ["reef-line-divers", "keys-current-charters"] as const;
 

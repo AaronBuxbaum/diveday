@@ -18,12 +18,14 @@ import {
 const spanish = staffTranslator(SPANISH);
 
 async function expectNavigationDoesNotExpandPage(page: Parameters<typeof capture>[0]) {
-  const widths = await page.evaluate(async () => {
+  const widths = await page.evaluate(() => {
     const nav = document.querySelector<HTMLElement>("[data-staff-tabbar]");
     if (!nav) throw new Error("phone nav is missing");
     const withNavigation = document.documentElement.scrollWidth;
     nav.style.display = "none";
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    // Reading scrollWidth forces layout. Restore the bar in this same turn:
+    // yielding a frame lets its ResizeObserver remove the scroll cue, which
+    // widens the rail and then clips the focused tab when the cue returns.
     const withoutNavigation = document.documentElement.scrollWidth;
     nav.style.removeProperty("display");
     return { withNavigation, withoutNavigation };
@@ -351,6 +353,13 @@ test.describe("staff navigation", () => {
       });
       await capture(page, "staff-navigation-spanish-enlarged-text-inbox", "light", {
         locale: SPANISH,
+        // Check the actual captured state too: the width probe and document
+        // paint happen after focus and must not clip the focused tab again.
+        beforeScreenshot: async () => {
+          const inbox = page.locator("[data-staff-tab-scroll] a").filter({ hasText: "Mensajes" });
+          if (await inbox.isVisible()) await expectFocusedTabWithinRail(page);
+          await expectScrollCueMatchesRail(page);
+        },
         beforeShot: async () => {
           const inbox = page.locator("[data-staff-tab-scroll] a").filter({ hasText: "Mensajes" });
           if (await inbox.isVisible()) {

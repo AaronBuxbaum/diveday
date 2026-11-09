@@ -207,8 +207,9 @@ async function seedTheBoard(
 
   // Only the canonical blue-mantis demo pins any primary key, and everything
   // that pins one is gated on this: the visual tests mint a recap link from a
-  // fixed booking id, and the two tied medical-review waiver rows need a fixed
-  // order (seed-medical-review.ts). A freshly-minted demo shop — and the
+  // fixed booking id, public sheets print a fixed departure URL, and the two
+  // tied medical-review waiver rows need a fixed order (seed-medical-review.ts).
+  // A freshly-minted demo shop — and the
   // `privateShop` a spec takes for itself — gets random ids, because a literal
   // one can exist only once per database and a second shop would collide on it.
   const [shopRow] = await db
@@ -236,7 +237,9 @@ async function seedTheBoard(
   // Which NOAA station the two Key Largo sites read their tide from; the
   // ADR 20260907-noaa-tide-predictions.
   await seedTides(db, shopId);
+  const isCanonical = shopRow?.slug === DEMO_SHOP_SLUG;
   const { tripRows, captainId, divemasterId } = await seedTrips(db, shopId, {
+    pinTodayTrip: isCanonical,
     boatByName,
     instructor,
     reliefInstructor,
@@ -249,7 +252,6 @@ async function seedTheBoard(
     french: sites.french,
   });
   await seedSafeCrew(db, shopId);
-  const isCanonical = shopRow?.slug === DEMO_SHOP_SLUG;
   const bookings = await seedBookings(db, shopId, {
     cast,
     tripRows,

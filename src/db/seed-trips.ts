@@ -18,6 +18,7 @@ import {
 } from "./schema";
 import { CAPTAIN_NAME } from "./seed-cast";
 import { at, DEMO_TODAY_DEPARTURE_MS, demoTodayDepartureStart } from "./seed-clock";
+import { DEMO_TODAY_TRIP_ID } from "./seed-identifiers";
 
 /** Today's departure's name, which the other seed modules look it up by. */
 export const DEMO_TODAY_TRIP_TITLE = "Two-Tank Reef — Molasses & French";
@@ -114,6 +115,23 @@ function diveOneSites(
   ]);
 }
 
+type SeedTripsContext = {
+  /** Only the canonical demo owns the stable public-print URL. */
+  pinTodayTrip: boolean;
+  instructor: { id: string };
+  /** The shop's second instructor — see the crew block below (DOM-M7). */
+  reliefInstructor: { id: string };
+  courseRows: (typeof courses.$inferSelect)[];
+  discoverCourse: typeof courses.$inferSelect;
+  openWaterCourse: typeof courses.$inferSelect | undefined;
+  siteByName: Map<string, typeof diveSites.$inferSelect>;
+  benwood: typeof diveSites.$inferSelect | undefined;
+  french: typeof diveSites.$inferSelect | undefined;
+  courseIdByTitle: Map<string, string>;
+  /** The shop's fleet by name, so a boat departure sails on an actual hull. */
+  boatByName: Map<string, string>;
+};
+
 /**
  * The three headline boats plus the rest of the week: each departure with its
  * meeting windows, its dive plan, the readiness requirements it gates on, its
@@ -126,24 +144,7 @@ function diveOneSites(
  * course session with its instructor, and one where the divemaster is rostered
  * as the instructor.
  */
-export async function seedTrips(
-  db: DbExecutor,
-  shopId: string,
-  ctx: {
-    instructor: { id: string };
-    /** The shop's second instructor — see the crew block below (DOM-M7). */
-    reliefInstructor: { id: string };
-    courseRows: (typeof courses.$inferSelect)[];
-    discoverCourse: typeof courses.$inferSelect;
-    openWaterCourse: typeof courses.$inferSelect | undefined;
-    siteByName: Map<string, typeof diveSites.$inferSelect>;
-    benwood: typeof diveSites.$inferSelect | undefined;
-    french: typeof diveSites.$inferSelect | undefined;
-    courseIdByTitle: Map<string, string>;
-    /** The shop's fleet by name, so a boat departure sails on an actual hull. */
-    boatByName: Map<string, string>;
-  },
-) {
+export async function seedTrips(db: DbExecutor, shopId: string, ctx: SeedTripsContext) {
   const {
     boatByName,
     instructor,
@@ -170,6 +171,9 @@ export async function seedTrips(
     .insert(trips)
     .values([
       {
+        // The footer prints the genuine URL. Pin fixture identity rather than
+        // masking the footer or changing how a real departure is addressed.
+        ...(ctx.pinTodayTrip ? { id: DEMO_TODAY_TRIP_ID } : {}),
         shopId,
         boatId: boatByName.get("Mantis I"),
         title: DEMO_TODAY_TRIP_TITLE,
