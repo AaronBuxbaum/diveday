@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 import { calls, disabled, literal } from "./e2e-source.mjs";
 
 /**
@@ -91,4 +90,4 @@ function main() {
   console.log(`critical-journeys: ${parseLedger(markdown).length} journeys, each with its test`);
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) main();
+if (import.meta.main) main();

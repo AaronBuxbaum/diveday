@@ -245,7 +245,7 @@ const nextConfig: NextConfig = {
     // 1080px to 384px and reg-suit reported 0 differences across 732 surfaces
     // with a baseline resolved. `pnpm check:image-sizes` covers that gap with
     // arithmetic instead of pixels; this line is why it has to.
-    unoptimized: isE2EBuild,
+    unoptimized: isE2EBuild && process.env.DIVEDAY_IMAGE_SMOKE !== "1",
     // **The optimizer fetches from the distribution we deployed, and nowhere
     // else** (issue #1358).
     //
@@ -296,8 +296,9 @@ const nextConfig: NextConfig = {
   //
   // Vercel's 8 GB builder cannot hold TypeScript 7's checker (peak near 7.7 GB;
   // exit 137, 2026-11-05), so Vercel runs no typecheck. CI typechecks every
-  // commit and the deploy gate builds only green ones. Local `pnpm build` and CI
-  // keep their checks.
+  // commit and the deploy gate builds only green ones. CI's required build
+  // retains Next's full application/generated-type check; safeguards checks
+  // the independent service worker, or both programs when no build runs.
   ...(process.env.VERCEL === "1" ? { typescript: { ignoreBuildErrors: true } } : {}),
   experimental: {
     useTypeScriptCli: true,

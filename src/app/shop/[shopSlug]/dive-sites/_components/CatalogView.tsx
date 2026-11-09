@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
-import type { MapPin } from "@/components/map/SiteMap";
 import { shopMapAnchor } from "@/components/map/shop-map-anchor";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -10,8 +9,6 @@ import { LedgerRow } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { getGlobalDiveSiteTemplate, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import type { Shop } from "@/db/schema";
-import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
-import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { joinFacts } from "@/lib/format";
@@ -19,6 +16,8 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { importDiveSiteTemplateAction } from "../actions";
 import { cachedCatalogMapRows } from "../catalog-map-cache";
+import { compactCatalogPins } from "../catalog-map-pins";
+import { catalogPinDetailsAction } from "../catalog-pin-actions";
 import { CatalogMapLayout } from "./CatalogMapLayout";
 import { TemplatePreview } from "./TemplatePreview";
 
@@ -103,20 +102,7 @@ export async function CatalogView({
 
   const shopAnchor = shopMapAnchor(shop);
 
-  const catalogPins: MapPin[] = mapRows.map((site) => ({
-    id: site.templateId,
-    name: site.name,
-    latitude: site.latitude,
-    longitude: site.longitude,
-    details: [
-      staffDiveSiteDepthText(t, site, shop.depthUnit),
-      diveSiteDifficultyLabel(site.difficultyLevel, diverT),
-    ].filter((detail): detail is string => Boolean(detail)),
-    description: site.description,
-    href: `${catalogPageHref}&template=${encodeURIComponent(site.slug)}`,
-    hrefLabel: t("diveSites.map.openSite"),
-    tone: "primary",
-  }));
+  const catalogPins = compactCatalogPins(mapRows);
 
   return (
     <StaffPage width="full">
@@ -133,6 +119,13 @@ export async function CatalogView({
         viewportStorageKey={`${shop.id}:catalog`}
         shopAnchor={shopAnchor}
         pins={catalogPins}
+        catalogPageHref={catalogPageHref}
+        openSiteLabel={t("diveSites.map.openSite")}
+        loadDetails={catalogPinDetailsAction.bind(null, shopSlug)}
+        detailWords={{
+          loading: t("diveSites.map.loadingDetails"),
+          unavailable: t("diveSites.map.detailsUnavailable"),
+        }}
         clusterLabel={t("diveSites.map.clusterLabel")}
       >
         <ul className="space-y-1">

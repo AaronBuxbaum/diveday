@@ -1,23 +1,68 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { LazySiteMap } from "@/components/map/LazySiteMap";
-import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
+import type { MapPin, MapPinDetails, ShopAnchor } from "@/components/map/SiteMap";
+
+import type { CatalogMapPin } from "../catalog-map-pins";
 
 export function CatalogMapLayout({
   shopAnchor,
   viewportStorageKey,
-  pins,
+  pins: compactPins,
+  catalogPageHref,
+  openSiteLabel,
+  loadDetails,
+  detailWords,
   clusterLabel,
   children,
 }: {
   shopAnchor: ShopAnchor | null;
   viewportStorageKey?: string;
-  pins: MapPin[];
+  pins: CatalogMapPin[];
+  catalogPageHref: string;
+  openSiteLabel: string;
+  loadDetails: (slug: string) => Promise<MapPinDetails | null>;
+  detailWords: { loading: string; unavailable: string };
   clusterLabel: string;
   children: ReactNode;
 }) {
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
+
+  const pins = useMemo(
+    () =>
+      compactPins.map(
+        ({ slug, ...pin }): MapPin => ({
+          ...pin,
+          href: `${catalogPageHref}&template=${encodeURIComponent(slug)}`,
+          hrefLabel: openSiteLabel,
+          tone: "primary",
+        }),
+      ),
+    [compactPins, catalogPageHref, openSiteLabel],
+  );
+  // Only successful detail reads are retained, for this revision's pin set.
+  const loadPinDetails = useMemo(() => {
+    const details = new Map<string, Promise<MapPinDetails | null>>();
+    return (id: string) => {
+      const pin = compactPins.find((candidate) => candidate.id === id);
+      if (!pin) return Promise.resolve(null);
+      let pending = details.get(id);
+      if (!pending) {
+        pending = loadDetails(pin.slug)
+          .then((result) => {
+            if (!result) details.delete(id);
+            return result;
+          })
+          .catch((error: unknown) => {
+            details.delete(id);
+            throw error;
+          });
+        details.set(id, pending);
+      }
+      return pending;
+    };
+  }, [compactPins, loadDetails]);
 
   const defaultCenter = shopAnchor
     ? { latitude: shopAnchor.latitude, longitude: shopAnchor.longitude }
@@ -37,6 +82,8 @@ export function CatalogMapLayout({
               zoom={10}
               shopAnchor={shopAnchor}
               pins={pins}
+              loadPinDetails={loadPinDetails}
+              pinDetailsWords={detailWords}
               clusterLabel={clusterLabel}
               selectedPinId={selectedPinId}
               onSelectPin={setSelectedPinId}

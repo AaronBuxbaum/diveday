@@ -98,3 +98,6 @@ public/manifest-sw.js
 # `pnpm content:photos candidates` contact sheets, looked at and thrown away.
 /.content-review/
 /dist/
+
+# Fixed-fixture performance lane reports and browser attachments.
+/benchmark-results/

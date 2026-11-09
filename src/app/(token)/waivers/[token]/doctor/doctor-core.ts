@@ -140,6 +140,7 @@ export async function sendDoctorFormFor(
   if (attached === "sent") return { status: "sent" };
   await queueAndAttemptMediaDeletion(db, {
     shopId: record.shopId,
+    personId: record.personId,
     kind: "waiver_document",
     url: stored.url,
   });

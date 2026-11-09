@@ -189,6 +189,7 @@ export async function recordMedicalClearanceAction(
   if (!result.ok && documentUrl) {
     await queueAndAttemptMediaDeletion(db, {
       shopId: staff.user.shopId,
+      personId,
       kind: "waiver_document",
       url: documentUrl,
     });

@@ -2,6 +2,8 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage } from "node:http";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import { withExplicitSslMode } from "@/db/connection-string";
 import { demoBypassEnabled } from "@/lib/demo-bypass";
@@ -121,7 +123,8 @@ export async function startShopBrowser(connectionString: string) {
   };
 }
 
-if (import.meta.main) {
+// tsx imports its entry module, so import.meta.main is undefined there.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   startShopBrowser(process.env.DATABASE_URL ?? "")
     .then((browser) => {
       console.log(`Open this private local URL: ${browser.url}`);

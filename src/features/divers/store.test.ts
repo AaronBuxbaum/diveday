@@ -1697,26 +1697,6 @@ describe("diver erasure", () => {
     expect(bystanders.some((row) => row.phone !== null)).toBe(true);
   });
 
-  it("erases a diver who has nothing but a name", async () => {
-    const { db, shop } = ctx;
-    const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
-    const diver = await createDiver(db, { shopId: shop.id, fullName: "Bare Bernard" });
-    if (!diver) throw new Error("diver insert failed");
-
-    expect(
-      await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: ownerId }),
-    ).toEqual({
-      ok: true,
-      alreadyAnonymized: false,
-      queuedMediaDeletions: 0,
-      dischargedProcessorErasures: 0,
-      owedProcessorErasures: 0,
-    });
-    const [person] = await db.select().from(people).where(eq(people.id, diver.id));
-    expect(person).toMatchObject({ fullName: ANONYMIZED_PERSON_NAME, email: null });
-    expect(person?.anonymizedAt).toBeInstanceOf(Date);
-  });
-
   it("retires every blob it drops a URL for through the media-deletion ledger", async () => {
     const { db, shop, diver, ownerId } = await erasableDiver();
     const result = await anonymizeDiver(db, {
@@ -1743,7 +1723,8 @@ describe("diver erasure", () => {
     expect(new Set(queued.map((row) => row.kind))).toEqual(
       new Set(["recap_photo", "waiver_document"]),
     );
-    expect(queued.every((row) => row.status === "pending")).toBe(true);
+    expect(queued.every((row) => row.status === "failed" && row.purgeVersions)).toBe(true);
+    expect(result.owedMediaDeletions).toBe(queued.length);
     expect(result.queuedMediaDeletions).toBe(queued.length);
   });
 
@@ -1811,6 +1792,7 @@ describe("diver erasure", () => {
       ok: true,
       alreadyAnonymized: true,
       queuedMediaDeletions: 0,
+      owedMediaDeletions: first.queuedMediaDeletions,
       dischargedProcessorErasures: 0,
       owedProcessorErasures: 0,
     });

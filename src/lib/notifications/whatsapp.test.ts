@@ -1,3 +1,4 @@
+import { getEventListeners } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 import { NOTIFICATION_PROVIDER_TIMEOUT_MS, notificationProviderSignal } from "./provider";
 import {
@@ -244,14 +245,67 @@ describe("whatsAppProvider", () => {
   });
 
   it("retries a rate limit and succeeds on a later attempt", async () => {
+    const sleep = vi.fn(async () => {});
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(429, { error: { message: "Too many", code: 130429 } }))
       .mockResolvedValueOnce(okResponse("wamid.RETRY"));
-    const delivery = await whatsAppProvider(credentials, fetchImpl, noWait).send(message);
+    const delivery = await whatsAppProvider(credentials, fetchImpl, {
+      sleep,
+      random: () => 0,
+    }).send(message);
 
     expect(delivery).toEqual({ status: "sent", providerMessageId: "wamid.RETRY" });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(250);
+  });
+
+  it("releases the backoff's abort listener after a successful retry", async () => {
+    const controller = new AbortController();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(503, {}))
+      .mockResolvedValueOnce(okResponse("wamid.RETRY"));
+    const delivery = await whatsAppProvider(credentials, fetchImpl, {
+      random: () => 0,
+      maxAttempts: 2,
+    }).send(message, { signal: controller.signal });
+
+    expect(delivery).toEqual({ status: "sent", providerMessageId: "wamid.RETRY" });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+  });
+
+  it("settles cancellation during backoff without sending another request", async () => {
+    const controller = new AbortController();
+    const sleep = vi.fn(async () => {});
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse(503, {}));
+    const delivery = await whatsAppProvider(credentials, fetchImpl, {
+      sleep,
+      random: () => {
+        queueMicrotask(() => controller.abort(new Error("caller cancelled")));
+        return 0;
+      },
+    }).send(message, { signal: controller.signal });
+
+    expect(delivery).toEqual({ status: "failed", retryable: true, errorCode: "timeout" });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+    expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+  });
+
+  it("does not send or wait for an already-cancelled request", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetchImpl = vi.fn();
+    const sleep = vi.fn(async () => {});
+    const delivery = await whatsAppProvider(credentials, fetchImpl, { sleep }).send(message, {
+      signal: controller.signal,
+    });
+
+    expect(delivery).toEqual({ status: "failed", retryable: true, errorCode: "timeout" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(sleep).not.toHaveBeenCalled();
   });
 
   it("retries a 5xx and gives up as retryable after the attempt cap", async () => {

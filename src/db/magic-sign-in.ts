@@ -22,11 +22,7 @@ async function eligible(tx: AppTransaction, id: string, demo = false) {
     locked.person.anonymizedAt
   )
     return null;
-  const [shop] = await tx
-    .select()
-    .from(shops)
-    .where(eq(shops.id, locked.person.shopId))
-    .for("share");
+  const [shop] = await tx.select().from(shops).where(eq(shops.id, locked.person.shopId));
   if (!shop || shop.isDemo !== demo || (demo && !demoBypassEnabled())) return null;
   const roles = (
     await tx

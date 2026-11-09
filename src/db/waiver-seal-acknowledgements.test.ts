@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { anonymizeDiver } from "../features/anonymize/store";
@@ -82,6 +82,32 @@ describe("acknowledging a broken waiver seal (#3891)", () => {
     const quiet = await recheckWaiverSeals(db, { now: nightAfter });
     return { ...ctx, quietInvalid: quiet.invalid, quietAcknowledged: quiet.acknowledged };
   }
+
+  it("retains an unchanged acknowledgement and open-page digest after routine key rotation", async () => {
+    const a = "a".repeat(40),
+      b = "b".repeat(40);
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+    vi.stubEnv("WAIVER_INTEGRITY_KEYS", JSON.stringify({ active: "a", keys: { a } }));
+    const { db, shop, recordId, owner, quietAcknowledged } = await acknowledged();
+    const expectedStateDigest = await shownDigest(db, recordId);
+    vi.stubEnv("WAIVER_INTEGRITY_KEYS", JSON.stringify({ active: "b", keys: { a, b } }));
+    const checked = await recheckWaiverSeals(db, {
+      now: new Date(nightAfter.getTime() + 86_400_000),
+    });
+    expect(checked.acknowledged).toBe(quietAcknowledged);
+    expect(
+      await acknowledgeBrokenWaiverSeal(db, {
+        shopId: shop.id,
+        recordId,
+        actorPersonId: owner,
+        note: NOTE,
+        expectedStateDigest,
+        now: nightAfter,
+      }),
+    ).toEqual({ ok: true });
+  });
 
   it("rings again when the diver is merged into another record (#3956)", async () => {
     const { db, shop, recordId, owner, person, quietInvalid, quietAcknowledged } =

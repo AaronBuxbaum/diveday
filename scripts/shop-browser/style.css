@@ -54,3 +54,27 @@ li code {
 pre {
   white-space: pre-wrap;
 }
+pre {
+  overflow-wrap: anywhere;
+}
+button.secondary {
+  background: transparent;
+  color: inherit;
+}
+@media (max-width: 600px) {
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  li strong {
+    min-width: 0;
+  }
+  li button {
+    justify-self: start;
+  }
+}
+li > section {
+  flex-basis: 100%;
+  min-width: 0;
+  grid-column: 1 / -1;
+}

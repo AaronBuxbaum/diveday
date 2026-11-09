@@ -5,9 +5,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { issueMagicSignIn } from "@/db/magic-sign-in";
-import { sendNotification } from "@/db/notifications";
-import { toDiverLocale } from "@/i18n/settings";
+import { sendMagicSignInMail } from "@/features/email-sign-in";
 import { getAuth } from "@/lib/auth";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -29,22 +27,7 @@ export async function requestMagicSignIn(formData: FormData) {
     const origin = publicAppUrl();
     if (limits.every((limit) => limit.allowed) && origin)
       after(async () => {
-        const db = await getDb();
-        const issued = await issueMagicSignIn(db, email);
-        if (!issued) return;
-        const account = issued.contact;
-        await sendNotification(db, {
-          kind: "magic_sign_in_request",
-          userAccountId: account.id,
-          tokenId: issued.tokenId,
-          shopId: account.shopId,
-          to: account.email,
-          locale: toDiverLocale(account.defaultLocale),
-          ownerName: account.ownerName,
-          signInUrl: new URL(`/email-sign-in/${issued.token}`, `${origin}/`).toString(),
-          expiresAt: issued.expiresAt,
-          timezone: account.timezone,
-        }).catch(() => ({ status: "failed" as const }));
+        await sendMagicSignInMail(await getDb(), email);
       });
   }
   redirect("/email-sign-in?sent=1");

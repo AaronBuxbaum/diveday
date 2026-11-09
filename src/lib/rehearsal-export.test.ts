@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ExportTable } from "./export";
-import { withoutRehearsals } from "./rehearsal-export";
+import { rehearsalExportColumns, withoutRehearsals } from "./rehearsal-export";
 
 const TRIP = "11111111-1111-4111-8111-111111111111";
 const REAL_TRIP = "22222222-2222-4222-8222-222222222222";
@@ -121,5 +121,26 @@ describe("withoutRehearsals", () => {
   it("returns the tables untouched when the shop has no rehearsal", () => {
     const tables = [table("trips.csv", ["id"], [[REAL_TRIP]])];
     expect(withoutRehearsals(tables, { tripIds: new Set(), bookingIds: new Set() })).toBe(tables);
+  });
+});
+
+describe("the shared rehearsal exclusion scope", () => {
+  it("keeps evidence counts and filters only the same exact exported reference names", () => {
+    expect(rehearsalExportColumns("waiver_records.csv", ["id", "trip_id", "booking_id"])).toEqual(
+      [],
+    );
+    expect(rehearsalExportColumns("roll_call_events.csv", ["trip_id", "booking_id"])).toEqual([]);
+    expect(rehearsalExportColumns("course_form_records.csv", ["trip_id", "booking_id"])).toEqual(
+      [],
+    );
+    expect(rehearsalExportColumns("roll_call_crew_events.csv", ["id", "trip_id"])).toEqual([
+      { column: "trip_id", ids: "tripIds" },
+    ]);
+    expect(rehearsalExportColumns("trips.csv", ["id"])).toEqual([{ column: "id", ids: "tripIds" }]);
+    expect(rehearsalExportColumns("bookings.csv", ["id", "trip_id"])).toEqual([
+      { column: "id", ids: "bookingIds" },
+      { column: "trip_id", ids: "tripIds" },
+    ]);
+    expect(rehearsalExportColumns("boat_snags.csv", ["id", "noted_on_trip_id"])).toEqual([]);
   });
 });

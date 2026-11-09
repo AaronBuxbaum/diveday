@@ -174,8 +174,11 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
             visual rhythm of the stack it sits in, and `flush` puts its end on
             the fields' edge. */}
         {!secondFactorRequired ? (
-          <>
-            <Link href="/email-sign-in" className="font-medium text-primary hover:underline">
+          <div className="flex items-center justify-between gap-4">
+            <Link
+              href="/email-sign-in"
+              className={buttonClass({ variant: "link", flush: true, className: "-my-2" })}
+            >
               {t("account.magicSignIn.title")}
             </Link>
             <Link
@@ -188,7 +191,7 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
             >
               {t("account.signIn.forgotPassword")}
             </Link>
-          </>
+          </div>
         ) : null}
         <SubmitButton pendingLabel={t("account.signIn.signingIn")} className={buttonClass()}>
           {t(secondFactorRequired ? "account.signIn.verify" : "account.signIn.submit")}

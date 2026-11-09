@@ -1,22 +1,21 @@
 name: Playwright workers trial
 
-# **Do two workers per functional Playwright shard hold up on a CI runner?**
+# Historical rollout experiment, retained as a repeatability probe.
 #
-# ci.yml runs twelve shards at `E2E_WORKERS: "1"` (moved off two after
-# unrelated functional timeouts on #3162 and #3163). Playwright is 45% of a
-# green PR run's runner-minutes (CI profile 2026-11-01,
-# /mnt/project-files/ci-speed/2026-11-01-ci-profile.md): ~77 of 172, about 79
-# minutes of recorded spec time dealt twelve ways. Six shards at two workers
-# would use roughly 45 runner-minutes and six fewer concurrent jobs, if the
-# 4-core runner is not CPU-bound at one worker. This workflow answers that one
-# question and changes nothing else.
+# The original 2026-11-01 question compared twelve functional shards at one
+# worker with six at two (profile: /mnt/project-files/ci-speed/2026-11-01-ci-profile.md).
+# By 2026-11-09, ci.yml had adopted the six-shard/two-worker arrangement
+# this workflow repeats. It is NOT a current control-versus-trial
+# comparison and does not claim a new saving. Read ci.yml's matrix/env for the
+# current production topology rather than carrying a duplicate count here.
 #
-# It deals the same specs ci.yml does (`scripts/e2e-shard.mjs`) six ways and
-# runs each shard at `E2E_WORKERS=2`, `repeat` times from one build. A red
-# shard, a timeout, or a shard slower than ~7.5 minutes means the trial failed.
-# Decide from the job summary (per-run seconds) and the failure annotations;
-# there is no baseline and no reg-suit. Dispatched by hand from main, never on
-# a pull request or a push.
+# This manual-only lane repeats its explicitly configured deal from one build
+# to inspect variance, functional failures and runner contention. Historical
+# estimates (~77/172 runner-minutes, ~79 minutes of spec time, and a ~7.5 minute
+# shard target) describe that dated experiment, not present acceptance evidence.
+# Decide any new change from comparable controls and measured summaries; no
+# visual-worker increase is implied. CI retains its accepted visual-noise tradeoff.
+# There is no reg-suit or visual baseline here. Never dispatched on push/PR.
 on:
   workflow_dispatch:
     inputs:

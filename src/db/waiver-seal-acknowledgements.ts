@@ -1,5 +1,9 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { integrityDigest, type WaiverSealedFields } from "@/lib/waiver-integrity";
+import {
+  integrityDigest,
+  verifyIntegrityDigest,
+  type WaiverSealedFields,
+} from "@/lib/waiver-integrity";
 import { canPersonManageWaiverTemplates } from "./authz";
 import type { DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
@@ -28,11 +32,15 @@ import { WAIVER_SEALED_COLUMNS } from "./waiver-record-columns";
  * into it no longer matches and rings again. Keyed so the stored value is no
  * plain hash of a diver's medical answers.
  */
-export function waiverSealStateDigest(record: WaiverSealedFields): string {
+function waiverSealState(record: WaiverSealedFields): string {
   const ordered = Object.keys(record)
     .sort()
     .map((key) => [key, record[key as keyof WaiverSealedFields] ?? null]);
-  return integrityDigest(`waiver-seal-state\0${JSON.stringify(ordered)}`);
+  return `waiver-seal-state\0${JSON.stringify(ordered)}`;
+}
+
+export function waiverSealStateDigest(record: WaiverSealedFields): string {
+  return integrityDigest(waiverSealState(record));
 }
 
 export type AcknowledgeBrokenWaiverSealResult =
@@ -86,7 +94,8 @@ export async function acknowledgeBrokenWaiverSeal(
     if (!row) return { ok: false, reason: "not_found" };
     if (row.valid !== false) return { ok: false, reason: "not_broken" };
     const stateDigest = waiverSealStateDigest(row.record);
-    if (stateDigest !== input.expectedStateDigest) return { ok: false, reason: "changed" };
+    if (!verifyIntegrityDigest(waiverSealState(row.record), input.expectedStateDigest))
+      return { ok: false, reason: "changed" };
     await tx.insert(waiverSealAcknowledgements).values({
       shopId: input.shopId,
       waiverRecordId: input.recordId,
@@ -133,11 +142,13 @@ export async function acknowledgedWaiverSeals(
     );
   const covered = new Set<string>();
   for (const { record } of broken) {
-    const digest = waiverSealStateDigest(record);
+    const state = waiverSealState(record);
     if (
       acks.some(
         (ack) =>
-          ack.recordId === record.id && ack.shopId === record.shopId && ack.digest === digest,
+          ack.recordId === record.id &&
+          ack.shopId === record.shopId &&
+          verifyIntegrityDigest(state, ack.digest),
       )
     ) {
       covered.add(record.id);

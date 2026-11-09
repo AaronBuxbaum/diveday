@@ -1,10 +1,13 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { TestModule, Vitest } from "vitest/node";
 import {
   DURATIONS_LOG_MARKER as MERGE_MARKER,
   parseDurationsInput,
 } from "../../scripts/merge-test-durations.mjs";
-import {
+import DurationReporter, {
   collectDurations,
   DURATIONS_LOG_MARKER,
   durationsLogLine,
@@ -72,4 +75,55 @@ describe("durationsLogLine", () => {
     expect(MERGE_MARKER).toBe(DURATIONS_LOG_MARKER);
     expect(parseDurationsInput(`2026-10-09T02:36:11.2Z ${line}`)).toEqual(durations);
   });
+});
+
+afterEach(() => vi.unstubAllEnvs());
+
+it("records mode/source/cache/phase metadata alongside the compatible duration map", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "duration-reporter-"));
+  try {
+    vi.stubEnv("DIVEDAY_TEST_DURATIONS_OUT", path.join(root, "durations.json"));
+    vi.stubEnv("GITHUB_STEP_SUMMARY", path.join(root, "summary.md"));
+    vi.stubEnv("GITHUB_SHA", "source-sha");
+    vi.stubEnv("GITHUB_RUN_ID", "run-1");
+    vi.stubEnv("DIVEDAY_TEMPLATE_CACHE_HIT", "true");
+    const reporter = new DurationReporter();
+    reporter.onInit({
+      config: { coverage: { enabled: true }, shard: { index: 2, count: 4 } },
+    } as unknown as Vitest);
+    reporter.onTestRunEnd([
+      {
+        moduleId: path.join(root, "a.test.ts"),
+        project: { config: { root } },
+        state: () => "passed",
+        diagnostic: () => ({
+          environmentSetupDuration: 1,
+          prepareDuration: 2,
+          collectDuration: 3,
+          setupDuration: 4,
+          duration: 5,
+        }),
+      },
+    ] as unknown as TestModule[]);
+    const artifact = JSON.parse(readFileSync(path.join(root, "durations.json"), "utf8"));
+    expect(artifact).toMatchObject({
+      version: 2,
+      metadata: {
+        sha: "source-sha",
+        runId: "run-1",
+        coverage: true,
+        shard: 2,
+        shards: 4,
+        templateCacheHit: true,
+        success: true,
+      },
+      durations: { "a.test.ts": 15 },
+    });
+    expect(artifact.phases["a.test.ts"].collectDuration).toBe(3);
+    expect(readFileSync(path.join(root, "summary.md"), "utf8")).toContain(
+      "aggregate file work 15 ms (not shard elapsed)",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

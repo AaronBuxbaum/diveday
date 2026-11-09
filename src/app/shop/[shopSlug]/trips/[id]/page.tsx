@@ -108,7 +108,6 @@ export default async function ManageTripPage({
     t,
     locale,
     session,
-    details: view === "details",
     filters: { diverQuery: diverq, confirmName },
   });
   const { departureNeeds } = reading;
@@ -121,8 +120,6 @@ export default async function ManageTripPage({
     overview,
     coursePulse,
     guests,
-    boats: shopBoats,
-    lenses: shopLenses,
     stage: stageReading,
     can: { refund: mayWriteOffPayment, retireMedicalRefusal: mayRetireRefusal },
   } = manifest;
@@ -152,16 +149,17 @@ export default async function ManageTripPage({
     t,
   });
 
+  const showDetails = showsDetailsTab(view, rest.add, tripNotice);
   const pulseFacts = tripPulseFactsOf(overview, {
     liveBoatClashes: cancelled ? [] : boatClashes,
     shopSlug,
     tripId,
     now,
     t,
-    needs: overview.pulseNeeded ? await departureNeeds : null,
+    needs: overview.pulseNeeded && !showDetails ? await departureNeeds() : null,
   });
 
-  const showDetails = showsDetailsTab(view, rest.add, tripNotice);
+  const details = showDetails ? await reading.details() : null;
   const readRows = detailsReadRows({ db, shop, overview, t, locale, shown: showDetails });
   const { automatedForecast, tideLines } = departureConditionReads({
     showDetails,
@@ -268,7 +266,7 @@ export default async function ManageTripPage({
           {...{ cancelled, canConfigure, blowoutCalled, lifecycleStatus, shopSlug, tripId, t }}
         />
 
-        {showDetails ? (
+        {details ? (
           <>
             <TripAboutSection
               rows={[
@@ -281,8 +279,8 @@ export default async function ManageTripPage({
                   locale,
                   t,
                   tripNotice,
-                  shopBoats,
-                  shopLenses,
+                  shopBoats: details.boats,
+                  shopLenses: details.lenses,
                   automatedForecast,
                   tideLines,
                   held: held ? { id: held, section: form } : undefined,
@@ -304,7 +302,7 @@ export default async function ManageTripPage({
             />
             <ConservationPanel
               shopSlug={shopSlug}
-              panel={manifest.conservation}
+              panel={details.conservation}
               tripId={tripId}
               t={t}
               locale={locale}

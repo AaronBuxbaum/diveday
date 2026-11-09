@@ -1,6 +1,6 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { ModuleDiagnostic, Reporter, TestModule } from "vitest/node";
+import type { ModuleDiagnostic, Reporter, TestModule, TestRunEndReason, Vitest } from "vitest/node";
 
 /**
  * Records how long each test file took, so the shard sequencer can deal by
@@ -71,7 +71,15 @@ export function collectDurations(
 }
 
 export default class DurationReporter implements Reporter {
-  onTestRunEnd(testModules: ReadonlyArray<TestModule>): void {
+  private context?: Vitest;
+  onInit(context: Vitest): void {
+    this.context = context;
+  }
+  onTestRunEnd(
+    testModules: ReadonlyArray<TestModule>,
+    errors: ReadonlyArray<unknown> = [],
+    reason: TestRunEndReason = "passed",
+  ): void {
     const out = process.env[DURATIONS_OUT_ENV];
     if (!out || testModules.length === 0) return;
     const root = testModules[0].project.config.root;
@@ -83,7 +91,36 @@ export default class DurationReporter implements Reporter {
       root,
     );
     mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
-    writeFileSync(out, `${JSON.stringify(durations, null, 2)}\n`);
+    const metadata = {
+      sha: process.env.GITHUB_SHA ?? "local",
+      runId: process.env.GITHUB_RUN_ID ?? "local",
+      runner: `${process.platform}-${process.arch}-${process.env.ImageOS ?? (process.env.CI ? "self-hosted" : "local")}`,
+      nodeMajor: Number(process.versions.node.split(".")[0]),
+      coverage: this.context?.config.coverage.enabled ?? false,
+      shard: this.context?.config.shard?.index ?? 1,
+      shards: this.context?.config.shard?.count ?? 1,
+      files: testModules.length,
+      createdAt: new Date().toISOString(),
+      templateCacheHit: process.env.DIVEDAY_TEMPLATE_CACHE_HIT === "true",
+      success: reason === "passed" && errors.length === 0,
+    };
+    const phases = Object.fromEntries(
+      testModules.map((module) => [path.relative(root, module.moduleId), module.diagnostic()]),
+    );
+    writeFileSync(out, `${JSON.stringify({ version: 2, metadata, durations, phases }, null, 2)}\n`);
+    const totals = testModules.reduce(
+      (sum, module) => {
+        const d = module.diagnostic();
+        return {
+          setup: sum.setup + d.environmentSetupDuration + d.prepareDuration + d.setupDuration,
+          imports: sum.imports + d.collectDuration,
+          body: sum.body + d.duration,
+        };
+      },
+      { setup: 0, imports: 0, body: 0 },
+    );
+    const summary = `### Unit duration profile\n\n${metadata.runner}, Node ${metadata.nodeMajor}, coverage ${metadata.coverage}; SHA ${metadata.sha}; template cache hit ${metadata.templateCacheHit}.\n\n${Object.keys(durations).length} files; aggregate file work ${Math.round(Object.values(durations).reduce((a, b) => a + b, 0))} ms (not shard elapsed). Setup ${Math.round(totals.setup)} ms; imports/collection ${Math.round(totals.imports)} ms; bodies/hooks ${Math.round(totals.body)} ms.\n`;
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
     console.log(durationsLogLine(durations));
   }
 }

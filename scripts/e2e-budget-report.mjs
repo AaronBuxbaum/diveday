@@ -16,8 +16,9 @@
  *
  * It reports; it refuses nothing. Durations from a contended runner are the
  * numbers the issue is about, and a guard that failed on them would fail on
- * the runner's load. A per-test `test.slow()` with the measured number in its
- * comment is the fix this list asks for, one test at a time.
+ * the runner's load. Diagnose readiness, work size and contention first, then
+ * fix or split real flakiness. A new, genuinely long journey may have a measured
+ * initial budget; widening an existing flaky test is not its repair.
  *
  * A step summary is where nobody looks, though: `add-diver.spec.ts:48` took
  * about 27 s of its 30 and was on the list before it timed out on run 4752
@@ -109,7 +110,7 @@ export function budgetAnnotations(report, { share = WARN_SHARE, cwd = process.cw
       .replaceAll("%", "%25")
       .replaceAll("\r", "%0D")
       .replaceAll("\n", "%0A");
-    return `::warning file=${file},line=${entry.line},title=e2e test at ${Math.round(entry.used * 100)}% of its budget::${title} took ${seconds(entry.duration)} of ${seconds(entry.timeout)}. Give it test.slow() or test.setTimeout() with the measured reason, or make it faster, before it times out on a loaded runner.`;
+    return `::warning file=${file},line=${entry.line},title=e2e test at ${Math.round(entry.used * 100)}% of its budget::${title} took ${seconds(entry.duration)} of ${seconds(entry.timeout)}. Diagnose readiness, work size and runner contention first; fix or split the work, never widen an existing flaky test. A genuinely new long journey needs a measured initial budget. Policy: docs/agents/verifying.md.`;
   });
 }
 

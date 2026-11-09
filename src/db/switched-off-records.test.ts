@@ -172,6 +172,7 @@ describe("recap photos switched off", () => {
     expect(await deleteRecapPhoto(db, shop.id, kept.photo.id)).toEqual({
       deleted: true,
       imageUrl: "https://img/kept.jpg",
+      personId: expect.any(String),
     });
 
     await db.update(shops).set({ diverPhotosEnabled: true }).where(eq(shops.id, shop.id));

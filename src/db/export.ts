@@ -43,7 +43,8 @@ import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { withoutRehearsals } from "@/lib/rehearsal-export";
 import { readActiveStaffRoles } from "./authz";
 import { sortBuddyMemberRowsByTeam } from "./buddy-teams";
-import type { AppDb, AppTransaction } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { exportCountScope } from "./export-count-scope";
 import { DIVER_EXPORT_FILES } from "./export-diver-files";
 import { SHOP_EXPORT_FILES } from "./export-shop-files";
 import {
@@ -52,13 +53,16 @@ import {
   countShopTips,
   type DiverExportScope,
   diverOwnRows,
+  EXPORT_TABLES,
   readScoped,
   readTipRows,
   type ShopExportScope,
 } from "./export-tables";
+import { queryBatches } from "./query-helpers";
 import { shopRehearsalIds } from "./rehearsals";
 import { countRollCallMarks, splitRollCallRows } from "./roll-call-subject";
 import {
+  bookingCheckoutBookings,
   bookingReferrals,
   bookings,
   buddyTeamMembers,
@@ -75,6 +79,7 @@ import {
   recapPulses,
   reviewModerationEvents,
   reviewReplies,
+  rollCallEvents,
   shops,
   staffShifts,
   tripAssignments,
@@ -1251,204 +1256,271 @@ export type ExportFileCount = { file: string; note: string; count: number };
  * bundle's file list never drift.
  */
 export async function loadShopExportCounts(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
 ): Promise<ExportFileCount[] | null> {
   const [shop] = await db.select({ id: shops.id }).from(shops).where(eq(shops.id, shopId)).limit(1);
   if (!shop) return null;
 
-  // A shop that has held a rehearsal: its rows are spread over a dozen files,
-  // and the bundle leaves them all out, so the counts are read off the bundle
-  // itself rather than restated file by file (ADR 20261012-rehearsal-departures).
-  const rehearsals = await shopRehearsalIds(db, shopId);
-  if (rehearsals.tripIds.size > 0) {
-    const bundle = await loadShopExportBundleInput(db, shopId);
-    return bundle
-      ? bundle.tables.map((table) => ({
-          file: table.file,
-          note: table.note,
-          count: table.rows.length,
-        }))
-      : null;
-  }
+  const specification = (file: keyof typeof EXPORT_FILE_NOTES) => {
+    const spec = SHOP_EXPORT_FILES.find((spec) => spec.file === file);
+    if (!spec) throw new Error(`export count: missing file ${file}`);
+    return spec;
+  };
+  const exclusion = (
+    file: keyof typeof EXPORT_FILE_NOTES,
+    table: Parameters<typeof exportCountScope>[3],
+  ) => exportCountScope(db, shopId, specification(file), table);
+  const scoped = (file: keyof typeof EXPORT_FILE_NOTES, key: keyof typeof EXPORT_TABLES) =>
+    countShopScoped(db, key, shopId, exclusion(file, EXPORT_TABLES[key].table));
 
   const countOf = async (query: Promise<{ n: number }[]>) => (await query)[0]?.n ?? 0;
   const peopleCount = await countShopScoped(db, "people", shopId);
-  const counts: Record<keyof typeof EXPORT_FILE_NOTES, number> = {
-    "shop.csv": 1,
-    "boats.csv": await countShopScoped(db, "boats", shopId),
-    "trip_lenses.csv": await countShopScoped(db, "tripLenses", shopId),
+  const tasks: Record<keyof typeof EXPORT_FILE_NOTES, () => Promise<number>> = {
+    "shop.csv": async () => 1,
+    "boats.csv": async () => scoped("boats.csv", "boats"),
+    "trip_lenses.csv": async () => scoped("trip_lenses.csv", "tripLenses"),
     // One flat import-ready row per person, so the count mirrors people.csv.
-    "contacts.csv": peopleCount,
-    "people.csv": peopleCount,
-    "cards.csv": await countShopScoped(db, "cards", shopId),
-    "certification_junior_reviews.csv": await countShopScoped(
-      db,
-      "certificationJuniorReviews",
-      shopId,
-    ),
+    "contacts.csv": async () => peopleCount,
+    "people.csv": async () => peopleCount,
+    "cards.csv": async () => scoped("cards.csv", "cards"),
+    "certification_junior_reviews.csv": async () =>
+      scoped("certification_junior_reviews.csv", "certificationJuniorReviews"),
     // diveday:allow-deleted-trips: this counts what the bundle above writes, and
     // the bundle writes every row the shop owns. A count that filtered would
     // disagree with its own file.
-    "trips.csv": await countOf(
-      db.select({ n: count() }).from(trips).where(eq(trips.shopId, shopId)),
-    ),
-    "trip_change_events.csv": await countShopScoped(db, "tripChangeEvents", shopId),
-    "trip_stage_events.csv": await countShopScoped(db, "tripStageEvents", shopId),
-    "safety_drills.csv": await countShopScoped(db, "safetyDrills", shopId),
-    "safety_drill_participants.csv": await countShopScoped(db, "safetyDrillParticipants", shopId),
-    "trip_series.csv": await countShopScoped(db, "tripSeries", shopId),
-    "trip_series_skips.csv": await countShopScoped(db, "tripSeriesSkips", shopId),
-    "trip_series_crew.csv": await countShopScoped(db, "tripSeriesCrew", shopId),
-    "trip_schedule_days.csv": await countOf(
-      db
-        .select({ n: count() })
-        .from(tripScheduleDays)
-        .innerJoin(trips, eq(trips.id, tripScheduleDays.tripId))
-        .where(eq(trips.shopId, shopId)),
-    ),
-    "trip_dives.csv": await countOf(
-      db
-        .select({ n: count() })
-        .from(tripDives)
-        .innerJoin(trips, eq(trips.id, tripDives.tripId))
-        .where(eq(trips.shopId, shopId)),
-    ),
-    "trip_requirements.csv": await countShopScoped(db, "tripRequirements", shopId),
-    "trip_assignments.csv": await countOf(
-      db
-        .select({ n: count() })
-        .from(tripAssignments)
-        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-        .where(eq(trips.shopId, shopId)),
-    ),
-    "staff_shifts.csv": await countOf(
-      db.select({ n: count() }).from(staffShifts).where(eq(staffShifts.shopId, shopId)),
-    ),
-    "crew_availability_blocks.csv": await countOf(
-      db
-        .select({ n: count() })
-        .from(crewAvailabilityBlocks)
-        .where(
-          and(eq(crewAvailabilityBlocks.shopId, shopId), isNull(crewAvailabilityBlocks.deletedAt)),
-        ),
-    ),
-    "crew_away_acknowledgements.csv": await countShopScoped(db, "crewAwayAcknowledgements", shopId),
-    "crew_assignment_requests.csv": await countOf(
-      db
-        .select({ n: count() })
-        .from(crewAssignmentRequests)
-        .where(
-          and(eq(crewAssignmentRequests.shopId, shopId), isNull(crewAssignmentRequests.deletedAt)),
-        ),
-    ),
-    "staff_credentials.csv": await countShopScoped(db, "staffCredentials", shopId),
-    "staff_credential_history.csv": await countShopScoped(db, "staffCredentialHistory", shopId),
-    "bookings.csv": await countOf(
-      db.select({ n: count() }).from(bookings).where(eq(bookings.shopId, shopId)),
-    ),
-    "trip_help_requests.csv": await countShopScoped(db, "tripHelpRequests", shopId),
-    "booking_payment_events.csv": await countShopScoped(db, "bookingPaymentEvents", shopId),
-    "booking_checkouts.csv": await countShopScoped(db, "bookingCheckouts", shopId),
-    "booking_checkout_bookings.csv": await countShopScoped(db, "bookingCheckoutBookings", shopId),
-    "executed_dives.csv": await countShopScoped(db, "executedDives", shopId),
-    "trip_conservation.csv": await countShopScoped(db, "tripConservation", shopId),
-    "trip_sightings.csv": await countShopScoped(db, "tripSightings", shopId),
-    "internal_notes.csv": await countShopScoped(db, "internalNotes", shopId),
-    "incident_reports.csv": await countShopScoped(db, "incidentReports", shopId),
-    "incident_report_people.csv": await countShopScoped(db, "incidentReportPeople", shopId),
-    "incident_report_addenda.csv": await countShopScoped(db, "incidentReportAddenda", shopId),
-    "activity_events.csv": await countShopScoped(db, "activityEvents", shopId),
-    "notification_deliveries.csv": await countShopScoped(db, "notificationDeliveries", shopId),
-    "interests.csv": await countShopScoped(db, "interests", shopId),
-    "date_request_offer_bookings.csv": await countShopScoped(
-      db,
-      "dateRequestOfferBookings",
-      shopId,
-    ),
-    "trip_last_minute_promos.csv": await countDeals(db, shopId, "trip"),
-    "booking_arrival_events.csv": await countShopScoped(db, "bookingArrivalEvents", shopId),
-    "roll_call_events.csv": await countRollCallMarks(db, shopId, "seat"),
-    "roll_call_crew_events.csv": await countRollCallMarks(db, shopId, "crew"),
-    "buddy_teams.csv": await countShopScoped(db, "buddyTeamMembers", shopId),
-    "waiver_templates.csv": await countShopScoped(db, "waiverTemplates", shopId),
-    "waiver_materiality_decisions.csv": await countShopScoped(
-      db,
-      "waiverMaterialityDecisions",
-      shopId,
-    ),
-    "waiver_records.csv": await countShopScoped(db, "waiverRecords", shopId),
-    "waiver_seal_acknowledgements.csv": await countShopScoped(
-      db,
-      "waiverSealAcknowledgements",
-      shopId,
-    ),
-    "course_forms.csv": await countShopScoped(db, "courseForms", shopId),
-    "course_form_versions.csv": await countShopScoped(db, "courseFormVersions", shopId),
-    "course_form_requirements.csv": await countShopScoped(db, "courseFormRequirements", shopId),
-    "course_form_records.csv": await countShopScoped(db, "courseFormRecords", shopId),
-    "rental_fit.csv": await countShopScoped(db, "rentalFitProfiles", shopId),
-    "gear_items.csv": await countShopScoped(db, "gearItems", shopId),
-    "gear_service_events.csv": await countShopScoped(db, "gearServiceEvents", shopId),
-    "gear_reservations.csv": await countShopScoped(db, "gearReservations", shopId),
-    "customer_gear_items.csv": await countShopScoped(db, "customerGearItems", shopId),
-    "inbound_messages.csv": await countShopScoped(db, "inboundMessages", shopId),
-    "staff_replies.csv": await countShopScoped(db, "staffReplies", shopId),
-    "interest_replies.csv": await countShopScoped(db, "interestReplies", shopId),
-    "departure_notes.csv": await countShopScoped(db, "departureNotes", shopId),
-    "lost_items.csv": await countShopScoped(db, "lostItems", shopId),
-    "work_orders.csv": await countShopScoped(db, "workOrders", shopId),
-    "work_order_items.csv": await countShopScoped(db, "workOrderItems", shopId),
-    "work_order_lines.csv": await countShopScoped(db, "workOrderLines", shopId),
-    "work_order_care.csv": await countShopScoped(db, "workOrderCare", shopId),
-    "work_order_events.csv": await countShopScoped(db, "workOrderEvents", shopId),
-    "pre_departure_checklist_items.csv": await countShopScoped(
-      db,
-      "preDepartureChecklistItems",
-      shopId,
-    ),
-    "pre_departure_check_events.csv": await countShopScoped(db, "preDepartureCheckEvents", shopId),
-    "boat_snags.csv": await countShopScoped(db, "boatSnags", shopId),
-    "departure_boat_safety_snapshots.csv": await countShopScoped(
-      db,
-      "departureBoatSafetySnapshots",
-      shopId,
-    ),
-    "prior_visits.csv": await countShopScoped(db, "priorVisits", shopId),
-    "imported_payment_history.csv": await countShopScoped(db, "importedPaymentHistory", shopId),
-    "orders.csv": await countShopScoped(db, "orders", shopId),
-    "order_line_items.csv": await countShopScoped(db, "orderLineItems", shopId),
-    "work_order_bills.csv": await countShopScoped(db, "workOrderBills", shopId),
-    "customer_gear_reminder_settings.csv": await countShopScoped(
-      db,
-      "customerGearReminderSettings",
-      shopId,
-    ),
-    "tips.csv": await countShopTips(db, shopId),
-    "dive_sites.csv": await countShopScoped(db, "diveSites", shopId),
-    "dive_site_creatures.csv": await countShopScoped(db, "diveSiteCreatures", shopId),
-    "recap_photos.csv": await countShopScoped(db, "recapPhotos", shopId),
-    "trip_recap_photos.csv": await countOf(
-      db.select({ n: count() }).from(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId)),
-    ),
-    "trip_reviews.csv": await countOf(
-      db.select({ n: count() }).from(tripReviews).where(eq(tripReviews.shopId, shopId)),
-    ),
-    "recap_pulses.csv": await countOf(
-      db.select({ n: count() }).from(recapPulses).where(eq(recapPulses.shopId, shopId)),
-    ),
-    "review_moderation_events.csv": await countOf(
-      db
-        .select({ n: count() })
-        .from(reviewModerationEvents)
-        .where(eq(reviewModerationEvents.shopId, shopId)),
-    ),
-    "dive_packages.csv": await countShopScoped(db, "divePackages", shopId),
-    "dive_package_entitlements.csv": await countShopScoped(db, "divePackageEntitlements", shopId),
-    "shop_promo_codes.csv": await countDeals(db, shopId, "shop"),
-    "courses.csv": await countShopScoped(db, "courses", shopId),
-    "shop_text_translations.csv": await countShopScoped(db, "shopTextTranslations", shopId),
+    "trips.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(trips)
+          .where(and(eq(trips.shopId, shopId), exclusion("trips.csv", trips))),
+      ),
+    "trip_change_events.csv": async () => scoped("trip_change_events.csv", "tripChangeEvents"),
+    "trip_stage_events.csv": async () => scoped("trip_stage_events.csv", "tripStageEvents"),
+    "safety_drills.csv": async () => scoped("safety_drills.csv", "safetyDrills"),
+    "safety_drill_participants.csv": async () =>
+      scoped("safety_drill_participants.csv", "safetyDrillParticipants"),
+    "trip_series.csv": async () => scoped("trip_series.csv", "tripSeries"),
+    "trip_series_skips.csv": async () => scoped("trip_series_skips.csv", "tripSeriesSkips"),
+    "trip_series_crew.csv": async () => scoped("trip_series_crew.csv", "tripSeriesCrew"),
+    "trip_schedule_days.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(tripScheduleDays)
+          .innerJoin(trips, eq(trips.id, tripScheduleDays.tripId))
+          .where(
+            and(eq(trips.shopId, shopId), exclusion("trip_schedule_days.csv", tripScheduleDays)),
+          ),
+      ),
+    "trip_dives.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(tripDives)
+          .innerJoin(trips, eq(trips.id, tripDives.tripId))
+          .where(and(eq(trips.shopId, shopId), exclusion("trip_dives.csv", tripDives))),
+      ),
+    "trip_requirements.csv": async () => scoped("trip_requirements.csv", "tripRequirements"),
+    "trip_assignments.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(tripAssignments)
+          .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+          .where(and(eq(trips.shopId, shopId), exclusion("trip_assignments.csv", tripAssignments))),
+      ),
+    "staff_shifts.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(staffShifts)
+          .where(and(eq(staffShifts.shopId, shopId), exclusion("staff_shifts.csv", staffShifts))),
+      ),
+    "crew_availability_blocks.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(crewAvailabilityBlocks)
+          .where(
+            and(
+              and(
+                eq(crewAvailabilityBlocks.shopId, shopId),
+                isNull(crewAvailabilityBlocks.deletedAt),
+              ),
+              exclusion("crew_availability_blocks.csv", crewAvailabilityBlocks),
+            ),
+          ),
+      ),
+    "crew_away_acknowledgements.csv": async () =>
+      scoped("crew_away_acknowledgements.csv", "crewAwayAcknowledgements"),
+    "crew_assignment_requests.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(crewAssignmentRequests)
+          .where(
+            and(
+              and(
+                eq(crewAssignmentRequests.shopId, shopId),
+                isNull(crewAssignmentRequests.deletedAt),
+              ),
+              exclusion("crew_assignment_requests.csv", crewAssignmentRequests),
+            ),
+          ),
+      ),
+    "staff_credentials.csv": async () => scoped("staff_credentials.csv", "staffCredentials"),
+    "staff_credential_history.csv": async () =>
+      scoped("staff_credential_history.csv", "staffCredentialHistory"),
+    "bookings.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(bookings)
+          .where(and(eq(bookings.shopId, shopId), exclusion("bookings.csv", bookings))),
+      ),
+    "trip_help_requests.csv": async () => scoped("trip_help_requests.csv", "tripHelpRequests"),
+    "booking_payment_events.csv": async () =>
+      scoped("booking_payment_events.csv", "bookingPaymentEvents"),
+    "booking_checkouts.csv": async () => scoped("booking_checkouts.csv", "bookingCheckouts"),
+    "booking_checkout_bookings.csv": async () =>
+      scoped("booking_checkout_bookings.csv", "bookingCheckoutBookings"),
+    "executed_dives.csv": async () => scoped("executed_dives.csv", "executedDives"),
+    "trip_conservation.csv": async () => scoped("trip_conservation.csv", "tripConservation"),
+    "trip_sightings.csv": async () => scoped("trip_sightings.csv", "tripSightings"),
+    "internal_notes.csv": async () => scoped("internal_notes.csv", "internalNotes"),
+    "incident_reports.csv": async () => scoped("incident_reports.csv", "incidentReports"),
+    "incident_report_people.csv": async () =>
+      scoped("incident_report_people.csv", "incidentReportPeople"),
+    "incident_report_addenda.csv": async () =>
+      scoped("incident_report_addenda.csv", "incidentReportAddenda"),
+    "activity_events.csv": async () => scoped("activity_events.csv", "activityEvents"),
+    "notification_deliveries.csv": async () =>
+      scoped("notification_deliveries.csv", "notificationDeliveries"),
+    "interests.csv": async () => scoped("interests.csv", "interests"),
+    "date_request_offer_bookings.csv": async () =>
+      scoped("date_request_offer_bookings.csv", "dateRequestOfferBookings"),
+    "trip_last_minute_promos.csv": async () =>
+      countDeals(db, shopId, "trip", exclusion("trip_last_minute_promos.csv", deals)),
+    "booking_arrival_events.csv": async () =>
+      scoped("booking_arrival_events.csv", "bookingArrivalEvents"),
+    "roll_call_events.csv": async () =>
+      countRollCallMarks(db, shopId, "seat", exclusion("roll_call_events.csv", rollCallEvents)),
+    "roll_call_crew_events.csv": async () =>
+      countRollCallMarks(
+        db,
+        shopId,
+        "crew",
+        exclusion("roll_call_crew_events.csv", rollCallEvents),
+      ),
+    "buddy_teams.csv": async () => scoped("buddy_teams.csv", "buddyTeamMembers"),
+    "waiver_templates.csv": async () => scoped("waiver_templates.csv", "waiverTemplates"),
+    "waiver_materiality_decisions.csv": async () =>
+      scoped("waiver_materiality_decisions.csv", "waiverMaterialityDecisions"),
+    "waiver_records.csv": async () => scoped("waiver_records.csv", "waiverRecords"),
+    "waiver_seal_acknowledgements.csv": async () =>
+      scoped("waiver_seal_acknowledgements.csv", "waiverSealAcknowledgements"),
+    "course_forms.csv": async () => scoped("course_forms.csv", "courseForms"),
+    "course_form_versions.csv": async () =>
+      scoped("course_form_versions.csv", "courseFormVersions"),
+    "course_form_requirements.csv": async () =>
+      scoped("course_form_requirements.csv", "courseFormRequirements"),
+    "course_form_records.csv": async () => scoped("course_form_records.csv", "courseFormRecords"),
+    "rental_fit.csv": async () => scoped("rental_fit.csv", "rentalFitProfiles"),
+    "gear_items.csv": async () => scoped("gear_items.csv", "gearItems"),
+    "gear_service_events.csv": async () => scoped("gear_service_events.csv", "gearServiceEvents"),
+    "gear_reservations.csv": async () => scoped("gear_reservations.csv", "gearReservations"),
+    "customer_gear_items.csv": async () => scoped("customer_gear_items.csv", "customerGearItems"),
+    "inbound_messages.csv": async () => scoped("inbound_messages.csv", "inboundMessages"),
+    "staff_replies.csv": async () => scoped("staff_replies.csv", "staffReplies"),
+    "interest_replies.csv": async () => scoped("interest_replies.csv", "interestReplies"),
+    "departure_notes.csv": async () => scoped("departure_notes.csv", "departureNotes"),
+    "lost_items.csv": async () => scoped("lost_items.csv", "lostItems"),
+    "work_orders.csv": async () => scoped("work_orders.csv", "workOrders"),
+    "work_order_items.csv": async () => scoped("work_order_items.csv", "workOrderItems"),
+    "work_order_lines.csv": async () => scoped("work_order_lines.csv", "workOrderLines"),
+    "work_order_care.csv": async () => scoped("work_order_care.csv", "workOrderCare"),
+    "work_order_events.csv": async () => scoped("work_order_events.csv", "workOrderEvents"),
+    "pre_departure_checklist_items.csv": async () =>
+      scoped("pre_departure_checklist_items.csv", "preDepartureChecklistItems"),
+    "pre_departure_check_events.csv": async () =>
+      scoped("pre_departure_check_events.csv", "preDepartureCheckEvents"),
+    "boat_snags.csv": async () => scoped("boat_snags.csv", "boatSnags"),
+    "departure_boat_safety_snapshots.csv": async () =>
+      scoped("departure_boat_safety_snapshots.csv", "departureBoatSafetySnapshots"),
+    "prior_visits.csv": async () => scoped("prior_visits.csv", "priorVisits"),
+    "imported_payment_history.csv": async () =>
+      scoped("imported_payment_history.csv", "importedPaymentHistory"),
+    "orders.csv": async () => scoped("orders.csv", "orders"),
+    "order_line_items.csv": async () => scoped("order_line_items.csv", "orderLineItems"),
+    "work_order_bills.csv": async () => scoped("work_order_bills.csv", "workOrderBills"),
+    "customer_gear_reminder_settings.csv": async () =>
+      scoped("customer_gear_reminder_settings.csv", "customerGearReminderSettings"),
+    "tips.csv": async () =>
+      countShopTips(
+        db,
+        shopId,
+        exclusion("tips.csv", { bookingId: bookingCheckoutBookings.bookingId }),
+      ),
+    "dive_sites.csv": async () => scoped("dive_sites.csv", "diveSites"),
+    "dive_site_creatures.csv": async () => scoped("dive_site_creatures.csv", "diveSiteCreatures"),
+    "recap_photos.csv": async () => scoped("recap_photos.csv", "recapPhotos"),
+    "trip_recap_photos.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(tripRecapPhotos)
+          .where(
+            and(
+              eq(tripRecapPhotos.shopId, shopId),
+              exclusion("trip_recap_photos.csv", tripRecapPhotos),
+            ),
+          ),
+      ),
+    "trip_reviews.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(tripReviews)
+          .where(and(eq(tripReviews.shopId, shopId), exclusion("trip_reviews.csv", tripReviews))),
+      ),
+    "recap_pulses.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(recapPulses)
+          .where(and(eq(recapPulses.shopId, shopId), exclusion("recap_pulses.csv", recapPulses))),
+      ),
+    "review_moderation_events.csv": async () =>
+      countOf(
+        db
+          .select({ n: count() })
+          .from(reviewModerationEvents)
+          .where(
+            and(
+              eq(reviewModerationEvents.shopId, shopId),
+              exclusion("review_moderation_events.csv", reviewModerationEvents),
+            ),
+          ),
+      ),
+    "dive_packages.csv": async () => scoped("dive_packages.csv", "divePackages"),
+    "dive_package_entitlements.csv": async () =>
+      scoped("dive_package_entitlements.csv", "divePackageEntitlements"),
+    "shop_promo_codes.csv": async () =>
+      countDeals(db, shopId, "shop", exclusion("shop_promo_codes.csv", deals)),
+    "courses.csv": async () => scoped("courses.csv", "courses"),
+    "shop_text_translations.csv": async () =>
+      scoped("shop_text_translations.csv", "shopTextTranslations"),
   };
+
+  const files = Object.keys(tasks) as (keyof typeof EXPORT_FILE_NOTES)[];
+  const values = await queryBatches(
+    db,
+    files.map((file) => tasks[file]),
+    4,
+  );
+  const counts = Object.fromEntries(files.map((file, index) => [file, values[index]]));
 
   return (Object.keys(EXPORT_FILE_NOTES) as (keyof typeof EXPORT_FILE_NOTES)[]).map((file) => ({
     file,
@@ -1458,7 +1530,12 @@ export async function loadShopExportCounts(
 }
 
 /** How many of the shop's deals land in one of the two files `deals` splits into. */
-async function countDeals(db: AppDb, shopId: string, kind: "shop" | "trip"): Promise<number> {
+async function countDeals(
+  db: DbExecutor,
+  shopId: string,
+  kind: "shop" | "trip",
+  exclusion?: import("drizzle-orm").SQL,
+): Promise<number> {
   const [row] = await db
     .select({ n: count() })
     .from(deals)
@@ -1466,6 +1543,7 @@ async function countDeals(db: AppDb, shopId: string, kind: "shop" | "trip"): Pro
       and(
         eq(deals.shopId, shopId),
         kind === "shop" ? isNull(deals.tripId) : isNotNull(deals.tripId),
+        exclusion,
       ),
     );
   return row?.n ?? 0;

@@ -10,11 +10,12 @@ import {
   canAddRecapPhoto,
   isRecapOpen,
   MAX_RECAP_PHOTOS_PER_BOOKING,
+  retireRejectedRecapPhoto,
 } from "@/features/recap";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
+import { storeRecapImage } from "@/lib/storage";
 
 /**
  * The recap photo upload, shared by the two doors that take one: the recap
@@ -34,7 +35,7 @@ const captionForm = z.object({ caption: z.string().default("") });
  * booking, never trusted from the form. The endpoint is public, so the
  * booking/cancelled/cap gate runs *before* bytes are stored (no orphaned blob
  * on a rejected upload), and only a lost race against the cap can leave a
- * stored object — which is then cleaned up best-effort. Every file shares the
+ * stored object — which is then retired through the durable deletion ledger. Every file shares the
  * one caption field the form offers; an unconfigured provider or a rejected
  * file surfaces as a notice.
  *
@@ -138,7 +139,7 @@ export async function uploadRecapPhotos(
       // Only reachable if a concurrent upload filled the cap (or the booking
       // was cancelled) mid-batch — the object we just stored is now
       // orphaned, so clean it up.
-      await deleteStoredImage(stored.url);
+      await retireRejectedRecapPhoto(db, bookingId, stored.url);
       if (result.reason === "limit") {
         hitLimit = true;
         break; // no room for the rest of the batch either

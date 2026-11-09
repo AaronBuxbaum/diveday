@@ -35,7 +35,7 @@ history we cannot produce.
 | Store | What's in it | Primary recovery | Secondary copy |
 | --- | --- | --- | --- |
 | Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema/` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | The weekly full-cluster dump in `diveday-database-dumps` (§2c — the only copy that carries accounts and tokens), plus the per-shop export bundles in `diveday-backups` under `exports/` |
-| AWS S3 Media Bucket (`diveday-media`) | Recap photos, course/dive-site media, shop logos, imported waiver source documents | S3-managed storage (versioned/retained) | The `photos/` directory inside each export bundle (see the gap below) |
+| AWS S3 Media Bucket (`diveday-media`) | Recap photos, course/dive-site media, shop logos, imported waiver source documents | S3-managed storage; versioned with 30-day noncurrent recovery after deployment; stack deletion retains the bucket | The `photos/` directory inside each export bundle (see the gap below) |
 | Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `SECRET_ENCRYPTION_KEY`, Stripe/AWS keys | Not backed up by design — secrets never enter the repo | Owner's password manager — **Aaron, first run with an agent** (§2's secrets note, §4's checklist) |
 
 ## 1. Neon point-in-time recovery
@@ -123,17 +123,18 @@ recovery**. Restoring a platform from bundles alone gives you every shop record 
 sign in. Recovery from bundles therefore includes re-inviting staff and forcing a password reset for
 every account; plan for it rather than discovering it.
 
-**A photo that fails to fetch is silently dropped.** `fetchExportPhotos` in `src/lib/export.ts`
-returns `null` for any URL that times out (10s), returns non-OK, or throws, and those nulls are
-filtered out. Nothing is logged, nothing is counted, and the bundle succeeds. For a portability
-export that is a reasonable "never fail the whole download for one image". **For a backup it is a
-landmine**: a bundle can be missing a waiver's source document with no signal at all, and you will
-find out during a restore, which is the worst possible time.
+**Managed-media completeness is explicit.** Every export contains `media-manifest.json`, with
+expected and included counts, each managed path, included byte count and SHA-256 checksum, or a
+coded failure. It never contains signed URLs or provider exception text. Interactive exports still
+return their CSVs and available media when one object fails. The README and manifest do not claim
+that a missing object was copied.
 
-Mitigation until that is fixed: after each run, compare the number of files under `photos/` against
-the count of distinct managed-blob URLs across the CSVs, and treat any shortfall as a failed backup
-for that shop. The durable fix is for `fetchExportPhotos` to report its failures so a caller can
-decide — that belongs to whoever owns `src/lib/export.ts` next, and it is worth doing.
+Both scheduled backup destinations store the usable partial ZIP but report `media_incomplete`
+rather than success. The weekly claim is not completed, the destination is not verified by that
+attempt, and the existing failure alert/census and retry paths remain active. Inspect the manifest
+in that attempted copy and repair access or retrieve the original; a green provider PUT alone is
+not proof of a complete backup. Imported waiver/receipt documents are read through signed S3
+requests restricted to their private namespaces, never by opening them publicly at CloudFront.
 
 ### Destination and credentials
 
@@ -466,15 +467,29 @@ written through the seam in `src/lib/storage/` and recognised by `isManagedStora
 (`src/lib/storage/blob-host.ts`), which matches the configured bucket's own origins and nothing
 else. It replaced Vercel Blob on 2026-08-26 (AWS-8).
 
-**There is still no provider-side backup.** The bucket is `S3_MANAGED` encrypted and `RETAIN` on
-stack destroy, but **versioning is not enabled** — so a deleted or overwritten object is gone, the
-same posture Vercel Blob had. The only copy DiveDay holds is the `photos/` directory inside each
-export bundle, which is exactly why the silent-drop gap above matters more than it looks. Enabling
-versioning on that bucket is the one change that would close it.
+The stack enables versioning and expires noncurrent versions after 30 days. Current objects do
+not expire. This is recovery from overwrite or ordinary deletion, not an independent backup or a
+change to evidence retention. The policy takes effect only after an approved deployment and cannot
+recover objects permanently deleted before versioning was enabled.
 
-The app already does the *deletion* side carefully: orphan-media cleanup is queued and retried
-through `retryPendingMediaDeletions` on the daily cron rather than deleted inline, so a transient
-provider failure does not lose track of an object. That is a consistency mechanism, not a backup.
+Ordinary deletion creates a delete marker. Diver-owned retired files retain subject attribution in
+the deletion ledger, so later erasure also finds files already detached from current records.
+Authorized erasure first hides the exact key behind a marker, lists every version, deletes its bytes
+first and its markers last, then verifies absence. Failures remain
+in the media-deletion ledger and the erasure notice says work remains. Retries preserve the permanent
+erasure mode. A missing storage configuration is a failure, not proof of deletion.
+
+Recovery is an operator procedure, not a public app permission: identify the shop's authorized object
+from its record or deletion ledger; check that no erasure or incident restriction applies; inspect S3
+versions; and restore the approved version as a new current version. Do not remove a delete marker
+blindly, which can expose an older confidential file. Restoring a database snapshot must never replay
+an erased object's bytes. The app uploader has no GetObjectVersion grant; version reads and recovery
+require separately authorized operator access. This change grants no live deployment or restoration.
+
+The recovery window increases storage cost and retains ordinary deleted content for up to 30 days
+plus S3 lifecycle processing time. Provider version deletion does not recall already downloaded
+copies or independently stored export bundles. Existing CDN caches follow their own expiry; sensitive
+source documents remain blocked at the public edge. Keep exports under the existing erasure process.
 
 ## 4. Restore tests
 

@@ -4,7 +4,12 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
-import { floorMarkersIn, sharedFirstLoadChunks } from "./perf-budget.mjs";
+import {
+  floorMarkersIn,
+  ROUTE_BUDGETS,
+  routeBudgetResults,
+  sharedFirstLoadChunks,
+} from "./perf-budget.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -118,5 +123,38 @@ describe("the budget against the real build", () => {
       (chunk) => floorMarkersIn(readFileSync(path.join(ROOT, chunk), "utf8")).length > 0,
     );
     expect(carrying).toEqual([]);
+  });
+});
+
+describe("representative route budgets", () => {
+  it("enforces a finite measured ceiling on every representative route", () => {
+    expect(Object.keys(ROUTE_BUDGETS)).toHaveLength(4);
+    for (const ceiling of Object.values(ROUTE_BUDGETS)) {
+      expect(Number.isFinite(ceiling)).toBe(true);
+      expect(ceiling).toBeGreaterThan(0);
+    }
+  });
+
+  it("catches a route-only dependency while the shared floor does not change", () => {
+    const stats = [
+      { route: "/a", firstLoadChunkPaths: ["common", "only-a"] },
+      { route: "/b", firstLoadChunkPaths: ["common"] },
+    ];
+    expect(sharedFirstLoadChunks(stats)).toEqual(["common"]);
+    const bytes = new Map([
+      ["common", 1024],
+      ["only-a", 4096],
+    ]);
+    expect(routeBudgetResults(stats, bytes, { "/a": 4, "/b": 4 })).toEqual([
+      { route: "/a", gzipKb: 5, ceilingKb: 4, over: true },
+      { route: "/b", gzipKb: 1, ceilingKb: 4, over: false },
+    ]);
+  });
+
+  it("fails closed when a named route or its bytes are missing", () => {
+    expect(() => routeBudgetResults([], new Map(), { "/a": 4 })).toThrow(/no client bundle/);
+    expect(() =>
+      routeBudgetResults([{ route: "/a", firstLoadChunkPaths: ["lost"] }], new Map(), { "/a": 4 }),
+    ).toThrow(/missing measured chunk/);
   });
 });

@@ -1395,7 +1395,6 @@ describe("recap photos and crew shout-out", () => {
     expect(after.length).toBe(before.length + 2);
     expect(after.find((p) => p.id === doomed.photo.id)?.diverName).toBe("Rae Recap");
 
-    // A different shop can neither see nor moderate this photo.
     expect(
       await listRecapPhotosForTrips(db, "00000000-0000-0000-0000-000000000000", [reef.id]),
     ).toEqual([]);
@@ -1405,6 +1404,7 @@ describe("recap photos and crew shout-out", () => {
     expect(await deleteRecapPhoto(db, shop.id, doomed.photo.id)).toEqual({
       deleted: true,
       imageUrl: "https://img/bad.jpg",
+      personId: expect.any(String),
     });
     const afterDelete = await listRecapPhotosForTrips(db, shop.id, [reef.id]);
     expect(afterDelete.length).toBe(before.length + 1);

@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
+import { DEMO_BYPASS_ENV_VAR } from "@/lib/demo-bypass";
+import { bindSignInToken } from "@/lib/magic-sign-in";
 import { totpCode } from "@/lib/totp";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -177,5 +179,63 @@ describe("operator demo handoffs", () => {
     await h.db.update(shops).set({ isDemo: true }).where(eq(shops.id, h.person.shopId));
     expect((await h.redeem(token.token)).status).toBe("invalid");
     expect(h.persist).not.toHaveBeenCalled();
+  });
+});
+
+describe("demo link security boundaries", () => {
+  async function demo() {
+    const h = await fixture();
+    await h.db.update(shops).set({ isDemo: true }).where(eq(shops.id, h.person.shopId));
+    await h.db
+      .update(userAccounts)
+      .set({ email: "owner@demo.invalid", emailVerified: false, emailVerifiedAt: null })
+      .where(eq(userAccounts.id, h.account.id));
+    const issued = await issueAccountToken(h.db, {
+      userAccountId: h.account.id,
+      purpose: "demo_sign_in",
+    });
+    return { ...h, issued };
+  }
+  it("refuses owner demotion, withdrawal, and the operator kill switch", async () => {
+    const h = await demo();
+    await h.db.delete(personRoles).where(eq(personRoles.personId, h.person.id));
+    await h.db.insert(personRoles).values({ personId: h.person.id, role: "captain" });
+    expect((await h.redeem(h.issued.token)).status).toBe("invalid");
+    await h.db.insert(personRoles).values({ personId: h.person.id, role: "owner" });
+    vi.stubEnv(DEMO_BYPASS_ENV_VAR, "off");
+    try {
+      expect((await h.redeem(h.issued.token)).status).toBe("invalid");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    await withdrawAccountTokens(h.db, { userAccountId: h.account.id });
+    expect((await h.redeem(h.issued.token)).status).toBe("invalid");
+    expect(h.persist).not.toHaveBeenCalled();
+  });
+  it("requires TOTP for a demo owner with an enrolled second factor", async () => {
+    const h = await demo();
+    const enrollment = await beginTotpEnrollment(h.db, h.account.id);
+    if (!enrollment) throw new Error("enrollment unavailable");
+    expect(await enableTotp(h.db, h.account.id, totpCode(enrollment.secret))).toBe(true);
+    expect((await h.redeem(h.issued.token)).status).toBe("pending");
+    expect(h.persist).not.toHaveBeenCalled();
+  });
+  it("cannot cross purposes by stripping or appending the email binding", async () => {
+    const real = await fixture();
+    const emailLink = await real.issue();
+    expect((await real.redeem(emailLink.token.split(".")[0])).status).toBe("invalid");
+    await real.db.update(shops).set({ isDemo: true }).where(eq(shops.id, real.person.shopId));
+    await real.db
+      .update(userAccounts)
+      .set({ email: "owner@demo.invalid" })
+      .where(eq(userAccounts.id, real.account.id));
+    const demoLink = await issueAccountToken(real.db, {
+      userAccountId: real.account.id,
+      purpose: "demo_sign_in",
+    });
+    expect(
+      (await real.redeem(bindSignInToken(demoLink.token, "owner@demo.invalid", nowDate()))).status,
+    ).toBe("invalid");
+    expect(real.persist).not.toHaveBeenCalled();
   });
 });

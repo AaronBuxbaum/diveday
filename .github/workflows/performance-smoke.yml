@@ -1,0 +1,47 @@
+name: Performance and optimized images
+
+on:
+  schedule:
+    - cron: "35 6 * * 2"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "next.config.ts"
+      - "pnpm-lock.yaml"
+      - "src/components/StoredPhoto.tsx"
+      - "src/app/**/opengraph-image.tsx"
+      - "src/lib/storage/**"
+      - "public/**"
+      - "scripts/e2e-build*.mjs"
+      - "src/features/og-rasterizer/**"
+      - "benchmarks/**"
+      - "playwright.benchmarks.config.ts"
+      - "scripts/perf-budget*"
+      - ".github/workflows/performance-smoke.yml"
+
+concurrency:
+  group: performance-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DIVEDAY_IMAGE_SMOKE: "1"
+      E2E_WORKERS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright-shell
+      - run: pnpm e2e:build
+      - run: pnpm exec playwright test --config playwright.benchmarks.config.ts
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: performance-smoke
+          path: benchmark-results/
+          retention-days: 30

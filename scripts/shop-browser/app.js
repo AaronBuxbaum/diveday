@@ -3,6 +3,7 @@ history.replaceState(null, "", "/");
 const status = document.querySelector("#status");
 const list = document.querySelector("#shops");
 const next = document.querySelector("#next");
+const recovery = document.querySelector("#recovery");
 let cursor = "";
 let query = "";
 async function request(path) {
@@ -13,10 +14,19 @@ async function request(path) {
   if (!response.ok) throw new Error("Request failed");
   return response.json();
 }
+function showRecovery(row, shop, details) {
+  recovery.querySelector("h2").textContent = `Demo access · ${shop.name}`;
+  recovery.querySelector("pre").textContent = `${shop.slug}\n${details}`;
+  row.append(recovery);
+  recovery.hidden = false;
+  recovery.focus({ preventScroll: true });
+  recovery.scrollIntoView({ block: "nearest" });
+  status.textContent = `Demo access ready for ${shop.slug}.`;
+}
 async function browse(after = "") {
   status.textContent = "Loading shops…";
   next.disabled = true;
-  document.querySelector("#recovery").hidden = true;
+  recovery.hidden = true;
   try {
     const data = await request(`/shops?${new URLSearchParams({ q: query, after })}`);
     list.replaceChildren();
@@ -30,6 +40,7 @@ async function browse(after = "") {
       if (shop.is_demo) {
         const button = document.createElement("button");
         button.textContent = "Show demo sign-in";
+        button.className = "secondary";
         button.onclick = async () => {
           try {
             const value = await request(`/demo?${new URLSearchParams({ slug: shop.slug })}`);
@@ -37,9 +48,7 @@ async function browse(after = "") {
               status.textContent = "No eligible sample owner found.";
               return;
             }
-            document.querySelector("#details").textContent =
-              `${shop.slug}\n${value.email}\n${value.password}`;
-            document.querySelector("#recovery").hidden = false;
+            showRecovery(row, shop, `${value.email}\n${value.password}`);
           } catch {
             status.textContent = "Recovery unavailable. Try again.";
           }
@@ -55,9 +64,11 @@ async function browse(after = "") {
               status.textContent = "No eligible sample owner found.";
               return;
             }
-            document.querySelector("#details").textContent =
-              `${value.url}\nExpires: ${value.expiresAt} (UTC)\nSingle use. Copy this link into your email. Generating another invalidates this one.`;
-            document.querySelector("#recovery").hidden = false;
+            showRecovery(
+              row,
+              shop,
+              `${value.url}\nExpires: ${value.expiresAt} (UTC)\nSingle use. Copy this link into your email. Generating another invalidates this one.`,
+            );
           } catch {
             status.textContent = "Link generation unavailable. Try again.";
           } finally {
