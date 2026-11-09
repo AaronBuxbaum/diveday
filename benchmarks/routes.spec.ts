@@ -1,6 +1,7 @@
-import { expect, signedInAsOwner, test } from "../e2e/fixtures";
+import { expect, STUB_BASEMAP_TILE, signedInAsOwner, test } from "../e2e/fixtures";
 import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { measurementNetworkPolicy } from "./network-policy";
 
 signedInAsOwner();
 
@@ -17,6 +18,7 @@ const routes = {
 for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
   test(`${name}: cold/warm document and cached/uncached client navigation baseline`, async ({
     page,
+    workerBaseURL,
   }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const cdp = await page.context().newCDPSession(page);
@@ -39,6 +41,10 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
       ).observe({ type: "longtask", buffered: true });
     });
     let blockedPrefetches = 0;
+    // The shared fixture's external stubs also use Playwright routing. Remove
+    // them only in this measurement, replacing them with equivalent native stubs.
+    await page.context().unrouteAll({ behavior: "wait" });
+    const workerOrigin = new URL(workerBaseURL).origin;
     // Native interception avoids Playwright routing's automatic HTTP-cache disable.
     await cdp.send("Fetch.enable", { patterns: [{ urlPattern: "*", requestStage: "Request" }] });
     cdp.on("Fetch.requestPaused", async ({ requestId, request }) => {
@@ -48,7 +54,28 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
       if (prefetch) {
         blockedPrefetches++;
         await cdp.send("Fetch.failRequest", { requestId, errorReason: "BlockedByClient" });
-      } else await cdp.send("Fetch.continueRequest", { requestId });
+      } else {
+        const policy = measurementNetworkPolicy(request.url, workerOrigin);
+        if (policy === "continue") await cdp.send("Fetch.continueRequest", { requestId });
+        else if (policy === "abort")
+          await cdp.send("Fetch.failRequest", { requestId, errorReason: "BlockedByClient" });
+        else {
+          const contentType =
+            policy === "tile" ? "image/png" : policy === "stylesheet" ? "text/css" : "text/html";
+          const body =
+            policy === "tile"
+              ? STUB_BASEMAP_TILE.toString("base64")
+              : Buffer.from(policy === "frame" ? "<!doctype html><title></title>" : "").toString(
+                  "base64",
+                );
+          await cdp.send("Fetch.fulfillRequest", {
+            requestId,
+            responseCode: 200,
+            responseHeaders: [{ name: "content-type", value: contentType }],
+            body,
+          });
+        }
+      }
     });
     const samples = [];
     for (const mode of [
@@ -98,9 +125,7 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
         await page.waitForURL((url) => url.pathname + url.search === route);
       } else await page.goto(route);
       if (name === "manifest")
-        await expect(
-          page.locator("[data-roll-call-name]").filter({ visible: true }).first(),
-        ).toBeVisible();
+        await expect(page.locator("#roll-call-list").getByRole("button").first()).toBeVisible();
       else if (name === "catalog") {
         await expect(
           page.getByRole("heading", {

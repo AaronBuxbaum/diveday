@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { E2E_FROZEN_CLOCK } from "./servers";
@@ -260,7 +261,48 @@ test("catalog pins load their briefing only after keyboard selection and keep th
 }) => {
   await page.goto("/shop/blue-mantis/dive-sites?view=catalog");
   await waitForMarkerLayer(page);
-  const pin = page.locator(".leaflet-site-marker button").first();
+  // The global overview intentionally contains clusters, not individual pins.
+  // Restore this tab's supported camera to an isolated published fixture before
+  // exercising the selected-only detail flow; cluster navigation is tested above.
+  const geocoded = DIVE_SITE_TEMPLATES.filter(
+    ({ briefing }) => briefing.forecastLatitude != null && briefing.forecastLongitude != null,
+  );
+  const target = geocoded.find(({ slug, briefing }) =>
+    geocoded.every(
+      (other) =>
+        other.slug === slug ||
+        Math.hypot(
+          (other.briefing.forecastLatitude as number) - (briefing.forecastLatitude as number),
+          (other.briefing.forecastLongitude as number) - (briefing.forecastLongitude as number),
+        ) > 0.001,
+    ),
+  );
+  if (!target) throw new Error("No isolated geocoded catalog fixture");
+  await page
+    .locator(".leaflet-container")
+    .getByRole("button", { name: "Zoom in", exact: true })
+    .click();
+  await expect.poll(() => catalogCamera(page)).not.toBeNull();
+  await page.evaluate(
+    (camera) => {
+      const key = Object.keys(sessionStorage).find(
+        (candidate) => candidate.startsWith("diveday:map:") && candidate.endsWith(":catalog"),
+      );
+      if (!key) throw new Error("Catalog camera storage was not initialized");
+      sessionStorage.setItem(key, JSON.stringify(camera));
+    },
+    {
+      latitude: target.briefing.forecastLatitude,
+      longitude: target.briefing.forecastLongitude,
+      zoom: 19,
+    },
+  );
+  await page.reload();
+  await waitForMarkerLayer(page);
+  const pin = page.locator(".leaflet-site-marker").getByRole("button", {
+    name: target.briefing.name,
+    exact: true,
+  });
   await expect(pin).toBeVisible();
   const name = await pin.getAttribute("aria-label");
   expect(name).toBeTruthy();
