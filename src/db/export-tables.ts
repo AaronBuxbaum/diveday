@@ -802,11 +802,22 @@ export async function readTipRows(db: DbExecutor, scope: ExportScope) {
 }
 
 /** How many tips a shop's bundle holds — the settings page's cheap view. */
-export async function countShopTips(db: DbExecutor, shopId: string): Promise<number> {
+export async function countShopTips(
+  db: DbExecutor,
+  shopId: string,
+  exclusion?: SQL,
+): Promise<number> {
   const [row] = await db
     .select({ n: count() })
     .from(bookingCheckouts)
-    .where(and(eq(bookingCheckouts.shopId, shopId), tipCheckout()));
+    .innerJoin(
+      bookingCheckoutBookings,
+      and(
+        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+        eq(bookingCheckoutBookings.shopId, shopId),
+      ),
+    )
+    .where(and(eq(bookingCheckouts.shopId, shopId), tipCheckout(), exclusion));
   return row?.n ?? 0;
 }
 
@@ -815,12 +826,13 @@ export async function countShopScoped(
   db: DbExecutor,
   key: ExportTableKey,
   shopId: string,
+  exclusion?: SQL,
 ): Promise<number> {
   const { table, scope, records } = EXPORT_TABLES[key] as ExportTableRead;
   const [row] = await db
     .select({ n: count() })
     .from(table as never)
-    .where(and(eq(scope.shopColumn, shopId), records));
+    .where(and(eq(scope.shopColumn, shopId), records, exclusion));
   return row?.n ?? 0;
 }
 

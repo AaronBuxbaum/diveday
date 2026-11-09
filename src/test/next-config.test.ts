@@ -26,6 +26,7 @@ type ImageConfig = {
       pathname?: string;
     }[];
     domains?: string[];
+    unoptimized?: boolean;
   };
   assetPrefix?: string;
   outputFileTracingExcludes?: Record<string, string[]>;
@@ -78,6 +79,15 @@ describe("next.config.ts development origin", () => {
 });
 
 describe("next.config.ts images", () => {
+  it("enables real optimization only for the dedicated image smoke profile", async () => {
+    const normal = await loadConfig({ DIVEDAY_E2E: "1", DIVEDAY_IMAGE_SMOKE: "" });
+    expect(normal.images?.unoptimized).toBe(true);
+    const smoke = await loadConfig({ DIVEDAY_E2E: "1", DIVEDAY_IMAGE_SMOKE: "1" });
+    expect(smoke.images?.unoptimized).toBe(false);
+    const production = await loadConfig({ DIVEDAY_E2E: "", DIVEDAY_IMAGE_SMOKE: "" });
+    expect(production.images?.unoptimized).toBe(false);
+  });
+
   /**
    * The finding itself. A pattern is matched by hostname through picomatch, so
    * a `*` anywhere in one is an open image proxy: `/_next/image` downloads,
@@ -218,11 +228,33 @@ describe("next.config.ts outputFileTracingExcludes", () => {
  */
 describe("next.config.ts typescript", () => {
   it("keeps Next's in-build type check for local builds", async () => {
-    const config = await loadConfig({ ...CONFIGURED, VERCEL: "" });
+    const config = await loadConfig({
+      ...CONFIGURED,
+      VERCEL: "",
+      GITHUB_ACTIONS: "",
+      DIVEDAY_E2E: "",
+    });
     expect(
       config.typescript?.ignoreBuildErrors,
       "local `pnpm build` must retain Next's type check",
     ).toBeUndefined();
+  });
+
+  it("retains the authoritative in-build application check for every GitHub E2E build", async () => {
+    const config = await loadConfig({
+      ...CONFIGURED,
+      VERCEL: "",
+      GITHUB_ACTIONS: "true",
+      DIVEDAY_E2E: "1",
+    });
+    expect(config.typescript?.ignoreBuildErrors).toBeUndefined();
+    const ordinary = await loadConfig({
+      ...CONFIGURED,
+      VERCEL: "",
+      GITHUB_ACTIONS: "true",
+      DIVEDAY_E2E: "",
+    });
+    expect(ordinary.typescript?.ignoreBuildErrors).toBeUndefined();
   });
 
   it("skips Next's in-build type check on Vercel", async () => {

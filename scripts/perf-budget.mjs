@@ -36,8 +36,8 @@ import { gzipSync } from "node:zlib";
  * regression it is named after is worse than no budget, because it is read as
  * evidence.
  *
- * Per-route budgets remain out of scope; the shared floor is the largest lever
- * and the easiest to regress. See docs/architecture/performance-budgets.md.
+ * Representative route budgets additionally catch route-local regressions.
+ * Runtime/RSC baselines live in benchmarks/ and are reported separately.
  *
  * With no `.next` at all this prints how to produce one and exits 0, rather
  * than failing a checkout that simply has not built. A `.next` that exists but
@@ -55,6 +55,31 @@ import { gzipSync } from "node:zlib";
  * record was 83.5 KB.
  */
 const SHARED_FIRST_LOAD_BUDGET_KB = 170;
+
+// Exact-head CI baseline and headroom are recorded in performance-audit-implementation.md.
+// Ceil 105% of observed gzip KB to the next 5 KB; shared 170 KB still applies independently.
+export const ROUTE_BUDGETS = {
+  "/shop/[shopSlug]": 295,
+  "/shop/[shopSlug]/trips/[id]/manifest": 260,
+  "/s/[shopSlug]": 240,
+  "/shop/[shopSlug]/dive-sites": 305,
+};
+
+/** Route-local growth must move a budget even if the shared intersection is unchanged. */
+export function routeBudgetResults(routeStats, chunkBytes, budgets = ROUTE_BUDGETS) {
+  return Object.entries(budgets).map(([route, ceilingKb]) => {
+    const entry = routeStats.find((item) => item.route === route);
+    if (!entry?.firstLoadChunkPaths?.length)
+      throw new Error(`perf: no client bundle measured for budgeted route ${route}`);
+    const gzipKb =
+      [...new Set(entry.firstLoadChunkPaths)].reduce((total, chunk) => {
+        const bytes = chunkBytes.get(chunk);
+        if (bytes === undefined) throw new Error(`perf: missing measured chunk ${chunk}`);
+        return total + bytes;
+      }, 0) / 1024;
+    return { route, gzipKb, ceilingKb, over: ceilingKb !== null && gzipKb > ceilingKb };
+  });
+}
 
 const NEXT_DIR = ".next";
 const ROUTE_STATS = path.join(NEXT_DIR, "diagnostics", "route-bundle-stats.json");
@@ -127,6 +152,20 @@ async function main() {
     );
     process.exit(1);
   }
+
+  const chunkBytes = new Map();
+  for (const chunk of new Set(routeStats.flatMap((route) => route.firstLoadChunkPaths ?? []))) {
+    chunkBytes.set(chunk, gzipSync(await readFile(chunk)).length);
+  }
+  const routes = routeBudgetResults(routeStats, chunkBytes);
+  for (const result of routes)
+    console.log(
+      `perf: ${result.route}: ${result.gzipKb.toFixed(1)} KB gzip / ${result.ceilingKb ?? "baseline pending"}`,
+    );
+  if (routes.some((result) => result.over))
+    throw new Error(
+      "Representative route first-load JS budget exceeded; review the route-local dependency instead of increasing the shared ceiling.",
+    );
 
   let totalKb = 0;
   const markedChunks = [];

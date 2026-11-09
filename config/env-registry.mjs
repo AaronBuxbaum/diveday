@@ -1217,6 +1217,27 @@ export const ENV_GROUPS = [
         absent: "the /api/test/* routes are closed in a production runtime",
       },
       {
+        key: "DIVEDAY_TEST_DURATIONS_OUT",
+        from: "harness",
+        targets: NOWHERE,
+        absent: "duration reporter emits no artifact or measurement summary",
+      },
+      {
+        key: "DIVEDAY_TEMPLATE_CACHE_HIT",
+        from: "harness",
+        targets: NOWHERE,
+        absent:
+          "records the fixture cache restore result in CI measurements; absent means no reported hit",
+      },
+      {
+        key: "DIVEDAY_IMAGE_SMOKE",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent:
+          "the normal E2E build keeps image optimization disabled for deterministic screenshots",
+      },
+      {
         key: "DIVEDAY_E2E_SECRET",
         from: "harness",
         targets: NOWHERE,
@@ -1439,6 +1460,37 @@ export const ENV_GROUPS = [
         from: "platform",
         targets: NOWHERE,
         absent: "set by Vercel",
+      },
+      {
+        key: "ImageOS",
+        from: "platform",
+        targets: NOWHERE,
+        absent:
+          "GitHub hosted runner image identity is unavailable; duration observations use local or self-hosted strata",
+      },
+      {
+        key: "CI",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "marks hosted or self-hosted CI duration observations; absent means local weights",
+      },
+      {
+        key: "GITHUB_SHA",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "identifies the source commit of a duration artifact; absent is labeled local",
+      },
+      {
+        key: "GITHUB_RUN_ID",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "identifies a complete CI duration run; absent observations are not calibrated",
+      },
+      {
+        key: "GITHUB_STEP_SUMMARY",
+        from: "platform",
+        targets: NOWHERE,
+        absent: "receives measurement summaries in GitHub Actions; absent prints console only",
       },
       {
         key: "GITHUB_ACTIONS",

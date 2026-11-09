@@ -1,7 +1,7 @@
 // Branch coverage on the safety-critical files may not drop (test review 2026-10-14, decision 6).
 //
 // Not a blanket target: reachability is near 100% for src/lib and src/db, so a whole-tree number
-// would mostly be noise. Eleven files decide whether a diver boards, who may do what, and where
+// would mostly be noise. These files decide whether a diver boards, who may do what, and where
 // money moves; each has a floor in `scripts/coverage-floors.json`, and this refuses a run whose
 // branch coverage on any of them fell below it.
 //
@@ -34,18 +34,59 @@ export const DEFAULT_SUMMARY = "coverage/coverage-summary.json";
 const NOTE =
   'Branch coverage floor (percent) per safety-critical file. A floor may only rise: `node scripts/coverage-floors.mjs --write` banks a rise and refuses a fall; `--absorb "<why>"` records a fall with its reason. See scripts/coverage-floors.mjs.';
 
+function record(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validPercent(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100;
+}
+
+/** Malformed evidence is not an accepted fall, even with --absorb. */
+function numericProblems(floors, current) {
+  const problems = [];
+  if (!record(floors) || !record(current))
+    return ["coverage floors and current values must be objects"];
+  for (const [file, value] of Object.entries(floors)) {
+    if (!file.startsWith("//") && !validPercent(value))
+      problems.push(
+        `${file}: invalid saved coverage floor; expected a finite percentage from 0 to 100`,
+      );
+  }
+  for (const [file, value] of Object.entries(current)) {
+    if (!validPercent(value))
+      problems.push(
+        `${file}: invalid current branch coverage; expected a finite percentage from 0 to 100`,
+      );
+  }
+  return problems;
+}
+
 /**
  * `{ file: branchPct }` from a json-summary, keyed by repository path. The reporter keys by
  * absolute path, and the four shards' runners may not share a checkout path, so each key is
  * cut at its `src/`.
  */
 export function branchCoverage(summary) {
+  if (!record(summary)) throw new Error("coverage summary must be an object");
   const out = {};
   for (const [key, value] of Object.entries(summary)) {
+    const branches = record(value) && record(value.branches) ? value.branches : {};
+    const { covered, total } = branches;
+    if (
+      !Number.isSafeInteger(covered) ||
+      !Number.isSafeInteger(total) ||
+      covered < 0 ||
+      total < 0 ||
+      covered > total
+    ) {
+      throw new Error(
+        `${key}: invalid branch counts; expected safe nonnegative integers with covered <= total`,
+      );
+    }
     if (key === "total") continue;
     const at = key.replaceAll("\\", "/").lastIndexOf("/src/");
     const rel = key.startsWith("src/") ? key : at === -1 ? key : key.slice(at + 1);
-    const { covered, total } = value.branches;
     out[rel] = total === 0 ? 100 : Math.floor((10_000 * covered) / total) / 100;
   }
   return out;
@@ -53,6 +94,8 @@ export function branchCoverage(summary) {
 
 /** What is wrong with `current` against `floors`: `failures` fail the run, `rises` are banked. */
 export function compareFloors(floors, current) {
+  const invalid = numericProblems(floors, current);
+  if (invalid.length > 0) return { failures: invalid, rises: [] };
   const failures = [];
   const rises = [];
   for (const [file, floor] of Object.entries(floors)) {
@@ -78,6 +121,8 @@ export function compareFloors(floors, current) {
 
 /** The floors file `--write` produces, or `{ refused }` when a fall arrives without `absorb`. */
 export function nextFloors(floors, current, absorb) {
+  const invalid = numericProblems(floors, current);
+  if (invalid.length > 0) return { refused: invalid };
   const falls = SAFETY_FILES.filter(
     (file) => file in floors && current[file] !== undefined && current[file] < floors[file],
   );
@@ -117,7 +162,13 @@ function main() {
     return 1;
   }
   const floors = JSON.parse(readFileSync(path.join(root, FLOORS_PATH), "utf8"));
-  const current = branchCoverage(summary);
+  let current;
+  try {
+    current = branchCoverage(summary);
+  } catch (error) {
+    console.error(`coverage-floors: invalid summary: ${error.message}`);
+    return 1;
+  }
 
   if (write) {
     if (absorb === "") {
@@ -126,7 +177,9 @@ function main() {
     }
     const next = nextFloors(floors, current, absorb);
     if (next.refused) {
-      console.error('coverage-floors: refusing to lower a floor without --absorb "<why>":');
+      console.error(
+        'coverage-floors: refusing invalid evidence, missing coverage, or a lower floor without --absorb "<why>":',
+      );
       for (const line of next.refused) console.error(`- ${line}`);
       return 1;
     }

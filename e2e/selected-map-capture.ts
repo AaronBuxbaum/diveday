@@ -8,6 +8,7 @@ export async function mapIsReady(requireSelection = true) {
   const marker = map?.querySelector<HTMLElement>(".leaflet-site-marker button.ring-4");
   const popup = map?.querySelector<HTMLElement>(".leaflet-popup");
   if (!map || !pane || (requireSelection && (!marker || !popup))) return false;
+  if (popup?.querySelector('[aria-busy="true"]')) return false;
   const readyTiles = () => {
     const tiles = [...map.querySelectorAll<HTMLImageElement>(".leaflet-tile")];
     return (

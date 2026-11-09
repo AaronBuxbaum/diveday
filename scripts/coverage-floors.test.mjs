@@ -17,6 +17,50 @@ const all = (pct) => Object.fromEntries(SAFETY_FILES.map((file) => [file, pct]))
 const summaryEntry = (covered, total) => ({ branches: { covered, total, pct: 0 } });
 
 describe("coverage-floors", () => {
+  it.each([
+    {},
+    { covered: 1 },
+    { total: 10 },
+    { covered: null, total: 10 },
+    { covered: "1", total: 10 },
+    { covered: 1, total: "10" },
+    { covered: -1, total: 10 },
+    { covered: 1, total: -10 },
+    { covered: 11, total: 10 },
+    { covered: 0.5, total: 10 },
+    { covered: Number.NaN, total: 10 },
+    { covered: 1, total: Number.POSITIVE_INFINITY },
+    { covered: 1e308, total: 1e308 },
+    { covered: 1, total: 0 },
+  ])("rejects malformed branch counts %j", (branches) => {
+    expect(() => branchCoverage({ "src/lib/readiness.ts": { branches } })).toThrow(
+      /invalid branch counts/,
+    );
+  });
+
+  it.each([null, [], "bad"])("rejects a malformed summary %j", (summary) => {
+    expect(() => branchCoverage(summary)).toThrow(/summary must be an object/);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 101, "90", null])(
+    "refuses malformed current and saved values in check and write mode: %s",
+    (bad) => {
+      const floors = all(80);
+      const current = { ...all(90), "src/lib/readiness.ts": bad };
+      const before = { ...floors };
+      expect(compareFloors(floors, current).failures.join(" ")).toContain("invalid current");
+      expect(nextFloors(floors, current, "approved fall").refused.join(" ")).toContain(
+        "invalid current",
+      );
+      const malformed = { ...floors, "src/lib/readiness.ts": bad };
+      expect(compareFloors(malformed, all(90)).failures.join(" ")).toContain("invalid saved");
+      expect(nextFloors(malformed, all(90), "approved fall").refused.join(" ")).toContain(
+        "invalid saved",
+      );
+      expect(floors).toEqual(before);
+    },
+  );
+
   it("keys the summary by repository path, whatever checkout the shard ran in", () => {
     const current = branchCoverage({
       total: summaryEntry(1, 2),

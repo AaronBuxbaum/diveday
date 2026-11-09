@@ -37,12 +37,18 @@ export function buildFingerprint(root = process.cwd()) {
     "node_modules/next/package.json",
     "scripts/build-service-worker.mjs",
     "scripts/e2e-build.mjs",
+    "scripts/e2e-build-env.mjs",
   ]) {
     if (existsSync(path.join(root, file))) files.push(file);
   }
   const hash = createHash("sha256");
   hash.update(
-    JSON.stringify({ node: process.version, platform: process.platform, arch: process.arch }),
+    JSON.stringify({
+      node: process.version,
+      platform: process.platform,
+      arch: process.arch,
+      imageSmoke: process.env.DIVEDAY_IMAGE_SMOKE === "1",
+    }),
   );
   // Only build-time public values: the e2e profile forces Sentry off. Never emit values.
   for (const key of Object.keys(process.env)

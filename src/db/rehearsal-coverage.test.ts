@@ -241,8 +241,28 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
   },
   {
     file: "src/db/export.ts",
-    holds: "shopRehearsalIds(db, shopId)",
-    why: "the settings page's counts agree with the bundle",
+    holds: "exportCountScope(db, shopId, specification(file), table)",
+    why: "the settings page's counts apply the SQL rehearsal scope",
+  },
+  {
+    file: "src/db/export-count-scope.ts",
+    holds: "rehearsalExportColumns(file.file, file.header)",
+    why: "count SQL uses the same file/header exclusion policy as the bundle",
+  },
+  {
+    file: "src/db/export-count-scope.ts",
+    holds: "eq(trips.shopId, shopId), eq(trips.isRehearsal, true)",
+    why: "the excluded departure set belongs to this shop, including historical rehearsals",
+  },
+  {
+    file: "src/db/export-count-scope.ts",
+    holds: "eq(bookings.shopId, shopId), inArray(bookings.tripId, rehearsalTrips)",
+    why: "the excluded booking set belongs to the same shop and rehearsal departures",
+  },
+  {
+    file: "src/db/export-count-scope.ts",
+    holds: "notInArray(column, excluded)",
+    why: "the shared-policy exclusion is applied to each applicable SQL column",
   },
   {
     file: "src/app/api/cron/trip-series/route.ts",
