@@ -411,7 +411,7 @@ describe("FareHarbor transfer honesty", () => {
           : "importar no equivale a una nueva firma",
       );
       expect(
-        screen.queryByRole("heading", { name: "Comes across", exact: true, hidden: true }),
+        screen.queryByRole("heading", { name: /^Comes across$/, hidden: true }),
       ).not.toBeInTheDocument();
     },
   );

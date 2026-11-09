@@ -795,7 +795,7 @@ export function FareHarborTransferScope({ locale }: { locale: DiverLocale }) {
   return (
     <dl className="mt-6 divide-y divide-border border-y border-border">
       {(["contacts", "bookings", "certs", "evidence", "payments"] as const).map((row) => (
-        <div key={row} className="grid gap-2 py-5 sm:grid-cols-[13rem_1fr] sm:gap-6">
+        <div key={row} className="grid gap-2 py-5 sm:grid-cols-[15rem_1fr] sm:gap-6">
           <dt className="font-semibold">
             {t(`marketing.guides.fareharbor.transferScope.rows.${row}.title`)}
           </dt>
