@@ -16,7 +16,8 @@ export type AccountTokenPurpose =
   | "email_verification"
   | "password_reset"
   | "invite"
-  | "magic_sign_in";
+  | "magic_sign_in"
+  | "demo_sign_in";
 
 /** Low stakes — only confirms the address works, so a generous window. */
 export const EMAIL_VERIFICATION_TTL_MS = 3 * DAY_MS;
@@ -48,3 +49,6 @@ export function inviteLinkPath(token: string): string {
 
 /** Email sign-in is a short-lived authentication proof, independent of resets. */
 export const MAGIC_SIGN_IN_TTL_MS = 15 * 60 * 1000;
+
+/** Operator demo handoffs remain usable until the following day. */
+export const DEMO_SIGN_IN_TTL_MS = DAY_MS;

@@ -21,9 +21,22 @@ by this tool.
 
 The server binds to `127.0.0.1`, not a public interface. Keep the printed launch URL private;
 refreshing after its fragment has been removed requires reopening that URL. Stop with Ctrl+C.
-Use a read-only database credential where available. Every query is additionally executed inside
+Use a read-only database credential where available. Browsing and existing-login queries additionally execute inside
 a read-only transaction. Do not expose this listener through a reverse proxy or public tunnel.
 
 This implementation was developed without production database access, production settings changes,
 real credential creation or sending real emails. Ordinary account email sign-in is a separate
-application flow; the operator browser neither sends nor reveals those links.
+application flow; the operator browser neither sends nor reveals real-account links.
+
+## Email a demo access link
+
+Choose **Generate 24-hour demo link** beside a demo shop. Copy the displayed link into your own
+email. The tool sends no email and stores no recipient identity. The link is single-use, expires
+after 24 hours, and is invalidated by generating a replacement. Opening it shows a confirmation;
+only pressing Continue signs in, with any existing second factor still required. A demo deleted
+before the expiry cannot be opened.
+
+Link generation requires a database credential that can write capabilities; browsing and existing
+sample-login lookup remain read-only. The local private launch URL is for the operator alone; send
+the generated application URL to the recipient. Real shops have no operator-generated access link.
+Ordinary account email sign-in remains at fifteen minutes and goes only to the verified address.

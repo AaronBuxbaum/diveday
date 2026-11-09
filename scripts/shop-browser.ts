@@ -1,4 +1,4 @@
-/** Local operator UI. Possession of an explicit database connection gates launch; never deployed. */
+/** Local operator UI. Existing database access gates launch; only explicit demo-link minting writes. */
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage } from "node:http";
@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import { withExplicitSslMode } from "@/db/connection-string";
 import { demoBypassEnabled } from "@/lib/demo-bypass";
 import { demoCredentials } from "./demo-access";
+import { mintDemoLink } from "./demo-link";
 
 export function authorizedBrowserRequest(
   req: Pick<IncomingMessage, "headers" | "method">,
@@ -67,7 +68,10 @@ export async function startShopBrowser(connectionString: string) {
       }
       const client = await pool.connect();
       try {
-        await client.query("begin transaction isolation level repeatable read read only");
+        const minting = url.pathname === "/demo-link";
+        await client.query(
+          minting ? "begin" : "begin transaction isolation level repeatable read read only",
+        );
         let result: unknown;
         if (url.pathname === "/shops") {
           const query = (url.searchParams.get("q") ?? "").slice(0, 100);
@@ -79,6 +83,9 @@ export async function startShopBrowser(connectionString: string) {
             [query, after],
           );
           result = { rows: rows.slice(0, 50), next: rows.length > 50 ? rows[49].slug : null };
+        } else if (url.pathname === "/demo-link") {
+          result = await mintDemoLink(client, url.searchParams.get("slug") ?? "");
+          await client.query("commit");
         } else if (url.pathname === "/demo") {
           const slug = url.searchParams.get("slug") ?? "";
           result =
@@ -119,7 +126,7 @@ if (import.meta.main) {
     .then((browser) => {
       console.log(`Open this private local URL: ${browser.url}`);
       console.log(
-        "Read-only operator browser. Stop with Ctrl+C. No real-shop sign-in or email action.",
+        "Operator browser. Browsing is read-only; generating a demo link writes its token. Stop with Ctrl+C.",
       );
       for (const signal of ["SIGINT", "SIGTERM"] as const)
         process.once(signal, () => {

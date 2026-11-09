@@ -14,10 +14,10 @@ email or retain the visitor's typed shop name outside its existing cookie.
 
 Offer a local operator browser, launched with an explicit database connection. It binds only to
 loopback, chooses a random port and launch secret, and requires the secret and exact Origin/Host
-for data requests. Every operation runs in a read-only transaction. Search exposes only names,
+for data requests. Browsing and credential lookup use read-only transactions. Explicit demo-link generation writes only token state. Search exposes only names,
 slugs and demo flags, fifty rows per page. Exact demo selection recovers existing public sample
 credentials only after the demo flag and reserved identity namespace pass validation. There is no
-real-account impersonation, credential creation, email action or hosted admin role.
+real-account impersonation, email action or hosted admin role.
 
 Ordinary sign-in gains a separate `magic_sign_in` account capability. It expires after fifteen
 minutes, supersedes its previous link, stores only a random token's digest, and is withdrawn with
@@ -44,3 +44,12 @@ The local URL is private and expires when its process stops. Email sign-in requi
 address; password sign-in and verification remain available. Rotating the auth secret invalidates
 outstanding email bindings. If hosted administration is later required, design explicit platform
 authorization before moving any directory reader into the application.
+
+## Operator demo handoff amendment
+
+At Aaron’s request, the browser can mint a copyable `demo_sign_in` link for manual emailing.
+The expiry is fixed at 24 hours. Its separate capability purpose is hashed, expiring, single-use
+and superseded per account. Both minting and redemption require an active demo sample owner;
+redemption rechecks the demo flag and reserved namespace. Real accounts cannot use this purpose.
+Minting is an explicit write transaction requiring existing database write access. No recipient
+email is retained and no email is sent. Ordinary account sign-in keeps its fifteen-minute expiry.

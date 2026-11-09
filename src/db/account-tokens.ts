@@ -109,6 +109,7 @@ export async function wasAccountTokenConsumed(
  */
 const ACCOUNT_STATUS_SPENDING = {
   invite: eq(userAccounts.status, "invited"),
+  demo_sign_in: eq(userAccounts.status, "active"),
   magic_sign_in: sql`${userAccounts.status} = 'active' and ${userAccounts.emailVerified} = true and ${userAccounts.emailVerifiedAt} is not null`,
   password_reset: eq(userAccounts.status, "active"),
   email_verification: ne(userAccounts.status, "disabled"),
@@ -163,6 +164,7 @@ const ACCOUNT_TOKEN_PURPOSES: readonly AccountTokenPurpose[] = [
   "email_verification",
   "password_reset",
   "magic_sign_in",
+  "demo_sign_in",
   "invite",
 ];
 

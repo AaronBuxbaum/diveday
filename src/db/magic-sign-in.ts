@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { isStaff, type Role } from "@/lib/authz";
+import { demoBypassEnabled } from "@/lib/demo-bypass";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { bindSignInToken, openSignInToken } from "@/lib/magic-sign-in";
 import { checkAccountToken, consumeAccountToken, issueAccountToken } from "./account-tokens";
@@ -10,13 +11,12 @@ import { personRoles, shops, userAccounts } from "./schema";
 import { cancelPendingSignIn, finishFirstFactor, lockAccount } from "./sign-in-challenges";
 import { getAccountContact } from "./user-accounts";
 
-async function eligible(tx: AppTransaction, id: string) {
+async function eligible(tx: AppTransaction, id: string, demo = false) {
   const locked = await lockAccount(tx, id);
   if (
     locked?.account.status !== "active" ||
-    !locked.account.emailVerified ||
-    !locked.account.emailVerifiedAt ||
-    isDemoAccountEmail(locked.account.email) ||
+    (!demo && (!locked.account.emailVerified || !locked.account.emailVerifiedAt)) ||
+    isDemoAccountEmail(locked.account.email) !== demo ||
     !locked.person ||
     locked.person.deletedAt ||
     locked.person.anonymizedAt
@@ -27,14 +27,14 @@ async function eligible(tx: AppTransaction, id: string) {
     .from(shops)
     .where(eq(shops.id, locked.person.shopId))
     .for("share");
-  if (!shop || shop.isDemo) return null;
+  if (!shop || shop.isDemo !== demo || (demo && !demoBypassEnabled())) return null;
   const roles = (
     await tx
       .select({ role: personRoles.role })
       .from(personRoles)
       .where(eq(personRoles.personId, locked.person.id))
   ).map((r) => r.role as Role);
-  if (!isStaff(roles)) return null;
+  if (!isStaff(roles) || (demo && !roles.includes("owner"))) return null;
   return {
     ...locked,
     person: locked.person,
@@ -64,7 +64,7 @@ export async function issueMagicSignIn(db: DbExecutor, email: string) {
     return {
       ...issued,
       contact,
-      token: bindSignInToken(issued.token, live.account.email, live.verifiedAt),
+      token: bindSignInToken(issued.token, live.account.email, live.verifiedAt as Date),
     };
   });
 }
@@ -75,17 +75,22 @@ export async function startMagicSignIn<T>(
   persist: (tx: AppTransaction, verified: VerifiedUser) => Promise<T>,
 ) {
   await cancelPendingSignIn(db, input.previousHandle);
-  if (!/^[A-Za-z0-9_-]{43}\.[A-Za-z0-9_-]{43}$/.test(input.token))
+  const demo = /^[A-Za-z0-9_-]{43}$/.test(input.token);
+  const purpose = demo ? "demo_sign_in" : "magic_sign_in";
+  if (!demo && !/^[A-Za-z0-9_-]{43}\.[A-Za-z0-9_-]{43}$/.test(input.token))
     return { status: "invalid" as const };
   const token = input.token.split(".")[0];
-  const candidate = await checkAccountToken(db, { token, purpose: "magic_sign_in" });
+  const candidate = await checkAccountToken(db, { token, purpose });
   if (!candidate) return { status: "invalid" as const };
   return db.transaction(async (tx) => {
     await boundLockWaits(tx);
-    const live = await eligible(tx, candidate.userAccountId);
-    if (!live || !openSignInToken(input.token, live.account.email, live.verifiedAt))
+    const live = await eligible(tx, candidate.userAccountId, demo);
+    if (
+      !live ||
+      (!demo && !openSignInToken(input.token, live.account.email, live.verifiedAt as Date))
+    )
       return { status: "invalid" as const };
-    const spent = await consumeAccountToken(tx, { token, purpose: "magic_sign_in" });
+    const spent = await consumeAccountToken(tx, { token, purpose });
     if (!spent) return { status: "invalid" as const };
     return finishFirstFactor(
       tx,

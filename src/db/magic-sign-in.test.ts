@@ -144,3 +144,38 @@ describe("magic email sign-in", () => {
     expect((await h.redeem(issued.token)).status).toBe("signed_in");
   });
 });
+
+describe("operator demo handoffs", () => {
+  it("accepts a demo link after fifteen minutes, consumes once, and expires at 24 hours", async () => {
+    const h = await fixture();
+    await h.db.update(shops).set({ isDemo: true }).where(eq(shops.id, h.person.shopId));
+    await h.db
+      .update(userAccounts)
+      .set({ email: "owner@demo.invalid", emailVerified: false, emailVerifiedAt: null })
+      .where(eq(userAccounts.id, h.account.id));
+    const first = await issueAccountToken(h.db, {
+      userAccountId: h.account.id,
+      purpose: "demo_sign_in",
+    });
+    advanceClock(60 * 60 * 1000);
+    expect((await h.redeem(first.token)).status).toBe("signed_in");
+    expect((await h.redeem(first.token)).status).toBe("invalid");
+    const second = await issueAccountToken(h.db, {
+      userAccountId: h.account.id,
+      purpose: "demo_sign_in",
+    });
+    advanceClock(24 * 60 * 60 * 1000);
+    expect((await h.redeem(second.token)).status).toBe("invalid");
+  });
+  it("cannot turn a real owner into a demo sign-in, even with a minted demo token", async () => {
+    const h = await fixture();
+    const token = await issueAccountToken(h.db, {
+      userAccountId: h.account.id,
+      purpose: "demo_sign_in",
+    });
+    expect((await h.redeem(token.token)).status).toBe("invalid");
+    await h.db.update(shops).set({ isDemo: true }).where(eq(shops.id, h.person.shopId));
+    expect((await h.redeem(token.token)).status).toBe("invalid");
+    expect(h.persist).not.toHaveBeenCalled();
+  });
+});

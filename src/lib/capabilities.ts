@@ -1,4 +1,5 @@
 import {
+  DEMO_SIGN_IN_TTL_MS,
   EMAIL_VERIFICATION_TTL_MS,
   INVITE_TTL_MS,
   MAGIC_SIGN_IN_TTL_MS,
@@ -51,6 +52,7 @@ export const CAPABILITY_PURPOSES = [
   "email_verification",
   "password_reset",
   "magic_sign_in",
+  "demo_sign_in",
   "invite",
   "shop_setup",
   "calendar_assignments",
@@ -263,6 +265,15 @@ export const CAPABILITY_POLICY = {
     use: "once",
   },
   // Sets a new password: a credential over account takeover, so an hour.
+  demo_sign_in: {
+    subject: "user_account",
+    scope: "platform",
+    lifetime: "expires",
+    ttlMs: DEMO_SIGN_IN_TTL_MS,
+    reissue: "supersedes",
+    per: "subject",
+    use: "once",
+  },
   magic_sign_in: {
     subject: "user_account",
     scope: "platform",

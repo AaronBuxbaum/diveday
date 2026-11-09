@@ -45,6 +45,26 @@ async function browse(after = "") {
           }
         };
         row.append(button);
+        const generate = document.createElement("button");
+        generate.textContent = "Generate 24-hour demo link";
+        generate.onclick = async () => {
+          generate.disabled = true;
+          try {
+            const value = await request(`/demo-link?${new URLSearchParams({ slug: shop.slug })}`);
+            if (!value) {
+              status.textContent = "No eligible sample owner found.";
+              return;
+            }
+            document.querySelector("#details").textContent =
+              `${value.url}\nExpires: ${value.expiresAt} (UTC)\nSingle use. Copy this link into your email. Generating another invalidates this one.`;
+            document.querySelector("#recovery").hidden = false;
+          } catch {
+            status.textContent = "Link generation unavailable. Try again.";
+          } finally {
+            generate.disabled = false;
+          }
+        };
+        row.append(generate);
       }
       list.append(row);
     }
