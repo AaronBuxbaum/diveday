@@ -16,6 +16,8 @@ pilot-only engineering boundary: UX/design exploration and polish remain wanted.
 claims within [marketing.md](../marketing.md); website work is a discussion, not an included
 custom-build promise.
 
+<a id="18-nothing-from-nowhere-18a18e-shipped-2026-09-07-18f-waiting-on-h-20260907-diveday-move-like-thing-b"></a>
+
 ## Approved work and ownership
 
 - **Group coordination:** expiring holds plus an organizer payment ledger, [#4209](https://github.com/AaronBuxbaum/diveday/issues/4209).
