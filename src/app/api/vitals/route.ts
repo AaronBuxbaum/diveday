@@ -18,7 +18,7 @@ import { clientIp } from "@/lib/request-ip";
  * Where the browser's Core Web Vitals land — DiveDay's own Speed Insights
  * equivalent (ADR 20260806-cloudwatch-rum-and-vitals).
  *
- * One `sendBeacon` per page view arrives here, becomes one structured log line,
+ * Each changed-measurement `sendBeacon` batch becomes one structured log line,
  * and the metric filters in `infra/lib/observability.ts` extract each figure as
  * a CloudWatch metric scored at p75.
  *

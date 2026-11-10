@@ -13,13 +13,11 @@ import { redactCapabilityUrl } from "./observability";
  * the `web-vitals` library it already bundles, so this costs a few hundred
  * bytes rather than a third analytics client on a diver's hotel wifi.
  *
- * **One beacon, at the end.** LCP, FCP and TTFB settle early; INP and CLS keep
- * getting worse right up until the visitor leaves, and the browser re-reports
- * them as they do. Sending each metric as it arrives would mean five requests
- * and five log lines per page view for numbers that are not final yet. So they
- * are collected and sent once, when the page is hidden — which is also when
- * `sendBeacon` exists to be used, being the one transport that survives the
- * page going away.
+ * **One batch per hide, only changed measurements.** Metrics remain pending until
+ * sendBeacon accepts the batch. Resuming a tab can update INP/CLS, and bfcache
+ * restores can start new metric IDs; both must remain observable. An unchanged
+ * measurement is never replayed by a second hide/pagehide event. Acceptance is
+ * browser queueing, not evidence of server delivery.
  *
  * **Attribution is per page load, not per client navigation.** The route is
  * captured when the first metric arrives. LCP, FCP and TTFB genuinely belong to
@@ -32,16 +30,22 @@ import { redactCapabilityUrl } from "./observability";
 const REPORTED = new Set<string>(WEB_VITAL_NAMES);
 
 export function WebVitals() {
-  const values = useRef(new Map<WebVitalName, number>());
+  const values = useRef(new Map<WebVitalName, { id: string; value: number }>());
+  const accepted = useRef(new Map<WebVitalName, { id: string; value: number }>());
   const route = useRef<string | null>(null);
   const navigationType = useRef<string | undefined>(undefined);
-  const sent = useRef(false);
 
   useReportWebVitals((metric) => {
     if (!REPORTED.has(metric.name)) return;
     // Last value wins: the browser re-reports INP and CLS as a visit degrades,
     // and the final figure is the one that describes the visit.
-    values.current.set(metric.name as WebVitalName, metric.value);
+    const name = metric.name as WebVitalName;
+    const previous = accepted.current.get(name);
+    if (previous && previous.id === metric.id && previous.value === metric.value) {
+      values.current.delete(name);
+    } else {
+      values.current.set(name, { id: metric.id, value: metric.value });
+    }
     navigationType.current = metric.navigationType;
     if (route.current === null) {
       route.current = redactCapabilityUrl(`${window.location.pathname}${window.location.search}`);
@@ -50,15 +54,26 @@ export function WebVitals() {
 
   useEffect(() => {
     const send = () => {
-      if (sent.current || values.current.size === 0 || route.current === null) return;
+      if (values.current.size === 0 || route.current === null) return;
       if (typeof navigator.sendBeacon !== "function") return;
-      sent.current = true;
+      const pending = new Map(values.current);
       const body = JSON.stringify({
         url: route.current,
         navigationType: navigationType.current,
-        metrics: [...values.current].map(([name, value]) => ({ name, value })),
+        metrics: [...pending].map(([name, metric]) => ({ name, value: metric.value })),
       });
-      navigator.sendBeacon("/api/vitals", new Blob([body], { type: "application/json" }));
+      try {
+        if (!navigator.sendBeacon("/api/vitals", new Blob([body], { type: "application/json" }))) {
+          return;
+        }
+      } catch {
+        // Keep the batch for the next lifecycle event; telemetry never breaks navigation.
+        return;
+      }
+      for (const [name, metric] of pending) {
+        accepted.current.set(name, metric);
+        values.current.delete(name);
+      }
     };
 
     // `visibilitychange` to hidden is the only event every browser reliably

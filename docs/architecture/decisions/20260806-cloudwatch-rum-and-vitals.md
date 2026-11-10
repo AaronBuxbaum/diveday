@@ -29,15 +29,23 @@ Two different questions are hiding in "Speed Insights, but AWS":
 
 **The numbers come from the browser's own measurements, through DiveDay's own endpoint.**
 `useReportWebVitals` — Next's hook over the `web-vitals` code the framework already bundles, so no
-new browser dependency — collects LCP, INP, CLS, FCP and TTFB and sends **one** `sendBeacon` per
-page view to `/api/vitals`. That becomes one `web_vital.reported` log line, and the metric filters
+new browser dependency — collects LCP, INP, CLS, FCP and TTFB and batches changed measurements
+on hide/pagehide to `/api/vitals`. Each accepted batch becomes one `web_vital.reported` log line, and the metric filters
 in `infra/lib/observability.ts` extract each field as a CloudWatch metric scored at **p75**, the
 statistic Google and Vercel both use because a median hides the slow quarter.
 
-One beacon rather than five: LCP, FCP and TTFB settle early while INP and CLS keep getting worse
-until the visitor leaves, so sending each metric as it arrives means five requests and five log
-lines per page view for numbers that are not final yet. They are collected and sent on
-`visibilitychange`/`pagehide`, which is also the only moment `sendBeacon` exists to be used.
+LCP, FCP and TTFB settle early while INP and CLS can change after a hidden tab resumes. Batch
+pending metrics on `visibilitychange`/`pagehide`; retain a rejected or throwing beacon for the
+next lifecycle event, and acknowledge only browser queue acceptance, not server delivery.
+Deduplicate accepted metric ID/value pairs, so repeated hide events do not repeat unchanged
+measurements, while a bfcache-restored metric ID remains reportable. Route attribution stays
+with the entry page, not soft navigations.
+
+**November 10 correction:** the former once-per-load latch lost resumed measurements and marked
+rejected beacons sent. Repeated changed measurements now contribute separate metric observations.
+Consequently CloudWatch p75 is over reported observations, not a deduplicated final-per-visit
+population; do not describe it as an exact Google/Vercel visit-level equivalent. No new identifying
+session data is collected to reconstruct visits.
 
 **Alarms on the three Core Web Vitals only, at Google's own "good" boundaries** (LCP 2.5s, INP
 200ms, CLS 0.1), over three consecutive hours. FCP and TTFB are collected and graphed because they
