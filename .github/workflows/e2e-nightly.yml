@@ -68,8 +68,8 @@ jobs:
         if: ${{ (inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') }}
         env:
           DIVEDAY_SCROLL_DIAGNOSTIC: "1"
-          E2E_WORKERS: "1"
-        run: pnpm exec playwright test e2e/staff-nav.spec.ts --grep 'a departure opened from a scrolled board' --repeat-each=10 --trace=on
+          E2E_WORKERS: "2"
+        run: pnpm exec playwright test e2e/staff-nav.spec.ts --grep 'a departure opened from a scrolled board' --repeat-each=30 --trace=on
       - name: Preserve diagnostic evidence on pass or failure
         if: ${{ always() && (inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
