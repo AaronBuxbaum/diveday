@@ -67,6 +67,7 @@ export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCover
  * reads the table and fails naming any boolean not listed here.
  */
 export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
+  walletPassesEnabled: "walletPasses",
   taxEnabled: "tax",
   hasBoatDiving: "divingOptions",
   hasShoreDiving: "divingOptions",

@@ -36,7 +36,8 @@
       "stranded-diver-card",
       "thread-anything-changed",
       "thread-prep-current-step"
-    ]
+    ],
+    "e2e": ["wallet-pass.spec.ts"]
   },
   "/ready/[token]/forms": {
     "visual": ["course-form-sign"]

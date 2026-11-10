@@ -1,6 +1,6 @@
 # Nothing from nowhere — six moves that make the interface behave as a thing
 
-- **Status:** Live (its ADR is Proposed, pending H-20260907-diveday-move-like-thing; slices 18a–18d shipped 2026-09-07)
+- **Status:** Shipped (18f built dark 2026-11-10; the ADR still awaits the separate motion calls a and c)
 - **Date:** 2026-09-07
 - **ADR:** [20260907-nothing-from-nowhere](../../../architecture/decisions/20260907-nothing-from-nowhere.md)
 - **Published:** https://claude.ai/code/artifact/6015f01a-ae08-4975-a122-bd270198a86b
@@ -95,7 +95,7 @@ comment, and a test pins the rule.
 | 18c — a row closes its own gap: `SettledRows` on the counter's working queue and its settled group, Undo reversed (the manifest roster still waits on H-20260907-diveday-move-like-thing c) | dropped | shipped, then removed: its last list, the trip's Check-in tab, folded into Divers on 2026-10-05, and the component went with it on 2026-10-12 | — |
 | 18d — the sheet follows the thumb: `useDragSheet` on the dock's More sheet, with the grab handle; the scrim tracks the sheet's travel | dropped | built, never wired to a sheet, and deleted on 2026-10-13 (H-20260815-no-legacy) | — |
 | 18e — the title folds into the bar on a phone: `FoldedPageTitle` portals the page's title into `ShopNav`'s slot, three scroll-driven animations over 120px | shipped | `src/components/chrome/FoldedPageTitle.tsx` | `src/components/chrome/FoldedPageTitle.test.tsx`, `src/components/chrome/chrome.test.ts` |
-| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the PassKit web service and the Google object (H-20260907-diveday-move-like-thing b decided yes 2026-09-07; built dark until the credentials are held; contract in [SPEC.md](SPEC.md)) | open | — | — |
+| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the PassKit web service and the Google object (H-20260907-diveday-move-like-thing b decided yes 2026-09-07; built dark until the credentials are held; contract in [SPEC.md](SPEC.md)) | shipped | `src/features/wallet-pass/index.ts` | `src/features/wallet-pass/rules.test.ts`, `signing.test.ts`, `store.test.ts`, `e2e/wallet-pass.spec.ts` |
 
 **What 18a–18d settled that the drawing left open, and what is still owed:**
 
@@ -123,8 +123,7 @@ comment, and a test pins the rule.
   heading in the page. Measured on a freshly onboarded shop the fold was
   already a fifth applied on arrival; `scroll(root block)` is what the boards
   mean by "the scroll".
-- **18f is unbuilt and unbuildable here**: it waits on H-20260907-diveday-move-like-thing b and on
-  credentials a human holds.
+- **18f shipped dark 2026-11-10 (#4218)**: native generation, updates and erasure are built; credentials remain the human action in #4208. The saved arrival card remains the fallback.
 
 ## Implementing a slice
 

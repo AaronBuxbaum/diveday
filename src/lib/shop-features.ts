@@ -27,6 +27,7 @@
  * because switching it off also has to keep a safety count honest.
  */
 export const SHOP_FEATURES = [
+  "walletPasses",
   "reviews",
   "conservation",
   "coursePulse",
@@ -69,6 +70,7 @@ export const OFF_BY_DECISION: readonly ShopFeature[] = ["seatSoldAlerts"];
 
 /** The `shops` columns behind each feature, as Drizzle names them. */
 export const SHOP_FEATURE_COLUMNS = {
+  walletPasses: "walletPassesEnabled",
   reviews: "reviewsEnabled",
   conservation: "conservationEnabled",
   coursePulse: "coursePulseEnabled",

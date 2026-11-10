@@ -59,6 +59,10 @@
     {
       "path": "/api/cron/pricing-volume",
       "schedule": "8 14,18,22 2,3 * *"
+    },
+    {
+      "path": "/api/cron/wallet-passes",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

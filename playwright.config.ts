@@ -11,6 +11,7 @@ import {
   e2eBaseURL,
   e2ePort,
   e2eServerCommand,
+  e2eWalletEnvironment,
   e2eWorkerIndexes,
 } from "./e2e/servers";
 
@@ -37,6 +38,7 @@ if (process.env.PIXEL_PROBE === "1") {
 //     manual request context.
 const serverEnv = {
   ...process.env,
+  ...e2eWalletEnvironment(),
   // A real, non-loopback public origin so `publicAppUrl()` resolves fleet-wide
   // — see E2E_APP_HOST in e2e/servers.ts for what that unlocks, why nothing
   // needs the hostname to resolve, and why it must match `pnpm e2e:build`.

@@ -24,10 +24,10 @@ custom-build promise.
   Implemented in draft [#4222](https://github.com/AaronBuxbaum/diveday/pull/4222) on top of per-seat
   checkout and seat claims; no new split-payment prerequisite or seat cap. Unmerged work is not
   production activation.
-- **Native Apple/Google Wallet passes:** build dark in [#4218](https://github.com/AaronBuxbaum/diveday/issues/4218);
+- **Native Apple/Google Wallet passes:** implemented dark in [#4218](https://github.com/AaronBuxbaum/diveday/issues/4218);
   owner-controlled accounts and credentials are [#4208](https://github.com/AaronBuxbaum/diveday/issues/4208).
-  The saved HTML arrival card is the fallback, not native Wallet delivery. The approved contract
-  remains [slice 18f](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md).
+  The saved HTML arrival card remains available; credentials still control native activation. The
+  implementation follows [slice 18f](../../design/canvases/20260907-nothing-from-nowhere/SPEC.md).
 - **AWS hosting:** serverless-first OpenNext/CloudFront go/no-go spike, [#4219](https://github.com/AaronBuxbaum/diveday/issues/4219).
   Keep Neon for now. Preview URLs remain an owner question. No production migration or purchase
   follows from the spike; see [the current dossier status](../../architecture/aws-migration-dossier.md#current-direction--2026-11-10).

@@ -965,7 +965,7 @@
     "src/features/recap/store.test.ts": 2141,
     "src/features/reminders/store.test.ts": 936,
     "src/features/reporting/store.test.ts": 1380,
-    "src/features/retention/store.test.ts": 1027,
+    "src/features/retention/store.test.ts": 1022,
     "src/features/reviews/store.test.ts": 997,
     "src/features/seat-claims/store.test.ts": 1524,
     "src/features/staffing-week/rules.test.ts": 1125,

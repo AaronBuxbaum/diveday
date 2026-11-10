@@ -9,6 +9,9 @@
  * its export fate fails the coverage test below.
  */
 export const EXCLUDED_TABLES = [
+  "wallet_passes", // provider object IDs and pass-authentication hashes are infrastructure credentials
+  "wallet_pass_registrations", // device delivery credentials cannot be transferred to another issuer
+
   "retention_prune_state", // global scheduler cursor, no tenant or personal data
   "platform_backup_progress", // one shop-scoped scheduler checkpoint, not portable shop data
   "shop_backup_delivery_claims", // one per-shop scheduler lease, not portable shop data

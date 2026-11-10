@@ -74,6 +74,7 @@ export const FEATURE_ROWS: readonly FeatureRow[] = [
   optional("tips", "bookings", "payments"),
   { id: "tax", group: "bookings", gate: "payments", headingKey: "settings.main.tax.heading" },
   optional("checkoutRecovery", "bookings", "settings"),
+  optional("walletPasses", "bookings", "settings"),
   optional("buddyLinks", "bookings", "settings"),
   optional("selfRegistration", "bookings", "settings"),
   optional("waitlist", "bookings", "settings"),

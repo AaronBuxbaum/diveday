@@ -555,6 +555,11 @@
         "heading": "Conservation records",
         "description": "Record departure cleanup actions and show the measured facts on diver recaps.",
         "label": "Conservation records"
+      },
+      "walletPasses": {
+        "heading": "Wallet passes",
+        "label": "Offer departure passes in Apple and Google Wallet",
+        "description": "The booked departure follows changes to the plan."
       }
     },
     "crewSchedule": {

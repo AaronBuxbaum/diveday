@@ -2350,6 +2350,43 @@ exports.handler = async (event) => {
     // infra/lib/manual-actions.test.ts).
     const availableManualActions: readonly ManualAction[] = [
       {
+        id: "apple-wallet-credentials",
+        title: "Enroll in Apple Developer and create the departure Pass Type ID certificate",
+        category: "Credentials",
+        when: "once before enabling Apple Wallet, and when its certificate expires or is revoked",
+        why: "Apple Developer Program membership has a yearly fee and requires the account owner's acceptance. Only the human account owner can create the Pass Type ID and download its signing identity; this stack never holds their Apple login.",
+        run: [
+          "In the Apple Developer account, enroll in the Developer Program, register pass.app.diveday.departure as a Pass Type ID, and issue its certificate using a locally generated CSR. Export the certificate and private key as PEM; keep the private key in approved secret storage.",
+        ],
+        produces:
+          "APPLE_PASS_TYPE_ID, APPLE_TEAM_ID, APPLE_PASS_CERTIFICATE_PEM, APPLE_PASS_KEY_PEM and, for an encrypted key, APPLE_PASS_KEY_PASSPHRASE.",
+        store:
+          "The named keys in the owner's .env.manual, distributed to Vercel by the existing environment workflow. Never paste key material into GitHub, a PR or a chat.",
+        verify: [
+          "After the owner enables the keys, add a pass on a real iPhone and rehearse a changed departure. The same Pass Type ID certificate authenticates APNs; no separate push credential is needed.",
+        ],
+        note: "#4208 tracks the human action. The saved arrival card remains available. AUTH_SECRET rotation invalidates new-download derivation; an existing installed pass keeps its own hashed credential until it is replaced or erased.",
+      },
+      {
+        id: "google-wallet-credentials",
+        title: "Create a Google Wallet issuer and grant a service account issuer access",
+        category: "Credentials",
+        when: "once before enabling Google Wallet, and on service-account key rotation",
+        why: "The Wallet issuer account, its production approval and the service account's issuer access require the owner's Google Pay and Wallet Console. This stack cannot accept account terms or approve its own issuer.",
+        run: [
+          "Create the issuer in Google Pay and Wallet Console. Create a service account, grant the Wallet Object Issuer role and add its email to the issuer's access list. Create its JSON key and keep it in approved secret storage.",
+        ],
+        produces:
+          "GOOGLE_WALLET_ISSUER_ID and GOOGLE_WALLET_SERVICE_ACCOUNT_JSON (the complete key file as one JSON string).",
+        store:
+          "The two named keys in the owner's .env.manual, distributed to Vercel by the existing environment workflow. Never commit or post the service-account key.",
+        verify: [
+          "After the owner enables the keys, add a departure on an Android device and rehearse a changed departure and cancellation. The generic class is inserted on first use; an existing class is reused.",
+        ],
+        note: "#4208 tracks the human action. Native routes stay disabled until both values exist; the saved arrival card remains available.",
+      },
+
+      {
         id: "aws-cli-admin-profile",
         title: "Install the AWS CLI and configure an administrator profile",
         category: "Prerequisites",
@@ -2994,6 +3031,8 @@ exports.handler = async (event) => {
         // CLI here can create a Stripe product, a portal configuration or the
         // legal entity behind them (ADR 20261007-subscription-billing).
         "stripe-billing-setup",
+        "apple-wallet-credentials",
+        "google-wallet-credentials",
         // Only the root user can delete its own keys, and nothing in this
         // repo may hold a root credential to do it with. A live root key is
         // the one credential that outranks every guard in this stack

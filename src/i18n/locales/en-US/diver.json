@@ -4525,5 +4525,29 @@
     "submitting": "Stopping…",
     "confirmedTitle": "Month-end files stopped",
     "confirmedText": "{shopName} won’t send you month-end files anymore. If the shop adds you again, they start again until you stop them."
+  },
+  "wallet": {
+    "addToWallet": "Add to Wallet",
+    "date": "Date",
+    "dockCall": "Dock call",
+    "departs": "Departs",
+    "boat": "Boat",
+    "diver": "Name",
+    "meetingPlace": "Meeting place",
+    "crew": "Crew",
+    "sites": "Sites",
+    "phone": "Phone",
+    "plan": "This pass updates if the plan changes.",
+    "description": "Your departure",
+    "apple": "Add to Apple Wallet",
+    "google": "Add to Google Wallet",
+    "choose": "Add your departure to Wallet",
+    "stages": {
+      "boarding": "Boarding",
+      "underway": "Underway",
+      "surface": "On the surface",
+      "heading_in": "Heading in",
+      "home": "Home"
+    }
   }
 }

@@ -49,7 +49,7 @@ import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { PayStepBody } from "./_components/PayStepBody";
 import { atShopMoneyLine, payStepLines } from "./_components/pay-step-lines";
 import { resolvePaymentReceipt } from "./_components/payment-receipt";
-import { ReadyBookedShell, ReadyThreadFallback } from "./_components/ReadyBookedShell";
+import * as ReadyCards from "./_components/ReadyBookedShell";
 import { ReadyFitForm } from "./_components/ReadyFitForm";
 import { ReadyThreadPage } from "./_components/ReadyMasthead";
 import { ReadyOfflineCopy } from "./_components/ReadyOfflineCopy";
@@ -157,13 +157,13 @@ export default async function ReadyTokenPage({
   );
   if (!card) return thread;
   return (
-    <ReadyBookedShell
-      card={card}
+    <ReadyCards.ReadyBookedShell
+      card={ReadyCards.withWalletPass(card, token)}
       locale={await requestLocale(card.shop.defaultLocale)}
       dateActions={readyDateActions(dataPromise, partyClaimsPromise)}
     >
       {thread}
-    </ReadyBookedShell>
+    </ReadyCards.ReadyBookedShell>
   );
 }
 
@@ -598,7 +598,7 @@ async function DiverReadinessPage({
       {/* The spine, the arrival card, the packing list and the cancel door
           read seven more things between them, and arrive behind a body-shaped
           fallback rather than holding the opening above them (UX audit #5). */}
-      <Suspense fallback={<ReadyThreadFallback />}>{threadBody}</Suspense>
+      <Suspense fallback={<ReadyCards.ReadyThreadFallback />}>{threadBody}</Suspense>
     </>
   );
 
@@ -606,7 +606,7 @@ async function DiverReadinessPage({
     below
   ) : (
     <ReadyThreadPage
-      data={data}
+      data={ReadyCards.withWalletPass(data, token)}
       locale={locale}
       t={t}
       dateActions={readyDateActions(dataPromise, partyClaimsPromise)}

@@ -18,7 +18,10 @@ import { pendingSignInForRetention } from "../../test/retention-pending-sign-in"
 import { setupRequestForRetention } from "../../test/retention-setup-request";
 import { schemaTableNames } from "../../test/schema-tables";
 import { writeBackupDeliveryClaimFixture } from "../../test/substrate-fixtures/db/retention-backup-delivery-claims.test-support";
-import { OUTSIDE_RETENTION } from "../../test/substrate-fixtures/db/retention-table-classification.test-support";
+import {
+  OUTSIDE_RETENTION,
+  UNCLASSIFIED_HELP,
+} from "../../test/substrate-fixtures/db/retention-table-classification.test-support";
 import { insertShoreAlertStop } from "../../test/substrate-fixtures/db/shore-alert-test-fixtures";
 import { writeTodayReadMark } from "../today-catch-up-retention-fixture/store";
 import {
@@ -28,6 +31,7 @@ import {
   UNBOUNDED_BY_DECISION,
 } from "./rules";
 import { PRUNE_ARMS, pruneExpiredRecords, retentionIdentityMatches } from "./store";
+import { walletRegistrationRetentionFixture } from "./wallet-registration.test-support";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = new Date("2026-08-03T00:00:00.000Z");
@@ -527,6 +531,7 @@ const idOf = <T extends { id: string }>([row]: T[]) => {
 };
 
 const STALE_AND_FRESH = {
+  wallet_pass_registrations: walletRegistrationRetentionFixture,
   stripe_webhook_events: async ({ db }, at) =>
     idOf(
       await db
@@ -920,16 +925,6 @@ describe("every retention window deletes", () => {
     },
   );
 });
-/** What the guard's failure says, so a session reads the rule and not the list. */
-const UNCLASSIFIED_HELP =
-  "a table in src/db/schema/ that retention classifies as nothing. Give it a window " +
-  "in RETENTION_DAYS if it is a trail that should be pruned; add it to " +
-  "UNBOUNDED_BY_DECISION *and write the paragraph in src/features/retention/rules.ts saying who " +
-  "decided it is kept forever and when*, the way gear_service_events and " +
-  "trip_stage_events do; or add it to OUTSIDE_RETENTION if a clock is the wrong " +
-  "instrument for it at all. Adding a bare name to whichever list makes this test go " +
-  "green is the one wrong answer";
-
 /**
  * The three classifications, checked against the names a schema actually has.
  *

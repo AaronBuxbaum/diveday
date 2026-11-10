@@ -4525,5 +4525,29 @@
     "submitting": "Guardando…",
     "confirmedTitle": "Archivos de fin de mes desactivados",
     "confirmedText": "{shopName} ya no te enviará archivos de fin de mes. Si el centro vuelve a agregarte, empezarán de nuevo hasta que los canceles."
+  },
+  "wallet": {
+    "addToWallet": "Agregar a Wallet",
+    "date": "Fecha",
+    "dockCall": "En el muelle",
+    "departs": "Salida",
+    "boat": "Barco",
+    "diver": "Nombre",
+    "meetingPlace": "Punto de encuentro",
+    "crew": "Tripulación",
+    "sites": "Sitios",
+    "phone": "Teléfono",
+    "plan": "Este pase se actualiza si cambia el plan.",
+    "description": "Tu salida",
+    "apple": "Agregar a Apple Wallet",
+    "google": "Agregar a Google Wallet",
+    "choose": "Agrega tu salida a Wallet",
+    "stages": {
+      "boarding": "Embarcando",
+      "underway": "En camino",
+      "surface": "En superficie",
+      "heading_in": "De regreso",
+      "home": "En el muelle"
+    }
   }
 }

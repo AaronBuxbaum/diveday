@@ -555,6 +555,11 @@
         "heading": "Registros de conservación",
         "description": "Registra acciones de limpieza de cada salida y muestra los datos medidos en los resúmenes de los buceadores.",
         "label": "Registros de conservación"
+      },
+      "walletPasses": {
+        "heading": "Pases de Wallet",
+        "label": "Ofrecer pases de salida en Apple y Google Wallet",
+        "description": "La salida reservada se actualiza si cambia el plan."
       }
     },
     "crewSchedule": {

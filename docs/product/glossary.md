@@ -248,6 +248,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Departure clock
 - Departure count
 - Departure log
+- Departure pass
 - Deposit
 - Desk hours
 - Didn't sail

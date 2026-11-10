@@ -7,6 +7,14 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Native departure passes (built dark 2026-11-10)
+
+- Apple and Google Wallet departure snapshots, signed downloads, PassKit updates, ten-minute
+  delivery, cancellation and erasure under [20261110-native-wallet-passes](../architecture/decisions/20261110-native-wallet-passes.md).
+  Incomplete credentials hide every native issue route and link; the saved arrival card remains
+  available. The default-on shop Features switch controls new passes. Human credentials remain
+  [#4208](https://github.com/AaronBuxbaum/diveday/issues/4208).
+
 ## Text contrast measured on the current palette (built 2026-11-10)
 
 Current light/dark text colors are remeasured in #4211. Placeholders and empty date/time masks use

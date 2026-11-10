@@ -105,6 +105,65 @@ const NOWHERE = [];
 
 export const ENV_GROUPS = [
   {
+    seam: "apple-wallet",
+    doc: [
+      "Native departure passes (ADR 20261110-native-wallet-passes). Human credentials tracked in #4208; incomplete credentials leave this platform off.",
+    ],
+    keys: [
+      {
+        key: "APPLE_PASS_TYPE_ID",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "native Apple Wallet stays dark; the saved arrival card remains available",
+      },
+      {
+        key: "APPLE_TEAM_ID",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "native Apple Wallet stays dark; the saved arrival card remains available",
+      },
+      {
+        key: "APPLE_PASS_CERTIFICATE_PEM",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "native Apple Wallet stays dark; the saved arrival card remains available",
+      },
+      {
+        key: "APPLE_PASS_KEY_PEM",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "native Apple Wallet stays dark; the saved arrival card remains available",
+      },
+      {
+        key: "APPLE_PASS_KEY_PASSPHRASE",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "unencrypted Apple signing keys need no passphrase",
+      },
+    ],
+  },
+  {
+    seam: "google-wallet",
+    doc: [
+      "Native departure passes (ADR 20261110-native-wallet-passes). Human credentials tracked in #4208; incomplete credentials leave this platform off.",
+    ],
+    keys: [
+      {
+        key: "GOOGLE_WALLET_ISSUER_ID",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "native Google Wallet stays dark; the saved arrival card remains available",
+      },
+      {
+        key: "GOOGLE_WALLET_SERVICE_ACCOUNT_JSON",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "native Google Wallet stays dark; the saved arrival card remains available",
+      },
+    ],
+  },
+
+  {
     seam: "neon",
     doc: [
       "Production only. Vercel's Neon integration injects these automatically into",
