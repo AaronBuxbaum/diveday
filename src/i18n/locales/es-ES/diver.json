@@ -479,7 +479,10 @@
       "noGate": "Ninguna de estas opciones cambia si puedes reservar."
     },
     "alternativeSameRun": "Próxima fecha con plazas, {date}",
-    "findAnotherTrip": "Buscar otra salida"
+    "findAnotherTrip": "Buscar otra salida",
+    "holdSeats": "Reservar estas plazas",
+    "holdGroup": "Reservar plazas mientras todos pagan",
+    "holdGroupNote": "Cada persona paga desde su enlace en un plazo de 24 horas, o antes de la salida si es más pronto. Las plazas sin pagar vuelven a estar disponibles."
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
@@ -1373,7 +1376,15 @@
     "payingSeat": "Abriendo el pago…",
     "payForSeatNote": "Paga ahora en línea. La plaza sigue siendo suya para reclamar.",
     "seatPaidNotice": "Pago recibido por su plaza. Lo estamos confirmando con tu centro. No tienes que hacer nada más.",
-    "payUnavailable": "No hemos podido abrir la página de pago de esa plaza. Sigue reservada. Inténtalo otra vez o paga en el centro."
+    "payUnavailable": "No hemos podido abrir la página de pago de esa plaza. Sigue reservada. Inténtalo otra vez o paga en el centro.",
+    "paidSummary": "{paid} de {total} con pago o cobertura",
+    "holdUntil": "Paga antes del {when} para conservar esta plaza.",
+    "holdExpired": "La reserva venció. Esta plaza vuelve a estar disponible.",
+    "paymentReceived": "Pago recibido o cubierto",
+    "holdPaymentWindow": "Abre el pago en línea al menos 31 minutos antes del plazo. Después, pide al centro que cobre el pago.",
+    "paymentNeeded": "Pago pendiente",
+    "expiredOrganizerHeading": "Los pagos de tu grupo",
+    "expiredOrganizerBody": "Tu reserva sin pagar venció. Las plazas pagadas de tu grupo siguen reservadas."
   },
   "rental": {
     "ownGear": "Traes tu propio equipo, así que no hace falta alquiler.",

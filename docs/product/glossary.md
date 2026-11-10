@@ -268,6 +268,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Export bundle
 - Feature coverage
 - Fill rate
+- Group hold
 - Held
 - Holds the hull
 - Horizon

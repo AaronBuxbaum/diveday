@@ -5,6 +5,7 @@ import {
 import { TripCrewLine } from "@/app/s/[shopSlug]/trips/[id]/_components/TripCrewLine";
 import { arrivalCardShopOf } from "@/components/arrival-card-facts";
 import { LogEntryPreview } from "@/components/LogEntryPreview";
+import { SubmitButton } from "@/components/SubmitButton";
 import { TripArrivalCard } from "@/components/TripArrivalCard";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { THREAD_FOOT_SECTION_CLASS } from "@/components/thread/ThreadShell";
@@ -29,6 +30,7 @@ import {
   askToMoveAction,
   cancelMyBookingAction,
   payForPartySeatFromReady,
+  payFromReady,
 } from "../booking-actions";
 import { signMinorWaiverAction } from "../party-actions";
 import { CourseMaterials } from "./CourseMaterials";
@@ -152,9 +154,31 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
         {/* A course's learning materials, the same list the confirmation
                 email carried (ADR 20261008-course-learning-materials). */}
         <CourseMaterials data={data} t={t} />
+        {/* A chosen hold needs a payment door even when the trip's boarding
+            checklist does not require payment. Keep that safety checklist unchanged. */}
+        {data.groupHoldUntil &&
+        data.canPay &&
+        !data.identityHeld &&
+        !detail.requirement?.requiresPayment ? (
+          <div className="space-y-3">
+            <p className="text-base text-muted">
+              {t("seatClaim.holdUntil", {
+                when: formatPlannedDateTimeTz(data.groupHoldUntil, locale, detail.shop.timezone),
+              })}
+            </p>
+            <form action={payFromReady.bind(null, token)}>
+              <SubmitButton pendingLabel={t("ready.openingPayment")} className={buttonClass()}>
+                {t("ready.payForTrip")}
+              </SubmitButton>
+            </form>
+          </div>
+        ) : null}
         <PartySection
           locale={locale}
           seats={partySeats}
+          organizerSettled={data.paymentSettled}
+          organizerHoldUntil={data.groupHoldUntil}
+          timeZone={detail.shop.timezone}
           allSet={partyAllSet}
           addSeatAction={data.canAddSeat ? addSeatFromReady.bind(null, token) : null}
           signWaiverAction={data.identityHeld ? undefined : signMinorWaiverAction.bind(null, token)}

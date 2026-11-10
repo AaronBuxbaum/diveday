@@ -958,3 +958,14 @@ At phone width names and slugs stack, long links wrap, and the public sample-log
 secondary to generating a link. Ordinary account email sign-in keeps EntryShell, one primary
 action per step, and a 44px alternative alongside password recovery; the request and confirmation
 screens and operator result were inspected at phone and desktop widths.
+
+
+## Group hold payment ledger
+
+The one idea is who has paid and which seats still need payment. The organizer arrives asking
+how many seats are covered, when unpaid seats expire, and whose link to share; the count leads,
+then names and payment/deadline facts stay on each existing seat row. A separate finance page
+would separate payment from the seats it describes, so the existing party panel keeps the ledger.
+After the organizer's own hold expires, the same names and count remain in the thread's column,
+with a single explanation and a schedule link; no booking controls survive. This is a small state
+of an existing surface rather than a dashboard or new card stack.

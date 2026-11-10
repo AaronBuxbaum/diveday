@@ -35,6 +35,7 @@ import {
   lendAMaskToSomeoneWithNoWaiver,
   returnTheBenchedUnitWithAConcern,
 } from "./gear-states";
+import { seedGroupHoldLedger } from "./group-hold-ledger";
 import { hideEnoughReviewsToWithholdTheRating } from "./hide-enough-reviews-to-withhold-the-rating";
 import { leaveACourseFormUnworded } from "./leave-a-course-form-unworded";
 import { letTheReefBoatsKitLapse } from "./let-the-reef-boats-kit-lapse";
@@ -256,6 +257,10 @@ const FACTS = {
   ),
   todayCatchUp: privateOnly(({ db, shop, now }) => takeASeatSinceTheOwnerLooked(db, shop, now)),
   stripeAccount: ({ db, shop }) => connectStripe(db, shop),
+  groupHoldLedger: privateOnly(({ db, shop, now }) => seedGroupHoldLedger(db, shop.id, now)),
+  expiredGroupHoldLedger: privateOnly(({ db, shop, now }) =>
+    seedGroupHoldLedger(db, shop.id, now, true),
+  ),
   bookingCheckout: withArgs(diverEmailArgs, (context, args) =>
     openABookingCheckout(context.db, context.shop.id, args, requestOf(context).origin, context.now),
   ),

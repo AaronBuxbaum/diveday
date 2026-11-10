@@ -69,6 +69,8 @@ export async function payFromReady(token: string) {
     cancelUrl: `${returnBase}?pay=cancelled`,
     describeLine: (parts) => describeCheckoutLine(t, parts),
   }).catch(() => null);
+  if (outcome && !outcome.ok && outcome.reason === "hold_checkout_window")
+    redirect(`${base(token)}?error=hold-pay`);
   const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
   if (!url) redirect(`${base(token)}?error=pay`);
   redirect(url);
@@ -225,6 +227,8 @@ export async function payForPartySeatFromReady(token: string, formData: FormData
     cancelUrl: `${returnBase}?pay=cancelled#party-seats`,
     describeLine: (parts) => describeCheckoutLine(t, parts),
   }).catch(() => null);
+  if (outcome && !outcome.ok && outcome.reason === "hold_checkout_window")
+    redirect(`${base(token)}?error=hold-pay#party-seats`);
   const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
   if (!url) redirect(`${base(token)}?error=seat-pay#party-seats`);
   redirect(url);

@@ -29,6 +29,7 @@ import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { looksLikeBookingLinkToken } from "@/lib/booking-link-shape";
+import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import {
   declarationWithinPersonBudget,
@@ -37,6 +38,7 @@ import {
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
 import { embedTripPath } from "@/lib/embed-routes";
+import { groupHoldDeadline } from "@/lib/group-holds";
 import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications";
 import { isDiver, parsePartyTypes, rentsKind } from "@/lib/participant-types";
@@ -306,7 +308,11 @@ export async function bookSpot(
   const payAtBookingForGear = Boolean(
     payablePerDiverCentsForGear && canAcceptPayments(stripeAccountForGear) && publicAppUrl(),
   );
-  const offersGearAtCheckout = payAtBookingForGear && hasAnyRentalPricing(shopNow.rentalPricing);
+  const groupHold = fields.groupHold === "on" && partySize > 1 && payAtBookingForGear;
+  const holdUntil =
+    groupHold && tripForGear ? groupHoldDeadline(nowDate(), tripForGear.startsAt) : null;
+  const offersGearAtCheckout =
+    !groupHold && payAtBookingForGear && hasAnyRentalPricing(shopNow.rentalPricing);
   // Nothing to rent on a course whose fee includes the gear (issue #2795): the
   // form offers no box there, so a `gear-N-*` arriving anyway is hand-built and
   // buys nothing, and the student's fit is left for `/ready` to ask.
@@ -406,6 +412,7 @@ export async function bookSpot(
       // how to reach it.
       referralSource,
     })),
+    holdUntil ? { holdUntil } : {},
   ).catch(busyOnLockWait);
   if (outcome === "busy") return { error: t(ERROR_MESSAGE_KEYS.busy) };
   if (!outcome.ok && outcome.reason === "already_booked") {
@@ -592,6 +599,7 @@ export async function bookSpot(
     : redirectCapability
       ? `${readinessLinkPath(redirectCapability.token)}?booked=1`
       : base;
+  if (groupHold) revalidateAndRedirect(base, landing);
   // `tripPromo`/`shopPromo` were already resolved above, before the party was
   // booked (task 20) — an invalid/expired/wrong-scope code now fails the
   // submit itself with a field error, rather than being silently dropped

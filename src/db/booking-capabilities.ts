@@ -1037,6 +1037,46 @@ export async function resolveRevokedBookingCapability(
   return row ?? null;
 }
 
+/** A cancelled organizer retains only its ledger, never booking mutation authority.
+ * Only a readiness link revoked by this exact hold expiry qualifies. A link
+ * revoked earlier for contact correction or erasure must stay dead.
+ */
+export async function resolveExpiredGroupHoldOrganizer(
+  db: DbExecutor,
+  input: { token: string; now?: Date },
+): Promise<{ bookingId: string; shopId: string } | null> {
+  const matches = rowMatchingToken(input.token, "readiness");
+  if (!matches) return null;
+  const [row] = await db
+    .select({ bookingId: bookings.id, shopId: bookings.shopId })
+    .from(bookingCapabilities)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.id, bookingCapabilities.bookingId),
+        eq(bookings.shopId, bookingCapabilities.shopId),
+      ),
+    )
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .where(
+      and(
+        matches,
+        gt(bookingCapabilities.expiresAt, input.now ?? nowDate()),
+        eq(bookings.status, "cancelled"),
+        isNotNull(bookings.groupHoldExpiredAt),
+        eq(bookingCapabilities.revokedAt, bookings.groupHoldExpiredAt),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+        isNull(people.mergedIntoPersonId),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
 /**
  * **Which shop a dead link belonged to, and nothing else.**
  *

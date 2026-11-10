@@ -1,9 +1,10 @@
-import { and, eq, inArray, isNotNull, isNull, like, lt, or, type SQL } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, isNull, like, lt, or, type SQL } from "drizzle-orm";
 import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import type { PaymentOperationIntent, PaymentOperationKind } from "./schema";
 import { bookings, paymentOperationIntents } from "./schema";
+import { seatHeld } from "./trips-queries";
 
 export type StartPaymentOperationInput = {
   shopId: string;
@@ -210,7 +211,14 @@ export async function claimBookingsForCheckout(
     const claimed = await tx
       .update(bookings)
       .set({ pendingCheckoutIntentId: input.intentId })
-      .where(and(inArray(bookings.id, input.bookingIds), isNull(bookings.pendingCheckoutIntentId)))
+      .where(
+        and(
+          inArray(bookings.id, input.bookingIds),
+          seatHeld,
+          isNull(bookings.pendingCheckoutIntentId),
+          or(isNull(bookings.groupHoldUntil), gt(bookings.groupHoldUntil, nowDate())),
+        ),
+      )
       .returning({ id: bookings.id });
 
     if (claimed.length !== input.bookingIds.length) {

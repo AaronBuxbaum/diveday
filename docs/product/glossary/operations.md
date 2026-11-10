@@ -541,6 +541,17 @@
   already checked in) stays, and the `/ready` confirm lists both before the tap. A cancelled seat
   with an address of its own gets its own cancellation notice (`cancelUnclaimedPartySeats`,
   `settleReleasedPartySeats`, batch 6 item 10).
+- **Group hold** — an organizer's explicit reservation of two or more public-booking seats while
+  the party pays per seat. It ends after 24 hours or at departure, whichever comes first. Captured
+  payments (including deposits and partly refunded payments) and an explicit staff waiver keep
+  their seats; unpaid seats are cancelled under the capacity transaction's departure-then-seat
+  locks. An hourly sweep catches up, and the next booking releases due seats before counting
+  capacity. A checkout already in flight is fenced briefly; an abandoned claim cannot reserve
+  capacity forever. A hosted payment page expires no later than the hold; Stripe's minimum
+  session lifetime means a new page cannot open inside the last 31 minutes. The organizer sees
+  paid-or-covered counts and each seat's payment state. If their own unpaid seat expires, their
+  original, still-unexpired link reads only the ledger and authorizes no booking actions. This
+  is the existing booking/payment path, not a separate split-payment or charter concept.
 - **Seat held** — the booking status that counts against a departure's capacity: `booked`, checked
   in or not, and nothing else (`seatIsHeld`, `src/lib/no-show.ts`,
   spelled once as a `where` clause in `seatHeld`, `src/db/trips-queries.ts`). `cancelled` never held

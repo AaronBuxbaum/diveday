@@ -1,0 +1,82 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "583018b2-2f6e-4019-82df-faea7da7fac1",
+  "prevIds": [
+    "4c865cdf-810a-466d-b204-1341e2e424bd",
+    "b4c08b60-046b-4c3a-b8c7-a9fecb52dacb"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "group_hold_until"
+      ],
+      "writes": [
+        "s|col|public.bookings.group_hold_until",
+        "n|col|public.bookings.group_hold_until",
+        "e|col|public.bookings.group_hold_until"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "group_hold_expired_at"
+      ],
+      "writes": [
+        "s|col|public.bookings.group_hold_expired_at",
+        "n|col|public.bookings.group_hold_expired_at",
+        "e|col|public.bookings.group_hold_expired_at"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "group_hold_until",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "group_hold_expired_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

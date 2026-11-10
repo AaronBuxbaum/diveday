@@ -904,11 +904,10 @@ alongside them moved several of these prerequisites.
   water elsewhere gets a referral document generated from N-30's ledger, in the agency's field
   layout; an incoming referral is a course inquiry with the paperwork attached. *Effort:* M.
   *Needs:* domain, H-20260724-certification-levels-agency-rules.
-- **N-32 The organizer's ledger.** The organizer's link shows every seat's state (claimed, signed,
-  paid, ready) with one nudge per person and a group deadline; a group hold ("8 seats until
-  Friday") releases itself when the deadline passes. *Build:* `booking_holds` with expiry, a cron
-  sweep beside minimum-seats, an organizer view on `/claim`. *Effort:* M. *Needs:* owner (H-20261025-bigger-party-right-answer),
-  security.
+- **N-32 The organizer's ledger — delivered 2026-11-10 (#4209).** The organizer's `/ready`
+  panel shows per-seat payment state and a paid-or-covered count. An explicit public group hold
+  releases unpaid seats after 24 hours or at departure, using existing bookings and per-seat
+  checkout rather than a separate split-payment model. See [group-holds.md](group-holds.md).
 - **N-33 The club's Thursday.** A recurring series with a standing organizer and a hold each
   occurrence, for the dive club that takes the same boat monthly. *Effort:* S after N-32.
 - **N-35 The diver's passport.** A diver-held record (which shop verified which card and when, a

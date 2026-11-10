@@ -290,6 +290,8 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
     // export a party of six and get back six unrelated singles.
     { header: "party_lead_booking_id", in: "shop", value: (row) => row.partyLeadBookingId },
     { header: "claimed_at", in: "both", value: (row) => row.claimedAt },
+    { header: "group_hold_until", in: "both", value: (row) => row.groupHoldUntil },
+    { header: "group_hold_expired_at", in: "both", value: (row) => row.groupHoldExpiredAt },
     // Which partner's link brought this diver (issue #1285). A plain
     // fact about the seat, like `claimed_at` above it — a shop that
     // exported its bookings and got them back un-credited would have

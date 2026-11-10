@@ -488,6 +488,8 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
   // back up rather than this section duplicating that state — `MoneyBlock`
   // multiplies the fare by it.
   const [partySize, setPartySize] = useState(1);
+  const [holdChoice, setHoldChoice] = useState(false);
+  const groupHold = Boolean(payAtBooking && partySize > 1 && holdChoice);
   // What each person in the party is coming as, reported up by
   // `BookingPartyFields` the same way the size is. Only read when the
   // departure sells more than diver seats.
@@ -532,7 +534,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
       current[index] === cents ? current : { ...current, [index]: cents },
     );
   }, []);
-  const showGearFields = payAtBooking && hasAnyRentalPricing(rentalPricing);
+  const showGearFields = !groupHold && payAtBooking && hasAnyRentalPricing(rentalPricing);
   const passThroughTotalCents = (passThroughFee?.amountCents ?? 0) * partySize;
   // Shrinking the party leaves a stale subtotal behind for the dropped slot
   // (BookingGearFields unmounts, but its last report stays in state) — sum
@@ -549,13 +551,15 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
     : 0;
   // Sized by the party, not the boat's free seats: one diver booking reads
   // "Book this seat", never "these spots" (fourth UX review item 7, H-20261014-seat-is-the-word).
-  const bookLabel = payAtBooking
-    ? remaining === 1
-      ? t("bookAndPayLastSeat")
-      : t("bookAndPay")
-    : remaining === 1
-      ? t("bookLastSeat")
-      : t("bookSeats", { count: partySize });
+  const bookLabel = groupHold
+    ? t("holdSeats")
+    : payAtBooking
+      ? remaining === 1
+        ? t("bookAndPayLastSeat")
+        : t("bookAndPay")
+      : remaining === 1
+        ? t("bookLastSeat")
+        : t("bookSeats", { count: partySize });
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
     capacityLabelValue.kind === "full"
@@ -687,7 +691,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         ) : null}
         {/* After booking, each diver's `/ready/<token>` link can be used to
             provide dive intent. */}
-        {payAtBooking && offerCodeField ? (
+        {payAtBooking && !groupHold && offerCodeField ? (
           <FieldGrid columns={1} className="max-w-64 border-t border-border pt-4">
             {/* A shop-wide code and a trip-scoped last-minute deal are typed
                   into the same box — the diver has no idea which kind they were
@@ -714,7 +718,20 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         {/* The money, said once, immediately above the button that commits to
             it. Five `text-sm` siblings scattered through this form did this job
             before — see `MoneyBlock`. */}
-        {perDiverPriceCents === null ? null : (
+        {payAtBooking && partySize > 1 ? (
+          <div className="border-t border-border pt-4">
+            <ChoiceRow
+              type="checkbox"
+              name="groupHold"
+              checked={holdChoice}
+              onChange={(event) => setHoldChoice(event.target.checked)}
+            >
+              {t("holdGroup")}
+            </ChoiceRow>
+            {groupHold ? <p className="mt-1 text-base text-muted">{t("holdGroupNote")}</p> : null}
+          </div>
+        ) : null}
+        {perDiverPriceCents === null || groupHold ? null : (
           <MoneyBlock
             context={{
               fareCents: perDiverPriceCents,
@@ -746,14 +763,14 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         )}
         <div className="mt-1">
           <SubmitButton
-            pendingLabel={payAtBooking ? t("headingToPayment") : t("booking")}
+            pendingLabel={payAtBooking && !groupHold ? t("headingToPayment") : t("booking")}
             className={buttonClass({ busy: true })}
           >
             {bookLabel}
           </SubmitButton>
           {/* Explain the external Stripe checkout before submission when
               pay-at-booking is offered. */}
-          {payAtBooking ? (
+          {payAtBooking && !groupHold ? (
             <p className="mt-2 text-xs text-muted">
               {t(payAtBooking === "test-mode" ? "stripeTestModeHint" : "stripeHint")}
             </p>

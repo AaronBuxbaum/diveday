@@ -160,6 +160,8 @@ export async function getBookedCard(
  * acts on.
  */
 export type ReadyPageData = {
+  paymentSettled?: boolean;
+  groupHoldUntil?: Date | null;
   detail: BookingReadinessDetail;
   shop: {
     id: string;
@@ -479,6 +481,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
   const [row] = await db
     .select({
       shopId: bookings.shopId,
+      groupHoldUntil: bookings.groupHoldUntil,
       tripId: bookings.tripId,
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
@@ -844,6 +847,8 @@ export async function getReadyPageData(
     helpRequestsOn: row.helpRequestsOn,
     lunchAboard: row.tripLunchAboard,
     dietaryNote: row.dietaryNote,
+    paymentSettled: settled,
+    groupHoldUntil: row.groupHoldUntil,
     owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
     cancelPreview,
     canCancelBooking,

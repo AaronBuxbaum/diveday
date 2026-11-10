@@ -995,7 +995,6 @@
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 306,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 302,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 305,
-    "src/db/checkouts.ts#startBookingCheckout": 302,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 632,
     "src/db/seed-more-trips.ts#seedMoreTrips": 623,

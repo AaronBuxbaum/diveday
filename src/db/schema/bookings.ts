@@ -461,6 +461,10 @@ export const bookings = pgTable(
      * way the mutual `pending_checkout_intent_id` reference above does.
      */
     partyLeadBookingId: uuid("party_lead_booking_id"),
+    /** Explicit party reservation deadline; settled seats clear it under their payment lock. */
+    groupHoldUntil: timestamp("group_hold_until", { withTimezone: true }),
+    /** An expired unpaid seat remains visible in its organizer’s ledger. */
+    groupHoldExpiredAt: timestamp("group_hold_expired_at", { withTimezone: true }),
     /**
      * When a party member claimed this seat as their own through a
      * `/claim/[token]` link — identity re-pointed to the claimant's person
