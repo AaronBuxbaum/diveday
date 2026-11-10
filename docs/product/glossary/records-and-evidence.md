@@ -296,3 +296,8 @@
   line. No depth, bottom time or gas: those are the diver's own, added in the logbook app that opens it.
   Throttled and `no-store` like every capability door; a dead link, an unopened recap and an unknown format
   are one 404. `src/features/dive-log-export/rules.ts`.
+
+- **Provider quota observation** — an identified provider resource's plan, allowance, reset
+  period and dated source, separate from an owner-selected budget. Neon diagnostics compare
+  identity-preserving project consumption only against matching recent supplied observations;
+  absent evidence stays unknown. Cumulative GiB-months are not instantaneous storage size.

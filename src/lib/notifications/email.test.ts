@@ -472,9 +472,7 @@ describe("usageCeilingAlertEmail (docs ADR 20260806-provider-usage-guardrails)",
     expect(over.subject).toContain("over ceiling");
   });
 
-  it("says what the provider does at the ceiling, in the provider's own terms", () => {
-    // A ceiling that suspends the database and one that adds to an invoice are
-    // not the same 7am email, and the code alone would not tell the reader that.
+  it("distinguishes owner budget thresholds from unverified provider quota consequences", () => {
     const suspends = usageCeilingAlertEmail({
       ...warning,
       ceilingId: "neon_compute",
@@ -484,6 +482,8 @@ describe("usageCeilingAlertEmail (docs ADR 20260806-provider-usage-guardrails)",
       overflow: "suspends",
     });
     expect(suspends.text).toContain("suspends");
+    expect(suspends.text).toContain("owner budget, not a verified provider quota");
+    expect(suspends.text).not.toContain("At the ceiling");
     const drops = usageCeilingAlertEmail({ ...warning, overflow: "drops" });
     expect(drops.text).toContain("discards");
   });

@@ -75,10 +75,13 @@ describe("cost-report", () => {
   it("carries mocked live readings with their window, units, scope and verification limits", async () => {
     const now = new Date("2026-11-10T12:00:00Z");
     const collect = vi.fn().mockResolvedValue({
-      vercel_spend: { status: "measured", value: 12.5 },
-      neon_compute: { status: "measured", value: 95 },
-      neon_storage: { status: "unavailable", reason: "network_error" },
-      neon_egress: { status: "not_configured" },
+      samples: {
+        vercel_spend: { status: "measured", value: 12.5 },
+        neon_compute: { status: "measured", value: 95 },
+        neon_storage: { status: "unavailable", reason: "network_error" },
+        neon_egress: { status: "not_configured" },
+      },
+      neonProjects: [],
     });
     const report = await generateLiveCostReport({}, { now, collect });
     expect(collect).toHaveBeenCalledExactlyOnceWith({ env: {}, now, fetcher: undefined });
@@ -111,7 +114,12 @@ describe("cost-report", () => {
   it("fails closed for missing, invalid and failed readings", async () => {
     const invalid = await generateLiveCostReport(
       {},
-      { collect: async () => ({ vercel_spend: { status: "measured", value: NaN } }) },
+      {
+        collect: async () => ({
+          samples: { vercel_spend: { status: "measured", value: NaN } },
+          neonProjects: [],
+        }),
+      },
     );
     expect(invalid.measurements[0]).toMatchObject({
       status: "unavailable",
@@ -140,6 +148,72 @@ describe("cost-report", () => {
     const report = await generateLiveCostReport({}, { fetcher });
     expect(report.measurements.every((m) => m.status === "not_configured")).toBe(true);
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("reports actual per-project observations against supplied evidence without a second probe", async () => {
+    const now = new Date("2026-11-10T12:00:00Z");
+    const fetcher = vi.fn(async () =>
+      Response.json({
+        projects: [
+          {
+            project_id: "production",
+            periods: [
+              {
+                consumption: [
+                  {
+                    timeframe_start: "2026-11-01T00:00:00Z",
+                    timeframe_end: "2026-12-01T00:00:00Z",
+                    metrics: { compute_unit_seconds: 95 * 3_600 },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            project_id: "preview",
+            periods: [
+              {
+                consumption: [
+                  {
+                    timeframe_start: "2026-11-01T00:00:00Z",
+                    timeframe_end: "2026-12-01T00:00:00Z",
+                    metrics: { compute_unit_seconds: 2 * 3_600 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const report = await generateLiveCostReport(
+      { USAGE_NEON_API_KEY: "test", USAGE_NEON_ORG_ID: "test" },
+      {
+        now,
+        fetcher,
+        quotaEvidence: [
+          {
+            projectId: "production",
+            plan: "test plan",
+            source: "test observation",
+            verifiedAt: now.toISOString(),
+            periodStart: "2026-11-01T00:00:00Z",
+            periodEnd: "2026-12-01T00:00:00Z",
+            computeLimitHours: 100,
+          },
+        ],
+      },
+    );
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(report.projectQuotas[0]).toMatchObject({
+      compute: { usedHours: 95, limitHours: 100, level: "warn" },
+    });
+    expect(report.projectQuotas[1]).toMatchObject({
+      status: "unknown",
+      reason: "plan_quota_unknown",
+    });
+    expect(report.quotaEvidenceSource).toBe("operator_supplied_not_verified_by_this_report");
+    expect(renderCliReport(report)).toContain("evaluated_against_supplied_account_evidence");
   });
 
   it("keeps source topology claims tied to the current implementation", () => {

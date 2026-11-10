@@ -125,10 +125,9 @@ export function generateCostReport(env = getEnvironment(), { now = new Date() } 
   };
 }
 
-async function loadCollector() {
+async function loadUsageModule() {
   const { require: tsRequire } = await import("tsx/cjs/api");
-  const { collectUsageSamples } = tsRequire("../src/features/usage/index.ts", import.meta.url);
-  return collectUsageSamples;
+  return tsRequire("../src/features/usage/index.ts", import.meta.url);
 }
 
 const MEASUREMENT_SOURCES = {
@@ -166,15 +165,20 @@ const MEASUREMENT_SOURCES = {
 /** Opt-in reuse of the cron's collectors; missing or failed readings never become zero. */
 export async function generateLiveCostReport(
   env = getEnvironment(),
-  { now = new Date(), collect, fetcher } = {},
+  { now = new Date(), collect, fetcher, quotaEvidence = [] } = {},
 ) {
   const report = generateCostReport(env, { now });
-  const collector = collect ?? (await loadCollector());
+  const usage = await loadUsageModule();
+  const collector = collect ?? usage.collectUsageEvidence;
   let samples;
+  let neonProjects;
   try {
-    samples = await collector({ env, now, fetcher });
+    const evidence = await collector({ env, now, fetcher });
+    samples = evidence.samples ?? {};
+    neonProjects = evidence.neonProjects ?? [];
   } catch {
     samples = {};
+    neonProjects = [];
   }
   const period = {
     start: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
@@ -182,6 +186,8 @@ export async function generateLiveCostReport(
     kind: "requested_utc_calendar_month_not_invoice_period",
   };
   report.mode = "live_probes";
+  report.projectQuotas = usage.evaluateNeonProjectQuotas(neonProjects, quotaEvidence, now);
+  report.quotaEvidenceSource = "operator_supplied_not_verified_by_this_report";
   report.measurements = Object.entries(MEASUREMENT_SOURCES).map(([metric, provenance]) => {
     const sample = samples[metric] ?? { status: "unavailable", reason: "missing_sample" };
     const valid =
@@ -218,6 +224,10 @@ export function renderMarkdownReport(report) {
             `- ${m.metric}: ${m.status}${m.status === "measured" ? ` ${m.value} ${m.unit}` : ` (${m.reason ?? m.status})`}; source: ${m.source}; scope: ${m.scope}; plan: ${m.plan}; requested window: ${m.period.start} to ${m.period.endExclusive} exclusive; requested at: ${m.requestedAt}; currency verification: ${m.currencyVerification ?? "not a money metric"}; last verified: unknown.`,
         )
       : ["No live probes requested."]),
+    "## Project quota diagnostics (supplied account evidence, not deployment verification)",
+    ...(report.projectQuotas ?? []).map(
+      (quota) => `- ${quota.projectId ?? "unknown project"}: ${JSON.stringify(quota)}`,
+    ),
     "## Historical evidence (not a current bill or fixed floor)",
     ...report.historicalEvidence.map(
       (h) =>
@@ -239,7 +249,21 @@ export function renderCliReport(report) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const report = args.includes("--live") ? await generateLiveCostReport() : generateCostReport();
+  const evidenceIndex = args.indexOf("--quota-evidence");
+  let quotaEvidence = [];
+  if (evidenceIndex !== -1) {
+    if (
+      !args.includes("--live") ||
+      !args[evidenceIndex + 1] ||
+      args[evidenceIndex + 1].startsWith("--")
+    ) {
+      throw new Error("--quota-evidence requires --live and a JSON file path");
+    }
+    quotaEvidence = JSON.parse(readFileSync(args[evidenceIndex + 1], "utf8"));
+  }
+  const report = args.includes("--live")
+    ? await generateLiveCostReport(undefined, { quotaEvidence })
+    : generateCostReport();
   if (args.includes("--json")) console.log(JSON.stringify(report, null, 2));
   else if (args.includes("--markdown")) console.log(renderMarkdownReport(report));
   else console.log(renderCliReport(report));
