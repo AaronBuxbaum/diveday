@@ -107,6 +107,55 @@ describe("deferSentry", () => {
     expect(h.sdk.captureException).toHaveBeenCalledTimes(20);
   });
 
+  it("starts and initializes the SDK before reporting a root error, even before idle", async () => {
+    const h = harness();
+    const order: string[] = [];
+    h.sdk.init.mockImplementation(() => order.push("init"));
+    h.sdk.captureException.mockImplementation(() => order.push("capture"));
+    const load = vi.fn(async () => h.sdk);
+    const reporter = deferSentry({
+      load,
+      init: (sdk) => sdk.init({}),
+      target: h.target,
+      whenIdle: h.whenIdle,
+    });
+    const error = new Error("root render failed");
+    reporter.captureException(error);
+    await vi.waitFor(() => expect(h.sdk.captureException).toHaveBeenCalledWith(error));
+    expect(order).toEqual(["init", "capture"]);
+    h.idle();
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps reporter failures from becoming unhandled rejections", async () => {
+    const h = harness();
+    const reporter = deferSentry({
+      load: (): Promise<SentryBrowserSdk> => Promise.reject(new Error("blocked")),
+      init: (sdk) => sdk.init({}),
+      target: h.target,
+      whenIdle: h.whenIdle,
+    });
+    reporter.captureException(new Error("root render failed"));
+    await vi.waitFor(() => expect(h.listeners.get("error")?.size ?? 0).toBe(0));
+  });
+
+  it("continues after a capture failure and reports later errors", async () => {
+    const h = harness();
+    h.sdk.captureException.mockImplementationOnce(() => {
+      throw new Error("capture failed");
+    });
+    const reporter = deferSentry({
+      load: async () => h.sdk,
+      init: (sdk) => sdk.init({}),
+      target: h.target,
+      whenIdle: h.whenIdle,
+    });
+    reporter.captureException(new Error("first"));
+    const second = new Error("second");
+    reporter.captureException(second);
+    await vi.waitFor(() => expect(h.sdk.captureException).toHaveBeenCalledWith(second));
+  });
+
   it("forwards a navigation only once the SDK is there", async () => {
     const h = harness();
     const deferred = deferSentry({

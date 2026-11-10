@@ -39,7 +39,11 @@ export default function GlobalError({
   const stale = isStaleDeployError(error);
   useEffect(() => {
     if (!stale) {
-      import("@sentry/nextjs").then(({ captureException }) => captureException(error));
+      void import("./sentry-client")
+        .then(({ browserSentry }) => browserSentry?.captureException(error))
+        .catch(() => {
+          // The fallback must still work if telemetry cannot load.
+        });
       return;
     }
     try {

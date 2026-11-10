@@ -11,8 +11,9 @@ import type * as SentrySdk from "@sentry/nextjs";
  * thrown, and two listeners do that. Once the page is idle the SDK loads,
  * initialises (installing its own global handlers), and is handed the errors
  * that arrived before it, marked unhandled as its own handlers would have
- * marked them. A load that fails (an extension blocking the chunk) lets the
- * page go and reports nothing: a broken reporter must never break a page.
+ * marked them. An explicit root-boundary report starts loading immediately
+ * and waits for initialization. A load that fails (an extension blocking the
+ * chunk) lets the page go: a broken reporter must never break a page.
  *
  * Framework-free and handed its `window`, its loader and its idle scheduler,
  * so the test drives every step.
@@ -35,8 +36,11 @@ export function deferSentry<Sdk extends SentryBrowserSdk>(options: {
     removeEventListener: (type: string, listener: Listener) => void;
   };
   whenIdle: (run: () => void) => void;
-}): { onRouterTransitionStart: (href: string, navigationType: string) => void } {
-  const early: Array<{ error: unknown; type: "onerror" | "onunhandledrejection" }> = [];
+}): {
+  captureException: (error: unknown) => void;
+  onRouterTransitionStart: (href: string, navigationType: string) => void;
+} {
+  const early: Array<{ error: unknown; type?: "onerror" | "onunhandledrejection" }> = [];
   const remember = (error: unknown, type: "onerror" | "onunhandledrejection") => {
     if (early.length < EARLY_ERROR_LIMIT) early.push({ error, type });
   };
@@ -55,24 +59,44 @@ export function deferSentry<Sdk extends SentryBrowserSdk>(options: {
   };
 
   let loaded: Sdk | undefined;
-  options.whenIdle(() => {
-    options.load().then(
-      (sdk) => {
+  let starting = false;
+  const capture = (sdk: Sdk, error: unknown, type?: "onerror" | "onunhandledrejection") => {
+    try {
+      if (type) sdk.captureException(error, { mechanism: { type, handled: false } });
+      else sdk.captureException(error);
+    } catch {
+      // A failed reporter must not break the error fallback or other reports.
+    }
+  };
+  const start = () => {
+    if (starting || loaded) return;
+    starting = true;
+    void Promise.resolve()
+      .then(options.load)
+      .then((sdk) => {
         options.init(sdk);
         letGo();
         loaded = sdk;
-        for (const { error, type } of early.splice(0)) {
-          sdk.captureException(error, { mechanism: { type, handled: false } });
-        }
-      },
-      () => {
+        for (const { error, type } of early.splice(0)) capture(sdk, error, type);
+      })
+      .catch(() => {
+        starting = false;
         letGo();
         early.length = 0;
-      },
-    );
-  });
+      });
+  };
+  options.whenIdle(start);
 
   return {
+    captureException(error) {
+      if (loaded) capture(loaded, error);
+      else {
+        // Keep the explicit root error even if a noisy page filled the buffer.
+        if (early.length === EARLY_ERROR_LIMIT) early.shift();
+        early.push({ error });
+        start();
+      }
+    },
     onRouterTransitionStart(href, navigationType) {
       loaded?.captureRouterTransitionStart(href, navigationType);
     },
