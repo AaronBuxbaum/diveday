@@ -165,6 +165,85 @@ test.describe("owner", () => {
     ).toBeVisible();
   });
 
+  test("departure money and waiver facts meet the critical-text floor", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/reports");
+    const ledger = page.getByRole("region", { name: "Trips this month" });
+    const money = ledger.getByText(/^\$[\d,.]+$/).first();
+    const waiver = ledger.getByText(/^(All waivers in|\d+ waivers? to collect)$/).first();
+    await expect(money).toBeVisible();
+    await expect(waiver).toBeVisible();
+    for (const fact of [money, waiver]) {
+      expect(
+        await fact.evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize)),
+      ).toBeGreaterThanOrEqual(16);
+    }
+  });
+
+  test(
+    "long departure facts wrap without losing the row door",
+    { tag: READ_ONLY },
+    async ({ page }, testInfo) => {
+      // Stress the real row geometry with values longer than the demo data. This
+      // changes only text in the browser, not report arithmetic or waiver state.
+      for (const locale of ["en-US", "es-ES"] as const) {
+        await page.goto("/shop/blue-mantis/reports");
+        await page
+          .context()
+          .addCookies([{ name: "diveday_locale", value: locale, url: page.url() }]);
+        await page.reload();
+        const copy = staffTranslator(locale);
+        const ledger = page.getByRole("region", { name: copy("reports.tripsThisMonth") });
+        const outstanding = ledger
+          .getByText(copy("reports.row.waiversToCollect", { count: 1 }), { exact: true })
+          .first();
+        await expect(outstanding).toBeVisible();
+        await outstanding.locator("xpath=ancestor::li").evaluate((node) => {
+          node.setAttribute("data-stress-row", "");
+        });
+        const row = ledger.locator("[data-stress-row]");
+        const waiver = row.locator("span.text-warning-strong");
+        const money = row.locator("span.text-foreground").first();
+        await expect(money).toBeVisible();
+        await waiver.evaluate(
+          (node, text) => {
+            node.textContent = text;
+          },
+          copy("reports.row.waiversToCollect", { count: 12 }),
+        );
+        await money.evaluate(
+          (node, text) => {
+            node.textContent = text;
+          },
+          locale === "es-ES" ? "1.234.567,89 US$" : "$1,234,567.89",
+        );
+        await expect(waiver).toHaveText(copy("reports.row.waiversToCollect", { count: 12 }));
+        for (const width of [390, 1280, 640]) {
+          // 640 CSS pixels represents the desktop's 1280px viewport at 200% zoom.
+          await page.setViewportSize({ width, height: 844 });
+          for (const fact of [money, waiver]) {
+            const fits = await fact.evaluate((node) => {
+              const box = node.getBoundingClientRect();
+              return (
+                box.left >= 0 &&
+                box.right <= document.documentElement.clientWidth &&
+                node.scrollWidth <= node.clientWidth
+              );
+            });
+            expect(fits, `${locale} ${width}px fact stays within its column and viewport`).toBe(
+              true,
+            );
+          }
+          await expect(row.getByRole("link").first()).toHaveAttribute("href", /\/trips\//);
+          await row.scrollIntoViewIfNeeded();
+          await page.evaluate(() => window.scrollBy(0, 300));
+          await row.screenshot({ path: testInfo.outputPath(`ledger-${locale}-${width}.png`) });
+        }
+      }
+    },
+  );
+
   test("downloads this month's report as a CSV, distinct from the full-shop export", {
     tag: READ_ONLY,
   }, async ({ page, request }) => {

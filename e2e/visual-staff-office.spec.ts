@@ -4,6 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { monthLabel } from "../src/lib/calendar";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow, openBookingActions, openRosterDetails, seededTripId } from "./helpers";
@@ -16,6 +17,7 @@ import {
   diverCopy,
   installVisualBuildGuard,
   REEF_TRIP,
+  SPANISH,
   SURFACE_TIMEOUT_MS,
   staffCopy,
   VISUAL_STEP_BOUNDS,
@@ -169,6 +171,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
         await capture(page, "reports", scheme);
+      });
+
+      test.describe("reports in Spanish", () => {
+        test.use({ locale: SPANISH });
+
+        test(`the departure ledger reads in Spanish (${scheme})`, async ({ page }) => {
+          const copy = staffTranslator(SPANISH);
+          await page.goto("/shop/blue-mantis/reports");
+          await page.getByRole("region", { name: copy("reports.tripsThisMonth") }).waitFor();
+          await capture(page, "reports", scheme, { locale: SPANISH });
+        });
       });
 
       test(`imported payment history keeps its report review door visible (${scheme})`, async ({
