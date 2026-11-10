@@ -28,7 +28,13 @@ export function FactorManagementSection({
   return (
     <SectionCard
       title={t("settings.security.factorManagement.heading")}
-      description={t("settings.security.factorManagement.description")}
+      description={t(
+        hasPasskeys
+          ? hasTotp
+            ? "settings.security.factorManagement.bothDescription"
+            : "settings.security.factorManagement.passkeyDescription"
+          : "settings.security.factorManagement.codeDescription",
+      )}
     >
       <div className="space-y-4">
         {hasPasskeys ? (

@@ -8,6 +8,7 @@ import {
   deletePasskeyAction,
   renamePasskeyAction,
 } from "@/app/actions/passkeys";
+import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import { browserSupportsPasskeys } from "@/features/passkeys";
@@ -127,7 +128,7 @@ export function PasskeySettings({
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted">{words.empty}</p>
+        <EmptyState title={words.empty} titleAs="h3" nested icon={false} />
       )}
       {supported ? (
         <form

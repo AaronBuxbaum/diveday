@@ -1312,7 +1312,10 @@
     },
     "factorManagement": {
       "heading": "Verify to change sign-in methods",
-      "description": "Use an existing passkey, authenticator code or your current password before adding or deleting a sign-in method. Verification lasts five minutes in this browser.",
+      "description": "Verify your identity before adding or deleting a sign-in method. Verification lasts five minutes in this browser.",
+      "bothDescription": "Use an existing passkey, authenticator code or your current password before adding or deleting a sign-in method. Verification lasts five minutes in this browser.",
+      "passkeyDescription": "Use an existing passkey or your current password before adding or deleting a sign-in method. Verification lasts five minutes in this browser.",
+      "codeDescription": "Use an authenticator code or your current password before adding or deleting a sign-in method. Verification lasts five minutes in this browser.",
       "verified": "Sign-in method changes are verified for five minutes in this browser.",
       "invalid": "That password was not accepted. Try again or reset your password.",
       "password": "Current password",

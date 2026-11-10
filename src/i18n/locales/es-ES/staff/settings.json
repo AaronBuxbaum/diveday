@@ -1312,7 +1312,10 @@
     },
     "factorManagement": {
       "heading": "Verifica para cambiar cómo entras",
-      "description": "Usa una clave de acceso existente, un código del autenticador o tu contraseña actual antes de agregar o eliminar un método de acceso. La verificación dura cinco minutos en este navegador.",
+      "description": "Verifica tu identidad antes de agregar o eliminar un método de acceso. La verificación dura cinco minutos en este navegador.",
+      "bothDescription": "Usa una clave de acceso existente, un código del autenticador o tu contraseña actual antes de agregar o eliminar un método de acceso. La verificación dura cinco minutos en este navegador.",
+      "passkeyDescription": "Usa una clave de acceso existente o tu contraseña actual antes de agregar o eliminar un método de acceso. La verificación dura cinco minutos en este navegador.",
+      "codeDescription": "Usa un código del autenticador o tu contraseña actual antes de agregar o eliminar un método de acceso. La verificación dura cinco minutos en este navegador.",
       "verified": "Puedes cambiar tus métodos de acceso durante cinco minutos en este navegador.",
       "invalid": "No se aceptó esa contraseña. Inténtalo de nuevo o restablécela.",
       "password": "Contraseña actual",
