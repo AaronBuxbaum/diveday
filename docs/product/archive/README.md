@@ -26,6 +26,12 @@ The [idea coverage record](doc-idea-coverage-20261110.md) accounts for the broad
 three recovered device slices, smaller research details and historical completion evidence.
 It preserves the distinction between inventory, owner decisions and an implementation queue.
 
+## Engineering completion evidence
+
+The [November 10 engineering follow-up record](engineering-followups-20261110.md) distinguishes
+implemented export bounds, repeated-query removal and documentation corrections from unmeasured
+production outcomes and larger residual work.
+
 ## Retained snapshots
 
 - [Visual polish execution record](visual-polish-plan-20261026.md): all 85 proposals dispositioned;
