@@ -25,6 +25,12 @@ function vercelCrons(): Array<{ path: string; schedule: string }> {
   return JSON.parse(raw).crons;
 }
 
+// SPEC18f explicitly requires a ten-minute Wallet update. Every other deployed
+// schedule remains subject to the fixed-minute, single-wake constraints below.
+const INDEPENDENT_CADENCES = new Map([["/api/cron/wallet-passes", "*/10 * * * *"]]);
+const singleWakeCrons = (crons = vercelCrons()) =>
+  crons.filter((cron) => !INDEPENDENT_CADENCES.has(cron.path));
+
 describe("the daily tick", () => {
   it("matches the daily dietary sweep and preserves weekly table retention", () => {
     expect(
@@ -87,8 +93,8 @@ describe("the daily tick", () => {
    * against the pooler at one second. The assertion holds both: one pass to a
    * minute, and no gap of five minutes between one hourly pass and the next.
    */
-  it("keeps the hourly passes one to a minute, with no five-minute gap between them", () => {
-    const hourlyMinutes = vercelCrons()
+  it("keeps ordinary hourly passes one to a minute, with no five-minute gap between them", () => {
+    const hourlyMinutes = singleWakeCrons()
       .filter((cron) => cron.schedule.split(" ")[1] === "*")
       .flatMap((cron) => cron.schedule.split(" ")[0].split(","))
       .map(Number);
@@ -103,15 +109,15 @@ describe("the daily tick", () => {
 
   /**
    * **The dailies and the nightlies ride the same wake.** The assertion above
-   * sees hourlies only; every entry, whatever its cadence, takes a minute
+   * sees hourlies only; every ordinary single-wake entry takes a minute
    * nothing else in its hour fires on, and every minute sits within five of the
    * one before it from `:00`, so an hour wakes the compute once.
    */
-  it("gives every pass in an hour its own minute, all inside one wake", () => {
+  it("gives every single-wake pass in an hour its own minute, all inside one wake", () => {
     const hoursOf = (field: string) =>
       field === "*" ? Array.from({ length: 24 }, (_, hour) => hour) : field.split(",").map(Number);
     for (let hour = 0; hour < 24; hour += 1) {
-      const minutes = vercelCrons()
+      const minutes = singleWakeCrons()
         .filter((cron) => hoursOf(cron.schedule.split(" ")[1]).includes(hour))
         .flatMap((cron) => cron.schedule.split(" ")[0].split(","))
         .map(Number)
@@ -125,6 +131,21 @@ describe("the daily tick", () => {
         ).toBeLessThan(5);
       }
     }
+  });
+
+  it.each(["*/5 * * * *", "* * * * *", "1/10 * * * *"])(
+    "does not exempt an unlisted stepped schedule (%s) from the ordinary wake constraints",
+    (schedule) => {
+      const unlisted = { path: "/api/cron/unlisted", schedule };
+      const wallet = { path: "/api/cron/wallet-passes", schedule: "*/10 * * * *" };
+      expect(singleWakeCrons([unlisted, wallet])).toEqual([unlisted]);
+    },
+  );
+
+  it("keeps only the specified Wallet pass on an independent ten-minute cadence", () => {
+    expect(vercelCrons().filter((cron) => INDEPENDENT_CADENCES.has(cron.path))).toEqual(
+      [...INDEPENDENT_CADENCES].map(([path, schedule]) => ({ path, schedule })),
+    );
   });
 
   it("wakes no *queue-draining* pass more often than daily, so a day is the floor on retry latency", () => {
@@ -155,6 +176,9 @@ describe("the daily tick", () => {
       // (`sendDueWeeklyDigests`); later passes stop at the per-person,
       // per-week claim.
       "/api/cron/weekly-digest",
+      // Wallet: SPEC18f promises updates within ten minutes. Credential-gated
+      // APNs/object updates never drain the generic notification retry queue.
+      "/api/cron/wallet-passes",
     ]);
     const subDaily = vercelCrons().filter((cron) => {
       const [minute, hour] = cron.schedule.split(" ");
@@ -173,6 +197,8 @@ describe("the daily tick", () => {
       "src/app/api/cron/shop-tick/route.ts",
       "src/features/shop-tick/shop-tick.ts",
       "src/features/shop-tick/minimum-seats.ts",
+      "src/app/api/cron/wallet-passes/route.ts",
+      "src/features/wallet-pass/store.ts",
     ]) {
       const route = readFileSync(path.join(process.cwd(), routePath), "utf8");
       expect(route).not.toMatch(/sendNotification\b|sendNotificationBatch\b/);

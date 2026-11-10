@@ -17,7 +17,7 @@ vi.mock("@/features/wallet-pass", () => ({
 vi.mock("@/features/sentry-server", () => ({ sentry: { captureCheckIn: mocks.checkIn } }));
 vi.mock("@/features/log-shipping", () => ({ flushLogs: mocks.flush }));
 
-import { GET } from "./route";
+import { GET, maxDuration } from "./route";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -38,6 +38,7 @@ describe("the ten-minute native Wallet pass", () => {
     expect((await GET(request("wrong"))).status).toBe(401);
     expect(mocks.getDb).not.toHaveBeenCalled();
     expect(mocks.checkIn).not.toHaveBeenCalled();
+    expect(mocks.platforms).not.toHaveBeenCalled();
     vi.stubEnv("CRON_SECRET", "");
     expect((await GET(request())).status).toBe(503);
   });
@@ -58,6 +59,15 @@ describe("the ten-minute native Wallet pass", () => {
       status: "ok",
     });
     expect(mocks.flush).toHaveBeenCalledOnce();
+  });
+  it("monitors the deployed cadence beyond the unchanged execution deadline", async () => {
+    await GET(request());
+    expect(maxDuration).toBe(60);
+    const [checkIn, config] = mocks.checkIn.mock.calls[0] ?? [];
+    expect(checkIn).toEqual({ monitorSlug: "diveday-wallet-passes", status: "in_progress" });
+    expect(config?.schedule).toEqual({ type: "crontab", value: "*/10 * * * *" });
+    expect(config?.timezone).toBe("Etc/UTC");
+    expect((config?.maxRuntime ?? 0) * 60).toBeGreaterThan(maxDuration);
   });
   it("marks a partial failed delivery as a failed run", async () => {
     mocks.push.mockResolvedValue({ examined: 2, pushed: 1, failed: 1 });

@@ -35,6 +35,13 @@ vi.mock("@sentry/nextjs", () => ({
   captureMessage: vi.fn(),
 }));
 
+// Native Wallet has an intentional credential preflight, like platform backup.
+vi.mock("@/features/wallet-pass", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/wallet-pass")>();
+  return { ...actual, configuredWalletPlatforms: vi.fn() };
+});
+const { configuredWalletPlatforms } = await import("@/features/wallet-pass");
+
 const { getDb } = await import("@/db/client");
 const Sentry = await import("@sentry/nextjs");
 
@@ -87,6 +94,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchSpy);
   vi.stubEnv("CRON_SECRET", SECRET);
   vi.mocked(getDb).mockReset().mockRejectedValue(new Error("no database in this test"));
+  vi.mocked(configuredWalletPlatforms).mockReset().mockReturnValue([]);
   vi.mocked(Sentry.captureCheckIn).mockClear();
   vi.mocked(Sentry.captureException).mockClear();
   vi.mocked(Sentry.captureMessage).mockClear();
@@ -103,6 +111,16 @@ describe("every cron route", () => {
   it("is deployed: each route directory has a config/crons.json entry and each entry a route", () => {
     expect(ROUTES.length).toBeGreaterThan(10);
     expect(ROUTES.map((name) => `/api/cron/${name}`)).toEqual([...DEPLOYED.keys()].sort());
+  });
+
+  it("keeps unconfigured Wallet dark without database, network or monitor work", async () => {
+    const { GET } = await import("./wallet-passes/route");
+    expectUntouched("wallet-passes");
+    const response = await GET(cronRequest("wallet-passes", `Bearer ${SECRET}`));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ examined: 0, pushed: 0, failed: 0 });
+    expect(configuredWalletPlatforms).toHaveBeenCalledOnce();
+    expectUntouched("wallet-passes");
   });
 
   describe.each(ROUTES)("/api/cron/%s", (name) => {
@@ -160,6 +178,8 @@ describe("every cron route", () => {
       vi.stubEnv("PLATFORM_BACKUP_AWS_SECRET_ACCESS_KEY", "secret");
       vi.stubEnv("PLATFORM_BACKUP_BUCKET", "diveday-backups");
       vi.stubEnv("PLATFORM_BACKUP_AWS_REGION", "us-east-1");
+      // Only the admitted monitor test enables Wallet; refusal/dark cases stay unconfigured.
+      vi.mocked(configuredWalletPlatforms).mockReturnValue(["apple"]);
       await GET(cronRequest(name, `Bearer ${SECRET}`));
 
       const opened = vi

@@ -24,6 +24,9 @@ The ten-minute job reads the same departure, consented crew and recorded stage a
 Only content changes publish updates; failed deliveries retry. `last_checked_at` gives bounded
 scans a fair order. Registrations expire thirty days after their pass; pass rows follow erasure.
 
+SPEC 18f's ten-minute cadence is a credential-gated wake exception, never a notification-queue
+drain. Sentry's two-minute reporting grace leaves execution at sixty seconds.
+
 A random bearer token cannot be re-rendered from its hash. Derive Apple's per-pass token using
 HKDF-SHA256 with a new `wallet-pass-auth-v1` purpose and HMAC over the pass's random UUID, under
 the existing AUTH_SECRET. Store only SHA-256. This token cannot open a booking. An installed

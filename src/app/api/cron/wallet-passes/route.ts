@@ -9,7 +9,8 @@ const monitorSlug = "diveday-wallet-passes";
 const monitorConfig = {
   schedule: { type: "crontab", value: "*/10 * * * *" },
   checkinMargin: 10,
-  maxRuntime: 1,
+  // Sentry timeout grace only; the execution ceiling above remains sixty seconds.
+  maxRuntime: 2,
   timezone: "Etc/UTC",
 } as const;
 
