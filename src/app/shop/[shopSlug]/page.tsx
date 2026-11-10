@@ -12,6 +12,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
+import { HomeScreenInstallSlot } from "@/app/shop/[shopSlug]/_components/today/HomeScreenInstallSlot";
 import { QuietDay } from "@/app/shop/[shopSlug]/_components/today/QuietDay";
 import { ReleaseStillSample } from "@/app/shop/[shopSlug]/_components/today/ReleaseStillSample";
 import { recapEditorsFor } from "@/app/shop/[shopSlug]/_components/today/recap-editors";
@@ -146,7 +147,6 @@ export default async function ShopPage({
     q?: string;
   }>;
 }) {
-  // The session and the two route-param promises are independent: resolved together.
   const [session, { shopSlug }, { created, series, reset, email, notice, noted, q }] =
     await Promise.all([requireStaffSession(), params, searchParams]);
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
@@ -198,7 +198,6 @@ async function TodayBody({
   arrivalQuery: string;
 }) {
   const { db, shop } = await getHomeShop(session.user.shopId);
-  // Staff and public pages negotiate locale alike (ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop?.defaultLocale);
   // A session pointing at a shop row that is gone is a page that does not
   // exist, not a blank 200. Settled on `notFound()` app-wide alongside
@@ -554,6 +553,7 @@ async function TodayBody({
           }}
         />
       )}
+      <HomeScreenInstallSlot roles={session.user.roles} t={t} />
 
       {/* **"Your week"**: the reader's next three departures, on any day, quiet or not, at a
           shop that plans its crew in DiveDay. Any role with an assignment (fourth review, item

@@ -46,7 +46,7 @@ a row's own tap is its only door. The nine trailing "Open …" verbs are gone fr
 the home loses its doors (a row's own tap is the door), its pills and chips (a state is a word), and — pending H-20260911-six-consolidations-makes-diveday b — its decoration (the band, the tile, the dial, the coral washes); what it is then organised by is the owner's pick among six concepts, each redrawing this surface: three words, the week, the desk and the boat, one field, the shop's card, the storefront itself. Round 2, the same day, redraws the surface beneath any of them — five candidates to replace Reef (Salt, Air, Headline, Their ink, Slate), each on the home and the counter — pending H-20260911-six-consolidations-makes-diveday e–h; round 3, the same day, draws one of them deep on the owner's word — Console, the instrument: the home's one readout is the countdown to the next boat, the day is a ladder of departures with their figures, every need a line with its state in a slot, daylight at the desk and depth after dark — pending H-20260911-six-consolidations-makes-diveday i–l; round 4 puts the countdown on a display, a seat gauge under every boat and a telemetry line at the foot, pending H-20260911-six-consolidations-makes-diveday m–o; round 5, on the owner's word that light must render light, prints the instrument on the app's own paper — Chart: the reading on a lit face, a boat as a sheet on the sand, the night palette as the one dark, glare as the crew's word at the rail — pending H-20260911-six-consolidations-makes-diveday p–r. Nothing ships from it until H-20260911-six-consolidations-makes-diveday is answered.
 
 **Accepted 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
-on a phone or tablet in a browser tab, a staffer whose role reaches the manifest sees one line under the day's spine, once per device, saying the roll call can open from the home screen without a browser bar or signal, with the platform's install prompt or its own menu item; installed, on a desktop, or dismissed, it renders nothing.
+on a phone or tablet in a browser tab, staff see one quiet row after the current Logbook work, with an actual native install prompt or accurate supported-browser instructions; it makes no claim about saved or offline manifests, and installed, desktop, embedded or dismissed contexts render nothing.
 
 **Proposed 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), [canvas](canvases/20260907-nothing-from-nowhere/README.md)):
 on a phone the greeting folds into the header bar as the page scrolls, driven by the scroll position; a cleared row's neighbours slide into its gap; the station chip's count rolls; every row and chip answers a press in the frame the finger lands. Each renders the cut, the swap or the tap of today when it is not true.
@@ -969,3 +969,11 @@ would separate payment from the seats it describes, so the existing party panel 
 After the organizer's own hold expires, the same names and count remain in the thread's column,
 with a single explanation and a schedule link; no booking controls survive. This is a small state
 of an existing surface rather than a dashboard or new card stack.
+
+### Home-screen entry on the Logbook — `/shop/[shopSlug]` (2026-11-10)
+
+The one idea remains the day’s operational work; installation is a quiet device convenience below it.
+The eye reaches the work before this unboxed, muted row, including on an empty or blocked day.
+The sentence and platform’s own menu words carry the hierarchy without a new heading or decoration.
+One available native install action is secondary, with a flush dismissal that holds on this device.
+Installed, desktop, embedded, unsupported and dismissed states remove the row rather than explain it.

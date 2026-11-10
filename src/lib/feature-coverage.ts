@@ -20,6 +20,13 @@ export type FeatureCoverage =
   | { readonly anyOf: readonly ShopSwitch[] }
   | { readonly core: string };
 
+/** Home-screen entry is a device convenience for the existing core staff shell, not a new service. */
+export const STAFF_SHELL_COVERAGE = {
+  homeScreenInstall: {
+    core: "a device-local way into the existing staff shell; never an offline-readiness claim",
+  },
+} satisfies Record<string, FeatureCoverage>;
+
 /** Core options within existing booking flows, rather than separate destinations or subsystems. */
 export const BOOKING_FLOW_COVERAGE = {
   groupHolds: {

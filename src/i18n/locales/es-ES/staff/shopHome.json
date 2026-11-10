@@ -198,5 +198,14 @@
     "bookedOn": "{name} tiene reserva el {date} · {time}.",
     "nothingBooked": "{name} no tiene nada reservado.",
     "openRecord": "Abrir la ficha de {name}"
+  },
+  "install": {
+    "body": "Abre DiveDay desde la pantalla de inicio.",
+    "action": "Agregar a la pantalla de inicio",
+    "dismiss": "Descartar",
+    "safari": "En Safari, toca Compartir y luego Agregar a pantalla de inicio.",
+    "otherIos": "Abre esta página en Safari, toca Compartir y luego Agregar a pantalla de inicio.",
+    "chrome": "En Chrome, abre el menú y toca Agregar a pantalla de inicio.",
+    "promptFailed": "No se abrió la opción de instalación. Usa el menú del navegador."
   }
 }

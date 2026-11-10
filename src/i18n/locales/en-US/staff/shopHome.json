@@ -198,5 +198,14 @@
     "bookedOn": "{name} is booked {date} · {time}.",
     "nothingBooked": "{name} has nothing booked.",
     "openRecord": "Open {name}’s record"
+  },
+  "install": {
+    "body": "Open DiveDay from your Home Screen.",
+    "action": "Add to Home Screen",
+    "dismiss": "Dismiss",
+    "safari": "In Safari, tap Share, then Add to Home Screen.",
+    "otherIos": "Open this page in Safari, then tap Share and Add to Home Screen.",
+    "chrome": "In Chrome, open the menu, then Add to home screen.",
+    "promptFailed": "The install prompt didn’t open. Use the browser menu instead."
   }
 }

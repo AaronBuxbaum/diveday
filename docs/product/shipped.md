@@ -3798,3 +3798,12 @@ and staff trip pages, per-test PGlite, split dive-site helpers, retained superse
 [architecture/overview.md](../architecture/overview.md#settled-shape-decisions). Navigation
 unification, one notice system, the `reports`/`shop` cuts, the trial/demo split, honest marketing,
 and the decomposition of the four monster pages all shipped.
+
+## Contextual home-screen entry (built 2026-11-10)
+
+Slice 19e of [ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md),
+recovered by #4233, adds one quiet row after the Logbook’s operational work on supported staff
+phones and tablets. Only a real browser event offers a native install button; Safari and Android
+Chrome otherwise get their own menu instructions. Device dismissal, installed/desktop/embed
+suppression and storage failure paths are tested. Installation makes no offline-readiness promise
+and changes neither permissions nor the service worker.
