@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
-import { waitForNavigationGate } from "@/features/e2e-test-routes";
 import { requireShopSurface } from "@/features/session";
 import { readTripPage } from "@/features/trip-page";
 import { requestLocale } from "@/i18n/request";
@@ -97,9 +96,6 @@ export default async function ManageTripPage({
   ] = await Promise.all([params, searchParams]);
   // An unparseable UUID must not reach Postgres.
   if (!uuidParam(tripId)) notFound();
-  // The test gate exists only in the isolated E2E server and lets its real
-  // loading boundary stream while a test holds this page's dynamic read.
-  if (process.env.DIVEDAY_E2E === "1") await waitForNavigationGate(tripId);
   const state = await departureStateOf(shopSlug, tripId, { ...rest, notice });
   if (state) return state;
   const { session, db, shop } = await requireShopSurface(shopSlug);

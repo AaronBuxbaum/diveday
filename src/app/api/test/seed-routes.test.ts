@@ -41,6 +41,8 @@ type SeedRoute = {
   slug: string;
   /** Optional query for routes whose post-guard path requires a named fixture. */
   query?: string;
+  /** Optional valid body to distinguish reaching a route from an auth refusal. */
+  body?: Record<string, string>;
   /**
    * The verb this row is about — one row per handler, because a handler is
    * guarded one at a time. `email-previews` and `demo-recap-trip` are `GET`s;
@@ -85,6 +87,16 @@ async function expectInvalidBody(response: Response) {
 }
 
 const routes: SeedRoute[] = [
+  {
+    slug: "navigation-gate",
+    body: { tripId: "00000000-0000-4000-8000-000000000001", action: "release" },
+    expectPastTheGuard: async (response) => {
+      // An unarmed gate is a conflict, distinct from the authorization 404.
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({ ok: false });
+      expect(getDb).not.toHaveBeenCalled();
+    },
+  },
   { slug: "age-staff-session", expectPastTheGuard: expectInvalidBody },
   {
     // It delivers an inbound message on a shop's behalf, which on a
@@ -160,20 +172,24 @@ afterEach(() => {
 describe.each(routes)(
   "/api/test/$slug — auth gate (specialist-optimization-audit-20260731.md §5)",
   (route) => {
-    const { slug, method, query, expectPastTheGuard } = route;
+    const { slug, method, query, body, expectPastTheGuard } = route;
     const handler = (request: Request) => handlerFor(route).then((fn) => fn(request));
     function seedRequest(authorization?: string) {
       const headers: Record<string, string> = {};
       if (authorization !== undefined) headers.authorization = authorization;
-      // Deliberately no body: every refusal must land before the route ever
-      // reads one, so the same request shape exercises all of them.
+      // Most rows need no body. A valid body lets a route whose shape refusal
+      // is also a 404 prove that authorized requests actually pass the guard.
       return new Request(`http://localhost/api/test/${slug}${query ?? ""}`, {
         method: method ?? "POST",
         headers,
+        body: body ? JSON.stringify(body) : undefined,
       });
     }
 
-    async function expectRefused(response: Response) {
+    async function expectRefused(request: Request) {
+      const readBody = vi.spyOn(request, "json");
+      const response = await handler(request);
+      expect(readBody).not.toHaveBeenCalled();
       expect(response.status).toBe(404);
       expect(await response.json()).toEqual({ error: "not_available" });
       // Refusal happens before any database work — these tests never hydrate one.
@@ -183,27 +199,27 @@ describe.each(routes)(
     it("404s with a missing Authorization header, even with DIVEDAY_E2E=1 in a production-shaped runtime", async () => {
       vi.stubEnv("NODE_ENV", "production");
       vi.stubEnv("DIVEDAY_E2E", "1");
-      await expectRefused(await handler(seedRequest()));
+      await expectRefused(seedRequest());
     });
 
     it("404s with the wrong bearer token", async () => {
-      await expectRefused(await handler(seedRequest("Bearer wrong-secret")));
+      await expectRefused(seedRequest("Bearer wrong-secret"));
     });
 
     it("404s when DIVEDAY_E2E_SECRET isn't configured at all, regardless of the header sent", async () => {
       vi.stubEnv("DIVEDAY_E2E_SECRET", "");
-      await expectRefused(await handler(seedRequest(`Bearer ${secret}`)));
+      await expectRefused(seedRequest(`Bearer ${secret}`));
     });
 
     it("404s whenever a real database is configured, even with the correct secret", async () => {
       vi.stubEnv("DATABASE_URL", "postgres://example");
-      await expectRefused(await handler(seedRequest(`Bearer ${secret}`)));
+      await expectRefused(seedRequest(`Bearer ${secret}`));
     });
 
     it("404s in a production runtime that never opted in via DIVEDAY_E2E, even with the correct secret", async () => {
       vi.stubEnv("NODE_ENV", "production");
       vi.stubEnv("DIVEDAY_E2E", "");
-      await expectRefused(await handler(seedRequest(`Bearer ${secret}`)));
+      await expectRefused(seedRequest(`Bearer ${secret}`));
     });
 
     it("gets past the guard with the correct bearer token", async () => {
