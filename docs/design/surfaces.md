@@ -806,7 +806,7 @@ which leaves for the thread), because they are one surface: `EntryShell` is the 
 ### The homepage — `/`
 
 **Reviewed 2026-08-27** — the conversion pass in
-[marketing-review-20260827.md](../product/marketing-review-20260827.md) (open; slices in roadmap
+[marketing-review-20260827.md](../product/archive/marketing-review-20260827.md) (open; slices in roadmap
 section 12). The 2026-08-13 composition stands; the findings move copy, not bands.
 
 - **One idea:** the whole dive day runs from one calm place — and you can walk it right now for

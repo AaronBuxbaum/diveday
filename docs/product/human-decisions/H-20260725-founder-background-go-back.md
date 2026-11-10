@@ -1,9 +1,17 @@
 # H-20260725-founder-background-go-back: Does the founder's background go back on the marketing pages, and who does the…
 
-- **Status:** Ready
+- **Status:** Chosen
 - **Human owner:** Product owner
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+Leave /about unchanged. Add a biography line only if Aaron supplies the sentence; do not derive
+career meaning from an older canvas.
+
+Source: [owner-account decision record on #4195](https://github.com/AaronBuxbaum/diveday/issues/4195#issuecomment-6759818376).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 **Does the founder's background go back on the marketing pages, and who does the support sentence name?** The 2026-09-02 loop over the marketing pages ([canvas](../../design/canvases/20260902-the-maker-is-the-proof/README.md), ADR [20260902-the-maker-is-the-proof](../../architecture/decisions/20260902-the-maker-is-the-proof.md)) found the site has no maker: the `/about` founder band carries no name, and the confirmed background (Google Maps; a biotech company through to going public; self-driving cars — confirmed 2026-07-25) came off on 2026-08-05 as a résumé block. The canvas proposes it back as a third-person story naming Aaron Buxbaum with a three-row ledger — no signature, no "I", and the background listed without a tense, per the owner's three constraints in session (not a side project, not one person working, no first person) — and proposes the support line "read by the people who build DiveDay" over today's "a real person". That line names no individual and promises no response time, so it sits inside the current policy rather than reversing H-20260724-public-founding-shop-price's 2026-08-05 retirement.
 

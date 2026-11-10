@@ -1,5 +1,9 @@
 # Improvement ideas — 2026-09-07
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 > Sixty-two ideas through twenty-five angles the earlier reviews did not use, each written so an
 > owner can say yes, later, or no, and an implementation agent can start from the line. It is a
 > decision sheet, not a backlog: nothing here is scope until a row in the register at the bottom
@@ -39,7 +43,7 @@ around tide, current, moon and the reef's own calendar, and all of that lives in
 head or a NOAA tab.
 
 Every idea in this section shipped. The register below keeps their rows; the deliveries are in
-[shipped.md](../shipped.md).
+[shipped.md](../../shipped.md).
 
 ## 2. The diver's body
 
@@ -338,7 +342,7 @@ Lens: agents ship daily; the founder runs support, billing and the north star by
 Lens: V-04 asks a human to rehearse a whole day. A script can rehearse it every night.
 
 Both ideas in this section shipped. The register below keeps their rows; the deliveries are in
-[shipped.md](../shipped.md).
+[shipped.md](../../shipped.md).
 
 ## 25. The reef itself
 
@@ -363,7 +367,7 @@ twenty-five were decided on 2026-09-07; the remaining thirty-seven on 2026-09-09
   2026-09-08. The seven decided on 2026-09-09 — N-21, N-22, N-24, N-43, N-45, N-48, N-54 — are in
   build as four stacked chains.
 - **35 After pilot.** Deferred, not dropped. Each one is carried forward with its full shape in
-  [../features/roadmap.md](../features/roadmap.md)'s "Deferred from the 2026-09-07 idea review"
+  [../features/roadmap.md](../../features/roadmap.md)'s "Deferred from the 2026-09-07 idea review"
   section, so it is actionable by a session that never read this report. They are **not** filed as
   `needs-triage` issues: that label is the human's triage inbox, and an idea the owner has already
   triaged into "later" would only rot there.

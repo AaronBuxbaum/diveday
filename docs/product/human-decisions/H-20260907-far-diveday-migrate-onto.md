@@ -1,9 +1,23 @@
 # H-20260907-far-diveday-migrate-onto: How far should DiveDay migrate onto AWS, and in what order?
 
-- **Status:** Ready
+- **Status:** Chosen
 - **Human owner:** Product owner / technical owner
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+Move hosting from Vercel to AWS, serverless first, after the go/no-go spike
+[#4219](https://github.com/AaronBuxbaum/diveday/issues/4219). Keep Neon for its restore/branching
+safety net and revisit the database after hosting. Containers are the fallback if the spike
+fails. Per-PR preview URLs remain an open owner question. There is no user-driven cutover
+downtime constraint yet because there are no users. No booking-flow canary yet; revisit when
+real shops exist. The hourly demo public-schedule browser canary already exists and needs no
+pilot slug. Cron operational completion stays #3838/#3691. Old cost estimates are not verified
+usage quotes. No cloud deployment, purchase or credential change is authorized by this record.
+
+Source: [owner-account decision record on #4194](https://github.com/AaronBuxbaum/diveday/issues/4194#issuecomment-6760187588).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 How far should DiveDay migrate onto AWS, and in what order? The stated intent is to leave Vercel and other vendors *once it makes sense* for simplification, scaling, and lock-in — which is a per-component call, not one switch. [aws-migration-dossier.md](../../architecture/aws-migration-dossier.md) catalogs every remaining non-AWS dependency as numbered `AWS-n` rows with benefit, money, work, and risk on each.
 

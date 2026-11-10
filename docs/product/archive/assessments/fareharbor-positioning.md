@@ -1,5 +1,9 @@
 # FareHarbor positioning — coexist, or compete
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 > How DiveDay wins the FareHarbor dive shop. Written 2026-07-24 from a sourced research pass
 > (FareHarbor's own site, help centre, and provider terms; Booking Holdings' acquisition release;
 > third-party pricing and distribution explainers), checked against the running codebase. A

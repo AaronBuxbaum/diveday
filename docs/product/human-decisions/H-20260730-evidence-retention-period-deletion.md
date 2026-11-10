@@ -1,9 +1,19 @@
 # H-20260730-evidence-retention-period-deletion: What evidence-retention period, deletion-request process, and backup/audit exception apply to waivers and medical flags?
 
-- **Status:** Ready
+- **Status:** Deferred
 - **Human owner:** Product owner + generalist attorney (drafts) + scuba-liability specialist (confirms) — Tier 2, see [legal-engagement-scope.md](../stakeholders/legal-engagement-scope.md#tier-2--generalist-drafts-specialist-blesses-before-it-goes-live)
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+Keep indefinite customer retention as the working default. Qualified waiver/medical review must
+record retention, deletion and access policy before real use in
+[#4213](https://github.com/AaronBuxbaum/diveday/issues/4213). This does not change existing erasure
+mechanisms or resolve counsel-only questions such as #3967.
+
+Source: [owner-account decision record on #4192](https://github.com/AaronBuxbaum/diveday/issues/4192#issuecomment-6759950843).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 What evidence-retention period, deletion-request process, and backup/audit exception apply to waivers and medical flags?
 

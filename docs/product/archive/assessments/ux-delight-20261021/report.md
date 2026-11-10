@@ -5,7 +5,7 @@
 The observations and images below describe that baseline. Delivery status was reconciled on
 2026-10-21 (America/New_York); it does not turn the original evidence into a test of later changes.
 Search/draft continuity and operational safety fixes have merged; their delivery is recorded in
-[Shipped](../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21).
+[Shipped](../../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21).
 Visual PR [#2910](https://github.com/AaronBuxbaum/diveday/pull/2910) is open and unmerged. Manual
 Settings work and UX groups A–D are prepared for serial publication, not merged or deployed. The
 nine UX issues [#2858–#2866](opportunities.md#approved-publication-groups) are approved work.
@@ -50,7 +50,7 @@ them. Manual Settings and the unmerged visual layer precede A.
 
 The previously recommended search/draft continuity and offline capacity, boat-history and buddy
 fixes are recorded in
-[Shipped](../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21). Do not plan
+[Shipped](../../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21). Do not plan
 those merged slices from this historical audit. Merge does not establish production deployment.
 Other issue references below retain their baseline context unless expressly refreshed.
 

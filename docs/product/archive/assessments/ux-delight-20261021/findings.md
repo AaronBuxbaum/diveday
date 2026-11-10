@@ -4,7 +4,7 @@ Baseline: `f3bfde4604ea0090eba3143986f01001dbaefab0`. Evidence and source anchor
 2026-10-21 audit, not the prepared UX implementation. UX-01–03 retain their dated observations;
 their recommendations were removed after [#2873](https://github.com/AaronBuxbaum/diveday/pull/2873)
 merged. Delivery is recorded in
-[Shipped](../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21).
+[Shipped](../../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21).
 
 UX-05/07/08 are approved and prepared in groups A/B, not yet merged. UX-04/06/09/10 were unfiled at
 the baseline inbox ceiling; their current tracker and implementation state are unknown here. Their
@@ -251,4 +251,4 @@ deliberate All waivers in labels; they are not redundant decoration.
 Spanish waiver counts, large currency amounts and zoom without overlap or horizontal loss. Preserve
 row navigation and the existing ledger composition.
 
-**Source anchors:** [DepartureLedger.tsx](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/app/shop/[shopSlug]/reports/_components/DepartureLedger.tsx), [design principles](../../../design/principles.md#2-pass-the-dock-test).
+**Source anchors:** [DepartureLedger.tsx](https://github.com/AaronBuxbaum/diveday/blob/f3bfde4604ea0090eba3143986f01001dbaefab0/src/app/shop/[shopSlug]/reports/_components/DepartureLedger.tsx), [design principles](../../../../design/principles.md#2-pass-the-dock-test).

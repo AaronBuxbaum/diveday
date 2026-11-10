@@ -1,5 +1,9 @@
 # Agent efficiency: instructions, retrieval, and handoffs
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 Dated assessment, 2026-10-21. Read-only investigation of repository behavior at `971c490d4`;
 the only change made by this investigator is this report. Recommendations below are assessment
 findings, not approved work or filed tickets. Sources are repository files, commands, and the

@@ -1,10 +1,14 @@
 # Paid acquisition — can DiveDay advertise its way to a founding cohort?
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 > A channel-by-channel assessment of paid advertising for reaching dive shop owners, written
 > 2026-08-12 from a live research sweep (vendor tag containers, Google autocomplete probes, published
 > 2026 rate cards, media kits, DEMA's own rate pages, industry census data) against the commercial
-> terms in [human-decisions/](../human-decisions/README.md) H-20260724-public-founding-shop-price/H-20260802-what-game-is-this. Companion to
-> [rollout.md](../rollout.md), which schedules "modest paid search on high-intent queries" in Phase 2
+> terms in [human-decisions/](../../human-decisions/README.md) H-20260724-public-founding-shop-price/H-20260802-what-game-is-this. Companion to
+> [rollout.md](../../rollout.md), which schedules "modest paid search on high-intent queries" in Phase 2
 > — this document is the sizing work behind that line, and it narrows it substantially. An
 > assessment, not a commitment.
 
@@ -91,7 +95,7 @@ businesses: **~8,000–10,000**. The US is ~9–11% of it.
 | Consumer dive media (DeeperBlue, Divernet, X-Ray Mag, Scuba Diving, Alert Diver, InDEPTH) | Avoid | All of it sells divers to gear and travel brands. Near-total waste for a shop-operations product |
 | **DEMA Show 2026** | **Buy the badge, not the booth** | Trade-only, no consumers, no guest passes. Nov 3–6, New Orleans |
 | DEMA membership + Dive Industry Association | **Buy both** | $200/yr + $125/yr. The only two listings in this research that reach actual dive shop owners |
-| Scubanomics / Business of Diving Institute | **Not buyable — correct the internal record** | [rollout.md](../rollout.md) names it as a sponsorship target. It **sells no advertising at all** — no rate card, no sponsorship page, no published subscriber count. Darcy Kieran has 635 Medium followers; the podcast has 827 lifetime Spotify plays. Excellent editorial fit, real relationship value, zero inventory |
+| Scubanomics / Business of Diving Institute | **Not buyable — correct the internal record** | [rollout.md](../../rollout.md) names it as a sponsorship target. It **sells no advertising at all** — no rate card, no sponsorship page, no published subscriber count. Darcy Kieran has 635 Medium followers; the podcast has 827 lifetime Spotify plays. Excellent editorial fit, real relationship value, zero inventory |
 | ScubaBoard | Listening post only | Commercial activity is gated behind a paid Business Sponsor tier (reported $100–150/mo). The shop-owner business forum holds 107 threads lifetime against 65,363 in consumer classifieds |
 
 ## Why Google Search cannot fill the cohort
@@ -211,7 +215,7 @@ Two claims-relevant findings sit alongside it:
    Magazine's retailer-to-retailer show, explicitly about shop owners' operational problems.
 6. **The insurance intermediary.** An underwriter whose product is priced on incident risk is the one
    party with a genuine commercial interest in a fail-closed readiness engine. The
-   [insurance playbook](../stakeholders/insurance.md) already schedules this conversation; it is also
+   [insurance playbook](../../stakeholders/insurance.md) already schedules this conversation; it is also
    the best referral relationship in this document, and no competitor can buy it.
 
 ## The budget this supports
@@ -285,7 +289,7 @@ qualitatively informative at n=1, and a single conversion is not.
   tokened route is refused outright** — an audience built from `/waivers/[token]` visitors is an
   advertising audience of people who signed a medical form, and no redaction fixes that. The rule and
   its reasoning are in
-  [capability-telemetry-runbook.md](../../engineering/capability-telemetry-runbook.md#advertising-and-analytics-tags-the-one-rule).
+  [capability-telemetry-runbook.md](../../../engineering/capability-telemetry-runbook.md#advertising-and-analytics-tags-the-one-rule).
 - **Competitor-brand bidding.** Legal — Google does not restrict trademarks as keywords. But an
   upheld complaint restricts **the entire second-level domain going forward**, and `dive.day` is the
   company's only domain and only SEO asset. The upside is ~2 clicks/month on `diveshop360`, whose
@@ -302,7 +306,7 @@ qualitatively informative at n=1, and a single conversion is not.
   real person. An email from `diveday-app.com` to a shop you will shake hands with in November
   contradicts everything `/about` argues.
 - **Savings arithmetic in ad copy.** The "$4,000–$17,000/yr saved versus a commission model" figure is
-  seductive and is banned by name in [marketing.md](../marketing.md#claims-policy-hard-rules): no
+  seductive and is banned by name in [marketing.md](../../marketing.md#claims-policy-hard-rules): no
   booking volume, no savings math, no "typical shop." It is the same fabricated-proof failure as an
   invented testimonial, wearing a spreadsheet.
 
@@ -323,7 +327,7 @@ Both are independently worth fixing, and both are cheap:
    looking for a privacy link on the landing page still will not find one. Treat the pages as
    written-and-waiting, not as a shipped prerequisite; the remaining step is a decision, not
    drafting.
-2. **The Phase 0 blockers in [rollout.md](../rollout.md#phase-0--get-legally-and-operationally-real-now--early-sept).**
+2. **The Phase 0 blockers in [rollout.md](../../rollout.md#phase-0--get-legally-and-operationally-real-now--early-sept).**
    This is the strongest argument in the assessment and it is worth stating as a failure path rather
    than a caution. A shop that clicks an ad today: reaches the demo (which is excellent), starts a
    trial, tries to send a waiver link — **and the email does not arrive**, because H-20260724-channel-sends-booking-waiver's SES
@@ -345,7 +349,7 @@ Both are independently worth fixing, and both are cheap:
 
 ## What this changes in the plan of record
 
-- [rollout.md](../rollout.md) Phase 2 schedules "modest paid search on high-intent queries
+- [rollout.md](../../rollout.md) Phase 2 schedules "modest paid search on high-intent queries
   ('EVE dive shop software replacement', 'DiveShop360 alternative') pointed at the guides — the
   documented Jane/anti-Mindbody pattern." **The pattern is right and the queries are not.**
   `diveshop360 alternative` returns zero autocomplete suggestions; the EVE switching terms return
@@ -353,7 +357,7 @@ Both are independently worth fixing, and both are cheap:
   sales collateral** — `dive.day/switching` already ranks #2 for "how to export data from EVE" with
   no backlinks — but they are not a paid-search target. The rollout line has been narrowed to point
   here.
-- [rollout.md](../rollout.md) Phase 1 names Scubanomics as a channel where "a guest piece or
+- [rollout.md](../../rollout.md) Phase 1 names Scubanomics as a channel where "a guest piece or
   sponsorship reaches exactly the buyer." **The sponsorship half is not purchasable** — it sells no
   advertising. The guest-piece half is right and is better aimed at Scuba Diving Industry Magazine's
   retailer podcast.

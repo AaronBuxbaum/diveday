@@ -6,7 +6,7 @@ scope, and [findings](findings.md) for baseline defects and their reconciliation
 refer to baseline `f3bfde4604ea0090eba3143986f01001dbaefab0`. Opportunity paragraphs retain that
 dated rationale; issue references outside the approved groups have not been refreshed into a current
 backlog. See [publication groups](opportunities.md#approved-publication-groups) for prepared A–D
-work and [Shipped](../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21) for
+work and [Shipped](../../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21) for
 merged slices.
 
 ## A prospective owner deciding whether to try DiveDay
@@ -153,7 +153,7 @@ readiness lookup fails. Printed people counts include crew and passenger types.
 
 **Baseline evidence.** The audit prioritized offline certified capacity, boat-swap evidence and
 buddy checks (#2742/#2727/#2807). These merged in #2906 and are recorded in
-[Shipped](../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21). Unknown-age
+[Shipped](../../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21). Unknown-age
 handling (#2808) retains its baseline issue context; its current state was not revalidated here.
 
 **Boundary.** Actual head counts must remain recordable. Do not apply a booking gate to rescue

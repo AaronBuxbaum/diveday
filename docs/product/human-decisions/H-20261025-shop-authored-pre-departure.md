@@ -1,9 +1,17 @@
 # H-20261025-shop-authored-pre-departure: A shop-authored pre-departure safety checklist (issue #686 — pre_departure_check_events, ADR 20260824-pre-departure-safety-check) ships informs-only: an…
 
-- **Status:** Ready
+- **Status:** Chosen
 - **Human owner:** Product owner
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+Keep the shop-authored checklist informs-only. An unchecked item does not become a departure,
+boarding or completion gate. No implementation delta is required by this decision.
+
+Source: [owner-account decision record on #4193](https://github.com/AaronBuxbaum/diveday/issues/4193#issuecomment-6759760819).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 A shop-authored pre-departure safety checklist (issue #686 — `pre_departure_check_events`, ADR [20260824-pre-departure-safety-check](../../architecture/decisions/20260824-pre-departure-safety-check.md)) ships informs-only: an unchecked item never blocks a departure page, a boat from sailing, or any other surface. That stance matches every other "target, not a gate" in this app (`divemaster-ratio.ts`, the gear service clocks) and is deliberate rather than a placeholder — but the opposite argument (this is the one check that genuinely should be hard, since it is a legally specified vessel-safety kit in a way a divemaster ratio is not) deserves an owner's answer rather than an engineer's default.
 

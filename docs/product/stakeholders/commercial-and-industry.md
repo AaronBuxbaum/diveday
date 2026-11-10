@@ -25,7 +25,7 @@ What to have prepared per conversation:
 - **The [one-pager](design-partner-one-pager.md)** stating [the offer](../rollout.md#the-offer-write-it-down-say-it-the-same-way-every-time)
   in the rollout's exact terms: free through the pilot, founder-run concierge migration (they
   send exports; we never log into their incumbent system — the
-  [portability-wedge legal guardrail](../assessments/competitive-strategy.md#the-portability-wedge)),
+  [portability-wedge legal guardrail](../archive/assessments/competitive-strategy.md#the-portability-wedge)),
   weekly 30-minute call, direct founder thread, founding price + two-year lock on conversion.
   In exchange: real days, observation access, and (if earned) a named case study.
 - **The pilot agreement** to sign ([legal.md](legal.md)'s contract set — do not run a pilot on a
@@ -37,7 +37,7 @@ What to have prepared per conversation:
   live `/switching` guide, so the migration feels concrete.
 - **Etiquette for the public channels** (ScubaBoard threads, Facebook shop-owner groups): respond
   to named problems with specifics; never broadcast. These threads are where the
-  [competitive research](../assessments/competitive-strategy.md) mined incumbent complaints —
+  [competitive research](../archive/assessments/competitive-strategy.md) mined incumbent complaints —
   the credibility only works if replies stay in that register.
 - **The [pilot-recruiting kit](../pilot-kit/README.md)** carries the rest of the paper for these
   conversations: the [Florida call-list template](../pilot-kit/florida-call-list.md) (criteria,

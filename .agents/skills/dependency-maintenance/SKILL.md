@@ -5,6 +5,11 @@ description: Upgrade dependencies with compatibility evidence.
 
 # Update a dependency with bounded evidence
 
+**Release policy (Aaron, 2026-11-10): stable releases only; drizzle-orm and drizzle-kit are the
+sole prerelease exception.** Migrate a pinned prerelease when a compatible stable release is
+available. The durable decision is
+[H-20261025-ga-migration-budget-pre](../../../docs/product/human-decisions/H-20261025-ga-migration-budget-pre.md).
+
 1. Identify direct users with `rg` and read the installed package's changelog/docs for the target version. Confirm the Node and package-manager pins first.
 2. Change the smallest compatible dependency group. New runtime dependencies need an ADR; upgrades must explain breaking API or configuration changes.
 3. Use the existing package manager to update the lockfile; never read the generated lockfile whole or hand-edit resolutions.

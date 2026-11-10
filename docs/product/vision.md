@@ -61,7 +61,7 @@ concretely here.
   ([20260827-shop-authorized-provider-connectors](../architecture/decisions/20260827-shop-authorized-provider-connectors.md),
   superseding the earlier "emit only" rule). For everything not on that short register, the path is
   still a no-code bridge (Zapier/Make) the shop wires to DiveDay's own events
-  ([features/roadmap.md](features/roadmap.md#1-data-portability-follow-ons-the-wedge)).
+  ([features/roadmap.md](archive/roadmap-20261110.md#1-data-portability-follow-ons-the-wedge)).
 - Not a dive-log social network.
 
 ## What kind of business this is

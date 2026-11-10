@@ -62,7 +62,7 @@ results; staff form drafts survive immediate navigation (#2855/#2856/#2857, [PR
 boat-swap/history handling and buddy cautions (#2742/#2727/#2807) merged in [PR
 #2906](https://github.com/AaronBuxbaum/diveday/pull/2906). These dates use America/New_York. Merge
 is confirmed; production deployment was not established by this audit reconciliation. The [dated UX
-audit](assessments/ux-delight-20261021/report.md) retains the baseline evidence and limits.
+audit](archive/assessments/ux-delight-20261021/report.md) retains the baseline evidence and limits.
 
 ## Boat papers and safety kit (delivered 2026-10-09)
 
@@ -126,7 +126,7 @@ carry the type. Course sessions sell divers only. One migration
 (`drizzle/20261007121659_participant-types`); ADR
 [20261007-participant-types](../architecture/decisions/20261007-participant-types.md); scope and
 the defaults chosen for its open questions in
-[features/participant-types.md](features/participant-types.md).
+[features/participant-types.md](archive/participant-types-20260820.md).
 
 ## A page for every feature (delivered 2026-10-05)
 
@@ -1461,7 +1461,7 @@ where an exposed URL is assessed.
 
 ## /about spends the impulse it creates (delivered 2026-08-28)
 
-Slice 12f of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's
+Slice 12f of [marketing-review-20260827.md](archive/marketing-review-20260827.md), against that review's
 third finding — help arrives after the homework. The trust page manufactures its impulse in one
 band: four operating rules, each ending in the demo action that proves it ("save a manifest to your
 phone, turn the network off, and run roll call anyway"). What a reader convinced there could act on
@@ -1509,7 +1509,7 @@ neither could be read on its own. `e2e/marketing.spec.ts` now counts the primary
 
 ## Help arrives before the homework on a switching guide (delivered 2026-08-28)
 
-Slice 12e of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's
+Slice 12e of [marketing-review-20260827.md](archive/marketing-review-20260827.md), against that review's
 third finding. The concierge — free, personal, product-owner authorized, and the strongest
 de-risking claim DiveDay owns — appeared on a guide once, about 80% down the page, *below* the
 four-phase rail whose whole job is to show a reader how much work switching is. An owner deciding
@@ -1553,7 +1553,7 @@ is filed rather than done: it is a claims change wearing a consistency cleanup's
 
 ## The product page's dare gets a door (delivered 2026-08-28)
 
-Slice 12d of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's
+Slice 12d of [marketing-review-20260827.md](archive/marketing-review-20260827.md), against that review's
 first finding — the persuasion gradient is inverted. `/product` made the site's most explicit dare
 ("every one of these 49 lines is something you can go and do in the live demo right now") and then
 ran 49 lines, 1,600px at desktop and 3,300px on a phone, before handing the reader anything to act
@@ -1582,7 +1582,7 @@ included, and fails on any band holding two enabled controls or a second trial l
 
 ## The trial's terms stand at the pricing doors (delivered 2026-08-28)
 
-Slice 12c of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's
+Slice 12c of [marketing-review-20260827.md](archive/marketing-review-20260827.md), against that review's
 second finding — the terms never stand at the doors. `/pricing` asked for a trial at two decision
 points and named no terms at either: the demo note beside the hero pair answers for the demo alone
 and must not promise "no sign-up" on the trial's behalf, so the higher-friction door stood bare.
@@ -1645,7 +1645,7 @@ claim present on `/product`.
 
 ## The day on the homepage gets its evening (delivered 2026-08-28)
 
-Slice 12b of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's
+Slice 12b of [marketing-review-20260827.md](archive/marketing-review-20260827.md), against that review's
 fourth finding: the product's argument is delight-first — the shop gets remembered — and the
 homepage's day ended at 8 a.m. The moments band is **three rows now**, and the third is the
 evening: "Divers go home with a page worth sharing", beside the recap screen `/product`'s
@@ -1670,7 +1670,7 @@ comes from the caller's translated label.
 
 ## The homepage says the morning (delivered 2026-08-28)
 
-Slice 12a of [marketing-review-20260827.md](marketing-review-20260827.md), the first of that
+Slice 12a of [marketing-review-20260827.md](archive/marketing-review-20260827.md), the first of that
 review's six to land, against its first two diagnoses: the persuasion gradient is inverted, and the
 terms never stand at the doors. **The hero asks the questions only a dive shop asks** — "Who's
 booked, who's cleared, who's on the boat — one answer, all day." — and its description drops the
@@ -1703,7 +1703,7 @@ program's one **group label** spelling ("Your shop" / "You" — the element stay
 outline a screen reader walks is unchanged), and the four-sentence reassurance under the primary
 collapses to **one** — *"Free for 3 weeks, no card — and nothing switches off when the window
 ends."* That sentence is also the marketing review's day-22 answer
-([marketing-review-20260827.md](marketing-review-20260827.md), the `/onboard` half of slice 12c):
+([marketing-review-20260827.md](archive/marketing-review-20260827.md), the `/onboard` half of slice 12c):
 the old line said "free for 3 weeks" and never said what happens on the 22nd day, which a burned
 buyer reads as a card wall. Soft expiry is real — `src/features/trial/rules.ts` switches nothing off.
 
@@ -2825,7 +2825,7 @@ rediscovered:
   has exactly one instructor, so seeding it would leave that session with nobody on the ratio and
   move seeded bookings, staffing and Today across the whole demo. A second seeded instructor is the
   obvious follow-on and is carried in
-  [features/roadmap.md](features/roadmap.md#p1--next). The rule is asserted directly by the
+  [features/roadmap.md](archive/roadmap-20261110.md#p1--next). The rule is asserted directly by the
   monotonicity test meanwhile.
 - **The count-level crew attestation deliberately raises no Today row.** Most shops have never
   filled it in, so it would fire on nearly every trip and bury the rows that mean a person is in the
@@ -3010,7 +3010,7 @@ The 165-task persona walkthrough closed out; the vast majority shipped across PR
 task-by-task rationale is archived in
 [archive/ux-personas-20260730-findings.md](archive/ux-personas-20260730-findings.md), the standing
 evaluation frame is [personas.md](personas.md), and what's still open is in
-[features/story-backlog.md](features/story-backlog.md). The headline slices:
+[features/story-backlog.md](archive/story-backlog-20261110.md). The headline slices:
 
 - **The shop declares its own currency** — `shops.currency` (ISO 4217, chosen in settings) is the
   single source of truth for every checkout, order, invoice, tip, and displayed amount; Stripe's
@@ -3120,7 +3120,7 @@ not forgotten.
 Five of the eight lenses of the [specialist optimization
 audit](archive/specialist-optimization-audit-20260731.md) shipped in full. At the time, accessibility
 and security/privacy were still open and ML & data had just moved to
-[features/ai-ml.md](features/ai-ml.md#scoped-prompt-ready--from-the-2026-07-31-specialist-audit); both
+[features/ai-ml.md](features/ai-ml.md#historical-prompt-sketches--from-the-2026-07-31-specialist-audit); both
 of the others have since shipped or moved too (see the entries above) and the audit is now fully
 archived.
 
@@ -3509,7 +3509,7 @@ archived.
   (DiveDay takes the booking, the per-booking fee stops), over the shared export/scope/import
   mechanics. Every competitor claim is sourced and honesty-flagged (the ~6% fee is reported-only,
   not FareHarbor-published; no live sync claimed)
-  ([assessments/fareharbor-positioning.md](assessments/fareharbor-positioning.md)).
+  ([assessments/fareharbor-positioning.md](archive/assessments/fareharbor-positioning.md)).
 - **Rezdy guide (coexist-led)** (2026-07-24) — `/switching/rezdy`, the second booking-channel guide
   on the same `coexist` template. Rezdy is a general tours engine (part of a PE-backed group with
   Checkfront and Regiondo) with a *monthly-subscription-plus-per-booking* model, so the leave pitch
@@ -3517,7 +3517,7 @@ archived.
   (self-serve Sales/Orders CSV plus an operator API), and the copy honestly concedes Rezdy's own
   portability-friendliness. The wider survey of who gets a guide next — WeTravel, Rezgo, Bókun,
   Bloowatch, Peek Pro, and why PADI/SSI are import rails, not switching targets — is in
-  [assessments/switching-guide-landscape.md](assessments/switching-guide-landscape.md).
+  [assessments/switching-guide-landscape.md](archive/assessments/switching-guide-landscape.md).
 - **Marketing SEO substrate + try/run/leave repositioning** (2026-07-24) — the public pages argue
   the researched wedge instead of the category: home gains a "Safe to leave" portability band and
   founding-shop closing, `/product` a diver-arc moment (night-before brief, recap) and an "honest
@@ -3746,7 +3746,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 - **The chosen fit and nitrox request are saved the moment the booking exists** — the same
   `recordRentalFit`/`setBookingNitrox` writes the post-booking form already made, just a step earlier;
   that form still exists for a diver who skipped the step or wants to add sizes afterward.
-  Was the highest-leverage of [roadmap.md](features/roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
+  Was the highest-leverage of [roadmap.md](archive/roadmap-20261110.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
   candidates. See
   [20260801-checkout-upsells-rental-gear](../architecture/decisions/20260801-checkout-upsells-rental-gear.md).
 

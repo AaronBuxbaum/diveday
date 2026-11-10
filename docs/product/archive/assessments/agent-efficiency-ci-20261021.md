@@ -1,5 +1,9 @@
 # Agent efficiency audit: CI, verification, and delivery
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 Audit date: 2026-10-21. Scope: read-only inspection of the current checkout, verification
 playbooks, workflow implementation, and a live GitHub Actions sample. No application or pipeline
 changes were made. Recommendations are assessment proposals, not changes to accepted policy.

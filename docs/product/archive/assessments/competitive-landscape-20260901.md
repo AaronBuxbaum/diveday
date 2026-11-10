@@ -1,5 +1,9 @@
 # Competitive landscape — 2026-09-01
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 > A whole-field read of DiveDay's feature set against the dive-shop software market and against
 > the problems a dive shop actually has, written 2026-09-01 from four parallel research passes
 > (roughly 200 web searches and 400 page fetches over vendor sites, pricing pages, help centres,
@@ -9,7 +13,7 @@
 > and updates the two rival profiles in [competitive-strategy.md](competitive-strategy.md)
 > (2026-07-22); both stay as the record of the reasoning that shaped the product. An assessment,
 > not a commitment: every buildable gap below is a GitHub issue, and an owner's nod moves it into
-> [the roadmap](../features/roadmap.md).
+> [the roadmap](../../features/roadmap.md).
 
 ## Verdict in five sentences
 
@@ -95,7 +99,7 @@ section condenses; what matters for DiveDay is the shape of the market.
 
 | Segment | Owners | Challengers | What it means |
 | --- | --- | --- | --- |
-| **Retail POS + inventory + service** | DiveShop360 (+EVE), Rain POS | Lightspeed, EnComPOS, RetailEdge | Agency cert sync and air-fill cards live here and almost nowhere else. Concede POS loudly, as [vision.md](../vision.md#non-goals-for-now) already does |
+| **Retail POS + inventory + service** | DiveShop360 (+EVE), Rain POS | Lightspeed, EnComPOS, RetailEdge | Agency cert sync and air-fill cards live here and almost nowhere else. Concede POS loudly, as [vision.md](../../vision.md#non-goals-for-now) already does |
 | **Charter / day-trip booking on commission** | FareHarbor, Xola, Peek Pro | Rezdy, Checkfront, Bookeo (flat), TrekkSoft | ~6% guest-facing fees are the loudest complaint in the field; Checkfront is the only one modelling tanks, nitrox and weights as shared resources |
 | **Dive-native ops, flat fee, zero commission** | Bloowatch (Europe), DiversDesk (Asia) | DiverDash, ScubaCloud, AbyssOS, DivingList, DivePlanner Pro, Theybook, EquipDash, Geek Divers, Divery, AquaDivePro, DiveStreams, ScubaHub, DivePrep | **DiveDay's direct peer group.** Fragmented, $19–$119/month, none with independent review volume; a dozen say "not FareHarbor: flat fee, own your data" |
 | **Training records / student progress** | MySSI and the PADI app hold the records | DiverDash, ScubaCloud, AbyssOS, EVE/DS360 track progress locally | No open API from PADI or SSI; DiveOne's "sync" is beta |
@@ -508,25 +512,25 @@ tracked" links the existing home; "filed" is a new `needs-triage` issue from thi
 
 | Gap the market shows | Where it lives |
 | --- | --- |
-| Read API + webhooks (DiveAdmin's MCP/OAuth flag; Smartwaiver-grade reads) | [roadmap §1](../features/roadmap.md#1-data-portability-follow-ons-the-wedge) |
-| Gift cards (2 verified; generic engines likely) | [roadmap, unscheduled](../features/roadmap.md#gift-cards) |
-| Private / buyout charters and a boat entity (12 of 32 multi-boat) | [roadmap §4](../features/roadmap.md#4-multi-boat--multi-shop-configuration) and the boat-resource ADR |
-| Snorkellers and riders (Checkfront-style participant types) | [participant-types.md](../features/participant-types.md) |
-| Nitrox fill / analysis log, compressor logs (DiveOne) | [roadmap §3](../features/roadmap.md#3-nitrox-fill--analysis-log-open-question), H-20260730-nitrox-fill-station-procedure |
-| No-show frees the seat; morning Go / Watching call; seasonal price windows; counted share links; load-out checklist templates; tips by crew; refresher counsel; outbound Google review door | [roadmap §11](../features/roadmap.md#11-product-ideas-from-the-sweep-all-thirteen-deferred-past-pilot), ruled later in #1079 |
-| Credit ledger, buddy referral credit, course cohorts, group pay-your-own-share, alternative-day salvage, cohort/retention view, thermal receipt print | [brainstorm.md](../features/brainstorm.md) |
-| Cert-card OCR, natural-language ops assistant, diver Q&A (the "AI agent" wave: DiveOne, Anolla, EquipDash, MOLA, DiveOps.ai, DiveAdmin's Coral, ScubaHub's daily brief) | [ai-ml.md](../features/ai-ml.md) — DiveDay's Today queue already is the "daily brief"; the guardrail stands |
+| Read API + webhooks (DiveAdmin's MCP/OAuth flag; Smartwaiver-grade reads) | [roadmap §1](../roadmap-20261110.md#1-data-portability-follow-ons-the-wedge) |
+| Gift cards (2 verified; generic engines likely) | [roadmap, unscheduled](../roadmap-20261110.md#gift-cards) |
+| Private / buyout charters and a boat entity (12 of 32 multi-boat) | [roadmap §4](../roadmap-20261110.md#4-multi-boat--multi-shop-configuration) and the boat-resource ADR |
+| Snorkellers and riders (Checkfront-style participant types) | [participant-types.md](../participant-types-20260820.md) |
+| Nitrox fill / analysis log, compressor logs (DiveOne) | [roadmap §3](../roadmap-20261110.md#3-nitrox-fill--analysis-log-open-question), H-20260730-nitrox-fill-station-procedure |
+| No-show frees the seat; morning Go / Watching call; seasonal price windows; counted share links; load-out checklist templates; tips by crew; refresher counsel; outbound Google review door | [roadmap §11](../roadmap-20261110.md#11-product-ideas-from-the-sweep-all-thirteen-deferred-past-pilot), ruled later in #1079 |
+| Credit ledger, buddy referral credit, course cohorts, group pay-your-own-share, alternative-day salvage, cohort/retention view, thermal receipt print | [brainstorm.md](../../features/brainstorm.md) |
+| Cert-card OCR, natural-language ops assistant, diver Q&A (the "AI agent" wave: DiveOne, Anolla, EquipDash, MOLA, DiveOps.ai, DiveAdmin's Coral, ScubaHub's daily brief) | [ai-ml.md](../../features/ai-ml.md) — DiveDay's Today queue already is the "daily brief"; the guardrail stands |
 | Guardian co-signature on a minor's waiver (AbyssOS, EquipDash) | H-20260730-minimum-age-gate-data: solo signature accepted as-is, returns with H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit |
 | Birthday cues, welcome cues, rusty-diver re-entry, weather-disappointment recovery, service-recovery inbox (ScubaHub's birthday alert; FareHarbor's rebooking) | Delight backlog #1160 (D18, D22, D37, D46) |
-| Course minimum-age enforcement | [story-backlog.md](../features/story-backlog.md) |
-| Third-party e-signature adapter | [roadmap §2](../features/roadmap.md#2-third-party-e-signature-adapter-m3-follow-up) |
-| Multi-currency on one order; per-trip ratings; review replies; fixed-amount discounts | the ADR consequences listed under [smaller follow-ons](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs) |
+| Course minimum-age enforcement | [story-backlog.md](../story-backlog-20261110.md) |
+| Third-party e-signature adapter | [roadmap §2](../roadmap-20261110.md#2-third-party-e-signature-adapter-m3-follow-up) |
+| Multi-currency on one order; per-trip ratings; review replies; fixed-amount discounts | the ADR consequences listed under [smaller follow-ons](../roadmap-20261110.md#smaller-follow-ons-live-with-their-adrs) |
 | Native iOS/Android app (14 of 32 claim a mobile app; none of the newcomers actually has one) | ADR 20260804-ios-native-shell: PWA, with a measured trigger |
 
 ### Declined, and the rule that declines it
 
 - **Retail POS, barcode inventory, vendor catalogs, e-commerce webshop** — DiveShop360's
-  fortress and DiveDay's stated non-goal ([vision.md](../vision.md#non-goals-for-now)). The
+  fortress and DiveDay's stated non-goal ([vision.md](../../vision.md#non-goals-for-now)). The
   consultant advice on ScubaBoard is the split stack: a real POS plus a separate dive-day tool,
   which is the coexist story DiveDay already tells.
 - **Customer repair work orders** — retail-service territory, declined 2026-08-15 after a direct
@@ -599,4 +603,4 @@ rows lean on snippets and third-party pages. AI-generated listicles (gitnux, wif
 were used only to find names, never as evidence; several names in the brief and in those lists
 (Dive Centre HQ, DiveManager, ScubaDesk, Ocean Blue, RentMy, ZenDive, Scubacore) are defunct or
 do not exist. Pricing figures are dated 2026-09-01 and should be re-fetched from the vendor's own
-page before any of them is quoted publicly ([marketing.md](../marketing.md)'s claims policy).
+page before any of them is quoted publicly ([marketing.md](../../marketing.md)'s claims policy).

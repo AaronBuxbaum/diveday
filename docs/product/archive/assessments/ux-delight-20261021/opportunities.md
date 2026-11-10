@@ -136,7 +136,7 @@ implementation.
 The following items retain the audit's issue snapshot and rationale. Their current state was not
 revalidated here unless explicitly stated; this is not a current open-work list. The delivered
 operational recommendations #2742/#2727/#2807 were removed and recorded in
-[Shipped](../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21).
+[Shipped](../../../shipped.md#ux-audit-continuity-and-operational-trust-merged-2026-10-21).
 Inclusion does not supersede an issue's approved design.
 
 | Priority band | Existing work | Why it matters to the experience | Boundary to preserve |

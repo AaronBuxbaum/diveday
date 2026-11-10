@@ -1,5 +1,9 @@
 # Agent efficiency: code structure and measurement evidence
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 Assessment date: 2026-10-21. Checkout: `971c490d4ba1e863a3fb4e5a7ced4d5e94dd4522`.
 This is a research appendix, not a refactoring mandate. Counts include tests unless stated.
 
@@ -35,14 +39,14 @@ Examples:
 
 | File | Lines | Natural responsibilities visible in its symbols |
 | --- | ---: | --- |
-| [bookings.ts](../../../src/db/bookings.ts) | 4,144 | Creation and parties, admission, movement/restoration, participant changes, cancellation, diver details, identity confirmation/splitting |
-| [anonymize.ts](../../../src/features/anonymize/store.ts) | 2,978 | Erasure orchestrator plus many domain-specific scrubbers |
-| [orders.ts](../../../src/db/orders.ts) | 2,767 | Order creation/issue, counter settlement, ledger queries, provider event application |
-| [manifests.ts](../../../src/db/manifests.ts) | 2,382 | Checkpoint queries, manifest assembly, diver and crew writes, offline reconciliation |
-| [notifications/kinds.ts](../../../src/lib/notifications/kinds.ts) | 2,304 | Notification-kind definitions |
-| [form.tsx](../../../src/components/ui/form.tsx) | 1,203 | Shared field/control implementation |
+| [bookings.ts](../../../../src/db/bookings.ts) | 4,144 | Creation and parties, admission, movement/restoration, participant changes, cancellation, diver details, identity confirmation/splitting |
+| [anonymize.ts](../../../../src/features/anonymize/store.ts) | 2,978 | Erasure orchestrator plus many domain-specific scrubbers |
+| [orders.ts](../../../../src/db/orders.ts) | 2,767 | Order creation/issue, counter settlement, ledger queries, provider event application |
+| [manifests.ts](../../../../src/db/manifests.ts) | 2,382 | Checkpoint queries, manifest assembly, diver and crew writes, offline reconciliation |
+| [notifications/kinds.ts](../../../../src/lib/notifications/kinds.ts) | 2,304 | Notification-kind definitions |
+| [form.tsx](../../../../src/components/ui/form.tsx) | 1,203 | Shared field/control implementation |
 
-The existing [size guard](../../../scripts/check-page-length.mjs), lines 90–95, limits source
+The existing [size guard](../../../../scripts/check-page-length.mjs), lines 90–95, limits source
 file size for app/components and test files throughout `src`; it does not apply the source-file
 limit to db/lib. The function guard covers those areas, so this is an asymmetry, not an absence
 of all size protection.
@@ -90,15 +94,15 @@ stacking policy is a decision, not an audit-time implementation.
 
 ## S3. Authoritative architecture guidance has semantic drift
 
-[Architecture overview](../../architecture/overview.md), lines 39–40 and 63–65, still describes
+[Architecture overview](../../../architecture/overview.md), lines 39–40 and 63–65, still describes
 `schema.ts`, components "when it exists," and feature modules as proven on one feature.
 The current route map points to `src/db/schema/`, hundreds of component files exist, and there
 are four feature modules.
 
 More materially, lines 84–85 say a migrate-once template database is a future proposal.
-[db-template.ts](../../../src/test/db-template.ts), lines 13–20 and 91 onward, already builds
-reusable snapshots; [db.ts](../../../src/test/db.ts), lines 160–275, provides a file-scoped
-database with per-test rollback. [Testing documentation](../../engineering/testing.md),
+[db-template.ts](../../../../src/test/db-template.ts), lines 13–20 and 91 onward, already builds
+reusable snapshots; [db.ts](../../../../src/test/db.ts), lines 160–275, provides a file-scoped
+database with per-test rollback. [Testing documentation](../../../engineering/testing.md),
 "The test database is a snapshot, not a boot," describes the implemented mechanism.
 
 An agent reading the architecture document first can reject the implemented test optimization
@@ -109,12 +113,12 @@ dated and distinguish its decision from the current mechanism.
 
 ## S4. Use existing successful centralization as the pattern
 
-[seat-diver.ts](../../../src/features/seat-diver/store.ts), lines 32–46, explains an actual recurring
+[seat-diver.ts](../../../../src/features/seat-diver/store.ts), lines 32–46, explains an actual recurring
 failure: five entry points repeated booking consequences, and some omitted waiver delivery or
 activity recording. `seatDiver` gives callers one consequence path with explicit variation.
 This is more effective than reminding every future agent to remember four side effects.
 
-[recap-after-state](../../../src/features/recap-after-state/README.md) similarly documents one
+[recap-after-state](../../../../src/features/recap-after-state/README.md) similarly documents one
 assembler, its two callers, what it owns, and what remains in db/auth/copy. The architecture
 guard prevents callers from reaching into its private implementation.
 
@@ -124,7 +128,7 @@ wrappers that merely rename a call and add another file to read.
 
 ## S5. Test setup has a possible optimization target, not a measured bottleneck
 
-[inputsFingerprint](../../../src/test/db-template.ts), lines 45–65, hashes all non-test files
+[inputsFingerprint](../../../../src/test/db-template.ts), lines 45–65, hashes all non-test files
 under `drizzle`, `src/db`, and `src/content`, plus the frozen clock. A query-only db edit therefore
 invalidates snapshots even when the seed inputs did not change. This is intentionally conservative.
 

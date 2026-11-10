@@ -1,5 +1,8 @@
 # Participant types — divers, snorkellers, and riders on one departure
 
+> Archived 2026-11-10. Historical context, not an active worklist. See
+> [the reconciliation](README.md) and current issues before acting on the text below.
+
 **Status: shipped 2026-10-07** ([ADR 20261007-participant-types](../../architecture/decisions/20261007-participant-types.md);
 [shipped.md](../shipped.md#participants-who-are-not-divers-delivered-2026-10-07)). All four slices
 below landed together. The code spells the type **snorkeler** (US English); this document keeps the
@@ -113,7 +116,7 @@ should ship first: it is small, and it is the one blocking a sale today.
 1. **Does a rider sign a waiver?** A person on a dive boat who never enters the water is still on a
    dive boat. This is an H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit question and it should ride with them rather than be guessed.
 2. **Do the two capacity limits come from the boat or the trip?** A boat entity does not exist yet —
-   a trip *is* the boat-day (see [roadmap.md](roadmap.md#4-multi-boat--multi-shop-configuration) and
+   a trip *is* the boat-day (see [roadmap.md](roadmap-20261110.md#4-multi-boat--multi-shop-configuration) and
    ADR 20260804-boat-resource-model). Putting a second capacity on `trips` is right until that ADR is
    accepted, and wrong afterwards.
 3. **Is "snorkeller" one type or two?** Some shops sell a guided snorkel with a divemaster in the

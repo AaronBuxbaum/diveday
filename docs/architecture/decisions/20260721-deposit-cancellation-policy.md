@@ -8,7 +8,7 @@
 [Checkout-at-booking](20260721-checkout-at-booking.md) shipped the mechanism for public payment but
 with a deliberately provisional policy: full trip price per diver, no deposit tier, no cancellation
 window. Those two gaps are the remaining half of **H-20260724-payment-deposit-cancellation-refund** and the last thing the
-[competitive analysis](../../product/assessments/competitive-analysis.md#what-blocks-the-purchase) flags before
+[competitive analysis](../../product/archive/assessments/competitive-analysis.md#what-blocks-the-purchase) flags before
 this checkout takes production money: every credible competitor offers a deposit-only option and a
 stated cancellation policy.
 

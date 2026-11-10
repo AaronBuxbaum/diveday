@@ -6,7 +6,7 @@
 ## Context
 
 The buyer is usually the owner, and the question they ask first — *"how's my month?"* — had no surface.
-[competitive-analysis.md](../../product/assessments/competitive-analysis.md#what-blocks-the-purchase)
+[competitive-analysis.md](../../product/archive/assessments/competitive-analysis.md#what-blocks-the-purchase)
 lists "no owner reporting" as a recurring deal-blocker: rivals (DiveShop360, DiveAdmin, EVE) all show
 bookings, revenue, and fill at a glance, and its absence reads as "this is a tool for the crew, not
 for me." The [roadmap](../../product/features/roadmap.md) scopes the answer deliberately small — *"even a

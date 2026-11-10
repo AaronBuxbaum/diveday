@@ -9,7 +9,7 @@ This document is the living rulebook for those pages: the positioning they argue
 may make, the voice they use, and the maintenance loop that keeps them true. The dated case for the
 current direction is [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md)
 (fully delivered, kept for rationale); so is the conversion pass argued in
-[marketing-review-20260827.md](marketing-review-20260827.md), whose slices 12a–12f all landed on
+[marketing-review-20260827.md](archive/marketing-review-20260827.md), whose slices 12a–12f all landed on
 2026-08-28; the leave-it guides' pricing link was approved on 2026-11-10. The step-by-step editing
 procedure is the `marketing-page` skill.
 
@@ -142,7 +142,7 @@ stays declined as a vision non-goal; repair work orders no longer are — the be
 gear tracking is a shipped capability: it belongs in `productCapabilityIndex`, never in the concession list. The general rule
 this is an instance of — **when a slice ships, sweep the concessions before writing new copy**; a
 stale "we don't do X" costs more trust than the honest no ever bought. See
-[assessments/competitive-strategy.md](assessments/competitive-strategy.md) for why these are the
+[assessments/competitive-strategy.md](archive/assessments/competitive-strategy.md) for why these are the
 chosen battlegrounds — and re-read it before changing the spine.
 
 ## The two doors, and which one leads (decided 2026-08-22)
@@ -204,7 +204,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   the move rail, ends "Rather hand it off? Send us the file and a person brings your divers in with
   you, free." The full block used to be the offer's only appearance and sat about 80% down every
   guide — *below* the four-phase rail whose whole job is to show a reader how much work switching is
-  ([marketing-review-20260827.md](marketing-review-20260827.md)'s third diagnosis, "help arrives
+  ([marketing-review-20260827.md](archive/marketing-review-20260827.md)'s third diagnosis, "help arrives
   after the homework"). The reader deciding whether they can face this now meets the alternative in
   the same breath as the work. Compressed at the top, authored once, never re-worded — the same
   shape `midSeasonCutover` uses for the cutover steps and `GUIDE_FACTS.back` uses for the export
@@ -745,7 +745,7 @@ accumulated still reads. `product-mid` retired the same way on 2026-10-05, with 
 the dock chapter it stood under (H-20261005-public-pages-sell), and `product-index` the same day, with the inventory band
 it closed. That door (2026-08-28) answered the band's dare, *every one of these lines is something
 you can go and do in the live demo right now*, with a door under the list rather than two bands
-further down ([marketing-review-20260827.md](marketing-review-20260827.md), "the dare gets a
+further down ([marketing-review-20260827.md](archive/marketing-review-20260827.md), "the dare gets a
 door"). Once the inventory folded into the directory, the hub was short enough that the pair
 stood one screen above the close's own, and the dare itself had gone: the demo cannot take a
 payment, so "every line" was no longer true of it (#2094). `/product` keeps two doors, hero and
@@ -757,7 +757,7 @@ furthest from the impulse. `/about`'s four operating rules each end in the demo 
 them — *save a manifest to your phone, turn the network off, and run roll call anyway* — and the
 nearest thing a convinced reader could act on was a primary-weight `mailto:` two bands down, with
 the demo waiting past the founder story, the concessions and the export terms
-([marketing-review-20260827.md](marketing-review-20260827.md), "help arrives after the homework").
+([marketing-review-20260827.md](archive/marketing-review-20260827.md), "help arrives after the homework").
 The pair now closes the band that makes the dare, wordless because the four "Check it" lines above
 it are its caption. The demo note stands beneath the pair, because
 this is now the page's first door and the terms belong at the first one (the once-per-page rule
@@ -1009,7 +1009,7 @@ to reach out directly regardless, which is where the real conversation happens. 
 cadence to "per shop" — that is a pricing change wearing a documentation cleanup's clothes.
 Each names one incumbent's own export click-path, renders the import scope table from
 `IMPORT_HONESTY_TABLE` verbatim (never paraphrased), and ends on a demo CTA. Every incumbent claim
-is documented fact from [assessments/competitive-strategy.md](assessments/competitive-strategy.md),
+is documented fact from [assessments/competitive-strategy.md](archive/assessments/competitive-strategy.md),
 carrying its own `sources` (rendered on the page) and phrased factually, never speculative; the
 safety-adjacent scope copy gets `dive-domain-expert` review like any other. Add a guide by writing
 its `MigrationGuide` entry — only once its export path is verified, since every registered entry is
@@ -1037,8 +1037,8 @@ stops) over the same shared export/scope/import mechanics. Two extra honesty rul
 **never imply an integration or live sync** (coexistence is "run alongside, bridged by the CSV
 import"), and **never state a competitor's unpublished fee as their published price** (FareHarbor's
 rate is reported-only, "reported at around 6%"; Rezdy's 3% is dated to its current published page).
-See [assessments/fareharbor-positioning.md](assessments/fareharbor-positioning.md) for the pattern
-and [assessments/switching-guide-landscape.md](assessments/switching-guide-landscape.md) for which
+See [assessments/fareharbor-positioning.md](archive/assessments/fareharbor-positioning.md) for the pattern
+and [assessments/switching-guide-landscape.md](archive/assessments/switching-guide-landscape.md) for which
 channels get a guide next.
 
 The one non-incumbent guide is `/switching/spreadsheet` ("Coming from a spreadsheet"). A shop on a

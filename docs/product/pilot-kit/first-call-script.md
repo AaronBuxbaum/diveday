@@ -106,7 +106,7 @@ more.
   anything?
 - How do those people end up on the list the boat leaves with?
 
-*(Feeds [../features/participant-types.md](../features/participant-types.md), whose price and waiver
+*(Feeds [../features/participant-types.md](../archive/participant-types-20260820.md), whose price and waiver
 assumptions are inferred from published rate cards and nothing else. A shop that says "everyone dives,
 always" is a finding too — it demotes the whole subsystem.)*
 
@@ -236,7 +236,7 @@ Write it while it's warm. A call note that isn't written the same hour is a call
 Where it goes:
 
 - **Product findings** — something DiveDay does wrong or doesn't do — become tickets in
-  [features/story-backlog.md](../features/story-backlog.md); safety findings follow the stop-the-line
+  [features/story-backlog.md](../archive/story-backlog-20261110.md); safety findings follow the stop-the-line
   rule in [dive-operations.md](../stakeholders/dive-operations.md).
 - **A committed pilot** is V-04 evidence and a phase-progress note in
   [rollout.md](../rollout.md); the status lives in

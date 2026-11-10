@@ -260,7 +260,7 @@ not exercised in the field.
   production departures may proceed. Status lives there and nowhere else.
 - Safety-severity defects become stop-the-line fixes with regression tests
   ([dive-operations.md](../stakeholders/dive-operations.md)).
-- Everything else becomes tickets in [features/story-backlog.md](../features/story-backlog.md).
+- Everything else becomes tickets in [features/story-backlog.md](../archive/story-backlog-20261110.md).
 - A **passing** V-02 is what the claims policy waits on before offline roll call may be spoken about
   as proven ([marketing.md](../marketing.md#claims-policy-hard-rules),
   [rollout.md](../rollout.md#03-field-validation-v-01-v-02-v-04-rehearsal)).

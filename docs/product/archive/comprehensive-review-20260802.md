@@ -8,7 +8,7 @@
 > items that turned out still genuinely open — is dissolved into the durable docs: the register is
 > now [human-decisions/](../human-decisions/README.md)'s **H-20261025-product-has-never-had through H-20260806-orders-csv-carries-hosted**, and the agency free-text
 > companion field (DOM-L1) is a bullet in
-> [roadmap.md](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs). This file holds no
+> [roadmap.md](roadmap-20261110.md#smaller-follow-ons-live-with-their-adrs). This file holds no
 > open work of its own any longer — retained below for the rationale behind each finding, not as a
 > plan. See the fifth-pass note at the end of the reconciliation history immediately below, and
 > [human-decisions/](../human-decisions/README.md)'s 2026-08-07 change-history row for what moved where.
@@ -68,7 +68,7 @@
 > companion-field gap, the live Stripe-invoice-URL export finding (new, found reviewing the
 > 2026-08-06 export work), and the full human-decision register — is dissolved into
 > [human-decisions/](../human-decisions/README.md) as **H-20261025-product-has-never-had through H-20260806-orders-csv-carries-hosted** and one bullet in
-> [roadmap.md](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs). This document is
+> [roadmap.md](roadmap-20261110.md#smaller-follow-ons-live-with-their-adrs). This document is
 > archived rather than reconciled a sixth time: it has nothing further to reconcile.
 
 ## Verdict
@@ -141,7 +141,7 @@ would have found — and theme 5 is new.
    **ARCH-2, I18N-4 and the I18N-2 residue shipped 2026-08-04** (`pnpm check:architecture` now sees
    bare side-effect imports and ratchets pre-existing debt; `pnpm check:tokens` fails raw hex and
    palette-scale classes; `provider-coverage.test.ts` now traces `src/components` consumers too — see
-   [roadmap P2](../features/roadmap.md#p2--when-parallelism-or-scale-proves-the-need)) — this theme's
+   [roadmap P2](roadmap-20261110.md#p2--when-parallelism-or-scale-proves-the-need)) — this theme's
    text below was never updated to say so. What is still unchecked: the lib↔db contract, unchecked
    and already violated (ARCH-1, [H-20261025-lib-db-layer-contract](../human-decisions/README.md)); "revisit at GA" triggers that live
    only in ADR text (ARCH-4, [H-20261025-ga-migration-budget-pre](../human-decisions/README.md)). An invariant that isn't executable is a
@@ -209,11 +209,11 @@ home instead of duplicated in an archived assessment:
   [roadmap §contrast](../features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision),
   gated on H-20261024-colour-guide-decision-blocking.
 - **The real-Postgres CI job** shipped 2026-08-06 —
-  [roadmap's enablement backlog](../features/roadmap.md#p1--next) — with its cadence question as
+  [roadmap's enablement backlog](roadmap-20261110.md#p1--next) — with its cadence question as
   H-20260806-real-postgres-ci-job.
 - **DOM-L1's agency free-text companion field**, the one item from the old "what to build" list that
   is still open and still buildable, is a bullet in
-  [roadmap's smaller follow-ons](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs).
+  [roadmap's smaller follow-ons](roadmap-20261110.md#smaller-follow-ons-live-with-their-adrs).
 - **Everything else the old "what to build" list named** — the rate-limit fail-open log voice
   (SEC-D1/OPS-7), the two payment-quote/refund-lock findings (PAY-L2/L3), the destructive-migration
   guard (DATA-L5), the Stripe fixture version pin (TEST-M2), the trigram indexes (DATA-L6), the
@@ -388,7 +388,7 @@ optimism; minors' ages purged from crew phones.
   a mirror of the enum; BSAC was deliberately **not** added to it. The PADI-only ratio scope is
   itself unchanged and still recorded — widening the enum widens who that applies to without
   changing the rule.
-  The companion field is a buildable bullet in [roadmap.md](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs); DOM-M7, DOM-L2 and DOM-L4 shipped 2026-08-06.
+  The companion field is a buildable bullet in [roadmap.md](roadmap-20261110.md#smaller-follow-ons-live-with-their-adrs); DOM-M7, DOM-L2 and DOM-L4 shipped 2026-08-06.
 
 ## 5. Data model & persistence
 
@@ -731,6 +731,6 @@ said and what the code did stays visible rather than vanishing into an edit. Wha
 human-external Criticals, one live claims-policy violation gated on V-02, the full human-decision
 register, and two genuinely still-open small items — is dissolved into
 [human-decisions/](../human-decisions/README.md) (H-20261025-product-has-never-had through H-20260806-orders-csv-carries-hosted) and
-[roadmap.md](../features/roadmap.md#smaller-follow-ons-live-with-their-adrs) (DOM-L1's companion
+[roadmap.md](roadmap-20261110.md#smaller-follow-ons-live-with-their-adrs) (DOM-L1's companion
 field). This document is archived rather than reconciled again: everything it could still say has a
 more current home now.

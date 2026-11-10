@@ -1,5 +1,9 @@
 # Experience review — 2026-08-31
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 > A whole-app review through 24 product, UX, marketing, feature, and delight lenses. It is an
 > assessment, not a backlog in parallel with GitHub: every action below either has its existing
 > issue or is built in the accompanying branch.

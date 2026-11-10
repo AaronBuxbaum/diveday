@@ -1,9 +1,18 @@
 # H-20260724-corporate-footing-diveday-operate: Corporate footing for DiveDay: operate inside the owner's existing Pseudorandom LLC (S-corp election; current…
 
-- **Status:** Ready
+- **Status:** Deferred
 - **Human owner:** Product owner + generalist attorney + CPA (Tier 1 — no specialist needed, see [legal-engagement-scope.md](../stakeholders/legal-engagement-scope.md))
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+Confirm the contracting entity and get counsel review before the first paid contract. The task
+is [#4212](https://github.com/AaronBuxbaum/diveday/issues/4212). This is a timing decision, not a
+legal sign-off or selection of an entity.
+
+Source: [owner-account decision record on #4192](https://github.com/AaronBuxbaum/diveday/issues/4192#issuecomment-6759950843).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 Corporate footing for DiveDay: operate inside the owner's existing **Pseudorandom LLC** (S-corp election; current business is software contracting and mentorship — owner context recorded 2026-07-24) or form a dedicated DiveDay entity — plus the SaaS contract set nothing can be signed without: design-partner pilot agreement, founding-shop subscription terms encoding the published two-year price lock and same-day support promises (H-20260724-public-founding-shop-price), a privacy policy, and the "your waiver is your responsibility" boundary. The working recommendation is a dedicated LLC before any pilot agreement is signed; analysis and the generalist/CPA question list are in [stakeholders/legal.md](../stakeholders/legal.md#the-entity-decision-h-20260724-corporate-footing-diveday-operate).
 

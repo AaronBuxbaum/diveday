@@ -1,11 +1,15 @@
 # Competitive strategy — beating DiveAdmin and DiveShop360
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 > The battle plan against the two most dangerous named rivals, and the data-portability wedge that
 > makes "try us" a safe decision. Written 2026-07-22 from three deep research passes (vendor sites
 > and API docs, review platforms, ScubaBoard, migration-industry and regulatory sources), checked
 > against the running codebase. Companion to [competitive-analysis.md](competitive-analysis.md)
 > (the buyer's whole-market view); this document is the operator's view of two specific fights.
-> An assessment, not a commitment; items that survive review move to [roadmap.md](../features/roadmap.md).
+> An assessment, not a commitment; items that survive review move to [roadmap.md](../../features/roadmap.md).
 > Both rival profiles were re-verified on 2026-09-01 in
 > [competitive-landscape-20260901.md](competitive-landscape-20260901.md): DiveShop360 is Rain
 > Retail Software's vertical (Provo, Utah, founded 2006; the Quilt/PSG ownership stated below was
@@ -126,7 +130,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
 **safety-critical surface** (boring code, adversarial tests, `dive-domain-expert` review).
 
 1. ✅ **Full-shop export, self-serve, every tier** — **shipped 2026-07-22, completeness pass
-   2026-07-23** ([ADR](../../architecture/decisions/20260722-full-shop-export.md)): Settings → Data
+   2026-07-23** ([ADR](../../../architecture/decisions/20260722-full-shop-export.md)): Settings → Data
    export downloads one ZIP of documented RFC-4180 CSVs (people + roles, all three certification
    kinds, trips + dives + series, boarding gates, crew, bookings + payment state, wait lists,
    waiver templates with full versioned bodies, signed waiver records including medical evidence,
@@ -142,7 +146,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    documented, wizard-mappable CSV" — per-competitor import verification belongs to the migration
    guides (#3).
 2. ✅ **Diver/customer CSV importer with a published honesty table** — **shipped 2026-07-23**
-   ([ADR](../../architecture/decisions/20260723-contact-importer.md)): Settings → Import contacts,
+   ([ADR](../../../architecture/decisions/20260723-contact-importer.md)): Settings → Import contacts,
    matched by email, with the scope table up front and the safety spine held (imported certs land
    *claimed*, never *verified*; medical answers never import).
    Column-mapped, previewed, validated import for the shop's people + cert + sizes data, with
@@ -161,7 +165,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    *Updated 2026-07-24:* a row explicitly claiming a prior waiver acceptance is now trusted (medical
    clearance included) and written as a distinctly-marked `imported` record — a product-owner
    decision (H-20260724-contact-importer-trust-prior) that narrows the "medical never imports" rule above; see
-   [20260724-import-waiver-acceptance](../../architecture/decisions/20260724-import-waiver-acceptance.md).
+   [20260724-import-waiver-acceptance](../../../architecture/decisions/20260724-import-waiver-acceptance.md).
 3. **Migration guides as public pages** *(S, marketing)*. "Switching from DiveShop360," "…from
    EVE" (the forced-migration pool), "…from DiveAdmin," "…from Smartwaiver," "…from
    FareHarbor/Rezdy." Each: exact click-path to the incumbent's own export, our scope table, the
@@ -180,7 +184,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    survey of remaining candidates — WeTravel, Rezgo, Bókun, Bloowatch, Peek Pro, and why the
    agencies (PADI/SSI) are import rails, not switching targets — is in
    [switching-guide-landscape.md](switching-guide-landscape.md). See
-   [marketing.md](../marketing.md#where-the-words-live).
+   [marketing.md](../../marketing.md#where-the-words-live).
 4. **Scheduled backup export to shop-owned storage** *(S–M)*. Weekly bundle from #1 to the shop's
    email/Drive. Matches DiveAdmin's one real portability lever and converts "your data is yours"
    from pledge to running fact. Calendar (.ics) feeds for trips ride along cheaply here.
@@ -189,7 +193,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    attachment limits die at real bundle sizes, and a bucket is durable storage under the shop's
    own credential, which is the actual promise. Weekly cron, idempotent per shop per ISO week,
    sealed credentials, per-delivery history with coded failures, `trips.ics` riding along; see
-   [20260804-shop-owned-backup-export](../../architecture/decisions/20260804-shop-owned-backup-export.md).
+   [20260804-shop-owned-backup-export](../../../architecture/decisions/20260804-shop-owned-backup-export.md).
 5. **Read API + webhooks, every tier** *(M — ADR required)*. Smartwaiver-grade: token-scoped read
    endpoints over the same documented schema as #1, webhooks for booking/waiver/manifest events.
    This out-substances DiveAdmin's ingestion-only API and gives DiveShop360 nothing to answer
@@ -231,7 +235,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    band — together they are the "easy data export (attack lock-in fear head-on)" counter that
    [competitive-analysis.md](competitive-analysis.md) already prescribes for blocker #6, now
    specced.
-2. Migration guides (#3) belong to the marketing surface ([marketing.md](../marketing.md)); they
+2. Migration guides (#3) belong to the marketing surface ([marketing.md](../../marketing.md)); they
    shipped as a `/switching` hub with "Switching from EVE" first (`/switching/eve`) — the live-now pool —
    followed by live guides for DiveShop360 and Smartwaiver (a DiveAdmin guide shipped alongside them
    and was retired 2026-08-05), and (2026-07-24) a

@@ -1,5 +1,9 @@
 # AI coding efficiency assessment
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 **Date:** 2026-10-21. **Repository snapshot:** `971c490d4ba1e863a3fb4e5a7ced4d5e94dd4522`.
 **Requested outcome:** explain excess context/token use, slow delivery, repeated CI repairs,
 and recurring visual mistakes; identify improvements and missing skills.
@@ -134,8 +138,8 @@ skills with supported links or generated adapters, then test all exposed entry p
 Examples include unconditional dark captures versus color-only dark review; full local visual
 comparison versus Linux-baseline guidance; a read-only Explore role prescribed for execution;
 and CI access instructions that universalize an old cloud environment's restrictions.
-[Verifying guidance](../../agents/verifying.md) says CI can only be read through MCP, while
-[issue-tracker guidance](../../agents/issue-tracker.md) prescribes REST/CLI access. In this audit,
+[Verifying guidance](../../../agents/verifying.md) says CI can only be read through MCP, while
+[issue-tracker guidance](../../../agents/issue-tracker.md) prescribes REST/CLI access. In this audit,
 REST access worked. Preserve the historical lesson about positive completion checks, but probe
 capabilities instead of treating one environment's incident as universal policy.
 
@@ -171,8 +175,8 @@ Do not turn every text change into a full browser suite.
 
 ### Base selection can charge a task for inherited work
 
-`stackBase` in [e2e-affected.mjs](../../../scripts/e2e-affected.mjs), lines 104–125, searches
-`refs/remotes/origin/claude`. [verify-push.mjs](../../../scripts/verify-push.mjs), lines 423–447,
+`stackBase` in [e2e-affected.mjs](../../../../scripts/e2e-affected.mjs), lines 104–125, searches
+`refs/remotes/origin/claude`. [verify-push.mjs](../../../../scripts/verify-push.mjs), lines 423–447,
 uses that result for both selection and the base CI verdict. A Codex stack can therefore fall
 back to main, select inherited changes, and inspect the wrong parent's status.
 
@@ -209,7 +213,7 @@ appropriate to the task; do not mechanically demand every combination. See V3.
 
 ### Old builds can make wrong evidence look successful
 
-[check-e2e-build.mjs](../../../scripts/check-e2e-build.mjs), lines 59–66, warns when `src` is
+[check-e2e-build.mjs](../../../../scripts/check-e2e-build.mjs), lines 59–66, warns when `src` is
 newer than the build and continues. A passing capture of old code is as misleading as a failure
 against old code. Configuration and other build inputs are outside that heuristic.
 

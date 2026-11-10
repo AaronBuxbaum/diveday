@@ -15,16 +15,16 @@ specific to a guide — read `marketing-page` first if you haven't.
 
 1. Read `docs/product/marketing.md` §"Where the words live" (switching-guide section) — the rules
    this skill implements.
-2. Read [assessments/competitive-strategy.md](../../../docs/product/assessments/competitive-strategy.md)
+2. Read [assessments/competitive-strategy.md](../../../docs/product/archive/assessments/competitive-strategy.md)
    for why portability is the chosen battleground and the legal guardrail (a shop migrates from
    files *it* exports itself — a guide never tells anyone to hand over a competitor login, and
    DiveDay never reaches into another system).
-3. Check [assessments/switching-guide-landscape.md](../../../docs/product/assessments/switching-guide-landscape.md)
+3. Check [assessments/switching-guide-landscape.md](../../../docs/product/archive/assessments/switching-guide-landscape.md)
    for which incumbents/channels are surveyed and which is next — don't add an unsurveyed one
    without product-owner sign-off on its claims.
 4. If the incumbent is a booking/distribution **channel** rather than a records system (today:
    FareHarbor, Rezdy — general tours engines), read
-   [assessments/fareharbor-positioning.md](../../../docs/product/assessments/fareharbor-positioning.md)
+   [assessments/fareharbor-positioning.md](../../../docs/product/archive/assessments/fareharbor-positioning.md)
    for the coexist-led pattern before drafting.
 
 ## Two guide shapes

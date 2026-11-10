@@ -1,5 +1,9 @@
 # Switching-guide landscape — who else gets a guide
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 > A survey of the software a dive shop might leave (or run DiveDay alongside), and which ones earn a
 > switching guide next. Written 2026-07-24 from a multi-source research sweep (vendor sites, help
 > centres, API docs, review platforms, ScubaBoard), checked against the shipping gate below.

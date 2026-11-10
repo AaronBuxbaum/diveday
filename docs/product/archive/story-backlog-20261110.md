@@ -1,7 +1,10 @@
 # Story backlog
 
+> Archived 2026-11-10. Historical context, not an active worklist. See
+> [the reconciliation](README.md) and current issues before acting on the text below.
+
 Open, partial, and review-blocked work carried forward from
-[../archive/ux-personas-20260730-findings.md](../archive/ux-personas-20260730-findings.md) (the
+[../archive/ux-personas-20260730-findings.md](ux-personas-20260730-findings.md) (the
 2026-07-30 UX persona review). Each entry cross-references the persona or lens it serves in
 [../personas.md](../personas.md) and links back to its original task number for full context (file
 references, review notes, rationale) in the archive.

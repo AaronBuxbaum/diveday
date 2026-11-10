@@ -152,7 +152,7 @@ URLs to Google or Meta on every visit, and the guardrail it walked past is one
 comment in a file it never opened.
 
 Nothing is broken today: there is no ad pixel in the tree, and the
-[paid-acquisition assessment](../product/assessments/paid-acquisition-assessment.md)
+[paid-acquisition assessment](../product/archive/assessments/paid-acquisition-assessment.md)
 recommends `$0` of ad spend until a design partner exists. This section exists so
 the answer stays safe if that changes.
 

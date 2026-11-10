@@ -44,7 +44,7 @@ shops"). They have to win the only three ways available to an unproven vendor:
 
 "Run the whole dive day, from booking to head count" and "everything the shop needs" are sentences
 DiveAdmin and DiveShop360 can (and do) also say. Meanwhile the things
-[competitive-strategy.md](../assessments/competitive-strategy.md) verified we *actually win on* are absent or
+[competitive-strategy.md](assessments/competitive-strategy.md) verified we *actually win on* are absent or
 buried:
 
 - **Boat-day depth** — roll-call checkpoints, append-only history, an offline manifest that keeps
@@ -78,7 +78,7 @@ For a no-brand entrant, search and shared links are the only free inbound channe
 ### 3. The objection layer answers easy questions, not deal-killers
 
 The pricing FAQ (4 items) answers "what's included" and "does the manifest work offline". The
-questions that actually kill the deal, per [competitive-analysis.md](../assessments/competitive-analysis.md#what-blocks-the-purchase),
+questions that actually kill the deal, per [competitive-analysis.md](assessments/competitive-analysis.md#what-blocks-the-purchase),
 go unanswered:
 
 - **"You're new and unproven — what happens to my data if you fold?"** We have the best possible

@@ -11,7 +11,7 @@ call a provider's API when a shop has authorized it, on private apps only. The c
 as written, including the constraint that is no longer true, so the reasoning that was correct in
 August stays readable.
 
-**Proposed, deliberately.** This is [roadmap §1](../../product/features/roadmap.md#1-data-portability-follow-ons-the-wedge)'s
+**Proposed, deliberately.** This is [roadmap §1](../../product/archive/roadmap-20261110.md#1-data-portability-follow-ons-the-wedge)'s
 "read API + webhooks," which the roadmap already marks **ADR required**. Accepting it is a
 product-owner decision; this record exists so implementation starts from a settled shape instead
 of improvising the transport layer under deadline. [20260815-pos-order-emission-completeness](20260815-pos-order-emission-completeness.md)

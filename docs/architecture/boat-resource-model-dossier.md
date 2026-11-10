@@ -1,5 +1,11 @@
 # Boat & buyout-charter model — design dossier (2026-08-04)
 
+**Historical design evidence, reconciled 2026-11-10.** Boats, private departures and charter
+quotes now exist. This dossier's no-boat inventory and deferred-work language describe
+2026-08-04, not today's product. Use current code and
+[the accepted capacity ADR](decisions/20261029-boat-capacity-total-occupants.md) for the current
+head-count rule; preserve the alternatives below as rationale, not work to restart.
+
 Supporting material for the **Proposed** ADR
 [20260804-boat-resource-model](decisions/20260804-boat-resource-model.md). This file is the
 auditable thinking: the ground-truth inventory, the evaluation criteria (fixed before any design was
@@ -17,10 +23,10 @@ the same morning instead of with a month of modeling arguments.
 DiveDay has no boat entity — **a trip *is* the boat-day**. Two roadmap items block on that one
 missing model:
 
-- [roadmap §4 — Multi-boat / multi-shop configuration](../product/features/roadmap.md#4-multi-boat--multi-shop-configuration):
+- [roadmap §4 — Multi-boat / multi-shop configuration](../product/archive/roadmap-20261110.md#4-multi-boat--multi-shop-configuration):
   a shop running several boats can see all departures, move divers and crew carefully, and avoid
   collisions ([brainstorm: multi-boat day orchestration](../product/features/brainstorm.md#staff-operations)).
-- [roadmap — Private / buyout charters](../product/features/roadmap.md#private--buyout-charters):
+- [roadmap — Private / buyout charters](../product/archive/roadmap-20261110.md#private--buyout-charters):
   quote → contract → deposit → the departure withdrawn from public sale
   ([brainstorm: charter inquiry to quote](../product/features/brainstorm.md#diver-experience-and-growth)).
 

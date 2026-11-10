@@ -1,11 +1,14 @@
 # Marketing review — 2026-08-27
 
+> Archived 2026-11-10. Historical context, not an active worklist. See
+> [the reconciliation](README.md) and current issues before acting on the text below.
+
 - **Status:** Slices 12a–12f delivered 2026-08-28. The owner approved the leave-it guides'
   destination-only pricing link on 2026-11-10 ([#4195](https://github.com/AaronBuxbaum/diveday/issues/4195)).
 - **Why now:** shop owners are not converting to trials (the owner's own read, 2026-08-27), and
   the funnel pair (`demo_entered` / `trial_started`) is too thin to argue from — so this review
   argues from the pages themselves: three independent conversion passes (home+product,
-  pricing+onboard, switching+about) against [marketing.md](marketing.md)'s claims policy, plus
+  pricing+onboard, switching+about) against [marketing.md](../marketing.md)'s claims policy, plus
   full-page screenshots of every route.
 - **What this is not:** a rebuild. Every pass found real composition — the price hero that
   answers everything in one screen, the mirrored diptych, the `GUIDE_FACTS` strip, the numbered
@@ -155,7 +158,7 @@ reconciled sentence.
 Aaron approved the recommendation below in #4195: one understated destination-only pricing link
 on each leave-it guide, without competing with the main action.
 
-**A pricing link on the leave-it guides.** At the time of the review, [marketing.md](marketing.md) scoped the single forward `/pricing`
+**A pricing link on the leave-it guides.** At the time of the review, [marketing.md](../marketing.md) scoped the single forward `/pricing`
 link to the coexist guides' leave-path box. The recommendation was to add the same
 destination-not-claim link (`switching.common.seePricing`) under leave-it guides' bothWays block.
 
@@ -169,7 +172,7 @@ at the counter" all stay untouched. The four-card band remains four assertions p
 
 ## Implementation
 
-Slices live in [features/roadmap.md](features/roadmap.md) section 12; every slice runs the
+Slices live in [features/roadmap.md](../features/roadmap.md) section 12; every slice runs the
 `marketing-page` skill end to end (claims checklist, `e2e/marketing.spec.ts` updates, screenshots
 looked at, `conversion-reviewer` re-pass), and the safety-adjacent items name their extra
 review. One tooling fix shipped with this review: `scripts/screenshot.mjs` now emulates reduced

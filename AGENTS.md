@@ -51,7 +51,7 @@ Core rows; every other area (auth, DB client, domain logic, glossary, ADRs) is i
 | Whether a diver may *buy* a seat vs. *board* | two gates: `src/lib/trip-admission.ts` (booking-time, weaker) and `src/lib/readiness.ts` (boarding-time); admission never refuses someone readiness would clear |
 | The booking transaction (capacity) | `src/db/bookings.ts` — tests first |
 | Copy and languages | `src/i18n/` — `locales/<locale>/diver.json` and `staff/<namespace>.json`, composed by `staff-messages.ts`; resolution order and switcher: `.claude/rules/i18n.md`; Spanish: `src/i18n/locales/es-ES/README.md` first |
-| An idea, question, risk, or cleanup you are **not** doing in this change | a `needs-triage` GitHub issue ([issue-tracker.md](docs/agents/issue-tracker.md), "Filing a follow-up"); `waiting-on-external` when nobody here can move it. Committed work: `docs/product/features/`; human-owned calls: `docs/product/human-decisions/README.md` |
+| An idea, question, risk, or cleanup you are **not** doing in this change | a `needs-triage` GitHub issue ([issue-tracker.md](docs/agents/issue-tracker.md), "Filing a follow-up"); `waiting-on-external` when nobody here can move it. Ideas: `docs/product/features/`; human-owned calls: `docs/product/human-decisions/README.md` |
 
 ## Skills and providers
 

@@ -1,9 +1,18 @@
 # H-20260724-current-typed-name-explicit: Is the current typed name + explicit consent + timestamp sufficient for the intended…
 
-- **Status:** Ready
+- **Status:** Deferred
 - **Human owner:** Product owner + generalist attorney (general UETA/E-SIGN read) + scuba-liability specialist (adventure-sport-sufficiency layer) — Tier 2, see [legal-engagement-scope.md](../stakeholders/legal-engagement-scope.md#tier-2--generalist-drafts-specialist-blesses-before-it-goes-live)
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+Keep the local typed-signature provider unless qualified review requires another. Review the
+Florida waiver/medical wording and assurance level before real use in
+[#4213](https://github.com/AaronBuxbaum/diveday/issues/4213). No legal-sufficiency approval is recorded.
+
+Source: [owner-account decision record on #4192](https://github.com/AaronBuxbaum/diveday/issues/4192#issuecomment-6759950843).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 Is the current typed name + explicit consent + timestamp sufficient for the intended release, or is a specialist e-signature provider required?
 

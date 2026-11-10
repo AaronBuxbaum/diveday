@@ -7,7 +7,7 @@ deferred and why. Not open work; do not plan from it. For current state, use:
 
 - [product/personas.md](../personas.md) — the standing persona reference this review produced,
   rewritten as evergreen guidance (not a dated bug list) for evaluating future UX work.
-- [product/features/story-backlog.md](../features/story-backlog.md) — every ticket from this review that is still
+- [product/features/story-backlog.md](story-backlog-20261110.md) — every ticket from this review that is still
   open, partially done, or blocked on a pending review pass, cross-referenced back to its persona.
 
 ---

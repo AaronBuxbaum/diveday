@@ -1,14 +1,28 @@
 # AWS migration dossier
 
-An inventory of everything DiveDay buys from a vendor that is not AWS, what the AWS replacement
-would be, and what each swap costs and buys. **Nothing here is decided.** Every row is written so
-the owner can answer it with a yes, a no, or a trigger condition; the answers land in
-[human-decisions/](../product/human-decisions/README.md#decision-register) (H-20260907-far-diveday-migrate-onto), and anything that
-gets a yes and is hard to reverse then gets its own ADR.
+## Current direction — 2026-11-10
 
-Dated 2026-08-12. Re-read the numbers before acting on them — vendor pricing moves, and the
-spend figures this repo holds are *guardrails we chose*, not bills we paid (see
-[cost-guardrails-runbook.md](../engineering/cost-guardrails-runbook.md)).
+Aaron chose AWS hosting, serverless first, with Neon retained for its restore/branching safety
+net. [#4219](https://github.com/AaronBuxbaum/diveday/issues/4219) is the throwaway OpenNext +
+CloudFront go/no-go spike: live manifest SSE, Next PPR/streaming, cache revalidation, cron/RUM
+integration and Lambda-to-Neon latency. Containers are the fallback, not a selected deployment.
+Per-PR preview URLs remain an owner question. There are no users yet, so there is no user-driven
+cutover downtime constraint. No production cloud changes, credentials or purchases are approved
+by the spike or this document.
+
+External heartbeat/status, the hourly demo public-schedule browser canary, EventBridge cron
+dispatch and S3 media have already been implemented. Deployment/operations must still be verified;
+cron operational completion is #3838/#3691. The demo canary needs no pilot slug. A booking-flow
+canary is deferred until real shops exist. Do not duplicate those tasks or infer deployed service
+configuration from code alone.
+
+## Historical August comparison
+
+The remainder is the 2026-08-12 option study, not a current deployment inventory or refreshed
+quote. Its vendor/price/version/streaming claims must be re-checked before acting, including the
+OpenNext v2-era streaming warning. Current acceptance and measured cost belong to #4219; durable
+owner outcomes are in
+[H-20260907-far-diveday-migrate-onto](../product/human-decisions/H-20260907-far-diveday-migrate-onto.md).
 
 ## How to read a row
 

@@ -1,5 +1,9 @@
 # DiveDay performance and cost assessment — 2026-10-21
 
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
 **Recommendation:** improve work bounding, completion guarantees, and measurement before changing
 hosting providers. The code already contains substantial performance engineering. The best next
 investments remove repeated work and prevent slow providers or growing datasets from exhausting
