@@ -28,6 +28,9 @@ It preserves the distinction between inventory, owner decisions and an implement
 
 ## Retained snapshots
 
+- [Visual polish execution record](visual-polish-plan-20261026.md): all 85 proposals dispositioned;
+  75 implemented, seven already done, three owner-retained. The active path keeps section links.
+
 - [Roadmap before reconciliation](roadmap-20261110.md): old sequence, raw deferred ideas, measures
   and previously shipped slices. Current priorities are [here](../features/roadmap.md).
 - [Persona story backlog](story-backlog-20261110.md): historical minimum-age proposal, superseded

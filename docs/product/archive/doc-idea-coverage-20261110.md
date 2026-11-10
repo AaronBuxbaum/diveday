@@ -71,7 +71,7 @@ neither a demonstrated gap for this market nor a new payment commitment.
 
 ## Completed, partial and superseded work
 
-- The [85 visual-polish proposals](../../engineering/audits/20261026-visual-polish-plan.md) are
+- The [85 visual-polish proposals](visual-polish-plan-20261026.md) are
   fully dispositioned: 75 implemented, seven already done and three owner-retained. RP04's final
   merge is #3123; the old 74-of-75 and unpublished wording was stale.
 - Pickup ordering, root crash reporting and report facts landed in #4199, #4206 and #4204.
