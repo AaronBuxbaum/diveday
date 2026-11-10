@@ -4,7 +4,7 @@ import type { StructuredCall } from "../../lib/claude/structured";
 /**
  * **review-flags**: each pending review with a comment gets neutral chips, so
  * a staffer moderating forty reviews sees which three need a careful read.
- * Specified in docs/product/features/ai-ml.md ("assistive review-moderation").
+ * Specified in docs/engineering/claude-assists.md ("assistive review-moderation").
  * Publishing stays a staff tap (`setReviewPublished`); nothing reads these
  * codes to publish, hide or reorder. Only the comment is sent: no name, no
  * trip, no rating.

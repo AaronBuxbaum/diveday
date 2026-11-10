@@ -1,7 +1,11 @@
 import { getTableColumns } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { shops } from "@/db/schema";
-import { SHOP_BOOLEAN_COVERAGE, STAFF_DESTINATION_COVERAGE } from "./feature-coverage";
+import {
+  SHOP_BOOLEAN_COVERAGE,
+  STAFF_DESTINATION_COVERAGE,
+  STAFF_SHELL_COVERAGE,
+} from "./feature-coverage";
 import { ALL_SWITCHES_ON, SHOP_FEATURE_COLUMNS, SHOP_FEATURES } from "./shop-features";
 import { STAFF_DESTINATIONS } from "./staff-destinations";
 
@@ -37,6 +41,7 @@ describe("every feature is considered for the Features page", () => {
   it("names only switches that exist, and a reason for every core entry", () => {
     for (const coverage of [
       ...Object.values(STAFF_DESTINATION_COVERAGE),
+      ...Object.values(STAFF_SHELL_COVERAGE),
       ...Object.values(SHOP_BOOLEAN_COVERAGE),
     ]) {
       if (typeof coverage === "string") expect(switches).toContain(coverage);

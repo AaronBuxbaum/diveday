@@ -1,19 +1,19 @@
-# AI & ML ideas
+# Claude assists
 
-The single home for every AI/ML-shaped DiveDay idea — from a raw one-line concept to a
-prompt-ready implementation task. Previously split across a brainstorm file and a specialist
-audit's ML & data section; consolidated here 2026-08-01 so there is exactly one place to look.
-Nothing here is committed scope until a human decision and scoped GitHub issue promote it, with
-an ADR for a provider/dependency boundary and the right safety review. [roadmap.md](roadmap.md)
-links current priorities; search current code, issues and shipped work before reviving a prompt.
+How DiveDay's Claude assists work and the rules they keep. The ideas that used to live in this file
+(a diver readiness Q&A, a staff ops assistant, and five small data ideas) are now GitHub issues:
+[#4253](https://github.com/AaronBuxbaum/diveday/issues/4253),
+[#4254](https://github.com/AaronBuxbaum/diveday/issues/4254) and
+[#4264](https://github.com/AaronBuxbaum/diveday/issues/4264). Nothing here is committed scope for a
+new assist until a human decision and a scoped issue promote it, with an ADR for a provider or
+dependency boundary and the right safety review.
 
 **What shipped (2026-10-18):** the provider boundary exists. Claude is a runtime dependency behind
 `src/lib/claude/` and `runAssist` in `src/features/assists/store.ts`, dark without a key, with the shop's
 "Claude suggestions" switch off, or past the shop's $15 monthly cap, and every call is costed in
-`claude_usage` ([ADR 20261018-claude-assists](../../architecture/decisions/20261018-claude-assists.md)).
+`claude_usage` ([ADR 20261018-claude-assists](../architecture/decisions/20261018-claude-assists.md)).
 The features built on it (inbox drafts and sorting, import mapping, card reading, website setup and
-the rest of the build plan) land in the layers above that ADR; each keeps the guardrails below. The
-"app has no LLM dependency" baseline in the audit section is out of date for that reason.
+the rest of the build plan) land in the layers above that ADR; each keeps the guardrails below.
 
 **Front of house (2026-10-22)**, each rendered only while the shop's assists are on:
 
@@ -46,7 +46,7 @@ repeat is passed as a placeholder, and an answer that invents a number or a spec
 
 ## Claude assists in detail
 
-The mechanics behind [ADR 20261018-claude-assists](../../architecture/decisions/20261018-claude-assists.md),
+The mechanics behind [ADR 20261018-claude-assists](../architecture/decisions/20261018-claude-assists.md),
 kept here so the ADR stays short.
 
 - **Models**: `quick` (Haiku) sorts, extracts and writes short text; `draft` (Sonnet) drafts,
@@ -63,7 +63,7 @@ kept here so the ADR stays short.
 - **What was said, 30 days**: a `claude_call_content` row beside each usage row keeps the
   instructions, shop context, request and answer as text, every image and document a placeholder
   and every fetched page a URL. DiveDay reads it by SQL
-  ([runbook](../../engineering/claude-call-content-runbook.md)); every erasure deletes the
+  ([runbook](claude-call-content-runbook.md)); every erasure deletes the
   shop's rows.
 - **Reservations**: each call reserves its likely cost under a per-shop lock, with at most two in
   flight, so concurrent calls overshoot the cap only by how far a call exceeds its reservation. A
@@ -114,45 +114,10 @@ and divers read it on the recap. Turning the switch on is the shop's standing ap
   right tool. Prefer a named, auditable rule table over an opaque score on any safety-adjacent
   surface.
 
-**Explicitly rejected as not worth building now** (per the 2026-07-31 specialist audit): training
+**Explicitly rejected as not worth building** (per the 2026-07-31 specialist audit, still standing): training
 any custom model — every surface here is below the data volume where one would beat a heuristic
 or SQL aggregate; LLM-drafted replies to reviews;
 LLM anything on cert gating, manifests, or medical decisions (hard rule: assistive only, and the
 assistive versions are deliberately model-free where they touch those surfaces); and dynamic
 pricing beyond the last-minute rule table (Stripe owns arithmetic; trust risk exceeds upside for a
 delight-first product).
-
-## Raw ideas — not yet scoped
-
-Exploratory only. No effort estimate below the level of "big bet"; these need a design pass before
-anyone writes a prompt. Card-photo reading, once listed here, is built (see above).
-
-- **Diver-facing Q&A grounded in real state.** Answer questions like "Can I dive the wreck Saturday
-  with Open Water?" from schedule and readiness logic. The answer can explain, but the readiness
-  engine remains authoritative. *(L, cross-cutting, big bet.)*
-- **Natural-language ops assistant.** Staff-only assistant for operational questions such as "Who is
-  not ready for tomorrow's wreck trip?" Answers must cite the underlying app state. *(L,
-  cross-cutting, big bet.)*
-
-## Historical prompt sketches — from the 2026-07-31 specialist audit
-
-The audit's eight ready-to-paste prompts were removed on 2026-11-10: their file paths and line
-numbers had drifted, and every module except review moderation (shipped 2026-10-22) was still
-unbuilt when the code was re-checked on 2026-11-10. The full text is in
-[the archived audit](../archive/specialist-optimization-audit-20260731.md) and stays there as
-history, not as scope. What is worth keeping:
-
-- **Filed as issues**: lapsed-regular win-back list [#4246](https://github.com/AaronBuxbaum/diveday/issues/4246),
-  next-course card on the recap page [#4249](https://github.com/AaronBuxbaum/diveday/issues/4249),
-  Spanish drafting script [#4250](https://github.com/AaronBuxbaum/diveday/issues/4250).
-- **Parked, no issue**: departure-demand signal on the schedule builder; a last-minute-deal discount
-  advisor; a "answered differently than last time" note between a diver's waivers (informational,
-  never gating); a boarding-attention checklist; Today-queue click instrumentation before any
-  re-ranking. None has a user to learn from yet. If one is revived, check the current code first.
-- **The rule that outlived the prompts**: at one shop's volume, a SQL aggregate or a named rule
-  table beats a trained model, and every one of those ideas had to stay assistive and never gate
-  boarding, medical review or payment. That is the Guardrails section above.
-
-North-star measures these ideas could eventually feed are in
-[the archived roadmap's measures](../archive/roadmap-20261110.md#measures): instrument before
-ranking, never the reverse.

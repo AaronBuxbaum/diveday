@@ -3161,7 +3161,7 @@ not forgotten.
 Five of the eight lenses of the [specialist optimization
 audit](archive/specialist-optimization-audit-20260731.md) shipped in full. At the time, accessibility
 and security/privacy were still open and ML & data had just moved to
-[features/ai-ml.md](features/ai-ml.md#historical-prompt-sketches--from-the-2026-07-31-specialist-audit); both
+[issue #4264](https://github.com/AaronBuxbaum/diveday/issues/4264); both
 of the others have since shipped or moved too (see the entries above) and the audit is now fully
 archived.
 
@@ -3798,3 +3798,12 @@ and staff trip pages, per-test PGlite, split dive-site helpers, retained superse
 [architecture/overview.md](../architecture/overview.md#settled-shape-decisions). Navigation
 unification, one notice system, the `reports`/`shop` cuts, the trial/demo split, honest marketing,
 and the decomposition of the four monster pages all shipped.
+
+## Contextual home-screen entry (built 2026-11-10)
+
+Slice 19e of [ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md),
+recovered by #4233, adds one quiet row after the Logbook’s operational work on supported staff
+phones and tablets. Only a real browser event offers a native install button; Safari and Android
+Chrome otherwise get their own menu instructions. Device dismissal, installed/desktop/embed
+suppression and storage failure paths are tested. Installation makes no offline-readiness promise
+and changes neither permissions nor the service worker.

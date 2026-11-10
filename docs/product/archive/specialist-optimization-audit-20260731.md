@@ -6,7 +6,7 @@
 > architecture, and developer/agent experience shipped 2026-08-01 — see
 > [shipped.md](../shipped.md#specialist-optimization-audit--five-lenses-delivered-2026-07-31--08-01).
 > ML & data moved in full to
-> [features/ai-ml.md](../features/ai-ml.md#historical-prompt-sketches--from-the-2026-07-31-specialist-audit).
+> [issue #4264](https://github.com/AaronBuxbaum/diveday/issues/4264).
 > Security & privacy shipped 2026-08-01 (six of seven tasks; the seventh was deliberately not
 > built — see [§5](#5-security--privacy-delivered) below) — see
 > [shipped.md](../shipped.md#specialist-optimization-audit--security--privacy-delivered-2026-08-01).
@@ -43,7 +43,7 @@ delivered lens keeps its row here rather than being renumbered away.
 | 3 | Accessibility | ◐ **Partly delivered** — the skip link, `<html lang>`, and the shortcuts-dialog focus trap landed with the ux-persona work; waiver field errors, schedule-builder panel focus, and automated axe scans landed 2026-08-01 — see [shipped.md](../shipped.md#specialist-optimization-audit--accessibility-non-contrast-items-and-ci-dedup-2026-08-01); the three contrast tasks are deliberately deferred and moved to [roadmap.md](../features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision), pending a color-guide decision |
 | 4 | SEO & growth | ✅ **Delivered** 2026-08-01 (PR #288) |
 | 5 | Security & privacy | ✅ **Delivered** 2026-08-01 — [six of seven tasks](#5-security--privacy-delivered); the seventh was **not built** — see that section |
-| 6 | ML & data | ○ **Open** — eight tasks, none started; moved to [features/ai-ml.md](../features/ai-ml.md#historical-prompt-sketches--from-the-2026-07-31-specialist-audit) in the 2026-08-01 doc consolidation so every AI/ML idea lives in one place |
+| 6 | ML & data | ○ **Open** — eight tasks, none started; moved to [issue #4264](https://github.com/AaronBuxbaum/diveday/issues/4264) in the 2026-08-01 doc consolidation so every AI/ML idea lives in one place |
 | 7 | Backend & data architecture | ✅ **Delivered** 2026-08-01 (PR #292) |
 | 8 | Developer & agent experience | ✅ **Delivered** 2026-08-01, including the CI composite action |
 
@@ -178,7 +178,7 @@ a human decision, not a missed task.** Kept in full below for whoever eventually
 ## 6. ML & data (open)
 
 Moved in full to
-[../features/ai-ml.md](../features/ai-ml.md#historical-prompt-sketches--from-the-2026-07-31-specialist-audit)
+[issue #4264](https://github.com/AaronBuxbaum/diveday/issues/4264)
 on 2026-08-01 — AI/ML ideas were split across this section and a separate brainstorm file, so both
 now live in one place. The eight tasks, their prompts, and the auditor's baseline notes are
 unchanged; only the location moved. Code comments in `src/` citing "specialist-optimization-audit-20260731.md
@@ -212,7 +212,7 @@ shard matrix, artifact step, and env block is unchanged — a pure refactor of t
 - **The three moved contrast tasks (§3) all touch `src/app/globals.css`** — that was flagged as one
   natural slice and one `pnpm visual` pass; still true wherever they land now, see
   [roadmap.md](../features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision).
-- **The medical-diff, boarding-attention, and review-assist tasks in [ai-ml.md](../features/ai-ml.md)
+- **The medical-diff, boarding-attention, and review-assist tasks in [claude-assists.md](../../engineering/claude-assists.md)
   (formerly §6) need `dive-domain-expert`** in addition to `security-reviewer` on review-assist and
   lapsed-regulars — noted here since it doesn't fit `ai-ml.md`'s own per-task format.
 - **The marketing-caching task (§2) is gated on the e2e Activity migration**, not on Next

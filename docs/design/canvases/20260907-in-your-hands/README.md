@@ -105,7 +105,7 @@ comment, and a test pins the rule.
 | 19b — hand it over: *Sign here* on the counter's and the roster's blocked row, the session lock read by `requireShopSurface`, the hand-over and who-sees-what lines on the waiver page, the counter provenance on the signature row (H-20260907-where-device-already-knows b) | open | — | — |
 | 19c — point the camera at the card: the reader, the *Read* marks, the date field, the Textract opt-out step, the `/privacy` sentence (H-20260907-where-device-already-knows c declined 2026-09-07; the board's premise was wrong, see "Decided" above) | dropped | — | — |
 | 19d — the type follows the phone: the `-apple-system-body` probe in the pre-hydration script, upward only, the manifest captured at the largest root | open | — | — |
-| 19e — on the home screen: the one line under the day's spine with the platform's install prompt or its own menu item, the device-kept dismissal, nothing when installed or on a desktop | open | — | — |
+| 19e — on the home screen: one quiet row after the current Logbook work, actual native prompt or accurate supported-browser instructions, device dismissal; no offline-readiness promise | shipped | `src/app/shop/[shopSlug]/_components/today/HomeScreenInstall.tsx` | `HomeScreenInstall.test.tsx`, `src/features/home-screen-install/rules.test.ts`, `e2e/home-screen-install.spec.ts` |
 
 ## Implementing a slice
 

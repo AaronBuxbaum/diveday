@@ -58,7 +58,7 @@ export type ExportStep = {
  * sync. `runsInDiveDay` items are shipped-only, demonstrable in the live demo.
  * When this field is absent a guide is a straight leave-it migration like the
  * records-system guides. Candidates for the next channel guides are surveyed in
- * docs/product/assessments/switching-guide-landscape.md.
+ * docs/product/archive/assessments/switching-guide-landscape.md.
  */
 export type CoexistFraming = {
   /** Section heading — coexist-led, the day the incumbent can't run. */

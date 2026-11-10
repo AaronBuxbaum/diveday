@@ -14,7 +14,7 @@ portability wedge), [marketing.md](marketing.md) (the public-page rulebook and c
 [stakeholders/](stakeholders/README.md) (the per-discipline playbooks — exact contacts, briefing
 packets, and question lists for every conversation this plan schedules). This plan sequences and
 gates work; it does not describe features — for what a wedge item, punch-list fix, or pilot ask
-actually *is*, see [features/](features/README.md), the single home for feature detail.
+actually *is*, see [features/](features/roadmap.md), the single home for feature detail.
 
 ## Where we stand
 

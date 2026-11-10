@@ -161,14 +161,21 @@ from the rail.
 
 ### 6. On the home screen
 
-A staffer whose role reaches the manifest, on a phone or tablet, in a browser tab, on an account
-that has never dismissed it on this device, sees one line under the day's spine: the roll call can
-open from the home screen, without a browser bar and without signal, with the one act that does it —
-a button that calls the platform's install prompt where one exists, the platform's own menu item
-(with the share glyph drawn inline) where none does. Dismissed once, it is gone (a device
-fact, kept where boat mode keeps its own); installed (`display-mode: standalone`), on a desktop, in
-an embed, or above the first-thing panel, it never renders. No coral, no drawing, no motion: a fact
-about the device at the ledger row's own weight, so the home's budget is untouched.
+A staffer whose role reaches the manifest, on a phone or tablet in a browser tab, sees one quiet
+row **after the current Logbook operational reading**, including its quiet-day or first-run task.
+It says that DiveDay can open from the home screen. A native button appears only after the browser
+supplies a real `beforeinstallprompt` event; iOS uses Safari’s Share menu instead. Android Chrome
+without that event names its Add to home screen menu item. Other Android browsers render nothing
+unless they supply an actual native prompt; unrecognized devices and known embedded browsers render
+nothing. Desktop, framed and installed contexts (`standalone`, `minimal-ui`, `fullscreen`, or iOS’s
+standalone signal) render nothing.
+
+Dismissed once, the row is gone on this device, kept in `localStorage` like boat mode. A refused
+storage read suppresses it; a refused write still dismisses it for the document’s lifetime. Native
+acceptance, native refusal and `appinstalled` retire it too. Installation is only a way into the
+existing staff shell: it does **not** prove that a manifest is saved, fresh or usable without signal,
+and it neither requests notification permission nor changes service-worker scope. No coral,
+drawing or motion is added; the work remains the home’s one idea.
 
 ## Alternatives considered
 
@@ -217,8 +224,9 @@ about the device at the ledger row's own weight, so the home's budget is untouch
 - **The root probe** is one line in the existing pre-hydration script and one visual capture;
   `check:tokens` and the loading-skeleton guard are unchanged, and any px measure that stops scaling
   is a visual diff to fix.
-- **The home-screen line** is one conditional row under `DaySpine` with a device-kept dismissal; a
-  test pins that it renders nothing when installed or on a desktop.
+- **The home-screen line** is one conditional row after the Logbook’s operational reading, with a
+  device-kept dismissal; tests pin native availability/refusal, platform instructions, storage
+  failures, repeated dismissal and suppression in installed, desktop and embedded contexts.
 - Each slice ends in the standing obligation from
   [design-artifacts.md](../../design/design-artifacts.md): the component names this ADR and a test
   pins the rule. The escape hatch is the same as the last four ADRs': every move renders the page as
