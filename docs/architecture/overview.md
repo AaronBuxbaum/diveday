@@ -36,7 +36,7 @@ before writing framework-touching code (see AGENTS.md).
 src/
   app/          # routes, layouts — App Router. Keep route files thin.
   features/     # feature modules: one index.ts is the public surface, README.md the contract
-  lib/          # framework-free domain logic and helpers. Most unit tests live here.
+  lib/          # shared domain logic and helpers, including framework/IO adapters.
   db/           # schema/ (source of truth), client.ts (getDb seam), queries, seed
   components/   # shared UI components, token-styled
   i18n/         # locale negotiation and the diver/staff message bundles

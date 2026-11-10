@@ -20,6 +20,12 @@ The five umbrella decision trackers were answered and closed; their actual outco
 Issue status remains live on GitHub. No item here certifies that an implementation, field test,
 legal review, provider activation or production deployment is complete.
 
+## Coverage after cleanup
+
+The [idea coverage record](doc-idea-coverage-20261110.md) accounts for the broader source pass,
+three recovered device slices, smaller research details and historical completion evidence.
+It preserves the distinction between inventory, owner decisions and an implementation queue.
+
 ## Retained snapshots
 
 - [Roadmap before reconciliation](roadmap-20261110.md): old sequence, raw deferred ideas, measures

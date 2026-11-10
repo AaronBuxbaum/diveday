@@ -35,7 +35,7 @@ fetching a run. Visual capture flags require a real changed-content selector. Se
 | --- | --- |
 | C1: provider parity | Offline bootstrap exposes branch, Node, dependencies and state for all providers. Claude lifecycle hooks are configured but unverified. Codex supports trust-gated project hooks; a safe Bash-guard probe in an untrusted worktree did not fire, so this repo uses explicit commands for Codex. |
 | C2: duplicated skills | One `.agents/skills` source, Claude symlinks, local/upstream provenance and mirror/path checks. Relative supporting links remain at the same directory depth. |
-| C3: broad retrieval | Broad books become optional references. Path packets select exact sibling tests, rules and preserved invariants; common UI paths select executable recipes. Unmapped paths explicitly fall back to the route map. |
+| C3: broad retrieval | Broad books are optional references. Read matching path-scoped rules, use the route map to locate source, then read sibling tests and invariants. Task packets were removed; no command selects this context automatically. Common UI compositions remain explicit recipes. |
 | C4: misleading budget | Reports distinguish repository Claude and canonical-provider estimates and excluded host context. The existing Claude ratchet remains; canonical estimates are not separate hard budgets. |
 | C5: semantic conflicts | Corrected dark-scheme policy, scout capabilities, stack wording, schema/components and PGlite guidance. Tests cover concrete provider mirrors, command dependencies and branch fetch scope; they do not prove all prose semantics. |
 | C6: visual retrieval | Five concrete recipes plus focused visual-review inputs provide a bounded entry point for ordinary changes. Broad audit mode remains appropriate for shared changes. |
@@ -47,7 +47,7 @@ fetching a run. Visual capture flags require a real changed-content selector. Se
 | Finding | Disposition and practical limit |
 | --- | --- |
 | V1: contradictory workflow | Canonical skills now prescribe scoped fresh changed-state capture, conditional dark checks and CI S3/sticky-summary review. No baseline commit or follow-up visual-only job is awaited; full local comparison is an explicit investigation. |
-| V2: broad design context | Path routing returns production primitives, contract tests, recipe states and exact execution commands. It does not replace surface-specific acceptance criteria. |
+| V2: broad design context | The recipe index names production primitives, contract tests and recipe states. Plan the selected recipe explicitly, then supply the actual route and changed state. No path-routing command replaces surface-specific acceptance criteria. |
 | V3: route versus state proof | Focused capture requires route, role, fixture, state and a positive changed-content selector. Manifests preserve evidence; reviewers still judge whether that selector proves the intended feature. |
 | V4: stale builds | Input fingerprints guard verification-grade build reuse. A spec-only change can reuse the application build; application input drift requires rebuilding. |
 | V5: manual assembly | One bounded visual-review command produces run-scoped capture and probe inputs, freshness and rerun evidence. Status remains captured-not-reviewed until a reviewer inspects it. |
