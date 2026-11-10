@@ -12,7 +12,7 @@ paperwork: they book the party, then relay waivers, contact details, and prep fo
 has never met. DiveDay's party booking (`createBookingParty`) already holds the seats atomically
 under one purchaser, but the non-organizer seats are just names the organizer typed — no email, no
 own waiver, no own prep. This is the first slice of the brainstorm's group-organizer bet
-(docs/product/features/brainstorm.md); pay-your-own-share is explicitly out of scope. The
+(docs/product/archive/brainstorm-20261110.md); pay-your-own-share is explicitly out of scope. The
 capability-telemetry runbook requires any new bearer-token type to answer shape, lifetime, and
 revocation up front.
 

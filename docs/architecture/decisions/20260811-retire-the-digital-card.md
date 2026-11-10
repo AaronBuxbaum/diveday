@@ -79,7 +79,7 @@ the impression that DiveDay holds a verified credential artefact, which is exact
   (`settings.main.dataJobs.mediaKind.certification_card`) and Today's
   (`shared.today.opsAlert.mediaKind.certificationCard`) stay with it, so a row written before this
   release would still render a word rather than a raw enum value.
-- Cert-card OCR (`docs/product/features/ai-ml.md`) is unaffected — it already noted there is no
+- Cert-card OCR (`docs/engineering/claude-assists.md`) is unaffected — it already noted there is no
   stored card photo to read.
 - Reversal is now a migration, not just a component and a copy block. That is the trade being
   made, and it is only available because nobody is on the product yet.

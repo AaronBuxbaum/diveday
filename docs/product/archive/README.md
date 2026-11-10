@@ -39,6 +39,8 @@ production outcomes and larger residual work.
 
 - [Roadmap before reconciliation](roadmap-20261110.md): old sequence, raw deferred ideas, measures
   and previously shipped slices. Current priorities are [here](../features/roadmap.md).
+- [Brainstorm](brainstorm-20261110.md): the raw non-AI idea list before ideas moved to GitHub issues
+  (the banner maps each to its issue). Lenses and bet-size tags are the reason to keep it.
 - [Persona story backlog](story-backlog-20261110.md): historical minimum-age proposal, superseded
   by later policy and implementation. The standing personas remain [live](../personas.md).
 - [Participant types plan](participant-types-20260820.md): shipped 2026-10-07; use its accepted ADR

@@ -3161,7 +3161,7 @@ not forgotten.
 Five of the eight lenses of the [specialist optimization
 audit](archive/specialist-optimization-audit-20260731.md) shipped in full. At the time, accessibility
 and security/privacy were still open and ML & data had just moved to
-[features/ai-ml.md](features/ai-ml.md#historical-prompt-sketches--from-the-2026-07-31-specialist-audit); both
+[issue #4264](https://github.com/AaronBuxbaum/diveday/issues/4264); both
 of the others have since shipped or moved too (see the entries above) and the audit is now fully
 archived.
 

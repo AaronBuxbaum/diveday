@@ -6,7 +6,7 @@
 
 ## Context
 
-The brainstorm's biggest operational bet ([features/brainstorm.md](../../product/features/brainstorm.md),
+The brainstorm's biggest operational bet ([archived brainstorm](../../product/archive/brainstorm-20261110.md),
 Revenue And Recovery): a dive shop sells perishable seats under weather risk, and the blow-out
 morning — captain calls it, phone rings, every booked diver needs the same three facts — was
 DiveDay's worst hour, handled per booking by hand. What existed before this slice: `cancelTripAction`

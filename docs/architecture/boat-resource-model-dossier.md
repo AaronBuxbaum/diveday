@@ -25,10 +25,10 @@ missing model:
 
 - [roadmap §4 — Multi-boat / multi-shop configuration](../product/archive/roadmap-20261110.md#4-multi-boat--multi-shop-configuration):
   a shop running several boats can see all departures, move divers and crew carefully, and avoid
-  collisions ([brainstorm: multi-boat day orchestration](../product/features/brainstorm.md#staff-operations)).
+  collisions ([brainstorm: multi-boat day orchestration](../product/archive/brainstorm-20261110.md#staff-operations)).
 - [roadmap — Private / buyout charters](../product/archive/roadmap-20261110.md#private--buyout-charters):
   quote → contract → deposit → the departure withdrawn from public sale
-  ([brainstorm: charter inquiry to quote](../product/features/brainstorm.md#diver-experience-and-growth)).
+  ([brainstorm: charter inquiry to quote](../product/archive/brainstorm-20261110.md#diver-experience-and-growth)).
 
 The roadmap's own instruction: *"design the two together, not separately."* This dossier does that.
 

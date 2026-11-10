@@ -31,8 +31,8 @@ doc to update when.
   an agent records an outcome there only when a human made the call. Its id is `H-YYYYMMDD-slug`
   (the date of the call and a few words of the question), never the next integer; the README's
   index is generated (`pnpm regen`) and `pnpm check:human-decisions` fails on a duplicate, a
-  numbered `H-<n>` or a citation that names no file. Current priorities and raw ideas live in
-  [product/features/](../../docs/product/features/README.md); shipped slices move to
+  numbered `H-<n>` or a citation that names no file. Current direction lives in
+  [product/features/](../../docs/product/features/roadmap.md); shipped slices move to
   [product/shipped.md](../../docs/product/shipped.md).
 - **Follow-ups are GitHub issues** labelled `needs-triage`, never a doc section
   ([agents/issue-tracker.md](../../docs/agents/issue-tracker.md)'s "Filing a follow-up").

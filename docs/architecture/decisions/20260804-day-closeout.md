@@ -6,7 +6,7 @@
 ## Context
 
 The Today queue owns the morning — "can the boats sail, who needs me before they do?" — and nothing
-owned 5 p.m. The brainstorm's "end-of-day close-out" (docs/product/features/brainstorm.md, Staff
+owned 5 p.m. The brainstorm's "end-of-day close-out" (docs/product/archive/brainstorm-20261110.md, Staff
 Operations) asks for the mirror: one surface where staff confirm the day is actually over — every
 departure's head count reconciled, today's leftovers explicitly carried or dismissed, tomorrow's
 blockers seen before walking out. A shop should end its day with the same confidence DiveDay gives

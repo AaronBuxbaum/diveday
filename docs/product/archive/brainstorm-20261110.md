@@ -1,13 +1,22 @@
-# Brainstorm
+# Brainstorm (archived 2026-11-10)
 
-Idea exploration, not commitments. This is the active backlog for raw DiveDay ideas that are not yet
-scheduled and do not require AI. Ideas that require AI, model-based extraction, or natural-language
-generation live in [ai-ml.md](ai-ml.md). Nothing here is approved scope until a human decision and a scoped GitHub issue promote it;
-[roadmap.md](roadmap.md) links current priorities. Search existing issues and shipped work first.
-
-Keep this file to open ideas. When an idea ships, remove it from here and capture the delivered slice
-in [../shipped.md](../shipped.md) or the ADR that made the decision. When a whole brainstorm is
-complete, move that snapshot to [../archive/](../archive/).
+> Archived 2026-11-10. GitHub Issues is now where ideas live; this file is kept for the lenses,
+> the effort and bet-size tags, and the reasoning behind each idea. Not current scope.
+>
+> Where each remaining idea went: safety record page [#4255](https://github.com/AaronBuxbaum/diveday/issues/4255),
+> emergency text draft [#4256](https://github.com/AaronBuxbaum/diveday/issues/4256), no-boats-day suggestions
+> [#4257](https://github.com/AaronBuxbaum/diveday/issues/4257), multi-boat days
+> [#4258](https://github.com/AaronBuxbaum/diveday/issues/4258), course cohorts
+> [#4259](https://github.com/AaronBuxbaum/diveday/issues/4259), buddy referral credit
+> [#4260](https://github.com/AaronBuxbaum/diveday/issues/4260), crew thank-yous
+> [#4261](https://github.com/AaronBuxbaum/diveday/issues/4261), retention and north-star measures
+> [#4262](https://github.com/AaronBuxbaum/diveday/issues/4262), and the small parked delight and growth
+> ideas [#4263](https://github.com/AaronBuxbaum/diveday/issues/4263). Earlier moves: alternative-day
+> salvage [#4244](https://github.com/AaronBuxbaum/diveday/issues/4244), credit ledger
+> [#4245](https://github.com/AaronBuxbaum/diveday/issues/4245), receipt printing
+> [#4247](https://github.com/AaronBuxbaum/diveday/issues/4247), deck head count
+> [#4248](https://github.com/AaronBuxbaum/diveday/issues/4248). The AI ideas went the same way; see
+> [claude-assists.md](../../engineering/claude-assists.md).
 
 Every idea is tagged so you can triage fast:
 
@@ -75,11 +84,11 @@ Lens: make connected data compound while keeping safety facts human-verifiable a
   trip/course type. *(M, cross-cutting, quick win.)*
 - **North-star measures from real data.** Track blocker-resolution time, waiver completion rate, and
   fully-ready departures from production data — the list to instrument is
-  [roadmap.md's measures](../archive/roadmap-20261110.md#measures). *(M, cross-cutting, quick win.)*
+  [roadmap.md's measures](roadmap-20261110.md#measures). *(M, cross-cutting, quick win.)*
 
 Tooling ideas that were duplicated here — sharded feature/entity docs, and a machine-readable task
 manifest for external orchestrators — now live once, in
-[roadmap.md's engineering enablement backlog](../archive/roadmap-20261110.md#p2--when-parallelism-or-scale-proves-the-need).
+[roadmap.md's engineering enablement backlog](roadmap-20261110.md#p2--when-parallelism-or-scale-proves-the-need).
 
 ## Delight And Micro-Interactions
 
@@ -96,13 +105,13 @@ already exist; inspect current source and shipped history before proposing eithe
 Use these records instead:
 
 - [../shipped.md](../shipped.md) is the canonical index of delivered slices.
-- [../archive/delight-and-experience.md](../archive/delight-and-experience.md) is the completed
+- [../archive/delight-and-experience.md](delight-and-experience.md) is the completed
   delight-and-experience brainstorm.
-- [../archive/diver-booking-delight-20260729.md](../archive/diver-booking-delight-20260729.md) is the
+- [../archive/diver-booking-delight-20260729.md](diver-booking-delight-20260729.md) is the
   completed diver-booking-delight follow-on brainstorm.
 - The nitrox maximum-depth calculator (`src/features/nitrox-mod`, shown on the diver's ready page),
   the swipe-away undo toast, and expiring group holds with an organizer ledger (#4209) are built.
-- [ai-ml.md](ai-ml.md) holds AI-required ideas, including natural-language assistants and
+- [ai-ml.md](../../engineering/claude-assists.md) holds AI-required ideas, including natural-language assistants and
   model-based evidence extraction.
 - [../shipped.md](../shipped.md#demand-crew-and-staff-context-delivered-2026-07-29) covers demand
   intelligence, conflict-safe crew assignment, private booking notes, and operational activity.

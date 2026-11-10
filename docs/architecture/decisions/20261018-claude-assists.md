@@ -9,7 +9,7 @@ Aaron picked twenty-one Claude features. All send shop data to an outside model,
 dependency, one gate, one cost ledger and one rule about what a suggestion may do. Invariants: an
 assist clears no gate (readiness, admission, cert, medical, nitrox, boarding), sends nothing to a
 diver without a staff tap, and publishes nothing; every feature works identically without it.
-Detail: [ai-ml.md](../../product/features/ai-ml.md#claude-assists-in-detail).
+Detail: [claude-assists.md](../../engineering/claude-assists.md#claude-assists-in-detail).
 
 ## Decision
 
@@ -58,6 +58,6 @@ Review #2923 found two exceptions to the Context; both stay.
   (`shops.recap_assist_auto_approve`, on by default from 2026-10-23), the recap send fills
   a blank highlight; turning it on is the shop's standing approval. It never replaces the crew's
   words, never runs with a live incident report, and any failure is no line. Every guard:
-  [ai-ml.md](../../product/features/ai-ml.md#recap-highlights-filled-before-send).
+  [claude-assists.md](../../engineering/claude-assists.md#recap-highlights-filled-before-send).
 
 No other assist publishes, saves or sends to a diver on its own.

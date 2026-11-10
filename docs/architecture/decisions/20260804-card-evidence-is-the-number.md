@@ -60,7 +60,7 @@ and one more field between a front-desk staffer and a captured card.
   (decode/re-encode, disguised-file rejection) remain enforced at the shared seam and covered by
   `src/lib/storage/index.test.ts`; the three e2e tests that drove them through the card form were
   removed with the form, with a note at their old site saying so.
-- Cert-card OCR (`docs/product/features/ai-ml.md`) loses its assumed input. If it is ever built it
+- Cert-card OCR (`docs/engineering/claude-assists.md`) loses its assumed input. If it is ever built it
   needs its own capture path — most likely a scan-then-discard flow that reads the number and
   keeps no image — rather than reinstating a stored photo.
 - Reversible at the cost of one form field: the column, the display, and the storage pipeline all
