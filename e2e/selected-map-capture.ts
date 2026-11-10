@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { expect } from "./fixtures";
 import { withRendererBound } from "./visual-harness";
 
 /** Runs in the page: a loaded tile may still be transparent during Leaflet's fade. */
@@ -25,7 +26,7 @@ export async function mapIsReady(requireSelection = true) {
   if (
     !readyTiles() ||
     pane.classList.contains("leaflet-pan-anim") ||
-    map.classList.contains("leaflet-zoom-anim")
+    pane.classList.contains("leaflet-zoom-anim")
   )
     return false;
   // Leaflet's loaded class precedes both image decoding and its Date-driven fade.
@@ -50,31 +51,45 @@ export async function mapIsReady(requireSelection = true) {
   await nextFrame();
   return (
     !pane.classList.contains("leaflet-pan-anim") &&
-    !map.classList.contains("leaflet-zoom-anim") &&
+    !pane.classList.contains("leaflet-zoom-anim") &&
     readyTiles() &&
     JSON.stringify(before) === JSON.stringify(geometry())
   );
 }
 
+async function waitForMapToSettle(page: Page, requireSelection: boolean) {
+  // waitForFunction treats this async predicate's Promise as truthy even when
+  // it resolves false. Poll the evaluated boolean in the driver instead.
+  const rendererDeadline = Date.now() + 20_000;
+  let sample: Promise<boolean> | undefined;
+  try {
+    await expect
+      .poll(
+        () => {
+          sample = withRendererBound(
+            page,
+            "map pan, tile decode and fade",
+            Math.max(1, rendererDeadline - Date.now()),
+            page.evaluate(mapIsReady, requireSelection),
+            false,
+          );
+          return sample;
+        },
+        { timeout: 15_000, message: "Map must settle before its screenshot" },
+      )
+      .toBe(true);
+  } finally {
+    // A matcher deadline must not abandon an in-flight renderer probe. All
+    // samples share the original ceiling, so joining it cannot extend that bound.
+    await sample;
+  }
+}
+
 export async function waitForSelectedMapToSettle(page: Page) {
-  const settled = await withRendererBound(
-    page,
-    "selected map pan, tile decode and fade",
-    20_000,
-    page.waitForFunction(mapIsReady, true, { timeout: 15_000 }).then(() => true),
-    false,
-  );
-  if (!settled) throw new Error("Selected map did not settle before its screenshot");
+  await waitForMapToSettle(page, true);
 }
 
 /** Tooltip captures have no selected popup, but still need opaque, decoded tiles. */
 export async function waitForMapTilesToSettle(page: Page) {
-  const settled = await withRendererBound(
-    page,
-    "map pan, tile decode and fade",
-    20_000,
-    page.waitForFunction(mapIsReady, false, { timeout: 15_000 }).then(() => true),
-    false,
-  );
-  if (!settled) throw new Error("Map tiles did not settle before their screenshot");
+  await waitForMapToSettle(page, false);
 }

@@ -7,6 +7,7 @@ import {
   installVisualBuildGuard,
   SURFACE_TIMEOUT_MS,
   VISUAL_STEP_BOUNDS,
+  waitForReadyPageSaved,
 } from "./visual-harness";
 
 installVisualBuildGuard();
@@ -39,6 +40,11 @@ for (const scheme of ["light", "dark"] as const) {
           page,
           expired ? "group-hold-ledger-expired" : "group-hold-ledger-active",
           scheme,
+          {
+            // Expiry releases the unpaid organizer's seat; that ledger has
+            // no readiness snapshot to save. The active page keeps its full copy.
+            beforeScreenshot: expired ? undefined : () => waitForReadyPageSaved(page),
+          },
         );
       });
     }
