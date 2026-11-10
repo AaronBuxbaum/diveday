@@ -162,14 +162,15 @@ export default function SiteMap({
     let popupOpen = false;
     let leaflet: typeof import("leaflet") | null = null;
 
-    const clearMarkers = () => {
+    const clearMarkers = (keepKey?: string) => {
       isClearingMarkers = true;
       try {
-        mapInstance.closePopup();
-        markersRef.current.forEach((marker) => {
+        if (!keepKey) mapInstance.closePopup();
+        markersRef.current.forEach((marker, key) => {
+          if (key === keepKey) return;
           marker.remove();
+          markersRef.current.delete(key);
         });
-        markersRef.current.clear();
       } finally {
         isClearingMarkers = false;
       }
@@ -201,9 +202,14 @@ export default function SiteMap({
       onSelectPin?.(pinId);
     };
 
-    const renderMarkers = (L: typeof import("leaflet"), openSelectedPopup = false) => {
+    const renderMarkers = (
+      L: typeof import("leaflet"),
+      openSelectedPopup = false,
+      keepSelectedPopup = false,
+    ) => {
       if (isCancelled || mapRef.current !== mapInstance) return;
-      clearMarkers();
+      const keepKey = keepSelectedPopup ? `site:${activePinIdRef.current}` : undefined;
+      clearMarkers(keepKey);
 
       const visibleBounds = mapInstance.getBounds().pad(0.35);
       const mapSize = mapInstance.getSize();
@@ -248,6 +254,7 @@ export default function SiteMap({
         const pin = group[0];
         if (!pin) return;
         const isSelected = pin.id === activePinIdRef.current;
+        if (isSelected && keepKey) return;
         const position: [number, number] = [pin.latitude, pin.longitude];
         if (
           inViewport &&
@@ -322,14 +329,18 @@ export default function SiteMap({
       queueMicrotask(() => {
         updateQueued = false;
         // Leaflet can emit moveend during auto-pan before popupopen. Check
-        // again here so that queued work cannot clear the popup it just opened.
-        if (leaflet && !isCancelled && !popupOpen) renderMarkers(leaflet);
+        // again here and retain the selected card (including its focus) while
+        // refreshing the other sites. A cluster card stays intact until closed.
+        if (!leaflet || isCancelled) return;
+        const selectedMarker = markersRef.current.get(`site:${activePinIdRef.current}`);
+        if (!popupOpen) renderMarkers(leaflet);
+        else if (selectedMarker?.isPopupOpen()) renderMarkers(leaflet, false, true);
       });
     };
 
     const handleViewEnd = () => {
       updateShop();
-      if (!popupOpen) scheduleRender();
+      scheduleRender();
     };
     const handleSelect = () => {
       if (leaflet) renderMarkers(leaflet, true);
