@@ -19,17 +19,9 @@ on:
     # 06:00 UTC, before simulate-day (06:30) and ci.yml's nightly (07:00).
     - cron: "0 6 * * *"
   workflow_dispatch:
-    inputs:
-      focus:
-        description: Default nightly coverage, or the fixed navigation proof for issue 4183
-        type: choice
-        default: "all"
-        options:
-          - all
-          - navigation-scroll-4183
 
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && inputs.focus == 'navigation-scroll-4183' && format('e2e-navigation-4183-{0}', github.ref) || 'e2e-nightly' }}
+  group: e2e-nightly
   cancel-in-progress: true
 
 permissions:
@@ -54,39 +46,11 @@ jobs:
       - uses: ./.github/actions/playwright-shell
       - name: Install Chromium for real extension checks
         run: pnpm exec playwright install chromium
-      - name: Verify pinned Linux browser for navigation proof
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.focus == 'navigation-scroll-4183' }}
-        run: node scripts/e2e-navigation-proof.mjs browser
-      - name: Prepare exact pre-fix navigation runtime
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.focus == 'navigation-scroll-4183' }}
-        run: node scripts/e2e-navigation-causal-proof.mjs prepare
-      - name: Build the ephemeral pre-fix runtime
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.focus == 'navigation-scroll-4183' }}
-        run: pnpm e2e:build
-      - name: Prove the named pre-fix scroll failure
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.focus == 'navigation-scroll-4183' }}
-        env:
-          PLAYWRIGHT_JSON_OUTPUT_NAME: navigation-proof-before/results.json
-        run: |
-          status=0
-          pnpm exec playwright test e2e/staff-nav.spec.ts --project=chromium --repeat-each=3 --grep 'a delayed warm departure does not restore the board scroll$' --reporter=line,json --output=navigation-proof-before/test-results || status=$?
-          node scripts/e2e-navigation-causal-proof.mjs classify "$status"
-      - name: Restore and verify the original runtime and journey
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.focus == 'navigation-scroll-4183' }}
-        run: node scripts/e2e-navigation-causal-proof.mjs restore
-      - name: Build the unchanged nightly or restored navigation runtime
-        run: pnpm e2e:build
-      - name: Focused navigation proof
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.focus == 'navigation-scroll-4183' }}
-        run: pnpm exec playwright test e2e/staff-nav.spec.ts e2e/navigation-zero-clamp.spec.ts --project=chromium --repeat-each=5 --grep "$(node scripts/e2e-navigation-proof.mjs grep)"
-      - name: Summarize exact navigation proof
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.focus == 'navigation-scroll-4183' }}
-        run: node scripts/e2e-navigation-proof.mjs summary
+      - run: pnpm e2e:build
       - name: Quarantined tests
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.focus != 'navigation-scroll-4183' }}
         run: pnpm exec playwright test --grep @quarantine --pass-with-no-tests
       - name: Specs that failed in the last 7 days, five times each
-        if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.focus != 'navigation-scroll-4183') }}
+        if: ${{ !cancelled() }}
         run: |
           node scripts/e2e-recent-failures.mjs --days 7 --max 8 > recent-failures.txt 2> recent-history.log || {
             cat recent-history.log >&2
@@ -101,19 +65,6 @@ jobs:
           fi
           printf -- '- `%s`\n' "${specs[@]}" >> "$GITHUB_STEP_SUMMARY"
           pnpm exec playwright test --repeat-each=5 "${specs[@]}"
-      - name: Retain navigation proof
-        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.focus == 'navigation-scroll-4183' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: navigation-scroll-4183-${{ github.sha }}
-          path: |
-            navigation-proof-*.json
-            navigation-proof-before/
-            e2e-durations/results.json
-            test-results/
-            playwright-report/
-          if-no-files-found: error
-          retention-days: 7
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
@@ -124,8 +75,8 @@ jobs:
       # A red night opens one `ci-red` issue (or comments on the open one); the first green
       # night closes it (testing review decision 5, scripts/workflow-alert.mjs).
       - name: Open or update the red-run issue
-        if: failure() && inputs.focus != 'navigation-scroll-4183' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        if: failure() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         run: node scripts/workflow-alert.mjs --workflow e2e-nightly --outcome failure --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Close the red-run issue
-        if: success() && inputs.focus != 'navigation-scroll-4183' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        if: success() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         run: node scripts/workflow-alert.mjs --workflow e2e-nightly --outcome success --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
