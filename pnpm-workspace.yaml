@@ -24,11 +24,10 @@ update:
   ignoreDeps:
     - '@types/node'
 
-# Patched releases for advisories reported by `pnpm audit --audit-level high` (issue #2826).
-# Each selector matches only the vulnerable range, so a copy that is already patched is untouched.
+# Force patched releases only where the resolved dependency graph still needs them.
 overrides:
-  '@fastify/busboy@<3.2.1': '>=3.2.1'
-  '@modelcontextprotocol/sdk@<1.31.0': '>=1.31.0 <2'
+  '@modelcontextprotocol/sdk@<1.32.0': '>=1.32.0 <2'
+  '@vercel/cli-config>zod@>=4.0.0 <4.6.6': '^4.6.7'
   'js-yaml@>=4.0.0 <4.3.2': '^4.3.2'
   'minimatch@>=10.0.0 <10.2.3': '^10.2.3'
   'path-to-regexp@>=4.0.0 <6.3.0': '^6.3.0'
@@ -36,7 +35,7 @@ overrides:
   'smol-toml@<1.7.1': '>=1.7.1 <2'
   'tar@<7.5.21': '^7.5.21'
   'tmp@<0.2.6': '>=0.2.6 <0.3'
-  'undici@<6.27.0': '^6.27.0'
+  'undici@<6.29.1': '^6.29.1'
 
 # Reviewed advisories with no patched release (issue #2826). pnpm has no expiry field: re-check
 # with `pnpm audit` monthly (issue #2238) and delete the entry once a patched release exists.
