@@ -1,6 +1,4 @@
-import { instant } from "@next/playwright";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { attachScrollDiagnostic, startScrollDiagnostic } from "./navigation-scroll-diagnostic";
 import { mintOnboardFormPath } from "./setup-link";
 
 /**
@@ -16,26 +14,6 @@ import { mintOnboardFormPath } from "./setup-link";
 
 test.describe("owner", () => {
   signedInAsOwner();
-
-  // Temporary opt-in evidence for #4183; normal runs and assertions are unchanged.
-  test.beforeEach(async ({ page }, info) => {
-    if (
-      process.env.DIVEDAY_SCROLL_DIAGNOSTIC === "1" &&
-      (info.title.startsWith("a departure opened from a scrolled board") ||
-        info.title.startsWith("a delayed warm departure does not restore the board scroll"))
-    ) {
-      await startScrollDiagnostic(page);
-    }
-  });
-  test.afterEach(async ({ page }, info) => {
-    if (
-      process.env.DIVEDAY_SCROLL_DIAGNOSTIC === "1" &&
-      (info.title.startsWith("a departure opened from a scrolled board") ||
-        info.title.startsWith("a delayed warm departure does not restore the board scroll"))
-    ) {
-      await attachScrollDiagnostic(page, info);
-    }
-  });
 
   test.describe("phone navigation with enlarged text", () => {
     test.use({ locale: "es-ES", viewport: { width: 390, height: 844 } });
@@ -339,6 +317,10 @@ test.describe("owner", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     const departure = page.locator("[data-week-board] a[data-departure-door]").first();
     await expect(departure).toBeVisible();
+    const href = await departure.getAttribute("href");
+    const tripId = href?.split("/").at(-1);
+    if (!tripId) throw new Error("The departure link has no trip ID");
+
     // Warm the client route cache without replacing the document.
     await departure.click();
     await expect(page.locator("#roster")).toBeVisible();
@@ -351,22 +333,33 @@ test.describe("owner", () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(BOARD_SCROLL_PX);
     await expect(departure).toBeInViewport();
 
-    // Keep Next's prefetched shell live while its test API withholds dynamic
-    // content. Unlike route.fetch/fulfill, this does not buffer the Flight
-    // response and hide the loading boundary we need to observe (#4183).
-    await instant(page, async () => {
-      await departure.click();
+    // Pause the server's real dynamic read, not its Flight response. Next can
+    // stream the loading boundary before this test releases the departure.
+    const armed = await page.request.post("/api/test/navigation-gate", {
+      data: { tripId, action: "arm" },
+    });
+    expect(armed.ok()).toBe(true);
+    const click = departure.click();
+    try {
       await expect(page).toHaveURL(/\/trips\//);
       await expect(page.locator("[data-trip-loading]:visible")).toBeVisible();
       await expect
         .poll(() =>
           page.evaluate((boardOffset) => {
             const max = document.documentElement.scrollHeight - window.innerHeight;
-            return max < boardOffset && window.scrollY === max;
+            // Before the fix the fallback is clamped to max; after it, the
+            // router may already have honored the navigation by scrolling to 0.
+            return max > 0 && max < boardOffset && (window.scrollY === max || window.scrollY === 0);
           }, BOARD_SCROLL_PX),
         )
         .toBe(true);
-    });
+    } finally {
+      const released = await page.request.post("/api/test/navigation-gate", {
+        data: { tripId, action: "release" },
+      });
+      expect(released.ok()).toBe(true);
+    }
+    await click;
     await expect(page.locator("#roster")).toBeVisible();
     const landing = await page.evaluate(() => {
       const main = document.querySelector("main");
@@ -390,6 +383,17 @@ test.describe("owner", () => {
     );
     expect(landing.clearance, "the back-link was left under the staff bar").not.toBeNull();
     expect(landing.clearance ?? -1).toBeGreaterThanOrEqual(0);
+
+    // The new departure's forward scroll must not overwrite the board's
+    // history entry: a staffer returning to the board gets their place back.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/schedule\/board$/);
+    await expect(departure).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(BOARD_SCROLL_PX);
+    await page.goForward();
+    await expect(page).toHaveURL(/\/trips\//);
+    await expect(page.locator("#roster")).toBeVisible();
+    expect(await page.evaluate(() => window.scrollY)).toBeLessThanOrEqual(landing.maxTop);
   });
 
   for (const [suffix, section] of [
