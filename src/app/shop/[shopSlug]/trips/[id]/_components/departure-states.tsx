@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { readTripBlowout } from "@/db/blowouts";
+import { waitForNavigationGate } from "@/features/e2e-test-routes";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { MEDICAL_ALERTS_PRINT } from "@/lib/print-sheets";
+import { runtimeMode } from "@/lib/runtime-mode";
 import { uuidParam } from "@/lib/uuid";
 import { BlowoutPageBody } from "./blowout/BlowoutPageBody";
 import { blowoutTitleKey } from "./blowout/title";
@@ -25,6 +27,8 @@ export async function departureStateOf(
   tripId: string,
   params: { pass?: string; blowout?: string; print?: string; notice?: string },
 ) {
+  // Hold the dynamic read while the real loading boundary streams in the E2E harness.
+  if (runtimeMode().e2eHarness) await waitForNavigationGate(tripId);
   if (params.pass !== undefined) {
     const bookingId = uuidParam(params.pass);
     if (!bookingId) notFound();
