@@ -19,10 +19,9 @@ Every idea is tagged so you can triage fast:
 ## Safety And Trust
 
 Lens: make unsafe departure harder. Safety ideas require boring code, failure-path and adversarial
-tests, and `dive-domain-expert` review.
+tests, and `dive-domain-expert` review. The deck head-count comparison is now
+[#4248](https://github.com/AaronBuxbaum/diveday/issues/4248).
 
-- **Physical headcount reconciliation.** A captain enters the count they see on deck; the app
-  cross-checks it against boarded/not-boarded state. *(M, manifests, big bet.)*
 - **Safety record page.** Publish honest, computed shop safety stats such as boarded divers,
   roll-call completion, and readiness completion. The page must display the real numbers, even when
   imperfect. *(S-M, manifests, quick win.)*
@@ -33,26 +32,24 @@ tests, and `dive-domain-expert` review.
 ## Staff Operations
 
 Lens: give a busy front desk its day back by turning repeated coordination work into a glance or a
-single action.
+single action. Receipt-printer tickets are now
+[#4247](https://github.com/AaronBuxbaum/diveday/issues/4247).
 
-- **Thermal receipt print layout.** A compact manifest/check-in ticket layout for common lobby
-  receipt printers. *(M, manifests, quick win.)*
 - **No-boats-today suggestions.** Empty operational days suggest useful shop tasks such as reviewing
-  course sign-ups or upcoming blockers. *(S, cross-cutting, quick win.)*
+  course sign-ups or upcoming blockers. The quiet-day state already says "No boats today, and nothing
+  is waiting on you"; this adds suggestions to it. *(S, cross-cutting, quick win.)*
 - **Multi-boat / multi-trip day orchestration.** A shop running several boats can see all departures,
   move divers and crew carefully, and avoid collisions. *(L, cross-cutting, big bet.)*
+
 ## Diver Experience And Growth
 
 Lens: help a diver book, prepare, show up confident, return, and bring a buddy without turning DiveDay
 into a social network.
 
-- **Group organizer surface — promoted.** Expiring holds and an organizer payment ledger are
-  approved in [#4209](https://github.com/AaronBuxbaum/diveday/issues/4209), not a second raw
-  backlog item. Per-seat checkout and seat claims already exist; no split-payment prerequisite.
-- **Course cohorts as groups.** Reuse group-claim mechanics for a course roster so each student owns
+- **Course cohorts as groups.** Reuse the shipped group-claim mechanics for a course roster so each student owns
   their readiness while the instructor sees the whole cohort. *(M, bookings/certs, big bet.)*
 - **Buddy referral credit.** When a diver brings a buddy, issue a simple trip credit for a future
-  booking. Requires the credit ledger. *(M, bookings, quick win.)*
+  booking. Needs the credit ledger first ([#4245](https://github.com/AaronBuxbaum/diveday/issues/4245)). *(M, bookings, quick win.)*
 - **One-tap crew thank-you shoutouts.** The recap page can collect moderated compliments for crew
   members, useful for morale and review prompts. *(S-M, cross-cutting, quick win.)*
 - **Personal roster cue.** Let a diver choose a small, staff-visible preference or symbol that helps a
@@ -62,13 +59,10 @@ into a social network.
 ## Revenue And Recovery
 
 Lens: a dive shop sells perishable seats under weather risk. These ideas protect revenue without
-breaking community trust.
+breaking community trust. Alternative-day salvage is now
+[#4244](https://github.com/AaronBuxbaum/diveday/issues/4244) and the credit ledger
+[#4245](https://github.com/AaronBuxbaum/diveday/issues/4245).
 
-- **Alternative-day salvage.** A cancellation can offer what the shop can still run, such as a pool
-  session, shore dive, or classroom day. *(M, bookings, quick win now the cancellation cascade has
-  shipped.)*
-- **Credit ledger.** First-class trip credit balance on the diver, visible and spendable at booking.
-  Requires schema change and ADR. *(M, bookings, big bet.)*
 - **Insurance leverage.** Once incident and safety exports exist, package the evidence a shop can use
   in liability-premium discussions. No marketing claim until real operators validate it. *(No build,
   manifests, parked.)*
@@ -91,16 +85,10 @@ manifest for external orchestrators — now live once, in
 
 Lens: speed, feel, and authentic divemaster voice. Keep delight rationed; safety truth outranks feel.
 
-- **Nitrox MOD calculator.** After enriched-air verification, show a clean maximum-operating-depth
-  calculator in the diver prep surface. Planning aid only; never fill authorization. *(S, certs,
-  quick win.)*
 - **Interval chitchat tips.** Empty states may teach small local or marine facts while waiting, but
   only where they do not distract from operational work. *(S, cross-cutting, parked.)*
 - **Sub-surface page slide.** A small set of brand transitions for page changes, using transform and
   opacity only. Must respect reduced motion. *(S, cross-cutting, parked.)*
-- **Swipe-dismiss undo toast.** Toasts can be dismissed with a touch gesture while preserving the
-  undo window and keyboard/screen-reader access. *(S, cross-cutting, quick win.)*
-
 ## Completed Or Superseded Brainstorms
 
 Completed work does not live here. Private-charter inquiry/quotes and cancellation cascades
@@ -112,6 +100,8 @@ Use these records instead:
   delight-and-experience brainstorm.
 - [../archive/diver-booking-delight-20260729.md](../archive/diver-booking-delight-20260729.md) is the
   completed diver-booking-delight follow-on brainstorm.
+- The nitrox maximum-depth calculator (`src/features/nitrox-mod`, shown on the diver's ready page),
+  the swipe-away undo toast, and expiring group holds with an organizer ledger (#4209) are built.
 - [ai-ml.md](ai-ml.md) holds AI-required ideas, including natural-language assistants and
   model-based evidence extraction.
 - [../shipped.md](../shipped.md#demand-crew-and-staff-context-delivered-2026-07-29) covers demand
