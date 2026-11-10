@@ -491,41 +491,36 @@ surface that renders per-field errors gets the focus move for free. `key` it on 
 
 ### Which tone token: `text-success` or `text-success-strong`
 
-Settled by measurement, so nobody has to re-derive it. The ratios below are computed from the token
-values in `src/app/globals.css` on Tide's palette (recomputed 2026-09-25), with sRGB compositing and
-WCAG 2.x relative luminance, and truncated to two places so a figure never overstates. AA for
-normal text is **4.5:1**, and contrast is size-independent — a 12px badge and a 16px paragraph face
-the same bar, because none of this is "large text" (18pt / 14pt bold).
+Freshly computed from `src/app/globals.css` on Logbook's palette, 2026-11-10, using sRGB
+compositing and relative luminance. Values are truncated to two decimal places. The target for
+these reading inks is **4.5:1**. This focused measurement is not a conformance assessment; the
+[measurement record](text-contrast.md) states its scope.
 
-The `-strong` tokens are `color-mix(in srgb, black 6%, var(--success|--warning))`. The `-tint`
-fills are drawn values, one per hue per scheme (`--success-tint` is `#e3f2ea` by day and `#0b2617`
-at night), and **opaque**, which is what makes "on its own tint" a single number rather than one
-per parent. See the note under the table.
+The `-strong` tokens mix 6% black into the signal. The opaque tint fills are `#e2f2e8` /
+`#123022` for success and `#fbefdc` / `#33280f` for warning, in light / dark respectively.
 
-**Light palette** (`--surface` `#ffffff`, `--background` `#f2f2f7`, `--surface-sunken` `#ececf1`):
+**Light palette** (`--surface` `#ffffff`, `--background` `#f4f6f4`, `--surface-sunken` `#eaedea`):
 
 | text | on `bg-surface` | on its own `-tint` | on `bg-background` | on `bg-surface-sunken` |
 | --- | --- | --- | --- | --- |
-| `text-success` | 5.42 | 4.69 | 4.86 | 4.61 |
-| `text-success-strong` | 5.97 | 5.16 | 5.35 | 5.07 |
-| `text-warning` | 5.42 | 4.80 | 4.86 | 4.60 |
-| `text-warning-strong` | 5.97 | 5.28 | 5.35 | 5.07 |
-| `text-danger` | 5.38 | 4.65 | 4.82 | 4.57 |
+| `text-success` | 5.77 | 4.98 | 5.32 | 4.89 |
+| `text-success-strong` | 6.34 | 5.47 | 5.84 | 5.38 |
+| `text-warning` | 6.10 | 5.37 | 5.62 | 5.17 |
+| `text-warning-strong` | 6.69 | 5.89 | 6.16 | 5.67 |
+| `text-danger` | 6.49 | 5.43 | 5.97 | 5.50 |
 
-**Dark palette** (`--surface` `#1c1c1e`, `--background` `#000000`, `--surface-sunken` `#0b0b0d`):
+**Dark palette** (`--surface` `#162129`, `--background` `#0f171c`, `--surface-sunken` `#0b1216`):
 
 | text | on `bg-surface` | on its own `-tint` | on `bg-background` | on `bg-surface-sunken` |
 | --- | --- | --- | --- | --- |
-| `text-success` | 8.41 | 7.96 | 10.38 | 9.72 |
-| `text-success-strong` | 7.43 | 7.03 | 9.17 | 8.59 |
-| `text-warning` | 8.27 | 7.90 | 10.21 | 9.56 |
-| `text-warning-strong` | 7.31 | 6.98 | 9.02 | 8.45 |
-| `text-danger` | 4.99 | 5.08 | 6.16 | 5.77 |
+| `text-success` | 8.47 | 7.39 | 9.38 | 9.78 |
+| `text-success-strong` | 7.51 | 6.55 | 8.31 | 8.67 |
+| `text-warning` | 9.02 | 7.98 | 9.99 | 10.41 |
+| `text-warning-strong` | 7.96 | 7.04 | 8.82 | 9.19 |
+| `text-danger` | 6.68 | 6.42 | 7.39 | 7.71 |
 
-Nothing in either table is under AA. The rules below were set on the Clearwater palette, where the
-raw success and warning hues measured 4.36–4.39 on a tint or a sunken fill and failed. On Tide's
-palette the raw hues clear those fills by 0.1–0.3, and `-strong` clears them by 0.5 or more, so the
-components still use `-strong`. Read off it:
+All pairs in these tables clear 4.5:1. Components keep `-strong` for success and warning on
+washes or sunken fills, so an ink remains readable when its caller changes the container:
 
 - **A coloured ink sits on `bg-<hue>-tint`, never on `bg-<hue>/10`.** The `/10` form is
   translucent, so the real background is the hue mixed over *whatever is behind the element*, and
@@ -539,19 +534,18 @@ components still use `-strong`. Read off it:
 - **Light is the binding scheme for success and warning.** Every dark-palette pairing of those two
   clears AA by a wide margin. Mixing black into an already-light-on-dark hue *lowers* contrast, so
   `-strong` is a light-mode fix that costs a little in dark and never rescues anything there. It is
-  still safe everywhere, which is why one token can serve both schemes. `danger` is the tightest ink
-  in both schemes: 4.57 on a light sunken fill, 4.99 on the dark surface.
-- **On a tint of its own hue, success/warning text is `-strong`.** The raw hue lands at 4.69–4.80
-  (4.38–4.39 on Clearwater's palette, just under). `danger` needs no `-strong` and has none.
-- **On `bg-surface-sunken`, success/warning text is `-strong`** even with no tint (4.60 → 5.07).
+  still safe on all the fills measured above, so one token can serve both schemes.
+- **On a tint of its own hue, success/warning text is `-strong`.** The raw hues clear 4.5:1;
+  `-strong` keeps additional room on those fills. `danger` needs no `-strong` and has none.
+- **On `bg-surface-sunken`, success/warning text is `-strong`** even with no tint.
   This is why `ShopStat`'s figure uses `-strong`: the tile's `inset` variant is a sunken box.
-- **On plain `bg-surface`, the raw hue is fine** (5.42) — and that is exactly why a component that
+- **On plain `bg-surface`, the raw hue is fine** — and that is exactly why a component that
   does not know what it is mounted on may not rely on it. `KindChip` named `bg-surface` on *itself*
   so it could; its replacement, `LedgerRow`'s kind word (`src/components/ui/ledger.tsx`), carries no
-  fill at all, so it takes `text-warning-strong` (5.97 / 5.07 / 5.28 on surface, sunken and tint)
+  fill at all, so it takes `text-warning-strong`
   and keeps `text-danger`, which needs no `-strong` at any of them. The case is not hypothetical: a
-  `LedgerRow` that is a door hovers to `bg-surface-sunken/60`, where the raw hue measured 4.37 on
-  Clearwater's palette (4.92 today). **The general rule this is an instance of:** a component
+  `LedgerRow` that is a door hovers to `bg-surface-sunken/60`, so its fill is not always white.
+  **The general rule this is an instance of:** a component
   mounted in whatever container its caller chose picks the ink that clears everywhere, rather than
   the one that clears where its author happened to be looking — `FormStatus` and `ShopStat` already
   settle it the same way. A `className` override is not the escape hatch, because Tailwind emits

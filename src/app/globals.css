@@ -794,9 +794,10 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 @layer base {
+  /* Full-strength quiet ink: alpha-mixing it failed 4.5:1 on the day fills. */
   input::placeholder,
   textarea::placeholder {
-    color: color-mix(in srgb, var(--muted) 78%, transparent);
+    color: var(--muted);
   }
 
   /*
@@ -812,7 +813,7 @@ select:not([multiple]):not([size]):dir(rtl) {
    * digits in the placeholder's grey and read it as not taking the input.
    */
   input[data-empty]:not(:focus)::-webkit-datetime-edit {
-    color: color-mix(in srgb, var(--muted) 78%, transparent);
+    color: var(--muted);
   }
 
   /*

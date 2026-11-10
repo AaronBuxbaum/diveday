@@ -22,7 +22,7 @@ report.)
   ([../archive/specialist-optimization-audit-20260731.md](../archive/specialist-optimization-audit-20260731.md))
   — every lens shipped or moved out by 2026-08-01: ML & data into [ai-ml.md](ai-ml.md), security &
   privacy into [../shipped.md](../shipped.md), and its three still-open accessibility contrast
-  fixes into this file's own [Accessibility contrast fixes](#accessibility-contrast-fixes-blocked-on-a-color-guide-decision)
+  fixes into this file's own [Accessibility contrast fixes](#accessibility-contrast-fixes)
   section below (two of the three have since shipped; one remains).
 - Open UX tickets carried out of the persona review live in [story-backlog.md](story-backlog.md);
   raw, unfiltered ideas live in [brainstorm.md](brainstorm.md) (AI-required ideas in
@@ -986,41 +986,14 @@ alongside them moved several of these prerequisites.
   iNaturalist CSV shapes; the storefront's conservation panel then has a real fact ("your divers
   logged 40 turtle sightings this season"), which is what D39 (#1199) waits on. *Effort:* S–M.
 
-## Accessibility contrast fixes (blocked on a color-guide decision)
+## Accessibility contrast fixes
 
-Carried over from the archived [2026-07-31 specialist optimization
-audit](../archive/specialist-optimization-audit-20260731.md#3-accessibility-contrast-tasks-moved)
-§3. **Two of the three have shipped (2026-08-02 and 2026-08-23); one remains deliberately not
-built**: the product owner ruled out touching the placeholder color value, because it would fight
-the current color guide. Pick it up once that guide decision is made, not before — re-verify the
-computed ratios against `globals.css` first, since token values may have drifted.
+<a id="accessibility-contrast-fixes-blocked-on-a-color-guide-decision"></a>
 
-`e2e/a11y.spec.ts`'s axe scan **no longer excludes** the `color-contrast` rule (2026-08-23, issue
-#793). What this section used to assert — that the rule "fires app-wide on exactly these token
-values, so turning it on now would just paint CI red" — was measured and was not true: 23 failing
-nodes in light mode and one in dark, reducing to four colour combinations, none of which was a
-frozen token value. They were one mechanism, a translucent `bg-<hue>/10` fill composited over
-something that is not `--surface`, and an opaque `--<hue>-tint` token closed all of them. Nothing
-here is now blocking that scan, and a new contrast failure on any scanned surface is a red build.
-The placeholder item below is invisible to it either way: axe does not evaluate `::placeholder`.
-
-Nothing in the repo may claim WCAG AA conformance while that item is open — see
-[design/principles.md](../../design/principles.md#tokens-the-mechanics) for the wording that is
-actually true, and keep any new claim in sync with this section.
-
-The focus-indicator item that used to head this section **shipped on 2026-08-02** and has moved to
-[../shipped.md](../shipped.md) with its measured before/after ratios; `--focus-ring` now clears
-WCAG 1.4.11's 3:1 in all six light/dark palettes. The tinted status-banner item **shipped on
-2026-08-23** with issue #793 — and not by darkening `--success`/`--warning`, which stay exactly
-where the colour guide put them: the fills those inks sit on became opaque, so the ratios the
-palette had already computed are the ones that render. The one item below is what remains.
-
-### Fix placeholder text contrast
-
-- **Priority**: medium
-- **Effort**: S
-- **Prompt**: `src/app/globals.css` sets `input::placeholder`/`textarea::placeholder` to `color-mix(in srgb, var(--muted) 78%, transparent)`, which computes to 3.35:1 on white surfaces and 3.07:1 on `--surface-sunken` in light mode — placeholder text is real text under WCAG 1.4.3 and needs 4.5:1 (the schedule builder's title placeholder and search inputs rely on it). Change the rule to use `var(--muted)` at full strength (5.0:1 on background, 4.58:1 on sunken — passing) or raise the mix to a percentage that clears 4.5:1 on the darkest light-mode surface it sits on; placeholders remain visually distinct from typed text because typed text uses `--foreground`, not `--muted`. Dark mode currently sits at 4.54:1 — keep it at or above that.
-- **Verification**: Node contrast script confirming ≥4.5:1 for the computed placeholder color over `#ffffff`, `#faf9f6`, and `#f1efe9` (light) and `#0d222d` (dark); axe run (or DevTools contrast checker) on the schedule builder's Add panel; `pnpm visual` diff reviewed and explained.
+The approved current-palette text work is built in #4211; see
+[the shipped entry](../shipped.md#text-contrast-measured-on-the-current-palette-built-2026-11-10)
+and [fresh measurements and scope](../../design/text-contrast.md). This is not a WCAG-conformance
+claim. No contrast item remains blocked on the former color-guide decision.
 
 ## Engineering enablement
 

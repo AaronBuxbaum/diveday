@@ -7,6 +7,13 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Text contrast measured on the current palette (built 2026-11-10)
+
+Current light/dark text colors are remeasured in #4211. Placeholders and empty date/time masks use
+full-strength muted ink; unchecked rental price fields keep readable text on sunken fills instead
+of dimming the whole control. The [measurement record](../design/text-contrast.md) gives fresh
+ratios, sampled surfaces and limits; it is not a WCAG-conformance claim.
+
 ## A shared inbox is two divers (built 2026-11-06)
 
 - A booking or seat claim on a known email under a different name gets a record of its own, holding
