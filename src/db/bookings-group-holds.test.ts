@@ -16,20 +16,20 @@ import {
 import { addPartySeat, createBooking, createBookingParty, expireGroupHolds } from "./bookings";
 import { startBookingCheckout } from "./checkouts";
 import { setBookingPayment } from "./payments";
-import { bookings, paymentOperationIntents, shops } from "./schema";
+import { bookings, paymentOperationIntents, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { createTrip, getTripWithBooked } from "./trips";
 
 const ctx = fileScopedShopContext();
 const HOUR = 3_600_000;
 
-async function heldParty() {
+async function heldParty(capacity = 3) {
   const { db, shop } = ctx;
   const now = nowDate();
   const trip = await createTrip(db, {
     shopId: shop.id,
     title: "Group hold departure",
-    capacity: 3,
+    capacity,
     plannedDives: 1,
     startsAt: new Date(now.getTime() + 72 * HOUR),
     endsAt: new Date(now.getTime() + 76 * HOUR),
@@ -402,8 +402,106 @@ describe("expiring party holds", () => {
     expect(await expireGroupHolds(db, until)).toBe(2);
   });
 
-  it("rejects invalid deadlines and mixed-shop parties with no partial seats", async () => {
-    const { db, shop, trip } = await heldParty();
+  it("rolls back an otherwise valid party when its requested deadline has already arrived", async () => {
+    const { db, shop, trip } = await heldParty(6);
+    const outcome = await createBookingParty(
+      db,
+      [
+        {
+          actor: "public",
+          shopId: shop.id,
+          tripId: trip.id,
+          fullName: "Invalid deadline organizer",
+          email: "invalid-deadline@example.com",
+        },
+        {
+          actor: "public",
+          shopId: shop.id,
+          tripId: trip.id,
+          fullName: "Invalid deadline companion",
+        },
+      ],
+      { holdUntil: nowDate() },
+    );
+    expect(outcome).toEqual({ ok: false, reason: "trip_unavailable", failedIndex: -1 });
+    expect((await tripSeats()).filter((seat) => seat.tripId === trip.id)).toHaveLength(2);
+    expect(
+      await db
+        .select({ id: people.id })
+        .from(people)
+        .where(and(eq(people.shopId, shop.id), eq(people.email, "invalid-deadline@example.com"))),
+    ).toHaveLength(0);
+  });
+
+  it("rolls back both departures instead of spreading one hold across them", async () => {
+    const { db, shop, trip, until } = await heldParty(6);
+    const second = await createTrip(db, {
+      shopId: shop.id,
+      title: "Another group departure",
+      capacity: 3,
+      plannedDives: 1,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      priceCents: 10_000,
+    });
+    if (!second) throw new Error("second departure missing");
+    const outcome = await createBookingParty(
+      db,
+      [
+        {
+          actor: "public",
+          shopId: shop.id,
+          tripId: trip.id,
+          fullName: "Mixed departure organizer",
+          email: "mixed-departure@example.com",
+        },
+        {
+          actor: "public",
+          shopId: shop.id,
+          tripId: second.id,
+          fullName: "Mixed departure companion",
+        },
+      ],
+      { holdUntil: until },
+    );
+    expect(outcome).toEqual({ ok: false, reason: "trip_unavailable", failedIndex: -1 });
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.booked).toBe(2);
+    expect((await getTripWithBooked(db, shop.id, second.id))?.booked).toBe(0);
+    expect(
+      await db
+        .select({ id: people.id })
+        .from(people)
+        .where(and(eq(people.shopId, shop.id), eq(people.email, "mixed-departure@example.com"))),
+    ).toHaveLength(0);
+  });
+
+  it("does not add a companion after the remaining unpaid group deadline", async () => {
+    const { db, shop, trip, lead, member, until } = await heldParty();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: lead.bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 10_000,
+    });
+    advanceClock(until.getTime() - nowDate().getTime());
+    expect(
+      await addPartySeat(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatName: "Too late companion",
+      }),
+    ).toEqual({ ok: false, reason: "lead_unavailable" });
+    expect((await tripSeats()).filter((seat) => seat.tripId === trip.id)).toHaveLength(2);
+    expect(await expireGroupHolds(db)).toBe(1);
+    expect((await tripSeats()).find((seat) => seat.id === lead.bookingId)?.status).toBe("booked");
+    expect((await tripSeats()).find((seat) => seat.id === member.bookingId)?.status).toBe(
+      "cancelled",
+    );
+  });
+
+  it("rejects mixed-shop parties with no partial seats", async () => {
+    const { db, shop, trip, until } = await heldParty();
     const [other] = await db
       .insert(shops)
       .values({ name: "Other group shop", slug: "other-group-shop", timezone: "UTC" })
@@ -421,7 +519,7 @@ describe("expiring party holds", () => {
         },
         { actor: "public", shopId: other.id, tripId: trip.id, fullName: "Other shop member" },
       ],
-      { holdUntil: nowDate() },
+      { holdUntil: until },
     );
     expect(outcome.ok).toBe(false);
     expect((await tripSeats()).filter((seat) => seat.tripId === trip.id)).toHaveLength(2);
