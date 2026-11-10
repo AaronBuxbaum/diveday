@@ -5,6 +5,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
+vi.mock("@/db/bookings", () => ({ expireGroupHolds: vi.fn() }));
 vi.mock("@/db/seed-boat-at-sea", () => ({ bringDemoBoatsAtSeaHome: vi.fn() }));
 vi.mock("@/db/trips", () => ({
   cancelDeparturesBelowMinimum: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
 
+const { expireGroupHolds } = await import("@/db/bookings");
 const { getDb } = await import("@/db/client");
 const { bringDemoBoatsAtSeaHome } = await import("@/db/seed-boat-at-sea");
 const { cancelDeparturesBelowMinimum } = await import("@/db/trips");
@@ -60,6 +62,7 @@ function cronRequest(query = "", authorization: string | null = `Bearer ${secret
 
 const ALL_SCANS = [
   bringDemoBoatsAtSeaHome,
+  expireGroupHolds,
   cancelDeparturesBelowMinimum,
   sendDueReminders,
   drainNotificationRetries,
@@ -84,6 +87,7 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue(FAKE_DB as never);
   vi.mocked(bringDemoBoatsAtSeaHome).mockReset().mockResolvedValue(0);
+  vi.mocked(expireGroupHolds).mockReset().mockResolvedValue(0);
   vi.mocked(cancelDeparturesBelowMinimum)
     .mockReset()
     .mockResolvedValue({ considered: 0, cancelled: [], deferred: 0 } as never);
@@ -152,6 +156,8 @@ describe("GET /api/cron/shop-tick", () => {
     expect(sendDueRecaps).toHaveBeenCalledWith(FAKE_DB, { marineLifeNamesIn, now });
     expect(sendMissingDiverAlerts).toHaveBeenCalledWith(FAKE_DB, { now });
     expect(bringDemoBoatsAtSeaHome).toHaveBeenCalledWith(FAKE_DB, now);
+    expect(expireGroupHolds).toHaveBeenCalledWith(FAKE_DB, now);
+    expect(body["group-holds"]).toBe(0);
     expect(body.recaps).toEqual({ sent: 2 });
     expect(body["trip-reminders"]).toEqual({ scanned: 1, sent: 1 });
   });
