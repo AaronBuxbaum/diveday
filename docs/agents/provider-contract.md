@@ -16,7 +16,7 @@ live PID is not proof of ownership; inspect the command before stopping anything
 | Capability | Claude repository adapter | Codex and other hosts |
 | --- | --- | --- |
 | Startup / resume context | SessionStart configured; execution depends on host | Explicit bootstrap command |
-| Scoped rules | Host can load matching paths | Read rules returned by task packet |
+| Scoped rules | Host can load matching paths | Read matching `.claude/rules/` files |
 | Format touched files | Configured lifecycle hook | Explicit Biome command on owned files |
 | Shell refusals / failure hints | Configured hooks | Repository checks remain mandatory |
 | Push verification | Same repository gate | Same repository gate |

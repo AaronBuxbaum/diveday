@@ -21,8 +21,8 @@ custom-build promise.
 ## Approved work and ownership
 
 - **Group coordination:** expiring holds plus an organizer payment ledger, [#4209](https://github.com/AaronBuxbaum/diveday/issues/4209).
-  Implemented in draft [#4222](https://github.com/AaronBuxbaum/diveday/pull/4222) on top of per-seat
-  checkout and seat claims; no new split-payment prerequisite or seat cap. Unmerged work is not
+  Merged in [#4222](https://github.com/AaronBuxbaum/diveday/pull/4222) on top of per-seat
+  checkout and seat claims; no new split-payment prerequisite or seat cap. Merge evidence is not
   production activation.
 - **Native Apple/Google Wallet passes:** implemented dark in [#4218](https://github.com/AaronBuxbaum/diveday/issues/4218);
   owner-controlled accounts and credentials are [#4208](https://github.com/AaronBuxbaum/diveday/issues/4208).
@@ -34,12 +34,22 @@ custom-build promise.
 - **Drysuit short cuts:** retain the existing grid, add short variants, retain Not sure and collect
   no body measurements, [#4221](https://github.com/AaronBuxbaum/diveday/issues/4221).
 - **Contrast:** [#4211](https://github.com/AaronBuxbaum/diveday/issues/4211) owns fresh measurement and
-  raising text combinations below 4.5:1, implemented in draft
+  raising text combinations below 4.5:1, merged in
   [#4224](https://github.com/AaronBuxbaum/diveday/pull/4224). Its current evidence is linked below.
 
 The leave-it guide pricing link is already on `main` through
 [#4207](https://github.com/AaronBuxbaum/diveday/pull/4207), implementing #4205. #4210 duplicated
 that request; it is not another feature to build.
+
+## Recovered accepted-design slices
+
+The September device design has three scoped recovery tickets: staff passkeys
+[#4232](https://github.com/AaronBuxbaum/diveday/issues/4232), upward-only iPhone text scaling
+[#4234](https://github.com/AaronBuxbaum/diveday/issues/4234), and a contextual install prompt
+[#4233](https://github.com/AaronBuxbaum/diveday/issues/4233). They preserve the recorded design and
+require reconciliation with current auth and Logbook surfaces; they are not implementation or
+production-activation evidence. The [coverage record](../archive/doc-idea-coverage-20261110.md)
+explains why the other device slices are not reopened.
 
 ## Human-owned production gates
 

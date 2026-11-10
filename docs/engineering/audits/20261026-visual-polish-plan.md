@@ -21,7 +21,21 @@ update below. M02 still adds no new Product hero scene, and RGS04 adds no filena
 Browser review Skip and notes retain precedence; this record does not overwrite browser-only
 choices.
 
-## Execution update — 27 October 2026
+## Current disposition — 10 November 2026
+
+All 85 original proposals are accounted for: 75 implementation proposals merged, seven were
+already done at the audit, and three retain the owner's chosen behavior (M04, D06 and D07).
+The final RP04 registration disclosure and public-header repair merged in
+[PR #3123](https://github.com/AaronBuxbaum/diveday/pull/3123) on 27 October as
+`d8f559e879ccfd17bcb2f08bd9ac88d42d4ea785`. Its execution issue
+[#3101](https://github.com/AaronBuxbaum/diveday/issues/3101) and header issue
+[#3116](https://github.com/AaronBuxbaum/diveday/issues/3116) are closed completed.
+This is repository delivery evidence, not production deployment or new browser validation.
+
+The observations below preserve their original dates, including the no-JavaScript failure and
+bounded visual evidence. Their old open/partial labels are not a current implementation queue.
+
+## Historical execution update — 27 October 2026
 
 74 of the 75 implementation proposals are merged, including R01, RP02, RP03 and RP06 in
 [PR #3105](https://github.com/AaronBuxbaum/diveday/pull/3105). This was verified on main
@@ -98,8 +112,8 @@ inspections. All eight recovery bodies have recorded opacity 1; the earlier sett
 All ten probe candidates were dismissed with measured reasons; no confirmed or unclear integration
 visual finding remains. This review is local evidence, separate from hosted Linux visual comparison.
 
-The main integration candidate has not been pushed, published as a PR or merged. Publication policy
-for the unrelated failed stack and exact hosted CI remain parent-owned; no deployment is claimed.
+At this local-verification snapshot, the main integration candidate had not been pushed or
+merged. Its later publication and merge are recorded above; no deployment is claimed.
 
 The original mapping and per-proposal observations below are the 26 October planning snapshot.
 Their queued/readiness labels describe that snapshot, not current delivery status. This update

@@ -4,6 +4,15 @@
 skill, push hook, stack policy and required reviews still apply. This note explores how an agent
 could publish reviewable work sooner while preserving an authoritative merge decision.
 
+## Current disposition — 10 November 2026
+
+This research predates the accepted [top-of-stack CI policy](../../architecture/decisions/20261105-ci-runs-on-the-top-of-the-stack.md).
+Its every-layer requirement is superseded. Exact-candidate and result validation remain, but the
+historical text below is not permission to restore lower-layer full CI or the removed push guard.
+The owner [left branch settings unchanged](../../product/human-decisions/H-20261110-branch-protection-top-of-stack.md);
+the October ruleset instructions below are deferred, not a current administrator task. Future
+settings changes require separate authorization.
+
 ## Finding
 
 The strongest first move is to establish a real merge boundary, then separate saving a draft from
