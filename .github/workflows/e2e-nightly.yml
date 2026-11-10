@@ -18,7 +18,14 @@ on:
   schedule:
     # 06:00 UTC, before simulate-day (06:30) and ci.yml's nightly (07:00).
     - cron: "0 6 * * *"
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
+    inputs:
+      navigation_scroll_diagnostic:
+        description: Temporary focused scroll-intent diagnostic for issue 4183
+        type: boolean
+        default: false
 
 concurrency:
   group: e2e-nightly
@@ -30,6 +37,7 @@ permissions:
 jobs:
   nightly:
     name: Quarantined tests and the flake hunt
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'fix/warm-navigation-scroll-4183' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -45,12 +53,37 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/playwright-shell
       - name: Install Chromium for real extension checks
+        if: ${{ !(inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') }}
         run: pnpm exec playwright install chromium
       - run: pnpm e2e:build
+        if: ${{ !(inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') }}
+      - name: Build with temporary scroll probes
+        if: ${{ (inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') }}
+        run: |
+          trap 'node scripts/diagnose-navigation-scroll.mjs --restore' EXIT
+          node scripts/diagnose-navigation-scroll.mjs
+          pnpm e2e:build
+      - name: Focused warm departure diagnostic
+        if: ${{ (inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') }}
+        env:
+          DIVEDAY_SCROLL_DIAGNOSTIC: "1"
+          E2E_WORKERS: "1"
+        run: pnpm exec playwright test e2e/staff-nav.spec.ts --grep 'a departure opened from a scrolled board' --repeat-each=10 --trace=on
+      - name: Preserve diagnostic evidence on pass or failure
+        if: ${{ always() && (inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: navigation-scroll-4183
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: error
+          retention-days: 7
       - name: Quarantined tests
+        if: ${{ !(inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') }}
         run: pnpm exec playwright test --grep @quarantine --pass-with-no-tests
       - name: Specs that failed in the last 7 days, five times each
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && !(inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') }}
         run: |
           node scripts/e2e-recent-failures.mjs --days 7 --max 8 > recent-failures.txt 2> recent-history.log || {
             cat recent-history.log >&2
@@ -75,8 +108,8 @@ jobs:
       # A red night opens one `ci-red` issue (or comments on the open one); the first green
       # night closes it (testing review decision 5, scripts/workflow-alert.mjs).
       - name: Open or update the red-run issue
-        if: failure() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        if: failure() && !(inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         run: node scripts/workflow-alert.mjs --workflow e2e-nightly --outcome failure --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Close the red-run issue
-        if: success() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        if: success() && !(inputs.navigation_scroll_diagnostic || github.event_name == 'pull_request') && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         run: node scripts/workflow-alert.mjs --workflow e2e-nightly --outcome success --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

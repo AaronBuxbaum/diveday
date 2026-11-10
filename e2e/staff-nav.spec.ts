@@ -1,4 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { attachScrollDiagnostic, startScrollDiagnostic } from "./navigation-scroll-diagnostic";
 import { mintOnboardFormPath } from "./setup-link";
 
 /**
@@ -14,6 +15,24 @@ import { mintOnboardFormPath } from "./setup-link";
 
 test.describe("owner", () => {
   signedInAsOwner();
+
+  // Temporary opt-in evidence for #4183; normal runs and assertions are unchanged.
+  test.beforeEach(async ({ page }, info) => {
+    if (
+      process.env.DIVEDAY_SCROLL_DIAGNOSTIC === "1" &&
+      info.title.startsWith("a departure opened from a scrolled board")
+    ) {
+      await startScrollDiagnostic(page);
+    }
+  });
+  test.afterEach(async ({ page }, info) => {
+    if (
+      process.env.DIVEDAY_SCROLL_DIAGNOSTIC === "1" &&
+      info.title.startsWith("a departure opened from a scrolled board")
+    ) {
+      await attachScrollDiagnostic(page, info);
+    }
+  });
 
   test.describe("phone navigation with enlarged text", () => {
     test.use({ locale: "es-ES", viewport: { width: 390, height: 844 } });
