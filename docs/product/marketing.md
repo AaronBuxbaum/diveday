@@ -10,8 +10,8 @@ may make, the voice they use, and the maintenance loop that keeps them true. The
 current direction is [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md)
 (fully delivered, kept for rationale); so is the conversion pass argued in
 [marketing-review-20260827.md](marketing-review-20260827.md), whose slices 12a–12f all landed on
-2026-08-28 — what is left of it is one owner call, the leave-it guides' pricing link, which was
-never a slice; the step-by-step editing procedure is the `marketing-page` skill.
+2026-08-28; the leave-it guides' pricing link was approved on 2026-11-10. The step-by-step editing
+procedure is the `marketing-page` skill.
 
 **These pages are product surface.** DiveDay is developed exclusively by AI sessions, so marketing
 has no separate team, tooling, or CMS: copy is code, reviewed like code, tested like code
@@ -991,19 +991,12 @@ decision exists, because a single canonical URL serves one `<head>` to every cra
 
 A switching guide is a live page only — no roadmap or "coming soon" entries (claims policy).
 
-**A switching guide may carry exactly one forward link to `/pricing`, and it sits under the coexist
-section's leave-path box** (decided 2026-08-14; **still the rule as of 2026-08-28** — the
-2026-08-27 review recommends extending the same destination-not-claim link to the leave-it guides'
-`bothWays` block and records it as an open owner call, so `/switching/eve`,
-`/switching/diveshop360` and `/switching/smartwaiver` carry no forward pricing link at all and
-`e2e/marketing.spec.ts` asserts they render none. Adding one is a decision, not an edit). Two of the guides argue hard on an incumbent's
-per-booking fee — FareHarbor's, Rezdy's — and then gave the reader nowhere to learn what DiveDay
-costs except the nav tab several thousand pixels above them. The link is worded as a destination
-(`switching.common.seePricing`), never as a claim: no figure, no "flat price", no comparison and no
-savings arithmetic, since the price renders only from `src/lib/marketing.ts`. It is deliberately
-*not* in the closing band, which already carries three controls. `/pricing` links back to the guides
-for the fee citation, so this closes that loop rather than opening a second one; a second forward
-link anywhere on these pages is not covered by this and needs its own decision.
+**A switching guide may carry one forward link to `/pricing`**. On coexist guides it sits in the
+leave-path box; on leave-it guides it sits in the `bothWays` block below the scope table (approved
+2026-11-10 in #4195). It is a destination, never a claim: no figure, no "flat price", comparison,
+or savings arithmetic. The price renders only from `src/lib/marketing.ts`. Keep the link understated
+and out of the closing band, which already carries three controls. `/pricing` links back to the
+guides for the fee citation, so this closes that loop without adding a second forward link.
 
 **Per-location pricing stays exactly as published** (decided 2026-08-14, closing
 FU-20260813-per-location-price-has-no-location with no change). `/pricing` charges "per location /

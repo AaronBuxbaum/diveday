@@ -1292,21 +1292,25 @@ test("help arrives before the homework on a switching guide", async ({ page }) =
   expect(cutoverSteps[0]).toBe("Let the crew walk their screens first");
   await expect(cutoverPhase.getByText(/the same roles your dock does/)).toBeVisible();
 
-  // The owner call the review recorded and left open: a leave-it guide carries
-  // no forward link to /pricing. The single allowed one lives in the coexist
-  // guides' leave-path box (marketing.md, decided 2026-08-14), and these guides
-  // have no coexist block — so this renders nothing, deliberately, until
-  // somebody decides otherwise. Scoped to <main>: the nav and footer carry
-  // their own pricing links on every marketing page.
-  await expect(eveMain.locator('a[href^="/pricing"]')).toHaveCount(0);
+  // Each leave-it guide has one destination-only pricing link, without a
+  // price or a competing primary action. Scope to main; the site navigation
+  // and footer have their own links.
+  const priceLabel = diverTranslator("en-US")("switching.common.seePricing");
+  for (const slug of ["eve", "diveshop360", "smartwaiver"]) {
+    if (slug !== "eve") await page.goto(`/switching/${slug}`);
+    const main = page.getByRole("main");
+    const pricing = main.locator('a[href^="/pricing"]');
+    await expect(pricing, slug).toHaveCount(1);
+    await expect(pricing).toHaveAttribute("href", "/pricing");
+    await expect(pricing).toHaveText(priceLabel);
+    await expect(main.getByRole("link", { name: priceLabel })).toBeVisible();
+  }
 
-  // The second leave-it lede, same rule: DiveShop360's opens on the export
-  // limit its own FAQ documents, and every clause is on the page below it.
+  // DiveShop360's lede still names the export limit its own FAQ documents.
   await page.goto("/switching/diveshop360");
   const dsMain = page.getByRole("main");
   await expect(dsMain.getByText(/the four CSVs its own FAQ names/)).toBeVisible();
   await expect(dsMain.getByText(/no bulk export, no API/).first()).toBeVisible();
-  await expect(dsMain.locator('a[href^="/pricing"]')).toHaveCount(0);
 
   // The spreadsheet guide has no incumbent to cut over from, so it renders no
   // cutover rail at all — and with it, none of the parallel-run answer that

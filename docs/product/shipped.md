@@ -1539,8 +1539,9 @@ stops them. A source that claims a nitrox card and supplies no number is now a `
 Three renders-nothing pins, because a deliberate absence is what a later edit restores by accident:
 the spreadsheet guide has no cutover rail and so no crew step, the retired "bad teammate" framing
 is pinned out by name, and the leave-it guides carry no forward `/pricing` link inside `<main>` —
-the owner call the review recorded is undecided, so adding one is a decision rather than an edit.
-Levelling "verified" out of the certification and specialty rows carries the same imprecision and
+the owner call the review recorded was then undecided. The owner approved that link on 2026-11-10
+([#4195](https://github.com/AaronBuxbaum/diveday/issues/4195)); the newer rule is in
+[marketing.md](marketing.md). Levelling "verified" out of the certification and specialty rows carries the same imprecision and
 is filed rather than done: it is a claims change wearing a consistency cleanup's clothes.
 
 ## The product page's dare gets a door (delivered 2026-08-28)

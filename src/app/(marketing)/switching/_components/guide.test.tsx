@@ -376,6 +376,17 @@ describe("guide contents and import reference", () => {
     expect(screen.getByRole("link", { name: "Make the move" })).toHaveAttribute("href", "#cutover");
   });
 
+  it.each(["en-US", "es-ES"] as const)(
+    "offers a destination-only pricing link when requested in %s",
+    (locale) => {
+      render(<ScopePhase locale={locale} number={2} showPricingLink />);
+      const link = screen.getByRole("link", {
+        name: diverTranslator(locale)("switching.common.seePricing"),
+      });
+      expect(link).toHaveAttribute("href", "/pricing");
+    },
+  );
+
   it("keeps import categories visible and preserves every detail in the expandable reference", async () => {
     const { ScopePhase } = await import("./guide");
     const { container } = render(

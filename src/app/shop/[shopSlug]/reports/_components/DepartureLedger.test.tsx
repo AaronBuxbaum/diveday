@@ -82,7 +82,7 @@ describe("the facts' columns", () => {
     renderLedger([SHORT]);
     expect(screen.getByText("9 of 12 seats")).toHaveClass("lg:w-32");
     expect(screen.getByText("2 crew")).toHaveClass("lg:w-24");
-    expect(screen.getByText("2 waivers to collect")).toHaveClass("lg:w-48");
+    expect(screen.getByText("2 waivers to collect")).toHaveClass("lg:w-56");
     expect(screen.getByText("2 crew").parentElement).toHaveClass("whitespace-nowrap");
   });
 
@@ -90,7 +90,7 @@ describe("the facts' columns", () => {
     const { container } = renderLedger([UNBOOKED]);
     const slot = container.querySelector('span[aria-hidden="true"]');
     expect(slot?.textContent).toBe("");
-    expect(slot).toHaveClass("lg:w-48", "hidden", "lg:block");
+    expect(slot).toHaveClass("lg:w-56", "hidden", "lg:block");
   });
 
   it("draw no meters", () => {

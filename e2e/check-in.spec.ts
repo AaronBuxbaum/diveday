@@ -930,6 +930,10 @@ test("Today's arrival search says who is on file but not arriving today", async 
   const diverName = `Zephyrine ${stamp} Quayside`;
   await page.goto("/shop/blue-mantis/divers?add=1");
   await page.getByRole("heading", { level: 2, name: "Add a diver" }).waitFor();
+  await expect(page.locator('[data-form-draft="new_diver"]')).toHaveAttribute(
+    "data-hydrated",
+    "true",
+  );
   await page.getByLabel("Full name").fill(diverName);
   await page.getByRole("button", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);

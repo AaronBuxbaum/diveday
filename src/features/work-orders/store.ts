@@ -1291,7 +1291,15 @@ export async function workOrderBoard(
       ),
     )
     .where(and(eq(workOrders.shopId, shopId), liveWorkOrder()))
-    .orderBy(desc(workOrders.receivedAt), asc(workOrders.reportedProblem), asc(workOrders.id));
+    // Only collected tickets have a pickup-order key. Open rows all tie on
+    // those keys and retain the existing intake order below.
+    .orderBy(
+      sql`case when ${workOrders.status} = 'picked_up' then ${workOrders.pickedUpAt} end desc nulls last`,
+      sql`case when ${workOrders.status} = 'picked_up' then ${workOrders.id} end asc`,
+      desc(workOrders.receivedAt),
+      asc(workOrders.reportedProblem),
+      asc(workOrders.id),
+    );
 
   const open = rows.filter((row) => row.status !== "picked_up");
   const collected = rows.filter((row) => row.status === "picked_up").slice(0, collectedLimit);

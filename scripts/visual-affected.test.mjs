@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { moduleIndex } from "./symbol-reach.mjs";
 import {
@@ -23,6 +23,7 @@ import {
   messageConsumers,
   packageJsonReach,
   SMOKE,
+  selectCaptureFiles,
   selectCaptures,
   shardCount,
   THEME,
@@ -509,6 +510,147 @@ describe("following an edit name by name", () => {
     expect(
       changedMessageKeys("src/i18n/locales/en-US/content/marketing.json", '{"a":"x"}', '{"a":"y"}'),
     ).toEqual([{ key: "marketing.a", removed: false }]);
+  });
+
+  it("keeps exact consumer lines for scoped, templated and mixed-quote keys", () => {
+    const sources = new Map([
+      ["whole.ts", 't("marketing.guides.fareharbor.transferScope.source")'],
+      ["mixed.ts", "t(\"fareharbor.transferScope.source')"],
+      ["scoped.ts", 'useTranslations("marketing.guides.fareharbor.transferScope");\nt("source")'],
+      ["template.ts", "t(`guides.fareharbor.${kind}`)"],
+      ["bare.ts", 't("source")'],
+    ]);
+    expect(
+      [...messageConsumers("marketing.guides.fareharbor.transferScope.source", sources)].map(
+        ([file, lines]) => [file, [...lines]],
+      ),
+    ).toEqual([
+      ["whole.ts", [1]],
+      ["mixed.ts", [1]],
+      ["scoped.ts", [1, 2]],
+      ["template.ts", [1]],
+    ]);
+  });
+
+  it("does not test every line of a large module that only names the bare leaf", () => {
+    const line = "quietSentence is a bare leaf, not a scoped message key";
+    const sources = new Map([["unrelated.ts", Array(2_000).fill(line).join("\n")]]);
+    const original = RegExp.prototype.test;
+    let lineTests = 0;
+    const spy = vi.spyOn(RegExp.prototype, "test").mockImplementation(function (text) {
+      if (text === line) lineTests += 1;
+      return original.call(this, text);
+    });
+    let result;
+    try {
+      result = messageConsumers("shopHome.spine.quietSentence", sources);
+    } finally {
+      spy.mockRestore();
+    }
+    expect([...result]).toEqual([]);
+    expect(lineTests).toBe(0);
+  });
+
+  it("traces a shared changed key once across locales and visual specs", () => {
+    const sources = new Map(tree);
+    let sourceWalks = 0;
+    sources[Symbol.iterator] = function* () {
+      sourceWalks += 1;
+      yield* Map.prototype[Symbol.iterator].call(this);
+    };
+    const files = ["e2e/visual-one.spec.ts", "e2e/visual-two.spec.ts"];
+    const changed = ["en-US", "es-ES"].map(
+      (locale) => `src/i18n/locales/${locale}/staff/gear.json`,
+    );
+    const result = selectCaptureFiles({
+      files,
+      report: {
+        suites: files.map((file, i) => ({
+          file: path.basename(file),
+          specs: [{ title: `gear ${i}`, line: 1 }],
+          suites: [],
+        })),
+      },
+      diff: {
+        changed,
+        context: {
+          sources,
+          modules: moduleIndex(tree),
+          before: () => '{"register":{"heading":"Gear"}}',
+          after: () => '{"register":{"heading":"Your gear"}}',
+        },
+      },
+      graph: null,
+      readSource: () =>
+        'test("gear", async ({page}) => {\n await page.goto("/shop/demo/gear");\n await capture(page, "gear");\n});',
+      linesFor: () => new Set(),
+    });
+    expect(result.mode).toBe("affected");
+    expect([...result.lines]).toEqual([
+      "visual-one.spec.ts › gear 0",
+      "visual-two.spec.ts › gear 1",
+    ]);
+    expect(sourceWalks).toBe(1);
+  });
+});
+
+describe("route reach shared across visual specs", () => {
+  const files = ["e2e/visual-one.spec.ts", "e2e/visual-two.spec.ts"];
+  const sources = new Map(
+    files.map((file, i) => [
+      file,
+      `test("capture ${i}", async ({page}) => {\n  await page.goto("/route-${i}");\n});`,
+    ]),
+  );
+  const select = (diff, linesFor = () => new Set([2])) =>
+    selectCaptureFiles({
+      files,
+      report: {
+        suites: files.map((file, i) => ({
+          file: path.basename(file),
+          specs: [{ title: `capture ${i}`, line: 1 }],
+          suites: [],
+        })),
+      },
+      diff,
+      graph: new Map([["src/app/route-0/page.tsx", new Set()]]),
+      readSource: (file) => sources.get(file) ?? "",
+      linesFor,
+    });
+
+  it("applies each visual spec's edits only to that spec", () => {
+    expect([...select({ changed: [files[0]] }).lines]).toEqual(["visual-one.spec.ts › capture 0"]);
+    expect([...select({ changed: files }).lines]).toEqual([
+      "visual-one.spec.ts › capture 0",
+      "visual-two.spec.ts › capture 1",
+    ]);
+  });
+
+  it("preserves an unbounded fallback after a known locale key", () => {
+    const diff = {
+      changed: ["src/i18n/locales/en-US/staff/gear.json", "src/lib/deleted.ts"],
+      context: {
+        sources: new Map(),
+        before: () => '{"heading":"old"}',
+        after: () => '{"heading":"new"}',
+      },
+    };
+    expect(select(diff)).toEqual({
+      mode: "all",
+      why: "src/lib/deleted.ts is not in the import graph",
+    });
+  });
+
+  it("does not retain route reach between separate selections", () => {
+    const context = {
+      sources: new Map([["src/app/route-0/page.tsx", 't("gear.heading")']]),
+      before: () => '{"heading":"old"}',
+      after: () => '{"heading":"new"}',
+    };
+    const diff = { changed: ["src/i18n/locales/en-US/staff/gear.json"], context };
+    expect([...select(diff).lines]).toEqual(["visual-one.spec.ts › capture 0"]);
+    context.sources.clear();
+    expect([...select(diff).lines]).toEqual([]);
   });
 });
 

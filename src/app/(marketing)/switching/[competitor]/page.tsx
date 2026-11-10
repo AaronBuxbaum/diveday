@@ -334,6 +334,7 @@ async function GuideBody({
           locale={locale}
           number={2}
           source={guide.slug === "fareharbor" ? "fareharbor" : undefined}
+          showPricingLink={!guide.coexist}
         />
         <ImportPhase
           locale={locale}

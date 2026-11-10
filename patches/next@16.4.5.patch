@@ -28,3 +28,71 @@ diff --git a/dist/esm/client/components/segment-cache/cache.js b/dist/esm/client
      fulfilledEntry.renderedSearch = renderedSearch;
      fulfilledEntry.supportsPerSegmentPrefetching = supportsPerSegmentPrefetching;
      pingBlockedTasks(entry);
+diff --git a/dist/client/components/app-router-state.js b/dist/client/components/app-router-state.js
+--- a/dist/client/components/app-router-state.js
++++ b/dist/client/components/app-router-state.js
+@@ -419,6 +419,12 @@
+         // new segments were created). The handler checks per-node refs, so
+         // unchanged parallel route slots won't scroll.
+         activeScrollRef = scrollRef;
++        // Only a new pathname with the default scroll behavior gets this
++        // measurement. Hash, history, refresh and scroll:false keep their
++        // existing scroll intent and do not participate.
++        if (scrollRef !== null && url.pathname !== oldUrl.pathname && typeof window !== 'undefined') {
++            scrollRef.initialNavigationScrollY = window.scrollY;
++        }
+         // If this navigation created new scroll targets, invalidate any
+         // pending scroll from a previous navigation.
+         if (scrollRef !== null) {
+diff --git a/dist/esm/client/components/app-router-state.js b/dist/esm/client/components/app-router-state.js
+--- a/dist/esm/client/components/app-router-state.js
++++ b/dist/esm/client/components/app-router-state.js
+@@ -392,6 +392,12 @@
+         // new segments were created). The handler checks per-node refs, so
+         // unchanged parallel route slots won't scroll.
+         activeScrollRef = scrollRef;
++        // Only a new pathname with the default scroll behavior gets this
++        // measurement. Hash, history, refresh and scroll:false keep their
++        // existing scroll intent and do not participate.
++        if (scrollRef !== null && url.pathname !== oldUrl.pathname && typeof window !== 'undefined') {
++            scrollRef.initialNavigationScrollY = window.scrollY;
++        }
+         // If this navigation created new scroll targets, invalidate any
+         // pending scroll from a previous navigation.
+         if (scrollRef !== null) {
+diff --git a/dist/client/components/layout-router.js b/dist/client/components/layout-router.js
+--- a/dist/client/components/layout-router.js
++++ b/dist/client/components/layout-router.js
+@@ -159,6 +159,14 @@
+             }
+             // If the element's top edge is already in the viewport, exit early.
+             if (initialTargetState === 1) {
++                // A short streamed fallback can clamp the inherited offset to
++                // its bottom before this handler runs. The browser can restore
++                // the larger offset when the page grows, after this intent was
++                // consumed. Honor this forward navigation while it is clamped.
++                const initialScrollY = scrollRef.initialNavigationScrollY;
++                if (typeof initialScrollY === 'number' && htmlElement.scrollTop > 0 && initialScrollY > htmlElement.scrollTop && htmlElement.scrollTop >= htmlElement.scrollHeight - viewportHeight) {
++                    htmlElement.scrollTop = 0;
++                }
+                 return;
+             }
+             // Otherwise, try scrolling go the top of the document to be backward compatible with pages
+diff --git a/dist/esm/client/components/layout-router.js b/dist/esm/client/components/layout-router.js
+--- a/dist/esm/client/components/layout-router.js
++++ b/dist/esm/client/components/layout-router.js
+@@ -133,6 +133,14 @@
+             }
+             // If the element's top edge is already in the viewport, exit early.
+             if (initialTargetState === 1) {
++                // A short streamed fallback can clamp the inherited offset to
++                // its bottom before this handler runs. The browser can restore
++                // the larger offset when the page grows, after this intent was
++                // consumed. Honor this forward navigation while it is clamped.
++                const initialScrollY = scrollRef.initialNavigationScrollY;
++                if (typeof initialScrollY === 'number' && htmlElement.scrollTop > 0 && initialScrollY > htmlElement.scrollTop && htmlElement.scrollTop >= htmlElement.scrollHeight - viewportHeight) {
++                    htmlElement.scrollTop = 0;
++                }
+                 return;
+             }
+             // Otherwise, try scrolling go the top of the document to be backward compatible with pages

@@ -59,12 +59,13 @@ export type DepartureRow = {
  * The facts' columns from `lg`, each sized for its longest real fact set
  * whole. Spanish is the longest of each: "10 de 12 plazas" (~100px),
  * "3 tripulantes" (~87px with two digits) and "12 exenciones por recoger"
- * (~170px). Exported for the Reports skeleton, whose blocks stand in them.
+ * (~200px at the critical-text floor). Exported for the Reports skeleton, whose
+ * blocks stand in them.
  */
 export const SEATS_COLUMN = "lg:w-32";
 export const CREW_COLUMN = "lg:w-24";
-export const WAIVERS_COLUMN = "lg:w-48";
-export const NET_COLUMN = "lg:w-24 lg:text-end";
+export const WAIVERS_COLUMN = "lg:w-56";
+export const NET_COLUMN = "lg:w-32 lg:text-end";
 
 export function DepartureLedger({
   label,
@@ -109,13 +110,15 @@ export function DepartureLedger({
                 <span className={`shrink-0 ${SEATS_COLUMN}`}>{row.seats}</span>
                 <span className={`shrink-0 ${CREW_COLUMN}`}>{row.crew}</span>
                 {row.net !== undefined ? (
-                  <span className={`shrink-0 font-medium text-foreground ${NET_COLUMN}`}>
+                  <span
+                    className={`max-w-full shrink-0 text-base font-medium break-words whitespace-normal text-foreground ${NET_COLUMN}`}
+                  >
                     {row.net}
                   </span>
                 ) : null}
                 {row.waivers ? (
                   <span
-                    className={`shrink-0 ${WAIVERS_COLUMN} ${
+                    className={`max-w-full shrink-0 text-base break-words whitespace-normal ${WAIVERS_COLUMN} ${
                       row.waivers.outstanding ? "font-medium text-warning-strong" : ""
                     }`.trim()}
                   >
