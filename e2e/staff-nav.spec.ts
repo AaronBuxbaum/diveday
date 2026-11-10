@@ -1,3 +1,4 @@
+import { instant } from "@next/playwright";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { attachScrollDiagnostic, startScrollDiagnostic } from "./navigation-scroll-diagnostic";
 import { mintOnboardFormPath } from "./setup-link";
@@ -20,7 +21,8 @@ test.describe("owner", () => {
   test.beforeEach(async ({ page }, info) => {
     if (
       process.env.DIVEDAY_SCROLL_DIAGNOSTIC === "1" &&
-      info.title.startsWith("a departure opened from a scrolled board")
+      (info.title.startsWith("a departure opened from a scrolled board") ||
+        info.title.startsWith("a delayed warm departure does not restore the board scroll"))
     ) {
       await startScrollDiagnostic(page);
     }
@@ -28,7 +30,8 @@ test.describe("owner", () => {
   test.afterEach(async ({ page }, info) => {
     if (
       process.env.DIVEDAY_SCROLL_DIAGNOSTIC === "1" &&
-      info.title.startsWith("a departure opened from a scrolled board")
+      (info.title.startsWith("a departure opened from a scrolled board") ||
+        info.title.startsWith("a delayed warm departure does not restore the board scroll"))
     ) {
       await attachScrollDiagnostic(page, info);
     }
@@ -330,6 +333,63 @@ test.describe("owner", () => {
     });
     expect(clearance, "the back-link was left under the staff bar").not.toBeNull();
     expect(clearance ?? -1).toBeGreaterThanOrEqual(0);
+  });
+
+  test("a delayed warm departure does not restore the board scroll", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/schedule/board");
+    const departure = page.locator("[data-week-board] a[data-departure-door]").first();
+    await expect(departure).toBeVisible();
+    // Warm the client route cache without replacing the document.
+    await departure.click();
+    await expect(page.locator("#roster")).toBeVisible();
+    await page
+      .getByRole("navigation", { name: "Main", exact: true })
+      .getByRole("link", { name: "Schedule" })
+      .click();
+    await expect(departure).toBeVisible();
+    await page.evaluate((y) => window.scrollTo(0, y), BOARD_SCROLL_PX);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(BOARD_SCROLL_PX);
+    await expect(departure).toBeInViewport();
+
+    // Keep Next's prefetched shell live while its test API withholds dynamic
+    // content. Unlike route.fetch/fulfill, this does not buffer the Flight
+    // response and hide the loading boundary we need to observe (#4183).
+    await instant(page, async () => {
+      await departure.click();
+      await expect(page).toHaveURL(/\/trips\//);
+      await expect(page.locator("[data-trip-loading]:visible")).toBeVisible();
+      await expect
+        .poll(() =>
+          page.evaluate((boardOffset) => {
+            const max = document.documentElement.scrollHeight - window.innerHeight;
+            return max < boardOffset && window.scrollY === max;
+          }, BOARD_SCROLL_PX),
+        )
+        .toBe(true);
+    });
+    await expect(page.locator("#roster")).toBeVisible();
+    const landing = await page.evaluate(() => {
+      const main = document.querySelector("main");
+      const bar = document.querySelector("[data-chrome-bar]")?.getBoundingClientRect();
+      const back = [...document.querySelectorAll("main a")]
+        .find((anchor) => /^schedule$/i.test(anchor.textContent?.trim() ?? ""))
+        ?.getBoundingClientRect();
+      return {
+        scrollY: window.scrollY,
+        maxTop: Math.max(
+          0,
+          Math.round(
+            (main?.getBoundingClientRect().top ?? 0) + window.scrollY - (bar?.height ?? 0),
+          ),
+        ),
+        clearance: bar && back ? Math.round(back.top - bar.bottom) : null,
+      };
+    });
+    expect(landing.scrollY, "the departure opened partway down itself").toBeLessThanOrEqual(
+      landing.maxTop,
+    );
+    expect(landing.clearance, "the back-link was left under the staff bar").not.toBeNull();
+    expect(landing.clearance ?? -1).toBeGreaterThanOrEqual(0);
   });
 
   for (const [suffix, section] of [

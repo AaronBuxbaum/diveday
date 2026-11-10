@@ -301,6 +301,8 @@ const nextConfig: NextConfig = {
   // the independent service worker, or both programs when no build runs.
   ...(process.env.VERCEL === "1" ? { typescript: { ignoreBuildErrors: true } } : {}),
   experimental: {
+    // The instant-navigation lock is exposed only in dedicated E2E builds.
+    exposeTestingApiInProductionBuild: isE2EBuild,
     useTypeScriptCli: true,
     // Static-generation workers only need to be serialized when they'd share
     // one file-backed PGlite database (src/db/client.ts): a real DATABASE_URL
