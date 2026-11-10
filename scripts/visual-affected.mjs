@@ -261,11 +261,14 @@ export function messageConsumers(key, sources) {
     ) {
       continue;
     }
-    const tests = [...patterns];
+    // A bare leaf is common in unrelated modules. Only scan lines with patterns that
+    // actually match this file; a match on a line must also match the complete text.
+    const tests = patterns.filter((pattern) => pattern.test(text));
     // A scope (`useTranslations("shopHome.spine")`) and the rest of the key in one module.
     for (const [scope, rest] of scopes) {
       if (scope.test(text) && rest.test(text)) tests.push(scope, rest);
     }
+    if (tests.length === 0) continue;
     const lines = linesWhere(text, (line) => tests.some((pattern) => pattern.test(line)));
     if (lines.size > 0) hits.set(file, lines);
   }
@@ -517,6 +520,8 @@ export function changedRoutes(changed, graph, context = {}) {
   // Seed scenarios and schema modules the diff changes: data, followed to its readers below.
   const data = new Map();
   const schema = new Map();
+  // Locale bundles share message keys and read the same source snapshot.
+  const tracedKeys = new Set();
   let visualSpec = false;
   let helpersEdited = false;
   const boundaries = [];
@@ -572,7 +577,8 @@ export function changedRoutes(changed, graph, context = {}) {
         return { all: `${file} could not be parsed` };
       }
       for (const { key, removed } of keys) {
-        if (removed) continue;
+        if (removed || tracedKeys.has(key)) continue;
+        tracedKeys.add(key);
         // A key no module names is not on any screen (`check:copy` reports it as unused).
         for (const [consumer, at] of messageConsumers(key, sources)) {
           if (CODE.test(consumer)) seed(consumer, at);
@@ -863,8 +869,8 @@ export function selectCaptures({
   helpersSource,
   visualSources = new Map(),
   file = "the visual spec",
+  reach = changedRoutes(changed, graph, context),
 }) {
-  const reach = changedRoutes(changed, graph, context);
   if (reach.all) return { mode: "all", why: reach.all };
   const spans = captureSpans(report, source.split("\n"), visualSources);
   const missing = spans.find((span) => span.sourceMissing);
@@ -1128,6 +1134,10 @@ export function selectCaptureFiles({
   linesFor,
   visualSources = new Map(),
 }) {
+  // Route reach belongs to the diff, not to each capture spec. Keep it scoped to this
+  // selection so another call with changed sources or context cannot reuse stale reach.
+  const changed = diff.changed.filter((name) => !files.includes(name));
+  const reach = changedRoutes(changed, graph, diff.context);
   const results = [];
   for (const file of files) {
     const source = readSource(file);
@@ -1135,12 +1145,11 @@ export function selectCaptureFiles({
       ...report,
       suites: report.suites.filter((suite) => path.basename(suite.file) === path.basename(file)),
     };
-    // Another visual spec's edit is that file's own selection, never this one's.
-    const changed = diff.changed.filter((name) => !files.includes(name) || name === file);
     const visualLines = linesFor(file);
     const result = selectCaptures({
       ...diff,
-      changed,
+      // Another visual spec's edit is that file's own selection, never this one's.
+      reach: { ...reach, visualSpec: reach.visualSpec || diff.changed.includes(file) },
       file,
       visualLines,
       graph,
