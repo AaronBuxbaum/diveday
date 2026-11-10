@@ -536,15 +536,9 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
 
 /**
  * A drysuit is offered on the drysuit grid, not the wetsuit's (issue 1414): the
- * wall is racked by girth *and* cut, so the grid carries tall variants the
- * wetsuit scale has no room for. It shares the wetsuit's girth letters, `XS`
- * included — a `dive-domain-expert` pass read the old list's missing `XS`, one
- * field below a wetsuit select that starts there, as this shop having nothing
- * for a small-framed diver.
- *
- * The grid itself is a PROPOSAL pending the owner's confirmation (H-20260912-drysuit-sizes-diver-own); these
- * tests are what pin it, and changing them is the whole cost of changing the
- * scale.
+ * wall is racked by girth and cut. The owner kept the existing grid and added
+ * short cuts on 2026-11-10 (H-20260912-drysuit-sizes-diver-own, issue #4221).
+ * Codes record a preference for a dock-side fit check, never a guaranteed fit.
  */
 describe("RentalFitForm drysuit size (issue 1414)", () => {
   function renderDrysuit(fit?: Partial<DiverRentalFit>) {
@@ -567,8 +561,8 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
   /**
    * A size the grid cannot represent (issue #1728).
    *
-   * H-20260912-drysuit-sizes-diver-own sanctions these: `MS`, `ML`, `LS` and `MLT` are real sizes a shop
-   * that stocks one records staff-side, where the field is free text. And
+   * Staff keep free text for sizes and fit details beyond the diver's grid.
+   * `ML` and `MLT`, for example, remain off-grid manufacturer codes. And
    * `drysuit_size` is the one field on the fit that reaches the packing list
    * verbatim, so "ML, rock boot 9" is how a neoprene-sock fleet says a diver
    * needs a boot — the crew find out at the dock if it goes missing.
@@ -594,10 +588,13 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
       "XS",
       "S",
       "M",
+      "MS",
       "MT",
       "L",
+      "LS",
       "LT",
       "XL",
+      "XLS",
       "XLT",
       "XXL",
     ]);
@@ -673,10 +670,13 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
       "XS",
       "S",
       "M",
+      "MS",
       "MT",
       "L",
+      "LS",
       "LT",
       "XL",
+      "XLS",
       "XLT",
       "XXL",
     ]);
@@ -702,29 +702,16 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
       "XS",
       "S",
       "M",
+      "MS",
       "MT",
       "L",
+      "LS",
       "LT",
       "XL",
+      "XLS",
       "XLT",
       "XXL",
     ]);
-  });
-
-  /**
-   * The one rule the grid is held to. `MS` and `ML` sat in this list as
-   * in-between girths while `MT` beside them was a height; both readings are
-   * real in the field, so a staffer packing on the strength of `MS` could hand
-   * a short diver a suit cut for a tall one. Every code is now a girth letter
-   * with at most a `T` after it, and that is what this pins — a size whose
-   * second character means something else does not belong in a diver's select,
-   * whatever the owner answers on H-20260912-drysuit-sizes-diver-own.
-   */
-  it("says one thing by the second letter: a girth letter, optionally tall", () => {
-    const { container } = renderDrysuit();
-    const select = container.querySelector('select[name="drysuitSize"]') as HTMLSelectElement;
-    const codes = [...select.options].map((option) => option.value).filter(Boolean);
-    expect(codes.filter((code) => !/^(?:XS|S|M|L|XL|XXL)T?$/.test(code))).toEqual([]);
   });
 
   /**
@@ -748,6 +735,17 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
         currency="usd"
       />,
     );
+    const wetsuit = container.querySelector('select[name="wetsuitSize"]') as HTMLSelectElement;
+    expect([...wetsuit.options].map((option) => option.value)).toEqual([
+      "",
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL",
+    ]);
+    expect(screen.queryByLabelText(/height|body weight|shoe size/i)).not.toBeInTheDocument();
     for (const name of ["wetsuitSize", "drysuitSize"]) {
       const select = container.querySelector(`select[name="${name}"]`) as HTMLSelectElement;
       expect([...select.options].map((option) => option.value)).toContain("XS");

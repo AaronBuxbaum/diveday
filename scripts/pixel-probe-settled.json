@@ -142,6 +142,24 @@
       "context": "recap-independent-panels",
       "reason": "The recap's review and next-dive headings sit in bordered SectionCards; the buddy invitation is an independent borderless wash. Equal panel padding produces exactly a 1px ink-edge difference. Fresh evidence must prove these three headings, common panel edges/padding and the border-accounted offset; changed geometry or another heading stays reportable.",
       "pointer": "scripts/pixel-probe/settlements.mjs, the recap independent-panel border comment; scripts/pixel-probe/settlements.test.mjs, recap panel-edge fixtures; docs/design/settled-questions.md"
+    },
+    {
+      "check": "focus-invisible",
+      "signature": "input[radio].focus-visible:outline-none size-4",
+      "container": "label.bg-surface border border-border content-center cursor-pointer gap-x-2 grid grid-cols-[auto_1fr] has-[input:checked]:bg-primary-tint has-[input:checked]:border-primary has-[input:checked]:font-semibold has-[input:focus-v items-start min-h-11 not-has-[input:checked]:hover:bg-surface-sunken py-2 rounded-lg text-sm transition-colors",
+      "captures": ["thread-drysuit-short-size"],
+      "classes": ["size-4", "shrink-0", "focus-visible:outline-none"],
+      "reason": "The rental suit radio draws focus around its ChoicePill label or aside wrapper through radioRingClass, not around the native 16px dot. The short-size capture's state atlas confirms the rounded parent ring at focus; its select and save button keep their own rings. The probe measures only the input's outline. Restricted to this capture and these exact wrapper signatures.",
+      "pointer": "src/components/ui/form.tsx, radioClass/radioRingClass docblock and both ChoicePill wrappers; docs/design/settled-questions.md"
+    },
+    {
+      "check": "focus-invisible",
+      "signature": "input[radio].focus-visible:outline-none size-4",
+      "container": "div.bg-surface border border-border flex gap-2 has-[input:checked]:bg-primary-tint has-[input:checked]:border-primary has-[input:checked]:font-semibold has-[input:focus-visible]:focus-ring items-center min-h-11 not-has-[input:checked]:hover:bg-surface-sunken pe-4 rounded-lg text-sm transition-colors",
+      "captures": ["thread-drysuit-short-size"],
+      "classes": ["size-4", "shrink-0", "focus-visible:outline-none"],
+      "reason": "The rental suit radio draws focus around its ChoicePill label or aside wrapper through radioRingClass, not around the native 16px dot. The short-size capture's state atlas confirms the rounded parent ring at focus; its select and save button keep their own rings. The probe measures only the input's outline. Restricted to this capture and these exact wrapper signatures.",
+      "pointer": "src/components/ui/form.tsx, radioClass/radioRingClass docblock and both ChoicePill wrappers; docs/design/settled-questions.md"
     }
   ]
 }

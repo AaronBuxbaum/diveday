@@ -105,11 +105,12 @@
   with a free-text size (H-20261007-hood-glove-sizes), each racked by size and thickness ("M, 5 mm", "L, 3 mm"). A
   drysuit diver's gloves are flagged on the packing line ("wet or dry gloves?").
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
-  manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
-  which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room
-  for. Which codes the diver's own select offers is open as H-20260912-drysuit-sizes-diver-own. **A stored size the diver's grid
-  cannot spell is offered back to them as a selected option, and they can replace it** (issue
-  #1728): a staffer typing `ML, rock boot 9` should know the diver will see those words on their own
+  manufacturer grid a rental wall is racked from (standard girths plus trailing `S` for short
+  and `T` for tall cuts), which shares the wetsuit's girth letters but carries a second axis the
+  wetsuit scale has no room for. The owner retained the grid and added `MS`, `LS` and `XLS` on 2026-11-10
+  (H-20260912-drysuit-sizes-diver-own), without collecting body measurements.
+  **A stored size the diver's grid cannot spell is offered back to them as a selected option,
+  and they can replace it** (issue #1728): a staffer typing `ML, rock boot 9` should know the diver will see those words on their own
   gear form. Before that the box painted blank over the stored value and the next save overwrote it,
   which was worse — but it does mean the free text is a shared field rather than a staff-only one.
   It contributes exactly **one**

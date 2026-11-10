@@ -1,14 +1,15 @@
 # H-20260912-drysuit-sizes-diver-own: Which drysuit sizes does the diver's own form offer, and should it be asking…
 
-- **Status:** Chosen
+- **Status:** Implemented
 - **Human owner:** Product owner + dive operations lead
 
 ## Current outcome — 2026-11-10
 
 Retain the current diver-facing grid and add short cuts; do not collect height, weight or shoe
-measurements. Not sure stays available. The missing implementation is
-[#4221](https://github.com/AaronBuxbaum/diveday/issues/4221); do not treat this choice as evidence
-that its UI options are already built.
+measurements. Not sure stays available. Short cuts MS, LS and XLS are implemented in this layer
+for [#4221](https://github.com/AaronBuxbaum/diveday/issues/4221); Not sure, saved off-grid values,
+staff free text and the wetsuit scale are unchanged. No body measurements or readiness/admission
+behavior changed.
 
 Source: [owner-account decision record on #4193](https://github.com/AaronBuxbaum/diveday/issues/4193#issuecomment-6759760819).
 The sections below preserve the original question and rationale, not a second unresolved worklist.

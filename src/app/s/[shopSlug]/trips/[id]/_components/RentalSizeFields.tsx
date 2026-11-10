@@ -17,32 +17,13 @@ const SIZED_KINDS: readonly RentableItemKind[] = [
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
 /**
- * A drysuit is not sized on the wetsuit scale above (issue 1414): a rental wall
- * is racked on the manufacturer grid, where a girth letter carries a second
- * axis the wetsuit has none of — the cut. One rule holds this list together: a
- * girth letter, optionally followed by `T` for the tall cut. The second
- * character therefore means exactly one thing wherever it appears.
- *
- * That rule is what a `dive-domain-expert` pass took off the provisional list.
- * `MS` and `ML` shipped here as in-between *girths* while `MT` beside them was
- * a *height*, and both readings are real — manufacturer charts gloss `MS` as
- * medium short and `ML` as medium large — so a diver picking `MS` for a short
- * torso and a packer reading it as a girth were never naming the same suit.
- * They join `LS` and `MLT`: real sizes, rarely stocked as rentals, and a shop
- * holding one records it staff-side, where the field is free text. `XS` goes
- * back on: every major maker publishes it, a cold-water fleet stocks it, and
- * the wetsuit select one field above starts there — so its absence read to a
- * small-framed diver as "this shop has nothing for me".
- *
- * The grid is the owner's call and is open as **H-20260912-drysuit-sizes-diver-own** in
- * `docs/product/human-decisions/README.md`, which carries the two questions this list
- * cannot answer for itself: the short cut is missing where the tall one is not,
- * and a diver may not know their drysuit size at all. This list ships
- * provisionally. Only this array depends on the answer — the column is `text`
- * and the staff field is free text — so changing the grid is an edit to this
- * one line.
+ * Drysuits keep a separate grid: standard girths plus short (`S`) and tall
+ * (`T`) cuts for M, L and XL. The owner approved these short cuts on 2026-11-10
+ * (H-20260912-drysuit-sizes-diver-own, issue #4221), without body measurements.
+ * A manufacturer's size code is a preference for the counter to check, never
+ * a fit guarantee; staff can still record other codes and fit details as text.
  */
-const DRYSUIT_SIZES = ["XS", "S", "M", "MT", "L", "LT", "XL", "XLT", "XXL"];
+const DRYSUIT_SIZES = ["XS", "S", "M", "MS", "MT", "L", "LS", "LT", "XL", "XLS", "XLT", "XXL"];
 
 /**
  * The grid, plus a stored value the grid cannot represent.
@@ -57,10 +38,9 @@ const DRYSUIT_SIZES = ["XS", "S", "M", "MT", "L", "LT", "XL", "XLT", "XXL"];
  * `src/lib/dive-prep.ts`, where a neoprene-sock fleet records "ML, rock boot
  * 9"). Silent data loss, and the crew find out at the dock.
  *
- * Off-grid values are sanctioned rather than accidental: H-20260912-drysuit-sizes-diver-own
- * (`docs/product/human-decisions/README.md`) says `MS`, `ML`, `LS` and `MLT` are real
- * sizes a shop that stocks one records staff-side, where the field is free
- * text. Offering the stored value as an option makes it visible, selected, and
+ * Off-grid values are intentional: the staff field stays free text for other
+ * manufacturer codes and fit details (H-20260912-drysuit-sizes-diver-own).
+ * Offering the stored value as an option makes it visible, selected, and
  * preserved by any save that does not deliberately change it.
  *
  * Trimmed before comparing: the staff writer trims on write, but nothing
@@ -76,7 +56,7 @@ function optionsWithStored(grid: readonly string[], stored: string | null | unde
  * Whether an option is the stored off-grid value rather than a grid code, so
  * the select can say what it is.
  *
- * Rendered bare, the stored string sits above nine clean letters looking like a
+ * Rendered bare, the stored string sits above clean size codes looking like a
  * mistake to tidy up — and the diver's plausible move is to "correct" it to the
  * letter they believe they are, which writes away the shop's own encoding of a
  * boot the fleet does not stock separately. Closing the *accidental* overwrite

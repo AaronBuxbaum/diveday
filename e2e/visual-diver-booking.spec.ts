@@ -22,6 +22,7 @@ import {
   signOut,
   threadStatus,
 } from "./helpers";
+import { openDrysuitRentalFit } from "./rental-fit-helpers";
 import { seedFacts } from "./shop-facts";
 import {
   bookAVisualRegressionSeat,
@@ -214,6 +215,22 @@ for (const scheme of ["light", "dark"] as const) {
         await threadStatus(page).waitFor();
         await openThreadStep(page, "gear");
         await capture(page, "thread-prep-current-step", scheme);
+      });
+
+      test.describe("drysuit short fit", () => {
+        test.use({ privateShopSlug: `drysuit-fit-${scheme}` });
+
+        test(`the drysuit renter's short size stays readable (${scheme})`, async ({
+          page,
+          privateShop,
+        }) => {
+          test.setTimeout(FLOW_TIMEOUT_MS);
+          const fit = await openDrysuitRentalFit(page, privateShop.slug);
+          const drysuit = fit.getByLabel(diverCopy("rental.drysuitSize"), { exact: true });
+          await drysuit.selectOption("MS");
+          await expect(drysuit).toHaveValue("MS");
+          await capture(page, "thread-drysuit-short-size", scheme);
+        });
       });
 
       /**

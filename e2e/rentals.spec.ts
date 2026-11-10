@@ -1,5 +1,9 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 import { e2eNow, openThreadStep } from "./helpers";
+import { openDrysuitRentalFit } from "./rental-fit-helpers";
+
+const diver = diverTranslator("en-US");
 
 // The demo shop prices its rental gear (src/db/seed.ts): a $45 full set and
 // per-piece prices. A diver setting their rental fit should see those prices and
@@ -60,4 +64,45 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // with it. `e2e/nitrox.spec.ts` owns the other side, where a card exists.
   await expect(fit.getByText(/per dive/)).toHaveCount(0);
   await expect(fit.getByRole("button", { name: "About Nitrox" })).toHaveCount(0);
+});
+
+test("a drysuit renter saves short cuts and can return to an uncertain fit", async ({
+  page,
+  privateShop,
+}) => {
+  // Private-shop mint/sign-in, catalog save, booking, then two fit-save round trips.
+  test.setTimeout(60_000);
+  let fit = await openDrysuitRentalFit(page, privateShop.slug);
+  const drysuit = () => fit.getByLabel(diver("rental.drysuitSize"), { exact: true });
+  await expect(drysuit().locator("option")).toHaveText([
+    diver("rental.notSure"),
+    "XS",
+    "S",
+    "M",
+    "MS",
+    "MT",
+    "L",
+    "LS",
+    "LT",
+    "XL",
+    "XLS",
+    "XLT",
+    "XXL",
+  ]);
+  for (const size of ["MS", "LS", "XLS"]) {
+    await drysuit().selectOption(size);
+    await expect(drysuit()).toHaveValue(size);
+  }
+  await fit.getByRole("button", { name: diver("rental.saveFit"), exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(diver("ready.fitSaved"));
+  await page.reload();
+  fit = await openThreadStep(page, "gear");
+  await expect(drysuit()).toHaveValue("XLS");
+  await drysuit().selectOption("");
+  await expect(fit.getByTestId("gear-status-indicator")).toContainText(diver("rental.selectSizes"));
+  await fit.getByRole("button", { name: diver("rental.saveFit"), exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(diver("ready.fitSaved"));
+  await page.reload();
+  fit = await openThreadStep(page, "gear");
+  await expect(drysuit()).toHaveValue("");
 });

@@ -113,7 +113,7 @@ and run the command again.
 | H-20260910-relationships-may-co-signer | Implemented | 2026-09-10 | Which relationships may a co-signer pick, when only parent and legal_guardian exist? |
 | H-20260910-where-crew-member-read | Deferred | 2026-09-10 | Where does a crew member read their own fly-safe answer — the day close-out,… |
 | H-20260911-six-consolidations-makes-diveday | Superseded | 2026-11-10 | Which of six consolidations makes DiveDay clean and simple, and what leaves first? |
-| H-20260912-drysuit-sizes-diver-own | Chosen | 2026-11-10 | Which drysuit sizes does the diver's own form offer, and should it be asking… |
+| H-20260912-drysuit-sizes-diver-own | Implemented | 2026-11-10 | Which drysuit sizes does the diver's own form offer, and should it be asking… |
 | H-20260916-delight-backlog-leftovers | Chosen | 2026-09-16 | What is left of the 55-ticket delight backlog? |
 | H-20260916-far-deletion-promise-reach | Chosen | 2026-10-17 | How far does a deletion promise reach? |
 | H-20260916-may-dive-chain-share | Chosen | 2026-10-12 | May a dive chain share one WhatsApp Business account across shops? |
