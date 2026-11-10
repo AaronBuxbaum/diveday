@@ -153,6 +153,19 @@ searching open PRs for a fix in flight, or quarantined; never skipped, never giv
   reports the inspected run count and date window. Authentication, API and partial-page failures
   fail the hunt explicitly. An empty result means no existing spec was identified in those
   annotations; it does not establish an exhaustive clean history.
+- **Focused navigation proof (#4183)**: manually dispatch `e2e-nightly.yml` with
+  `focus=navigation-scroll-4183` on the exact branch under review. It runs only the original
+  quarantined warm-departure journey, the delayed-warm regression and the zero-clamp regression,
+  five times each, with the pinned Linux Chromium and existing assertions, retries and timeouts.
+  First, only on the ephemeral runner, it validates Next 16.4.5 and removes the exact four
+  runtime additions from #4201. Three delayed-warm executions must each fail at the unchanged
+  scroll assertion, with a timeline proving clamped intent consumption followed by restoration.
+  Setup errors, timeouts and other failures do not count. Original runtime and test bytes are
+  restored and their hashes verified regardless of failure, before rebuilding the fixed app.
+  It retains the browser revision, SHA, named results and failure traces for seven days. The
+  focus has separate concurrency and does not run or report the broad flake hunt. Scheduled and
+  default dispatches keep their existing coverage. Post-fix passes alone do not satisfy #4183's
+  required artifact review or authorize removing its quarantine.
 
 ## Selection
 
