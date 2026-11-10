@@ -69,5 +69,13 @@ not the nonexistent `factories.ts`. Merged #4235 had already corrected removed t
 claims. The completed 3,868-line visual-polish execution record moved into
 [the archive](visual-polish-plan-20261026.md); its old path retains section links.
 
-Cost-report, project-quota and WhatsApp accounting work has its own source and evidence. This
-record does not mark that remaining ENG-04 scope complete or assert any live provider plan/rate.
+ENG-04 now also has [source-aware cost reporting](../../architecture/infrastructure-costs-and-risks.md),
+[project-scoped quota evidence](../../engineering/cost-guardrails-runbook.md), and a
+[verified-delivery WhatsApp ledger](../../architecture/decisions/20261110-whatsapp-delivered-usage.md).
+The ledger deduplicates signed callbacks by sending account, blocks pre-assignment replay, and
+travels with retention and shop export coverage. These implementations have focused/schema tests,
+real-PostgreSQL duplicate/connection tests and affected browser flows, plus independent security
+review. Provider plans, quota exhaustion forecasts, billing markets/rates and invoice payers still
+require verified account evidence; local diagnostics do not establish production deployment or
+actual savings. The obsolete conversation allowance is removed, not converted into a message
+allowance.

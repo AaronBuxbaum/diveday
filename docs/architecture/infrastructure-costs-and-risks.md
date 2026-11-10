@@ -62,12 +62,17 @@ informational; never shut off bookings to save money.
 Conversation counts and a supposed 1,000-conversation allowance are not a delivered-message cost
 model. A charge depends on the applicable category, recipient market, rate version and billing
 account. Provider message identity and delivery outcome must be reconciled with account invoices
-before a modeled charge can be called actual spend. The current console-only signal cannot
-answer that question. Do not infer that all shops' charges belong to DiveDay's Meta account.
+before a modeled charge can be called actual spend. The tenant-scoped
+`readWhatsAppDeliveredUsage` reader in `@/features/whatsapp-webhook` counts verified delivered
+callbacks by sending WABA/phone and pricing classification. The shop export includes
+`whatsapp_delivered_usage.csv`; coverage starts with callbacks received since deployment, not
+complete historical/account usage. Market, rate version, money, currency and invoice payer remain
+unknown. Do not infer that all shops' charges belong to DiveDay's Meta account.
 
 This correction changes no delivery semantics, channel selection, opt-ins, account plan or
-billing configuration. A reconciled delivered-message ledger and production project quota
-integration remain separate implementation work, not capabilities claimed by the report.
+billing configuration. The old conversation ceiling is removed rather than replaced with an invented
+allowance. Actual rate/invoice reconciliation and production project quota evidence remain
+unverified; callback counts and local diagnostics do not certify them.
 
 ## Operational references
 

@@ -27,7 +27,7 @@ and the only consequences of crossing one are an email and a Sentry event.
 | Vercel | Hosting, functions, bandwidth, Analytics, Speed Insights | `vercel_spend` in `src/lib/cost-guardrails.ts`, polled daily | `/api/cron/usage` |
 | Neon | Postgres compute, storage, egress | `neon_compute`, `neon_storage`, `neon_egress`, polled daily | `/api/cron/usage` |
 | Sentry | Error events | `sentry_errors` — **console only** | Nobody. See below. |
-| Meta (WhatsApp Cloud API) | Per-conversation messaging | `whatsapp_conversations` — **console only** | Nobody. See below. |
+| Meta (WhatsApp Cloud API) | Delivered-message pricing depends on account/category/market/rate | Verified callback observations; no monetary ceiling or assumed allowance | Account/invoice reconciliation still required |
 | Anthropic | Claude assists (drafts, sorting, reading) | `anthropic_spend`, $200 a month, summed daily from DiveDay's own `claude_usage` ledger | `/api/cron/usage` |
 | Stripe | Per-transaction fees | none, deliberately | — |
 
@@ -91,7 +91,7 @@ These codes describe conservative provider-limit consequences, not what happens 
 budget threshold. The alert now states that distinction. Confirm the plan and actual resource
 allowance before interpreting any consequence as applicable to this account.
 
-- **`bills_overage` — Vercel spend, Neon storage, Neon egress, WhatsApp conversations.**
+- **`bills_overage` — Vercel spend, Neon storage, Neon egress.**
   Everything keeps serving; the invoice grows. Nothing breaks, nothing is lost. This is a money
   problem with a deadline of "before the card is charged".
 - **`suspends` — Neon compute.** The one that is not about money. On Neon's free plan, an
@@ -136,11 +136,18 @@ The response body carries every ceiling's full evaluation, which is what
 
 The honest part. Read this before trusting a quiet inbox.
 
-- **Sentry and WhatsApp are not polled at all.** Both are in the registry as `console_only`,
-  which evaluates to `unobservable` and is never rendered as `ok`. Sentry publishes an
-  organization stats API and could become `polled`; this code has no such collector. Meta's billable
-  conversation totals live in Business Manager and the Cloud API reports per-message delivery
-  rather than a running total, so that one needs a person looking.
+- **Sentry is not polled.** Its registry entry remains `console_only`, evaluates to
+  `unobservable` and never becomes `ok` without a measurement. This code has no Sentry stats
+  collector.
+- **WhatsApp delivery evidence is not a bill.** `readWhatsAppDeliveredUsage(db, { shopId, start, end })`
+  from `@/features/whatsapp-webhook` returns counts of verified delivered callbacks by sending
+  WABA/phone and provider pricing classification, inclusive start/exclusive end. Shop export
+  includes `whatsapp_delivered_usage.csv`. Deduplicated observations cover only callbacks received
+  since deployment, not complete historical/account usage. `recipientMarket`, `rateVersion`,
+  `monetaryCost`, `currency`, and `invoicePayer` remain null pending verified account/invoice
+  evidence. A billable flag does not establish a price. No app-level or 1,000-conversation
+  allowance is assumed; no monetary cost `ok` conclusion follows. The obsolete conversation
+  ceiling is removed rather than replaced with an invented message allowance.
 - **A calendar month is not a billing period.** Vercel and Neon both bill on an account
   anniversary. `periodKeyFor` uses UTC calendar months because it needs a denominator and an alert
   period, not because it reproduces an invoice. Do not reconcile a warning against a statement and
