@@ -83,6 +83,7 @@ export type BookedCard = {
     timezone: string;
     defaultLocale: (typeof shops.$inferSelect)["defaultLocale"];
     dockCallMinutes: number;
+    walletPassesEnabled: boolean;
   };
   trip: { id: string; title: string; startsAt: Date; endsAt: Date };
   greetingName: string;
@@ -115,6 +116,7 @@ export async function getBookedCard(
       timezone: shops.timezone,
       defaultLocale: shops.defaultLocale,
       dockCallMinutes: shops.dockCallMinutes,
+      walletPassesEnabled: shops.walletPassesEnabled,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -139,6 +141,7 @@ export async function getBookedCard(
       timezone: row.timezone,
       defaultLocale: row.defaultLocale,
       dockCallMinutes: row.dockCallMinutes,
+      walletPassesEnabled: row.walletPassesEnabled,
     },
     trip: { id: row.tripId, title: row.tripTitle, startsAt: row.startsAt, endsAt: row.endsAt },
     greetingName: identityHeld ? row.identityBookedAs?.trim() || "" : row.personName,
@@ -160,6 +163,8 @@ export async function getBookedCard(
  * acts on.
  */
 export type ReadyPageData = {
+  paymentSettled?: boolean;
+  groupHoldUntil?: Date | null;
   detail: BookingReadinessDetail;
   shop: {
     id: string;
@@ -186,6 +191,7 @@ export type ReadyPageData = {
     rentalPricing: RentalPricing;
     /** Minutes before departure the shop wants divers at the dock — the same figure the night-before email's arrival line uses. */
     dockCallMinutes: number;
+    walletPassesEnabled: boolean;
     /** How the desk takes money, said after a figure owed there (fifth-loop ideas, item 21). */
     deskPayment: DeskPayment | null;
   };
@@ -479,6 +485,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
   const [row] = await db
     .select({
       shopId: bookings.shopId,
+      groupHoldUntil: bookings.groupHoldUntil,
       tripId: bookings.tripId,
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
@@ -515,6 +522,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       rentalItems: shops.rentalItems,
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
+      walletPassesEnabled: shops.walletPassesEnabled,
       offersHotelPickup: shops.offersHotelPickup,
       helpRequestsOn: shops.helpRequestsEnabled,
       deskPayment: shops.deskPayment,
@@ -777,6 +785,7 @@ export async function getReadyPageData(
       rentalItems: row.rentalItems,
       rentalPricing: row.rentalPricing,
       dockCallMinutes: row.dockCallMinutes,
+      walletPassesEnabled: row.walletPassesEnabled,
       deskPayment: row.deskPayment,
     },
     trip: {
@@ -844,6 +853,8 @@ export async function getReadyPageData(
     helpRequestsOn: row.helpRequestsOn,
     lunchAboard: row.tripLunchAboard,
     dietaryNote: row.dietaryNote,
+    paymentSettled: settled,
+    groupHoldUntil: row.groupHoldUntil,
     owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
     cancelPreview,
     canCancelBooking,

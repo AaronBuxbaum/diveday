@@ -177,7 +177,7 @@ content in the product, and the `⋯` menu reaches it in the same two seconds wi
   rule [design/surfaces.md](../../design/surfaces.md) already sets — an entry in a document is an
   index, a doc comment and a test are what stop it rotting. The specific obligations are listed on
   each roadmap slice in
-  [product/features/roadmap.md](../../product/features/roadmap.md#5-the-departures-two-working-surfaces-design-complete);
+  [product/features/roadmap.md](../../product/archive/roadmap-20261110.md#5-the-departures-two-working-surfaces-design-complete);
   in short: `RollCallControls` defers to decision 3 by name and a test fails if the not-back path
   becomes a single tap; the manifest page defers to decision 4 and a test fails if any danger-toned
   element renders at a checkpoint with no recorded exception; `check:repo`'s existing tinted-ink and

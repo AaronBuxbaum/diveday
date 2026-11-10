@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { livePerson, liveTrip, seatNotCancelled } from "@/db/trips";
 import { type AboardHold, heldAtTheDoor } from "../../db/aboard-at-sea";
@@ -227,7 +227,9 @@ async function seatSeenAtDesk(
 }
 
 function claimableNow(
-  booking: Pick<typeof bookings.$inferSelect, "status" | "partyLeadBookingId" | "claimedAt">,
+  booking: Pick<typeof bookings.$inferSelect, "status" | "partyLeadBookingId" | "claimedAt"> & {
+    groupHoldUntil?: Date | null;
+  },
   trip: Pick<typeof trips.$inferSelect, "status" | "startsAt">,
   now: Date,
 ): boolean {
@@ -235,6 +237,7 @@ function claimableNow(
     booking.status === "booked" &&
     booking.partyLeadBookingId !== null &&
     booking.claimedAt === null &&
+    (!booking.groupHoldUntil || booking.groupHoldUntil > now) &&
     trip.status === "scheduled" &&
     trip.startsAt > now
   );
@@ -584,6 +587,9 @@ export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<
 
 /** One party seat as the organizer's claim panel shows it. */
 export type PartySeatClaim = {
+  paymentStatus: string | null;
+  groupHoldUntil: Date | null;
+  groupHoldExpired: boolean;
   bookingId: string;
   /** This authorized companion sails on a different departure from the lead. */
   differentDeparture: boolean;
@@ -681,7 +687,7 @@ const partyLead = alias(bookings, "party_lead");
  */
 export async function issuePartySeatClaims(
   db: AppDb,
-  input: { shopId: string; leadBookingId: string; now?: Date },
+  input: { shopId: string; leadBookingId: string; now?: Date; issueClaims?: boolean },
 ): Promise<PartySeatClaim[]> {
   const now = input.now ?? nowDate();
   const rows = await db
@@ -694,6 +700,8 @@ export async function issuePartySeatClaims(
         id: bookings.id,
         personId: bookings.personId,
         status: bookings.status,
+        groupHoldUntil: bookings.groupHoldUntil,
+        groupHoldExpiredAt: bookings.groupHoldExpiredAt,
         tripId: bookings.tripId,
         partyLeadBookingId: bookings.partyLeadBookingId,
         claimedAt: bookings.claimedAt,
@@ -760,7 +768,7 @@ export async function issuePartySeatClaims(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.partyLeadBookingId, input.leadBookingId),
-        seatNotCancelled,
+        or(seatNotCancelled, isNotNull(bookings.groupHoldExpiredAt)),
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
@@ -790,15 +798,17 @@ export async function issuePartySeatClaims(
       : null,
     // The rows above are this lead's party in this shop and not cancelled, read
     // in this request, so the departure's end is already in hand.
-    mintBookingCapabilities(db, {
-      shopId: input.shopId,
-      seats: claimable.map((row) => ({
-        bookingId: row.booking.id,
-        tripEndsAt: row.trip.endsAt,
-      })),
-      purpose: "claim",
-      now,
-    }),
+    input.issueClaims === false
+      ? new Map<string, IssuedCapability>()
+      : mintBookingCapabilities(db, {
+          shopId: input.shopId,
+          seats: claimable.map((row) => ({
+            bookingId: row.booking.id,
+            tripEndsAt: row.trip.endsAt,
+          })),
+          purpose: "claim",
+          now,
+        }),
   ]);
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
@@ -808,6 +818,9 @@ export async function issuePartySeatClaims(
     });
     seats.push({
       bookingId: row.booking.id,
+      paymentStatus: row.paymentStatus,
+      groupHoldUntil: row.booking.groupHoldUntil,
+      groupHoldExpired: row.booking.groupHoldExpiredAt !== null,
       differentDeparture: row.booking.tripId !== row.leadTripId,
       seatHeld: seatIsHeld(row.booking.status),
       // A held seat goes by the name it was booked under: the matched
@@ -834,6 +847,8 @@ export async function issuePartySeatClaims(
         row.booking.tripId === row.leadTripId &&
         !held.has(row.booking.id),
       payable:
+        row.booking.status === "booked" &&
+        (!row.booking.groupHoldUntil || row.booking.groupHoldUntil > now) &&
         row.booking.claimedAt === null &&
         row.booking.tripId === row.leadTripId &&
         seatListPriceCents(row.trip, row.course, row.booking.participantType) !== null &&

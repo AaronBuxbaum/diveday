@@ -16,6 +16,9 @@ import { PartyClaimPanel, type PartyClaimSeat } from "./PartyClaimPanel";
  */
 export function PartySection({
   locale,
+  organizerSettled,
+  organizerHoldUntil,
+  timeZone,
   seats,
   allSet,
   addSeatAction,
@@ -23,6 +26,9 @@ export function PartySection({
   payAction,
   t,
 }: {
+  organizerSettled?: boolean;
+  organizerHoldUntil?: Date | null;
+  timeZone?: string;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   seats: PartyClaimSeat[];
@@ -42,6 +48,9 @@ export function PartySection({
       <PartyClaimPanel
         locale={locale}
         seats={seats}
+        organizerSettled={organizerSettled}
+        organizerHoldUntil={organizerHoldUntil}
+        timeZone={timeZone}
         signWaiverAction={signWaiverAction}
         payAction={payAction}
       />
@@ -66,6 +75,9 @@ export function partyClaimSeats(
   const claimOrigin = publicAppUrl();
   return claims.map((seat) => ({
     bookingId: seat.bookingId,
+    paymentStatus: seat.paymentStatus,
+    groupHoldUntil: seat.groupHoldUntil,
+    groupHoldExpired: seat.groupHoldExpired,
     seatName: seat.seatName,
     claimed: seat.claimed,
     waiverSigned: seat.waiverSigned,

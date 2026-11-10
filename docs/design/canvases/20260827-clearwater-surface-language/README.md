@@ -81,7 +81,7 @@ Which surfaces this canvas still speaks for. **A canvas has authority over a sur
 that surface's slice is `open`** — once a slice ships, the shipped code is the design for it and
 anything here that disagrees is stale ([design-artifacts.md](../../design-artifacts.md)). The slice
 bodies, with their pins and owner-call dependencies, are in
-[roadmap.md](../../../product/features/roadmap.md#6-clearwater--the-surface-language-design-complete).
+[roadmap.md](../../../product/archive/roadmap-20261110.md#6-clearwater--the-surface-language-design-complete).
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |

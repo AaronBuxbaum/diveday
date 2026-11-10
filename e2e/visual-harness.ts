@@ -120,6 +120,13 @@ export async function waitForSiteLibrary(page: Page) {
   await waitForSiteMap(page);
 }
 
+/** The saved-copy line appears only after the ready worker confirms its snapshot. */
+export async function waitForReadyPageSaved(page: Page) {
+  await expect(
+    page.getByRole("button", { name: diverCopy("ready.offlineRemove"), exact: true }),
+  ).toBeVisible();
+}
+
 /**
  * Visual regression coverage: one `capture()` call per surface, each shot in
  * light at a phone and a desktop viewport and in dark at the desktop viewport

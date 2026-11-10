@@ -1,5 +1,6 @@
 import { and, desc, eq, getViewSelectedFields, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { groupSeatSettled } from "@/lib/group-holds";
 import { log } from "@/lib/log";
 import type { AppTransaction, DbExecutor } from "./client";
 import { boundLockWaits } from "./lock-bounds";
@@ -177,6 +178,12 @@ export async function setBookingPayment(
     // actually change?" comparison, and a value read outside the lock could
     // describe a state a concurrent write has already replaced.
     const previous = await currentPayment(tx, input.shopId, input.bookingId);
+    if (groupSeatSettled(input.status)) {
+      await tx
+        .update(bookings)
+        .set({ groupHoldUntil: null })
+        .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+    }
     if (!paymentStateChanged(previous, next)) return previous;
     const [entry] = await tx
       .insert(bookingPaymentEvents)

@@ -179,7 +179,7 @@ drain, while filing and daily triage cost about $5 a day (token review, ideas ro
 that will never be worked is paid for twice and read never.
 
 Do not file: a bug in your own change (fix it), a failing or flaky test (fix it — AGENTS.md hard
-rules), a note already covered by an existing roadmap/story-backlog/human-decision entry (link to
+rules), a note already covered by an existing issue or human decision (link to
 it in the PR instead), or a vague "we could improve this someday" with no concrete first step.
 
 ### How
@@ -289,10 +289,10 @@ needs the reader to hold two unrelated proposals in their head gets triaged as n
 An issue has exactly two ends, and neither is "leave it open, marked done":
 
 - **Accept** — either relabel it (`ready-for-agent`/`ready-for-human`, see
-  [triage-labels.md](triage-labels.md)) and let it run as an ordinary tracked issue, or move the
-  decision into [features/roadmap.md](../product/features/README.md),
-  [human-decisions/](../product/human-decisions/README.md), or an ADR, and close the issue with a
-  comment pointing at where it landed. Or just run the prompt: when the work lands, close the issue
+  [triage-labels.md](triage-labels.md)) and let it run as an ordinary tracked issue, or record a resolved human
+  decision in [human-decisions/](../product/human-decisions/README.md) or an ADR and close that
+  decision issue with a pointer. An accepted but unbuilt feature stays open as a scoped issue;
+  [features/roadmap.md](../product/features/roadmap.md) links priorities without copying its checklist. Or just run the prompt: when the work lands, close the issue
   in that PR.
 - **Decline** — close it as not planned. If it is worth remembering that it was declined and why,
   say so in the ADR or roadmap entry the decision touches; a tracker full of closed-with-no-reason

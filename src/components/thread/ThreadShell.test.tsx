@@ -61,9 +61,13 @@ const SHELL_OWNER: Record<string, string> = {
     "app/(token)/waivers/[token]/doctor/DoctorReferralBody.tsx",
 };
 
-const THREAD_SHELL_COMPONENTS = THREAD_PAGES.filter(
-  (page) => page !== "app/(token)/recap/[token]/page.tsx",
-).map((page) => SHELL_OWNER[page] ?? page);
+const THREAD_SHELL_COMPONENTS = [
+  ...THREAD_PAGES.filter((page) => page !== "app/(token)/recap/[token]/page.tsx").map(
+    (page) => SHELL_OWNER[page] ?? page,
+  ),
+  // The expired organizer's ledger is a terminal state of the readiness bearer page.
+  "app/(token)/ready/[token]/_components/ExpiredGroupHoldLedger.tsx",
+];
 
 describe("ThreadShell", () => {
   it("renders the shop's name as the eyebrow and exactly one h1", () => {

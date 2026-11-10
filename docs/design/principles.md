@@ -31,7 +31,7 @@ most extreme version of this. Live and offline boat surfaces run in `boat-mode`,
 device's own light/dark preference — bright by day so the manifest reads in full sun, dark for a
 night dive when a white screen would blind the deck — while boosting ink, border, and action
 contrast well past the app palette in both schemes: every boat-mode ink and action token clears
-6.2:1 against its own surfaces, where the app palette's weakest token sits at 4.4:1. Visible
+6.2:1 against its own surfaces. Visible
 connectivity/freshness states, a sticky progress cue, and an accessible skip link keep any
 operational state from hiding behind deck glare.
 
@@ -550,19 +550,16 @@ colour; **amber** (`--accent`) is rationed for earned moments under the
 decision 11 budget; feedback colours (`--success`, `--warning`, `--danger`) never carry meaning alone.
 `.boat-mode` is the roll call's high-contrast skin: by day white ground, navy ink and navy actions labeled in safety yellow; in the dark scheme Night Dive (navy, white ink, safety yellow). Light by day because sun on a screen washes a dark ground out (H-20261006-boat-mode-dark-sun).
 
-**Where the palette actually stands.** AA is the bar, and the light palette does not clear it
-everywhere yet — so do not describe the app as WCAG AA conformant, in docs, in a page, or in a
-PR description. One known light-mode gap is open and deliberately deferred pending a color-guide
-decision: input placeholders (3.07:1 on `--surface-sunken`), tracked in
-[product/features/roadmap.md](../product/features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision).
-Everything else measured clears AA, and `--focus-ring` clears WCAG 1.4.11's 3:1 in all four
-palettes (worst case 4.93:1).
+**Where the palette actually stands.** The 2026-11-10 [text measurement](text-contrast.md)
+checks the current light/dark semantic inks and sampled rendered combinations against 4.5:1.
+Placeholders and empty date/time masks use full-strength `--muted`; editable rental-price fields
+use a sunken fill and muted ink instead of dimming the whole field. Do not describe these scoped
+measurements as WCAG conformance, in docs, a page, or a PR description.
 
-**CI no longer catches a contrast regression.** From 2026-08-23 the axe scan's `color-contrast`
-rule ran with no exclusion list at all (issue #793), until the suite's scans were removed on
-2026-10-24; `pnpm check:tinted-ink` is the one guard left, and it sees tinted fills only. It had been off since 2026-08-01 on the belief that it fired app-wide on the frozen token
-values; measured, it did not. All 24 failing nodes were one mechanism, and none of them was a
-frozen value.
+**What CI checks.** `src/lib/text-contrast.test.ts` checks the token/fill matrix and empty-field
+rules; `e2e/text-contrast.spec.ts` checks computed colors, alpha and ancestor opacity on named
+public/staff samples in both schemes. `pnpm check:tinted-ink` also guards opaque tinted fills.
+There is no broad automated accessibility scan; the axe scans were removed on 2026-10-24.
 
 **That mechanism, because it is the one to know:** a `bg-<hue>/10` fill is *translucent*, so text
 above it contrasts against the hue mixed over **whatever is behind the element** — and every ratio
@@ -671,7 +668,7 @@ what stop it rotting.
       entries for the controls touched were read before the source —
       [pixel-craft.md](pixel-craft.md)
 - [ ] Dock test: targets ≥ 44 px, text ≥ 16 px, AA contrast (4.5:1 text, 3:1 focus ring/control
-      border) — measured, not eyeballed; no automated scan checks contrast
+      border) — measured, not eyeballed; focused tests cover only their named pairs and samples
 - [ ] Buttons and button-shaped links via `buttonClass()`; labels centered in the target
 - [ ] Stacked form fields via `<Field>`/`<FieldGrid>`; controls aligned across columns
 - [ ] Loading = content-shaped skeletons; no layout shift

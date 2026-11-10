@@ -1,6 +1,11 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { mapIsReady, waitForSelectedMapToSettle } from "./selected-map-capture";
+import {
+  mapIsReady,
+  waitForMapTilesToSettle,
+  waitForSelectedMapToSettle,
+} from "./selected-map-capture";
+import { E2E_FROZEN_CLOCK } from "./servers";
 import { capture, withRendererBound } from "./visual-harness";
 
 async function renderSelectedMap(page: Page) {
@@ -37,6 +42,85 @@ test("selected map readiness rejects loaded tiles until their fade has finished"
     .evaluate((pane) => pane.classList.add("leaflet-pan-anim"));
   expect(await readiness(page)).toBe(false);
 });
+
+test("map readiness rejects zooming on the pane Leaflet actually animates", async ({ page }) => {
+  await renderSelectedMap(page);
+  await page.locator("img").evaluate((tile) => {
+    tile.style.opacity = "1";
+  });
+  await page.locator(".leaflet-map-pane").evaluate((pane) => {
+    pane.classList.add("leaflet-zoom-anim");
+  });
+  expect(await readiness(page)).toBe(false);
+});
+
+for (const [name, wait] of [
+  ["selected", waitForSelectedMapToSettle],
+  ["tooltip", waitForMapTilesToSettle],
+] as const) {
+  for (const clock of ["frozen", "advancing"] as const) {
+    test(`${name} map wait polls the resolved readiness boolean with ${clock} clock`, async ({
+      page,
+    }) => {
+      if (clock === "advancing") await page.clock.install({ time: E2E_FROZEN_CLOCK });
+      await renderSelectedMap(page);
+      if (name === "tooltip") {
+        await page.locator(".leaflet-popup").evaluate((popup) => popup.remove());
+        await page.locator("button").evaluate((marker) => marker.classList.remove("ring-4"));
+      }
+      let sampled!: () => void;
+      const firstSample = new Promise<void>((resolve) => {
+        sampled = resolve;
+      });
+      // Observe a completed predicate call, whether it runs through the old
+      // waitForFunction path or the driver-side evaluate path. No elapsed-time guess.
+      const originals = {
+        evaluate: page.evaluate,
+        waitForFunction: page.waitForFunction,
+      };
+      for (const method of ["evaluate", "waitForFunction"] as const) {
+        Object.defineProperty(page, method, {
+          configurable: true,
+          value: (...args: unknown[]) => {
+            const work = Reflect.apply(originals[method], page, args) as Promise<unknown>;
+            if (args[0] === mapIsReady) void work.then(sampled, () => undefined);
+            return work;
+          },
+        });
+      }
+      let settled = false;
+      const pending = wait(page).then(() => {
+        settled = true;
+      });
+      void pending.catch(() => undefined);
+      try {
+        await Promise.race([firstSample, pending]);
+        await expect(page.locator("img")).toHaveCSS("opacity", "0");
+        expect(settled, "a Promise resolving false must not count as a ready map").toBe(false);
+        await page.locator("img").evaluate((tile) => {
+          tile.style.opacity = "1";
+        });
+        await pending;
+        expect(settled).toBe(true);
+      } finally {
+        try {
+          await page.locator("img").evaluate((tile) => {
+            tile.style.opacity = "1";
+          });
+          await pending.catch(() => undefined);
+        } finally {
+          for (const method of ["evaluate", "waitForFunction"] as const) {
+            Object.defineProperty(page, method, {
+              configurable: true,
+              writable: true,
+              value: originals[method],
+            });
+          }
+        }
+      }
+    });
+  }
+}
 
 test("selected map readiness is checked again after document painting", async ({ page }) => {
   await renderSelectedMap(page);

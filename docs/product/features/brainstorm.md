@@ -2,8 +2,8 @@
 
 Idea exploration, not commitments. This is the active backlog for raw DiveDay ideas that are not yet
 scheduled and do not require AI. Ideas that require AI, model-based extraction, or natural-language
-generation live in [ai-ml.md](ai-ml.md). Nothing here is approved scope until it moves into
-[roadmap.md](roadmap.md) with a milestone and a note.
+generation live in [ai-ml.md](ai-ml.md). Nothing here is approved scope until a human decision and a scoped GitHub issue promote it;
+[roadmap.md](roadmap.md) links current priorities. Search existing issues and shipped work first.
 
 Keep this file to open ideas. When an idea ships, remove it from here and capture the delivered slice
 in [../shipped.md](../shipped.md) or the ADR that made the decision. When a whole brainstorm is
@@ -46,17 +46,11 @@ single action.
 Lens: help a diver book, prepare, show up confident, return, and bring a buddy without turning DiveDay
 into a social network.
 
-- **Group organizer surface.** One organizer holds several seats; invitees claim their own seat, sign
-  their own waiver, upload certs, and optionally pay their own share. Seat claiming shipped
-  2026-08-04 — see
-  [../shipped.md](../shipped.md#seat-claim-links-for-party-bookings-delivered-2026-08-04) and ADR
-  [20260804-seat-claim-links](../../architecture/decisions/20260804-seat-claim-links.md); an invitee
-  claiming a seat gets waiver-on-join and is gated on their own evidence. Pay-your-own-share remains
-  open and waits on the credit/split-payment work. *(M remaining, bookings/payments, big bet.)*
+- **Group organizer surface — promoted.** Expiring holds and an organizer payment ledger are
+  approved in [#4209](https://github.com/AaronBuxbaum/diveday/issues/4209), not a second raw
+  backlog item. Per-seat checkout and seat claims already exist; no split-payment prerequisite.
 - **Course cohorts as groups.** Reuse group-claim mechanics for a course roster so each student owns
   their readiness while the instructor sees the whole cohort. *(M, bookings/certs, big bet.)*
-- **Private charter inquiry to quote to booking.** Replace email ping-pong for high-value group trips
-  with a structured inquiry and quote flow. *(M, bookings, quick win after groups.)*
 - **Buddy referral credit.** When a diver brings a buddy, issue a simple trip credit for a future
   booking. Requires the credit ledger. *(M, bookings, quick win.)*
 - **One-tap crew thank-you shoutouts.** The recap page can collect moderated compliments for crew
@@ -70,11 +64,6 @@ into a social network.
 Lens: a dive shop sells perishable seats under weather risk. These ideas protect revenue without
 breaking community trust.
 
-- **One-tap cancellation cascade.** Captain calls a blow-out; staff taps once; booked divers receive
-  rebooking links filtered to trips they qualify for. Shipped 2026-08-04 — see
-  [../shipped.md](../shipped.md#weather-blow-out-cancellation-cascade-delivered-2026-08-04) and ADR
-  [20260804-blowout-cascade](../../architecture/decisions/20260804-blowout-cascade.md); the
-  trip-credit option waits on the credit ledger below. *(Shipped, bookings.)*
 - **Alternative-day salvage.** A cancellation can offer what the shop can still run, such as a pool
   session, shore dive, or classroom day. *(M, bookings, quick win now the cancellation cascade has
   shipped.)*
@@ -92,11 +81,11 @@ Lens: make connected data compound while keeping safety facts human-verifiable a
   trip/course type. *(M, cross-cutting, quick win.)*
 - **North-star measures from real data.** Track blocker-resolution time, waiver completion rate, and
   fully-ready departures from production data — the list to instrument is
-  [roadmap.md's measures](roadmap.md#measures). *(M, cross-cutting, quick win.)*
+  [roadmap.md's measures](../archive/roadmap-20261110.md#measures). *(M, cross-cutting, quick win.)*
 
 Tooling ideas that were duplicated here — sharded feature/entity docs, and a machine-readable task
 manifest for external orchestrators — now live once, in
-[roadmap.md's engineering enablement backlog](roadmap.md#p2--when-parallelism-or-scale-proves-the-need).
+[roadmap.md's engineering enablement backlog](../archive/roadmap-20261110.md#p2--when-parallelism-or-scale-proves-the-need).
 
 ## Delight And Micro-Interactions
 
@@ -114,7 +103,9 @@ Lens: speed, feel, and authentic divemaster voice. Keep delight rationed; safety
 
 ## Completed Or Superseded Brainstorms
 
-Completed work does not live here. Use these records instead:
+Completed work does not live here. Private-charter inquiry/quotes and cancellation cascades
+already exist; inspect current source and shipped history before proposing either again.
+Use these records instead:
 
 - [../shipped.md](../shipped.md) is the canonical index of delivered slices.
 - [../archive/delight-and-experience.md](../archive/delight-and-experience.md) is the completed

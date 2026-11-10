@@ -78,6 +78,16 @@ export interface LogSignal {
 
 export const LOG_SIGNALS: readonly LogSignal[] = [
   {
+    metricName: "WalletPassPushFailures",
+    title: "Departure passes are not updating",
+    why: "An installed pass must follow a moved or cancelled departure; repeated delivery failures leave old facts on a diver's phone.",
+    events: ["wallet_pass.push_failed"],
+    threshold: 3,
+    periodMinutes: 15,
+    response:
+      "Read the Wallet passes query, check the platform's credential expiry and issuer access, then rerun the bounded pass. Never copy signing keys or device tokens into an incident report.",
+  },
+  {
     metricName: "AppErrors",
     title: "Handled errors",
     why:
@@ -733,6 +743,12 @@ export interface SavedLogQuery {
 }
 
 export const SAVED_LOG_QUERIES: readonly SavedLogQuery[] = [
+  {
+    name: "DiveDay/Wallet passes",
+    why: "Issuance and update delivery outcomes without credentials, device identifiers or diver names.",
+    queryString:
+      'fields @timestamp, event, passId, platform | filter event in ["wallet_pass.issued", "wallet_pass.pushed", "wallet_pass.push_failed"] | sort @timestamp desc | limit 200',
+  },
   {
     name: "DiveDay/Errors, newest first",
     why: "The first query to run for any alarm. Every handled error, with its context fields.",

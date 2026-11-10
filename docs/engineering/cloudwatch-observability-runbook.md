@@ -308,3 +308,7 @@ and a sampled count is a count that lies.
 | Vitals arrive but a p75 looks impossibly good | Check the metric filter has no `DefaultValue`. Publishing a 0 for page views that reported no INP would drag the percentile down until the metric flattered the app; the infra test asserts it is absent. |
 | RUM records nothing | The app monitor's `domain` must match the origin the browser is on — RUM refuses events from anywhere else, and a preview URL is a different origin. Then check the four `NEXT_PUBLIC_RUM_*` values reached the *client* bundle (they must keep the prefix). |
 | RUM's bill is larger than expected | `NEXT_PUBLIC_RUM_SAMPLE_RATE`. If it is already low, look at the Cognito identity pool: it issues anonymous credentials by design, so an unexpected volume of `PutRumEvents` from outside the app's own origin is worth ruling out. |
+
+### Native departure passes
+
+`wallet_pass.issued` and `wallet_pass.pushed` record issuance and delivery by pass id and platform. `wallet_pass.push_failed` feeds the WalletPassPushFailures metric and alarms at three failures in fifteen minutes. Open the “DiveDay/Wallet passes” query, check certificate expiration or issuer access, and rerun the bounded cron after correcting configuration. Never log or paste pass tokens, push tokens, device identifiers or signing material.

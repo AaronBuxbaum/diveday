@@ -19,7 +19,7 @@ items; assignments and service history were removed outright."* `rental_fit_prof
 comment still states the invariant directly — *"the shop tracks no equipment inventory... never a
 reservation of a particular item."* A real DiveShop360-shop inquiry (2026-08-15) named exactly this
 gap unprompted (what's out, when it's due back, avoiding double-booking), and
-[competitive-analysis.md](../../product/assessments/competitive-analysis.md#what-blocks-the-purchase)
+[competitive-analysis.md](../../product/archive/assessments/competitive-analysis.md#what-blocks-the-purchase)
 already calls the absence of item tracking a disqualifier for the classic gear-heavy shop.
 
 Constraints a lower-context agent must not miss:

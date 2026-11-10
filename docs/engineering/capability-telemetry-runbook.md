@@ -152,7 +152,7 @@ URLs to Google or Meta on every visit, and the guardrail it walked past is one
 comment in a file it never opened.
 
 Nothing is broken today: there is no ad pixel in the tree, and the
-[paid-acquisition assessment](../product/assessments/paid-acquisition-assessment.md)
+[paid-acquisition assessment](../product/archive/assessments/paid-acquisition-assessment.md)
 recommends `$0` of ad spend until a design partner exists. This section exists so
 the answer stays safe if that changes.
 
@@ -511,3 +511,13 @@ Both belong in the [decision register](../product/human-decisions/README.md#deci
 alongside H-20260724-vercel-selected-web-hosting's incident-ownership items, not in this runbook. Until they are
 answered, treat the access log as a credential store: same care, same access
 list, same reason not to paste an excerpt into a ticket.
+
+### Native departure passes
+
+`/ready/[token]/wallet*` uses the readiness capability and inherits its URL redaction. PassKit
+requests use a different, pass-scoped ApplePass token stored only as a hash; it cannot open a
+booking. `/api/wallet/**` URLs are replaced with `/api/wallet/[redacted]` before telemetry so
+serials and device identifiers do not leak through traces. Handler logs contain codes and pass
+ids only; Apple device log bodies are discarded. Erasure revokes downloads and removes device
+registrations; an offline downloaded pass cannot be recalled. AUTH_SECRET rotation retains
+existing installed-pass authentication until explicit re-add replaces that row and registrations.

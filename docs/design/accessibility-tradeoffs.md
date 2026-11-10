@@ -31,10 +31,9 @@ A row goes in this table when **all** of these are true:
   navigating by keyboard is a standard user, not an accommodation.
 - **Touch targets below 44 px on a primary flow.** The [dock test](principles.md) is an
   operating condition, not an accessibility nicety.
-- **The known colour-contrast gaps.** Two light-palette contrast failures are open and deferred
-  pending a colour-guide decision; they are tracked in
-  [product/features/roadmap.md](../product/features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision).
-  Those are a backlog, not a trade — do not move them here.
+- **Text contrast.** A reading-ink failure is a defect, not a trade. The current
+  [focused measurements](text-contrast.md) cover tokens and sampled rendered combinations;
+  they are not an app-wide conformance claim.
 
 ## How to add a row
 

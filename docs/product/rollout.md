@@ -7,8 +7,8 @@ phase completes or a gate clears, update this doc and [human-decisions/](human-d
 the same change.
 
 Companions: [vision.md](vision.md) (what winning looks like),
-[competitive-analysis.md](assessments/competitive-analysis.md) and
-[competitive-strategy.md](assessments/competitive-strategy.md) (who we're up against and the
+[competitive-analysis.md](archive/assessments/competitive-analysis.md) and
+[competitive-strategy.md](archive/assessments/competitive-strategy.md) (who we're up against and the
 portability wedge), [marketing.md](marketing.md) (the public-page rulebook and claims policy),
 [human-decisions/](human-decisions/README.md) (the gate register this plan sequences), and
 [stakeholders/](stakeholders/README.md) (the per-discipline playbooks — exact contacts, briefing
@@ -18,18 +18,26 @@ actually *is*, see [features/](features/README.md), the single home for feature 
 
 ## Where we stand
 
-The product is feature-complete across the five pillars plus payments, notifications, owner
-reporting, and the first two legs of the data-portability wedge (export, importer, migration
-guides). **Nothing that blocks rollout is code.** What blocks rollout is:
+Reconciled 2026-11-10: there are no shops or pilot partners yet, confirmed by Aaron. The product
+has substantial implemented scope; neither old missing-feature lists nor browser tests prove
+real-shop adoption or launch readiness.
 
-1. **Legal reality** — waiver text, medical questions, e-signature sufficiency, and retention are
-   provisional baselines awaiting counsel (H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit, V-03).
-2. **Operational reality** — no named owner for secrets/backups/incidents (H-20260724-vercel-selected-web-hosting), no live Stripe
-   Connect platform application (H-20260724-payment-deposit-cancellation-refund), no verified sender/consent policy (H-20260724-channel-sends-booking-waiver), and the offline
-   manifest is field-unproven (V-02).
-3. **Commercial reality** — the $99 founding-shop price is approved for now (H-20260724-public-founding-shop-price, 2026-07-24;
-   early-access, with billing/tax/support/contract terms still open), and no real shop has
-   run a real dive day on the product (V-04).
+1. **Legal evidence:** contract/entity review before the first paid contract (#4212); Florida
+   waiver/medical and typed-consent review before real use (#4213). Local typed signing and the
+   indefinite-retention working default stay. Existing pilot-before-counsel permission does not
+   turn either review into completed evidence.
+2. **Operational evidence:** Aaron is the sole owner for secrets, backups, alerts and recovery;
+   solo-owner risk is accepted for now. V-02/#4214, V-03/#4215 and V-04/#4216 must precede the first
+   pilot departure. Reconcile counter-rental gas records for V-05. V-06/#4217 precedes a
+   Spanish-speaking launch. Automated checks do not substitute for these human results.
+3. **Commercial activation:** use [marketing.md](marketing.md) for current offer/claims. The
+   configured $0/month + 3% activation remains #2948; do not revive the old $99 price below.
+   Website work is a discussion, not an included custom-build service promise.
+
+The detailed phase tactics and calendar windows below were written in July. Their dates are
+historical planning targets, not current commitments or evidence of phase completion. Retain the
+exit-criteria sequence, re-date it only with an owner plan, and use the linked issues for live
+status. No outreach, agreement, account setup or provider activation is authorized by this plan.
 
 The rollout is therefore sequenced as four phases, each with explicit entry/exit criteria. Do not
 skip ahead: marketing that leans on an unproven safety claim, or a waiver flow without counsel
@@ -119,7 +127,7 @@ it down) for each of:
   location / month, everything included, no setup fee, no per-seat math, no platform fee, cancel
   anytime with the export button** — exactly where `src/lib/marketing.ts` already sits, now made
   official. Rationale is already argued in
-  [competitive-analysis.md](assessments/competitive-analysis.md#pricing-posture): DiveAdmin tops
+  [competitive-analysis.md](archive/assessments/competitive-analysis.md#pricing-posture): DiveAdmin tops
   out at $119, DiveShop360 starts at ~$149–199 *plus* $1,000–3,000 setup, and "no add-ons, no
   lock-in" only works as a headline if the number is unsurprising. Add a founding-shop sweetener
   that costs nothing now: **price locked for two years for the founding cohort.** Define the
@@ -157,7 +165,7 @@ operations surface.
    instructor staffing, and waiver/medical flow on students.
 3. **An EVE or DiveShop360 defector** — stresses the importer and migration guides on real
    incumbent exports, and becomes the "Switching from EVE" case study. The EVE pool is the
-   [freshest switching pool in the market](assessments/competitive-strategy.md#diveshop360--the-pe-owned-pos-incumbent)
+   [freshest switching pool in the market](archive/assessments/competitive-strategy.md#diveshop360--the-pe-owned-pos-incumbent)
    — these shops must migrate somewhere regardless.
 
 ### Where to find them, concretely
@@ -177,7 +185,7 @@ operations surface.
   relationship and an earned-media contact. The buyable trade book aimed at this reader is **Scuba
   Diving Industry Magazine**, printed and mailed to every US dive retailer, whose
   retailer-to-retailer podcast books guests for free — see
-  [paid-acquisition-assessment.md](assessments/paid-acquisition-assessment.md).
+  [paid-acquisition-assessment.md](archive/assessments/paid-acquisition-assessment.md).
 - **Local directories as a call list:** the PADI and SSI shop locators for the chosen launch
   region give a complete, public list of every shop to visit in person. In-person beats email for
   a 0-reputation product; bring a phone, run the demo shop from the dock.
@@ -186,7 +194,7 @@ operations surface.
 
 Free through the pilot, founder-run concierge migration (they send exports; we import — never
 log into their incumbent system, per the
-[legal guardrail](assessments/competitive-strategy.md#the-portability-wedge)), weekly 30-minute
+[legal guardrail](archive/assessments/competitive-strategy.md#the-portability-wedge)), weekly 30-minute
 call, a shared WhatsApp/SMS thread with the founder, and the founding-shop price + two-year lock
 when the pilot converts. In exchange: they run real days on it, they let us watch, and (if it
 goes well) a named quote/case study.
@@ -218,7 +226,7 @@ finite (a plain `support@dive.day` inbox, not a founder-direct promise as of 202
   the EVE case study as a linked story, pointed at the guides — the documented Jane/anti-Mindbody
   pattern. Track guide → trial conversion via the existing analytics seam. **The paid-search half of
   this line was narrowed 2026-08-12** by
-  [paid-acquisition-assessment.md](assessments/paid-acquisition-assessment.md): the pattern is right
+  [paid-acquisition-assessment.md](archive/assessments/paid-acquisition-assessment.md): the pattern is right
   and the queries are not — `diveshop360 alternative` returns no Google autocomplete suggestions at
   all, and the EVE switching terms return none *and* collide with anime and EVE Online. The guides
   earn their keep organically (`dive.day/switching` already ranks #2 for "how to export data from
@@ -261,7 +269,7 @@ support load per shop measured and sustainable (else the cap holds until it is).
   by hand — reopening it is removing one key check, [ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)),
   pricing public and final, founding cohort closes, standard price honors the meet-the-market
   posture.
-- **What we still don't do** (repeating [what NOT to do](assessments/competitive-strategy.md#what-not-to-do)
+- **What we still don't do** (repeating [what NOT to do](archive/assessments/competitive-strategy.md#what-not-to-do)
   because launch pressure will test it): no POS fight, no PADI-sync promises, no price war with a
   three-person studio, no openness claims ahead of shipped artifacts.
 
@@ -341,4 +349,4 @@ serves it. Computed nightly and mailed to the founder each Monday with the activ
 Revisit at each phase boundary, whenever a gate row in
 [human-decisions/](human-decisions/README.md) changes state, and immediately if either named rival
 ships a direct response (per the re-check rule in
-[competitive-strategy.md](assessments/competitive-strategy.md#implications-for-the-queue)).
+[competitive-strategy.md](archive/assessments/competitive-strategy.md#implications-for-the-queue)).

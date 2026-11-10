@@ -105,6 +105,7 @@ describe("the Features page's save", () => {
       "tips",
       "tax",
       "checkoutRecovery",
+      "walletPasses",
       "buddyLinks",
       "selfRegistration",
       "waitlist",

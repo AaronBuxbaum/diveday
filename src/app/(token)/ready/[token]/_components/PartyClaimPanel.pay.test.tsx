@@ -48,6 +48,43 @@ describe("PartyClaimPanel pay line", () => {
     expect(screen.queryByRole("button", { name: "Pay for this seat" })).toBeNull();
   });
 
+  it("counts paid and covered seats while keeping expired seats in the ledger", () => {
+    render(
+      <PartyClaimPanel
+        locale="en-US"
+        organizerSettled={false}
+        seats={[
+          seat({ paymentStatus: "paid", payable: false }),
+          seat({ bookingId: "seat-2", paymentStatus: "waived", payable: false }),
+          seat({
+            bookingId: "seat-3",
+            paymentStatus: "unpaid",
+            groupHoldExpired: true,
+            claimUrl: null,
+            payable: false,
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("2 of 4 paid or covered")).toBeInTheDocument();
+    expect(screen.getByText("Hold expired. This seat is back on sale.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pay for this seat" })).toBeNull();
+  });
+
+  it("keeps the expired organizer ledger focused on payment, without stale link instructions", () => {
+    render(
+      <PartyClaimPanel
+        readOnly
+        locale="en-US"
+        organizerSettled={false}
+        seats={[seat({ paymentStatus: "paid", claimUrl: null, payable: false })]}
+      />,
+    );
+    expect(screen.getByText("1 of 2 paid or covered")).toBeInTheDocument();
+    expect(screen.queryByText(/Send each diver their own link/)).toBeNull();
+    expect(screen.queryByText("Waiver still needed")).toBeNull();
+  });
+
   it("speaks Spanish", () => {
     render(<PartyClaimPanel locale="es-ES" payAction={async () => {}} seats={[seat({})]} />);
     expect(screen.getByRole("button", { name: "Pagar esta plaza" })).toBeInTheDocument();

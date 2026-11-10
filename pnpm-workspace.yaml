@@ -26,6 +26,8 @@ update:
 
 # Force patched releases only where the resolved dependency graph still needs them.
 overrides:
+  # passkit-generator 3.5.8 pins vulnerable Joi; retain its API on the patched 17.x line.
+  'passkit-generator>joi@17.13.4': '17.13.9'
   '@modelcontextprotocol/sdk@<1.32.0': '>=1.32.0 <2'
   '@vercel/cli-config>zod@>=4.0.0 <4.6.6': '^4.6.7'
   'js-yaml@>=4.0.0 <4.3.2': '^4.3.2'

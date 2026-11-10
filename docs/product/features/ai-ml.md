@@ -3,8 +3,9 @@
 The single home for every AI/ML-shaped DiveDay idea — from a raw one-line concept to a
 prompt-ready implementation task. Previously split across a brainstorm file and a specialist
 audit's ML & data section; consolidated here 2026-08-01 so there is exactly one place to look.
-Nothing here is committed scope until it moves into [roadmap.md](roadmap.md) with a milestone, an
-ADR for the provider/dependency boundary, and the right safety review.
+Nothing here is committed scope until a human decision and scoped GitHub issue promote it, with
+an ADR for a provider/dependency boundary and the right safety review. [roadmap.md](roadmap.md)
+links current priorities; search current code, issues and shipped work before reviving a prompt.
 
 **What shipped (2026-10-18):** the provider boundary exists. Claude is a runtime dependency behind
 `src/lib/claude/` and `runAssist` in `src/features/assists/store.ts`, dark without a key, with the shop's
@@ -143,7 +144,11 @@ Exploratory only. No effort estimate below the level of "big bet"; no module nam
   [20260804-card-evidence-is-the-number](../../architecture/decisions/20260804-card-evidence-is-the-number.md)
   — so this needs its own scan-then-discard capture rather than reinstating one. *(M, certs, big bet.)*
 
-## Scoped, prompt-ready — from the 2026-07-31 specialist audit
+## Historical prompt sketches — from the 2026-07-31 specialist audit
+
+These prompts preserve raw opportunities, not missing-feature findings or approved tickets.
+Several mechanisms now exist, as the current implementation summary above records. Re-check
+each proposed delta against current code and issues before scoping work.
 
 Auditor's baseline: the app has no LLM dependency today (new runtime dependency → ADR), a strict
 external-HTTP seam pattern (`marine-forecast.ts`/`analytics.ts` + `DIVEDAY_DISABLE_EXTERNAL_HTTP`),
@@ -233,5 +238,5 @@ section — the task numbering below is unchanged from the original audit, only 
 - **Reviews required**: the medical-diff, boarding-attention, and review-assist tasks above need
   `dive-domain-expert`; review-assist and lapsed-regulars additionally need `security-reviewer`.
 - **North-star measures** these ideas could eventually feed are tracked in
-  [roadmap.md's measures](roadmap.md#measures) — instrument before ranking, never the reverse (see
+  [roadmap.md's measures](../archive/roadmap-20261110.md#measures) — instrument before ranking, never the reverse (see
   the Today-queue task above).

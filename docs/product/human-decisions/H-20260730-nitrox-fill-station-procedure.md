@@ -3,6 +3,17 @@
 - **Status:** Implemented
 - **Human owner:** Dive operations lead + gas-blending authority
 
+## Current scope — reconciled 2026-11-10
+
+The boat nitrox request is not an analyzed-fill log. Counter-rented tanks now also record
+staff-declared O2 percent, recorder/time and O2-clean gaps in gear_reservations; these are not
+analyzer readings or analysis signatures. Reconcile both seams for V-05 before treating any
+remaining fill-analysis gap as missing work. The 2026-07-30 operating-policy decision is preserved;
+this correction grants no field sign-off. See [the current verification scope](README.md#human-verification-queue)
+and [#4216](https://github.com/AaronBuxbaum/diveday/issues/4216).
+
+The wording below records the historical request-only inventory, not the complete current product.
+
 ## Decision or approval needed
 
 Which nitrox fill-station procedure, ppO₂ ceilings, mix band, O₂-clean tank tracking, and blender qualifications apply?

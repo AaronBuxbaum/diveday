@@ -1,9 +1,20 @@
 # H-20260912-drysuit-sizes-diver-own: Which drysuit sizes does the diver's own form offer, and should it be asking…
 
-- **Status:** Ready
+- **Status:** Implemented
 - **Human owner:** Product owner + dive operations lead
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+Retain the current diver-facing grid and add short cuts; do not collect height, weight or shoe
+measurements. Not sure stays available. Short cuts MS, LS and XLS are implemented in this layer
+for [#4221](https://github.com/AaronBuxbaum/diveday/issues/4221); Not sure, saved off-grid values,
+staff free text and the wetsuit scale are unchanged. No body measurements or readiness/admission
+behavior changed.
+
+Source: [owner-account decision record on #4193](https://github.com/AaronBuxbaum/diveday/issues/4193#issuecomment-6759760819).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 **Which drysuit sizes does the diver's own form offer, and should it be asking for a size at all?** Issue 1414 gave `rental_fit_profiles` a `drysuit_size` column on its own scale — the manufacturer grid a rental wall is racked from, where a girth letter carries a second axis the wetsuit has none of, the cut — never the wetsuit's plain XS-XXL. The column is `text` and the staff field on the diver record is free text, so staff can record anything; the open call is only the fixed list the **diver-facing** select offers at `src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx`. A `dive-domain-expert` pass on 2026-09-12 revised the provisional list to `XS, S, M, MT, L, LT, XL, XLT, XXL` and left two questions it could not answer for itself. **The revision:** `XS` goes back on — every major maker publishes it, a cold-water fleet stocks it because a large share of drysuit divers are small-framed, and the wetsuit select one field above starts there, so keeping XXL and dropping XS told a 155cm diver the shop has nothing for her. `MS` and `ML` come off — they shipped as in-between *girths* while `MT` beside them was a *height*, and manufacturer charts gloss `MS` as medium short and `ML` as medium large, so the second letter meant two things in one list and a staffer packing on `MS` could hand a short diver a suit cut for a tall one. Every code is now a girth letter with at most a `T` after it; `MS`, `ML`, `LS` and `MLT` are real sizes a shop that stocks one records staff-side, where the field is free text. **The two open questions:** **(a)** the list carries the tall cut and not the short one, which is backwards for who actually fails to get a stock fit — short-torso divers are not rare, and they are the ones a stock grid fails. **(b)** A diver does not know their drysuit size, and it does not transfer between brands: even a diver who owns one knows only their own suit's brand code. A select of nine letters harvests a confident-looking wrong answer and prints it on a packing list as though it were a measurement. What every manufacturer's chart is indexed on, and what every shop asks on the phone, is **height, weight and shoe size**.
 

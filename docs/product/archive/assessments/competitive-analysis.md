@@ -1,0 +1,174 @@
+# Competitive analysis — the buyer's view
+
+> Archived 2026-11-10. This is dated research or a completed worklist, not current scope or
+> delivery status. See [the reconciliation](../README.md) and the linked live issues before
+> acting on a recommendation. Historical claims and measurements below were not re-verified.
+
+> A buyer-perspective assessment of DiveDay against the dive-shop software market, written 2026-07-20
+> from external research (vendor sites, pricing pages, ScubaBoard buyer threads) plus a hands-on pass
+> through the running product (public pages, demo shop, staff surfaces, manifest). Companion to
+> [product-space-investigation.md](../product-space-investigation.md), which reads the product from the
+> inside; this document reads it from the outside — as a shop owner comparing us to
+> [DiveAdmin](https://diveadmin.com/en), EVE, DiveShop360, Bloowatch, and the generic booking
+> platforms. An assessment, not a commitment; items that survive review move to
+> [roadmap.md](../../features/roadmap.md). For the operator's view of the two most dangerous named rivals —
+> verified company profiles, head-to-head axes, and the data-portability wedge — see
+> [competitive-strategy.md](competitive-strategy.md) (2026-07-22). **The market table below is
+> superseded** by [competitive-landscape-20260901.md](competitive-landscape-20260901.md), which
+> re-verifies both incumbents, adds the 2026 newcomers and a 32-product feature-frequency table,
+> and files the remaining gaps as issues; the reasoning here still stands.
+
+## The market in one table
+
+| Product | Segment | Pricing (advertised) | What buyers say |
+| --- | --- | --- | --- |
+| **DiveAdmin** | Dive centers/schools, resort-flavored | $39 / $59 / $119 per month by staff count; $3,495 lifetime; no commission | Young, thin review footprint; broadest modern feature list (booking widgets, waivers, WhatsApp/SMS inbox, equipment + maintenance, payroll, multi-branch, REST API + MCP/AI, 15 languages) |
+| **EVE** (ISSYS) | PADI retail stores | Sales-gated license + modules | The PADI endorsement is the moat, not the product: "crappy UI," "kludge," "support almost nonexistent" (ScubaBoard); Windows desktop; acquired by DiveShop360 in 2023 — assume sunset |
+| **DiveShop360** | US retail-heavy stores (Rain POS base) | Startup ~$149–199/mo; Core/Plus quote-only (Plus historically ~$299/mo + ~$3k setup) | Happiest incumbent user base; POS-first — strong retail/PADI eLearning/air cards, weaker boat-day ops; pricing opacity |
+| **Bloowatch** | EU dive/watersports schools | €49 / €79 / €119 per month, zero commission | Closest dive-ops rival: ratios, live manifests, cert matching — but waivers are a paid add-on (€0–250/mo) and manifests start at Pro |
+| **Generic platforms** (FareHarbor, Rezdy, Checkfront, Xola, TrekkSoft, Bookeo) | Any activity operator | $0–100/mo **plus 2–6% of online volume** (Bookeo flat $40–80 is the exception) | Win on checkout, lose on dive: no certs, no medical logic, no manifests, no gear sizes. Fee resentment is loud (FareHarbor's 6% consumer fee) |
+| **Agency ecosystems** | — | PADI Adventures widget: no commission, 4.9% service charge; SSI mySSI: free training records/e-signatures with affiliation | PADI is pulling the *booking relationship* toward itself; SSI gives training admin away, setting the bar for "student management" |
+
+A small shop's realistic all-in budget is **$50–200/month**. The long tail (ScubaOffice,
+DiveCentres, original Bookadive) is a graveyard — vendor-longevity fear is a real buying factor, and
+so is lock-in: owners on ScubaBoard stay on software they hate because migration hurts.
+
+## What a buyer likes about DiveDay
+
+Verified hands-on against the demo shop, not from our own marketing:
+
+- **The daily loop is real and nobody else has it.** Today ("1 departure today. 9 divers still
+  can't board"), the blocker queue, one-screen check-in with readiness re-checked at the boarding
+  tap. Every competitor makes staff assemble this picture by hand; DiveAdmin's equivalent is lists
+  and pipelines, EVE's is a desktop kludge. This is the "40% less admin" claim, actually embodied.
+- **Fail-closed readiness is a genuine category difference.** Verified-vs-claimed cards, stricter-of
+  trip/site requirements, medical fail-closed to physician review, nitrox re-checked at every read.
+  Competitors store certs as text fields; Bloowatch's "certification matching" is the nearest claim
+  and it is nowhere near a typed safety boundary. No one else can honestly say "unknown evidence
+  never boards."
+- **The manifest is a safety document, not a printout.** Per-dive roll-call checkpoints, append-only
+  history with staff attribution, encrypted offline copy with explicit freshness and reconciliation,
+  emergency contacts on the card. The market's state of the art is "print the PDF."
+- **The diver never needs an account.** Sub-minute public booking, token waiver links with saved
+  progress, the no-login readiness page. This attacks the most-complained-about workflow in the
+  category — chasing signatures at the dock — from the diver's side too.
+- **Honest, flat packaging.** One price, waivers and manifests in every tier, external processing
+  fees stated plainly. Against Bloowatch's waiver add-on, TrekkSoft's triple fee stack, and
+  FareHarbor's 6% consumer fee, "no add-ons, no commission" is a clean wedge.
+- **Instant demo with role switching** (owner → captain → diver) and self-serve trial. Most rivals
+  gate evaluation behind a sales demo; letting a buyer feel the product is itself differentiating.
+
+## What blocks the purchase
+
+In rough order of how often it would kill the deal:
+
+1. ~~**We don't take the diver's money.**~~ ✅ **Closed 2026-07-21** — the public flow now hands the
+   diver the shop's own hosted Stripe Checkout right after the seats commit
+   ([ADR](../../../architecture/decisions/20260721-checkout-at-booking.md)), and the **deposit + declarative
+   cancellation-window mechanisms** now ship on top of it (opt-in, off by default,
+   [ADR](../../../architecture/decisions/20260721-deposit-cancellation-policy.md)). Remaining from the
+   buyer's chair is now *policy, not mechanism*: the deposit/window values shops should be guided
+   toward and live Connect platform credentials in production (all H-20260724-payment-deposit-cancellation-refund). Refunds inside a stated
+   window now automate through the shop's Stripe account
+   ([ADR](../../../architecture/decisions/20260721-automated-cancellation-refund.md)).
+2. **Messages** (H-20260724-channel-sends-booking-waiver). Booking confirmation, the waiver link, and the wait-list freed-seat invite go
+   through one `notify()` seam and send for real once Resend is configured — degrading to a
+   copyable/mailto composer when it isn't. The remaining channel/cadence scope is now built: courtesy
+   SMS through an AWS SNS `SmsProvider` seam
+   ([ADR](../../../architecture/decisions/20260802-sns-sms-adapter.md)) and scheduled 7-day/
+   24-hour pre-trip reminders via an idempotent cron endpoint
+   ([ADR](../../../architecture/decisions/20260721-scheduled-reminder-cadence.md)), both off until their
+   env is set. Still open: the H-20260724-channel-sends-booking-waiver consent/copy/sender ownership policy.
+3. ✅ **Equipment tracking answered (2026-08-20).** "Who has what, what's due for service" was
+   table stakes for gear-heavy shops — DiveAdmin, Bloowatch, DiveShop360, and EVE all have it —
+   and a disqualifier after the M5 removal. The gear register shipped as the re-entry
+   ([20260815-minimal-gear-register](../../../architecture/decisions/20260815-minimal-gear-register.md)):
+   tagged units, per-unit service clocks (tank hydro/VIP included), date-ranged reservations with
+   a database-level double-booking guard, and export CSVs — still not a POS, still no work
+   orders (those stay on the "explicitly fine to not have" list below).
+4. **No agency-ecosystem hooks.** Buyers ask "does it talk to PADI?" DiveShop360 sells PADI
+   eLearning code integration; DiveAdmin advertises a mySSI connection. We have neither — no agency
+   exposes a usable C-card API (H-20261007-request-supported-c-card), so certification is a manual staff lookup, and there are no
+   eLearning/roster hooks. The honest near-term version is course rosters and student progress that
+   *feel* agency-aware, plus painless
+   CSV/export interop — not speculative API plumbing.
+5. ~~**No owner reporting.**~~ ✅ **Closed 2026-07-23** — the "How's your month" dashboard
+   (`/shop/[shopSlug]/reports`: revenue, bookings, seat fill, waiver completion) shipped
+   ([ADR](../../../architecture/decisions/20260723-owner-reporting.md)).
+6. **Trust signals are thin.** No case study, no production track record, and the safety
+   differentiator (offline manifest) is field-unvalidated (V-02). In a market scarred by vendor
+   deaths and acquisitions, "new + unproven + niche" is the objection; the counter is easy data
+   export (attack lock-in fear head-on) and a founding-shop program that names real shops.
+
+Explicitly fine to *not* have, despite competitors: retail POS/barcode inventory (non-goal —
+DiveShop360 owns it), work orders / repair-ticket tracking (parts, labor, tech notes — the same
+retail-service territory as POS/inventory, not a boat-day or training concern; raised directly by a
+DiveShop360-shop inquiry 2026-08-15 and declined for that reason), marketing campaigns/CRM blasts,
+channel-manager/OTA plumbing, staff payroll, multi-location (say "not yet" honestly, as the pricing
+FAQ already does).
+
+## Pricing posture
+
+The founding-shop price ([marketing.md](../../marketing.md#claims-policy-hard-rules), set in
+`src/lib/marketing.ts`) came **down** from the original $249 toward the specialist tier (DiveAdmin
+tops out at $119, Bloowatch at €119, DiveShop360's POS-inclusive Startup is ~$149–199) — the "meet
+the market" posture below, which is the one **H-20260724-public-founding-shop-price closed on 2026-07-24**: **$99 flat per location /
+month**, everything included, no setup fee, no platform fee, cancel anytime with the export button,
+plus a **two-year founding-cohort price lock** and **founder-direct, same-day support**. Still open
+(not blocking the founding-cohort launch): standard post-cohort pricing, taxes/fees treatment, and
+the public contract/intake flow — see [human-decisions/](../../human-decisions/README.md#decision-register)
+H-20260724-public-founding-shop-price.
+
+- **Meet the market** (chosen): land flat, everything included, zero commission — makes
+  "no add-ons" the headline against Bloowatch/TrekkSoft nickel-and-diming.
+- **Earn the premium** (not taken): hold higher once the manifest is field-proven (V-02) and sell it
+  as "the safety-first operating system," with the 6%-of-volume math versus FareHarbor as the anchor
+  (a shop doing $300k/yr online pays $9–18k/yr in generic-platform fees). V-02 is still open, so this
+  lever stays available if the meet-the-market posture needs revisiting post-launch.
+
+## Critical vs. differentiator
+
+| Capability | Market status | DiveDay today | Verdict |
+| --- | --- | --- | --- |
+| Online booking w/ real-time capacity | Universal | ✅ Best-in-class flow | Critical — done |
+| **Payment/deposit at booking** | Universal | ✅ Hosted Stripe Checkout at booking ([shipped 2026-07-21](../../../architecture/decisions/20260721-checkout-at-booking.md)); deposit + cancellation-window mechanisms shipped opt-in ([ADR](../../../architecture/decisions/20260721-deposit-cancellation-policy.md)); only the policy *values* remain H-20260724-payment-deposit-cancellation-refund | Critical — mechanism done; policy open |
+| Digital waivers + medical, auto-sent | Universal (often add-on) | ✅ Versioned, immutable, included | Critical — done; needs sending to be real |
+| Course/student management | Universal, agency-aware | ⚠️ Sessions + prerequisites; learning materials sent with the booking and a per-student "materials done" tick ([20261008-course-learning-materials](../../../architecture/decisions/20261008-course-learning-materials.md)); no agency eLearning hooks (H-20261007-request-supported-c-card) | Critical — partial |
+| Trip scheduling + manifest | Universal (as printouts) | ✅ Far beyond market | Critical — done, and a differentiator |
+| Customer records (certs, sizes, history) | Universal | ✅ Person-spine is stronger than market | Critical — done |
+| Rental equipment tracking | Universal | ✅ Gear register: units, reservations, service clocks (2026-08-20) | Critical — done |
+| Notifications (email min., SMS/WhatsApp rising) | Universal | ✅ Email everywhere via one seam (confirmation, waiver, wait-list invite); scheduled 7-day/24-hour reminders add courtesy SMS via AWS SNS. No WhatsApp path — SNS has none, and nothing has asked for it | Critical — email + reminder SMS done; consent/copy (H-20260724-channel-sends-booking-waiver) open |
+| Owner reporting | Expected | ✅ "How's your month" dashboard ([shipped 2026-07-23](../../../architecture/decisions/20260723-owner-reporting.md)) | Critical-lite — done |
+| Cloud + phone-first at the dock | Now disqualifying to lack | ✅ | Critical — done |
+| Fail-closed readiness engine | **No one has it** | ✅ | **Differentiator #1** |
+| Offline roll call w/ reconciliation | No one has it | ✅ (field-unproven, V-02) | Differentiator — prove it |
+| No-login diver arc (book/sign/readiness) | No one has it end-to-end | ✅ | Differentiator |
+| Today/blocker daily loop | No one has it | ✅ | Differentiator |
+| Delight/UX | Open flank (EVE is the anti-model) | ✅ Visibly ahead | Differentiator |
+| Flat transparent pricing, no add-ons | Rare (Bookeo, DiveAdmin) | ✅ $99 flat, everything included, no platform fee (H-20260724-public-founding-shop-price closed 2026-07-24, see [Pricing posture](#pricing-posture)) | Differentiator |
+| Open API / AI / easy export | Only DiveAdmin, and shallowly: its documented API only ingests leads (no bulk export, no webhooks); DiveShop360 has no API at all, manual CSV of four datasets | ⚠️ Full-shop export shipped 2026-07-22, the CSV importer 2026-07-23, and the public migration guides (`/switching` hub + live EVE, DiveShop360, Smartwaiver pages) 2026-07-23 ([export](../../../architecture/decisions/20260722-full-shop-export.md), [importer](../../../architecture/decisions/20260723-contact-importer.md)); read API still open | **Active wedge** — sequenced in [competitive-strategy.md](competitive-strategy.md): export ✅, importer ✅, migration guides ✅, then read API + webhooks |
+
+## Implications for the queue
+
+Consistent with the [breadth→depth pivot](../product-space-investigation.md#recommendation-three-moves-in-order),
+with one material re-ranking from the buyer's chair:
+
+1. ✅ **Elevate checkout-at-booking (H-20260724-payment-deposit-cancellation-refund) from P2 to the front of P1** — shipped 2026-07-21: the
+   public flow now ends on the shop's own hosted Stripe Checkout, webhook confirmed
+   ([ADR](../../../architecture/decisions/20260721-checkout-at-booking.md)), and the deposit +
+   declarative-cancellation mechanisms now layer on it opt-in
+   ([ADR](../../../architecture/decisions/20260721-deposit-cancellation-policy.md)). Still open from the
+   buyer's chair, and now *policy not mechanism*: the deposit/window values, whether refunds
+   automate, and live Connect platform credentials (H-20260724-payment-deposit-cancellation-refund).
+2. ✅ **Real notifications (H-20260724-channel-sends-booking-waiver)** — the wait-list freed-seat invite sends through the same
+   `notify()` seam as booking confirmations and waiver links, and the remaining channel/cadence scope
+   is now built too: courtesy SMS via an AWS SNS `SmsProvider` seam and scheduled 7-day/24-hour
+   pre-trip reminders via an idempotent cron endpoint (both off until their env is set). Remaining is
+   policy, not mechanism: the H-20260724-channel-sends-booking-waiver consent/copy/sender ownership decision.
+3. Field-validate the manifest (V-02) before marketing leans on safety.
+4. ✅ **Pricing posture decided (H-20260724-public-founding-shop-price, 2026-07-24)** — $99 flat per location/month, published on the
+   pricing and home pages; see [Pricing posture](#pricing-posture).
+5. ✅ **Gear register shipped (2026-08-20)** — the equipment disqualifier is answered; see
+   [shipped.md](../../shipped.md) and ADR 20260815-minimal-gear-register.
+6. Keep the cut list cut: dive-site CMS/global catalog and per-agency verification plumbing add
+   nothing a buyer asks for; DiveAdmin's feature breadth is not the model to chase.

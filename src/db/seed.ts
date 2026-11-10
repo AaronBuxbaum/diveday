@@ -113,6 +113,8 @@ import {
   waiverRecords,
   waiverSealAcknowledgements,
   waiverTemplates,
+  walletPasses,
+  walletPassRegistrations,
   workOrderCare,
   workOrderEvents,
   workOrderItems,
@@ -1101,6 +1103,8 @@ export async function clearDemoSchedule(
   // below FK-violates and aborts the whole reset mid-run — the same class of
   // bug the token comments above already walk (ADR 20260804-buddy-teams).
   await db.delete(buddyTeamMembers).where(eq(buddyTeamMembers.shopId, shopId));
+  await db.delete(walletPassRegistrations).where(eq(walletPassRegistrations.shopId, shopId));
+  await db.delete(walletPasses).where(eq(walletPasses.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   await db.delete(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId));

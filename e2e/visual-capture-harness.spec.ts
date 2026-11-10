@@ -8,9 +8,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { holdClientChunk } from "./hold-client-chunk";
+import { seedFacts } from "./shop-facts";
 import {
   CATALOG_MAP_SITE_COUNT,
   capture,
+  diverCopy,
   expectOverviewMapSites,
   installVisualBuildGuard,
   openDiverProfile,
@@ -19,6 +21,7 @@ import {
   settleCaptureFonts,
   VIEWPORTS,
   VISUAL_STEP_BOUNDS,
+  waitForReadyPageSaved,
   waitForSiteLibrary,
   waitForSiteMap,
   withRendererBound,
@@ -43,6 +46,55 @@ test.describe("capture harness", () => {
   test("runner keeps failure screenshots and traces for responsive pages", () => {
     expect(test.info().project.use.screenshot).toBe("only-on-failure");
     expect(test.info().project.use.trace).toBe("retain-on-failure");
+  });
+
+  test.describe("saved readiness pages", () => {
+    test.use({ privateShopSlug: "capture-ready-copy" });
+
+    test("group ledger readiness waits for the worker after the paid summary renders", async ({
+      page,
+      context,
+      request,
+      privateShop,
+    }) => {
+      let releaseWorker!: () => void;
+      let workerRequested = false;
+      let readiness: Promise<void> | undefined;
+      const gate = new Promise<void>((resolve) => {
+        releaseWorker = resolve;
+      });
+      await context.route("**/manifest-sw.js", async (route) => {
+        workerRequested = true;
+        await gate;
+        await route.continue();
+      });
+      try {
+        const values = await seedFacts(request, ["stripeAccount", "groupHoldLedger"], {
+          slug: privateShop.slug,
+        });
+        await page.goto(`/ready/${values.groupHoldLedger.token}`);
+        const paid = page.getByText(diverCopy("seatClaim.paidSummary", { paid: 1, total: 3 }));
+        await expect(paid).toBeVisible();
+        await expect.poll(() => workerRequested).toBe(true);
+        const remove = page.getByRole("button", { name: diverCopy("ready.offlineRemove") });
+        await expect(remove).toHaveCount(0);
+        let ready = false;
+        readiness = waitForReadyPageSaved(page).then(() => {
+          ready = true;
+        });
+        void readiness.catch(() => undefined);
+        // The server's ledger is ready while the real worker request is held.
+        await expect(paid).toBeVisible();
+        expect(ready).toBe(false);
+        releaseWorker();
+        await readiness;
+        await expect(remove).toBeVisible();
+      } finally {
+        releaseWorker();
+        await readiness?.catch(() => undefined);
+        await context.unrouteAll({ behavior: "wait" });
+      }
+    });
   });
 
   test.describe("marketing reveal hydration", () => {

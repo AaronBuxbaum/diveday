@@ -49,7 +49,7 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 **A canvas has authority over a surface only while that surface's slice is `open`**
 ([design-artifacts.md](../../design-artifacts.md)). Slice bodies and pins:
 [SPEC.md](SPEC.md) and
-[roadmap.md](../../../product/features/roadmap.md#7-the-divers-thread-design-complete).
+[roadmap.md](../../../product/archive/roadmap-20261110.md#7-the-divers-thread-design-complete).
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |

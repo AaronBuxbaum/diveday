@@ -319,3 +319,28 @@ describe("a departure that meets on several days", () => {
     expect(container.innerHTML).toBe("");
   });
 });
+
+describe("the native Wallet convenience", () => {
+  it("sits between calendar and sharing with one separator on each side", () => {
+    const t = diverTranslator("en-US");
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={{ ...FACTS, walletUrl: "/ready/test-capability/wallet" }}
+          greetingName="Yara"
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={t}
+        />,
+      ),
+    );
+    const group = screen.getByRole("group", { name: t("trip.planAndShare") });
+    expect(group.textContent).toMatch(
+      /Add to calendar\s*·\s*Add to Wallet\s*·\s*Share with a buddy/,
+    );
+    expect(screen.getByRole("link", { name: t("wallet.addToWallet") }).getAttribute("href")).toBe(
+      "/ready/test-capability/wallet",
+    );
+  });
+});

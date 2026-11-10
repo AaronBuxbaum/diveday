@@ -28,7 +28,7 @@ import type { SettingsShop } from "../groups/kit";
  * rail rows, each saving a slice; a shop sets them in one sitting.
  *
  * A row is a piece: tick it to rent it, and its price box is live. An unticked
- * row greys its box (and the server keeps the price it had), so there is no
+ * row uses a sunken box with muted ink (and the server keeps the price it had), so there is no
  * second page of boxes for pieces that are not rented. Nitrox is a row like
  * the rest, priced per dive.
  */
@@ -98,7 +98,7 @@ export function RentalsForm({
                   </ChoiceRow>
                 </Td>
                 <Td clip={false} align="baseline">
-                  <div className="group-has-[input[type=checkbox]:not(:checked)]:opacity-50">
+                  <div className="group-has-[input[type=checkbox]:not(:checked)]:[&_input]:bg-surface-sunken group-has-[input[type=checkbox]:not(:checked)]:[&_input]:text-muted">
                     {priceBox(
                       item.kind === "nitrox" ? "nitroxPrice" : `price_${item.name}`,
                       label,

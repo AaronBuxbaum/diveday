@@ -1,9 +1,18 @@
 # H-20260908-four-directions-makes-diveday: Which of four directions makes DiveDay cohere, and what is deleted first?
 
-- **Status:** Ready
+- **Status:** Superseded
 - **Human owner:** Product owner
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+The unresolved September canvas questions were closed as superseded by the latest design ADRs.
+Do not re-propose a wholesale redesign from this historical choice sheet. A genuinely current
+gap needs current evidence and its own scoped issue.
+
+Source: [owner-account decision record on #4195](https://github.com/AaronBuxbaum/diveday/issues/4195#issuecomment-6759818376).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 **Which of four directions makes DiveDay cohere, and what is deleted first?** The 2026-09-08 loop ([canvas](../../design/canvases/20260908-one-hand/README.md), ADR [20260908-one-hand](../../architecture/decisions/20260908-one-hand.md)) read the app from the running tree and found a good design system under five design passes in twelve days, each adding a vocabulary and none deleting the last: five page widths, the eyebrow saying four kinds of thing in 19 spellings, a group's count attached three ways, five row grammars and 31 hand-rolled lists, "add a thing" in six spellings, one state drawn five ways, good news in the alarm's wash, 305 skeleton spellings, and a voice with one rule and thirty-six authors (the clipboard fails in seven sentences; "we" is four actors; "fine" has nine words). The ADR proposes a floor — six jobs held at one spelling by guards, and a voice sheet — that every direction shares, and four directions that redraw the same two surfaces: A finishes Reef by subtraction; B is a paper logbook; C a dive computer; D the voice as the system. Slices 20a–20e (the floor) move on the ADR alone.
 

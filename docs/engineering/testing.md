@@ -154,6 +154,20 @@ searching open PRs for a fix in flight, or quarantined; never skipped, never giv
   fail the hunt explicitly. An empty result means no existing spec was identified in those
   annotations; it does not establish an exhaustive clean history.
 
+The warm-departure inherited-scroll quarantine (#4183) was removed after
+[pinned Linux proof run 42799947659](https://github.com/AaronBuxbaum/diveday/actions/runs/42799947659)
+on [commit 45422ba6c](https://github.com/AaronBuxbaum/diveday/commit/45422ba6cd76ca7e9b9beca24c495658a0bed805).
+Playwright 1.65.0 used Chromium 158.0.8127.18, revision 1254. Removing only #4201's exact four
+installed Next 16.4.5 additions caused all three delayed-warm repetitions to fail the unchanged
+scroll assertion: 157px received, at most 69px allowed. Each final-click timeline showed 56px root
+padding, a Fragment top of 96px, and a pending intent consumed at the short fallback's 69px
+maximum before page growth restored 157px. Three valid traces and the clipped-heading screenshot
+corroborated the timeline. Original file hashes and modes were restored and verified before a
+clean rebuild. The owner journey, delayed-warm regression (including Back/Forward) and zero-clamp
+regression then each passed five times, without retries. Their assertions and ordinary hash/form
+coverage are unchanged. The one-off proof workflow mode and observer were removed after review;
+the historical commit preserves the controlled reproduction without a permanent diagnostic lane.
+
 ## Selection
 
 What a diff runs is decided by reading it, at two places:

@@ -114,6 +114,8 @@ import {
   waiverRecords,
   waiverSealAcknowledgements,
   waiverTemplates,
+  walletPasses,
+  walletPassRegistrations,
   workOrderBills,
   workOrderCare,
   workOrderEvents,
@@ -293,6 +295,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
   await db.delete(priorGearAssignments).where(eq(priorGearAssignments.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
+  await db.delete(walletPassRegistrations).where(eq(walletPassRegistrations.shopId, shopId));
+  await db.delete(walletPasses).where(eq(walletPasses.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId));
   // The shop's Spanish for the trips, sites and courses about to go: a

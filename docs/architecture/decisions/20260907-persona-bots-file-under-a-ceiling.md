@@ -13,7 +13,7 @@ on a schedule. Its own archived predecessor
 ([the 2026-07-30 review](../../product/archive/ux-personas-20260730-findings.md)) was a human pass
 that has not been repeated, and the surfaces it walked have moved a great deal since.
 
-N-61 in [improvement-ideas-20260907.md](../../product/assessments/improvement-ideas-20260907.md)
+N-61 in [improvement-ideas-20260907.md](../../product/archive/assessments/improvement-ideas-20260907.md)
 asks for a weekly agent run that walks each persona's flows against the demo and files
 `needs-triage` issues with screenshots. It is marked **Build now**, with one thing flagged as an
 owner's call: *issue volume against a one-person inbox*.

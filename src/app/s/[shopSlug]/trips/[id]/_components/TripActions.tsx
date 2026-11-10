@@ -5,7 +5,8 @@ import { useState } from "react";
 import { copyToClipboard } from "@/components/Copyable";
 
 /**
- * The hero's two conveniences, at link weight. `min-h-11` keeps the 44px
+ * ADR 20260907-nothing-from-nowhere adds the credential-gated departure pass.
+ * The hero's conveniences, at link weight. `min-h-11` keeps the 44px
  * target the ghost buttons used to give them.
  */
 const QUIET_LINK_CLASS =
@@ -14,8 +15,10 @@ const QUIET_LINK_CLASS =
 export function TripActions({
   calendarUrl,
   shareUrl,
+  wallet,
 }: {
   calendarUrl: string;
+  wallet?: { href: string; label: string };
   /**
    * What "share with a buddy" actually hands over. Defaults to the page's own
    * URL, which is right on the public trip page and **wrong** on `/ready`,
@@ -75,6 +78,16 @@ export function TripActions({
       <a href={calendarUrl} className={QUIET_LINK_CLASS}>
         {t("addToCalendar")}
       </a>
+      {wallet ? (
+        <>
+          <span aria-hidden="true" className="text-muted">
+            ·
+          </span>
+          <a href={wallet.href} className={QUIET_LINK_CLASS}>
+            {wallet.label}
+          </a>
+        </>
+      ) : null}
       <span aria-hidden="true" className="text-muted">
         ·
       </span>

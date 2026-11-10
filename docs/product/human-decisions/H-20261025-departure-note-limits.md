@@ -1,9 +1,18 @@
 # H-20261025-departure-note-limits: Who may send a note to everyone on a departure, and how much may it say?
 
-- **Status:** Ready
+- **Status:** Chosen
 - **Human owner:** Product owner
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+Keep any-staff access, 500 characters and three notes per departure, with the eight-second Undo
+and audit trail. Links remain allowed under the 2026-11-06 decision. No new restriction or
+expanded sending authority follows from this reconciliation.
+
+Source: [owner-account decision record on #4193](https://github.com/AaronBuxbaum/diveday/issues/4193#issuecomment-6759804545).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 **A note to everyone on a departure (batch 4, J4) puts a staffer's own words in front of every booked diver, by email or text, from the shop's sender.** That is the widest free-text channel staff have had: the last-minute deal is a template, the blow-out is DiveDay's own words, and a diver message answers one person. Somebody has to say who may send one and how far a note may go, because a login that can message every diver on a boat is also a way to spam them, or to send them a link they will trust because it came from their dive shop.
 

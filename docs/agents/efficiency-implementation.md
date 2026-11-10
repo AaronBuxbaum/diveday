@@ -1,6 +1,6 @@
 # Agent efficiency implementation — 2026-10-21
 
-Disposition of the [assessment](../product/assessments/agent-efficiency-20261021.md).
+Disposition of the [assessment](../product/archive/assessments/agent-efficiency-20261021.md).
 This describes implemented mechanisms and bounded pilots, not measured improvements in cost or
 landing time. Hosted CI, visual acceptance and comparable task cohorts must supply those outcomes.
 The structural pilot reported six files / 116 tests and typecheck passing; that is local evidence,

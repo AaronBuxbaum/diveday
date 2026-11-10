@@ -541,6 +541,17 @@
   already checked in) stays, and the `/ready` confirm lists both before the tap. A cancelled seat
   with an address of its own gets its own cancellation notice (`cancelUnclaimedPartySeats`,
   `settleReleasedPartySeats`, batch 6 item 10).
+- **Group hold** — an organizer's explicit reservation of two or more public-booking seats while
+  the party pays per seat. It ends after 24 hours or at departure, whichever comes first. Captured
+  payments (including deposits and partly refunded payments) and an explicit staff waiver keep
+  their seats; unpaid seats are cancelled under the capacity transaction's departure-then-seat
+  locks. An hourly sweep catches up, and the next booking releases due seats before counting
+  capacity. A checkout already in flight is fenced briefly; an abandoned claim cannot reserve
+  capacity forever. A hosted payment page expires no later than the hold; Stripe's minimum
+  session lifetime means a new page cannot open inside the last 31 minutes. The organizer sees
+  paid-or-covered counts and each seat's payment state. If their own unpaid seat expires, their
+  original, still-unexpired link reads only the ledger and authorizes no booking actions. This
+  is the existing booking/payment path, not a separate split-payment or charter concept.
 - **Seat held** — the booking status that counts against a departure's capacity: `booked`, checked
   in or not, and nothing else (`seatIsHeld`, `src/lib/no-show.ts`,
   spelled once as a `where` clause in `seatHeld`, `src/db/trips-queries.ts`). `cancelled` never held
@@ -2383,3 +2394,5 @@
 - **Site closure** — a dive site closed for a window of shop-local calendar days with a reason (a marine-park closure, a storm-damaged mooring; loop 5, row 5), set on the site's page under Dive sites. While the shop's own day is inside it, the public site page answers not found, the sitemap leaves it out and a departure's day plan drops the link; the week board warns on a departure that visits it. It is `dive_sites.closed_from` / `closed_until` / `closure_reason`; the window is never read by readiness or the manifest. `src/features/dive-site-closures/store.ts`.
 - **Referral student** — a course seat whose diver finished theory and pool with another instructor and comes here for the open-water dives (loop 5, row 10). Marked on the course roster; the desk then collects the referral form and the other instructor's training record, each stamped with who collected it and when (`bookings.referred_in_at`, `referral_form_at`, `referral_record_at`, each with its staffer). Only on a course departure. What is still owed shows on the seat until both are in. `src/features/referral-student/rules.ts`, `src/features/referral-students/store.ts`.
 - **Charter inquiry** — a date request that asks for the whole boat for a group (loop 5, row 11): a box on the date-request form when the shop dives from a boat and the `privateCharters` Features switch is on, never on a course ask (`interests.charter`). Staff answer it from Date requests with a reply that can open with a whole-boat quote in the shop's currency, written in the diver's language, from an owner or manager only (`canQuoteCharter`), and counted in the reply's 1,000 characters; the quote is recorded on the request (`charter_quote_cents`, `_currency`, `_quoted_at`, `_quoted_by_person_id`) only once the reply went. A departure built from it is private, whatever the Private box said, and the builder's brief says so; the builder's brief shows the quote under that request, above the price box, and the staffer sets the price (#3917). Inquiry to quote to booking, with the booking itself the ordinary private departure. `src/features/charter-quote/rules.ts`, `src/features/interest-replies/store.ts`.
+
+- **Departure pass** — the booked departure's arrival facts in Apple or Google Wallet, in the shop's brand and the issue locale. It follows plan changes and crew-set stages, is voided on cancellation or erasure, and never proves readiness or authorizes boarding. It carries no booking capability, barcode, price, waiver, medical or emergency fact ([ADR 20261110-native-wallet-passes](../../architecture/decisions/20261110-native-wallet-passes.md)). The saved arrival card is its credential-free fallback.

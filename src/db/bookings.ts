@@ -1,5 +1,6 @@
-import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, not, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, not, sql } from "drizzle-orm";
 import { isPlausibleDateOfBirth } from "@/lib/age";
+import { PAYMENT_CLAIM_STALE_AFTER_MS } from "@/lib/attempts";
 import { sellableSeats } from "@/lib/boat-safety";
 import {
   type BookingActor,
@@ -21,6 +22,7 @@ import {
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
 import { seatListPriceCents } from "@/lib/deposits";
 import type { DiveIntent } from "@/lib/dive-intent";
+import { groupHoldDeadline } from "@/lib/group-holds";
 import {
   type HeldContactChoice,
   heldContactCarry,
@@ -119,6 +121,7 @@ import { liveTrip } from "./trips-live";
 import {
   heldSeatCounts,
   liveBookingJoin,
+  seatHeld,
   seatNotCancelled,
   sellableCapacity,
   tripAssignedCrewCount,
@@ -464,6 +467,7 @@ export async function createBooking(db: AppDb, req: BookingRequest): Promise<Boo
 export async function createBookingParty(
   db: AppDb,
   requests: BookingRequest[],
+  options: { holdUntil?: Date } = {},
 ): Promise<BookingPartyOutcome> {
   if (requests.length === 0) return { ok: false, reason: "trip_unavailable", failedIndex: -1 };
   return db
@@ -509,6 +513,38 @@ export async function createBookingParty(
             .where(eq(bookings.id, outcome.bookingId));
         }
         created.push(outcome);
+      }
+      if (options.holdUntil) {
+        const first = requests[0];
+        if (
+          !first ||
+          requests.length < 2 ||
+          requests.some(
+            (request) =>
+              request.actor !== "public" ||
+              request.shopId !== first.shopId ||
+              request.tripId !== first.tripId,
+          )
+        )
+          throw new PartyBookingError({ ok: false, reason: "trip_unavailable" }, -1);
+        const [trip] = await tx
+          .select({ startsAt: trips.startsAt })
+          .from(trips)
+          .where(and(eq(trips.id, first.tripId), eq(trips.shopId, first.shopId), liveTrip()));
+        const until = trip ? groupHoldDeadline(nowDate(), trip.startsAt, options.holdUntil) : null;
+        if (!until) throw new PartyBookingError({ ok: false, reason: "trip_unavailable" }, -1);
+        await tx
+          .update(bookings)
+          .set({ groupHoldUntil: until, groupHoldExpiredAt: null })
+          .where(
+            and(
+              eq(bookings.shopId, first.shopId),
+              inArray(
+                bookings.id,
+                created.map((seat) => seat.bookingId),
+              ),
+            ),
+          );
       }
       await flushDeclarations(tx, pending);
       return { ok: true as const, bookings: created };
@@ -562,6 +598,18 @@ export async function addPartySeat(
   input: { shopId: string; leadBookingId: string; seatName: string },
 ): Promise<AddPartySeatOutcome> {
   return db.transaction(async (tx): Promise<AddPartySeatOutcome> => {
+    const [departure] = await tx
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+      .limit(1);
+    if (!departure) return { ok: false, reason: "lead_unavailable" };
+    // Match capacity/expiry lock order: departure first, then the organizer.
+    await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.id, departure.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+      .for("no key update");
     const [lead] = await tx
       .select({
         id: bookings.id,
@@ -570,6 +618,7 @@ export async function addPartySeat(
         status: bookings.status,
         identityUnconfirmedAt: bookings.identityUnconfirmedAt,
         partyLeadBookingId: bookings.partyLeadBookingId,
+        groupHoldUntil: bookings.groupHoldUntil,
       })
       .from(bookings)
       .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
@@ -585,7 +634,7 @@ export async function addPartySeat(
       return { ok: false, reason: "lead_unavailable" };
     }
     const members = await tx
-      .select({ id: bookings.id })
+      .select({ id: bookings.id, groupHoldUntil: bookings.groupHoldUntil })
       .from(bookings)
       .where(
         and(
@@ -594,6 +643,12 @@ export async function addPartySeat(
           seatNotCancelled,
         ),
       );
+    const deadlines = [lead, ...members].flatMap((seat) =>
+      seat.groupHoldUntil ? [seat.groupHoldUntil.getTime()] : [],
+    );
+    const groupHoldUntil = deadlines.length ? new Date(Math.min(...deadlines)) : null;
+    if (groupHoldUntil && groupHoldUntil <= nowDate())
+      return { ok: false, reason: "lead_unavailable" };
     if (members.length + 1 >= MAX_PUBLIC_PARTY_SIZE) return { ok: false, reason: "party_full" };
     const pending: PendingDeclaration[] = [];
     const outcome = await createBookingRecord(
@@ -604,7 +659,7 @@ export async function addPartySeat(
     if (!outcome.ok) return outcome;
     await tx
       .update(bookings)
-      .set({ partyLeadBookingId: lead.id })
+      .set({ partyLeadBookingId: lead.id, groupHoldUntil })
       .where(eq(bookings.id, outcome.bookingId));
     await flushDeclarations(tx, pending);
     // The departure's trail says where the booking came from: the lead, from
@@ -1095,6 +1150,7 @@ async function createBookingRecord(
   // crew member. Read under the trip lock, so crew edits and new grants
   // serialize; the boat row is shared-locked after it. A copied, rolled,
   // reinstated or otherwise over-limit departure still reaches this gate.
+  await expireGroupHoldsOnTrip(tx, trip.shopId, trip.id, nowDate());
   const held = await heldSeatCounts(tx, trip.shopId, trip.id);
   const seatFull = seatRefusal(
     participantType,
@@ -1320,6 +1376,8 @@ async function writeSeat(
         // that reactivates a row re-stamps the linkage right after this
         // returns (`createBookingParty`).
         partyLeadBookingId: null,
+        groupHoldUntil: null,
+        groupHoldExpiredAt: null,
         claimedAt: null,
         contactTypedByLeadAt: null,
         // "Running late" (J3) was said about the seat's earlier life.
@@ -3113,11 +3171,12 @@ export async function cancelBooking(
 }
 
 async function cancelBookingRow(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   bookingId: string,
   now: Date,
   trail?: { actorPersonId: string },
+  expireHold = false,
 ): Promise<CancelBookingOutcome> {
   return db.transaction(async (tx): Promise<CancelBookingOutcome> => {
     // The departure, then the seat: the order every seat writer takes, the
@@ -3128,17 +3187,58 @@ async function cancelBookingRow(
     // that was `booked` becomes a diver's "your booking is canceled" email, and
     // a roster removal of a checked-in or no-show row is not one.
     const [prior] = await tx
-      .select({ status: bookings.status })
+      .select({
+        status: bookings.status,
+        groupHoldUntil: bookings.groupHoldUntil,
+        pendingCheckoutIntentId: bookings.pendingCheckoutIntentId,
+      })
       .from(bookings)
       .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
       .for("update");
     if (!prior) return { ok: false, reason: "not_found" };
+    if (expireHold) {
+      if (prior.status !== "booked" || !prior.groupHoldUntil || prior.groupHoldUntil > now)
+        return { ok: false, reason: "not_found" };
+      if (prior.pendingCheckoutIntentId) {
+        const { paymentOperationIntents } = await import("./schema");
+        const [intent] = await tx
+          .select({
+            status: paymentOperationIntents.status,
+            startedAt: paymentOperationIntents.startedAt,
+          })
+          .from(paymentOperationIntents)
+          .where(
+            and(
+              eq(paymentOperationIntents.id, prior.pendingCheckoutIntentId),
+              eq(paymentOperationIntents.shopId, shopId),
+            ),
+          );
+        // Use the same abandoned-call fence as checkout creation. The durable
+        // intent stays available for reconciliation after the process died.
+        if (
+          intent?.status === "started" &&
+          intent.startedAt.getTime() >= now.getTime() - PAYMENT_CLAIM_STALE_AFTER_MS
+        )
+          return { ok: false, reason: "not_found" };
+        await tx
+          .update(bookings)
+          .set({ pendingCheckoutIntentId: null })
+          .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)));
+      }
+      const payment = await getBookingPayment(tx, shopId, bookingId);
+      if (isCapturedPaymentStatus(payment?.status) || payment?.status === "waived")
+        return { ok: false, reason: "not_found" };
+    }
     const atSea = await aboardAtSeaBookingIds(tx, { shopId, tripId, now, bookingIds: [bookingId] });
     const hold = atSea.get(bookingId);
     if (hold) return { ok: false, reason: "aboard_at_sea", hold };
     const [updated] = await tx
       .update(bookings)
-      .set({ status: "cancelled" })
+      .set({
+        status: "cancelled",
+        groupHoldUntil: null,
+        ...(expireHold ? { groupHoldExpiredAt: now } : {}),
+      })
       .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
       .returning();
     if (!updated) return { ok: false, reason: "not_found" };
@@ -3149,7 +3249,11 @@ async function cancelBookingRow(
     // writes share this transaction so a revoke failure rolls the status
     // change back too, instead of leaving a cancelled booking whose
     // capabilities are still live.
-    await revokeBookingCapabilities(tx, { shopId, bookingId });
+    await revokeBookingCapabilities(tx, { shopId, bookingId, now });
+    if (expireHold) {
+      const { expirePendingCheckoutsForBooking } = await import("./checkouts");
+      await expirePendingCheckoutsForBooking(tx, shopId, bookingId);
+    }
     // And the units the diver never collected: a cancelled booking must not
     // keep tagged gear reserved against the divers who are actually coming
     // (ADR 20260815-minimal-gear-register). Checked-out units stay — they are
@@ -4278,3 +4382,49 @@ export {
   setBookingPickupDetails,
   setBookingReEntryAsk,
 } from "./bookings-diver-details";
+
+/** The caller holds the departure lock; every expiry also locks the seat before reading payment. */
+async function expireGroupHoldsOnTrip(tx: DbExecutor, shopId: string, tripId: string, now: Date) {
+  const candidates = await tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        seatHeld,
+        lte(bookings.groupHoldUntil, now),
+      ),
+    )
+    .orderBy(asc(bookings.id));
+  let expired = 0;
+  for (const seat of candidates) {
+    const outcome = await cancelBookingRow(tx, shopId, seat.id, now, undefined, true);
+    if (outcome.ok) expired++;
+  }
+  return expired;
+}
+
+/** Hourly catch-up; new bookings also release due seats under their existing capacity lock. */
+export async function expireGroupHolds(db: AppDb, now: Date = nowDate()): Promise<number> {
+  const due = await db
+    .selectDistinct({ shopId: bookings.shopId, tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(seatHeld, lte(bookings.groupHoldUntil, now)))
+    .orderBy(asc(bookings.shopId), asc(bookings.tripId))
+    .limit(200);
+  let expired = 0;
+  for (const trip of due) {
+    expired += await db.transaction(async (tx) => {
+      await boundLockWaits(tx);
+      await tx
+        .select({ id: trips.id })
+        .from(trips)
+        // diveday:allow-deleted-trips: expiry releases a due reservation, even on a deleted departure.
+        .where(and(eq(trips.shopId, trip.shopId), eq(trips.id, trip.tripId)))
+        .for("no key update");
+      return expireGroupHoldsOnTrip(tx, trip.shopId, trip.tripId, now);
+    });
+  }
+  return expired;
+}

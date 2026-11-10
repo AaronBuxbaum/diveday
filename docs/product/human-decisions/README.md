@@ -1,8 +1,8 @@
 # Human decision log
 
-The durable worklist for decisions, approvals, and verification that need a human owner. It
-complements the delivery sequence in [roadmap.md](../features/roadmap.md): implementation can advance only
-when the relevant row is **Chosen** or intentionally **Deferred**.
+The durable record of human policy outcomes and their rationale. Concrete human tasks and
+implementation status live in GitHub; [current priorities](../features/roadmap.md) link to them.
+A chosen direction is not evidence of implementation, legal sign-off or field validation.
 
 ## How to use this log
 
@@ -20,34 +20,23 @@ when the relevant row is **Chosen** or intentionally **Deferred**.
 current slice; **Chosen** has an outcome awaiting implementation; **Implemented** is in the product
 but still may need validation; **Validated** has the stated evidence.
 
-## Immediate actions for the product owner
+## Current owner tasks — reconciled 2026-11-10
 
-1. Name the operating jurisdiction(s) and the person responsible for legal approval. Have them
-   review the waiver language, medical questions, typed-consent standard, and evidence-retention
-   policy before production use.
-2. Vercel is the selected production host and Neon (via Vercel's Marketplace integration) is the
-   selected Postgres provider, in the **US-East / Washington, D.C.** region. Production builds run
-   migrations automatically (see [Neon hosting
-   ADR](../../architecture/decisions/20260718-vercel-neon-hosting.md)). Owner named 2026-07-24:
-   **Aaron Buxbaum** (sole operator) owns production secrets, backups, domain, and incident response
-   (H-20260724-vercel-selected-web-hosting). The backup/restore-test cadence and incident runbook are now written
-   ([backup-and-restore-runbook.md](../../engineering/backup-and-restore-runbook.md),
-   [incident-response-runbook.md](../../engineering/incident-response-runbook.md)), and
-   `alerts@dive.day` **exists** as of 2026-08-06 — every alert path in the product, including the
-   AWS cost alerts that had defaulted to a personal inbox, now terminates there. **Closed
-   2026-09-07:** a Route 53 health check polls `/api/health` from outside the account every 30
-   seconds and alarms into that same mailbox, and `/status` answers the question in public
-   ([20260907-external-uptime-monitor](../../architecture/decisions/20260907-external-uptime-monitor.md),
-   AWS-1's heartbeat and AWS-2 in
-   [aws-migration-dossier.md](../../architecture/aws-migration-dossier.md)). What is still not covered
-   is the *rendering* check — a browser canary that loads a real shop's public schedule and asserts a
-   departure is on it — which needs a pilot shop's slug to point at.
-3. Assign the dive operations lead and run V-02 against the encrypted offline manifest before a
-   production departure. Record the exact phone/browser, glare and wet-hand findings, airplane-mode
-   reload result, multi-checkpoint roll call, conflict reconciliation, and print fallback.
-4. Run the full browser verification for the merged gear and manifest work in light/dark desktop and
-   phone viewports, keeping the automated offline Playwright scenario as regression evidence rather
-   than a substitute for outdoor field validation.
+Contract/entity review is [#4212](https://github.com/AaronBuxbaum/diveday/issues/4212); Florida
+waiver/medical and typed-signature review is [#4213](https://github.com/AaronBuxbaum/diveday/issues/4213).
+The current typed provider and indefinite-retention default stay. No legal approval is inferred.
+
+Field and native-language work is tracked in V-02/#4214, V-03/#4215, V-04/#4216 and V-06/#4217,
+linked in the verification table below. Automated/browser evidence is not dock evidence. Aaron
+confirmed no shops or pilot partners yet on 2026-11-10; update that dated fact when evidence changes.
+
+Aaron remains the sole production/alert/recovery owner, with that risk accepted until the first
+shop goes live. The external heartbeat/status page and hourly demo public-schedule browser canary
+exist. The canary does not need a pilot slug; a booking-flow canary is deferred. Serverless AWS
+hosting is a spike (#4219), not a production change, and Neon stays for now.
+
+Wallet account prerequisites are [#4208](https://github.com/AaronBuxbaum/diveday/issues/4208).
+Do not duplicate existing billing #2948, cron #3838/#3691, deploy gate #2987 or agency-review tasks.
 
 ## Decision register
 
@@ -68,8 +57,8 @@ and run the command again.
 | H-20260724-channel-sends-booking-waiver | In progress | 2026-10-14 | Which channel sends booking and waiver notifications, and what consent, copy, timing, and sender… |
 | H-20260724-contact-importer-trust-prior | Implemented | 2026-07-24 | Should the contact importer trust a prior shop's own waiver acceptance — including its… |
 | H-20260724-contact-importer-trust-shop | Implemented | 2026-07-24 | Should the contact importer trust what a shop already had in its own system… |
-| H-20260724-corporate-footing-diveday-operate | Ready | 2026-08-14 | Corporate footing for DiveDay: operate inside the owner's existing Pseudorandom LLC (S-corp election; current… |
-| H-20260724-current-typed-name-explicit | Ready | 2026-07-24 | Is the current typed name + explicit consent + timestamp sufficient for the intended… |
+| H-20260724-corporate-footing-diveday-operate | Deferred | 2026-11-10 | Corporate footing for DiveDay: operate inside the owner's existing Pseudorandom LLC (S-corp election; current… |
+| H-20260724-current-typed-name-explicit | Deferred | 2026-11-10 | Is the current typed name + explicit consent + timestamp sufficient for the intended… |
 | H-20260724-initial-gear-policy-sizing | Implemented | 2026-08-02 | What is the initial gear policy for sizing, preferences, staff assignment, and substitutions? |
 | H-20260724-minimum-age-gate-fail | Implemented | 2026-07-25 | H-20260724-certification-levels-agency-rules's minimum-age gate as approved (2026-07-24, option B — "collect it, fail open") did… |
 | H-20260724-one-person-per-email | Implemented | 2026-11-06 | CR-008 made (shop_id, lower(email)) a hard uniqueness constraint for active people and, per the… |
@@ -80,14 +69,14 @@ and run the command again.
 | H-20260724-staff-disable-latency | Implemented | 2026-07-24 | The codebase review's "Human-owned decisions" item 2: most staff mutations trust role-bearing JWT state… |
 | H-20260724-staff-role-reach | Implemented | 2026-09-16 | The codebase review's "Human-owned decisions" item 1: current ADRs let every staff role reach… |
 | H-20260724-vercel-selected-web-hosting | Implemented | 2026-09-07 | Vercel is selected for web hosting and Neon (Vercel Marketplace integration) is selected as… |
-| H-20260725-founder-background-go-back | Ready | 2026-09-02 | Does the founder's background go back on the marketing pages, and who does the… |
+| H-20260725-founder-background-go-back | Chosen | 2026-11-10 | Does the founder's background go back on the marketing pages, and who does the… |
 | H-20260725-owner-asked-move-rows | Implemented | 2026-07-25 | The owner asked to move rows from the published honesty table's "Stays behind" column… |
 | H-20260725-two-findings-dive-domain | Implemented | 2026-08-14 | Two findings the dive-domain-expert review raised against the specialty-card import (H-20260725-owner-asked-move-rows) and which that… |
 | H-20260730-diveday-itself-carry-technology | Deferred | 2026-07-30 | Does DiveDay itself carry technology E&O and cyber coverage — it stores medical flags… |
-| H-20260730-evidence-retention-period-deletion | Ready | 2026-09-10 | What evidence-retention period, deletion-request process, and backup/audit exception apply to waivers and medical flags? |
-| H-20260730-jurisdiction-waiver-text-medical | Ready | 2026-07-30 | Which jurisdiction(s), waiver text, and medical-question wording apply to the shop? |
+| H-20260730-evidence-retention-period-deletion | Deferred | 2026-11-10 | What evidence-retention period, deletion-request process, and backup/audit exception apply to waivers and medical flags? |
+| H-20260730-jurisdiction-waiver-text-medical | Deferred | 2026-11-10 | Which jurisdiction(s), waiver text, and medical-question wording apply to the shop? |
 | H-20260730-minimum-age-gate-data | Implemented | 2026-10-30 | H-20260724-certification-levels-agency-rules's minimum-age gate (people.date_of_birth, 20260724-gear-fit-fallback) made age a piece of data DiveDay now holds… |
-| H-20260730-nitrox-fill-station-procedure | Implemented | 2026-09-02 | Which nitrox fill-station procedure, ppO₂ ceilings, mix band, O₂-clean tank tracking, and blender qualifications… |
+| H-20260730-nitrox-fill-station-procedure | Implemented | 2026-11-10 | Which nitrox fill-station procedure, ppO₂ ceilings, mix band, O₂-clean tank tracking, and blender qualifications… |
 | H-20260802-may-public-pages-say | Implemented | 2026-10-06 | May the public pages say the roll call works with no signal before the… |
 | H-20260802-pilot-before-counsel | Chosen | 2026-08-02 | HD-4 (2026-08-02 comprehensive review): pilot-before-counsel policy — can Phase 1 design-partner pilots start before… |
 | H-20260802-what-game-is-this | Chosen | 2026-08-05 | HD-3 (2026-08-02 comprehensive review): what game is this — a calm lifestyle-scale business or… |
@@ -116,15 +105,15 @@ and run the command again.
 | H-20260903-voice-public-pages-speak | Chosen | 2026-09-24 | Which voice do the public pages speak in? |
 | H-20260904-reef-go-all-way | Chosen | 2026-09-04 | Does Reef go all the way down, and does the delight budget widen along… |
 | H-20260906-diveday-fill-already-knows | Chosen | 2026-09-06 | Does DiveDay fill in what it already knows, and where does a person still… |
-| H-20260907-diveday-move-like-thing | Ready | 2026-09-07 | Does DiveDay move like a thing, and how far does that reach? |
-| H-20260907-far-diveday-migrate-onto | Ready | 2026-09-07 | How far should DiveDay migrate onto AWS, and in what order? |
+| H-20260907-diveday-move-like-thing | Chosen | 2026-11-10 | Does DiveDay move like a thing, and how far does that reach? |
+| H-20260907-far-diveday-migrate-onto | Chosen | 2026-11-10 | How far should DiveDay migrate onto AWS, and in what order? |
 | H-20260907-where-device-already-knows | Chosen | 2026-09-07 | Where the device already knows a thing, may DiveDay use it? |
-| H-20260908-four-directions-makes-diveday | Ready | 2026-09-10 | Which of four directions makes DiveDay cohere, and what is deleted first? |
+| H-20260908-four-directions-makes-diveday | Superseded | 2026-11-10 | Which of four directions makes DiveDay cohere, and what is deleted first? |
 | H-20260910-parent-whose-name-matches | Implemented | 2026-09-10 | Can a parent whose name matches their child's ever co-sign a minor's release? |
 | H-20260910-relationships-may-co-signer | Implemented | 2026-09-10 | Which relationships may a co-signer pick, when only parent and legal_guardian exist? |
 | H-20260910-where-crew-member-read | Deferred | 2026-09-10 | Where does a crew member read their own fly-safe answer — the day close-out,… |
-| H-20260911-six-consolidations-makes-diveday | Ready | 2026-09-18 | Which of six consolidations makes DiveDay clean and simple, and what leaves first? |
-| H-20260912-drysuit-sizes-diver-own | Ready | 2026-09-12 | Which drysuit sizes does the diver's own form offer, and should it be asking… |
+| H-20260911-six-consolidations-makes-diveday | Superseded | 2026-11-10 | Which of six consolidations makes DiveDay clean and simple, and what leaves first? |
+| H-20260912-drysuit-sizes-diver-own | Implemented | 2026-11-10 | Which drysuit sizes does the diver's own form offer, and should it be asking… |
 | H-20260916-delight-backlog-leftovers | Chosen | 2026-09-16 | What is left of the 55-ticket delight backlog? |
 | H-20260916-far-deletion-promise-reach | Chosen | 2026-10-17 | How far does a deletion promise reach? |
 | H-20260916-may-dive-chain-share | Chosen | 2026-10-12 | May a dive chain share one WhatsApp Business account across shops? |
@@ -204,42 +193,47 @@ and run the command again.
 | H-20261023-medical-alert-for-the | Implemented | 2026-10-24 | Where does a diver tell the crew something medical they should know in an emergency? |
 | H-20261023-no-always-on-database | Implemented | 2026-10-23 | Keep the database awake at the pilot, or retry a cold connect? |
 | H-20261023-shop-photo-tile-in | Implemented | 2026-10-23 | May visual captures show a plain tile where a shop photo goes? |
-| H-20261024-colour-guide-decision-blocking | Ready | 2026-10-24 | The colour-guide decision blocking the two remaining WCAG contrast token fixes: light-mode --success on… |
+| H-20261024-colour-guide-decision-blocking | Implemented | 2026-11-10 | The colour-guide decision blocking the two remaining WCAG contrast token fixes: light-mode --success on… |
 | H-20261024-counter-payment-undo-hold | Implemented | 2026-10-25 | How does "Record payment" at the counter record cash or the card machine? |
 | H-20261024-site-change-on-the | Implemented | 2026-10-25 | Is a site change ledgered on the diver's thread? |
-| H-20261025-bigger-party-right-answer | Ready | — | Is a bigger party the right answer for a group, or is a group… |
-| H-20261025-built-order-website-priced | Ready | — | How is the built-to-order website priced, and what may the pages promise about it? |
+| H-20261025-bigger-party-right-answer | Chosen | 2026-11-10 | Is a bigger party the right answer for a group, or is a group… |
+| H-20261025-built-order-website-priced | Chosen | 2026-11-10 | How is the built-to-order website priced, and what may the pages promise about it? |
 | H-20261025-crew-now-both-counted | Open | — | Crew are now both counted (per-checkpoint attestation) and named (per-person roll call, roll_call_crew_events) —… |
 | H-20261025-dema-seasonality-posture-meetings | Ready | — | DEMA/seasonality posture — meetings-only or a booth — has no gate row at all… |
-| H-20261025-departure-note-limits | Ready | 2026-11-06 | Who may send a note to everyone on a departure, and how much may it say? |
-| H-20261025-every-alert-path-terminates | Ready | — | Every alert path terminates at alerts@dive.day, one mailbox, one person (comprehensive-review-20260802 HD-23). |
-| H-20261025-ga-migration-budget-pre | Ready | — | GA migration budget for the pre-release stack running the whole critical path simultaneously —… |
+| H-20261025-departure-note-limits | Chosen | 2026-11-10 | Who may send a note to everyone on a departure, and how much may it say? |
+| H-20261025-every-alert-path-terminates | Chosen | 2026-11-10 | Every alert path terminates at alerts@dive.day, one mailbox, one person (comprehensive-review-20260802 HD-23). |
+| H-20261025-ga-migration-budget-pre | Chosen | 2026-11-10 | GA migration budget for the pre-release stack running the whole critical path simultaneously —… |
 | H-20261025-invoice-snapshot-erasure-obligation | Open | — | The invoice-snapshot erasure obligation (processor_erasure_obligations) has no API behind it and is never auto-retried… |
 | H-20261025-lib-db-layer-contract | Ready | — | The lib/db layer contract: overview.md calls src/lib "framework-free," but lib/auth.ts imports next-auth and getDb,… |
-| H-20261025-may-one-human-hold | Ready | — | May one human hold a login at more than one shop? |
-| H-20261025-name-first-three-pilot | Ready | — | Name the first three pilot shops by name (comprehensive-review-20260802 PROD-C1/HD-2). |
-| H-20261025-paper-day-say-printed | Ready | — | Does the paper day say who printed it? |
+| H-20261025-may-one-human-hold | Deferred | 2026-11-10 | May one human hold a login at more than one shop? |
+| H-20261025-name-first-three-pilot | Ready | 2026-11-10 | Name the first three pilot shops by name (comprehensive-review-20260802 PROD-C1/HD-2). |
+| H-20261025-paper-day-say-printed | Implemented | 2026-11-10 | Does the paper day say who printed it? |
 | H-20261025-per-diver-record-export | Implemented | 2026-11-05 | A per-diver record export (issue #726 — loadDiverExportBundleInput, src/db/export.ts) ships with waiver_records.csv's medical_answers column… |
-| H-20261025-product-has-never-had | Ready | — | The product has never had a recorded conversation with a real dive shop. |
-| H-20261025-review-entire-engineering-backlog | Ready | — | This review's entire engineering backlog closed twice in five days (144 files, then 82,… |
-| H-20261025-shop-authored-pre-departure | Ready | — | A shop-authored pre-departure safety checklist (issue #686 — pre_departure_check_events, ADR 20260824-pre-departure-safety-check) ships informs-only: an… |
+| H-20261025-product-has-never-had | Ready | 2026-11-10 | The product has never had a recorded conversation with a real dive shop. |
+| H-20261025-review-entire-engineering-backlog | Chosen | 2026-11-10 | This review's entire engineering backlog closed twice in five days (144 files, then 82,… |
+| H-20261025-shop-authored-pre-departure | Chosen | 2026-11-10 | A shop-authored pre-departure safety checklist (issue #686 — pre_departure_check_events, ADR 20260824-pre-departure-safety-check) ships informs-only: an… |
 | H-20261025-two-leftover-ratio-questions | Open | — | Two leftover ratio questions from H-20260724-certification-levels-agency-rules/HD-6's DSD correction: the Rescue Diver scenario-supervision figure, which… |
 | H-20261105-ci-on-the-stack-top | Implemented | 2026-11-05 | Which layers of a stack run CI? |
 | H-20261105-staff-roles-credentials-in-diver-export | Implemented | 2026-11-05 | Do a staffer's roles and pro cards belong in their own data export? |
 | H-20261109-media-version-recovery | Chosen | 2026-11-09 | How long should older media versions remain recoverable? |
+| H-20261110-branch-protection-top-of-stack | Deferred | 2026-11-10 | When should branch protection require the stack result? |
 
 <!-- human-decision-index:end -->
 
 ## Human verification queue
 
-| ID | Status | Human owner | Work to perform | Evidence of completion |
-| --- | --- | --- | --- | --- |
-| V-01 | Ready | Product owner or QA owner | Browser-check the merged M5/M6 experience in light and dark mode on a desktop viewport and a phone viewport: pack and return gear, service and retire eligible gear, view a manifest with blockers, board an eligible diver, reject a blocked diver, and print/save the manifest. | Browser/OS, viewports, test data, result, defects, and screenshots or a short screen recording. |
-| V-02 | Ready | Dive operations lead + `dive-domain-expert` reviewer | Field-test the manifest on a phone outdoors with realistic marina connectivity. Include glare/wet hands, automatic save + airplane-mode reload, a blocked diver, before-departure and after-dive roll calls, a deliberately newer live event conflict, reconnection, an expired/undecryptable device copy recovering on its own (no delete button exists), and print/PDF fallback. | Date, device/browser, network conditions, scenarios, freshness shown, reconciliation results, findings, screenshots/video, reviewer sign-off, and whether production departures may proceed. |
-| V-03 | Ready before production | Product owner + qualified legal reviewer | Review the configured waiver/medical flow against the approved H-20260730-jurisdiction-waiver-text-medical, H-20260730-evidence-retention-period-deletion, H-20260724-current-typed-name-explicit policies and confirm staff know how to handle a medical-review blocker. | Signed-off policy version, staff training owner/date, and escalation contact. |
-| V-04 | Ready before production | Operations lead | Load real initial inventory, staff roles, trips, and pilot bookings; then rehearse check-in, packing, return, and roll call. | Pilot checklist, discrepancies found, and any required data cleanup. |
-| V-06 | Ready before a Spanish-language shop goes live | Product owner + a native Spanish speaker with dive-industry vocabulary | Review the `es-ES` diver-facing bundle (`src/i18n/locales/es-ES/diver.json`) for accuracy, register, and dive-industry terminology before the language is offered to a real shop. It is a first-pass translation written alongside the feature, not a professional one. Pay particular attention to the booking and readiness copy, where a mistranslation changes what a diver believes they have agreed to, and to the doctor's page upload keys (`waiver.doctor.returnUpload`, `formLabel`, `formChoose`, `formChooseAnother`, `formSubmit`, `formSending`, `formSent`, `formInvalid`, `formRate`, `formUnavailable`, `returnWithEmail`, `returnToShop`; issue #2797), where `formSent` tells a diver they are not yet cleared to dive. Note the deliberate scope boundary: the waiver body, the medical questionnaire, and `/ready` are **not** translated and stay English pending H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit, so a Spanish shop currently shows a visible language seam at the waiver. | Reviewer name and date, corrections applied, and a decision on whether the seam at the waiver is acceptable for a pilot or whether H-20260730-jurisdiction-waiver-text-medical/H-20260724-current-typed-name-explicit must clear first. See [diver-copy-localization](../../architecture/decisions/20260729-diver-copy-localization.md). |
-| V-05 | Ready before production | `dive-domain-expert` reviewer | **Scope amended 2026-08-03 (DOM-M4) to match what ships:** review the nitrox **fill-request gate** — the verified-card predicate (`authorizesNitroxFill`), the imported-card confirm carve-out, the live re-check on the prep list / manifest / Today queue, and the fall-back-to-air behaviour when no verified card backs a request. There is **no fill log to review**: DiveDay records no mix %, no MOD, no ppO₂ ceiling and no analysis signature, so the earlier wording asked for sign-off on evidence that does not exist. The mix band and MOD basis stay in scope as *shop policy the reviewer is asked to confirm is sound*, not as product behaviour to check. | Reviewer sign-off, any corrections to the [provisional parameters](#nitrox-fills), confirmation the request-time gate matches shop policy, and a judgement on whether operating with no fill log of record is acceptable for the launch jurisdiction (feeds HD-8, does not decide it). |
+GitHub owns each task's live state. This table retains scope and evidence boundaries, not another
+set of Ready/completed flags. The listed tickets do not authorize real departures, legal
+agreements, provider payments or transmission of customer data.
+
+| Evidence | Owner and task | Completion evidence |
+| --- | --- | --- |
+| V-01 automated/browser | Product/QA: use current focused tests and CI for the actual final head | Browser/OS, route/state, viewports, seeded data, results and captures; not field sign-off |
+| V-02 outdoor/offline | Aaron, [#4214](https://github.com/AaronBuxbaum/diveday/issues/4214), before first pilot departure | Device/browser, sun/wet hands, no-signal reload, blocked diver, roll-call checkpoints, stale/newer conflicts, reconnection and print fallback; dated findings |
+| V-03 legal/medical operations | Aaron, [#4215](https://github.com/AaronBuxbaum/diveday/issues/4215), before first pilot departure | Approved policy/version, reviewer/date, staff escalation and training; coordinate #4212/#4213 |
+| V-04 real-shop rehearsal | Aaron, [#4216](https://github.com/AaronBuxbaum/diveday/issues/4216), before first pilot departure | Real shop/date, inventory, roles, trips and rehearsal results for check-in, packing, return and roll call |
+| V-05 gas policy reconciliation | Product owner with dive-domain reviewer; reconcile with #4216 | Inspect current counter-rental gas records and boat fill-request gates separately, then verify mix/MOD/analysis evidence and remaining policy against current code. Do not repeat the old no-fill-record-anywhere claim. |
+| V-06 native Spanish | Aaron, [#4217](https://github.com/AaronBuxbaum/diveday/issues/4217), before a Spanish-speaking launch | Native reviewer/date, dive terminology and booking/readiness/doctor-upload outcomes, corrections and an explicit verdict on English waiver/medical seams |
 
 ## Existing implementation boundaries
 
@@ -253,7 +247,8 @@ and run the command again.
 - **Manifest:** the live source remains derived and append-only. Offline use is an explicitly saved,
   encrypted device snapshot; it can disappear with browser storage, does not update across devices,
   and displays stale readiness rather than presenting it as live. Print/PDF is the independent
-  fallback. Production operation remains blocked on H-20260724-product-now-uses-explicit policy approval and V-02 field evidence.
+  fallback. The saved-snapshot policy is already recorded in H-20260724-product-now-uses-explicit;
+  V-02 field evidence remains a separate launch gate.
 - **Provider choices:** payment, notification, signature, and similar integrations must remain
   behind a small provider seam rather than spreading vendor SDK calls through the application. See
   the provider-seam rule in [architecture/overview.md](../../architecture/overview.md#cross-cutting-rules).
@@ -386,31 +381,30 @@ Source: [example dive-rental reservation form with package and size fields](http
 
 ### Nitrox fills
 
-> **What DiveDay holds (amended 2026-08-03, DOM-M4).** DiveDay gates the nitrox **fill request** and
-> holds **no fill log**. It records one boolean per booking — this diver wants enriched air — refuses
-> to set it when the shop's rental catalog has no nitrox, and re-reads the diver's **verified**
-> nitrox specialty card live on every surface that acts on it, falling back to plain air when no
-> verified card backs the request (`src/db/nitrox.ts`). It records **no** analyzed mix, MOD, ppO₂
-> ceiling, analysis signature, blender, or tank. The parameters below are therefore **shop operating
-> policy the product does not compute or store**, with one exception: the verified-card gate, which
-> the product does enforce. An owner needing a fill log of record still keeps their own — DiveDay is
-> not it, and nothing here should be read as saying otherwise. Whether to build a minimal
-> fill-analysis log is **HD-8**, still open.
+**Current scope (2026-11-10):** boat fill requests and counter-rental gas records are different
+seams. The historical defaults below are not proof that no fill record exists anywhere. V-05
+must inspect current records before defining the remaining approval gap.
+
+> **Boat requests and counter gas records are separate.** A boat booking records a nitrox
+> request, live-checked against the shop catalog and verified card; it does not record that
+> departure's analyzed fill. Counter-rented tanks also record staff-declared oxygen percent,
+> recorder/time and O2-clean gaps (`gear_reservations.fill_o2_percent`, `fill_recorded_at`,
+> `fill_recorded_by_person_id`, `fill_o2_clean_gap`). Those fields are not an analyzer reading or
+> an analysis signature. V-05 must inspect both seams before deciding what fill evidence is
+> still missing. No operational approval follows from the presence of those fields.
 
 - **Mix band (shop policy, not enforced in product):** whole-percent recreational EANx from 22% to
   40% oxygen. Below 22% is treated as air; above 40% is a technical mix outside this slice.
 - **MOD basis (shop policy, not computed in product):** maximum operating depth derived as
   `10·(ppO₂/FO₂ − 1)` metres, floored, at a default working ppO₂ of **1.4 bar** with a **1.6 bar**
-  contingency option, from the analyzed mix. DiveDay neither derives nor stores this figure; the
+  contingency option, from the analyzed mix. The boat-request seam neither derives nor stores this figure; the
   diver's own pre-dive analysis and the shop's procedure remain the whole of it.
 - **Gate (enforced in product):** an enriched-air *request* only becomes an enriched-air tank for a
   diver with a live, **verified** nitrox specialty card — and an imported card additionally waits for
   a staffer's one-tap confirm, because a nitrox card carries no expiry to catch a bad import later
   (`authorizesNitroxFill`). Archiving the card fails the request closed on the next read. This gate
   does not replace the diver's own pre-dive O₂ analysis, and it produces no record of the fill.
-- **Must verify (H-20260730-nitrox-fill-station-procedure, V-05):** agency/blending-facility fill-station procedure, whether a signed
-  analysis sticker or fill log of record is required **at all** — and, if it is, that the shop is
-  keeping it somewhere other than DiveDay — the accepted ppO₂ ceilings for the shop's diving,
+- **Must verify (H-20260730-nitrox-fill-station-procedure, V-05):** agency/blending-facility fill-station procedure, whether the current records and the shop's separate analysis evidence meet its jurisdiction's requirements, the accepted ppO₂ ceilings for the shop's diving,
   gas-blender qualifications, O₂-clean tank tracking, and any per-agency EANx card acceptance rules.
 
 Sources: [DAN — enriched air nitrox and ppO₂/MOD limits](https://dan.org/alert-diver/article/the-basics-of-nitrox/),
@@ -422,7 +416,8 @@ Vercel is the selected web host and Neon (through Vercel's Marketplace integrati
 production Postgres provider. The Vercel production build applies committed Drizzle migrations
 before building the application; preview builds intentionally skip them. Vercel System Environment
 Variables are enabled, so the build can identify production through `VERCEL_ENV`. Backups, domain,
-secrets, and incident ownership still need H-20260724-vercel-selected-web-hosting completion. See the [Neon hosting
+secrets, and incident response are owned by Aaron; field/provider activation evidence remains
+separate. AWS hosting is the #4219 spike, with Neon retained for now. See the [Neon hosting
 ADR](../../architecture/decisions/20260718-vercel-neon-hosting.md).
 
 ## Change history

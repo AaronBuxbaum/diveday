@@ -30,6 +30,7 @@ import type { DiveDayMilestone } from "@/lib/visit-milestones";
  * 2026-10-10, item 7).
  */
 export type MastheadFacts = {
+  walletUrl?: string;
   shop: { name: string; slug: string; timezone: string; dockCallMinutes: number };
   trip: { id: string; title: string; startsAt: Date; endsAt: Date };
   /**
@@ -132,6 +133,9 @@ function MastheadDoors({ facts, t }: { facts: MastheadFacts; t: DiverTranslator 
       <TripActions
         calendarUrl={publicTripCalendarPath(facts.shop.slug, facts.trip.id)}
         shareUrl={shareUrl}
+        wallet={
+          facts.walletUrl ? { href: facts.walletUrl, label: t("wallet.addToWallet") } : undefined
+        }
       />
       {/* What this page *is*, said once, at the top. Divers arrive here from a
           booking submit or an emailed link, and both read as a confirmation, a
@@ -347,19 +351,21 @@ export function readyMastheadFacts(data: ReadyPageData): MastheadFacts {
 
 /** The full thread and narrow booked card use the same masthead facts. */
 export function ReadyThreadMasthead({
+  walletUrl,
   data,
   locale,
   t,
   dateActions,
 }: {
   data: ReadyPageData;
+  walletUrl?: string;
   locale: string;
   t: DiverTranslator;
   dateActions?: ReactNode;
 }) {
   return (
     <ReadyMastheadMeta
-      facts={readyMastheadFacts(data)}
+      facts={{ ...readyMastheadFacts(data), walletUrl }}
       locale={locale}
       now={nowDate()}
       t={t}
@@ -376,7 +382,7 @@ export function ReadyThreadPage({
   dateActions,
   children,
 }: {
-  data: ReadyPageData;
+  data: ReadyPageData & { walletUrl?: string };
   locale: DiverLocale;
   t: DiverTranslator;
   dateActions?: ReactNode;

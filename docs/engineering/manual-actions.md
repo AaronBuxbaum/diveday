@@ -58,7 +58,25 @@ this file is the checklist, not the argument.
 ## Credentials
 
 ```text
-[6] Mint a GitHub token for the CI deploy job's own gh CLI calls
+[6] Enroll in Apple Developer and create the departure Pass Type ID certificate
+    when     once before enabling Apple Wallet, and when its certificate expires or is revoked
+    why      Apple Developer Program membership has a yearly fee and requires the account owner's acceptance. Only the human account owner can create the Pass Type ID and download its signing identity; this stack never holds their Apple login.
+    run      In the Apple Developer account, enroll in the Developer Program, register pass.app.diveday.departure as a Pass Type ID, and issue its certificate using a locally generated CSR. Export the certificate and private key as PEM; keep the private key in approved secret storage.
+    produces APPLE_PASS_TYPE_ID, APPLE_TEAM_ID, APPLE_PASS_CERTIFICATE_PEM, APPLE_PASS_KEY_PEM and, for an encrypted key, APPLE_PASS_KEY_PASSPHRASE.
+    store    The named keys in the owner's .env.manual, distributed to Vercel by the existing environment workflow. Never paste key material into GitHub, a PR or a chat.
+    verify   After the owner enables the keys, add a pass on a real iPhone and rehearse a changed departure. The same Pass Type ID certificate authenticates APNs; no separate push credential is needed.
+    note     #4208 tracks the human action. The saved arrival card remains available. AUTH_SECRET rotation invalidates new-download derivation; an existing installed pass keeps its own hashed credential until it is replaced or erased.
+
+[7] Create a Google Wallet issuer and grant a service account issuer access
+    when     once before enabling Google Wallet, and on service-account key rotation
+    why      The Wallet issuer account, its production approval and the service account's issuer access require the owner's Google Pay and Wallet Console. This stack cannot accept account terms or approve its own issuer.
+    run      Create the issuer in Google Pay and Wallet Console. Create a service account, grant the Wallet Object Issuer role and add its email to the issuer's access list. Create its JSON key and keep it in approved secret storage.
+    produces GOOGLE_WALLET_ISSUER_ID and GOOGLE_WALLET_SERVICE_ACCOUNT_JSON (the complete key file as one JSON string).
+    store    The two named keys in the owner's .env.manual, distributed to Vercel by the existing environment workflow. Never commit or post the service-account key.
+    verify   After the owner enables the keys, add a departure on an Android device and rehearse a changed departure and cancellation. The generic class is inserted on first use; an existing class is reused.
+    note     #4208 tracks the human action. Native routes stay disabled until both values exist; the saved arrival card remains available.
+
+[8] Mint a GitHub token for the CI deploy job's own gh CLI calls
     when     once, before the first CI-run post-deploy wizard, and again if the token expires or is revoked
     why      The default GITHUB_TOKEN a workflow run receives cannot manage repository secrets or variables -- those need the Secrets/Variables permissions, which are not among the ones the `permissions:` key in a workflow file can grant it (its whole list is actions, artifact-metadata, attestations, checks, code-quality, contents, deployments, discussions, id-token, issues, packages, pages, pull-requests, security-events, statuses, vulnerability-alerts). The wizard's GitHub steps that run in CI (sync-github-secrets.mjs, sync-github-cdk-ci-vars.mjs) use the gh CLI, which needs a token that actually holds those scopes -- and minting one is an account-level action no CLI can perform on its own behalf.
     run      GitHub -> Settings -> Developer settings -> Fine-grained tokens -> Generate new token, scoped to this repository only, with Secrets (read/write) and Variables (read/write) repository permissions -- not Actions, which none of the wizard's gh calls use, and deliberately not Administration: the one step that would need it (the infra-deploy environment sync) is workstation-only and skipped in CI, ADR 20260812-env-sync-is-workstation-only.
@@ -68,7 +86,7 @@ this file is the checklist, not the argument.
     verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the run's log shows the wizard's GitHub steps succeeding rather than gh reporting 403/Resource not accessible.
     note     This token is a materially broader credential than AWS_CDK_DIFF_ROLE_ARN/AWS_CDK_DEPLOY_ROLE_ARN (identifiers, not secrets) -- it can rewrite this repository's Actions secrets, variables, and environment protection rules. It is reachable only from the deploy job, which is itself gated by the infra-deploy environment's required-reviewer approval (ADR 20260811-ci-deploy-full-wizard).
 
-[7] Mint a Vercel token and link the project for the CI deploy job
+[9] Mint a Vercel token and link the project for the CI deploy job
     when     once, before the first CI-run post-deploy wizard, and again if the token is revoked
     why      The wizard's Vercel steps (import-vercel-env.mjs, `vercel --prod --archive=tgz`, the SES DNS records) shell out to the Vercel CLI, which needs both a token and to know which Vercel project/org it is acting on. A workstation operator supplies both by having run `vercel login` and `vercel link` once, interactively, out of band -- neither has an unattended CLI equivalent.
     run      Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.
@@ -79,7 +97,7 @@ this file is the checklist, not the argument.
     verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the wizard's Vercel steps push/deploy rather than the CLI reporting 'no project linked'.
     note     A revoked or expired token fails the wizard's Vercel steps loudly (a nonzero `vercel` exit code fails the job) rather than silently skipping them, since scripts/infra-deploy.mjs propagates the wizard's own exit status.
 
-[8] Give the on-demand preview workflow its own Vercel credentials
+[10] Give the on-demand preview workflow its own Vercel credentials
     when     once, before the first `preview` label or `/preview` comment on a pull request. Skippable: nothing else needs it, and production deploys are unaffected
     why      `vercel.json`'s git.deploymentEnabled turns automatic preview deployments off for every branch but main -- roughly three of every four Vercel builds, none of which anything in this repository consumed. .github/workflows/preview.yml is the door back in, and it shells out to the Vercel CLI, which needs the same token and project ids the deploy job uses. It cannot read infra-deploy's copies: that environment carries a required-reviewer approval, which is correct for a production deploy and would make an on-demand preview useless -- somebody would have to approve a run to look at a branch.
     run      Create or update the GitHub `preview-deploy` environment with a custom deployment branch policy allowing only `main`. Both preview workflow triggers run on the default branch, even though the resolved pull request SHA is what gets uploaded.
@@ -93,7 +111,7 @@ this file is the checklist, not the argument.
              Confirm the token owner's project and team roles do not include production deployment, promotion or rollback, then label an open pull request `preview` -- the Preview workflow should run and comment a URL. Without the secrets it fails naming the one that is empty, rather than at an opaque Vercel CLI error.
     note     The branch policy and restricted token are both required before enabling this workflow. Project scope alone does not prevent production deployment: the token inherits its owner's role. Preview source builds on Vercel and can read the project's Preview environment variables; scope those separately. The workflow checks `author_association` before acting on a `/preview` comment because anyone can comment; labelling and pushing already require write access.
 
-[9] Give the production deploy gate its Vercel credentials, then turn it on
+[11] Give the production deploy gate its Vercel credentials, then turn it on
     when     once, at the pilot shop's first real booking (H-20261021-deploy-gate-from-first), and again if the token is revoked. Skippable until then: with DEPLOY_REQUIRES_GREEN unset, every push to main deploys as before
     why      With the gate on, Vercel's push-triggered production build cancels itself and .github/workflows/deploy-gate.yml deploys each commit only after its CI on main is green, with the Vercel CLI. That needs a Vercel token and the project ids, and the switch itself has to be set on both GitHub and Vercel, because Vercel cannot read a GitHub variable. No CLI here can mint the token.
     run      Mint a token for this environment alone: Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project. Never reuse the preview-deploy-token one: the preview job runs pull request code, and any token that can deploy the project can deploy production around the gate.
@@ -108,7 +126,7 @@ this file is the checklist, not the argument.
              Actions -> Deploy gate -> Run workflow with the newest green commit on main: Vercel shows a production deployment of that sha. The next push to main shows a CANCELED deployment whose log names the gate, then a deployment from the workflow once its CI is green.
     note     To turn it off, remove the Vercel variable first, then the GitHub one; the other order leaves a window in which nothing deploys. docs/engineering/deploy-and-migrations-runbook.md, 'The deploy gate', has the mechanism.
 
-[10] Turn on DiveDay's own subscription billing in Stripe
+[12] Turn on DiveDay's own subscription billing in Stripe
     when     once, after the entity that bills shops exists (H-20260724-corporate-footing-diveday-operate), and again in test mode for a staging deploy
     why      The product, the price, the webhook endpoint, the Customer Portal and Stripe's invoice emails are settings on DiveDay's own Stripe account, and the merchant they name is a legal entity this repository cannot create. Until all three BILLING_STRIPE_* values are set, Settings > Billing says billing is not turned on and nothing is charged (ADR 20261007-subscription-billing).
     run      Stripe (DiveDay's own account, not a connected one) -> Product catalog -> Add product 'DiveDay', one recurring price: USD 99.00 per month, per unit. Copy the price_... id.
@@ -123,7 +141,7 @@ this file is the checklist, not the argument.
     if not   A 503 from the endpoint means one of the three values is missing or malformed in the running app (a price id must start price_, the key sk_ or rk_, the secret whsec_). A 400 means the signing secret belongs to a different endpoint; Connect's STRIPE_WEBHOOK_SECRET is not this one.
     note     Keep these keys apart from STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET even when both live on the same Stripe account: one moves divers' money to shops through Connect, the other bills shops for DiveDay, and a restricted billing key cannot reach a connected account. Stripe Tax is not turned on here; the CPA question in docs/product/stakeholders/finance-and-tax.md decides whether it should be. A free term granted to a founding shop is set with pnpm billing:free-term <shop-slug> <last-free-day>, not in Stripe.
 
-[11] Configure reg-suit for GitHub Actions
+[13] Configure reg-suit for GitHub Actions
     when     after the first deploy, and after replacing the GitHub OIDC role
     why      CI compares visual baselines against the visual-regression bucket (infra-stack.ts S1). GitHub is a third platform, and its secrets are write-only through an API this stack has no credential for.
     run      gh secret set REG_SUIT_S3_BUCKET_NAME --body <S3BucketName output>
@@ -131,7 +149,7 @@ this file is the checklist, not the argument.
     store    GitHub repository Actions secrets: REG_SUIT_S3_BUCKET_NAME. Actions variables: AWS_REG_SUIT_ROLE_ARN. CI uses GitHub OIDC to assume the stack role; do not add REG_SUIT_AWS_REGION, REG_SUIT_AWS_ACCESS_KEY_ID or REG_SUIT_AWS_SECRET_ACCESS_KEY as GitHub secrets.
     verify   Push a branch and confirm the visual job uploads a report rather than skipping.
 
-[12] Make the Neon API credentials available to backup setup
+[14] Make the Neon API credentials available to backup setup
     when     once before the first backup setup run, and again after rotating the Neon API key or project
     why      GitHub environment secrets are scoped to one environment. The existing NEON_API_KEY and NEON_PROJECT_ID are on restore-drill, so the Backup setup workflow needs its own environment copy to provision the direct dump connection.
     run      In GitHub Settings -> Environments -> infra-deploy, add the existing NEON_API_KEY value as an environment secret and the existing NEON_PROJECT_ID value as an environment variable.
@@ -140,7 +158,7 @@ this file is the checklist, not the argument.
     verify   GitHub Settings -> Environments -> infra-deploy -> confirm NEON_API_KEY is listed under environment secrets and NEON_PROJECT_ID under environment variables, without revealing either value.
     note     GitHub cannot reveal an already-saved secret. Use the original API key source; if that is unavailable, create a replacement Neon API key and update both environments. The connection URI itself is never stored in GitHub.
 
-[13] Mint the Vercel and Neon usage read tokens
+[15] Mint the Vercel and Neon usage read tokens
     when     once, before the usage monitor can measure anything, and again after rotating either
     why      Both are another vendor's account credentials -- this stack has no identity on either platform and no API that could mint one. Nothing else in DiveDay needs them, so they exist only for the daily usage poll.
     run      Vercel -> Account Settings -> Tokens -> Create: scope it to the team that holds the billing account, read access only.
@@ -153,7 +171,7 @@ this file is the checklist, not the argument.
 ## AWS account
 
 ```text
-[14] Request SES production access
+[16] Request SES production access
     when     once per region -- currently us-east-1, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region: each region is its own request, judged on its own text. The history of every case filed so far is in docs/engineering/ses-email-runbook.md (ADR 20260924-one-region-in-us-east-1).
     run      Read docs/engineering/ses-email-runbook.md, 'Production access: the request', and paste its case text.
@@ -163,7 +181,7 @@ this file is the checklist, not the argument.
     if not   A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.
     note     Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in the email stack. The case text lists them; do not paraphrase it shorter.
 
-[15] Leave the SMS sandbox, register a toll-free number and set its HELP/STOP replies
+[17] Leave the SMS sandbox, register a toll-free number and set its HELP/STOP replies
     when     once per region, before sending SMS to a diver -- start it early, the vetting is measured in weeks
     why      All of it is account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US toll-free number is a vetted registration with the carriers that takes weeks, not days. Toll-free rather than 10DLC because one DiveDay number sends for every shop (ADR 20261007-sms-stop-and-help). The keyword replies and the two-way setting live on the number, which the stack does not own, so they are set here; the stack supplies the topic and the role they name. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of it. The spend limit and the US-only country rules are not here: the stack sets them (smsMonthlySpendLimitUsd and smsAllowedCountries in S10) and alarms at 80% of the limit, but it can only set a limit up to what the sandbox-exit case granted, so ask for the quota you need in that case. Moving the estate to another region means doing all of it again there (docs/engineering/region-migration.md).
     run      AWS End User Messaging SMS console -> Account settings -> Request production access (a Support case); ask for the spend limit in the same case.
@@ -176,7 +194,7 @@ this file is the checklist, not the argument.
              Text STOP to the number from your own phone: the STOP reply arrives, and an sms_webhook.reply_applied line is logged.
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped, and without the two-way setting a STOP is still honored by AWS but the app never hears of it.
 
-[16] Delete the root user's access keys
+[18] Delete the root user's access keys
     when     once per account, and again if AWS Trusted Advisor's Root User Access Key check turns red
     why      Only the root user can delete its own access keys, and this stack must never hold a root credential (see the cdk-bootstrap note). A root key is a password to the whole account with no MFA in front of it; nothing in DiveDay uses one.
     run      Sign in to the AWS console as the root user (email and password, then MFA).
@@ -184,7 +202,7 @@ this file is the checklist, not the argument.
     verify   aws iam get-account-summary --query SummaryMap.AccountAccessKeysPresent -- 0 means no root key exists.
     if not   If something breaks after deactivating, that thing was using root: give it its own IAM identity before deleting the key, rather than reactivating it.
 
-[17] Confirm the observability alarm subscription email
+[19] Confirm the observability alarm subscription email
     when     three times per alert address -- once per alarm topic -- and again if the address changes
     why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13), both SES reputation alarms (infra/lib/email-stack.ts) and both uptime alarms (infra/lib/global-stack.ts) transition correctly and notify nobody, which is the failure mode the alarms exist to prevent.
     run      Open all three 'AWS Notification - Subscription Confirmation' mails sent to the alert address and click Confirm subscription in each.
@@ -199,7 +217,7 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
-[18] Confirm the usage monitor reports numbers and reaches a real inbox
+[20] Confirm the usage monitor reports numbers and reaches a real inbox
     when     after minting the tokens, and after changing OPS_ALERT_EMAIL
     why      Every failure mode of this monitor is silent by construction. A wrong token, a revoked scope, a renamed provider field, or an unreachable alert mailbox all leave a cron that runs green and reports nothing, which is indistinguishable from a month with no cost problem.
     run      curl -s -H "Authorization: Bearer $CRON_SECRET" <webhookHost>/api/cron/usage | jq '.evaluations[] | {ceilingId, level, value}'

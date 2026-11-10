@@ -5,9 +5,14 @@ import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { partySeatAnchor } from "@/features/party-seat-anchor";
 import { diverTranslator } from "@/i18n/messages";
+import { formatPlannedDateTimeTz } from "@/lib/format";
+import { groupSeatSettled } from "@/lib/group-holds";
 
 /** One party seat as the organizer's surfaces render it. */
 export type PartyClaimSeat = {
+  paymentStatus?: string | null;
+  groupHoldUntil?: Date | null;
+  groupHoldExpired?: boolean;
   bookingId: string;
   /** The name on the seat — the organizer's own typing until claimed, the claimant after. */
   seatName: string;
@@ -43,10 +48,18 @@ export type PartyClaimSeat = {
  */
 export function PartyClaimPanel({
   locale,
+  readOnly = false,
   seats,
   signWaiverAction,
   payAction = null,
+  organizerSettled,
+  organizerHoldUntil,
+  timeZone,
 }: {
+  readOnly?: boolean;
+  organizerSettled?: boolean;
+  organizerHoldUntil?: Date | null;
+  timeZone?: string;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   seats: PartyClaimSeat[];
@@ -63,14 +76,37 @@ export function PartyClaimPanel({
 }) {
   if (seats.length === 0) return null;
   const t = diverTranslator(locale);
+  const hasPaymentDeadline = Boolean(
+    organizerHoldUntil || seats.some((seat) => seat.groupHoldUntil),
+  );
   // The default `md` inset, the one "Where to go" and "Anything changed" take
   // above it on /ready, so the thread's card titles share one left edge.
   return (
     <SectionCard
       className="text-left"
       title={t("seatClaim.panelHeading")}
-      description={t("seatClaim.panelBody")}
+      description={readOnly ? undefined : t("seatClaim.panelBody")}
     >
+      {organizerSettled !== undefined ? (
+        <p className="mb-3 text-base font-semibold">
+          {t("seatClaim.paidSummary", {
+            paid:
+              seats.filter((seat) => groupSeatSettled(seat.paymentStatus)).length +
+              Number(organizerSettled),
+            total: seats.length + 1,
+          })}
+        </p>
+      ) : null}
+      {organizerHoldUntil && timeZone ? (
+        <p className="mb-3 text-base text-muted">
+          {t("seatClaim.holdUntil", {
+            when: formatPlannedDateTimeTz(organizerHoldUntil, locale, timeZone),
+          })}
+        </p>
+      ) : null}
+      {hasPaymentDeadline ? (
+        <p className="mb-3 text-base text-muted">{t("seatClaim.holdPaymentWindow")}</p>
+      ) : null}
       <ul className="flex flex-col gap-3">
         {/* A row inside the panel, deliberately not a card of its own: giving
             it the card's chrome would put a `rounded-panel bg-surface` panel
@@ -95,9 +131,29 @@ export function PartyClaimPanel({
                 </span>
               )}
             </div>
-            <p className="mt-1 text-base text-muted">
-              {seat.waiverSigned ? t("seatClaim.waiverComplete") : t("seatClaim.waiverNeeded")}
-            </p>
+            {seat.paymentStatus !== undefined ? (
+              <p className="mt-1 text-base text-muted">
+                {t(
+                  seat.groupHoldExpired
+                    ? "seatClaim.holdExpired"
+                    : groupSeatSettled(seat.paymentStatus)
+                      ? "seatClaim.paymentReceived"
+                      : "seatClaim.paymentNeeded",
+                )}
+              </p>
+            ) : null}
+            {seat.groupHoldUntil && timeZone ? (
+              <p className="mt-1 text-base text-muted">
+                {t("seatClaim.holdUntil", {
+                  when: formatPlannedDateTimeTz(seat.groupHoldUntil, locale, timeZone),
+                })}
+              </p>
+            ) : null}
+            {!readOnly && !seat.groupHoldExpired ? (
+              <p className="mt-1 text-base text-muted">
+                {seat.waiverSigned ? t("seatClaim.waiverComplete") : t("seatClaim.waiverNeeded")}
+              </p>
+            ) : null}
             {!seat.claimed && seat.claimUrl ? (
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                 {/* It starts the line, so its word sits on the seat's name and

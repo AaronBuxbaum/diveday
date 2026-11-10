@@ -1,3 +1,4 @@
+import { expireGroupHolds } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { sendDueCrewNotices } from "@/db/crew-notices";
 import { sendMissingDiverAlerts } from "@/db/missing-diver-alerts";
@@ -37,6 +38,7 @@ import { sweepMinimumSeats } from "./minimum-seats";
  */
 export const SHOP_TICK_SCANS = [
   "demo-boats-at-sea",
+  "group-holds",
   "minimum-seats",
   "trip-reminders",
   "held-sends",
@@ -56,6 +58,7 @@ export function isShopTickScan(value: string): value is ShopTickScan {
 }
 
 const RUNS = {
+  "group-holds": (db, now) => expireGroupHolds(db, now),
   // Brings every demo shop's boat at sea home once she is past her return
   // (issue 2917): a count left open read as divers lost at sea. Demo shops
   // only, and a boat already home is left alone. It runs before the others so

@@ -17,6 +17,8 @@
  * than a reason to add a name below.
  */
 export const OUTSIDE_RETENTION: readonly string[] = [
+  "wallet_passes", // booking snapshots are voided/soft-deleted on erasure; no independent age prune
+
   "today_read_mark_events", // junction rows cascade with the 30-day mark or event; no independent clock
   "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
   "platform_backup_progress", // one mutable per-shop checkpoint, replaced on attempts and deleted with its shop
@@ -207,3 +209,13 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   "incident_report_people",
   "incident_report_addenda",
 ];
+
+/** What the guard's failure says, so a session reads the rule and not the list. */
+export const UNCLASSIFIED_HELP =
+  "a table in src/db/schema/ that retention classifies as nothing. Give it a window " +
+  "in RETENTION_DAYS if it is a trail that should be pruned; add it to " +
+  "UNBOUNDED_BY_DECISION *and write the paragraph in src/features/retention/rules.ts saying who " +
+  "decided it is kept forever and when*, the way gear_service_events and " +
+  "trip_stage_events do; or add it to OUTSIDE_RETENTION if a clock is the wrong " +
+  "instrument for it at all. Adding a bare name to whichever list makes this test go " +
+  "green is the one wrong answer";

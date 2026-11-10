@@ -163,6 +163,8 @@ export function redactCapabilityUrl(rawUrl: string): string {
     return "[unparseable]";
   }
   const segments = url.pathname.split("/").filter(Boolean);
+  const decoded = segments.map((segment) => decodeSegment(segment).toLowerCase());
+  if (decoded[0] === "api" && decoded[1] === "wallet") return "/api/wallet/[redacted]";
   const first = segments.length >= 2 ? decodeSegment(segments[0] ?? "").toLowerCase() : "";
   const prefix = CAPABILITY_ROUTE_PREFIXES.find((candidate) => candidate === first);
   if (prefix) return `/${prefix}/[token]`;

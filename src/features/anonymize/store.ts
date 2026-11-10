@@ -79,6 +79,7 @@ import {
   type ProcessorErasureTargetInput,
   recordProcessorErasureObligations,
 } from "@/features/processor-erasure";
+import { voidWalletPassesForPerson } from "@/features/wallet-pass";
 import { canPersonErasePersonalData } from "../../db/authz";
 import {
   lockBoardingCertificationEvidence,
@@ -3091,6 +3092,7 @@ const SCRUB_SECTIONS = [
 
 async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {
   const { shopId, personId } = ctx;
+  await voidWalletPassesForPerson(tx, { shopId, personId });
 
   const bookingRows = await tx
     .select({ id: bookings.id })

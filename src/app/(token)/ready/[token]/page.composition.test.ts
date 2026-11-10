@@ -385,3 +385,12 @@ describe("adding a seat from the diver's page", () => {
     expect(threadCountOf("<AddSeat")).toBe(0);
   });
 });
+
+describe("the native departure pass is optional", () => {
+  it("derives the thread link through the credential and shop gates and preserves the calendar", () => {
+    expect(SOURCE).toContain("ReadyCards.withWalletPass(data, token)");
+    expect(MASTHEAD).toContain("facts.walletUrl");
+    expect(MASTHEAD).toContain('label: t("wallet.addToWallet")');
+    expect(MASTHEAD).toContain("publicTripCalendarPath");
+  });
+});

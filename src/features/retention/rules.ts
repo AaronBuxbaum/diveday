@@ -95,6 +95,7 @@ export type RetainedTable =
   | "capabilities"
   | "booking_capabilities"
   | "booking_payment_events"
+  | "wallet_pass_registrations"
   | "push_subscriptions"
   | "trip_read_marks"
   | "today_read_marks"
@@ -289,6 +290,7 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * and `removeStaffMember` revokes a leaver's devices. None of those fire for a
    * device that simply stopped being used.
    */
+  wallet_pass_registrations: 30, // measured from the parent pass expiration (ADR 20261110-native-wallet-passes)
   push_subscriptions: 30,
   /**
    * The same 30 days as a desk line ({@link DESK_LINE_RETENTION_DAYS}),

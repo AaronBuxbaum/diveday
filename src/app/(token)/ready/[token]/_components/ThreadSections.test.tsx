@@ -13,6 +13,7 @@ const seen = vi.hoisted(() => ({
 }));
 
 vi.mock("../booking-actions", () => ({
+  payFromReady: async () => {},
   cancelMyBookingAction: async () => {},
   addSeatFromReady: async () => {},
   payForPartySeatFromReady: async () => {},
@@ -114,6 +115,31 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
 }
 
 describe("ThreadSections", () => {
+  it("opens payment for an active held seat without a normal payment checklist step", () => {
+    const c = context();
+    Object.assign(c.data, {
+      groupHoldUntil: new Date("2026-11-11T12:00:00Z"),
+      canPay: true,
+      identityHeld: false,
+    });
+    render(<ThreadSections context={c} />);
+    expect(screen.getByRole("button", { name: t("ready.payForTrip") })).toBeTruthy();
+  });
+
+  it("adds no hold-payment door to expired, unpaid-unavailable, or identity-held seats", () => {
+    for (const fields of [
+      { groupHoldUntil: null, canPay: true, identityHeld: false },
+      { groupHoldUntil: new Date("2026-11-11T12:00:00Z"), canPay: false, identityHeld: false },
+      { groupHoldUntil: new Date("2026-11-11T12:00:00Z"), canPay: true, identityHeld: true },
+    ]) {
+      const c = context();
+      Object.assign(c.data, fields);
+      render(<ThreadSections context={c} />);
+      expect(screen.queryByRole("button", { name: t("ready.payForTrip") })).toBeNull();
+      cleanup();
+    }
+  });
+
   it("prints the day sheet, never the screen, and hands it no bearer token", () => {
     render(<ThreadSections context={context()} />);
     expect(seen.sheet).not.toBeNull();

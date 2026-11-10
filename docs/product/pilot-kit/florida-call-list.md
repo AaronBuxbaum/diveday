@@ -108,7 +108,7 @@ Work top to bottom; the first two give near-complete coverage and the rest add c
 3. **Their booking flow, clicked through as a diver** (stop before paying). It shows you what their
    diver actually experiences, whether waivers are digital, and often which vendor is behind it.
 4. **ScubaBoard's dive-shop-software threads.** The same threads the
-   [competitive research](../assessments/competitive-strategy.md) mined for incumbent complaints —
+   [competitive research](../archive/assessments/competitive-strategy.md) mined for incumbent complaints —
    shop owners describing their own pain in public, by name.
 5. **Facebook dive-industry groups** (shop-owner and dive-professional groups) for the same signal.
 6. **Charter and dive-site directories, and the dive-boat listings around a given port** — useful for

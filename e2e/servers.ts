@@ -1,5 +1,6 @@
 import { cpus } from "node:os";
 import { resolveE2EBasePort } from "@/features/e2e-port";
+import { generateWalletTestCredentials } from "../src/test/wallet-credentials";
 
 /**
  * Shared topology for the e2e server fleet, imported by playwright.config.ts,
@@ -145,3 +146,27 @@ export const E2E_FROZEN_CLOCK = process.env.DIVEDAY_CLOCK || "2026-07-21T13:30:0
  * is the guard against the two drifting apart.
  */
 export const E2E_APP_HOST = process.env.APP_HOST || "https://e2e.diveday.example";
+
+/** Dedicated local/CI native-pass run; ordinary runs stay dark and contain no signing identity. */
+export function e2eWalletEnvironment(): Record<string, string> {
+  if (process.env.E2E_WALLET_PASSES !== "1")
+    return {
+      APPLE_PASS_TYPE_ID: "",
+      APPLE_TEAM_ID: "",
+      APPLE_PASS_CERTIFICATE_PEM: "",
+      APPLE_PASS_KEY_PEM: "",
+      APPLE_PASS_KEY_PASSPHRASE: "",
+      GOOGLE_WALLET_ISSUER_ID: "",
+      GOOGLE_WALLET_SERVICE_ACCOUNT_JSON: "",
+    };
+  const generated = generateWalletTestCredentials();
+  return {
+    APPLE_PASS_TYPE_ID: "pass.app.diveday.test",
+    APPLE_TEAM_ID: "TESTTEAM01",
+    APPLE_PASS_CERTIFICATE_PEM: generated.certificate,
+    APPLE_PASS_KEY_PEM: generated.key,
+    APPLE_PASS_KEY_PASSPHRASE: "",
+    GOOGLE_WALLET_ISSUER_ID: "",
+    GOOGLE_WALLET_SERVICE_ACCOUNT_JSON: "",
+  };
+}

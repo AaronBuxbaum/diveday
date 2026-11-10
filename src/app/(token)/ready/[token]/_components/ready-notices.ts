@@ -12,6 +12,7 @@ export const READY_NOTICES: Record<
 > = {
   "pay-paid": { tone: "success", key: "ready.paymentReceived" },
   "error-waiver": { tone: "danger", key: "ready.waiverUnavailable" },
+  "error-hold-pay": { tone: "neutral", key: "seatClaim.holdPaymentWindow" },
   "error-pay": { tone: "danger", key: "ready.paymentUnavailable" },
   // Back from the checkout a party lead opened for a seat they added (#2474).
   "pay-seat-paid": { tone: "success", key: "seatClaim.seatPaidNotice" },

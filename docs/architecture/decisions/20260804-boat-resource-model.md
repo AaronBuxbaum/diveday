@@ -3,6 +3,13 @@
 - **Status:** Proposed
 - **Date:** 2026-08-04
 
+**Inventory reconciliation — 2026-11-10:** this is the historical proposal, not a current
+missing-feature list. Boats, private departures and charter quotes now exist. The current
+capacity rule is accepted in
+[20261029-boat-capacity-total-occupants](20261029-boat-capacity-total-occupants.md). Do not restart
+the design from the request-only inventory below or infer that its old deferral still blocks
+the implemented system. This note records source state, not a new owner acceptance of this ADR.
+
 **Proposed, deliberately.** Roadmap §4 (multi-boat) and the buyout-charter candidate stay
 *deferred until a real operator needs them* — accepting this ADR is a human decision, and the
 deferral stands either way. This record exists so that the day an operator does need it,
@@ -18,8 +25,8 @@ DiveDay has no boat entity: **a trip *is* the boat-day**. Capacity lives on the 
 (`src/db/bookings.ts`), and every scheduled trip is publicly for sale — there is no visibility
 concept. Two deferred roadmap items block on this one gap, and the roadmap instructs that they be
 designed together
-([roadmap §4](../../product/features/roadmap.md#4-multi-boat--multi-shop-configuration),
-[Private / buyout charters](../../product/features/roadmap.md#private--buyout-charters)):
+([roadmap §4](../../product/archive/roadmap-20261110.md#4-multi-boat--multi-shop-configuration),
+[Private / buyout charters](../../product/archive/roadmap-20261110.md#private--buyout-charters)):
 a shop running several boats cannot see or avoid same-hull collisions, and a group cannot buy out
 a departure (quote → deposit → withdrawn from public sale).
 

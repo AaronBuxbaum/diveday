@@ -12,6 +12,7 @@ import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { askToMoveFromCancelledAction } from "../booking-actions";
 import { cancelledNoticeForReady } from "./CancelledNotice";
+import { expiredGroupHoldLedger } from "./ExpiredGroupHoldLedger";
 import { ExpiredLink, UnavailableReadyLink } from "./ExpiredLink";
 import { TripCancelledCard } from "./TripCancelledCard";
 
@@ -41,6 +42,8 @@ export async function readyDeadLink({
   /** The visitor's own locale: a dead link resolves no shop to negotiate with. */
   anonT: DiverTranslator;
 }) {
+  const ledger = await expiredGroupHoldLedger(db, token);
+  if (ledger) return ledger;
   // Revoked, expired, or never ours — with one exception. The diver's own
   // cancel revokes this exact token as part of cancelling and then redirects
   // back to it with `?cancelled=1`, so the verified path above can never show

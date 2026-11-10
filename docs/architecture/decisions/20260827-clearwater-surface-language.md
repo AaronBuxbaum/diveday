@@ -266,7 +266,7 @@ collisions (two boats, one boat, none) are the board's whole question.
 ## Consequences
 
 - **Slices** (sequenced in
-  [roadmap.md](../../product/features/roadmap.md#6-clearwater--the-surface-language-design-complete),
+  [roadmap.md](../../product/archive/roadmap-20261110.md#6-clearwater--the-surface-language-design-complete),
   tracked in the canvas README): (a) the language mechanics — flat-at-rest, the ledger/group
   primitives, one chip, ramp cleanup; (b) one chrome spec; (c) the home as the day's spine;
   (d) the home's evening reading; (e) the week board; (f) the orders day ledger; (g) settings rail

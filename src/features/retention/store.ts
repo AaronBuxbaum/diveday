@@ -36,6 +36,8 @@ import {
   tripReadMarks,
   trips,
   waiverDeliveries,
+  walletPasses,
+  walletPassRegistrations,
   websiteSetupDrafts,
   weeklyDigestSends,
 } from "../../db/schema/index";
@@ -556,6 +558,12 @@ export const PRUNE_ARMS = {
     id: incidentReports.id,
     clock: sql`coalesce(${incidentReports.occurredAt}, ${incidentReports.createdAt})`,
     extraWhere: isNull(incidentReports.legalHoldAt),
+  },
+  // Append new arms without changing the durable cursor's established first/successor order.
+  wallet_pass_registrations: {
+    from: walletPassRegistrations,
+    id: walletPassRegistrations.id,
+    clock: sql`(select (${walletPasses.contentJson}->>'expirationDate')::timestamptz from ${walletPasses} where ${walletPasses.id} = ${walletPassRegistrations.passId} and ${walletPasses.shopId} = ${walletPassRegistrations.shopId})`,
   },
 } satisfies Record<RetainedTable, PruneArm>;
 

@@ -28,7 +28,7 @@ learning materials, waivers, and reminders. Checking each claim against the runn
 | **Automatically assigns learning materials** | ❌ **missing** — no roster, progress, or e-learning status field exists anywhere in the schema |
 
 The last row is the real gap, and it's already named independently in
-[competitive-analysis.md](../../product/assessments/competitive-analysis.md#critical-vs-differentiator):
+[competitive-analysis.md](../../product/archive/assessments/competitive-analysis.md#critical-vs-differentiator):
 *"Course/student management ⚠️ Sessions + prerequisites; no rosters/progress/eLearning."*
 
 Constraints a lower-context agent must not miss:

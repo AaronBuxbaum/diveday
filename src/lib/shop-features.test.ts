@@ -8,6 +8,7 @@ import {
 } from "./shop-features";
 
 const allOn = {
+  walletPassesEnabled: true,
   reviewsEnabled: true,
   conservationEnabled: true,
   coursePulseEnabled: true,

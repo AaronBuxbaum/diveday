@@ -3,12 +3,12 @@
 Fifteen personas plus two cross-cutting lenses, distilled from the 2026-07-30 frontend review
 (archived at [archive/ux-personas-20260730-findings.md](archive/ux-personas-20260730-findings.md))
 into evergreen guidance. Use this doc to evaluate *new* UX work — "how does this land for Nadia?"
-— not to look up what was already fixed. Open follow-on work from the original review lives in
-[features/story-backlog.md](features/story-backlog.md), each ticket tagged with the persona it serves.
+— not to look up what was already fixed. The original [story backlog](archive/story-backlog-20261110.md) is historical. Current follow-on
+work lives in scoped GitHub issues, each naming the persona it serves.
 
 **How to use this doc.** Before shipping a diver- or staff-facing change, skim the personas whose
 surfaces it touches and check the change against their "what to hold the line on" list. When you
-find a new gap for a persona, add it to `features/story-backlog.md` rather than editing the narrative here
+find a new gap for a persona, file or reuse a GitHub issue rather than editing the narrative here
 — this document should stay a stable frame, not a running bug list.
 
 **A machine reads it too, every Monday.** `pnpm persona:bots` walks each persona's surfaces against
@@ -85,10 +85,10 @@ Books herself plus two kids, 9 and 11, for a Discover Scuba session, on a phone.
 
 **Hold the line on:** party-booking forms never force an invented email address for every family
 member; a party-size cap always offers a "bigger group? contact us" escape; a course's minimum
-age is visible wherever the booking happens, not only buried on the course page. **Open:**
-`course_min_age` is still not a hard gate for public bookings — a self-declared attestation
-checkbox is the current safe mechanism, and any move toward hard enforcement is a policy question
-(H-20260724-certification-levels-agency-rules), not just an engineering one — see `features/story-backlog.md`.
+age is visible wherever the booking happens, not only buried on the course page. The
+[minimum-age policy](human-decisions/H-20260724-minimum-age-gate-fail.md) and current admission code
+are the contract; changing that gate requires an actual human policy decision, not a revived
+July backlog prompt.
 
 ## 4. Marco — the repeat local who wants to book in ten seconds
 
@@ -107,10 +107,9 @@ pages erode trust fast — especially around money, medicine, and legal text.
 20260731-domain-layer-copy-leaks) — copy lives in `diver.json`/`staff.json`; every date, time, and
 money figure formats for the negotiated request locale, never a literal `"en-US"`; sentences are
 composed as single ICU messages, not assembled from JSX fragments that break word order in
-translation; `pnpm check:locale` and `pnpm check:copy` stay clean. **Open:** money is still
-USD-hardcoded end-to-end (currency isn't a `shops` column yet), Stripe line-item text is still
-composed in the domain layer, and every outbound email still uses the shop's locale rather than
-the recipient's — see `features/story-backlog.md`.
+translation; `pnpm check:locale` and `pnpm check:copy` stay clean. The shop's declared currency and
+the current locale-resolution rules are the contract; do not infer a missing mechanism from
+the old July review's USD-only inventory.
 
 ## 6. Rob — the diver the night before (waiver, medical, readiness)
 
@@ -247,4 +246,4 @@ feature to an already-overloaded route.
 *This document supersedes the persona narratives in the archived 2026-07-30 review
 ([archive/ux-personas-20260730-findings.md](archive/ux-personas-20260730-findings.md)), rewritten
 as standing guidance rather than a dated bug list. Update it only when a persona's actual needs or
-context change — new findings against these personas belong in `features/story-backlog.md`, not here.*
+context change — new findings against these personas belong in scoped GitHub issues, not here.*

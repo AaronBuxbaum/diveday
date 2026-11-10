@@ -1,9 +1,18 @@
 # H-20260911-six-consolidations-makes-diveday: Which of six consolidations makes DiveDay clean and simple, and what leaves first?
 
-- **Status:** Ready
+- **Status:** Superseded
 - **Human owner:** Product owner
 
-## Decision or approval needed
+## Current outcome — 2026-11-10
+
+The unresolved September canvas questions were closed as superseded by the latest design ADRs.
+Do not re-propose a wholesale redesign from this historical choice sheet. A genuinely current
+gap needs current evidence and its own scoped issue.
+
+Source: [owner-account decision record on #4195](https://github.com/AaronBuxbaum/diveday/issues/4195#issuecomment-6759818376).
+The sections below preserve the original question and rationale, not a second unresolved worklist.
+
+## Original question
 
 **Which of six consolidations makes DiveDay clean and simple, and what leaves first?** The 2026-09-11 loop ([canvas](../../design/canvases/20260911-clear-the-deck/README.md), ADR [20260911-clear-the-deck](../../architecture/decisions/20260911-clear-the-deck.md)) answered the owner's brief — the design system is ugly and has far too many controls and external-facing features; rethink it; at least five concepts that consolidate — with a count read from the tree (96 routes, 21 staff destinations, 43 Settings rows and 12 pages beneath, about twenty controls on the home at rest, 14 sections on the storefront's one page, 27 primitives, 39 message namespaces, thirteen canvases in fifteen days and none of One hand's five deletion slices landed), a floor that deletes kinds of thing rather than spellings (the door, the chip and the pill, the decoration, the switch, the outside, DiveDay's own pages), and six concepts that each consolidate along one axis, every one redrawing the shop home for the same shop on the same morning: 1 Three words (by noun), 2 The week (by time), 3 Ashore and aboard (by place), 4 Ask (by question), 5 The shop's card (by default), 6 One face (by face). The floor's first two rows may start on the ADR alone.
 

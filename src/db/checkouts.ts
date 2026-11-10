@@ -1,6 +1,7 @@
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge, seatCheckoutCharge } from "@/lib/deposits";
+import { groupHoldCheckoutDeadline } from "@/lib/group-holds";
 import { log } from "@/lib/log";
 import { isDiver, type ParticipantType } from "@/lib/participant-types";
 import { parsePassThroughFee, passThroughTotalCents } from "@/lib/pass-through-fee";
@@ -149,10 +150,35 @@ export type StartCheckoutOutcome =
         | "unpriced"
         | "invalid"
         | "checkout_unavailable"
+        | "hold_checkout_window"
         | "already_paid"
         /** A capped discount has nothing left; the seats are held, and paying without it works. */
         | "promo_used_up";
     };
+
+async function checkoutSeats(
+  db: AppDb,
+  input: Pick<StartCheckoutInput, "shopId" | "tripId" | "bookingIds">,
+) {
+  return db
+    .select({
+      id: bookings.id,
+      participantType: bookings.participantType,
+      groupHoldUntil: bookings.groupHoldUntil,
+    })
+    .from(bookings)
+    .where(
+      and(
+        inArray(bookings.id, input.bookingIds),
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.tripId, input.tripId),
+        // Only a seat the diver still holds is charged: a released one (turned
+        // away, not here) may already be resold (layer 3 review, dde-2 #1).
+        seatHeld,
+        or(isNull(bookings.groupHoldUntil), gt(bookings.groupHoldUntil, nowDate())),
+      ),
+    );
+}
 
 /**
  * Hand a fresh public booking (or party) a hosted Stripe Checkout on the
@@ -188,20 +214,12 @@ export async function startBookingCheckout(
   if (!tripRow || tripRow.trip.isRehearsal) return { ok: false, reason: "invalid" };
   const shop = await getShopById(db, input.shopId);
   const passThroughFee = parsePassThroughFee(shop?.passThroughFee);
-  const bookingRows = await db
-    .select({ id: bookings.id, participantType: bookings.participantType })
-    .from(bookings)
-    .where(
-      and(
-        inArray(bookings.id, input.bookingIds),
-        eq(bookings.shopId, input.shopId),
-        eq(bookings.tripId, input.tripId),
-        // Only a seat the diver still holds is charged: a released one (turned
-        // away, not here) may already be resold (layer 3 review, dde-2 #1).
-        seatHeld,
-      ),
-    );
+  const bookingRows = await checkoutSeats(db, input);
   if (bookingRows.length !== input.bookingIds.length) return { ok: false, reason: "invalid" };
+  const holdExpiresAt = groupHoldCheckoutDeadline(
+    bookingRows.map((seat) => seat.groupHoldUntil),
+    nowDate(),
+  );
 
   // Each seat is charged for what it is (ADR 20261007-participant-types): a
   // diver the trip's own fare, a snorkeler or a rider their own price. A seat
@@ -383,6 +401,8 @@ export async function startBookingCheckout(
     await retireStaleCheckout(db, existing);
   }
 
+  if (holdExpiresAt === null) return { ok: false, reason: "hold_checkout_window" };
+
   // Durable evidence this attempt exists, written and committed before
   // Stripe is ever called (CR-005) — a crash mid-attempt still leaves this
   // row for reconciliation (the `payment_operation` kind of `src/db/unfinished.ts`) instead of no trace
@@ -427,7 +447,7 @@ export async function startBookingCheckout(
   // a discount reserves one use under the code's own lock before Stripe is
   // called, and an exhausted code is refused with a reason the diver can act
   // on (layer-7 security review).
-  let cappedSessionExpiresAt: Date | undefined;
+  let cappedSessionExpiresAt: Date | undefined = holdExpiresAt;
   // Retire other pending pages over these seats, promo or not: two live ones would double-pay (#2474).
   await retireOverlappingPendingCheckouts(db, input.shopId, input.bookingIds);
   if (appliedPromo) {
@@ -456,7 +476,9 @@ export async function startBookingCheckout(
     // An abandoned page holds a capped code's use until it expires, so it
     // expires in minutes rather than Stripe's default day.
     if (reservation === "reserved") {
-      cappedSessionExpiresAt = new Date(now.getTime() + CAPPED_SESSION_LIFETIME_MS);
+      cappedSessionExpiresAt = new Date(
+        Math.min(holdExpiresAt?.getTime() ?? Infinity, now.getTime() + CAPPED_SESSION_LIFETIME_MS),
+      );
     }
   }
   const passThroughDiscountGuard =

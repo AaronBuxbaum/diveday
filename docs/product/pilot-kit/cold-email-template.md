@@ -252,7 +252,7 @@ each is an existing rule rather than a new one:
   "compliant" is authorized.
 - **Offering to log into their current system or "just get the data out for you."** They export,
   the founder maps. That is the
-  [portability-wedge legal guardrail](../assessments/competitive-strategy.md#the-portability-wedge),
+  [portability-wedge legal guardrail](../archive/assessments/competitive-strategy.md#the-portability-wedge),
   not a preference.
 - **"Another shop told me…" or "shops usually…"** There are no other shops.
 

@@ -459,5 +459,6 @@ script again.
 | 20261108-configured-pricing | Configure one monthly and percentage… |
 | 20261109-evidence-key-history | Keep signing key identity with… (proposed) |
 | 20261109-operator-browser-and-email-sign-in | Separate database operators from account… |
+| 20261110-native-wallet-passes | Sign native departure passes behind… |
 
 <!-- adr-index:end -->

@@ -248,7 +248,7 @@ Delight over a product that can't operate is theater. In parallel with Move 2:
 
 ## How we'll know it worked
 
-The [roadmap measures](../features/roadmap.md#measures) become checkable once Move 2 + real notifications
+The [roadmap measures](roadmap-20261110.md#measures) become checkable once Move 2 + real notifications
 land: median time to resolve a booking blocker, waiver completion rate before arrival, % of
 departures fully ready before trip day. The qualitative bar from the vision is the real test — *staff
 run the whole day from it, unprompted, and a diver compliments the booking flow.* We are not there

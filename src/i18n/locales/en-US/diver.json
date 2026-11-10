@@ -479,7 +479,10 @@
       "noGate": "None of these changes whether you can book."
     },
     "alternativeSameRun": "Next date with room, {date}",
-    "findAnotherTrip": "Find another trip"
+    "findAnotherTrip": "Find another trip",
+    "holdSeats": "Hold these seats",
+    "holdGroup": "Hold seats while everyone pays",
+    "holdGroupNote": "Each person pays from their own link within 24 hours, or before departure if sooner. Unpaid seats go back on sale."
   },
   "bookingGear": {
     "heading": "Rental gear",
@@ -1373,7 +1376,15 @@
     "payingSeat": "Opening payment…",
     "payForSeatNote": "Pay online now. The seat stays theirs to claim.",
     "seatPaidNotice": "Payment received for their seat. We’re confirming it with your shop. Nothing more to do.",
-    "payUnavailable": "We couldn’t open the payment page for that seat. It’s still held. Try again, or pay at the shop."
+    "payUnavailable": "We couldn’t open the payment page for that seat. It’s still held. Try again, or pay at the shop.",
+    "paidSummary": "{paid} of {total} paid or covered",
+    "holdUntil": "Pay by {when} to keep this seat.",
+    "holdExpired": "Hold expired. This seat is back on sale.",
+    "paymentReceived": "Payment received or covered",
+    "holdPaymentWindow": "Open online checkout at least 31 minutes before the deadline. After that, ask the shop to take payment.",
+    "paymentNeeded": "Payment needed",
+    "expiredOrganizerHeading": "Your group’s payment ledger",
+    "expiredOrganizerBody": "Your unpaid seat hold expired. Paid seats in your group stay booked."
   },
   "rental": {
     "ownGear": "Bringing own gear, so no rental needed",
@@ -4514,5 +4525,29 @@
     "submitting": "Stopping…",
     "confirmedTitle": "Month-end files stopped",
     "confirmedText": "{shopName} won’t send you month-end files anymore. If the shop adds you again, they start again until you stop them."
+  },
+  "wallet": {
+    "addToWallet": "Add to Wallet",
+    "date": "Date",
+    "dockCall": "Dock call",
+    "departs": "Departs",
+    "boat": "Boat",
+    "diver": "Name",
+    "meetingPlace": "Meeting place",
+    "crew": "Crew",
+    "sites": "Sites",
+    "phone": "Phone",
+    "plan": "This pass updates if the plan changes.",
+    "description": "Your departure",
+    "apple": "Add to Apple Wallet",
+    "google": "Add to Google Wallet",
+    "choose": "Add your departure to Wallet",
+    "stages": {
+      "boarding": "Boarding",
+      "underway": "Underway",
+      "surface": "On the surface",
+      "heading_in": "Heading in",
+      "home": "Home"
+    }
   }
 }

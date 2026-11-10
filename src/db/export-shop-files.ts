@@ -143,6 +143,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // Which optional features the shop switched off (ADR
       // 20261005-optional-shop-features): a restore must not quietly
       // turn reviews or tips back on for a shop that chose not to ask.
+      "wallet_passes_enabled",
       "reviews_enabled",
       "date_requests_enabled",
       "last_minute_list_enabled",
@@ -286,6 +287,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.hasPoolDiving,
         shop.diversPerDivemaster,
         shop.crewScheduleEnabled,
+        shop.walletPassesEnabled,
         shop.reviewsEnabled,
         shop.dateRequestsEnabled,
         shop.lastMinuteListEnabled,

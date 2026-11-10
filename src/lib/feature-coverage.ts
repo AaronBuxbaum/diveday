@@ -20,6 +20,13 @@ export type FeatureCoverage =
   | { readonly anyOf: readonly ShopSwitch[] }
   | { readonly core: string };
 
+/** Core options within existing booking flows, rather than separate destinations or subsystems. */
+export const BOOKING_FLOW_COVERAGE = {
+  groupHolds: {
+    core: "a per-seat booking reservation option; its expiry is part of capacity and payment correctness",
+  },
+} satisfies Record<string, FeatureCoverage>;
+
 export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCoverage> = {
   today: { core: "daily operations: the shop home" },
   divers: { core: "daily operations: the people the shop dives with" },
@@ -60,6 +67,7 @@ export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCover
  * reads the table and fails naming any boolean not listed here.
  */
 export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
+  walletPassesEnabled: "walletPasses",
   taxEnabled: "tax",
   hasBoatDiving: "divingOptions",
   hasShoreDiving: "divingOptions",

@@ -192,6 +192,7 @@ export const shops = pgTable(
      * - `tips_enabled`: the tip on the recap. Tipping is a custom in some
      *   waters and an awkward ask in others.
      */
+    walletPassesEnabled: boolean("wallet_passes_enabled").notNull().default(true),
     reviewsEnabled: boolean("reviews_enabled").notNull().default(true),
     conservationEnabled: boolean("conservation_enabled").notNull().default(true),
     coursePulseEnabled: boolean("course_pulse_enabled").notNull().default(true),

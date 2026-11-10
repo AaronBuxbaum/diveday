@@ -58,3 +58,11 @@ describe("redacting a capability URL", () => {
     expect(redactCapabilityUrl("http://[::1")).toBe("[unparseable]");
   });
 });
+
+it("redacts native-pass device identifiers, serials and query strings", () => {
+  expect(
+    redactCapabilityUrl(
+      "https://dive.day/api/wallet/v1/devices/private-device/registrations/pass.test/private-serial?passesUpdatedSince=private",
+    ),
+  ).toBe("/api/wallet/[redacted]");
+});

@@ -567,8 +567,8 @@ against each redraw.
 
 ### The thread — `/ready/[token]` (and every state after booking)
 
-**Chosen 2026-09-07** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), slice 18f, [spec](canvases/20260907-nothing-from-nowhere/SPEC.md)):
-one line beside Add to calendar, *Add to Wallet*, on every state after booking; the pass wears the shop's brand, carries the top card's facts, the diver's name and the crew-set stage, surfaces on the lock screen from the dock call, and updates when the plan moves. Never the thread's URL, a barcode, a price or a medical fact. Rendered only when a platform is configured; otherwise the thread as it ships.
+**Shipped dark 2026-11-10** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), slice 18f, [spec](canvases/20260907-nothing-from-nowhere/SPEC.md)):
+one line beside Add to calendar, *Add to Wallet*, on every state after booking; the pass wears the shop's brand, carries the top card's facts, the diver's name and the crew-set stage, surfaces on the lock screen from the dock call, and updates when the plan moves. Never the thread's URL, a barcode, a price or a medical fact. Rendered only when a platform is configured and the shop offers Wallet passes; otherwise the thread stays unchanged. The saved arrival card remains available.
 
 **Proposed 2026-09-04** (same ADR and canvas): one step, "Anything changed?", over the facts the shop kept; provenance on the arrival card; the boat's-back line on the day; the recap becomes a postcard with its number, an image to keep, a private pulse and the next dive with its reason.
 
@@ -806,7 +806,7 @@ which leaves for the thread), because they are one surface: `EntryShell` is the 
 ### The homepage — `/`
 
 **Reviewed 2026-08-27** — the conversion pass in
-[marketing-review-20260827.md](../product/marketing-review-20260827.md) (open; slices in roadmap
+[marketing-review-20260827.md](../product/archive/marketing-review-20260827.md) (open; slices in roadmap
 section 12). The 2026-08-13 composition stands; the findings move copy, not bands.
 
 - **One idea:** the whole dive day runs from one calm place — and you can walk it right now for
@@ -958,3 +958,14 @@ At phone width names and slugs stack, long links wrap, and the public sample-log
 secondary to generating a link. Ordinary account email sign-in keeps EntryShell, one primary
 action per step, and a 44px alternative alongside password recovery; the request and confirmation
 screens and operator result were inspected at phone and desktop widths.
+
+
+## Group hold payment ledger
+
+The one idea is who has paid and which seats still need payment. The organizer arrives asking
+how many seats are covered, when unpaid seats expire, and whose link to share; the count leads,
+then names and payment/deadline facts stay on each existing seat row. A separate finance page
+would separate payment from the seats it describes, so the existing party panel keeps the ledger.
+After the organizer's own hold expires, the same names and count remain in the thread's column,
+with a single explanation and a schedule link; no booking controls survive. This is a small state
+of an existing surface rather than a dashboard or new card stack.

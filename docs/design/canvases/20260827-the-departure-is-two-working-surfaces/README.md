@@ -55,7 +55,7 @@ Which surfaces this canvas still speaks for. **A canvas has authority over a sur
 surface's slice is `open`** — once a slice ships, the shipped code is the design for it and anything
 here that disagrees is stale ([design-artifacts.md](../../design-artifacts.md)). The slice bodies,
 with their dependencies, are in
-[roadmap.md](../../../product/features/roadmap.md#5-the-departures-two-working-surfaces-design-complete).
+[roadmap.md](../../../product/archive/roadmap-20261110.md#5-the-departures-two-working-surfaces-design-complete).
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
