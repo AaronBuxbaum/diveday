@@ -7,6 +7,7 @@ import { hasRequiredStepUp } from "@/features/step-up";
 import { nowDate } from "@/lib/clock";
 import {
   buildExportBundle,
+  ExportResourceLimitError,
   exportFileName,
   exportMediaFiles,
   fetchExportPhotos,
@@ -49,7 +50,16 @@ export async function GET(request: Request) {
 
   const photos = await fetchExportPhotos(input.photoUrls);
   const files = [...buildExportBundle(input, now), ...exportMediaFiles(photos)];
-  const zip = zipExportBundle(files);
+  let zip: Uint8Array;
+  try {
+    zip = zipExportBundle(files);
+  } catch (error) {
+    if (!(error instanceof ExportResourceLimitError)) throw error;
+    return Response.json(
+      { error: "export_resource_limit" },
+      { status: 413, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const fileName = exportFileName(input.shopSlug, now, input.timezone);
   return new Response(new Uint8Array(zip), {
     headers: {

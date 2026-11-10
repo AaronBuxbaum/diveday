@@ -30,6 +30,7 @@ vi.mock("@/lib/export", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/export")>();
   return {
     ...actual,
+    zipExportBundle: vi.fn(actual.zipExportBundle),
     fetchExportPhotos: vi.fn(async () => ({
       photos: [],
       manifest: { version: 1, expected: 0, included: 0, complete: true, files: [] },
@@ -41,6 +42,7 @@ const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("../../../../../../features/session/rules");
 const { recordMedicalAnswersExported } = await import("@/db/operations");
 const { GET } = await import("./route");
+const { zipExportBundle, ExportResourceLimitError } = await import("@/lib/export");
 
 const ctx = fileScopedShopContext();
 
@@ -95,6 +97,17 @@ async function readLines(personId: string) {
 }
 
 describe("GET the bulk export", () => {
+  it("returns an explicit no-store refusal when the archive exceeds its resource limit", async () => {
+    await signInOwner();
+    vi.mocked(zipExportBundle).mockImplementationOnce(() => {
+      throw new ExportResourceLimitError();
+    });
+    const response = await GET(new Request("https://diveday.test/export/download"));
+    expect(response.status).toBe(413);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Content-Disposition")).toBeNull();
+    expect(await response.json()).toEqual({ error: "export_resource_limit" });
+  });
   it("writes a medical_answers_read line for each diver whose answers are in the file, and none for one without", async () => {
     const owner = await signInOwner();
     const answered = await signedRelease("answered.export@example.com", true);
