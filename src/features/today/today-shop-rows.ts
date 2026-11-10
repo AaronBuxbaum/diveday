@@ -28,7 +28,7 @@ import type { TodayRowsContext } from "./today-rows-context";
 /**
  * The rows about the shop rather than one departure: the payment rows' invoice controls, the owner's platform chores, reviews awaiting moderation and unanswered messages.
  */
-export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): void {
+export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): ReadonlySet<string> {
   const { shopSlug, timeZone, locale, t, now } = ctx;
   const {
     opsAlerts,
@@ -62,6 +62,7 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
   // it from) so they land in today's queue the day they go stale; `dueAt: null`
   // keeps them after every dated row in that band. Each row's `href` points at
   // the panel that owns the work: payments on Orders, deletions in Settings.
+  const opsStart = actions.length;
   if (opsAlerts) {
     const [stuckOperations, pendingDeletions, owedRefunds, openDisputes, restrictedSince] =
       opsAlerts;
@@ -192,6 +193,8 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
     }
   }
 
+  const opsActionIds = new Set(actions.slice(opsStart).map((action) => action.id));
+
   // Incident reports started and never filed (safety sheet 2026-10-15, item
   // 3): an injury written up on the boat can sit as a private draft while the
   // insurer's notice window runs, and drafts showed only on the trip page and
@@ -270,4 +273,5 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
       dueAt: null,
     });
   }
+  return opsActionIds;
 }

@@ -1536,7 +1536,7 @@ export async function getTodayWork(
    * and managers only, re-checked live. Omitted, that row is never raised.
    */
   viewerPersonId?: string,
-): Promise<TodayWork> {
+): Promise<TodayWork & { actionsWithoutOpsAlerts: TodayAction[] }> {
   const { timeZone, now } = clock;
   // The one horizon every readiness surface shares (src/lib/operational-window.ts).
   const { to: horizon } = operationalWindow(now);
@@ -1688,7 +1688,7 @@ export async function getTodayWork(
 
   pushDepartureRows(actions, rows);
 
-  pushShopRows(actions, rows);
+  const opsActionIds = pushShopRows(actions, rows);
 
   // **The one first-run question a trading shop can still have open.**
   //
@@ -1817,6 +1817,20 @@ export async function getTodayWork(
   return {
     departures,
     actions: visibleActions,
+    // Project before folding: staff never receive an owner-only row or its count.
+    actionsWithoutOpsAlerts:
+      opsActionIds.size === 0
+        ? visibleActions
+        : oneRowPerDiver(
+            attachAgencyChecks(
+              filterActionsForRoles(
+                actions.filter((action) => !opsActionIds.has(action.id)),
+                roles,
+              ),
+              agencyCheckCards,
+            ),
+            t,
+          ),
     handledHelp,
     highWind,
     outTripIds: [

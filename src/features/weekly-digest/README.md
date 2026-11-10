@@ -28,5 +28,6 @@ Everything importable from outside is re-exported by `./index.ts`.
 ## Invariants
 
 - **Every number comes off a reader another surface already trusts**, so the email can never say
-  something the app contradicts. The overdue count is Today's own queue, read twice off one readiness
-  pass: with the owner-only rows for Reports' gate holders, without them for everyone else.
+  something the app contradicts. The overdue count is Today's own queue, read once off one readiness
+  pass and projected before folding: with the owner-only rows for Reports' gate holders, without them
+  for everyone else.

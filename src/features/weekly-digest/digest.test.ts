@@ -14,6 +14,7 @@ import {
   weeklyDigestSends,
 } from "@/db/schema";
 import { createTrip, listStaff, setTripCrew } from "@/db/trips";
+import * as todayReader from "@/features/today";
 import { nowDate } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { notificationSchema } from "@/lib/notifications/kinds";
@@ -337,6 +338,22 @@ describe("previewWeeklyDigest", () => {
    * only shows that gate's holders. A crew member's preview carries neither;
    * the owner's carries both.
    */
+  it("loads the Today graph once for both digest grades", async () => {
+    const { db, shop, monday } = await context();
+    const read = vi.spyOn(todayReader, "getTodayWork");
+    try {
+      await readWeeklyDigestFacts(db, shop, monday);
+      expect(read).toHaveBeenCalledTimes(1);
+      const reports = await read.mock.results[0].value;
+      const args: Parameters<typeof todayReader.getTodayWork> = [...read.mock.calls[0]];
+      args[7] = false;
+      const staff = await todayReader.getTodayWork(...args);
+      expect(reports.actionsWithoutOpsAlerts).toEqual(staff.actions);
+    } finally {
+      read.mockRestore();
+    }
+  });
+
   it("keeps Reports-grade facts out of a crew member's email", async () => {
     const { db, shop, owner, captain, instructor, monday } = await context();
     // A stuck Stripe call: an ops alert on Today for an owner or manager only.

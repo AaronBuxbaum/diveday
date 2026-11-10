@@ -999,7 +999,7 @@
     "src/db/seed-history.ts#seedHistory": 632,
     "src/db/seed-more-trips.ts#seedMoreTrips": 623,
     "src/db/seed-trips.ts#seedTrips": 349,
-    "src/features/reporting/store.ts#getMonthlyReport": 319,
+    "src/features/reporting/store.ts#getMonthlyReport": 308,
     "src/lib/import.ts#prepareContactImport": 430
   },
   "live-people": {

@@ -335,27 +335,22 @@ export async function readWeeklyDigestFacts(
     }
   }
 
-  // Today's queue twice off the one readiness pass: with the owed-refund,
-  // stuck-payment and failed-deletion rows Reports' gate holders see, and
-  // without them for everyone else — the same split the shop home makes.
-  const todayQueue = (includeOpsAlerts: boolean) =>
-    getTodayWork(
-      db,
-      shop.id,
-      shop.slug,
-      shopClock(shop, now),
-      undefined,
-      // The email reads counts, never the rows' words.
-      staffTranslator(shop.defaultLocale),
-      undefined,
-      includeOpsAlerts,
-      evidence,
-      shop.diversPerDivemaster,
-      undefined,
-      // The email never reads the streamed wind rows; no forecast request.
-      false,
-    );
-  const [reportsToday, staffToday] = await Promise.all([todayQueue(true), todayQueue(false)]);
+  // One graph supplies both grades. Today projects the staff rows before
+  // folding, excluding every row produced by the operations-only facts.
+  const reportsToday = await getTodayWork(
+    db,
+    shop.id,
+    shop.slug,
+    shopClock(shop, now),
+    undefined,
+    staffTranslator(shop.defaultLocale),
+    undefined,
+    true,
+    evidence,
+    shop.diversPerDivemaster,
+    undefined,
+    false,
+  );
 
   const [
     bookingsMade,
@@ -457,7 +452,7 @@ export async function readWeeklyDigestFacts(
       staff: {
         ...shared,
         lastWeek: NO_LAST_WEEK,
-        overdueTodayItems: overdueTodayActions(staffToday.actions, now),
+        overdueTodayItems: overdueTodayActions(reportsToday.actionsWithoutOpsAlerts, now),
         money: noMoney(shop.currency),
         gearServiceDue: 0,
         safety: NO_SAFETY,

@@ -50,7 +50,7 @@ import {
   recordNotificationDelivery,
   sendNotificationBatch,
 } from "../../db/notifications";
-import { queryAll } from "../../db/query-helpers";
+import { queryAll, queryBatches } from "../../db/query-helpers";
 import {
   bookings,
   cards,
@@ -1882,16 +1882,24 @@ async function sendRecaps(
     );
   const alreadySent = new Set(delivered.map((d) => d.bookingId));
 
+  // Group unsent, send-window-eligible work once. Delivered and held rows
+  // still reach the outcome loop below, preserving scanned/skipped/held counts.
+  const pendingByTrip = new Map<string, typeof rows>();
+  for (const row of rows) {
+    if (alreadySent.has(row.booking.id) || !shopClock(row.shop, now).maySend("trip_recap"))
+      continue;
+    const group = pendingByTrip.get(row.trip.id);
+    if (group) group.push(row);
+    else pendingByTrip.set(row.trip.id, [row]);
+  }
+
   // **The highlight a crew left blank**, for a shop that switched on "Recap
   // highlights": Claude's line from the logged sightings, written to the trip
   // before the first recap of it goes, so every diver on the boat and the page
   // read the same words. Never over a crew's own; dark or refused, the recap
   // goes without one exactly as before (`src/features/recap/recap-assist.store.ts`).
-  for (const { trip, shop } of new Map(
-    rows
-      .filter((row) => !alreadySent.has(row.booking.id))
-      .map((row) => [row.trip.id, row] as const),
-  ).values()) {
+  for (const [first] of pendingByTrip.values()) {
+    const { trip, shop } = first;
     await autoFillRecapLine(db, trip, shop, options.marineLifeNamesIn);
   }
 
@@ -1906,21 +1914,22 @@ async function sendRecaps(
   // regression test pins, is that this email and `getRecapPageData` never
   // disagree about **one diver** — not that a boat agrees with itself.
   const flySafeByBooking = new Map<string, FlySafeResult | null>();
-  await Promise.all(
-    [...new Set(rows.map((r) => r.trip.id))].map(async (tripId) => {
-      const tripRows = rows.filter((r) => r.trip.id === tripId);
+  await queryBatches(
+    db,
+    [...pendingByTrip.values()].map((tripRows) => async () => {
       const first = tripRows[0];
-      if (!first) return;
+      const tripId = first.trip.id;
       const shopId = first.shop.id;
-      const [lived, divedRecentlyIds] = await Promise.all([
-        listExecutedDives(db, shopId, tripId),
-        diveDaysBefore(
-          db,
-          shopId,
-          tripRows.map((r) => r.booking.personId),
-          first.trip.startsAt,
-          first.shop.timezone,
-        ),
+      const [lived, divedRecentlyIds] = await queryAll(db, [
+        () => listExecutedDives(db, shopId, tripId),
+        () =>
+          diveDaysBefore(
+            db,
+            shopId,
+            tripRows.map((r) => r.booking.personId),
+            first.trip.startsAt,
+            first.shop.timezone,
+          ),
       ]);
       const executed = lived.map(({ executed: dive }) => ({
         diveNumber: dive.diveNumber,
