@@ -2,6 +2,7 @@
   "sheet": {
     "door": "Print",
     "printed": "Printed {date}",
+    "printedBy": "Printed by {name} · {date}",
     "pass": {
       "eyebrow": "Your pass",
       "bringHeading": "Bring",

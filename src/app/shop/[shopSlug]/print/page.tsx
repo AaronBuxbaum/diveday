@@ -25,6 +25,7 @@ import {
   TripPacket,
 } from "../trips/[id]/_components/packet/TripPacket";
 import { SheetDocument } from "./_components/SheetDocument";
+import { sheetAttribution } from "./_components/ShopSheet";
 
 export const metadata: Metadata = {
   title: "Day packet — DiveDay",
@@ -153,7 +154,7 @@ export default async function ShopDayPrintPage({
     trackEvent({ name: "day_print_opened", surface: "day_spine", departures: sheets.length }),
   );
 
-  const printed = `${t("print.sheet.printed", { date: formatPaperDateTime(now, locale, shop.timezone) })} · ${shop.timezone}`;
+  const printed = `${sheetAttribution(t, formatPaperDateTime(now, locale, shop.timezone), session.user.name)} · ${shop.timezone}`;
   const dayTitle = t(
     tomorrow ? "shared.printPacket.dayTitleTomorrow" : "shared.printPacket.dayTitle",
   );

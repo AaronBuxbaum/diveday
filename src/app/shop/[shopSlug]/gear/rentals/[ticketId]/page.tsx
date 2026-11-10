@@ -110,7 +110,7 @@ export default async function CounterRentalTicketPage({
   const ticketId = uuidParam(rawTicketId);
   if (!ticketId) notFound();
 
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const page = await getCounterRentalTicketPage(db, shop, ticketId);
@@ -266,7 +266,7 @@ export default async function CounterRentalTicketPage({
       <RentalSlip
         shop={shop}
         shopSlug={shopSlug}
-        printed={sheetPrinted(t, nowDate(), locale, shop.timezone)}
+        printed={sheetPrinted(t, nowDate(), locale, shop.timezone, session.user.name)}
         holder={ticket.personName}
         line={window}
         units={ticket.units.map((unit) => ({

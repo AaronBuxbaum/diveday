@@ -13,7 +13,8 @@ import { ARRIVAL_MAP_PROBES } from "../src/lib/maps";
 import { assertCrewPdfPixels } from "./crew-pdf-pixels";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { bookASeatAndOpenThread, openTripFromBoard, seededTripId } from "./helpers";
-import { staticPrintPage } from "./print-pdf";
+import { assertPacketAttributionBelowKit } from "./print-attribution";
+import { capturePrintPdfs, staticPrintPage } from "./print-pdf";
 import { seedFacts } from "./shop-facts";
 import {
   capturePrint,
@@ -236,7 +237,9 @@ test.describe("print", () => {
   // to compose all four, which is how 42 buttons — "Cancel trip" among them —
   // came to be printed beside a roster (issue #814). It composes the dive plan
   // it renders itself, plus the two tabs that were already documents.
-  test("the trip packet prints the dive plan, the manifest and the prep list", async ({ page }) => {
+  test("the trip packet prints the dive plan, the manifest and the prep list", async ({
+    page,
+  }, info) => {
     await openReefTrip(page);
     const tripPath = new URL(page.url()).pathname;
     await page.goto(`${tripPath}?print=1`);
@@ -255,6 +258,11 @@ test.describe("print", () => {
     ).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Divers" }).first()).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
+    await expect(page.locator(".paper-sheet-fold").first()).toContainText("Printed by");
+    for (const pdf of await capturePrintPdfs(page, "trip-attribution", info.outputDir)) {
+      assertPacketAttributionBelowKit(pdf);
+      await info.attach("packet-attribution", { path: pdf, contentType: "application/pdf" });
+    }
     await capturePrint(page, "trip-packet");
   });
 
