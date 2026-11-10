@@ -28,7 +28,8 @@ on:
         default: false
 
 concurrency:
-  group: e2e-nightly
+  # PR diagnostics must not cancel nightly or another PR's skipped workflow.
+  group: ${{ github.event_name == 'pull_request' && format('e2e-diagnostic-{0}', github.event.pull_request.number) || 'e2e-nightly' }}
   cancel-in-progress: true
 
 permissions:
