@@ -32,7 +32,7 @@ describe("pending sign-in policy", () => {
         DIVEDAY_E2E: "1",
         PORT: "4123",
       }),
-    ).toEqual(["http://127.0.0.1:4123"]);
+    ).toEqual(["http://127.0.0.1:4123", "http://localhost:4123"]);
     expect(signInOrigins("https://dive.day", { NODE_ENV: "production", PORT: "4123" })).toEqual([
       "https://dive.day",
       "https://www.dive.day",

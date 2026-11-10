@@ -2,17 +2,20 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import {
   beginTotpEnrollment,
+  disableTotp,
   enableTotp,
   getAccountSecurity,
   verifyAccountSecondFactor,
 } from "@/db/account-security";
 import type { AppDb } from "@/db/client";
+import { beginPasskeyRegistration, registerAccountPasskey } from "@/db/passkeys";
 import { accountSessions, accountStepUps, people, personRoles, userAccounts } from "@/db/schema";
 import { nowDate, nowMs } from "@/lib/clock";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+import { passkeyAuthenticator } from "@/test/passkey-authenticator";
 import { redirectedTo, staffSession } from "@/test/staff-session";
 
 /**
@@ -35,7 +38,13 @@ vi.mock("next/headers", () => nextHeadersStub());
 vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 
 const { requireShopSurface } = await import("../../../../../features/session/rules");
-const { disableTotpAction, revokeSessionAction, verifyStepUpAction } = await import("./actions");
+const {
+  beginTotpEnrollmentAction,
+  enableTotpAction,
+  disableTotpAction,
+  revokeSessionAction,
+  verifyStepUpAction,
+} = await import("./actions");
 
 const ctx = fileScopedShopContext();
 
@@ -106,6 +115,74 @@ function form(entries: Record<string, string>): FormData {
 
 const securityPage = (slug: string) => shopPath(slug, "me", "security");
 
+async function passkeyOnlyOwner() {
+  const { db, shop } = ctx;
+  const owner = await enrolledOwner(db, shop);
+  await disableTotp(db, owner.accountId);
+  const binding = {
+    userAccountId: owner.accountId,
+    accountSessionId: owner.sessionId,
+    shopId: shop.id,
+  };
+  const rp = { origin: "https://diveday.app", rpId: "diveday.app" };
+  const start = await beginPasskeyRegistration(db, binding, rp, null);
+  if (!start) throw new Error("registration unavailable");
+  const authenticator = passkeyAuthenticator();
+  expect(
+    await registerAccountPasskey(
+      db,
+      binding,
+      rp,
+      start.handle,
+      authenticator.register(start.options.challenge, rp.origin, rp.rpId),
+      "Phone",
+    ),
+  ).toBe(true);
+  signIn(owner.personId, owner.sessionId);
+  return owner;
+}
+
+describe("passkey-only action boundaries", () => {
+  it.each(["money", "export", "backup"])(
+    "refuses an arbitrary code for a passkey-only %s step-up",
+    async (purpose) => {
+      const { db, shop } = ctx;
+      const owner = await passkeyOnlyOwner();
+      const target = shopPath(shop.slug, "orders");
+      const to = await redirectedTo(() =>
+        verifyStepUpAction(shop.slug, form({ purpose, returnTo: target, code: "000000" })),
+      );
+      expect(to).toBe(
+        noticeUrl(securityPage(shop.slug), "code-invalid", { purpose, returnTo: target }),
+      );
+      expect(
+        await db
+          .select()
+          .from(accountStepUps)
+          .where(eq(accountStepUps.userAccountId, owner.accountId)),
+      ).toEqual([]);
+    },
+  );
+  it("refuses session-only alternate TOTP enrollment on a passkey-protected account", async () => {
+    const { db, shop } = ctx;
+    const owner = await passkeyOnlyOwner();
+    const to = await redirectedTo(() => beginTotpEnrollmentAction(shop.slug));
+    expect(to).toBe(noticeUrl(securityPage(shop.slug), "security-proof-required"));
+    expect((await getAccountSecurity(db, owner.accountId))?.totpSecretSealed).toBeNull();
+  });
+  it("does not treat a staged TOTP secret as proof for enabling an alternate factor", async () => {
+    const { db, shop } = ctx;
+    const owner = await passkeyOnlyOwner();
+    const staged = await beginTotpEnrollment(db, owner.accountId);
+    if (!staged) throw new Error("missing staged TOTP");
+    const to = await redirectedTo(() =>
+      enableTotpAction(shop.slug, form({ code: totpCode(staged.secret) })),
+    );
+    expect(to).toBe(noticeUrl(securityPage(shop.slug), "security-proof-required"));
+    expect((await getAccountSecurity(db, owner.accountId))?.totpEnabledAt).toBeNull();
+  });
+});
+
 describe("disableTotpAction", () => {
   it("refuses with no code or a wrong one, and two-factor stays on", async () => {
     const { db, shop } = ctx;
@@ -160,6 +237,26 @@ describe("verifyStepUpAction", () => {
   async function grants(db: AppDb, accountId: string) {
     return db.select().from(accountStepUps).where(eq(accountStepUps.userAccountId, accountId));
   }
+  it("uses a current existing TOTP code for a separate five-minute security proof", async () => {
+    const { db, shop } = ctx;
+    const owner = await enrolledOwner(db, shop);
+    signIn(owner.personId, owner.sessionId);
+    expect(
+      await redirectedTo(() =>
+        verifyStepUpAction(
+          shop.slug,
+          form({
+            purpose: "security",
+            returnTo: securityPage(shop.slug),
+            code: totpCode(owner.secret),
+          }),
+        ),
+      ),
+    ).toBe(securityPage(shop.slug));
+    const [grant] = await grants(db, owner.accountId);
+    expect(grant.purpose).toBe("security");
+    expect(grant.expiresAt.getTime() - grant.verifiedAt.getTime()).toBe(300000);
+  });
 
   it("grants the purpose to this session and resumes at the shop path it was given", async () => {
     const { db, shop } = ctx;

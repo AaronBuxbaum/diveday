@@ -48,7 +48,7 @@ export function signInOrigins(
 ): readonly string[] {
   const port = Number(env.PORT);
   if (runtimeMode(env).e2eHarness && Number.isInteger(port) && port > 0 && port <= 65535)
-    return [`http://127.0.0.1:${port}`];
+    return [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
   const origin = new URL(configuredOrigin);
   // The same site under `www.`: a visitor who types it reaches the app (the
   // domain serves both) and must be able to sign in, or open the demo, from

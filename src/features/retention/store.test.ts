@@ -14,7 +14,7 @@ import {
 } from "../../db/schema/index";
 import { getTripRoster, upcomingTripsWithCounts } from "../../db/trips";
 import { fileScopedShopContext } from "../../test/db";
-import { pendingSignInForRetention } from "../../test/retention-pending-sign-in";
+import { pendingProofRetentionFixtures } from "../../test/retention-pending-sign-in";
 import { setupRequestForRetention } from "../../test/retention-setup-request";
 import { schemaTableNames } from "../../test/schema-tables";
 import { writeBackupDeliveryClaimFixture } from "../../test/substrate-fixtures/db/retention-backup-delivery-claims.test-support";
@@ -587,7 +587,7 @@ const STALE_AND_FRESH = {
         .values({ shopId: shop.id, actorPersonId: people[0], code: token(), occurredAt: at })
         .returning({ id: schema.activityEvents.id }),
     ),
-  account_sign_in_challenges: pendingSignInForRetention,
+  ...pendingProofRetentionFixtures,
   account_sessions: async ({ db, shop, owner, people }, at) =>
     idOf(
       await db

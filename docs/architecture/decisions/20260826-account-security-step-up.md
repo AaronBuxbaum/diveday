@@ -28,6 +28,14 @@ must not become readable from database rows or logs.
   and a refund comes back with the amount typed.
 - Keep the sign-in, step-up, session-revocation, and recovery-code failures generic to avoid
   account or factor enumeration.
+- **Amended 2026-11-10, #4232:** an enrolled staff passkey also opts the account into the same
+  purpose/session-bound step-up gate. A fresh, user-verified WebAuthn assertion can satisfy it
+  without replacing the current session. Enabled TOTP remains required at sign-in after a
+  passkey first factor. Changing enrolled factors uses a separate five-minute `security` purpose,
+  proved by an existing factor or actual current password. This keeps lost-device recovery while
+  preventing a live session from removing its own protection or enrolling a replacement factor.
+  Origin, RP and challenge binding are specified in
+  [20260907-in-your-hands](20260907-in-your-hands.md#slice-19a-mechanism-reconciliation-2026-11-10-4232).
 
 ## Alternatives considered
 

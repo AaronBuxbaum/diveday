@@ -32,6 +32,7 @@ export * from "./integrations";
 export * from "./interests";
 export * from "./notifications";
 export * from "./offline-manifests";
+export * from "./passkeys";
 export * from "./payments";
 export * from "./retention";
 export * from "./reviews";

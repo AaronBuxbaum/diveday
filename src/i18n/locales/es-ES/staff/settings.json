@@ -1284,10 +1284,40 @@
       "disabled": "Autenticación en dos pasos desactivada",
       "sessionRevoked": "Sesión revocada",
       "codeInvalid": "No se aceptó ese código.",
-      "stepUpRequired": "Verifica con tu aplicación de autenticación para continuar.",
+      "stepUpRequired": "Verifica tu identidad para continuar.",
       "unavailable": "La configuración de seguridad no está disponible hasta configurar la clave de cifrado del despliegue.",
       "invalid": "No cambió nada: tu sesión venció o el formulario estaba desactualizado. Cierra sesión, vuelve a entrar e inténtalo de nuevo desde esta página.",
-      "tooManyAttempts": "Demasiados intentos. Espera unos minutos e intÃ©ntalo de nuevo."
+      "tooManyAttempts": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."
+    },
+    "passkeys": {
+      "heading": "Claves de acceso",
+      "description": "Usa la huella, el rostro o el PIN de tu dispositivo para entrar. Conserva tu contraseña para otro dispositivo. La autenticación de dos factores sigue activa si la habilitaste.",
+      "name": "Nombre de la clave",
+      "add": "Agregar una clave de acceso",
+      "adding": "Agregando clave…",
+      "save": "Guardar nombre",
+      "delete": "Eliminar",
+      "confirmDelete": "Eliminar esta clave",
+      "cancel": "Cancelar",
+      "empty": "No hay claves de acceso.",
+      "error": "No se completó la verificación. Inténtalo de nuevo.",
+      "saved": "Claves de acceso actualizadas.",
+      "unavailable": "Este navegador no permite usar claves de acceso aquí. Tu contraseña sigue funcionando.",
+      "lastUsed": "Último uso: {date}",
+      "neverUsed": "Sin usar todavía",
+      "verify": "Verificar con una clave de acceso",
+      "verifying": "Verificando tu clave…",
+      "stepUpDescription": "Verifica con una clave de acceso. Esta aprobación dura 12 horas en este navegador.",
+      "stepUpWithCodeDescription": "Usa una clave de acceso, un código del autenticador o de recuperación. Esta aprobación dura 12 horas en este navegador."
+    },
+    "factorManagement": {
+      "heading": "Verifica para cambiar cómo entras",
+      "description": "Usa una clave de acceso existente, un código del autenticador o tu contraseña actual antes de agregar o eliminar un método de acceso. La verificación dura cinco minutos en este navegador.",
+      "verified": "Puedes cambiar tus métodos de acceso durante cinco minutos en este navegador.",
+      "invalid": "No se aceptó esa contraseña. Inténtalo de nuevo o restablécela.",
+      "password": "Contraseña actual",
+      "verifyPassword": "Verificar contraseña",
+      "recoverPassword": "Restablecer una contraseña olvidada"
     }
   },
   "embed": {

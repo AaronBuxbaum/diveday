@@ -77,7 +77,11 @@ import { sayPriyaIsRunningLate } from "./say-priya-is-running-late";
 import { seatSomebodyOffTheNamePrompt } from "./seat-somebody-off-the-name-prompt";
 import { seedOwedMoney } from "./seed-owed-money";
 import { departTripArgs, sendADepartureOut } from "./send-a-departure-out";
-import { failTheLatestBackup, giveTheFirstBoatAPhoto } from "./settings-states";
+import {
+  failTheLatestBackup,
+  giveTheFirstBoatAPhoto,
+  pinStaffSessionsSeenNow,
+} from "./settings-states";
 import { slideOneDepartureOntoAnother } from "./slide-one-departure-onto-another";
 import {
   connectStripe,
@@ -225,6 +229,7 @@ const FACTS = {
   mixedTraining: ({ db, shop, now }) => bookOneInstructorTwice(db, shop, now),
   boatPhoto: privateOnly(({ db, shop }) => giveTheFirstBoatAPhoto(db, shop)),
   backupFailed: ({ db, shop, now }) => failTheLatestBackup(db, shop, now),
+  staffSessionsSeenNow: privateOnly(({ db, shop, now }) => pinStaffSessionsSeenNow(db, shop, now)),
   authChallengeExpired: privateOnly((context) =>
     expireThePendingSignIn(context.db, context.shop, requestOf(context).headers, context.now),
   ),

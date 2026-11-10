@@ -4,9 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
-  beginTotpEnrollment,
   disableTotp,
-  enableTotp,
   getAccountSecurity,
   grantStepUp,
   refreshAccountRecoveryCodes,
@@ -14,6 +12,11 @@ import {
   revokeAllAccountSessions,
   verifyAccountSecondFactor,
 } from "@/db/account-security";
+import {
+  authorizeFactorManagementPassword,
+  beginProtectedTotpEnrollment,
+  enableProtectedTotp,
+} from "@/db/passkeys";
 import { getAccountIdForPerson } from "@/db/user-accounts";
 import { parseForm, readForm, single, text } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
@@ -53,10 +56,47 @@ async function securityContext(shopSlug: string) {
   return { ...surface, accountId };
 }
 
+function factorBinding(
+  accountId: string,
+  session: Awaited<ReturnType<typeof securityContext>>["session"],
+) {
+  return session.user.sessionId
+    ? {
+        userAccountId: accountId,
+        accountSessionId: session.user.sessionId,
+        shopId: session.user.shopId,
+      }
+    : null;
+}
+
+export async function verifyFactorManagementPasswordAction(shopSlug: string, formData: FormData) {
+  const { db, accountId, session } = await securityContext(shopSlug);
+  if (!(await secondFactorAttemptAllowed(accountId)))
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "too-many-attempts"));
+  const binding = factorBinding(accountId, session);
+  const password = formData.get("password");
+  const accepted =
+    binding &&
+    typeof password === "string" &&
+    password.length > 0 &&
+    password.length <= 1000 &&
+    (await authorizeFactorManagementPassword(db, binding, password));
+  revalidateAndRedirect(
+    shopPath(shopSlug, "me", "security"),
+    noticeUrl(
+      shopPath(shopSlug, "me", "security"),
+      accepted ? "security-proof-verified" : "security-proof-invalid",
+    ),
+  );
+}
+
 export async function beginTotpEnrollmentAction(shopSlug: string) {
-  const { db, accountId } = await securityContext(shopSlug);
-  const started = await beginTotpEnrollment(db, accountId);
-  if (started) {
+  const { db, accountId, session } = await securityContext(shopSlug);
+  const binding = factorBinding(accountId, session);
+  const started = binding ? await beginProtectedTotpEnrollment(db, binding) : null;
+  if (!started || started.status === "proof_required")
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "security-proof-required"));
+  if (started.status === "started") {
     const key = secretKeyFromEnvironment();
     if (key.status === "ok") {
       const cookieStore = await cookies();
@@ -77,7 +117,7 @@ export async function beginTotpEnrollmentAction(shopSlug: string) {
     shopPath(shopSlug, "me", "security"),
     noticeUrl(
       shopPath(shopSlug, "me", "security"),
-      started ? "enrollment-started" : "security-unavailable",
+      started.status === "started" ? "enrollment-started" : "security-unavailable",
     ),
   );
 }
@@ -97,12 +137,16 @@ function secondFactorCode(formData: FormData) {
 }
 
 export async function enableTotpAction(shopSlug: string, formData: FormData) {
-  const { db, accountId } = await securityContext(shopSlug);
+  const { db, accountId, session } = await securityContext(shopSlug);
   if (!(await secondFactorAttemptAllowed(accountId))) {
     redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "too-many-attempts"));
   }
   const code = parseForm(totpCodeForm, formData);
-  const enabled = code.ok && (await enableTotp(db, accountId, code.data.code));
+  const binding = factorBinding(accountId, session);
+  const result = code.ok && binding ? await enableProtectedTotp(db, binding, code.data.code) : null;
+  if (result?.status === "proof_required")
+    redirect(noticeUrl(shopPath(shopSlug, "me", "security"), "security-proof-required"));
+  const enabled = result?.status === "checked" && result.enabled;
   revalidateAndRedirect(
     shopPath(shopSlug, "me", "security"),
     noticeUrl(
@@ -202,6 +246,7 @@ export async function verifyStepUpAction(shopSlug: string, formData: FormData) {
   }
   const accepted = await verifyAccountSecondFactor(db, accountId, code.data, {
     consumeTotpStep: false,
+    requireEnabled: true,
   });
   if (!accepted) {
     redirect(

@@ -92,6 +92,7 @@ export type RetainedTable =
   | "activity_events"
   | "account_sessions"
   | "account_sign_in_challenges"
+  | "account_passkey_challenges"
   | "shop_contact_email_confirmation_tokens"
   | "capabilities"
   | "booking_capabilities"
@@ -232,6 +233,8 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
   account_sessions: 90,
   /** Pending proof ends at expiry; bounded issuance and weekly sweeps remove expired rows. */
   account_sign_in_challenges: 0,
+  /** WebAuthn proof expires in five minutes and is single-use. */
+  account_passkey_challenges: 0,
   /**
    * The same 90 days past `expires_at` as the account tokens, for the same shape
    * of row: a hashed one-time link (issue #1288) that is dead the moment it is

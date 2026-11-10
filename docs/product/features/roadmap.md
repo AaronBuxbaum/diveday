@@ -13,6 +13,7 @@ missing-feature description. See [shipped.md](../shipped.md), the current code a
 before proposing a delta.
 
 Contextual home-screen entry is built; see [its shipped record](../shipped.md#contextual-home-screen-entry-built-2026-11-10).
+Staff passkeys are built; see [their shipped record](../shipped.md#staff-passkeys-built-2026-11-10).
 
 Aaron confirmed on 2026-11-10 that there are no shops or pilot partners yet. He did not impose a
 pilot-only engineering boundary: UX and design exploration and polish remain wanted, and a change

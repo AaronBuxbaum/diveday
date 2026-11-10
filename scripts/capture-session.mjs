@@ -201,7 +201,7 @@ export async function signInOnce(browser, base, role) {
     await page.goto(`${base}/sign-in`);
     await page.getByLabel("Email").fill(login.email);
     await page.getByLabel("Password").fill(login.password);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.waitForURL(
       (url) => url.pathname.startsWith("/shop") || url.searchParams.has("error"),
       { timeout: SIGN_IN_TIMEOUT_MS },

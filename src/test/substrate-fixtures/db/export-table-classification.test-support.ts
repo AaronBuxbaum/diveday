@@ -94,6 +94,8 @@ export const EXCLUDED_TABLES = [
   "user_accounts", // credentials are never exported
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
   "account_sign_in_challenges", // pending authentication capabilities, never exported
+  "account_passkeys", // account-bound authentication credentials, never exported
+  "account_passkey_challenges", // single-use authentication proof, never exported
   "account_sessions", // a live sign-in session — more sensitive than a bearer token, never exported
   "account_security", // TOTP seeds and recovery-code hashes are credentials
   "account_step_ups", // short-lived second-factor grants are credentials

@@ -91,6 +91,48 @@ bound to the session and purpose for fifteen minutes as the authenticator code i
 **Recommended:** yes to both. Declined on the second, the code is asked as today; declined on the
 first, nothing on the door or in Settings changes. **Decided 2026-09-07: yes to both.**
 
+#### Slice 19a mechanism reconciliation, 2026-11-10 (#4232)
+
+The current security page is `/shop/[shopSlug]/me/security`. Browser capability is not evidence
+that this account owns a passkey. The password form therefore stays the primary door, with an
+explicit *Sign in with a passkey* text action on capable secure browsers. Its email input allows
+`username webauthn` autofill. No device inventory or account-specific availability is inferred.
+Unsupported browsers and canceled ceremonies retain the password and recovery paths. WebAuthn
+requires a domain RP ID: IP-hosted contexts offer password fallback, and isolated browser tests
+use the exact server-configured localhost origin rather than the non-passkey fleet’s loopback IP.
+
+Better Auth remains the session issuer. Its stock passkey plugin would create a session directly,
+bypassing DiveDay's pending second-factor stage and required tenant/session fields. Instead this
+slice uses stable `@simplewebauthn/server` and `@simplewebauthn/browser`, the verifier/browser
+mechanism used by that plugin, through DiveDay's custom Better Auth endpoint and existing
+`finishFirstFactor` transition. Enabled TOTP and recovery codes remain the second sign-in stage.
+This supersedes the stock-plugin mechanism above, without changing the approved staff-only scope.
+
+Registration and assertions require user verification and an exact configured origin and its
+hostname as RP ID. Five-minute challenges are random, browser-cookie-bound, stored with a handle
+digest, atomically spent once, and bound to ceremony and, for signed-in work, account, tenant and
+current session. Step-up additionally binds the requested purpose, creates no new session, and
+resumes only a checked same-shop path. Live account, staff roles, session expiry and revocation
+are rechecked before writes. Public keys and signature counters are stored; private keys never
+leave the authenticator. Names, last use and Delete live on the security page. Deleted credentials
+are excluded immediately and cannot be registered again under the same credential ID.
+
+An enrolled passkey, like enabled TOTP, requires a fresh grant for the operations that currently
+ask for one. Passkeys satisfy that challenge without disabling TOTP. The grant uses the current
+one-shift, twelve-hour lifetime (#4063), superseding this section's historical fifteen minutes.
+All existing consequential confirmation taps remain. Once an account has a passkey or enabled
+TOTP, adding a factor, completing alternate TOTP enrollment, or deleting a passkey also requires
+an independent, five-minute `security` grant for the exact live session. That purpose cannot
+approve money, export or backup. An existing user-verified passkey, current enabled-TOTP/recovery
+code, or the actual current account password can issue it; verification of a newly supplied key
+or staged TOTP secret cannot. Password reset remains the lost-device recovery route. Initial
+factor enrollment on an account without either factor stays unchanged. This closes replacement
+of the factor from an unattended protected session without forcing possession of a lost key.
+Credential rows are excluded from shop
+exports and cascade with the account or shop; expired challenge machinery is removed on issuance
+and by retention. No diver account, counter signing, card capture, production configuration or
+deployment is part of this slice.
+
 ### 3. Hand it over (H-20260907-where-device-already-knows b)
 
 A blocked row whose fix is the release — on the counter and on the departure's roster, the two

@@ -60,7 +60,9 @@ describe("the staff sign-in", () => {
   const script = readFileSync(path.join(process.cwd(), "scripts/screenshot.mjs"), "utf8");
 
   it("submits the form once per run and hands the session to every context as storage state", () => {
-    expect(source.match(/getByRole\("button", \{ name: "Sign in" \}\)/g)).toHaveLength(1);
+    expect(source.match(/getByRole\("button", \{ name: "Sign in", exact: true \}\)/g)).toHaveLength(
+      1,
+    );
     expect(script).not.toMatch(/name: "Sign in"/);
     expect(script.match(/await signInOnce\(/g)).toHaveLength(1);
     // The capture contexts take the minted session rather than earning their own.

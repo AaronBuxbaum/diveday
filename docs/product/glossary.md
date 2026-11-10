@@ -507,6 +507,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Address confirmation token
 - Booking link
 - Capability
+- Passkey
 - Pending sign-in challenge
 - Recovery code
 - Step-up

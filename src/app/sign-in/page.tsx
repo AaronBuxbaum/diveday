@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { connection } from "next/server";
+import { PasskeyAuthentication } from "@/app/_components/PasskeyAuthentication";
 import { EntryShell } from "@/components/account/EntryShell";
 import { ForgetThisDevice } from "@/components/ForgetThisDevice";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -133,7 +134,7 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
                   name="email"
                   type="email"
                   required
-                  autoComplete="email"
+                  autoComplete="username webauthn"
                   className={controlClass}
                 />
               </Field>
@@ -238,6 +239,13 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
           </SignInStatus>
         ) : null}
       </form>
+      {!secondFactorRequired ? (
+        <PasskeyAuthentication
+          label={t("account.signIn.passkey")}
+          pendingLabel={t("account.signIn.passkeyPending")}
+          errorLabel={t("account.signIn.passkeyError")}
+        />
+      ) : null}
     </EntryShell>
   );
 }

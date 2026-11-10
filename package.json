@@ -137,6 +137,8 @@
     "@electric-sql/pglite": "^0.5.15",
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@sentry/nextjs": "^11.11.0",
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.1.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.1.0",
     "aws-rum-web": "^3.2.1",

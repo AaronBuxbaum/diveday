@@ -1,0 +1,836 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "16059de0-3e8d-4408-b2d0-12c65f5cf7bf",
+  "prevIds": [
+    "c4de0f6c-6317-4165-98ce-b1572b65254c"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "security_step_up_purpose"
+      ],
+      "writes": [
+        "s|enum|public.security_step_up_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_passkey_challenges"
+      ],
+      "writes": [
+        "s|tbl|public.account_passkey_challenges",
+        "n|tbl|public.account_passkey_challenges",
+        "e|tbl|public.account_passkey_challenges",
+        "n|rel|public.account_passkey_challenges",
+        "n|type|public.account_passkey_challenges",
+        "n|rel|public.account_passkey_challenges_pkey",
+        "n|rel|public.account_passkey_challenges_token_hash_key"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_passkeys"
+      ],
+      "writes": [
+        "s|tbl|public.account_passkeys",
+        "n|tbl|public.account_passkeys",
+        "e|tbl|public.account_passkeys",
+        "n|rel|public.account_passkeys",
+        "n|type|public.account_passkeys",
+        "n|rel|public.account_passkeys_pkey",
+        "n|rel|public.account_passkeys_credential_id_key"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "account_passkey_challenges",
+        "account_passkey_challenges_expiry_idx"
+      ],
+      "writes": [
+        "s|idx|public.account_passkey_challenges_expiry_idx",
+        "n|idx|public.account_passkey_challenges_expiry_idx",
+        "e|idx|public.account_passkey_challenges_expiry_idx",
+        "n|rel|public.account_passkey_challenges_expiry_idx"
+      ],
+      "reads": [
+        "n|tbl|public.account_passkey_challenges",
+        "n|sch|public",
+        "n|col|public.account_passkey_challenges.expires_at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "account_passkeys",
+        "account_passkeys_live_account_idx"
+      ],
+      "writes": [
+        "s|idx|public.account_passkeys_live_account_idx",
+        "n|idx|public.account_passkeys_live_account_idx",
+        "e|idx|public.account_passkeys_live_account_idx",
+        "n|rel|public.account_passkeys_live_account_idx"
+      ],
+      "reads": [
+        "n|tbl|public.account_passkeys",
+        "n|sch|public",
+        "n|col|public.account_passkeys.user_account_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_passkey_challenges"
+      ],
+      "writes": [
+        "s|fk|public.account_passkey_challenges.account_passkey_challenges_shop_id_shops_id_fkey",
+        "n|fk|public.account_passkey_challenges.account_passkey_challenges_shop_id_shops_id_fkey",
+        "e|fk|public.account_passkey_challenges.account_passkey_challenges_shop_id_shops_id_fkey",
+        "n|con|public.account_passkey_challenges.account_passkey_challenges_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.account_passkey_challenges",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.account_passkey_challenges.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_passkey_challenges"
+      ],
+      "writes": [
+        "s|fk|public.account_passkey_challenges.account_passkey_challenges_IAoJPG6JDKcK_fkey",
+        "n|fk|public.account_passkey_challenges.account_passkey_challenges_IAoJPG6JDKcK_fkey",
+        "e|fk|public.account_passkey_challenges.account_passkey_challenges_IAoJPG6JDKcK_fkey",
+        "n|con|public.account_passkey_challenges.account_passkey_challenges_IAoJPG6JDKcK_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.account_passkey_challenges",
+        "n|sch|public",
+        "n|tbl|public.user_accounts",
+        "n|sch|public",
+        "n|col|public.account_passkey_challenges.user_account_id",
+        "n|col|public.user_accounts.id",
+        "e|uniqueness|public.user_accounts.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_passkey_challenges"
+      ],
+      "writes": [
+        "s|fk|public.account_passkey_challenges.account_passkey_challenges_WpffnZM0oTSQ_fkey",
+        "n|fk|public.account_passkey_challenges.account_passkey_challenges_WpffnZM0oTSQ_fkey",
+        "e|fk|public.account_passkey_challenges.account_passkey_challenges_WpffnZM0oTSQ_fkey",
+        "n|con|public.account_passkey_challenges.account_passkey_challenges_WpffnZM0oTSQ_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.account_passkey_challenges",
+        "n|sch|public",
+        "n|tbl|public.account_sessions",
+        "n|sch|public",
+        "n|col|public.account_passkey_challenges.account_session_id",
+        "n|col|public.account_sessions.id",
+        "e|uniqueness|public.account_sessions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_passkeys"
+      ],
+      "writes": [
+        "s|fk|public.account_passkeys.account_passkeys_shop_id_shops_id_fkey",
+        "n|fk|public.account_passkeys.account_passkeys_shop_id_shops_id_fkey",
+        "e|fk|public.account_passkeys.account_passkeys_shop_id_shops_id_fkey",
+        "n|con|public.account_passkeys.account_passkeys_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.account_passkeys",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.account_passkeys.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "account_passkeys"
+      ],
+      "writes": [
+        "s|fk|public.account_passkeys.account_passkeys_user_account_id_user_accounts_id_fkey",
+        "n|fk|public.account_passkeys.account_passkeys_user_account_id_user_accounts_id_fkey",
+        "e|fk|public.account_passkeys.account_passkeys_user_account_id_user_accounts_id_fkey",
+        "n|con|public.account_passkeys.account_passkeys_user_account_id_user_accounts_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.account_passkeys",
+        "n|sch|public",
+        "n|tbl|public.user_accounts",
+        "n|sch|public",
+        "n|col|public.account_passkeys.user_account_id",
+        "n|col|public.user_accounts.id",
+        "e|uniqueness|public.user_accounts.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "account_passkey_challenges",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "account_passkeys",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "user_account_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "account_session_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "token_hash",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "challenge",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "ceremony",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "purpose",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "origin",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "rp_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "expires_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "user_account_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "credential_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "public_key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "counter",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "last_used_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "deleted_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "account_passkey_challenges_expiry_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "expires_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "account_passkeys_live_account_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "user_account_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"deleted_at\" is null",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "account_passkey_challenges_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "account_passkey_challenges_IAoJPG6JDKcK_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_account_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user_accounts",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "account_passkey_challenges_WpffnZM0oTSQ_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "account_session_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "account_sessions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "account_passkeys_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "account_passkeys_user_account_id_user_accounts_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_account_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user_accounts",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "account_passkey_challenges_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "account_passkeys_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "account_passkey_challenges_token_hash_key",
+        "nameExplicit": false,
+        "columns": [
+          "token_hash"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "account_passkeys_credential_id_key",
+        "nameExplicit": false,
+        "columns": [
+          "credential_id"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkey_challenges",
+        "name": "account_passkey_challenges_binding",
+        "value": "(\"ceremony\" = 'sign-in' and \"user_account_id\" is null and \"account_session_id\" is null and \"shop_id\" is null and \"purpose\" is null) or (\"ceremony\" in ('register', 'step-up') and \"user_account_id\" is not null and \"account_session_id\" is not null and \"shop_id\" is not null and ((\"ceremony\" = 'register' and \"purpose\" is null) or (\"ceremony\" = 'step-up' and \"purpose\" is not null and \"purpose\" in ('money', 'export', 'backup', 'security'))))",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "account_passkeys_counter",
+        "value": "\"counter\" >= 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account_passkeys",
+        "name": "account_passkeys_name",
+        "value": "length(\"name\") between 1 and 80",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"security_step_up_purpose\"]",
+      "set": {
+        "values": [
+          "money",
+          "export",
+          "backup",
+          "security"
+        ]
+      }
+    }
+  ]
+}

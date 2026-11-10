@@ -3407,7 +3407,10 @@
       "verify": "Verify",
       "restart": "Your sign-in expired. Enter your email and password again.",
       "demoUnavailable": "The demo didn’t open. You may have tried it a few times this hour. Give it a little while and try again.",
-      "rateLimit": "Too many attempts. Wait a moment before trying again."
+      "rateLimit": "Too many attempts. Wait a moment before trying again.",
+      "passkey": "Sign in with a passkey",
+      "passkeyPending": "Checking your passkey…",
+      "passkeyError": "Passkey sign-in didn’t finish. Try again or use your password."
     },
     "onboard": {
       "eyebrow": "Start a shop",
