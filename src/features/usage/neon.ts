@@ -57,7 +57,15 @@ const consumptionResponseSchema = z.object({
         .array(
           z.object({
             consumption: z
-              .array(z.object({ metrics: metricsSchema.optional() }).passthrough())
+              .array(
+                z
+                  .object({
+                    timeframe_start: z.string().optional(),
+                    timeframe_end: z.string().optional(),
+                    metrics: metricsSchema.optional(),
+                  })
+                  .passthrough(),
+              )
               .optional(),
           }),
         )
@@ -69,6 +77,16 @@ const consumptionResponseSchema = z.object({
 const SECONDS_PER_HOUR = 3_600;
 const BYTES_PER_GIB = 1_024 ** 3;
 
+export type NeonProjectUsage = {
+  readonly projectId: string | null;
+  readonly periodStart: string | null;
+  readonly periodEnd: string | null;
+  readonly observedAt: string;
+  readonly compute: UsageSample;
+  readonly storage: UsageSample;
+  readonly egress: UsageSample;
+};
+
 export type NeonUsageResult = {
   /** `neon_compute` — compute-unit hours. */
   readonly compute: UsageSample;
@@ -78,11 +96,13 @@ export type NeonUsageResult = {
   readonly egress: UsageSample;
   /** How many projects contributed. Logged so a zero reading is legible. */
   readonly projects: number;
+  /** Identity-preserving observations; never use an org sum as a project quota. */
+  readonly projectUsage: readonly NeonProjectUsage[];
 };
 
 /** The same non-answer for all three ceilings — one failed read, three blind spots. */
 function allSamples(sample: UsageSample, projects = 0): NeonUsageResult {
-  return { compute: sample, storage: sample, egress: sample, projects };
+  return { compute: sample, storage: sample, egress: sample, projects, projectUsage: [] };
 }
 
 function credentials(env: Environment): { apiKey: string; orgId: string } | null {
@@ -142,29 +162,73 @@ export async function fetchNeonUsage(options: ProbeOptions = {}): Promise<NeonUs
   const add = (running: number | null, value: number | undefined) =>
     value === undefined ? running : (running ?? 0) + value;
 
+  let incompleteCompute = false;
+  let incompleteStorage = false;
+  let incompleteEgress = false;
+  const projectUsage: NeonProjectUsage[] = [];
+  const measured = (total: number | null, divisor: number, complete: boolean): UsageSample =>
+    total === null
+      ? unavailable("metric_absent")
+      : !complete
+        ? unavailable("metric_incomplete")
+        : { status: "measured", value: total / divisor };
   for (const project of parsed.data.projects) {
+    let projectCompute: number | null = null;
+    let projectStorage: number | null = null;
+    let projectEgress: number | null = null;
+    let computeComplete = true;
+    let storageComplete = true;
+    let egressComplete = true;
+    let periodMatches = true;
+    let entries = 0;
     for (const period of project.periods ?? []) {
+      if (!period.consumption?.length) {
+        computeComplete = storageComplete = egressComplete = periodMatches = false;
+      }
       for (const entry of period.consumption ?? []) {
+        entries += 1;
+        periodMatches &&=
+          Date.parse(entry.timeframe_start ?? "") === start.getTime() &&
+          Date.parse(entry.timeframe_end ?? "") === end.getTime();
         const metrics = entry.metrics;
+        computeComplete &&= metrics?.compute_unit_seconds !== undefined;
+        storageComplete &&=
+          metrics?.root_branch_bytes_month !== undefined &&
+          metrics?.child_branch_bytes_month !== undefined;
+        egressComplete &&= metrics?.public_network_transfer_bytes !== undefined;
         if (!metrics) continue;
+        projectCompute = add(projectCompute, metrics.compute_unit_seconds);
+        projectStorage = add(projectStorage, metrics.root_branch_bytes_month);
+        projectStorage = add(projectStorage, metrics.child_branch_bytes_month);
+        projectEgress = add(projectEgress, metrics.public_network_transfer_bytes);
         computeUnitSeconds = add(computeUnitSeconds, metrics.compute_unit_seconds);
         storageBytesMonth = add(storageBytesMonth, metrics.root_branch_bytes_month);
         storageBytesMonth = add(storageBytesMonth, metrics.child_branch_bytes_month);
         egressBytes = add(egressBytes, metrics.public_network_transfer_bytes);
       }
     }
+    incompleteCompute ||= !computeComplete || entries === 0;
+    incompleteStorage ||= !storageComplete || entries === 0;
+    incompleteEgress ||= !egressComplete || entries === 0;
+    projectUsage.push({
+      projectId: project.project_id?.trim() || null,
+      periodStart: periodMatches && entries > 0 ? start.toISOString() : null,
+      periodEnd: periodMatches && entries > 0 ? end.toISOString() : null,
+      observedAt: now.toISOString(),
+      compute: measured(projectCompute, SECONDS_PER_HOUR, computeComplete),
+      storage: measured(projectStorage, BYTES_PER_GIB, storageComplete),
+      egress: measured(projectEgress, BYTES_PER_GIB, egressComplete),
+    });
   }
 
   // `null` means the metric never appeared in any row — a renamed field, an
   // empty account, a scope the key cannot see. Per ceiling, so one missing
   // metric costs one blind spot rather than three.
-  const measured = (total: number | null, divisor: number): UsageSample =>
-    total === null ? unavailable("metric_absent") : { status: "measured", value: total / divisor };
-
   return {
-    compute: measured(computeUnitSeconds, SECONDS_PER_HOUR),
-    storage: measured(storageBytesMonth, BYTES_PER_GIB),
-    egress: measured(egressBytes, BYTES_PER_GIB),
+    compute: measured(computeUnitSeconds, SECONDS_PER_HOUR, !incompleteCompute),
+    storage: measured(storageBytesMonth, BYTES_PER_GIB, !incompleteStorage),
+    egress: measured(egressBytes, BYTES_PER_GIB, !incompleteEgress),
     projects: parsed.data.projects.length,
+    projectUsage,
   };
 }

@@ -46,14 +46,7 @@ export const CEILING_PERIODS = ["calendar_month"] as const;
 export type CeilingPeriod = (typeof CEILING_PERIODS)[number];
 
 /** The unit a ceiling and its samples are both stated in. */
-export const CEILING_UNITS = [
-  "usd",
-  "compute_unit_hour",
-  "gib",
-  "gib_month",
-  "event",
-  "conversation",
-] as const;
+export const CEILING_UNITS = ["usd", "compute_unit_hour", "gib", "gib_month", "event"] as const;
 export type CeilingUnit = (typeof CEILING_UNITS)[number];
 
 /**
@@ -200,23 +193,9 @@ export const COST_CEILINGS: readonly CostCeiling[] = [
     observability: "console_only",
     overflow: "drops",
   },
-  {
-    // WhatsApp conversations through Meta's Cloud API. Per-shop in effect —
-    // each shop connects its own sender — but the Meta app, and therefore the
-    // aggregate bill, is DiveDay's (ADR 20260802-whatsapp-cloud-api-per-shop).
-    // `console_only`: Meta's usage figures live in Business Manager, and the
-    // Cloud API's own endpoints report per-message delivery, not a running
-    // billable total.
-    id: "whatsapp_conversations",
-    provider: "meta_whatsapp",
-    metric: "conversations",
-    unit: "conversation",
-    ceiling: 1_000,
-    period: "calendar_month",
-    warnAt: 0.6,
-    observability: "console_only",
-    overflow: "bills_overage",
-  },
+  // WhatsApp has no verified platform allowance or payer. Its account-scoped
+  // delivered-message ledger is usage evidence, not a fabricated 1,000-conversation
+  // ceiling. Invoice/rate reconciliation stays explicit and unknown until verified.
   {
     // Claude, every shop's assists together (ADR 20261018-claude-assists).
     // `polled`, but not from Anthropic: every call records its own cost in

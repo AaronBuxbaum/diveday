@@ -40,6 +40,7 @@ import {
   walletPassRegistrations,
   websiteSetupDrafts,
   weeklyDigestSends,
+  whatsAppDeliveredUsage,
 } from "../../db/schema/index";
 import { DESK_ONLY_CODES } from "../../lib/activity";
 import { purposesNaming } from "../../lib/capabilities";
@@ -310,6 +311,11 @@ export const PRUNE_ARMS = {
   },
   // One row per send: measured from the attempt, not from the row's insert,
   // because a retry of a once-only kind refreshes `attempted_at` in place.
+  whatsapp_delivered_usage: {
+    from: whatsAppDeliveredUsage,
+    id: whatsAppDeliveredUsage.id,
+    clock: whatsAppDeliveredUsage.deliveredAt,
+  },
   notification_deliveries: {
     from: notificationDeliveries,
     id: notificationDeliveries.id,

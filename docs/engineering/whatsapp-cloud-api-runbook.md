@@ -140,3 +140,18 @@ Inbound messages are built: see [ADR 20260907-two-way-inbox](../architecture/dec
 
 **SMS delivery statuses** are now built, but as their own pipeline rather than a sibling route — see
 [sms-delivery-receipts-runbook.md](sms-delivery-receipts-runbook.md).
+
+## Delivered-message accounting
+
+The verified webhook now records observed deliveries, including courtesy sends without a tracked
+notification row. `readWhatsAppDeliveredUsage(db, { shopId, start, end })` from
+`@/features/whatsapp-webhook` returns account/category/pricing-type counts for an inclusive start
+and exclusive end. The shop export carries `whatsapp_delivered_usage.csv` for reconciliation.
+
+These are webhook observations since deployment, not complete historical account usage or an
+invoice. Missing pricing stays unknown. The responsible WABA and sending number do not prove who
+pays its bill. Market, rate version, currency and monetary cost remain unknown until reconciled
+against verified account evidence. No conversation allowance or automatic channel switching is
+inferred. Raw provider message ids, recipient numbers, message bodies and read receipts are not
+retained in the ledger; its fingerprint and classification expire after 400 days, like delivery
+trails. See [the decision](../architecture/decisions/20261110-whatsapp-delivered-usage.md).

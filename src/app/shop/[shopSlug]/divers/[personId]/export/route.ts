@@ -7,6 +7,7 @@ import { nowDate } from "@/lib/clock";
 import {
   buildDiverExportBundle,
   diverExportFileName,
+  ExportResourceLimitError,
   exportMediaFiles,
   fetchExportPhotos,
   zipExportBundle,
@@ -43,7 +44,16 @@ export async function GET(
 
   const photos = await fetchExportPhotos(input.photoUrls);
   const files = [...buildDiverExportBundle(input, now), ...exportMediaFiles(photos)];
-  const zip = zipExportBundle(files);
+  let zip: Uint8Array;
+  try {
+    zip = zipExportBundle(files);
+  } catch (error) {
+    if (!(error instanceof ExportResourceLimitError)) throw error;
+    return Response.json(
+      { error: "export_resource_limit" },
+      { status: 413, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const fileName = diverExportFileName(input.shopSlug, personId, now, input.timezone);
 
   // Recorded so a shop can show it responded to a subject-access request, and

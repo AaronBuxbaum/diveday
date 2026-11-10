@@ -113,6 +113,41 @@ describe("whatsAppChallengeResponse", () => {
 });
 
 describe("parseWhatsAppDeliveryEvents", () => {
+  it("keeps known provider pricing fields without retaining arbitrary strings or recipient data", () => {
+    const [event] = parseWhatsAppDeliveryEvents(
+      statusPayload([
+        {
+          id: "wamid.1",
+          status: "delivered",
+          timestamp: "1785672000",
+          recipient_id: "15555550199",
+          pricing: {
+            billable: true,
+            pricing_model: "PMP",
+            category: "unknown private text",
+            type: "regular",
+          },
+        },
+      ]),
+      NOW,
+    );
+    expect(event.pricing).toEqual({
+      billable: true,
+      model: "PMP",
+      category: null,
+      type: "regular",
+    });
+    expect(JSON.stringify(event)).not.toContain("15555550199");
+    expect(JSON.stringify(event)).not.toContain("unknown private text");
+  });
+  it("keeps malformed pricing unknown without dropping a delivery", () => {
+    const [event] = parseWhatsAppDeliveryEvents(
+      statusPayload([{ id: "wamid.1", status: "delivered", pricing: "bad" }]),
+      NOW,
+    );
+    expect(event.pricing).toEqual({ billable: null, model: null, category: null, type: null });
+    expect(event.deliveryTimestampValid).toBe(false);
+  });
   it("maps sent, delivered, and failed onto the stored provider statuses", () => {
     const payload = statusPayload([
       { id: "wamid.1", status: "sent", timestamp: "1785672000" },

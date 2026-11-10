@@ -159,3 +159,103 @@ describe("fetchNeonUsage — the fleet-wide external HTTP switch", () => {
     expect(result.compute).toEqual({ status: "measured", value: 1 });
   });
 });
+
+describe("fetchNeonUsage — project identity", () => {
+  it("preserves a near-quota project's shape rather than hiding it in an org sum", async () => {
+    const fetcher = async () =>
+      Response.json({
+        projects: [
+          {
+            project_id: "production",
+            periods: [
+              { consumption: [{ metrics: { compute_unit_seconds: 95 * SECONDS_PER_HOUR } }] },
+            ],
+          },
+          {
+            project_id: "preview",
+            periods: [
+              { consumption: [{ metrics: { compute_unit_seconds: 2 * SECONDS_PER_HOUR } }] },
+            ],
+          },
+        ],
+      });
+    const result = await fetchNeonUsage({ env, fetcher, now });
+    expect(result.compute).toEqual({ status: "measured", value: 97 });
+    expect(result.projectUsage.map((project) => [project.projectId, project.compute])).toEqual([
+      ["production", { status: "measured", value: 95 }],
+      ["preview", { status: "measured", value: 2 }],
+    ]);
+  });
+
+  it("does not invent a project identity or treat missing metrics as zero", async () => {
+    const fetcher = async () =>
+      Response.json({
+        projects: [{ periods: [{ consumption: [{ metrics: { root_branch_bytes_month: 1 } }] }] }],
+      });
+    const result = await fetchNeonUsage({ env, fetcher, now });
+    expect(result.projectUsage[0]).toMatchObject({
+      projectId: null,
+      compute: { status: "unavailable", reason: "metric_absent" },
+    });
+  });
+});
+
+describe("fetchNeonUsage — complete project evidence", () => {
+  it("does not call a partial compute sum measured", async () => {
+    const fetcher = async () =>
+      Response.json({
+        projects: [
+          {
+            project_id: "production",
+            periods: [
+              {
+                consumption: [
+                  {
+                    timeframe_start: "2026-08-01T00:00:00Z",
+                    timeframe_end: "2026-09-01T00:00:00Z",
+                    metrics: { compute_unit_seconds: 3_600 },
+                  },
+                  {
+                    timeframe_start: "2026-08-01T00:00:00Z",
+                    timeframe_end: "2026-09-01T00:00:00Z",
+                    metrics: { public_network_transfer_bytes: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    const result = await fetchNeonUsage({ env, fetcher, now });
+    expect(result.projectUsage[0].compute.status).toBe("unavailable");
+    expect(result.compute.status).toBe("unavailable");
+  });
+
+  it("retains missing or mismatched provider windows as unknown quota evidence", async () => {
+    const fetcher = async () =>
+      Response.json({
+        projects: [
+          {
+            project_id: "production",
+            periods: [
+              {
+                consumption: [
+                  {
+                    timeframe_start: "2026-07-01T00:00:00Z",
+                    timeframe_end: "2026-08-01T00:00:00Z",
+                    metrics: { compute_unit_seconds: 3_600 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    const result = await fetchNeonUsage({ env, fetcher, now });
+    expect(result.projectUsage[0]).toMatchObject({
+      periodStart: null,
+      periodEnd: null,
+      observedAt: now.toISOString(),
+    });
+  });
+});

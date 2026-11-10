@@ -146,10 +146,8 @@ describe("evaluateCeilings", () => {
     const vercel = evaluations.find((evaluation) => evaluation.ceilingId === "vercel_spend");
     expect(vercel?.level).toBe("ok");
     expect(vercel?.value).toBe(1);
-    const whatsapp = evaluations.find(
-      (evaluation) => evaluation.ceilingId === "whatsapp_conversations",
-    );
-    expect(whatsapp?.level).toBe("unobservable");
+    // No verified app-level WhatsApp allowance exists. No false cost "ok".
+    expect(evaluations.some((evaluation) => evaluation.provider === "meta_whatsapp")).toBe(false);
   });
 });
 

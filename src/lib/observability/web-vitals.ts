@@ -10,8 +10,9 @@ import type { MutationDurationBeacon, WebVitalsBeacon } from "./web-vitals-beaco
  * This is the app's half of the Speed Insights equivalent: the browser reports
  * what it measured, `/api/vitals` turns it into one structured log line, and the
  * metric filters in `infra/lib/observability.ts` extract each figure as a
- * CloudWatch metric scored at **p75** — the same statistic Google and Vercel
- * use, because a median hides the quarter of visits that are actually bad.
+ * CloudWatch metric scored at **p75** over reported observations. Resumed
+ * visits can report changed values again, so this is not an exact final-per-visit
+ * population equivalent to Google or Vercel analytics.
  *
  * `field` is the key the figure takes in the log line, and it is a contract:
  * the metric filters read `$.lcp`, `$.inp`, `$.cls` and so on, and a filter

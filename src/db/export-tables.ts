@@ -86,6 +86,7 @@ import {
   waiverRecords,
   waiverSealAcknowledgements,
   waiverTemplates,
+  whatsAppDeliveredUsage,
   workOrderBills,
   workOrderCare,
   workOrderEvents,
@@ -372,6 +373,11 @@ export const EXPORT_TABLES = {
   },
   // One row per (booking, kind) by unique index — a resend overwrites in
   // place — so this is the standing outcome per message, not a send log.
+  whatsAppDeliveredUsage: {
+    table: whatsAppDeliveredUsage,
+    order: [asc(whatsAppDeliveredUsage.deliveredAt), asc(whatsAppDeliveredUsage.id)],
+    scope: { shopColumn: whatsAppDeliveredUsage.shopId },
+  },
   notificationDeliveries: {
     table: notificationDeliveries,
     order: [asc(notificationDeliveries.attemptedAt), asc(notificationDeliveries.id)],

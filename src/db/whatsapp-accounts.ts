@@ -280,14 +280,19 @@ export async function connectShopWhatsAppAccount(
     const account = await db.transaction(async (savepoint) => {
       const [row] = await savepoint
         .insert(shopWhatsappAccounts)
-        .values({ ...values, ...pin, connectedAt: now })
+        .values({ ...values, ...pin, connectedAt: now, numberAssignedAt: now })
         .onConflictDoUpdate({
           target: shopWhatsappAccounts.shopId,
           // `connectedAt` deliberately survives a re-connect — it is when this shop
           // first switched WhatsApp on, not when it last rotated a token.
           // `verifiedAt` deliberately does not: new credentials are unproven until
           // a fresh test send proves them.
-          set: { ...values, ...pin, verifiedAt: null },
+          set: {
+            ...values,
+            ...pin,
+            verifiedAt: null,
+            numberAssignedAt: sql`case when ${shopWhatsappAccounts.phoneNumberId} is distinct from excluded.phone_number_id or ${shopWhatsappAccounts.wabaId} is distinct from excluded.waba_id then ${now.toISOString()}::timestamptz else ${shopWhatsappAccounts.numberAssignedAt} end`,
+          },
         })
         .returning();
       return row;

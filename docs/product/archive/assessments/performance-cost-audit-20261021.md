@@ -22,6 +22,12 @@ and [cost model](#cost-model-and-business-impact) first. Detailed evidence follo
 [measurement plan](#measurement-and-acceptance-plan) and
 [handoff](#existing-work-handoff-and-verification-record) close the assessment.
 
+## Later implementation evidence — 2026-11-10
+
+[Engineering follow-ups](../engineering-followups-20261110.md) record the DB-02 resource bounds,
+DB-07/09/10 query changes and FE-07 resumed vitals correction. The historical findings below
+remain dated evidence, not claims that those fixes are still absent.
+
 ## Implementation status — 2026-10-21
 
 | Finding | Status | Evidence and remaining limit |

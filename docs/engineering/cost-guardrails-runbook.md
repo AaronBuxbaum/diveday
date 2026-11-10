@@ -27,7 +27,7 @@ and the only consequences of crossing one are an email and a Sentry event.
 | Vercel | Hosting, functions, bandwidth, Analytics, Speed Insights | `vercel_spend` in `src/lib/cost-guardrails.ts`, polled daily | `/api/cron/usage` |
 | Neon | Postgres compute, storage, egress | `neon_compute`, `neon_storage`, `neon_egress`, polled daily | `/api/cron/usage` |
 | Sentry | Error events | `sentry_errors` — **console only** | Nobody. See below. |
-| Meta (WhatsApp Cloud API) | Per-conversation messaging | `whatsapp_conversations` — **console only** | Nobody. See below. |
+| Meta (WhatsApp Cloud API) | Delivered-message pricing depends on account/category/market/rate | Verified callback observations; no monetary ceiling or assumed allowance | Account/invoice reconciliation still required |
 | Anthropic | Claude assists (drafts, sorting, reading) | `anthropic_spend`, $200 a month, summed daily from DiveDay's own `claude_usage` ledger | `/api/cron/usage` |
 | Stripe | Per-transaction fees | none, deliberately | — |
 
@@ -50,96 +50,48 @@ the finding predates that ADR.
 
 ## Where the money actually goes
 
-Read before proposing to "move a service to save money". **Read off the actual AWS bill for August
-and the first nine days of September 2026**, not estimated from the stack — the estimate that used
-to sit here was wrong by an order of magnitude on two lines, which is the reason this table now
-cites an invoice.
+[Historical invoices and completed trimming work](../product/archive/cost-invoice-history-20261110.md)
+are archived with their original dates and caveats. August/early-September AWS bills were recorded
+as $43.55, including variable unattributed S3 spend. The later documented $25 support removal is
+not a new invoice. Neither that subtraction nor the old cross-provider totals are a current
+monthly run rate or fixed floor. Verify current account bills before making spend decisions.
 
-| Line | $/month | What it buys |
-| --- | ---: | --- |
-| AWS Basic Support | 0 | Dropped from Business Support+ ($25) on 2026-11-02. Basic can still raise account-and-billing cases |
-| Vercel Pro, one seat | 20 | Hosting, previews, crons, Analytics, Speed Insights |
-| AWS S3, four buckets | 12 | Visual-regression baselines, database dumps, backups, media. **See the warning below — this is not yet attributed** |
-| AWS Route 53 health check | 2.75 | The one check that runs outside the thing it checks (`infra/lib/global-stack.ts`); 30-second interval with string matching, against a non-AWS endpoint |
-| AWS CloudWatch | 2.50 | Seven metrics and four alarms past the always-free ten (`infra/lib/observability.ts`) |
-| AWS Secrets Manager | 1.20 | Three secrets at $0.40; `infra/lib/infra-stack.ts` §16 |
-| Neon | 0 | Free tier; **suspends** past 300 CU-hours, which is the one ceiling that is an outage rather than an invoice |
-| Sentry, Meta, Stripe | 0 | Free tiers and per-transaction |
-| GitHub Actions | 0 | The repository is public, so runner minutes are free. They cost **wall-clock**: one run of the workflow is 24 to 26 jobs (four unit shards and the Playwright and visual shards), more than the twenty-concurrent-job cap on its own, and a run that starts while another is in flight queues behind it — a green main run on 2026-08-31 waited ten minutes for a runner before its first job started |
+The [source and measurement guide](../architecture/infrastructure-costs-and-risks.md) separates
+source inventory, configured probes, historical evidence, live readings and unknown deployment.
+`pnpm cost:report --live --json` opts into the existing provider probes without changing accounts.
 
-So the bill is about **$39 a month**, of which $20 is AWS. It was described here as $22–24 until
-2026-09-10, and was about $64 while the $25 Business Support+ plan lasted (dropped 2026-11-02).
+### Per-project quota diagnostics
 
-> **The $12 of S3 is a finding, not a baseline.** This table used to carry the reg-suit bucket at
-> "<1" and the entire AWS floor at "2–3". The August bill says S3 alone was $11.998, on an account
-> with no production traffic, with daily spikes to $2 on 23, 24, 27 and 28 August. Nothing here
-> attributes that to a bucket, and there are four candidates: the visual-regression bucket (~700
-> PNGs per run, every run), the daily `pg_dump` objects, the backup bucket, and media. Requests, not
-> storage, are the likely shape of it. Until someone runs Cost Explorer grouped by usage type, treat
-> this line as unexplained rather than as the cost of doing business. Tracked as issue #1651.
->
-> **The visual bucket has been tightened, and it will not move this line.** On 2026-09-10 the
-> bucket's lifecycle expiry went from 180 days to 60 and the pruner from nightly to six-hourly
-> (ADR 20260826-prune-visual-bucket's second amendment). Both are storage levers, and the arithmetic
-> says storage is not where the money is: the bucket's steady state is roughly ten main baselines
-> plus a day and a half of branch runs — about 145 snapshots × 854 PNGs × ~250 KB, or ~31 GB, which
-> is ~$0.71/month of `TimedStorage-ByteHrs`. What matches the bill is requests, exactly as the daily
-> profile above suggests: ~900 Tier-1 PUTs per publishing run at $0.005/1,000 is $0.0045 a run, and
-> at this repository's rate of ~26 merges plus ~65 branch commits a day that is $0.41/day, or
-> ~$12.3/month — which lands on both the measured $0.38/day and the August total. Neither a
-> lifecycle rule nor a pruner touches a PUT. The only lever that reaches the $12 is whether every CI
-> run needs to upload every capture, which is filed separately and is still the thing to do. What
-> the 60-day expiry *does* buy is a lower ceiling on a silent pruner outage: at ~19 GB a day of
-> accumulation, ~$27/month instead of ~$80.
+Owner budgets remain unchanged. A 300 CU-hour org budget does not protect a project with a 100
+CU-hour allowance, and cumulative GiB-months do not measure current storage size. No production
+plan or allowance is inferred from credentials or a closed setup ticket.
 
-> **Update 2026-11-01: the publisher now uploads half as many objects.** `.reg/expected` is a copy of
-> the whole baseline, and the publish bundle uploaded it next to `actual/` on every run, although
-> the report viewer reads an expected image only for a changed or deleted item and the next run's
-> baseline reads `actual/` only. `scripts/visual-build-publish-bundle.mjs` now keeps `expected/`
-> files for `failedItems` and `deletedItems` only: about 1,700 fewer Tier-1 PUTs (~$0.0085) per
-> publishing run. Also done, on Aaron's yes: a pull request snapshot is never anyone's baseline (every PR is keyed to its fork point on `main`), so pull request runs skip uploading `passed` actual images. Their report lists only the captures it uploaded (`partialActual: true`) and its Passed tab shows names without images; runs on `main` upload every actual image once, under its content hash (`blobs/<sha256>.png`), and skip any that already exist (ADR 20260826-prune-visual-bucket, 2026-11-04 amendment).
+`pnpm cost:report --live --quota-evidence /path/to/account-evidence.json --json` accepts a local
+JSON array of explicit account observations. Each row requires `projectId`, `plan`, `source`,
+`verifiedAt`, `periodStart`, `periodEnd` (ISO UTC instants), and positive `computeLimitHours`.
+Optional `storage` requires current `usedBytes`, positive `limitBytes`, `observedAt` and `source`.
+Do not include credentials or a database URL. The file is read locally and not uploaded.
 
-What moving would and would not do:
+The report joins observations to identity-preserving Neon project readings. It refuses missing,
+ambiguous, future or more-than-24-hour-old evidence; a non-calendar quota period cannot be compared
+with the collector's calendar-month window. Returned consumption rows must carry the same window;
+partial metrics and stale or future usage observations cannot produce quota assurance. Unknown
+stays unknown. Matching observations warn at
+80% or when the current-period average burn leaves at most one day of runway. This daily-cadence
+diagnostic is not a promise against bursts, and `below_warning` is not a provider guarantee.
+Storage is evaluated only from its own recent instantaneous observation, never GiB-months.
 
-- **Vercel → AWS (Lambda + CloudFront via OpenNext, or Amplify).** Saves the $20 and costs a
-  deploy pipeline this repo does not have: previews, the twelve `vercel.json` crons, Analytics and
-  Speed Insights all need replacing, `scripts/vercel-build.mjs` runs the production migration, and
-  ADR 20260718-vercel-hosting chose Vercel for exactly those. Weeks of agent time to save the price
-  of one lunch a month, before a single shop is paying. Not worth it pre-pilot; revisit when Vercel
-  usage lines (function GB-hours, bandwidth) start to show on the invoice, which they do not today.
-- **Neon → RDS / Aurora Serverless v2.** Costs *more* (Aurora's floor is ~$40/month at 0.5 ACU)
-  and buys durability the free tier lacks. The right move is the one `pnpm cost:report` already
-  names: Neon Launch at $19/month before the first pilot shop, because the free tier's ceiling
-  suspends the endpoint rather than billing.
-- **AWS Business Support+ → Basic.** **Done 2026-11-02.** It saved $25 a month, the largest single
-  AWS line, and costs the response-time case path. The one thing on the checklist that *required* a
-  support case, `cloudfront-account-verification` in
-  [manual-actions.md](manual-actions.md), is an account-and-billing case, which Basic Support can
-  raise for free. Re-buy the plan for the response times if a pilot is imminent.
-- **AWS trimming.** Real but small, and now **done** (issue #3652). Every Lambda writes to a
-  managed log group that expires after a month (the last implicit one was the GitHub OIDC provider's
-  handler); RUM samples one session in ten (`sessionSampleRate` in the stack and the client's
-  default, `NEXT_PUBLIC_RUM_SAMPLE_RATE` overrides); and the two MCP IAM users left the stack on
-  2026-09-02, so there is nothing to delete in code. `cost-guardrails.test.ts` ("AWS trimming")
-  pins all three. Dollar figures here are estimates, not Cost Explorer. The largest of them was
-  the `MutationDuration` metric filter, which was dimensioned by action label and would have billed
-  $0.30 per distinct label — about $9/month across thirty-odd server actions — and is now one
-  aggregate metric, with the per-action ranking left to the Logs Insights widget (issue #1241).
-  Still a human's: confirm in the IAM console that the two `diveday-mcp-readonly-*` users no longer
-  exist in the account, and read the first bill after 2026-11-02 to confirm the $25 line is
-  gone; the floor is $18.55 on that assumption.
-
-The cost worth engineering against is therefore **CI wall-clock**, not dollars — see
-`.github/workflows/ci.yml`'s `changes` gate (a docs-only change skips the build, the unit, Playwright
-and visual shards and the compare) and `src/test/shard-sequencer.ts` (unit shards dealt by
-recorded duration rather than by count).
+The report labels the plan/quota evidence as operator-supplied, not verified by this tool. Actual
+production account evidence is still required. The scheduled budget cron remains unchanged;
+these explicit quota diagnostics do not create a recurring quota monitor or disable bookings.
 
 ## What actually happens when a ceiling is hit
 
-This is the question worth being precise about, because the three answers are not equally urgent
-and the registry encodes them as codes (`CeilingOverflow`) rather than prose.
+These codes describe conservative provider-limit consequences, not what happens at an owner
+budget threshold. The alert now states that distinction. Confirm the plan and actual resource
+allowance before interpreting any consequence as applicable to this account.
 
-- **`bills_overage` — Vercel spend, Neon storage, Neon egress, WhatsApp conversations.**
+- **`bills_overage` — Vercel spend, Neon storage, Neon egress.**
   Everything keeps serving; the invoice grows. Nothing breaks, nothing is lost. This is a money
   problem with a deadline of "before the card is charged".
 - **`suspends` — Neon compute.** The one that is not about money. On Neon's free plan, an
@@ -147,8 +99,8 @@ and the registry encodes them as codes (`CeilingOverflow`) rather than prose.
   the database going away: every page, every booking, every manifest. On a paid plan the same
   ceiling meters instead. **Confirm which behaviour your plan has** — `provider-spend-caps` in
   manual-actions.md asks you to, and it changes whether `neon_compute` warnings are a budget
-  conversation or an outage countdown. The registry warns at 40% of this one, earlier than any
-  other, on the assumption of the worse plan.
+  conversation or an outage countdown. The 40%-of-300 budget warning can be later than a smaller project allowance; it is not
+  quota protection. Use verified project observations above.
 - **`drops` — Sentry errors.** Past the quota Sentry silently discards events. Nothing breaks and
   nothing tells you; error monitoring simply stops, usually on the busiest day of the month, which
   is the day you most need it. **This also disables the dead-man's switch on every cron**, because
@@ -184,11 +136,18 @@ The response body carries every ceiling's full evaluation, which is what
 
 The honest part. Read this before trusting a quiet inbox.
 
-- **Sentry and WhatsApp are not polled at all.** Both are in the registry as `console_only`,
-  which evaluates to `unobservable` and is never rendered as `ok`. Sentry publishes an
-  organization stats API and could become `polled`; nobody has minted the token. Meta's billable
-  conversation totals live in Business Manager and the Cloud API reports per-message delivery
-  rather than a running total, so that one needs a person looking.
+- **Sentry is not polled.** Its registry entry remains `console_only`, evaluates to
+  `unobservable` and never becomes `ok` without a measurement. This code has no Sentry stats
+  collector.
+- **WhatsApp delivery evidence is not a bill.** `readWhatsAppDeliveredUsage(db, { shopId, start, end })`
+  from `@/features/whatsapp-webhook` returns counts of verified delivered callbacks by sending
+  WABA/phone and provider pricing classification, inclusive start/exclusive end. Shop export
+  includes `whatsapp_delivered_usage.csv`. Deduplicated observations cover only callbacks received
+  since deployment, not complete historical/account usage. `recipientMarket`, `rateVersion`,
+  `monetaryCost`, `currency`, and `invoicePayer` remain null pending verified account/invoice
+  evidence. A billable flag does not establish a price. No app-level or 1,000-conversation
+  allowance is assumed; no monetary cost `ok` conclusion follows. The obsolete conversation
+  ceiling is removed rather than replaced with an invented message allowance.
 - **A calendar month is not a billing period.** Vercel and Neon both bill on an account
   anniversary. `periodKeyFor` uses UTC calendar months because it needs a denominator and an alert
   period, not because it reproduces an invoice. Do not reconcile a warning against a statement and
@@ -197,10 +156,10 @@ The honest part. Read this before trusting a quiet inbox.
   Free tiers change several times a year; a number in the repo claiming to be "the Neon free-tier
   allowance" would be wrong within months while still looking authoritative. Review the array in
   `src/lib/cost-guardrails.ts` when the plan changes.
-- **Neither response shape has been verified against a live account.** No Vercel or Neon
-  credential exists in this repo, so both parsers were written from published documentation. Both
-  say so in their own source. That is why the first real run has an explicit manual step: compare
-  the logged figure against the console, by eye, once.
+- **No live-account reconciliation is recorded here.** The parsers and project diagnostics are
+  covered with fixtures, not a current production account observation. Credential presence alone
+  does not verify a response shape or currency. Compare the first real reading with the matching
+  provider account and period before treating it as billing evidence.
 - **Spend between two daily runs is invisible.** The floor on detection is one day. A runaway that
   starts at 09:01 UTC has 24 hours before anything looks.
 - **The monitor cannot see its own absence.** That is what the Sentry Cron Monitor

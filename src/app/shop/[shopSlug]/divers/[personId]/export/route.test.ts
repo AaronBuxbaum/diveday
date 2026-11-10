@@ -27,6 +27,7 @@ vi.mock("@/lib/export", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/export")>();
   return {
     ...actual,
+    zipExportBundle: vi.fn(actual.zipExportBundle),
     fetchExportPhotos: vi.fn(async () => ({
       photos: [],
       manifest: { version: 1, expected: 0, included: 0, complete: true, files: [] },
@@ -37,6 +38,7 @@ vi.mock("@/lib/export", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("../../../../../../features/session/rules");
 const { GET } = await import("./route");
+const { zipExportBundle, ExportResourceLimitError } = await import("@/lib/export");
 
 const ctx = fileScopedShopContext();
 
@@ -76,6 +78,21 @@ function get(personId: string) {
 }
 
 describe("GET a diver's record export", () => {
+  it("refuses oversized archives without recording a delivered subject-access export", async () => {
+    const { db, shop } = ctx;
+    const diver = await seededDiverId(db, shop.id);
+    signIn(await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL));
+    const before = await exportsOf(db, diver);
+    vi.mocked(zipExportBundle).mockImplementationOnce(() => {
+      throw new ExportResourceLimitError();
+    });
+    const response = await get(diver);
+    expect(response.status).toBe(413);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Content-Disposition")).toBeNull();
+    expect(await response.json()).toEqual({ error: "export_resource_limit" });
+    expect(await exportsOf(db, diver)).toEqual(before);
+  });
   it("answers 404 to a malformed id before reading the session", async () => {
     vi.mocked(requireStaffSession).mockClear();
     const response = await get("not-a-uuid");

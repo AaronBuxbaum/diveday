@@ -176,6 +176,13 @@ describe("ops alerts on the queue (task 157)", () => {
   it("surfaces a stuck payment operation as an urgency: now row, only when the caller opts in", async () => {
     const { db, shop } = ctx;
     const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
+    const deletion = await queueMediaDeletion(db, {
+      shopId: shop.id,
+      kind: "dive_site_photo",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/example/projection.jpg",
+    });
+    if (!deletion) throw new Error("managed deletion missing");
+    await resolveMediaDeletion(db, deletion.id, { status: "failed", error: "network error" });
     // No wall-clock trickery needed on the write side: reading the queue from
     // ten minutes in the *database's* future is what makes the just-started
     // intent read as stuck (same trick the stuck-payment read's own
@@ -207,6 +214,8 @@ describe("ops alerts on the queue (task 157)", () => {
       "en-US",
       true,
     );
+    expect(withFlag.actions.some((a) => a.id === `media-deletion:${deletion.id}`)).toBe(true);
+    expect(withFlag.actionsWithoutOpsAlerts).toEqual(withoutFlag.actions);
     const row = withFlag.actions.find((a) => a.id === `stuck-payment-op:${intent.id}`);
     expect(row).toBeDefined();
     expect(row?.kind).toBe("stuck_payment_operation");

@@ -272,8 +272,9 @@ describe("GET /api/cron/usage — what it cannot see", () => {
         blind: 1,
         vercel_spend_level: "not_configured",
         neon_compute_level: "unavailable",
-        // not_configured plus the two console-only ceilings.
-        unmeasured: 3,
+        sentry_errors_level: "unobservable",
+        // The unconfigured probe plus the one console-only ceiling.
+        unmeasured: 2,
       }),
     );
   });

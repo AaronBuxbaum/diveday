@@ -177,6 +177,8 @@ export const EXPORT_FILE_NOTES = {
     "The staff activity trail: who did what, to which trip or booking or about which diver, and when. Append-only and never edited, so reading it in order reconstructs how a departure got to the state the other files describe. Each row names the kind of event in `code` and the names its sentence uses in `params`; the words themselves are DiveDay's and are written fresh in whichever language the reader has chosen, so they are not carried here. `audience` says who may read the line (staff, or a diver). The crew's same-day catch-up lines are not part of the trail and are not here.",
   "notification_deliveries.csv":
     'Whether each diver actually got each message the shop sent them — booking confirmation, waiver request, trip reminder, conditions hold, recap — with what the email or SMS provider said came of it and, when something went wrong, why. One row per booking and message kind: a resend overwrites in place rather than appending, so this is the latest outcome per message, not a send history. It is here because "did this diver ever get their waiver request" is a question a shop has to be able to answer about its own past, sometimes years later, and no other file in this bundle can. The retry queue and rate-limit state behind it are not included — those are plumbing.',
+  "whatsapp_delivered_usage.csv":
+    "WhatsApp deliveries observed by the verified webhook, grouped by the sending account for billing reconciliation. No recipients, message bodies or raw provider message IDs are retained. Classification comes from Meta; missing rates, recipient markets and invoice payers remain unknown. This is observed usage, not an invoice.",
   "orders.csv":
     "Shop-issued orders with their Stripe invoice references — reconcilable against the shop's own Stripe account, which stays the shop's. collection says how the money was taken: stripe_invoice, cash and card_machine for a payment taken at the counter, which has no Stripe reference, or room_charge for one billed to a resort guest's room, with room_number and room_hotel naming it. source is staff for an order someone on the staff raised and public for one a diver bought on the shop's own pages; a public order names the diver as its creator, because nobody on the staff raised it.",
   "order_line_items.csv": "The lines on each order (trip fees, courses, rentals, nitrox, retail).",
@@ -451,8 +453,38 @@ export function buildDiverExportBundle(input: DiverExportBundleInput, now: Date)
   return [{ name: "README.txt", content: `${readme}\n` }, ...files];
 }
 
-/** Zip the bundle (fflate deflate); content is small enough for sync work. */
-export function zipExportBundle(files: ExportFile[]): Uint8Array {
+/** In-memory export ceilings, not a promise that whole-shop DB hydration is bounded. */
+export const EXPORT_RESOURCE_LIMITS = {
+  photoConcurrency: 4,
+  totalPhotoTimeoutMs: 30_000,
+  photoBytes: 16 * 1024 * 1024,
+  totalPhotoBytes: 64 * 1024 * 1024,
+  archiveInputBytes: 128 * 1024 * 1024,
+} as const;
+
+type ExportResourceLimits = { [Key in keyof typeof EXPORT_RESOURCE_LIMITS]: number };
+
+/** A bounded export cannot be assembled; callers must not advertise a complete download. */
+export class ExportResourceLimitError extends Error {
+  constructor() {
+    super("export_resource_limit");
+    this.name = "ExportResourceLimitError";
+  }
+}
+
+/** Refuse oversized input before allocating encoded CSVs or synchronous compression buffers. */
+export function zipExportBundle(
+  files: ExportFile[],
+  maxBytes: number = EXPORT_RESOURCE_LIMITS.archiveInputBytes,
+): Uint8Array {
+  let inputBytes = 0;
+  for (const file of files) {
+    inputBytes +=
+      typeof file.content === "string"
+        ? Buffer.byteLength(file.content, "utf8")
+        : file.content.byteLength;
+    if (inputBytes > maxBytes) throw new ExportResourceLimitError();
+  }
   const entries: Record<string, Uint8Array> = {};
   for (const file of files) {
     entries[file.name] = typeof file.content === "string" ? strToU8(file.content) : file.content;
@@ -483,7 +515,8 @@ export type ExportMediaEntry =
         | "fetch_failed"
         | "timed_out"
         | "storage_unconfigured"
-        | "private_read_failed";
+        | "private_read_failed"
+        | "resource_limit";
     };
 
 export type ExportMediaManifest = {
@@ -500,53 +533,126 @@ export async function fetchExportPhotos(
   urls: readonly string[],
   fetchImpl: typeof fetch = fetch,
   env: Readonly<Record<string, string | undefined>> = process.env,
+  limits: ExportResourceLimits = EXPORT_RESOURCE_LIMITS,
 ): Promise<ExportMedia> {
   const unique = [...new Set(urls)].filter((url) => isManagedStorageUrl(url, env)).sort();
-  const results = await Promise.all(
-    unique.map(async (url): Promise<{ photo?: ExportPhoto; entry: ExportMediaEntry }> => {
-      const path = exportPhotoPath(url);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), PHOTO_FETCH_TIMEOUT_MS);
-      const missing = (reason: Extract<ExportMediaEntry, { status: "missing" }>["reason"]) => ({
-        entry: { path, status: "missing" as const, reason },
+  if (Object.values(limits).some((value) => !Number.isSafeInteger(value) || value <= 0)) {
+    throw new Error("export_resource_limits_invalid");
+  }
+  const deadline = new AbortController();
+  const deadlineTimer = setTimeout(() => deadline.abort(), limits.totalPhotoTimeoutMs);
+  let consumedBytes = 0;
+  let nextIndex = 0;
+  type Result = { photo?: ExportPhoto; entry: ExportMediaEntry };
+  const results: Result[] = new Array(unique.length);
+  const fetchPhoto = async (url: string): Promise<Result> => {
+    const path = exportPhotoPath(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), PHOTO_FETCH_TIMEOUT_MS);
+    const abortAtDeadline = () => controller.abort();
+    deadline.signal.addEventListener("abort", abortAtDeadline, { once: true });
+    const missing = (reason: Extract<ExportMediaEntry, { status: "missing" }>["reason"]) => ({
+      entry: { path, status: "missing" as const, reason },
+    });
+    let resourceLimit = false;
+    let photoBytes = 0;
+    // Bound the body before either public arrayBuffer() or signed S3's reader
+    // can allocate it. Content-Length is advisory; count actual streamed bytes.
+    const boundedFetch: typeof fetch = async (input, init) => {
+      const response = await fetchImpl(input, {
+        ...init,
+        signal: controller.signal,
+        redirect: "error",
       });
-      try {
-        const prefix = new URL(url).pathname.split("/")[1];
-        let bytes: Uint8Array;
-        if (
-          prefix === "import-waivers" ||
-          prefix === "import-receipts" ||
-          prefix === "medical-clearances"
-        ) {
-          const config = mediaStorageConfigFromEnvironment(env);
-          if (!config.success) return missing("storage_unconfigured");
-          const read = await readS3Object(url, config.data, { prefix }, (input, init) =>
-            fetchImpl(input, { ...init, signal: controller.signal, redirect: "error" }),
+      if (!response.ok) {
+        await response.body?.cancel();
+        return response;
+      }
+      if (!response.body) return response;
+      const reader = response.body.getReader();
+      const body = new ReadableStream<Uint8Array>({
+        async pull(stream) {
+          try {
+            const chunk = await reader.read();
+            if (chunk.done) {
+              stream.close();
+              return;
+            }
+            if (
+              photoBytes + chunk.value.byteLength > limits.photoBytes ||
+              consumedBytes + chunk.value.byteLength > limits.totalPhotoBytes
+            ) {
+              resourceLimit = true;
+              controller.abort();
+              await reader.cancel();
+              stream.error(new Error("export_resource_limit"));
+              return;
+            }
+            photoBytes += chunk.value.byteLength;
+            consumedBytes += chunk.value.byteLength;
+            stream.enqueue(chunk.value);
+          } catch (error) {
+            stream.error(error);
+          }
+        },
+        cancel: (reason) => reader.cancel(reason),
+      });
+      return new Response(body, { status: response.status, headers: response.headers });
+    };
+    try {
+      if (deadline.signal.aborted) return missing("timed_out");
+      if (consumedBytes >= limits.totalPhotoBytes) return missing("resource_limit");
+      const prefix = new URL(url).pathname.split("/")[1];
+      let bytes: Uint8Array;
+      if (
+        prefix === "import-waivers" ||
+        prefix === "import-receipts" ||
+        prefix === "medical-clearances"
+      ) {
+        const config = mediaStorageConfigFromEnvironment(env);
+        if (!config.success) return missing("storage_unconfigured");
+        const read = await readS3Object(url, config.data, { prefix }, boundedFetch);
+        if (!read.ok)
+          return missing(
+            resourceLimit
+              ? "resource_limit"
+              : controller.signal.aborted
+                ? "timed_out"
+                : "private_read_failed",
           );
-          if (!read.ok)
-            return missing(controller.signal.aborted ? "timed_out" : "private_read_failed");
-          bytes = new Uint8Array(read.bytes);
-        } else {
-          const response = await fetchImpl(url, { signal: controller.signal, redirect: "error" });
-          if (!response.ok) return missing("http_error");
-          bytes = new Uint8Array(await response.arrayBuffer());
-        }
-        return {
-          photo: { path, bytes },
-          entry: {
-            path,
-            status: "included",
-            bytes: bytes.byteLength,
-            sha256: createHash("sha256").update(bytes).digest("hex"),
-          },
-        };
-      } catch {
-        return missing(controller.signal.aborted ? "timed_out" : "fetch_failed");
-      } finally {
-        clearTimeout(timeout);
+        bytes = new Uint8Array(read.bytes);
+      } else {
+        const response = await boundedFetch(url);
+        if (!response.ok) return missing("http_error");
+        bytes = new Uint8Array(await response.arrayBuffer());
+      }
+      return {
+        photo: { path, bytes },
+        entry: {
+          path,
+          status: "included",
+          bytes: bytes.byteLength,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        },
+      };
+    } catch {
+      return missing(
+        resourceLimit ? "resource_limit" : controller.signal.aborted ? "timed_out" : "fetch_failed",
+      );
+    } finally {
+      clearTimeout(timeout);
+      deadline.signal.removeEventListener("abort", abortAtDeadline);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limits.photoConcurrency, unique.length) }, async () => {
+      while (nextIndex < unique.length) {
+        const index = nextIndex++;
+        results[index] = await fetchPhoto(unique[index]);
       }
     }),
   );
+  clearTimeout(deadlineTimer);
   const photos = results.flatMap((result) => (result.photo ? [result.photo] : []));
   return {
     photos,

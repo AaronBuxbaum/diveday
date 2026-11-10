@@ -36,9 +36,10 @@ example.
 **Fixtures come from `src/test/`.** `db.ts` hands out the database (`fileScopedShopContext`,
 `seededShopContext`, `fileScopedEmptyContext`, `unseededTestDb`; [below](#the-test-database-is-a-snapshot-not-a-boot)),
 `fakes.ts` the providers, `staff-session.ts` a signed-in staff member, `frozen-clock.ts` the
-clock, `source.ts` the tree a guard walks. Rows come from `src/test/factories.ts` (`secondShop()`,
-`aDiver`, `aTrip`, `aBooking`, `staffWithRole`) before a raw `insert`: a cross-tenant case is then
-one line, so it gets written.
+clock, `source.ts` the tree a guard walks. Reuse an existing scenario helper in `src/test/` when
+it matches the case; otherwise insert the minimal rows through the real database and schema.
+For cross-tenant coverage, `src/db/export.test.ts` inserts a rival shop and person, then proves
+each export contains only its own rows. There is no shared `factories.ts` interface.
 
 **A rule over source is a guard.** A test that reads files to assert a rule lives in `check:repo`
 or the `guards` project ([repo-checks.md](../agents/repo-checks.md)), never beside a component. A

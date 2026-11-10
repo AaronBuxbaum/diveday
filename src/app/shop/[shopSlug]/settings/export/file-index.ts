@@ -78,6 +78,7 @@ export const EXPORT_PURPOSE_KEYS = {
   "incident_report_people.csv": "settings.export.filePurposes.incident_report_people",
   "incident_report_addenda.csv": "settings.export.filePurposes.incident_report_addenda",
   "activity_events.csv": "settings.export.filePurposes.activity_events",
+  "whatsapp_delivered_usage.csv": "settings.export.filePurposes.whatsapp_delivered_usage",
   "notification_deliveries.csv": "settings.export.filePurposes.notification_deliveries",
   "orders.csv": "settings.export.filePurposes.orders",
   "order_line_items.csv": "settings.export.filePurposes.order_line_items",

@@ -540,6 +540,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const activityRows = await readScoped(tx, "activityEvents", scope);
 
+  const whatsAppUsageRows = await readScoped(tx, "whatsAppDeliveredUsage", scope);
   const notificationRows = await readScoped(tx, "notificationDeliveries", scope);
 
   const arrivalRows = await readScoped(tx, "bookingArrivalEvents", scope);
@@ -717,6 +718,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     noteRows,
     activityRows,
     notificationRows,
+    whatsAppUsageRows,
     arrivalRows,
     rollCallRows: rollCallMarks.seats,
     crewRollCallRows: rollCallMarks.crew,
@@ -1396,6 +1398,8 @@ export async function loadShopExportCounts(
     "incident_report_addenda.csv": async () =>
       scoped("incident_report_addenda.csv", "incidentReportAddenda"),
     "activity_events.csv": async () => scoped("activity_events.csv", "activityEvents"),
+    "whatsapp_delivered_usage.csv": async () =>
+      scoped("whatsapp_delivered_usage.csv", "whatsAppDeliveredUsage"),
     "notification_deliveries.csv": async () =>
       scoped("notification_deliveries.csv", "notificationDeliveries"),
     "interests.csv": async () => scoped("interests.csv", "interests"),

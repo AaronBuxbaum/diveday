@@ -37,6 +37,10 @@ test.describe("full-shop data export", () => {
     await bundle.getByText("What’s in the bundle").click();
     await expect(page.getByText("people.csv", { exact: true })).toBeVisible();
     await expect(page.getByText("waiver_records.csv", { exact: true })).toBeVisible();
+    await expect(page.getByText("whatsapp_delivered_usage.csv", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("WhatsApp delivered-message accounting", { exact: true }),
+    ).toBeVisible();
 
     // The button is a real download, named for the shop and the day.
     const downloadPromise = page.waitForEvent("download");
@@ -78,6 +82,7 @@ test.describe("full-shop data export", () => {
       "internal_notes.csv",
       "activity_events.csv",
       "notification_deliveries.csv",
+      "whatsapp_delivered_usage.csv",
     ]) {
       expect(Object.keys(unzipped)).toContain(name);
     }

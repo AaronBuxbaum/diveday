@@ -87,6 +87,7 @@ export type RetainedTable =
   | "stripe_webhook_events"
   | "integration_events"
   | "integration_oauth_states"
+  | "whatsapp_delivered_usage"
   | "notification_deliveries"
   | "activity_events"
   | "account_sessions"
@@ -199,6 +200,8 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * message bodies.
    */
   notification_deliveries: 400,
+  /** Provider accounting shares the delivery trail window; no recipient or raw message id. */
+  whatsapp_delivered_usage: 400,
   /**
    * 1095 days (3 years). Staff-facing operational history in human language:
    * who moved a booking, who cancelled a departure. Longest-lived because it

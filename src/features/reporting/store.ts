@@ -262,6 +262,67 @@ async function monthTipTotals(db: DbExecutor, shopId: string, inWindow: SQL | un
   return row;
 }
 
+// Waiver-complete bookings per trip. A waiver is signed once and then covers
+// every one of that diver's bookings (20260721-waiver-sign-once), so an active
+// booking counts as complete when its *person* holds a current completed,
+// non-superseded release at the shop — matching the boarding gate, not merely a
+// release issued for that exact booking. countDistinct on the booking id so a
+// diver with several signed releases still counts their booking once.
+async function monthlyWaiverRows(db: DbExecutor, shopId: string, inWindow: SQL | undefined) {
+  return db
+    .select({
+      tripId: trips.id,
+      waiverComplete: countDistinct(bookings.id),
+    })
+    .from(trips)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.tripId, trips.id),
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
+    )
+    .innerJoin(
+      waiverRecords,
+      and(
+        eq(waiverRecords.personId, bookings.personId),
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.status, "completed"),
+        isNull(waiverRecords.supersededAt),
+      ),
+    )
+    .where(and(inWindow, liveTrip()))
+    .groupBy(trips.id);
+}
+
+// Money collected on this month's trips. The base is each booking's current
+// payment row, which correctly covers full payments, deposits not yet topped
+// up, full refunds (excluded — the row leaves `COLLECTED_PAYMENT_STATUSES`),
+// partial refunds (counted at what is left, because `amount_cents` is the
+// retained figure), and staff manual marks.
+// `bookings`/`bookingPayments` carry their own (independently-writable)
+// `shop_id` alongside the FK chain to `trips` — every join here is scoped
+// to both, so this never trusts a child row's own shop_id alone (CR-007).
+async function monthlyBaseRevenue(db: DbExecutor, shopId: string, inWindow: SQL | undefined) {
+  return db
+    .select({ tripId: trips.id, total: sum(bookingPayments.amountCents) })
+    .from(bookingPayments)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingPayments.bookingId), eq(bookings.shopId, shopId)),
+    )
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        inWindow,
+        eq(bookingPayments.shopId, shopId),
+        inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES]),
+      ),
+    )
+    .groupBy(trips.id);
+}
+
 /**
  * The month's numbers, anchored to trips that *departed* in `[startUtc, endUtc)`.
  * Returns the raw per-trip rows and the revenue total; all the derived rates
@@ -309,64 +370,7 @@ export async function getMonthlyReport(
     lt(trips.startsAt, endUtc),
   );
 
-  const tripRows = await monthTripSpine(db, shopId, inWindow);
-
-  // Waiver-complete bookings per trip. A waiver is signed once and then covers
-  // every one of that diver's bookings (20260721-waiver-sign-once), so an active
-  // booking counts as complete when its *person* holds a current completed,
-  // non-superseded release at the shop — matching the boarding gate, not merely a
-  // release issued for that exact booking. countDistinct on the booking id so a
-  // diver with several signed releases still counts their booking once.
-  const waiverRows = await db
-    .select({
-      tripId: trips.id,
-      waiverComplete: countDistinct(bookings.id),
-    })
-    .from(trips)
-    .innerJoin(
-      bookings,
-      and(
-        eq(bookings.tripId, trips.id),
-        eq(bookings.shopId, shopId),
-        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
-      ),
-    )
-    .innerJoin(
-      waiverRecords,
-      and(
-        eq(waiverRecords.personId, bookings.personId),
-        eq(waiverRecords.shopId, shopId),
-        eq(waiverRecords.status, "completed"),
-        isNull(waiverRecords.supersededAt),
-      ),
-    )
-    .where(and(inWindow, liveTrip()))
-    .groupBy(trips.id);
-
-  // Money collected on this month's trips. The base is each booking's current
-  // payment row, which correctly covers full payments, deposits not yet topped
-  // up, full refunds (excluded — the row leaves `COLLECTED_PAYMENT_STATUSES`),
-  // partial refunds (counted at what is left, because `amount_cents` is the
-  // retained figure), and staff manual marks.
-  // `bookings`/`bookingPayments` carry their own (independently-writable)
-  // `shop_id` alongside the FK chain to `trips` — every join here is scoped
-  // to both, so this never trusts a child row's own shop_id alone (CR-007).
-  const baseRevenue = await db
-    .select({ tripId: trips.id, total: sum(bookingPayments.amountCents) })
-    .from(bookingPayments)
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, bookingPayments.bookingId), eq(bookings.shopId, shopId)),
-    )
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        inWindow,
-        eq(bookingPayments.shopId, shopId),
-        inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES]),
-      ),
-    )
-    .groupBy(trips.id);
+  const readTripRows = async () => monthTripSpine(db, shopId, inWindow);
 
   // The one thing that current-state row loses: when a deposit is later topped
   // up by a balance payment, `setBookingPayment` overwrites the deposit amount
@@ -411,178 +415,183 @@ export async function getMonthlyReport(
         ), 0)::numeric
       / nullif(${bookingCheckouts.totalCents}, 0)
   )), 0)`;
-  const recoveredDeposits = await db
-    .select({
-      tripId: trips.id,
-      total: recoveredDepositCents,
-      tax: sum(bookingCheckoutBookings.taxCents),
-      passThrough: recoveredPassThroughCents,
-    })
-    .from(bookingCheckouts)
-    .innerJoin(
-      bookingCheckoutBookings,
-      and(
-        eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
-        eq(bookingCheckoutBookings.shopId, shopId),
-      ),
-    )
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
-    )
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .innerJoin(
-      bookingPayments,
-      and(eq(bookingPayments.bookingId, bookings.id), eq(bookingPayments.shopId, shopId)),
-    )
-    .where(
-      and(
-        inWindow,
-        eq(bookingCheckouts.shopId, shopId),
-        eq(bookingCheckouts.isDeposit, true),
-        eq(bookingCheckouts.status, "completed"),
-        fareCheckout(),
-        eq(bookingPayments.status, "paid"),
-      ),
-    )
-    .groupBy(trips.id);
+  const readRecoveredDeposits = async () =>
+    db
+      .select({
+        tripId: trips.id,
+        total: recoveredDepositCents,
+        tax: sum(bookingCheckoutBookings.taxCents),
+        passThrough: recoveredPassThroughCents,
+      })
+      .from(bookingCheckouts)
+      .innerJoin(
+        bookingCheckoutBookings,
+        and(
+          eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+          eq(bookingCheckoutBookings.shopId, shopId),
+        ),
+      )
+      .innerJoin(
+        bookings,
+        and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+      )
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(
+        bookingPayments,
+        and(eq(bookingPayments.bookingId, bookings.id), eq(bookingPayments.shopId, shopId)),
+      )
+      .where(
+        and(
+          inWindow,
+          eq(bookingCheckouts.shopId, shopId),
+          eq(bookingCheckouts.isDeposit, true),
+          eq(bookingCheckouts.status, "completed"),
+          fareCheckout(),
+          eq(bookingPayments.status, "paid"),
+        ),
+      )
+      .groupBy(trips.id);
 
   // Tax for a current booking payment comes from the checkout allocation, but
   // only while that checkout is still the payment row's provider. A later
   // invoice balance replaces the booking payment and has its own tax evidence
   // below; a deposit that it replaced is recovered by the query above.
-  const currentCheckoutTax = await db
-    .select({ tripId: trips.id, total: sum(bookingCheckoutBookings.taxCents) })
-    .from(bookingCheckoutBookings)
-    .innerJoin(
-      bookingCheckouts,
-      and(
-        eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
-        eq(bookingCheckouts.shopId, shopId),
-        eq(bookingCheckouts.status, "completed"),
-        fareCheckout(),
-      ),
-    )
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
-    )
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .innerJoin(
-      bookingPayments,
-      and(
-        eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId),
-        eq(bookingPayments.shopId, shopId),
-        eq(bookingPayments.providerRef, bookingCheckouts.stripeSessionId),
-      ),
-    )
-    .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])))
-    .groupBy(trips.id);
+  const readCurrentCheckoutTax = async () =>
+    db
+      .select({ tripId: trips.id, total: sum(bookingCheckoutBookings.taxCents) })
+      .from(bookingCheckoutBookings)
+      .innerJoin(
+        bookingCheckouts,
+        and(
+          eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
+          eq(bookingCheckouts.shopId, shopId),
+          eq(bookingCheckouts.status, "completed"),
+          fareCheckout(),
+        ),
+      )
+      .innerJoin(
+        bookings,
+        and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+      )
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(
+        bookingPayments,
+        and(
+          eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId),
+          eq(bookingPayments.shopId, shopId),
+          eq(bookingPayments.providerRef, bookingCheckouts.stripeSessionId),
+        ),
+      )
+      .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])))
+      .groupBy(trips.id);
 
   // The pass-through line is collected with the checkout but is not the
   // shop's revenue. Match it to the current booking payment by Stripe session
   // id so manual payments remain untouched.
-  const currentPassThrough = await db
-    .select({ tripId: trips.id, total: sum(bookingCheckoutBookings.passThroughCents) })
-    .from(bookingCheckoutBookings)
-    .innerJoin(
-      bookingCheckouts,
-      and(
-        eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
-        eq(bookingCheckouts.shopId, shopId),
-        eq(bookingCheckouts.status, "completed"),
-        fareCheckout(),
-      ),
-    )
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
-    )
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .innerJoin(
-      bookingPayments,
-      and(
-        eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId),
-        eq(bookingPayments.shopId, shopId),
-        eq(bookingPayments.providerRef, bookingCheckouts.stripeSessionId),
-      ),
-    )
-    .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])))
-    .groupBy(trips.id);
+  const readCurrentPassThrough = async () =>
+    db
+      .select({ tripId: trips.id, total: sum(bookingCheckoutBookings.passThroughCents) })
+      .from(bookingCheckoutBookings)
+      .innerJoin(
+        bookingCheckouts,
+        and(
+          eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
+          eq(bookingCheckouts.shopId, shopId),
+          eq(bookingCheckouts.status, "completed"),
+          fareCheckout(),
+        ),
+      )
+      .innerJoin(
+        bookings,
+        and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+      )
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(
+        bookingPayments,
+        and(
+          eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId),
+          eq(bookingPayments.shopId, shopId),
+          eq(bookingPayments.providerRef, bookingCheckouts.stripeSessionId),
+        ),
+      )
+      .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])))
+      .groupBy(trips.id);
 
   // Older/demo data can contain a paid invoice without the booking-payment
   // mirror (the invoice is still the authoritative collected amount). Use it
   // only when no current payment row exists, avoiding double counting the
   // normal webhook/manual-payment path above.
-  const invoiceRevenue = await db
-    .select({
-      tripId: trips.id,
-      total: sum(orders.amountPaidCents),
-      tax: sum(orders.taxCents),
-      passThrough: sum(orders.passThroughCents),
-    })
-    .from(orders)
-    .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        inWindow,
-        eq(orders.shopId, shopId),
-        // `partly_refunded` as well as `paid`: `amount_paid_cents` is what the
-        // shop still holds, so the row's own figure is already net of what
-        // went back, and dropping the status entirely would report a
-        // part-refunded invoice as no revenue at all rather than as less of
-        // it (issue #699).
-        inArray(orders.status, ["paid", "partly_refunded"]),
-        gt(orders.amountPaidCents, 0),
-        not(
-          exists(
-            db
-              .select({ id: bookingPayments.id })
-              .from(bookingPayments)
-              .where(
-                and(
-                  eq(bookingPayments.bookingId, orders.bookingId),
-                  eq(bookingPayments.shopId, shopId),
+  const readInvoiceRevenue = async () =>
+    db
+      .select({
+        tripId: trips.id,
+        total: sum(orders.amountPaidCents),
+        tax: sum(orders.taxCents),
+        passThrough: sum(orders.passThroughCents),
+      })
+      .from(orders)
+      .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          inWindow,
+          eq(orders.shopId, shopId),
+          // `partly_refunded` as well as `paid`: `amount_paid_cents` is what the
+          // shop still holds, so the row's own figure is already net of what
+          // went back, and dropping the status entirely would report a
+          // part-refunded invoice as no revenue at all rather than as less of
+          // it (issue #699).
+          inArray(orders.status, ["paid", "partly_refunded"]),
+          gt(orders.amountPaidCents, 0),
+          not(
+            exists(
+              db
+                .select({ id: bookingPayments.id })
+                .from(bookingPayments)
+                .where(
+                  and(
+                    eq(bookingPayments.bookingId, orders.bookingId),
+                    eq(bookingPayments.shopId, shopId),
+                  ),
                 ),
-              ),
+            ),
           ),
         ),
-      ),
-    )
-    .groupBy(trips.id);
+      )
+      .groupBy(trips.id);
 
   // A paid staff invoice normally mirrors its collected total into
   // `booking_payments`, so the revenue query above deliberately excludes it.
   // Its tax and pass-through allocation still belong in separate report lines,
   // matched by providerRef so an unrelated manual payment on the same booking
   // cannot subtract amounts that were not part of the invoice being reported.
-  const invoiceBookingAmounts = await db
-    .select({
-      tripId: trips.id,
-      total: sum(orders.taxCents),
-      passThrough: sum(orders.passThroughCents),
-    })
-    .from(orders)
-    .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .innerJoin(
-      bookingPayments,
-      and(
-        eq(bookingPayments.bookingId, orders.bookingId),
-        eq(bookingPayments.shopId, shopId),
-        eq(bookingPayments.providerRef, orders.stripeInvoiceId),
-      ),
-    )
-    .where(
-      and(
-        inWindow,
-        eq(orders.shopId, shopId),
-        inArray(orders.status, ["paid", "partly_refunded"]),
-        gt(orders.amountPaidCents, 0),
-      ),
-    )
-    .groupBy(trips.id);
+  const readInvoiceBookingAmounts = async () =>
+    db
+      .select({
+        tripId: trips.id,
+        total: sum(orders.taxCents),
+        passThrough: sum(orders.passThroughCents),
+      })
+      .from(orders)
+      .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(
+        bookingPayments,
+        and(
+          eq(bookingPayments.bookingId, orders.bookingId),
+          eq(bookingPayments.shopId, shopId),
+          eq(bookingPayments.providerRef, orders.stripeInvoiceId),
+        ),
+      )
+      .where(
+        and(
+          inWindow,
+          eq(orders.shopId, shopId),
+          inArray(orders.status, ["paid", "partly_refunded"]),
+          gt(orders.amountPaidCents, 0),
+        ),
+      )
+      .groupBy(trips.id);
 
   // **Orders that belong to no booking**: a gear rental at the counter, a
   // retail sale, an air fill. No departure names them, so they are anchored to
@@ -592,23 +601,24 @@ export async function getMonthlyReport(
   // the counter in cash or on the shop's own card machine reaches Reports (ADR
   // 20261009-counter-payments); a Stripe-invoiced one with no booking was
   // missing from the month for the same reason and arrives here too.
-  const [standaloneOrderRevenue] = await db
-    .select({
-      total: sum(orders.amountPaidCents),
-      tax: sum(orders.taxCents),
-      passThrough: sum(orders.passThroughCents),
-    })
-    .from(orders)
-    .where(
-      and(
-        eq(orders.shopId, shopId),
-        isNull(orders.bookingId),
-        inArray(orders.status, ["paid", "partly_refunded"]),
-        gt(orders.amountPaidCents, 0),
-        gte(orders.paidAt, startUtc),
-        lt(orders.paidAt, endUtc),
-      ),
-    );
+  const readStandaloneOrderRevenue = async () =>
+    db
+      .select({
+        total: sum(orders.amountPaidCents),
+        tax: sum(orders.taxCents),
+        passThrough: sum(orders.passThroughCents),
+      })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.shopId, shopId),
+          isNull(orders.bookingId),
+          inArray(orders.status, ["paid", "partly_refunded"]),
+          gt(orders.amountPaidCents, 0),
+          gte(orders.paidAt, startUtc),
+          lt(orders.paidAt, endUtc),
+        ),
+      );
 
   // Imported source history is not tied to a local trip, so it lives on its
   // own calendar-day timeline rather than pretending an imported booking was a
@@ -619,25 +629,26 @@ export async function getMonthlyReport(
   // never an order or booking-payment status.
   const importStart = calendarDateInTimezone(startUtc, options.timeZone ?? "UTC");
   const importEnd = calendarDateInTimezone(endUtc, options.timeZone ?? "UTC");
-  const [importedFinancialTotals] = await db
-    .select({
-      payments: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'payment' then ${importedPaymentHistory.amountCents} else 0 end), 0)`,
-      refunds: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'refund' then ${importedPaymentHistory.amountCents} else 0 end), 0)`,
-      count: count(importedPaymentHistory.id),
-    })
-    .from(importedPaymentHistory)
-    .where(
-      and(
-        eq(importedPaymentHistory.shopId, shopId),
-        eq(importedPaymentHistory.currency, options.currency ?? "usd"),
-        isNotNull(importedPaymentHistory.amountCents),
-        inArray(importedPaymentHistory.direction, ["payment", "refund"]),
-        gte(importedPaymentHistory.occurredOn, importStart),
-        lt(importedPaymentHistory.occurredOn, importEnd),
-      ),
-    );
+  const readImportedFinancialTotals = async () =>
+    db
+      .select({
+        payments: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'payment' then ${importedPaymentHistory.amountCents} else 0 end), 0)`,
+        refunds: sql<string>`coalesce(sum(case when ${importedPaymentHistory.direction} = 'refund' then ${importedPaymentHistory.amountCents} else 0 end), 0)`,
+        count: count(importedPaymentHistory.id),
+      })
+      .from(importedPaymentHistory)
+      .where(
+        and(
+          eq(importedPaymentHistory.shopId, shopId),
+          eq(importedPaymentHistory.currency, options.currency ?? "usd"),
+          isNotNull(importedPaymentHistory.amountCents),
+          inArray(importedPaymentHistory.direction, ["payment", "refund"]),
+          gte(importedPaymentHistory.occurredOn, importStart),
+          lt(importedPaymentHistory.occurredOn, importEnd),
+        ),
+      );
 
-  const tipTotals = await monthTipTotals(db, shopId, inWindow);
+  const readTipTotals = async () => monthTipTotals(db, shopId, inWindow);
 
   // **How many seats arrived on a partner link this month** — a count, and
   // deliberately not a list of who.
@@ -668,31 +679,56 @@ export async function getMonthlyReport(
   // how many rows could appear; it reserved none of them for a partner the
   // shop knew, so a quiet month with two genuine partners at one booking each
   // was fully displaced by an attacker with two bookings per invented slug.
-  const referredTotals = await partnerReferredSeatsForWindow(db, shopId, inWindow);
+  const readReferredTotals = async () => partnerReferredSeatsForWindow(db, shopId, inWindow);
 
   // **The row lever W adds to the month** (ADR 20260908-one-hand, decision
   // 6): seats a diver's own link brought. Counted on this window's live
   // departures, the basis every other figure on this page uses, and kept apart
   // from `partnerReferredSeats` above — a hotel and a friend are not the same
   // fact.
-  const buddyReferredSeats = await buddyReferredSeatsForWindow(db, shopId, startUtc, endUtc);
+  const readBuddyReferredSeats = async () =>
+    buddyReferredSeatsForWindow(db, shopId, startUtc, endUtc);
 
   // **The same seats, by what each person did aboard** (ADR
   // 20261007-participant-types). Same basis as `seatsBooked` — active bookings
   // on this month's live trips — so the split always sums to it.
-  const typeRows = await db
-    .select({ participantType: bookings.participantType, seats: count(bookings.id) })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        inWindow,
-        liveTrip(),
-        eq(bookings.shopId, shopId),
-        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
-      ),
-    )
-    .groupBy(bookings.participantType);
+  const readTypeRows = async () =>
+    db
+      .select({ participantType: bookings.participantType, seats: count(bookings.id) })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          inWindow,
+          liveTrip(),
+          eq(bookings.shopId, shopId),
+          inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+        ),
+      )
+      .groupBy(bookings.participantType);
+  // Four independent reads per pool wave; queryAll serializes each wave
+  // on a pinned transaction. No aggregate depends on another aggregate.
+  const [tripRows, waiverRows, baseRevenue, recoveredDeposits] = await queryAll(db, [
+    readTripRows,
+    () => monthlyWaiverRows(db, shopId, inWindow),
+    () => monthlyBaseRevenue(db, shopId, inWindow),
+    readRecoveredDeposits,
+  ]);
+  const [currentCheckoutTax, currentPassThrough, invoiceRevenue, invoiceBookingAmounts] =
+    await queryAll(db, [
+      readCurrentCheckoutTax,
+      readCurrentPassThrough,
+      readInvoiceRevenue,
+      readInvoiceBookingAmounts,
+    ]);
+  const [[standaloneOrderRevenue], [importedFinancialTotals], tipTotals, referredTotals] =
+    await queryAll(db, [
+      readStandaloneOrderRevenue,
+      readImportedFinancialTotals,
+      readTipTotals,
+      readReferredTotals,
+    ]);
+  const [buddyReferredSeats, typeRows] = await queryAll(db, [readBuddyReferredSeats, readTypeRows]);
   const seatsByType = emptyParticipantCounts();
   for (const row of typeRows) seatsByType[row.participantType] += Number(row.seats);
 

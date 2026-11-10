@@ -1,7 +1,7 @@
 import { nowDate } from "../../lib/clock";
 import type { UsageSample } from "../../lib/cost-guardrails";
 import { type AnthropicSpendReader, readAnthropicSpend } from "./anthropic";
-import { fetchNeonUsage } from "./neon";
+import { fetchNeonUsage, type NeonProjectUsage } from "./neon";
 import type { ProbeOptions } from "./probe";
 import { fetchVercelSpend } from "./vercel";
 
@@ -20,12 +20,12 @@ import { fetchVercelSpend } from "./vercel";
  * braces, because a monitor that dies on an unexpected error is a monitor that
  * stops watching exactly when something unexpected is happening.
  */
-export async function collectUsageSamples(
+export async function collectUsageEvidence(
   options: ProbeOptions & {
     /** Claude's spend comes from DiveDay's own ledger; the cron passes the db read in. */
     readonly readAnthropicSpendUsd?: AnthropicSpendReader;
   } = {},
-): Promise<Record<string, UsageSample>> {
+): Promise<{ samples: Record<string, UsageSample>; neonProjects: readonly NeonProjectUsage[] }> {
   const now = options.now ?? nowDate();
   const probeOptions = { ...options, now };
 
@@ -35,7 +35,7 @@ export async function collectUsageSamples(
     })),
     fetchNeonUsage(probeOptions).catch(() => {
       const sample: UsageSample = { status: "unavailable", reason: "probe_threw" };
-      return { compute: sample, storage: sample, egress: sample, projects: 0 };
+      return { compute: sample, storage: sample, egress: sample, projects: 0, projectUsage: [] };
     }),
     readAnthropicSpend({
       env: options.env ?? process.env,
@@ -45,10 +45,20 @@ export async function collectUsageSamples(
   ]);
 
   return {
-    vercel_spend: vercel.sample,
-    neon_compute: neon.compute,
-    neon_storage: neon.storage,
-    neon_egress: neon.egress,
-    anthropic_spend: anthropic,
+    neonProjects: neon.projectUsage,
+    samples: {
+      vercel_spend: vercel.sample,
+      neon_compute: neon.compute,
+      neon_storage: neon.storage,
+      neon_egress: neon.egress,
+      anthropic_spend: anthropic,
+    },
   };
+}
+
+/** Keep the alert cron's established metric contract while retaining detail for reports. */
+export async function collectUsageSamples(
+  options: Parameters<typeof collectUsageEvidence>[0] = {},
+): Promise<Record<string, UsageSample>> {
+  return (await collectUsageEvidence(options)).samples;
 }

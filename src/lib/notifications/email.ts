@@ -1259,8 +1259,8 @@ export function usageCeilingAlertEmail(input: UsageCeilingAlertEmailInput): Noti
 
   return {
     subject: `Usage ${headline}: ${input.ceilingId} at ${input.percent}% (${input.periodKey})`,
-    text: `${input.ceilingId} is at ${reading} for ${input.periodKey}.\n\nProvider: ${input.provider} / ${input.metric}.\nAt the ceiling, ${input.provider} ${consequence}.\n\nAlert-only: nothing has been disabled, throttled, or turned off.\n`,
-    html: `<p><strong>${ceilingId}</strong> is at ${readingHtml} for ${period}.</p><p>Provider: <code>${provider}</code> / <code>${metric}</code>. At the ceiling, ${provider} ${consequence}.</p><p>Alert-only: nothing has been disabled, throttled, or turned off.</p>`,
+    text: `${input.ceilingId} is at ${reading} for ${input.periodKey}.\n\nProvider: ${input.provider} / ${input.metric}.\nThis is an owner budget, not a verified provider quota. Confirm the account plan, resource and reset period. At a provider limit, the assumed consequence is that ${input.provider} ${consequence}.\n\nAlert-only: nothing has been disabled, throttled, or turned off.\n`,
+    html: `<p><strong>${ceilingId}</strong> is at ${readingHtml} for ${period}.</p><p>Provider: <code>${provider}</code> / <code>${metric}</code>. This is an owner budget, not a verified provider quota. Confirm the account plan, resource and reset period. At a provider limit, the assumed consequence is that ${provider} ${consequence}.</p><p>Alert-only: nothing has been disabled, throttled, or turned off.</p>`,
   };
 }
 

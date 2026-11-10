@@ -1,16 +1,5 @@
 #!/usr/bin/env node
-/**
- * Live Cost, Projections, and Infrastructure Risk Report.
- *
- * Evaluates current provider spend baselines, configured usage guardrails,
- * scaling cost multipliers, and architectural vulnerabilities for human operators
- * and AI agents.
- *
- * Usage:
- *   node scripts/cost-report.mjs
- *   node scripts/cost-report.mjs --json
- *   node scripts/cost-report.mjs --markdown
- */
+/** Source inventory by default; --live additionally reads existing usage probes. */
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import process from "node:process";
@@ -21,117 +10,56 @@ const ROOT = process.cwd();
 const MANUAL_ENV_PATH = join(ROOT, ".env.manual");
 const LOCAL_ENV_PATH = join(ROOT, ".env.local");
 
-/** Fixed baselines and active infrastructure inventory. */
+/** Code inventory is not an account plan, current price, or deployment observation. */
 export const PROVIDER_INVENTORY = [
-  {
-    provider: "Vercel",
-    tier: "Pro (1 seat)",
-    monthlyBaseUsd: 20.0,
-    variableElements:
-      "Build concurrency ($40/slot), Serverless GB-hrs, Egress over 1TB (Blob storage retired)",
-    overflowBehavior: "bills_overage",
-    guardrail: "vercel_spend ($60.00/mo)",
-  },
-  {
-    provider: "Neon",
-    tier: "Serverless Postgres (Free)",
-    monthlyBaseUsd: 0.0,
-    variableElements: "Compute unit hours, Storage over 0.5 GiB, Egress",
-    overflowBehavior: "suspends",
-    guardrail: "neon_compute (300 CU-hrs), neon_storage (50 GiB-mo)",
-  },
-  {
-    provider: "AWS",
-    tier: "CDK Stack (22 subsystems), Basic Support",
-    // Read off the August and early-September 2026 bills rather than estimated
-    // from the stack, which is why this number moved from 2.40 to 43.55 on
-    // 2026-09-10 without any resource being added, then to 18.55 on 2026-11-05
-    // when the Business Support+ line ($25.00) went away with the drop to Basic
-    // on 2026-11-02: S3 across the four buckets ($12.00), the Route 53 health check ($2.75),
-    // CloudWatch metrics and alarms past the free ten ($2.50), three Secrets
-    // Manager secrets ($1.20) and tax ($0.10). The S3 line is unattributed and
-    // is a finding, not a baseline -- the runbook's "Where the money actually
-    // goes" section carries the warning and the reasoning.
-    monthlyBaseUsd: 18.55,
-    variableElements:
-      "SES ($0.10/k), SNS SMS ($0.0075/ea), CloudWatch Logs/RUM, CloudFront media egress, S3 requests, CodeBuild",
-    overflowBehavior: "alert_only",
-    guardrail: "AWS::Budgets::Budget ($90.00/mo, dollar thresholds) + Cost Anomaly Detection",
-  },
-  {
-    provider: "Sentry",
-    tier: "Developer (Free)",
-    monthlyBaseUsd: 0.0,
-    variableElements: "Error events over 50k/mo, Cron monitors",
-    overflowBehavior: "drops",
-    guardrail: "sentry_errors (50,000 events/mo)",
-  },
+  { provider: "Vercel", source: "Next.js hosting and scheduled routes", plan: "unknown" },
+  { provider: "Neon", source: "PostgreSQL; org-level consumption probes", plan: "unknown" },
+  { provider: "AWS", source: "CDK resources, budgets and external health alarms", plan: "unknown" },
+  { provider: "Sentry", source: "Error reporting and cron monitoring", plan: "unknown" },
   {
     provider: "Meta (WhatsApp)",
-    tier: "Cloud API",
-    monthlyBaseUsd: 0.0,
-    variableElements: "Utility / marketing convs over 1,000 free service convs/mo",
-    overflowBehavior: "bills_overage",
-    guardrail: "whatsapp_conversations (1,000 convs/mo)",
+    source:
+      "Per-shop sender; delivered-message pricing depends on category, market and billing account",
+    plan: "unknown",
   },
-  {
-    provider: "Stripe",
-    tier: "Connect",
-    monthlyBaseUsd: 0.0,
-    variableElements: "2.9% + 30¢ per successful card charge",
-    overflowBehavior: "bills_per_transaction",
-    guardrail: "payout_reconciliation",
-  },
+  { provider: "Stripe", source: "Connect payments", plan: "unknown" },
 ];
 
-/** Documented architecture and cost vulnerability matrix. */
 export const ARCHITECTURAL_RISKS = [
   {
     id: "W-1",
-    name: "Manifest SSE on Serverless",
-    severity: "High",
-    impact:
-      "MaxDuration=300s connections cause reconnect storms on cellular links and high GB-hr serverless spend",
-    remedy: "Migrate long-lived manifest streams to AWS AppSync or ECS Fargate (AWS-5)",
+    name: "Manifest stream resource use",
+    impact: "Viewer duration is not billed GB-hours or a database connection count.",
+    remedy:
+      "Measure billed execution, process count and reconnect outcomes before proposing a hosting change.",
   },
   {
     id: "W-2",
-    name: "Neon Free Tier Compute Exhaustion",
-    severity: "Critical",
-    impact: "Endpoint suspended upon exceeding 300 CU-hrs; total outage of booking and staff app",
-    remedy: "Upgrade to Neon Launch ($19/mo) or provision AWS RDS Aurora Serverless v2 (AWS-4)",
-  },
-  {
-    id: "W-3",
-    name: "Internal-Only Observability",
-    severity: "High",
-    impact: "Platform outage silences in-app Sentry/monitors; no outside-in status alarm",
-    remedy: "Deploy AWS CloudWatch Synthetics heartbeat canary (AWS-1)",
+    name: "Unverified database quota headroom",
+    impact:
+      "Org-wide usage budgets do not establish a production project's plan, allowance or remaining quota.",
+    remedy:
+      "Verify production project identity, plan, reset period, current-size storage and compute allowance in the provider account.",
   },
   {
     id: "W-4",
-    name: "Build-Time Database Migrations",
-    severity: "Medium",
-    impact:
-      "Migrations apply during Vercel deploy while previous release is still actively serving",
-    remedy:
-      "Maintain strict expand/contract rules; isolate migrations to pre-deploy task in AWS cutover",
-  },
-  {
-    id: "W-5",
-    name: "Media Storage in AWS S3 (Resolved)",
-    severity: "Low",
-    impact: "Vercel Blob eliminated; media and waiver scans stored in S3 (AWS-8 delivered)",
-    remedy: "S3 Image Storage Provider active with scoped IAM uploader credentials",
-  },
-  {
-    id: "W-6",
-    name: "In-Memory Rate Limiting",
-    severity: "Medium",
-    impact: "Token bucket resets on serverless cold starts; vulnerable to distributed scraping",
-    remedy: "Configure Upstash Redis or deploy AWS WAF edge rate limiting (AWS-10)",
+    name: "Build-time migration overlap",
+    impact: "The prior application release can serve while a migration applies.",
+    remedy: "Retain expand/contract checks and verify the actual deployment path.",
   },
 ];
+
+export const SOURCE_TOPOLOGY = {
+  manifestRoute: "src/app/api/trips/[id]/manifest-events/route.ts",
+  manifestRetirementSeconds: 240,
+  listenerScope: "one per warm process with viewers",
+  listenerIdleSeconds: 120,
+  databaseDumpSchedule: "weekly",
+  externalMonitoring: "Route 53 health checks and SNS alarms defined in infra/lib/global-stack.ts",
+  media: "S3 provider implemented",
+  rateLimiting:
+    "Upstash credentials required by production environment registry; runtime fallback is not deployment evidence",
+};
 
 /** Read combined manual and local environment variables. */
 export function getEnvironment() {
@@ -145,147 +73,200 @@ export function getEnvironment() {
   return env;
 }
 
-/** Check which telemetry probes have configured tokens. */
+/** Credential presence is configuration only, never proof a probe or deployment works. */
 export function auditProbeStatus(env = getEnvironment()) {
   return {
-    vercel: Boolean(env.USAGE_VERCEL_TOKEN && env.USAGE_VERCEL_TEAM_ID),
-    neon: Boolean(env.USAGE_NEON_API_KEY && env.USAGE_NEON_ORG_ID),
-    awsBudget: true, // provisioned in CDK S7
-    sentry: false, // console_only currently
-    whatsapp: false, // console_only currently
+    vercel: Boolean(env.USAGE_VERCEL_TOKEN?.trim() && env.USAGE_VERCEL_TEAM_ID?.trim()),
+    neon: Boolean(env.USAGE_NEON_API_KEY?.trim() && env.USAGE_NEON_ORG_ID?.trim()),
+    awsBudget: "unknown",
   };
 }
 
-/** Compute cost and risk assessment summary object. */
-export function generateCostReport(env = getEnvironment()) {
-  const probeStatus = auditProbeStatus(env);
-  const minBaseTotal = PROVIDER_INVENTORY.reduce((acc, p) => acc + p.monthlyBaseUsd, 0);
-
+export function generateCostReport(env = getEnvironment(), { now = new Date() } = {}) {
+  const configured = auditProbeStatus(env);
   return {
-    timestamp: new Date().toISOString(),
-    baselineMonthlySpend: {
-      minimumFixedUsd: minBaseTotal,
-      // Derived, not typed. The literal here read "$21.50 - $40.00 / month" and
-      // was still saying so on 2026-09-10, by which point the fixed lines above
-      // summed to more than its upper bound -- a second source of truth for a
-      // number the array already knows. The upper bound is the fixed floor plus
-      // $20 of per-use headroom (SES, SNS, CloudFront egress, S3 requests,
-      // CodeBuild, RUM).
-      estimatedRangeUsd: `$${minBaseTotal.toFixed(2)} – $${(minBaseTotal + 20).toFixed(2)} / month`,
-    },
+    timestamp: now.toISOString(),
+    mode: "source_inventory",
+    currentSpend: { status: "unknown", total: null, currency: null },
+    deployment: { awsBudgets: "unknown", externalMonitoring: "unknown", rateLimiting: "unknown" },
     providers: PROVIDER_INVENTORY,
-    probeConfiguration: {
-      vercelBillingApi: probeStatus.vercel ? "configured" : "not_configured (token unset)",
-      neonConsumptionApi: probeStatus.neon ? "configured" : "not_configured (token unset)",
-      awsBudgets: "deployed (AWS::Budgets::Budget $90/mo, ABSOLUTE_VALUE thresholds)",
-      sentryStats: "console_only",
-      metaWhatsApp: "console_only",
-    },
-    architecturalRisks: ARCHITECTURAL_RISKS,
-    recommendations: [
+    sourceTopology: SOURCE_TOPOLOGY,
+    historicalEvidence: [
       {
-        priority: "P1",
-        action:
-          "Upgrade Neon to Launch plan ($19/mo) before production bookings to prevent endpoint suspension",
-        vulnerabilityRef: "W-2",
-      },
-      {
-        priority: "P2",
-        action:
-          "Provision AWS-1 CloudWatch Synthetics heartbeat canary for outside-in uptime alarms",
-        vulnerabilityRef: "W-3",
-      },
-      {
-        priority: "P3",
-        action:
-          "Configure Upstash Redis or deploy AWS WAF edge rate limiting (AWS-10) for durable token buckets",
-        vulnerabilityRef: "W-6",
+        source: "docs/engineering/cost-guardrails-runbook.md#where-the-money-actually-goes",
+        period: "August and early September 2026 invoices, as recorded in the runbook",
+        currency: "USD",
+        recordedAwsMonthlyAmount: 43.55,
+        laterSupportAdjustment: { effectiveDate: "2026-11-02", removedUsd: 25 },
+        status: "historical_documentation_not_current_measurement",
+        caveat:
+          "Includes variable, unattributed S3 spend. Subtracting support does not create a new invoice or fixed floor.",
       },
     ],
+    probeConfiguration: {
+      vercelBillingApi: configured.vercel ? "configured_not_verified" : "not_configured",
+      neonConsumptionApi: configured.neon ? "configured_not_verified" : "not_configured",
+      awsBudgets: "source_defined_deployment_unknown",
+      sentryStats: "console_only",
+      metaWhatsApp: "console_only_billing_account_and_rates_unknown",
+    },
+    measurements: [],
+    coverageLimits: [
+      "No all-provider total or current price/plan verification is available.",
+      "Neon org totals are owner-budget signals, not per-project quota protection; GiB-months are not current storage size.",
+      "WhatsApp chargeable delivered messages need category, recipient market, rate version and responsible billing account; conversation counts are not spend.",
+      "A report timestamp is generation time, not deployment verification or invoice date.",
+    ],
+    architecturalRisks: ARCHITECTURAL_RISKS,
+    recommendations: ARCHITECTURAL_RISKS.map(({ id, remedy }) => ({
+      action: remedy,
+      vulnerabilityRef: id,
+    })),
   };
 }
 
-/** Render CLI formatted text. */
-export function renderCliReport(report) {
-  const lines = [];
-  lines.push("================================================================================");
-  lines.push("                     DIVEDAY INFRASTRUCTURE COST & RISK REPORT                  ");
-  lines.push("================================================================================");
-  lines.push(`Generated: ${report.timestamp}`);
-  lines.push(`Baseline Monthly Run Rate: ${report.baselineMonthlySpend.estimatedRangeUsd}\n`);
-
-  lines.push("--- PROVIDER INVENTORY & SPEND CEILINGS ---");
-  for (const p of report.providers) {
-    lines.push(
-      `• ${p.provider.padEnd(16)} | Base: $${p.monthlyBaseUsd.toFixed(2).padStart(5)}/mo | Overflow: ${p.overflowBehavior.padEnd(13)} | Guardrail: ${p.guardrail}`,
-    );
-  }
-
-  lines.push("\n--- ACTIVE TELEMETRY PROBES ---");
-  lines.push(`• Vercel Billing API   : ${report.probeConfiguration.vercelBillingApi}`);
-  lines.push(`• Neon Consumption API : ${report.probeConfiguration.neonConsumptionApi}`);
-  lines.push(`• AWS Budgets & Anomaly: ${report.probeConfiguration.awsBudgets}`);
-  lines.push(`• Sentry Stats         : ${report.probeConfiguration.sentryStats}`);
-  lines.push(`• Meta WhatsApp        : ${report.probeConfiguration.metaWhatsApp}`);
-
-  lines.push("\n--- TOP ARCHITECTURAL VULNERABILITIES & EXPENSIVE PATTERNS ---");
-  for (const risk of report.architecturalRisks) {
-    lines.push(`[${risk.id}] [${risk.severity.toUpperCase()}] ${risk.name}`);
-    lines.push(`    Impact: ${risk.impact}`);
-    lines.push(`    Remedy: ${risk.remedy}`);
-  }
-
-  lines.push("\n--- IMMEDIATE ACTION MATRIX ---");
-  for (const rec of report.recommendations) {
-    lines.push(`• ${rec.priority}: ${rec.action} [Ref: ${rec.vulnerabilityRef}]`);
-  }
-  lines.push("================================================================================");
-
-  return lines.join("\n");
+async function loadUsageModule() {
+  const { require: tsRequire } = await import("tsx/cjs/api");
+  return tsRequire("../src/features/usage/index.ts", import.meta.url);
 }
 
-/** Render Markdown formatted text. */
+const MEASUREMENT_SOURCES = {
+  vercel_spend: {
+    source: "Vercel Billing charges API via existing FOCUS collector",
+    unit: "usd",
+    currency: "USD",
+    currencyVerification: "collector_assumption_not_verified",
+    scope: "configured team",
+    plan: "unknown",
+  },
+  neon_compute: {
+    source: "Neon consumption_history/v2/projects",
+    unit: "compute_unit_hour",
+    currency: null,
+    scope: "configured organization, all returned projects",
+    plan: "unknown",
+  },
+  neon_storage: {
+    source: "Neon consumption_history/v2/projects",
+    unit: "gib_month",
+    currency: null,
+    scope: "configured organization, all returned projects",
+    plan: "unknown",
+  },
+  neon_egress: {
+    source: "Neon consumption_history/v2/projects",
+    unit: "gib",
+    currency: null,
+    scope: "configured organization, all returned projects",
+    plan: "unknown",
+  },
+};
+
+/** Opt-in reuse of the cron's collectors; missing or failed readings never become zero. */
+export async function generateLiveCostReport(
+  env = getEnvironment(),
+  { now = new Date(), collect, fetcher, quotaEvidence = [] } = {},
+) {
+  const report = generateCostReport(env, { now });
+  const usage = await loadUsageModule();
+  const collector = collect ?? usage.collectUsageEvidence;
+  let samples;
+  let neonProjects;
+  try {
+    const evidence = await collector({ env, now, fetcher });
+    samples = evidence.samples ?? {};
+    neonProjects = evidence.neonProjects ?? [];
+  } catch {
+    samples = {};
+    neonProjects = [];
+  }
+  const period = {
+    start: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
+    endExclusive: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString(),
+    kind: "requested_utc_calendar_month_not_invoice_period",
+  };
+  report.mode = "live_probes";
+  report.projectQuotas = usage.evaluateNeonProjectQuotas(neonProjects, quotaEvidence, now);
+  report.quotaEvidenceSource = "operator_supplied_not_verified_by_this_report";
+  report.measurements = Object.entries(MEASUREMENT_SOURCES).map(([metric, provenance]) => {
+    const sample = samples[metric] ?? { status: "unavailable", reason: "missing_sample" };
+    const valid =
+      sample.status !== "measured" || (Number.isFinite(sample.value) && sample.value >= 0);
+    const reading = valid ? sample : { status: "unavailable", reason: "invalid_sample" };
+    return {
+      metric,
+      ...reading,
+      ...provenance,
+      period,
+      requestedAt: now.toISOString(),
+      lastVerifiedAt: null,
+    };
+  });
+  return report;
+}
+
+/** Both formats carry the same uncertainty and provenance; neither invents a price total. */
 export function renderMarkdownReport(report) {
-  const lines = [];
-  lines.push("# DiveDay Infrastructure Cost & Risk Assessment");
-  lines.push(`*Generated at ${report.timestamp}*\n`);
-  lines.push(`**Estimated Monthly Baseline:** ${report.baselineMonthlySpend.estimatedRangeUsd}\n`);
-
-  lines.push("## Provider Spend Inventory & Guardrails");
-  lines.push("| Provider | Tier | Monthly Base | Overflow Action | Configured Guardrail |");
-  lines.push("| --- | --- | --- | --- | --- |");
-  for (const p of report.providers) {
-    lines.push(
-      `| **${p.provider}** | ${p.tier} | $${p.monthlyBaseUsd.toFixed(2)} | \`${p.overflowBehavior}\` | ${p.guardrail} |`,
-    );
-  }
-
-  lines.push("\n## Architectural Weaknesses & Cost Risks");
-  lines.push("| ID | Severity | Vulnerability | Impact | Mitigation |");
-  lines.push("| --- | --- | --- | --- | --- |");
-  for (const r of report.architecturalRisks) {
-    lines.push(`| **${r.id}** | ${r.severity} | ${r.name} | ${r.impact} | ${r.remedy} |`);
-  }
-
-  lines.push("\n## Priority Decisions");
-  for (const rec of report.recommendations) {
-    lines.push(`- **${rec.priority}**: ${rec.action} (*${rec.vulnerabilityRef}*)`);
-  }
-
+  const lines = [
+    "# DiveDay Infrastructure Cost & Risk Assessment",
+    `Generated: ${report.timestamp}; mode: ${report.mode}`,
+    "Current all-provider spend: unknown. Deployment status: unknown.",
+    "## Source inventory (not verified account plans or deployment)",
+    "| Provider | Source inventory | Plan |",
+    "| --- | --- | --- |",
+    ...report.providers.map((p) => `| ${p.provider} | ${p.source} | ${p.plan} |`),
+    "## Probe configuration (not successful measurement)",
+    ...Object.entries(report.probeConfiguration).map(([key, value]) => `- ${key}: ${value}`),
+    "## Measurements",
+    ...(report.measurements.length
+      ? report.measurements.map(
+          (m) =>
+            `- ${m.metric}: ${m.status}${m.status === "measured" ? ` ${m.value} ${m.unit}` : ` (${m.reason ?? m.status})`}; source: ${m.source}; scope: ${m.scope}; plan: ${m.plan}; requested window: ${m.period.start} to ${m.period.endExclusive} exclusive; requested at: ${m.requestedAt}; currency verification: ${m.currencyVerification ?? "not a money metric"}; last verified: unknown.`,
+        )
+      : ["No live probes requested."]),
+    "## Project quota diagnostics (supplied account evidence, not deployment verification)",
+    ...(report.projectQuotas ?? []).map(
+      (quota) => `- ${quota.projectId ?? "unknown project"}: ${JSON.stringify(quota)}`,
+    ),
+    "## Historical evidence (not a current bill or fixed floor)",
+    ...report.historicalEvidence.map(
+      (h) =>
+        `- ${h.period}: ${h.currency} ${h.recordedAwsMonthlyAmount}; documented support removal ${h.laterSupportAdjustment.effectiveDate}: ${h.currency} ${h.laterSupportAdjustment.removedUsd}. Source: ${h.source}. ${h.caveat}`,
+    ),
+    "## Source topology",
+    ...Object.entries(report.sourceTopology).map(([key, value]) => `- ${key}: ${value}`),
+    "## Coverage limits",
+    ...report.coverageLimits.map((limit) => `- ${limit}`),
+    "## Checks before decisions",
+    ...report.recommendations.map((r) => `- ${r.vulnerabilityRef}: ${r.action}`),
+  ];
   return lines.join("\n");
 }
 
-function main() {
-  const args = process.argv.slice(2);
-  const report = generateCostReport();
+export function renderCliReport(report) {
+  return `DIVEDAY INFRASTRUCTURE COST & RISK REPORT\n${renderMarkdownReport(report)}`;
+}
 
-  if (args.includes("--json")) {
-    console.log(JSON.stringify(report, null, 2));
-  } else if (args.includes("--markdown")) {
-    console.log(renderMarkdownReport(report));
-  } else {
-    console.log(renderCliReport(report));
+async function main() {
+  const args = process.argv.slice(2);
+  const evidenceIndex = args.indexOf("--quota-evidence");
+  let quotaEvidence = [];
+  if (evidenceIndex !== -1) {
+    if (
+      !args.includes("--live") ||
+      !args[evidenceIndex + 1] ||
+      args[evidenceIndex + 1].startsWith("--")
+    ) {
+      throw new Error("--quota-evidence requires --live and a JSON file path");
+    }
+    quotaEvidence = JSON.parse(readFileSync(args[evidenceIndex + 1], "utf8"));
   }
+  const report = args.includes("--live")
+    ? await generateLiveCostReport(undefined, { quotaEvidence })
+    : generateCostReport();
+  if (args.includes("--json")) console.log(JSON.stringify(report, null, 2));
+  else if (args.includes("--markdown")) console.log(renderMarkdownReport(report));
+  else console.log(renderCliReport(report));
 }
 
 if (process.argv[1]) {
@@ -298,6 +279,6 @@ if (process.argv[1]) {
   }
 
   if (import.meta.url === directEntryUrl || import.meta.url === canonicalEntryUrl) {
-    main();
+    await main();
   }
 }
