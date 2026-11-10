@@ -1,9 +1,7 @@
 # Marketing review — 2026-08-27
 
-- **Status:** Open — slices 12a–12e delivered 2026-08-28 (PR #1115); 12f (`/about` spends the
-  impulse it creates) remains, plus the leave-it-guides pricing-link owner call below. Move this
-  file to [archive/](archive/) when the last slice lands, the way
-  [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md) did.
+- **Status:** Slices 12a–12f delivered 2026-08-28. The owner approved the leave-it guides'
+  destination-only pricing link on 2026-11-10 ([#4195](https://github.com/AaronBuxbaum/diveday/issues/4195)).
 - **Why now:** shop owners are not converting to trials (the owner's own read, 2026-08-27), and
   the funnel pair (`demo_entered` / `trial_started`) is too thin to argue from — so this review
   argues from the pages themselves: three independent conversion passes (home+product,
@@ -152,13 +150,14 @@ reconciled sentence.
   catch-all row adds the human: "And if yours is messier than that, send it over — a person
   maps it with you, free."
 
-## One owner call
+## Owner call, resolved 2026-11-10
 
-**A pricing link on the leave-it guides.** [marketing.md](marketing.md) scopes the single
-forward `/pricing` link to the coexist guides' leave-path box and says a second placement needs
-its own decision. An EVE or DiveShop360 reader's "and yours costs what?" currently has only the
-nav tab. Recommendation: allow the same destination-not-claim link
-(`switching.common.seePricing`) under those guides' bothWays block. Decide before slice 12e.
+Aaron approved the recommendation below in #4195: one understated destination-only pricing link
+on each leave-it guide, without competing with the main action.
+
+**A pricing link on the leave-it guides.** At the time of the review, [marketing.md](marketing.md) scoped the single forward `/pricing`
+link to the coexist guides' leave-path box. The recommendation was to add the same
+destination-not-claim link (`switching.common.seePricing`) under leave-it guides' bothWays block.
 
 ## What stays
 

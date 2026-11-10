@@ -139,14 +139,7 @@ describe("help arrives before the homework", () => {
     expect(en("marketing.guides.eve.context.item2")).toMatch(/shops report/);
   });
 
-  /**
-   * The owner call the review recorded and deliberately left open: whether the
-   * leave-it guides may carry the same forward `/pricing` link the coexist
-   * guides' leave-path box does. Until it is decided, `seePricing` renders only
-   * inside a `coexist` block — so the leave-it guides have none, and this is
-   * the assertion that makes adding one a decision rather than an edit.
-   */
-  it("gives the leave-it guides no coexist block, and so no forward pricing link", () => {
+  it("keeps leave-it guides free of a coexist block", () => {
     for (const slug of ["eve", "diveshop360", "smartwaiver"]) {
       expect(getMigrationGuide(slug)?.coexist, slug).toBeUndefined();
     }

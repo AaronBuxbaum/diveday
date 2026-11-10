@@ -18,8 +18,8 @@ export const CALLOUT_LINK_CLASS = `${tapTargetLinkClass} font-medium text-primar
  * 20261022-pricing-ab-test), because its argument is the incumbent's
  * per-booking fee against a flat price.
  *
- * The one forward link to /pricing on a switching guide, and it
- * belongs here rather than in the closing band. This page has
+ * The coexist guides' forward link to /pricing belongs here rather
+ * than in the closing band. This page has
  * just told a shop owner what the incumbent's per-booking fee
  * costs them; "and yours costs what?" is the next thought, and
  * until now the only answer was the nav tab several thousand

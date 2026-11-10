@@ -21,6 +21,7 @@ import type { FunnelSource } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import { fullShopExport } from "@/lib/marketing";
 import { IMPORT_SCOPE_ROW_KEYS } from "@/lib/migration-guides";
+import { CALLOUT_LINK_CLASS } from "./ReplaceCallout";
 
 /**
  * The one switching-guide composition, shared by the incumbent guides
@@ -500,10 +501,12 @@ export function ScopePhase({
   locale,
   number,
   source,
+  showPricingLink = false,
 }: {
   locale: DiverLocale;
   number: number;
   source?: "fareharbor";
+  showPricingLink?: boolean;
 }) {
   const t = diverTranslator(locale);
   const groups = [
@@ -598,6 +601,13 @@ export function ScopePhase({
             : t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
         </p>
         <p className="mt-2 text-sm leading-6 text-muted">{t(fullShopExport.termsKey)}</p>
+        {showPricingLink && (
+          <p className="mt-4 flex h-6 items-center">
+            <Link href="/pricing" className={CALLOUT_LINK_CLASS}>
+              {t("switching.common.seePricing")}
+            </Link>
+          </p>
+        )}
       </div>
     </MovePhase>
   );

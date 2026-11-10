@@ -304,8 +304,8 @@ homework) and every replacement sentence written out, claims-policy-clean. Each 
 both locales in the same change. Unranked, but 12a and 12c aim directly at "owners aren't
 starting trials."
 
-**12a–12f all shipped 2026-08-28** ([shipped.md](../shipped.md)). What is left of the review is
-not a slice: the leave-it guides' pricing link stays where the review left it, an owner call.
+**12a–12f all shipped 2026-08-28** ([shipped.md](../shipped.md)). The owner approved the
+leave-it guides' destination-only pricing link on 2026-11-10 (#4195).
 
 ### 14. Gaps against the field (each needs an owner's nod)
 
