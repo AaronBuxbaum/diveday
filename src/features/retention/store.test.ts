@@ -32,11 +32,11 @@ import {
 } from "./rules";
 import { PRUNE_ARMS, pruneExpiredRecords, retentionIdentityMatches } from "./store";
 import { walletRegistrationRetentionFixture } from "./wallet-registration.test-support";
+import { whatsAppUsageRetentionFixture } from "./whatsapp-usage.test-support";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = new Date("2026-08-03T00:00:00.000Z");
 
-/** `days` before {@link NOW}. */
 function daysAgo(days: number): Date {
   return new Date(NOW.getTime() - days * DAY_MS);
 }
@@ -58,8 +58,7 @@ function outcomeFor(summary: Awaited<ReturnType<typeof pruneExpiredRecords>>, ta
   return outcome;
 }
 
-// One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+// One seeded database; rollback per test. Nothing here commits or races.
 const ctx = fileScopedShopContext();
 
 describe("pruneExpiredRecords", () => {
@@ -567,6 +566,7 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.integrationOauthStates.id }),
     ),
+  whatsapp_delivered_usage: whatsAppUsageRetentionFixture,
   notification_deliveries: async ({ db, shop, entry }, at, n) =>
     idOf(
       await db

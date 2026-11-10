@@ -229,6 +229,7 @@ async function recordDeletedTables(
  * them, and a spec writing any other one needs a private shop too.
  */
 const RESET_KEEPS: Record<string, string> = {
+  whatsapp_delivered_usage: "provider accounting, not resettable schedule state",
   certification_junior_reviews: "ON DELETE CASCADE from cards clears it",
   staff_credential_history: "ON DELETE CASCADE from staff credentials clears it",
   account_sign_in_challenges:
@@ -301,6 +302,7 @@ const RESET_KEEPS: Record<string, string> = {
   // piece by ON DELETE CASCADE, and the reset clears those before orders.
   customer_gear_notices: "ON DELETE CASCADE from work orders and customer gear clears it",
   customer_gear_reminder_settings: "ON DELETE CASCADE from customer gear clears it",
+
   work_order_bills: "ON DELETE CASCADE from work orders clears it",
   // People in an incident report hang off incident_reports by ON DELETE CASCADE.
   // A raised report points at its subject's row, so incidentReports is deleted first.
@@ -360,6 +362,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   shop_milestones: "ON DELETE CASCADE from shops clears it",
   customer_gear_notices: "ON DELETE CASCADE from work orders and customer gear clears it",
   customer_gear_reminder_settings: "ON DELETE CASCADE from customer gear clears it",
+  whatsapp_delivered_usage: "ON DELETE CASCADE from shops clears it",
 };
 
 describe("shop-scoped delete-path coverage", () => {

@@ -9,6 +9,7 @@ Import values and types through `index.ts`. The published contract keeps this us
 ## Owns
 
 - `rules.ts`
+- `store.ts`: tenant/account-scoped delivered-message usage and reconciliation reader.
 
 ## Does not own
 
@@ -16,4 +17,4 @@ Routes, UI, schema definitions and shared provider primitives stay in their exis
 
 ## Invariants
 
-This ownership move changes no validation, authorization, tenant scope, provider call, return shape or side effect. Existing tests retain their original project and timeout classification.
+Signature verification precedes every write. Delivered usage is deduplicated by account and message fingerprint, keeps no recipient/content, and never invents a monetary charge from incomplete pricing metadata.

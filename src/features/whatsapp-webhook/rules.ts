@@ -92,10 +92,33 @@ const PROVIDER_STATUS_BY_WHATSAPP_STATUS: Record<string, ProviderEmailStatus | u
   failed: "failed",
 };
 
+const pricingSchema = z.object({
+  billable: z.boolean().optional().catch(undefined),
+  pricing_model: z.enum(["PMP", "CBP"]).optional().catch(undefined),
+  category: z
+    .enum([
+      "marketing",
+      "utility",
+      "authentication",
+      "authentication-international",
+      "authentication_international",
+      "marketing_lite",
+      "service",
+      "referral_conversion",
+    ])
+    .optional()
+    .catch(undefined),
+  type: z
+    .enum(["regular", "free_customer_service", "free_entry_point", "free_group_customer_service"])
+    .optional()
+    .catch(undefined),
+});
+
 const statusSchema = z.object({
   id: z.string().min(1),
   status: z.string().min(1),
   timestamp: z.string().optional(),
+  pricing: z.unknown().optional(),
   errors: z
     .array(
       z.object({
@@ -189,6 +212,15 @@ export type WhatsAppDeliveryEvent = {
   /** Meta's own explanation for a failure, when it gave one. */
   detail: string | null;
   occurredAt: Date;
+  /** Absent or unrecognized metadata stays unknown, never inferred from a template. */
+  pricing?: {
+    billable: boolean | null;
+    model: string | null;
+    category: string | null;
+    type: string | null;
+  };
+  /** Cost accounting cannot put a missing timestamp in today's billing period. */
+  deliveryTimestampValid?: boolean;
 };
 
 /**
@@ -223,6 +255,12 @@ export function parseWhatsAppDeliveryEvents(payload: string, now: Date): WhatsAp
           status: mapped,
           detail: failureDetail(status.errors),
           occurredAt: timestampFrom([status.timestamp], now, "epoch-seconds"),
+          deliveryTimestampValid: Boolean(
+            status.timestamp &&
+              /^\d+$/.test(status.timestamp) &&
+              Number.isFinite(new Date(Number(status.timestamp) * 1000).getTime()),
+          ),
+          pricing: parsedPricing(status.pricing),
         });
       }
     }
@@ -310,4 +348,14 @@ function failureDetail(errors: z.infer<typeof statusSchema>["errors"]): string |
   // row (security review of issue #2531).
   const parts = [first.code?.toString(), first.title?.slice(0, 120)].filter(Boolean);
   return parts.length > 0 ? parts.join(" ") : null;
+}
+
+function parsedPricing(value: unknown): NonNullable<WhatsAppDeliveryEvent["pricing"]> {
+  const parsed = pricingSchema.safeParse(value);
+  return {
+    billable: parsed.success ? (parsed.data.billable ?? null) : null,
+    model: parsed.success ? (parsed.data.pricing_model ?? null) : null,
+    category: parsed.success ? (parsed.data.category ?? null) : null,
+    type: parsed.success ? (parsed.data.type ?? null) : null,
+  };
 }

@@ -61,6 +61,33 @@ function okFetch(id = "wamid.OK") {
 const ctx = fileScopedShopContext();
 
 describe("connectShopWhatsAppAccount", () => {
+  it("preserves the assignment era on token refresh and resets it on a number or WABA change", async () => {
+    const { db, shop } = ctx;
+    const first = new Date("2026-08-01T12:00:00.500Z");
+    const later = new Date("2026-08-02T12:00:00.500Z");
+    const final = new Date("2026-08-03T12:00:00.500Z");
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { now: first }), {
+      key,
+    });
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { now: later }), {
+      key,
+    });
+    expect((await getShopWhatsAppAccount(db, shop.id))?.numberAssignedAt).toEqual(first);
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(shop.id, { now: later, phoneNumberId: "different" }),
+      { key },
+    );
+    expect((await getShopWhatsAppAccount(db, shop.id))?.numberAssignedAt).toEqual(later);
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(shop.id, { now: final, phoneNumberId: "different", wabaId: "waba-2" }),
+      { key },
+    );
+    const current = await getShopWhatsAppAccount(db, shop.id);
+    expect(current?.numberAssignedAt).toEqual(final);
+    expect(current?.connectedAt).toEqual(first);
+  });
   it("prefers an injected key over malformed environment configuration", async () => {
     vi.stubEnv("SECRET_ENCRYPTION_KEY", "invalid");
     const { db, shop } = ctx;

@@ -708,6 +708,8 @@ export const shopWhatsappAccounts = pgTable(
     templateName: text("template_name").notNull(),
     templateLanguage: text("template_language").notNull(),
     connectedAt: appNowTimestamp("connected_at").notNull(),
+    /** Start of this shop/number/WABA association; token refresh does not reset it. */
+    numberAssignedAt: appNowTimestamp("number_assigned_at").notNull(),
     /** Set by the settings page's test send, so staff can see the connection was proven, not just saved. */
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
     updatedAt: appNowTimestamp("updated_at").notNull(),
@@ -798,3 +800,35 @@ export const pushSubscriptions = pgTable(
 export type ShopWhatsappAccount = typeof shopWhatsappAccounts.$inferSelect;
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
+/** Provider delivery accounting, not a recipient trail. No phone, body or raw message id.
+ * Account identifiers describe billing responsibility, not a verified invoice payer.
+ * Unknown rates/markets are deliberately not manufactured from recipient phone prefixes.
+ */
+export const whatsAppDeliveredUsage = pgTable(
+  "whatsapp_delivered_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    phoneNumberId: text("phone_number_id").notNull(),
+    wabaId: text("waba_id").notNull(),
+    messageFingerprint: text("message_fingerprint").notNull(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }).notNull(),
+    pricingModel: text("pricing_model"),
+    category: text("category"),
+    pricingType: text("pricing_type"),
+    billable: boolean("billable"),
+    recordedAt: appNowTimestamp("recorded_at"),
+  },
+  (table) => [
+    uniqueIndex("whatsapp_delivered_usage_message_unique").on(
+      table.shopId,
+      table.phoneNumberId,
+      table.messageFingerprint,
+    ),
+    index("whatsapp_delivered_usage_window_idx").on(table.shopId, table.deliveredAt),
+    index("whatsapp_delivered_usage_retention_idx").on(table.deliveredAt),
+  ],
+);

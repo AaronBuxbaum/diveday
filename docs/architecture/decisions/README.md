@@ -460,5 +460,6 @@ script again.
 | 20261109-evidence-key-history | Keep signing key identity with… (proposed) |
 | 20261109-operator-browser-and-email-sign-in | Separate database operators from account… |
 | 20261110-native-wallet-passes | Sign native departure passes behind… |
+| 20261110-whatsapp-delivered-usage | Count verified deliveries by sending… |
 
 <!-- adr-index:end -->

@@ -917,6 +917,7 @@
       "incident_report_people": "People in incident reports",
       "incident_report_addenda": "Incident report additions",
       "activity_events": "Staff activity",
+      "whatsapp_delivered_usage": "WhatsApp delivered-message accounting",
       "notification_deliveries": "Message delivery outcomes",
       "orders": "Orders",
       "order_line_items": "Order lines",

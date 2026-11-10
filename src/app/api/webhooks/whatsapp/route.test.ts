@@ -5,6 +5,9 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
+vi.mock("../../../../features/whatsapp-webhook/store", () => ({
+  recordWhatsAppDeliveredUsage: vi.fn(),
+}));
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
 vi.mock("@/db/inbound-messages", () => ({ recordInboundMessage: vi.fn() }));
 // Stubbed rather than run, for the reason the email route's spec gives: the
@@ -25,6 +28,9 @@ vi.mock("next/server", async (importOriginal) => {
 vi.mock("@/db/whatsapp-accounts", () => ({ shopIdForWhatsAppEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
+const { recordWhatsAppDeliveredUsage } = await import(
+  "../../../../features/whatsapp-webhook/store"
+);
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { recordInboundMessage } = await import("@/db/inbound-messages");
 const { handleInboundReplyKeyword } = await import("../../../../features/reply-keywords/store");
@@ -81,9 +87,45 @@ beforeEach(() => {
   vi.mocked(handleInboundReplyKeyword).mockReset().mockResolvedValue("not_a_keyword");
   vi.mocked(pingDeskAfterHoursSafely).mockReset();
   vi.mocked(after).mockReset();
+  vi.mocked(recordWhatsAppDeliveredUsage).mockReset();
 });
 
 describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbox)", () => {
+  it("records a verified courtesy delivery even without a notification tracking row", async () => {
+    vi.mocked(applyProviderEmailEvent).mockResolvedValue("unknown_message");
+    const payload = payloadFor({
+      statuses: [
+        {
+          id: "wamid.courtesy",
+          status: "delivered",
+          timestamp: "1785672000",
+          pricing: { billable: true, pricing_model: "PMP", category: "utility" },
+        },
+      ],
+    });
+    expect((await POST(webhookRequest(payload))).status).toBe(200);
+    expect(recordWhatsAppDeliveredUsage).toHaveBeenCalledWith(
+      FAKE_DB,
+      SHOP_ID,
+      expect.objectContaining({
+        providerMessageId: "wamid.courtesy",
+        status: "delivered",
+        pricing: expect.objectContaining({ billable: true, category: "utility" }),
+      }),
+    );
+    vi.mocked(recordWhatsAppDeliveredUsage).mockClear();
+    vi.mocked(shopIdForWhatsAppEvent).mockResolvedValue(null);
+    expect((await POST(webhookRequest(payload))).status).toBe(200);
+    expect(recordWhatsAppDeliveredUsage).not.toHaveBeenCalled();
+  });
+  it("never records unsigned or forged delivery accounting", async () => {
+    const payload = payloadFor({
+      statuses: [{ id: "wamid.courtesy", status: "delivered", timestamp: "1785672000" }],
+    });
+    expect((await POST(webhookRequest(payload, sign(payload, "wrong")))).status).toBe(400);
+    expect((await POST(webhookRequest(payload, ""))).status).toBe(400);
+    expect(recordWhatsAppDeliveredUsage).not.toHaveBeenCalled();
+  });
   it("files a diver's text against the shop its number resolves to", async () => {
     const payload = payloadFor({
       messages: [
@@ -139,6 +181,7 @@ describe("whatsapp webhook route — inbound messages (ADR 20260907-two-way-inbo
     expect((await POST(webhookRequest(payload, sign(payload, "wrong")))).status).toBe(400);
     expect((await POST(webhookRequest(payload, ""))).status).toBe(400);
     expect(getDb).not.toHaveBeenCalled();
+    expect(recordWhatsAppDeliveredUsage).not.toHaveBeenCalled();
     expect(recordInboundMessage).not.toHaveBeenCalled();
   });
 

@@ -10,3 +10,5 @@ export {
   verifyWhatsAppSignature,
   whatsAppChallengeResponse,
 } from "./rules";
+
+export { readWhatsAppDeliveredUsage, recordWhatsAppDeliveredUsage } from "./store";

@@ -10,6 +10,7 @@ import { logWebhookRefusal } from "@/features/webhook-refusal";
 import {
   parseWhatsAppDeliveryEvents,
   parseWhatsAppInboundMessages,
+  recordWhatsAppDeliveredUsage,
   verifyWhatsAppSignature,
   whatsAppChallengeResponse,
 } from "@/features/whatsapp-webhook";
@@ -164,6 +165,7 @@ export async function POST(request: Request) {
       });
       continue;
     }
+    await recordWhatsAppDeliveredUsage(db, shopId, event);
     const result = await applyProviderEmailEvent(db, {
       providerMessageId: event.providerMessageId,
       status: event.status,
