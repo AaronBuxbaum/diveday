@@ -66,12 +66,13 @@ describe("readManifestPage (in-memory PGlite)", () => {
       readManifestPage(counted, shop.id, reef.id, staff.person.id),
     );
 
-    // 71 today: 76 before the render stopped issuing the offline snapshot
-    // (its lock, isolation check, trip key-share and revision write, issue
+    // 72 today: 76 before the render stopped issuing the offline snapshot
+    // (its lock_timeout, isolation check, advisory lock, trip key-share and
+    // revision write went; a plain read of the trip's revision came, issue
     // #4391), 115 in production before the page stopped reading the manifest
     // twice and the roll call stopped reading once per checkpoint (issue #3857).
     // A tripwire: a change that adds a statement should say so here.
-    expect(stats.queries).toBeLessThanOrEqual(71);
+    expect(stats.queries).toBeLessThanOrEqual(72);
   });
 
   it("renders without a write, a lock or a snapshot revision (issue #4391)", async () => {
@@ -102,8 +103,9 @@ describe("readManifestPage (in-memory PGlite)", () => {
       .from(offlineManifestSnapshotRevisions)
       .where(eq(offlineManifestSnapshotRevisions.tripId, reef.id));
     expect(counters).toEqual([]);
-    // It carries the epoch its rows were read at, for the device's save.
+    // It carries the epoch and revision its rows were read at, for the device's save.
     expect(reads.offlineRoster?.erasureEpoch).toBe(shop.offlineErasureEpoch);
+    expect(reads.offlineRoster?.snapshotRevision).toBe(0);
   });
 
   it("reads nothing for a departure that is not this shop's", async () => {

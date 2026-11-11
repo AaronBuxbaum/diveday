@@ -12,6 +12,7 @@ describe("offlineManifestPayload", () => {
           tripManifest({ checkpoint: "after_dive_1", divers: [diver()] }),
         ],
         erasureEpoch: 3,
+        snapshotRevision: 9,
       },
       shop: {
         slug: "blue-mantis",
@@ -29,9 +30,9 @@ describe("offlineManifestPayload", () => {
     });
     expect(payload.snags).toBeUndefined();
     expect(payload.shop.slug).toBe("blue-mantis");
-    // The epoch the rows were read at, for the device to trade for a signed
+    // The epoch and revision the rows were read at, for the device to trade for a signed
     // token when it saves; the page itself issues no snapshot (issue #4391).
-    expect(payload.readAtErasureEpoch).toBe(3);
+    expect(payload.readAt).toEqual({ erasureEpoch: 3, snapshotRevision: 9 });
     expect(payload).not.toHaveProperty("snapshotId");
     expect(payload).not.toHaveProperty("erasureEpochToken");
     expect(payload.manifests.map((entry) => entry.checkpoint)).toEqual([
@@ -45,6 +46,7 @@ describe("offlineManifestPayload", () => {
       roster: {
         manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
         erasureEpoch: 0,
+        snapshotRevision: 0,
       },
       shop: {
         slug: "blue-mantis",
@@ -114,6 +116,7 @@ describe("offlineManifestPayload", () => {
     const roster = {
       manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
       erasureEpoch: 0,
+      snapshotRevision: 0,
     };
     const day = (date: number) => ({
       startsAt: new Date(Date.UTC(2026, 6, date, 10)),

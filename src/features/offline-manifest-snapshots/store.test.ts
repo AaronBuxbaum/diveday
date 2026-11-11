@@ -23,8 +23,16 @@ async function revisionRows(tripId: string) {
     .where(eq(offlineManifestSnapshotRevisions.tripId, tripId));
 }
 
+async function tripTitled(prefix: string) {
+  const { db, shop } = context;
+  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+  const trip = trips.find((candidate) => candidate.title.startsWith(prefix));
+  if (!trip) throw new Error(`demo trip ${prefix} missing`);
+  return trip;
+}
+
 describe("offline manifest snapshot ordering", () => {
-  it("reads the roster and the erasure epoch it was read at, writing no revision (issue #4391)", async () => {
+  it("reads the roster, the erasure epoch and the snapshot revision it was read at, writing nothing (issue #4391)", async () => {
     const { db, shop } = context;
     const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     if (!trip) throw new Error("offline manifest trip missing");
@@ -33,17 +41,25 @@ describe("offline manifest snapshot ordering", () => {
 
     expect(roster?.manifests[0]?.trip.id).toBe(trip.id);
     expect(roster?.erasureEpoch).toBe(shop.offlineErasureEpoch);
+    // No snapshot was ever issued for this trip: the read says so, and writes no counter.
+    expect(roster?.snapshotRevision).toBe(0);
     expect(await revisionRows(trip.id)).toEqual([]);
   });
 
-  it("issues increasing server revisions under the erasure fence", async () => {
+  it("issues increasing server revisions under the erasure fence, each for the read before it", async () => {
     const { db, shop } = context;
     const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     if (!trip) throw new Error("offline manifest trip missing");
     const epoch = shop.offlineErasureEpoch;
 
-    const first = await issueOfflineManifestSnapshot(db, shop.id, trip.id, epoch);
-    const second = await issueOfflineManifestSnapshot(db, shop.id, trip.id, epoch);
+    const first = await issueOfflineManifestSnapshot(db, shop.id, trip.id, {
+      erasureEpoch: epoch,
+      snapshotRevision: 0,
+    });
+    const read = await readOfflineManifestRoster(db, shop.id, trip.id);
+    if (!read) throw new Error("roster missing");
+    expect(read.snapshotRevision).toBe(1);
+    const second = await issueOfflineManifestSnapshot(db, shop.id, trip.id, read);
     if (!first.ok || !second.ok) throw new Error("snapshot was not issued");
 
     expect(first.snapshotRevision).toBe(1);
@@ -57,6 +73,39 @@ describe("offline manifest snapshot ordering", () => {
       }),
     ).toBe(shop.offlineErasureEpoch);
     expect(await revisionRows(trip.id)).toEqual([{ revision: 2 }]);
+  });
+
+  it("refuses rows read before another snapshot was issued, writing nothing (dock-operator review)", async () => {
+    const { db, shop } = context;
+    const trip = await tripTitled("Two-Tank Reef — Christ");
+
+    // The page's rows, read before any copy of this departure existed.
+    const read = await readOfflineManifestRoster(db, shop.id, trip.id);
+    if (!read) throw new Error("roster missing");
+    const base = read.snapshotRevision;
+    // A newer read is issued first: the layout's board, under the fence.
+    expect(await nextOfflineManifestSnapshotRevision(db, shop.id, trip.id)).toBe(base + 1);
+
+    // Signing the older read now would order it after the newer copy.
+    expect(await issueOfflineManifestSnapshot(db, shop.id, trip.id, read)).toEqual({
+      ok: false,
+      reason: "snapshot_superseded",
+    });
+    expect(await revisionRows(trip.id)).toEqual([{ revision: base + 1 }]);
+
+    // Two claims from the same read: the first is issued, the second refused
+    // (the concurrent case is `store.postgres.test.ts`).
+    const reread = await readOfflineManifestRoster(db, shop.id, trip.id);
+    if (!reread) throw new Error("roster missing");
+    expect(await issueOfflineManifestSnapshot(db, shop.id, trip.id, reread)).toMatchObject({
+      ok: true,
+      snapshotRevision: base + 2,
+    });
+    expect(await issueOfflineManifestSnapshot(db, shop.id, trip.id, reread)).toEqual({
+      ok: false,
+      reason: "snapshot_superseded",
+    });
+    expect(await revisionRows(trip.id)).toEqual([{ revision: base + 2 }]);
   });
 
   it("refuses a valid other-shop trip before writing a counter or returning a snapshot", async () => {
@@ -77,7 +126,10 @@ describe("offline manifest snapshot ordering", () => {
     expect(await nextOfflineManifestSnapshotRevision(db, shop.id, otherTrip.id)).toBeNull();
     expect(await readOfflineManifestRoster(db, shop.id, otherTrip.id)).toBeNull();
     expect(
-      await issueOfflineManifestSnapshot(db, shop.id, otherTrip.id, shop.offlineErasureEpoch),
+      await issueOfflineManifestSnapshot(db, shop.id, otherTrip.id, {
+        erasureEpoch: shop.offlineErasureEpoch,
+        snapshotRevision: 0,
+      }),
     ).toEqual({ ok: false, reason: "not_found" });
     expect(await revisionRows(otherTrip.id)).toEqual([]);
     await expect(
@@ -89,9 +141,7 @@ describe("offline manifest snapshot ordering", () => {
 
   it("refuses to sign rows read before an erasure, writing no revision, and signs a fresh read (issue #4391)", async () => {
     const { db, shop } = context;
-    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-    const trip = trips.find((candidate) => candidate.title.startsWith("Two-Tank Reef — Molasses"));
-    if (!trip) throw new Error("demo reef trip missing");
+    const trip = await tripTitled("Two-Tank Reef — Molasses");
     const [seat] = await getTripRoster(db, shop.id, trip.id);
     const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
     if (!seat || !owner) throw new Error("erasure fixture missing");
@@ -110,7 +160,7 @@ describe("offline manifest snapshot ordering", () => {
     // A device saving those rows now would carry a pre-erasure name under a
     // token the server could not tell from a fresh one: refused, and nothing
     // is written.
-    expect(await issueOfflineManifestSnapshot(db, shop.id, trip.id, before.erasureEpoch)).toEqual({
+    expect(await issueOfflineManifestSnapshot(db, shop.id, trip.id, before)).toEqual({
       ok: false,
       reason: "erasure_epoch_moved",
     });
@@ -121,7 +171,7 @@ describe("offline manifest snapshot ordering", () => {
     if (!after) throw new Error("roster missing after erasure");
     expect(after.erasureEpoch).toBe(before.erasureEpoch + 1);
     expect(after.erasureEpoch).toBe(await getShopOfflineErasureEpoch(db, shop.id));
-    const issued = await issueOfflineManifestSnapshot(db, shop.id, trip.id, after.erasureEpoch);
+    const issued = await issueOfflineManifestSnapshot(db, shop.id, trip.id, after);
     if (!issued.ok) throw new Error("fresh snapshot was refused");
     expect(
       verifyOfflineErasureEpoch({

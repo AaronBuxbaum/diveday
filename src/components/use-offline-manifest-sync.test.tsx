@@ -196,43 +196,101 @@ describe("useOfflineManifestSync on a network that stops answering", () => {
 
 describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)", () => {
   const SNAPSHOT_ID = "55555555-5555-4555-8555-555555555555";
-  const pagePayload: OfflineManifestPayload = { ...payload, readAtErasureEpoch: 4 };
+  const SNAPSHOT_URL = `/api/offline-manifests/${TRIP_ID}/snapshot`;
+  const pagePayload: OfflineManifestPayload = {
+    ...payload,
+    readAt: { erasureEpoch: 4, snapshotRevision: 9 },
+  };
+  /** The page's next render, as router.refresh() would deliver it. */
+  const reread: OfflineManifestPayload = {
+    ...payload,
+    readAt: { erasureEpoch: 4, snapshotRevision: 10 },
+  };
+  const stale = () => Response.json({ error: "snapshot_superseded" }, { status: 409 });
+  const issued = () => Response.json({ snapshotId: SNAPSHOT_ID, erasureEpochToken: "4.10.signed" });
 
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("saves the rows under the snapshot the server issues for the epoch they were read at", async () => {
-    const fetchMock = vi.fn(async (url: string) =>
-      url === "/api/offline-manifests/identity"
-        ? Response.json({ shop: { slug: "blue-mantis" } })
-        : Response.json({ snapshotId: SNAPSHOT_ID, erasureEpochToken: "4.7.signed" }),
-    );
+  function renderPage(initial: OfflineManifestPayload) {
+    return renderHook(({ page }) => useOfflineManifestSync(page, copy), {
+      initialProps: { page: initial },
+    });
+  }
+
+  it("saves the rows under the snapshot the server issues for the epoch and revision they were read at", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => issued());
     vi.stubGlobal("fetch", fetchMock);
 
-    renderHook(() => useOfflineManifestSync(pagePayload, copy));
+    renderPage(pagePayload);
 
     await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
     const [saved] = vi.mocked(saveOfflineManifest).mock.calls[0] ?? [];
-    expect(saved).toEqual({ ...payload, snapshotId: SNAPSHOT_ID, erasureEpochToken: "4.7.signed" });
-    expect(saved).not.toHaveProperty("readAtErasureEpoch");
-    const claim = fetchMock.mock.calls.find(
-      ([url]) => url === `/api/offline-manifests/${TRIP_ID}/snapshot`,
-    ) as unknown as [string, RequestInit] | undefined;
-    expect(claim?.[1].method).toBe("POST");
-    expect(JSON.parse(String(claim?.[1].body))).toEqual({ erasureEpoch: 4 });
+    expect(saved).toEqual({
+      ...payload,
+      snapshotId: SNAPSHOT_ID,
+      erasureEpochToken: "4.10.signed",
+    });
+    expect(saved).not.toHaveProperty("readAt");
+    const claim = fetchMock.mock.calls.find(([url]) => url === SNAPSHOT_URL);
+    expect(claim?.[1]?.method).toBe("POST");
+    expect(JSON.parse(String(claim?.[1]?.body))).toEqual({ erasureEpoch: 4, snapshotRevision: 9 });
   });
 
-  it("saves nothing and re-reads the page when an erasure landed after the read", async () => {
+  it("saves nothing and re-reads the page once when the read is stale, then saves the re-read", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+      JSON.parse(String(init?.body)).snapshotRevision === 9 ? stale() : issued(),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { rerender } = renderPage(pagePayload);
+
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+    expect(saveOfflineManifest).not.toHaveBeenCalled();
+    rerender({ page: reread });
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks for one re-read per stale claim, never a loop", async () => {
+    const fetchMock = vi.fn(async () => stale());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { rerender } = renderPage(pagePayload);
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+
+    // The re-read lands, and its claim is stale too (another copy again).
+    rerender({ page: reread });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+
+    expect(mockRouter.refresh).toHaveBeenCalledTimes(1);
+    expect(saveOfflineManifest).not.toHaveBeenCalled();
+  });
+
+  it("does not stay on Saving… after a manual refresh whose claim is stale and whose re-read never lands", async () => {
+    let claims = 0;
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json({ error: "erasure_epoch_moved" }, { status: 409 })),
+      vi.fn(async () => {
+        claims += 1;
+        return claims === 1 ? issued() : stale();
+      }),
     );
+    const { result, rerender } = renderPage(pagePayload);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
 
-    renderHook(() => useOfflineManifestSync(pagePayload, copy));
+    act(() => result.current.refresh({ manual: true }));
+    expect(result.current.message).toBe("saving");
+    // The manual refresh's render lands; its claim is stale; the re-read it
+    // asks for never arrives.
+    rerender({ page: reread });
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(2));
 
-    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalled());
-    expect(saveOfflineManifest).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.message).not.toBe("saving"));
+    expect(result.current.message).toBe("");
+    expect(result.current.busy).toBe(false);
   });
 
   it("saves nothing when the snapshot cannot be issued", async () => {
@@ -241,7 +299,7 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
       vi.fn(async () => Response.json({ error: "x" }, { status: 500 })),
     );
 
-    const { result } = renderHook(() => useOfflineManifestSync(pagePayload, copy));
+    const { result } = renderPage(pagePayload);
 
     await waitFor(() => expect(result.current.message).toBe("save failed"));
     expect(saveOfflineManifest).not.toHaveBeenCalled();

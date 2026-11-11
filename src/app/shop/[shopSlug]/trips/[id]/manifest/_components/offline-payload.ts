@@ -75,7 +75,7 @@ export function offlineManifestPayload({
     ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
     // The device trades this for a snapshot id, revision and signed token when
     // it saves (`claimOfflineManifestSnapshot`), refused if an erasure landed
-    // since these rows were read (issue #4391).
-    readAtErasureEpoch: roster.erasureEpoch,
+    // since these rows were read or another copy was issued since (issue #4391).
+    readAt: { erasureEpoch: roster.erasureEpoch, snapshotRevision: roster.snapshotRevision },
   };
 }

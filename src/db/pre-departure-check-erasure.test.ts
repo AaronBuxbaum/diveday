@@ -139,7 +139,7 @@ describe("pre-departure checklist notes and diver erasure", () => {
     });
     const roster = await readOfflineManifestRoster(db, shop.id, trip.id);
     if (!roster) throw new Error("fresh offline roster missing");
-    const snapshot = await issueOfflineManifestSnapshot(db, shop.id, trip.id, roster.erasureEpoch);
+    const snapshot = await issueOfflineManifestSnapshot(db, shop.id, trip.id, roster);
     if (!snapshot.ok) throw new Error("fresh offline snapshot missing");
     const occurredAt = nowDate();
 
