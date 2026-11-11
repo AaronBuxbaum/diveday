@@ -74,13 +74,12 @@ sales-tool shape there is, and it is spotted before the email is opened.
 >
 > I'll be straight about where it stands. I've never run a shop, and the head count between dives, which works with the radio off once the phone has the manifest saved, has never been on a real boat, in the sun, with wet hands. I'm looking for a shop that will let me test it alongside their own paper count and tell me where it breaks.
 >
-> Would you be open to a 15-minute call? If it isn't a problem for you, a one-line "we're fine" helps me too. And if someone else handles the boat side, I'd be glad to be pointed their way.
+> Would you be open to a 15-minute call? If so, just reply and we can sort out how. If it isn't a problem for you, a one-line "we're fine" helps me too. And if someone else handles the boat side, I'd be glad to be pointed their way.
 >
 > Aaron Buxbaum
-> [CELL]
 > dive.day
 
-Slots: `[GREETING]` ("Hello [SHOP] crew," by default; "Hi Dan," only when the shop's own page names the person who runs it; never a guessed first name), `[SHOP]`, `[RESEARCHED STATEMENT]`, `[CELL]`. Nothing else is variable.
+Slots: `[GREETING]` ("Hello [SHOP] crew," by default; "Hi Dan," only when the shop's own page names the person who runs it; never a guessed first name), `[SHOP]`, `[RESEARCHED STATEMENT]`. Nothing else is variable.
 
 **If nothing about the shop could be verified**, replace the researched statement with this line instead
 of splicing a fragment at 11pm on the eleventh email of the week:
@@ -89,7 +88,7 @@ of splicing a fragment at 11pm on the eleventh email of the week:
 
 ### Before you hit send
 
-Six checks, in the order they'd fail:
+Checks, in the order they'd fail:
 
 - [ ] **From name is a person.** "Aaron Buxbaum", never "DiveDay" or "Aaron at DiveDay". Every
       mobile client renders the sender above the subject, so it is the first thing read and the
@@ -100,9 +99,8 @@ Six checks, in the order they'd fail:
 - [ ] **No merge field in the subject line.**
 - [ ] **`[RESEARCHED STATEMENT]` restates something actually read on their pages** — or the no-detail
       version above is used instead. No guesses, and no vendor named.
-- [ ] **A real cell number under the signature.** It is the mechanism for the phone call this email
-      is hoping for: a mildly curious owner will text a number at 9pm, and will not click, book, or
-      schedule.
+- [ ] **No phone number in the first email** (Aaron, 2026-11-11). The ask is a call; the number is
+      shared in the reply once they say yes.
 - [ ] **Send date written into the call list's `Last contact` column**, with the follow-up date in
       `Next action`. "About six business days later" is only enforceable if it is written down
       somewhere ([florida-call-list.md](florida-call-list.md)).
@@ -192,7 +190,6 @@ entire goal is that they pass it on.
 > I'm writing about the hour before a boat leaves. Waivers, cert cards, knowing who's actually aboard. I write software, I've never run a shop, and I'm trying to learn from people who have, which is why I'm writing to shops one at a time instead of advertising. If that's someone's job there, would you pass this along? If it isn't, no reply needed.
 >
 > Aaron Buxbaum
-> [CELL]
 > dive.day
 
 The subject is a routing instruction, which is the right shape for a gatekeeper. The body must not
