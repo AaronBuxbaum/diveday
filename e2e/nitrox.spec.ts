@@ -360,7 +360,7 @@ test("a course taught on air offers no nitrox request, at the same shop that fil
   // The course carries the agency's minimum age, so this booking form asks
   // for the attestation an ordinary charter's does not.
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
+  await page.getByRole("button", { name: "Enroll", exact: true }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Owen/ })).toBeVisible();
 
   // The rest of the rental form is untouched — this closes one box, not the

@@ -1,5 +1,6 @@
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { openMapsUrl } from "../src/lib/maps";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -75,8 +76,11 @@ test.describe("the dive arrival arc", () => {
     await expect(
       page.getByText("Blue Mantis sign by the fuel dock", { exact: true }),
     ).not.toBeVisible();
-    await expect(page.getByText("North Jetty Marina", { exact: true })).not.toBeVisible();
-    await expect(page.getByText("12 Dock Rd", { exact: true })).not.toBeVisible();
+    const bookingFacts = page.getByRole("region", { name: diver("trip.goodToKnow") });
+    await expect(bookingFacts.getByText("North Jetty Marina", { exact: true })).toBeVisible();
+    const meetingMap = bookingFacts.getByRole("link", { name: "12 Dock Rd", exact: true });
+    await expect(meetingMap).toBeVisible();
+    await expect(meetingMap).toHaveAttribute("href", openMapsUrl("North Jetty Marina, 12 Dock Rd"));
     await expect(
       page.getByText("Look for the yellow dive flag", { exact: true }),
     ).not.toBeVisible();

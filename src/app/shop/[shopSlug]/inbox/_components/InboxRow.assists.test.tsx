@@ -39,11 +39,14 @@ const MESSAGE: InboxMessageRow["message"] = {
   createdAt: new Date("2026-07-21T13:30:00.000Z"),
 };
 
-function renderRow(responseAction?: (messageId: string) => Promise<string | null>) {
+function renderRow(
+  responseAction?: (messageId: string) => Promise<string | null>,
+  message = MESSAGE,
+) {
   render(
     <ul>
       <InboxRow
-        row={{ message: MESSAGE, personName: "Lena Vogel" }}
+        row={{ message, personName: "Lena Vogel" }}
         shopSlug="blue-mantis"
         locale="en-US"
         timezone="America/Cancun"
@@ -109,6 +112,23 @@ describe("a message Claude has read, while the shop's assists are on", () => {
       finish?.("Replacement draft.");
     });
     expect(field).toHaveValue("My corrected reply.");
+  });
+
+  it.each([
+    { senderAuthenticated: false, spamFlagged: false },
+    { senderAuthenticated: true, spamFlagged: true },
+  ])("keeps manual email available without offering an ineligible draft: %j", async (flags) => {
+    const draft = vi.fn();
+    renderRow(draft, { ...MESSAGE, ...flags, personId: null });
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Lena Vogel" }),
+    );
+    expect(screen.queryByRole("button", { name: "Draft response" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Reply by email" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("mailto:"),
+    );
+    expect(draft).not.toHaveBeenCalled();
   });
 
   it("keeps a failed attempt visible without creating a booking", async () => {

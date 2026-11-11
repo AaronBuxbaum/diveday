@@ -50,6 +50,7 @@ export async function seedInbox(
       body: "Do you rent 5mm suits in a women's medium? The water was colder than I expected last time.",
       receivedAt: hoursFromNow(-48),
       answeredAt,
+      senderAuthenticated: true,
       providerMessageId: `seed-inbox-${shopId}-lena`,
     })
     .returning({ id: inboundMessages.id });
@@ -83,6 +84,7 @@ export async function seedInbox(
       // i18n-exempt: fixture text — what a diver typed, stored verbatim
       body: "Hi! My flight got pushed back and I won't make today's reef boat. Could I move to another day this week?\n\nPriya",
       receivedAt: hoursFromNow(-3),
+      senderAuthenticated: true,
       providerMessageId: `seed-inbox-${shopId}-priya`,
     },
     {
@@ -94,6 +96,7 @@ export async function seedInbox(
       // i18n-exempt: fixture text — what a diver typed, stored verbatim
       body: "Running about 15 min late, traffic on the causeway. Please don't leave without me 🙏",
       receivedAt: hoursFromNow(-1.5),
+      senderAuthenticated: true,
       providerMessageId: `seed-inbox-${shopId}-diego`,
     },
     {
@@ -106,6 +109,7 @@ export async function seedInbox(
       // i18n-exempt: fixture text — what a stranger typed, stored verbatim
       body: "Hello, do you run night dives in October? Two of us, both Advanced. Thanks, Marta",
       receivedAt: hoursFromNow(-26),
+      senderAuthenticated: true,
       providerMessageId: `seed-inbox-${shopId}-marta`,
     },
   ]);

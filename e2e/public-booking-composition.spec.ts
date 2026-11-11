@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
@@ -41,6 +42,17 @@ test("the booking anchor includes the published conditions before the selected t
   await signOut(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/s/blue-mantis/trips/${tripId}#book`);
+  const facts = page.getByRole("region", { name: diverTranslator("en-US")("trip.goodToKnow") });
+  await expect(facts).toBeVisible();
+  await expect(facts.getByText(diverTranslator("en-US")("trip.packProvided"))).toBeVisible();
+  expect(
+    await facts.evaluate((element) => {
+      const booking = document.querySelector("#book");
+      return (
+        !!booking && !!(element.compareDocumentPosition(booking) & Node.DOCUMENT_POSITION_FOLLOWING)
+      );
+    }),
+  ).toBe(true);
   const anchor = page.locator("#book");
   await expect(anchor).toHaveCount(1);
   const conditions = anchor.locator("[data-trip-conditions]");

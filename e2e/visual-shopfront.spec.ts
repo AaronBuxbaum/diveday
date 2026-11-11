@@ -5,8 +5,9 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { diverTranslator } from "../src/i18n/messages";
-import { expect, test } from "./fixtures";
-import { bookASeatAndOpenThread } from "./helpers";
+import { cancelEmbeddedDeparture } from "./embed-departure-helpers";
+import { expect, makeActivitySafe, test } from "./fixtures";
+import { bookASeatAndOpenThread, choosePartySize } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   ADVANCED_CHARTER,
@@ -215,6 +216,23 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "embed-departure", scheme);
       });
 
+      test(`the cancelled embed departure offers the schedule (${scheme})`, async ({
+        page,
+        browser,
+        staffStorageState,
+      }) => {
+        const staffContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+        });
+        try {
+          const staffPage = makeActivitySafe(await staffContext.newPage());
+          await cancelEmbeddedDeparture(staffPage, page);
+          await capture(page, "embed-departure-cancelled", scheme);
+        } finally {
+          await staffContext.close();
+        }
+      });
+
       test(`the embed course list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/embed/courses");
         await page.getByRole("link", { name: "Enroll" }).first().waitFor();
@@ -366,6 +384,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "public-trip-full", scheme);
       });
 
+      test(`a wait-list confirmation renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await page.getByRole("link", { name: "Wreck Trip — Spiegel Grove" }).click();
+        await choosePartySize(page, 2);
+        await page.getByRole("textbox", { name: "Name", exact: true }).fill("Astra Waitlist");
+        await page.getByRole("textbox", { name: "Email", exact: true }).fill("astra@example.com");
+        await page.getByRole("button", { name: diverCopy("booking.waitlistHeading") }).click();
+        await page.waitForURL(/\?interest=/);
+        await expect(page.getByRole("status")).toContainText(
+          diverCopy("booking.waitlistConfirmedHeading", { name: "Astra" }),
+        );
+        await capture(page, "public-trip-waitlist-confirmed", scheme);
+      });
+
       /**
        * **A first-timer's course session** (UX sheet 2026-10-22, item 3). Under
        * The day, the course's own "Your afternoon" and, since the seed's
@@ -382,9 +414,19 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         const coursePlan = page.getByTestId("trip-course-plan");
         await expect(coursePlan.getByText("Your afternoon")).toBeVisible();
-        await expect(coursePlan.getByText(/^Included with the course:/)).toHaveText(
-          "Included with the course: Scuba unit (BCD, regulator, tank, weights), Mask, Wetsuit, Fins, and Dive computer.",
-        );
+        const copy = diverTranslator("en-US");
+        const facts = page.getByRole("region", { name: copy("trip.goodToKnow") });
+        for (const key of [
+          "trip.providedItems.scubaUnit",
+          "trip.rentalItems.mask",
+          "trip.rentalItems.wetsuit",
+          "trip.rentalItems.fins",
+          "trip.rentalItems.diveComputer",
+          "trip.personalGear.snorkel",
+          "trip.personalGear.boots",
+        ] as const) {
+          await expect(facts.getByText(copy(key), { exact: true })).toBeVisible();
+        }
         await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
           "data-hydrated",
           "true",
@@ -564,6 +606,19 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText("is not loading.").waitFor();
         await page.evaluate(() => window.scrollTo(0, 0));
         await capture(page, "dive-site-page", scheme);
+      });
+
+      test(`the dive-site departures distinguish courses from charters (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis/sites/uscgc-duane");
+        const departures = page.locator("#departures");
+        const courseTitle = "Advanced Open Water Diver — two-day course";
+        await expect(departures.getByText(courseTitle, { exact: true })).toBeVisible();
+        await expect(
+          departures.getByText("Deep Adventure — USCGC Duane", { exact: true }),
+        ).toBeVisible();
+        await capture(page, "dive-site-mixed-departures", scheme);
       });
 
       // The diver's catalog index. It used to be the signed-out half of a

@@ -9,15 +9,12 @@ import { CaptainPhoneFrame } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { BANNER_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
-import { planCopyParams } from "@/features/billing";
 import { FOUNDER_NAME } from "@/features/company-identity";
-import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { setUpHref, switchingHref } from "@/lib/funnel";
-import { continuityPromise, earlyAccessPrice, sharedLinkCard } from "@/lib/marketing";
+import { sharedLinkCard } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
@@ -70,10 +67,10 @@ export const metadata: Metadata = {
  * *session* as well as the locale; the body must not wait on that.
  */
 export default async function AboutPage() {
-  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
+  const locale = await requestLocale();
   return (
     <div className="flex flex-1 flex-col">
-      <AboutBody locale={locale} offer={offer} />
+      <AboutBody locale={locale} />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
@@ -81,33 +78,12 @@ export default async function AboutPage() {
   );
 }
 
-/**
- * Cached per negotiated locale (DIVER_LOCALES — two entries) and per pricing
- * offer (ADR 20261022-pricing-ab-test) — no session-scoped content.
- */
-async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTerms }) {
+/** Cached per negotiated locale; no session-scoped content. */
+async function AboutBody({ locale }: { locale: DiverLocale }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
-  // "One price" and "no cut of your bookings" are the monthly-only offer’s alone; the
-  // percentage offer's card and door say its own terms.
-  const percentArm = offer.plan === "percent_of_volume";
-  const params = planCopyParams(offer, locale);
-  const flatPrice = { price: params.price, cadence: t(earlyAccessPrice.cadenceKey) };
-
-  /**
-   * The four things every screen is held to. Each is a shipped behavior a
-   * visitor can reproduce in the demo (docs/product/marketing.md,
-   * shipped-only). Until 2026-10-07 each card ended in a "Check it:" dare
-   * naming the demo action; the 2026-10-07 rewrite dropped the dares with the
-   * rest of the spoken register (H-20261006-about-say-whose-voice) and lets the demo door under the grid
-   * carry the invitation once.
-   *
-   * The page speaks as the company. It names no individual, states no CV, and
-   * describes the people who build DiveDay in generalities (docs/product/
-   * marketing.md, "Biography is a claim like any other", 2026-10-07 amendment);
-   * `copy.test.ts` holds the mechanical half of that in both locales.
-   */
+  // Product standards follow directly from the origin story.
   const standards = [
     {
       title: t("marketing.about.rules.survivesDock.title"),
@@ -116,32 +92,6 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
     {
       title: t("marketing.about.rules.noSilentPasses.title"),
       body: t("marketing.about.rules.noSilentPasses.body"),
-    },
-    {
-      title: percentArm
-        ? t("marketing.about.percentArm.onePriceTitle")
-        : t("marketing.about.rules.onePrice.title"),
-      // The figure where the question is raised, never a door away from it.
-      // Interpolated, never spelled: `earlyAccessPrice` is H-20260724-public-founding-shop-price's single
-      // source, and `src/lib/marketing.test.ts` counts this key among the
-      // sentences that must carry `{price}` and `{cadence}`.
-      body: percentArm
-        ? t("marketing.about.percentArm.onePriceBody", params)
-        : t("marketing.about.rules.onePrice.body", flatPrice),
-    },
-    {
-      title: t("marketing.about.rules.yourRecords.title"),
-      // The export terms are the one shared claim (`fullShopExport`), composed
-      // here as on every other page that states them, so the card cannot drift
-      // from the pricing FAQ or the homepage's records band.
-      body: t("marketing.about.rules.yourRecords.body"),
-      // The export promise is written once, on /pricing's table; this card
-      // links to it rather than restating it (visual review 2026-10-24, B10).
-      link: { href: "/pricing#export", label: t("marketing.common.recordsLink") },
-      // What happens to the records if DiveDay itself closes: the shared
-      // continuity promise (`continuityPromise`, H-20261007-continuity-promise), on the card that is
-      // already about taking them away, rather than a band of its own.
-      note: t(continuityPromise.claimKey),
     },
   ] as const;
 
@@ -210,7 +160,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
         </div>
       </section>
 
-      {/* What the product is built around, then the four standards as cards,
+      {/* What the product is built around, then the two standards as cards,
           then the page's first demo door. The order is why, who, what we hold
           it to, which is the order a reader asks in. */}
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
@@ -236,30 +186,20 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
             <SectionCard as="article" key={rule.title} padding="lg">
               <h3 className={SUB_TITLE_CLASS}>{rule.title}</h3>
               <p className="mt-3 leading-7 text-muted">{rule.body}</p>
-              {"note" in rule ? <p className="mt-3 leading-7 text-muted">{rule.note}</p> : null}
-              {"link" in rule ? (
-                <Link
-                  href={rule.link.href}
-                  className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
-                >
-                  {rule.link.label}
-                </Link>
-              ) : null}
             </SectionCard>
           ))}
         </div>
         {/* The first demo door sits under the standards, where a reader who
             wants to see them for themselves is (docs/product/
             marketing-review-20260827.md, "help arrives after the homework").
-            No words of its own: the four cards above are the caption, and a
+            No words of its own: the standards above are the caption, and a
             heading here would restate the section it closes. Left-aligned on
             the section's rail, like the heading block and the grid. */}
-        <FunnelCtas locale={locale} source="about-rules" footnotes={{ offer }} className="mt-10" />
+        <FunnelCtas locale={locale} source="about-rules" footnotes={{}} className="mt-10" />
       </section>
 
       {/* How a shop gets set up and who answers afterwards, beside the
-          commercial facts a buyer scans for: where the records live, how the
-          plan works, who answers. The prose argues; the list is the same
+          practical facts a buyer scans for: where the records live and who answers. The prose argues; the list is the same
           facts at a glance. */}
       <section className="border-t border-border">
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
@@ -284,14 +224,6 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
                   sent a reader who had just decided to the wrong inbox. The
                   support address keeps its one home in the list beside.
 
-                  The pricing door states the figure in its own words rather
-                  than parking it behind itself; "See what it costs" is the
-                  unlabeled door a skeptic reads as "they won't say"
-                  (docs/product/marketing-review-20260827.md, diagnosis 2).
-                  Interpolated, never spelled: `earlyAccessPrice` is H-20260724-public-founding-shop-price's
-                  single source, and `src/lib/marketing.test.ts` counts this key
-                  among the sentences that must carry `{price}` and `{cadence}`.
-
                   The switching door is tagged like the homepage's doors onto
                   the same surface — the one in-page switching door on `/about`
                   takes the page's own name. The nav and footer links stay bare
@@ -307,9 +239,7 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
                   {t("marketing.common.getSetUp")}
                 </Link>
                 <Link href="/pricing" className={buttonClass({ variant: "outline" })}>
-                  {percentArm
-                    ? t("marketing.about.percentArm.seeCost", params)
-                    : t("marketing.about.seeCost", flatPrice)}
+                  {t("marketing.about.seeCost")}
                 </Link>
                 <Link
                   href={switchingHref("/switching", "about-switching")}
@@ -327,11 +257,15 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
             <dl className="divide-y divide-border rounded-panel border border-border bg-background">
               <div className="p-6">
                 <Eyebrow as="dt">{t("marketing.about.whereLiveLabel")}</Eyebrow>
-                <dd className="mt-2 leading-7">{t("marketing.about.whereLiveValue")}</dd>
-              </div>
-              <div className="p-6">
-                <Eyebrow as="dt">{t("marketing.about.committingLabel")}</Eyebrow>
-                <dd className="mt-2 leading-7">{t("marketing.about.committingValue")}</dd>
+                <dd className="mt-2 flex flex-col items-start leading-7">
+                  <p>{t("marketing.about.whereLiveValue")}</p>
+                  <Link
+                    href="/pricing#export"
+                    className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
+                  >
+                    {t("marketing.common.recordsLink")}
+                  </Link>
+                </dd>
               </div>
               <div className="p-6">
                 <Eyebrow as="dt">{t("marketing.about.whoAnswersLabel")}</Eyebrow>

@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 import { STAFF_DAY_HEADING } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
@@ -18,6 +19,19 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
   await expect(page.getByText(/Do not enter real customer details/)).toBeVisible();
   await expect(page.getByText(/Session expired/)).toHaveCount(0);
 
+  const copy = diverTranslator("en-US");
+  const starts = page.getByRole("region", { name: copy("demo.startTitle") });
+  await expect(starts).toBeVisible();
+  const dismiss = page.getByRole("button", { name: copy("demo.dismissStarts") });
+  const dismissBox = await dismiss.boundingBox();
+  expect(dismissBox).not.toBeNull();
+  expect(dismissBox?.width).toBeGreaterThanOrEqual(44);
+  expect(dismissBox?.height).toBeGreaterThanOrEqual(44);
+  await dismiss.click();
+  await expect(starts).toHaveCount(0);
+  await page.reload();
+  await expect(starts).toHaveCount(0);
+
   // The picker is a popover of one row per role, the one in force reading
   // "Current"; Escape closes it and hands focus back to its button.
   const trigger = page.getByRole("button", { name: /^Switch role/ });
@@ -29,6 +43,26 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
   await expect(picker).toHaveCount(0);
   await expect(trigger).toBeFocused();
 });
+
+for (const start of [
+  { key: "demo.startDesk", destination: /\/shop\/[^/]+\/trips\/[^/?]+$/ },
+  { key: "demo.startCaptain", destination: /\/shop\/[^/]+\/trips\/[^/?]+\/manifest$/ },
+  { key: "demo.startDiver", destination: /\/s\/[^/?]+$/ },
+] as const) {
+  test(`demo starting place ${start.key} opens its working screen`, async ({ page }) => {
+    await page.goto("/");
+    const openedAt = performance.now();
+    await page.getByRole("button", { name: "Try the live demo" }).first().click();
+    await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
+    test.info().annotations.push({
+      type: "demo-open-ms",
+      description: String(Math.round(performance.now() - openedAt)),
+    });
+    await page.getByRole("button", { name: diverTranslator("en-US")(start.key) }).click();
+    await expect(page).toHaveURL(start.destination);
+    await expect(page.getByText("Demo shop")).toBeVisible();
+  });
+}
 
 test("demo role switcher moves from owner to instructor and back", async ({ page }) => {
   // Minting the demo shop is the cost, not a wait: the trace on 2026-10-24 put

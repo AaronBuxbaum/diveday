@@ -286,8 +286,13 @@ function reviewAnswers(section, agent) {
       .trim();
     if (/^not needed because\b\s*\S{2,}/.test(answer)) {
       answers.push({ label, ran: false, text: answer });
-    } else if (/\blaunched\b/.test(answer) && !NEGATED.test(answer)) {
-      answers.push({ label, ran: true, text: answer });
+    } else {
+      const launch = /\blaunched\b/.exec(answer);
+      // The launch claim ends at "launched". Later findings and verification
+      // limits may honestly say "not repeated" or "browser checks skipped".
+      if (launch && !NEGATED.test(answer.slice(0, launch.index))) {
+        answers.push({ label, ran: true, text: answer });
+      }
     }
   }
   return answers;

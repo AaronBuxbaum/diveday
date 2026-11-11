@@ -31,7 +31,7 @@ import {
   publicSchedulePath,
   publicTripPath,
 } from "@/lib/public-routes";
-import { capacityLabel, seatsOnSale } from "@/lib/trips";
+import { acceptsNewDivers, capacityLabel, seatsOnSale } from "@/lib/trips";
 import { DepartureCard } from "./_components/DepartureCard";
 import { EmbedHeightReporter } from "./_components/EmbedHeightReporter";
 
@@ -119,6 +119,13 @@ export default async function EmbedWidgetPage({
     const label = capacityLabel(seatsOnSale(trip));
     if (label.kind === "full") return { text: t("fallback.full"), full: true };
     return { text: t("fallback.spotsLeft", { count: label.remaining }), full: false };
+  };
+
+  const unavailable = (trip: { status: string; conditionsHold: boolean; startsAt: Date }) => {
+    if (acceptsNewDivers(trip, now)) return null;
+    if (trip.status === "cancelled") return t("booking.cancelledHeading");
+    if (trip.conditionsHold) return t("trip.conditionsHoldHeading");
+    return t("booking.sailedHeading");
   };
 
   let body: React.ReactNode;
@@ -213,6 +220,8 @@ export default async function EmbedWidgetPage({
         seats={seats(trip)}
         href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
         waitlist={shop.waitlistEnabled}
+        unavailable={unavailable(trip)}
+        scheduleHref={`${origin}${publicSchedulePath(shopSlug)}`}
         t={t}
       />
     );
@@ -303,6 +312,8 @@ export default async function EmbedWidgetPage({
             seats={seats(trip)}
             href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
             waitlist={shop.waitlistEnabled}
+            unavailable={unavailable(trip)}
+            scheduleHref={`${origin}${publicSchedulePath(shopSlug)}`}
             t={t}
           />
         ))}

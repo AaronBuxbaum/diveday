@@ -1,3 +1,4 @@
+import { DEMO_STARTS, demoStartFrom } from "@/features/demo-starts";
 /**
  * **The shop's chrome, as four components a route other than `layout.tsx` can
  * also render.**
@@ -200,6 +201,12 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
         <DemoBanner
           switchRole={switchDemoRoleAction}
           currentRole={currentRole}
+          starts={DEMO_STARTS.flatMap((start) => {
+            const destination = demoStartFrom(start.id);
+            return destination
+              ? [{ id: start.id, role: destination.role, label: t(`demo.${start.copy}`) }]
+              : [];
+          })}
           currentName={session?.user?.name}
           shopSlug={shopSlug}
           roles={DEMO_ROLE_META.filter((role) => availableRoles.includes(role.id)).map((role) => {
@@ -218,6 +225,8 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
             current: t("demo.current"),
             switchAction: t("demo.switchAction"),
             switchFailed: t("demo.switchFailed"),
+            startTitle: t("demo.startTitle"),
+            dismissStarts: t("demo.dismissStarts"),
           }}
           isMintedDemo={shop.slug !== DEMO_SHOP_SLUG}
         />

@@ -39,8 +39,9 @@ the same PR.
 - Written in the page's register (`docs/design/brand.md`, "The two registers of the public
   pages"): the selling register everywhere (a heading that says what the shop gets, the screen that
   proves it with builder's notes under twenty words each naming one visible thing and its reason or
-  limit, never an evaluation, and a demo door that opens on that screen as that role), and speech
-  on `/about` (every heading the owner's question repeated back without a mark). Reads as a person, not a model. No em-dash in prose, no "not a project, a
+  limit, never an evaluation, and a demo door that opens on that screen as that role). `/about`
+  keeps its approved company voice and statement headings, not the retired question-heading
+  register (H-20261006-about-say-whose-voice). Reads as a person, not a model. No em-dash in prose, no "not a project, a
   file" contrast, no "No X. No Y. No Z." run, no *actually*/*genuinely*/*plainly*, no "Here's how",
   no aphorism or rhetorical question as a heading, no closing flourish, no mirrored pair, no
   triplet for rhythm, no tag sentence, no phrase reused on a third page. The list, with

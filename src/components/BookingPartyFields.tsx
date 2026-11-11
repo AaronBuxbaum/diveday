@@ -57,6 +57,7 @@ export type BookingFieldErrors = Record<string, string>;
  */
 export function BookingPartyFields({
   maxPartySize,
+  groupRequestHref,
   leadPhone = false,
   fieldErrors,
   rememberForShop,
@@ -69,6 +70,7 @@ export function BookingPartyFields({
   leadOnly = false,
 }: {
   maxPartySize: number;
+  groupRequestHref?: string;
   /** Show an optional phone field for the lead booker (diver 1). */
   leadPhone?: boolean;
   fieldErrors?: BookingFieldErrors;
@@ -234,7 +236,16 @@ export function BookingPartyFields({
         // the "Questions?" line under this card, and once in the footer
         // (visual review 2026-10-24, B23); this line points there.
         <p className="-mt-2 text-sm text-muted">
-          {t("party.bigGroupContactGeneric", { count: limit })}
+          {groupRequestHref ? (
+            <a
+              href={groupRequestHref}
+              className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4"
+            >
+              {t("party.bigGroupRequest", { count: limit })}
+            </a>
+          ) : (
+            t("party.bigGroupContactGeneric", { count: limit })
+          )}
         </p>
       ) : null}
       {diverSlots.slice(0, leadOnly ? 1 : size).map((slot, index) => {
@@ -305,7 +316,8 @@ export function BookingPartyFields({
                   >
                     <input
                       name={`fullName-${index}`}
-                      required
+                      required={index === 0}
+                      placeholder={index > 0 ? t("party.guestN", { number: index + 1 }) : undefined}
                       maxLength={120}
                       // Every slot gets a real autofill token (task 22) — a
                       // browser scopes repeated `name`/`email` tokens per

@@ -84,3 +84,9 @@ booking's person never changes must tolerate the re-point (capabilities and waiv
 here; rental fit written for a placeholder stays on the placeholder). Escape hatch: dropping the
 feature means ignoring the two columns and the `claim` enum value — nothing else depends on them;
 migrating to per-member payment later extends this token, not replaces it.
+
+## 2026-11-11 amendment: one group share door
+
+A verified organizer can share `/claim/<token>/group`, backed by a distinct `group_claim` purpose on their booking. It uses the same derived token storage, expiry and revocation as the existing capability family. The group page exposes only public trip context, the names on still-unclaimed companion seats and their existing individual claim links. It never carries the organizer's readiness, payment or medical capability. The ordinary single-seat transaction still arbitrates competing claims and rechecks admission, identity, guardian and waiver requirements.
+
+Companion names may be omitted at booking. Each omitted name creates a fresh no-email guest identity with an identity claim hold; a submitted email cannot match another person's record in this path. The lead must still provide a name and email. The group chooser gives each guest the same opportunity to supply their own identity as a named companion. A cancelled, held or departed organizer cannot expose the group picker. Claimed or moved companion seats disappear from it.

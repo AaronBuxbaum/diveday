@@ -223,7 +223,23 @@ for (const scheme of ["light", "dark"] as const) {
         expect(after?.y).toBe(before?.y);
         await menu.click();
         await expect(page.getByRole("link", { name: "Download record" })).toBeVisible();
-        await capture(page, "diver-booking-record-actions", scheme);
+        await capture(page, "diver-booking-record-actions", scheme, {
+          beforeShot: async () => {
+            // Each viewport must position a newly opened menu, not only resize
+            // a panel that was first opened on desktop.
+            await menu.click();
+            await menu.click();
+            await page.mouse.move(0, 0);
+            await expect
+              .poll(() =>
+                page.locator("[data-row-menu]").evaluate((panel) => {
+                  const bounds = panel.getBoundingClientRect();
+                  return Math.min(bounds.left, document.documentElement.clientWidth - bounds.right);
+                }),
+              )
+              .toBeGreaterThanOrEqual(0);
+          },
+        });
       });
 
       test(`later departures stay open on the diver record (${scheme})`, async ({ page }) => {

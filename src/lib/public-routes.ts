@@ -182,3 +182,16 @@ export function shopSlugFromPublicPath(pathname: string | null | undefined): str
   if (`/${prefix}` !== PUBLIC_SHOP_PREFIX || !slug || !SHOP_SLUG_PATTERN.test(slug)) return null;
   return slug;
 }
+
+/** Carry public departure context into the shop’s existing group/date request. */
+export function publicGroupRequestPath(
+  shopSlug: string,
+  trip: { title: string; date: string; count: number },
+): string {
+  const query = new URLSearchParams({
+    groupTrip: trip.title,
+    groupDate: trip.date,
+    groupSize: String(trip.count),
+  });
+  return `${publicSchedulePath(shopSlug)}?${query}#request-a-date`;
+}

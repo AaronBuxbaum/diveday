@@ -76,3 +76,8 @@ export function seatAddressIsLeadTyped(seat: {
 export function claimLinkPath(token: string): string {
   return `/claim/${token}`;
 }
+
+/** A group capability picks a companion seat; it never opens organizer prep. */
+export function groupClaimLinkPath(token: string): string {
+  return `/claim/${token}/group`;
+}

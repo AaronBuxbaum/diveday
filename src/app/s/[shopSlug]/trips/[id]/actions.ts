@@ -43,13 +43,7 @@ import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications";
 import { isDiver, parsePartyTypes, rentsKind } from "@/lib/participant-types";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
-import {
-  DIVER_NAME_MAX,
-  DIVER_PHONE_MAX,
-  diverEmailSchema,
-  diverNameSchema,
-  diverPhoneSchema,
-} from "@/lib/person-fields";
+import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { partnerFromReferralCookie, REFERRAL_COOKIE } from "@/lib/referrals";
@@ -65,6 +59,7 @@ import { unionRequirements } from "@/lib/requirement";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
 import { answerAlreadyHeld } from "./_lib/already-held";
+import { validateBookingParty } from "./_lib/booking-party-fields";
 import { checkoutGearLines, persistCheckoutGear } from "./_lib/checkout-gear";
 import { issueConfirmedBookingCapability } from "./_lib/issue-confirmed-booking-capability";
 import { issueReturningDiverReceiptForBooking } from "./_lib/issue-returning-diver-receipt";
@@ -131,8 +126,6 @@ const bookSchema = z.object({
   phone: diverPhoneSchema.optional(),
 });
 
-const emailField = diverEmailSchema;
-
 /**
  * Every field the booking form posts, each read the way `FormData.get` read
  * it, so this action still measures each box itself and points at the one
@@ -147,46 +140,6 @@ const bookingForm = z
     handoff: formValue(),
   })
   .catchall(formValue());
-
-function validateBookingParty(
-  fields: z.infer<typeof bookingForm>,
-  t: ReturnType<typeof diverTranslator>,
-) {
-  const partySize = z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(MAX_PUBLIC_PARTY_SIZE)
-    .safeParse(fields.partySize);
-  if (!partySize.success)
-    return { ok: false as const, state: { error: t(ERROR_MESSAGE_KEYS.invalid) } };
-  const fieldErrors: Record<string, string> = {};
-  const validParty: { fullName: string; email: string; minorDeclared: boolean }[] = [];
-  for (let index = 0; index < partySize.data; index++) {
-    const fullName = String(fields[`fullName-${index}`] ?? "").trim();
-    const email = String(fields[`email-${index}`] ?? "").trim();
-    if (!fullName) fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameRequired");
-    if (fullName.length > DIVER_NAME_MAX)
-      fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameTooLong");
-    if (index === 0 && !email) {
-      fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
-    } else if (email && !emailField.safeParse(email).success) {
-      fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
-    }
-    validParty.push({ fullName, email, minorDeclared: fields[`minor-${index}`] === "on" });
-  }
-  if (fields.phone.length > DIVER_PHONE_MAX)
-    fieldErrors.phone = t("booking.fieldErrors.phoneTooLong");
-  if (Object.keys(fieldErrors).length > 0)
-    return { ok: false as const, state: { error: t("booking.errors.checkFields"), fieldErrors } };
-  return {
-    ok: true as const,
-    partySize: partySize.data,
-    validParty,
-    phone: fields.phone,
-    promoCodeInput: fields.promoCode,
-  };
-}
 
 /**
  * The banner code for a booking `createBookingParty` refused. Anything not

@@ -4,6 +4,7 @@ import {
   certificationSummaryBelowRequirementText,
   certificationSummaryText,
   certificationSummaryUnchecked,
+  readinessBlockerText,
 } from "./readiness-labels";
 import { staffTranslator } from "./staff-messages";
 
@@ -188,4 +189,25 @@ describe("certificationSummaryUnchecked", () => {
     // so the tone must not go on colouring words nobody is reading.
     expect(certificationSummaryUnchecked(summary({ noCertificationDeclared: true }))).toBe(false);
   });
+});
+
+describe("unverified lower certification feedback", () => {
+  it.each(["en-US", "es-ES"] as const)(
+    "distinguishes a saved lower card from no card in %s",
+    (locale) => {
+      const text = readinessBlockerText(staffTranslator(locale), {
+        code: "certification_insufficient",
+        params: {
+          requiredLevel: "advanced_open_water",
+          heldLevel: "open_water",
+          heldUnverified: true,
+        },
+      });
+      expect(text).toBe(
+        locale === "en-US"
+          ? "Open Water certification on file, awaiting verification. This trip needs Advanced Open Water or higher."
+          : "Certificación Open Water registrada, pendiente de verificación. Esta salida requiere Advanced Open Water o superior.",
+      );
+    },
+  );
 });

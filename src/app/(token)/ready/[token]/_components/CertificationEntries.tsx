@@ -19,6 +19,7 @@ import {
   saveCertificationFromReady,
   saveNitroxCertificationFromReady,
   saveSpecialtyFromReady,
+  showCertificationAtCheckInFromReady,
 } from "../cert-actions";
 
 /**
@@ -29,12 +30,9 @@ import {
  * duplicate the unique index refuses. The four here all mean the shop is
  * holding nothing usable.
  *
- * `certification_self_declared` belongs in that group and not with `pending`,
- * which is the whole reason it is its own code. A diver who picked a level on a
- * public opt-in has a `pending` row with **no card number in it** — there is
- * nothing for a unique index to collide with, nothing for a staffer to look up,
- * and if this form were withheld the diver would be told their card was being
- * verified while holding the only copy of it (ADR 20260814-self-declared-cards).
+ * A self-declared level without a number waits for a card sighting at check-in.
+ * Its optional number-entry form remains available below, but answering it is
+ * no longer required to finish the diver's online preparation.
  *
  * `certification_not_yet` is "waiting" (the diver has answered), so it never
  * arrives in `actionable`; `notYet` below carries it instead.
@@ -192,6 +190,9 @@ export function CertificationEntries({
         <CertificationEntry key="certification_not_yet" token={token} t={t} />,
       ]
     : [];
+  if (item.code === "certification_self_declared" && item.state === "waiting") {
+    forms.push(<CertificationEntry key="card-later" token={token} t={t} />);
+  }
   for (const blocker of item.actionable) forms.push(...entriesFor(blocker));
   function entriesFor(blocker: DiverChecklistItem["actionable"][number]): React.ReactNode[] {
     if (CERT_ENTRY_CODES.has(blocker.code)) {
@@ -200,6 +201,23 @@ export function CertificationEntries({
       // "Nothing more to do", and the step's own line sends the diver to the
       // shop, so the form stays the quiet disclosure it was.
       const entries = [
+        ...(blocker.code === "certification_insufficient" &&
+        blocker.params?.requiredLevel &&
+        blocker.params.heldLevel
+          ? [
+              <p key="level-feedback" className="text-sm text-ink-muted">
+                {t(
+                  blocker.params.heldUnverified
+                    ? "ready.certSavedInsufficient"
+                    : "ready.certVerifiedInsufficient",
+                  {
+                    held: t(DIVER_CERTIFICATION_LEVEL_KEYS[blocker.params.heldLevel]),
+                    level: t(DIVER_CERTIFICATION_LEVEL_KEYS[blocker.params.requiredLevel]),
+                  },
+                )}
+              </p>,
+            ]
+          : []),
         <CertificationEntry
           key={blocker.code}
           token={token}
@@ -208,7 +226,10 @@ export function CertificationEntries({
         />,
       ];
       if (NOT_YET_OFFER_CODES.has(blocker.code)) {
-        entries.push(<NotYetAnswer key="not-yet" token={token} t={t} />);
+        entries.push(
+          <CardAtCheckInEntry key="check-in" token={token} t={t} />,
+          <NotYetAnswer key="not-yet" token={token} t={t} />,
+        );
       }
       return entries;
     }
@@ -263,30 +284,7 @@ function CertificationEntry({
       <form action={saveCertificationFromReady.bind(null, token)} className="flex flex-col gap-3">
         <p className="text-sm text-muted">{t("ready.certBody")}</p>
         <FieldGrid columns={2}>
-          <Field label={t("ready.certAgency")}>
-            <select name="agency" required defaultValue="" className={controlClass}>
-              <option value="" disabled>
-                {t("ready.certChoose")}
-              </option>
-              {certificationAgency.enumValues.map((agency) => (
-                <option key={agency} value={agency}>
-                  {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t("ready.certLevel")}>
-            <select name="level" required defaultValue="" className={controlClass}>
-              <option value="" disabled>
-                {t("ready.certChoose")}
-              </option>
-              {certificationLevel.enumValues.map((level) => (
-                <option key={level} value={level}>
-                  {t(DIVER_CERTIFICATION_LEVEL_KEYS[level])}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <CertificationIdentityFields t={t} />
           <Field label={t("ready.certNumber")}>
             <input
               name="identifier"
@@ -312,6 +310,60 @@ function CertificationEntry({
             className={buttonClass({ variant: "primary" })}
           >
             {t("ready.certSubmit")}
+          </SubmitButton>
+        </div>
+      </form>
+    </CertificationDisclosure>
+  );
+}
+
+function CertificationIdentityFields({ t }: { t: DiverTranslator }) {
+  return (
+    <>
+      <Field label={t("ready.certAgency")}>
+        <select name="agency" required defaultValue="" className={controlClass}>
+          <option value="" disabled>
+            {t("ready.certChoose")}
+          </option>
+          {certificationAgency.enumValues.map((agency) => (
+            <option key={agency} value={agency}>
+              {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label={t("ready.certLevel")}>
+        <select name="level" required defaultValue="" className={controlClass}>
+          <option value="" disabled>
+            {t("ready.certChoose")}
+          </option>
+          {certificationLevel.enumValues.map((level) => (
+            <option key={level} value={level}>
+              {t(DIVER_CERTIFICATION_LEVEL_KEYS[level])}
+            </option>
+          ))}
+        </select>
+      </Field>
+    </>
+  );
+}
+
+function CardAtCheckInEntry({ token, t }: { token: string; t: DiverTranslator }) {
+  return (
+    <CertificationDisclosure summary={t("ready.certAtCheckIn")}>
+      <form
+        action={showCertificationAtCheckInFromReady.bind(null, token)}
+        className="flex flex-col gap-3"
+      >
+        <FieldGrid columns={2}>
+          <CertificationIdentityFields t={t} />
+        </FieldGrid>
+        <div>
+          <SubmitButton
+            pendingLabel={t("words.busy.saving")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("ready.certAtCheckIn")}
           </SubmitButton>
         </div>
       </form>

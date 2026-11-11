@@ -1,5 +1,6 @@
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { type RentableItemKind, SCUBA_UNIT_KINDS } from "@/lib/rentals";
+import type { CoursePersonalGear } from "./course-personal-gear";
 
 /**
  * The beats of a dock day; the component looks each one up in
@@ -526,8 +527,8 @@ export function exposureSuitFor(celsius: number): ExposureSuit {
 /**
  * The personal gear a student brings to a course whose fee includes gear
  * (`courses.included_rental_kinds`): what most shops expect a student to own,
- * less the mask and fins when the fee includes them. Snorkel and boots are
- * never rental kinds of their own, so they stay on the list.
+ * less every item the fee explicitly includes. Snorkel and boots are
+ * personal kit, separate from rentable inventory.
  */
 export type PersonalGearCode = "mask" | "fins" | "snorkel" | "boots";
 const PERSONAL_GEAR: readonly PersonalGearCode[] = ["mask", "fins", "snorkel", "boots"];
@@ -555,6 +556,7 @@ export function packingConfidence(
    */
   courseIncluded: readonly RentableItemKind[] = [],
   rentedAtShop: readonly RentableItemKind[] = [],
+  includedPersonalGear: readonly CoursePersonalGear[] = [],
 ): {
   bring: string[];
   /** Personal gear to bring, said before the shop's own list. */
@@ -563,6 +565,7 @@ export function packingConfidence(
   provided: ProvidedItemCode[];
   /** Kinds the course fee includes beyond what `provided` already names, said after it. */
   providedKinds: RentableItemKind[];
+  providedPersonal: CoursePersonalGear[];
 } {
   // A note-only row rents nothing: every `rents_*` column defaults to true, so
   // without this the diver would be told the shop is bringing a BCD, regulator,
@@ -572,7 +575,7 @@ export function packingConfidence(
     ? RENTAL_FIELD_KINDS.filter(([field]) => rental[field] === true).map(([, kind]) => kind)
     : [];
   const shared = { bring: shopItems, rented };
-  if (courseIncluded.length === 0) {
+  if (courseIncluded.length === 0 && includedPersonalGear.length === 0) {
     return {
       ...shared,
       bringPersonal: [],
@@ -581,9 +584,10 @@ export function packingConfidence(
         ...(briefs ? (["crewBriefing"] as const) : []),
       ],
       providedKinds: [],
+      providedPersonal: [],
     };
   }
-  const included = new Set<string>(courseIncluded);
+  const included = new Set<string>([...courseIncluded, ...includedPersonalGear]);
   const wholeUnit = [...SCUBA_UNIT_KINDS].every((kind) => included.has(kind));
   // What the first provided line already says: the whole unit, or the tanks
   // with the weights only when the fee includes them. A fee that leaves the
@@ -601,6 +605,7 @@ export function packingConfidence(
       "instructorBriefing",
     ],
     providedKinds: courseIncluded.filter((kind) => !named.has(kind)),
+    providedPersonal: [...includedPersonalGear],
   };
 }
 

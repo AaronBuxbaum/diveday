@@ -499,7 +499,7 @@
       "CLAUDE.md": 45,
       "AGENTS.md": 1039,
       ".claude/rules/*.md (without paths: frontmatter)": 0,
-      ".claude/skills/*/SKILL.md (description lines)": 770,
+      ".claude/skills/*/SKILL.md (description lines)": 765,
       ".claude/agents/*.md (description lines)": 130
     },
     "raises": [
@@ -929,7 +929,7 @@
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1027,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1146,
-    "src/components/MarketingFeatureScreens.tsx": 1064,
+    "src/components/MarketingFeatureScreens.tsx": 948,
     "src/components/search/CommandPalette.tsx": 913,
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1464,
@@ -1009,7 +1009,6 @@
   },
   "logical-properties": {
     "//": "Physical directional utilities still in components, per file. Written by `node scripts/check-logical-properties.mjs --write`. This number may only go down — see scripts/check-logical-properties.mjs. Use ms-/me-/ps-/pe-/start-/end-/text-start/text-end instead.",
-    "src/app/(marketing)/page.tsx": 5,
     "src/app/(marketing)/pricing/page.tsx": 1,
     "src/app/(marketing)/switching/_components/guide.tsx": 3,
     "src/app/(token)/ready/[token]/_components/PartyClaimPanel.tsx": 1,
@@ -1053,7 +1052,6 @@
         }
       }
     ],
-    "src/app/(marketing)/page.tsx": 422,
     "src/app/(token)/ready/[token]/page.tsx": 615,
     "src/app/s/[shopSlug]/page.tsx": 644,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,

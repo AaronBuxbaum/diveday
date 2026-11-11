@@ -23,7 +23,8 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
  *
  * - the list opens directly under its button, end-aligned, as a floating
  *   panel over the rows below — it never pushes the row taller or reflows
- *   what sits beside it;
+ *   what sits beside it; horizontal placement stays inside the viewport
+ *   when a narrow layout puts the trigger near its edge;
  * - when the list would run under the foot of the screen (or the phone tab
  *   bar), it opens upward from the "⋯" instead;
  * - a second tap on the "⋯" closes it, as does Escape (focus goes back to the
@@ -76,6 +77,7 @@ export function RowMenu({
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
   const panelRef = useRef<HTMLDivElement>(null);
   const [upward, setUpward] = useState(false);
+  const [inlineEnd, setInlineEnd] = useState(0);
 
   // Measured before paint, so a list near the foot never flashes downward
   // first. The tab bar is fixed over the foot below `lg` (`--tabbar-h`), and a
@@ -85,6 +87,7 @@ export function RowMenu({
     const panel = panelRef.current;
     if (!open || !panel) {
       setUpward(false);
+      setInlineEnd(0);
       return;
     }
     const positionPanel = () => {
@@ -93,6 +96,21 @@ export function RowMenu({
       if (!trigger || height === 0) return;
       const floor = window.innerHeight - tabBarHeight(panel);
       setUpward(trigger.bottom + height + 8 > floor && trigger.top - height - 8 >= 0);
+
+      // The trigger may wrap to the left on a phone. Measure the unanimated
+      // width, then clamp the normal end alignment inside the viewport.
+      // Deriving from the root (not the already-shifted panel) also lets an
+      // open menu return to its normal alignment after a resize.
+      const root = rootRef.current?.getBoundingClientRect();
+      if (!root) return;
+      const width = panel.offsetWidth;
+      const rtl = getComputedStyle(panel).direction === "rtl";
+      const left = rtl ? root.left : root.right - width;
+      const containedLeft = Math.max(
+        16,
+        Math.min(left, document.documentElement.clientWidth - width - 16),
+      );
+      setInlineEnd(rtl ? containedLeft - root.left : root.right - containedLeft - width);
     };
     positionPanel();
     window.addEventListener("resize", positionPanel);
@@ -134,6 +152,7 @@ export function RowMenu({
           ref={panelRef}
           id={panelId}
           data-row-menu=""
+          style={{ insetInlineEnd: inlineEnd }}
           className={`absolute end-0 z-20 ${upward ? "bottom-full mb-1" : "top-full mt-1"} max-w-[calc(100vw-2rem)] animate-scale-in ${MENU_PANEL} ${panelClassName}`}
         >
           {typeof children === "function" ? children(close) : children}

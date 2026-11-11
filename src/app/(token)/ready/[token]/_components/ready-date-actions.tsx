@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { AppDb } from "@/db/client";
 import { getReadyPageData } from "@/features/ready";
-import { issuePartySeatClaims } from "@/features/seat-claims";
+import { issueGroupSeatClaim, issuePartySeatClaims } from "@/features/seat-claims";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { theBoatIsHome } from "@/lib/thread-steps";
@@ -19,7 +19,14 @@ export function readReadyActions(db: AppDb, bookingId: string, capabilityShopId:
       ? issuePartySeatClaims(db, { shopId: capabilityShopId, leadBookingId: bookingId })
       : [],
   );
-  return { dataPromise, partyClaimsPromise };
+  const groupClaimPromise = Promise.all([dataPromise, partyClaimsPromise]).then(([data, seats]) =>
+    data &&
+    !data.identityHeld &&
+    seats.some((seat) => !seat.claimed && !seat.differentDeparture && seat.claim)
+      ? issueGroupSeatClaim(db, { shopId: capabilityShopId, leadBookingId: bookingId })
+      : null,
+  );
+  return { dataPromise, partyClaimsPromise, groupClaimPromise };
 }
 export type ReadyActionReads = ReturnType<typeof readReadyActions>;
 

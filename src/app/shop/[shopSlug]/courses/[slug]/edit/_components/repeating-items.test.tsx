@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   REPEATING_ITEM_CARD_CLASS,
@@ -18,6 +18,8 @@ const DAY_COPY: DayByDayEditorCopy = {
   dayTitlePlaceholder: "",
   startTimeLabel: "Day {number} start time",
   endTimeLabel: "Day {number} end time",
+  meetingPlaceLabel: "Day {number} meeting place",
+  meetingPlacePlaceholder: "Shop classroom",
   timeNoteLabel: "Day {number} time note",
   timeNoteDescription: "",
   timeNoteTitle: "",
@@ -99,4 +101,21 @@ describe("the course editor's repeating items", () => {
     expect(card?.querySelector(".gap-y-3")).toBeNull();
     expect(screen.getByRole("button", { name: "Add a question" })).toHaveClass(...ADD);
   });
+});
+
+it("round-trips each explicitly authored day place in the course editor", () => {
+  const { container } = render(
+    <DayByDayEditor
+      initialDays={[{ title: "Pool day", items: [], meetingPlace: "Shop pool" }]}
+      storageKey="test-places"
+      copy={DAY_COPY}
+    />,
+  );
+  const place = screen.getByRole("textbox", { name: "Day 1 meeting place" });
+  expect(place).toHaveValue("Shop pool");
+  fireEvent.change(place, { target: { value: "Training pool entrance" } });
+  expect(
+    JSON.parse((container.querySelector('[name="scheduleDaysJson"]') as HTMLInputElement).value)[0]
+      .meetingPlace,
+  ).toBe("Training pool entrance");
 });

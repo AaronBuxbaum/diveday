@@ -75,6 +75,7 @@ const course: Course = {
   isIntroCourse: false,
   nitroxCompatible: false,
   includedRentalKinds: [],
+  includedPersonalGear: [],
   rowVersion: 0,
   sourceTemplateSlug: null,
   sourceTemplateVersion: null,
@@ -290,5 +291,55 @@ describe("public Open Water template copy", () => {
       0,
     );
     expect(screen.queryByText("Tarifas de certificación de PADI")).not.toBeInTheDocument();
+  });
+});
+
+describe("public course structured data", () => {
+  it.each(["en-US", "es-ES"] as const)("keeps internal copy out of %s JSON-LD", async (locale) => {
+    request.locale = locale;
+    vi.mocked(shopBySlugCached).mockResolvedValue(shop(null, null));
+    vi.mocked(getCourseBySlug).mockResolvedValue({
+      ...course,
+      description: "INTERNAL STAFF PICKER NOTE",
+    });
+    vi.mocked(listUpcomingSessionsForCourse).mockResolvedValue([]);
+    const { container } = render(
+      await CoursePage({
+        params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
+      }),
+    );
+    const script = container.querySelector('script[type="application/ld+json"]');
+    expect(script).not.toBeNull();
+    expect(script?.textContent).not.toContain("INTERNAL STAFF PICKER NOTE");
+    expect(JSON.parse(script?.textContent ?? "{}")).not.toHaveProperty("description");
+  });
+
+  it("publishes the summary with resolved depth markers", async () => {
+    request.locale = "en-US";
+    vi.mocked(shopBySlugCached).mockResolvedValue(shop(null, null));
+    vi.mocked(getCourseBySlug).mockResolvedValue({ ...course, summary: "Dive to {depth18}." });
+    vi.mocked(listUpcomingSessionsForCourse).mockResolvedValue([]);
+    const { container } = render(
+      await CoursePage({
+        params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
+      }),
+    );
+    const script = container.querySelector('script[type="application/ld+json"]');
+    expect(JSON.parse(script?.textContent ?? "{}").description).toBe("Dive to 18 meters.");
+  });
+
+  it("emits no graph for a hidden course in staff preview", async () => {
+    const { isLiveShopStaff } = await import("../../../../../features/session/rules");
+    vi.mocked(isLiveShopStaff).mockResolvedValueOnce(true);
+    request.locale = "en-US";
+    vi.mocked(shopBySlugCached).mockResolvedValue(shop(null, null));
+    vi.mocked(getCourseBySlug).mockResolvedValue({ ...course, isActive: false });
+    vi.mocked(listUpcomingSessionsForCourse).mockResolvedValue([]);
+    const { container } = render(
+      await CoursePage({
+        params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
+      }),
+    );
+    expect(container.querySelector('script[type="application/ld+json"]')).toBeNull();
   });
 });

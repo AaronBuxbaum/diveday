@@ -55,6 +55,7 @@ export type ReadyThreadSectionsContext = {
   changeEvents: Awaited<ReturnType<typeof listTripChangeEvents>>;
   publicCrew: Awaited<ReturnType<typeof tripPublicCrew>>;
   partySeatClaims: Awaited<ReturnType<typeof issuePartySeatClaims>>;
+  groupClaim?: { token: string } | null;
   /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
   partyAllSet: boolean;
   /** When to fly home, as a plan (fifth-loop ideas, item 18); null when nothing honest can be said. */
@@ -153,7 +154,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
         <TripChangeLedger events={changeEvents} locale={locale} timeZone={detail.shop.timezone} />
         {/* A course's learning materials, the same list the confirmation
                 email carried (ADR 20261008-course-learning-materials). */}
-        <CourseMaterials data={data} t={t} />
+        <CourseMaterials data={data} contactEmail={data.shop.contactEmail} t={t} />
         {/* A chosen hold needs a payment door even when the trip's boarding
             checklist does not require payment. Keep that safety checklist unchanged. */}
         {data.groupHoldUntil &&
@@ -176,7 +177,10 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
         <PartySection
           locale={locale}
           seats={partySeats}
+          groupClaim={context.groupClaim}
+          paymentsAtShop={data.paymentsAtShop}
           organizerSettled={data.paymentSettled}
+          organizerPriceCents={data.trip.seatPriceCents}
           organizerHoldUntil={data.groupHoldUntil}
           timeZone={detail.shop.timezone}
           allSet={partyAllSet}

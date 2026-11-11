@@ -44,8 +44,18 @@ export type CourseScheduleDay = {
   startTime?: string;
   endTime?: string;
   timeNote?: string;
+  /** The shop-authored meeting place for this day of the course outline. */
+  meetingPlace?: string;
   items: string[];
 };
+
+/** A full run may use its authored outline; a partial session has no day mapping. */
+export function courseDaysForMeetings(
+  days: readonly CourseScheduleDay[],
+  meetingCount: number,
+): readonly CourseScheduleDay[] {
+  return days.length === meetingCount ? days : [];
+}
 
 const CLOCK_TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -93,6 +103,7 @@ const scheduleDayInputSchema = z.object({
   startTime: z.string().max(5).optional().default(""),
   endTime: z.string().max(5).optional().default(""),
   timeNote: z.string().max(120).optional().default(""),
+  meetingPlace: z.string().max(240).optional().default(""),
   items: z.array(z.string().max(200)).max(MAX_SCHEDULE_DAY_ITEMS).optional().default([]),
 });
 
@@ -115,8 +126,10 @@ export function sanitizeScheduleDays(raw: unknown): CourseScheduleDay[] | null {
     const startTime = CLOCK_TIME_RE.test(entry.startTime) ? entry.startTime : undefined;
     const endTime = CLOCK_TIME_RE.test(entry.endTime) ? entry.endTime : undefined;
     const timeNote = entry.timeNote.trim();
+    const meetingPlace = entry.meetingPlace.trim();
 
-    const isBlank = !title && !startTime && !endTime && !timeNote && items.length === 0;
+    const isBlank =
+      !title && !startTime && !endTime && !timeNote && !meetingPlace && items.length === 0;
     if (isBlank) continue;
     if (!title) return null;
 
@@ -125,6 +138,7 @@ export function sanitizeScheduleDays(raw: unknown): CourseScheduleDay[] | null {
       ...(startTime ? { startTime } : {}),
       ...(endTime ? { endTime } : {}),
       ...(timeNote ? { timeNote } : {}),
+      ...(meetingPlace ? { meetingPlace } : {}),
       items,
     });
   }

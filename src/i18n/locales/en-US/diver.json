@@ -140,6 +140,7 @@
     "boatCapacity": "{count, plural, one {# person aboard, including crew} other {# people aboard, including crew}}"
   },
   "trip": {
+    "coursePlanHeading": "Your course plan",
     "boatLabel": "Boat",
     "courseSession": "Course session",
     "privateCharter": "Private charter",
@@ -349,9 +350,15 @@
     "runLine": "Runs {cadence} · next {date}",
     "crewToBeConfirmed": "{role} · to be confirmed",
     "changedByShop": "Changed by the shop on {when}",
-    "changedByCrew": "Changed by the crew on {when}"
+    "changedByCrew": "Changed by the crew on {when}",
+    "goodToKnow": "Good to know",
+    "rentalFrom": "Rental gear from {price}",
+    "rentalFullSet": "Full set {price}"
   },
   "booking": {
+    "enrollAndPay": "Enroll and pay",
+    "enroll": "Enroll",
+    "courseHeading": "Enroll in this course",
     "heading": "Grab a seat",
     "knownDiver": {
       "heading": "Booking as {name}",
@@ -365,7 +372,7 @@
     "money": {
       "fare": "{price} × {count, plural, one {# diver} other {# divers}}",
       "courseFee": "Course fee",
-      "eLearning": "E-learning",
+      "eLearning": "Online course materials",
       "gear": "Rental gear",
       "tax": "Tax",
       "taxAtCheckout": "added at checkout",
@@ -884,6 +891,8 @@
     "introWithScope": "{intro} {scope}."
   },
   "ready": {
+    "materialsAccess": "Ask the shop about access",
+    "courseStartLine": "Your course starts at {time}.",
     "estimatedOwnRental": "Your estimated rental: {amount}.",
     "estimatedAtShopTotal": "Estimated total at the shop: {amount}. The crew confirms the rental at the dock.",
     "rentalEstimateOwnOnly": "This estimate includes your gear only; other divers’ rentals are extra.",
@@ -978,7 +987,7 @@
       "guardianSignatureMissing": "A parent or legal guardian also has to sign the waiver. Open it here and sign it together.",
       "certificationMissing": "Add your certification details to your record.",
       "certificationPending": "Your certification details are being verified.",
-      "certificationSelfDeclared": "Your certification level has not been verified yet.",
+      "certificationSelfDeclared": "Bring your certification card to check-in so the shop can verify it.",
       "certificationInsufficient": "This trip needs a higher certification level. Your shop can talk through the options.",
       "certificationInTraining": "You’re booked on a course that finishes before this trip. Once you complete it and your instructor certifies you, this step is done.",
       "certificationNotYet": "You told the shop you’re not certified yet, so the shop will get in touch about your options before the day.",
@@ -1016,12 +1025,15 @@
     },
     "fitUnavailable": "We couldn’t save your gear and setup just now. Try again in a moment.",
     "fitSaved": "Saved. The crew will have your sizes.",
+    "certSavedInsufficient": "Your {held} certification is saved and awaiting verification. This trip needs {level} or higher. Contact the shop about a suitable trip or course; add another card only if you already hold it.",
+    "certVerifiedInsufficient": "Your verified certification is {held}. This trip needs {level} or higher. Contact the shop about a suitable trip or course; add another card only if you already hold it.",
     "certHeading": "Add your certification",
     "certBody": "Enter your certification details for the shop’s records.",
     "specialtyHeading": "Add your {specialty} card",
     "nitroxCertHeading": "Add your nitrox card",
     "certAgency": "Training agency",
     "certLevel": "Level",
+    "certAtCheckIn": "I’ll show my card at check-in",
     "certNumber": "Certification number",
     "certChoose": "Choose one",
     "certSubmit": "Add my certification",
@@ -1390,7 +1402,13 @@
     "holdPaymentWindow": "Open online checkout at least 31 minutes before the deadline. After that, ask the shop to take payment.",
     "paymentNeeded": "Payment needed",
     "expiredOrganizerHeading": "Your group’s payment ledger",
-    "expiredOrganizerBody": "Your unpaid seat hold expired. Paid seats in your group stay booked."
+    "expiredOrganizerBody": "Your unpaid seat hold expired. Paid seats in your group stay booked.",
+    "groupHeading": "Choose your seat",
+    "groupBody": "Your organizer has booked these seats. Choose yours to add your details and get ready.",
+    "groupEmpty": "Everyone has claimed their seat. Ask your organizer if you still need a link.",
+    "shareGroup": "Share with the group",
+    "paysAtShop": "Pays at the shop",
+    "atShopSummary": "Payment is due at the shop."
   },
   "rental": {
     "ownGear": "Bringing own gear, so no rental needed",
@@ -1484,7 +1502,9 @@
     "useMainContactEmail": "Use the main contact’s email for this diver",
     "under18": "Under 18",
     "under18Hint": "A parent or guardian signs the waiver too.",
-    "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop."
+    "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop.",
+    "guestN": "Guest {number}",
+    "bigGroupRequest": "Bringing more than {count}? Ask about a group trip."
   },
   "site": {
     "page": {
@@ -3796,7 +3816,12 @@
       "diver": {
         "title": "Diver"
       }
-    }
+    },
+    "startTitle": "Start here",
+    "startCaptain": "Call the roll as the captain",
+    "startDesk": "Check a diver in at the desk",
+    "startDiver": "Book a seat as a diver",
+    "dismissStarts": "Dismiss starting places"
   },
   "errorBoundary": {
     "title": "That didn’t go through",

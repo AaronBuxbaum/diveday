@@ -16,6 +16,7 @@ import {
   trips,
 } from "@/db/schema";
 import { AT_SEA_DUSK_TITLE, DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "@/db/seed";
+import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { listShopDayDepartures, liveTrip, notRehearsal, seatNotCancelled } from "@/db/trips";
 import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "@/features/recap";
 import { listRollCallGaps, oneRowPerHalf } from "@/features/roll-call-gaps";
@@ -128,6 +129,7 @@ async function dayTrips(
     planChangeRows,
     loggedDiveRows,
     stagesByTrip,
+    meetingWindows,
   ] = await Promise.all([
     // **Two counts off one roster, because the evening and the shelf ask
     // different questions** (issue #1689). `booked` is the seats this
@@ -287,6 +289,7 @@ async function dayTrips(
     // station the return buffer still calls "still out". One batched query for
     // the whole day, never one per boat.
     latestTripStagesByTrip(db, shopId, tripIds),
+    meetingWindowsByTrip(db, rows),
   ]);
   // **The roster, and the subset of it the boat carried** (issue #1689). One
   // walk, one rule per seat, so the two numbers can never be derived by
@@ -375,6 +378,7 @@ async function dayTrips(
     capacity: row.capacity,
     plannedDives: row.plannedDives,
     stage: stagesByTrip.get(row.id) ?? null,
+    meetingWindows: meetingWindows.get(row.id),
     crew: crewSubjectsAtClose(
       row.plannedDives,
       crewByTrip.get(row.id) ?? [],

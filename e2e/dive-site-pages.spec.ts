@@ -1,4 +1,5 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
+import { diverTranslator } from "../src/i18n/messages";
 import { MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { expect, READ_ONLY, test } from "./fixtures";
 
@@ -16,6 +17,47 @@ import { expect, READ_ONLY, test } from "./fixtures";
  */
 
 const SITE_PATH = `/s/${DEMO_SHOP_SLUG}/sites/molasses-reef`;
+
+for (const locale of ["en-US", "es-ES"] as const) {
+  for (const width of [390, 1280]) {
+    test.describe(`site departure names at ${width}px in ${locale}`, () => {
+      test.use({ viewport: { width, height: 844 }, locale });
+
+      test("course and charter names are visible and open their own departures", {
+        tag: READ_ONLY,
+      }, async ({ page }) => {
+        const t = diverTranslator(locale);
+        const path = `/s/${DEMO_SHOP_SLUG}/sites/uscgc-duane`;
+        const titles = [
+          "Advanced Open Water Diver — two-day course",
+          "Deep Adventure — USCGC Duane",
+        ];
+        for (const title of titles) {
+          await page.goto(path);
+          const departures = page.locator("#departures");
+          await expect(
+            departures.getByRole("heading", { name: t("site.page.departuresHeading") }),
+          ).toBeVisible();
+          const row = departures.getByRole("listitem").filter({
+            has: page.getByRole("link", { name: title, exact: true }),
+          });
+          // An aria-label alone passed before this fix, despite naming no trip on screen.
+          await expect(row.getByText(title, { exact: true })).toBeVisible();
+          const link = row.getByRole("link", { name: title, exact: true });
+          await expect(row.getByRole("link")).toHaveCount(1);
+          const href = await link.getAttribute("href");
+          expect(href).toMatch(/\/trips\/[0-9a-f-]{36}$/);
+          await link.focus();
+          await page.keyboard.press("Enter");
+          await expect(page).toHaveURL(href ?? "");
+          await expect(
+            page.getByRole("heading", { level: 1, name: title, exact: true }),
+          ).toBeVisible();
+        }
+      });
+    });
+  }
+}
 
 test("a departure's site name opens that site's own page, which leads back to a bookable day", {
   tag: READ_ONLY,

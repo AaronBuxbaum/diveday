@@ -424,6 +424,17 @@ routes took the display-scale h1 only.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
 
+**Course booking, 2026-11-11 (#4332):** a complete course run presents its authored day plan and an
+Enroll action in the existing booking composition. The arriving question is what the student will do
+across the course, so the full plan replaces charter dive slots when the meeting count matches. A
+partial session never guesses its place in the course outline. No new control is needed beyond the
+existing booking form; extra explanatory copy is the first thing to remove.
+
+Before the booking form, **Good to know** shows the course’s included gear, the shop’s packing
+list, current rental quotes, the meeting address and configured cancellation terms. It uses
+the same packing, quote and arrival rules as the booked diver’s page; unset prices and terms
+stay absent. Course inclusions appear here once; the itinerary retains its gear line only when booking facts are absent.
+
 **Composition, 2026-10-27 (#3140) — rendered review pending**
 
 - **One idea:** understand the selected day and book in one place.
@@ -484,6 +495,17 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
   wait-list-disabled outcomes without letting operator prerequisite prose replace admission facts.
 
 ### The product page — `/product`
+
+**Product proof, 2026-11-11 (#4320).** One Today screen now sits beside the hero on desktop
+and follows its existing demo and setup doors on a phone. The directory still answers which job
+DiveDay handles; the preview gives the buyer a concrete starting point before that list. It reuses
+the homepage’s current readiness preview and accessible description, with no added control or claim.
+This supersedes the earlier no-screen choice below. Remove a second screen or repeated feature
+list first; the existing directory remains the complete catalogue.
+
+The homepage booking preview and website preview include the demo shop’s bundled Molasses Reef
+cover. The real reef photo is part of the sample storefront, separate from the approved editorial
+illustrations. It adds no customer endorsement or evidence, and the original artwork stays intact.
 
 **Composition, 2026-10-26 (#3069).** The twelve-feature catalogue lives here, reached by the
 homepage’s quiet full-list door. The existing hero starts sooner; no new hero scene is added.
@@ -588,7 +610,23 @@ against each redraw.
   comparison, the exit terms and the FAQ. The notes are the builder's-note register: each names one
   line of the invoice and says why it is what it is.
 
+**Updated 2026-11-11 (#4314):** the configured fee uses the same sentence across public pages.
+Three illustrative USD months follow the invoice, before the competitor comparison, so an owner
+can see the fee at no receipts and two receipt amounts without doing the multiplication. A compact
+ledger keeps the received amount and calculated fee together; three separate cards were rejected
+because the rows are a comparison, not three offers. The examples use the configured billing
+calculation and label credits, Stripe fees and excluded pass-through amounts explicitly. The FAQ
+now answers account, printed-manifest, device and billing-currency questions. No new control or
+CTA is added. Remove a repeated explanation before adding another example.
+
 ### The thread — `/ready/[token]` (and every state after booking)
+
+**Course prep and an unknown card number, 2026-11-11 (#4332, #4335):** the same next-step spine
+answers what to do before arrival. Course students see all dated meetings and the authored course
+plan, with a start-time line that assumes no boat or dock. A certified diver can choose “I’ll show
+my card at check-in” inside the certification step; that answer waits with the shop, retains
+optional number entry, and asks them to bring the card. The existing disclosure owns the action, so
+no extra panel or explanatory banner competes with it. Boarding still needs verified evidence.
 
 **Shipped dark 2026-11-10** ([ADR 20260907-nothing-from-nowhere](../architecture/decisions/20260907-nothing-from-nowhere.md), slice 18f, [spec](canvases/20260907-nothing-from-nowhere/SPEC.md)):
 one line beside Add to calendar, *Add to Wallet*, on every state after booking; the pass wears the shop's brand, carries the top card's facts, the diver's name and the crew-set stage, surfaces on the lock screen from the dock call, and updates when the plan moves. Never the thread's URL, a barcode, a price or a medical fact. Rendered only when a platform is configured and the shop offers Wallet passes; otherwise the thread stays unchanged. The saved arrival card remains available.
@@ -1102,3 +1140,38 @@ return; refunded and still-held totals use a separate current balance and the 16
 Read-only labels no longer say optional, and absent action menus leave no header gap. The final
 18 probes reported no flags; the focused browser regression checks the original tax and remaining
 balance after a partial return, including the balance's computed type size.
+
+### First-arrival demo choices — demo banner
+
+**Built 2026-11-11 (#4318).**
+
+- **One idea:** give a visitor one recognizable job to try before they learn the staff navigation.
+- **Question on arrival:** where do I begin? Three named places open a working screen as the
+  matching role; they do not ask the visitor to understand roles first.
+- **Controls that dissolved:** no separate tour, modal or next button. Three quiet links share
+  one compact strip with a dismiss action. The existing role menu remains the repeat-visit control.
+- **Remove first:** any explanatory sentence above the choices. Their names carry the instruction.
+- **Composition:** a short strip under the current-role row, wrapping each action whole on a
+  phone. A modal would hide the product the visitor came to try, and three cards would compete
+  with Today. Dismissal lasts for the tab's demo session.
+
+### Marketing hierarchy — 2026-11-11
+
+Home leads its records section with arrival and a sample review. It is one setup section, with portability available through a quiet inline link to the canonical export details. The illustrated booking-to-recap journey follows the hero; the compact origin account follows that practical journey. About keeps the origin story, company account and founder signature, followed by two operational standards and the setup/support section. Removing the commercial standards leaves a complete two-card row; records ownership and backups live with the practical support facts. Ordinary feature pages keep their proof screens, contextual demo doors and checklist, with one quiet Pricing link beside the included-plan sentence. The separate export strip and hero price line are removed. The pricing ledger above is the place for worked fee examples. The arriving question is what the crew can do with the product; commercial reassurance is available where that question arises, without becoming every page’s argument.
+
+
+Rendered review at 390 and 1280 pixels covered Home, About, Product, Pricing, setup, switching and all twelve feature pages in English and Spanish, plus seven English switching guides. The practical journey and approved artwork remain readable before Home’s compact origin account. About’s two operational cards fill their row without a vacant cell, and the retained records fact has a separate export-link row. Feature breadcrumbs now keep a 44px target; the removed export strip leaves a clean transition to the demo. The phone checklist remains disclosed.
+
+The arriving questions determine the composition: Home shows what a crew can do; About shows why the builders care and how they help; Product and feature pages connect each job to its proof screen; Pricing explains the actual charge; switching explains a realistic move; setup makes a human request concrete. Demo remains the primary action, setup the secondary one, and pricing/export are quiet destinations. The first elements to remove were the repeated commercial cards and export pitch; the remaining controls answer distinct questions. The pricing examples use a compact ledger instead of another card grid.
+
+Independent review confirmed and then rechecked two fixes: About’s export link ran into its sentence on desktop, and feature breadcrumbs had 18px targets. Both now pass browser geometry regressions and new phone/desktop captures. Remaining probe flags describe separate mockup/editorial alignment systems, a deliberately faded static gear-chip row, the choice-pill wrapper’s visible focus ring, a visible Spanish status label extending its measurement box, and a decorative rule yielding to a long eyebrow. None hides text or an interactive target in the reviewed images. The Home description shell reserves Spanish’s five phone lines (English uses four) and three desktop lines. The inherited longer Spanish title has a separate loading-shell follow-up, issue #4372.
+
+### The group seat picker — `/claim/[token]/group`
+
+The arriving question is “Which seat is mine?” One list of remaining companion seats opens each
+seat’s existing claim form. The organizer shares one group link beside the retained individual
+links. Unnamed seats read Guest 2, Guest 3 and so on until claimed. Payment due at the shop says
+so without presenting an unpaid seat as already paid. Medical, payment and organizer prep facts
+stay off this invitation. The empty state says every seat has been claimed.
+
+**Amended 2026-11-11 (#4332, authored course meeting places):** the course editor accepts an optional meeting place per plan day and prompts for learning-material access instructions. The public and printable course plans show that authored place; the enrolled student's actual dated meetings pair it only when the session covers the complete plan. Saved arrival cards retain those dates and places, use course-start wording, and preserve scheduled hotel pickup precedence. Partial sessions do not infer a place from activity prose. The separate online course materials fee keeps its own price line.

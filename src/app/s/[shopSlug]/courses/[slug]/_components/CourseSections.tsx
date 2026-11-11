@@ -307,6 +307,9 @@ export function CourseSchedule({
                     <h3 className={ITEM_TITLE_CLASS}>{day.title}</h3>
                     {time ? <p className="text-base tabular-nums text-muted">{time}</p> : null}
                   </div>
+                  {day.meetingPlace ? (
+                    <p className="mt-1 text-sm font-medium">{day.meetingPlace}</p>
+                  ) : null}
                   {day.items.length > 0 ? (
                     <ul className="mt-2 grid gap-1.5 text-sm text-muted">
                       {day.items.map((item) => (

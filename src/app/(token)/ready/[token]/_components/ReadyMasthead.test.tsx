@@ -84,6 +84,12 @@ describe("mastheadArrivalLine", () => {
     expect(mastheadArrivalLine(FACTS, "en-US", t)).toContain("6:30");
   });
 
+  it("names a course start without inventing a boat or meeting place", () => {
+    const line = mastheadArrivalLine({ ...FACTS, courseSession: true }, "en-US", t);
+    expect(line).toMatch(/Your course starts at 7:00/);
+    expect(line).not.toMatch(/dock|sail/);
+  });
+
   it("names the hotel pickup in its place when one is scheduled", () => {
     const line = mastheadArrivalLine(
       { ...FACTS, pickup: { time: "6:10 AM", location: "Reef Inn" } },
@@ -302,6 +308,22 @@ describe("a departure that meets on several days", () => {
     ],
   };
 
+  it("keeps all meeting dates visible immediately after booking", () => {
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={{ ...course, courseSession: true }}
+          greetingName="Priya"
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+        />,
+      ),
+    );
+    expect(screen.getByTestId("ready-meeting-days").querySelectorAll("li")).toHaveLength(2);
+  });
+
   it("states day one's own hours on the when line, not the whole run's", () => {
     const { hours } = mastheadWhenParts(course, "en-US", NIGHT_BEFORE);
     expect(hours).toMatch(/^6:00\sPM\s–\s9:00\sPM/);
@@ -343,4 +365,29 @@ describe("the native Wallet convenience", () => {
       "/ready/test-capability/wallet",
     );
   });
+});
+
+it("pairs each actual dated meeting with its authored place, even a one-day course", () => {
+  const days = [
+    { startsAt: FACTS.trip.startsAt, endsAt: FACTS.trip.endsAt, meetingPlace: "Shop classroom" },
+    {
+      startsAt: new Date("2026-10-12T13:00:00Z"),
+      endsAt: new Date("2026-10-12T17:00:00Z"),
+      meetingPlace: "Training pool entrance",
+    },
+  ];
+  const { rerender } = render(
+    <MastheadDays facts={{ ...FACTS, days }} locale="en-US" t={diverTranslator("en-US")} />,
+  );
+  const lines = screen.getAllByRole("listitem");
+  expect(lines[0]).toHaveTextContent(/Oct\s11.*7:00.*Shop classroom/);
+  expect(lines[1]).toHaveTextContent(/Oct\s12.*9:00.*Training pool entrance/);
+  rerender(
+    <MastheadDays
+      facts={{ ...FACTS, days: days.slice(0, 1) }}
+      locale="en-US"
+      t={diverTranslator("en-US")}
+    />,
+  );
+  expect(screen.getByText("Shop classroom")).toBeVisible();
 });

@@ -15,7 +15,13 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { includedGearList, includesScubaUnitOnly } from "@/i18n/packing-labels";
 import { courseDepthFormat, diveSiteDepthText } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
-import { type CourseScheduleDay, formatScheduleDayTime, resolveCourseDepths } from "@/lib/courses";
+import type { CoursePersonalGear } from "@/lib/course-personal-gear";
+import {
+  type CourseScheduleDay,
+  courseDaysForMeetings,
+  formatScheduleDayTime,
+  resolveCourseDepths,
+} from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type DiveMode, type DockDayRhythm, dockDayTimeline } from "@/lib/diver-planning";
 import { formatShortDate, formatTime } from "@/lib/format";
@@ -56,6 +62,7 @@ export type DayProfileFacts = {
 type CourseFacts = {
   scheduleDays: CourseScheduleDay[];
   includedRentalKinds: readonly RentableItemKind[];
+  includedPersonalGear?: readonly CoursePersonalGear[];
 };
 
 type ProfileShop = Pick<Shop, keyof DockDayRhythm | "depthUnit">;
@@ -94,17 +101,16 @@ export function dayProfileFacts(
  * shop edits, never written again here, with its depth markers said in the
  * shop's unit as the course page says them.
  *
- * **One session, one day.** A trip page is one session, so it says that
- * session's day of the plan and never the whole multi-day plan. A session
- * records no plan day of its own (`trip_schedule_days` numbers its meetings,
- * not the course's days), so the only day it can be matched to is a
- * one-meeting session of a one-day plan: Discover Scuba's afternoon. Any other
- * session says no plan day at all; the gear line is the course's either way.
+ * A booking covering the full course plan can show all its planned days. A
+ * partial session still has no plan-day mapping, so a different meeting count
+ * must not guess which subset it covers. Actual dates/hours are shown separately
+ * from this course-authored outline.
  */
 export type CourseDayPlan = {
   days: CourseScheduleDay[];
   /** The rental kinds the course fee includes (issue #2796); empty says nothing of gear. */
   includedRentalKinds: readonly RentableItemKind[];
+  includedPersonalGear?: readonly CoursePersonalGear[];
 };
 
 export function courseDayPlan(
@@ -114,9 +120,13 @@ export function courseDayPlan(
   meetingDays: number,
 ): CourseDayPlan | undefined {
   if (!course) return undefined;
-  const sessionDays =
-    meetingDays === 1 && course.scheduleDays.length === 1 ? course.scheduleDays : [];
-  if (sessionDays.length === 0 && course.includedRentalKinds.length === 0) return undefined;
+  const sessionDays = courseDaysForMeetings(course.scheduleDays, meetingDays);
+  if (
+    sessionDays.length === 0 &&
+    course.includedRentalKinds.length === 0 &&
+    !course.includedPersonalGear?.length
+  )
+    return undefined;
   const format = courseDepthFormat(t, depthUnit);
   return {
     days: sessionDays.map((day) => ({
@@ -125,6 +135,7 @@ export function courseDayPlan(
       items: day.items.map((item) => resolveCourseDepths(item, format)),
     })),
     includedRentalKinds: course.includedRentalKinds,
+    includedPersonalGear: course.includedPersonalGear ?? [],
   };
 }
 
@@ -132,7 +143,9 @@ export function CoursePlan({
   plan,
   t,
   locale,
+  showIncludedGear = true,
 }: {
+  showIncludedGear?: boolean;
   plan: CourseDayPlan;
   t: DiverTranslator;
   locale: string;
@@ -147,6 +160,9 @@ export function CoursePlan({
               <span>{day.title}</span>
               {time ? <span className="font-normal text-muted tabular-nums">{time}</span> : null}
             </p>
+            {day.meetingPlace ? (
+              <p className="mt-1 text-sm font-medium">{day.meetingPlace}</p>
+            ) : null}
             {day.items.length > 0 ? (
               <ul className="mt-1 grid gap-1 text-sm text-muted">
                 {day.items.map((item) => (
@@ -157,12 +173,18 @@ export function CoursePlan({
           </div>
         );
       })}
-      {plan.includedRentalKinds.length > 0 ? (
+      {showIncludedGear &&
+      (plan.includedRentalKinds.length > 0 || (plan.includedPersonalGear?.length ?? 0) > 0) ? (
         <p className="text-sm">
-          {includesScubaUnitOnly(plan.includedRentalKinds)
+          {includesScubaUnitOnly(plan.includedRentalKinds, plan.includedPersonalGear)
             ? t("trip.courseGearIncluded")
             : t("trip.courseGearIncludedKinds", {
-                items: includedGearList(plan.includedRentalKinds, (key) => t(key), locale),
+                items: includedGearList(
+                  plan.includedRentalKinds,
+                  (key) => t(key),
+                  locale,
+                  plan.includedPersonalGear,
+                ),
               })}
         </p>
       ) : null}
@@ -294,6 +316,7 @@ export function TripDayPlan({
   nextOpensOnRule = false,
   siteReviews,
   content = "full",
+  showIncludedGear = true,
 }: {
   briefings: DiveBriefing[];
   /**
@@ -327,6 +350,8 @@ export function TripDayPlan({
   siteReviews?: readonly SiteReview[];
   /** Keep the public itinerary compact; its site reports follow booking. Embeds retain the full plan. */
   content?: "full" | "itinerary" | "reports";
+  /** Booking facts own inclusions while they are shown beside this itinerary. */
+  showIncludedGear?: boolean;
 }) {
   const t = diverTranslator(locale);
   const course = profile
@@ -339,7 +364,17 @@ export function TripDayPlan({
       {rhythm}
     </p>
   ) : null;
-  const coursePlan = course ? <CoursePlan plan={course} t={t} locale={locale} /> : null;
+  const coursePlan = course ? (
+    <CoursePlan plan={course} t={t} locale={locale} showIncludedGear={showIncludedGear} />
+  ) : null;
+  if (course && course.days.length > 1 && content !== "reports") {
+    return (
+      <section>
+        <GroupLabel as="h2">{t("trip.coursePlanHeading")}</GroupLabel>
+        {coursePlan}
+      </section>
+    );
+  }
   // Durations, never a clock: how long a dive runs and the boat sits between
   // two are facts about the day; its hours belong to the booked diver's thread.
   const rows = profile

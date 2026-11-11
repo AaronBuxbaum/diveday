@@ -75,7 +75,7 @@
     "groupSizePlaceholder": "Max 5 students per instructor",
     "nitroxCompatibleLabel": "We can run this course on nitrox",
     "nitroxCompatibleHint": "When it is off, sessions of this course never offer divers the enriched-air box. A diver still needs verified nitrox certification before any fill.",
-    "gearIncludedLabel": "Rental gear is part of the course fee",
+    "gearIncludedLabel": "Gear is part of the course fee",
     "gearIncludedHint": "Students give their sizes before a session, and bring their own mask and fins unless the fee includes them.",
     "includedKindsLegend": "Included in the fee",
     "enrollLegend": "Who can enroll",
@@ -155,7 +155,9 @@
       "removeNotSaved": "That didn’t save.",
       "displayOrder": "Display order"
     },
-    "summarySpanishLabel": "Course summary in Spanish"
+    "summarySpanishLabel": "Course summary in Spanish",
+    "personalGearSnorkel": "Snorkel",
+    "personalGearBoots": "Boots"
   },
   "dayByDay": {
     "dayLabel": "Day {number}",
@@ -174,7 +176,9 @@
     "itemsOverMaxOther": "Up to {max} items a day. Take a line out before saving.",
     "daysMaxOne": "{max} day max",
     "daysMaxOther": "{max} days max",
-    "addDay": "Add day"
+    "addDay": "Add day",
+    "meetingPlaceLabel": "Day {number} meeting place (optional)",
+    "meetingPlacePlaceholder": "Shop classroom"
   },
   "faq": {
     "questionLabel": "Question {number}",
@@ -191,9 +195,9 @@
     "nameLabel": "Material {number}",
     "namePlaceholder": "Open Water eLearning",
     "linkLabel": "Link",
-    "linkHint": "Optional. Starts with https://. If the fee includes the eLearning, leave the agency’s store off: the agency emails the student their access.",
-    "noteLabel": "Note",
-    "notePlaceholder": "Finish before day 1",
+    "linkHint": "Optional. Starts with https://. Use the learning portal, not a store page when access is included.",
+    "noteLabel": "Access and preparation",
+    "notePlaceholder": "Explain how to get access and when to finish",
     "remove": "Remove material {number}",
     "add": "Add a material",
     "max": "A course holds up to {max, plural, one {# material} other {# materials}}.",

@@ -34,7 +34,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   await page.getByLabel("Email", { exact: true }).fill("marco@example.com");
   await remember.check();
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
+  await page.getByRole("button", { name: diver("booking.enroll"), exact: true }).click();
   await expect(page).toHaveURL(/\/ready\/[A-Za-z0-9_-]+/);
   const confirmationUrl = new URL(page.url());
   confirmationUrl.searchParams.set("booked", "1");
@@ -72,7 +72,7 @@ test("the embed widget never prefills or remembers a booker", async ({ page }) =
   await page.getByLabel("Name", { exact: true }).fill("Sal Moretti");
   await page.getByLabel("Email", { exact: true }).fill("sal@example.com");
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
+  await page.getByRole("button", { name: diver("booking.enroll"), exact: true }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Sal/ })).toBeVisible();
   expect(await storedMemory(page, "blue-mantis")).toBeNull();
   await expect(page.getByRole("checkbox", { name: diver("booking.rememberOnDevice") })).toHaveCount(
@@ -119,7 +119,7 @@ test("a successful booking without opt-in and a forged confirmation flag do not 
   await page.getByLabel("Name", { exact: true }).fill("Marco Reyes");
   await page.getByLabel("Email", { exact: true }).fill("marco@example.com");
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
+  await page.getByRole("button", { name: diver("booking.enroll"), exact: true }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Marco/ })).toBeVisible();
   await expect.poll(() => storedMemory(page, "blue-mantis")).toBeNull();
   const forged = new URL(page.url());
@@ -140,7 +140,7 @@ test("a refused repeat booking cannot create device memory", async ({ page }) =>
   await page.getByLabel("Name", { exact: true }).fill("Marco Reyes");
   await page.getByLabel("Email", { exact: true }).fill("repeat@example.com");
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
+  await page.getByRole("button", { name: diver("booking.enroll"), exact: true }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Marco/ })).toBeVisible();
   await page.goto("/s/blue-mantis");
   await page
@@ -153,7 +153,7 @@ test("a refused repeat booking cannot create device memory", async ({ page }) =>
   await page.getByLabel("Email", { exact: true }).fill("repeat@example.com");
   await page.getByRole("checkbox", { name: diver("booking.rememberOnDevice") }).check();
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
+  await page.getByRole("button", { name: diver("booking.enroll"), exact: true }).click();
   await expect(page).toHaveURL(/\bsent=1\b/);
   await expect.poll(() => storedMemory(page, "blue-mantis")).toBeNull();
 });
@@ -194,7 +194,7 @@ test("the booked confirmation stays visible while the opt-in receipt is still re
     await page.getByLabel("Email", { exact: true }).fill("slow-receipt@example.com");
     await page.getByRole("checkbox", { name: diver("booking.rememberOnDevice") }).check();
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
+    await page.getByRole("button", { name: diver("booking.enroll"), exact: true }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Marco/ })).toBeVisible();
     await paused;
     expect(isPaused).toBe(true);

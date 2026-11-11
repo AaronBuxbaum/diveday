@@ -15,7 +15,8 @@ import type { PlanChangeReason } from "./plan-change";
  * - `unreconciled` — the departure carries an after-dive gap (missing diver or
  *   crew, or an unfinished after-dive count other than one still being
  *   taken). Loudest state on the page.
- * - `still_out` — the boat has left and is not due back yet. An after-dive
+ * - `still_out` — the boat has left and is not due back yet, or its current
+ *   staff stage still says it is out. An after-dive
  *   count still being taken (`countStillBeingTaken`) reads here too, keeping
  *   its dive and count. Not an alarm, but a day cannot quietly read
  *   "everyone is home" while it isn't.
@@ -23,8 +24,8 @@ import type { PlanChangeReason } from "./plan-change";
  *   Paperwork, toned as such — see DOM-H3's wallpaper lesson in
  *   `src/features/today/today.ts`.
  * - `not_departed` — closing before a boat has even left. Stated, quietly.
- * - `all_home` — the head count closed clean. The state the ritual exists to
- *   confirm.
+ * - `all_home` — the head count closed clean and the staff boat reading allows
+ *   return. A completed count alone does not establish return to the dock.
  */
 export type CloseoutDepartureStatus =
   | "unreconciled"

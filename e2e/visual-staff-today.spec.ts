@@ -13,6 +13,7 @@ import {
   createTrip,
   daysFromNow,
   disclosureSettled,
+  offlineCopySaved,
   openBookingActions,
   openCounterFor,
   openPaperWaiverForm,
@@ -29,6 +30,7 @@ import { seedFacts } from "./shop-facts";
 import { todayCatchUpScenario } from "./today-catch-up-helper";
 import {
   capture,
+  diverCopy,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
   registerExpectedVisualCapture,
@@ -47,6 +49,28 @@ for (const scheme of ["light", "dark"] as const) {
     // Base viewport for navigation and clicks; `capture` resizes to each entry
     // in VIEWPORTS for the screenshots and restores this afterward.
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    // A visual-only mint keeps the header identity stable; the homepage journey
+    // remains covered by demo.spec.ts. This scope has its own private-shop login.
+    test.describe("private demo", () => {
+      test.use({ privateShopSlug: `demo-first-arrival-${scheme}`, privateShopDemo: true });
+
+      test(`the demo's first-arrival choices render true to the design (${scheme})`, async ({
+        page,
+        privateShop,
+      }) => {
+        await page.goto(`/shop/${privateShop.slug}`);
+        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
+        const starts = page.getByRole("region", { name: diverCopy("demo.startTitle") });
+        await expect(starts).toBeVisible();
+        for (const key of ["demo.startCaptain", "demo.startDesk", "demo.startDiver"] as const) {
+          await expect(
+            starts.getByRole("button", { name: diverCopy(key), exact: true }),
+          ).toBeVisible();
+        }
+        await capture(page, "demo-first-arrival", scheme);
+      });
+    });
 
     test.describe("staff", () => {
       signedInAsOwner();
@@ -838,6 +862,26 @@ for (const scheme of ["light", "dark"] as const) {
         // baseline would agree with it forever.
         await page.getByText(/^All boats are home:/).waitFor();
         await capture(page, "today-all-home", scheme);
+      });
+
+      test(`a counted overdue boat still reads out (${scheme})`, async ({ page, request }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const { evening } = await seedFacts(request, [{ name: "evening", heads: "closed" }]);
+        const id = (evening as { departures: { id: string }[] }).departures[0]?.id;
+        if (!id) throw new Error("the evening fixture moved no departures");
+        await page.goto(`/shop/blue-mantis/trips/${id}/manifest`);
+        await offlineCopySaved(page);
+        const underway = page.getByRole("button", { name: "Underway", exact: true });
+        await underway.click();
+        await expect(underway).toHaveAttribute("aria-pressed", "true");
+        await page.goto("/shop/blue-mantis");
+        const station = page.getByRole("listitem").filter({
+          has: page.locator(`a[href="/shop/blue-mantis/trips/${id}"]`),
+        });
+        await expect(
+          station.getByText(staffCopy("closeout.departures.status.stillOut"), { exact: true }),
+        ).toBeVisible();
+        await capture(page, "today-counted-boat-still-out", scheme);
       });
 
       // Staffing as a week (ADR 20260827-the-shops-shelves, decision 3):

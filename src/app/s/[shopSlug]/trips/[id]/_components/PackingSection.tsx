@@ -26,7 +26,7 @@ import type { RentalFit, Shop, Trip } from "./types";
  * rental prep list) resolves against the staff bundle — the English words
  * happen to match, but the two bundles stay independent on purpose.
  */
-const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
+export const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
   scubaUnit: "trip.providedItems.scubaUnit",
   tanksAndWeights: "trip.providedItems.tanksAndWeights",
   tanks: "trip.providedItems.tanks",
@@ -238,6 +238,7 @@ export function PackingLists({
     offeredRentableItems(shop.rentalItems)
       .filter((item) => shop.rentalPricing.perItemCents[item.kind] !== 0)
       .map((item) => item.kind),
+    trip.course?.includedPersonalGear ?? [],
   );
   const logbook = packsLogbook({
     shopSuggests: shop.packingLogbook,
@@ -283,6 +284,9 @@ export function PackingLists({
             ))}
             {packing.providedKinds.map((kind) => (
               <li key={kind}>{t(RENTAL_ITEM_KEYS[kind])}</li>
+            ))}
+            {packing.providedPersonal.map((kind) => (
+              <li key={kind}>{t(PERSONAL_GEAR_KEYS[kind])}</li>
             ))}
           </ul>
         </div>

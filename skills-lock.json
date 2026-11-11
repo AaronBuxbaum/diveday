@@ -236,6 +236,11 @@
       "source": "AaronBuxbaum/diveday",
       "sourceType": "local",
       "skillPath": ".agents/skills/dependency-maintenance/SKILL.md"
+    },
+    "gh-stack": {
+      "source": "github/gh-stack",
+      "sourceType": "github",
+      "skillPath": "skills/gh-stack/SKILL.md"
     }
   }
 }

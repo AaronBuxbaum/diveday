@@ -12,6 +12,7 @@ vi.mock("../cert-actions", () => {
     saveCertificationFromReady: action,
     saveNitroxCertificationFromReady: action,
     saveSpecialtyFromReady: action,
+    showCertificationAtCheckInFromReady: action,
   };
 });
 
@@ -49,6 +50,7 @@ describe("CertificationEntries", () => {
     );
     expect(summaries(container)).toEqual([
       t("ready.certHeading"),
+      t("ready.certAtCheckIn"),
       t("ready.specialtyHeading", { specialty: "Deep" }),
       t("ready.nitroxCertHeading"),
     ]);
@@ -56,6 +58,49 @@ describe("CertificationEntries", () => {
       expect(details.open).toBe(false);
     }
   });
+
+  it.each(["en-US", "es-ES"] as const)(
+    "shows a saved lower card and every unmet requirement in %s",
+    (locale) => {
+      const translate = diverTranslator(locale);
+      render(
+        <CertificationEntries
+          token="tok"
+          item={item([
+            {
+              code: "certification_insufficient",
+              params: {
+                requiredLevel: "advanced_open_water",
+                heldLevel: "open_water",
+                heldUnverified: true,
+              },
+            },
+            { code: "specialty_missing", params: { specialty: "deep" } },
+            { code: "nitrox_missing" },
+          ])}
+          offerNitrox={false}
+          notYet={null}
+          t={translate}
+        />,
+      );
+      expect(
+        screen.getByText(
+          locale === "en-US"
+            ? "Your Open Water certification is saved and awaiting verification. This trip needs Advanced Open Water or higher. Contact the shop about a suitable trip or course; add another card only if you already hold it."
+            : "Tu certificación Open Water está guardada y pendiente de verificación. Esta salida requiere Advanced Open Water o superior. Contacta al centro para elegir una salida o un curso adecuado; agrega otra tarjeta solo si ya la tienes.",
+        ),
+      ).toBeVisible();
+      expect(
+        screen.getByText(
+          translate("ready.specialtyHeading", {
+            specialty: locale === "en-US" ? "Deep" : "Profundidad",
+          }),
+        ),
+      ).toBeVisible();
+      expect(screen.getByText(translate("ready.nitroxCertHeading"))).toBeVisible();
+      expect(screen.queryByText(translate("ready.certNotYetLead"))).toBeNull();
+    },
+  );
 
   it("offers no form for a card already with the shop", () => {
     const { container } = render(
@@ -228,4 +273,35 @@ describe("CertificationEntries", () => {
     const [card] = [...container.querySelectorAll("summary")];
     expect(card).toHaveClass("bg-primary");
   });
+});
+
+it("offers a number-free check-in answer while retaining the numbered card form", () => {
+  const { container } = render(
+    <CertificationEntries
+      token="tok"
+      item={item([{ code: "certification_missing" }])}
+      offerNitrox={false}
+      notYet={null}
+      t={t}
+    />,
+  );
+  const forms = [...container.querySelectorAll("form")];
+  const checkIn = forms.find((form) => form.textContent?.includes(t("ready.certAtCheckIn")));
+  expect(checkIn?.querySelector('[name="agency"]')).toBeRequired();
+  expect(checkIn?.querySelector('[name="level"]')).toBeRequired();
+  expect(checkIn?.querySelector('[name="identifier"]')).toBeNull();
+  expect(container.querySelector('[name="identifier"]')).toBeRequired();
+});
+
+it("keeps number entry optional when an unsighted card is with the shop", () => {
+  const waiting = {
+    ...item([]),
+    code: "certification_self_declared",
+    state: "waiting",
+  } as DiverChecklistItem;
+  const { container } = render(
+    <CertificationEntries token="tok" item={waiting} offerNitrox={false} notYet={null} t={t} />,
+  );
+  expect(summaries(container)).toEqual([t("ready.certHeading")]);
+  expect(container.querySelector("details")).not.toHaveAttribute("open");
 });

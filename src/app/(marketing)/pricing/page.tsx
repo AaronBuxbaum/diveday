@@ -15,11 +15,11 @@ import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { earlyAccessPrice } from "@/lib/marketing";
+import { earlyAccessPrice, marketingFee } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { PricingExportBand } from "./_components/PricingExportBand";
-import { offerFigure, pricingFaq } from "./faq";
+import { offerFigure, pricingExamples, pricingFaq } from "./faq";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
 // read this page makes (`requestLocale()`) sits behind this segment's
@@ -226,6 +226,33 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
           </div>
         </section>
 
+        <section className="border-b border-border" aria-labelledby="worked-months">
+          <div className={`${CONTAINER} py-16 lg:py-24`}>
+            <h2 id="worked-months" className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
+              {t("marketing.pricing.examples.title")}
+            </h2>
+            <p className="mt-4 max-w-2xl leading-7 text-muted">
+              {t("marketing.pricing.examples.note")}
+            </p>
+            <div className="mt-8 divide-y divide-border border-y border-border">
+              {pricingExamples(offer, locale).map((example) => (
+                <div
+                  key={example.id}
+                  className="grid gap-3 py-6 sm:grid-cols-[1.4fr_1fr_1fr] sm:items-baseline"
+                >
+                  <h3 className="font-semibold">{t(`marketing.pricing.examples.${example.id}`)}</h3>
+                  <p className="text-muted">
+                    {t("marketing.pricing.examples.received", { amount: example.received })}
+                  </p>
+                  <p className="font-medium">
+                    {t("marketing.pricing.examples.fee", { amount: example.fee })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* The flat price is only meaningful next to the model it replaces.
             Quiet rows: the incumbents' terms are evidence, and our answer is
             the one line that gets full ink. The "both rows are the channels'
@@ -259,7 +286,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               </p>
               <p className="mt-10 border-l-2 border-primary pl-5 text-lg leading-8">
                 {percentArm
-                  ? t("marketing.pricing.percentArm.ours", params)
+                  ? t(marketingFee.summaryKey, params)
                   : t("marketing.pricing.feeAnchor.ours")}
               </p>
             </div>

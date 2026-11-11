@@ -614,3 +614,26 @@ describe("DateRequestForm — a private charter", () => {
     expect(screen.queryByRole("checkbox", { name: /A boat just for our group/ })).toBeNull();
   });
 });
+
+it("opens a group request with the departure and shop-local day prefilled", () => {
+  window.history.replaceState(
+    {},
+    "",
+    "/s/reef?groupTrip=Evening+Reef&groupDate=2026-11-21&groupSize=8#request-a-date",
+  );
+  renderDiver(
+    <DateRequestForm
+      submitRequest={async () => ({})}
+      askInterest
+      offerCharter
+      contactEmail={null}
+      contactPhone={null}
+      copy={copy}
+    />,
+  );
+  expect(screen.getByRole("textbox", { name: copy.whatToDive })).toHaveValue("Evening Reef");
+  expect(screen.getByLabelText(copy.preferredDate)).toHaveValue("2026-11-21");
+  expect(screen.getByRole("spinbutton", { name: copy.howManyDivers })).toHaveValue(8);
+  expect(screen.getByRole("checkbox", { name: /A boat just for our group/ })).toBeChecked();
+  window.history.replaceState({}, "", "/");
+});

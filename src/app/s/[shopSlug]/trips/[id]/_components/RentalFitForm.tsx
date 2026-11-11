@@ -8,6 +8,7 @@ import { ChoiceFieldset, ChoicePill } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { includedGearList, includesScubaUnitOnly } from "@/i18n/packing-labels";
+import type { CoursePersonalGear } from "@/lib/course-personal-gear";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import {
@@ -137,15 +138,21 @@ export function ItemPrice({ price, widest }: { price: string; widest: string }) 
  * ideas item 16, issue #2796). The scuba unit alone keeps the yes/no's own
  * sentence; any other set is named.
  */
-function CourseGearLine({ included }: { included: readonly RentableItemKind[] }) {
+function CourseGearLine({
+  included,
+  personal,
+}: {
+  included: readonly RentableItemKind[];
+  personal: readonly CoursePersonalGear[];
+}) {
   const t = useTranslations();
   const locale = useLocale();
   return (
     <p className="mt-4 text-base text-foreground">
-      {includesScubaUnitOnly(included)
+      {includesScubaUnitOnly(included, personal)
         ? t("rental.courseGearIncluded")
         : t("rental.courseGearIncludedKinds", {
-            items: includedGearList(included, (key) => t(key), locale),
+            items: includedGearList(included, (key) => t(key), locale, personal),
           })}
     </p>
   );
@@ -188,7 +195,11 @@ export function RentalFitForm({
    * includes, whose sizes are asked with no price (fifth-loop ideas item 16,
    * issue #2796).
    */
-  course: { nitroxCompatible: boolean; includedRentalKinds?: readonly RentableItemKind[] } | null;
+  course: {
+    nitroxCompatible: boolean;
+    includedRentalKinds?: readonly RentableItemKind[];
+    includedPersonalGear?: readonly CoursePersonalGear[];
+  } | null;
   pricing: RentalPricing;
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
@@ -225,6 +236,7 @@ export function RentalFitForm({
   const t = useTranslations();
   const locale = useLocale();
   const included = course?.includedRentalKinds ?? [];
+  const personal = course?.includedPersonalGear ?? [];
   const includesGear = included.length > 0;
   const fee = new Set(included);
   const offered = offeredRentableItems(rentalItems, included);
@@ -362,7 +374,9 @@ export function RentalFitForm({
           {t("rental.savedNote")}
         </p>
       ) : null}
-      {includesGear ? <CourseGearLine included={included} /> : null}
+      {includesGear || personal.length > 0 ? (
+        <CourseGearLine included={included} personal={personal} />
+      ) : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
         <ChoiceFieldset legend={t("rental.suitLegend")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
@@ -521,6 +535,7 @@ export function RentalFitForm({
 
         <RentalSizeFields
           offers={offers}
+          includedBoots={personal.includes("boots")}
           rentalFit={rentalFit}
           suit={suit}
           sizes={{

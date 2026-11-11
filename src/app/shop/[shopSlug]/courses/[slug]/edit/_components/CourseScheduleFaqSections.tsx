@@ -30,6 +30,8 @@ export function CourseDayByDaySection({
           dayTitlePlaceholder: t("courses.dayByDay.dayTitlePlaceholder"),
           startTimeLabel: t.raw("courses.dayByDay.startTimeLabel"),
           endTimeLabel: t.raw("courses.dayByDay.endTimeLabel"),
+          meetingPlaceLabel: t.raw("courses.dayByDay.meetingPlaceLabel"),
+          meetingPlacePlaceholder: t("courses.dayByDay.meetingPlacePlaceholder"),
           timeNoteLabel: t.raw("courses.dayByDay.timeNoteLabel"),
           timeNoteDescription: t("courses.dayByDay.timeNoteDescription"),
           timeNoteTitle: t("courses.dayByDay.timeNoteTitle"),

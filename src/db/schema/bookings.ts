@@ -808,6 +808,7 @@ export const tripHelpRequests = pgTable(
  * lifetimes differ in practice.
  */
 export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
+  "group_claim",
   "readiness",
   "confirm",
   "claim",

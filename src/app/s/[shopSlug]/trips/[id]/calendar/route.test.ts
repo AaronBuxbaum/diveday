@@ -33,7 +33,7 @@ vi.mock("@/i18n/request", async () => {
 const { getDb } = await import("@/db/client");
 const { GET } = await import("./route");
 const { upcomingTripsWithCounts } = await import("@/db/trips");
-const { shops, trips } = await import("@/db/schema");
+const { courses, shops, trips, tripScheduleDays } = await import("@/db/schema");
 const { eq } = await import("drizzle-orm");
 
 /** The seeded demo's next departure, with the fields this route reads set. */
@@ -41,7 +41,7 @@ async function aDeparture(meetingPoint: { label: string; address: string } | nul
   const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   await db.update(shops).set({ dockCallMinutes: 45 }).where(eq(shops.id, shop.id));
-  const [trip] = await upcomingTripsWithCounts(db, shop.id);
+  const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => !row.courseId);
   if (!trip) throw new Error("seed has no upcoming departure");
   await db
     .update(trips)
@@ -65,6 +65,98 @@ async function fetchIcs(shopSlug: string, tripId: string) {
 }
 
 describe("GET /s/[shopSlug]/trips/[id]/calendar", () => {
+  it("exports the seeded introductory course at its advertised start with its actual plan", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (row) => row.title === "Discover Scuba — Pool & Reef",
+    );
+    if (!trip?.course) throw new Error("seed has no introductory session");
+    const file = await fetchIcs(shop.slug, trip.id);
+    const start = trip.startsAt.toISOString().replace(/[-:]/g, "").replace(".000Z", "Z");
+    expect(file).toContain(`DTSTART:${start}`);
+    expect(file).toContain("Briefing:");
+    expect(file).toContain("Confined water:");
+    expect(file).toContain("One shallow open-water dive");
+    expect(file).not.toMatch(/Dock call|We leave|LOCATION:|\{depth/);
+  });
+
+  it("exports the three actual Open Water meetings, with classroom content and no reef location", async () => {
+    const { db, shop } = ctx;
+    vi.mocked(getDb).mockResolvedValue(db);
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (row) => row.title === "Open Water Diver — three-day course",
+    );
+    if (!trip?.course) throw new Error("seed has no Open Water session");
+    await db.update(shops).set({ dockCallMinutes: 30 }).where(eq(shops.id, shop.id));
+    await db
+      .update(trips)
+      .set({
+        startsAt: new Date("2026-11-20T13:00:00Z"),
+        endsAt: new Date("2026-11-22T21:00:00Z"),
+        meetingPointLabel: null,
+        meetingPointAddress: null,
+      })
+      .where(eq(trips.id, trip.id));
+    await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, trip.id));
+    await db.insert(tripScheduleDays).values(
+      [20, 21, 22].map((date, index) => ({
+        tripId: trip.id,
+        dayNumber: index + 1,
+        startsAt: new Date(`2026-11-${date}T13:00:00Z`),
+        endsAt: new Date(`2026-11-${date}T${index === 2 ? "21" : "22"}:00:00Z`),
+      })),
+    );
+    const file = await fetchIcs(shop.slug, trip.id);
+    const events = file.split("BEGIN:VEVENT").slice(1);
+    expect(events).toHaveLength(3);
+    for (const [index, event] of events.entries()) {
+      expect(event).toContain(`DTSTART:202611${20 + index}T130000Z`);
+      expect(event).toContain(`DTEND:202611${20 + index}T${index === 2 ? "21" : "22"}0000Z`);
+    }
+    expect(events[0]).toContain(trip.course.scheduleDays[0].title);
+    expect(events[0]).toMatch(/confined/i);
+    expect(file).not.toMatch(/Dock call|We leave|LOCATION:/);
+  });
+
+  it.each([
+    { label: null, address: null, location: null },
+    { label: "Training room", address: null, location: "Training room" },
+    { label: null, address: "12 Ocean Drive", location: "12 Ocean Drive" },
+    { label: "  ", address: "  ", location: null },
+  ])(
+    "keeps intro course times and only an explicitly recorded meeting place: $location",
+    async ({ label, address, location }) => {
+      const { db, shop, tripId } = await aDeparture(null);
+      const [course] = await db.select().from(courses).where(eq(courses.shopId, shop.id)).limit(1);
+      await db
+        .update(courses)
+        .set({
+          scheduleDays: [
+            {
+              title: "Briefing and confined water",
+              items: ["Shallow introductory dive"],
+            },
+          ],
+        })
+        .where(eq(courses.id, course.id));
+      await db
+        .update(trips)
+        .set({ courseId: course.id, meetingPointLabel: label, meetingPointAddress: address })
+        .where(eq(trips.id, tripId));
+      await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
+      const file = await fetchIcs(shop.slug, tripId);
+      expect(file.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+      expect(file).toContain("DTSTART:20300805T130000Z");
+      expect(file).toContain("DTEND:20300805T173000Z");
+      expect(file).toContain("Briefing and confined water");
+      expect(file).toContain("Shallow introductory dive");
+      expect(file).not.toMatch(/Dock call|We leave/);
+      if (location) expect(file).toContain(`LOCATION:${location}\r\n`);
+      else expect(file).not.toContain("LOCATION:");
+    },
+  );
+
   it("starts the event at the dock call and says when the boat actually leaves", async () => {
     const { shop, tripId } = await aDeparture(null);
     const file = await fetchIcs(shop.slug, tripId);

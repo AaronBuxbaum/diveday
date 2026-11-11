@@ -494,6 +494,22 @@ describe("booking delight planning", () => {
     expect(packing.bringPersonal).toEqual(["snorkel", "boots"]);
   });
 
+  it("provides explicit personal kit without asking the student to bring it or renting it", () => {
+    const packing = packingConfidence([], null, true, ["mask", "fins"], [], ["snorkel", "boots"]);
+    expect(packing.bringPersonal).toEqual([]);
+    expect(packing.providedPersonal).toEqual(["snorkel", "boots"]);
+    expect(packing.rented).toEqual([]);
+    expect(packing.providedKinds).toEqual(["mask", "fins"]);
+  });
+
+  it("supports personal-kit-only inclusions without inventing included scuba equipment", () => {
+    const packing = packingConfidence([], null, false, [], ["weights"], ["snorkel"]);
+    expect(packing.bringPersonal).toEqual(["mask", "fins", "boots"]);
+    expect(packing.providedPersonal).toEqual(["snorkel"]);
+    expect(packing.provided).toEqual(["tanks", "instructorBriefing"]);
+    expect(packing.providedKinds).toEqual([]);
+  });
+
   it("promises no scuba unit when the fee includes only part of it", () => {
     const packing = packingConfidence([], null, true, ["wetsuit", "weights"]);
     expect(packing.provided).toEqual(["tanksAndWeights", "instructorBriefing"]);

@@ -27,6 +27,8 @@ export interface DayByDayEditorCopy {
   dayTitlePlaceholder: string;
   startTimeLabel: string;
   endTimeLabel: string;
+  meetingPlaceLabel: string;
+  meetingPlacePlaceholder: string;
   timeNoteLabel: string;
   timeNoteDescription: string;
   timeNoteTitle: string;
@@ -163,6 +165,15 @@ export function DayByDayEditor({
                   />
                 </Field>
               </FieldGrid>
+              <Field label={fill(copy.meetingPlaceLabel, { number: dayNumber })}>
+                <input
+                  value={day.meetingPlace ?? ""}
+                  onChange={(event) => updateDay(dayIndex, { meetingPlace: event.target.value })}
+                  maxLength={240}
+                  placeholder={copy.meetingPlacePlaceholder}
+                  className={controlClass}
+                />
+              </Field>
               <Field
                 label={fill(copy.timeNoteLabel, { number: dayNumber })}
                 description={copy.timeNoteDescription}

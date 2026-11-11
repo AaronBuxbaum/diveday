@@ -67,9 +67,9 @@ const { resetDemoAction, switchDemoRoleAction } = await import("./demo");
 const { people, personRoles, trips, userAccounts } = await import("@/db/schema");
 
 /** Where the action sent the caller, or the error it failed with instead. */
-async function landing(role: string): Promise<string> {
+async function landing(role: string, start?: string): Promise<string> {
   try {
-    await switchDemoRoleAction(role, "blue-mantis");
+    await switchDemoRoleAction(role, "blue-mantis", start);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
@@ -109,6 +109,44 @@ describe("switchDemoRoleAction", () => {
     ["constructor", "a prototype-walking value"],
   ])("refuses %s (%s) back to the shop rather than 500ing", async (role) => {
     expect(await landing(role)).toBe("/shop/blue-mantis");
+    expect(hoisted.signInDiveDayCredentials).not.toHaveBeenCalled();
+  });
+
+  it("opens a departure roster even when the visitor is already the owner", async () => {
+    expect(await landing("owner", "desk")).toMatch(/^\/shop\/blue-mantis\/trips\/[a-f0-9-]+$/);
+  });
+
+  it("opens the captain's assigned departure manifest", async () => {
+    const destination = await landing("captain", "captain");
+    expect(destination).toMatch(/^\/shop\/blue-mantis\/trips\/[a-f0-9-]+\/manifest$/);
+    const id = destination.split("/")[4];
+    const { tripAssignments } = await import("@/db/schema");
+    const assigned = await ctx.db
+      .select({ email: people.email })
+      .from(tripAssignments)
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .where(and(eq(tripAssignments.tripId, id), eq(people.shopId, shopId)));
+    const signIn = hoisted.signInDiveDayCredentials.mock.calls[0] as unknown as [
+      { body: { email: string } },
+    ];
+    expect(assigned.map(({ email }) => email)).toContain(signIn[0].body.email);
+  });
+
+  it("falls back to Today when no scheduled departure remains", async () => {
+    await ctx.db.update(trips).set({ status: "cancelled" }).where(eq(trips.shopId, shopId));
+    expect(await landing("owner", "desk")).toBe("/shop/blue-mantis");
+  });
+
+  it.each(["../../settings", "captain", "constructor"])(
+    "does not trust a mismatched or unknown start %s",
+    async (start) => {
+      expect(await landing("owner", start)).toBe("/shop/blue-mantis");
+    },
+  );
+
+  it("does not let a start bypass the demo seat gate", async () => {
+    vi.mocked(auth).mockResolvedValue(null as never);
+    expect(await landing("captain", "captain")).toBe("/");
     expect(hoisted.signInDiveDayCredentials).not.toHaveBeenCalled();
   });
 

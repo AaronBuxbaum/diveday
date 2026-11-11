@@ -164,6 +164,10 @@ export function InboxRow({
   const lateSeats = seats.filter((seat) => seat.lateWindow);
   const severalLate = lateSeats.length > 1;
   const assisted = responseAction !== undefined;
+  const draftAction =
+    message.senderAuthenticated && !message.spamFlagged && message.channel !== "page"
+      ? responseAction
+      : undefined;
   // A keyword reply already says what it asked; Claude's tag would repeat it.
   const intent =
     assisted &&
@@ -304,7 +308,7 @@ export function InboxRow({
                 >
                   {t("inbox.openRecordShort")}
                 </Link>
-              ) : !responseAction && isEmailAddress(message.fromAddress) ? (
+              ) : !draftAction && isEmailAddress(message.fromAddress) ? (
                 // A stranger has no record to write from, so the reply starts in
                 // the staffer's own mail app. A phone number stays words.
                 <a
@@ -382,9 +386,9 @@ export function InboxRow({
                   </SubmitButton>
                 </form>
               )}
-              {responseAction && message.channel !== "page" ? (
+              {draftAction ? (
                 <InboxResponseDraft
-                  draft={responseAction.bind(null, message.id)}
+                  draft={draftAction.bind(null, message.id)}
                   email={email}
                   subject={replySubject}
                   quoted={quoted}

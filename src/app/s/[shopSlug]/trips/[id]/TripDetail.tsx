@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
+import { ScrollToHash } from "@/components/ScrollToHash";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { getDb } from "@/db/client";
 import { checkoutMode } from "@/db/stripe-accounts";
@@ -18,8 +19,9 @@ import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
-import { publicTripPath } from "@/lib/public-routes";
+import { publicGroupRequestPath, publicTripPath } from "@/lib/public-routes";
 import { unionRequirements } from "@/lib/requirement";
+import { shopDayOf } from "@/lib/shop-day";
 import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
@@ -40,13 +42,14 @@ import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { TripAlternatives } from "./_components/TripAlternatives";
+import { TripBookingFacts } from "./_components/TripBookingFacts";
 import { TripContactLine } from "./_components/TripContactLine";
 import { dayCoverPhoto, dayProfileFacts } from "./_components/TripDayPlan";
 import { TripItinerary, TripSupportingDetails } from "./_components/TripDaySections";
 import { TripBoatPhoto, TripHero } from "./_components/TripHero";
 import { TripPaperSheet } from "./_components/TripPaperSheet";
 import { pitchOpensOnDoor } from "./_components/TripPitch";
-import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
+import { ERROR_MESSAGE_KEYS, isErrorCode, type Shop, type Trip } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
 import { fullFootLabel } from "./_lib/foot-bar-label";
@@ -79,6 +82,16 @@ const TRIP_PAGE_NAMESPACES = [
   "rental",
   "trip",
 ] as const;
+
+/** Prefill a date request for a group larger than the seats still available. */
+function groupRequestFor(shop: Shop, trip: Trip, remaining: number) {
+  if (!shop.dateRequestsEnabled) return undefined;
+  return publicGroupRequestPath(shop.slug, {
+    title: trip.title,
+    date: shopDayOf(trip.startsAt, shop.timezone),
+    count: remaining + 1,
+  });
+}
 
 /** Also the framed page, `embed/trip/[id]`, which sets `isEmbed`: never the query (ADR 20260726-schedule-embed). */
 export async function TripDetailPage({
@@ -269,6 +282,7 @@ export async function TripDetailPage({
       shop={shop}
       locale={locale}
       profile={profile}
+      showIncludedGear={!!confirmed || inPast}
     >
       {!isEmbed ? <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} /> : null}
     </TripItinerary>
@@ -311,7 +325,7 @@ export async function TripDetailPage({
             than the reading stretches that row rather than the gaps between
             sections. A phone reads the compact itinerary before the booking fields;
             supporting wildlife and site prose stay below (public audit P2, #3140). */}
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(5,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           <TripHero
             shop={shop}
             trip={trip}
@@ -325,11 +339,15 @@ export async function TripDetailPage({
             t={t}
           />
           {!isEmbed ? dayPlan : null}
+          {!confirmed && !inPast ? (
+            <TripBookingFacts shop={shop} trip={trip} locale={locale} />
+          ) : null}
           {/* The selected departure’s next action, after the compact day plan. */}
           <div
             id={confirmed || waitlistConfirmation ? undefined : "book"}
-            className="mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1"
+            className="mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-7 lg:row-start-1"
           >
+            <ScrollToHash onlyHash="book" />
             {confirmed ? null : conditionsLine}
             {confirmed && bookingToken ? (
               <EmbedBookedNotice
@@ -372,6 +390,7 @@ export async function TripDetailPage({
                   withAnchor: false,
                   tripRef,
                   remaining,
+                  groupRequestHref: groupRequestFor(shop, trip, remaining),
                   errorMessage,
                   payAtBooking: payAtBooking && checkoutMode(stripeAccount),
                   offerCodeField,
@@ -444,7 +463,7 @@ export async function TripDetailPage({
             list), not a dead-ended thumb (task 12). Both destinations share
             the `#book` anchor: `BookSpotSection` and `TripFullSection`'s
             wait-list form each carry it. */}
-        {!confirmed && !inPast && !trip.conditionsHold ? (
+        {offersAnotherBoat ? (
           <PhoneFootBar href="#book">
             {t(full ? fullFootLabel(shop) : "booking.bookVerb")}
           </PhoneFootBar>

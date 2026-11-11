@@ -315,7 +315,10 @@ export function registerRemainingExpandedAuditCaptures(
       test.setTimeout(flowTimeout);
       await bookThread(page);
       const certification = await openThreadStep(page, "certification");
-      const card = nestedEditor(certification, 'select[name="level"]');
+      const card = nestedEditor(
+        certification,
+        'form:has(select[name="level"]):has(input[name="identifier"])',
+      );
       await openIfClosed(card);
       await card.locator('select[name="agency"]').selectOption("padi");
       await card.locator('select[name="level"]').selectOption("open_water");

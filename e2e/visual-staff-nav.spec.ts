@@ -151,6 +151,24 @@ test.use({ colorScheme: "light", viewport: { width: 1280, height: 800 }, ...VISU
 test.describe("staff navigation", () => {
   signedInAsOwner();
 
+  test.describe("touch", () => {
+    test.use({ hasTouch: true });
+
+    test("More remains open after a phone tap", async ({ page }) => {
+      await page.goto("/shop/blue-mantis/safety-checklist");
+      await capture(page, "staff-navigation-more", "light", {
+        beforeShot: async () => {
+          const tabs = page.locator("[data-staff-tabbar]");
+          if (!(await tabs.isVisible())) return;
+          const more = tabs.getByRole("button", { name: "More", exact: true });
+          if ((await more.getAttribute("aria-expanded")) !== "true") await more.tap();
+          await expect(more).toHaveAttribute("aria-expanded", "true");
+          await expect(tabs.getByRole("link", { name: "Money", exact: true })).toBeVisible();
+        },
+      });
+    });
+  });
+
   test("English section names render at phone and desktop widths", async ({ page }) => {
     await page.goto("/shop/blue-mantis/safety-checklist");
     await expect(page.locator("[data-staff-nav][data-hydrated=true]")).toHaveCount(2);

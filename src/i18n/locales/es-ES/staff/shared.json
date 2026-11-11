@@ -242,6 +242,7 @@
       "certificationPending": "La certificación espera verificación del personal.",
       "certificationSelfDeclared": "El buceador indicó su nivel por su cuenta. No se ha verificado ningún registro de certificación: pide los datos y verifícalos.",
       "certificationInsufficient": "Sin la certificación para esta salida. Requiere {level} o superior.",
+      "certificationInsufficientUnverified": "Certificación {held} registrada, pendiente de verificación. Esta salida requiere {level} o superior.",
       "certificationInsufficientHeld": "Sin la certificación para esta salida. Requiere {level} o superior, y la certificación más alta registrada es {held}.",
       "certificationInTraining": "Aún sin certificación {level}. Inscrito en un curso que termina antes de esta salida; esto se resuelve cuando el instructor lo certifique.",
       "certificationNotYet": "Dice que todavía no tiene certificación. Esta salida pide {level} o superior, así que ponte en contacto antes del día.",

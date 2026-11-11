@@ -2,7 +2,7 @@
   "home": {
     "eyebrow": "Dive shop software",
     "heroTitle": "Every diver booked, signed, checked and accounted for",
-    "heroDescription": "From the online booking to the dock, see who’s ready and what each diver still needs.",
+    "heroDescription": "Welcome the next group knowing who’s ready and what each diver still needs. Bookings, forms and trip details stay together for the desk and dock crews.",
     "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
     "diverDoor": "Booked a dive?",
     "diverDoorLink": "Find your booking",
@@ -17,7 +17,7 @@
     "steps": {
       "book": {
         "when": "Days before",
-        "title": "A diver books and pays without calling the shop",
+        "title": "Let divers book while you’re out diving",
         "note1": "Seats left are counted against the boat, live. A full boat says so and takes no more.",
         "note2": "No sign-in on this page. A diver books, pays, and gets a link to their trip by email.",
         "mockupLabel": "The Blue Mantis public schedule, two upcoming trips with the seats left on each."
@@ -40,25 +40,20 @@
       },
       "recap": {
         "when": "After the boat is back",
-        "title": "Each diver gets the day’s recap, under your shop’s name",
+        "title": "Give divers a little of the day to take home",
         "note1": "The dive record at the top is the shop’s, written once: boat, crew, site, conditions.",
         "note2": "The crew’s note is a quote. It is whatever the crew typed, with no template behind it.",
         "mockupLabel": "A diver’s recap page with the day’s dive record, a note from the crew, and one review ask."
       }
     },
-    "featuresLink": "The full list of what each feature includes →",
-    "exportTitle": "How records arrive, and how they leave",
-    "arrivingLabel": "Coming in",
-    "exportDescription1": "Upload a spreadsheet. Before anything saves, the preview shows what each column became and which rows it will skip. Or email us the file and a person does the import with you, free.",
+    "featuresLink": "Explore the features",
+    "exportTitle": "Get your records ready for the next dive day",
+    "exportDescription1": "Bring a sample of your diver list. Upload a spreadsheet and review the column matches and skipped rows before saving, or email it to us and work through the import with a person, free.",
     "spreadsheetLink": "Your spreadsheet, column by column →",
-    "leavingLabel": "Going out",
-    "exportDescription2": "{claim} {terms}",
-    "guidesLink": "Guides for leaving {competitors}, and one for a spreadsheet →",
-    "tryTitle": "Every diver booked, signed and counted aboard, from your first trip",
+    "guidesLink": "Find the guide for your current system",
+    "tryTitle": "Come run a dive day in the demo shop",
     "stepLink": "{name} →",
-    "percentArm": {
-      "heroPriceLine": "{hasBase, select, yes {{percent} of payments you mark received, plus {base} a month. No setup fee.} other {{percent} when you record a payment, with no monthly fee.}}"
-    }
+    "percentArm": {}
   },
   "common": {
     "gettingReady": "Getting your shop ready…",
@@ -67,14 +62,15 @@
     "demoShopNameHint": "We use it to name your demo.",
     "getSetUp": "Get set up",
     "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card.",
-    "closingSupport": "A person reads every set-up request, and anything else can go to {email}.",
-    "recordsLink": "Taking your records with you"
+    "closingSupport": "Tell us about your shop. One of the people building DiveDay will read your request. You can also write to {email}.",
+    "recordsLink": "See what’s in your export"
   },
   "price": {
     "name": "Founding shop",
     "cadence": "per location / month",
     "item3": "New features as they ship, with no higher tier",
-    "item7": "A storefront in your brand, plus booking buttons and calendars for your own site"
+    "item7": "A storefront in your brand, plus booking buttons and calendars for your own site",
+    "receivedMoneyFee": "{percent} of money recorded as received in DiveDay, cash included{hasBase, select, yes {, plus {base} a month} other {, with no monthly fee}}."
   },
   "export": {
     "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs (divers, bookings, waiver records, payment history), led by a contacts file shaped for another system’s import wizard. Every stored photo (certification evidence, dive-site pictures, trip recaps) is in it as a file.",
@@ -744,49 +740,34 @@
       "noSilentPasses": {
         "title": "Gaps in a diver’s record show up at the desk, not on the boat",
         "body": "When nothing on a diver’s record clears them, DiveDay marks them Blocked on the manifest and names what is missing, so the crew sees it at the desk that morning, with the diver standing there and time to fix it."
-      },
-      "onePrice": {
-        "title": "One price covers the shop",
-        "body": "The plan is {price} {cadence}, and it covers every part of DiveDay and a login for everyone on your staff. We take no cut of your bookings. The pricing page lists each thing it covers."
-      },
-      "yourRecords": {
-        "title": "Download every record your shop holds, on any day",
-        "body": "It comes as a single ZIP of plain files you can open anywhere. The plan runs month to month with no setup fee and no contract."
       }
     },
     "workEyebrow": "How we work with shops",
     "workTitle": "We set your shop up with you",
     "workP1": "Write to us, and someone here builds your shop with you: the boats, the sites, the schedule, the waiver, the prices, and whatever records you already keep. If those records live in another system or in a spreadsheet, send us the export and we bring the divers across ourselves, with their certifications and sizes wherever the file holds them.",
     "workP2": "After that, your email goes to the people who build DiveDay. Tell us what the screen said and what you were trying to do, and the answer comes from someone who can change the product.",
-    "seeCost": "One flat {price} {cadence}. See the full list",
-    "switchingLink": "How your records come in, and how they leave →",
+    "seeCost": "See pricing",
+    "switchingLink": "See how to bring your records",
     "whereLiveLabel": "Where your records live",
     "whereLiveValue": "On servers in the United States, in a ZIP you can download on any day, and, if you turn it on, in a weekly copy delivered to storage your shop owns.",
-    "committingLabel": "How the plan works",
-    "committingValue": "Month to month, per location, with no setup fee and no annual contract.",
     "whoAnswersLabel": "Who answers you",
     "whoAnswersValue": "One of the people who build DiveDay, at {email}.",
-    "closingTitle": "The demo is a working shop, with divers booked on today’s boat",
-    "percentArm": {
-      "onePriceTitle": "One plan covers the shop",
-      "onePriceBody": "The plan covers every part of DiveDay and a login for each staff member. Your shop pays {percent} on its recorded receipts{hasBase, select, yes { plus {base} a month} other {, with no monthly fee}}. Tips never count. The pricing page has the full breakdown.",
-      "seeCost": "{percent} on receipts{hasBase, select, yes { and {base} a month} other {}}. See the full list"
-    }
+    "closingTitle": "The demo is a working shop, with divers booked on today’s boat"
   },
   "product": {
     "eyebrow": "Features",
     "heroTitle": "From the first booking to the roll call after the last dive",
-    "heroDescription": "Booking, waivers, certification checks, the boat manifest, rental gear, courses and payments run in one app. Each job below has a page that shows its screen and opens the demo on it.",
+    "heroDescription": "Keep bookings, diver records and trip preparation together, from the front desk to the captain’s phone.",
     "boxDescription": "Before the dive day, on the day and across the season are all in one plan.",
     "whatsInIt": "What’s in it",
-    "closingTitle": "Every job on this page runs in the demo shop, as your crew would run it",
+    "closingTitle": "Try a morning at the demo shop",
     "spreadsheetLink": "See how DiveDay reads your spreadsheet →",
     "alsoInPlan": "Also in the plan"
   },
   "pricing": {
     "heroTitle": "What a shop pays, line by line",
     "lockNote": "Today’s price, locked for two years for founding shops.",
-    "trialNote": "The trial is a shop of your own, free for 3 weeks with no card, and nothing switches off when it ends. To move to paid, email {email}.",
+    "trialNote": "Try a shop of your own free for 3 weeks, with no card. Your shop keeps working after the trial while you arrange the move to a paid plan with {email}.",
     "earlyAccessBadge": "Early access",
     "invoice": {
       "title": "The invoice",
@@ -815,7 +796,7 @@
         "value": "Month to month"
       },
       "leaving": {
-        "label": "Leaving",
+        "label": "Data export",
         "value": "A ZIP from Settings, any day",
         "pointer": "Your records go with you. See below."
       }
@@ -836,7 +817,7 @@
     },
     "dataExit": {
       "eyebrow": "Your records",
-      "title": "What happens to my records if I leave?",
+      "title": "Your records stay yours",
       "door": "Open the demo as the owner →",
       "mockupLabel": "The Data export screen in DiveDay, listing the bundle’s files with a row count for each and the account credentials that stay protected"
     },
@@ -877,16 +858,44 @@
       "multipleLocations": {
         "question": "What about multiple locations?",
         "answer": "Each DiveDay shop runs one location today. If you run more than one, email {email}."
+      },
+      "shopSize": {
+        "question": "What would a shop my size pay?",
+        "answer": "The worked months above show how the same plan applies at different amounts received. Boat count and staff logins do not change the rate."
+      },
+      "diverApp": {
+        "question": "Do divers need an app or an account?",
+        "answer": "No. They book on your public page and open their own link to sign forms and prepare for the trip."
+      },
+      "printedManifest": {
+        "question": "Can the crew carry a printed manifest?",
+        "answer": "Yes. Print the departure’s manifest for the crew to take aboard."
+      },
+      "devices": {
+        "question": "What phone or tablet do we need?",
+        "answer": "DiveDay runs in a web browser on a phone, tablet or computer. Try the demo on the devices your crew already uses."
+      },
+      "currency": {
+        "question": "What currency is billing in?",
+        "answer": "Automatic billing is in USD. A shop taking payments in another currency needs an agreed billing setup before any charge; amounts in different currencies are never combined or converted."
       }
     },
     "closingTitle": "Every feature and every staff login are in the price",
     "percentArm": {
-      "cadence": "{hasBase, select, yes {when you mark money received, plus {base} a month} other {when you mark money received, billed monthly}}",
+      "cadence": "of money recorded as received in DiveDay{hasBase, select, yes {, plus {base} a month} other {, with no monthly fee}}",
       "invoiceFeeLabel": "DiveDay’s fee",
-      "invoiceFeeValue": "{percent} of recorded collections",
-      "ours": "{hasBase, select, yes {DiveDay charges {base} a month plus {percent} of the money your shop records as received in DiveDay.} other {DiveDay has no monthly charge. Its fee is {percent} of the money your shop records as received in DiveDay.}} Nothing is added to your guest’s price.",
+      "invoiceFeeValue": "{percent} of money recorded as received in DiveDay",
       "whatCountsQuestion": "What counts toward the {percent}?",
       "whatCountsAnswer": "Money recorded as received in DiveDay, whether paid online, in cash, by bank transfer, on your own card machine or another method. Deposits count when received; an unpaid booking does not. Packages count when sold, never again when redeemed. Separately recorded tips, tax and pass-through fees, and imported history, are excluded. An amount without a separate tax breakdown counts in full. Refunds receive a credit at the original rate."
+    },
+    "examples": {
+      "title": "What a month could cost",
+      "note": "Illustrative months in USD, before refund credits and Stripe’s card fees. The amounts received exclude separately recorded tips, tax and pass-through charges.",
+      "none": "A month with no money received",
+      "oneBoat": "A month for a one-boat shop",
+      "threeBoats": "A month for a three-boat shop",
+      "received": "{amount} received",
+      "fee": "{amount} DiveDay fee"
     }
   },
   "privacy": {
@@ -1084,8 +1093,8 @@
     "stepsTitle": "How it works",
     "includedTitle": "What’s in it",
     "includedShowAll": "Show all {count}",
-    "includedPrice": "Every line here is in the one plan, at {price} {cadence}.",
-    "pricingLink": "See everything the plan covers",
+    "includedPrice": "Included in your shop’s plan.",
+    "pricingLink": "See pricing",
     "faqTitle": "Questions shops ask",
     "relatedTitle": "Related features",
     "allFeatures": "All features",
@@ -1096,9 +1105,8 @@
     },
     "demoNote": "The demo opens on {place}. It’s a working sample shop, with no sign-up and no card.",
     "percentArm": {
-      "includedPrice": "Every line is included for {percent} of the payments you enter as received{hasBase, select, yes { plus {base} a month} other {}}.",
       "paymentsNote3": "No row carries a DiveDay fee. DiveDay’s {percent} is billed to you once a month, on an invoice of its own.",
-      "paymentsFaq1A": "Yes. The fee is {percent} of money recorded as received in DiveDay{hasBase, select, yes {, plus {base} a month} other {}}, billed monthly. Cash and external payments count too. Separately recorded tips, tax and pass-through fees are excluded. Nothing is added to your guest’s price. Stripe charges its own card fees."
+      "paymentsFaq1A": "Yes. {fee} Online card payments count automatically; record cash and external payments when received. Separately recorded tips, tax and pass-through fees are excluded. Nothing is added to your guest’s price. Stripe charges its own card fees."
     }
   },
   "featurePages": {
@@ -1133,8 +1141,8 @@
       "summary": "A booking page in your shop’s colors, and booking buttons for the site you already have.",
       "metaTitle": "Dive shop website and booking page",
       "metaDescription": "A booking page in your shop’s color, typeface and photos, plus a Book Now button, calendar and trip grid for WordPress, Squarespace or Wix.",
-      "title": "Divers book on a page in your shop’s colors, rated only by divers who dived with you",
-      "lede": "Your booking page wears your color, typeface and photos, and its buttons paste onto the site you run. Need help with a new website? Reach out to discuss what you have in mind.",
+      "title": "A booking page that looks like your shop",
+      "lede": "Give divers a feel for your shop before they arrive, with your photos, colors and typeface. Reviews come only from divers who dived with you. Add booking buttons to your own site, or reach out to discuss a new one.",
       "screenLabel": "A shop’s public booking page: the shop’s name and rating, the next boat with space, and the week’s departures.",
       "note1": "The shop’s color, the typeface on its name and “Since 1987” are set once, in Settings.",
       "note2": "The next boat with space comes first, for the diver who wants to go out tomorrow.",
@@ -1185,7 +1193,7 @@
       "summary": "Each diver is Ready or Blocked for each departure, with the missing card, form or payment named.",
       "metaTitle": "Dive certification checks for every departure",
       "metaDescription": "DiveDay checks each diver’s cards against what the departure and its dive sites ask for, such as deep, wreck, night or nitrox, and names what is missing days before the boat leaves.",
-      "title": "Know who can board days before the boat leaves, and what the others are missing",
+      "title": "Know what each diver needs before departure",
       "lede": "DiveDay checks each diver against the level and the Deep, Wreck or nitrox card the departure and its sites ask for, plus the waiver, medical form and payment it requires, and names what’s missing.",
       "screenLabel": "Today in DiveDay: a departure’s readiness bar, then the Needs you list with the reason beside each name.",
       "note1": "The bar is the departure’s seats: green for ready divers, red for blocked ones, the rest still open.",
@@ -1211,7 +1219,7 @@
       "summary": "Confirmations, a reminder a week out, a brief the day before and the recap go out on their own, and email replies land in one inbox.",
       "metaTitle": "Automatic booking reminders and dive trip messages",
       "metaDescription": "Confirmation and waiver emails, a reminder a week out, a brief the day before with the dock time, and a recap after the dive. Divers’ email replies land in one inbox.",
-      "title": "The day before, each diver gets the dock time and a list of what’s still theirs to do",
+      "title": "Send divers the dock time and what they still need to do",
       "lede": "Confirmations, a reminder a week out and a brief the day before go out by email with a text alongside, and a failed email shows up for your staff with a Resend button.",
       "screenLabel": "The night-before page on a diver’s phone: the dock time, waiver and certification done, and gear still to fill in.",
       "note1": "The dock time opens the page, because it’s the line a diver checks first thing in the morning.",
@@ -1289,8 +1297,8 @@
       "summary": "Each site’s route, landmarks and marine life written once, and shown to every diver on a boat that goes there.",
       "metaTitle": "Dive site briefings for your divers",
       "metaDescription": "Write each dive site once: depth, route, landmarks with photos and what lives there. Every diver booked on a boat to that site reads the briefing before they come.",
-      "title": "Write each dive site once",
-      "lede": "Divers read the route, landmarks and recent sightings before they come. Each site’s depth, terrain map, photos and species stay together on their trip page.",
+      "title": "Let divers picture the dive before they arrive",
+      "lede": "Share the route, the landmarks and the recent sightings that make a site worth looking forward to. Depth, maps and photos stay together on each diver’s trip page.",
       "screenLabel": "A dive site briefing as divers read it before the trip: the site, its depth and time in the water, the route, and what has been seen there this month.",
       "note1": "Depth is the site’s own, in your shop’s units, and time in the water is your usual for that dive.",
       "note2": "The route starts at a hollow circle and finishes at a filled one, so a diver reads which way the dive swims.",
@@ -1315,8 +1323,8 @@
       "summary": "Every unit on your wall with its size and service due, reserved for one diver at a time, and your customers’ own gear on the bench.",
       "metaTitle": "Dive gear rental and service tracking",
       "metaDescription": "Track every BCD, regulator, wetsuit and cylinder by tag, size and service date. Staff reserve a unit to one booking, and the register won’t give it to a second diver on the same dates.",
-      "title": "Know which wetsuit is on which diver, and which regulator is due for service",
-      "lede": "List your own units by tag, size and serial, reserve one to a booking from the departure’s Gear tab, and see each regulator, cylinder and BCD’s next service date. When a customer brings their own regulator in, it goes on the bench as a work order, and they hear when it’s ready.",
+      "title": "Know what’s out, what’s available and what needs service",
+      "lede": "When the morning crew starts pulling gear, see the sizes divers sent and the units available to hand out. Track your tagged units, returns and service dates. Customer repairs have their own work orders, with a message when the gear is ready.",
       "screenLabel": "The gear register: units by kind with their counts, then each unit’s tag, model, size and status.",
       "note1": "The chips count units of each kind, so a short shelf shows before the morning.",
       "note2": "A reserved unit names its diver, and the register won’t give it to anyone else.",
@@ -1341,8 +1349,8 @@
       "summary": "Build the season’s departures, repeat the regular ones, and see which boat still needs crew.",
       "metaTitle": "Dive trip scheduling and crew planning",
       "metaDescription": "Add, move and copy departures in place, repeat a weekly trip with no end date, and put crew on each boat. The crew view shows which departure is uncovered.",
-      "title": "Regular trips repeat on their own, and a boat with no crew yet says so on the week’s board",
-      "lede": "When you call off a boat for weather, one confirmed tap cancels it, emails every diver the departures they qualify for, and refunds their online card payments.",
+      "title": "Build the week and see which boats still need crew",
+      "lede": "Put departures on the week’s board, repeat your regular trips and assign the crew. A boat without crew stands out, and overlapping assignments are flagged.",
       "screenLabel": "The week’s schedule: departures by day with their times, crew and seats filled, and an Add button on each day.",
       "note1": "Each row shows how many of the boat’s seats are filled, so a thin departure stands out early.",
       "note2": "“Crew: nobody yet” marks a boat no one is assigned to, on the same row as its seats.",
@@ -1417,7 +1425,7 @@
   },
   "setUp": {
     "title": "Get your shop set up",
-    "description": "We open every shop by hand and write back to set up yours.",
+    "description": "Tell us about your shop. We’ll help you set it up for the way your crew works.",
     "shopName": "Shop name",
     "region": "Town or region",
     "runsBoat": "Do you run a boat?",
@@ -1438,7 +1446,7 @@
     "email": "Email",
     "phone": "Phone",
     "website": "Website",
-    "submit": "Send",
+    "submit": "Request setup",
     "errors": {
       "required": "Fill this in.",
       "invalid": "Check this one.",

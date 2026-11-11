@@ -231,6 +231,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Course catalog copy
 - Course form
 - Course page
+- Course personal kit
 - Course session
 - Courtesy message
 - Crew clash
@@ -276,6 +277,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Feature coverage
 - Fill rate
 - Group hold
+- Group seat link
 - Held
 - Holds the hull
 - Horizon

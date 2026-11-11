@@ -377,7 +377,6 @@ export type CourseForStructuredData = {
   title: string;
   agency: string | null;
   summary: string | null;
-  description: string | null;
   priceCents: number | null;
   durationText: string | null;
 };
@@ -398,7 +397,7 @@ export function coursePageJsonLd(
     "@context": SCHEMA_CONTEXT,
     "@type": "Course",
     name: course.title,
-    description: course.summary ?? course.description,
+    description: course.summary ?? undefined,
     url,
     provider: shopJsonLd(shop, origin, aggregate),
     educationalCredentialAwarded: course.agency ? `${course.agency} ${course.title}` : course.title,

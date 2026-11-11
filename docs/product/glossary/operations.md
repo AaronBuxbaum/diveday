@@ -61,16 +61,13 @@
   copy was saved", never the present tense.
 - **Close-out** — the shop home's evening state (ADR 20260827-clearwater-surface-language,
   decision 4): once every departure of the shop day has settled, each station reads its end state
-  in strict precedence off the same roll-call evidence Today chases, then the clock, and only then
-  the crew's own **trip stage** (`departureStatus`, `src/features/today/closeout.ts`), and the day's takings
-  read beneath them. **A stage settles a station the clock would leave open, and never reopens one
-  the clock has closed** (issue #1480): inside the late-arrival hour a live `home` reads `all_home`,
-  because a crew member tapping Home at the rail is the statement that buffer was standing in for
-  rather than an inference from a time. Nothing demotes — a stage that says `underway` over a
-  departure the clock calls back is silence, not a contradiction, and so is one the crew stopped
-  maintaining. The asymmetry is affordable only because the head count returns before any of it:
-  the promotion is reached solely over a departure whose divers are all already counted back
-  aboard. One exception runs the other way: an after-dive count started and still open reads
+  in strict precedence off the same roll-call evidence Today chases, then the staff boat reading
+  (`departureStatus`, `src/features/today/closeout.ts`, using `boatStageOf`), with the clock as fallback when no crew word speaks.
+  A complete final roll call means everyone is back aboard; it does not put the boat at the dock.
+  A speaking non-home stage keeps the station `still_out`, even beyond the scheduled return and
+  its late-arrival hour. A final-meeting-day `home` can settle it inside that hour (issue #1480), but never
+  over an unresolved head count. With no speaking stage the existing clock fallback remains.
+  The staff stage expires on the same rule as the roster and Today’s boats-out reading. One exception runs the other way: an after-dive count started and still open reads
   `still_out` ("Dive 2 count open, 2 people and 1 crew member to mark"), a count in progress rather
   than one never closed, only before she is due back, on a trip within today's shop day, when every
   open count on the boat, diver and crew, is at the latest checkpoint anybody marked with no later
@@ -790,6 +787,12 @@
   course session needs an instructor and a signed waiver; the shop controls its two prices, its
   course page, and whether the course appears when scheduling. Hiding never rewrites existing
   sessions.
+  A booking whose meeting count matches the full course plan shows that outline on booking and
+  prep pages, beside the actual dated meetings. A partial session never guesses which plan days
+  it covers. The immediate booking confirmation carries the same meeting dates as the full prep
+  page. Course arrival copy states the start time without assuming a dock or boat; a material's
+  access instructions remain shop-authored, with a contact link when the student needs help.
+  Each authored course-plan day can name an optional meeting place (plain text, up to 240 characters). A full-plan session pairs these places with its actual meeting dates and hours on the prep page and saved arrival card; a partial session never guesses a place from the plan or its prose. The saved card keeps the same course-start wording and scheduled pickup precedence as the online page.
 - **Course page** — the diver-facing page for one course: subhead, overview, photos, spec chips
   (duration, group size, minimum age, prerequisite), a day-by-day plan, what the fee covers, an
   FAQ, and the upcoming sessions it can be booked through. There is no separate draft/publish
@@ -1543,10 +1546,10 @@
   review fixes). `home` alone carries
   the roll call's success tone, and `home` alone is withheld from the anonymous surfaces: the diver
   who was aboard reads it on their own link, a storefront panel about tomorrow does not. It was a
-  display word until issue #1480 made it load-bearing — the **close-out** reads a live `home` as a
-  boat that is in, which is what lets a tap settle a station the clock would leave open. So the
-  staleness rule is a safety rule there and not a courtesy: a stage the crew stopped maintaining
-  says nothing about whether the day may close.
+  display word until issue #1480 made it load-bearing. The **close-out** uses the staff
+  **trip phase** rule: a final-meeting-day `home` can settle a counted station before the clock
+  would; a speaking non-home stage keeps it out even when overdue. Earlier-day course Home
+  finishes nothing. An expired staff word hands the question back to the clock.
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
   statement**. DiveDay keeps one versioned release per shop: a *changed* release saves a new immutable
   version and new links snapshot the current one. The exact template version is snapshotted into each
@@ -2396,3 +2399,12 @@
 - **Charter inquiry** — a date request that asks for the whole boat for a group (loop 5, row 11): a box on the date-request form when the shop dives from a boat and the `privateCharters` Features switch is on, never on a course ask (`interests.charter`). Staff answer it from Date requests with a reply that can open with a whole-boat quote in the shop's currency, written in the diver's language, from an owner or manager only (`canQuoteCharter`), and counted in the reply's 1,000 characters; the quote is recorded on the request (`charter_quote_cents`, `_currency`, `_quoted_at`, `_quoted_by_person_id`) only once the reply went. A departure built from it is private, whatever the Private box said, and the builder's brief says so; the builder's brief shows the quote under that request, above the price box, and the staffer sets the price (#3917). Inquiry to quote to booking, with the booking itself the ordinary private departure. `src/features/charter-quote/rules.ts`, `src/features/interest-replies/store.ts`.
 
 - **Departure pass** — the booked departure's arrival facts in Apple or Google Wallet, in the shop's brand and the issue locale. It follows plan changes and crew-set stages, is voided on cancellation or erasure, and never proves readiness or authorizes boarding. It carries no booking capability, barcode, price, waiver, medical or emergency fact ([ADR 20261110-native-wallet-passes](../../architecture/decisions/20261110-native-wallet-passes.md)). The saved arrival card is its credential-free fallback.
+
+- **Course personal kit** — snorkel and boots explicitly supplied in the course fee
+  (`courses.included_personal_gear`). These are separate from the rentable kinds in
+  `included_rental_kinds`: they carry no rental charge or inventory reservation and never change
+  the rental defaults. The editor records each inclusion, the course and packing lists name it
+  under Provided, and online and saved prep leave it off Bring. Boots can still have a size
+  recorded for the crew; that size is a request, never a fit guarantee.
+
+- **Group seat link** — one invitation an organizer shares for an existing booking party. The separate `group_claim` capability opens only a picker of unclaimed companion seats on the organizer’s departure. Each choice enters the existing single-seat claim transaction; it never exposes the organizer’s readiness link, private preparation, medical answers or payment details. An unnamed companion starts as a fresh Guest record, held for identity until claimed, never matched by an organizer-supplied email.

@@ -94,6 +94,7 @@ const STAFF_PREFIX = "/shop/";
 const EDGE_EXEMPT = new Map<string, string>(
   [
     "/claim/[token]",
+    "/claim/[token]/group",
     "/confirm-contact/[token]",
     "/invite/[token]",
     "/ready/[token]",

@@ -13,13 +13,9 @@ function heroColumns(container: HTMLElement) {
   return { claim, phone };
 }
 
-/**
- * The booking band, and its first step's two columns. It is the third
- * section: the band that says why the roll call is by name sits between it
- * and the hero.
- */
+/** The booking band follows the hero, before the later origin account. */
 function firstStep(container: HTMLElement) {
-  const band = container.querySelectorAll("main > section")[2];
+  const band = container.querySelectorAll("main > section")[1];
   const row = band?.children[1];
   const [copy, screen] = [...(row?.children ?? [])];
   if (!band || !copy || !screen) throw new Error("no first step");
@@ -64,18 +60,18 @@ describe("the landing's skeleton", () => {
     expect(phone).not.toHaveClass("h-[450px]");
   });
 
-  it("draws a line box for each line the title wraps to: four on a phone, three from sm and at lg", () => {
+  it("reserves the longer Spanish title: five phone lines and four from sm", () => {
     const { container } = render(<HomeBodySkeleton />);
     const lines = [...heroColumns(container).claim.querySelectorAll(".lg\\:h-18")];
-    expect(lines).toHaveLength(4);
-    expect(shownAt(lines)).toEqual([4, 3, 3]);
+    expect(lines).toHaveLength(5);
+    expect(shownAt(lines)).toEqual([5, 4, 4]);
   });
 
-  it("draws the compact description’s three lines on a phone and two from sm", () => {
+  it("reserves the Spanish description’s five phone lines and three from sm", () => {
     const { container } = render(<HomeBodySkeleton />);
     const lines = [...heroColumns(container).claim.querySelectorAll(".h-8")];
-    expect(lines).toHaveLength(3);
-    expect(shownAt(lines)).toEqual([3, 2, 2]);
+    expect(lines).toHaveLength(5);
+    expect(shownAt(lines)).toEqual([5, 3, 3]);
   });
 
   it("draws the dock card's detail as three lines in a phone's column and two from sm", () => {
@@ -94,11 +90,9 @@ describe("the landing's skeleton", () => {
  * that renders 323px with no shadow (Logbook frames a screen by its hairline).
  */
 describe("the landing skeleton's band under the hero", () => {
-  it("draws the story and the tie at their line counts, and no diver's line while the flag is off", () => {
+  it("keeps the origin story out of the first-step placeholder, and no diver line while the flag is off", () => {
     const { container } = render(<HomeBodySkeleton />);
-    const why = container.querySelectorAll("main > section")[1];
-    expect(why?.className).toContain("bg-surface");
-    expect(why?.querySelectorAll(".h-11")).toHaveLength(1);
+    expect(container.querySelectorAll("main > section")).toHaveLength(2);
     // The hero keeps two 20px lines under the doors and no third for a diver.
     const { claim } = heroColumns(container);
     expect(claim.querySelectorAll(":scope > .mt-6")).toHaveLength(1);

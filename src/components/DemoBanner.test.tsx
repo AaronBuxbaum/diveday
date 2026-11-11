@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChromeBar } from "./chrome/ChromeBar";
 import { DemoBanner } from "./DemoBanner";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  sessionStorage.clear();
+});
 
 const COPY = {
   shopLabel: "Demo shop",
@@ -14,6 +17,11 @@ const COPY = {
   current: "Actual",
   switchAction: "",
   switchFailed: "",
+  startTitle: "Start here",
+  startCaptain: "Call the roll as the captain",
+  startDesk: "Check a diver in at the desk",
+  startDiver: "Book a seat as a diver",
+  dismissStarts: "Dismiss starting places",
 };
 
 const ROLES = [
@@ -192,5 +200,61 @@ describe("DemoBanner", () => {
         console.error = consoleError;
       }
     });
+  });
+});
+
+describe("first-arrival starting places", () => {
+  function starts(shopSlug = "demo-first") {
+    const switchRole = vi.fn(async () => {});
+    const view = render(
+      <DemoBanner
+        currentRole="owner"
+        shopSlug={shopSlug}
+        starts={[
+          { id: "captain", role: "captain", label: COPY.startCaptain },
+          { id: "desk", role: "owner", label: COPY.startDesk },
+          { id: "diver", role: "diver", label: COPY.startDiver },
+        ]}
+        roles={[
+          ...ROLES,
+          { id: "captain", name: "Sal", title: "Captain", switchAriaLabel: "Captain" },
+          { id: "diver", name: "", title: "Diver", switchAriaLabel: "Diver" },
+        ]}
+        copy={COPY}
+        isMintedDemo
+        switchRole={switchRole}
+      />,
+    );
+    return { ...view, switchRole };
+  }
+
+  it("offers the feature pages' role and landing, including the current role", async () => {
+    const { switchRole } = starts();
+    fireEvent.click(screen.getByRole("button", { name: COPY.startDesk }));
+    await waitFor(() => expect(switchRole).toHaveBeenCalledWith("owner", "demo-first", "desk"));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: COPY.startCaptain })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: COPY.startCaptain }));
+    await waitFor(() =>
+      expect(switchRole).toHaveBeenCalledWith("captain", "demo-first", "captain"),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: COPY.startDiver })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: COPY.startDiver }));
+    await waitFor(() => expect(switchRole).toHaveBeenCalledWith("diver", "demo-first", "diver"));
+  });
+
+  it("keeps a dismissal for this demo session without hiding a new demo's choices", () => {
+    const first = starts();
+    fireEvent.click(screen.getByRole("button", { name: COPY.dismissStarts }));
+    expect(screen.queryByRole("button", { name: COPY.startCaptain })).toBeNull();
+    first.unmount();
+    const again = starts();
+    expect(screen.queryByRole("button", { name: COPY.startCaptain })).toBeNull();
+    again.unmount();
+    starts("another-demo");
+    expect(screen.getByRole("button", { name: COPY.startCaptain })).toBeVisible();
   });
 });

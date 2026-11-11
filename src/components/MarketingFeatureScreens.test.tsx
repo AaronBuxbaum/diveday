@@ -15,6 +15,14 @@ import {
 
 afterEach(cleanup);
 
+it("StorefrontFallback shows the demo shop’s reef cover inside its accessible screen", () => {
+  const { container } = render(<StorefrontFallback locale="en-US" />);
+  const photo = container.querySelector("img");
+  expect(photo).not.toBeNull();
+  expect(photo).toHaveAttribute("alt", "");
+  expect(photo?.getAttribute("src")).toContain("Elkhorn");
+});
+
 const EVERY_MOCK = [
   ["BookingCardFallback", BookingCardFallback],
   ["StorefrontFallback", StorefrontFallback],

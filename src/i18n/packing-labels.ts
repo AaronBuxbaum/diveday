@@ -1,7 +1,14 @@
+import type { CoursePersonalGear } from "@/lib/course-personal-gear";
 import type { PersonalGearCode } from "@/lib/diver-planning";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { type RentableItemKind, SCUBA_UNIT_KINDS, SCUBA_UNIT_PRESET } from "@/lib/rentals";
 import type { DiverMessageKey } from "./messages";
+import type { StaffMessageKey } from "./staff-messages";
+
+export const COURSE_PERSONAL_GEAR_STAFF_KEYS: Record<CoursePersonalGear, StaffMessageKey> = {
+  snorkel: "courses.edit.personalGearSnorkel",
+  boots: "courses.edit.personalGearBoots",
+};
 
 export const PERSONAL_GEAR_KEYS: Record<PersonalGearCode, DiverMessageKey> = {
   mask: "trip.personalGear.mask",
@@ -32,8 +39,12 @@ export const RENTAL_ITEM_KEYS: Record<RentableItemKind, DiverMessageKey> = {
  * ticking "gear included" (issue #2796): the case the yes/no's own sentences
  * already say, word for word.
  */
-export function includesScubaUnitOnly(included: readonly RentableItemKind[]): boolean {
+export function includesScubaUnitOnly(
+  included: readonly RentableItemKind[],
+  personal: readonly CoursePersonalGear[] = [],
+): boolean {
   return (
+    personal.length === 0 &&
     included.length === SCUBA_UNIT_PRESET.length &&
     included.every((kind) => SCUBA_UNIT_KINDS.has(kind))
   );
@@ -49,6 +60,7 @@ export function includedGearList(
   included: readonly RentableItemKind[],
   t: (key: DiverMessageKey) => string,
   locale: string,
+  personal: readonly CoursePersonalGear[] = [],
 ): string {
   const wholeUnit = [...SCUBA_UNIT_KINDS].every((kind) => included.includes(kind));
   const words = [
@@ -56,6 +68,7 @@ export function includedGearList(
     ...included
       .filter((kind) => !(wholeUnit && SCUBA_UNIT_KINDS.has(kind)))
       .map((kind) => t(RENTAL_ITEM_KEYS[kind])),
+    ...personal.map((kind) => t(PERSONAL_GEAR_KEYS[kind])),
   ];
   return cachedListFormat(locale, { type: "conjunction" }).format(words);
 }

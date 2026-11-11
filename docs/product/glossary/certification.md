@@ -274,7 +274,9 @@
 - **Self-declared certification** — a diver's claim about their certification, before a staffer
   sights it.
   The `/ready/[token]` certification step is capability-bound to the booked diver and records their
-  entered agency, level and number as a pending card. Anonymous list actions also accept optional
+  entered agency, level and number as a pending card. A diver who will show the card at check-in
+  can record only agency and level; the checklist waits for the shop, reminders still ask them
+  to bring the card, and boarding stays unverified until staff sight it. Anonymous list actions also accept optional
   declaration payloads: the shop-wide last-minute-deal form currently asks for an optional level
   only; the full-trip wait-list page no longer renders declaration controls, though its action still
   parses supplied declaration fields. The trip booking form stopped asking in the 2026-08-27 change

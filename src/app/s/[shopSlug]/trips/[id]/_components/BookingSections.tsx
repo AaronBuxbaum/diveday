@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useActionState, useCallback, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { getReturningDiverServerTime } from "@/app/actions/returning-diver-memory";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ChoiceRow, choiceClass, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { ShopNotice } from "@/components/ui/outcome";
+import { StatusInView } from "@/components/ui/StatusInView";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   DIVER_PARTICIPANT_CHOICE_KEYS,
@@ -69,23 +70,35 @@ export function WaitlistConfirmation({
   embed?: boolean;
 }) {
   const t = useTranslations();
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    // The submitted form (and its focused button) has gone. Give keyboard
+    // users a place to continue, unless they have already focused elsewhere.
+    // StatusInView owns the minimal reveal after preserved scroll settles.
+    if (document.activeElement === document.body) {
+      heading.current?.focus({ preventScroll: true });
+    }
+  }, []);
   return (
     // A wait-list join isn't the earned win the rationed accent is for
     // (design/principles.md #3) — a seat isn't held yet, so this sits on the
     // same sunken material as the full-boat state it came from: a place in
     // line, not a seat on the boat. Only a real confirmed booking gets coral.
-    <section className="rise-in rounded-panel bg-surface-sunken p-6">
-      <h2 className={`${SECTION_TITLE_CLASS} text-balance`}>
-        {t("booking.waitlistConfirmedHeading", { name: firstName })}
-      </h2>
-      <p className="mt-2 text-muted">{t("booking.waitlistConfirmedBody")}</p>
-      <Link
-        href={embed ? embedCalendarPath(shopSlug) : publicSchedulePath(shopSlug)}
-        className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
-      >
-        {t("common.backToSchedule")}
-      </Link>
-    </section>
+    <>
+      <section role="status" className="rise-in rounded-panel bg-surface-sunken p-6">
+        <h2 ref={heading} tabIndex={-1} className={`${SECTION_TITLE_CLASS} text-balance`}>
+          {t("booking.waitlistConfirmedHeading", { name: firstName })}
+        </h2>
+        <p className="mt-2 text-muted">{t("booking.waitlistConfirmedBody")}</p>
+        <Link
+          href={embed ? embedCalendarPath(shopSlug) : publicSchedulePath(shopSlug)}
+          className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
+        >
+          {t("common.backToSchedule")}
+        </Link>
+      </section>
+      <StatusInView />
+    </>
   );
 }
 
@@ -334,6 +347,7 @@ const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-fiv
 
 /** Everything `BookSpotSection` draws, assembled once by its caller and handed over as one object. */
 export type BookSpotSectionContext = {
+  groupRequestHref?: string;
   trip: BookingFormTrip;
   tripRef: TripRef;
   remaining: number;
@@ -553,13 +567,15 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
   // "Book this seat", never "these spots" (fourth UX review item 7, H-20261014-seat-is-the-word).
   const bookLabel = groupHold
     ? t("holdSeats")
-    : payAtBooking
-      ? remaining === 1
-        ? t("bookAndPayLastSeat")
-        : t("bookAndPay")
-      : remaining === 1
-        ? t("bookLastSeat")
-        : t("bookSeats", { count: partySize });
+    : trip.course
+      ? t(payAtBooking ? "enrollAndPay" : "enroll")
+      : payAtBooking
+        ? remaining === 1
+          ? t("bookAndPayLastSeat")
+          : t("bookAndPay")
+        : remaining === 1
+          ? t("bookLastSeat")
+          : t("bookSeats", { count: partySize });
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
     capacityLabelValue.kind === "full"
@@ -581,7 +597,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
       // page's `space-y-10` sets the distance above (pixel-craft class 4,
       // K-162), where each state used to carry a top margin of its own.
       className="scroll-mt-4"
-      title={t("heading")}
+      title={t(trip.course ? "courseHeading" : "heading")}
       actions={
         <span className="text-sm font-medium text-primary tabular-nums">{capacityText}</span>
       }
@@ -620,6 +636,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         ) : null}
         <BookingPartyFields
           maxPartySize={remaining}
+          groupRequestHref={context.groupRequestHref}
           leadPhone
           fieldErrors={state.fieldErrors}
           rememberForShop={!tripRef.embed ? tripRef.shopSlug : null}

@@ -130,10 +130,9 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   training_mark_invalid: "waiting",
   certification_missing: "action",
   certification_pending: "waiting",
-  // "action", not "waiting": the diver said a level and nobody has seen a card,
-  // so there is nothing on the shop's end to wait for — the card-entry form on
-  // this very page is the whole fix, and it is offered for this code.
-  certification_self_declared: "action",
+  // The diver can bring the card at check-in. Staff still owe a sighting;
+  // the boarding blocker remains, but entering a number online is optional.
+  certification_self_declared: "waiting",
   certification_insufficient: "action",
   // "waiting": the diver's part is finishing the course they are booked on,
   // and the card is the instructor's to issue.
@@ -270,7 +269,8 @@ export function buildDiverChecklist(
 }
 
 /**
- * Only the codes a diver can act on before the dock — a "waiting" blocker
+ * Codes for pre-trip preparation, including bringing a declared card to the dock.
+ * An ordinary "waiting" blocker
  * (verification, medical review) is the shop's to finish, so it never appears
  * here as a to-do the diver can't complete. A code, never a phrase: the
  * caller (`src/features/reminders/store.ts`'s SMS/email composition) resolves each one
@@ -342,7 +342,11 @@ export function reminderReadiness(items: readonly DiverChecklistItem[]): Reminde
   let medicalReview = false;
   for (const item of items) {
     if (item.code === "medical_review") medicalReview = true;
-    if (item.state === "action" && item.code && isReminderActionCode(item.code)) {
+    if (
+      item.code &&
+      (item.state === "action" || item.code === "certification_self_declared") &&
+      isReminderActionCode(item.code)
+    ) {
       outstanding.push(item.code);
     }
   }

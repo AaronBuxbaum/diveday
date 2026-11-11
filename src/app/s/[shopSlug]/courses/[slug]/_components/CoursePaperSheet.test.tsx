@@ -149,3 +149,14 @@ describe("a course on paper", () => {
     expect(text).toContain("/s/blue-mantis/courses/open-water");
   });
 });
+
+it("keeps the course's authored places on the paper day plan", () => {
+  const { container } = sheet(
+    course({
+      scheduleDays: [
+        { title: "Pool day", meetingPlace: "Training pool entrance", items: ["Skills"] },
+      ],
+    }),
+  );
+  expect(container).toHaveTextContent("Training pool entrance");
+});

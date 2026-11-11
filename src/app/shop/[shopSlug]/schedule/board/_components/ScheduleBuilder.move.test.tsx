@@ -77,6 +77,53 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Move Two-Tank Reef/ }));
   }
 
+  it("keeps a native date edit when departure time rerenders the form and submits both", async () => {
+    renderBoard();
+    await openMovePanel();
+    const date = screen.getByLabelText(COPY.newDate);
+    fireEvent.input(date, { target: { value: "2026-08-06" } });
+    expect(date).toHaveValue("2026-08-06");
+    fireEvent.change(screen.getByLabelText(COPY.newDepartureTime), {
+      target: { value: "10:00" },
+    });
+    expect(date).toHaveValue("2026-08-06");
+    await waitFor(() =>
+      expect(loadMovePreflight).toHaveBeenLastCalledWith("trip-1", {
+        date: "2026-08-06",
+        startTime: "10:00",
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: COPY.moveIt }));
+    await waitFor(() => expect(actions.move).toHaveBeenCalled());
+    const submitted = vi.mocked(actions.move).mock.calls[0][0];
+    expect(submitted.get("date")).toBe("2026-08-06");
+    expect(submitted.get("startTime")).toBe("10:00");
+  });
+
+  it("keeps time-first edits and discards both fields when cancelled and reopened", async () => {
+    renderBoard();
+    await openMovePanel();
+    fireEvent.change(screen.getByLabelText(COPY.newDepartureTime), {
+      target: { value: "10:00" },
+    });
+    fireEvent.input(screen.getByLabelText(COPY.newDate), {
+      target: { value: "2026-08-06" },
+    });
+    await waitFor(() =>
+      expect(loadMovePreflight).toHaveBeenLastCalledWith("trip-1", {
+        date: "2026-08-06",
+        startTime: "10:00",
+      }),
+    );
+    expect(screen.getByLabelText(COPY.newDepartureTime)).toHaveValue("10:00 AM");
+    await userEvent.click(screen.getByRole("button", { name: COPY.cancel }));
+    expect(screen.queryByLabelText(COPY.newDate)).toBeNull();
+    expect(actions.move).not.toHaveBeenCalled();
+    await openMovePanel();
+    expect(screen.getByLabelText(COPY.newDate)).toHaveValue("2026-08-01");
+    expect(screen.getByLabelText(COPY.newDepartureTime)).toHaveValue("8:30 AM");
+  });
+
   /**
    * The board carries a page of departures and every panel on it is closed, so
    * the counts are asked for on the path that opens one — never shipped with

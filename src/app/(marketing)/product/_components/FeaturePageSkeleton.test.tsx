@@ -25,7 +25,7 @@ function linesOf(block: Element | null | undefined) {
   );
 }
 
-/** The claim's column: breadcrumb, title, lede, the doors, the demo note, the price. */
+/** The claim's column: breadcrumb, title, lede, the doors, the demo note. */
 function claim(container: HTMLElement) {
   const column = container.querySelector("main > section > div > div");
   if (!column) throw new Error("no claim column");
@@ -53,12 +53,12 @@ describe("the feature page skeleton", () => {
     expect(linesOf(lede)).toEqual({ base: 5, sm: 3, lg: 4, xl: 3 });
   });
 
-  it("draws the demo note three lines on a phone and two from sm, then the price two and one", () => {
+  it("draws the demo note without a repeated price placeholder", () => {
     const { container } = render(<FeaturePageSkeleton />);
-    const blocks = claim(container).querySelectorAll(":scope > div > .text-sm");
-    const [note, price] = [...blocks].slice(-2);
+    const blocks = claim(container).querySelectorAll(":scope > .mt-3 > .text-sm");
+    expect(blocks).toHaveLength(1);
+    const [note] = blocks;
     expect(linesOf(note)).toEqual({ base: 3, sm: 2, lg: 2, xl: 2 });
-    expect(linesOf(price)).toEqual({ base: 2, sm: 1, lg: 1, xl: 1 });
   });
 
   it("draws nothing a visitor could tap", () => {

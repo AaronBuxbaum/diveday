@@ -1,0 +1,42 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "297cc90a-9890-412a-b6c4-21f2eedae558",
+  "prevIds": [
+    "0114375b-04bd-4b34-bc97-c4becdc6e099"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "booking_capability_purpose"
+      ],
+      "writes": [
+        "s|enum|public.booking_capability_purpose"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"booking_capability_purpose\"]",
+      "set": {
+        "values": [
+          "group_claim",
+          "readiness",
+          "confirm",
+          "claim",
+          "handoff",
+          "course_forms",
+          "returning_diver_receipt"
+        ]
+      }
+    }
+  ]
+}

@@ -604,3 +604,18 @@ describe("the course opening's next date", () => {
     expect(courseHeroDate([], "reef", "America/New_York", "en-US", t)).toBeNull();
   });
 });
+
+it("shows only authored meeting places alongside each course day", () => {
+  render(
+    <CourseSchedule
+      days={[
+        { title: "Day 1", meetingPlace: "Shop classroom", items: ["Theory"] },
+        { title: "Day 2", meetingPlace: "Training pool entrance", items: ["Skills"] },
+      ]}
+      locale="en-US"
+      t={t}
+    />,
+  );
+  expect(screen.getByText("Shop classroom")).toBeVisible();
+  expect(screen.getByText("Training pool entrance")).toBeVisible();
+});

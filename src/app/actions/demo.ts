@@ -22,6 +22,7 @@ import {
   DEMO_SHOP_NAME_MAX_AGE_SECONDS,
   signDemoShopName,
 } from "@/features/demo-shop-name";
+import { demoStartDeparture, demoStartFrom } from "@/features/demo-starts";
 import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/quiet-demo-device";
 import { requireStaffSession } from "@/features/session";
 import { auth, getAuth } from "@/lib/auth";
@@ -244,7 +245,7 @@ export async function resetDemoAction() {
  * Switch the active session to a different demo role.
  * Works for both seeded and dynamically created trials.
  */
-export async function switchDemoRoleAction(role: string, shopSlug: string) {
+export async function switchDemoRoleAction(role: string, shopSlug: string, start?: string) {
   // diveday:slug-action-before-sign-in: this is how a demo visitor becomes
   // staff of the shop the slug names, so there is no shop surface to require
   // yet; the seat cookie or a session already in this shop is the gate below.
@@ -332,6 +333,17 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
       throw error;
     }
     if (pendingSignIn) redirect("/sign-in?error=two-factor");
+    const destination = demoStartFrom(start);
+    if (destination?.role === role) {
+      const tripId = await demoStartDeparture(
+        db,
+        shop.id,
+        role === "captain" ? targetEmail : undefined,
+      );
+      if (tripId)
+        redirect(`/shop/${shopSlug}/trips/${tripId}${role === "captain" ? "/manifest" : ""}`);
+      redirect(demoLandingPath(shopSlug, destination.role, destination.landing));
+    }
     redirect(`/shop/${shopSlug}`);
   }
 }

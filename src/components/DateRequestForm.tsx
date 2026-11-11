@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
@@ -22,6 +22,7 @@ import {
   type DateRequestCopy,
   type InquiryFormState,
 } from "@/lib/course-inquiry";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 
 /**
  * "Get in touch and we will set one" used to be the end of the road: a diver
@@ -145,6 +146,19 @@ export function DateRequestForm({
   const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
   const [message, setMessage] = useState("");
   const [charter, setCharter] = useState(false);
+  useEffect(() => {
+    if (!askInterest) return;
+    const query = new URLSearchParams(window.location.search);
+    const trip = query.get("groupTrip")?.trim().slice(0, 120);
+    if (!trip) return;
+    setInterest(trip);
+    const date = query.get("groupDate");
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) setPreferredDate(date);
+    const count = Number(query.get("groupSize"));
+    if (Number.isInteger(count) && count >= 1 && count <= MAX_PUBLIC_PARTY_SIZE)
+      setDiversInput(String(count));
+    setCharter(offerCharter);
+  }, [askInterest, offerCharter]);
   const [contactMissing, setContactMissing] = useState(false);
   const [interestMissing, setInterestMissing] = useState(false);
 
@@ -340,7 +354,7 @@ export function DateRequestForm({
               name="divers"
               type="number"
               min={1}
-              max={12}
+              max={MAX_PUBLIC_PARTY_SIZE}
               value={diversInput}
               onChange={(event) => setDiversInput(event.target.value)}
               className={controlClass}

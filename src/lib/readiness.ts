@@ -221,8 +221,10 @@ export type ReadinessBlockerCode =
  */
 export type ReadinessBlockerParams = {
   requiredLevel?: CertificationLevel;
-  /** The highest verified rung on file, beside a `certification_insufficient`. */
+  /** The highest usable recorded rung beside `certification_insufficient`; see heldUnverified. */
   heldLevel?: CertificationLevel;
+  /** The recorded lower card is awaiting verification, never boarding evidence. */
+  heldUnverified?: boolean;
   specialty?: DiveSpecialty;
   age?: number;
   minimumAge?: number;
@@ -895,6 +897,21 @@ function certificationBlocker(
       params: { requiredLevel: minimumLevel, heldLevel },
     };
   }
+  // A submitted number below the requirement is still on file. Keep it
+  // blocked and distinguish its unverified level from both a verified card
+  // and no record. Numberless declarations retain their own entry path below.
+  const submitted = certifications.filter(
+    (card) => card.status === "pending" && Boolean(card.identifier),
+  );
+  if (submitted.length > 0) {
+    const heldLevel = submitted
+      .map((card) => card.level)
+      .reduce((best, level) => (certificationRank(level) > certificationRank(best) ? level : best));
+    return {
+      code: "certification_insufficient",
+      params: { requiredLevel: minimumLevel, heldLevel, heldUnverified: true },
+    };
+  }
   // **The diver's own "not yet"**, below every card the shop holds and every
   // course that gets them there: a verified card, a number waiting on review
   // or a course finishing first all answer more than the statement does. Above
@@ -906,7 +923,8 @@ function certificationBlocker(
   // Below every state backed by something the shop holds, and above plain
   // `missing` only because it can say more: the diver told us a level and gave
   // no number, so nobody has anything to look up. Both are "the shop is holding
-  // nothing usable", and both offer the diver the card-entry form. A claim that
+  // nothing usable". The declared level can wait for check-in, with optional
+  // number entry; a missing level still asks for an answer. A claim that
   // *does* carry a number was answered as `pending` above.
   if (
     certifications.some(
