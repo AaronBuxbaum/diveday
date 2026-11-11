@@ -4,17 +4,18 @@ import { homeDiverDoorEnabled } from "@/features/home-diver-door";
 
 /**
  * The hero's title, a line box per line: `text-5xl` / `sm:text-6xl` /
- * `lg:text-7xl` at `leading-none`, so 48, 60 and 72px lines. It wraps to four
- * lines on a 390px phone and to three across the `sm` band and at 1280
- * (measured). Each entry is the line's visibility: the fourth is a phone's
- * alone.
+ * `lg:text-7xl` at `leading-none`, so 48, 60 and 72px lines. Reserve the
+ * longer Spanish title: five lines on a 390px phone and four at 1280
+ * (English uses four and three). This locale-neutral maximum keeps the shell
+ * instant while requestLocale resolves; the fifth line is phone-only.
  */
 const TITLE_LINE_HEIGHT = "h-12 sm:h-15 lg:h-18";
 const TITLE_LINES = [
   ["one", ""],
   ["two", ""],
   ["three", ""],
-  ["four", "sm:hidden"],
+  ["four", ""],
+  ["five", "sm:hidden"],
 ] as const;
 
 /**

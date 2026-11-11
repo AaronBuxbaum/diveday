@@ -1466,7 +1466,12 @@ test("the homepage's spreadsheet door survives, tagged, and lands on the columns
   // Which of the two a spreadsheet shop takes is the question the pair was
   // split to answer, so neither may quietly lose its tag.
   await expect(
-    page.getByRole("main").getByRole("link", { name: /and one for a spreadsheet →$/ }),
+    page
+      .getByRole("main")
+      .getByRole("link", {
+        name: diverTranslator("en-US")("marketing.home.guidesLink"),
+        exact: true,
+      }),
   ).toHaveAttribute("href", "/switching?from=home-records");
 
   await spreadsheetDoor.click();

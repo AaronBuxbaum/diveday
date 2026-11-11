@@ -60,11 +60,11 @@ describe("the landing's skeleton", () => {
     expect(phone).not.toHaveClass("h-[450px]");
   });
 
-  it("draws a line box for each line the title wraps to: four on a phone, three from sm and at lg", () => {
+  it("reserves the longer Spanish title: five phone lines and four from sm", () => {
     const { container } = render(<HomeBodySkeleton />);
     const lines = [...heroColumns(container).claim.querySelectorAll(".lg\\:h-18")];
-    expect(lines).toHaveLength(4);
-    expect(shownAt(lines)).toEqual([4, 3, 3]);
+    expect(lines).toHaveLength(5);
+    expect(shownAt(lines)).toEqual([5, 4, 4]);
   });
 
   it("reserves the Spanish description’s five phone lines and three from sm", () => {

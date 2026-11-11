@@ -12,13 +12,15 @@ test("a new course student is given the personal kit online and in the saved pre
   await page.getByRole("link", { name: "Book this date" }).first().click();
   const facts = page.getByRole("region", { name: t("trip.goodToKnow") });
   const supplied = facts.getByText(t("trip.packProvided"), { exact: true }).locator("..");
+  const coursePlan = page.getByTestId("trip-course-plan").filter({ visible: true });
+  await expect(coursePlan).toHaveCount(1);
   for (const key of ["trip.personalGear.snorkel", "trip.personalGear.boots"] as const) {
     await expect(supplied.getByText(t(key), { exact: true })).toBeVisible();
-    await expect(page.getByTestId("trip-course-plan")).not.toContainText(t(key));
+    await expect(coursePlan).not.toContainText(t(key));
   }
   await bookASeatAndOpenThread(page, "Personal Kit Student");
   const provided = page.getByRole("heading", { name: t("trip.packProvided") }).locator("..");
-  const bring = page.getByRole("heading", { name: t("trip.packBring") }).locator("..");
+  const bring = page.getByRole("heading", { name: t("trip.packBring"), exact: true }).locator("..");
   for (const key of ["trip.personalGear.snorkel", "trip.personalGear.boots"] as const) {
     await expect(provided).toContainText(t(key));
     await expect(bring).not.toContainText(t(key));
@@ -28,7 +30,10 @@ test("a new course student is given the personal kit online and in the saved pre
     t("trip.personalGear.boots"),
   );
   await expect(
-    gear.getByRole("textbox", { name: t("rental.bootSize"), exact: true }),
+    gear.getByRole("textbox", {
+      name: `${t("rental.bootSize")} ${t("common.optional")}`,
+      exact: true,
+    }),
   ).toBeVisible();
   const response = await request.get(`${new URL(page.url()).pathname}/offline`);
   expect(response.ok()).toBe(true);
