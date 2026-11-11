@@ -49,13 +49,13 @@ Claude can do the research pass and the drafting pass. Run it in a Claude Code s
 >
 > Score 0 to 6: own boat with stated capacity (2), named decision-maker with an address (2), a quoted booking-to-boat handoff (1), open and not stale (1). Tag the jurisdiction (US, Canada, UK/EU, Australia, other); do not judge legality.
 >
-> Draft only for a score of 4 or more. Use the template's main email, its no-detail question when no handoff was quoted, or the forwarding variant for a general inbox or form. The researched detail must restate a quoted fact as a question, never as a claim about how they work. Never name their booking vendor, a competitor, a price, the offer or anything unshipped. Keep the water paragraph word for word.
+> Draft only for a score of 4 or more. Use the template's main email, its no-detail line when no handoff was quoted, or the forwarding variant for a general inbox or form. The researched statement must restate a quoted fact and say why it caught your eye, never claim how they work. Never name their booking vendor, a competitor, a price, the offer or anything unshipped. Keep the water paragraph word for word.
 >
 > Hand over one markdown file and one CSV in [SHARED FOLDER]. Use the method's columns plus trip_types, own_boat, cert_agencies, email_kind, jurisdiction, score, evidence, quote_check, excluded_reason and dedup_key, and leave sent_on, follow_up_on and reply empty for Aaron. End with what you could not verify.
 
 ## The email
 
-The first email is the [cold email template](cold-email-template.md), rewritten 2026-11-11 from the founder's own email and three reviews. It keeps his strongest parts (a diver and engineer who has never run a shop, the boat he cannot test from a desk, "either answer helps") and adds one question restating a fact read on the shop's own page. A months-long trial, a fly-in offer and naming the shop's booking tool are out of the first email: they turn a four-word reply into a decision and put open terms on the table (H-20260724-public-founding-shop-price). They belong in the reply, once the captain says the morning is a real problem.
+The first email is the [cold email template](cold-email-template.md), rewritten 2026-11-11 on Aaron's call that it should say plainly it is outreach. It states who he is (a diver and ex-Google software engineer), what DiveDay is, why this shop (one fact read on its own page), where the product honestly stands, and one small ask: a 15-minute call or a test alongside the shop's paper count. Price, trial terms, the fly-in offer and the shop's booking tool stay out of the first email, because they belong in the reply (H-20260724-public-founding-shop-price is still open).
 
 ## Follow-up and channel
 

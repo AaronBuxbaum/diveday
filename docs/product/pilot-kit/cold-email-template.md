@@ -2,8 +2,7 @@
 
 The letter that opens a conversation with a shop the founder has no warm route into. It is the
 written cousin of the [first-call script](first-call-script.md), and it inherits that script's
-posture: **it is not a pitch.** Its job is to start a relationship with one person — which in
-practice means a one-line reply, or a forward to whoever runs the boat.
+posture: **it is outreach, and it says so.** Aaron decided on 2026-11-11 that a letter calling itself "a question, not a pitch" reads as a sales call in disguise. It is a short, honest first contact: who he is, what he is building, why this shop, and one small ask. Its job is a one-line reply, a call, or a forward to whoever runs the boat.
 
 The founder personalizes and sends every one of these by hand, from his own mailbox. Nothing here
 is sent automatically, in a sequence, or in bulk (`commercial-outreach` skill: no autonomous
@@ -20,15 +19,16 @@ objection, and leading with one signals that we misread the room.
 The deeper trap is subtler: **anything shaped like sales is answered like sales.** Objection
 handling, risk reversal, a benefits list, a discount — each one tells the reader this is a
 transaction, and a transaction with a stranger who has no customers is an easy no. The email has to
-be a letter from a person who wants to learn something, because that is what it actually is.
+be a letter from a person who can relate to the shop's morning and wants to learn whether he can help. It admits it is a first contact, and it never pretends otherwise.
 
 Four consequences shape every line below:
 
-1. **Nothing is asked that requires a change.** No trial, no signup, no demo homework, no
-   "15 minutes to show you". The reader can satisfy this email with four words typed at a dock.
-2. **It asks more than it tells.** One sentence says what DiveDay is. Nothing else describes the
-   product, because a description invites evaluation and evaluation of an unproven product ends
-   one way.
+1. **One small ask, with a way out.** A 15-minute call, and a one-line "we're fine" is welcome too.
+   No signup, no trial terms, no demo homework. The reader can satisfy this email with four words
+   typed at a dock.
+2. **It tells a little and asks a little.** One sentence says what DiveDay is and one says why this
+   shop. No benefits list, because a description invites evaluation and evaluation of an unproven
+   product ends one way.
 3. **No offer.** See [Why the offer is not in this email](#why-the-offer-is-not-in-this-email).
 4. **The honest weakness is the hook, not a confession to bury.** The founder has never run a shop,
    and the offline count has never been on a boat. That is the truthful reason to be writing to
@@ -42,11 +42,11 @@ one, because improvising it at send time is exactly where template-smell gets in
 
 ## Before sending — the research, ten minutes per shop
 
-`[RESEARCHED QUESTION]` is the load-bearing slot. Write **one question that restates one thing read on the shop's own
-pages**, never a claim about how they work: a named departure and time, a specific trip on their schedule, the charter they run
+`[RESEARCHED STATEMENT]` is the load-bearing slot. Write **one or two sentences that restate one thing read on the shop's own
+pages and say why it caught your eye**, never a claim about how they work. For example: "Your site has guests sign the waiver online and check in at the shop. That gap is the kind of thing I'm building for, and I'm curious how it plays out on a busy morning.": a named departure and time, a specific trip on their schedule, the charter they run
 Saturdays. It must be current and checkable.
 
-- **If nothing can be verified, use the no-detail version** of the question below. Sending with no
+- **If nothing can be verified, use the no-detail line** below. Sending with no
   detail beats sending with a guess: a wrong detail proves the email is a template and confirms the
   reader's no.
 - **Never guess what software the shop uses, and never name a vendor.** It cannot be verified from
@@ -68,29 +68,24 @@ sales-tool shape there is, and it is spotted before the email is opened.
 
 > [FIRST NAME],
 >
-> I'm a diver and an ex-Google software engineer, and I've been building a tool for running dive days, from booking through the head count on the boat. I've never run a shop, so this is a question and not a pitch.
+> I'm a diver and an ex-Google software engineer, and I'm building DiveDay, software for running a dive day: booking, waivers, cert checks and the head count on the boat. I'm writing because I think it could help [SHOP], and I'd like to find out if I'm right.
 >
-> [RESEARCHED QUESTION]
+> [RESEARCHED STATEMENT]
 >
-> The part I can't test from a desk is the water. Divers get counted between dives with the radio off, once the phone has the manifest saved, but it has never been on a real boat, in the sun, with wet hands, and I'm not willing to say it holds until someone has had it there.
+> I'll be straight about where it stands. I've never run a shop, and the head count between dives, which works with the radio off once the phone has the manifest saved, has never been on a real boat, in the sun, with wet hands. I'm looking for a shop that will let me test it alongside their own paper count and tell me where it breaks.
 >
-> Is that morning a real problem for you, or already sorted? Either answer is useful to me.
->
-> If the boat side is someone else's call, I'd be glad to be pointed their way.
+> Would you be open to a 15-minute call? If it isn't a problem for you, a one-line "we're fine" helps me too. And if someone else handles the boat side, I'd be glad to be pointed their way.
 >
 > Aaron Buxbaum
 > [CELL]
 > dive.day
 
-Slots: `[FIRST NAME]`, `[RESEARCHED QUESTION]`, `[CELL]`. Nothing else is variable.
+Slots: `[FIRST NAME]`, `[SHOP]`, `[RESEARCHED STATEMENT]`, `[CELL]`. Nothing else is variable.
 
-**If nothing about the shop could be verified**, the question paragraph is sent in this form
-instead — written out because the alternative is splicing a fragment at 11pm on the eleventh email
-of the week, which is where template-smell gets in:
+**If nothing about the shop could be verified**, replace the researched statement with this line instead
+of splicing a fragment at 11pm on the eleventh email of the week:
 
-> Does the hour before the boat leaves exist at your place, or do your trip mornings run themselves and I'm describing a problem you don't have?
-
-In that version, drop the closing "Is that morning a real problem" line, since this paragraph already asks it.
+> I don't know how your trip mornings run, which is partly why I'm writing.
 
 ### Before you hit send
 
@@ -103,7 +98,7 @@ Six checks, in the order they'd fail:
       marketing email is identified by its formatting before a word of it is read, and a template
       that announces itself defeats every sentence above.
 - [ ] **No merge field in the subject line.**
-- [ ] **`[RESEARCHED QUESTION]` restates something actually read on their pages** — or the no-detail
+- [ ] **`[RESEARCHED STATEMENT]` restates something actually read on their pages** — or the no-detail
       version above is used instead. No guesses, and no vendor named.
 - [ ] **A real cell number under the signature.** It is the mechanism for the phone call this email
       is hoping for: a mildly curious owner will text a number at 9pm, and will not click, book, or
@@ -117,12 +112,12 @@ Six checks, in the order they'd fail:
 | Part | Doing what |
 | --- | --- |
 | "an ex-Google software engineer" | One clause. Aaron chose this wording over "worked on Google Maps" (2026-11-11), and it is his own true biography. It answers "who is this" with something true and checkable, and is the only credential in the email. No diver cert level unless it is exact, and no shop count, quote or testimonial: there are none. |
-| "I've never run a shop" | The first paragraph's real content. It sets the relationship — someone asking, not someone selling — and it is why the rest of the email is allowed to ask a question. One clause says what DiveDay is, and the paragraph does not return to it. |
-| The researched question | Placed where the owner story used to be. It proves the founder read this shop's pages, asks about their morning instead of describing a product, and asserts nothing about how they work, so there is nothing to defend. The owner story was cut for length; the "I've never run a shop" clause carries the same job. |
+| "I've never run a shop" | The honest weakness, said inside the 'where it stands' paragraph. It sets the relationship as someone who can relate and wants to learn, and it is why the ask to test alongside their paper count is reasonable. |
+| The researched statement | Placed where the owner story used to be. It proves the founder read this shop's pages, shows he can relate to their morning, and asserts nothing about how they work, so there is nothing to defend. The owner story was cut for length; the "I've never run a shop" clause carries the same job. |
 | The water paragraph | The genuine reason this email exists rather than an ad, and the thing the reader has that the founder needs. It asserts only the half that is true and says the rest is untested — see [the offline line](#the-offline-line--read-this-before-editing-the-water-paragraph). |
-| The question, last | Asked up front it reads as qualification; asked after the reader knows why, answering feels like helping. "Either answer is useful to me" is what makes a *no* safe to send — without it the reader assumes a no invites a rebuttal and says nothing at all. |
+| The ask, last | A 15-minute call, with "a one-line 'we\'re fine' helps me too" as the easy way out. That line makes a *no* safe to send; without it the reader assumes a no invites a rebuttal and says nothing at all. |
 | "I'd be glad to be pointed their way" | The forwarding hatch, phrased as a request to a person rather than an instruction to a lead. A reader who isn't the decider gets a way to not-decide, which is the outcome this email most often wins. |
-| What is **absent** | No benefits list, no "nothing gets switched off", no export pitch, no scope disclaimer, no offer. Every one of those is objection handling, and objection handling is what tells a reader they are being sold to. They belong in the reply, where they answer a question that was actually asked. |
+| What is **absent** | No benefits list, no price or discount, no export pitch, no trial terms, no competitor named. Those belong in the reply, where they answer a question that was actually asked. |
 
 ### The offline line — read this before editing the water paragraph
 
@@ -176,14 +171,14 @@ in one sentence.
 
 ## Follow-up — about six business days later
 
-Same thread, no new subject, no guilt, and an easy out. It **re-asks the question** rather than only
+Same thread, no new subject, no guilt, and an easy out. It **re-asks the ask** rather than only
 offering a door marked no: six days on, in a threaded reply with the original collapsed, a message
 whose only frictionless action is a decline harvests closure instead of conversations, and nothing
 at all from the many readers who simply forgot.
 
 > One follow-up, then I'll stop.
 >
-> Still the same question: is the hour before the boat leaves a problem where you are, or is it already sorted? Either answer is useful to me. If it's a no, or just not this season, say the word and I'll leave it there.
+> Following up on my note about the hour before the boat leaves. Is a 15-minute call something you'd be open to? If it's a no, or just not this season, say the word and I'll leave it there.
 >
 > Aaron
 
