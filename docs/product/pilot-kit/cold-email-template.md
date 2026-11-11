@@ -77,7 +77,7 @@ sales-tool shape there is, and it is spotted before the email is opened.
 > Would you be open to a 15-minute call? If so, just reply and we can sort out how. If it isn't a problem for you, a one-line "we're fine" helps me too. And if someone else handles the boat side, I'd be glad to be pointed their way.
 >
 > Aaron Buxbaum
-> dive.day
+> https://www.dive.day
 
 Slots: `[GREETING]` ("Hello [SHOP] crew," by default; "Hi Dan," only when the shop's own page names the person who runs it; never a guessed first name), `[SHOP]`, `[RESEARCHED STATEMENT]`. Nothing else is variable.
 
@@ -190,7 +190,7 @@ entire goal is that they pass it on.
 > I'm writing about the hour before a boat leaves. Waivers, cert cards, knowing who's actually aboard. I write software, I've never run a shop, and I'm trying to learn from people who have, which is why I'm writing to shops one at a time instead of advertising. If that's someone's job there, would you pass this along? If it isn't, no reply needed.
 >
 > Aaron Buxbaum
-> dive.day
+> https://www.dive.day
 
 The subject is a routing instruction, which is the right shape for a gatekeeper. The body must not
 open on a category sentence ("I built software for running a dive day") — a front-desk person
