@@ -187,10 +187,17 @@ describe("getShopYear", () => {
       aboard: 12,
       seats: 12,
     });
-    // Today is the last square drawn, and the strip never runs past it.
+    // Activity ends today; the display retains the rest of the selected year.
     expect(year.lastDay).toBe("2026-08-27");
-    expect(year.strip.at(-1)?.day).toBe("2026-08-27");
-    expect(year.strip.at(-1)?.isToday).toBe(true);
+    expect(year.strip.at(-1)).toMatchObject({
+      day: "2026-12-31",
+      divers: 0,
+      boats: 0,
+      fill: 0,
+      isFuture: true,
+      isToday: false,
+    });
+    expect(year.strip.find((cell) => cell.day === "2026-08-27")?.isToday).toBe(true);
     // January 1 2026 is a Thursday, so the first column carries four padding
     // squares before it.
     expect(year.strip.slice(0, 4).every((cell) => cell.day === null)).toBe(true);
@@ -217,7 +224,7 @@ describe("getShopYear", () => {
     expect(year.quietestMonth).toEqual({ month: 2, divers: 3, boats: 1 });
   });
 
-  it("says since the month a shop opened in, and draws no square before it", async () => {
+  it("keeps the opening-month statistics while drawing the whole calendar", async () => {
     const db = await unseededTestDb();
     const shopId = await yearShop(db, "year-opened-mid-year");
     await sailedTrip(db, shopId, "2026-05-20", 8, 6);
@@ -229,9 +236,15 @@ describe("getShopYear", () => {
     expect(input.openedThisYear).toBe(true);
     expect(year.sinceMonth).toBe(5);
     expect(year.firstDay).toBe("2026-05-20");
-    // 2026-05-20 is a Wednesday: three padding squares, then the first day.
-    expect(year.strip.slice(0, 3).every((cell) => cell.day === null)).toBe(true);
-    expect(year.strip[3]?.day).toBe("2026-05-20");
+    // Calendar padding belongs to January 1, not the first recorded activity.
+    expect(year.strip.slice(0, 4).every((cell) => cell.day === null)).toBe(true);
+    expect(year.strip[4]).toMatchObject({ day: "2026-01-01", boats: 0, divers: 0, fill: 0 });
+    expect(year.strip.at(-1)?.day).toBe("2026-12-31");
+    expect(year.lastDay).toBe("2026-08-27");
+    expect(year.daysAtSea).toBe(2);
+    expect(year.boatsOut).toBe(2);
+    expect(year.divers).toBe(10);
+    expect(year.quietestMonth).toEqual({ month: 6, divers: 4, boats: 1 });
   });
 
   it("says nothing for a year with no departures", async () => {
