@@ -1,4 +1,5 @@
 import type { Locator } from "@playwright/test";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -244,8 +245,8 @@ test("staff moves a departure to a different boat after it is on the board", asy
  * (issue #704 slice 2) — a marina three miles out, a shore dive's beach car
  * park. Staff sets it on the trip's own details form; the diver reads it on
  * their thread once they hold a seat. The public page's "Good to know" block
- * also names it before booking (docs/design/surfaces.md), so this test only
- * pins that the thread carries it.
+ * names it before booking too (Aaron, 2026-11-11, #4376): a diver deciding to
+ * buy needs to know where they will be.
  */
 test("a departure's own meeting point reaches the diver once they hold a seat", async ({
   page,
@@ -270,6 +271,10 @@ test("a departure's own meeting point reaches the diver once they hold a seat", 
   await page.context().clearCookies();
   await page.goto(`/s/blue-mantis/trips/${tripId}`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  const goodToKnow = page.getByRole("region", {
+    name: diverTranslator("en-US")("trip.goodToKnow"),
+  });
+  await expect(goodToKnow.getByText("12 Dock Rd", { exact: true })).toBeVisible();
 
   await bookASeatAndOpenThread(page, "Meeting Point Diver");
   await expect(page.getByText("North Jetty Marina", { exact: true })).toBeVisible();
