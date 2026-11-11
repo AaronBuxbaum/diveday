@@ -125,7 +125,6 @@ describe("independent prompt concepts", () => {
       "review-flags",
       "review-themes",
       "same-person",
-      "sightings-match",
       "site-brief",
       "waiver-draft",
       "website-reading",

@@ -25,6 +25,20 @@ describe("sightingWindowStart", () => {
 });
 
 describe("rankSiteSightings", () => {
+  it("keeps custom words readable even when common catalog species fill the summary", () => {
+    const ranked = rankSiteSightings({
+      diveSiteId: "reef",
+      dives: 5,
+      tallies: [
+        tally("a", 5),
+        tally("b", 4),
+        tally("c", 3),
+        tally("d", 2),
+        { ...tally("custom:abc", 1), customName: "Seahome" },
+      ],
+    });
+    expect(ranked?.species.map((row) => row.speciesSlug)).toEqual(["a", "b", "c", "custom:abc"]);
+  });
   it("says nothing at all for a site with no log", () => {
     // A heading over an empty list is a page apologising for a feature the crew
     // has not used; the beat renders nothing instead.

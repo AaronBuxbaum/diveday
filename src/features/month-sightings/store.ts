@@ -78,6 +78,7 @@ export async function monthSightings(
         .where(
           and(
             eq(tripSightings.shopId, shopId),
+            isNull(tripSightings.customName),
             isNull(tripSightings.deletedAt),
             livePublicTripForShop(shopId),
             notRehearsal(),

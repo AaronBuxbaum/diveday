@@ -73,9 +73,9 @@
   adds up over a month into "seen here this month: southern stingray on 2 of 3 logged dives here".
   Nothing to do with a **Card sighting**, which is a staffer reading a certification card in their
   own hands; the two share only the English word, and neither is ever evidence for the other. The
-  species is refused rather than dropped when the catalog does not carry it, which is the opposite
-  call from an observed species and for the opposite reason: the slug *is* the record here, so one
-  with no words would reach a public page as punctuation. Refused too on a departure that has not
+  crew can choose from the full catalog or record their own words. Custom sightings retain their
+  original label for divers to read, combine case/spacing variants into one tally, and never
+  enter future preset chips or the catalog. Refused too on a departure that has not
   sailed (`hasSailed`) — a boat still alongside has seen nothing. Informs and gates nothing — it
   sits nowhere near the roll call's commit path or the manifest's head count — and it never
   promises: a site's summary counts *logged* dives in a trailing month, dates itself to the

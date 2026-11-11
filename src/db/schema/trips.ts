@@ -1061,14 +1061,10 @@ export const tripSightings = pgTable(
       .references(() => diveSites.id),
     /** The site's name as it stood when the crew tapped, so a rename never rewrites the log. */
     diveSiteName: text("dive_site_name").notNull(),
-    /**
-     * A `MARINE_LIFE_CATALOG` slug, refused by `recordTripSighting` when the
-     * catalog does not carry it. Never free text: what a diver reads is
-     * DiveDay's copy in their own language (ADR
-     * 20260813-marine-life-is-diveday-copy), and a slug with no words would
-     * reach a public page as punctuation.
-     */
+    /** Catalog slug, or a namespaced identity for a custom sighting. */
     speciesSlug: text("species_slug").notNull(),
+    /** Crew-written words, never added to the catalog or future preset chips. */
+    customName: text("custom_name"),
     /** How many the crew tapped for. At least one — a row at zero is a delete. */
     count: integer("count").notNull().default(1),
     recordedByPersonId: uuid("recorded_by_person_id")

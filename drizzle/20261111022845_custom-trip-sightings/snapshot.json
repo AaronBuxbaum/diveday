@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "23164f06-4696-4efd-8d19-e77057a8e496",
+  "prevIds": [
+    "50c7f499-ec85-4504-a72f-7843db697da5"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trip_sightings",
+        "custom_name"
+      ],
+      "writes": [
+        "s|col|public.trip_sightings.custom_name",
+        "n|col|public.trip_sightings.custom_name",
+        "e|col|public.trip_sightings.custom_name"
+      ],
+      "reads": [
+        "n|tbl|public.trip_sightings",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_sightings",
+        "name": "custom_name",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

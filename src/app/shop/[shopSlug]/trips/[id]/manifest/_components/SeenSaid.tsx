@@ -1,38 +1,20 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
-import type { SightingMatch } from "@/features/sightings-match";
 import type { SightingResult } from "../actions";
 
-export type SeenSaidCopy = {
-  label: string;
-  match: string;
-  matching: string;
-  add: string;
-  adding: string;
-  none: string;
-  /** `{name} × {count}`, filled here: the count is only known after the match. */
-  proposed: string;
-};
+export type SeenSaidCopy = { label: string; add: string; adding: string };
 
-/**
- * **Or say what you saw** (the `sightings` assist): a line the crew types or
- * dictates with the phone keyboard's own microphone, matched to this reef's
- * chips. The match is a proposal: nothing is logged until "Add these", which
- * taps each chip as many times as the proposal says, through the chip's own
- * action. A proposal can only name a chip on the row above it.
- */
+/** A catalog suggestion is optional: the crew can always record their own words. */
 export function SeenSaid({
-  chips,
-  match,
+  species,
   recordAction,
   onResult,
   copy,
 }: {
-  chips: readonly { slug: string; name: string }[];
-  match: (said: string) => Promise<SightingMatch[] | null>;
+  species: readonly { slug: string; name: string }[];
   recordAction: (
     previous: SightingResult | undefined,
     formData: FormData,
@@ -41,99 +23,156 @@ export function SeenSaid({
   copy: SeenSaidCopy;
 }) {
   const id = useId();
+  const input = useRef<HTMLInputElement>(null);
   const [said, setSaid] = useState("");
-  const [proposal, setProposal] = useState<SightingMatch[] | null>(null);
-  const [matching, startMatch] = useTransition();
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
   const [adding, startAdd] = useTransition();
-  const names = new Map(chips.map((chip) => [chip.slug, chip.name]));
-  const shown = (proposal ?? []).filter((item) => names.has(item.slug));
+  const normalize = (value: string) =>
+    value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
+  const query = normalize(said);
+  const suggestions = query ? species.filter((item) => normalize(item.name).includes(query)) : [];
+  const expanded = open && suggestions.length > 0;
+  useEffect(() => {
+    if (expanded && active >= 0)
+      document.getElementById(`${id}-option-${active}`)?.scrollIntoView?.({ block: "nearest" });
+  }, [active, expanded, id]);
 
-  function runMatch() {
-    const text = said.trim();
-    if (!text) return;
-    startMatch(async () => {
-      try {
-        setProposal((await match(text)) ?? []);
-      } catch {
-        setProposal([]);
-      }
-    });
+  function choose(name: string) {
+    setSaid(name);
+    setActive(-1);
+    setOpen(false);
+    input.current?.focus();
   }
 
-  function addAll() {
+  function add() {
+    if (!query || adding) return;
+    const exact = species.find((item) => normalize(item.name) === query);
+    const formData = new FormData();
+    formData.set(exact ? "speciesSlug" : "customName", exact?.slug ?? said.trim());
     startAdd(async () => {
-      for (const item of shown) {
-        for (let tap = 0; tap < item.count; tap += 1) {
-          const formData = new FormData();
-          formData.set("speciesSlug", item.slug);
-          const result = await recordAction(undefined, formData);
-          onResult(result);
-          if (result.status !== "ok") return;
+      try {
+        const result = await recordAction(undefined, formData);
+        onResult(result);
+        if (result.status === "ok") {
+          setSaid("");
+          setOpen(false);
+          setActive(-1);
         }
+      } catch {
+        onResult({ status: "error" });
       }
-      setProposal(null);
-      setSaid("");
     });
   }
 
   return (
-    <div className="mt-4">
+    <form
+      className="mt-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        add();
+      }}
+    >
       <label htmlFor={id} className="text-sm font-medium">
         {copy.label}
       </label>
       <div className="mt-1 flex gap-2">
-        <input
-          id={id}
-          value={said}
-          maxLength={300}
-          onChange={(event) => {
-            setSaid(event.target.value);
-            setProposal(null);
-          }}
-          className={`${controlClass} flex-1`}
-        />
+        <div className="relative min-w-0 flex-1">
+          <input
+            ref={input}
+            id={id}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={expanded}
+            aria-controls={`${id}-options`}
+            aria-activedescendant={expanded && active >= 0 ? `${id}-option-${active}` : undefined}
+            autoComplete="off"
+            value={said}
+            maxLength={300}
+            disabled={adding}
+            onFocus={() => setOpen(true)}
+            onBlur={() => {
+              setOpen(false);
+              setActive(-1);
+            }}
+            onChange={(event) => {
+              setSaid(event.target.value);
+              setOpen(true);
+              setActive(-1);
+            }}
+            onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing) {
+                if (event.key === "Enter") event.preventDefault();
+                return;
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setOpen(false);
+                setActive(-1);
+              }
+              if ((event.key === "ArrowDown" || event.key === "ArrowUp") && suggestions.length) {
+                event.preventDefault();
+                setOpen(true);
+                setActive((previous) =>
+                  previous < 0
+                    ? event.key === "ArrowDown"
+                      ? 0
+                      : suggestions.length - 1
+                    : (previous + (event.key === "ArrowDown" ? 1 : -1) + suggestions.length) %
+                      suggestions.length,
+                );
+              }
+              if (event.key === "Enter" && expanded && active >= 0) {
+                event.preventDefault();
+                choose(suggestions[active].name);
+              }
+            }}
+            className={`${controlClass} w-full`}
+          />
+          {expanded ? (
+            <div
+              id={`${id}-options`}
+              role="listbox"
+              aria-label={copy.label}
+              className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-border bg-surface shadow-lg"
+            >
+              {suggestions.map((item, index) => (
+                <div
+                  key={item.slug}
+                  id={`${id}-option-${index}`}
+                  role="option"
+                  tabIndex={-1}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      choose(item.name);
+                    }
+                  }}
+                  aria-selected={active === index}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => choose(item.name)}
+                  className={`cursor-pointer px-3 py-3 text-sm ${active === index ? "bg-surface-sunken" : ""}`}
+                >
+                  {item.name}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <button
-          type="button"
-          onClick={runMatch}
-          disabled={matching || !said.trim()}
-          aria-busy={matching || undefined}
+          type="submit"
+          disabled={adding || !query}
+          aria-busy={adding || undefined}
           className={buttonClass({
             variant: "secondary",
             size: "sm",
-            busy: matching,
+            busy: adding,
             className: "touch-manipulation",
           })}
         >
-          {matching ? copy.matching : copy.match}
+          {adding ? copy.adding : copy.add}
         </button>
       </div>
-      <div aria-live="polite">
-        {proposal && shown.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">{copy.none}</p>
-        ) : null}
-        {shown.length > 0 ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <ul className="flex flex-wrap gap-2">
-              {shown.map((item) => (
-                <li key={item.slug} className="rounded-full bg-surface-sunken px-3 py-1 text-sm">
-                  {copy.proposed
-                    .replace("{name}", names.get(item.slug) ?? "")
-                    .replace("{count}", String(item.count))}
-                </li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              onClick={addAll}
-              disabled={adding}
-              aria-busy={adding || undefined}
-              className={buttonClass({ size: "sm", busy: adding, className: "touch-manipulation" })}
-            >
-              {adding ? copy.adding : copy.add}
-            </button>
-          </div>
-        ) : null}
-      </div>
-    </div>
+    </form>
   );
 }

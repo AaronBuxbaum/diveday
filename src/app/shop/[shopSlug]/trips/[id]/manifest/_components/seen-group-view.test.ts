@@ -37,6 +37,16 @@ function view(overrides: Partial<Parameters<typeof seenGroupView>[0]> = {}) {
 }
 
 describe("seenGroupView", () => {
+  it("offers the whole catalog without AI and preserves custom tallies without preset chips", () => {
+    const seen = view({
+      loggedSightings: [
+        { diveSiteId: reef.id, speciesSlug: "custom:test", customName: "Seahome", count: 2 },
+      ] as never,
+    });
+    expect(seen?.autocomplete.species).toEqual(catalogSpecies);
+    expect(seen?.tallies[0]).toMatchObject({ name: "Seahome", count: 2 });
+    expect(seen?.chips.some((chip) => chip.name === "Seahome")).toBe(false);
+  });
   it("attaches the taps to the planned reef, with that reef's tallies only", () => {
     const seen = view();
     expect(seen?.copy.consequence).toBe(t("manifest.seen.consequence", { site: reef.name }));

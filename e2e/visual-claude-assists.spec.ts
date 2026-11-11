@@ -277,16 +277,27 @@ test.describe("light mode — Claude's assists, lit", () => {
         .evaluate((link: HTMLElement) => link.click());
       await page.waitForURL(/checkpoint=after_dive_1/);
       const seen = page.getByRole("region", { name: "Seen" });
+      await seen.getByRole("combobox").fill("seaho");
+      await expect(seen.getByRole("option").first()).toBeVisible();
+      await capture(page, "sightings-autocomplete", "light");
       // i18n-exempt: what the crew said, typed as they would
-      await seen.getByLabel("Or say what you saw").fill("two stingrays and a big grouper");
-      await seen.getByRole("button", { name: "Match" }).click();
-      const add = seen.getByRole("button", { name: "Add these" });
+      await seen
+        .getByRole("combobox", { name: "Or say what you saw" })
+        .fill("two stingrays and a big grouper");
+      const add = seen.getByRole("button", { name: "Add", exact: true });
       await add.waitFor();
       await add.evaluate((button) => button.scrollIntoView({ block: "center" }));
       await page.mouse.move(0, 0);
       await capture(page, "assist-sightings", "light");
       await add.click();
       await expect(seen.getByRole("listitem").first()).toBeVisible();
+      await capture(page, "sightings-custom-saved", "light");
+
+      // Free-text sightings stay out of AI facts. Give the recap a catalog fact.
+      await seen.getByRole("combobox").fill("seaho");
+      await seen.getByRole("option").first().click();
+      await add.click();
+      await expect(seen.getByRole("listitem")).toHaveCount(2);
 
       await page.goto(`/shop/${privateShop.slug}`);
       const recap = page.locator("details", { hasText: "Recap" }).first();

@@ -58,7 +58,6 @@ const PROMPT_ROOTS = [
   "src/features/review-flags/",
   "src/features/review-themes/",
   "src/features/same-person/",
-  "src/features/sightings-match/",
   "src/features/site-brief/",
   "src/features/waiver-draft/",
   "src/features/website-reading/",

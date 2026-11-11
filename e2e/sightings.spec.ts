@@ -120,3 +120,33 @@ test("a diver reads the crew's month under the site on the trip page", async ({ 
   // lines carry the honesty themselves.
   await expect(page.getByText("It says what was seen, not what you will see.")).toHaveCount(0);
 });
+
+test("full-catalog autocomplete and custom words survive reload without becoming chips", async ({
+  page,
+}) => {
+  // The manifest, two saves, reload and public trip read exercise the persisted flow.
+  test.setTimeout(45_000);
+  await openReefManifest(page);
+  const seen = page.getByRole("region", { name: "Seen" });
+  const input = seen.getByRole("combobox");
+  await input.fill("seaho");
+  await expect(seen.getByRole("option").first()).toBeVisible();
+  await input.press("ArrowDown");
+  await input.press("Enter");
+  await seen.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(input).toHaveValue("");
+  await input.fill("seahome");
+  await input.press("Enter");
+  await expect(seen.getByRole("listitem").filter({ hasText: "seahome" })).toBeVisible();
+  await page.reload();
+  await expect(seen.getByRole("listitem").filter({ hasText: "seahome" })).toBeVisible();
+  await expect(seen.getByRole("button", { name: "seahome", exact: true })).toHaveCount(0);
+  await input.fill("seaho");
+  await expect(seen.getByRole("option", { name: "seahome", exact: true })).toHaveCount(0);
+  await page.goto("/s/blue-mantis");
+  await page
+    .getByRole("link", { name: /Two-Tank Reef — Molasses & French/ })
+    .first()
+    .click();
+  await expect(page.getByText(/seahome on \d+ of \d+ logged dives/)).toBeVisible();
+});

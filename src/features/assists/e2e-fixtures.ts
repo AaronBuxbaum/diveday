@@ -7,7 +7,6 @@ import { RENTAL_NOTE_SYSTEM, rentalNoteFixture } from "@/features/rental-note";
 import { REVIEW_FLAGS_SYSTEM, reviewFlagsFixture } from "@/features/review-flags";
 import { REVIEW_THEMES_SYSTEM, reviewThemesFixture } from "@/features/review-themes";
 import { SAME_PERSON_SYSTEM, samePersonFixture } from "@/features/same-person";
-import { SIGHTINGS_MATCH_SYSTEM, sightingsMatchFixture } from "@/features/sightings-match";
 import { SITE_BRIEF_SYSTEM, siteBriefFixture } from "@/features/site-brief";
 import { SHOP_TRANSLATE_SYSTEM, shopTranslateFixture } from "../../lib/assists/shop-translate";
 import type { ClaudeMessage, ClaudeProvider, ClaudeRequest } from "../../lib/claude/provider";
@@ -42,7 +41,6 @@ const FIXTURES: ReadonlyMap<string, (request: ClaudeRequest) => unknown> = new M
   [SHOP_TRANSLATE_SYSTEM, shopTranslateFixture],
   [SITE_BRIEF_SYSTEM, siteBriefFixture],
   [RECAP_LINE_SYSTEM, recapLineFixture],
-  [SIGHTINGS_MATCH_SYSTEM, sightingsMatchFixture],
   [BENCH_NOTE_SYSTEM, benchNoteFixture],
   ...FRONT_FIXTURES,
 ]);
