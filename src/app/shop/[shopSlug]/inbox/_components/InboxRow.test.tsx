@@ -113,11 +113,16 @@ describe("a message from a stranger", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Unknown sender" }),
     );
+    const reply = new URL(
+      screen.getByRole("link", { name: "Reply by email" }).getAttribute("href") ?? "",
+    );
+    expect(reply.searchParams.get("subject")).toContain(MESSAGE.subject);
+    expect(reply.searchParams.get("body")).toContain(`> ${MESSAGE.body}`);
     // The one link starts a reply in the staffer's own mail app.
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Reply by email" })).toHaveAttribute(
       "href",
-      "mailto:marta.keller@example.net",
+      expect.stringContaining("mailto:marta.keller@example.net?subject="),
     );
   });
 
@@ -128,7 +133,7 @@ describe("a message from a stranger", () => {
     );
     expect(screen.getByRole("link", { name: "Reply by email" })).toHaveAttribute(
       "href",
-      "mailto:marta%2Bboats@example.net",
+      expect.stringContaining("mailto:marta%2Bboats@example.net?subject="),
     );
   });
 

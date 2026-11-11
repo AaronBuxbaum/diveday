@@ -16,10 +16,10 @@ import { canQuoteCharter } from "@/lib/authz";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { addDepartureHref } from "@/lib/date-requests";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
-import { formatShortDate } from "@/lib/format";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { RequestDayGroup, requestAdviceLines } from "./_components/RequestDayGroup";
+import { RequestDayPlan } from "./_components/RequestDayPlan";
 import { RequestDoneRow } from "./_components/RequestDoneRow";
 import { RequestLedgerRow } from "./_components/RequestLedgerRow";
 import { RequestReferenceRow } from "./_components/RequestReferenceRow";
@@ -210,7 +210,7 @@ export default async function RequestsPage({
     ) : null;
 
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <ShopPageHeader title={t("shared.shopSections.inbox")} />
       <StaffSectionTabs
         section="inbox"
@@ -237,6 +237,12 @@ export default async function RequestsPage({
         // One rhythm between groups, the page-section spacing every staff
         // surface uses — never a per-section `mt-*` that drifts.
         <div className="space-y-10">
+          {groups.length > 0 ? (
+            <div className="space-y-1 text-sm text-muted">
+              <p>{t("requests.plan.review")}</p>
+              <p>{t("requests.plan.dateOverlap")}</p>
+            </div>
+          ) : null}
           {groups.map((group) => {
             const advice = adviseRequests(
               group.entries.map(({ request }) => ({
@@ -253,14 +259,7 @@ export default async function RequestsPage({
               shop.diversPerDivemaster,
               t,
             );
-            // **The advice is a shared fact between days, not only within one.**
-            // A shop with one hull and one ratio advises the same hull and the
-            // same crew on every day that fits it, so the sentence stood
-            // verbatim under every group heading. It renders when it says
-            // something the group above did not — and always when it carries
-            // the warning, because "more divers than any hull you own" is a
-            // state rather than a repeated fact (principle 9, and the colour
-            // rule in ADR 20260827-clearwater-surface-language).
+            // Repeated hull/crew advice adds nothing; capacity warnings stay on each date.
             const joined = lines.map((line) => line.text).join("§");
             const repeats = joined === previousAdvice && !lines.some((l) => l.tone === "warning");
             previousAdvice = joined;
@@ -288,14 +287,19 @@ export default async function RequestsPage({
                   divers: advice.estimatedDivers,
                 })}
                 advice={repeats ? [] : lines}
-                onBoard={(boardByDate.get(group.date) ?? []).map((departure) => ({
-                  href: `${shopPath(shopSlug, "trips", departure.tripId)}#who-wants-in`,
-                  label: t("requests.onTheBoard", {
-                    when: formatShortDate(departure.startsAt, locale, timezone),
-                    title: departure.title,
-                    seats: departure.seatsLeft,
-                  }),
-                }))}
+                planning={
+                  <RequestDayPlan
+                    date={group.date}
+                    entries={group.entries}
+                    departures={boardByDate.get(group.date) ?? []}
+                    shopSlug={shopSlug}
+                    locale={locale}
+                    timezone={timezone}
+                    crewEnabled={shop.crewScheduleEnabled}
+                    crewAwayCountByTrip={requests.crewAwayCountByTrip}
+                    t={t}
+                  />
+                }
               >
                 {group.entries.map((entry) =>
                   // The full record belongs to one group — the first date this

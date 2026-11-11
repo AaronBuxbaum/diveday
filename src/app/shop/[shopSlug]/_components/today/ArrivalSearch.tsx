@@ -17,6 +17,7 @@ export function ArrivalSearch({
   query: string;
   copy: { label: string; placeholder: string };
 }) {
+  const searchRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -28,6 +29,9 @@ export function ArrivalSearch({
 
   useEffect(() => {
     setHydrated(true);
+    if (!document.querySelector("[data-add-panel-heading], [role=dialog]")) {
+      searchRef.current?.focus({ preventScroll: true });
+    }
     return () => {
       clearSearchTimer();
     };
@@ -58,6 +62,7 @@ export function ArrivalSearch({
   return (
     <QueryForm ref={formRef} onSubmitCapture={clearSearchTimer}>
       <SearchField
+        ref={searchRef}
         id="arrival-search"
         name="q"
         label={copy.label}

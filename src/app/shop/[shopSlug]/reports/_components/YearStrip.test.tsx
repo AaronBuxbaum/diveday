@@ -130,7 +130,7 @@ describe("YearStrip", () => {
     // April 1 (a Wednesday) to today, every one a day: padding is the weeks' shape only.
     const squares = [...grid.querySelectorAll("span")];
     expect(squares.map((square) => square.getAttribute("title"))).toEqual(
-      Array.from({ length: 10 }, (_, index) => `2026-04-${String(index + 1).padStart(2, "0")}`),
+      Array.from({ length: 30 }, (_, index) => `2026-04-${String(index + 1).padStart(2, "0")}`),
     );
     expect(screen.queryByRole("navigation")).toBeNull();
   });

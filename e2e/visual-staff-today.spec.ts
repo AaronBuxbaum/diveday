@@ -162,6 +162,9 @@ for (const scheme of ["light", "dark"] as const) {
       // that boat's Divers tab at the diver's own row.
       test(`the arrival lookup renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis?q=Priya%20Sharma");
+        await expect(
+          page.getByRole("searchbox", { name: staffCopy("shopHome.arrivals.label") }),
+        ).toBeFocused();
         await page
           .getByRole("link", { name: /check-in for Priya Sharma$/ })
           .first()

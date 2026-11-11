@@ -95,5 +95,7 @@
     "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",
     "deleted": "Message deleted",
     "gone": "That message is no longer in the inbox."
-  }
+  },
+  "replySubject": "Re: {subject}",
+  "quoteHeader": "On {date} at {time}, {name} wrote:"
 }

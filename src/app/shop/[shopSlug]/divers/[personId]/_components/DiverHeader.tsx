@@ -66,7 +66,7 @@ export function DiverHeader({
   locale: string;
   /** Dives left on the packages this diver holds (fourth UX review, item 20); null when none. */
   packages?: { left: number; of: number } | null;
-  /** The record's "⋯" (`DiverRecordMenu`): download and delete, beside Book; absent when neither is allowed. */
+  /** The record's "⋯" (`DiverRecordMenu`): download and delete, beside the name; absent when neither is allowed. */
   menu?: ReactNode;
 }) {
   return (
@@ -75,6 +75,7 @@ export function DiverHeader({
         eyebrow={t("divers.page.title")}
         title={diver.person.fullName}
         align="start"
+        actions={menu}
         meta={
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
             {/* `mailtoHref`/`telHref` (src/lib/contact-links.ts), not a template
@@ -161,12 +162,7 @@ export function DiverHeader({
       />
       {moment}
       {status?.tone === "success" ? <DiverFormStatus status={status} className="-mt-4" /> : null}
-      {book || menu ? (
-        <div className="mt-1 flex flex-wrap items-start gap-2">
-          {book}
-          {menu}
-        </div>
-      ) : null}
+      {book ? <div className="mt-1 flex flex-wrap items-start gap-2">{book}</div> : null}
     </>
   );
 }

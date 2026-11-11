@@ -2,11 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { loadActiveStaffRoles } from "@/db/authz";
+import { requireActiveStaffId } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { bookingAskFromMessage } from "@/features/booking-ask-assists";
 import { recordFormDraftIfVacant } from "@/features/form-drafts";
 import { readForm } from "@/features/form-parse";
+import { draftReplyToMessage } from "@/features/inbox-assists";
 import { requireStaffSession } from "@/features/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { callPanelHref } from "@/lib/took-a-call";
@@ -36,7 +37,7 @@ export async function requestFromMessageAction(formData: FormData): Promise<void
   const session = await requireStaffSession();
   const db = await getDb();
   const { shopId, shopSlug, personId } = session.user;
-  if (!(await loadActiveStaffRoles(db, shopId, personId))) redirect(shopPath(shopSlug, "inbox"));
+  if (!(await requireActiveStaffId(db, shopId, personId))) redirect(shopPath(shopSlug, "inbox"));
   const input = readForm(requestForm, formData);
   const messageId = uuidParam(input.messageId);
   const returnPersonId = uuidParam(input.returnPersonId);
@@ -59,4 +60,15 @@ export async function requestFromMessageAction(formData: FormData): Promise<void
   if (saved === "empty") redirect(noticeUrl(returnPath, "request-nothing"));
   if (saved === "exists") redirect(noticeUrl(returnPath, "request-draft-exists"));
   redirect(callPanelHref(shopSlug, { outcome: "date-request" }, "call"));
+}
+
+/** Draft only: no booking, saved request or message is created. */
+export async function draftInboxResponseAction(rawMessageId: string): Promise<string | null> {
+  const messageId = uuidParam(rawMessageId);
+  if (!messageId) return null;
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const { shopId, personId } = session.user;
+  if (!(await requireActiveStaffId(db, shopId, personId))) return null;
+  return draftReplyToMessage(db, { shopId, messageId });
 }

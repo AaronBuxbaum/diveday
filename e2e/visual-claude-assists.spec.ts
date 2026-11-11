@@ -103,6 +103,20 @@ test.describe("light mode — Claude's assists, lit", () => {
       // The row opens in place (visual review A15); its first act is the
       // door to the diver's record.
       await row.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
+      await row.getByRole("button", { name: "Draft response", exact: true }).click();
+      const response = row.getByRole("textbox", { name: "Response draft", exact: true });
+      await expect(response).toHaveValue(/Thanks for getting in touch/);
+      const mail = new URL(
+        (await row.getByRole("link", { name: "Reply by email" }).getAttribute("href")) ?? "",
+      );
+      expect(mail.searchParams.get("body")).toContain("> Hola, ¿podemos cambiar");
+      await capture(page, "assist-inbox-response-draft", "light");
+      // The fixed phone navigation must not prevent reaching the draft's manual action.
+      await page.setViewportSize({ width: 390, height: 844 });
+      const copyResponse = row.getByRole("button", { name: "Copy response", exact: true });
+      await copyResponse.scrollIntoViewIfNeeded();
+      await copyResponse.click({ trial: true });
+      await page.setViewportSize({ width: 1280, height: 800 });
       await row.getByRole("link", { name: "Open the record for Diego Alvarez" }).click();
       await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
       const conversation = page.getByRole("region", { name: "Conversation" });

@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { formDrafts } from "@/db/schema";
+import { formDrafts, personRoles } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -28,10 +29,12 @@ vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.f
 vi.mock("../../../../features/booking-ask-assists/store", () => ({
   bookingAskFromMessage: vi.fn(),
 }));
+vi.mock("@/features/inbox-assists", () => ({ draftReplyToMessage: vi.fn() }));
+const { draftReplyToMessage } = await import("@/features/inbox-assists");
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("../../../../features/session/rules");
 const { bookingAskFromMessage } = await import("../../../../features/booking-ask-assists/store");
-const { requestFromMessageAction } = await import("./assist-actions");
+const { requestFromMessageAction, draftInboxResponseAction } = await import("./assist-actions");
 
 const MESSAGE_ID = "8f000000-1111-4222-8333-444444444444";
 
@@ -124,5 +127,33 @@ describe("Make a request", () => {
     vi.mocked(bookingAskFromMessage).mockClear();
     await redirectedTo(() => requestFromMessageAction(form("not-a-uuid")));
     expect(bookingAskFromMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("Draft response", () => {
+  it("passes the session shop and selected message without saving a request", async () => {
+    const { db, shop, owner } = await signedIn();
+    vi.mocked(draftReplyToMessage).mockResolvedValue("Please park behind the shop.");
+    expect(await draftInboxResponseAction(MESSAGE_ID)).toBe("Please park behind the shop.");
+    expect(draftReplyToMessage).toHaveBeenCalledWith(db, {
+      shopId: shop.id,
+      messageId: MESSAGE_ID,
+    });
+    expect(await readFormDraft(db, shop.id, owner, "took_a_call")).toBeNull();
+  });
+  it("refuses a revoked staff role before reading a message", async () => {
+    const { db, owner } = await signedIn();
+    await db.delete(personRoles).where(eq(personRoles.personId, owner));
+    vi.mocked(draftReplyToMessage).mockClear();
+    expect(await draftInboxResponseAction(MESSAGE_ID)).toBeNull();
+    expect(draftReplyToMessage).not.toHaveBeenCalled();
+    vi.mocked(bookingAskFromMessage).mockClear();
+    await redirectedTo(() => requestFromMessageAction(form(MESSAGE_ID)));
+    expect(bookingAskFromMessage).not.toHaveBeenCalled();
+  });
+  it("refuses malformed message identifiers before reading a message", async () => {
+    vi.mocked(draftReplyToMessage).mockClear();
+    expect(await draftInboxResponseAction("not-an-id")).toBeNull();
+    expect(draftReplyToMessage).not.toHaveBeenCalled();
   });
 });

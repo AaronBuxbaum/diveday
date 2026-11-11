@@ -78,6 +78,7 @@ export function RequestDayGroup({
   label,
   advice = [],
   onBoard = [],
+  planning,
   children,
 }: {
   id: string;
@@ -89,6 +90,7 @@ export function RequestDayGroup({
    * `#who-wants-in` (ADR 20261017-one-interest-with-a-scope).
    */
   onBoard?: readonly { href: string; label: string }[];
+  planning?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -131,6 +133,7 @@ export function RequestDayGroup({
           ))}
         </ul>
       ) : null}
+      {planning}
       <ul className="mt-2">{children}</ul>
     </section>
   );

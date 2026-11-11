@@ -468,6 +468,9 @@ test.describe("staff", () => {
       .filter({ has: page.getByText("Discover Scuba Diving", { exact: true }) });
     await expect(scheduled).toContainText(/Next /);
     await expect(page.getByText("Not scheduled")).toHaveCount(0);
+    await views.getByRole("link", { name: "All", exact: true }).click();
+    await expect(page).not.toHaveURL(/[?&]view=/);
+    await expect(page.getByText("Not scheduled").first()).toBeVisible();
   });
 
   test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({

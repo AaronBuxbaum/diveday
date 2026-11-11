@@ -1,4 +1,3 @@
-import { EmptyState } from "@/components/EmptyState";
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -9,6 +8,7 @@ import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatMonthDay, monthNames, shortMonthNames } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import { type MonthFigure, MonthFigures } from "./MonthFigures";
+import { StripLegend } from "./StripLegend";
 import { YearStrip, type YearStripCopy } from "./YearStrip";
 
 /**
@@ -64,10 +64,6 @@ export function YearReport({
   shopSlug: string;
   t: StaffTranslator;
 }) {
-  if (!year.hasActivity) {
-    return <EmptyState title={t("reports.year.empty")} className="mt-8" />;
-  }
-
   const months = monthNames(locale);
   const monthMarkers = monthMarkersFor(year.strip, shortMonthNames(locale)).map((marker) => ({
     ...marker,
@@ -180,10 +176,7 @@ export function YearReport({
             months={monthMarkers}
             copy={stripCopy(t, locale, year.firstDay)}
           />
-          <p className="mt-2 flex justify-between text-xs text-muted">
-            <span>{t("reports.year.stripQuiet")}</span>
-            <span>{t("reports.year.stripFull")}</span>
-          </p>
+          <StripLegend t={t} />
         </section>
 
         <MonthFigures label={t("reports.year.numbersLabel")} figures={figures} columns={4} />
@@ -250,15 +243,19 @@ export function stripCopy(t: StaffTranslator, locale: string, firstDay: string):
   return {
     monthsLabel: t("reports.chooseMonth"),
     day: (cell: ShopYearCell) =>
-      cell.boats > 0
-        ? t("reports.year.stripDay", {
+      cell.isFuture
+        ? t("reports.year.stripFutureDay", {
             day: formatCalendarDate(cell.day ?? firstDay, locale),
-            divers: cell.divers,
-            boats: cell.boats,
           })
-        : t("reports.year.stripQuietDay", {
-            day: formatCalendarDate(cell.day ?? firstDay, locale),
-          }),
+        : cell.boats > 0
+          ? t("reports.year.stripDay", {
+              day: formatCalendarDate(cell.day ?? firstDay, locale),
+              divers: cell.divers,
+              boats: cell.boats,
+            })
+          : t("reports.year.stripQuietDay", {
+              day: formatCalendarDate(cell.day ?? firstDay, locale),
+            }),
   };
 }
 

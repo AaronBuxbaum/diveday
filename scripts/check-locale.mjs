@@ -82,6 +82,7 @@ const guardedRoots = ["src/app", "src/components"];
  * name. A third locale that disagrees is a decision, not a merge conflict.
  */
 export const DELIBERATELY_IDENTICAL = new Map([
+  ["staff/inbox.json replySubject", "standard email reply subject prefix"],
   ["staff/settings.json security.browser.chrome", "browser or operating system brand name"],
   ["staff/settings.json security.browser.edge", "browser or operating system brand name"],
   ["staff/settings.json security.browser.firefox", "browser or operating system brand name"],

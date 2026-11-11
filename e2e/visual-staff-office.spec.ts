@@ -598,9 +598,8 @@ for (const scheme of ["light", "dark"] as const) {
       // (slice 9g of ADR 20260827-the-shops-shelves; codes themselves are ADR
       // 20260729-shop-promo-codes). The seed holds a live code and an expired
       // one, so two shelves render and the windows and redemption counts sit on
-      // the rows. The demo has no Stripe account and never connects one, so
-      // nothing stands above the ledger: no Connect ask and no "New code" door
-      // that would open only on one (fourth review, item 53).
+      // the rows. New code stays available even without a Stripe account;
+      // required payment setup is explained inside that panel.
       test(`the discount codes page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/promos");
         await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();

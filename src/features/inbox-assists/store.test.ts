@@ -14,6 +14,7 @@ import {
   awaitsTriage,
   diverReplyLanguage,
   draftReplyFor,
+  draftReplyToMessage,
   replyFacts,
   translateReplyFor,
   triageInboundMessage,
@@ -471,5 +472,76 @@ describe("translateReplyFor", () => {
       env: keyed,
     });
     expect(await diverReplyLanguage(ctx.db, ctx.shop.id, personId)).toBeNull();
+  });
+});
+
+describe("draftReplyToMessage", () => {
+  it("answers a non-booking question from the selected message", async () => {
+    await setShopReplyNotes(ctx.db, ctx.shop.id, "Park behind the shop.");
+    const { messageId } = await diverWithMessage("Where do I park?");
+    const draft = await draftReplyToMessage(ctx.db, {
+      shopId: ctx.shop.id,
+      messageId,
+      env: keyed,
+      provider: answering({
+        reply: "Park behind the shop.",
+        medical: false,
+        eligibility: false,
+        confidence: 0.9,
+      }),
+    });
+    expect(draft).toBe("Park behind the shop.");
+  });
+  it("does not send another shop’s message to the model", async () => {
+    const { messageId } = await diverWithMessage("Where do I park?");
+    expect(
+      await draftReplyToMessage(ctx.db, {
+        shopId: "00000000-0000-4000-8000-000000000001",
+        messageId,
+        env: keyed,
+      }),
+    ).toBeNull();
+  });
+  it("does not draft for deleted or untrusted mail", async () => {
+    const { messageId } = await diverWithMessage("Where do I park?");
+    await ctx.db
+      .update(inboundMessages)
+      .set({ senderAuthenticated: false })
+      .where(eq(inboundMessages.id, messageId));
+    expect(
+      await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed }),
+    ).toBeNull();
+    await ctx.db
+      .update(inboundMessages)
+      .set({ senderAuthenticated: true, deletedAt: nowDate() })
+      .where(eq(inboundMessages.id, messageId));
+    expect(
+      await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed }),
+    ).toBeNull();
+  });
+});
+
+describe("selected-message draft freshness", () => {
+  it("discards a draft when the subject changes while the provider is answering", async () => {
+    const { messageId } = await diverWithMessage("Where do I park?");
+    const fixture = answering({
+      reply: "A staff member will confirm.",
+      medical: false,
+      eligibility: false,
+      confidence: 0.9,
+    });
+    const provider: ClaudeProvider = {
+      createMessage: async (request) => {
+        await ctx.db
+          .update(inboundMessages)
+          .set({ subject: "Corrected question" })
+          .where(eq(inboundMessages.id, messageId));
+        return fixture.createMessage(request);
+      },
+    };
+    expect(
+      await draftReplyToMessage(ctx.db, { shopId: ctx.shop.id, messageId, env: keyed, provider }),
+    ).toBeNull();
+    expect(fixture.requests).toHaveLength(1);
   });
 });

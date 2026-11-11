@@ -321,3 +321,54 @@ export async function translateReplyFor(
   });
   return value ? checkedTranslation(text, value.translation) : null;
 }
+
+/** A generic reply to exactly the selected message, including an unmatched sender. */
+export async function draftReplyToMessage(
+  db: AppDb,
+  input: { shopId: string; messageId: string; now?: Date } & AssistOptions,
+): Promise<string | null> {
+  const [message] = await db
+    .select({ subject: inboundMessages.subject, body: inboundMessages.body })
+    .from(inboundMessages)
+    .where(
+      and(
+        eq(inboundMessages.shopId, input.shopId),
+        eq(inboundMessages.id, input.messageId),
+        isNull(inboundMessages.deletedAt),
+        eq(inboundMessages.senderAuthenticated, true),
+        eq(inboundMessages.spamFlagged, false),
+        ne(inboundMessages.channel, "page"),
+      ),
+    )
+    .limit(1);
+  if (!message?.body.trim() || !(await assistsAvailable(db, input.shopId, input))) return null;
+  const thread: ThreadLine[] = [
+    { from: "diver", text: [message.subject, message.body].filter(Boolean).join("\n\n") },
+  ];
+  const { window, lines: facts } = await replyFacts(db, input.shopId, input.now);
+  const value = await runAssist(db, {
+    ...input,
+    feature: "inbox_draft",
+    call: replyDraftCall({ window, facts, thread }),
+  });
+  if (!value) return null;
+  // Erasure or an edit while the model was answering must not resurrect old words.
+  const [current] = await db
+    .select({ id: inboundMessages.id })
+    .from(inboundMessages)
+    .where(
+      and(
+        eq(inboundMessages.shopId, input.shopId),
+        eq(inboundMessages.id, input.messageId),
+        isNull(inboundMessages.deletedAt),
+        eq(inboundMessages.body, message.body),
+        message.subject === null
+          ? isNull(inboundMessages.subject)
+          : eq(inboundMessages.subject, message.subject),
+        eq(inboundMessages.senderAuthenticated, true),
+        eq(inboundMessages.spamFlagged, false),
+      ),
+    )
+    .limit(1);
+  return current ? groundedReply(value, { facts, thread }) : null;
+}

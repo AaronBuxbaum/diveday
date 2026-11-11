@@ -117,7 +117,7 @@ export default async function CoursesPage({
     keepQuery = true,
   }: {
     target?: number;
-    nextView?: CourseListView;
+    nextView?: CourseListView | null;
     keepQuery?: boolean;
   }) => {
     const search = new URLSearchParams();
@@ -132,7 +132,7 @@ export default async function CoursesPage({
     {
       key: "all",
       label: st("courses.list.views.all"),
-      href: listHref({ nextView: undefined }),
+      href: listHref({ nextView: null }),
       active: !view,
     },
     ...COURSE_LIST_VIEWS.map((key) => ({

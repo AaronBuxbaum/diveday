@@ -46,9 +46,9 @@ describe("ArrivalSearch", () => {
     expect(router.replace).toHaveBeenLastCalledWith("/shop/blue-mantis", { scroll: false });
   });
 
-  /** Today is not the counter: the box must not steal focus from the page. */
-  it("does not take focus on arrival", () => {
+  /** The arrival lookup opens ready for a name or scanner. */
+  it("takes focus on arrival", () => {
     render(<ArrivalSearch query="" copy={copy} />);
-    expect(document.activeElement).not.toBe(screen.getByRole("searchbox", { name: copy.label }));
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: copy.label }));
   });
 });

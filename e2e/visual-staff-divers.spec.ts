@@ -207,6 +207,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "diver-bram-fitting-note", scheme);
       });
 
+      test(`record actions stay above the expanded booking panel (${scheme})`, async ({ page }) => {
+        await openDiverProfile(page, "Priya", "Priya Sharma");
+        const menu = page.getByRole("button", { name: "Record actions" });
+        const before = await menu.boundingBox();
+        await page
+          .locator("summary", { hasText: staffCopy("divers.bookActivity.bookDeparture") })
+          .click();
+        await expect(
+          page.getByRole("combobox", { name: staffCopy("divers.bookActivity.courseOrDiveLabel") }),
+        ).toBeVisible();
+        const after = await menu.boundingBox();
+        expect(before).not.toBeNull();
+        expect(after).not.toBeNull();
+        expect(after?.y).toBe(before?.y);
+        await menu.click();
+        await expect(page.getByRole("link", { name: "Download record" })).toBeVisible();
+        await capture(page, "diver-booking-record-actions", scheme);
+      });
+
       test(`later departures stay open on the diver record (${scheme})`, async ({ page }) => {
         await openDiverProfile(page, "Priya", "Priya Sharma");
         await page

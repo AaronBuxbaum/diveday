@@ -34,7 +34,7 @@ function RequestRows({ count }: { count: number }) {
 
 export default function RequestsLoading() {
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="inbox" />

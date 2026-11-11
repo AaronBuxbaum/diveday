@@ -150,10 +150,9 @@ export default async function ReportsPage({
   const currency = toShopCurrency(shop.currency);
   const todayWall = utcToWallTime(now, tz);
   const thisMonth: MonthRef = { year: todayWall.year, month: todayWall.month };
-  // The oldest month this shop could have anything to report on. It is the
-  // floor of the back arrow and of a hand-edited `?month=`: walking further back only ever
-  // renders identical empty months, and `?month=0001-01` should land somewhere
-  // real rather than querying the year 1. An imported payment/refund is a
+  // The first observed month is the comparison floor. Navigation includes its whole year,
+  // but empty months before the first observation must not become a baseline.
+  // An imported payment/refund is a
   // genuine financial fact even without a DiveDay departure, so its earliest
   // eligible source day also moves this floor.
   const { earliestTripStart, earliestImportedFinancialDate } = await getReportsFloor(
@@ -169,7 +168,8 @@ export default async function ReportsPage({
   });
   // No ceiling: a shop that schedules ahead can still ask for a month that has
   // not happened yet, and the page frames it honestly as one that hasn't sailed.
-  const current = clampMonth(parseMonthKey(month) ?? thisMonth, floorMonth);
+  const navigationFloor = { year: floorMonth.year, month: 1 };
+  const current = clampMonth(parseMonthKey(month) ?? thisMonth, navigationFloor);
   const next = addMonths(current, 1);
 
   const { from: monthStart, to: monthEnd } = shopMonthBounds(current, tz);
@@ -263,10 +263,10 @@ export default async function ReportsPage({
     (current.year === thisMonth.year && current.month > thisMonth.month);
   // Paging forward past the current month is allowed but rarely useful — cap the
   // "next" arrow at the current month so the default view is the far edge. The
-  // back arrow stops at the shop's first month for the mirror-image reason:
-  // beyond it there is nothing but identical empty months.
+  // back arrow stops at January of the first observed year, keeping every
+  // month link from the year view reachable without inventing earlier history.
   const prevMonthKey =
-    compareMonths(current, floorMonth) > 0 ? monthKey(addMonths(current, -1)) : null;
+    compareMonths(current, navigationFloor) > 0 ? monthKey(addMonths(current, -1)) : null;
   const nextMonthKey = isThisMonth ? null : monthKey(next);
 
   // A square 44px target holding one glyph, through the shared `size: "icon"`
@@ -384,6 +384,7 @@ export default async function ReportsPage({
         )}
       </nav>
 
+      <MonthDays summary={monthSummary} locale={locale} t={t} month={current} />
       {!hasMonthlyActivity ? (
         <QuietMonth
           title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")}
@@ -393,7 +394,6 @@ export default async function ReportsPage({
         />
       ) : (
         <>
-          <MonthDays summary={monthSummary} locale={locale} t={t} month={current} />
           <MonthFigures label={t("reports.numbersLabel")} figures={figures} caption={figureBasis} />
 
           <MonthFootnotes

@@ -813,6 +813,8 @@ describe("listDeparturesOnDates", () => {
     const mine = found.find((row) => row.tripId === trip.id);
     expect(mine).toMatchObject({ title: trip.title, date: day });
     expect(mine?.seatsLeft).toBe(Math.max(0, trip.sellableCapacity - trip.booked));
+    expect(mine?.assignedCrewCount).toBe(trip.assignedCrewCount);
+    expect(mine?.isPrivate).toBe(trip.isPrivate);
     expect(found.every((row) => row.date === day)).toBe(true);
   });
 

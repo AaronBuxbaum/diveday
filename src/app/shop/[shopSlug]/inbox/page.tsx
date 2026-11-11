@@ -21,7 +21,7 @@ import {
   markInboxSenderLateAction,
   setInboxMessageDoneAction,
 } from "./actions";
-import { requestFromMessageAction } from "./assist-actions";
+import { draftInboxResponseAction } from "./assist-actions";
 
 /**
  * `?notice=` codes this page redirects back to itself with. Read through
@@ -116,7 +116,7 @@ export default async function InboxPage({
     const unread = waiting.flatMap((row) => (awaitsTriage(row.message) ? [row.message.id] : []));
     if (unread.length > 0) after(() => triageInboundMessagesSafely(db, shop.id, unread));
   }
-  const requestAction = assists ? requestFromMessageAction : undefined;
+  const responseAction = assists ? draftInboxResponseAction : undefined;
   const answered = messages.rows.filter((row) => row.message.answeredAt !== null);
   const banner = noticeFromParam(notice, NOTICES);
   const base = shopPath(shopSlug, "inbox");
@@ -168,7 +168,7 @@ export default async function InboxPage({
                     doneAction={setInboxMessageDoneAction}
                     seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
-                    requestAction={requestAction}
+                    responseAction={responseAction}
                   />
                 ))}
               </ul>
@@ -195,7 +195,7 @@ export default async function InboxPage({
                     doneAction={setInboxMessageDoneAction}
                     seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
-                    requestAction={requestAction}
+                    responseAction={responseAction}
                   />
                 ))}
               </ul>

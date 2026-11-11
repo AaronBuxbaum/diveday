@@ -11,10 +11,16 @@
     "urgent": "Urgente",
     "translation": "En {language}: {text}",
     "makeRequest": "Preparar una solicitud de reserva",
-    "makeRequestFor": "Preparar una solicitud de reserva con el mensaje de {name}",
     "makingRequest": "Leyendo…",
     "requestNothing": "Nada en ese mensaje se lee como una reserva.",
-    "requestDraftExists": "Completa o borra tu formulario de llamada sin terminar en Agregar una reserva, en Hoy, antes de preparar otra solicitud."
+    "requestDraftExists": "Completa o borra tu formulario de llamada sin terminar en Agregar una reserva, en Hoy, antes de preparar otra solicitud.",
+    "draftResponse": "Redactar respuesta",
+    "responseEmpty": "No se pudo redactar una respuesta segura. Responde con tus propias palabras.",
+    "responseLabel": "Borrador de respuesta",
+    "responseReview": "Revisa antes de enviar. Este borrador no modifica ninguna reserva.",
+    "copyResponse": "Copiar respuesta",
+    "responseCopyFailed": "Selecciona la respuesta para copiarla.",
+    "responseChanged": "Se conservaron tus cambios. Vuelve a redactar cuando quieras reemplazarlos."
   },
   "conversation": {
     "translatedFrom": "Traducido del {language}",

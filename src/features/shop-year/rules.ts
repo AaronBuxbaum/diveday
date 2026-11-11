@@ -62,15 +62,15 @@ export type ShopYearInput = {
   /** The window's last day. */
   endsOn: CalendarDate;
   /**
-   * The first shop-local day the window draws — `startsOn`, or the shop's
+   * The first observed shop-local day — `startsOn`, or the shop's
    * first day at sea when that falls later inside it.
    */
   firstDay: CalendarDate;
-  /** The last day drawn: today for the current window, `endsOn` for a past one. */
+  /** The last observed day: today for the current window, `endsOn` for a past one. */
   lastDay: CalendarDate;
   /** True when `firstDay` is the shop's first day at sea rather than `startsOn`. */
   openedThisYear: boolean;
-  /** Today in the shop's zone, so the strip can outline it and draw nothing after it. */
+  /** Today in the shop's zone, so the strip can outline it and distinguish future days. */
   today: CalendarDate;
   /** Different people who sailed in the window. Not the days' sum: one regular is one diver. */
   divers: number;
@@ -102,6 +102,8 @@ export type ShopYearCell = {
   boats: number;
   /** True for today's square, which is outlined. */
   isToday: boolean;
+  /** Future calendar context, not activity or an input to averages. */
+  isFuture?: boolean;
 };
 
 export type ShopYearSummary = {
@@ -165,29 +167,26 @@ function monthIsComplete(key: string, input: ShopYearInput): boolean {
 }
 
 /**
- * The strip: one square per day from the Sunday on or before the year's first
- * day through the last day drawn, laid out column by column so seven rows read
- * as the days of the week. Squares before the first day are padding and draw
- * nothing; there are no squares after today at all, which is the promise the
- * board makes — the year is what happened, never what is booked.
+ * The strip always shows the selected calendar window. Activity and averages
+ * still use firstDay/lastDay, so blank context never becomes observed data.
  */
 function buildStrip(input: ShopYearInput, byDay: Map<CalendarDate, ShopYearDay>): ShopYearCell[] {
-  const lead = calendarDateWeekday(input.firstDay);
-  let cursor = shiftCalendarDate(input.firstDay, -lead);
+  const lead = calendarDateWeekday(input.startsOn);
+  let cursor = shiftCalendarDate(input.startsOn, -lead);
   const cells: ShopYearCell[] = [];
-  // A year is 53 weeks at most, and the loop is bounded by the last day rather
-  // than by a count so a shop that opened in November draws eight columns.
-  while (cursor <= input.lastDay) {
-    if (cursor < input.firstDay) {
+  // Bound display to the selected period, including days before the first record.
+  while (cursor <= input.endsOn) {
+    if (cursor < input.startsOn) {
       cells.push({ day: null, fill: 0, divers: 0, boats: 0, isToday: false });
     } else {
-      const day = byDay.get(cursor);
+      const day = cursor <= input.lastDay ? byDay.get(cursor) : undefined;
       cells.push({
         day: cursor,
         fill: day ? fillFor(day) : 0,
         divers: day?.divers ?? 0,
         boats: day?.boats ?? 0,
         isToday: cursor === input.today,
+        isFuture: cursor > input.today,
       });
     }
     cursor = shiftCalendarDate(cursor, 1);

@@ -95,5 +95,7 @@
     "lateClosed": "Ese lugar ya no admite el aviso: hizo el check-in, se canceló o el barco ya salió.",
     "deleted": "Mensaje eliminado",
     "gone": "Ese mensaje ya no está en la bandeja."
-  }
+  },
+  "replySubject": "Re: {subject}",
+  "quoteHeader": "El {date} a las {time}, {name} escribió:"
 }

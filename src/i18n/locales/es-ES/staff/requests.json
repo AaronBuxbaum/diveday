@@ -6,7 +6,6 @@
     "day": "{date} — {groups, plural, one {# grupo} other {# grupos}} · {divers, plural, one {# buceador} other {# buceadores}}",
     "noDate": "Sin fecha concreta: {count, plural, one {# petición} other {# peticiones}}"
   },
-  "onTheBoard": "En el calendario: {when} · {title} · {seats, plural, =0 {completa} one {queda # plaza} other {quedan # plazas}}",
   "addDeparture": "Agregar una salida",
   "openDeparture": "Abrir una salida para esta fecha",
   "flexible": "Flexible",
@@ -61,5 +60,25 @@
     "booked": "Reservada el {date}",
     "marked": "Resuelta el {date}",
     "replied": "Respondida el {date}"
+  },
+  "plan": {
+    "interestHeading": "Solicitudes para esta fecha",
+    "preferred": "Primera opción",
+    "alternate": "Segunda opción",
+    "nearby": "Flexible y cercana",
+    "headcount": "{count, plural, one {# buceador en los tamaños de grupo indicados} other {# buceadores en los tamaños de grupo indicados}}",
+    "unknown": "{count, plural, one {# grupo sin tamaño indicado} other {# grupos sin tamaño indicado}}",
+    "interest": "{title} · {count, plural, one {# solicitud} other {# solicitudes}}",
+    "charters": "{count, plural, one {# solicitud de barco completo; revisar por separado} other {# solicitudes de barco completo; revisar por separado}}",
+    "departuresHeading": "Ya en el calendario",
+    "noDepartures": "No hay salidas programadas para esta fecha.",
+    "departure": "{when} · {title}",
+    "private": "Salida privada",
+    "seats": "{count, plural, =0 {No quedan plazas} one {# plaza libre} other {# plazas libres}}",
+    "crew": "{count, plural, =0 {Sin tripulación asignada} one {# tripulante asignado} other {# tripulantes asignados}}",
+    "review": "Compara las plazas con el tamaño de los grupos. Confirma que la salida sea adecuada para los buzos y que la tripulación esté disponible antes de ofrecer una plaza.",
+    "reviewCrew": "Revisar el calendario de tripulación",
+    "crewAway": "{count, plural, one {# tripulante asignado tiene una ausencia por confirmar} other {# tripulantes asignados tienen ausencias por confirmar}}",
+    "dateOverlap": "Las solicitudes flexibles pueden aparecer en más de una fecha."
   }
 }

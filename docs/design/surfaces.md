@@ -732,6 +732,20 @@ invalid field, and returns focus to the updated total after success.
   precedent.
 - **Composition:** figures then a ledger — the shape it always had, with the chrome removed.
 
+**Updated 2026-11-11** — Month and Year retain the whole selected calendar, including days
+before the first recorded activity. Empty context does not enter activity-window averages.
+The occupancy legend names its scale explicitly; mobile month chips leave room for keyboard focus.
+
+### Inbox planning — `/shop/[shopSlug]/inbox` and `/requests`
+
+- **One idea:** understand the request, then choose the next human action.
+- A response draft answers the selected message, stays editable and never sends itself. Email
+  replies quote the original message. Booking extraction remains a separate capability.
+- Date groups compare stated party sizes and interests with existing departures, open seats and
+  recorded crew/time-away facts. They do not promise suitability or staffing. Shared guidance is
+  stated once; each departure retains its own warning and the dated crew-schedule door.
+- Date requests and Reviews retain the Messages page width; Discounts retains Money's width.
+
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 
 **Declined 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):

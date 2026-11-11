@@ -5,7 +5,7 @@ import type { ShopYearCell, ShopYearFill } from "@/features/shop-year";
 /**
  * **The year as fifty-odd weeks of days** (ADR 20260908-one-hand, decision 6,
  * lever T) — one square per day, seven rows deep, the water deepening with how
- * full that day's boats were, today outlined, and nothing at all after today.
+ * full that day's boats were, today outlined, with future days shown as outlined calendar context.
  *
  * Drawn in the app's own tokens rather than copied off the canvas: the fills
  * are the lagoon at four strengths, so the strip follows the palette into the
@@ -33,7 +33,7 @@ import type { ShopYearCell, ShopYearFill } from "@/features/shop-year";
  */
 
 /** The lagoon at four strengths: no boat, a thin boat, a good boat, a full one. */
-const FILL_CLASS: Record<ShopYearFill, string> = {
+export const FILL_CLASS: Record<ShopYearFill, string> = {
   0: "bg-surface-sunken",
   1: "bg-primary/25",
   2: "bg-primary/55",
@@ -104,7 +104,7 @@ export function YearStrip({
             wide across 390px (the weeks a label spans are about 33px), so below
             `sm` the months are a row of 44 by 44px chips that scrolls sideways
             and the labels in the strip are plain words (#2573). */}
-        <ul className="-mx-4 mb-1 flex gap-2 overflow-x-auto px-4 sm:hidden">
+        <ul className="-mx-4 mb-1 flex gap-2 overflow-x-auto px-4 py-1.5 sm:hidden">
           {months.map((month) => (
             <li key={month.key} className="shrink-0">
               <Link
@@ -171,7 +171,7 @@ function DaySquare({ cell, copy }: { cell: ShopYearCell; copy: YearStripCopy }) 
   return (
     <span
       title={copy.day(cell)}
-      className={`aspect-square rounded-[2px] ${FILL_CLASS[cell.fill]} ${
+      className={`aspect-square rounded-[2px] ${cell.isFuture ? "border border-dashed border-border" : FILL_CLASS[cell.fill]} ${
         cell.isToday
           ? "outline-2 -outline-offset-2 outline-foreground max-sm:outline-1 max-sm:-outline-offset-1"
           : ""
