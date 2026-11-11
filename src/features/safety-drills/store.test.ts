@@ -120,6 +120,7 @@ describe("recordSafetyDrill", () => {
 
   it("refuses a participant who is not this shop's staff", async () => {
     const { db, shop } = ctx;
+    const before = await db.select().from(safetyDrills).where(eq(safetyDrills.shopId, shop.id));
     const { ownerId, today } = await cast();
     const [diver] = await db
       .insert(people)
@@ -136,7 +137,7 @@ describe("recordSafetyDrill", () => {
       }),
     ).resolves.toEqual({ ok: false, reason: "invalid_participant" });
     expect(await db.select().from(safetyDrills).where(eq(safetyDrills.shopId, shop.id))).toEqual(
-      [],
+      before,
     );
   });
 });
@@ -145,6 +146,13 @@ describe("lastSafetyDrills and deleteSafetyDrill", () => {
   it("answers the latest live drill per kind; a deleted drill no longer counts", async () => {
     const { db, shop } = ctx;
     const { ownerId } = await cast();
+    // Isolate this timeline from the demo's recent practice drills.
+    for (const drill of await db
+      .select()
+      .from(safetyDrills)
+      .where(eq(safetyDrills.shopId, shop.id))) {
+      await deleteSafetyDrill(db, { shopId: shop.id, personId: ownerId, drillId: drill.id });
+    }
     const base = { shopId: shop.id, recordedByPersonId: ownerId, participantIds: [] };
     await recordSafetyDrill(db, { ...base, kind: "oxygen", heldOn: daysAgo(94, shop.timezone) });
     const newer = await recordSafetyDrill(db, {
