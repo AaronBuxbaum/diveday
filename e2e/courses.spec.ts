@@ -1264,7 +1264,9 @@ test.describe("the course editor over a wander through the app", () => {
     };
     const goBySearch = async (name: string) => {
       await page.locator("header").getByRole("button", { name: "Search" }).click();
-      await page.getByRole("combobox").fill(name);
+      await page
+        .getByRole("combobox", { name: "Search divers, trips, and pages", exact: true })
+        .fill(name);
       await page
         .getByRole("option", { name: new RegExp(name) })
         .first()
@@ -1285,7 +1287,9 @@ test.describe("the course editor over a wander through the app", () => {
 
     // Back the way a person would come back: through the search, not history.
     await page.locator("header").getByRole("button", { name: "Search" }).click();
-    await page.getByRole("combobox").fill("Courses");
+    await page
+      .getByRole("combobox", { name: "Search divers, trips, and pages", exact: true })
+      .fill("Courses");
     await page
       .getByRole("option", { name: /Courses/ })
       .first()
