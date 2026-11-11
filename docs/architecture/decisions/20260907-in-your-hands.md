@@ -129,9 +129,12 @@ or staged TOTP secret cannot. Password reset remains the lost-device recovery ro
 factor enrollment on an account without either factor stays unchanged. This closes replacement
 of the factor from an unattended protected session without forcing possession of a lost key.
 Credential rows are excluded from shop
-exports and cascade with the account or shop; expired challenge machinery is removed on issuance
-and by retention. No diver account, counter signing, card capture, production configuration or
-deployment is part of this slice.
+exports and cascade with the account or shop. An eligible former staffer's erasure explicitly
+destroys their live/deleted credentials and account-bound ceremonies before the retained account
+is redacted and disabled; current staff erasure stays refused. Anonymous ceremonies name nobody
+and remain unrelated. Expired challenge machinery is removed on issuance and by retention. No
+diver account, counter signing, card capture, production configuration or deployment is part of
+this slice.
 
 ### 3. Hand it over (H-20260907-where-device-already-knows b)
 
