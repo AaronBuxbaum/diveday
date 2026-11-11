@@ -5,6 +5,7 @@ import {
   countDistinct,
   desc,
   eq,
+  getTableColumns,
   gt,
   gte,
   inArray,
@@ -85,6 +86,52 @@ export async function countShopTrips(db: DbExecutor, shopId: string): Promise<nu
   return row?.total ?? 0;
 }
 
+/**
+ * **The course and dive-site columns a board row carries** (performance audit
+ * 2026-11-11, item 5): every column except the wide ones no schedule, picker
+ * or board renders. The board's query groups and sorts every upcoming trip
+ * before its `LIMIT`, so each wide column here was dragged through that work
+ * for every departure in scope.
+ *
+ * - Course: `sourceTemplateSnapshot` (a full copy of the template), and the
+ *   course page's long-form content — `overview`, `galleryPhotos`,
+ *   `includes`, `excludes`, `scheduleDays`, `faqs`, `learningMaterials`.
+ *   The course page reads those through its own reader.
+ * - Dive site: `templateUpdateUndo`, the template-update undo payload only
+ *   the site editor reads.
+ *
+ * The narrowing is in the type too: a board consumer that starts needing one
+ * of these fails to compile rather than reading `undefined`.
+ */
+const {
+  sourceTemplateSnapshot: _sourceTemplateSnapshot,
+  overview: _overview,
+  galleryPhotos: _galleryPhotos,
+  includes: _includes,
+  excludes: _excludes,
+  scheduleDays: _scheduleDays,
+  faqs: _faqs,
+  learningMaterials: _learningMaterials,
+  ...boardCourseColumns
+} = getTableColumns(courses);
+const { templateUpdateUndo: _templateUpdateUndo, ...boardDiveSiteColumns } =
+  getTableColumns(diveSites);
+
+/** A course as a board row carries it ({@link boardCourseColumns}). */
+export type BoardCourse = Omit<
+  typeof courses.$inferSelect,
+  | "sourceTemplateSnapshot"
+  | "overview"
+  | "galleryPhotos"
+  | "includes"
+  | "excludes"
+  | "scheduleDays"
+  | "faqs"
+  | "learningMaterials"
+>;
+/** A dive site as a board row carries it ({@link boardDiveSiteColumns}). */
+export type BoardDiveSite = Omit<typeof diveSites.$inferSelect, "templateUpdateUndo">;
+
 export type TripWithBookedCount = typeof trips.$inferSelect & {
   booked: number;
   /** The boat's raw total-occupant capacity, including assigned crew places. */
@@ -104,8 +151,8 @@ export type TripWithBookedCount = typeof trips.$inferSelect & {
    * divemaster ratio supervises. Capacity and headcount stay on `booked`.
    */
   bookedDivers: number;
-  course: typeof courses.$inferSelect | null;
-  diveSite: typeof diveSites.$inferSelect | null;
+  course: BoardCourse | null;
+  diveSite: BoardDiveSite | null;
 };
 
 /**
@@ -128,8 +175,8 @@ export async function upcomingTripsWithCounts(
   const rows = await db
     .select({
       trip: trips,
-      course: courses,
-      diveSite: diveSites,
+      course: boardCourseColumns,
+      diveSite: boardDiveSiteColumns,
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
       certifiedPassengers: tripBoatCertifiedPassengers(),
@@ -708,8 +755,8 @@ export async function pagedUpcomingTripsWithCounts(
   const rows = await db
     .select({
       trip: trips,
-      course: courses,
-      diveSite: diveSites,
+      course: boardCourseColumns,
+      diveSite: boardDiveSiteColumns,
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
       certifiedPassengers: tripBoatCertifiedPassengers(),
@@ -900,8 +947,8 @@ export async function offsetUpcomingTripsWithCounts(
       db
         .select({
           trip: trips,
-          course: courses,
-          diveSite: diveSites,
+          course: boardCourseColumns,
+          diveSite: boardDiveSiteColumns,
           booked: count(bookings.id),
           bookedDivers: bookedDiversCount(),
           certifiedPassengers: tripBoatCertifiedPassengers(),
