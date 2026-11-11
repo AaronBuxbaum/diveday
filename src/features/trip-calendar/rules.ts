@@ -4,6 +4,8 @@
  * Framework-free and pure so both callers can be tested without a request.
  */
 
+import type { CourseScheduleDay } from "@/lib/courses";
+
 type CalendarTrip = {
   title: string;
   description?: string | null;
@@ -131,5 +133,44 @@ export function tripCalendarFile(trip: CalendarTrip & { stamp?: Date; revision: 
     // of the trip's own is a stable stamp — and one that keeps the file
     // byte-identical across renders, which the visual and e2e fleets depend on.
     stamp: trip.stamp ?? trip.startsAt,
+  });
+}
+
+/**
+ * Courses meet in recorded windows, with no charter arrival offset. Catalog
+ * clock times describe the general course; they never schedule this session.
+ * Only pair a catalog day with a meeting when the complete numbered plan fits.
+ */
+export function courseCalendarFile(
+  course: CalendarTrip & {
+    revision: number;
+    meetings: readonly { dayNumber: number; startsAt: Date; endsAt: Date }[];
+    scheduleDays: readonly CourseScheduleDay[];
+  },
+): string {
+  const meetings = course.meetings.length
+    ? [...course.meetings].sort((a, b) => a.dayNumber - b.dayNumber)
+    : [{ dayNumber: 1, startsAt: course.startsAt, endsAt: course.endsAt }];
+  const hasMatchingPlan =
+    course.scheduleDays.length === meetings.length &&
+    meetings.every((meeting, index) => meeting.dayNumber === index + 1);
+  return calendarDocument({
+    stamp: course.startsAt,
+    events: meetings.map((meeting) => {
+      const plan = hasMatchingPlan ? course.scheduleDays[meeting.dayNumber - 1] : undefined;
+      return {
+        ...course,
+        startsAt: meeting.startsAt,
+        endsAt: meeting.endsAt,
+        title: plan ? `${course.title} — ${plan.title}` : course.title,
+        description: [course.description, plan && [plan.title, ...plan.items].join("\n")]
+          .filter(Boolean)
+          .join("\n\n"),
+        // Keep the former continuous event's identity for day one. Later days
+        // use the logical day number: edits replace row IDs and move instants.
+        uid: `${course.url}${meeting.dayNumber === 1 ? "" : `#day-${meeting.dayNumber}`}@diveday`,
+        sequence: course.revision,
+      };
+    }),
   });
 }

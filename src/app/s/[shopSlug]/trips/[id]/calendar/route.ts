@@ -1,44 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
-import { getTripWithBooked } from "@/db/trips";
-import { tripCalendarFile } from "@/features/trip-calendar";
+import { getTripWithBooked, listTripScheduleDays } from "@/db/trips";
+import { courseCalendarFile, tripCalendarFile } from "@/features/trip-calendar";
 import { requestTranslator } from "@/i18n/request";
+import { courseDepthFormat } from "@/i18n/unit-labels";
+import { resolveCourseContentDepths } from "@/lib/courses";
 import { formatTime } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
 
 /**
- * **The diver's "add to my calendar" download** — a living anchor for the day
- * rather than a date holder (issue #1165, delight report D05).
- *
- * Two things it now carries that it did not:
- *
- * **It starts at the dock call.** The trip page already tells a diver to
- * arrive `dockCallMinutes` before departure (`dockDayOffsets`,
- * `src/lib/diver-planning.ts`), so an event beginning when the lines come off
- * is an event that makes a punctual diver late. Nothing is hidden by that: the
- * description states the departure time in the same breath, so the calendar
- * and the page cannot be read as disagreeing.
- *
- * **It points at the meeting point.** This used to hand the calendar the *dive
- * site's* location name, which for a boat dive is a reef — a place no calendar
- * app can navigate anyone to, and for a departure with its own meeting point
- * (issue #704) the wrong parking lot. The staff feed fixed exactly this in
- * `feed-trips.ts`; the diver's file was still doing it.
- *
- * **It says which revision it is.** `SEQUENCE` ships from `trips.revision`,
- * which moves for a change to the departure time or to the list of dive sites
- * and for nothing else (`src/lib/trip-revision.ts`). A diver who downloads the
- * file again after the boat moved gets their existing entry updated rather
- * than a second one beside it; a conditions note the crew types at the rail
- * leaves the counter alone, so nobody's phone re-alerts for it.
- *
- * **What is deliberately not here** is the packing line D05 also asks for.
- * This route is public and holds no booking, so it cannot know what *this*
- * diver rented, is bringing, or is provided (`PackingSection` composes that
- * from their own booking). A generic "bring your certification card" would be
- * an invented fact about a day the shop never described, which is the one
- * thing D05's boundary rules out.
+ * Public calendar download: charter arrivals retain the dock call; courses
+ * export their recorded meetings. No booking, packing list or private notes.
  */
 export async function GET(
   request: NextRequest,
@@ -58,33 +31,52 @@ export async function GET(
   const tz = shop.timezone;
   const tripUrl = new URL(publicTripPath(shopSlug, id), request.url).toString();
   const dockCallAt = new Date(trip.startsAt.getTime() - shop.dockCallMinutes * 60_000);
-  // Where the diver actually stands, falling back to the dive site only when
-  // the shop has named no meeting point — the same order the staff feed uses.
   const meetingPoint =
-    [trip.meetingPointLabel, trip.meetingPointAddress].filter(Boolean).join(", ") || null;
-
-  const file = tripCalendarFile({
-    title: `${trip.title} with ${shop.name}`,
-    description: [
-      t("trip.calendarDockCall", {
-        dockCall: formatTime(dockCallAt, locale, tz),
-        departure: formatTime(trip.startsAt, locale, tz),
-      }),
-      meetingPoint ? t("trip.calendarMeetingPoint", { place: meetingPoint }) : null,
-      trip.description,
-    ]
+    [trip.meetingPointLabel, trip.meetingPointAddress]
+      .map((part) => part?.trim())
       .filter(Boolean)
-      .join("\n\n"),
-    startsAt: dockCallAt,
-    endsAt: trip.endsAt,
-    location: meetingPoint ?? trip.diveSite?.locationName,
-    url: tripUrl,
-    // The departure, not the dock call: DTSTAMP is about the trip this copy
-    // describes, and keeping it on the published time leaves the file
-    // byte-identical for a shop that sets no dock call.
-    stamp: trip.startsAt,
-    revision: trip.revision,
-  });
+      .join(", ") || null;
+  const meetingDescription = meetingPoint
+    ? t("trip.calendarMeetingPoint", { place: meetingPoint })
+    : null;
+
+  const file = trip.courseId
+    ? courseCalendarFile({
+        title: `${trip.title} with ${shop.name}`,
+        description: [meetingDescription, trip.description].filter(Boolean).join("\n\n"),
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        location: meetingPoint,
+        url: tripUrl,
+        revision: trip.revision,
+        meetings: await listTripScheduleDays(db, shop.id, trip.id),
+        scheduleDays: trip.course
+          ? resolveCourseContentDepths(trip.course, courseDepthFormat(t, shop.depthUnit))
+              .scheduleDays
+          : [],
+      })
+    : tripCalendarFile({
+        title: `${trip.title} with ${shop.name}`,
+        description: [
+          t("trip.calendarDockCall", {
+            dockCall: formatTime(dockCallAt, locale, tz),
+            departure: formatTime(trip.startsAt, locale, tz),
+          }),
+          meetingDescription,
+          trip.description,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+        startsAt: dockCallAt,
+        endsAt: trip.endsAt,
+        location: meetingPoint ?? trip.diveSite?.locationName,
+        url: tripUrl,
+        // The departure, not the dock call: DTSTAMP is about the trip this copy
+        // describes, and keeping it on the published time leaves the file
+        // byte-identical for a shop that sets no dock call.
+        stamp: trip.startsAt,
+        revision: trip.revision,
+      });
   return new NextResponse(file, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
