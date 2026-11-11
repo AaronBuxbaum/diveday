@@ -3,12 +3,15 @@ export type { PricingStatement } from "./store";
 export {
   billableWindow,
   closePricingMonth,
+  collectionCurrencies,
   getPricingStatement,
+  hasIncompleteCollectionEvidence,
   latestPricingStatement,
   listBillableShops,
   markPricingReportAttempted,
   markPricingStatementReported,
   meterIdentifier,
+  pricingMonthsToClose,
   processedVolumeCents,
   statementMonth,
 } from "./store";

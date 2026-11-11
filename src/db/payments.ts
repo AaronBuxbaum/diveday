@@ -1,16 +1,29 @@
-import { and, desc, eq, getViewSelectedFields, inArray } from "drizzle-orm";
+import { and, desc, eq, getViewSelectedFields, inArray, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { groupSeatSettled } from "@/lib/group-holds";
 import { log } from "@/lib/log";
 import type { AppTransaction, DbExecutor } from "./client";
+import { recordCollectionBalance } from "./collection-ledger";
 import { boundLockWaits } from "./lock-bounds";
+import {
+  SETTLEMENT_AFTER_FINAL_STATE,
+  SETTLEMENT_CURRENCY_MISMATCH,
+  SETTLEMENT_SOURCE_MISMATCH,
+} from "./payment-operations";
 import type {
   BookingPayment,
   ManualPaymentMethod,
   PaymentEventOperation,
   PaymentStatus,
 } from "./schema";
-import { bookingPaymentEvents, bookingPayments, bookings, trips } from "./schema";
+import {
+  bookingCheckoutBookings,
+  bookingPaymentEvents,
+  bookingPayments,
+  bookings,
+  paymentOperationIntents,
+  trips,
+} from "./schema";
 
 /**
  * Serializes every write to one booking's payment entries through a lock on
@@ -51,6 +64,8 @@ export type SetPaymentInput = {
   bookingId: string;
   status: PaymentStatus;
   amountCents?: number | null;
+  /** Only the manually received portion on a mixed Stripe/external payment. */
+  manualHeldCents?: number;
   /**
    * Required, not defaulted. The old `?? "usd"` meant the counter-cash path —
    * which passes no currency — wrote `usd` onto a Mexican shop's settled row,
@@ -77,6 +92,10 @@ export type SetPaymentInput = {
    * cancellation refund — states its own.
    */
   operation?: PaymentEventOperation;
+  /** Staff form version, checked under the source lock; null means no entry yet. */
+  expectedPaymentEntryId?: string | null;
+  /** Native receipt source retained for operator reconciliation. */
+  receiptSource?: { checkoutId: string } | { orderId: string };
 };
 
 /**
@@ -98,6 +117,7 @@ function paymentStateChanged(
     BookingPayment,
     | "status"
     | "amountCents"
+    | "manualHeldCents"
     | "currency"
     | "provider"
     | "providerRef"
@@ -110,6 +130,7 @@ function paymentStateChanged(
   return (
     previous.status !== next.status ||
     previous.amountCents !== next.amountCents ||
+    previous.manualHeldCents !== next.manualHeldCents ||
     previous.currency !== next.currency ||
     previous.provider !== next.provider ||
     previous.providerRef !== next.providerRef ||
@@ -166,6 +187,13 @@ export async function setBookingPayment(
       bookingId: input.bookingId,
       status: input.status,
       amountCents: input.amountCents ?? null,
+      manualHeldCents:
+        input.manualHeldCents ??
+        (input.provider
+          ? 0
+          : ["paid", "deposit_paid", "partly_refunded"].includes(input.status)
+            ? (input.amountCents ?? 0)
+            : 0),
       currency: input.currency,
       provider: input.provider ?? null,
       providerRef: input.providerRef ?? null,
@@ -178,6 +206,38 @@ export async function setBookingPayment(
     // actually change?" comparison, and a value read outside the lock could
     // describe a state a concurrent write has already replaced.
     const previous = await currentPayment(tx, input.shopId, input.bookingId);
+    if (
+      "expectedPaymentEntryId" in input &&
+      (previous?.id ?? null) !== input.expectedPaymentEntryId
+    )
+      return null;
+    if ((input.operation ?? "manual_mark") === "manual_mark") {
+      const [refund] = await tx
+        .select({ id: paymentOperationIntents.id })
+        .from(paymentOperationIntents)
+        .leftJoin(
+          bookingCheckoutBookings,
+          and(
+            eq(bookingCheckoutBookings.shopId, input.shopId),
+            eq(bookingCheckoutBookings.checkoutId, paymentOperationIntents.checkoutId),
+            eq(bookingCheckoutBookings.bookingId, input.bookingId),
+          ),
+        )
+        // diveday:any-checkout-purpose: membership of the seat's held refund source only.
+        .where(
+          and(
+            eq(paymentOperationIntents.shopId, input.shopId),
+            eq(paymentOperationIntents.kind, "refund"),
+            eq(paymentOperationIntents.status, "started"),
+            or(
+              eq(paymentOperationIntents.bookingId, input.bookingId),
+              eq(bookingCheckoutBookings.bookingId, input.bookingId),
+            ),
+          ),
+        )
+        .limit(1);
+      if (refund) return null;
+    }
     if (groupSeatSettled(input.status)) {
       await tx
         .update(bookings)
@@ -199,8 +259,78 @@ export async function setBookingPayment(
         createdAt: bookingPaymentEvents.createdAt,
       });
     if (!entry) return null;
+    // The economic receipt is elsewhere for Stripe or a package. A mixed
+    // deposit records only its explicitly separated external portion here.
+    if (next.provider === null || next.provider === "mixed") {
+      await recordCollectionBalance(tx, {
+        shopId: input.shopId,
+        sourceType: "booking",
+        sourceId: input.bookingId,
+        currency: next.currency,
+        method: next.method ?? "other",
+        balanceCents: ["paid", "deposit_paid", "partly_refunded"].includes(next.status)
+          ? next.manualHeldCents
+          : 0,
+        evidence: {
+          paymentEntryId: entry.id,
+          taxSplitRecorded: false,
+          stripeProviderRef: next.providerRef,
+        },
+      });
+    }
     return { ...next, id: entry.id, updatedAt: entry.occurredAt, createdAt: entry.createdAt };
   });
+}
+
+/** A refund ID may replace the pointer, but its original receipt stays in the trail. */
+async function providerSourceWasApplied(tx: AppTransaction, input: SetPaymentInput) {
+  if (!input.providerRef) return false;
+  const [row] = await tx
+    .select({ id: bookingPaymentEvents.id })
+    .from(bookingPaymentEvents)
+    .where(
+      and(
+        eq(bookingPaymentEvents.shopId, input.shopId),
+        eq(bookingPaymentEvents.bookingId, input.bookingId),
+        eq(bookingPaymentEvents.providerRef, input.providerRef),
+        inArray(bookingPaymentEvents.provider, ["stripe", "mixed"]),
+        inArray(bookingPaymentEvents.status, ["paid", "deposit_paid", "partly_refunded"]),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+/** Called only under the booking lock, with a known provider receipt. */
+async function holdUnallocatedSettlement(
+  tx: AppTransaction,
+  input: SetPaymentInput,
+  reason: string,
+) {
+  const [held] = await tx
+    .select({ id: paymentOperationIntents.id })
+    .from(paymentOperationIntents)
+    .where(
+      and(
+        eq(paymentOperationIntents.shopId, input.shopId),
+        eq(paymentOperationIntents.bookingId, input.bookingId),
+        eq(paymentOperationIntents.kind, "refund"),
+        eq(paymentOperationIntents.status, "started"),
+        eq(paymentOperationIntents.errorMessage, reason),
+        eq(paymentOperationIntents.stripeObjectId, input.providerRef ?? ""),
+      ),
+    )
+    .limit(1);
+  if (!held)
+    await tx.insert(paymentOperationIntents).values({
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      ...input.receiptSource,
+      kind: "refund",
+      stripeObjectId: input.providerRef,
+      amountCents: input.amountCents,
+      errorMessage: reason,
+    });
 }
 
 /**
@@ -228,8 +358,8 @@ const FINAL_PAYMENT_STATUSES: ReadonlySet<PaymentStatus> = new Set(["refunded", 
  *
  * When this does swallow a write — a real payment landing after a refund or
  * waive, which today has no legitimate path back to "paid" — it logs rather
- * than failing silently; making that owner-visible in the product is CR-005
- * territory (reconciliation for indeterminate/orphaned payment operations).
+ * than regressing it. A new online receipt after a manual final state also
+ * becomes a visible source reconciliation hold, rather than orphaned money.
  */
 export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: SetPaymentInput) {
   return withBookingPaymentLock(db, input.shopId, input.bookingId, async (tx, booking) => {
@@ -251,9 +381,27 @@ export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: Set
       });
       return null;
     }
+    const current = await currentPayment(tx, input.shopId, input.bookingId);
     if (!FINAL_PAYMENT_STATUSES.has(input.status)) {
-      const current = await currentPayment(tx, input.shopId, input.bookingId);
+      if (input.provider === "stripe" && current && current.providerRef !== input.providerRef) {
+        if (await providerSourceWasApplied(tx, input)) return current;
+        if (
+          current.provider !== null &&
+          (current.provider !== "stripe" || current.status !== "deposit_paid")
+        ) {
+          await holdUnallocatedSettlement(tx, input, SETTLEMENT_SOURCE_MISMATCH);
+          return current;
+        }
+      }
+      if (
+        current?.provider === "mixed" &&
+        (current.providerRef !== input.providerRef || current.status === "partly_refunded")
+      )
+        return current;
+      if (current?.provider === "stripe" && current.status === "partly_refunded") return current;
       if (current && FINAL_PAYMENT_STATUSES.has(current.status)) {
+        if (input.provider === "stripe" && current.provider === null)
+          await holdUnallocatedSettlement(tx, input, SETTLEMENT_AFTER_FINAL_STATE);
         log("payment.refused_final_status_regression", "error", {
           shopId: input.shopId,
           bookingId: input.bookingId,
@@ -262,8 +410,47 @@ export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: Set
         });
         return current;
       }
+      // A first paid webhook can arrive after staff have already taken cash.
+      // Reconcile only the online portion, retaining the independent receipt.
+      if (
+        input.provider === "stripe" &&
+        current &&
+        (current.provider === null || current.provider === "mixed") &&
+        ["paid", "deposit_paid", "partly_refunded"].includes(current.status) &&
+        current.manualHeldCents > 0
+      ) {
+        if (current.currency !== input.currency) {
+          await holdUnallocatedSettlement(tx, input, SETTLEMENT_CURRENCY_MISMATCH);
+          log("payment.settlement_currency_mismatch", "error", {
+            shopId: input.shopId,
+            bookingId: input.bookingId,
+            receiptCurrency: input.currency,
+            seatCurrency: current.currency,
+          });
+          return current;
+        }
+        return setBookingPayment(tx, {
+          ...input,
+          status:
+            current.status === "paid" || current.status === "partly_refunded"
+              ? current.status
+              : input.status,
+          amountCents: (input.amountCents ?? 0) + current.manualHeldCents,
+          manualHeldCents: current.manualHeldCents,
+          method: current.method,
+          provider: "mixed",
+          recordedByPersonId: current.recordedByPersonId,
+        });
+      }
     }
-    return setBookingPayment(tx, input);
+    return setBookingPayment(
+      tx,
+      current?.status === "paid" &&
+        input.status === "deposit_paid" &&
+        current.providerRef === input.providerRef
+        ? { ...input, status: "paid" }
+        : input,
+    );
   });
 }
 
@@ -341,6 +528,8 @@ export type PaymentEntrySeed = {
   bookingId: string;
   status: PaymentStatus;
   amountCents?: number | null;
+  /** Only the manually received portion on a mixed Stripe/external payment. */
+  manualHeldCents?: number;
   currency: string;
   provider?: string | null;
   providerRef?: string | null;

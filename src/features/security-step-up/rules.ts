@@ -1,10 +1,11 @@
+/** A step-up's purpose, its return path and its challenge link; whether a session holds one is `hasRequiredStepUp` in `src/features/step-up/store.ts`. */
+import type { StepUpPurpose } from "../../lib/security-step-up";
 import { noticeUrl, safeShopReturnPath, shopPath } from "../../lib/staff-notices";
 
-/** A step-up's purpose, its return path and its challenge link; whether a session holds one is `hasRequiredStepUp` in `src/features/step-up/store.ts`. */
-export type StepUpPurpose = "money" | "export" | "backup";
+export type { StepUpPurpose } from "../../lib/security-step-up";
 
 export function isStepUpPurpose(value: string | null | undefined): value is StepUpPurpose {
-  return value === "money" || value === "export" || value === "backup";
+  return value === "money" || value === "export" || value === "backup" || value === "security";
 }
 
 /**

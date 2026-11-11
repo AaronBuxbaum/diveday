@@ -23,6 +23,7 @@ import {
   buddyTeamMembers,
   capabilities,
   cards,
+  collectionEntries,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -338,6 +339,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tripLenses).where(eq(tripLenses.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   await db.delete(pricingVolumeStatements).where(eq(pricingVolumeStatements.shopId, shopId));
+  await db.delete(collectionEntries).where(eq(collectionEntries.shopId, shopId));
   await db.delete(shopSubscriptions).where(eq(shopSubscriptions.shopId, shopId));
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
   // References both shops and people (ADR 20260803-processor-erasure-obligations),

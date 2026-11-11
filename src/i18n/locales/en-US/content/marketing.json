@@ -53,7 +53,7 @@
     "tryTitle": "Every diver booked, signed and counted aboard, from your first trip",
     "stepLink": "{name} →",
     "percentArm": {
-      "heroPriceLine": "{hasBase, select, yes {{percent} of the card money taken through DiveDay plus {base} a month, and no setup fee.} other {{percent} of the card money taken through DiveDay, and no monthly fee.}}"
+      "heroPriceLine": "{hasBase, select, yes {{percent} of payments you mark received, plus {base} a month. No setup fee.} other {{percent} when you record a payment, with no monthly fee.}}"
     }
   },
   "common": {
@@ -773,8 +773,8 @@
     "closingTitle": "The demo is a working shop, with divers booked on today’s boat",
     "percentArm": {
       "onePriceTitle": "One plan covers the shop",
-      "onePriceBody": "The plan is {percent} of the card money taken through DiveDay{hasBase, select, yes { plus {base} a month} other {, with no monthly fee}}, and it covers every part of DiveDay and a login for everyone on your staff. Tips never count toward it. The pricing page lists each thing it covers.",
-      "seeCost": "{percent} of card money{hasBase, select, yes { and {base} a month} other { through DiveDay}}. See the full list"
+      "onePriceBody": "The plan covers every part of DiveDay and a login for each staff member. Your shop pays {percent} on its recorded receipts{hasBase, select, yes { plus {base} a month} other {, with no monthly fee}}. Tips never count. The pricing page has the full breakdown.",
+      "seeCost": "{percent} on receipts{hasBase, select, yes { and {base} a month} other {}}. See the full list"
     }
   },
   "product": {
@@ -885,12 +885,12 @@
     },
     "closingTitle": "Every feature and every staff login are in the price",
     "percentArm": {
-      "cadence": "{hasBase, select, yes {of the card money taken through DiveDay, plus {base} a month} other {of the card money taken through DiveDay, each month}}",
+      "cadence": "{hasBase, select, yes {when you mark money received, plus {base} a month} other {when you mark money received, billed monthly}}",
       "invoiceFeeLabel": "DiveDay’s fee",
-      "invoiceFeeValue": "{percent} of card money through DiveDay",
-      "ours": "{hasBase, select, yes {DiveDay charges {base} a month plus {percent} of the card money your shop takes through it.} other {DiveDay has no monthly charge. Its fee is {percent} of the card money your shop takes through it.}} Nothing is added to your guest’s price.",
+      "invoiceFeeValue": "{percent} of recorded collections",
+      "ours": "{hasBase, select, yes {DiveDay charges {base} a month plus {percent} of the money your shop records as received in DiveDay.} other {DiveDay has no monthly charge. Its fee is {percent} of the money your shop records as received in DiveDay.}} Nothing is added to your guest’s price.",
       "whatCountsQuestion": "What counts toward the {percent}?",
-      "whatCountsAnswer": "Card money your shop takes through DiveDay: online bookings, and the invoices and packages divers pay by card. Tips, tax, park and other pass-through fees, money taken at the counter and history imported from your old system never count. A refund comes off the month it is recorded in."
+      "whatCountsAnswer": "Money recorded as received in DiveDay, whether paid online, in cash, by bank transfer, on your own card machine or another method. Deposits count when received; an unpaid booking does not. Packages count when sold, never again when redeemed. Separately recorded tips, tax and pass-through fees, and imported history, are excluded. An amount without a separate tax breakdown counts in full. Refunds receive a credit at the original rate."
     }
   },
   "privacy": {
@@ -1039,21 +1039,21 @@
       "body": "Divers pay the shop, not us. Card payments run through the shop’s own Stripe account, so the shop’s money never sits with DiveDay and leaving does not mean extracting funds from us. Stripe’s own fees and terms apply to those payments. What DiveDay charges for itself is on the pricing page."
     },
     "percentPlan": {
-      "heading": "Plans priced as a percentage of card payments",
-      "intro": "These terms apply if your shop’s agreed plan includes a percentage of card payments. Your subscription keeps the rate and monthly fee you agreed to.",
+      "heading": "Plans priced as a percentage of recorded collections",
+      "intro": "These terms apply if your shop’s agreed plan includes a percentage of recorded collections. Your subscription keeps the rate and monthly fee you agreed to.",
       "feeTerm": "The fee",
-      "feeBody": "{percent} of the card money your shop takes through DiveDay in a calendar month{hasBase, select, yes {, with a base fee of {base} each month on top} other {}}. The month follows your shop’s own timezone.",
+      "feeBody": "{percent} of the money your shop records as received in DiveDay in a calendar month{hasBase, select, yes {, with a base fee of {base} each month on top} other {}}. The month follows your shop’s own timezone.",
       "countsTerm": "What counts",
-      "countsBody": "card payments your shop takes through DiveDay with Stripe Connect: online bookings, invoices and packages. Tips, tax, park and other pass-through fees, cash at the counter, money marked paid at the counter and history imported from another system never count.",
+      "countsBody": "money your shop records as received in DiveDay by any payment method, including cash and external payments. A deposit counts when recorded received, and only the later balance counts when it arrives. Unpaid bookings, package redemptions and imported history do not count. Packages count once at sale. Separately recorded tips, tax, park fees and other pass-through charges are excluded. Without a separate tax breakdown, the recorded amount counts in full.",
       "refundsTerm": "Refunds",
-      "refundsBody": "a refund nets in the month the refund is recorded: it comes off the card money of the first monthly statement written after it is recorded, whichever month the payment was taken in. What that month’s card money cannot cover carries to the following statement, so a fee never goes below zero.",
+      "refundsBody": "a recorded refund or correction reverses the fee on that money at the rate and rounding of its original statement. A later statement applies the credit once. Unused fee credit carries forward in the same currency, and never expires because a month has no collections. A failed refund reverses its credit. Contact us to settle unused credit after cancellation.",
       "statementTerm": "A monthly statement",
-      "statementBody": "early in the next month, Settings shows your shop the month’s card money, the rate and the fee, and the fee is billed with your DiveDay subscription.",
+      "statementBody": "early in the next month, Settings shows recorded collections, the rate, refund credits, any credit carried forward and the fee separately for each currency. Amounts are never converted or combined across currencies. Automatic billing currently supports USD only; other currencies need an agreed billing setup before any charge. The running estimate is before credits.",
       "whoPaysTerm": "Who pays the fee",
       "whoPaysBody": "the shop, never the diver. DiveDay adds nothing to a diver’s price or checkout.",
       "noticeTerm": "Changes to the plan",
       "noticeBody": "we tell your shop at least 30 days before we change the rate, the base fee or what counts toward the fee.",
-      "feeBodyAgreed": "The percentage and any monthly base fee agreed for your shop apply to the card money your shop takes through DiveDay in a calendar month. The month follows your shop’s own timezone."
+      "feeBodyAgreed": "The percentage and any monthly base fee agreed for your shop apply to the money your shop records as received in DiveDay in a calendar month. The month follows your shop’s own timezone."
     },
     "data": {
       "heading": "Whose data it is",
@@ -1097,9 +1097,9 @@
     },
     "demoNote": "The demo opens on {place}. It’s a working sample shop, with no sign-up and no card.",
     "percentArm": {
-      "includedPrice": "Every line here is in the one plan, at {percent} of the card money taken through DiveDay{hasBase, select, yes { plus {base} a month} other {}}.",
+      "includedPrice": "Every line is included for {percent} of the payments you enter as received{hasBase, select, yes { plus {base} a month} other {}}.",
       "paymentsNote3": "No row carries a DiveDay fee. DiveDay’s {percent} is billed to you once a month, on an invoice of its own.",
-      "paymentsFaq1A": "Yes. The fee is {percent} of the card money taken through DiveDay{hasBase, select, yes {, plus {base} a month} other {}}, billed once a month. Tips, tax and money taken at the counter never count, and nothing is added to your guest’s price. Stripe charges its own card fees in your Stripe account."
+      "paymentsFaq1A": "Yes. The fee is {percent} of money recorded as received in DiveDay{hasBase, select, yes {, plus {base} a month} other {}}, billed monthly. Cash and external payments count too. Separately recorded tips, tax and pass-through fees are excluded. Nothing is added to your guest’s price. Stripe charges its own card fees."
     }
   },
   "featurePages": {
@@ -1399,7 +1399,7 @@
       "screenLabel": "The Orders page: one day’s orders with the count and subtotal, and each order’s status.",
       "note1": "Orders file by day with the day’s count and subtotal, the way the till is counted at close.",
       "note2": "Open means the order still has money owed on it.",
-      "note3": "No row carries a DiveDay fee, because DiveDay takes no percentage of an order.",
+      "note3": "DiveDay’s software fee is billed monthly, separately from each guest’s payment.",
       "step1Title": "Connect your Stripe account",
       "step1Body": "Payouts, disputes and history stay in the shop’s own Stripe account.",
       "step2Title": "Take payment at booking",

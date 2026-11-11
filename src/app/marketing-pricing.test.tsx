@@ -125,7 +125,7 @@ describe("with the original monthly-only pricing", () => {
     // stands once, under its hero.
     expect(text).not.toContain("with every feature in it");
     expect(text).toContain(
-      "No row carries a DiveDay fee, because DiveDay takes no percentage of an order.",
+      "DiveDay’s software fee is billed monthly, separately from each guest’s payment.",
     );
     expect(text).toContain("No. DiveDay is one flat monthly price.");
     expect(text).not.toContain("card money");
@@ -173,39 +173,37 @@ describe("with default percentage pricing", () => {
     asReader("percent_of_volume");
     const about = await pageText("about");
     expect(about).toContain("One plan covers the shop");
-    expect(about).toContain(
-      "The plan is 3% of the card money taken through DiveDay, with no monthly fee,",
-    );
-    expect(about).toContain("3% of card money through DiveDay. See the full list");
+    expect(about).toContain("Your shop pays 3% on its recorded receipts, with no monthly fee.");
+    expect(about).toContain("3% on receipts. See the full list");
     expect(about).not.toMatch(FLAT_CLAIMS);
 
     const product = await pageText("product");
-    expect(product).toContain("3% of the card money taken through DiveDay, and no monthly fee.");
+    expect(product).toContain("3% when you record a payment, with no monthly fee.");
     expect(product).not.toMatch(FLAT_CLAIMS);
 
     const payments = await pageText("payments");
     expect(payments).toContain(
-      "Every line here is in the one plan, at 3% of the card money taken through DiveDay.",
+      "Every line is included for 3% of the payments you enter as received.",
     );
     expect(payments).toContain("DiveDay’s 3% is billed to you once a month");
     expect(payments).toContain(
-      "Yes. The fee is 3% of the card money taken through DiveDay, billed",
+      "Yes. The fee is 3% of money recorded as received in DiveDay, billed monthly.",
     );
     expect(payments).not.toMatch(FLAT_CLAIMS);
     expect(payments).not.toContain("$99");
+    expect(payments).toContain("Cash and external payments count too.");
+    expect(payments).not.toContain("card money taken through DiveDay");
   });
 
   it("follows a base fee", async () => {
     vi.stubEnv("PRICING_BASIS_POINTS", "300");
     vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
     asReader("percent_of_volume");
-    expect(await pageText("about")).toContain(
-      "of the card money taken through DiveDay plus $29 a month, and it covers",
+    expect(await pageText("about")).toContain("on its recorded receipts plus $29 a month.");
+    expect(await pageText("payments")).toContain(
+      "recorded as received in DiveDay, plus $29 a month, billed",
     );
-    expect(await pageText("payments")).toContain("taken through DiveDay, plus $29 a month, billed");
-    expect(await pageText("about")).toContain(
-      "3% of card money and $29 a month. See the full list",
-    );
+    expect(await pageText("about")).toContain("3% on receipts and $29 a month. See the full list");
   });
 
   it("takes the fee contrast off the switching pages for the percentage offer", async () => {
@@ -227,11 +225,12 @@ describe("with default percentage pricing", () => {
     const about = await pageText("about");
     expect(about).toContain("Un plan cubre el centro");
     expect(about).toMatch(
-      /El plan es el 3\s?% del dinero cobrado con tarjeta a través de DiveDay, sin cuota/,
+      /Tu centro paga el 3\s?% sobre sus cobros registrados, sin cuota mensual/,
     );
     expect(about).not.toContain("No nos quedamos con nada de tus reservas");
     const payments = await pageText("payments");
     expect(payments).toMatch(/Sí\. La tarifa es el 3\s?%/);
+    expect(payments).toContain("También cuentan el efectivo y los pagos externos.");
     expect(payments).not.toContain("DiveDay es un precio mensual fijo");
     const rezdy = await pageText("rezdy");
     expect(rezdy).toContain("o toma también la reserva aquí.");

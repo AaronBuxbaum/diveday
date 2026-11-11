@@ -30,6 +30,7 @@ import {
 } from "@/lib/payments/invoicing";
 import { canPersonManageOrders, loadActiveStaffRoles } from "./authz";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { recordOrderCollection } from "./collection-ledger";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
@@ -41,7 +42,7 @@ import {
   resolvePaymentOperation,
   startPaymentOperation,
 } from "./payment-operations";
-import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
+import { getBookingPayment, setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
 import { createPerson, findOrCreatePerson } from "./people";
 import { queryAll } from "./query-helpers";
 import type {
@@ -429,6 +430,7 @@ async function issueOrder(
       })
       .returning();
     if (!created) throw new Error("createOrder: insert returned no row");
+    await recordOrderCollection(tx, created.shopId, created.id);
 
     await tx.insert(orderLineItems).values(
       input.lineItems.map((item) => ({
@@ -454,6 +456,7 @@ async function issueOrder(
         currency: created.currency,
         provider: "stripe",
         providerRef: created.stripeInvoiceId,
+        receiptSource: { orderId: created.id },
         operation: "order_settled",
       });
     }
@@ -619,6 +622,7 @@ export async function recordCounterOrder(
       })
       .returning();
     if (!created) throw new Error("recordCounterOrder: insert returned no row");
+    await recordOrderCollection(tx, created.shopId, created.id);
 
     await tx.insert(orderLineItems).values(
       input.lineItems.map((item) => ({
@@ -979,6 +983,7 @@ async function settleCounterClaim(
     .where(and(eq(orders.id, current.id), eq(orders.collection, collection)))
     .returning();
   if (!updated) return null;
+  await recordOrderCollection(tx, updated.shopId, updated.id);
   if (updated.bookingId) {
     await setBookingPaymentIfNotFinal(tx, {
       shopId: updated.shopId,
@@ -990,6 +995,7 @@ async function settleCounterClaim(
       // The invoice id, as a settled invoice writes it: Reports matches a
       // seat's payment to the order that paid it by this reference.
       providerRef: updated.stripeInvoiceId,
+      receiptSource: { orderId: updated.id },
       operation: "order_settled",
     });
   }
@@ -1084,6 +1090,7 @@ export async function voidPaidCounterOrder(
       .where(eq(orders.id, current.id))
       .returning();
     if (!updated) return { ok: false, reason: "not_found" };
+    await recordOrderCollection(tx, updated.shopId, updated.id);
     await enqueueVoidedOrderEvent(tx, updated);
     return { ok: true, order: updated };
   });
@@ -2212,6 +2219,7 @@ async function applyOrderUpdate(
       .where(eq(orders.id, current.id))
       .returning();
     if (!updated) return null;
+    await recordOrderCollection(tx, updated.shopId, updated.id);
 
     if (updated.status === "paid" && updated.bookingId) {
       await setBookingPaymentIfNotFinal(tx, {
@@ -2222,6 +2230,7 @@ async function applyOrderUpdate(
         currency: updated.currency,
         provider: "stripe",
         providerRef: updated.stripeInvoiceId,
+        receiptSource: { orderId: updated.id },
         operation: "order_settled",
       });
     } else if (
@@ -2234,13 +2243,18 @@ async function applyOrderUpdate(
       // `partly_refunded` — a state that still clears the boarding gate
       // (`PAYMENT_CLEARED`, src/lib/readiness.ts), because a diver who got
       // half their money back has still paid (issue #699).
+      const currentSeat = await getBookingPayment(tx, updated.shopId, updated.bookingId);
+      const manualHeldCents = currentSeat?.provider === "mixed" ? currentSeat.manualHeldCents : 0;
       await setBookingPayment(tx, {
         shopId: updated.shopId,
         bookingId: updated.bookingId,
-        status: updated.status === "refunded" ? "refunded" : "partly_refunded",
-        amountCents: updated.amountPaidCents,
+        status:
+          updated.status === "refunded" && manualHeldCents === 0 ? "refunded" : "partly_refunded",
+        amountCents: updated.amountPaidCents + manualHeldCents,
+        manualHeldCents,
+        method: manualHeldCents > 0 ? (currentSeat?.method ?? null) : null,
         currency: updated.currency,
-        provider: "stripe",
+        provider: manualHeldCents > 0 ? "mixed" : "stripe",
         providerRef: updated.stripeInvoiceId,
         operation: patch.refundOperation ?? "order_refunded",
       });
@@ -2264,6 +2278,7 @@ async function applyOrderUpdate(
         refundedCents: updated.refundedCents,
       });
     } else if (updated.status === "void") {
+      await recordOrderCollection(tx, updated.shopId, updated.id);
       await enqueueVoidedOrderEvent(tx, updated);
     } else if (updated.status === "refunded" || updated.status === "partly_refunded") {
       await enqueueOrderIntegrationEvent(tx, {

@@ -52,16 +52,22 @@ afterEach(() => {
 describe("/terms percent-plan clause", () => {
   it("states the fee, what counts, refunds, the statement, who pays and the notice", async () => {
     const text = await termsText();
-    expect(text).toContain("Plans priced as a percentage of card payments");
-    expect(text).toContain("3% of the card money your shop takes through DiveDay");
+    expect(text).toContain("Plans priced as a percentage of recorded collections");
+    expect(text).toContain("3% of the money your shop records as received in DiveDay");
     expect(text).toContain("Your subscription keeps the rate and monthly fee you agreed to.");
-    for (const excluded of ["Tips", "tax", "pass-through fees", "counter", "imported"]) {
+    for (const excluded of ["tips", "tax", "pass-through charges", "cash", "imported"]) {
       expect(text).toContain(excluded);
     }
     expect(text).toContain("Refunds");
     // Issue 3024: a refund recorded after a statement closed is credited, not lost.
-    expect(text).toContain("in the month the refund is recorded");
+    expect(text).toContain("at the rate and rounding of its original statement");
     expect(text).not.toContain("not credited");
+    expect(text).toContain("only the later balance counts when it arrives");
+    expect(text).toContain("Packages count once at sale");
+    expect(text).toContain("Without a separate tax breakdown, the recorded amount counts in full");
+    expect(text).toContain("Unused fee credit carries forward in the same currency");
+    expect(text).toContain("Automatic billing currently supports USD only");
+    expect(text).not.toContain("percentage of card payments");
     expect(text).toContain("statement");
     expect(text).toContain("never the diver");
     expect(text).toContain("30 days");
@@ -79,15 +85,17 @@ describe("/terms percent-plan clause", () => {
     vi.stubEnv("PRICING_BASIS_POINTS", "250");
     vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
     const text = await termsText();
-    expect(text).toContain("2.5% of the card money your shop takes through DiveDay");
+    expect(text).toContain("2.5% of the money your shop records as received in DiveDay");
     expect(text).toContain("with a base fee of $29 each month");
   });
 
   it("says the same in es-ES", async () => {
     const text = await termsText("es-ES");
-    expect(text).toContain("Planes con precio en un porcentaje de los pagos con tarjeta");
-    expect(text).toMatch(/el 3\s?% del dinero que tu centro recibe en pagos con tarjeta/);
+    expect(text).toContain("Planes con precio en un porcentaje de los cobros registrados");
+    expect(text).toMatch(/el 3\s?% del dinero que tu centro registra como recibido/);
     expect(text).toContain("nunca el buceador");
+    expect(text).toContain("incluidos el efectivo y los pagos externos");
+    expect(text).toContain("El cobro automático admite solo USD por ahora");
     expect(text).toContain("30 días");
   });
 });

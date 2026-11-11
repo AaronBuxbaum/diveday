@@ -23,7 +23,8 @@ describe("security step-up routing", () => {
     expect(isStepUpPurpose("money")).toBe(true);
     expect(isStepUpPurpose("export")).toBe(true);
     expect(isStepUpPurpose("backup")).toBe(true);
-    expect(isStepUpPurpose("security")).toBe(false);
+    expect(isStepUpPurpose("security")).toBe(true);
+    expect(isStepUpPurpose("erase")).toBe(false);
     expect(isStepUpPurpose(undefined)).toBe(false);
   });
 });

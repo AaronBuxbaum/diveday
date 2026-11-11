@@ -13,6 +13,7 @@ import { PAPER_PASS_PAPER, passCodePayload, storefrontAddress } from "@/lib/prin
 import { shopPath } from "@/lib/staff-notices";
 import { SheetCode } from "../../../print/_components/SheetCode";
 import { SheetDocument } from "../../../print/_components/SheetDocument";
+import { sheetAttribution } from "../../../print/_components/ShopSheet";
 
 /**
  * **The paper pass** (A6, printed at the counter from one booking, `?pass=<bookingId>` on its departure) — ADR
@@ -41,7 +42,7 @@ export async function PaperPassSheet({
   tripId: string;
   bookingId: string;
 }) {
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const booking = await getPassBooking(db, shop.id, bookingId);
   // A booking of another departure names nothing here, like one of another shop.
   if (!booking || booking.tripId !== tripId) notFound();
@@ -87,9 +88,11 @@ export async function PaperPassSheet({
             <span className="font-brand-display text-xs font-bold">{shop.name}</span>
           </>
         }
-        foldLeft={t("print.sheet.printed", {
-          date: formatDateWithYear(nowDate(), locale, shop.timezone),
-        })}
+        foldLeft={sheetAttribution(
+          t,
+          formatDateWithYear(nowDate(), locale, shop.timezone),
+          session.user.name,
+        )}
         foldRight={storefrontAddress(shopSlug, publicAppUrl())}
       >
         <p className="paper-sheet-muted text-[0.625rem] font-bold tracking-[0.12em] uppercase">

@@ -20,16 +20,33 @@ export function normalizePaperFact(value: string): string {
 }
 
 /** Chromium margin boxes do not reliably wrap unbroken names; supply real line breaks. */
-export function paperFactLines(value: string): string[] {
+export function paperFactLines(value: string, width = 60): string[] {
   const lines: string[] = [];
   let line = "";
   for (const character of normalizePaperFact(value)) {
     // UTF-16 width is conservative for astral glyphs and never splits a surrogate pair.
-    if (line.length + character.length > 60) {
+    if (line.length + character.length > width) {
       lines.push(line);
       line = "";
     }
     line += character;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** Keep ordinary names and timezone words together; hard-wrap only oversized words. */
+export function paperAttributionLines(value: string): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of normalizePaperFact(value).split(" ")) {
+    for (const chunk of paperFactLines(word, 48)) {
+      if (line && line.length + 1 + chunk.length > 48) {
+        lines.push(line);
+        line = "";
+      }
+      line += `${line ? " " : ""}${chunk}`;
+    }
   }
   if (line) lines.push(line);
   return lines;
@@ -48,16 +65,20 @@ export function departurePaperRule(
   // the wrapper is `contents`.
   // Reserve space for wrapping rather than painting a fixed overlay over roster rows.
   // At 8pt a conservative 60 characters fit in the printable width of A4/Letter.
-  const facts = identity.flatMap(paperFactLines);
+  const facts = identity.flatMap((fact) => paperFactLines(fact));
   const lines = facts.length;
   const margin = 12 + lines * 4;
+  // The attribution gets 80% of the margin width; reserve its wrapped height
+  // too now that it can include the authenticated staff member’s full name.
+  const footerLines = paperAttributionLines(printed);
+  const bottomMargin = Math.max(20, 8 + footerLines.length * 4);
   // A standalone log owns the body too: returning to an unnamed page after its
   // last content otherwise makes Chromium append a page containing only a counter.
   const bodyRule = standaloneLog ? `body:has([data-departure-log]){page:${pageName}}` : "";
   return `@media print{[data-departure-paper="${pageName}"]{display:block;page:${pageName}}${bodyRule}}
-@page ${pageName}{margin-top:${margin}mm;margin-bottom:20mm;
+@page ${pageName}{margin-top:${margin}mm;margin-bottom:${bottomMargin}mm;
 @top-left{content:${paperCssString(facts.join("\n"))};white-space:pre-wrap;overflow-wrap:anywhere;font:8pt/1.35 sans-serif;vertical-align:middle;width:100%}
-@bottom-left{content:${paperCssString(normalizePaperFact(printed))};font:8pt/1.35 sans-serif;white-space:pre-wrap;width:80%}
+@bottom-left{content:${paperCssString(footerLines.join("\n"))};font:8pt/1.35 sans-serif;white-space:pre-wrap;width:80%}
 @bottom-right{content:counter(page) " / " counter(pages);font:8pt monospace;width:20%}}
 `;
 }

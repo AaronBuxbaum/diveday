@@ -35,7 +35,7 @@ export async function RentalTicketSheet({
   tripId: string;
   bookingId: string;
 }) {
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
@@ -65,7 +65,7 @@ export async function RentalTicketSheet({
       <RentalSlip
         shop={shop}
         shopSlug={shopSlug}
-        printed={sheetPrinted(t, nowDate(), locale, shop.timezone)}
+        printed={sheetPrinted(t, nowDate(), locale, shop.timezone, session.user.name)}
         holder={diver.fullName}
         line={`${trip.title} · ${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}`}
         units={assignments.map((assignment) => ({

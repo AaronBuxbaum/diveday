@@ -194,6 +194,14 @@ test.describe("owner", () => {
           .addCookies([{ name: "diveday_locale", value: locale, url: page.url() }]);
         await page.reload();
         const copy = staffTranslator(locale);
+        // The shell's hydration probe can finish before this streamed report.
+        // Prove its own React boundary is active before changing server text:
+        // otherwise late hydration replaces the stressed row with the seed.
+        const exportMenu = page.getByRole("button", { name: copy("reports.export"), exact: true });
+        await exportMenu.click();
+        await expect(exportMenu).toHaveAttribute("aria-expanded", "true");
+        await page.keyboard.press("Escape");
+        await expect(exportMenu).toHaveAttribute("aria-expanded", "false");
         const ledger = page.getByRole("region", { name: copy("reports.tripsThisMonth") });
         const outstanding = ledger
           .getByText(copy("reports.row.waiversToCollect", { count: 1 }), { exact: true })

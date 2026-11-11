@@ -4,7 +4,7 @@ import { useOptimistic, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { ForgivingCopy } from "@/components/ui/ForgivingInput";
-import { ChoiceFieldset, ChoicePill, controlClass, PriceField } from "@/components/ui/form";
+import { ChoicePill, controlClass, Field, FieldGrid, PriceField } from "@/components/ui/form";
 import {
   MANUAL_PAYMENT_METHODS,
   type ManualPaymentMethodCode,
@@ -14,7 +14,7 @@ import {
 /**
  * Every value the column can hold — which is not the same as every value this
  * control may *set*. `partly_refunded` is here so a seat that reached it
- * through an actual Stripe partial refund still shows its own word in the
+ * through a recorded partial refund still shows its own word in the
  * select (the filter below always keeps the current status), and it is
  * deliberately absent from `PAYMENT_STATUSES_ALL` in `RosterSection`, because
  * no amount of hand-setting a dropdown moves money (issue #699).
@@ -41,6 +41,8 @@ export type PaymentStatusControlCopy = {
   updating: string;
   /** The Paid mark's two questions (batch 6 item 1): how much, and how. */
   amountLabel: string;
+  refundAmountLabel: string;
+  refundHint: string;
   methodLabel: string;
   methods: Record<ManualPaymentMethodCode, string>;
   forgiving: ForgivingCopy;
@@ -56,6 +58,8 @@ const MONEY_STATUSES: readonly PaymentStatus[] = ["paid", "deposit_paid"];
  * someone with the write-off right and asks anyone else for the amount.
  */
 export type PaymentMarkDefaults = {
+  paymentEntryId?: string | null;
+  manualHeldCents?: number;
   amountCents: number | null;
   currency: string;
   locale: string;
@@ -122,7 +126,13 @@ export function PaymentStatusControl({
   // than after a round trip. Only a change *into* a money status asks: the
   // seat's own status re-submitted is a tap that changes nothing.
   const [picked, setPicked] = useState<PaymentStatus>(mark.retry?.status ?? status);
-  const asksForMoney = picked !== status && MONEY_STATUSES.includes(picked);
+  const asksForMoney =
+    MONEY_STATUSES.includes(picked) &&
+    (picked !== status || (status === "deposit_paid" && !mark.handMarkRefused));
+  const asksForExternalRefund =
+    picked === "refunded" &&
+    (mark.manualHeldCents ?? 0) > 0 &&
+    allowedStatuses.includes("refunded");
   const showRefund =
     (optimisticStatus === "paid" || optimisticStatus === "deposit_paid") && refundNote;
   const showPackage =
@@ -136,6 +146,7 @@ export function PaymentStatusControl({
       className="flex flex-wrap items-center gap-2"
     >
       <input type="hidden" name="bookingId" value={bookingId} />
+      <input type="hidden" name="paymentEntryId" value={mark.paymentEntryId ?? ""} />
       <span className="text-sm text-muted">
         {copy.prefix} {copy.statuses[optimisticStatus]}
         {sourceNote ? <span className="text-muted"> · {sourceNote}</span> : null}
@@ -168,7 +179,10 @@ export function PaymentStatusControl({
             {(Object.keys(copy.statuses) as PaymentStatus[])
               .filter(
                 (value) =>
-                  value === status || (!mark.handMarkRefused && allowedStatuses.includes(value)),
+                  value === status ||
+                  (allowedStatuses.includes(value) &&
+                    (!mark.handMarkRefused ||
+                      (value === "refunded" && (mark.manualHeldCents ?? 0) > 0))),
               )
               .map((value) => (
                 <option key={value} value={value}>
@@ -187,8 +201,21 @@ export function PaymentStatusControl({
       {/* **The Paid mark** (batch 6 item 1): how much changed hands and how,
           so cash at the dock reaches Reports instead of a $0 paid row. It
           opens under the picker, before Update, on the pick itself. */}
+      {asksForExternalRefund ? (
+        <div className="basis-full" data-testid="external-refund-mark">
+          <PriceField
+            name="refundAmount"
+            label={copy.refundAmountLabel}
+            hint={copy.refundHint}
+            cents={mark.manualHeldCents ?? 0}
+            currency={mark.currency}
+            locale={mark.locale}
+            copy={copy.forgiving}
+          />
+        </div>
+      ) : null}
       {asksForMoney ? (
-        <div className="grid basis-full gap-3 sm:grid-cols-2" data-testid="payment-mark">
+        <FieldGrid columns={2} className="basis-full" data-testid="payment-mark">
           <PriceField
             name="amount"
             label={copy.amountLabel}
@@ -198,24 +225,27 @@ export function PaymentStatusControl({
             locale={mark.locale}
             copy={copy.forgiving}
           />
-          <ChoiceFieldset legend={copy.methodLabel} bodyClassName="flex flex-wrap gap-2">
-            {MANUAL_PAYMENT_METHODS.map((method) => (
-              <ChoicePill
-                key={method}
-                type="radio"
-                name="method"
-                value={method}
-                // No default: a method nobody picked would be recorded as
-                // how the money came in. The browser asks first, and the
-                // action asks again for a post without one.
-                required
-                defaultChecked={mark.retry?.method === method}
-              >
-                {copy.methods[method]}
-              </ChoicePill>
-            ))}
-          </ChoiceFieldset>
-        </div>
+          <Field group label={copy.methodLabel} required>
+            <div className="flex flex-wrap gap-2">
+              {MANUAL_PAYMENT_METHODS.map((method) => (
+                <ChoicePill
+                  key={method}
+                  type="radio"
+                  size="field"
+                  name="method"
+                  value={method}
+                  // No default: a method nobody picked would be recorded as
+                  // how the money came in. The browser asks first, and the
+                  // action asks again for a post without one.
+                  required
+                  defaultChecked={mark.retry?.method === method}
+                >
+                  {copy.methods[method]}
+                </ChoicePill>
+              ))}
+            </div>
+          </Field>
+        </FieldGrid>
       ) : null}
     </form>
   );

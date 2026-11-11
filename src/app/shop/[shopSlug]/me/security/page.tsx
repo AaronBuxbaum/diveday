@@ -31,6 +31,9 @@ import { STAFF_DESTINATION_LABEL_KEYS, staffDestination } from "@/lib/staff-dest
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { staffPageClass } from "../../_components/staff-page";
 import { AccountSessionsList } from "./_components/AccountSessionsList";
+import { FactorManagementSection } from "./_components/FactorManagementSection";
+import { PasskeySection } from "./_components/PasskeySection";
+import { StepUpSection } from "./_components/StepUpSection";
 import {
   beginTotpEnrollmentAction,
   disableTotpAction,
@@ -38,7 +41,6 @@ import {
   refreshRecoveryCodesAction,
   revokeAllSessionsAction,
   revokeSessionAction,
-  verifyStepUpAction,
 } from "./actions";
 
 // This page reads live account security state, but the segment's
@@ -72,13 +74,18 @@ export default async function SecurityPage({
   const { shopSlug } = await params;
   const query = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
-  const account = await getAccountSecurityPage(db, session.user.personId);
+  const account = await getAccountSecurityPage(
+    db,
+    session.user.personId,
+    shop.id,
+    session.user.sessionId,
+  );
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const purpose: StepUpPurpose | null = isStepUpPurpose(query.purpose) ? query.purpose : null;
   const returnTo = safeStepUpReturnPath(shopSlug, query.returnTo);
   if (!account) return null;
-  const { accountId, security, sessions, secret } = account;
+  const { accountId, security, sessions, secret, passkeys, factorManagementVerified } = account;
   const recoveryCodes = await (async () => {
     const value = (await cookies()).get("diveday_totp_recovery_codes")?.value;
     const key = secretKeyFromEnvironment();
@@ -98,6 +105,18 @@ export default async function SecurityPage({
     }
   })();
   const notice = noticeFromParam<{ tone: NoticeTone; text: string }>(query.notice, {
+    "security-proof-required": {
+      tone: "warning",
+      text: t("settings.security.factorManagement.description"),
+    },
+    "security-proof-verified": {
+      tone: "success",
+      text: t("settings.security.factorManagement.verified"),
+    },
+    "security-proof-invalid": {
+      tone: "danger",
+      text: t("settings.security.factorManagement.invalid"),
+    },
     "enrollment-started": {
       tone: "success",
       text: t("settings.security.notice.enrollmentStarted"),
@@ -182,40 +201,31 @@ export default async function SecurityPage({
           (docs/design/forms-and-controls.md). The cards stood 24px apart,
           and the step-up card and the notice hung `mt-6` of their own (K-521). */}
       <div className="space-y-10">
-        {purpose && returnTo && isEnabled ? (
-          <SectionCard
-            title={t("settings.security.stepUpHeading")}
-            description={t("settings.security.stepUpDescription")}
-          >
-            <form
-              action={verifyStepUpAction.bind(null, shopSlug)}
-              className="flex flex-wrap items-end gap-3"
-            >
-              <input type="hidden" name="purpose" value={purpose} />
-              <input type="hidden" name="returnTo" value={returnTo} />
-              <Field
-                label={t("settings.security.stepUpCodeLabel")}
-                hint={t("settings.security.stepUpCodeHint")}
-              >
-                <input
-                  name="code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9A-Za-z-]{6,32}"
-                  maxLength={32}
-                  required
-                  className={controlClass}
-                />
-              </Field>
-              <SubmitButton
-                pendingLabel={t("settings.security.stepUpVerifying")}
-                className={buttonClass()}
-              >
-                {t("settings.security.stepUpVerify")}
-              </SubmitButton>
-            </form>
-          </SectionCard>
+        <StepUpSection
+          shopSlug={shopSlug}
+          purpose={purpose}
+          returnTo={returnTo}
+          isEnabled={isEnabled}
+          hasPasskeys={passkeys.length > 0}
+          t={t}
+        />
+        {!purpose ? (
+          <FactorManagementSection
+            shopSlug={shopSlug}
+            verified={factorManagementVerified}
+            hasPasskeys={passkeys.length > 0}
+            hasTotp={isEnabled}
+            t={t}
+          />
         ) : null}
+        <PasskeySection
+          locked={(isEnabled || passkeys.length > 0) && !factorManagementVerified}
+          shopSlug={shopSlug}
+          passkeys={passkeys}
+          locale={locale}
+          timeZone={shop.timezone}
+          t={t}
+        />
         <SectionCard
           title={t("settings.security.twoFactorHeading")}
           description={t("settings.security.twoFactorDescription")}

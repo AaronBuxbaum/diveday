@@ -24,7 +24,7 @@ export async function signInAsOwner(page: Page) {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
   await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/shop/);
 }
 
@@ -225,7 +225,7 @@ export async function signInAs(page: Page, login: { email: string; password: str
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(login.email);
   await page.getByLabel("Password").fill(login.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/shop/);
 }
 

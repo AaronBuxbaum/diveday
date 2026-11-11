@@ -45,7 +45,7 @@ export function PaperSheet({
   const box = PRINT_SHEET_BOX_MM[paper];
   return (
     <section
-      className="paper-sheet"
+      className={box.height === null ? "paper-sheet paper-sheet-long" : "paper-sheet"}
       lang={lang}
       style={
         {

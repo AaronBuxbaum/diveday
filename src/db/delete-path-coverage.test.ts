@@ -229,6 +229,9 @@ async function recordDeletedTables(
  * them, and a spec writing any other one needs a private shop too.
  */
 const RESET_KEEPS: Record<string, string> = {
+  account_passkeys: "staff authentication survives schedule reset; purged accounts cascade it",
+  account_passkey_challenges:
+    "staff ceremonies survive schedule reset; purged accounts cascade them",
   whatsapp_delivered_usage: "provider accounting, not resettable schedule state",
   certification_junior_reviews: "ON DELETE CASCADE from cards clears it",
   staff_credential_history: "ON DELETE CASCADE from staff credentials clears it",
@@ -336,6 +339,9 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
  * survivor here is a bug unless it is genuinely shared.
  */
 const CASCADE_KEEPS: Record<string, string> = {
+  account_passkeys: "ON DELETE CASCADE from shops clears it",
+  account_passkey_challenges:
+    "ON DELETE CASCADE from shops and accounts clears their bound challenges",
   certification_junior_reviews: "ON DELETE CASCADE from cards clears it",
   staff_credential_history: "ON DELETE CASCADE from staff credentials clears it",
   platform_backup_progress: "ON DELETE CASCADE from shops clears its scheduler checkpoint",

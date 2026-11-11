@@ -178,7 +178,10 @@ describe("the doctor's page", () => {
     const { token, person, shop } = await signedLink(medicalReferralAnswers);
     const html = await render(token);
     const sheet = sheetOf(html);
-    expect(html.match(/class="paper-sheet"/g)).toHaveLength(1);
+    const sheets = [...html.matchAll(/class="([^"]*)"/g)].filter(([, className]) =>
+      className.split(/\s+/u).includes("paper-sheet"),
+    );
+    expect(sheets).toHaveLength(1);
     expect(sheet).toContain('data-testid="doctor-referral-sheet"');
     expect(sheet).toContain(person.fullName);
     expect(sheet).toContain("signs page 3");

@@ -1,13 +1,17 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { recordCheckoutCollection, recordOrderCollection } from "@/db/collection-ledger";
 import {
+  bookingCheckouts,
+  collectionEntries,
   orderLineItems,
   orders,
   people,
   pricingVolumeStatements,
   shopSubscriptions,
   shops,
+  trips,
   userAccounts,
 } from "@/db/schema";
 import { DEFAULT_PRICING_CONFIG } from "@/lib/billing/pricing-plans";
@@ -27,7 +31,7 @@ let seq = 0;
 async function percentShop(
   db: AppDb,
   overrides: Partial<typeof shopSubscriptions.$inferInsert> = {},
-  shop: { isDemo?: boolean } = {},
+  shop: { isDemo?: boolean; currency?: "usd" | "jpy" } = {},
 ) {
   seq += 1;
   const [row] = await db
@@ -37,6 +41,7 @@ async function percentShop(
       slug: `close-shop-${seq}`,
       timezone: "UTC",
       isDemo: shop.isDemo ?? false,
+      currency: shop.currency ?? "usd",
       createdAt: new Date("2031-01-01T00:00:00Z"),
     })
     .returning();
@@ -65,7 +70,7 @@ async function percentShop(
       personId: owner.id,
       createdByPersonId: owner.id,
       status: "paid",
-      currency: "usd",
+      currency: shop.currency ?? "usd",
       totalCents: 100_000,
       taxCents: 0,
       amountPaidCents: 100_000,
@@ -85,7 +90,69 @@ async function percentShop(
     quantity: 1,
     unitAmountCents: 100_000,
   });
+  vi.stubEnv("DIVEDAY_CLOCK", "2031-06-15T12:00:00Z");
+  await db.transaction((tx) => recordOrderCollection(tx, row.id, order.id));
+  vi.unstubAllEnvs();
   return row.id;
+}
+
+async function unconfirmedMay(db: AppDb, shopId: string, withKnownMayReceipt: boolean) {
+  const [source] = await db.select().from(orders).where(eq(orders.shopId, shopId)).limit(1);
+  if (!source) throw new Error("order missing");
+  if (withKnownMayReceipt) {
+    const [known] = await db
+      .insert(orders)
+      .values({
+        shopId,
+        personId: source.personId,
+        createdByPersonId: source.createdByPersonId,
+        currency: "usd",
+        collection: "cash",
+        status: "paid",
+        totalCents: 10_000,
+        amountPaidCents: 10_000,
+        paidAt: new Date("2031-05-15T12:00:00Z"),
+      })
+      .returning();
+    if (!known) throw new Error("order missing");
+    await db.insert(collectionEntries).values({
+      shopId,
+      sourceType: "order",
+      sourceId: known.id,
+      currency: "usd",
+      method: "cash",
+      amountCents: 10_000,
+      recordedAt: new Date("2031-05-15T12:00:00Z"),
+      evidence: {},
+    });
+  }
+  const [trip] = await db
+    .insert(trips)
+    .values({
+      shopId,
+      title: "Unconfirmed receipt",
+      startsAt: new Date("2031-06-20T12:00:00Z"),
+      endsAt: new Date("2031-06-20T15:00:00Z"),
+      capacity: 8,
+    })
+    .returning();
+  if (!trip) throw new Error("trip missing");
+  const [checkout] = await db
+    .insert(bookingCheckouts)
+    .values({
+      shopId,
+      tripId: trip.id,
+      stripeAccountId: "acct_close",
+      stripeSessionId: `cs_missing_${shopId}`,
+      status: "completed",
+      completedAt: new Date("2031-05-20T12:00:00Z"),
+      currency: "usd",
+      totalCents: 50_000,
+      amountPerDiverCents: 50_000,
+    })
+    .returning();
+  if (!checkout) throw new Error("checkout missing");
+  return checkout;
 }
 
 function fakeProvider(status: "ok" | "failed" = "ok") {
@@ -166,7 +233,7 @@ describe("closePercentMonths", () => {
       eventName: "diveday_fee_cents",
       customerId: expect.stringMatching(/^cus_close_/),
       valueCents: 3_000,
-      identifier: `diveday-fee-${shopId}-2031-06`,
+      identifier: `diveday-fee-${shopId}-2031-06-usd`,
       timestamp: new Date("2031-06-30T23:59:00Z"),
     });
     const statement = await latestPricingStatement(db, shopId);
@@ -195,7 +262,10 @@ describe("closePercentMonths", () => {
       await closePercentMonths(db, { now: NOW, config: ON, provider: working, percent: PERCENT }),
     ).toMatchObject({ reported: 1 });
     expect(working.reportMeterEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ valueCents: 3_000, identifier: `diveday-fee-${shopId}-2031-06` }),
+      expect.objectContaining({
+        valueCents: 3_000,
+        identifier: `diveday-fee-${shopId}-2031-06-usd`,
+      }),
     );
   });
 
@@ -314,7 +384,7 @@ describe("closePercentMonths", () => {
       }),
     ).toMatchObject({ reported: 1 });
     expect(stripe.events).toEqual([
-      expect.objectContaining({ identifier: `diveday-fee-${shopId}-2031-06`, value: 3_000 }),
+      expect.objectContaining({ identifier: `diveday-fee-${shopId}-2031-06-usd`, value: 3_000 }),
     ]);
   });
 
@@ -331,7 +401,7 @@ describe("closePercentMonths", () => {
     expect(provider.invoiceFinalMonth).toHaveBeenCalledWith({
       customerId: expect.stringMatching(/^cus_close_/),
       amountCents: 3_000,
-      identifier: `diveday-fee-${shopId}-2031-06`,
+      identifier: `diveday-fee-${shopId}-2031-06-usd`,
       month: "2031-06",
     });
     expect(provider.reportMeterEvent).not.toHaveBeenCalled();
@@ -340,10 +410,10 @@ describe("closePercentMonths", () => {
     await closePercentMonths(db, options);
     await closePercentMonths(db, { ...options, now: new Date("2031-08-02T14:08:00Z") });
     expect(provider.invoiceFinalMonth).toHaveBeenCalledTimes(1);
-    expect(await db.select().from(pricingVolumeStatements)).toHaveLength(1);
+    expect(await db.select().from(pricingVolumeStatements)).toHaveLength(2);
   });
 
-  it("counts only the money taken before the cancel, and skips a subscription that ended earlier", async () => {
+  it("counts only money before cancellation and retains later statements for refund credits", async () => {
     const db = await unseededTestDb();
     // The June order is paid on the 15th, after a cancel on the 10th.
     const after = await percentShop(db, {
@@ -357,8 +427,91 @@ describe("closePercentMonths", () => {
     const provider = fakeProvider();
     expect(
       await closePercentMonths(db, { now: NOW, config: ON, provider, percent: PERCENT }),
-    ).toMatchObject({ closed: 1, nothingToReport: 1, finalMonths: 0 });
+    ).toMatchObject({ closed: 2, nothingToReport: 2, finalMonths: 0 });
     expect(provider.invoiceFinalMonth).not.toHaveBeenCalled();
     expect(await latestPricingStatement(db, after)).toMatchObject({ volumeCents: 0, feeCents: 0 });
+  });
+  it("catches up a missed month before closing the newer one", async () => {
+    const db = await unseededTestDb();
+    await percentShop(db);
+    const provider = fakeProvider();
+    const summary = await closePercentMonths(db, {
+      now: new Date("2031-08-02T14:08:00Z"),
+      config: ON,
+      provider,
+      percent: PERCENT,
+    });
+    expect(summary).toMatchObject({ closed: 2, reported: 1, nothingToReport: 1 });
+    expect(
+      (await db.select().from(pricingVolumeStatements)).map((row) => row.month).sort(),
+    ).toEqual(["2031-06-01", "2031-07-01"]);
+  });
+
+  it("holds native JPY fees instead of sending yen to the dollar meter", async () => {
+    const db = await unseededTestDb();
+    const shopId = await percentShop(db, {}, { currency: "jpy" });
+    const provider = fakeProvider();
+    expect(
+      await closePercentMonths(db, { now: NOW, config: ON, provider, percent: PERCENT }),
+    ).toMatchObject({ closed: 1, notConfigured: 1, reported: 0 });
+    expect(provider.reportMeterEvent).not.toHaveBeenCalled();
+    expect(provider.invoiceFinalMonth).not.toHaveBeenCalled();
+    expect(await latestPricingStatement(db, shopId)).toMatchObject({
+      currency: "jpy",
+      volumeCents: 100_000,
+      feeCents: 3_000,
+      reportedAt: null,
+    });
+  });
+  it("does not hold a paid month for an unknown receipt from an already free period", async () => {
+    const db = await unseededTestDb();
+    const shopId = await percentShop(db, { freeTermEndsOn: "2031-06-20" });
+    await unconfirmedMay(db, shopId, false);
+    await db
+      .update(collectionEntries)
+      .set({ recordedAt: new Date("2031-07-15T12:00:00Z") })
+      .where(eq(collectionEntries.shopId, shopId));
+    const provider = fakeProvider();
+    const result = await closePercentMonths(db, {
+      now: new Date("2031-08-02T12:00:00Z"),
+      config: ON,
+      provider,
+      percent: PERCENT,
+    });
+    expect(result).toMatchObject({ closed: 3, failed: 0, reported: 1 });
+    expect(
+      (await db.select().from(pricingVolumeStatements)).find((row) => row.month === "2031-07-01"),
+    ).toMatchObject({ volumeCents: 100_000, feeCents: 3_000 });
+  });
+
+  it("does not skip a failed earlier close and can catch it up after exact evidence arrives", async () => {
+    const db = await unseededTestDb();
+    const shopId = await percentShop(db);
+    const checkout = await unconfirmedMay(db, shopId, true);
+    const provider = fakeProvider();
+    const options = { now: NOW, config: ON, provider, percent: PERCENT };
+    expect(await closePercentMonths(db, options)).toMatchObject({ closed: 0, failed: 1 });
+    expect(await db.select().from(pricingVolumeStatements)).toHaveLength(0);
+    await db
+      .update(bookingCheckouts)
+      .set({ settledTotalCents: 50_000, taxCents: 0 })
+      .where(eq(bookingCheckouts.id, checkout.id));
+    await db.transaction((tx) => recordCheckoutCollection(tx, shopId, checkout.id));
+    expect(await closePercentMonths(db, options)).toMatchObject({ closed: 2, reported: 2 });
+    expect(
+      (await db.select().from(pricingVolumeStatements)).map((row) => row.month).sort(),
+    ).toEqual(["2031-05-01", "2031-06-01"]);
+  });
+
+  it("holds the earliest incomplete receipt even when it has no collection lot yet", async () => {
+    const db = await unseededTestDb();
+    const shopId = await percentShop(db);
+    await unconfirmedMay(db, shopId, false);
+    const provider = fakeProvider();
+    expect(
+      await closePercentMonths(db, { now: NOW, config: ON, provider, percent: PERCENT }),
+    ).toMatchObject({ closed: 0, failed: 1 });
+    expect(provider.reportMeterEvent).not.toHaveBeenCalled();
+    expect(await db.select().from(pricingVolumeStatements)).toHaveLength(0);
   });
 });

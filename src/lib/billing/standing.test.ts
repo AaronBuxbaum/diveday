@@ -3,6 +3,7 @@ import {
   type BillingStandingInput,
   type BillingStatus,
   billingStanding,
+  freePeriodEndsAt,
   freeTermEndsAt,
   freeTimeEndsAt,
   isInGoodStanding,
@@ -141,6 +142,14 @@ describe("freeTimeEndsAt", () => {
     expect(freeTimeEndsAt(input({ trialEndsAt: trialEnd, freeTermEndsOn: "2027-04-01" }))).toEqual(
       new Date("2027-04-02T04:00:00.000Z"),
     );
+  });
+
+  it("retains the historical free cutoff after expiry for receipt accounting", () => {
+    expect(
+      freePeriodEndsAt(
+        input({ trialEndsAt: new Date("2026-01-01T00:00:00Z"), freeTermEndsOn: "2026-02-01" }),
+      ),
+    ).toEqual(new Date("2026-02-02T05:00:00Z"));
   });
 
   it("is null once both have passed", () => {

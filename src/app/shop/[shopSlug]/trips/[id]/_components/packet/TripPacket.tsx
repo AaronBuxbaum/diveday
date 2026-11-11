@@ -13,7 +13,7 @@ import { getTripPrepPage } from "@/features/trip-prep";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import { ShopSheet } from "../../../../print/_components/ShopSheet";
+import { ShopSheet, sheetAttribution } from "../../../../print/_components/ShopSheet";
 import {
   DeparturePaperIdentity,
   formatPaperDateTime,
@@ -156,7 +156,7 @@ async function composeTripPacket({
     `${formatPaperDateTime(details.trip.startsAt, locale, shop.timezone)} · ${shop.timezone}`,
     vessel?.name ?? "",
   ];
-  const printed = `${t("print.sheet.printed", { date: formatPaperDateTime(now, locale, shop.timezone) })} · ${shop.timezone}`;
+  const printed = `${sheetAttribution(t, formatPaperDateTime(now, locale, shop.timezone), session.user.name)} · ${shop.timezone}`;
   // Which departure, at the head of each sheet: each starts a page of its
   // own, and the gear room's sheet still has to say which boat it is for.
   const head = (

@@ -17,6 +17,7 @@ import { useConservationActions } from "./ConservationActions";
 
 export type ConservationCopy = {
   kind: string;
+  lionfishHint: string;
   quantity: string;
   location: string;
   note: string;
@@ -69,7 +70,7 @@ export function ConservationForm({
         </>
       ) : null}
       <FieldGrid columns={2}>
-        <Field label={copy.kind}>
+        <Field label={copy.kind} hint={kind === "lionfish_count" ? copy.lionfishHint : undefined}>
           <select
             name="kind"
             value={kind}
@@ -88,8 +89,8 @@ export function ConservationForm({
             className={controlClass}
             name="quantity"
             type="number"
-            step="0.01"
-            min="0.01"
+            step={kind === "litter_items" || kind === "lionfish_count" ? "1" : "0.01"}
+            min={kind === "litter_items" || kind === "lionfish_count" ? "1" : "0.01"}
             max="100000"
             required
             value={quantity}

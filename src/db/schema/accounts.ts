@@ -126,6 +126,7 @@ export const securityStepUpPurpose = pgEnum("security_step_up_purpose", [
   "money",
   "export",
   "backup",
+  "security",
 ]);
 
 /** Short-lived, session-bound grants produced by a second-factor challenge. */

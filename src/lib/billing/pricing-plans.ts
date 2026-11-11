@@ -1,6 +1,6 @@
 import { earlyAccessPriceAmount } from "@/lib/marketing";
 
-/** Configured monthly fee plus a share of card payments collected through DiveDay. */
+/** Configured monthly fee plus a share of money recorded received by any method. */
 export const PRICING_PLANS = ["flat_monthly", "percent_of_volume"] as const;
 export type PricingPlan = (typeof PRICING_PLANS)[number];
 
@@ -107,7 +107,7 @@ export function effectivePricing(input: {
 /**
  * The percent plan's fee on a month's volume, in whole cents: `basisPoints`
  * of it, half a cent rounded up, never below zero (a month whose refunds
- * outweigh its sales owes nothing, and carries nothing into the next).
+ * outweigh its sales owes nothing; statement fee credits carry separately).
  * Integer arithmetic only.
  */
 export function percentFeeCents(volumeCents: number, basisPoints: number): number {

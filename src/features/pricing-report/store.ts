@@ -15,6 +15,7 @@ export type PricingPlanRow = {
   canceled: number;
   revenueCents: number;
   payingShops: number;
+  /** USD collection volume only: native currencies are never added together. */
   volumeCents: number;
 };
 
@@ -48,7 +49,7 @@ export async function pricingByPlan(db: DbExecutor): Promise<PricingPlanRow[]> {
     .from(pricingVolumeStatements)
     .innerJoin(shopSubscriptions, eq(shopSubscriptions.shopId, pricingVolumeStatements.shopId))
     .innerJoin(shops, eq(shops.id, pricingVolumeStatements.shopId))
-    .where(realShop())
+    .where(and(realShop(), eq(pricingVolumeStatements.currency, "usd")))
     .groupBy(plan);
 
   return PRICING_PLANS.map((plan) => {

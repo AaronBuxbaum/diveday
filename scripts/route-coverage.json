@@ -36,15 +36,10 @@
       "stranded-diver-card",
       "thread-anything-changed",
       "thread-prep-current-step"
-    ],
-    "e2e": ["wallet-pass.spec.ts"]
+    ]
   },
   "/ready/[token]/forms": {
     "visual": ["course-form-sign"]
-  },
-  "/ready/[token]/waiver": {
-    "e2e": ["booking.spec.ts", "manifest.spec.ts", "waivers.spec.ts"],
-    "visual": ["waiver-active", "waiver-medical-held", "waiver-rail", "waiver-rail-follow-ups"]
   },
   "/ready/[token]/party/[seatId]/waiver": {
     "exempt": "The same waiverSigningForm the waiver link draws, which the waiver captures photograph with its guardian card; only the door differs. guardian-co-signature.spec.ts reaches this page by the party panel's Sign tap, and src/app/(token)/ready/[token]/party-waiver-actions.test.ts holds the door against a real record (issue #2743)."
@@ -52,23 +47,15 @@
   "/ready/[token]/party/[seatId]/waiver/doctor": {
     "exempt": "The same DoctorReferralBody the diver's own doctor's page draws, held against a real record by src/app/(token)/ready/[token]/waiver/doctor/page.test.ts; only the door differs, and that door (the lead's readiness link, the panel's physician door on the seat, the referral gate) is held against a real record by src/app/(token)/ready/[token]/party-waiver-actions.test.ts (issue #2743)."
   },
+  "/ready/[token]/waiver": {
+    "e2e": ["booking.spec.ts", "manifest.spec.ts", "waivers.spec.ts"],
+    "visual": ["waiver-active", "waiver-medical-held", "waiver-rail", "waiver-rail-follow-ups"]
+  },
   "/ready/[token]/waiver/doctor": {
     "e2e": ["waivers.spec.ts"],
     "visual": ["waiver-doctor", "waiver-doctor-evaluation"]
   },
-  "/s/[shopSlug]/embed/calendar": {
-    "e2e": [
-      "returning-diver.spec.ts",
-      "reviews.spec.ts",
-      "schedule-embed.spec.ts",
-      "seo.spec.ts",
-      "storefront-brand.spec.ts",
-      "trip-admission.spec.ts"
-    ],
-    "visual": ["schedule-embed"]
-  },
   "/s/[shopSlug]/embed/trip/[id]": {
-    "e2e": ["returning-diver.spec.ts", "schedule-embed.spec.ts"],
     "visual": ["booking-confirmed-embed"]
   },
   "/shop/[shopSlug]/divers/[personId]/merge/[survivorId]": {
@@ -97,19 +84,16 @@
     "e2e": ["work-orders.spec.ts"],
     "visual": ["work-order-claim-tag"]
   },
-  "/shop/[shopSlug]/me/security": {
-    "exempt": "Browser coverage is real (e2e/security-settings.spec.ts enrols in two-factor against the frozen clock, reads the recovery codes and revokes a session). No capture, because the Active sessions card cannot hold a baseline still: account_sessions.updated_at is stamped by better-auth's own clock, which DIVEDAY_CLOCK does not reach, so \"last seen\" is the wall clock; the row beside it prints the Chromium user-agent string, version and all; and the row count depends on how often the run signed in. Masking those is the one fix AGENTS.md refuses. Closing this means stamping those timestamps through src/lib/clock.ts at the better-auth boundary, which is an auth change wanting its own review (issue #1020)."
-  },
   "/shop/[shopSlug]/orders/[id]/print/dispute": {
     "e2e": ["dispute-sheet.spec.ts"],
     "visual": ["order-dispute-sheet"]
   },
-  "/shop/[shopSlug]/schedule/blowout/day/[date]": {
-    "visual": ["blowout-day"]
-  },
   "/shop/[shopSlug]/safety/print": {
     "e2e": ["reports.spec.ts"],
     "exempt": "No capture of its own yet: the sheet is the Safety screen's figures and lists on a PacketSheet, held figure for figure against the screen by src/app/shop/[shopSlug]/safety/print/page.test.tsx and row for row by SafetyLists.test.tsx, and reports.spec.ts opens it from the Print door. Its first baseline is cut in the visual-print layer (issue #2745)."
+  },
+  "/shop/[shopSlug]/schedule/blowout/day/[date]": {
+    "visual": ["blowout-day"]
   },
   "/shop/[shopSlug]/staffing/print": {
     "e2e": ["visual-print.spec.ts"],

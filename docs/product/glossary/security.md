@@ -1,6 +1,6 @@
 # Security
 
-- **Pending sign-in challenge** — password proof awaiting a second factor, granting no staff
+- **Pending sign-in challenge** — password, email or passkey proof awaiting a second factor, granting no staff
   session. A random cookie handle resolves to a digest-only account/shop record, valid for five
   minutes and five submitted codes. TOTP or recovery-code consumption, challenge consumption and
   Better Auth session creation commit together. Back, restart and credential/security invalidation
@@ -10,10 +10,17 @@
 - **Step-up** — a fresh second-factor check for one sensitive act, bound to one Better Auth
   session and expiring on its own (`account_step_ups`, ADR
   [20260826-account-security-step-up](../../architecture/decisions/20260826-account-security-step-up.md)).
-  Three purposes: `money`, `export`, `backup`. A grant from another browser, or from a session
+  Operational purposes: `money`, `export`, `backup`, with twelve-hour grants. The separate
+  `security` purpose lasts five minutes and authorizes factor changes only, proved by an existing
+  factor or the current password. A grant from another browser, or from a session
   since revoked, never satisfies it. Being signed in is not being stepped up; **and step-up is
-  only demanded of an account that has enabled two-factor**, so it is a control a staff member
+  only demanded of an account that has enabled two-factor or registered a passkey**, so it is a control a staff member
   opts into rather than a floor under every account.
+- **Passkey** — a staff-only public-key credential, unlocked by the authenticator’s own face,
+  fingerprint or device-PIN check. DiveDay stores only the public key and signature counter; the
+  private key remains on the authenticator. A passkey starts the same sign-in flow as a password,
+  retaining enabled two-factor authentication, or verifies a session- and purpose-bound step-up
+  (ADR [20260907-in-your-hands](../../architecture/decisions/20260907-in-your-hands.md)).
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.

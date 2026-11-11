@@ -216,6 +216,7 @@ and run the command again.
 | H-20261105-ci-on-the-stack-top | Implemented | 2026-11-05 | Which layers of a stack run CI? |
 | H-20261105-staff-roles-credentials-in-diver-export | Implemented | 2026-11-05 | Do a staffer's roles and pro cards belong in their own data export? |
 | H-20261109-media-version-recovery | Chosen | 2026-11-09 | How long should older media versions remain recoverable? |
+| H-20261110-bill-recorded-receipts | Resolved | 2026-11-10 | Bill recorded receipts across payment methods |
 | H-20261110-branch-protection-top-of-stack | Deferred | 2026-11-10 | When should branch protection require the stack result? |
 
 <!-- human-decision-index:end -->

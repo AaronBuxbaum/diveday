@@ -37,6 +37,10 @@ describe("paymentSourceLine", () => {
     expect(paymentSourceLine("partly_refunded", null)).toBe("counter");
   });
 
+  it("names a mixed online and external payment explicitly", () => {
+    expect(paymentSourceLine("paid", "mixed")).toBe("mixed");
+  });
+
   it("names the counter when staff marked it paid manually", () => {
     expect(paymentSourceLine("paid", null)).toBe("counter");
     expect(paymentSourceLine("deposit_paid", undefined)).toBe("counter");

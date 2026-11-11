@@ -38,7 +38,8 @@ describe("retention windows", () => {
     const tables = Object.keys(RETENTION_DAYS) as RetainedTable[];
     expect(tables.length).toBeGreaterThan(0);
     for (const table of tables) {
-      if (table === "account_sign_in_challenges") expect(RETENTION_DAYS[table]).toBe(0);
+      if (table === "account_sign_in_challenges" || table === "account_passkey_challenges")
+        expect(RETENTION_DAYS[table]).toBe(0);
       else expect(RETENTION_DAYS[table]).toBeGreaterThan(0);
       expect(Number.isInteger(RETENTION_DAYS[table])).toBe(true);
     }
@@ -71,6 +72,7 @@ describe("retention windows", () => {
   it("keeps the pending-proof cutoff at this exact instant without day rounding", () => {
     const now = new Date("2026-08-03T12:34:56.789Z");
     expect(retentionCutoff("account_sign_in_challenges", now).getTime()).toBe(now.getTime());
+    expect(retentionCutoff("account_passkey_challenges", now).getTime()).toBe(now.getTime());
   });
 
   it("bounds one pass so a backlog converges instead of timing out", () => {

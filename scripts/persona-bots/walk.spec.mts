@@ -414,7 +414,7 @@ async function signIn(context: BrowserContext, role: string) {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(login.email);
   await page.getByLabel("Password").fill(login.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/shop") || url.searchParams.has("error"));
   if (new URL(page.url()).searchParams.has("error")) {
     throw new Error(`persona-bots: sign-in as ${role} was refused`);

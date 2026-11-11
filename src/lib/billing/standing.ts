@@ -109,10 +109,17 @@ function inFreeTerm(input: BillingStandingInput): boolean {
 export function freeTimeEndsAt(
   input: Pick<BillingStandingInput, "now" | "timeZone" | "trialEndsAt" | "freeTermEndsOn">,
 ): Date | null {
+  const latest = freePeriodEndsAt(input);
+  return latest.getTime() > input.now.getTime() ? latest : null;
+}
+
+/** Historical billing cutoff, retained after free time expires. */
+export function freePeriodEndsAt(
+  input: Pick<BillingStandingInput, "timeZone" | "trialEndsAt" | "freeTermEndsOn">,
+): Date {
   const candidates = [input.trialEndsAt];
   if (input.freeTermEndsOn) candidates.push(freeTermEndsAt(input.freeTermEndsOn, input.timeZone));
-  const latest = candidates.reduce((a, b) => (a.getTime() >= b.getTime() ? a : b));
-  return latest.getTime() > input.now.getTime() ? latest : null;
+  return candidates.reduce((a, b) => (a.getTime() >= b.getTime() ? a : b));
 }
 
 /** Which free window the shop is in when nothing Stripe says outranks it. */

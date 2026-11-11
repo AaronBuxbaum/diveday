@@ -784,7 +784,19 @@ to the packing list, which is the mechanism, not the outcome).
 **Pending sign-in, 2026-10-26:** a correct password opens a code-only second step for enrolled staff. The form arrives as complete HTML so native no-JavaScript submission works; only `/sign-in` waits for its locale/cookie/challenge lookup. One Verify action, an inline settled refusal, and Back; a retry hides the previous refusal while pending (ADR [20261026-pending-sign-in-challenge](../architecture/decisions/20261026-pending-sign-in-challenge.md)).
 
 **Chosen 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
-on a device that holds a passkey for the account, `/sign-in` is one primary and the device's own check, with the password as the link out; every other device gets the form as it ships. The door keeps its anatomy and its one primary; sign-out keeps its two taps. H-20260907-where-device-already-knows a decided yes, the step-up included.
+staff may use a device-verified passkey, including for step-up. **Mechanism reconciled 2026-11-10 (#4232):** capability cannot reveal whether this account owns a passkey, so the password stays the one primary and a secure capable browser gets a passkey text action. No ambient account inventory is inferred. The security page lists named keys and last use; an existing factor or current password unlocks protected factor changes for five minutes, registration asks the device, Delete remains explicit, and sign-out keeps its two taps. Enabled two-factor and the final confirmation of a consequential action stay separate.
+
+**Security page, observed 2026-11-10 (#4232):** its one idea is the reader's own ways in and ways
+out, not shop permissions. It answers “which key did I save, and can I change it?” with a named
+in-place field, last use in the shop's zone, and an explicit Delete confirmation. Registration
+and factor proof stay device actions; no extra edit page or primary toolbar was added. Protected
+factor changes put the short verification choice before the locked controls; its five-minute
+status replaces that choice after proof. An operational step-up instead shows its one challenge
+first and suppresses the management challenge, so two identical Verify choices do not compete.
+Light phone and desktop captures cover empty, saved/locked, Delete confirmation and operational
+challenge states. Their shared fields align and wrap without clipping. The sign-in capture keeps
+one password primary and a passkey text action; recovery remains visible. No celebration is
+attached to changing a security setting.
 
 **Built 2026-08-29** — ADR
 [20260827-first-light](../architecture/decisions/20260827-first-light.md) (Accepted), drawn in
@@ -977,3 +989,27 @@ The eye reaches the work before this unboxed, muted row, including on an empty o
 The sentence and platform’s own menu words carry the hierarchy without a new heading or decoration.
 One available native install action is secondary, with a flush dismissal that holds on this device.
 Installed, desktop, embedded, unsupported and dismissed states remove the row rather than explain it.
+
+
+## Recorded collections and external returns — 2026-11-11
+
+Billing answers how much was recorded received, the rate, and the credits on the last closed
+month. Native currency headings prevent a yen amount from reading as dollars. The existing plan
+panel keeps these facts together; a new finance dashboard would separate the fee from its terms.
+The filled USD/JPY and original-rate-credit state was reviewed at 390 and 1280 pixels. Money and
+period facts use the base 16px type, while the basis explanation remains secondary.
+
+The roster keeps the original online source beside an incremental external receipt. An external
+return asks only for money already returned, with a clear statement that Update sends no payment.
+The partial-return form and deposit balance were reviewed on phone and desktop. Receipt amount
+and method share FieldGrid’s caption/control tracks, and the method pills use 48px field targets.
+The browser regression measures their top edges and keyboard focus on the pill, rather than on
+its native radio dot.
+
+The probe’s transparent waiver-action wrapper contains 6px of extra top space, not a painted
+control whose label needs centering. Individual actions keep their own targets. Advisory pills
+align at the row’s end and vary in width; their left edges are not a column. The reused size-4 SVG
+class also covers different semantic positions, so its 33/138px starts do not establish an icon
+column. A native radio has no separate outline because ChoicePill draws focus around the whole
+rounded label. These four probe clusters are dismissed for those specific structures; they do not
+waive checks on new painted controls or actual shared columns.

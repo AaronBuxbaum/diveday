@@ -52,6 +52,8 @@ export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shop_subscriptions:
     "what the shop pays DiveDay: Stripe ids on DiveDay’s own account, a status, a few dates and the plan’s numbers (ADR 20261022-pricing-ab-test). The business is the customer, never a diver",
   pricing_volume_statements: "a closed month’s volume, rate and fee, as shop_subscriptions",
+  collection_entries:
+    "immutable shop billing evidence: native-currency amounts, method codes and source ids, with numeric settlement facts but no names, addresses or free text (ADR 20261110-recorded-collections-own-billing)",
   shop_integrations: "a provider connection the shop made, and the sealed credentials behind it",
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
   shop_backup_deliveries: "whether one of those bundles arrived: a period key, byte count, status",

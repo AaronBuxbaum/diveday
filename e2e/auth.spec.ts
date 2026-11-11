@@ -28,7 +28,7 @@ test("wrong password shows a friendly error and stays signed out", { tag: READ_O
   await expect(page.getByRole("button", { name: "Explore the demo shop" })).toHaveCount(0);
   await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
   await page.getByLabel("Password").fill("wrong-password");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   // Filtered because Next's route announcer is also role="alert".
   await expect(page.getByRole("alert").filter({ hasText: "don’t match" })).toBeVisible();
   await page.goto("/shop");
@@ -39,7 +39,7 @@ test("staff sign-in lands on the shop dashboard and sign-out locks it again", as
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
   await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
   // Straight to the staffer's own shop, not through the bare /shop.
   await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
@@ -67,7 +67,7 @@ test("/shop opens a signed-in staffer's shop even when the edge cannot decide", 
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(DEV_STAFF_LOGINS.owner.email);
   await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
 
   await page.context().clearCookies({ name: "better-auth.session_data" });

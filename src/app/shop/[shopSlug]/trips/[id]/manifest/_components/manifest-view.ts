@@ -145,6 +145,7 @@ export async function readManifestView({
     checkpoint,
     locale,
     t,
+    session.user.name,
   );
   return {
     status: "ready" as const,

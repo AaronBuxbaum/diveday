@@ -80,7 +80,7 @@
     "paid_after_close_refunded": "{actor} refunded a card paid after its checkout closed",
     "seat_refunded": "{actor} removed {diver} and refunded the seat by card",
     "payment_waived": "{actor} marked {diver}’s seat waived",
-    "payment_marked_refunded": "{actor} marked {diver}’s seat refunded",
+    "payment_marked_refunded": "{actor} recorded money returned for {diver}’s seat",
     "payment_balance_written_off": "{actor} wrote off the rest of {diver}’s seat",
     "party_marked_paid": "{actor} took {diver}’s share of the party’s payment",
     "dashboard_refund_matched": "{actor} matched a refund made in Stripe to {diver}’s seat",

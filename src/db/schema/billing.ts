@@ -1,9 +1,14 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
+  bigserial,
   boolean,
   check,
   date,
+  foreignKey,
+  index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -121,7 +126,7 @@ export const shopSubscriptions = pgTable(
 
 /**
  * **One closed month of a percent-plan shop** (ADR 20261022-pricing-ab-test):
- * the card money it took through DiveDay in its own calendar month
+ * the money recorded received by any method in its own calendar month
  * (`processedVolumeCents`), the fee on it, and whether that fee has reached
  * Stripe as a meter event.
  *
@@ -140,21 +145,28 @@ export const pricingVolumeStatements = pgTable(
       .notNull()
       .references(() => shops.id),
     month: date("month", { mode: "string" }).notNull(),
-    /** The month's own card money as read at the close, before any late refund. */
-    monthCardCents: integer("month_card_cents").notNull().default(0),
-    /**
-     * Refunds recorded after an earlier statement closed, plus what that
-     * statement carried in, taken off this month's card money (issue 3024).
-     */
+    currency: text("currency").notNull().default("usd"),
+    /** Net collection lots billed here, retained for original-rate credits. */
+    collections: jsonb("collections")
+      .$type<Array<{ entryId: number; amountCents: number }>>()
+      .notNull()
+      .default([]),
+    /** Fee before crediting refunds of an earlier statement. */
+    grossFeeCents: integer("gross_fee_cents").notNull().default(0),
+    /** Original-rate fee credits received here, including any carry. */
+    refundCreditCents: integer("refund_credit_cents").notNull().default(0),
+    /** Unused fee credit in this currency, never a volume repriced at a later rate. */
+    feeCreditCarryCents: integer("fee_credit_carry_cents").notNull().default(0),
+    /** New credits, by original statement, so a replay can never credit one twice. */
+    credits: jsonb("credits")
+      .$type<Array<{ statementId: string; basisCents: number; feeCents: number }>>()
+      .notNull()
+      .default([]),
+    /** Collections less same-month reversals, in this currency's minor units. */
+    monthCollectedCents: integer("month_card_cents").notNull().default(0),
+    /** Later refunds or failed-refund restorations, credited at the original rate. */
     lateRefundCents: integer("late_refund_cents").notNull().default(0),
-    /** What this month could not absorb of `lateRefundCents`: the next statement takes it. */
-    refundCarryCents: integer("refund_carry_cents").notNull().default(0),
-    /**
-     * How much of this month's card money later statements have credited as
-     * late refunds, so a refund is credited once however often it is re-read.
-     */
-    refundedSinceCloseCents: integer("refunded_since_close_cents").notNull().default(0),
-    /** Billed card money: `monthCardCents` less `lateRefundCents`, never below zero. */
+    /** This month's net collection basis; prior refunds adjust fees, not this volume. */
     volumeCents: integer("volume_cents").notNull(),
     /** The rate the fee was computed at: the shop's snapshot when the month closed. */
     basisPoints: integer("basis_points").notNull(),
@@ -172,7 +184,64 @@ export const pricingVolumeStatements = pgTable(
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
-    uniqueIndex("pricing_volume_statements_shop_month_unique").on(table.shopId, table.month),
+    uniqueIndex("pricing_volume_statements_shop_month_unique").on(
+      table.shopId,
+      table.month,
+      table.currency,
+    ),
     check("pricing_volume_statements_fee_check", sql`${table.feeCents} >= 0`),
+  ],
+);
+
+/**
+ * Append-only received-money lots and their linked reversals. One economic source
+ * is an order, a checkout, or a hand-marked seat, never both a receipt and its
+ * seat cascade. Amounts are native-currency minor units; no exchange rate exists.
+ * Source writers hold the source row lock before appending, in the same transaction.
+ */
+export const collectionEntries = pgTable(
+  "collection_entries",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    sourceType: text("source_type").$type<"order" | "checkout" | "booking">().notNull(),
+    sourceId: uuid("source_id").notNull(),
+    currency: text("currency").notNull(),
+    method: text("method").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    /** A refund names its collection lot; a failed-refund restoration names that refund. */
+    reversesEntryId: bigint("reverses_entry_id", { mode: "number" }),
+    /** The exact source facts used for the chargeable balance, not a future reread. */
+    evidence: jsonb("evidence").$type<Record<string, number | string | boolean | null>>().notNull(),
+    /** Receipt/reversal recording time; first exact checkout evidence retains its completion time. */
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
+    /** When this immutable accounting row was appended, including delayed evidence. */
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("collection_entries_shop_id_unique").on(table.shopId, table.id),
+    index("collection_entries_source_idx").on(
+      table.shopId,
+      table.sourceType,
+      table.sourceId,
+      table.id,
+    ),
+    index("collection_entries_month_idx").on(table.shopId, table.recordedAt),
+    foreignKey({
+      name: "collection_entries_reversal_shop_fk",
+      columns: [table.shopId, table.reversesEntryId],
+      foreignColumns: [table.shopId, table.id],
+    }),
+    check(
+      "collection_entries_source_check",
+      sql`${table.sourceType} in ('order', 'checkout', 'booking')`,
+    ),
+    check("collection_entries_currency_check", sql`${table.currency} ~ '^[a-z]{3}$'`),
+    check(
+      "collection_entries_reversal_check",
+      sql`${table.amountCents} <> 0 and (${table.amountCents} > 0 or ${table.reversesEntryId} is not null)`,
+    ),
   ],
 );

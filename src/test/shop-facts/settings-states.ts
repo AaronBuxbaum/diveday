@@ -1,9 +1,23 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
-import { boats, shopBackupDeliveries, shopBackupDestinations, trips } from "../../db/schema/index";
+import {
+  accountSessions,
+  boats,
+  shopBackupDeliveries,
+  shopBackupDestinations,
+  trips,
+} from "../../db/schema/index";
 import { liveTrip } from "../../db/trips-live";
 import { DAY_MS, HOUR_MS } from "../../lib/clock";
 import { FactRefused } from "./refusal";
+
+/** Pin provider-owned display timestamps to the harness clock, without changing session validity. */
+export async function pinStaffSessionsSeenNow(db: AppDb, shop: { id: string }, now: Date) {
+  await db
+    .update(accountSessions)
+    .set({ updatedAt: now })
+    .where(eq(accountSessions.shopId, shop.id));
+}
 
 /**
  * **A boat with a photo** (`boatPhoto`): the private shop's Mantis I takes one

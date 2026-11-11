@@ -14,10 +14,23 @@ export function sheetPrinted(
   at: Date,
   locale: string,
   timeZone: string,
+  printedBy?: string | null,
 ): string {
-  return t("print.sheet.printed", {
-    date: `${formatDateWithYear(at, locale, timeZone)} · ${formatTimeTz(at, locale, timeZone)}`,
-  });
+  return sheetAttribution(
+    t,
+    `${formatDateWithYear(at, locale, timeZone)} · ${formatTimeTz(at, locale, timeZone)}`,
+    printedBy,
+  );
+}
+
+/** Only the authenticated reader's display name, never a diver, owner, or email fallback. */
+export function sheetAttribution(
+  t: StaffTranslator,
+  date: string,
+  printedBy?: string | null,
+): string {
+  const name = printedBy?.trim();
+  return name ? t("print.sheet.printedBy", { date, name }) : t("print.sheet.printed", { date });
 }
 
 /**

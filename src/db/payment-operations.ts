@@ -6,6 +6,24 @@ import type { PaymentOperationIntent, PaymentOperationKind } from "./schema";
 import { bookings, paymentOperationIntents } from "./schema";
 import { seatHeld } from "./trips-queries";
 
+/** Known source reconciliation cannot become safe merely by waiting. */
+export const SETTLEMENT_CURRENCY_MISMATCH = "settlement_currency_mismatch";
+export const SETTLEMENT_AFTER_FINAL_STATE = "settlement_after_final_state";
+export const SETTLEMENT_SOURCE_MISMATCH = "settlement_source_mismatch";
+export const REFUND_FAILURE_ATTRIBUTION = "refund_failed_attribution";
+
+export function immediatePaymentReconciliation(): SQL {
+  return and(
+    eq(paymentOperationIntents.status, "started"),
+    inArray(paymentOperationIntents.errorMessage, [
+      SETTLEMENT_CURRENCY_MISMATCH,
+      SETTLEMENT_AFTER_FINAL_STATE,
+      SETTLEMENT_SOURCE_MISMATCH,
+      REFUND_FAILURE_ATTRIBUTION,
+    ]),
+  ) as SQL;
+}
+
 export type StartPaymentOperationInput = {
   shopId: string;
   kind: PaymentOperationKind;
