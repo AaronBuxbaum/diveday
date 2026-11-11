@@ -43,6 +43,25 @@ describe("standard course forms", () => {
   });
 });
 
+describe("PADI Open Water water skills", () => {
+  // https://www.padi.com/help/scuba-certification-faq: only the swim is untimed.
+  const openWater = COURSE_TEMPLATES.find((template) => template.slug === "open-water-diver");
+
+  it.each([
+    ["overview", openWater?.content.overview],
+    ["Day 1", openWater?.content.scheduleDays[0].items.find((item) => /swim/i.test(item))],
+    ["swimming FAQ", openWater?.content.faqs.find((faq) => /swimmer/.test(faq.question))?.answer],
+  ])("distinguishes the swim time limit from the float duration in %s", (_field, copy) => {
+    expect(copy).toMatch(/swim[^.!]*no time limit/i);
+    expect(copy).toMatch(/10-minute float/);
+    expect(copy).not.toMatch(/neither.*timed|swim and float assessment \(not timed\)/i);
+  });
+
+  it("offers the corrected copy to shops following an older template", () => {
+    expect(openWater?.version).toBeGreaterThan(4);
+  });
+});
+
 describe("PADI Open Water pricing copy", () => {
   it("keeps separately billed eLearning out of course-fee inclusions", () => {
     const openWater = COURSE_TEMPLATES.find((template) => template.slug === "open-water-diver");
