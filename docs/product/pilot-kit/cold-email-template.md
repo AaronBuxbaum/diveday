@@ -68,7 +68,7 @@ sales-tool shape there is, and it is spotted before the email is opened.
 
 > [FIRST NAME],
 >
-> I dive and I write software (I used to work on Google Maps), and I've been building a tool for running dive days, from booking through the head count on the boat. I've never run a shop, so this is a question and not a pitch.
+> I'm a diver and an ex-Google software engineer, and I've been building a tool for running dive days, from booking through the head count on the boat. I've never run a shop, so this is a question and not a pitch.
 >
 > [RESEARCHED QUESTION]
 >
@@ -116,7 +116,7 @@ Six checks, in the order they'd fail:
 
 | Part | Doing what |
 | --- | --- |
-| "I used to work on Google Maps" | One clause, in parentheses. It answers "who is this" with something true and checkable, and is the only credential in the email. No diver cert level unless it is exact, and no shop count, quote or testimonial: there are none. |
+| "an ex-Google software engineer" | One clause. Aaron chose this wording over "worked on Google Maps" (2026-11-11), and it is his own true biography. It answers "who is this" with something true and checkable, and is the only credential in the email. No diver cert level unless it is exact, and no shop count, quote or testimonial: there are none. |
 | "I've never run a shop" | The first paragraph's real content. It sets the relationship — someone asking, not someone selling — and it is why the rest of the email is allowed to ask a question. One clause says what DiveDay is, and the paragraph does not return to it. |
 | The researched question | Placed where the owner story used to be. It proves the founder read this shop's pages, asks about their morning instead of describing a product, and asserts nothing about how they work, so there is nothing to defend. The owner story was cut for length; the "I've never run a shop" clause carries the same job. |
 | The water paragraph | The genuine reason this email exists rather than an ad, and the thing the reader has that the founder needs. It asserts only the half that is true and says the rest is untested — see [the offline line](#the-offline-line--read-this-before-editing-the-water-paragraph). |
