@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, notExists } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -42,6 +42,13 @@ async function setting() {
     .orderBy(bookings.id)
     .limit(1);
   if (!seat) throw new Error("expected a seeded booking");
+  const elsewhere = await unrelatedDeparture(seat.personId);
+  await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, seat.personId));
+  return { db, shop, owner: owner.id, diver: seat.personId, tripId: seat.tripId, elsewhere };
+}
+
+async function unrelatedDeparture(personId: string) {
+  const { db, shop } = ctx;
   // A departure the diver was never on.
   const [elsewhere] = await db
     .select({ id: trips.id })
@@ -50,22 +57,25 @@ async function setting() {
       and(
         eq(trips.shopId, shop.id),
         liveTrip(),
-        ne(trips.id, seat.tripId),
-        // Not one of the diver's other seats either.
-        ne(
-          trips.id,
+        notExists(
           db
-            .select({ id: bookings.tripId })
+            .select({ id: bookings.id })
             .from(bookings)
-            .where(eq(bookings.personId, seat.personId))
-            .limit(1),
+            .where(and(eq(bookings.personId, personId), eq(bookings.tripId, trips.id))),
+        ),
+        notExists(
+          db
+            .select({ id: tripAssignments.personId })
+            .from(tripAssignments)
+            .where(
+              and(eq(tripAssignments.personId, personId), eq(tripAssignments.tripId, trips.id)),
+            ),
         ),
       ),
     )
     .limit(1);
   if (!elsewhere) throw new Error("expected a second departure");
-  await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, seat.personId));
-  return { db, shop, owner: owner.id, diver: seat.personId, tripId: seat.tripId, elsewhere };
+  return elsewhere;
 }
 
 async function report(
@@ -98,6 +108,33 @@ async function isErased(db: typeof ctx.db, personId: string) {
 }
 
 describe("erasure and an incident's legal hold", () => {
+  it("the unrelated-departure fixture excludes every seat and crew assignment", async () => {
+    const { db, shop } = ctx;
+    const departures = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), liveTrip()));
+    expect(departures.length).toBeGreaterThan(3);
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Fixture diver" })
+      .returning({ id: people.id });
+    const unrelated = departures.at(-1);
+    const crewOnly = departures.at(-2);
+    if (!person || !unrelated || !crewOnly) throw new Error("expected fixture rows");
+    await db.insert(bookings).values(
+      departures.slice(0, -2).map((trip, index) => ({
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: person.id,
+        bookedAs: "diver" as const,
+        status: index === 0 ? ("booked" as const) : ("cancelled" as const),
+      })),
+    );
+    await db.insert(tripAssignments).values({ tripId: crewOnly.id, personId: person.id });
+    expect(await unrelatedDeparture(person.id)).toEqual(unrelated);
+  });
+
   it("refuses a diver booked on a departure whose report is held, and changes nothing", async () => {
     const { db, shop, owner, diver, tripId } = await setting();
     await report(db, { shopId: shop.id, tripId, createdBy: owner, held: true });
