@@ -102,6 +102,44 @@ function git(args) {
 }
 
 describe("prepareNearestBaseline (#3968)", () => {
+  it("starts a rejected PR's fallback at its main fork outside the feature first-parent chain", async () => {
+    const { fetchImpl, requests } = bucket({
+      snapshots: {
+        [A]: {
+          version: VERSION_A,
+          owner: "pr",
+          report: { ...report(VERSION_A, { "x.png": HASH }), partialActual: true },
+        },
+        [C]: { version: VERSION_C, owner: "main", report: report(VERSION_C, { "x.png": HASH }) },
+      },
+      blobs: new Set([HASH]),
+    });
+    const calls = [];
+    const longStackGit = (args) => {
+      calls.push(args);
+      if (args[0] === "merge-base" && args[1] === A && args[2] === "origin/trunk") return C;
+      if (args[0] === "rev-parse" && args[1] === `${A}^`) return B;
+      if (args[0] === "rev-list") {
+        return Array.from({ length: 40 }, (_, i) => (i + 1).toString(16).padStart(40, "0")).join(
+          "\n",
+        );
+      }
+      throw new Error(`unexpected ${args}`);
+    };
+    const result = await prepareNearestBaseline({
+      git: longStackGit,
+      defaultBranch: "trunk",
+      bucket: BUCKET,
+      key: A,
+      version: VERSION_A,
+      outputDir: outputDir(),
+      fetchImpl,
+    });
+    expect(result).toMatchObject({ key: C, version: VERSION_C, count: 1, passedOver: [A] });
+    expect(calls).toEqual([["merge-base", A, "origin/trunk"]]);
+    expect(requests).not.toContain(`HEAD ${B}/out.json`);
+  });
+
   it("passes over a report-only PR snapshot instead of treating its 76 uploads as the whole baseline", async () => {
     const baseline = Array.from({ length: 1740 }, (_, i) => `surface-${i}.png`);
     const changed = baseline.slice(0, 70);
@@ -183,7 +221,7 @@ describe("prepareNearestBaseline (#3968)", () => {
     });
     const dir = outputDir();
     const result = await prepareNearestBaseline({
-      git,
+      git: (args) => (args[0] === "merge-base" ? args[1] : git(args)),
       bucket: BUCKET,
       key: A,
       version: VERSION_A,
