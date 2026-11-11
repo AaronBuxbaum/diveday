@@ -95,8 +95,14 @@ test.describe("light mode — Claude's assists, lit", () => {
       });
       expect(sent.ok()).toBe(true);
       await page.goto(`/shop/${privateShop.slug}/inbox`);
-      const row = page.getByRole("listitem").filter({ hasText: "Diego Alvarez" }).first();
+      const row = page.getByRole("listitem").filter({ hasText: "Hola, ¿podemos cambiar" });
       await reloadUntil(page, row.getByText("Wants to move"));
+      const late = page.getByRole("listitem").filter({ hasText: "traffic on the causeway" });
+      const enquiry = page.getByRole("listitem").filter({ hasText: "Night dives in October?" });
+      await reloadUntil(page, enquiry.getByText(staff("assistsFront.inbox.intent.question")));
+      await expect(late.getByText(staff("assistsFront.inbox.intent.late"))).toBeVisible();
+      await expect(late.getByText(staff("assistsFront.inbox.intent.move"))).toHaveCount(0);
+      await expect(enquiry.getByText(staff("assistsFront.inbox.intent.move"))).toHaveCount(0);
       await expect(row.getByText(/^In Spanish: /)).toBeVisible();
       await capture(page, "assist-inbox-row", "light");
 

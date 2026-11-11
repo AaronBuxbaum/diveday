@@ -71,4 +71,38 @@ describe("e2eClaudeFixtureProvider", () => {
     if (!call) throw new Error("expected a call");
     expect((await callStructured(provider, call)).outcome).toBe("ok");
   });
+
+  it.each([
+    {
+      body: "Running about 15 min late, traffic on the causeway. Please don't leave without me 🙏",
+      intent: "late",
+      urgent: true,
+    },
+    {
+      body: "Hello, do you run night dives in October? Two of us, both Advanced. Thanks, Marta",
+      intent: "question",
+      urgent: false,
+    },
+    {
+      body: "Hi! My flight got pushed back and I won't make today's reef boat. Could I move to another day this week?\n\nPriya",
+      intent: "move",
+      urgent: true,
+    },
+    {
+      body: "Hola, ¿podemos cambiar el buceo al domingo? Gracias",
+      intent: "move",
+      urgent: false,
+    },
+    { body: "Thanks for the photos!", intent: "other", urgent: false },
+  ])("triages the Inbox fixture's own words: $intent / $body", async ({ body, intent, urgent }) => {
+    armClaudeFixtures("shop-1", true);
+    const provider = e2eClaudeFixtureProvider("shop-1", fleet);
+    if (!provider) throw new Error("expected a provider");
+    const result = await callStructured(
+      provider,
+      inboundTriageCall({ subject: null, body, targetLocale: "en-US" }),
+    );
+    expect(result.outcome).toBe("ok");
+    expect(result.value).toMatchObject({ intent, urgent });
+  });
 });

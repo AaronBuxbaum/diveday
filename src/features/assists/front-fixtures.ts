@@ -20,10 +20,17 @@ function content(request: ClaudeRequest): string {
 }
 
 function triageFixture(request: ClaudeRequest): unknown {
-  const spanish = /hola|gracias|podemos|buceo/i.test(content(request));
+  const text = content(request);
+  const spanish = /hola|gracias|podemos|buceo/i.test(text);
+  // These are the fleet's seeded Inbox scenarios, not a production classifier.
+  // Once seed messages are authenticated, the lit shop triages every row.
+  let intent = "other";
+  if (/running about 15 min late/i.test(text)) intent = "late";
+  else if (/could I move|podemos cambiar/i.test(text)) intent = "move";
+  else if (/do you run night dives|do you rent 5mm suits/i.test(text)) intent = "question";
   return {
-    intent: "move",
-    urgent: false,
+    intent,
+    urgent: intent === "late" || /today's reef boat/i.test(text),
     language: spanish ? "es" : "en",
     translation: spanish ? "Hi, can we move our dive to the next morning trip? Thanks." : null,
     confidence: 0.9,
