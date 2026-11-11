@@ -1,8 +1,19 @@
 import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { diverCrewWithAway } from "@/features/crew-away-diver";
 import { inWaterCrewRole } from "@/lib/crew-roles";
+import { utcToWallTime } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
-import { courses, people, personRoles, shops, tripAssignments, trips } from "./schema";
+import {
+  courses,
+  people,
+  personRoles,
+  shops,
+  tripAssignments,
+  tripDives,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 import { createDemoShop, resetDemoSchedule } from "./seed";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME } from "./seed-cast";
 import { DEMO_TODAY_TRIP_ID } from "./seed-identifiers";
@@ -286,5 +297,68 @@ describe("public print fixture identity", () => {
     await resetDemoSchedule(db, shop.id, "lean");
     expect(await reefIds(shop.id)).toContain(DEMO_TODAY_TRIP_ID);
     expect(await reefIds(otherShop.id)).toEqual(privateIds);
+  });
+});
+
+describe("demo course promises match dated sessions", () => {
+  it("matches the Open Water plan hours and four dives", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.slug, "open-water-diver")));
+    const [trip] = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.courseId, course.id)));
+    const days = await db
+      .select()
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, trip.id))
+      .orderBy(tripScheduleDays.dayNumber);
+    const time = (date: Date) => {
+      const wall = utcToWallTime(date, shop.timezone);
+      return `${String(wall.hour).padStart(2, "0")}:${String(wall.minute).padStart(2, "0")}`;
+    };
+    expect(days.map((day) => [time(day.startsAt), time(day.endsAt)])).toEqual(
+      course.scheduleDays.map((day) => [day.startTime, day.endTime]),
+    );
+    expect(trip.startsAt).toEqual(days[0].startsAt);
+    expect(trip.endsAt).toEqual(days[2].endsAt);
+    expect(trip.plannedDives).toBe(4);
+  });
+
+  it("gives every Discover Scuba session one dive and a named instructor", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.slug, "discover-scuba-diving")));
+    const sessions = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.courseId, course.id)));
+    expect(sessions).toHaveLength(2);
+    for (const trip of sessions) {
+      expect(trip.plannedDives, trip.title).toBe(1);
+      const dives = await db.select().from(tripDives).where(eq(tripDives.tripId, trip.id));
+      expect(dives).toHaveLength(1);
+      const crew = await diverCrewWithAway(db, shop.id, trip, shop.timezone);
+      expect(
+        crew.some(
+          (member) =>
+            member.tripRole === "instructor" && member.firstName === "Marcus" && !member.away,
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("allows four hours for the refresher promised in the catalog", async () => {
+    const { db, shop } = await seededShopContext();
+    const [trip] = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, "Scuba Refresher — half day")));
+    expect(trip.endsAt.getTime() - trip.startsAt.getTime()).toBe(4 * 60 * 60 * 1000);
   });
 });

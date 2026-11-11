@@ -131,8 +131,8 @@ export type SeedContext = {
  * next test's board (`resetDemoSchedule`, ADR 20260815-per-test-private-shops).
  */
 async function seedCrewAway(db: DbExecutor, shopId: string, personId: string): Promise<void> {
-  // Three days out, so it lands inside the week the page opens on: a demo
-  // where the one blackout is always in a week nobody looks at shows nothing.
+  // One non-teaching day inside the week the page opens on. The following
+  // day has Discover Scuba and Refresher sessions that need this instructor.
   const from = shiftCalendarDate(
     calendarDateInTimezone(demoTodayDepartureStart(), DEMO_SHOP_TIMEZONE),
     3,
@@ -141,7 +141,7 @@ async function seedCrewAway(db: DbExecutor, shopId: string, personId: string): P
     shopId,
     personId,
     startsOn: from,
-    endsOn: shiftCalendarDate(from, 1),
+    endsOn: from,
     note: "Family trip",
     createdByPersonId: personId,
   });

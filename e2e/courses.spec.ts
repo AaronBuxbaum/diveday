@@ -61,7 +61,10 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   // sheet 2026-10-22, item 3): the seed's Discover Scuba includes its gear.
   const coursePlan = page.getByTestId("trip-course-plan");
   await expect(coursePlan.getByText("Your afternoon")).toBeVisible();
-  await expect(coursePlan.getByText("Gear is included.")).toBeVisible();
+  await expect(coursePlan.getByText(/^Included with the course:/)).toContainText(
+    "Mask, Wetsuit, Fins, and Dive computer",
+  );
+  await expect(page.getByText("One dive · site to be confirmed", { exact: true })).toBeVisible();
   // The course session line links out to the course page (a crawlable
   // inbound link for SEO), mirroring the link the schedule list already
   // carries — never just a bare name.
@@ -89,10 +92,14 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
   // The session's own afternoon rides along on her thread (issue #2795).
   await expect(page.getByRole("region", { name: "Your afternoon" })).toBeVisible();
+  await expect(
+    page.getByText("Marcus · Instructor", { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
 
   // Sizes live in the thread's "Gear and sizes" step, and at most one step is
   // open at rest (ADR 20260827-the-divers-thread, decision 3).
   await openThreadStep(page, "gear");
+  await expect(page.getByText(/^Estimated rental:/).filter({ visible: true })).toHaveCount(0);
   await page.getByLabel("BCD size").selectOption("L");
   await page.getByLabel("Wetsuit size").selectOption("XL");
   await page.getByRole("button", { name: "Save rental fit" }).click();

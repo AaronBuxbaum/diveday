@@ -10,8 +10,8 @@ const SHOP = "blue-mantis";
  * **Rostered and away, said where the shop plans** (fourth review, item 12).
  * Marcus Webb marked himself away for a weekend and stayed rostered on the
  * Sunday session; only the staffing week's Crew grid said so. The demo marks
- * him away three and four days out (`seedCrewAway`), so the spec rosters him on
- * a departure of its own on the first of those days and goes to the board,
+ * him away three days out (`seedCrewAway`), so the spec rosters him on
+ * a departure of its own that day and goes to the board,
  * where the shop plans the week. Informs, never gates: the assignment stands.
  * The owner's Today row (`crew_away`) is pinned in `src/features/today/today-reader.test.ts`: a
  * departure three days out is counted in Today's "This week" line, not named.
