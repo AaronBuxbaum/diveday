@@ -621,6 +621,21 @@ describe("account-security enrolment edges", () => {
     expect(await verifyAccountSecondFactor(db, account.id, "000000")).toBe(true);
   });
 
+  it("requires an enabled TOTP factor when the caller needs code-only proof", async () => {
+    const { db, account } = await seededAccount();
+    const options = { requireEnabled: true, consumeTotpStep: false };
+    expect(await verifyAccountSecondFactor(db, account.id, "000000", options)).toBe(false);
+
+    const started = await beginTotpEnrollment(db, account.id);
+    if (!started) throw new Error("enrollment needs a sealing key");
+    const code = totpCode(started.secret);
+    expect(await verifyAccountSecondFactor(db, account.id, code, options)).toBe(false);
+    expect(await enableTotp(db, account.id, code)).toBe(true);
+    expect(await verifyAccountSecondFactor(db, account.id, code, options)).toBe(true);
+    const wrong = totpCode(started.secret, nowMs() + 10 * TOTP_STEP_SECONDS * 1000);
+    expect(await verifyAccountSecondFactor(db, account.id, wrong, options)).toBe(false);
+  });
+
   it("refuses to start a second enrolment over one that is already on", async () => {
     const { db, account } = await seededAccount();
     const { secret } = await enrolledEarlier(db, account.id);
