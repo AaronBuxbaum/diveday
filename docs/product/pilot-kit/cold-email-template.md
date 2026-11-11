@@ -42,8 +42,7 @@ one, because improvising it at send time is exactly where template-smell gets in
 
 ## Before sending — the research, ten minutes per shop
 
-`[RESEARCHED STATEMENT]` is the load-bearing slot. Write **one or two sentences that restate one thing read on the shop's own
-pages and say why it caught your eye**, never a claim about how they work. For example: "Your site has guests sign the waiver online and check in at the shop. That gap is the kind of thing I'm building for, and I'm curious how it plays out on a busy morning.": a named departure and time, a specific trip on their schedule, the charter they run
+`[RESEARCHED STATEMENT]` is the load-bearing slot. Write **one sentence naming the specific problem this shop's setup creates**, ending "is the kind of thing I'm building for." No fun fact first: a fact true of every shop (guests sign online and check in at the shop) or a pointless one (the boat runs wreck trips) adds nothing, and the sentence that follows has to stand alone. Test: if the sentence would fit any dive shop, rewrite it or use the no-detail line. For example: "Checking everyone's certification before the Vandenberg boat leaves is the kind of thing I'm building for."
 Saturdays. It must be current and checkable.
 
 - **If nothing can be verified, use the no-detail line** below. Sending with no
@@ -79,7 +78,7 @@ sales-tool shape there is, and it is spotted before the email is opened.
 > Aaron Buxbaum
 > https://www.dive.day
 
-Slots: `[GREETING]` ("Hello [SHOP] crew," by default; "Hi Dan," only when the shop's own page names the person who runs it; never a guessed first name), `[SHOP]`, `[RESEARCHED STATEMENT]`. Nothing else is variable.
+Slots: `[GREETING]` ("Hi [SHOP] crew," by default; "Hi Dan," only when the shop's own page names the person who runs it; never a guessed first name), `[SHOP]`, `[RESEARCHED STATEMENT]`. Nothing else is variable.
 
 **If nothing about the shop could be verified**, replace the researched statement with this line instead
 of splicing a fragment at 11pm on the eleventh email of the week:
