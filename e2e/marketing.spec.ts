@@ -1863,7 +1863,7 @@ for (const [route, scene] of [
   ["/product/online-booking", "harbor"],
   ["/product/website", "harbor"],
   ["/product/courses", "classroom"],
-  ["/product/rental-gear", "classroom"],
+  ["/product/rental-gear", "gear-handover"],
 ] as const) {
   test(`editorial illustration loads without replacing product proof on ${route}`, async ({
     page,

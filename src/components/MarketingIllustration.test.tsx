@@ -10,7 +10,7 @@ afterEach(cleanup);
 
 describe("MarketingIllustration", () => {
   for (const locale of ["en-US", "es-ES"] as const) {
-    for (const scene of ["harbor", "classroom"] as const) {
+    for (const scene of ["harbor", "classroom", "gear-handover"] as const) {
       it(`labels the ${scene} scene as illustration in ${locale} and reserves its space`, () => {
         const t = diverTranslator(locale);
         render(<MarketingIllustration scene={scene} locale={locale} />);

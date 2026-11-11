@@ -133,14 +133,16 @@ export async function FeaturePageBody({
   ];
   const included = capabilityGroup(key);
   const related = relatedFeaturePages(page);
-  // Only pages about arrival or learning get an editorial scene. Keep the
+  // Only pages about arrival, learning or gear handover get an editorial scene. Keep the
   // product hub, safety/legal pages and the owner's About narrative unchanged.
   const scene =
     slug === "online-booking" || slug === "website"
       ? "harbor"
-      : slug === "courses" || slug === "rental-gear"
+      : slug === "courses"
         ? "classroom"
-        : null;
+        : slug === "rental-gear"
+          ? "gear-handover"
+          : null;
 
   return (
     <main className="flex-1">

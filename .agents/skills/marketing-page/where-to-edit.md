@@ -11,6 +11,7 @@ Part of the **marketing-page** skill ([SKILL.md](SKILL.md)). Read it before chan
 | Price / plan / included list | `src/lib/marketing.ts` → `earlyAccessPrice` — the ONLY place the number exists |
 | Page narrative copy | `src/app/(marketing)/page.tsx`, `src/app/(marketing)/product/page.tsx`, `src/app/(marketing)/pricing/page.tsx`, `src/app/onboard/page.tsx` |
 | A feature page (`/product/<feature>`) | the registry `src/lib/feature-pages.ts`, the one template `src/app/(marketing)/product/_components/FeaturePageBody.tsx`, words in `marketing.featurePages.<page>`; its checklist is that page's group of `productCapabilityIndex` |
+| Generated editorial scenes | `docs/design/marketing-art.md` for references and prompt; `public/marketing/` delivery assets and `src/components/MarketingIllustration.tsx` |
 | Illustrated mockup copy | `src/components/MarketingScreenFallbacks.tsx`; a feature page's screen in `src/components/MarketingFeatureScreens.tsx` |
 | Nav / footer | `src/components/MarketingNavView.tsx`, `src/components/MarketingFooter.tsx` |
 

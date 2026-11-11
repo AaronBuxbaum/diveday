@@ -228,6 +228,9 @@ Good recurring concepts:
 - daylight, open water, and honest visibility;
 - rounded forms, soft corners, and enough negative space to breathe.
 
+For generated editorial scenes, follow [marketing art direction](marketing-art.md), including its
+visual reference set and reusable prompt. Keep illustrations distinct from genuine customer photos.
+
 Use real dive context when imagery is needed: a calm briefing, a hand on a boat rail, a diver
 preparing gear, a reef with room around it, or a readable phone in daylight. Avoid generic extreme-
 sports imagery, dark danger shots, distressed nautical textures, pirate motifs, anchor clichés, and

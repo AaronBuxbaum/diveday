@@ -11,7 +11,7 @@ export function MarketingIllustration({
   scene,
   locale,
 }: {
-  scene: "harbor" | "classroom";
+  scene: "harbor" | "classroom" | "gear-handover";
   locale: DiverLocale;
 }) {
   const t = diverTranslator(locale);

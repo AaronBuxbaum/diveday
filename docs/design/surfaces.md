@@ -1020,7 +1020,8 @@ waive checks on new painted controls or actual shared columns.
 
 - **One idea:** a product demonstration belongs to a human dive day.
 - **Arriving question:** can I picture my guests and crew here? The illustrations add a welcoming
-  dock and a small teaching moment while the existing screens answer what the product does.
+  dock, a small teaching moment and a rental handover while the existing screens answer what
+  the product does. The rental page uses its own gear-handover scene rather than a reused lesson.
 - **Controls that dissolved:** no new controls. The demo still leads; artwork adds no carousel,
   modal, playback button, fabricated proof or secondary sales pitch.
 - **Remove first:** captions beyond the short illustration label, then duplicate scenes on one

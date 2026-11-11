@@ -802,16 +802,17 @@ human handoff before they have read the guide.
 ## Product visuals
 
 **Editorial scenes (2026-11-10).** The homepage journey introduction and the online booking,
-website, rental gear and courses feature pages include two original generated illustrations:
-a welcome at the dock and a conversation in a dive-shop classroom. They supply human atmosphere,
+website, rental gear and courses feature pages include original generated illustrations:
+a welcome at the dock, a conversation in a dive-shop classroom and a rental-gear handover. They supply human atmosphere,
 not customer evidence or depictions of the software. Each is labeled as an illustration, with
 localized alt text. Product mockups remain the functional proof, and the first demo door stays
 before the artwork. About, pricing, the product hub and safety/legal pages are unchanged.
 
 `MarketingIllustration` serves the complete 3:2 scenes from local WebP assets through `next/image`,
 with intrinsic dimensions, responsive sizes and lazy loading. No text is baked into the artwork.
-The originals and generation prompts are recorded in the change's private working artifacts;
-the source repository carries only the compressed delivery assets. Keep the illustrations
+The approved style, reusable generation brief and acceptance criteria live in
+[marketing art direction](../design/marketing-art.md); the repository carries only compressed
+delivery assets, not generation masters. Keep the illustrations
 separate from claims, real operator evidence and any future customer photographs.
 
 
