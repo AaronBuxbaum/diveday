@@ -9,7 +9,7 @@ import { sendDueRecaps } from "@/features/recap";
 import { sendDueReminders } from "@/features/reminders";
 import { sendStaleRollCallAlerts } from "@/features/roll-call-alerts";
 import { sendSeatSoldAlerts } from "@/features/seat-sold-alerts";
-import { reportScrubbedError } from "@/features/sentry-server";
+import { sentry } from "@/features/sentry-server";
 import { sendDueServiceReminders } from "@/features/work-order-follow-up";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { errorClassToken, errorCodeToken } from "@/lib/error-token";
@@ -102,10 +102,7 @@ async function runScan<Scan extends ShopTickScan>(
   try {
     return (await RUNS[scan](db, now)) as Awaited<ReturnType<(typeof RUNS)[Scan]>>;
   } catch (error) {
-    // Scrubbed: a database or provider error message can quote a diver's name or email.
-    await reportScrubbedError(error, {
-      name: "CronScanFailed",
-      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+    await sentry.captureException(error, {
       tags: { cron_scan: scan.replaceAll("-", "_") },
     });
     log("cron_shop_tick.scan_failed", "error", {

@@ -214,30 +214,18 @@ describe("POST /api/webhooks/billing — applies what Stripe says, once", () => 
     expect((await getShopSubscription(db, shopId))?.stripeStatus).toBe("active");
   });
 
-  // Issue #2334, as on the Connect webhook: a handler's error can quote the row
-  // it refused, so Sentry gets a fixed message and the class as a tag.
-  it("sends Sentry a scrubbed error, never the handler's own message", async () => {
+  it("sends Sentry the handler's real error, tagged with the event and stage", async () => {
     vi.mocked(Sentry.captureException).mockReset();
-    const leaky = new TypeError('duplicate key: (email)=(nora@example.com) for "Nora Diaz"');
-    vi.mocked(subscriptions.applyBillingEffect).mockRejectedValueOnce(leaky);
+    const failure = new TypeError('duplicate key: (email)=(nora@example.com) for "Nora Diaz"');
+    vi.mocked(subscriptions.applyBillingEffect).mockRejectedValueOnce(failure);
     const payload = subscriptionEvent("evt_leaky", { status: "active" });
     expect((await deliver(payload, signed(payload))).status).toBe(500);
 
     expect(Sentry.captureException).toHaveBeenCalledTimes(1);
-    const [sent, context] = vi.mocked(Sentry.captureException).mock.calls[0];
-    expect(sent).not.toBe(leaky);
-    const scrubbed = sent as Error;
-    expect(scrubbed.cause).toBeUndefined();
-    expect(scrubbed.message).toBe("Billing webhook handler failed");
-    for (const text of [scrubbed.message, scrubbed.stack ?? "", JSON.stringify(context)]) {
-      expect(text).not.toContain("nora@example.com");
-      expect(text).not.toContain("Nora Diaz");
-    }
-    expect(context).toEqual({
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
       tags: expect.objectContaining({
         stripe_event_id: "evt_leaky",
         billing_webhook_stage: "handler",
-        error_class: "TypeError",
       }),
     });
   });

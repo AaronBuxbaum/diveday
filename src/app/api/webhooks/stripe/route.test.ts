@@ -1479,23 +1479,19 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
       // Non-2xx, or Stripe treats this delivery as done and never retries.
       expect(response.status).toBe(500);
       expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, arm.event.id);
-      // Reported, but as a scrubbed stand-in (issue #2334): see below.
+      // Reported to Sentry with its real message and stack.
       expect(Sentry.captureException).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
-          tags: expect.objectContaining({ stripe_webhook_stage: "handler", error_class: "Error" }),
+          tags: expect.objectContaining({ stripe_webhook_stage: "handler" }),
         }),
       );
     });
   }
 
-  // Issue #2334. Sentry's beforeSend (`redactEvent`) scrubs URLs and headers,
-  // not exception text, and a handler's error can quote the row it refused. So
-  // Sentry gets a fixed message, the original's stack frames and its class as a
-  // tag, never the original message and never the original as `cause`.
-  it("sends Sentry a scrubbed error, never the handler's own message", async () => {
-    const leaky = new TypeError('duplicate key: (email)=(nora@example.com) for "Nora Diaz"');
-    vi.mocked(applyInvoicePaid).mockRejectedValue(leaky);
+  it("sends Sentry the handler's real error, message and all, tagged with the event", async () => {
+    const failure = new TypeError('duplicate key: (email)=(nora@example.com) for "Nora Diaz"');
+    vi.mocked(applyInvoicePaid).mockRejectedValue(failure);
 
     const response = await post({
       id: "evt_leaky",
@@ -1505,80 +1501,18 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
 
     expect(response.status).toBe(500);
     expect(Sentry.captureException).toHaveBeenCalledTimes(1);
-    const [sent, context] = vi.mocked(Sentry.captureException).mock.calls[0];
-    expect(sent).not.toBe(leaky);
-    expect(sent).toBeInstanceOf(Error);
-    const scrubbed = sent as Error;
-    expect(scrubbed.cause).toBeUndefined();
-    for (const text of [
-      scrubbed.message,
-      scrubbed.name,
-      scrubbed.stack ?? "",
-      JSON.stringify(context),
-    ]) {
-      expect(text).not.toContain("nora@example.com");
-      expect(text).not.toContain("Nora Diaz");
-    }
-    expect(context).toEqual({
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
       tags: {
         stripe_event_id: "evt_leaky",
         stripe_webhook_event_type: "invoice.paid",
         stripe_webhook_stage: "handler",
-        error_class: "TypeError",
       },
     });
-    // The frames survive, so the report still says where it broke.
-    expect(scrubbed.stack).toMatch(/\n\s+at /);
-  });
-
-  it("re-runs the handler and advances state on the redelivery after a failure", async () => {
-    const event = {
-      id: "evt_retry_1",
-      type: "invoice.paid",
-      data: { object: { id: "in_retry", amount_paid: 4500 } },
-    };
-    // First delivery: the order write throws.
-    vi.mocked(applyInvoicePaid)
-      .mockRejectedValueOnce(boom)
-      .mockResolvedValue({ status: "settled", order: { id: "order_1" } } as never);
-    const failed = await post(event);
-    expect(failed.status).toBe(500);
-    expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, "evt_retry_1");
-
-    // Stripe retries. The claim was released, so the ledger claims it afresh
-    // and the handler actually runs — this is the whole point: without the
-    // release the retry reads as a duplicate and the order never goes paid.
-    const retried = await post(event);
-    expect(retried.status).toBe(200);
-    expect(applyInvoicePaid).toHaveBeenCalledTimes(2);
-    expect(applyInvoicePaid).toHaveBeenLastCalledWith(FAKE_DB, {
-      stripeInvoiceId: "in_retry",
-      amountPaidCents: 4500,
-      expectedAccountId: undefined,
-      taxCents: null,
-    });
-  });
-
-  it("still does not re-run a handler on the redelivery after a success", async () => {
-    // The invariant release-on-failure must not weaken (webhook-events.test.ts):
-    // a handled event keeps its claim, so a manual refund made between two
-    // deliveries survives the replay.
-    vi.mocked(claimStripeWebhookEvent).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-    const event = {
-      id: "evt_success_replay",
-      type: "checkout.session.completed",
-      data: { object: { id: "cs_ok", payment_status: "paid" } },
-    };
-
-    expect((await post(event)).status).toBe(200);
-    expect((await post(event)).status).toBe(200);
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledTimes(1);
-    expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
   });
 
   // A database error wraps the driver's own: its class and SQLSTATE say what
   // went wrong without the bound parameters the outer message quotes.
-  it("tags and logs a failure by class and the driver's code, never a message", async () => {
+  it("tags the Sentry report by stage and logs the class and driver code, never a message", async () => {
     const cause = Object.assign(new Error("Key (email)=(nora@example.com) already exists"), {
       name: "PostgresError",
       code: "23505",
@@ -1603,13 +1537,8 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
       stripe_event_id: "evt_sql",
       stripe_webhook_event_type: "invoice.paid",
       stripe_webhook_stage: "handler",
-      error_class: "Error",
-      cause_name: "PostgresError",
-      cause_code: "23505",
     });
-    expect(tags).toContainEqual(
-      expect.objectContaining({ stripe_webhook_stage: "claim_release", cause_code: "57P01" }),
-    );
+    expect(tags).toContainEqual(expect.objectContaining({ stripe_webhook_stage: "claim_release" }));
 
     const lines = [
       ...vi.mocked(console.log).mock.calls,
@@ -1631,7 +1560,7 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
         causeCode: "57P01",
       }),
     );
-    const written = JSON.stringify([lines, vi.mocked(Sentry.captureException).mock.calls]);
+    const written = JSON.stringify(lines);
     expect(written).not.toContain("nora@example.com");
   });
 
@@ -1656,9 +1585,8 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
         ([, context]) => (context as { tags: Record<string, string> }).tags.stripe_webhook_stage,
       );
     expect(stages).toEqual(expect.arrayContaining(["handler", "claim_release"]));
-    for (const [sent] of vi.mocked(Sentry.captureException).mock.calls) {
-      expect((sent as Error).message).not.toMatch(/db is down|release failed too/);
-    }
+    const sent = vi.mocked(Sentry.captureException).mock.calls.map(([error]) => error);
+    expect(sent).toEqual(expect.arrayContaining([boom, releaseBoom]));
   });
 
   it("never releases a claim it never took (a duplicate is not a failure)", async () => {

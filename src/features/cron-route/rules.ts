@@ -1,6 +1,6 @@
 import { requireCronSecret } from "@/features/cron-auth";
 import { flushLogs } from "@/features/log-shipping";
-import { reportScrubbedError, sentry } from "@/features/sentry-server";
+import { sentry } from "@/features/sentry-server";
 import { log } from "../../lib/log";
 
 /**
@@ -24,11 +24,8 @@ import { log } from "../../lib/log";
  *   `cronRoute({ id: "..." })` call as it finds a literal `log("...")`.
  * - **The slug override is read here and nowhere else.** `slugEnv` names a
  *   route whose variable predates the `SENTRY_<ID>_CRON_MONITOR_SLUG` shape.
- * - **A thrown pass reaches Sentry without its message.** A database or
- *   provider error can quote the row it refused (a diver's name or email), and
- *   Sentry's `beforeSend` does not scrub exception text, so the failure goes
- *   through `reportScrubbedError`: its stack frames and error class, never what
- *   it said (issue #2334).
+ * - **A thrown pass reaches Sentry whole**: the real error, message and stack,
+ *   tagged with the scan's name.
  *
  * `maxDuration` is deliberately not an option. Next reads route segment config
  * from the route file's own `export const`, statically; a value passed through
@@ -89,9 +86,7 @@ export function cronRoute<Summary>(
       await sentry.captureCheckIn({ checkInId, monitorSlug, status: ok ? "ok" : "error" });
       return Response.json(summary);
     } catch (error) {
-      await reportScrubbedError(error, {
-        name: "CronPassFailed",
-        message: `cron pass ${id} failed`, // i18n-exempt: Sentry event title, never shown to a person
+      await sentry.captureException(error, {
         tags: { cron_scan: id },
       });
       log(`${logName}.scan_failed`, "error", { scan: id });

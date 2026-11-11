@@ -16,7 +16,7 @@ import {
   countUnnotifiedSetupRequests,
 } from "@/features/funnel";
 import { flushLogs } from "@/features/log-shipping";
-import { reportScrubbedError, sentry } from "@/features/sentry-server";
+import { sentry } from "@/features/sentry-server";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
@@ -111,9 +111,7 @@ export async function GET(request: Request) {
       { status: digest === "failed" ? 500 : 200 },
     );
   } catch (error) {
-    await reportScrubbedError(error, {
-      name: "CronScanFailed",
-      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+    await sentry.captureException(error, {
       tags: { cron_scan: "founder_metrics" },
     });
     log("cron_founder_metrics.failed", "error", {});
