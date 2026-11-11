@@ -53,6 +53,24 @@ describe("levelStanding at the boarding threshold", () => {
     }
   });
 
+  it("keeps the highest submitted lower card blocked and unverified, whatever the card order", () => {
+    const pending = (level: Certification["level"]) =>
+      ({ status: "pending", level, identifier: `card-${level}` }) as Certification;
+    for (const certifications of [
+      [pending("advanced_open_water"), pending("open_water")],
+      [pending("open_water"), pending("advanced_open_water")],
+    ]) {
+      expect(levelStanding("rescue", { ...evidence, certifications }, "verified")).toEqual({
+        code: "certification_insufficient",
+        params: {
+          requiredLevel: "rescue",
+          heldLevel: "advanced_open_water",
+          heldUnverified: true,
+        },
+      });
+    }
+  });
+
   it("points a missing card at the latest ended course, whatever order they come in", () => {
     const earlier = {
       level: "open_water" as const,

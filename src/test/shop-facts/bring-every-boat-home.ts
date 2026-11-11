@@ -18,6 +18,7 @@ import {
 } from "../../db/schema/index";
 import { bringDemoBoatsAtSeaHome } from "../../db/seed-boat-at-sea";
 import { listStaff, liveTrip, seatNotCancelled } from "../../db/trips";
+import { recordTripStage } from "../../features/trip-stages/store";
 import { HOUR_MS, nowDate } from "../../lib/clock";
 import { tripReservationWindow } from "../../lib/gear";
 import { SIZED_RENTAL_FIT_COLUMN, sizedRentalKindOfGearKind } from "../../lib/rentals";
@@ -37,8 +38,8 @@ const TURNAROUND_MS = 30 * 60 * 1000;
 const SETTLED_MARGIN_MS = 2 * HOUR_MS;
 /**
  * How far behind `now` the last boat ties up under `last: "just-in"`: **inside**
- * the standing one-hour late-arrival buffer, which is the one state a crew tap
- * on Home can change (issue #1480). Five minutes rather than fifty-five so the
+ * the standing one-hour late-arrival buffer, which isolates early settlement by a crew tap
+ * on Home (issue #1480). Five minutes rather than fifty-five so the
  * state cannot become flaky by sitting near the boundary it is about.
  */
 const JUST_IN_MARGIN_MS = 5 * 60 * 1000;
@@ -99,9 +100,9 @@ type LatestState = "boarded" | "not_boarded" | undefined;
  *
  * The last departure ties up {@link JUST_IN_MARGIN_MS} before `now` instead,
  * so the clock still calls it out (`hasReturned`) while every earlier boat has
- * settled. That is the only state in which the crew's own tap on **Home** can
- * change what the home says (issue #1480), and a day that has no such boat
- * cannot demonstrate the promotion at all.
+ * settled. This isolates the crew's own tap on **Home** settling the station early (issue #1480).
+ * Every other moved departure gets an explicit Home record; moving its schedule
+ * cannot override a crew stage that still says the boat is out.
  *
  * **This is a fixture, and the day it makes is not reachable through the
  * product.** It inserts into `roll_call_events` directly, so it walks past the
@@ -184,6 +185,23 @@ export async function bringEveryBoatHome(
   if (close && !close.ok) {
     const { ok: _ok, reason, ...detail } = close;
     throw new FactRefused(reason, 409, detail);
+  }
+
+  // Moving the schedule cannot turn an existing Underway tap into Home.
+  // This fact promises boats at the dock; record that separately from counts.
+  // The just-in boat deliberately keeps its word until the test taps Home.
+  const [staff] = await listStaff(db, shop.id);
+  if (!staff) throw new Error("evening fixture needs a staff member");
+  for (const trip of moved) {
+    if (args.last === "just-in" && trip.id === moved.at(-1)?.id) continue;
+    const result = await recordTripStage(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      stage: "home",
+      recordedByPersonId: staff.person.id,
+      recordedAt: now,
+    });
+    if (!result.ok) throw new Error(`evening Home refused: ${result.reason}`);
   }
 
   return {

@@ -297,7 +297,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     // acknowledgment (10615) for students up to 11 (issue #2265): a shop on
     // version 2 is offered it, and the pull sets it up with its age. Version 4
     // separates the eLearning fee from course-fee inclusions (issue #3136).
-    version: 4,
+    // Version 5 distinguishes the untimed swim from the 10-minute float.
+    version: 5,
     title: "Open Water Diver",
     agency: "padi",
     standardForms: PADI_OPEN_WATER_FORMS,
@@ -309,7 +310,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       learningMaterials: [{ name: "PADI Open Water Diver eLearning", note: "Finish before day 1" }],
       summary: "Become a certified PADI Open Water Diver",
       overview:
-        "The Open Water Diver certification is the one that opens the door: qualified to dive to {depth18} with a buddy, anywhere in the world, without an instructor — in conditions as good as or better than those you trained in.\n\nThe course is three parts. Knowledge development covers pressure, air, and planning — most students do this online before arriving. Confined water is where the skills become muscle memory, in shallow water with somewhere to stand. Four open-water dives put it together on the reef.\n\nNo prior experience is required. You do need to be comfortable in water: the course includes a 200-meter/yard swim (or 300 with mask, fins, and snorkel) and a 10-minute float, neither of them timed.",
+        "The Open Water Diver certification is the one that opens the door: qualified to dive to {depth18} with a buddy, anywhere in the world, without an instructor — in conditions as good as or better than those you trained in.\n\nThe course is three parts. Knowledge development covers pressure, air, and planning — most students do this online before arriving. Confined water is where the skills become muscle memory, in shallow water with somewhere to stand. Four open-water dives put it together on the reef.\n\nNo prior experience is required. You do need to be comfortable in water: the course includes a 200-meter/yard swim (or 300 with mask, fins, and snorkel) with no time limit, plus a 10-minute float or tread.",
       heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg",
@@ -343,7 +344,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           items: [
             "Paperwork, medical questionnaire, and gear fitting",
             "Knowledge reviews 1–2, with quizzes",
-            "Swim and float assessment (not timed)",
+            "Swim assessment (no time limit) and 10-minute float or tread",
             "Confined water dives 1–2: assembly, mask clearing, regulator recovery, buoyancy",
           ],
         },
@@ -378,7 +379,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "Do I need to be a strong swimmer?",
           answer:
-            "You need basic watermanship: a 200-meter swim or a 300-meter snorkel, plus a 10-minute float or tread. Neither is timed, and any stroke counts.",
+            "You need basic watermanship: a 200-meter swim or a 300-meter snorkel, plus a 10-minute float or tread. The swim has no time limit, and any stroke counts.",
         },
         {
           question: "Is equipment included?",

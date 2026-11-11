@@ -75,8 +75,9 @@ const subscribeNever = () => () => {};
  * address the click moved to, over HTML the server wrote for the one it left,
  * and React does not patch an attribute or a class that differs at hydration:
  * the old row stayed lit and `aria-current` kept naming the page left behind.
- * Keyed on this, each nav is drawn afresh right after hydrating, from the
- * address as it is.
+ * Keyed on this, the sidebar and phone rail are drawn afresh right after
+ * hydrating, from the address as it is. The phone's More trigger stays mounted
+ * so a click replayed during hydration is not lost to that redraw.
  *
  * The redrawn nav carries `data-hydrated="true"`, and the e2e harness waits
  * for it before clicking a row (#2332): a press that lands before hydration,
@@ -227,7 +228,6 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
   }, [hydratedKey]);
   return (
     <nav
-      key={hydratedKey}
       aria-label={copy.navAriaLabel}
       data-staff-nav=""
       data-hydrated={hydratedKey === "client" ? "true" : undefined}
@@ -238,6 +238,7 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
     >
       <div className="mx-auto flex h-(--tabbar-h) w-full max-w-xl items-stretch">
         <div
+          key={hydratedKey}
           ref={tabScrollRef}
           data-staff-tab-scroll=""
           className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain"
@@ -299,6 +300,7 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
         ) : null}
         {rest.length > 0 ? (
           <MoreMenu
+            hydratedKey={hydratedKey}
             root={root}
             items={rest}
             current={current}
@@ -313,6 +315,7 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
 }
 
 function MoreMenu({
+  hydratedKey,
   root,
   items,
   current,
@@ -320,6 +323,7 @@ function MoreMenu({
   pathname,
   copy,
 }: {
+  hydratedKey: string;
   root: string;
   items: readonly StaffNavItem[];
   current: StaffSection | null;
@@ -341,12 +345,16 @@ function MoreMenu({
         ref={triggerRef}
         onClick={() => setOpen((shown) => !shown)}
         aria-expanded={open}
-        className={`${tabClass} cursor-pointer ${
-          active ? "font-semibold text-primary" : "font-medium text-muted"
-        }`}
+        className={`${tabClass} cursor-pointer`}
       >
-        <DiveDayIcon name="more" className="size-6" />
-        <span>{copy.more}</span>
+        {/* Keep the touch target on the stable button while its color redraws. */}
+        <span
+          key={hydratedKey}
+          className={`pointer-events-none contents ${active ? "font-semibold text-primary" : "font-medium text-muted"}`}
+        >
+          <DiveDayIcon name="more" className="size-6" />
+          <span>{copy.more}</span>
+        </span>
       </button>
       {mounted ? (
         <ul

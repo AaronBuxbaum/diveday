@@ -242,6 +242,7 @@
       "certificationPending": "Certification is waiting for staff verification.",
       "certificationSelfDeclared": "The diver said their level themselves. No certification record has been verified. Ask for the details and verify them.",
       "certificationInsufficient": "Not certified for this trip. It needs {level} or higher.",
+      "certificationInsufficientUnverified": "{held} certification on file, awaiting verification. This trip needs {level} or higher.",
       "certificationInsufficientHeld": "Not certified for this trip. It needs {level} or higher, and the highest certified card on file is {held}.",
       "certificationInTraining": "Not yet certified {level}. Booked on a course that finishes before this trip; this clears when the instructor certifies them.",
       "certificationNotYet": "Says they’re not certified yet. This trip needs {level} or higher, so get in touch before the day.",

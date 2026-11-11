@@ -138,3 +138,27 @@ describe("the tab bar, on keyboard focus", () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
   });
 });
+
+it("keeps More open when its first click hydrates the tab bar", async () => {
+  location.pathname = root;
+  const container = document.createElement("div");
+  container.innerHTML = renderToString(<ShopTabBar {...props} />);
+  document.body.append(container);
+  await act(async () => {
+    hydrateRoot(container, <ShopTabBar {...props} />);
+    container.querySelector("button")?.click();
+  });
+  expect(container.querySelector("button")).toHaveAttribute("aria-expanded", "true");
+});
+
+it("updates More's active section when the address moves before hydration", async () => {
+  location.pathname = root;
+  const container = document.createElement("div");
+  container.innerHTML = renderToString(<ShopTabBar {...props} />);
+  document.body.append(container);
+  location.pathname = `${root}/safety-checklist`;
+  await act(async () => {
+    hydrateRoot(container, <ShopTabBar {...props} />, { onRecoverableError: () => {} });
+  });
+  expect(container.querySelector("button.text-primary, button .text-primary")).not.toBeNull();
+});

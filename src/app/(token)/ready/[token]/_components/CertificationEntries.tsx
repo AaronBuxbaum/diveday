@@ -200,6 +200,23 @@ export function CertificationEntries({
       // "Nothing more to do", and the step's own line sends the diver to the
       // shop, so the form stays the quiet disclosure it was.
       const entries = [
+        ...(blocker.code === "certification_insufficient" &&
+        blocker.params?.requiredLevel &&
+        blocker.params.heldLevel
+          ? [
+              <p key="level-feedback" className="text-sm text-ink-muted">
+                {t(
+                  blocker.params.heldUnverified
+                    ? "ready.certSavedInsufficient"
+                    : "ready.certVerifiedInsufficient",
+                  {
+                    held: t(DIVER_CERTIFICATION_LEVEL_KEYS[blocker.params.heldLevel]),
+                    level: t(DIVER_CERTIFICATION_LEVEL_KEYS[blocker.params.requiredLevel]),
+                  },
+                )}
+              </p>,
+            ]
+          : []),
         <CertificationEntry
           key={blocker.code}
           token={token}

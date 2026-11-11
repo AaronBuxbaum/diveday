@@ -1016,6 +1016,8 @@
     },
     "fitUnavailable": "We couldn’t save your gear and setup just now. Try again in a moment.",
     "fitSaved": "Saved. The crew will have your sizes.",
+    "certSavedInsufficient": "Your {held} certification is saved and awaiting verification. This trip needs {level} or higher. Contact the shop about a suitable trip or course; add another card only if you already hold it.",
+    "certVerifiedInsufficient": "Your verified certification is {held}. This trip needs {level} or higher. Contact the shop about a suitable trip or course; add another card only if you already hold it.",
     "certHeading": "Add your certification",
     "certBody": "Enter your certification details for the shop’s records.",
     "specialtyHeading": "Add your {specialty} card",

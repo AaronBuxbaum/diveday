@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEPARTURE_BUFFER_MS, rungOffsetMs } from "@/lib/departure-clock";
 import { type CrewRollCallSubject, rollCallCompleteness } from "@/lib/manifests";
 import { liveStageOf, TRIP_STAGES, type TripStage, type TripStageReading } from "@/lib/trip-stages";
 import {
@@ -59,6 +58,23 @@ describe("assembleDayCloseout", () => {
     expect(state.shopDay).toBe("2026-08-04");
     expect(state.departures.map((d) => d.status)).toEqual(["all_home", "all_home"]);
   });
+
+  it.each(["underway", "surface", "heading_in"] as const)(
+    "keeps a fully counted late boat still out while staff report %s",
+    (word) => {
+      const state = assembleDayCloseout({
+        trips: [trip({ tripId: "late", stage: stage(word, new Date("2026-08-04T14:00:00Z")) })],
+        gaps: [],
+        timeZone: TZ,
+        now,
+      });
+      expect(state.departures[0]?.status).toBe("still_out");
+      expect(assembleEveningClose(state.departures, now)).toMatchObject({
+        allHome: false,
+        closing: false,
+      });
+    },
+  );
 
   it("keeps a day with zero departures calm — no boats is not an error", () => {
     const state = assembleDayCloseout({ trips: [], gaps: [], timeZone: TZ, now });
@@ -155,13 +171,6 @@ describe("assembleDayCloseout", () => {
     expect(at("2026-11-01T07:30:00Z")).not.toBe("still_out"); // 02:30 EST
   });
 
-  // **A crew tap settles a station the clock would leave open; it never
-  // reopens one the clock has closed** — issue #1480. The late-arrival hour is
-  // an allowance for a *time-based inference*; a crew member tapping Home at
-  // the rail is the statement that inference was standing in for. The first
-  // four cases below pin the constraints the issue binds the promotion with;
-  // the last two pin the direction it deliberately does *not* run in, so a
-  // later session reads the asymmetry as the rule rather than an oversight.
   describe("a recorded home stage", () => {
     const MINUTE = 60 * 1000;
     /** Sailed at dawn, due back five minutes ago — still out for another 55. */
@@ -212,24 +221,40 @@ describe("assembleDayCloseout", () => {
       expect(statusOf({ ...elapsed, stage: null })).toBe("all_home");
     });
 
-    it("stops reading a stage the crew stopped maintaining", () => {
-      // **Constraint 3.** A word goes stale two buffers past the departure's
-      // own end (the clock's `stage_stale` rung), and by then the clock has long since
-      // answered on its own — so a stale stage cannot move this reading in
-      // *either* direction. The window in which it could is empty, and that is
-      // arithmetic rather than convention:
-      expect(rungOffsetMs("stage_stale")).toBeGreaterThan(DEPARTURE_BUFFER_MS);
-
+    it("keeps a late boat out until the staff word expires, then falls back to the clock", () => {
       const endsAt = new Date(now.getTime() - 3 * HOUR);
-      const long = (word: TripStage) =>
-        trip({
-          tripId: "t1",
-          startsAt: new Date(now.getTime() - 8 * HOUR),
-          endsAt,
-          stage: stage(word, new Date(endsAt.getTime() - 5 * MINUTE)),
-        });
-      expect(statusOf(long("home"))).toBe("all_home");
-      expect(statusOf(long("underway"))).toBe("all_home");
+      const late = trip({
+        tripId: "t1",
+        startsAt: new Date(now.getTime() - 8 * HOUR),
+        endsAt,
+        stage: stage("underway", new Date(endsAt.getTime() - 5 * MINUTE)),
+      });
+      expect(statusOf(late)).toBe("still_out");
+      expect(statusOf(late, [], new Date("2026-08-05T04:00:00Z"))).toBe("all_home");
+    });
+
+    it("does not finish a multi-day course on an earlier day's Home tap", () => {
+      const course = trip({
+        tripId: "course",
+        endsAt: new Date("2026-08-06T21:00:00Z"),
+        stage: stage("home", new Date("2026-08-04T21:00:00Z")),
+      });
+      expect(statusOf(course)).toBe("still_out");
+      expect(statusOf(course, [], new Date("2026-08-05T21:30:00Z"))).toBe("still_out");
+    });
+
+    it("recognizes Home from a final meeting that crosses midnight", () => {
+      const course = trip({
+        tripId: "course",
+        endsAt: new Date("2026-08-05T06:00:00Z"),
+        stage: stage("home", new Date("2026-08-05T03:30:00Z")),
+        meetingWindows: [
+          { startsAt: new Date("2026-08-03T02:00:00Z"), endsAt: new Date("2026-08-03T06:00:00Z") },
+          { startsAt: new Date("2026-08-05T02:00:00Z"), endsAt: new Date("2026-08-05T06:00:00Z") },
+        ],
+        startsAt: new Date("2026-08-03T02:00:00Z"),
+      });
+      expect(statusOf(course, [], new Date("2026-08-05T03:45:00Z"))).toBe("all_home");
     });
 
     it("promotes on home and on nothing else", () => {
@@ -242,13 +267,7 @@ describe("assembleDayCloseout", () => {
       }
     });
 
-    it("leaves the clock's own close standing through the overdue hour", () => {
-      // The direction the rule does not run in. Between the clock's close
-      // (`endsAt` + one buffer) and the word going stale (two buffers) there
-      // is a live, contrary `underway` — and the departure still reads home,
-      // because no stage demotes. What makes that safe rather than a boat lost
-      // quietly is the gap branch, which returns first: the second expectation
-      // is the same overdue boat with its head count open.
+    it("keeps a live overdue boat out and still prioritizes a missing diver", () => {
       const overdue = trip({
         tripId: "t1",
         startsAt: new Date(now.getTime() - 6 * HOUR),
@@ -258,7 +277,7 @@ describe("assembleDayCloseout", () => {
       // The word is genuinely still speaking here, not quietly stale:
       expect(liveStageOf(overdue.stage ?? null, overdue.endsAt, now)).not.toBeNull();
 
-      expect(statusOf(overdue)).toBe("all_home");
+      expect(statusOf(overdue)).toBe("still_out");
       expect(
         statusOf(overdue, [{ tripId: "t1", reason: "missing_diver", diveNumber: 2, uncounted: 1 }]),
       ).toBe("unreconciled");
@@ -670,19 +689,21 @@ describe("the glossary's close-out entry", () => {
   it("states the three sources in the order departureStatus reads them", async () => {
     const text = await entry();
     expect(text).toContain("departureStatus");
-    const [roll, clock, stage] = ["roll-call evidence", "then the clock", "trip stage"].map(
-      (needle) => text.indexOf(needle),
-    );
+    const [roll, stage, clock] = [
+      "roll-call evidence",
+      "staff boat reading",
+      "clock as fallback",
+    ].map((needle) => text.indexOf(needle));
     expect(roll).toBeGreaterThan(-1);
-    expect(clock).toBeGreaterThan(roll);
-    expect(stage).toBeGreaterThan(clock);
+    expect(stage).toBeGreaterThan(roll);
+    expect(clock).toBeGreaterThan(stage);
   });
 
-  it("states the promotion and its one-way-ness", async () => {
+  it("distinguishes a closed count from return to the dock", async () => {
     const text = await entry();
     expect(text).toContain("issue #1480");
-    expect(text).toMatch(/never\s+reopens\s+one\s+the\s+clock\s+has\s+closed/);
-    expect(text).toMatch(/Nothing\s+demotes/);
+    expect(text).toContain("A complete final roll call means everyone is back aboard");
+    expect(text).toContain("A speaking non-home stage keeps the station `still_out`");
   });
 });
 

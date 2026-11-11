@@ -1,5 +1,7 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
+import { seedFacts } from "./shop-facts";
 
 signedInAsOwner();
 
@@ -54,3 +56,59 @@ test("a tap on the manifest reaches the home and stays off the public schedule",
     await visitor.close();
   }
 });
+
+for (const width of [390, 1280]) {
+  test(`a counted overdue boat stays out until Home is recorded at ${width}px`, async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(45_000); // Two stage writes and full Today/roster reads at each width.
+    await page.setViewportSize({ width, height: 844 });
+    const t = staffTranslator("en-US");
+    const { evening } = await seedFacts(request, [{ name: "evening", heads: "closed" }]);
+    const id = (evening as { departures: { id: string }[] }).departures[0]?.id;
+    if (!id) throw new Error("the evening fixture moved no departures");
+    const tripPath = `/shop/blue-mantis/trips/${id}`;
+    const station = page
+      .getByRole("listitem")
+      .filter({ has: page.locator(`a[href="${tripPath}"]`) });
+    await page.goto("/shop/blue-mantis");
+    await expect(
+      station.getByText(t("closeout.departures.status.allHome"), { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("region", { name: "What today made" })).toBeVisible();
+    await page.goto(`${tripPath}/manifest`);
+    await offlineCopySaved(page);
+    const underway = page.getByRole("button", { name: "Underway", exact: true });
+    await underway.click();
+    await expect(underway).toHaveAttribute("aria-pressed", "true");
+    await page.goto(tripPath);
+    await expect(page.getByText("Stage: Underway", { exact: true })).toBeVisible();
+    await page.goto("/shop/blue-mantis");
+    await expect(
+      station.getByText(t("closeout.departures.status.stillOut"), { exact: true }),
+    ).toBeVisible();
+    await expect(
+      station.getByText(t("closeout.departures.status.allHome"), { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "What today made" })).toHaveCount(0);
+    await page.reload();
+    await expect(
+      station.getByText(t("closeout.departures.status.stillOut"), { exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: `test-results/counted-boat-still-out-${width}.png`,
+      fullPage: true,
+    });
+    await page.goto(`${tripPath}/manifest`);
+    await offlineCopySaved(page);
+    await expect(underway).toHaveAttribute("aria-pressed", "true");
+    const home = page.getByRole("button", { name: "Home", exact: true });
+    await home.click();
+    await expect(home).toHaveAttribute("aria-pressed", "true");
+    await page.goto("/shop/blue-mantis");
+    await expect(
+      station.getByText(t("closeout.departures.status.allHome"), { exact: true }),
+    ).toBeVisible();
+  });
+}

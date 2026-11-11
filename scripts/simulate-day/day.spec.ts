@@ -409,16 +409,33 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
     case "evening": {
       await advanceClock(at(id));
       await staff.goto(shopPath());
-      // Every departure station on the spine reads "All home". Not the
-      // shop-wide "All boats are home" line: the minted shop's seeded dawn
-      // boat closed its divers' count but never counted its crew, and the
-      // spine withholds that line over a boat whose crew nobody counted
-      // (#1346). The simulation drives one boat, so the stations are the
-      // claim it can make. (When the shop-wide line does show on a fresh
-      // shop, it reads "Your first boat is home", `shopHome.spine.firstBoatHome`.)
-      const stations = staff
-        .getByRole("listitem")
-        .filter({ has: staff.getByRole("link", { name: "Departure log" }) });
+      // Station identity is its departure link; the export moved to Safety.
+      // The completed roll call on the driven boat does not bring the seeded
+      // dawn boat home. Have that crew report Home before claiming all boats.
+      const stations = staff.getByRole("listitem").filter({
+        has: staff.locator(`h3 a[href^="${shopPath()}/trips/"]`),
+      });
+      const driven = stations.filter({
+        has: staff.locator(`a[href="${shopPath()}/trips/${day.tripId}"]`),
+      });
+      await expect(driven.getByText("All home", { exact: true })).toBeVisible();
+      const otherBoats = await stations
+        .filter({ hasText: /Still out/ })
+        .locator("h3 a")
+        .evaluateAll((links) =>
+          links
+            .map((link) => link.getAttribute("href"))
+            .filter((href): href is string => href !== null),
+        );
+      for (const href of otherBoats) {
+        if (tripIdFromPath(href) === day.tripId) continue;
+        await staff.goto(`${href}/manifest`);
+        await offlineCopySaved(staff);
+        const home = staff.getByRole("button", { name: "Home", exact: true });
+        await home.click();
+        await expect(home).toHaveAttribute("aria-pressed", "true");
+      }
+      await staff.goto(shopPath());
       await expect(stations.filter({ hasText: /All home/ }).first()).toBeVisible();
       await expect(stations.filter({ hasNotText: /All home/ })).toHaveCount(0);
       return {

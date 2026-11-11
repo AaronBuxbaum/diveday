@@ -6,7 +6,7 @@
  */
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
-import { bookASeatAndOpenThread } from "./helpers";
+import { bookASeatAndOpenThread, choosePartySize } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   ADVANCED_CHARTER,
@@ -366,6 +366,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "public-trip-full", scheme);
       });
 
+      test(`a wait-list confirmation renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await page.getByRole("link", { name: "Wreck Trip — Spiegel Grove" }).click();
+        await choosePartySize(page, 2);
+        await page.getByRole("textbox", { name: "Name", exact: true }).fill("Astra Waitlist");
+        await page.getByRole("textbox", { name: "Email", exact: true }).fill("astra@example.com");
+        await page.getByRole("button", { name: diverCopy("booking.waitlistHeading") }).click();
+        await page.waitForURL(/\?interest=/);
+        await expect(page.getByRole("status")).toContainText(
+          diverCopy("booking.waitlistConfirmedHeading", { name: "Astra" }),
+        );
+        await capture(page, "public-trip-waitlist-confirmed", scheme);
+      });
+
       /**
        * **A first-timer's course session** (UX sheet 2026-10-22, item 3). Under
        * The day, the course's own "Your afternoon" and, since the seed's
@@ -564,6 +578,19 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText("is not loading.").waitFor();
         await page.evaluate(() => window.scrollTo(0, 0));
         await capture(page, "dive-site-page", scheme);
+      });
+
+      test(`the dive-site departures distinguish courses from charters (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis/sites/uscgc-duane");
+        const departures = page.locator("#departures");
+        const courseTitle = "Advanced Open Water Diver — two-day course";
+        await expect(departures.getByText(courseTitle, { exact: true })).toBeVisible();
+        await expect(
+          departures.getByText("Deep Adventure — USCGC Duane", { exact: true }),
+        ).toBeVisible();
+        await capture(page, "dive-site-mixed-departures", scheme);
       });
 
       // The diver's catalog index. It used to be the signed-out half of a

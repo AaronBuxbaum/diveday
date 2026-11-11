@@ -83,6 +83,25 @@ describe("seeded course forms", () => {
   }, 60_000);
 });
 
+describe("seeded Open Water water skills", () => {
+  it("publishes the swim time limit and float duration in every demo course field", async () => {
+    const { db, shop } = await seededShopContext();
+    const rows = await db.select().from(courses).where(eq(courses.shopId, shop.id));
+    const openWater = rows.find((row) => row.sourceTemplateSlug === "open-water-diver");
+    expect(openWater).toBeDefined();
+    for (const copy of [
+      openWater?.overview,
+      openWater?.scheduleDays[0].items.find((item) => /swim/i.test(item)),
+      openWater?.faqs.find((faq) => /swimmer/.test(faq.question))?.answer,
+    ]) {
+      expect(copy).toMatch(/swim[^.!]*no time limit/i);
+      expect(copy).toMatch(/10-minute float/);
+      expect(copy).not.toMatch(/neither.*timed|swim and float assessment \(not timed\)/i);
+    }
+    expect(openWater?.sourceTemplateVersion).toBeGreaterThan(4);
+  }, 60_000);
+});
+
 describe("seeded gear-included courses", () => {
   it("includes the complete core set whenever the course promises complete rental gear", async () => {
     const { db, shop } = await seededShopContext();

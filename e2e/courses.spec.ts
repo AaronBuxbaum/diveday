@@ -983,6 +983,19 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
  * disagreement upward.
  */
 test.describe("courses on the shopfront", () => {
+  test("Open Water distinguishes the untimed swim from the ten-minute float", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    await page.goto("/s/blue-mantis/courses/open-water-diver");
+    const swimmingFaq = page.locator("#faqs details").filter({ hasText: "strong swimmer" });
+    await openIfClosed(swimmingFaq);
+    for (const section of [page.locator("#about"), page.locator("#how-it-runs"), swimmingFaq]) {
+      await expect(section).toContainText(/swim[^.!]*no time limit/i);
+      await expect(section).toContainText("10-minute float");
+      await expect(section).not.toContainText(/neither.*timed|assessment \(not timed\)/i);
+    }
+  });
+
   test("the shelf shows three rungs and a door to the rest", { tag: READ_ONLY }, async ({
     page,
   }) => {

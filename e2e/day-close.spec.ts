@@ -170,21 +170,21 @@ test.describe("the evening on the home", () => {
 });
 
 /**
- * **The clock as a fact the reset restores** (issue #2761), and the trial for
- * retiring `seed-evening`: the evening is the morning's shop read at the end of
- * the shop day, reached by moving the clock rather than the departures. The
+ * **The clock as a fact the reset restores** (issue #2761). Advancing the
+ * clock must not override a crew stage that still says the boat is out. The
  * pair is serial so the second test provably runs on the server the first one
  * moved.
  */
 test.describe("the clock fixture", () => {
   test.describe.configure({ mode: "serial" });
 
-  test("reads the day as over once the clock reaches the evening", async ({ page, clock }) => {
+  test("keeps a recorded boat out when the clock reaches the evening", async ({ page, clock }) => {
     // Sign in after the move: a session made at the frozen morning is idle-expired by the evening.
     await clock.toEvening();
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis");
-    await expect(page.getByRole("region", { name: "What today made" })).toBeVisible();
+    await expect(page.getByText("Still out", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("region", { name: "What today made" })).toHaveCount(0);
   });
 
   test("starts the next test back on the frozen clock", async ({ request }) => {

@@ -61,16 +61,13 @@
   copy was saved", never the present tense.
 - **Close-out** — the shop home's evening state (ADR 20260827-clearwater-surface-language,
   decision 4): once every departure of the shop day has settled, each station reads its end state
-  in strict precedence off the same roll-call evidence Today chases, then the clock, and only then
-  the crew's own **trip stage** (`departureStatus`, `src/features/today/closeout.ts`), and the day's takings
-  read beneath them. **A stage settles a station the clock would leave open, and never reopens one
-  the clock has closed** (issue #1480): inside the late-arrival hour a live `home` reads `all_home`,
-  because a crew member tapping Home at the rail is the statement that buffer was standing in for
-  rather than an inference from a time. Nothing demotes — a stage that says `underway` over a
-  departure the clock calls back is silence, not a contradiction, and so is one the crew stopped
-  maintaining. The asymmetry is affordable only because the head count returns before any of it:
-  the promotion is reached solely over a departure whose divers are all already counted back
-  aboard. One exception runs the other way: an after-dive count started and still open reads
+  in strict precedence off the same roll-call evidence Today chases, then the staff boat reading
+  (`departureStatus`, `src/features/today/closeout.ts`, using `boatStageOf`), with the clock as fallback when no crew word speaks.
+  A complete final roll call means everyone is back aboard; it does not put the boat at the dock.
+  A speaking non-home stage keeps the station `still_out`, even beyond the scheduled return and
+  its late-arrival hour. A final-meeting-day `home` can settle it inside that hour (issue #1480), but never
+  over an unresolved head count. With no speaking stage the existing clock fallback remains.
+  The staff stage expires on the same rule as the roster and Today’s boats-out reading. One exception runs the other way: an after-dive count started and still open reads
   `still_out` ("Dive 2 count open, 2 people and 1 crew member to mark"), a count in progress rather
   than one never closed, only before she is due back, on a trip within today's shop day, when every
   open count on the boat, diver and crew, is at the latest checkpoint anybody marked with no later
@@ -1543,10 +1540,10 @@
   review fixes). `home` alone carries
   the roll call's success tone, and `home` alone is withheld from the anonymous surfaces: the diver
   who was aboard reads it on their own link, a storefront panel about tomorrow does not. It was a
-  display word until issue #1480 made it load-bearing — the **close-out** reads a live `home` as a
-  boat that is in, which is what lets a tap settle a station the clock would leave open. So the
-  staleness rule is a safety rule there and not a courtesy: a stage the crew stopped maintaining
-  says nothing about whether the day may close.
+  display word until issue #1480 made it load-bearing. The **close-out** uses the staff
+  **trip phase** rule: a final-meeting-day `home` can settle a counted station before the clock
+  would; a speaking non-home stage keeps it out even when overdue. Earlier-day course Home
+  finishes nothing. An expired staff word hands the question back to the clock.
 - **Waiver / release** — the single liability release a shop uses, typically with a **medical
   statement**. DiveDay keeps one versioned release per shop: a *changed* release saves a new immutable
   version and new links snapshot the current one. The exact template version is snapshotted into each

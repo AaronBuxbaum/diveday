@@ -112,3 +112,40 @@ test("the shop header reveals the existing recovery form when its link is clicke
   await expect(recovery).toHaveAttribute("open", "");
   await expect(recovery.getByRole("textbox", { name: "Email" })).toBeInViewport();
 });
+
+for (const [device, viewport] of [
+  ["desktop", { width: 1258, height: 735 }],
+  ["phone", { width: 390, height: 844 }],
+] as const) {
+  test.describe(`recovery across routes on ${device}`, () => {
+    test.use({ viewport, isMobile: device === "phone", hasTouch: device === "phone" });
+
+    test("lands at the recovery form from courses and a trip", async ({ page }, testInfo) => {
+      // Each link navigates from another route into the streamed schedule.
+      test.setTimeout(30_000);
+      for (const source of ["courses", "trip"]) {
+        await page.goto(source === "courses" ? "/s/blue-mantis/courses" : "/s/blue-mantis");
+        if (source === "trip") {
+          await page.getByRole("link", { name: "Wreck Trip — Spiegel Grove" }).click();
+          await expect(page.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
+        }
+        await page.getByRole("link", { name: "Find my booking", exact: true }).click();
+        await page.waitForURL(/\/s\/blue-mantis#find-my-booking$/);
+        const recovery = page.locator("details#find-my-booking");
+        const email = recovery.getByRole("textbox", { name: "Email" });
+        await expect(recovery).toHaveAttribute("open", "");
+        await expect(email).toBeInViewport({ ratio: 1 });
+        await expect(email).toBeFocused();
+        const screenshot = testInfo.outputPath(`recovery-${device}-from-${source}.png`);
+        await page.screenshot({ path: screenshot });
+        await testInfo.attach(`recovery-${device}-from-${source}`, {
+          path: screenshot,
+          contentType: "image/png",
+        });
+      }
+      await page.goto("/s/blue-mantis");
+      await expect(page.locator("details#find-my-booking")).not.toHaveAttribute("open");
+      await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeInViewport();
+    });
+  });
+}
