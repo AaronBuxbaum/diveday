@@ -33,7 +33,7 @@ test("the close says who reads a set-up request, once per page", async ({ page }
   }
 });
 
-test("the homepage hero offers one demo door, and states the price at it", async ({ page }) => {
+test("the homepage hero offers one demo door without a price sentence", async ({ page }) => {
   await page.goto("/");
 
   // One site-wide name for the demo CTA — the hero used to say "Try the
@@ -85,17 +85,7 @@ test("the homepage hero offers one demo door, and states the price at it", async
   await expect(shopLinks).toHaveCount(1);
   await expect(shopLinks).toHaveAttribute("href", "/get-set-up?from=home-hero");
 
-  // The flat price reaches the first screen as a *sentence*
-  // (docs/product/marketing-review-20260827.md, "The price reaches the first
-  // screen"). The two counts above are the budget it had to arrive inside, so
-  // this assertion sits under them deliberately: it is the reason they are
-  // re-read on every copy change. A "See pricing" link here would answer the
-  // same question and cost the budget a door.
-  const heroPriceLine = heroSection.getByText(/^One flat price of/);
-  await expect(heroPriceLine).toBeVisible();
-  await expect(heroPriceLine).toContainText("no cut of your bookings.");
-  await expect(heroPriceLine.getByRole("link")).toHaveCount(0);
-  await expect(heroPriceLine.locator("button")).toHaveCount(0);
+  await expect(heroSection.getByText(/^One flat price of/)).toHaveCount(0);
 
   // The dock note intentionally rises 20px into the phone's lower edge. The
   // phone's entrance animation creates a stacking context, so the note must
@@ -107,22 +97,8 @@ test("the homepage hero offers one demo door, and states the price at it", async
   );
 });
 
-test("the homepage answers price and offers a way to ask before the footer", async ({ page }) => {
+test("the homepage offers a way to ask before the footer", async ({ page }) => {
   await page.goto("/");
-
-  // The flat price renders from src/lib/marketing.ts — never a prose literal —
-  // so a buyer doesn't have to click through to learn whether this is a
-  // hundred-dollar tool or an enterprise quote form. It stands once, under the
-  // hero's door, since the visual review of 2026-10-24 (B09): later doors carry
-  // the buttons alone.
-  await expect(page.getByText(/^One flat price of/)).toHaveCount(1);
-  await expect(
-    page
-      .getByRole("main")
-      .locator("section")
-      .first()
-      .getByText(/^One flat price of/),
-  ).toBeVisible();
 
   // The close: a hesitant buyer who won't self-serve a demo or trial gets a
   // visible human path in the close's one line (B15), not just an unlabeled
@@ -1974,9 +1950,11 @@ for (const [route, scene] of [
     const illustration = page.locator(`[data-marketing-illustration="${scene}"]`);
     await illustration.scrollIntoViewIfNeeded();
     await expect(illustration.getByRole("img")).toBeVisible();
-    await expect(illustration.locator("figcaption")).toHaveText(
-      "Illustration created for DiveDay.",
+    await expect(illustration.getByRole("img")).toHaveAttribute(
+      "alt",
+      diverTranslator("en-US")(`marketing.illustrations.${scene}Alt`),
     );
+    await expect(illustration.locator("figcaption")).toHaveCount(0);
     await expect
       .poll(() => illustration.locator("img").evaluate((img: HTMLImageElement) => img.naturalWidth))
       .toBeGreaterThan(0);

@@ -26,7 +26,6 @@ import { requestPricingOffer } from "@/features/pricing-offer";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { type FeaturePageSlug, featurePagePath, getFeaturePage } from "@/lib/feature-pages";
 import { switchingHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -101,7 +100,7 @@ async function LocalizedHomeBody() {
     <>
       {/* For the configured offer, so it streams with the body (`homeSoftwareJsonLd`). */}
       <JsonLd data={homeSoftwareJsonLd(offer)} />
-      <HomeBody locale={locale} offer={offer} />
+      <HomeBody locale={locale} />
     </>
   );
 }
@@ -230,7 +229,7 @@ const STEPS: readonly {
  * eyebrow/h2/lede/card-grid template. Two demo doors, hero and close, with the
  * demo's cost stated once at the first of them (docs/product/marketing.md).
  */
-async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTerms }) {
+async function HomeBody({ locale }: { locale: DiverLocale }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
@@ -252,14 +251,8 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
             <p className="mt-4 max-w-xl text-lg leading-8 text-muted sm:text-xl">
               {t("marketing.home.heroDescription")}
             </p>
-            {/* The terms stand under this pair and no later one (B09). */}
-            <FunnelCtas
-              locale={locale}
-              source="home-hero"
-              hero
-              footnotes={{ offer }}
-              className="mt-6"
-            />
+            {/* The demo note stands under this pair only; pricing lives on its own page. */}
+            <FunnelCtas locale={locale} source="home-hero" hero footnotes={{}} className="mt-6" />
             <DiverDoor t={t} />
           </div>
           <HomeHeroPhone locale={locale} />

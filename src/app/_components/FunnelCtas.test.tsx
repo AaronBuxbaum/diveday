@@ -144,6 +144,12 @@ describe("the footnotes under a pair", () => {
     expect(screen.getByText(/^One flat price of \$99/)).toBeInTheDocument();
   });
 
+  it("keeps the homepage demo reassurance without a price sentence", () => {
+    const { container } = render(<FunnelCtas locale="en-US" source="home-hero" footnotes={{}} />);
+    expect(screen.getByText(DEMO_NOTE)).toBeInTheDocument();
+    expect(container.querySelectorAll("p")).toHaveLength(1);
+  });
+
   it("are absent from every pair that does not ask for them", () => {
     for (const source of ["home-closing", "pricing-close", "product", "about-rules"] as const) {
       render(<FunnelCtas locale="en-US" source={source} />);
