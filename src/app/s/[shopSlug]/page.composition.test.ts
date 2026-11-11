@@ -39,6 +39,14 @@ describe("the public pages with sightings switched off", () => {
     );
   });
 
+  it("reads the month's sightings through an hourly cache keyed on the shop's month", () => {
+    const shelf = routeSource(import.meta.dirname, "MonthSightingsShelf.tsx");
+    expect(shelf).toContain('"use cache";\n  cacheLife("hours");');
+    expect(shelf).toContain("return { sightings, computedAtMs: cacheStamp() };");
+    expect(shelf).toContain("publicMonthSightings(shopId, tz, shopMonth)");
+    expect(shelf).toContain('reportCacheRead("month_sightings", cached.computedAtMs, { shopId });');
+  });
+
   it("reads no site sightings for a trip page", () => {
     const reads = routeSource(`${import.meta.dirname}/trips/[id]`, "_lib/page-reads.ts");
     expect(reads).toContain(
