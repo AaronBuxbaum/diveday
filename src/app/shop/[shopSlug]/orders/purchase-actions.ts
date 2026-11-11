@@ -16,7 +16,9 @@ import { orderRowsFromForm } from "./_lib/order-form";
 export type PurchaseActionState = { error: "invalid" | "not_authorized" | null };
 const fields = z.object({
   attemptId: z.uuid(),
-  personId: z.uuid(),
+  personId: z
+    .union([z.uuid(), z.literal("walk-in")])
+    .transform((value) => (value === "walk-in" ? null : value)),
   currency: z.string().regex(/^[a-z]{3}$/),
   collection: z.enum(["cash", "card_machine", "bank_transfer", "other"]),
   receiptReference: z.string().trim().max(100),

@@ -57,7 +57,7 @@ const paymentResponse = (refund = 0) =>
     },
   });
 
-async function fixture() {
+async function fixture(anonymous = false) {
   // A fresh database: this subject commits receipt and money transactions.
   const { db, shop } = await seededShopContext();
   await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
@@ -72,7 +72,7 @@ async function fixture() {
   if (!payer) throw new Error("payer missing");
   const input = {
     shopId: shop.id,
-    personId: payer.id,
+    personId: anonymous ? null : payer.id,
     createdByPersonId: staff.personId,
     collection: "cash" as const,
     lineItems: [
@@ -124,80 +124,86 @@ describe("Square receipt matching", () => {
       "refund_mismatch",
     );
   });
-  it("links and rechecks one purchase without a second collection, including refund observations", async () => {
-    const { db, linkInput } = await fixture();
-    const entries = () =>
-      db.select().from(collectionEntries).where(eq(collectionEntries.sourceId, linkInput.orderId));
-    const before = await entries();
-    expect(before).toHaveLength(1);
-    expect(percentFeeCents(before[0]?.amountCents ?? 0, 300)).toBe(300);
-    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => paymentResponse());
-    expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
-    expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
-    expect(await entries()).toEqual(before);
-    fetchImpl.mockImplementation(async () => paymentResponse(2500));
-    expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("refund_mismatch");
-    expect(await entries()).toEqual(before);
-    expect(
-      (await getSquareReceiptState(db, linkInput.shopId, linkInput.orderId)).link?.lastError,
-    ).toBe("refund_mismatch");
-    // Only the existing manual return path owns the economic reversal.
-    const refund = {
-      shopId: linkInput.shopId,
-      orderId: linkInput.orderId,
-      actorPersonId: linkInput.personId,
-      attemptId: randomUUID(),
-      currency: "usd",
-      amountCents: 2500,
-      expectedRefundedCents: 0,
-      reason: "Already returned in Square",
-    };
-    expect((await recordPurchaseRefund(db, refund)).ok).toBe(true);
-    expect((await recordPurchaseRefund(db, refund)).ok).toBe(true);
-    const partial = await entries();
-    expect(partial.map((entry) => entry.amountCents)).toEqual([10000, -2500]);
-    expect(partial[1]?.reversesEntryId).toBe(before[0]?.id);
-    expect(
-      percentFeeCents(
-        partial.reduce((sum, entry) => sum + entry.amountCents, 0),
-        300,
-      ),
-    ).toBe(225);
-    expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
-    expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
-    expect(await entries()).toEqual(partial);
-    // A distinct later refund observation still never creates another sale or reversal.
-    fetchImpl.mockImplementation(async () => paymentResponse(10000));
-    expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("refund_mismatch");
-    expect(await entries()).toEqual(partial);
-    expect(
-      (
-        await recordPurchaseRefund(db, {
-          ...refund,
-          attemptId: randomUUID(),
-          amountCents: 7500,
-          expectedRefundedCents: 2500,
-        })
-      ).ok,
-    ).toBe(true);
-    const full = await entries();
-    expect(full.map((entry) => entry.amountCents)).toEqual([10000, -2500, -7500]);
-    expect(
-      percentFeeCents(
-        full.reduce((sum, entry) => sum + entry.amountCents, 0),
-        300,
-      ),
-    ).toBe(0);
-    expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
-    expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
-    expect(await entries()).toEqual(full);
-    expect(
-      await db
-        .select()
-        .from(integrationSyncRecords)
-        .where(eq(integrationSyncRecords.provider, "square")),
-    ).toHaveLength(1);
-  });
+  it.each([false, true])(
+    "links and rechecks one purchase without a second collection (anonymous: %s)",
+    async (anonymous) => {
+      const { db, linkInput } = await fixture(anonymous);
+      const entries = () =>
+        db
+          .select()
+          .from(collectionEntries)
+          .where(eq(collectionEntries.sourceId, linkInput.orderId));
+      const before = await entries();
+      expect(before).toHaveLength(1);
+      expect(percentFeeCents(before[0]?.amountCents ?? 0, 300)).toBe(300);
+      const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => paymentResponse());
+      expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
+      expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
+      expect(await entries()).toEqual(before);
+      fetchImpl.mockImplementation(async () => paymentResponse(2500));
+      expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("refund_mismatch");
+      expect(await entries()).toEqual(before);
+      expect(
+        (await getSquareReceiptState(db, linkInput.shopId, linkInput.orderId)).link?.lastError,
+      ).toBe("refund_mismatch");
+      // Only the existing manual return path owns the economic reversal.
+      const refund = {
+        shopId: linkInput.shopId,
+        orderId: linkInput.orderId,
+        actorPersonId: linkInput.personId,
+        attemptId: randomUUID(),
+        currency: "usd",
+        amountCents: 2500,
+        expectedRefundedCents: 0,
+        reason: "Already returned in Square",
+      };
+      expect((await recordPurchaseRefund(db, refund)).ok).toBe(true);
+      expect((await recordPurchaseRefund(db, refund)).ok).toBe(true);
+      const partial = await entries();
+      expect(partial.map((entry) => entry.amountCents)).toEqual([10000, -2500]);
+      expect(partial[1]?.reversesEntryId).toBe(before[0]?.id);
+      expect(
+        percentFeeCents(
+          partial.reduce((sum, entry) => sum + entry.amountCents, 0),
+          300,
+        ),
+      ).toBe(225);
+      expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
+      expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
+      expect(await entries()).toEqual(partial);
+      // A distinct later refund observation still never creates another sale or reversal.
+      fetchImpl.mockImplementation(async () => paymentResponse(10000));
+      expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("refund_mismatch");
+      expect(await entries()).toEqual(partial);
+      expect(
+        (
+          await recordPurchaseRefund(db, {
+            ...refund,
+            attemptId: randomUUID(),
+            amountCents: 7500,
+            expectedRefundedCents: 2500,
+          })
+        ).ok,
+      ).toBe(true);
+      const full = await entries();
+      expect(full.map((entry) => entry.amountCents)).toEqual([10000, -2500, -7500]);
+      expect(
+        percentFeeCents(
+          full.reduce((sum, entry) => sum + entry.amountCents, 0),
+          300,
+        ),
+      ).toBe(0);
+      expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
+      expect(await linkSquareReceipt(db, linkInput, fetchImpl)).toBe("matched");
+      expect(await entries()).toEqual(full);
+      expect(
+        await db
+          .select()
+          .from(integrationSyncRecords)
+          .where(eq(integrationSyncRecords.provider, "square")),
+      ).toHaveLength(1);
+    },
+  );
   it("keeps duplicate protection across disconnect and reconnect", async () => {
     const { db, linkInput, input, connect } = await fixture();
     const fetchImpl = vi.fn<typeof fetch>().mockImplementation(async () => paymentResponse());

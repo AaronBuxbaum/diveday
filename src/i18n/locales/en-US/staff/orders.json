@@ -300,6 +300,7 @@
     "refundInvalid": "The return was not recorded. Check the remaining amount and refresh before trying again.",
     "includedTax": "Included tax",
     "includedTip": "Included tip",
-    "receiptReference": "External receipt or reference"
+    "receiptReference": "External receipt or reference",
+    "walkIn": "Walk-in customer"
   }
 }

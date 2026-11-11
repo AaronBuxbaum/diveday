@@ -29,3 +29,16 @@ sales receipts still use gross received-price lines and do not map this split in
 or gratuity accounts. Reconcile that classification in the accounting system; this feature does
 not claim automated tax accounting. Provider connection/reconciliation must not create another
 purchase for a receipt already recorded here.
+
+## Walk-in receipts
+
+A walk-in receipt has a null payer, not a synthetic person. Only standalone staff counter
+receipts may omit the payer; bookings, invoices and package purchases remain named.
+Ledger, search and shop exports retain these rows, while personal exports claim none of them.
+The customer picker defaults to Walk-in customer; choosing a known person preserves that link.
+Integration events carry `customer: null`. QuickBooks receipt delivery omits `CustomerRef`
+and never creates a placeholder customer. Intuit documents this reference as optional for
+[refund receipts](https://developer.intuit.com/docs/api/accounting/refundreceipt); its
+[SalesReceipt guidance](https://help.developer.intuit.com/s/question/0D54R00006ydR6ESAU/create-receipts-through-api)
+names lines and conditional currency as the minimum fields. Provider refusal still fails the
+delivery visibly, rather than marking it delivered or changing the local financial record.

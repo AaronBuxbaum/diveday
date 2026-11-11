@@ -503,8 +503,8 @@ export type NewCounterOrderInput = {
   /** Actual receipt time, no later than the recording clock. */
   collectedAt?: Date;
   shopId: string;
-  /** The person who paid. Must belong to the shop. */
-  personId: string;
+  /** Null for a walk-in; a named payer must belong to this shop. */
+  personId: string | null;
   /** The staff member who took the money; any active staff role will do. */
   createdByPersonId: string;
   collection: CounterCollection;
@@ -529,7 +529,7 @@ const COUNTER_COLLECTIONS: ReadonlySet<string> = new Set<CounterCollection>([
  * and a resort guest's **room charge** (fifth-loop ideas, item 57), which the
  * hotel collects and settles with the shop monthly.
  */
-export type OpenOrderCollection = CounterCollection | "room_charge";
+export type OpenOrderCollection = "cash" | "card_machine" | "room_charge";
 
 const OPEN_ORDER_COLLECTIONS: ReadonlySet<string> = new Set<OpenOrderCollection>([
   "cash",
@@ -605,14 +605,21 @@ export async function recordCounterOrder(
     return invalid;
   }
 
-  const [payer] = await db
-    .select({ id: people.id })
-    .from(people)
-    .where(
-      and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
-    )
-    .limit(1);
-  if (!payer) return invalid;
+  if (input.personId !== null) {
+    if (!isUuid(input.personId)) return invalid;
+    const [payer] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(
+        and(
+          eq(people.id, input.personId),
+          eq(people.shopId, input.shopId),
+          isNull(people.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!payer) return invalid;
+  }
 
   const totalCents = input.lineItems.reduce(
     (total, item) => total + item.quantity * item.unitAmountCents,
@@ -643,7 +650,7 @@ export async function recordCounterOrder(
         ...(input.attemptId ? { id: input.attemptId } : {}),
         shopId: input.shopId,
         bookingId: null,
-        personId: payer.id,
+        personId: input.personId,
         createdByPersonId: input.createdByPersonId,
         status: "paid",
         collection: input.collection,
@@ -742,7 +749,7 @@ export async function recordCounterOrder(
       shopId: input.shopId,
       orderId: created.id,
       actorPersonId: input.createdByPersonId,
-      subjectPersonId: payer.id,
+      subjectPersonId: input.personId,
       code: "purchase_recorded",
       audience: "staff",
       params: {
@@ -1601,7 +1608,7 @@ export async function listShopOrders(
         // computed without that join would promise pages that render nothing.
         // `orders.booking_id` is a foreign key, so the left join can only ever
         // add one row per order — it never inflates the count.
-        .innerJoin(people, eq(people.id, orders.personId))
+        .leftJoin(people, eq(people.id, orders.personId))
         .leftJoin(bookings, eq(bookings.id, orders.bookingId))
         // And the departure, because `?q=` matches its title: a join the row
         // query makes and the count does not is precisely the pager promising
@@ -1614,7 +1621,7 @@ export async function listShopOrders(
       db
         .select({ order: orders, person: people, trip: trips })
         .from(orders)
-        .innerJoin(people, eq(people.id, orders.personId))
+        .leftJoin(people, eq(people.id, orders.personId))
         .leftJoin(bookings, eq(bookings.id, orders.bookingId))
         .leftJoin(trips, eq(trips.id, bookings.tripId))
         .where(where)
@@ -1711,7 +1718,7 @@ function ledgerEntries(db: DbExecutor, shopId: string, filter: ShopOrderFilter) 
       kind: sql<"order" | "seat">`'order'`.as("kind"),
       id: sql<string>`${orders.id}`.as("id"),
       at: sql<Date>`${orders.createdAt}`.as("at"),
-      personName: sql<string>`${people.fullName}`.as("person_name"),
+      personName: sql<string>`coalesce(${people.fullName}, '')`.as("person_name"),
       currency: sql<string>`${orders.currency}`.as("currency"),
       // `status = 'void'` contributes 0; everything else contributes what is
       // left after refunds.
@@ -1721,7 +1728,7 @@ function ledgerEntries(db: DbExecutor, shopId: string, filter: ShopOrderFilter) 
         ),
     })
     .from(orders)
-    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(people, eq(people.id, orders.personId))
     .leftJoin(bookings, eq(bookings.id, orders.bookingId))
     .leftJoin(trips, eq(trips.id, bookings.tripId))
     .where(shopOrderWhere(shopId, filter));
@@ -1911,7 +1918,7 @@ async function ledgerRowsFor(
       db
         .select({ order: orders, person: people, trip: trips })
         .from(orders)
-        .innerJoin(people, eq(people.id, orders.personId))
+        .leftJoin(people, eq(people.id, orders.personId))
         .leftJoin(bookings, eq(bookings.id, orders.bookingId))
         // diveday:allow-deleted-trips: an order names the departure it was raised for, deleted or not.
         .leftJoin(trips, eq(trips.id, bookings.tripId))
@@ -1982,7 +1989,7 @@ export async function countOpenOrdersBySeat(
   const rows = await db
     .select({ tripId: bookings.tripId, total: count() })
     .from(orders)
-    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(people, eq(people.id, orders.personId))
     .innerJoin(bookings, eq(bookings.id, orders.bookingId))
     .where(
       and(shopOrderWhere(shopId, { status: "open" }), inArray(orders.bookingId, [...bookingIds])),
@@ -2009,7 +2016,7 @@ export async function countTripOrders(
   const [counted] = await db
     .select({ total: count() })
     .from(orders)
-    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(people, eq(people.id, orders.personId))
     .leftJoin(bookings, eq(bookings.id, orders.bookingId))
     .where(shopOrderWhere(shopId, { status, tripId, seats }));
   return counted?.total ?? 0;
@@ -2029,7 +2036,7 @@ export async function countShopOrders(
   const [counted] = await db
     .select({ total: count() })
     .from(orders)
-    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(people, eq(people.id, orders.personId))
     .leftJoin(bookings, eq(bookings.id, orders.bookingId))
     .leftJoin(trips, eq(trips.id, bookings.tripId))
     .where(shopOrderWhere(shopId, filter));
@@ -2094,7 +2101,7 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
       // booking left join went with it — it existed only to carry that column.
     })
     .from(orders)
-    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(people, eq(people.id, orders.personId))
     .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
     .limit(1);
   if (!row) return null;

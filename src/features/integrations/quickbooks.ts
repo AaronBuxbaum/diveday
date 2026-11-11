@@ -57,7 +57,7 @@ export type QuickBooksCredentials = {
 export type QuickBooksOrderPayload = {
   source?: SaleSource;
   orderId: string;
-  customer: { id: string; name: string; email: string | null };
+  customer: { id: string; name: string; email: string | null } | null;
   currency: string;
   totalCents: number;
   refundedCents: number;
@@ -143,11 +143,11 @@ export async function exchangeQuickBooksCode(
 
 export function quickBooksSalesReceipt(
   payload: QuickBooksOrderPayload,
-  customerId: string,
+  customerId: string | null,
   itemId: string,
 ) {
   return {
-    CustomerRef: { value: customerId },
+    ...(customerId ? { CustomerRef: { value: customerId } } : {}),
     TxnDate: payload.createdAt.slice(0, 10),
     PrivateNote: saleReference(payload),
     Line: payload.lineItems.map((line) => ({
@@ -165,12 +165,12 @@ export function quickBooksSalesReceipt(
 
 export function quickBooksRefundReceipt(
   payload: QuickBooksOrderPayload,
-  customerId: string,
+  customerId: string | null,
   itemId: string,
 ) {
   const refundCents = payload.refundCents ?? payload.refundedCents;
   return {
-    CustomerRef: { value: customerId },
+    ...(customerId ? { CustomerRef: { value: customerId } } : {}),
     TxnDate: payload.createdAt.slice(0, 10),
     PrivateNote: refundReference(payload),
     Line: [
@@ -403,7 +403,11 @@ async function ensureQuickBooksCustomer(
   eventId: string,
   fetchImpl: typeof fetch,
   deliverySignal?: AbortSignal,
-): Promise<{ status: "ok"; id: string } | { status: "failed"; code: string; retryable: boolean }> {
+): Promise<
+  { status: "ok"; id: string | null } | { status: "failed"; code: string; retryable: boolean }
+> {
+  // Both receipt APIs allow an omitted CustomerRef. A walk-in is not a customer record.
+  if (!payload.customer) return { status: "ok", id: null };
   const existing = await getIntegrationSyncRecord(db, {
     shopId: integration.shopId,
     provider: integration.provider,

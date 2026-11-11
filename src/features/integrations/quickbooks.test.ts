@@ -17,6 +17,12 @@ const payload = {
 };
 
 describe("QuickBooks integration", () => {
+  it("posts anonymous sale and refund receipts without inventing a customer", () => {
+    const anonymous = { ...payload, customer: null };
+    expect(quickBooksSalesReceipt(anonymous, null, "42")).not.toHaveProperty("CustomerRef");
+    expect(quickBooksRefundReceipt(anonymous, null, "42")).not.toHaveProperty("CustomerRef");
+    expect(quickBooksRefundReceipt(anonymous, null, "42").Line[0]?.Amount).toBe(25);
+  });
   it("requests the accounting scope and preserves callback state", () => {
     const url = new URL(
       quickBooksAuthorizationUrl({

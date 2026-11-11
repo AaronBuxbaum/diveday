@@ -41,7 +41,7 @@ export type OrderExportLine = {
   paidAt: Date | null;
   /** How it was taken: a Stripe invoice, cash, or the shop's own card machine. */
   collection: (typeof orders.$inferSelect)["collection"];
-  diverName: string;
+  diverName: string | null;
   tripTitle: string | null;
   tripStartsAt: Date | null;
   line: {
@@ -81,7 +81,7 @@ export async function listOrderLinesForExport(
     .from(orders)
     // The joins `listShopOrders` makes, in its shape, so `shopOrderWhere`'s
     // name, departure and trip conditions read the same columns here.
-    .innerJoin(people, and(eq(people.id, orders.personId), eq(people.shopId, shopId)))
+    .leftJoin(people, and(eq(people.id, orders.personId), eq(people.shopId, shopId)))
     .leftJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
     // diveday:allow-deleted-trips: an order names the departure it was raised for, deleted or not.
     .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))

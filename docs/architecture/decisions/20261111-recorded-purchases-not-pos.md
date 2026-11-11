@@ -27,7 +27,7 @@ refused. Refund recording uses the receipt lock, an expected refunded total and 
 UUID. It records money already returned outside DiveDay and never calls a provider to move money.
 Provider-backed invoices are refused by the local-return writer. Original purchase details remain
 on Orders; refund amount, actor, reason and time use the existing staff activity trail and its
-existing erasure/retention policy. The current history view is bounded to 50 rows.
+existing erasure/retention policy.
 
 Keep native currency frozen on each receipt and reject a form opened before a shop currency
 change. The fee ledger records when the receipt is recorded; an earlier receipt date cannot insert
@@ -35,6 +35,8 @@ unbilled money into an already closed billing statement. Existing seat payment m
 record bookings and their partial/mixed receipts; creating a second order for the same money is
 not a booking-payment shortcut. Square reconciliation must link to an existing economic receipt,
 not manufacture a second fee lot for that same purchase.
+
+Walk-ins have null receipt payers, never invented people. Other purchasing pathways remain named.
 
 ## Alternatives considered
 

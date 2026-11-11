@@ -41,6 +41,27 @@ test.describe("record money already received", () => {
     await page.reload();
     await expect(page.getByText("One shirt returned", { exact: true })).toBeVisible();
   });
+  test("records a walk-in without a customer record and retains it after reload", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/orders?purchase=1");
+    const form = page.getByRole("form", { name: t("orders.purchase.title"), exact: true });
+    await expect(form.getByLabel("Customer", { exact: true })).toHaveValue("walk-in");
+    await form.locator('[name="description-0"]').fill("Walk-in reef shirt");
+    await form.locator('[name="unitAmount-0"]').fill("20");
+    await form.getByRole("button", { name: "Record received payment", exact: true }).click();
+    await page.waitForURL(/\/orders\/[0-9a-f-]{36}$/);
+    await expect(
+      page.getByRole("heading", { name: t("orders.purchase.walkIn"), exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: t("orders.detail.diverRecord"), exact: true }),
+    ).toHaveCount(0);
+    await page.reload();
+    await expect(
+      page.getByRole("listitem").filter({ hasText: "Walk-in reef shirt" }),
+    ).toContainText("$20.00");
+  });
   test("keeps entered receipt fields after validation refusal and closes without a write", async ({
     page,
   }) => {

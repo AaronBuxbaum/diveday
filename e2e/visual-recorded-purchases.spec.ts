@@ -16,9 +16,7 @@ for (const scheme of ["light", "dark"] as const) {
     test(`received purchase and recorded return (${scheme})`, async ({ page }) => {
       await page.goto("/shop/blue-mantis/orders?purchase=1");
       const form = page.getByRole("form", { name: "Record purchase", exact: true });
-      await form
-        .getByLabel("Customer", { exact: true })
-        .selectOption({ label: "Priya Sharma · priya.sharma@mail.example" });
+      await expect(form.getByLabel("Customer", { exact: true })).toHaveValue("walk-in");
       await form.locator('[name="description-0"]').fill("Reef shirt");
       await form.locator('[name="unitAmount-0"]').fill("50");
       await form.getByLabel("Included tax (optional)", { exact: true }).fill("3");

@@ -60,6 +60,42 @@ async function connectedIntegration(
 }
 
 describe("deliverQuickBooksEvent — refund receipts", () => {
+  it("delivers walk-in sale and return events without customer requests, once each", async () => {
+    const { db, shop } = ctx;
+    const integration = await connectedIntegration(db, shop.id);
+    const calls: { url: string; body: Record<string, unknown> }[] = [];
+    const fetchImpl = (async (url: string, init: { body: string }) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      const entity = url.includes("refundreceipt") ? "RefundReceipt" : "SalesReceipt";
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ [entity]: { Id: String(calls.length) } }),
+      };
+    }) as unknown as typeof fetch;
+    for (const eventType of ["order.paid", "order.refunded"] as const) {
+      const event = await enqueueIntegrationEvent(db, {
+        shopId: shop.id,
+        eventType,
+        entityType: "order",
+        entityId: "walk-in-1",
+        idempotencyKey: `walk-in-1:${eventType}`,
+        payload: { ...orderPayload(5000, 5000), customer: null },
+      });
+      if (!event) throw new Error("event fixture failed");
+      expect(await deliverQuickBooksEvent(db, integration, event, CONFIG, fetchImpl)).toEqual({
+        status: "delivered",
+      });
+      expect(await deliverQuickBooksEvent(db, integration, event, CONFIG, fetchImpl)).toEqual({
+        status: "delivered",
+      });
+    }
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.url).toContain("/salesreceipt");
+    expect(calls[1]?.url).toContain("/refundreceipt");
+    for (const call of calls) expect(call.body).not.toHaveProperty("CustomerRef");
+  });
+
   /**
    * `partly_refunded -> partly_refunded` is a supported transition (issue
    * #699), so an order can be refunded in slices, and `refundOrder` emits one

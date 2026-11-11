@@ -131,14 +131,14 @@ export async function searchShop(
     db
       .select({
         id: orders.id,
-        personName: people.fullName,
+        personName: sql<string>`coalesce(${people.fullName}, nullif(${orders.description}, ''), ${orders.id}::text)`,
         description: orders.description,
         totalCents: orders.totalCents,
         currency: orders.currency,
         createdAt: orders.createdAt,
       })
       .from(orders)
-      .innerJoin(people, eq(people.id, orders.personId))
+      .leftJoin(people, eq(people.id, orders.personId))
       .where(
         and(
           eq(orders.shopId, shopId),
@@ -295,13 +295,13 @@ export async function resolveRecentRecords(
       : db
           .select({
             id: orders.id,
-            personName: people.fullName,
+            personName: sql<string>`coalesce(${people.fullName}, nullif(${orders.description}, ''), ${orders.id}::text)`,
             totalCents: orders.totalCents,
             currency: orders.currency,
             createdAt: orders.createdAt,
           })
           .from(orders)
-          .innerJoin(people, eq(people.id, orders.personId))
+          .leftJoin(people, eq(people.id, orders.personId))
           .where(and(eq(orders.shopId, shopId), inArray(orders.id, orderIds))),
     gearIds.length === 0
       ? none

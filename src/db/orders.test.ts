@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { courseTotalCents } from "@/lib/courses";
 import type {
@@ -447,7 +447,7 @@ describe("orders", () => {
 
     const fetched = await getOrder(db, shop.id, result.order.id);
     expect(fetched?.lineItems).toHaveLength(2);
-    expect(fetched?.person.id).toBe(entry.person.id);
+    expect(fetched?.person?.id).toBe(entry.person.id);
     // Who raised it, for the detail page's "Raised {date} by {name}" line — the
     // staff member who billed the diver, never the diver being billed.
     expect(fetched?.createdBy).toEqual({ id: staff, fullName: "Dana Reyes" });
@@ -2678,7 +2678,7 @@ describe("a diver buying a package online", () => {
       },
       fakeInvoicing(),
     );
-    if (!result.ok || !result.order.stripeInvoiceId) throw new Error("not created");
+    assert(result.ok && result.order.stripeInvoiceId && result.order.personId);
     expect(await countSpendableDives(db, shop.id, result.order.personId)).toBe(0);
     await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
     expect(await countSpendableDives(db, shop.id, result.order.personId)).toBe(10);
@@ -2697,7 +2697,7 @@ describe("a diver buying a package online", () => {
       },
       fakeInvoicing(),
     );
-    if (!result.ok || !result.order.stripeInvoiceId) throw new Error("not created");
+    assert(result.ok && result.order.stripeInvoiceId && result.order.personId);
     await markOrderPaidByInvoiceId(ctx.db, result.order.stripeInvoiceId, result.order.totalCents);
     return { ...ctx, order: result.order, personId: result.order.personId };
   }
@@ -2858,7 +2858,7 @@ describe("a diver buying a package online", () => {
       },
       invoicing,
     );
-    if (!result.ok || !result.order.stripeInvoiceId) throw new Error("refused");
+    assert(result.ok && result.order.stripeInvoiceId && result.order.personId);
     // Stripe bills what was typed; nothing the shop has on file is shown.
     expect(requests[0]?.customerName).toBe("Someone Else");
     expect(requests[0]?.customerEmail).toBe("known@example.com");
@@ -2935,7 +2935,7 @@ describe("a diver buying a package online", () => {
       },
       invoicing,
     );
-    if (!result.ok) throw new Error(`refused: ${result.reason}`);
+    assert(result.ok && result.order.personId, "package buyer missing");
     expect((await getOrder(db, shop.id, result.order.id))?.boughtOnline).toBe(true);
 
     const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);

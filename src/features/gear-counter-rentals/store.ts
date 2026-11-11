@@ -614,7 +614,7 @@ export async function linkCounterRentalOrder(
     .from(orders)
     .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
     .limit(1);
-  if (!order) return 0;
+  if (!order?.personId) return 0;
   const linked = await db
     .update(gearReservations)
     .set({ orderId: order.id })

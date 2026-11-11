@@ -61,7 +61,7 @@ async function PurchasePanelBody({
       words={{
         title: t("orders.purchase.title"),
         customer: t("orders.new.customerLabel"),
-        choose: t("orders.new.chooseCustomer"),
+        choose: t("orders.purchase.walkIn"),
         method: t("orders.purchase.method"),
         reference: t("orders.purchase.reference"),
         note: t("orders.new.noteLabel"),

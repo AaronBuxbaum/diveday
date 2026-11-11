@@ -300,6 +300,7 @@
     "refundInvalid": "No se registró la devolución. Revisa el importe restante y actualiza antes de volver a intentarlo.",
     "includedTax": "Impuesto incluido",
     "includedTip": "Propina incluida",
-    "receiptReference": "Recibo externo o referencia"
+    "receiptReference": "Recibo externo o referencia",
+    "walkIn": "Cliente sin registrar"
   }
 }

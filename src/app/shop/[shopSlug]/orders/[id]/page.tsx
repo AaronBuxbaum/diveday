@@ -127,7 +127,7 @@ export default async function OrderDetailPage({
       />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.orders)}
-        title={order.person.fullName}
+        title={order.person?.fullName ?? t("orders.purchase.walkIn")}
         description={order.order.description || t("orders.detail.fallbackDescription")}
         // One overflow for the dispute sheet and Stripe acts on an open invoice.
         // Record payment stays in the receipt card as the one row of work.
@@ -146,7 +146,7 @@ export default async function OrderDetailPage({
         meta={
           <OrderMeta
             order={order.order}
-            personId={order.person.id}
+            personId={order.person?.id ?? null}
             createdBy={{ name: order.createdBy?.fullName ?? null, online: order.boughtOnline }}
             rentalTicketId={header.rentalTicketId}
             shopSlug={shopSlug}
@@ -185,7 +185,7 @@ export default async function OrderDetailPage({
         {booking ? (
           <OrderBookingLine
             booking={booking}
-            personName={order.person.fullName}
+            personName={order.person?.fullName ?? t("orders.purchase.walkIn")}
             currency={order.order.currency}
             shopSlug={shopSlug}
             locale={locale}

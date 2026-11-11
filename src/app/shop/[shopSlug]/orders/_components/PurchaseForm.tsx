@@ -49,7 +49,7 @@ export function PurchaseForm({
   locale,
   step,
   customers,
-  personId = "",
+  personId = "walk-in",
   words,
 }: PurchaseFormProps) {
   const [state, action, pending] = useActionState(recordPurchaseAction, {
@@ -94,9 +94,7 @@ export function PurchaseForm({
               value={payer}
               onChange={(event) => setPayer(event.target.value)}
             >
-              <option value="" disabled>
-                {words.choose}
-              </option>
+              <option value="walk-in">{words.choose}</option>
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
                   {customer.fullName}

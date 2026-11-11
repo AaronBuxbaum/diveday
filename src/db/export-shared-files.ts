@@ -1632,7 +1632,7 @@ export const ORDERS_CSV = sharedFile<ShopRow<"orderRows">>({
     {
       header: "person_name",
       in: "shop",
-      value: (row, { personName }) => personName.get(row.personId),
+      value: (row, { personName }) => (row.personId ? personName.get(row.personId) : null),
     },
     { header: "booking_id", in: "both", value: (row) => row.bookingId },
     { header: "created_by_person_id", in: "shop", value: (row) => row.createdByPersonId },
