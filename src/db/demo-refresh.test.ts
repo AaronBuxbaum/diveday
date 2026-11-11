@@ -19,6 +19,7 @@ import {
   people,
   personRoles,
   rollCallEvents,
+  safetyDrillParticipants,
   shops,
   staffCredentials,
   staffShifts,
@@ -242,6 +243,9 @@ describe("refreshCanonicalDemoSchedule", () => {
     await db.delete(rollCallEvents).where(eq(rollCallEvents.crewPersonId, relief[0].id));
     await db.delete(staffShifts).where(eq(staffShifts.personId, relief[0].id));
     await db.delete(staffCredentials).where(eq(staffCredentials.personId, relief[0].id));
+    await db
+      .delete(safetyDrillParticipants)
+      .where(eq(safetyDrillParticipants.personId, relief[0].id));
     await db.delete(personRoles).where(eq(personRoles.personId, relief[0].id));
     await db.delete(people).where(eq(people.id, relief[0].id));
     await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);
