@@ -205,8 +205,9 @@ export async function prepareVisualBaseline({
 /**
  * **Prepare against the nearest usable baseline** (issue #3968: never wait on, or fail for, a
  * missing one). The resolved snapshot first; when its report or an image it names is missing from
- * the bucket, the nearest main-owned snapshot before it (`nearestPublishedAncestor`, which never
- * takes a marker a pull request published), up to `maxFallbacks` times; then none, so the compare
+ * the bucket, the nearest main-owned snapshot at its main fork (for a PR snapshot) or before it
+ * (for a main snapshot). `nearestPublishedAncestor` never takes a marker a pull request published.
+ * This hands over up to `maxFallbacks` times; then none, so the compare
  * reports its captures as new and says so. Bounded, and it never polls. Anything that is not a
  * missing object (a hash that disagrees, a malformed report, an outage) still throws.
  *
@@ -219,6 +220,7 @@ export async function prepareNearestBaseline({
   git,
   key = "",
   version = "",
+  defaultBranch = "main",
   maxFallbacks = MAX_BASELINE_FALLBACKS,
   ...input
 }) {
@@ -235,9 +237,18 @@ export async function prepareNearestBaseline({
     passedOver.push(candidate.key);
     candidate = { key: "", version: "" };
     if (passedOver.length > maxFallbacks) continue;
+    const rejected = passedOver.at(-1);
     let parent = "";
+    // A rejected layer-below report can be far above main, or reach it through a merge's second
+    // parent. Its first-parent walk can miss the already-published main fork entirely.
     try {
-      parent = git(["rev-parse", `${passedOver.at(-1)}^`]).trim();
+      const fork = git(["merge-base", rejected, `origin/${defaultBranch}`]).trim();
+      if (COMMIT_SHA.test(fork) && fork !== rejected) parent = fork;
+    } catch {
+      // A checkout without the remote ref still gets the existing bounded ancestor fallback.
+    }
+    try {
+      if (!parent) parent = git(["rev-parse", `${rejected}^`]).trim();
     } catch {
       continue;
     }
@@ -257,6 +268,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const expectedKey = process.env.REG_EXPECTED_KEY ?? "";
     const result = await prepareNearestBaseline({
       git: gitReader(),
+      defaultBranch: process.env.DEFAULT_BRANCH || "main",
       bucket: process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET,
       key: expectedKey,
       version: process.env.REG_EXPECTED_VERSION ?? "",
@@ -269,7 +281,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       // the expected images actually came from.
       const note = result.key
         ? `Baseline is ${result.key.slice(0, 7)}: ${result.passedOver.map((sha) => sha.slice(0, 7)).join(", ")} ` +
-          "had images missing from the bucket. Any surface main moved between them is reported here as this run's."
+          "did not have complete images in the bucket. This comparison can include earlier stack layers and intervening main changes."
         : `No complete main baseline was found near ${expectedKey.slice(0, 7)}; every capture is reported as new.`;
       console.log(`::warning title=Baseline resolved to an older snapshot::${note}`);
       const file = process.env.GITHUB_ENV;
