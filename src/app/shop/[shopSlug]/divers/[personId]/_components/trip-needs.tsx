@@ -1,3 +1,4 @@
+import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import type { DiverStatusRow } from "@/features/diver-status";
 import {
   CERTIFICATION_LEVEL_KEYS,
@@ -125,11 +126,12 @@ export function TripNeedsRow({ t, lines }: { t: StaffTranslator; lines: TripNeed
 export function TripNeedsDisclosure({ t, lines }: { t: StaffTranslator; lines: TripNeedsLine[] }) {
   if (lines.length === 0) return null;
   return (
-    <details className="group text-sm">
-      <summary className="cursor-pointer text-muted hover:text-foreground">
-        {t("divers.certifications.tripNeeds.heading")}
-      </summary>
+    <CompactDisclosureRow
+      label={t("divers.certifications.tripNeeds.heading")}
+      className="text-muted"
+      bodyClassName=""
+    >
       <TripNeedsList lines={lines} />
-    </details>
+    </CompactDisclosureRow>
   );
 }
