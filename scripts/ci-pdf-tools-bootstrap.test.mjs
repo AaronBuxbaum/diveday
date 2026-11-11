@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   acquireArchive,
   installPdfTools,
+  MICROMAMBA,
   PDF_PACKAGES,
   PDF_VERSION,
   smokePdf,
@@ -24,7 +25,8 @@ afterEach(() => {
 });
 const bytes = Buffer.from("an archive fixture");
 const pkg = {
-  file: "fixture.deb",
+  file: "fixture.conda",
+  url: "https://conda.anaconda.org/conda-forge/linux-64/fixture.conda",
   size: bytes.length,
   sha256: createHash("sha256").update(bytes).digest("hex"),
 };
@@ -47,34 +49,59 @@ describe("installation publishes tools only after verification", () => {
     expect(readFileSync(githubPath, "utf8")).toBe("original\n");
   });
 
-  it.each(["identity", "missing library", "wrong version", "smoke"])(
-    "keeps GITHUB_PATH unchanged after %s failure",
-    (failure) => {
-      const temp = temporary();
-      const githubPath = path.join(temp, "github-path");
-      writeFileSync(githubPath, "original\n");
-      const acquire = (pkg) => pkg.file;
-      const run = (binary, args) => {
-        if (binary === "dpkg-deb" && args[0] === "-f") {
-          const name = args[1].split("_")[0];
+  it.each([
+    "installer version",
+    "install",
+    "identity",
+    "missing library",
+    "wrong version",
+    "smoke",
+  ])("keeps GITHUB_PATH unchanged after %s failure", (failure) => {
+    const temp = temporary();
+    const githubPath = path.join(temp, "github-path");
+    writeFileSync(githubPath, "original\n");
+    const acquire = (pkg) => {
+      const file = path.join(temp, pkg.file);
+      writeFileSync(file, "fixture");
+      return file;
+    };
+    const run = (binary, args, options) => {
+      if (binary.endsWith(MICROMAMBA.file)) {
+        if (args[0] === "--version")
           return {
             status: 0,
-            stdout: `Package: ${name}\nVersion: ${PDF_VERSION}\nArchitecture: ${failure === "identity" ? "arm64" : "amd64"}\n`,
+            stdout: failure === "installer version" ? "0.0.0" : MICROMAMBA.version,
           };
+        expect(args).toContain("--offline");
+        expect(args).toContain("--skip-run-link-scripts");
+        expect(options.env.CONDA_PKGS_DIRS).toBe(path.join(temp, "diveday-poppler", "packages"));
+        if (failure === "install") return { status: 1, stderr: "archive extraction failed" };
+        const prefix = args[args.indexOf("--prefix") + 1];
+        mkdirSync(path.join(prefix, "conda-meta"), { recursive: true });
+        for (const pkg of PDF_PACKAGES) {
+          const build = pkg.file.replace(/\.(conda|tar\.bz2)$/u, "");
+          writeFileSync(
+            path.join(prefix, "conda-meta", `${build}.json`),
+            JSON.stringify({
+              name: pkg.name,
+              version: pkg.version,
+              sha256: failure === "identity" ? "wrong" : pkg.sha256,
+            }),
+          );
         }
-        if (binary === "dpkg-deb") return { status: 0 };
-        if (failure === "missing library") return { status: 127, stderr: "libpoppler not found" };
-        if (args[0] === "-v")
-          return {
-            status: 0,
-            stderr: `${path.basename(binary)} version ${failure === "wrong version" ? "26.11.0" : "24.02.0"}\n`,
-          };
-        return { status: 0, stdout: "wrong extracted text" };
-      };
-      expect(() => installPdfTools({ temp, githubPath, host, acquire, run })).toThrow();
-      expect(readFileSync(githubPath, "utf8")).toBe("original\n");
-    },
-  );
+        return { status: 0 };
+      }
+      if (failure === "missing library") return { status: 127, stderr: "libpoppler not found" };
+      if (args[0] === "-v")
+        return {
+          status: 0,
+          stderr: `${path.basename(binary)} version ${failure === "wrong version" ? "24.02.0" : PDF_VERSION}\n`,
+        };
+      return { status: 0, stdout: "wrong extracted text" };
+    };
+    expect(() => installPdfTools({ temp, githubPath, host, acquire, run })).toThrow();
+    expect(readFileSync(githubPath, "utf8")).toBe("original\n");
+  });
 
   it("refuses an unsupported host before acquiring packages", () => {
     const acquire = vi.fn();
@@ -86,11 +113,19 @@ describe("installation publishes tools only after verification", () => {
 });
 
 describe("verified PDF package acquisition", () => {
-  it("pins the same Ubuntu release and complete SHA256 digests for both packages", () => {
-    expect(PDF_PACKAGES.map((p) => p.name)).toEqual(["libpoppler134", "poppler-utils"]);
+  it("locks the entire Linux package closure and the installer by publisher URL, size and SHA256", () => {
+    expect(PDF_PACKAGES.find((p) => p.name === "poppler").version).toBe(PDF_VERSION);
+    expect(new Set(PDF_PACKAGES.map((p) => p.name)).size).toBe(PDF_PACKAGES.length);
     for (const p of PDF_PACKAGES) {
-      expect(p.file).toBe(`${p.name}_${PDF_VERSION}_amd64.deb`);
+      expect(p.url).toMatch(/^https:\/\/conda\.anaconda\.org\/conda-forge\/(linux-64|noarch)\//u);
+      expect(new URL(p.url).pathname.split("/").at(-1)).toBe(p.file);
+    }
+    expect(MICROMAMBA.url).toMatch(
+      /^https:\/\/github\.com\/mamba-org\/micromamba-releases\/releases\/download\//u,
+    );
+    for (const p of [...PDF_PACKAGES, MICROMAMBA]) {
       expect(p.sha256).toMatch(/^[a-f0-9]{64}$/u);
+      expect(p.size).toBeGreaterThan(0);
     }
   });
   it("rechecks a cached archive without network access", () => {
@@ -118,9 +153,7 @@ describe("verified PDF package acquisition", () => {
       expect(args).toContain("=https");
       expect(args).toContain("--proto-redir");
       expect(args).toContain("--max-filesize");
-      expect(args.at(-1)).toBe(
-        "https://security.ubuntu.com/ubuntu/pool/main/p/poppler/fixture.deb",
-      );
+      expect(args.at(-1)).toBe(pkg.url);
       expect(options.timeoutMs).toBeGreaterThan(0);
       writeFileSync(args[args.indexOf("--output") + 1], bytes);
       return { status: 0 };

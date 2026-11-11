@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Canonical's existing Noble renderer, without apt indexes or system installation.
-// Pins: packages.ubuntu.com/noble/amd64/poppler-utils/download and
-// packages.ubuntu.com/noble-updates/amd64/libpoppler134/download (2026-11-11).
+// An isolated, fully locked conda-forge Poppler environment. No apt or live solver.
+// Only original archives are cached; hashes are rechecked before offline installation.
 import { createHash } from "node:crypto";
 import {
   appendFileSync,
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -18,19 +18,10 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
-export const PDF_VERSION = "24.02.0-1ubuntu9.11";
-export const PDF_PACKAGES = [
-  {
-    name: "libpoppler134",
-    size: 1117982,
-    sha256: "fb25ad9d2bf31bf67840b8516bedc1a9bfc8f70d319c3eb9d341f722668e0151",
-  },
-  {
-    name: "poppler-utils",
-    size: 211678,
-    sha256: "babf881b89893f843701116f9f32917d19fa94dec337940b6dbeb27fe1a26fc8",
-  },
-].map((pkg) => ({ ...pkg, file: `${pkg.name}_${PDF_VERSION}_amd64.deb` }));
+const lock = JSON.parse(readFileSync(new URL("./ci-pdf-tools.lock.json", import.meta.url), "utf8"));
+export const PDF_VERSION = lock.version;
+export const PDF_PACKAGES = lock.packages;
+export const MICROMAMBA = lock.micromamba;
 
 export function verifyArchive(bytes, pkg) {
   if (bytes.length !== pkg.size || createHash("sha256").update(bytes).digest("hex") !== pkg.sha256)
@@ -74,7 +65,7 @@ export function acquireArchive(pkg, directory, run = runBounded) {
       String(pkg.size),
       "--output",
       partial,
-      `https://security.ubuntu.com/ubuntu/pool/main/p/poppler/${pkg.file}`,
+      pkg.url,
     ]);
     verifyArchive(readFileSync(partial), pkg);
     renameSync(partial, target);
@@ -146,29 +137,70 @@ export function installPdfTools({
     !/^VERSION_ID="24\.04"$/mu.test(host.release)
   )
     throw new Error("PDF tools: pinned packages require Ubuntu 24.04 amd64");
-  const archives = PDF_PACKAGES.map((pkg) =>
-    acquire(pkg, path.join(temp, "diveday-poppler-archives"), run),
-  );
+  const cache = path.join(temp, "diveday-poppler-archives");
+  const installer = acquire(MICROMAMBA, cache, run);
+  const archives = PDF_PACKAGES.map((pkg) => acquire(pkg, cache, run));
+  chmodSync(installer, 0o755);
+  if (checked(run, installer, ["--version"]).trim() !== MICROMAMBA.version)
+    throw new Error("PDF tools: unexpected micromamba version");
   const root = path.join(temp, "diveday-poppler");
   rmSync(root, { recursive: true, force: true });
   mkdirSync(path.join(root, "bin"), { recursive: true });
-  for (const [index, archive] of archives.entries()) {
-    const fields = checked(run, "dpkg-deb", ["-f", archive, "Package", "Version", "Architecture"]);
+  const specification = path.join(root, "explicit.txt");
+  writeFileSync(
+    specification,
+    `@EXPLICIT\n${archives
+      .map((archive, index) => `${pathToFileURL(archive).href}#${PDF_PACKAGES[index].sha256}`)
+      .join("\n")}\n`,
+  );
+  const prefix = path.join(root, "environment");
+  checked(
+    run,
+    installer,
+    [
+      "--no-rc",
+      "--root-prefix",
+      path.join(root, "mamba"),
+      "create",
+      "--prefix",
+      prefix,
+      "--file",
+      specification,
+      "--offline",
+      "--yes",
+      "--safety-checks",
+      "enabled",
+      "--extra-safety-checks",
+      "--skip-run-link-scripts",
+    ],
+    {
+      env: {
+        ...process.env,
+        CONDA_PKGS_DIRS: path.join(root, "packages"),
+        XDG_CACHE_HOME: path.join(root, "cache"),
+      },
+    },
+  );
+  for (const pkg of PDF_PACKAGES) {
+    const build = pkg.file.replace(/\.(conda|tar\.bz2)$/u, "");
+    const metadata = JSON.parse(
+      readFileSync(path.join(prefix, "conda-meta", `${build}.json`), "utf8"),
+    );
     if (
-      fields.trim() !==
-      `Package: ${PDF_PACKAGES[index].name}\nVersion: ${PDF_VERSION}\nArchitecture: amd64`
+      metadata.name !== pkg.name ||
+      metadata.version !== pkg.version ||
+      metadata.sha256 !== pkg.sha256
     )
-      throw new Error("PDF tools: package control fields do not match the pinned package");
-    checked(run, "dpkg-deb", ["-x", archive, root]);
+      throw new Error("PDF tools: installed package identity does not match lock");
   }
   for (const binary of ["pdftotext", "pdftoppm"]) {
     const wrapper = path.join(root, "bin", binary);
     writeFileSync(
       wrapper,
-      `#!/bin/sh\nroot="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"\nexport LD_LIBRARY_PATH="$root/usr/lib/x86_64-linux-gnu"\nexec "$root/usr/bin/${binary}" "$@"\n`,
+      `#!/bin/sh\nroot="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"\nexport FONTCONFIG_FILE=/etc/fonts/fonts.conf\nexec "$root/environment/bin/${binary}" "$@"\n`,
       { mode: 0o755 },
     );
-    if (!checked(run, wrapper, ["-v"]).includes(`${binary} version 24.02.0`))
+    if (!checked(run, wrapper, ["-v"]).includes(`${binary} version ${PDF_VERSION}`))
       throw new Error(`PDF tools: unexpected ${binary} version`);
   }
   const scratch = mkdtempSync(path.join(temp, "diveday-pdf-smoke-"));
@@ -179,7 +211,7 @@ export function installPdfTools({
   }
   if (githubPath) appendFileSync(githubPath, `${path.join(root, "bin")}\n`);
   console.log(
-    `PDF tools: verified Ubuntu ${PDF_VERSION}; text, bounding boxes and PNG smoke passed`,
+    `PDF tools: verified conda-forge Poppler ${PDF_VERSION} and ${PDF_PACKAGES.length} locked packages; text, bounding boxes and PNG smoke passed`,
   );
 }
 

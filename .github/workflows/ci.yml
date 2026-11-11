@@ -434,7 +434,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5.0.5
         with:
           path: ${{ runner.temp }}/diveday-poppler-archives
-          key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs') }}
+          key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs', 'scripts/ci-pdf-tools.lock.json') }}
       # Measure predictions against the full shard, never use them to skip gate tests.
       - name: Snapshot test-impact prediction
         continue-on-error: true
@@ -651,7 +651,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5.0.5
         with:
           path: ${{ runner.temp }}/diveday-poppler-archives
-          key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs') }}
+          key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs', 'scripts/ci-pdf-tools.lock.json') }}
       # The base by *ref*, never `base.sha`, for the reason the `changes` job
       # gives (issue #1295). A base or a CI history it cannot read leaves that
       # list empty; the script never fails the step on missing evidence.
@@ -842,7 +842,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5.0.5
         with:
           path: ${{ runner.temp }}/diveday-poppler-archives
-          key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs') }}
+          key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs', 'scripts/ci-pdf-tools.lock.json') }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: next-build
