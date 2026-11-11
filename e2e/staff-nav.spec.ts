@@ -37,9 +37,9 @@ test.describe("owner", () => {
       await expect(schedule).toBeVisible();
       await expect(divers).toBeVisible();
       await expect(inbox).toBeVisible();
-      await expect(nav.getByRole("button", { name: "Más", exact: true })).toHaveClass(
-        /text-primary/,
-      );
+      await expect(
+        nav.getByRole("button", { name: "Más", exact: true }).locator("span").first(),
+      ).toHaveClass(/text-primary/);
       await expect(schedule).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
       await expect(divers).toHaveAttribute("href", "/shop/blue-mantis/divers");
       await expect(inbox).toHaveAttribute("href", "/shop/blue-mantis/inbox");
@@ -557,7 +557,9 @@ test.describe("the phone", () => {
     ]);
     await tabs.getByRole("link", { name: "Money" }).click();
     await expect(page).toHaveURL(/\/orders$/);
-    await expect(tabs.getByRole("button", { name: "More" })).toHaveClass(/text-primary/);
+    await expect(tabs.getByRole("button", { name: "More" }).locator("span").first()).toHaveClass(
+      /text-primary/,
+    );
   });
 
   /**
