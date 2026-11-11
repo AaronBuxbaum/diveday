@@ -1447,6 +1447,7 @@ test("a course that includes its gear asks the student for sizes, not money", as
   await page.getByRole("checkbox", { name: "Rental gear is part of the course fee" }).check();
   // Exercise a deliberately partial kit, independently of the demo full-kit default.
   const includedKinds = page.getByTestId("course-included-kinds");
+  await expect(includedKinds.getByRole("checkbox")).not.toHaveCount(0);
   for (const checkbox of await includedKinds.getByRole("checkbox").all()) {
     await checkbox.uncheck();
   }
