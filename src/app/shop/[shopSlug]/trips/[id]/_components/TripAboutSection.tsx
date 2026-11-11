@@ -31,7 +31,7 @@ function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) 
   const beat = (
     <>
       <span className={groupLabelClass()}>{row.label}</span>
-      <div className="min-w-0 text-sm">{row.value}</div>
+      <div className="min-w-0 text-base">{row.value}</div>
     </>
   );
   if (!row.editor) {
@@ -53,7 +53,7 @@ function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) 
       <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:focus-ring-inset">
         <div className={ROW_GRID}>
           {beat}
-          <span className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-primary sm:justify-self-end">
+          <span className="inline-flex min-h-11 w-fit items-center gap-1 text-base font-semibold text-primary sm:justify-self-end">
             {row.editLabel ?? editLabel}
             <DisclosureCaret direction="down" className="size-4 group-open/row:rotate-180" />
           </span>

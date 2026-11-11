@@ -11,6 +11,12 @@ test("Details only folds its action links when their actual widths do not fit", 
 }) => {
   const id = await seededTripId(page, "blue-mantis", title);
   await page.goto(`/shop/blue-mantis/trips/${id}?view=details`);
+  const plan = page.locator("#plan > summary");
+  await expect(plan.locator(":scope > div > :nth-child(2)")).toHaveCSS("font-size", "16px");
+  await expect(plan.getByText(t("trips.about.edit"), { exact: true })).toHaveCSS(
+    "font-size",
+    "16px",
+  );
   const actions = page.locator("#about [data-overflow-actions]");
   await expect(actions).toBeVisible();
   for (const width of [1280, 820, 390, 1280]) {
@@ -64,6 +70,14 @@ test("early Home locks the plan but leaves conservation and safety evidence corr
   await expect(page.locator("#conservation-add > summary")).toBeVisible();
   await expect(page.locator("#about-more")).toHaveCount(0);
   const safety = page.locator("#safety-record");
+  await expect(safety.locator(":scope > summary > div > :nth-child(2)")).toHaveCSS(
+    "font-size",
+    "16px",
+  );
+  await expect(safety.getByText(t("trips.safetyRecord.correct"), { exact: true })).toHaveCSS(
+    "font-size",
+    "16px",
+  );
   await safety.locator(":scope > summary").click();
   await safety.locator('[name="exceedsNoDecoLimits"]').check();
   await safety.getByRole("button", { name: t("trips.details.saveChanges"), exact: true }).click();

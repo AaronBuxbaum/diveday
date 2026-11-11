@@ -4,7 +4,7 @@
 
 The source inventory covers all 110 `page.tsx` routes at `ffb570c8b`. It checks shared page composition, controls, instant navigation and loading siblings. It is not a rendered audit of every route. Staff routes consistently provide instant navigation and sibling loading states. The collection-pattern and visual-pattern audits document intentional differences between operational records, public pages and singleton settings; this change preserves them.
 
-The focused implementation and rendered verification concern departure Details. Conservation belongs in the same labeled-row card as the other departure facts. Its measured post-trip record is different from the departure's definition: staff can record, correct and delete conservation facts after return. The label column is wider; action overflow is based on measured available width rather than a viewport breakpoint. The lower action group names its contents: cancellation/weather for one departure, repeating dates/cancellations for a series.
+The focused implementation and rendered verification concern departure Details. Conservation belongs in the same labeled-row card as the other departure facts. Its measured post-trip record is different from the departure's definition: staff can record, correct and delete conservation facts after return. Critical values and correction controls use 16px text. The label column is wider; action overflow is based on measured available width rather than a viewport breakpoint. The lower action group names its contents: cancellation/weather for one departure, repeating dates/cancellations for a series.
 
 ## Editing by lifecycle
 
