@@ -19,6 +19,8 @@ for (const width of [1280, 390]) {
     test.use({ viewport: { width, height: 844 } });
 
     test("carries the diver's saved note to the staff file before departure", async ({ page }) => {
+      // One test, three sessions: creates a trip, books and saves as a diver, then reads the file as staff.
+      test.slow();
       const name = `Day Of Diver ${width}`;
       const title = `Day Of Departure ${width}`;
       await createTrip(page, {
