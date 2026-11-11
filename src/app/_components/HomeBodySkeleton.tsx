@@ -36,8 +36,7 @@ const TITLE_LINES = [
  *   - the description, `mt-4`, `leading-8`: three 32px lines on a phone, two
  *     from `sm` in its `max-w-xl`;
  *   - the doors, `mt-6`: a 48px demo button and a 44px setup link on one wrapping row;
- *   - the demo note (`mt-3`) and the price line (`mt-2`): 20px lines, two each
- *     on a phone and one from `sm`;
+ *   - the demo note (`mt-3`): 20px lines, two on a phone and one from `sm`;
  *   - the diver's line (`mt-6`): one 20px line, "Booked a dive? Find your
  *     booking" (fourth review, item 50), only while `HOME_DIVER_DOOR` is on;
  *   - the phone: `CaptainPhoneFrame` renders 544px tall at every width (its
@@ -87,9 +86,6 @@ export function HomeBodySkeleton() {
             </div>
             <div className="mt-3">
               <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-72 max-w-full" />
-            </div>
-            <div className="mt-2">
-              <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-64 max-w-full" />
             </div>
             {diverDoor ? (
               <div className="mt-6">

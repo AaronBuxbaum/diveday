@@ -18,6 +18,7 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("next/cache", () => ({ cacheLife: () => {} }));
 
+const { default: HomePage } = await import("./(marketing)/page");
 const { default: AboutPage } = await import("./(marketing)/about/page");
 const { default: ProductPage } = await import("./(marketing)/product/page");
 const { default: FeaturePage } = await import("./(marketing)/product/[feature]/page");
@@ -31,6 +32,8 @@ const { earlyAccessPriceAmount } = await import("@/lib/marketing");
 
 /** The server components between a page and its words, rendered when met. */
 const RENDERED = new Set([
+  "LocalizedHomeBody",
+  "HomeBody",
   "AboutBody",
   "ProductBody",
   "LocalizedFeatureBody",
@@ -171,6 +174,14 @@ describe("with default percentage pricing", () => {
     expect(await pageText("rezdy")).toContain(
       "One flat price of $99 per location / month, and no cut of your bookings.",
     );
+  });
+
+  it("keeps the homepage demo note without the percentage price sentence", async () => {
+    const text = await textOf(HomePage());
+    expect(text).toContain(
+      "The demo opens a working sample shop in one click. No sign-up and no card.",
+    );
+    expect(text).not.toContain("3% when you record a payment, with no monthly fee.");
   });
 
   it("gives the percentage offer its own terms on /about, /product and a feature page", async () => {

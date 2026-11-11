@@ -21,6 +21,7 @@ function host(html: string) {
 }
 
 beforeEach(() => {
+  for (const style of document.head.querySelectorAll("style")) style.remove();
   document.body.innerHTML = "";
   document.body.style.overflow = "";
 });
@@ -29,6 +30,32 @@ afterEach(() => {
 });
 
 describe("the loader", () => {
+  it("mounts each widget once when snippets repeat the loader, including later widgets", () => {
+    host(`<div data-diveday="grid" data-shop="blue-mantis" data-look="light"></div>`);
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<div data-diveday="courses" data-shop="blue-mantis" data-look="light"></div>`,
+    );
+    new Function(LOADER)();
+    for (const widget of document.querySelectorAll("[data-diveday]")) {
+      expect(widget.querySelectorAll("iframe")).toHaveLength(1);
+      expect(widget.querySelectorAll("[data-diveday-credit]")).toHaveLength(1);
+    }
+    expect(document.querySelectorAll("iframe")).toHaveLength(2);
+  });
+
+  it("opens only one modal after the loader is repeated", () => {
+    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    };
+    host(
+      `<a href="/s/blue-mantis" data-diveday="lightbox" data-shop="blue-mantis" data-look="light">Book</a>`,
+    );
+    new Function(LOADER)();
+    document.querySelector<HTMLAnchorElement>("[data-diveday=lightbox]")?.click();
+    expect(document.querySelectorAll("dialog[data-diveday-lightbox]")).toHaveLength(1);
+  });
+
   it("turns a framed kind into an iframe carrying the host page's color and face, and one credit", () => {
     // Inline, because jsdom's computed styles do not cascade a stylesheet
     // the way a browser's do; the loader reads computed colour and face either way.

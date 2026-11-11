@@ -23,7 +23,9 @@
   } catch (_e) {
     return;
   }
-  const mounted = new WeakSet();
+  // A symbol on the element survives another copy of the loader, but is not
+  // copied into a new widget when a CMS clones its markup.
+  const mounted = Symbol.for("diveday.embed.mounted");
   const DIVEDAY_LAGOON = "#0e7490";
   const sheetStyle = document.createElement("style");
 
@@ -217,8 +219,8 @@
     });
   }
   function mount(el) {
-    if (mounted.has(el)) return;
-    mounted.add(el);
+    if (el[mounted]) return;
+    el[mounted] = true;
     const kind = el.getAttribute("data-diveday");
     if (kind === "button") styleButton(el);
     else if (kind === "lightbox") lightbox(el);

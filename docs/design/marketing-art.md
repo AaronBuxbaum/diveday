@@ -13,9 +13,10 @@ screenshots, UI icons, customer photographs or safety instruction.
 | [Gear handover](../../public/marketing/gear-handover.webp) | Rental gear: a prepared, welcoming counter | A single clear action, ordinary adults of different ages, orderly useful equipment rather than decoration |
 
 These are generated illustrations of fictional scenes. Never label a depicted person as a customer,
-quote them, imply they use DiveDay, or present the scene as documentary evidence. Keep the visible
-localized illustration caption. Genuine operator photos, when available with permission, remain
-photos and must not be painted over to manufacture consistency.
+quote them, imply they use DiveDay, or present the scene as documentary evidence. Keep localized
+alt text identifying and describing the illustration; no visible caption is needed (Aaron,
+2026-11-11). Genuine operator photos, when available with permission, remain photos and must not
+be painted over to manufacture consistency.
 
 ## The look
 
@@ -65,8 +66,8 @@ where they fit. Pricing, About, legal/safety pages and the product directory do 
 An attractive picture alone is not a reason for another section or more scrolling.
 
 Keep the product demonstration and first demo door ahead of editorial art. Use the existing
-`MarketingIllustration` figure, localized alt text describing the visible scene, and its visible
-illustration caption. No text overlay, background-image conversion or carousel. Show the complete
+`MarketingIllustration` figure and localized alt text describing the visible scene. No text overlay,
+background-image conversion or carousel. Show the complete
 scene with intrinsic 1536 × 1024 dimensions, responsive `sizes` and lazy loading; do not mark it
 priority. Preserve the product mockups as proof of capability.
 
@@ -81,7 +82,7 @@ masters outside the repository; keep useful prompts here so future work does not
    faces, paired gear, perspective and accidentally generated text; regenerate visible defects.
 2. Verify its activity supports that specific page, without implying a new capability, integration,
    testimonial or safety guarantee. Don't use an illustration to paper over missing product proof.
-3. Inspect the real page at desktop and phone widths, with the caption and adjacent copy. Check
+3. Inspect the real page at desktop and phone widths, with the adjacent copy. Check
    cropping, horizontal overflow, load layout stability, and whether the CTA still leads.
 4. Run the component's locale/dimensions/lazy-loading/size tests and the affected marketing browser
    tests; retain visual captures. Explain the expected pixel change in the PR and review CI's diff.

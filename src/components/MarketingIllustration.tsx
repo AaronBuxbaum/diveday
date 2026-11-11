@@ -26,9 +26,6 @@ export function MarketingIllustration({
         loading="lazy"
         className="h-auto w-full rounded-panel"
       />
-      <figcaption className="mt-2 text-xs leading-5 text-muted">
-        {t("marketing.illustrations.caption")}
-      </figcaption>
     </figure>
   );
 }

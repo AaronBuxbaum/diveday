@@ -13,13 +13,13 @@ describe("MarketingIllustration", () => {
     for (const scene of ["harbor", "classroom", "gear-handover"] as const) {
       it(`labels the ${scene} scene as illustration in ${locale} and reserves its space`, () => {
         const t = diverTranslator(locale);
-        render(<MarketingIllustration scene={scene} locale={locale} />);
+        const { container } = render(<MarketingIllustration scene={scene} locale={locale} />);
         const image = screen.getByRole("img", { name: t(`marketing.illustrations.${scene}Alt`) });
         expect(image).toHaveAttribute("width", "1536");
         expect(image).toHaveAttribute("height", "1024");
         expect(image).toHaveAttribute("loading", "lazy");
         expect(image).toHaveAttribute("srcset");
-        expect(screen.getByText(t("marketing.illustrations.caption"))).toBeInTheDocument();
+        expect(container.querySelector("figcaption")).toBeNull();
         expect(statSync(join(process.cwd(), `public/marketing/${scene}.webp`)).size).toBeLessThan(
           500_000,
         );

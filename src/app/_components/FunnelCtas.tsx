@@ -66,7 +66,7 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
  *
  * **The terms stand under the first pair on a page and nowhere else**
  * (visual review 2026-10-24, B09): `footnotes` is set only at a hero, where it
- * renders what the demo costs and the price line. Every later pair is the two
+ * renders what the demo costs and, when supplied, the price line. Every later pair is the two
  * buttons alone; the same two sentences had stood under seven pairs on four
  * pages. Who reads a set-up request is said once, in {@link ClosingCta}.
  */
@@ -84,10 +84,10 @@ export function FunnelCtas({
   demo?: { role: DemoRoleId; landing: DemoLanding | null };
   /**
    * The hero's pair only: the demo's cost and the price line under the doors.
-   * Pass the reader's pricing offer (ADR 20261022-pricing-ab-test); absent or
-   * `false` everywhere else.
+   * Supply the pricing offer to show the price line; omit it for the homepage
+   * demo note alone. Absent or `false` renders neither footnote.
    */
-  footnotes?: false | { offer: PlanTerms };
+  footnotes?: false | { offer?: PlanTerms };
   /** Home and Product heroes keep the secondary setup door at quiet link weight. */
   hero?: boolean;
   /** Placement only — margins, `justify-*`, `shrink-0`. Never colour or weight. */
@@ -125,7 +125,9 @@ export function FunnelCtas({
       {footnotes ? (
         <>
           <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
-          <p className="mt-2 text-sm text-muted">{heroPriceLine(t, footnotes.offer, locale)}</p>
+          {footnotes.offer ? (
+            <p className="mt-2 text-sm text-muted">{heroPriceLine(t, footnotes.offer, locale)}</p>
+          ) : null}
         </>
       ) : null}
     </>

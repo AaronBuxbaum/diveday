@@ -620,15 +620,9 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   belong in ADR 20260908-one-hand's decision 6, possibility Y; that decision arrives with the
   round-4 canvas commit and is not in the tree yet, so they are recorded here and move there when
   it lands.)
-  **The budget binds controls, not facts.** The 2026-08-27 conversion review's second diagnosis is
-  that the terms never stand at the doors, and the flat price reached the homepage hero on
-  2026-08-28 as a consequence — as a muted *sentence* under the demo note ("One flat price — {price}
-  {cadence}. No cut of your bookings."), never a "See pricing" link, which would have spent the
-  budget to answer a question the sentence already answers. The same line sits under `/product`'s
-  hero: both are first-screen evaluation surfaces. That is the general move when a page
-  owes a reader a fact at a door: state it, do not open a third one. The closing band keeps the
-  two-year lock and the door to `/pricing`, so the figure now renders on two bands of `/` and both
-  interpolate it.
+  **The homepage hero carries the demo note without a price sentence** (Aaron, 2026-11-11).
+  Pricing remains on `/pricing` and the other marketing pages; the configured offer still
+  supplies the homepage's structured data. This changes copy placement, not billing terms.
   **`/product`'s money band is the same move made on a door that already existed** (2026-08-28).
   The one band on that page about money read "What DiveDay itself costs →" — it raised the cost
   question and parked our own half of the answer behind a click, which is what a burned buyer reads
@@ -828,8 +822,9 @@ human handoff before they have read the guide.
 **Editorial scenes (2026-11-10).** The homepage journey introduction and the online booking,
 website, rental gear and courses feature pages include original generated illustrations:
 a welcome at the dock, a conversation in a dive-shop classroom and a rental-gear handover. They supply human atmosphere,
-not customer evidence or depictions of the software. Each is labeled as an illustration, with
-localized alt text. Product mockups remain the functional proof, and the first demo door stays
+not customer evidence or depictions of the software. Each has localized alt text identifying and
+describing the illustration, without a visible caption (Aaron, 2026-11-11). Product mockups remain
+the functional proof, and the first demo door stays
 before the artwork. About, pricing, the product hub and safety/legal pages are unchanged.
 
 `MarketingIllustration` serves the complete 3:2 scenes from local WebP assets through `next/image`,
