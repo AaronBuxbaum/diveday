@@ -87,7 +87,8 @@ jobs:
         run: |
           node scripts/visual-publish-artifacts.mjs --validate-selection
           if [[ "$VISUAL_CAPTURE_MODE" == "all" ]]; then
-            echo 'selection_note=Complete visual capture (all twelve shards).' >> "$GITHUB_OUTPUT"
+            shards=$(node -e 'console.log(JSON.parse(process.env.VISUAL_CAPTURE_SHARDS).length)')
+            echo "selection_note=Complete visual capture (all ${shards} shards)." >> "$GITHUB_OUTPUT"
           else
             echo "selection_note=Selective visual capture ($VISUAL_CAPTURE_MODE mode); uncaptured surfaces are filled from the trusted baseline." >> "$GITHUB_OUTPUT"
           fi

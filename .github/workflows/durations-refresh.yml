@@ -57,7 +57,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: .nvmrc
+          # CI_NODE_VERSION in scripts/check-node-version.mjs, as every other job.
+          node-version: 24.22.0
       # The newest successful push run on main that ran the shards: a
       # docs-only main run skips them and uploads nothing, so it is passed
       # over rather than read as "every file vanished".
