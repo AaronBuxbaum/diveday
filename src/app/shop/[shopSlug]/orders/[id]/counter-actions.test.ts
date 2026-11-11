@@ -275,11 +275,20 @@ describe("countdown reconciliation after a hold is gone", () => {
     expect(await settledCounterPaymentHrefAction("invalid", "cash")).toBeNull();
   });
 
-  it("does not expose another shop's paid order", async () => {
-    const { orderId, personId } = await paid();
-    vi.mocked(requireStaffSession).mockResolvedValue(
-      staffSession({ shopId: crypto.randomUUID(), shopSlug: "other", personId }),
-    );
+  it("does not expose another shop's paid order to an active staff member", async () => {
+    const { orderId } = await paid();
+    const [other] = await ctx.db
+      .insert(shops)
+      .values({ name: "Other counter", slug: "other-counter-reconcile", timezone: "UTC" })
+      .returning();
+    const [guest] = await ctx.db
+      .insert(people)
+      .values({ shopId: other.id, fullName: "Other Guest" })
+      .returning();
+    await ctx.db
+      .update(orders)
+      .set({ shopId: other.id, personId: guest.id })
+      .where(eq(orders.id, orderId));
     expect(await settledCounterPaymentHrefAction(orderId, "card_machine")).toBeNull();
   });
 
