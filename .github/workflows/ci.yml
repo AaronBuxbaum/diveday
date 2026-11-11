@@ -430,6 +430,11 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      - name: Cache verified PDF archives
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5.0.5
+        with:
+          path: ${{ runner.temp }}/diveday-poppler-archives
+          key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs') }}
       # Measure predictions against the full shard, never use them to skip gate tests.
       - name: Snapshot test-impact prediction
         continue-on-error: true
@@ -518,10 +523,8 @@ jobs:
           # assigned those specs need Poppler; the visual and fast-lane
           # jobs install it separately when their selections require it.
           if printf '%s\n' "${spec_files[@]}" | grep -Eq '^e2e/(boarding-certification-paper|five-dive-departure-log|trip-document-print|public-document-identity)[.]spec[.]ts$'; then
-            if ! command -v pdftotext >/dev/null; then
-              sudo apt-get update -qq
-              sudo apt-get install -y --no-install-recommends poppler-utils
-            fi
+            node scripts/ci-pdf-tools.mjs
+            export PATH="$RUNNER_TEMP/diveday-poppler/bin:$PATH"
           fi
           status=0
           pnpm exec playwright test "${spec_files[@]}" 2>&1 | tee shard.log || status=$?
@@ -644,6 +647,11 @@ jobs:
           # depth-1 checkout.
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      - name: Cache verified PDF archives
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5.0.5
+        with:
+          path: ${{ runner.temp }}/diveday-poppler-archives
+          key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs') }}
       # The base by *ref*, never `base.sha`, for the reason the `changes` job
       # gives (issue #1295). A base or a CI history it cannot read leaves that
       # list empty; the script never fails the step on missing evidence.
@@ -677,10 +685,8 @@ jobs:
         run: |
           if [ "${{ steps.plan.outputs.captures }}" = 'true' ] ||
              { [ -f fast-lane/specs.txt ] && grep -Eq '^e2e/(boarding-certification-paper|five-dive-departure-log|trip-document-print|public-document-identity)[.]spec[.]ts(:[0-9]+)?$' fast-lane/specs.txt; }; then
-            if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
-              sudo apt-get update -qq
-              sudo apt-get install -y --no-install-recommends poppler-utils
-            fi
+            node scripts/ci-pdf-tools.mjs
+            export PATH="$RUNNER_TEMP/diveday-poppler/bin:$PATH"
           fi
       - name: Run the fast lane's specs
         if: steps.plan.outputs.specs == 'true'
@@ -832,6 +838,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+      - name: Cache verified PDF archives
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5.0.5
+        with:
+          path: ${{ runner.temp }}/diveday-poppler-archives
+          key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs') }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: next-build
@@ -845,10 +856,8 @@ jobs:
       - name: Install PDF rendering tools
         timeout-minutes: 5
         run: |
-          if ! command -v pdftoppm >/dev/null || ! command -v pdftotext >/dev/null; then
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends poppler-utils
-          fi
+          node scripts/ci-pdf-tools.mjs
+          export PATH="$RUNNER_TEMP/diveday-poppler/bin:$PATH"
       # Capture screenshots into e2e/screenshots; state and paper-integrity
       # assertions can fail this step. The reg-suit compare against
       # the S3 baseline runs once, in visual-publish below, over every shard's

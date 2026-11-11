@@ -20,13 +20,13 @@ describe("CI installs PDF tools for the selected browser tests", () => {
     "installs Poppler when the shard contains %s",
     (spec) => {
       const block = job("playwright");
-      const match = block.match(/grep -(qx|Eq) '([^']+)'; then\s+if ! command -v pdftotext/u);
+      const match = block.match(/grep -(qx|Eq) '([^']+)'; then\s+node scripts\/ci-pdf-tools.mjs/u);
       expect(match).not.toBeNull();
       const [, flags, pattern] = match;
       expect(selected(pattern, [`e2e/${spec}.spec.ts`], `-${flags}`)).toBe(true);
       expect(selected(pattern, ["e2e/unrelated.spec.ts"], `-${flags}`)).toBe(false);
       expect(selected(pattern, [`e2e/${spec}.spec.ts.extra`], `-${flags}`)).toBe(false);
-      expect(block).toContain("poppler-utils");
+      expect(block).toContain("node scripts/ci-pdf-tools.mjs");
     },
   );
 
@@ -41,7 +41,17 @@ describe("CI installs PDF tools for the selected browser tests", () => {
       expect(selected(pattern, [`e2e/${spec}.spec.ts:42:9`])).toBe(false);
       expect(selected(pattern, ["e2e/unrelated.spec.ts"])).toBe(false);
       expect(block).toContain("steps.plan.outputs.captures }}\" = 'true'");
-      expect(block).toContain("poppler-utils");
+      expect(block).toContain("node scripts/ci-pdf-tools.mjs");
+    },
+  );
+
+  it.each(["playwright", "fast-lane", "visual"])(
+    "uses verified cached archives instead of apt indexes in %s",
+    (id) => {
+      const block = job(id);
+      expect(block).toContain("node scripts/ci-pdf-tools.mjs");
+      expect(block).toContain("diveday-poppler-archives");
+      expect(block).not.toContain("apt-get");
     },
   );
 });
