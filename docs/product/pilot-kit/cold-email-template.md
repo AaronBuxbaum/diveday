@@ -42,7 +42,7 @@ one, because improvising it at send time is exactly where template-smell gets in
 
 ## Before sending — the research, ten minutes per shop
 
-`[RESEARCHED STATEMENT]` is the load-bearing slot. **Default (Aaron, 2026-11-11): talk about the problem space**, with this sentence: "When a group of eight or ten checks in and a few haven't signed the boat release, someone has to chase them before the boat leaves. That chase is the kind of morning I'm building for." Replace it only when the shop's own pages give a better, specific fact that creates a real problem for them, such as a shop and a boat at different marinas, or bookings that arrive only by phone. Never lead with a fun fact, and never a fact true of every dive shop. Test: would the replacement land harder than the default? If not, keep the default.
+`[PROBLEM SENTENCE]` is the load-bearing slot. **Aaron, 2026-11-11: the email sells the product, and this sentence names the problem it solves. Default: the problem space**, with this sentence: "When a group of eight or ten checks in and a few haven't signed the boat release, someone has to chase them before the boat leaves. That chase is the morning DiveDay is built for." Replace it only when the shop's own pages give a better, specific fact that creates a real problem for them, such as a shop and a boat at different marinas, or bookings that arrive only by phone. Never lead with a fun fact, and never a fact true of every dive shop. Test: would the replacement land harder than the default? If not, keep the default.
 Saturdays. It must be current and checkable.
 
 - **If nothing can be verified, use the no-detail line** below. Sending with no
@@ -67,23 +67,27 @@ sales-tool shape there is, and it is spotted before the email is opened.
 
 > [GREETING]
 >
-> I'm a diver and an ex-Google software engineer, and I'm building DiveDay, software for running a dive day: booking, waivers, cert checks, and the head count on the boat. I'm writing because I think it could help [SHOP], and I'd like to find out if I'm right.
+> I'm a diver and an ex-Google software engineer, and I built DiveDay, software for running a dive day. I'm writing because I think it could help your shop.
 >
-> [RESEARCHED STATEMENT]
+> [PROBLEM SENTENCE]
 >
-> I'll be straight about where it stands. I've never run a shop, and the head count between dives, which works with the radio off once the phone has the manifest saved, has never been on a real boat, in the sun, with wet hands. I'm looking for a shop that will let me test it alongside their own paper count and tell me where it breaks.
+> With DiveDay, each diver gets their own link to sign the waiver, add their cert card, and enter their rental sizes before they arrive. You see who's ready on one list, and that same list becomes your boat manifest, with a head count at the dock and after each dive.
 >
-> Would you be open to a 15-minute call? If so, just reply and we can sort out how. If it isn't a problem for you, a one-line "we're fine" helps me too. And if someone else handles the boat side, I'd be glad to be pointed their way.
+> There's a live demo at the link below. I've never run a shop, so I'd also like to hear what I've missed. Would you be open to a 15-minute call? If so, just reply and we can sort out how.
+>
+> If someone else handles the boat side, I'd be glad to be pointed their way.
 >
 > Aaron Buxbaum
 > https://www.dive.day
 
-Slots: `[GREETING]` ("Hi [SHOP] crew," by default; "Hi Dan," only when the shop's own page names the person who runs it; never a guessed first name), `[SHOP]`, `[RESEARCHED STATEMENT]`. Nothing else is variable.
+Slots: `[GREETING]` ("Hi [SHOP] crew," by default; "Hi Dan," only when the shop's own page names the person who runs it; never a guessed first name), `[PROBLEM SENTENCE]`. Nothing else is variable.
 
 **If nothing about the shop could be verified**, replace the researched statement with this line instead
 of splicing a fragment at 11pm on the eleventh email of the week:
 
 > I don't know how your trip mornings run, which is partly why I'm writing.
+
+The shipped-claims rule applies to the product paragraph: every clause describes something the live demo does today (checked 2026-11-11 against `/ready/[token]`, readiness and roll call). Do not add offline, "tested on a boat", price, trial or switching claims to the first email.
 
 ### Before you hit send
 
@@ -96,7 +100,7 @@ Checks, in the order they'd fail:
       marketing email is identified by its formatting before a word of it is read, and a template
       that announces itself defeats every sentence above.
 - [ ] **No merge field in the subject line.**
-- [ ] **`[RESEARCHED STATEMENT]` restates something actually read on their pages** — or the no-detail
+- [ ] **`[PROBLEM SENTENCE]` is the default, or restates something actually read on their pages** — or the no-detail
       version above is used instead. No guesses, and no vendor named.
 - [ ] **No phone number in the first email** (Aaron, 2026-11-11). The ask is a call; the number is
       shared in the reply once they say yes.
@@ -116,7 +120,9 @@ Checks, in the order they'd fail:
 | "I'd be glad to be pointed their way" | The forwarding hatch, phrased as a request to a person rather than an instruction to a lead. A reader who isn't the decider gets a way to not-decide, which is the outcome this email most often wins. |
 | What is **absent** | No benefits list, no price or discount, no export pitch, no trial terms, no competitor named. Those belong in the reply, where they answer a question that was actually asked. |
 
-### The offline line — read this before editing the water paragraph
+### The offline line — removed from the first email 2026-11-11
+
+The first email no longer mentions offline or the boat test, so none of this applies to it. Keep this section for any reply or later email that brings the offline count back: the same scoping and the "never been on a real boat" clause still bind.
 
 "Divers get counted between dives with the radio off, once the phone has the manifest saved, but it has never been on a real boat" is doing two
 jobs, and each half is load-bearing.
