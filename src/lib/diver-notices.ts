@@ -365,12 +365,6 @@ export const NOTICE_KEYS: DiverNoticeMap = {
 
   // Reply notices use inbox copy shared with the inbox page. Successful sends
   // appear in the thread; failures still need a notice.
-  "request-nothing": { form: "reply", tone: "warning", key: "assistsFront.inbox.requestNothing" },
-  "request-draft-exists": {
-    form: "reply",
-    tone: "warning",
-    key: "assistsFront.inbox.requestDraftExists",
-  },
   "reply-sent": { form: "reply", tone: "success", silent: true },
   "reply-send-failed": { form: "reply", tone: "danger", key: "inbox.notices.failed" },
   "reply-not-configured": { form: "reply", tone: "warning", key: "inbox.notices.notConfigured" },

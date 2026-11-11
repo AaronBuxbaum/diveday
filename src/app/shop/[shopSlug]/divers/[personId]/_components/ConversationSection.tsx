@@ -1,4 +1,7 @@
-import { AssistDraftButton } from "@/components/assists/AssistDraftButton";
+import {
+  AssistConversationButton,
+  type ConversationAssistAnswer,
+} from "@/components/assists/AssistConversationButton";
 import { languageName } from "@/components/assists/language-name";
 import { TranslateReplyButton } from "@/components/assists/TranslateReplyButton";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -37,14 +40,12 @@ const REPLY_FIELD_ID = "reply-body";
  * 20261018-claude-assists). Absent, the section is exactly what it was.
  */
 export type ConversationAssist = {
-  /** Drafts a reply to the latest message (`inbox-draft`). */
-  draft: () => Promise<string | null>;
+  /** Reads the latest message: drafts a reply, or opens a booking request (`inbox-draft`, `request`). */
+  run: () => Promise<ConversationAssistAnswer>;
   /** Translates the reply into the diver's language, when they write in another one. */
   translate: ((text: string) => Promise<string | null>) | null;
   /** The diver's language in the reader's words, for the Translate button. */
   diverLanguage: string | null;
-  /** Reads the latest message into a booking request (`request`). */
-  requestAction: (formData: FormData) => Promise<void>;
 };
 
 /**
@@ -248,12 +249,17 @@ export function ConversationSection({
               </Field>
               {assist ? (
                 <div className="flex flex-wrap items-center gap-2">
-                  <AssistDraftButton
-                    draft={assist.draft}
+                  <AssistConversationButton
+                    run={assist.run}
                     fieldId={REPLY_FIELD_ID}
                     label={t("assistsFront.conversation.draft")}
                     pendingLabel={t("assistsFront.conversation.drafting")}
-                    emptyLabel={t("deskAssists.nothing")}
+                    failures={{
+                      unavailable: t("assistsFront.conversation.unavailable"),
+                      declined: t("assistsFront.conversation.declined"),
+                      "nothing-to-answer": t("assistsFront.conversation.answered"),
+                      "draft-exists": t("assistsFront.inbox.requestDraftExists"),
+                    }}
                   />
                   {assist.translate && assist.diverLanguage ? (
                     <TranslateReplyButton
@@ -319,20 +325,6 @@ export function ConversationSection({
                 </form>
               )}
             </div>
-          ) : null}
-          {/* A booking ask in the latest message, read into the call form for
-              a staffer to check: the request is recorded there, not here. */}
-          {assist && latest && !removed ? (
-            <form action={assist.requestAction} className="mt-3">
-              <input type="hidden" name="messageId" value={latest.message.id} />
-              <input type="hidden" name="returnPersonId" value={personId} />
-              <SubmitButton
-                pendingLabel={t("assistsFront.inbox.makingRequest")}
-                className={buttonClass({ variant: "ghost", size: "sm" })}
-              >
-                {t("assistsFront.inbox.makeRequest")}
-              </SubmitButton>
-            </form>
           ) : null}
           <FieldActions>
             <DiverFormStatus status={status} />

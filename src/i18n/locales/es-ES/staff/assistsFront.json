@@ -10,9 +10,6 @@
     },
     "urgent": "Urgente",
     "translation": "En {language}: {text}",
-    "makeRequest": "Preparar una solicitud de reserva",
-    "makingRequest": "Leyendo…",
-    "requestNothing": "Nada en ese mensaje se lee como una reserva.",
     "requestDraftExists": "Completa o borra tu formulario de llamada sin terminar en Agregar una reserva, en Hoy, antes de preparar otra solicitud.",
     "draftResponse": "Redactar respuesta",
     "responseEmpty": "No se pudo redactar una respuesta segura. Responde con tus propias palabras.",
@@ -24,11 +21,14 @@
   },
   "conversation": {
     "translatedFrom": "Traducido del {language}",
-    "draft": "Redactar una respuesta",
+    "draft": "Redactar con IA",
     "drafting": "Redactando…",
     "translate": "Traducir al {language}",
     "translating": "Traduciendo…",
-    "yourWords": "Lo que escribiste: {text}"
+    "yourWords": "Lo que escribiste: {text}",
+    "unavailable": "La IA no está disponible ahora. Vuelve a intentarlo en un momento.",
+    "declined": "La IA no pudo redactar una respuesta segura para este mensaje. Responde con tus propias palabras.",
+    "answered": "Ya respondiste al último mensaje."
   },
   "callNote": {
     "label": "Notas de la llamada",

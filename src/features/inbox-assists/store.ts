@@ -255,26 +255,58 @@ export async function draftReplyFor(
   db: AppDb,
   input: { shopId: string; personId: string; now?: Date } & AssistOptions,
 ): Promise<string | null> {
+  const outcome = await draftReplyOutcome(db, input);
+  return outcome.text;
+}
+
+/**
+ * Why a reply draft came back empty, so the screen can say so: `unavailable`
+ * (dark, over the cap, a provider error: asking again may work), `declined`
+ * (Claude answered and the answer could not be used: refused, unsure, a
+ * health question, a figure the shop's facts do not hold), `nothing-to-answer`
+ * (the thread holds no message from the diver).
+ */
+export type DraftReplyOutcome =
+  | { text: string }
+  | { text: null; reason: "unavailable" | "declined" | "nothing-to-answer" };
+
+/** {@link draftReplyFor} that says why when there is no draft. */
+export async function draftReplyOutcome(
+  db: AppDb,
+  input: { shopId: string; personId: string; now?: Date } & AssistOptions,
+): Promise<DraftReplyOutcome> {
   const { shopId, personId } = input;
-  if (!(await assistsAvailable(db, shopId, input))) return null;
+  if (!(await assistsAvailable(db, shopId, input))) return { text: null, reason: "unavailable" };
   const entries = await personThread(db, shopId, personId);
-  const thread: ThreadLine[] = entries
+  const lines: ThreadLine[] = entries
     .filter((entry) => entry.direction === "outbound" || entry.message.channel !== "page")
     .map((entry) =>
       entry.direction === "inbound"
         ? { from: "diver" as const, text: entry.message.body }
         : { from: "shop" as const, text: entry.reply.body },
     )
-    .filter((line) => line.text.trim())
-    .slice(-DRAFT_THREAD_LINES);
-  if (thread.at(-1)?.from !== "diver") return null;
+    .filter((line) => line.text.trim());
+  // The draft answers the diver's latest message: once the shop has written
+  // last there is nothing to answer.
+  if (lines.at(-1)?.from !== "diver") return { text: null, reason: "nothing-to-answer" };
+  const thread = lines.slice(-DRAFT_THREAD_LINES);
   const { window, lines: facts } = await replyFacts(db, shopId, input.now);
-  const value = await runAssist(db, {
+  const { status, value } = await runAssistOutcome(db, {
     ...input,
     feature: "inbox_draft",
     call: replyDraftCall({ window, facts, thread }),
   });
-  return value ? groundedReply(value, { facts, thread }) : null;
+  if (status === "skipped") return { text: null, reason: "unavailable" };
+  const text = value ? groundedReply(value, { facts, thread }) : null;
+  if (!text) {
+    log("claude_assist.draft_unusable", "info", {
+      answered: Boolean(value),
+      medical: value?.medical ?? false,
+      eligibility: value?.eligibility ?? false,
+    });
+    return { text: null, reason: "declined" };
+  }
+  return { text };
 }
 
 /**
