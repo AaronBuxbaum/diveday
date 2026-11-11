@@ -79,11 +79,11 @@ describe("infra-cdk", () => {
     git("commit", "-qm", "base");
     writeFileSync(image, "FROM new\n");
     const workflow = readFileSync(join(process.cwd(), ".github/workflows/infra.yml"), "utf8");
-    const paths = workflow.match(
-      /git diff --name-only "\$\{BASE_SHA\}\.\.\.HEAD" -- ([^\n)]+)/,
-    )?.[1];
-    expect(paths).toBeDefined();
-    expect(git("diff", "--name-only", "HEAD", "--", ...paths.trim().split(/\s+/))).toBe(
+    // The pull_request trigger's `paths:` list, as git pathspecs.
+    const block = workflow.match(/\n {2}pull_request:\n {4}paths:\n((?: {6}- .+\n)+)/)?.[1];
+    expect(block).toBeDefined();
+    const paths = [...block.matchAll(/- "?([^"\n]+)"?/g)].map((match) => match[1]);
+    expect(git("diff", "--name-only", "HEAD", "--", ...paths)).toBe(
       "config/postgres-image/Dockerfile",
     );
   });

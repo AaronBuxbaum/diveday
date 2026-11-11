@@ -21,7 +21,14 @@ name: Infra
 #     (infra-stack.ts §18) names that environment specifically, so there is no
 #     token to mint until that approval has happened.
 on:
+  # Only a pull request that touches the infra surface starts a run; every other one logs none.
+  # No ruleset requires a check from this workflow, so a pull request with no run is not held.
   pull_request:
+    paths:
+      - "infra/**"
+      - cdk.json
+      - config/postgres-image/Dockerfile
+      - .github/workflows/infra.yml
   workflow_dispatch:
     inputs:
       command:
@@ -40,65 +47,13 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  infra-changed:
-    name: Detect infra changes
-    # Only pull_request needs this gate. A workflow_dispatch run is already an
-    # explicit "do this now" from a human — it should never be silently
-    # skipped because the current branch happens not to touch infra/.
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    # Only checks out and greps history; no write scope of any kind needed.
-    permissions:
-      contents: read
-    outputs:
-      changed: ${{ steps.filter.outputs.changed }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # The diff below reaches back to the base commit, which a depth-1
-          # checkout does not contain.
-          fetch-depth: 0
-      - id: filter
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          # Fail *open*: an unresolvable base is a reason to run the check, not
-          # to skip it silently.
-          if ! git rev-parse --verify -q "${BASE_SHA}^{commit}" > /dev/null 2>&1; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Base commit '${BASE_SHA}' is unresolvable — running the infra check anyway." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          changed_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- infra cdk.json config/postgres-image/Dockerfile .github/workflows/infra.yml)
-          if [ -n "${changed_paths}" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            {
-              echo "Infra surface touched — running cdk synth + diff:"
-              echo '```'
-              echo "${changed_paths}"
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No infra changes — cdk synth/diff skipped." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
   diff:
     name: cdk synth + diff
-    needs: infra-changed
-    # A skipped `infra-changed` (every workflow_dispatch run) must not skip
-    # this job by propagation. GitHub's actual rule (confirmed the hard way —
-    # every workflow_dispatch run of this workflow silently no-op'd until this
-    # was added): a job whose `needs:` job was itself skipped is skipped by
-    # default unless its `if:` includes a status function. !cancelled() survives
-    # that skipped dependency and lets cancellation stop an obsolete synth/diff.
-    # `command: deploy` also lands here, not just `command: diff`: the
-    # `deploy` job below `needs: diff`, so its required-reviewer approval
-    # gate comes after a fresh synth+diff is already visible in this run,
-    # not blind against whatever a past PR's diff comment happened to show.
-    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && (inputs.command == 'diff' || inputs.command == 'deploy')) || (github.event_name == 'pull_request' && needs.infra-changed.outputs.changed == 'true')) }}
+    # The trigger's `paths:` already chose the pull requests. `command: deploy` also lands here,
+    # not just `command: diff`: the `deploy` job below `needs: diff`, so its required-reviewer
+    # approval gate comes after a fresh synth+diff is already visible in this run, not blind
+    # against whatever a past PR's diff comment happened to show.
+    if: ${{ github.event_name == 'pull_request' || inputs.command == 'diff' || inputs.command == 'deploy' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     # GitHubActionsCdkDiffRole's trust condition (infra-stack.ts §18) accepts
@@ -296,16 +251,13 @@ jobs:
     # Three things this condition has to do at once, each learned the hard way:
     #
     # A status function -- skip propagation is *transitive*, and a job's own `if:`
-    # does not override it. `infra-changed` is skipped on every
-    # workflow_dispatch (its condition is pull_request-only); `diff` survives
-    # that only because of the same wrapper; and `deploy` still inherited the
-    # skip *through* `diff` even with `diff` succeeding. Fixing `diff` alone
-    # (2026-08-12) left this job silently skipping on every `command: deploy`
-    # dispatch, with no error anywhere -- proved by a temporary debug job whose
-    # only difference from this one was `if: always()`: it ran, printing
-    # `github.event_name: workflow_dispatch`, `inputs.command: deploy`,
-    # `needs.diff.result: success`, `full condition: true`, while this job,
-    # same run, same `needs:`, reported "This job was skipped".
+    # does not override it. While a pull-request-only detection job sat above
+    # `diff`, this job inherited its skip *through* `diff` on every
+    # `command: deploy` dispatch, silently, even with `diff` succeeding
+    # (2026-08-12: a debug job whose only difference was `if: always()` ran
+    # while this one, same run, same `needs:`, reported "This job was
+    # skipped"). That job is gone (the trigger's `paths:` replaced it); the
+    # status function stays so a skip upstream can never quietly skip a deploy.
     #
     # !cancelled() keeps that skipped-dependency behavior while honoring cancellation.
     #

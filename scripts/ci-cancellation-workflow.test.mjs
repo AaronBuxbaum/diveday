@@ -21,7 +21,6 @@ function runs(workflow, job, overrides = {}) {
     db = "true",
     stackRun = "true",
     command = "diff",
-    changed = "true",
     fork = false,
   } = overrides;
   const expression = jobCondition(workflow, job);
@@ -46,7 +45,6 @@ function runs(workflow, job, overrides = {}) {
       needs: {
         changes: { result: dependency, outputs: { db } },
         "stack-gate": { result: dependency, outputs: { run: stackRun } },
-        "infra-changed": { result: dependency, outputs: { changed } },
         diff: { result: dependency },
       },
     },
@@ -80,24 +78,12 @@ describe("CI job cancellation", () => {
 
 describe("infra job cancellation", () => {
   it.each([
+    // The trigger's `paths:` keeps a pull request without infra changes from starting a run.
     ["infra-changing pull request", {}, true],
-    ["pull request without infra changes", { changed: "false" }, false],
-    [
-      "manual diff with skipped change detection",
-      { event: "workflow_dispatch", dependency: "skipped" },
-      true,
-    ],
-    [
-      "manual deploy also needs a diff",
-      { event: "workflow_dispatch", command: "deploy", dependency: "skipped" },
-      true,
-    ],
+    ["manual diff", { event: "workflow_dispatch" }, true],
+    ["manual deploy also needs a diff", { event: "workflow_dispatch", command: "deploy" }, true],
     ["canceled pull request", { canceled: true }, false],
-    [
-      "canceled manual diff",
-      { event: "workflow_dispatch", dependency: "skipped", canceled: true },
-      false,
-    ],
+    ["canceled manual diff", { event: "workflow_dispatch", canceled: true }, false],
   ])("synth/diff: %s", (_name, state, expected) => {
     expect(runs("infra", "diff", state)).toBe(expected);
   });
