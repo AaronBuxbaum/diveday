@@ -152,6 +152,7 @@ export const integrationProvider = pgEnum("integration_provider", [
   "shopify",
   "quickbooks",
   "zapier",
+  "square",
 ]);
 
 export const integrationConnectionStatus = pgEnum("integration_connection_status", [
@@ -172,6 +173,8 @@ export type IntegrationSettings = {
   shopDomain?: string;
   environment?: "sandbox" | "production";
   incomeAccountId?: string;
+  squareLocationId?: string;
+  squareLocationName?: string;
 };
 
 /** The one encrypted credential envelope shared by OAuth and webhook providers. */
@@ -321,6 +324,18 @@ export const integrationSyncRecords = pgTable(
     sourceId: text("source_id").notNull(),
     operation: text("operation").notNull(),
     externalId: text("external_id").notNull(),
+    /** Minimal read-only Square receipt observation; never raw provider payloads or card data. */
+    receiptEvidence: jsonb("receipt_evidence").$type<{
+      environment: "sandbox" | "production";
+      merchantId: string;
+      paymentId: string;
+      locationId: string;
+      currency: string;
+      totalCents: number;
+      tipCents: number;
+      refundedCents: number;
+      receiptNumber: string | null;
+    }>(),
     lastSyncedAt: appNowTimestamp("last_synced_at").notNull(),
     lastError: text("last_error"),
     createdAt: appNowTimestamp("created_at").notNull(),
@@ -334,6 +349,12 @@ export const integrationSyncRecords = pgTable(
       table.sourceId,
       table.operation,
     ),
+    // One Square payment can evidence only one order, even across shops sharing a merchant.
+    uniqueIndex("integration_sync_records_square_receipt_unique")
+      .on(table.externalId)
+      .where(
+        sql`${table.sourceType} = 'square_payment_receipt' and ${table.operation} = 'receipt'`,
+      ),
     index("integration_sync_records_external_idx").on(
       table.shopId,
       table.provider,

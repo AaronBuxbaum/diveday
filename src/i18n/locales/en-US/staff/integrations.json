@@ -86,5 +86,41 @@
     "caution": "They arrive in {provider} as new entries, oldest first. If that period is closed in your books, do not send them.",
     "confirm": "Send to {provider}",
     "confirming": "Queuing…"
+  },
+  "square": {
+    "name": "Square",
+    "description": "Match Square receipts to purchases you already recorded. Square takes the payment; DiveDay records it once.",
+    "connect": "Connect Square",
+    "reconnect": "Reconnect Square",
+    "location": "Square location",
+    "locationHelp": "Choose the location for this shop. Only locations using the shop’s currency appear.",
+    "chooseLocation": "Choose a location",
+    "selected": "Location: {name}",
+    "sandbox": "Sandbox connection. Test receipts only.",
+    "noLocations": "No active Square location uses this shop’s currency.",
+    "unavailable": "Square could not be reached. Try again or reconnect.",
+    "receiptTitle": "Square receipt",
+    "receiptHelp": "Link a payment already recorded here. This does not take payment, change the purchase, or add another DiveDay fee.",
+    "paymentId": "Square payment ID",
+    "paymentIdHelp": "Use the payment ID, not the short receipt number. One payment can link to one purchase.",
+    "checked": "Last checked: {when}",
+    "needsCheck": "The Square receipt and this purchase differ. Check the receipt and any refunds before checking again.",
+    "checking": "Checking Square…",
+    "recheck": "Check again",
+    "link": "Match receipt",
+    "outcome": {
+      "matched": "Receipt matched. The purchase and DiveDay fee are unchanged.",
+      "not_connected": "Connect Square and choose a location in Settings → Integrations first.",
+      "unavailable": "The payment could not be read. Check the payment ID or reconnect Square, then try again.",
+      "invalid": "This purchase cannot be matched to a Square receipt.",
+      "already_linked": "That payment or purchase already has a receipt link. No purchase or fee was added.",
+      "not_completed": "Square has not completed this payment. Nothing changed here.",
+      "location_mismatch": "This payment belongs to a different Square location. Nothing changed here.",
+      "amount_mismatch": "The currency, original total, or tip differs. Check the purchase and Square receipt. Nothing changed here.",
+      "refund_mismatch": "Square and DiveDay show different refund totals. Record money already returned in DiveDay, or check the refund in Square, then check again.",
+      "deleted": "Receipt link deleted. The purchase, refund record and DiveDay fee are unchanged."
+    },
+    "deleteLink": "Delete receipt link",
+    "deleting": "Deleting link…"
   }
 }

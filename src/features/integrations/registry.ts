@@ -6,7 +6,11 @@ export type IntegrationEventType =
   | "order.refunded"
   | "order.voided";
 
-export type IntegrationCapability = "catalog_sync" | "accounting_export" | "outbound_events";
+export type IntegrationCapability =
+  | "catalog_sync"
+  | "accounting_export"
+  | "outbound_events"
+  | "receipt_link";
 
 export type IntegrationProviderDefinition = {
   id: IntegrationProvider;
@@ -35,6 +39,13 @@ export const INTEGRATION_PROVIDER_REGISTRY = {
     connection: "oauth",
     capabilities: ["accounting_export"],
     eventTypes: ["order.paid", "order.refunded", "order.voided"],
+  },
+  square: {
+    id: "square",
+    labelKey: "integrations.square.name",
+    connection: "oauth",
+    capabilities: ["receipt_link"],
+    eventTypes: [],
   },
   zapier: {
     id: "zapier",

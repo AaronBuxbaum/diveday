@@ -91,6 +91,25 @@ describe("connectionState: whatsapp", () => {
 });
 
 describe("connectionState: integrations", () => {
+  it("includes Square and reads its own live or disconnected evidence", () => {
+    const rows = { ...none, integrations: [integration({ provider: "square" })] };
+    expect(shopConnections(rows).find((row) => row.provider === "square")).toEqual({
+      provider: "square",
+      state: "connected",
+      lastSeenAt: t0,
+    });
+    expect(
+      connectionState("square", {
+        ...none,
+        integrations: [integration({ provider: "square", deletedAt: t2 })],
+      }),
+    ).toEqual({
+      provider: "square",
+      state: "disconnected",
+      lastSeenAt: t2,
+    });
+    expect(connectionState("quickbooks", rows).state).toBe("notConnected");
+  });
   it("reads each provider from its own row only", () => {
     const rows = { ...none, integrations: [integration({ provider: "quickbooks" })] };
     expect(connectionState("quickbooks", rows).state).toBe("connected");

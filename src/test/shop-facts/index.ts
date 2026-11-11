@@ -89,6 +89,7 @@ import {
   pinStaffSessionsSeenNow,
 } from "./settings-states";
 import { slideOneDepartureOntoAnother } from "./slide-one-departure-onto-another";
+import { seedDisconnectedSquareReceipt } from "./square-receipt";
 import {
   connectStripe,
   diverEmailArgs,
@@ -236,6 +237,7 @@ const FACTS = {
   boatPhoto: privateOnly(({ db, shop }) => giveTheFirstBoatAPhoto(db, shop)),
   backupFailed: ({ db, shop, now }) => failTheLatestBackup(db, shop, now),
   staffSessionsSeenNow: privateOnly(({ db, shop, now }) => pinStaffSessionsSeenNow(db, shop, now)),
+  disconnectedSquareReceipt: privateOnly(seedDisconnectedSquareReceipt),
   cashReceipt: privateOnly(({ db, shop, actorId, now }) => seedCashReceipt(db, shop, actorId, now)),
   collectionBilling: privateOnly(({ db, shop, actorId, now }) =>
     seedCollectionBilling(db, shop, actorId, now),

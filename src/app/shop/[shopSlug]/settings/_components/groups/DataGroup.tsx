@@ -92,6 +92,7 @@ const CONNECTION_PROVIDER_KEYS: Record<ConnectionProvider, StaffMessageKey> = {
   whatsapp: "settings.main.connections.provider.whatsapp",
   shopify: "settings.main.connections.provider.shopify",
   quickbooks: "settings.main.connections.provider.quickbooks",
+  square: "integrations.square.name",
   zapier: "settings.main.connections.provider.zapier",
   backups: "settings.main.connections.provider.backups",
   calendarFeeds: "settings.main.connections.provider.calendarFeeds",

@@ -6,6 +6,7 @@ describe("integration provider registry", () => {
     expect(listIntegrationProviders().map((provider) => provider.id)).toEqual([
       "shopify",
       "quickbooks",
+      "square",
       "zapier",
     ]);
   });

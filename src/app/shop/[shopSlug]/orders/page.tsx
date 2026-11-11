@@ -251,7 +251,7 @@ export default async function OrdersIndexPage({
       <FlashParams params={["notice"]} />
       <OrdersHeader
         {...{ shopSlug, t, search }}
-        showInvoice={!!door.href && (orderPage.total > 0 || hasImportedHistory || hasFilters)}
+        showInvoice={paymentsConnected && !!door.href && showToolbar}
         invoiceDoor={newOrderDoor}
       />
       <StaffSectionTabs

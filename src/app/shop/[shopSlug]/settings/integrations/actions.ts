@@ -9,6 +9,7 @@ import { getShopById } from "@/db/shops";
 import { formValue, parseForm, readForm, single, text, trimmedText } from "@/features/form-parse";
 import { runIntegrationBackfill } from "@/features/integration-backfill";
 import {
+  chooseSquareLocation,
   createIntegrationOAuthState,
   disconnectShopIntegration,
   editShopIntegrationSettings,
@@ -25,6 +26,8 @@ import {
   sendZapierTest,
   shopifyAuthorizationUrl,
   shopifyConfigFromEnvironment,
+  squareAuthorizationUrl,
+  squareConfigFromEnvironment,
   syncShopifyCatalog,
 } from "@/features/integrations";
 import { type NoticeRedirect, revalidateWithNotice } from "@/features/navigation";
@@ -215,7 +218,12 @@ export async function testZapierIntegrationAction(): Promise<void> {
 export async function disconnectIntegrationAction(formData: FormData): Promise<void> {
   const { db, session, path } = await integrationContext();
   const provider = readForm(providerForm, formData).provider;
-  if (provider !== "shopify" && provider !== "quickbooks" && provider !== "zapier")
+  if (
+    provider !== "shopify" &&
+    provider !== "quickbooks" &&
+    provider !== "zapier" &&
+    provider !== "square"
+  )
     done(path, "invalid");
   await disconnectShopIntegration(db, session.user.shopId, provider);
   done(path, "disconnected");
@@ -261,4 +269,40 @@ export async function sendEarlierCheckoutsAction(formData: FormData): Promise<vo
   }
   if (result.remaining > 0) done(path, "earlier-partial", { count: result.remaining });
   done(path, sent === 0 ? "earlier-none" : "earlier-sent", { count: sent });
+}
+
+export async function startSquareConnectionAction(): Promise<void> {
+  const { db, session, path } = await integrationContext();
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop || shop.isDemo) done(path, "invalid");
+  const config = squareConfigFromEnvironment();
+  const appHost = publicAppUrl();
+  const storageNotice = secureStorageNotice();
+  if (!config || !appHost || storageNotice) done(path, storageNotice ?? "not-configured");
+  const state = await createIntegrationOAuthState(db, {
+    shopId: session.user.shopId,
+    personId: session.user.personId,
+    provider: "square",
+    context: { environment: config.environment },
+  });
+  redirect(
+    squareAuthorizationUrl({
+      config,
+      state,
+      redirectUri: integrationCallbackUrl(appHost, "square"),
+    }),
+  );
+}
+
+const squareLocationForm = z.object({ locationId: single(z.string().min(1).max(192)) });
+export async function chooseSquareLocationAction(formData: FormData): Promise<void> {
+  const { db, session, path } = await integrationContext();
+  const parsed = parseForm(squareLocationForm, formData);
+  if (!parsed.ok) done(path, "invalid");
+  const selected = await chooseSquareLocation(db, {
+    shopId: session.user.shopId,
+    personId: session.user.personId,
+    locationId: parsed.data.locationId,
+  });
+  done(path, selected ? "saved" : "failed");
 }

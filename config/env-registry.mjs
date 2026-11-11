@@ -1161,6 +1161,24 @@ export const ENV_GROUPS = [
         absent: "uses the Admin API version pinned in src/features/integrations/shopify.ts",
       },
       {
+        key: "SQUARE_CLIENT_ID",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "Square cannot be connected; no Square API calls are made",
+      },
+      {
+        key: "SQUARE_CLIENT_SECRET",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "as SQUARE_CLIENT_ID",
+      },
+      {
+        key: "SQUARE_ENVIRONMENT",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "Square requires explicit sandbox or production; no default",
+      },
+      {
         key: "QUICKBOOKS_CLIENT_ID",
         from: "manual",
         targets: LOCAL_AND_VERCEL,

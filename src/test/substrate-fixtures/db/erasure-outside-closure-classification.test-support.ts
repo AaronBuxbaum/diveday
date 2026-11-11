@@ -105,5 +105,5 @@ export const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
     "the outbox a shop’s own integrations read. `entity_id` points at a row rather than copying it, and `payload` is built at delivery from the current record — which is the erased one by then",
   integration_deliveries: "whether one of those events reached the provider, and the error if not",
   integration_sync_records:
-    "the map from a DiveDay row to the provider’s own object, which is what stops a second QuickBooks Customer being created for a diver already synced (issue #1015). Ids on both sides, no copied details",
+    "the map from a DiveDay row to the provider’s own object, which is what stops a second QuickBooks Customer being created for a diver already synced (issue #1015). Ids on both sides; Square additionally keeps currency, amounts, location and a receipt number as minimal receipt evidence, never names, contacts or card details",
 };

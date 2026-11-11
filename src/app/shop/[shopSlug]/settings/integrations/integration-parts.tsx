@@ -100,7 +100,7 @@ export function DisconnectForm({
   provider,
   t,
 }: {
-  provider: "shopify" | "quickbooks" | "zapier";
+  provider: "shopify" | "quickbooks" | "zapier" | "square";
   t: StaffTranslator;
 }) {
   return (

@@ -1,3 +1,4 @@
+import { getSquareReceiptState } from "@/features/integrations";
 import { getOrderBookingContext } from "@/features/order-booking";
 import { loadOrderHeader } from "@/features/order-header";
 import { purchaseRefundHistory } from "@/features/recorded-purchases";
@@ -38,5 +39,17 @@ export async function getOrderDetailPage(
     bookingId ? getOrderBookingContext(db, shopId, bookingId) : null,
     order.order.counterReceipt ? purchaseRefundHistory(db, shopId, orderId) : [],
   ]);
-  return { order, purchaseRefunds, can: { refund, disputeSheet, voidCounter }, header, booking };
+  const squareReceipt = await getSquareReceiptState(db, shopId, orderId);
+  const matchSquareReceipt =
+    !order.order.stripeInvoiceId &&
+    ["cash", "card_machine", "bank_transfer", "other"].includes(order.order.collection) &&
+    ["paid", "partly_refunded", "refunded"].includes(order.order.status);
+  return {
+    order,
+    squareReceipt,
+    purchaseRefunds,
+    can: { refund, disputeSheet, voidCounter, matchSquareReceipt },
+    header,
+    booking,
+  };
 }

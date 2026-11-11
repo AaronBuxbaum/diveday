@@ -37,6 +37,7 @@ import { OrderMoreMenu } from "./_components/OrderMoreMenu";
 import { OrderPageFlash } from "./_components/OrderPageFlash";
 import { OrderReceiptLines } from "./_components/OrderReceiptLines";
 import { RecordedPurchaseRefund } from "./_components/RecordedPurchaseRefund";
+import { SquareReceiptCard } from "./_components/SquareReceiptCard";
 import { refundAction } from "./actions";
 import { NOTICES, STATUS_KEYS, undoTooLateText } from "./order-detail-keys";
 
@@ -372,6 +373,17 @@ export default async function OrderDetailPage({
           <p className="mt-2 text-xs text-muted">{t("orders.detail.demoRefundHint")}</p>
         ) : null}
       </SectionCard>
+      {counterCollection && !demo ? (
+        <SquareReceiptCard
+          state={page.squareReceipt}
+          matchable={page.can.matchSquareReceipt}
+          orderId={order.order.id}
+          notice={notice}
+          t={t}
+          locale={locale}
+          timezone={timezone}
+        />
+      ) : null}
     </StaffPage>
   );
 }

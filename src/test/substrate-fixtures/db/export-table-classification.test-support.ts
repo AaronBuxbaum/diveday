@@ -131,7 +131,8 @@ export const EXCLUDED_TABLES = [
   // Integration provider credentials, OAuth state, delivery retries, and
   // external-id mappings are operational machinery rather than shop records.
   // The credentials and webhook URLs are live capabilities; the remaining
-  // rows are pointers/retry state that cannot be restored into another shop.
+  // rows are pointers/retry state and minimal Square receipt observations that cannot
+  // be restored into another merchant/shop. Purchases and refunds export from orders.
   "shop_integrations",
   "integration_oauth_states",
   "integration_events",

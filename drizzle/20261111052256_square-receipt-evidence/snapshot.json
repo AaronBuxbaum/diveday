@@ -1,0 +1,117 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a15f0467-ca85-4cb0-8a91-6a28328ebb74",
+  "prevIds": [
+    "ad842a6f-19b7-41b1-8c80-c5267a1cfb76"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "integration_provider"
+      ],
+      "writes": [
+        "s|enum|public.integration_provider"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "integration_sync_records",
+        "receipt_evidence"
+      ],
+      "writes": [
+        "s|col|public.integration_sync_records.receipt_evidence",
+        "n|col|public.integration_sync_records.receipt_evidence",
+        "e|col|public.integration_sync_records.receipt_evidence"
+      ],
+      "reads": [
+        "n|tbl|public.integration_sync_records",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "integration_sync_records",
+        "integration_sync_records_square_receipt_unique"
+      ],
+      "writes": [
+        "s|idx|public.integration_sync_records_square_receipt_unique",
+        "n|idx|public.integration_sync_records_square_receipt_unique",
+        "e|idx|public.integration_sync_records_square_receipt_unique",
+        "n|rel|public.integration_sync_records_square_receipt_unique"
+      ],
+      "reads": [
+        "n|tbl|public.integration_sync_records",
+        "n|sch|public",
+        "n|col|public.integration_sync_records.external_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "integration_sync_records",
+        "name": "receipt_evidence",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "integration_sync_records",
+        "name": "integration_sync_records_square_receipt_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "external_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"source_type\" = 'square_payment_receipt' and \"operation\" = 'receipt'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"integration_provider\"]",
+      "set": {
+        "values": [
+          "shopify",
+          "quickbooks",
+          "zapier",
+          "square"
+        ]
+      }
+    }
+  ]
+}

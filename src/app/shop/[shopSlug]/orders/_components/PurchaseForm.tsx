@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus, legendClass } from "@/components/ui/form";
 import { formatMoneyCents } from "@/lib/format";
 import { majorToMinor } from "@/lib/money";
 import { MAX_LINE_ITEMS_PER_ORDER } from "@/lib/order-limits";
@@ -124,7 +124,7 @@ export function PurchaseForm({
         <div className="space-y-4">
           {rows.map((row, index) => (
             <fieldset key={row.id} className="space-y-3 rounded-lg border border-border p-4">
-              <legend className="px-1 font-medium">
+              <legend className={`${legendClass} font-medium`}>
                 {words.item} {index + 1}
               </legend>
               <FieldGrid columns={2}>

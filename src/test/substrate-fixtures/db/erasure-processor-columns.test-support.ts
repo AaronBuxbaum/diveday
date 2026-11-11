@@ -204,7 +204,7 @@ export const PROCESSOR_OBJECT_COLUMNS: Record<
   },
   "integration_sync_records.external_id": {
     held: "elsewhere",
-    why: "the QuickBooks object a diver was synced to: the map from a DiveDay row to the provider's own object. The row copies no details, but the Customer it names holds the diver's name and contact details at the provider, and erasure does not reach it. Kept so a second Customer is not created for someone already synced (`OUTSIDE_CLOSURE_REASONS` above, issue #1015). The books are the shop's to keep, and deleting a Customer may not be possible while its invoices reference it. Nothing is owed (ADR)",
+    why: "the QuickBooks object a diver was synced to or the Square payment a recorded purchase explicitly matched: the map from a DiveDay row to the provider's own object. The row copies no details, but the Customer it names holds the diver's name and contact details at the provider, and erasure does not reach it. Kept so a second Customer is not created for someone already synced (`OUTSIDE_CLOSURE_REASONS` above, issue #1015). The books are the shop's to keep, and deleting a Customer may not be possible while its invoices reference it. Nothing is owed (ADR)",
   },
   "imported_payment_history.stripe_reference": {
     held: "elsewhere",
