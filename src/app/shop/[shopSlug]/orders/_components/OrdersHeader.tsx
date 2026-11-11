@@ -24,15 +24,19 @@ export function OrdersHeader({
     <ShopPageHeader
       title={t("shared.shopSections.money")}
       actions={
-        <>
-          <Link
-            href={purchasePanelHref(shopSlug, search, true)}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("orders.purchase.title")}
-          </Link>
-          {showInvoice ? invoiceDoor : null}
-        </>
+        search.purchase === "1" && !showInvoice ? null : (
+          <>
+            {search.purchase !== "1" ? (
+              <Link
+                href={purchasePanelHref(shopSlug, search, true)}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("orders.purchase.title")}
+              </Link>
+            ) : null}
+            {showInvoice ? invoiceDoor : null}
+          </>
+        )
       }
     />
   );

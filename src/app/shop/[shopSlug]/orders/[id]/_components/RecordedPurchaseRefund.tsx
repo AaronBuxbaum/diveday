@@ -29,13 +29,13 @@ export function RecordedPurchaseRefund({
     <section className="mt-6 space-y-4">
       {order.counterReceipt.reference ? (
         <p className="break-words text-base">
-          <span className="text-muted">{t("orders.purchase.reference")}:</span>{" "}
+          <span className="text-muted">{t("orders.purchase.receiptReference")}:</span>{" "}
           {order.counterReceipt.reference}
         </p>
       ) : null}
       {order.counterReceipt.tipCents > 0 ? (
         <p className="text-base">
-          {t("orders.purchase.tip")}:{" "}
+          {t("orders.purchase.includedTip")}:{" "}
           {formatMoneyCents(order.counterReceipt.tipCents, order.currency, locale)}
         </p>
       ) : null}

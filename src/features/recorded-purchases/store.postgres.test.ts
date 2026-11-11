@@ -2,7 +2,14 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { createPerson } from "../../db/people";
-import { activityEvents, collectionEntries, orders, shops } from "../../db/schema";
+import {
+  activityEvents,
+  collectionEntries,
+  integrationEvents,
+  orders,
+  shops,
+  userAccounts,
+} from "../../db/schema";
 import { describePostgres, postgresTestDb } from "../../test/postgres";
 import { recordPurchase, recordPurchaseRefund } from "./store";
 
@@ -20,6 +27,12 @@ async function fixture() {
     phone: null,
     origin: "counter",
     roles: ["owner"],
+  });
+  await pg.db.insert(userAccounts).values({
+    personId: owner.id,
+    email: `owner-${randomUUID()}@mail.example`,
+    hashedPassword: "unused",
+    status: "active",
   });
   const customer = await createPerson(pg.db, {
     shopId: shop.id,
@@ -55,6 +68,39 @@ describePostgres("recorded purchase concurrency", () => {
         .select()
         .from(collectionEntries)
         .where(eq(collectionEntries.sourceId, input.attemptId)),
+    ).toHaveLength(1);
+  });
+  it("rejects a different receipt payload sharing a concurrent request UUID", async () => {
+    const { pg, input } = await fixture();
+    const changed = {
+      ...input,
+      lineItems: [
+        {
+          kind: "merchandise" as const,
+          description: "Different shirt",
+          quantity: 1,
+          unitAmountCents: 11000,
+        },
+      ],
+    };
+    const results = await Promise.all([
+      recordPurchase(pg.db, input),
+      recordPurchase(pg.connect(), changed),
+    ]);
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    expect(results.filter((result) => !result.ok)).toEqual([{ ok: false, reason: "invalid" }]);
+    const [order] = await pg.db.select().from(orders).where(eq(orders.id, input.attemptId));
+    const lots = await pg.db
+      .select()
+      .from(collectionEntries)
+      .where(eq(collectionEntries.sourceId, input.attemptId));
+    expect(lots).toHaveLength(1);
+    expect(lots[0]?.amountCents).toBe(order?.amountPaidCents);
+    expect(
+      await pg.db
+        .select()
+        .from(integrationEvents)
+        .where(eq(integrationEvents.entityId, input.attemptId)),
     ).toHaveLength(1);
   });
   it("serializes partial returns and refuses the stale second form", async () => {

@@ -211,7 +211,7 @@ export function PurchaseForm({
           </button>
         ) : null}
         <FieldGrid columns={2}>
-          <Field label={words.tax} hint={words.taxHint}>
+          <Field label={words.tax} description={words.taxHint}>
             <input
               name="tax"
               type="number"

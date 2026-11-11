@@ -297,6 +297,9 @@
     "refundSubmit": "Registrar dinero devuelto",
     "refundHistory": "Devoluciones registradas",
     "refundRecorded": "Dinero devuelto registrado. DiveDay no envió dinero.",
-    "refundInvalid": "No se registró la devolución. Revisa el importe restante y actualiza antes de volver a intentarlo."
+    "refundInvalid": "No se registró la devolución. Revisa el importe restante y actualiza antes de volver a intentarlo.",
+    "includedTax": "Impuesto incluido",
+    "includedTip": "Propina incluida",
+    "receiptReference": "Recibo externo o referencia"
   }
 }

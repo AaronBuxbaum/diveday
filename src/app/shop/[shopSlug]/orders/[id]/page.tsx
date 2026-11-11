@@ -131,14 +131,16 @@ export default async function OrderDetailPage({
         // One overflow for the dispute sheet and Stripe acts on an open invoice.
         // Record payment stays in the receipt card as the one row of work.
         actions={
-          <OrderMoreMenu
-            t={t}
-            shopSlug={shopSlug}
-            orderId={order.order.id}
-            canDisputeSheet={canDisputeSheet}
-            stripeOpen={stripeOpen}
-            demo={demo}
-          />
+          canDisputeSheet || stripeOpen ? (
+            <OrderMoreMenu
+              t={t}
+              shopSlug={shopSlug}
+              orderId={order.order.id}
+              canDisputeSheet={canDisputeSheet}
+              stripeOpen={stripeOpen}
+              demo={demo}
+            />
+          ) : null
         }
         meta={
           <OrderMeta
@@ -211,7 +213,7 @@ export default async function OrderDetailPage({
             Only on an order that has actually given something back, so a plain
             paid order gains no line. */}
         {order.order.refundedCents > 0 ? (
-          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-base">
             <div className="flex gap-2">
               <dt className="text-muted">{t("orders.detail.refundedSoFar")}</dt>
               <dd className="font-medium tabular-nums">
@@ -237,7 +239,8 @@ export default async function OrderDetailPage({
         <OrderReceiptLines
           lineItems={order.lineItems}
           currency={order.order.currency}
-          taxCents={order.order.taxCents}
+          taxCents={order.order.counterReceipt?.taxCents ?? order.order.taxCents}
+          includedTax={Boolean(order.order.counterReceipt)}
           {...{ locale, t }}
         />
 

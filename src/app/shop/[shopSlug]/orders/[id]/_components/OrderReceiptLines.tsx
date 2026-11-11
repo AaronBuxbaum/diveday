@@ -9,12 +9,14 @@ export function OrderReceiptLines({
   lineItems,
   currency,
   taxCents,
+  includedTax,
   locale,
   t,
 }: {
   lineItems: OrderDetail["lineItems"];
   currency: string;
   taxCents: number;
+  includedTax: boolean;
   locale: string;
   t: StaffTranslator;
 }) {
@@ -22,7 +24,7 @@ export function OrderReceiptLines({
     <>
       <ul className="mt-4 divide-y divide-border">
         {lineItems.map((item) => (
-          <li key={item.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
+          <li key={item.id} className="flex items-baseline justify-between gap-3 py-2 text-base">
             <span className="min-w-0 break-words">
               {item.description}{" "}
               <span className="text-muted">
@@ -38,8 +40,10 @@ export function OrderReceiptLines({
       </ul>
 
       {taxCents > 0 ? (
-        <dl className="mt-3 flex justify-end gap-2 text-sm">
-          <dt className="text-muted">{t("orders.detail.tax")}</dt>
+        <dl className="mt-3 flex justify-end gap-2 text-base">
+          <dt className="text-muted">
+            {t(includedTax ? "orders.purchase.includedTax" : "orders.detail.tax")}
+          </dt>
           <dd className="font-medium tabular-nums">
             {formatMoneyCents(taxCents, currency, locale)}
           </dd>

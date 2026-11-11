@@ -1095,3 +1095,10 @@ then included tax/tip and external-reference fields; the total and explicit Reco
 A separate catalog/cart composition was rejected because it implies inventory or payment acceptance.
 Returns belong on the receipt, under an explicit already-returned-money label, with the remaining
 amount, reason and recent staff history beside them; booking marks stay with the booked seat.
+
+The filled receipt, already-returned-money form and partial-return history were inspected at
+390 and 1280 pixels. Original included tax and tips remain beside original receipt lines after a
+return; refunded and still-held totals use a separate current balance and the 16px money ramp.
+Read-only labels no longer say optional, and absent action menus leave no header gap. The final
+18 probes reported no flags; the focused browser regression checks the original tax and remaining
+balance after a partial return, including the balance's computed type size.

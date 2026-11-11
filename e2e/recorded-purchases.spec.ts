@@ -35,6 +35,9 @@ test.describe("record money already received", () => {
     ).toBeVisible();
     await expect(page.getByText("One shirt returned", { exact: true })).toBeVisible();
     await expect(page.getByText("$40.00", { exact: true })).toBeVisible();
+    // Receipt lines retain the original included tax; retained tax belongs to accounting.
+    await expect(page.getByText("$3.00", { exact: true })).toBeVisible();
+    await expect(page.getByText("$40.00", { exact: true })).toHaveCSS("font-size", "16px");
     await page.reload();
     await expect(page.getByText("One shirt returned", { exact: true })).toBeVisible();
   });

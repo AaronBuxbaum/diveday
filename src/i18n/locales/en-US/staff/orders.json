@@ -297,6 +297,9 @@
     "refundSubmit": "Record returned money",
     "refundHistory": "Recorded returns",
     "refundRecorded": "Returned money recorded. No money was sent by DiveDay.",
-    "refundInvalid": "The return was not recorded. Check the remaining amount and refresh before trying again."
+    "refundInvalid": "The return was not recorded. Check the remaining amount and refresh before trying again.",
+    "includedTax": "Included tax",
+    "includedTip": "Included tip",
+    "receiptReference": "External receipt or reference"
   }
 }

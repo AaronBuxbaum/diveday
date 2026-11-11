@@ -188,7 +188,7 @@ export default async function OrdersIndexPage({
   const door = newOrderDoorFor(shopSlug, search.add, can.manageOrders, paymentsConnected);
   const banner = door.adding ? null : noticeFromParam(door.refusal ?? notice, NOTICES);
   // Reuse one permission-gated door in both the header and empty state.
-  const newOrderDoor = <InvoiceDoor href={door.href} t={t} />;
+  const newOrderDoor = door.href && <InvoiceDoor href={door.href} t={t} />;
   const orderPage = ledger.page;
   const hasImportedHistory = Boolean(importedHistoryPage && importedHistoryPage.total > 0);
 
@@ -251,7 +251,7 @@ export default async function OrdersIndexPage({
       <FlashParams params={["notice"]} />
       <OrdersHeader
         {...{ shopSlug, t, search }}
-        showInvoice={paymentsConnected && (orderPage.total > 0 || hasImportedHistory || hasFilters)}
+        showInvoice={!!door.href && (orderPage.total > 0 || hasImportedHistory || hasFilters)}
         invoiceDoor={newOrderDoor}
       />
       <StaffSectionTabs
