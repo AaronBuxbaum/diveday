@@ -339,6 +339,7 @@ const EMAIL = "diver@example.com";
  */
 const FACT_SAMPLES: Record<string, Record<string, unknown>> = {
   operationalTrust: { state: "capacity" },
+  executedDepth: { unit: "feet", meters: 18.4404 },
   evening: { heads: "closed" },
   departTrip: { tripId: "trip-1", minutesAgo: 90 },
   offSeason: { opensInDays: 45 },
