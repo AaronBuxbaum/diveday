@@ -1,5 +1,6 @@
 export const TRIP_CONFIG_ACTIONS = [
   "saveDetails",
+  "correctDiveSafetyRecord",
   "saveDetailsSection",
   "saveRequirementsAction",
   "reinstateTripAction",

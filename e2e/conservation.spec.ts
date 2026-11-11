@@ -23,7 +23,15 @@ test("staff record and correct measured conservation actions after a departure",
   });
   const path = await tripPathByTitle(page, "blue-mantis", title, { daysOut: -2 });
   await page.goto(`${path}?view=details`);
-  await expect(page.getByRole("heading", { name: t("trips.conservation.heading") })).toBeVisible();
+  await expect(
+    page
+      .locator("#about #conservation")
+      .getByText(t("trips.conservation.heading"), { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(t("trips.notices.detailsFinished"), { exact: true })).toBeVisible();
+  await expect(page.locator("#about #plan form")).toHaveCount(0);
+  await expect(page.locator("#about #conditions form")).toHaveCount(0);
+  await expect(page.locator('#about #about-crew [name="boatId"]')).toHaveCount(0);
   const add = page.locator("#conservation-add");
   await add.locator("summary").click();
   await add.getByRole("spinbutton", { name: t("trips.conservation.quantity") }).fill("2.5");

@@ -9,10 +9,10 @@ import { nowDate } from "@/lib/clock";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
+import { finalHomeSaid, tripPhaseOf } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
-import { ConservationPanel } from "./_components/ConservationPanel";
 import { CoursePulse } from "./_components/CoursePulse";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
@@ -23,11 +23,10 @@ import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
 import { addBandFor } from "./_components/seat-request-band";
-import { TripAboutLinks } from "./_components/TripAboutLinks";
-import { TripAboutSection } from "./_components/TripAboutSection";
 import { TripAddBookingLink } from "./_components/TripAddBookingLink";
 import { TripCancellation } from "./_components/TripCancellation";
 import { TripDeskConnectivity } from "./_components/TripDeskConnectivity";
+import { TripDetailsPanel } from "./_components/TripDetailsPanel";
 import { TripHeaderBadges } from "./_components/TripHeaderBadges";
 import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { TripMoreActions } from "./_components/TripMoreActions";
@@ -35,7 +34,7 @@ import { TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripTabs } from "./_components/TripTabs";
-import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
+import { assignedCrewNames } from "./_components/trip-about-rows";
 import { tripHeaderDaySpan, tripHeaderPrice } from "./_components/trip-header-price";
 import { showsDetailsTab } from "./_components/trip-notice-tabs";
 import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
@@ -171,6 +170,16 @@ export default async function ManageTripPage({
     t,
   });
 
+  const lifecycle = {
+    ...trip,
+    now,
+    timeZone: shop.timezone,
+    stage: stageReading,
+    cancelled: false,
+    meetingWindows: scheduleDays,
+  };
+  const detailsEditable = tripPhaseOf(lifecycle) !== "back";
+  const mayChangeDeparture = !cancelled && !finalHomeSaid(lifecycle);
   const acceptsDivers = acceptsNewDivers(trip, now);
   // The desk while arrivals are open, or a finished departure's record; the stage is read with
   // it, since a diver counted out and not back keeps the departure open (`readDepartureStage`).
@@ -268,45 +277,28 @@ export default async function ManageTripPage({
 
         {details ? (
           <>
-            <TripAboutSection
-              rows={[
-                ...tripAboutRows({
-                  overview,
-                  liveBoatClashes: cancelled ? [] : boatClashes,
-                  shop,
-                  shopSlug,
-                  tripId,
-                  locale,
-                  t,
-                  tripNotice,
-                  shopBoats: details.boats,
-                  shopLenses: details.lenses,
-                  automatedForecast,
-                  tideLines,
-                  held: held ? { id: held, section: form } : undefined,
-                  tell,
-                  refundsHeld: !mayWriteOffPayment,
-                }),
-                ...(await readRows),
-              ]}
-              editLabel={t("trips.about.edit")}
-              actions={
-                <TripAboutLinks
-                  shop={shop}
-                  personId={session.user.personId}
-                  shopSlug={shopSlug}
-                  tripId={tripId}
-                  t={t}
-                />
-              }
-            />
-            <ConservationPanel
-              shopSlug={shopSlug}
-              panel={details.conservation}
-              tripId={tripId}
-              t={t}
-              locale={locale}
-              timeZone={shop.timezone}
+            <TripDetailsPanel
+              context={{
+                overview,
+                liveBoatClashes: cancelled ? [] : boatClashes,
+                shop,
+                shopSlug,
+                tripId,
+                locale,
+                t,
+                tripNotice,
+                shopBoats: details.boats,
+                shopLenses: details.lenses,
+                automatedForecast,
+                tideLines,
+                held: held ? { id: held, section: form } : undefined,
+                tell,
+                refundsHeld: !mayWriteOffPayment,
+                detailsEditable,
+              }}
+              rows={await readRows}
+              conservation={details.conservation}
+              personId={session.user.personId}
             />
             <TripIncidentReports shop={shop} personId={session.user.personId} tripId={tripId} />
             <TripPromoteAndActivity
@@ -317,13 +309,14 @@ export default async function ManageTripPage({
               tripNotice={tripNotice}
               mayDiscount={staffGates.mayDiscount}
               more={
-                cancelled ? undefined : (
+                !mayChangeDeparture && !(canConfigure && series) ? undefined : (
                   <TripMoreActions
                     shop={shop}
                     personId={session.user.personId}
                     shopSlug={shopSlug}
                     tripId={tripId}
                     startsAt={trip.startsAt}
+                    mayChangeDeparture={mayChangeDeparture}
                     series={canConfigure ? series : null}
                     crewNames={assignedCrewNames(overview)}
                     lifecycleStatus={lifecycleStatus}

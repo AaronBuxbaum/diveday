@@ -1,9 +1,19 @@
 import { and, eq, gt, isNotNull, isNull, notExists } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { activityEvents, boats, bookings, courses, diveSites, tripDives, trips } from "@/db/schema";
+import {
+  activityEvents,
+  boats,
+  bookings,
+  courses,
+  diveSites,
+  tripDives,
+  tripStageEvents,
+  trips,
+} from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -37,7 +47,9 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("../../../../../features/session/rules");
-const { cancelTripAction, saveDetails, saveDetailsSection } = await import("./details-actions");
+const { cancelTripAction, correctDiveSafetyRecord, saveDetails, saveDetailsSection } = await import(
+  "./details-actions"
+);
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -484,4 +496,27 @@ it("an authenticated forged section name cannot write departure facts", async ()
   expect(new URL(location, "https://dive.day").searchParams.get("notice")).toBe("invalid");
   const [after] = await db.select().from(trips).where(eq(trips.id, trip.id));
   expect(after).toEqual(trip);
+});
+
+it("corrects decompression evidence after Home without accepting plan fields from the posted form", async () => {
+  const { db, shop, trip, owner } = await context();
+  advanceClock(trip.startsAt.getTime() + 3_600_000 - nowDate().getTime());
+  await db.insert(tripStageEvents).values({
+    shopId: shop.id,
+    tripId: trip.id,
+    stage: "home",
+    recordedByPersonId: owner,
+    recordedAt: nowDate(),
+  });
+  const form = new FormData();
+  form.set("exceedsNoDecoLimits", "on");
+  form.set("expectedExceedsNoDecoLimits", "no");
+  form.set("title", "Smuggled closed-plan title");
+  form.set("capacity", "1");
+  const to = await redirectedTo(() => correctDiveSafetyRecord(shop.slug, trip.id, form));
+  expect(to).toContain("form=safety-record");
+  const [after] = await db.select().from(trips).where(eq(trips.id, trip.id));
+  expect(after.exceedsNoDecoLimits).toBe(true);
+  expect(after.title).toBe(trip.title);
+  expect(after.capacity).toBe(trip.capacity);
 });

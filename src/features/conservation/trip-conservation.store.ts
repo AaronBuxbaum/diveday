@@ -1,6 +1,6 @@
 import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
+import { tripDetailsAreEditable } from "@/db/trip-editability";
 import { liveTrip, notRehearsal } from "@/db/trips";
-import { hasReturned } from "@/lib/trips";
 import { readActiveStaffRoles } from "../../db/authz";
 import type { AppDb, DbExecutor } from "../../db/client";
 import { shops, tripConservation, trips } from "../../db/schema/index";
@@ -57,7 +57,7 @@ export async function getTripConservationPanel(
   if (!trip?.enabled || trip.status === "cancelled") return null;
   return {
     rows: await conservationRows(db, shopId, tripId),
-    editable: hasReturned(trip.endsAt, now),
+    editable: !(await tripDetailsAreEditable(db, shopId, tripId, now)),
   };
 }
 
@@ -68,8 +68,8 @@ export async function tripConservationFacts(
   tripId: string,
   now = nowDate(),
 ): Promise<ConservationFact[]> {
-  // One scoped read for the public projection, beside the recap's other reads. Joining the
-  // departure and switch here keeps both gates live without a second sequential round trip.
+  // Keep the public projection scoped to live non-rehearsal departures and
+  // the current feature switch. Return timing is shared with definition edits.
   const rows = await db
     .select({
       id: tripConservation.id,
@@ -77,7 +77,6 @@ export async function tripConservationFacts(
       quantity: tripConservation.quantity,
       location: tripConservation.location,
       note: tripConservation.note,
-      endsAt: trips.endsAt,
     })
     .from(tripConservation)
     .innerJoin(trips, eq(trips.id, tripConservation.tripId))
@@ -101,9 +100,14 @@ export async function tripConservationFacts(
       asc(tripConservation.quantity),
       asc(tripConservation.id),
     );
-  return rows
-    .filter(({ endsAt }) => hasReturned(endsAt, now))
-    .map(({ id, kind, quantity, location, note }) => ({ id, kind, quantity, location, note }));
+  if (rows.length === 0 || (await tripDetailsAreEditable(db, shopId, tripId, now))) return [];
+  return rows.map(({ id, kind, quantity, location, note }) => ({
+    id,
+    kind,
+    quantity,
+    location,
+    note,
+  }));
 }
 
 export type ConservationResult =
@@ -145,7 +149,8 @@ export async function recordTripConservation(
       .where(and(eq(trips.shopId, input.shopId), eq(trips.id, input.tripId), liveTrip()))
       .for("update");
     if (!trip || trip.status === "cancelled") return { ok: false, reason: "unavailable" };
-    if (!hasReturned(trip.endsAt, now)) return { ok: false, reason: "not_returned" };
+    if (await tripDetailsAreEditable(tx, input.shopId, input.tripId, now))
+      return { ok: false, reason: "not_returned" };
     if (input.id) {
       const [changed] = await tx
         .update(tripConservation)

@@ -30,9 +30,11 @@ import {
   shops,
   tripDives,
   tripScheduleDays,
+  tripStageEvents,
   trips,
 } from "./schema";
 import { forgetTranslationsOf } from "./shop-text-translations";
+import { tripHasFinalHome } from "./trip-editability";
 import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { copiedRequirement, insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
@@ -223,7 +225,10 @@ export async function moveTrip(
     if (!existing) return { ok: false, reason: "not_found" };
     if (existing.status !== "scheduled") return { ok: false, reason: "not_scheduled" };
 
-    if ((await countRollCallEvidence(tx, shopId, tripId)) > 0) {
+    if (
+      (await tripHasFinalHome(tx, shopId, tripId, now)) ||
+      (await countRollCallEvidence(tx, shopId, tripId)) > 0
+    ) {
       return { ok: false, reason: "already_sailed" };
     }
 
@@ -405,7 +410,16 @@ export async function deleteTrip(
       );
     if (waiting > 0) return { ok: false, reason: "has_roster" };
 
-    if ((await countRollCallEvidence(tx, shopId, tripId)) > 0) {
+    if (
+      (
+        await tx
+          .select({ id: tripStageEvents.id })
+          .from(tripStageEvents)
+          .where(and(eq(tripStageEvents.shopId, shopId), eq(tripStageEvents.tripId, tripId)))
+          .limit(1)
+      ).length > 0 ||
+      (await countRollCallEvidence(tx, shopId, tripId)) > 0
+    ) {
       return { ok: false, reason: "already_sailed" };
     }
 

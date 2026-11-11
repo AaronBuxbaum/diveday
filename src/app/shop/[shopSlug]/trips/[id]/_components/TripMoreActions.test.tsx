@@ -61,3 +61,18 @@ describe("TripMoreActions", () => {
     expect(screen.getByText("Could not cancel.")).toBeTruthy();
   });
 });
+
+it("keeps future-series controls after Home without offering to cancel the completed occurrence", () => {
+  show({
+    series: { id: "s1", futureScheduledCount: 0, endsOn: null } as never,
+    mayChangeDeparture: false,
+  });
+  expect(screen.getByText(t("trips.about.moreSeries"))).toBeVisible();
+  expect(screen.getByText("series-actions")).toBeInTheDocument();
+  expect(screen.queryByText("blowout")).toBeNull();
+  expect(screen.queryByText(t("trips.about.cancel"))).toBeNull();
+});
+it("has no empty action group for a completed one-off departure", () => {
+  const { container } = show({ mayChangeDeparture: false });
+  expect(container).toBeEmptyDOMElement();
+});

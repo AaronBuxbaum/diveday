@@ -123,3 +123,68 @@ describePostgres("independent departure section saves (#3141)", () => {
     });
   });
 });
+
+describePostgres("final Home against a stale departure Details save", () => {
+  it("reads Home committed while the editor waits on the trip-row lock", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, trip } = await tripWithTwoOfThreeTaken(pg.db);
+    // This fixture is currently out, rather than tomorrow's unstarted trip.
+    const startsAt = new Date(nowDate().getTime() - 2 * HOUR_MS);
+    const endsAt = new Date(nowDate().getTime() + 2 * HOUR_MS);
+    // diveday:allow-flat-revision: race fixture only, not a subscribed trip edit.
+    await pg.db.update(trips).set({ startsAt, endsAt }).where(eq(trips.id, trip.id));
+    const [seat] = await pg.db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.tripId, trip.id))
+      .limit(1);
+    if (!seat) throw new Error("fixture person missing");
+    // The Home insert depends on the locked row, matching recordTripStage's
+    // serialization. The event is invisible to the waiting editor until commit.
+    const gate = await holdRowLock(
+      pg,
+      sql`
+      with locked as (select id from trips where id = ${trip.id} for update),
+      home as (
+        insert into trip_stage_events (shop_id, trip_id, stage, recorded_by_person_id, recorded_at)
+        select ${shopId}, id, 'home', ${seat.personId}, ${nowDate()} from locked returning id
+      ) select id from home
+    `,
+    );
+    const save = editTripSection(pg.connect(), shopId, trip.id, { title: "Rewritten after Home" });
+    await waitForLockWaiters(pg.db, 1);
+    await gate.release();
+    expect(await save).toEqual({ ok: false, reason: "finished" });
+    const [after] = await pg.db
+      .select({ title: trips.title })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(after.title).toBe(trip.title);
+  });
+});
+
+describePostgres("decompression evidence against a stale open safety form", () => {
+  it("compares the prior safety value after waiting for another writer's trip-row lock", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, trip } = await tripWithTwoOfThreeTaken(pg.db);
+    const gate = await holdRowLock(
+      pg,
+      sql`update trips set exceeds_no_deco_limits = true where id = ${trip.id} returning id`,
+    );
+    const stale = editTripSection(
+      pg.connect(),
+      shopId,
+      trip.id,
+      { exceedsNoDecoLimits: false },
+      { expectedExceedsNoDecoLimits: false },
+    );
+    await waitForLockWaiters(pg.db, 1);
+    await gate.release();
+    expect(await stale).toEqual({ ok: false, reason: "stale_safety_record" });
+    const [after] = await pg.db
+      .select({ decompression: trips.exceedsNoDecoLimits })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(after.decompression).toBe(true);
+  });
+});

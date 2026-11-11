@@ -256,6 +256,15 @@ export function checkInOpen(input: Parameters<typeof tripPhaseOf>[0]): boolean {
   return tripPhaseOf(input) === "checkin" && boatStageOf(input) === null;
 }
 
+/** The crew said Home on the final meeting day; the clock alone never says this. */
+export function finalHomeSaid(input: Parameters<typeof tripPhaseOf>[0]): boolean {
+  return (
+    !input.cancelled &&
+    input.stage !== null &&
+    readTap({ ...input, tap: input.stage }) === "final_home"
+  );
+}
+
 /**
  * A departure page's readings of where the boat is, from one input: the
  * crew's word the header chip prints (`boatStageOf`), whether the departure is
@@ -282,10 +291,7 @@ export function departureStage<R extends { stage: TripStage; recordedAt: Date }>
   input: Parameters<typeof boatStageOf<R>>[0] & { unaccountedFor?: boolean },
 ): { shown: R | null; finished: boolean; sailed: boolean; checkInOpen: boolean } {
   const { unaccountedFor = false, ...reading } = input;
-  const homeSaid =
-    !reading.cancelled &&
-    reading.stage !== null &&
-    readTap({ ...reading, tap: reading.stage }) === "final_home";
+  const homeSaid = finalHomeSaid(reading);
   return {
     shown: boatStageOf(reading),
     finished: tripPhaseOf(reading) === "back" && (homeSaid || !unaccountedFor),

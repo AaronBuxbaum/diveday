@@ -16,7 +16,7 @@ import { AboutRowDetails } from "./AboutRowDetails";
  * later value lines continue below.
  */
 const ROW_GRID =
-  "grid w-full gap-1 px-2 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-baseline sm:gap-4";
+  "grid w-full gap-1 px-2 py-3 sm:grid-cols-[11rem_minmax(0,1fr)_auto] lg:grid-cols-[13rem_minmax(0,1fr)_auto] sm:items-baseline sm:gap-4";
 
 /** The rows' rules extend 8px past the panel column on each side. */
 const ROWS_CLASS = "-mx-2 divide-y divide-border border-y border-border";
@@ -31,7 +31,7 @@ function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) 
   const beat = (
     <>
       <span className={groupLabelClass()}>{row.label}</span>
-      <span className="min-w-0 text-sm">{row.value}</span>
+      <div className="min-w-0 text-sm">{row.value}</div>
     </>
   );
   if (!row.editor) {
@@ -51,13 +51,13 @@ function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) 
       {/* The summary fill spans rule to rule; the inset focus ring stays clear
           of the label and caret at the row edges. */}
       <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:focus-ring-inset">
-        <span className={ROW_GRID}>
+        <div className={ROW_GRID}>
           {beat}
           <span className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-primary sm:justify-self-end">
-            {editLabel}
+            {row.editLabel ?? editLabel}
             <DisclosureCaret direction="down" className="size-4 group-open/row:rotate-180" />
           </span>
-        </span>
+        </div>
       </summary>
       {/* The editor sits on the text column the value above it sits on, and
           the space below it is what keeps the next row's label off the last
@@ -77,6 +77,8 @@ export type TripAboutRow = {
   value: ReactNode;
   /** The editor this row opens beneath itself. Without one the row is a fact and nothing else. */
   editor?: ReactNode;
+  /** A narrower correction or future-date action, when this is not a plan edit. */
+  editLabel?: string;
   /**
    * Server-decided: this editor has an outcome to show, or its subject has open
    * work. A refusal that hides inside a closed row is a form the staffer cannot

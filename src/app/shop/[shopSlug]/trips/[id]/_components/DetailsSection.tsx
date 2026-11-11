@@ -679,7 +679,7 @@ function PayAtBookingFields({
  * stops, so a departure marked here gets no flying sentence on the recap.
  * Nothing else reads it.
  */
-function DecompressionField({
+export function DecompressionField({
   t,
   checked,
   flySafeTold,

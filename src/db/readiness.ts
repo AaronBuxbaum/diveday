@@ -79,6 +79,7 @@ import {
   trips,
 } from "./schema";
 import { type MarkedSeat, resolveTrainingMarks } from "./training-mark-resolve";
+import { tripDetailsAreEditable } from "./trip-editability";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 import {
@@ -115,36 +116,39 @@ export async function upsertTripRequirements(
     keepLevelAsChosen?: boolean;
   },
 ) {
-  const { keepLevelAsChosen = false, ...requirementInput } = input;
-  const [trip] = await db
-    .select({ id: trips.id })
-    .from(trips)
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-    .limit(1);
-  if (!trip) return null;
-  // The default stays the default only while the level is unchanged: the
-  // form re-sends the select with every save, so ticking payment is not
-  // choosing a level, and changing it is (issue #3872; dock review of #3909).
-  // Read against the stored row, inside the one statement.
-  const [requirement] = await db
-    .insert(tripRequirements)
-    .values({ ...requirementInput, minimumCertificationIsDefault: false })
-    .onConflictDoUpdate({
-      target: tripRequirements.tripId,
-      set: {
-        requiresWaiver: input.requiresWaiver,
-        minimumCertificationLevel: input.minimumCertificationLevel,
-        minimumCertificationIsDefault: keepLevelAsChosen
-          ? false
-          : sql`${tripRequirements.minimumCertificationIsDefault} and ${tripRequirements.minimumCertificationLevel} is not distinct from ${input.minimumCertificationLevel}::certification_level`,
-        requiredSpecialties: input.requiredSpecialties,
-        requiresNitrox: input.requiresNitrox,
-        requiresPayment: input.requiresPayment,
-        updatedAt: nowDate(),
-      },
-    })
-    .returning();
-  return requirement ?? null;
+  return db.transaction(async (tx) => {
+    const { keepLevelAsChosen = false, ...requirementInput } = input;
+    const [trip] = await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+      .limit(1)
+      .for("update");
+    if (!trip || !(await tripDetailsAreEditable(tx, input.shopId, input.tripId))) return null;
+    // The default stays the default only while the level is unchanged: the
+    // form re-sends the select with every save, so ticking payment is not
+    // choosing a level, and changing it is (issue #3872; dock review of #3909).
+    // Read against the stored row, inside the one statement.
+    const [requirement] = await tx
+      .insert(tripRequirements)
+      .values({ ...requirementInput, minimumCertificationIsDefault: false })
+      .onConflictDoUpdate({
+        target: tripRequirements.tripId,
+        set: {
+          requiresWaiver: input.requiresWaiver,
+          minimumCertificationLevel: input.minimumCertificationLevel,
+          minimumCertificationIsDefault: keepLevelAsChosen
+            ? false
+            : sql`${tripRequirements.minimumCertificationIsDefault} and ${tripRequirements.minimumCertificationLevel} is not distinct from ${input.minimumCertificationLevel}::certification_level`,
+          requiredSpecialties: input.requiredSpecialties,
+          requiresNitrox: input.requiresNitrox,
+          requiresPayment: input.requiresPayment,
+          updatedAt: nowDate(),
+        },
+      })
+      .returning();
+    return requirement ?? null;
+  });
 }
 
 /**
