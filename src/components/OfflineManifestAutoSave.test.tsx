@@ -9,7 +9,7 @@ import {
   wipeOfflineMedicalAlerts,
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestPayload } from "@/lib/offline-manifests";
-import { OfflineManifestAutoSave } from "./OfflineManifestAutoSave";
+import { MIN_TRIGGERED_GAP_MS, OfflineManifestAutoSave } from "./OfflineManifestAutoSave";
 
 vi.mock("@/lib/offline-manifest-store", () => ({
   beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
@@ -294,6 +294,54 @@ describe("OfflineManifestAutoSave", () => {
 
     first.resolve(upcomingResponse([]));
     await waitFor(() => expect(saveOfflineManifest).not.toHaveBeenCalled());
+  });
+
+  describe("minimum gap for visibility and reconnect triggers (#4392)", () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    function visibleAgain() {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "visible",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    }
+
+    it("skips a tab becoming visible or the network returning within 90 seconds of a finished save, then allows one after", async () => {
+      setOnline(true);
+      vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+      let clock = 1_000;
+      vi.spyOn(performance, "now").mockImplementation(() => clock);
+      vi.mocked(fetch).mockImplementation(async () => upcomingResponse([payloadFor("a")]));
+
+      render(<OfflineManifestAutoSave />);
+      await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+
+      clock += MIN_TRIGGERED_GAP_MS - 1;
+      visibleAgain();
+      window.dispatchEvent(new Event("online"));
+      await Promise.resolve();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      clock += 1;
+      visibleAgain();
+      await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    });
+
+    it("does not hold the gate shut after a failed run", async () => {
+      setOnline(true);
+      vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+      vi.spyOn(performance, "now").mockReturnValue(1_000);
+      vi.mocked(fetch).mockResolvedValueOnce(new Response("no", { status: 500 }));
+
+      render(<OfflineManifestAutoSave />);
+      await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+      await Promise.resolve();
+
+      vi.mocked(fetch).mockResolvedValueOnce(upcomingResponse([]));
+      visibleAgain();
+      await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    });
   });
 
   it("wipes medical alert words another person saved before saving, and all of them when the body names nobody (H-20261023-medical-alert-for-the)", async () => {

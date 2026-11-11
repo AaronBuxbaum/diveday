@@ -22,6 +22,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { departureCrewCount } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
+import { mapWithLimit } from "@/lib/map-limit";
 import { withE2EApiTiming } from "@/lib/observability/query-timing";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import type {
@@ -36,6 +37,14 @@ import { rollCallDayBoundariesOf } from "@/lib/trip-days";
 // opened that specific trip's live manifest first, while staying well short
 // of caching a shop's entire future board on every device that visits it.
 const AUTO_SAVE_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * How many departures one request builds at a time (#4392). Each build is a locking, writing
+ * transaction, and a window of ten or more departures built all at once held every connection of
+ * a pool of ten (`src/lib/db-pool-config.ts`), queueing the same staffer's own page renders behind
+ * it. Three leaves the pool room; the response still carries every departure, in order.
+ */
+const MANIFEST_BUILD_CONCURRENCY = 3;
 
 /**
  * This body is a shop's whole 48-hour board — diver names, emergency contacts,
@@ -89,85 +98,85 @@ async function getUpcomingManifests() {
     db,
     tripIds.map((id) => ({ id })),
   );
-  const payloads = await Promise.all(
-    tripIds.map(
-      async (tripId): Promise<OfflineManifestPayload | null> =>
-        db.transaction(async (tx) => {
-          // The snapshot id, shop epoch, roster, and free-text evidence are read
-          // under one shared fence. Erasure either follows and sweeps everything
-          // read here, or precedes it and the token carries the new epoch.
-          await lockBoardingCertificationEvidence(tx, shop.id, "boarding");
-          const epoch = await getShopOfflineErasureEpoch(tx, shop.id);
-          if (epoch === null) return null;
-          const snapshotRevision = await nextOfflineManifestSnapshotRevision(tx, shop.id, tripId);
-          if (snapshotRevision === null) return null;
-          const snapshotId = randomUUID();
-          // PGlite's database type includes its client handle while the
-          // transaction executor intentionally does not. The manifest readers
-          // use only Drizzle query methods, which both objects implement.
-          const manifests = await getTripManifests(tx as unknown as AppDb, shop.id, tripId);
-          if (!manifests) return null;
-          const checklistItems = await listChecklistItems(tx, shop.id);
-          const checks = checklistItems.length
-            ? await latestPreDepartureChecksForTrip(tx, shop.id, tripId)
-            : new Map();
-          const vessels = await departureVessels(tx, shop.id, [tripId]);
-          // The boat's papers and kit, worded as the Boat tab words them.
-          const departure = manifests[0];
-          const boatSafety = departure
-            ? boatSafetySection(
-                t,
-                locale,
-                await departureBoatSafetyFor(tx, shop.id, {
-                  tripId,
-                  startsAt: departure.trip.startsAt,
-                  timeZone: shop.timezone,
-                  now,
-                  passengers: {
-                    booked: departure.summary.totalDivers,
-                    boarded: departure.summary.boarded,
-                  },
-                  crew: departureCrewCount(departure.crew),
-                }),
-              )
-            : null;
-          const payload = serializeManifests(
-            manifests,
-            {
-              ...shopIdentity,
-              emergencyReference: emergencyReferenceForDeparture(
-                shop.emergencyReference,
-                vessels.get(tripId) ?? null,
-              ),
-            },
-            (blocker, diver) => crewBlockerText(t, diver, blocker),
-            checklistItems.map((item) => ({
-              id: item.id,
-              label: item.label,
-              check: checks.get(item.id),
-            })),
-            boatSafety,
-            undefined,
-            (advisory) =>
-              advisory.params.verificationReasons?.length
-                ? t("shared.offlineManifest.juniorCheckRequired")
-                : depthWarningText(t, advisory),
-          );
-          const boundaries = rollCallDayBoundariesOf(meetingWindows.get(tripId));
-          return {
-            ...payload,
-            ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
+  const payloads = await mapWithLimit(
+    tripIds,
+    MANIFEST_BUILD_CONCURRENCY,
+    async (tripId): Promise<OfflineManifestPayload | null> =>
+      db.transaction(async (tx) => {
+        // The snapshot id, shop epoch, roster, and free-text evidence are read
+        // under one shared fence. Erasure either follows and sweeps everything
+        // read here, or precedes it and the token carries the new epoch.
+        await lockBoardingCertificationEvidence(tx, shop.id, "boarding");
+        const epoch = await getShopOfflineErasureEpoch(tx, shop.id);
+        if (epoch === null) return null;
+        const snapshotRevision = await nextOfflineManifestSnapshotRevision(tx, shop.id, tripId);
+        if (snapshotRevision === null) return null;
+        const snapshotId = randomUUID();
+        // PGlite's database type includes its client handle while the
+        // transaction executor intentionally does not. The manifest readers
+        // use only Drizzle query methods, which both objects implement.
+        const manifests = await getTripManifests(tx as unknown as AppDb, shop.id, tripId);
+        if (!manifests) return null;
+        const checklistItems = await listChecklistItems(tx, shop.id);
+        const checks = checklistItems.length
+          ? await latestPreDepartureChecksForTrip(tx, shop.id, tripId)
+          : new Map();
+        const vessels = await departureVessels(tx, shop.id, [tripId]);
+        // The boat's papers and kit, worded as the Boat tab words them.
+        const departure = manifests[0];
+        const boatSafety = departure
+          ? boatSafetySection(
+              t,
+              locale,
+              await departureBoatSafetyFor(tx, shop.id, {
+                tripId,
+                startsAt: departure.trip.startsAt,
+                timeZone: shop.timezone,
+                now,
+                passengers: {
+                  booked: departure.summary.totalDivers,
+                  boarded: departure.summary.boarded,
+                },
+                crew: departureCrewCount(departure.crew),
+              }),
+            )
+          : null;
+        const payload = serializeManifests(
+          manifests,
+          {
+            ...shopIdentity,
+            emergencyReference: emergencyReferenceForDeparture(
+              shop.emergencyReference,
+              vessels.get(tripId) ?? null,
+            ),
+          },
+          (blocker, diver) => crewBlockerText(t, diver, blocker),
+          checklistItems.map((item) => ({
+            id: item.id,
+            label: item.label,
+            check: checks.get(item.id),
+          })),
+          boatSafety,
+          undefined,
+          (advisory) =>
+            advisory.params.verificationReasons?.length
+              ? t("shared.offlineManifest.juniorCheckRequired")
+              : depthWarningText(t, advisory),
+        );
+        const boundaries = rollCallDayBoundariesOf(meetingWindows.get(tripId));
+        return {
+          ...payload,
+          ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
+          snapshotId,
+          erasureEpochToken: signOfflineErasureEpoch({
+            shopId: shop.id,
+            tripId,
             snapshotId,
-            erasureEpochToken: signOfflineErasureEpoch({
-              shopId: shop.id,
-              tripId,
-              snapshotId,
-              epoch,
-              snapshotRevision,
-            }),
-          };
-        }),
-    ),
+            epoch,
+            snapshotRevision,
+          }),
+        };
+      }),
   );
 
   const served = payloads.filter((payload): payload is OfflineManifestPayload => payload !== null);

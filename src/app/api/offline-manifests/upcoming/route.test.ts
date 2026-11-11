@@ -12,7 +12,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "@/db/schema";
-import { createTrip } from "@/db/trips";
+import { createTrip, listTripIdsInOfflineManifestWindow } from "@/db/trips";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -185,6 +185,25 @@ describe("GET /api/offline-manifests/upcoming", () => {
     expect(titles).not.toContain("Night Dive — City of Washington");
     // Seeded 5+ days out — far outside the window.
     expect(titles).not.toContain("Wreck Trip — Spiegel Grove");
+  });
+
+  it("builds the window three at a time and still answers every departure, in the window's order", async () => {
+    const { db, shop, personId } = await staffContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+    const now = nowDate();
+    const expected = await listTripIdsInOfflineManifestWindow(
+      db,
+      shop.id,
+      now,
+      new Date(now.getTime() + 48 * 60 * 60 * 1000),
+    );
+    expect(expected.length).toBeGreaterThan(1);
+
+    const body = (await (await GET()).json()) as {
+      payloads: Array<{ manifests: Array<{ trip: { id: string } }> }>;
+    };
+    expect(body.payloads.map((payload) => payload.manifests[0]?.trip.id)).toEqual(expected);
   });
 
   it("includes a trip already underway, not just ones yet to depart", async () => {

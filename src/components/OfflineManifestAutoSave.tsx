@@ -22,6 +22,14 @@ import {
 const AUTO_SAVE_INTERVAL_MS = 5 * 60 * 1000;
 
 /**
+ * The shortest gap between a finished save and the next one that a tab becoming visible or the
+ * network returning may start (#4392). A staffer who unlocks a phone many times an hour used to
+ * start a full build of every departure in the window each time. The mount run and the interval
+ * ignore it, and the freshness label on the copy still shows its true age.
+ */
+export const MIN_TRIGGERED_GAP_MS = 90 * 1000;
+
+/**
  * Primes the offline shell and saves a device copy of every trip in the
  * shop's rolling 48-hour window (windowed server-side by
  * GET /api/offline-manifests/upcoming), whichever staff page is open. Mounted
@@ -30,6 +38,9 @@ const AUTO_SAVE_INTERVAL_MS = 5 * 60 * 1000;
  */
 export function OfflineManifestAutoSave() {
   const inFlight = useRef<Promise<void> | null>(null);
+  // Monotonic, so a changed system clock cannot hold the gate shut. Set only by a run whose
+  // saves finished; a failed run leaves the next trigger free to try again.
+  const lastSuccessAt = useRef<number | null>(null);
 
   const run = useCallback((): Promise<void> => {
     if (!navigator.onLine) return Promise.resolve();
@@ -76,6 +87,7 @@ export function OfflineManifestAutoSave() {
             }).catch(() => {}),
           ),
         );
+        lastSuccessAt.current = performance.now();
       } catch {
         // Best-effort; see the module comment.
       }
@@ -88,11 +100,15 @@ export function OfflineManifestAutoSave() {
 
   useEffect(() => {
     void run();
+    const recentlySaved = () =>
+      lastSuccessAt.current !== null &&
+      performance.now() - lastSuccessAt.current < MIN_TRIGGERED_GAP_MS;
     const onOnline = () => {
-      if (navigator.onLine) void run();
+      if (navigator.onLine && !recentlySaved()) void run();
     };
     const onVisible = () => {
-      if (document.visibilityState === "visible" && navigator.onLine) void run();
+      if (document.visibilityState === "visible" && navigator.onLine && !recentlySaved())
+        void run();
     };
     const interval = setInterval(() => {
       if (navigator.onLine) void run();
