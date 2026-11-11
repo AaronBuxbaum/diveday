@@ -56,3 +56,20 @@ describe("the public pages with sightings switched off", () => {
     );
   });
 });
+
+/**
+ * A short welcome stands above the timetable (Aaron, 2026-11-11, #4336, option B): who the shop is
+ * first, the board one scroll later, the full story where it was.
+ */
+describe("the public schedule's welcome band", () => {
+  it("stands above the timetable, and the full story stays below it", () => {
+    expect(positionOf("<ShopWelcome")).toBeGreaterThan(-1);
+    expect(positionOf("<ShopWelcome")).toBeLessThan(positionOf("<WeekLedger"));
+    expect(positionOf("<ShopfrontStory")).toBeGreaterThan(positionOf("<WeekLedger"));
+  });
+
+  it("jumps to the board only when there is one and to courses only when the shop teaches", () => {
+    expect(SOURCE).toContain('seeScheduleHref={hasUpcoming ? "#schedule" : null}');
+    expect(SOURCE).toContain("newToDivingHref={shelfCourses.length > 0");
+  });
+});

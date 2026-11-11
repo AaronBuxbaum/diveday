@@ -69,6 +69,10 @@
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
+    "welcome": {
+      "newToDiving": "¿Nuevo en el buceo?",
+      "seeSchedule": "Ver el calendario"
+    },
     "shopPhotos": "Fotos del centro",
     "timesInZone": "Todos los horarios de abajo están en la hora local de {shop} ({zone}).",
     "timesInZoneFooter": "Las horas son locales de {shop} ({zone}).",

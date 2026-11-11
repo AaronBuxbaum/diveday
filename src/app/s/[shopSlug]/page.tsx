@@ -45,6 +45,7 @@ import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { SchedulePaperSheet, scheduleSheetEmpty } from "./_components/SchedulePaperSheet";
 import { ShopfrontStory } from "./_components/ShopfrontStory";
 import { BoatsShelf } from "./_components/ShopPhotoStrip";
+import { ShopWelcome } from "./_components/ShopWelcome";
 import { readSchedulePage } from "./_components/schedule-reads";
 import { seatPriceLabel, shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
 import {
@@ -318,6 +319,15 @@ export default async function SchedulePage({
         locale={locale}
         t={t}
         now={now}
+      />
+      <ShopWelcome
+        shop={shop}
+        aggregate={reviewAggregate}
+        newToDivingHref={shelfCourses.length > 0 ? publicCoursesPath(shopSlug) : null}
+        seeScheduleHref={hasUpcoming ? "#schedule" : null}
+        locale={locale}
+        t={t}
+        className="mb-10"
       />
       <header>
         <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{t("schedule.title")}</h1>
