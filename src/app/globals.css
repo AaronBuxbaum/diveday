@@ -1353,6 +1353,13 @@ select:not([multiple]):not([size]):dir(rtl) {
     -webkit-box-decoration-break: clone;
   }
 
+  /* The structural wrapper has padding, not a border to close. Repeating its
+     gutters at every page break can strand the attribution on an empty page. */
+  .paper-sheet-long > .paper-sheet-body {
+    box-decoration-break: slice;
+    -webkit-box-decoration-break: slice;
+  }
+
   /* On paper the frame stops being a frame, and every sheet starts a page. */
   .paper-sheet-frame {
     display: block;
