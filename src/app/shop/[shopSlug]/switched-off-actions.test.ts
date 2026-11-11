@@ -267,7 +267,13 @@ describe("actions behind a switched-off feature", () => {
       saveExecutedDiveAction(
         diveCtx,
         undefined,
-        form({ diveNumber: "1", actualSiteId: "", maxDepthMeters: "", ...fields }),
+        form({
+          diveNumber: "1",
+          actualSiteId: "",
+          maxDepthMeters: "",
+          depthUnit: "meters",
+          ...fields,
+        }),
       );
 
     // The form loaded with sightings on, so it drew the picker and its marker;

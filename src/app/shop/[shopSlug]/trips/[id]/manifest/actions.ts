@@ -146,6 +146,7 @@ const executedDiveSchema = z.object({
   enteredAt: z.string().optional(),
   exitedAt: z.string().optional(),
   maxDepthMeters: z.union([z.literal(""), z.coerce.number().finite().min(0)]),
+  depthUnit: z.enum(["meters", "feet"]),
   visibility: z.string().trim().max(120).optional(),
   current: z.string().trim().max(120).optional(),
   // Bounded here, believed nowhere: `upsertExecutedDive` checks it against the
@@ -227,7 +228,7 @@ export async function saveExecutedDiveAction(
   const maxDepthMeters =
     notRecorded.includes("depth") || parsed.data.maxDepthMeters === ""
       ? null
-      : depthToMeters(parsed.data.maxDepthMeters, shop.depthUnit);
+      : depthToMeters(parsed.data.maxDepthMeters, parsed.data.depthUnit);
   if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {
     return { status: "error", reason: "depth_out_of_range" };
   }
