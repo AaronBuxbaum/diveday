@@ -26,10 +26,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/playwright-shell
+      # Step timeouts, under the job's 30, so a hang fails the step and the report below still
+      # runs. A job timeout concludes `cancelled`, which the report skips.
       - name: Install WebKit and its system libraries
+        timeout-minutes: 10
         run: pnpm exec playwright install --with-deps webkit
       - run: pnpm e2e:build
       - name: Drive touch and mobile engine behavior
+        timeout-minutes: 10
         run: pnpm exec playwright test --config playwright.mobile.config.ts --reporter=github,html
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()

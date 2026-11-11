@@ -45,12 +45,16 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/playwright-shell
       - name: Install Chromium for real extension checks
+        timeout-minutes: 10
         run: pnpm exec playwright install chromium
       - run: pnpm e2e:build
       - name: Quarantined tests
         run: pnpm exec playwright test --grep @quarantine --pass-with-no-tests
+      # A step timeout, under the job's 60, so a hunt that overruns fails the step and the
+      # red-run issue below is filed. A job timeout concludes `cancelled`, which no alert reads.
       - name: Specs that failed in the last 7 days, five times each
         if: ${{ !cancelled() }}
+        timeout-minutes: 50
         run: |
           node scripts/e2e-recent-failures.mjs --days 7 --max 8 > recent-failures.txt 2> recent-history.log || {
             cat recent-history.log >&2
