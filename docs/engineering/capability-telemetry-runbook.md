@@ -32,6 +32,21 @@ All of this is redaction *inside this application's process*, and there is a
 second, larger copy of the same URLs it can never reach — see
 [What redaction cannot reach: the platform's access logs](#what-redaction-cannot-reach-the-platforms-access-logs).
 
+## Sentry diagnostic text
+
+Sentry's project Data Scrubber and Default Scrubbers must remain enabled. Project rules
+cover password-labelled diagnostic text and password-reset/email-sign-in URLs; this is
+server-side processing, not a guarantee that arbitrary unlabelled secrets can be recognized.
+Never deliberately log a password or a login link. Recheck the rules with fake credentials
+when changing the Sentry project or SDK; do not use real credentials as probes.
+
+The application retains its request-body, cookie and credential-header exclusions and
+capability-URL handling. It does not recursively clone and scrub arbitrary error objects.
+A synthetic-event check found that project rules cleaned messages and breadcrumbs but left
+stack-frame filenames and their derived issue culprit unchanged. `redactEvent` therefore
+also cleans frame `filename` and `abs_path` URLs before sending the event. Its focused test
+uses fake login URLs and preserves ordinary error context.
+
 ## Auditing existing telemetry for leaked tokens
 
 Events sent before this change (or before the `confirm`-token fix landed)
