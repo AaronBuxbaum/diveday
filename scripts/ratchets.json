@@ -1044,22 +1044,14 @@
         "why": "NoticeTone and noticeRole import moves to ui/tone, one import line more",
         "files": {
           "src/app/(token)/ready/[token]/page.tsx": "616 -> 617",
-          "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577",
-          "src/app/shop/[shopSlug]/staffing/page.tsx": "503 -> 504"
-        }
-      },
-      {
-        "why": "Merge of lower stack layers into db-codes; nothing added by hand",
-        "files": {
-          "src/app/shop/[shopSlug]/page.tsx": "569 -> 577"
+          "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577"
         }
       },
       {
         "why": "NoticeTone and noticeRole import moves to ui/tone, one import line more",
         "files": {
           "src/app/(token)/ready/[token]/page.tsx": "616 -> 617",
-          "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577",
-          "src/app/shop/[shopSlug]/page.tsx": "577 -> 578"
+          "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577"
         }
       }
     ],
