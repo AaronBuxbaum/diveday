@@ -55,6 +55,9 @@ export async function sweepMinimumSeats(db: AppDb, now: Date): Promise<MinimumSe
       else if (outcome.status !== "unpaid") summary.refundsOwed += 1;
     }
     const recipients = await listMinimumNotMetRecipients(db, departure.shopId, departure.tripId);
+    // The shop's sender is the departure's, not the recipient's: read once,
+    // and only when someone is actually emailed (performance audit 2026-11-11, item 11).
+    let sender: ReturnType<typeof shopSenderFor> | undefined;
     for (const recipient of recipients) {
       // No email on file is not a failure to retry: it is a walk-in the shop
       // seated on a name alone, and the counter already knows. Recorded so a
@@ -74,12 +77,13 @@ export async function sweepMinimumSeats(db: AppDb, now: Date): Promise<MinimumSe
       // durable retry queue (src/lib/cron-schedule.test.ts), so the shop's
       // Reply-To and postal line are resolved by hand here rather than by the
       // queue path that normally adds them.
+      sender ??= shopSenderFor(db, departure.shopId);
       const delivery = await notify({
         kind: "trip_minimum_not_met",
         tripId: departure.tripId,
         bookingId: recipient.bookingId,
         shopId: departure.shopId,
-        sender: await shopSenderFor(db, departure.shopId),
+        sender: await sender,
         to: recipient.email,
         locale: recipientLocale(recipient.personLocale, departure.shopDefaultLocale),
         diverName: recipient.fullName,
