@@ -61,6 +61,7 @@ function needText(t: StaffTranslator, blocker: ReadinessBlocker): string {
   const params = blocker.params;
   switch (blocker.code) {
     case "certification_insufficient":
+      if (params?.heldUnverified) return readinessBlockerText(t, blocker);
       if (params?.requiredLevel && params.heldLevel) {
         return t("divers.certifications.tripNeeds.levelHeld", {
           level: t(CERTIFICATION_LEVEL_KEYS[params.requiredLevel]),

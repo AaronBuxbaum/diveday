@@ -1016,6 +1016,8 @@
     },
     "fitUnavailable": "No hemos podido guardar tu equipo y ajuste ahora mismo. Inténtalo de nuevo en un momento.",
     "fitSaved": "Guardado. La tripulación tendrá tus tallas.",
+    "certSavedInsufficient": "Tu certificación {held} está guardada y pendiente de verificación. Esta salida requiere {level} o superior. Contacta al centro para elegir una salida o un curso adecuado; agrega otra tarjeta solo si ya la tienes.",
+    "certVerifiedInsufficient": "Tu certificación verificada es {held}. Esta salida requiere {level} o superior. Contacta al centro para elegir una salida o un curso adecuado; agrega otra tarjeta solo si ya la tienes.",
     "certHeading": "Agrega tu certificación",
     "certBody": "Introduce los datos de tu certificación. Tu centro los verificará con el registro de certificación u otra evidencia; agregarlos aquí solo evita que tengan que pedírtelos.",
     "specialtyHeading": "Agrega tu tarjeta de {specialty}",
