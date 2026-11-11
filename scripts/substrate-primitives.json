@@ -1,4 +1,5 @@
 {
+  "src/db/shop-render-facts.ts": "One statement for the shop facts every staff render reads (trips, orders, courses, gear, work orders), memoized per render so the chrome and Today share it. Concrete consumers: src/app/shop/[shopSlug]/_components/ShopChrome.tsx and src/features/today/shop-home.ts.",
   "src/lib/add-panel.ts": "URL and panel-state vocabulary shared by AddPanel and client add forms; it has no data reader or mutation. Concrete consumer: src/app/actions/held-sends.ts.",
   "src/lib/address-lookup.ts": "Address suggestion types and normalization shared by the AddressSearch client and settings server form. Concrete consumer: src/app/shop/[shopSlug]/settings/AddressSearch.tsx.",
   "src/lib/agency-check-queue.ts": "Pure batch-check state transitions shared by AgencyCheckAll and the extension host client. Concrete consumer: src/app/shop/[shopSlug]/_components/agency-check/AgencyCheckAll.tsx.",
@@ -28,6 +29,7 @@
   "src/lib/element-id.ts": "Stable HTML element identifiers shared by trip pulse facts and buddy-team navigation targets. Concrete consumer: src/app/shop/[shopSlug]/trips/[id]/_components/trip-pulse-facts.ts.",
   "src/lib/email-typo.ts": "Pure email spelling suggestion primitive used by the reusable BookingPartyFields client. Concrete consumer: src/components/BookingPartyFields.tsx.",
   "src/lib/embed-snippets.ts": "Embeddable snippet and option vocabulary shared by EmbedGenerator and EmbedKindChoices clients. Concrete consumer: src/app/shop/[shopSlug]/settings/embed/EmbedGenerator.tsx.",
+  "src/lib/map-limit.ts": "Bounded-concurrency map shared by any route that fans out transactions against the connection pool. Concrete consumer: src/app/api/offline-manifests/upcoming/route.ts.",
   "src/lib/marine-forecast.ts": "Forecast data and display primitives shared by ConditionsLine and public trip component types. Concrete consumer: src/app/s/[shopSlug]/trips/[id]/_components/ConditionsLine.tsx.",
   "src/lib/marine-life-tiles.ts": "Pure marine-life tile composition shared by recap doors and trip pitch renderers. Concrete consumer: src/app/(token)/ready/[token]/_components/RecapDoors.tsx.",
   "src/lib/motion.ts": "Motion duration and reduced-motion behavior shared by LanguagePicker and the manifest person sheet. Concrete consumer: src/app/shop/[shopSlug]/trips/[id]/manifest/_components/PersonSheet.tsx.",

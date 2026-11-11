@@ -296,7 +296,7 @@ describe("OfflineManifestAutoSave", () => {
     await waitFor(() => expect(saveOfflineManifest).not.toHaveBeenCalled());
   });
 
-  describe("minimum gap for visibility and reconnect triggers (#4392)", () => {
+  describe("minimum gap for visibility and reconnect triggers (issue 4392)", () => {
     afterEach(() => vi.restoreAllMocks());
 
     function visibleAgain() {
