@@ -108,6 +108,7 @@ for (const scheme of ["light", "dark"] as const) {
           for (const width of [390, 1280]) {
             await page.setViewportSize({ width, height: 844 });
             await page.goto("/shop/blue-mantis");
+            await expect(page.locator("#arrival-search")).toHaveAttribute("data-hydrated", "true");
             const link = page.locator('#needs-you h3 a[href*="/trips/"]').first();
             await expect(link).toBeVisible();
             const box = await link.boundingBox();
@@ -162,6 +163,9 @@ for (const scheme of ["light", "dark"] as const) {
       // that boat's Divers tab at the diver's own row.
       test(`the arrival lookup renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis?q=Priya%20Sharma");
+        await expect(
+          page.getByRole("searchbox", { name: staffCopy("shopHome.arrivals.label") }),
+        ).toBeFocused();
         await page
           .getByRole("link", { name: /check-in for Priya Sharma$/ })
           .first()

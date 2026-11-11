@@ -30,7 +30,6 @@ import { headCountView } from "./_components/head-count-view";
 import { ManifestDeviceSettings } from "./_components/ManifestDeviceSettings";
 import { ManifestMilestones } from "./_components/ManifestMilestones";
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
-import { manifestCanAssist } from "./_components/manifest-assist";
 import { catchUpStripView, offlineManifestManagerCopy } from "./_components/manifest-copy";
 import type { ManifestSearchParams } from "./_components/manifest-search-params";
 import { manifestSpecies } from "./_components/manifest-species";
@@ -142,7 +141,6 @@ export default async function TripManifestPage({
     shopPickedSpecies,
     catalogSpecies,
     speciesBySite,
-    canAssist: await manifestCanAssist(db, shop.id, checkpoint === "departure"),
     sightingsOn: shop.sightingsEnabled,
     t,
   });

@@ -245,7 +245,7 @@ globalThis.Date = new Proxy(__RealDate, {
         privateShop,
       }) => {
         await page.goto(`/shop/${privateShop.slug}/me/security`);
-        await page.getByRole("heading", { level: 1, name: "Account security" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Account settings" }).waitFor();
         await page.getByRole("button", { name: "Start setup" }).waitFor();
         await captureAudit(page, "settings-security", "light");
       });

@@ -103,6 +103,20 @@ test.describe("light mode — Claude's assists, lit", () => {
       // The row opens in place (visual review A15); its first act is the
       // door to the diver's record.
       await row.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
+      await row.getByRole("button", { name: "Draft response", exact: true }).click();
+      const response = row.getByRole("textbox", { name: "Response draft", exact: true });
+      await expect(response).toHaveValue(/Thanks for getting in touch/);
+      const mail = new URL(
+        (await row.getByRole("link", { name: "Reply by email" }).getAttribute("href")) ?? "",
+      );
+      expect(mail.searchParams.get("body")).toContain("> Hola, ¿podemos cambiar");
+      await capture(page, "assist-inbox-response-draft", "light");
+      // The fixed phone navigation must not prevent reaching the draft's manual action.
+      await page.setViewportSize({ width: 390, height: 844 });
+      const copyResponse = row.getByRole("button", { name: "Copy response", exact: true });
+      await copyResponse.scrollIntoViewIfNeeded();
+      await copyResponse.click({ trial: true });
+      await page.setViewportSize({ width: 1280, height: 800 });
       await row.getByRole("link", { name: "Open the record for Diego Alvarez" }).click();
       await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
       const conversation = page.getByRole("region", { name: "Conversation" });
@@ -277,16 +291,27 @@ test.describe("light mode — Claude's assists, lit", () => {
         .evaluate((link: HTMLElement) => link.click());
       await page.waitForURL(/checkpoint=after_dive_1/);
       const seen = page.getByRole("region", { name: "Seen" });
+      await seen.getByRole("combobox").fill("seaho");
+      await expect(seen.getByRole("option").first()).toBeVisible();
+      await capture(page, "sightings-autocomplete", "light");
       // i18n-exempt: what the crew said, typed as they would
-      await seen.getByLabel("Or say what you saw").fill("two stingrays and a big grouper");
-      await seen.getByRole("button", { name: "Match" }).click();
-      const add = seen.getByRole("button", { name: "Add these" });
+      await seen
+        .getByRole("combobox", { name: "Or say what you saw" })
+        .fill("two stingrays and a big grouper");
+      const add = seen.getByRole("button", { name: "Add", exact: true });
       await add.waitFor();
       await add.evaluate((button) => button.scrollIntoView({ block: "center" }));
       await page.mouse.move(0, 0);
       await capture(page, "assist-sightings", "light");
       await add.click();
       await expect(seen.getByRole("listitem").first()).toBeVisible();
+      await capture(page, "sightings-custom-saved", "light");
+
+      // Free-text sightings stay out of AI facts. Give the recap a catalog fact.
+      await seen.getByRole("combobox").fill("seaho");
+      await seen.getByRole("option").first().click();
+      await add.click();
+      await expect(seen.getByRole("listitem")).toHaveCount(2);
 
       await page.goto(`/shop/${privateShop.slug}`);
       const recap = page.locator("details", { hasText: "Recap" }).first();

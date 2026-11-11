@@ -75,8 +75,8 @@ type FocusStop = {
  * A client-side navigation keeps the same `window`, so the previous stop has
  * to be forgotten, or the next `followsPrevious` compares against an element
  * on a page we already left. Focus itself is the page's: on a cold load it is
- * on the body, so the first Tab is the skip link; after a client navigation
- * the staff shell has moved it to the new page's `h1` (`RouteFocus`, #2638),
+ * on the body unless the page owns an initial-focus field; after a client navigation
+ * the staff shell moves it to the new page's `h1` (`RouteFocus`, #2638),
  * so the first Tab is the first control after the heading.
  */
 async function beginWalk(page: Page): Promise<void> {
@@ -97,7 +97,7 @@ async function beginWalk(page: Page): Promise<void> {
 async function tab(page: Page, direction: "forward" | "back" = "forward"): Promise<FocusStop> {
   const key = direction === "forward" ? "Tab" : "Shift+Tab";
   await page.keyboard.press(key);
-  const stop = await snapshotFocus(page);
+  const stop = await snapshotFocus(page, direction);
   if (!stop) {
     const previous = await page.evaluate(() => {
       const prev = (window as Window & { __kbPrev?: HTMLElement | null }).__kbPrev;
@@ -116,8 +116,11 @@ async function tab(page: Page, direction: "forward" | "back" = "forward"): Promi
   return stop;
 }
 
-async function snapshotFocus(page: Page): Promise<FocusStop | null> {
-  return page.evaluate(() => {
+async function snapshotFocus(
+  page: Page,
+  direction: "forward" | "back" = "forward",
+): Promise<FocusStop | null> {
+  return page.evaluate((direction) => {
     const held = window as Window & { __kbPrev?: HTMLElement | null };
     const el = document.activeElement;
     if (!(el instanceof HTMLElement) || el === document.body) return null;
@@ -127,7 +130,12 @@ async function snapshotFocus(page: Page): Promise<FocusStop | null> {
     const followsPrevious =
       prev === null ||
       prev === el ||
-      Boolean(prev.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+      Boolean(
+        prev.compareDocumentPosition(el) &
+          (direction === "forward"
+            ? Node.DOCUMENT_POSITION_FOLLOWING
+            : Node.DOCUMENT_POSITION_PRECEDING),
+      );
     held.__kbPrev = el;
     // `closest`, not a document-wide `querySelector`: the question is whether
     // *this* element sits inside a modal, and the staff chrome can have more
@@ -165,7 +173,7 @@ async function snapshotFocus(page: Page): Promise<FocusStop | null> {
       followsPrevious,
       insideDialog,
     };
-  });
+  }, direction);
 }
 
 /**
@@ -179,11 +187,13 @@ function expectUsableStop(stop: FocusStop, where: string): void {
   );
   expect(stop.keyboardFocused, `${where}: not :focus-visible — ${stop.label}`).toBe(true);
   expect(stop.hasFocusRing, `${where}: no focus ring drawn — ${stop.label}`).toBe(true);
-  expect(stop.followsPrevious, `${where}: tab order jumped backwards to ${stop.label}`).toBe(true);
+  expect(stop.followsPrevious, `${where}: tab order reversed direction at ${stop.label}`).toBe(
+    true,
+  );
 }
 
 /**
- * Tab forward until a stop's label matches, checking every stop on the way.
+ * Tab in the chosen direction until a stop's label matches, checking every stop.
  * Returns the path, so a caller can assert *how far* something was — a control
  * you reach on the 3rd Tab and one you reach on the 60th are not the same
  * design, and only one of them is reachable in practice.
@@ -191,14 +201,18 @@ function expectUsableStop(stop: FocusStop, where: string): void {
 async function tabUntil(
   page: Page,
   match: RegExp,
-  { limit, where }: { limit: number; where: string },
+  {
+    limit,
+    where,
+    direction = "forward",
+  }: { limit: number; where: string; direction?: "forward" | "back" },
 ): Promise<FocusStop[]> {
   const path: FocusStop[] = [];
   const trail = () => path.map((stop, i) => `  ${i + 1}. ${stop.label}`).join("\n");
   for (let i = 0; i < limit; i++) {
     let stop: FocusStop;
     try {
-      stop = await tab(page);
+      stop = await tab(page, direction);
     } catch (error) {
       // Running off the end of the tab order is itself a finding about the
       // page, so the whole path it walked has to survive into the message.
@@ -281,15 +295,17 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   await expect(page.getByRole("button", { name: "Search" })).toBeVisible();
   await beginWalk(page);
 
-  // The very first tab stop is the skip link. This is the single most load-
-  // bearing fact about a staff page's tab order: without it, every one of the
-  // ~15 header stops below stands between a keyboard user and the actual page,
-  // on every navigation.
-  const first = await tab(page);
-  expectUsableStop(first, "shop home");
-  expect(first.label, "the first tab stop should be the skip link").toMatch(
-    /Skip to main content/i,
-  );
+  // Today deliberately opens on its arrival lookup. Walk back to the skip
+  // link using the keyboard, checking each stop, then retain the forward
+  // header/search journey and its original reachability budget.
+  const arrival = page.locator("#arrival-search");
+  await expect(arrival).toHaveAttribute("data-hydrated", "true");
+  await expect(arrival).toBeFocused();
+  await tabUntil(page, /Skip to main content/i, {
+    limit: 20,
+    where: "shop home, back from arrival lookup",
+    direction: "back",
+  });
 
   const toSearch = await tabUntil(page, /"Search"/, { limit: 20, where: "shop home" });
   // Reachable at all is the floor; reachable *early* is the design. Search is

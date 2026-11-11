@@ -31,6 +31,27 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ## Entries
 
+### Device text size — shared root, manifest and public forms
+
+**Slice [19d / #4234](https://github.com/AaronBuxbaum/diveday/issues/4234), 2026-11-10** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md)).
+
+- **One idea:** the same working surface at the device's readable type size, never below its floor.
+- **The arriving question:** names, safety states and form labels remain the answer at larger sizes.
+- **Controls that dissolved:** there is no new text-size setting; the supported device supplies it.
+- **Remove first:** nothing is added to the surface, and unsupported readings change nothing.
+- **Composition:** existing rows and forms wrap; an oversized public header scrolls its excess
+  above the viewport instead of covering the form, while oversized safety counts remain in page
+  flow with full-width names rather than hiding content in nested scrollers; narrow checklist,
+  status and departure tracks stack their marks rather than break ordinary words into columns.
+  No text or target shrinks. Mac WebKit and simulated body readings are the available evidence;
+  an actual iPhone system-setting change remains unmeasured.
+- **Final correction review, 2026-11-11:** missing-name warnings use padded rounded panels,
+  both upcoming and completed departure times keep AM/PM whole, and scaled Settings headers,
+  branding fields, previews and badge choices stack at their actual text measure. Independent
+  review accepted warning panels at390/1280, Settings at1024, departure times at390 and
+  ordinary-size manifest/settings controls. These are simulated readings and selected surfaces,
+  not a claim that every page or physical iPhone setting was tested.
+
 ### The shop home — `/shop/[shopSlug]`
 
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): on a floor with no decoration, no eyebrow, no greeting and one shell, the home is a large title over the day's boats — each a group whose first row is the boat (A), a title with its count at the end over hairline rows (B), or four figures in tiles over A's groups (C). Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
@@ -145,6 +166,8 @@ record?" A record is a quantity with its unit, optional location and collection 
 in-place correction disclosure. The add disclosure owns the section's one primary action;
 correction and deletion stay secondary, with Undo after deletion. No score, badge or inferred
 environmental benefit is needed. The owner's Features switch removes this optional section and its recap facts together.
+
+**Amended 2026-11-11 (#4252):** Details answers “what is this departure, and where can I correct its facts?” with one labeled ledger, including conservation records. Its category column is 11rem at small desktop widths and 13rem at large widths; the same labels stack above their values on a phone. Critical values and Edit/correction controls use the 16px base size; captions and recording timestamps retain their secondary size. The first action row stays inline until its actual contents no longer fit, when More holds those same controls. The footer says Cancellation and weather, or Repeating dates and cancellations, naming the rare actions it contains. After return the plan is read-only; Correct crew record and Correct dive safety record remain separate evidence corrections, and future repeating dates remain manageable. There is no extra conservation heading or second departure-facts card to remove. Filled production captures at 390, 820 and 1280 show the normal ledger, while 390/1280 captures show the opened plan/details editors and the returned conservation record/editor. The pixel probe found no flags across these four capture groups. The conservation add disclosure retains its section's one primary action; edit/delete stay secondary. This is a rendered Details review, not a visual signoff of all routes.
 
 **Amended 2026-10-27 (S7, S3; #3141):** each Details row owns one subject and one explicit save. The plan edits dives and their operational kit/decompression/lunch facts; Where we meet edits the meeting point with optional arrival guidance disclosed; Timing owns dates, times and meeting days; Booking and payment owns seats, price, deposits and cancellation/minimum policy; Departure details owns title, description and trip tag. Boat/mode/self-guided controls stay with Boat & crew behind Edit boat, independently of the existing crew assignment controls. Per-dive site choices stay visible while secondary name, ride and descriptive fields disclose on request. Each save submits its own fields, and omitted facts are preserved from the locked current departure rather than a stale browser snapshot. The roster keeps its neutral Ready group, because boarding and counter check-in are independent; routine Not here confirmation sits inside the person's existing details, while blockers, late arrivals, turned-away facts and released-seat remedies stay in the open. Phone/desktop rendered-state review is required before this amendment is called visually verified.
 
@@ -730,6 +753,20 @@ invalid field, and returns focus to the updated total after success.
   precedent.
 - **Composition:** figures then a ledger — the shape it always had, with the chrome removed.
 
+**Updated 2026-11-11** — Month and Year retain the whole selected calendar, including days
+before the first recorded activity. Empty context does not enter activity-window averages.
+The occupancy legend names its scale explicitly; mobile month chips leave room for keyboard focus.
+
+### Inbox planning — `/shop/[shopSlug]/inbox` and `/requests`
+
+- **One idea:** understand the request, then choose the next human action.
+- A response draft answers the selected message, stays editable and never sends itself. Email
+  replies quote the original message. Booking extraction remains a separate capability.
+- Date groups compare stated party sizes and interests with existing departures, open seats and
+  recorded crew/time-away facts. They do not promise suitability or staffing. Shared guidance is
+  stated once; each departure retains its own warning and the dated crew-schedule door.
+- Date requests and Reviews retain the Messages page width; Discounts retains Money's width.
+
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 
 **Declined 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
@@ -1013,3 +1050,55 @@ class also covers different semantic positions, so its 33/138px starts do not es
 column. A native radio has no separate outline because ChoicePill draws focus around the whole
 rounded label. These four probe clusters are dismissed for those specific structures; they do not
 waive checks on new painted controls or actual shared columns.
+
+### Editorial scenes on the marketing journey, 2026-11-10
+
+- **One idea:** a product demonstration belongs to a human dive day.
+- **Arriving question:** can I picture my guests and crew here? The illustrations add a welcoming
+  dock, a small teaching moment and a rental handover while the existing screens answer what
+  the product does. The rental page uses its own gear-handover scene rather than a reused lesson.
+- **Controls that dissolved:** no new controls. The demo still leads; artwork adds no carousel,
+  modal, playback button, fabricated proof or secondary sales pitch.
+- **Remove first:** captions beyond the short illustration label, then duplicate scenes on one
+  page. The complete image remains visible at every width; no text is embedded or overlaid.
+- **Composition:** considered a full-bleed photo-like hero behind the headline, and supporting
+  editorial scenes beside the existing journey introduction or numbered steps. Chose the latter:
+  it preserves the hero's product proof and first demo door, gives the content breathing room,
+  and makes generated artwork visibly distinct from evidence. On phones, instructions remain
+  before the supporting scene; the steps retain their reading order.
+
+### Switching hub and guides — `/switching`, `/switching/[competitor]`
+
+**Composition, 2026-11-11 (#4276).**
+
+- **One idea:** compare the working dive day before deciding whether to move records.
+- **Arriving question:** “Will this improve my shop, and what do I lose or have to do?” The
+  competitor-specific opening and keep-or-leave comparison answer fit; the Today sample shows
+  the promised workflow before the guide asks for an export.
+- **Controls dissolved:** the repeated four-fact hero grid and duplicate FareHarbor decision
+  section are removed. One primary demo action leads each opening; product references and
+  migration details remain secondary.
+- **Remove first:** export reference detail stays disclosed below the decision. The honest
+  import scope, live-booking work and original signed documents remain explicit because those
+  change the decision, rather than decorate it.
+- **Composition:** reason to compare → sample dive day → incumbent strengths and tradeoffs →
+  personal help and practical preparation. The hub chooses an existing workflow, including Peek;
+  every guide shares the same rhythm while retaining source-specific limits. The sample is
+  labeled, never presented as customer evidence.
+
+## Recording a received purchase
+
+**One idea:** record a fact about money already received, without pretending to collect it.
+The questions are who paid, what was received, by which method, and which included amounts are
+excluded from the DiveDay fee. The Money index opens one receipt panel with received-price lines,
+then included tax/tip and external-reference fields; the total and explicit Record action close it.
+A separate catalog/cart composition was rejected because it implies inventory or payment acceptance.
+Returns belong on the receipt, under an explicit already-returned-money label, with the remaining
+amount, reason and recent staff history beside them; booking marks stay with the booked seat.
+
+The filled receipt, already-returned-money form and partial-return history were inspected at
+390 and 1280 pixels. Original included tax and tips remain beside original receipt lines after a
+return; refunded and still-held totals use a separate current balance and the 16px money ramp.
+Read-only labels no longer say optional, and absent action menus leave no header gap. The final
+18 probes reported no flags; the focused browser regression checks the original tax and remaining
+balance after a partial return, including the balance's computed type size.

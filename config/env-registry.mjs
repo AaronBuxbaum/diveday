@@ -650,6 +650,22 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
+    doc: [
+      'The home hero\'s one line for a diver ("Booked a dive? Find your booking").',
+      "It opens /find-your-booking, which is empty until a shop is listed, so the",
+      "line stays hidden unless this is exactly 1. Set it once a shop is listed.",
+    ],
+    keys: [
+      {
+        key: "HOME_DIVER_DOOR",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "the home hero carries no line for a diver; /find-your-booking keeps its address",
+      },
+    ],
+  },
+  {
     seam: "sns-sms",
     doc: [
       "Courtesy SMS reminders through AWS SNS (ADR 20260802-sns-sms-adapter). A",
@@ -1159,6 +1175,24 @@ export const ENV_GROUPS = [
         from: "manual",
         targets: LOCAL_AND_VERCEL,
         absent: "uses the Admin API version pinned in src/features/integrations/shopify.ts",
+      },
+      {
+        key: "SQUARE_CLIENT_ID",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "Square cannot be connected; no Square API calls are made",
+      },
+      {
+        key: "SQUARE_CLIENT_SECRET",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "as SQUARE_CLIENT_ID",
+      },
+      {
+        key: "SQUARE_ENVIRONMENT",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "Square requires explicit sandbox or production; no default",
       },
       {
         key: "QUICKBOOKS_CLIENT_ID",

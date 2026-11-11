@@ -14,6 +14,7 @@ import {
   type SiteBottomTimes,
 } from "@/lib/diver-planning";
 import { formatTime } from "@/lib/format";
+import { offeredRentableItems } from "@/lib/rentals";
 import { EXPOSURE_SUIT_KEYS } from "./exposure-suit";
 import type { RentalFit, Shop, Trip } from "./types";
 
@@ -234,6 +235,9 @@ export function PackingLists({
     rentalFit ?? null,
     shop.briefingMinutes > 0,
     trip.course?.includedRentalKinds ?? [],
+    offeredRentableItems(shop.rentalItems)
+      .filter((item) => shop.rentalPricing.perItemCents[item.kind] !== 0)
+      .map((item) => item.kind),
   );
   const logbook = packsLogbook({
     shopSuggests: shop.packingLogbook,

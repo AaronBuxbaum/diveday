@@ -627,7 +627,9 @@ for (const scheme of ["light", "dark"] as const) {
       // diff here should be read against.
       test(`the switching hub renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching");
-        await page.getByRole("heading", { name: "Bring your shop with you" }).waitFor();
+        await page
+          .getByRole("heading", { name: diverTranslator("en-US")("switching.hub.title") })
+          .waitFor();
         await capture(page, "switching-hub", scheme);
       });
 
@@ -638,7 +640,11 @@ for (const scheme of ["light", "dark"] as const) {
       // every guide, incumbent or not, renders as a single numbered move rail.
       test(`the EVE switching guide renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching/eve");
-        await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
+        await page
+          .getByRole("heading", {
+            name: diverTranslator("en-US")("marketing.guides.eve.heroTitle"),
+          })
+          .waitFor();
         await capture(page, "switching-eve", scheme);
       });
 
@@ -651,7 +657,9 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/switching/spreadsheet");
-        await page.getByRole("heading", { name: "Bring the spreadsheet with you" }).waitFor();
+        await page
+          .getByRole("heading", { name: diverTranslator("en-US")("switching.spreadsheet.title") })
+          .waitFor();
         await capture(page, "switching-spreadsheet", scheme);
       });
 
@@ -664,7 +672,9 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/switching/fareharbor");
         await page
-          .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat" })
+          .getByRole("heading", {
+            name: diverTranslator("en-US")("marketing.guides.fareharbor.heroTitle"),
+          })
           .waitFor();
         await capture(page, "switching-fareharbor", scheme);
       });
@@ -675,9 +685,48 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the Rezdy switching guide renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching/rezdy");
         await page
-          .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat" })
+          .getByRole("heading", {
+            name: diverTranslator("en-US")("marketing.guides.rezdy.heroTitle"),
+          })
           .waitFor();
         await capture(page, "switching-rezdy", scheme);
+      });
+
+      test(`the Peek switching guide renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/switching/peek");
+        await page
+          .getByRole("heading", {
+            level: 1,
+            name: diverTranslator("en-US")("marketing.guides.peek.heroTitle"),
+          })
+          .waitFor();
+        await capture(page, "switching-peek", scheme);
+      });
+
+      test(`the DiveShop360 switching guide renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/switching/diveshop360");
+        await page
+          .getByRole("heading", {
+            level: 1,
+            name: diverTranslator("en-US")("marketing.guides.diveshop360.heroTitle"),
+          })
+          .waitFor();
+        await capture(page, "switching-diveshop360", scheme);
+      });
+
+      test(`the Smartwaiver switching guide renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/switching/smartwaiver");
+        await page
+          .getByRole("heading", {
+            level: 1,
+            name: diverTranslator("en-US")("marketing.guides.smartwaiver.heroTitle"),
+          })
+          .waitFor();
+        await capture(page, "switching-smartwaiver", scheme);
       });
 
       // The twelve feature pages (`src/lib/feature-pages.ts`, H-20261005-public-pages-sell). One

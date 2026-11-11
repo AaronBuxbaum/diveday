@@ -22,4 +22,5 @@ export {
   getSafetyMonth,
   getSafetyPage,
   getSafetyYear,
+  listStaffCredentials,
 } from "./store";

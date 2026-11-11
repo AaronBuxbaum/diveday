@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CORE_RENTAL_KINDS } from "@/lib/rentals";
 import { fileScopedShopContext } from "../../test/db";
 import { editCourse, getCourseBySlug } from "./store";
 
@@ -8,11 +9,16 @@ const ctx = fileScopedShopContext();
 
 /** **The rental kinds a course fee includes** (fifth-loop ideas, item 16; issue #2796). */
 describe("a course's included rental kinds", () => {
-  it("keeps the kinds the shop ticks, none until it does", async () => {
+  it("keeps the kinds the shop ticks and preserves them across unrelated edits", async () => {
     const { db, shop } = ctx;
     const course = await getCourseBySlug(db, shop.id, "open-water-diver");
     if (!course) throw new Error("seeded course missing");
-    expect(course.includedRentalKinds).toEqual([]);
+    const empty = await editCourse(db, shop.id, course.id, {
+      priceCents: 49500,
+      eLearningPriceCents: null,
+      includedRentalKinds: [],
+    });
+    expect(empty?.includedRentalKinds).toEqual([]);
     const included = await editCourse(db, shop.id, course.id, {
       priceCents: 49500,
       eLearningPriceCents: null,
@@ -46,9 +52,12 @@ describe("a course's included rental kinds", () => {
     expect(included?.includedRentalKinds).toEqual(["bcd"]);
   });
 
-  it("seeds Discover Scuba with the scuba unit, as a shop ticking the box gets it", async () => {
-    const { db, shop } = ctx;
-    const course = await getCourseBySlug(db, shop.id, "discover-scuba-diving");
-    expect(course?.includedRentalKinds).toEqual(["bcd", "regulator", "weights"]);
-  });
+  it.each(["discover-scuba-diving", "open-water-diver", "scuba-refresher"])(
+    "seeds %s with the complete promised rental kit",
+    async (slug) => {
+      const { db, shop } = ctx;
+      const course = await getCourseBySlug(db, shop.id, slug);
+      expect(course?.includedRentalKinds).toEqual(CORE_RENTAL_KINDS);
+    },
+  );
 });

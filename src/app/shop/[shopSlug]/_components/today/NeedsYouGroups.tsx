@@ -11,6 +11,7 @@ import {
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
+import { FormattedWords } from "./FormattedWords";
 import { rankBoatRows } from "./spine-reading";
 
 /**
@@ -56,7 +57,7 @@ export function NeedsYouGroups({
                 href={shopPath(shopSlug, "trips", group.departure.tripId)}
                 className={`${tapTargetLinkClass} hover:underline`}
               >
-                {group.departure.label}
+                <FormattedWords text={group.departure.label} />
               </Link>
             }
           >

@@ -147,6 +147,42 @@ async function paidOrder(
 }
 
 describe("the month's money by line", () => {
+  it("nets inclusive counter receipt tax and tips before reporting retail lines", async () => {
+    const db = context.db;
+    const shop = await freshShop(db);
+    const order = await paidOrder(db, shop, [{ kind: "merchandise", cents: 11000 }], {
+      collection: "cash",
+    });
+    await db
+      .update(orders)
+      .set({
+        taxCents: 700,
+        tipCents: 300,
+        counterReceipt: {
+          taxCents: 700,
+          taxKnown: true,
+          tipCents: 300,
+          passThroughCents: 0,
+          reference: null,
+        },
+      })
+      .where(eq(orders.id, order.id));
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
+    expect(detail.lines).toEqual([{ line: "retail", cents: 10000 }]);
+    await db
+      .update(orders)
+      .set({
+        status: "partly_refunded",
+        amountPaidCents: 5500,
+        refundedCents: 5500,
+        taxCents: 350,
+        tipCents: 150,
+      })
+      .where(eq(orders.id, order.id));
+    const partial = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
+    expect(partial.lines).toEqual([{ line: "retail", cents: 5000 }]);
+  });
+
   it("puts each invoice line on its own line, a refund netted where it was paid", async () => {
     const db = context.db;
     const shop = await freshShop(db);

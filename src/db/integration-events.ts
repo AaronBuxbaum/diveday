@@ -46,7 +46,7 @@ export type OrderIntegrationPayload = {
   source?: "order" | "checkout" | "tip";
   /** The sold thing's id: an order's, a checkout's or a tip's, by `source`. */
   orderId: string;
-  customer: { id: string } | OrderIntegrationCustomer;
+  customer: { id: string } | OrderIntegrationCustomer | null;
   status: string;
   currency: string;
   totalCents: number;
@@ -100,7 +100,7 @@ async function loadOrderIntegrationPayload(
   const [row] = await db
     .select({ order: orders, person: { id: people.id }, isRehearsal: trips.isRehearsal })
     .from(orders)
-    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(people, eq(people.id, orders.personId))
     // An order tied to a seat names that seat's departure; one that is not
     // tied to a seat has no departure to ask about.
     .leftJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
@@ -132,7 +132,7 @@ async function loadOrderIntegrationPayload(
     source: "order",
     orderId: row.order.id,
     // Identity by reference only — see OrderIntegrationCustomer above.
-    customer: { id: row.person.id },
+    customer: row.person ? { id: row.person.id } : null,
     status: overrides.status ?? row.order.status,
     currency: row.order.currency,
     totalCents: row.order.totalCents,
@@ -490,9 +490,8 @@ export async function orderHasIntegrationEvent(
  * delivery after an erasure should carry.
  *
  * A person row that cannot be found at all leaves `customer` as the bare id.
- * That is not an error path worth failing a delivery over: the order's owner is
- * an `innerJoin` at enqueue time and `people` rows are never hard-deleted, so
- * the only way here is a shop purge that is taking the event with it anyway.
+ * Named payers retain their foreign key, and people are not hard-deleted outside
+ * a shop purge. Walk-in events carry explicit null and need no identity lookup.
  */
 export async function hydrateIntegrationEventPayload(
   db: DbExecutor,

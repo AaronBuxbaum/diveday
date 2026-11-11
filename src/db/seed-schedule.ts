@@ -46,6 +46,7 @@ import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSafeCrew } from "./seed-safe-crew";
+import { seedSafetyDrills } from "./seed-safety-drills";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSharedDemoRecapPhoto } from "./seed-shared-demo-recap-photo";
 import { seedSightings } from "./seed-sightings";
@@ -130,8 +131,8 @@ export type SeedContext = {
  * next test's board (`resetDemoSchedule`, ADR 20260815-per-test-private-shops).
  */
 async function seedCrewAway(db: DbExecutor, shopId: string, personId: string): Promise<void> {
-  // Three days out, so it lands inside the week the page opens on: a demo
-  // where the one blackout is always in a week nobody looks at shows nothing.
+  // One non-teaching day inside the week the page opens on. The following
+  // day has Discover Scuba and Refresher sessions that need this instructor.
   const from = shiftCalendarDate(
     calendarDateInTimezone(demoTodayDepartureStart(), DEMO_SHOP_TIMEZONE),
     3,
@@ -140,7 +141,7 @@ async function seedCrewAway(db: DbExecutor, shopId: string, personId: string): P
     shopId,
     personId,
     startsOn: from,
-    endsOn: shiftCalendarDate(from, 1),
+    endsOn: from,
     note: "Family trip",
     createdByPersonId: personId,
   });
@@ -559,6 +560,7 @@ const THE_DAY: readonly SeedStep[] = [
   // head count — so nothing seeded before it moves.
   demo((db, c) => seedSightings(db, c.shopId)),
   demo((db, c) => seedConservation(db, c.shopId, c.staff.instructor.id)),
+  demo((db, c) => seedSafetyDrills(db, c.shopId)),
   // Adds-only and late: a snorkeler and a rider on today's reef boat, into the
   // two places `seed-trips.ts` holds for them (src/db/seed-mixed-boat.ts, ADR
   // 20261007-participant-types).

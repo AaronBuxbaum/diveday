@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { type APIRequestContext, expect, type Locator, type Page } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { E2E_FROZEN_CLOCK, E2E_STRIPE_TEST_WEBHOOK_SECRET } from "./servers";
 
 // Better Auth sign-out revokes a database session. The staff storage-state
@@ -331,13 +332,16 @@ export async function openTripAbout(page: Page): Promise<Locator> {
 }
 
 /**
- * Open the Details tab's "More for this departure" row — where the rare and
+ * Open the Details tab's cancellation or repeating-date row — where the rare and
  * destructive acts live (the weather blow-out, cancelling the departure, the
  * series-wide writes), beside Promote and Activity. Opens the tab first.
  */
 export async function openTripMore(page: Page): Promise<Locator> {
   await openTripAbout(page);
-  const list = page.getByRole("group", { name: "More for this departure" });
+  const t = staffTranslator("en-US");
+  const list = page
+    .getByRole("group", { name: t("trips.about.more"), exact: true })
+    .or(page.getByRole("group", { name: t("trips.about.moreSeries"), exact: true }));
   if ((await list.getAttribute("open")) === null) {
     await list.locator(":scope > summary").click();
   }

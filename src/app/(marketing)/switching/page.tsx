@@ -12,14 +12,12 @@ import {
   DISPLAY_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
-import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import type { PricingPlan } from "@/lib/billing/pricing-plans";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { sharedLinkCard } from "@/lib/marketing";
-import { guideForPlan, MIGRATION_GUIDES } from "@/lib/migration-guides";
+import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { HubGuideRow } from "./_components/HubGuideRow";
 import {
   HUB_CLOSING_ROW_CLASS,
@@ -48,13 +46,13 @@ const metadataCompetitors = cachedListFormat(DEFAULT_DIVER_LOCALE, {
 
 export const metadata: Metadata = {
   title: "Switching guides — DiveDay",
-  description: `On a spreadsheet, or leaving ${metadataCompetitors}? Step-by-step guides to bring your divers, cards, and sizes into DiveDay, with a clear picture of what comes across.`,
+  description: `On a spreadsheet, or leaving ${metadataCompetitors}? Compare the dive-day workflow, what to keep in your current system, and the records you can bring into DiveDay.`,
   alternates: { canonical: "/switching" },
   openGraph: {
     ...sharedLinkCard,
     title: "Switching guides — DiveDay",
     description:
-      "Step-by-step guides to bring your divers, cards, and sizes into DiveDay, with a clear picture of what comes across.",
+      "Compare the dive-day workflow, what to keep in your current system, and the records you can bring into DiveDay.",
     url: "/switching",
   },
   // `summary_large_image`: the shared link card (`sharedLinkCard`, served from
@@ -66,7 +64,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Switching guides — DiveDay",
     description:
-      "Step-by-step guides to bring your divers, cards, and sizes into DiveDay, with a clear picture of what comes across.",
+      "Compare the dive-day workflow, what to keep in your current system, and the records you can bring into DiveDay.",
   },
 };
 
@@ -97,8 +95,8 @@ export default function SwitchHubPage() {
 }
 
 async function LocalizedSwitchHubBody() {
-  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
-  return <SwitchHubBody locale={locale} arm={offer.plan} />;
+  const locale = await requestLocale();
+  return <SwitchHubBody locale={locale} />;
 }
 
 /**
@@ -117,7 +115,7 @@ async function LocalizedSwitchHubBody() {
  * sections instead of five and the escape hatch sits where the search failed
  * rather than two screens below it.
  */
-async function SwitchHubBody({ locale, arm }: { locale: DiverLocale; arm: PricingPlan }) {
+async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
@@ -130,8 +128,7 @@ async function SwitchHubBody({ locale, arm }: { locale: DiverLocale; arm: Pricin
     ...MIGRATION_GUIDES.map((guide) => ({
       href: `/switching/${guide.slug}`,
       title: t("switching.hub.switchingFrom", { competitor: guide.competitor }),
-      // For the configured offer (ADR 20261022-pricing-ab-test).
-      summary: t(guideForPlan(guide, arm).cardSummary),
+      summary: t(guide.cardSummary),
     })),
   ];
   return (

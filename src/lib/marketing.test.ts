@@ -393,31 +393,20 @@ describe("the manifest's offline answer lives on the boat manifest page alone", 
   }
 });
 
-/**
- * The fee anchor is the one place marketing.md lets a rival be named, and it is
- * bounded hard: FareHarbor publishes no rate, so the figure must stay reported
- * and attributed rather than presented as their price. The 2026-08-28 rewrite
- * broke the row's semicolon run into breath units; these pin the two things
- * that rewrite was not allowed to lose. The attribution matches
- * case-insensitively because the row now *opens* its last unit on it — the
- * second "the size of it is unpublished" announcement went, since the row's
- * first four words already say so — and where a clause falls in a sentence is
- * not what this is pinning.
- */
-describe("the fee anchor reports an unpublished rate as unpublished", () => {
+/** Rival fees belong to the operator's actual plan and agreement, not a guessed rate. */
+describe("the fee anchor compares contractual terms without inventing a rival rate", () => {
   for (const locale of DIVER_LOCALES) {
-    it(`says FareHarbor publishes nothing in ${locale}`, () => {
-      const row = marketingMessages(locale)["marketing.pricing.feeAnchor.fareharbor"];
-      expect(row).toMatch(locale === "en-US" ? /publishes no rate at all/ : /no publica ninguna/);
-    });
-
-    it(`attributes the figure to third parties in ${locale}`, () => {
-      const row = marketingMessages(locale)["marketing.pricing.feeAnchor.fareharbor"];
-      expect(row).toMatch(
-        locale === "en-US"
-          ? /third parties report that fee at around 6%/i
-          : /terceros sitúan esa comisión en torno al 6%/i,
+    it(`keeps FareHarbor's agreement and Rezdy's plan in view in ${locale}`, () => {
+      const messages = marketingMessages(locale);
+      expect(messages["marketing.pricing.feeAnchor.fareharbor"]).toMatch(
+        locale === "en-US" ? /provider agreement/ : /contrato con el proveedor/,
       );
+      expect(messages["marketing.pricing.feeAnchor.rezdy"]).toMatch(
+        locale === "en-US" ? /plan, market and booking channel/ : /plan, el mercado y el canal/,
+      );
+      for (const rival of ["fareharbor", "rezdy"] as const) {
+        expect(messages[`marketing.pricing.feeAnchor.${rival}`]).not.toMatch(/\d+%/);
+      }
     });
   }
 });

@@ -43,11 +43,14 @@
     "oneTime": "Salida única",
     "perDiver": "por buceador",
     "cancel": "Cancelar esta salida",
-    "more": "Más para esta salida",
+    "more": "Cancelación y mal tiempo",
     "meetingDaysSummary": "{count, plural, other {# días}} · {first} – {last}",
     "timing": "Horario",
     "bookingAndPayment": "Reserva y pago",
-    "departureDetails": "Detalles de la salida"
+    "departureDetails": "Detalles de la salida",
+    "moreSeries": "Fechas repetidas y cancelaciones",
+    "correctCrewRecord": "Corregir registro de tripulación",
+    "manageFutureDates": "Gestionar fechas futuras"
   },
   "openSeats": {
     "label": "Plazas sin vender",
@@ -246,7 +249,8 @@
     "courseFormDate": "No se registró. La fecha del papel no puede ser posterior a hoy.",
     "courseFormEnded": "Esta sesión ya terminó, así que no se puede registrar un formulario en papel.",
     "paymentCurrency": "Este recibo usa una moneda distinta de la moneda actual del centro. Registra el nuevo pago por separado en Pedidos.",
-    "paymentRefundAmount": "Indica el importe devuelto, mayor que cero y no superior al dinero externo que aún se conserva."
+    "paymentRefundAmount": "Indica el importe devuelto, mayor que cero y no superior al dinero externo que aún se conserva.",
+    "detailsFinished": "El plan de esta salida ahora es de solo lectura."
   },
   "pulse": {
     "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",
@@ -1013,5 +1017,12 @@
     "deleted": "Registro de conservación eliminado.",
     "undoFailed": "No se pudo restaurar este registro. Puede haber cambiado o la opción Deshacer ya no está disponible.",
     "lionfishHint": "Registra los peces león recolectados según las normas locales sobre especies invasoras. Sigue los permisos y las indicaciones de manejo locales."
+  },
+  "safetyRecord": {
+    "heading": "Registro de seguridad del buceo",
+    "correct": "Corregir registro de seguridad",
+    "decompression": "Buceo con descompresión registrado",
+    "noDecompression": "No se registró buceo con descompresión",
+    "stale": "El registro de seguridad cambió. Revisa el valor actual antes de corregirlo."
   }
 }

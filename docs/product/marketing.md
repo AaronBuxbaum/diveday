@@ -19,6 +19,17 @@ has no separate team, tooling, or CMS: copy is code, reviewed like code, tested 
 `schema.ts` is governed by the schema-change skill. A session editing these pages carries both
 jobs — marketer and maintainer — and must leave both the pages and this rulebook consistent.
 
+## Switching review (2026-11-11)
+
+The current switching composition and source review are in
+[switching-review-20261111.md](switching-review-20261111.md). It supersedes older switching
+claims and composition descriptions below: the reason to try DiveDay precedes export work,
+competitor absence claims and fixed migration-time estimates are removed, and Peek Pro joins
+as an explicitly qualified sample-review guide. An unverified export menu is never invented.
+The actual file determines transfer scope. All guides use the same truthful copy across pricing
+offers, with no savings arithmetic or competitor price figures. The unchanged importer reference
+continues to state supported fields, not guaranteed source exports.
+
 ## Configured pricing (2026-11-08)
 
 Every visitor sees the same configured offer. `PRICING_MONTHLY_CENTS` and
@@ -124,7 +135,8 @@ argue from **proof we can demonstrate**, in one sentence:
   a full sample shop minted fresh for each visitor, plus a trial shop of your own that starts clean.
   Demo before trial: it is the lowest-friction proof we own.
 - **Safe to run the boat on** — boat-day depth (roll-call checkpoints, append-only history, the
-  offline manifest) and fail-closed readiness ("no silent passes"). Verified rivals have neither.
+  offline manifest) and readiness that names unresolved requirements. Demonstrate these workflows; do not infer
+  that competitors lack them from silence in their documentation.
 - **Safe to leave** — the full-shop export (one ZIP, documented CSVs, every tier, self-serve) and
   the honesty-table importer. This is the counter to "you're new and unproven" — make it explicit,
   never assume it's implied.
@@ -207,8 +219,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   ([marketing-review-20260827.md](archive/marketing-review-20260827.md)'s third diagnosis, "help arrives
   after the homework"). The reader deciding whether they can face this now meets the alternative in
   the same breath as the work. Compressed at the top, authored once, never re-worded — the same
-  shape `midSeasonCutover` uses for the cutover steps and `GUIDE_FACTS.back` uses for the export
-  claim. A new service claim needs product-owner sign-off the same way the price does. **Website work is a discussion, not an included service promise (Aaron, 2026-11-09).** Invite shops to reach out and discuss what they need. Do not promise a custom-built website, an included or free build, a price, a delivery date or a page count. This replaces the earlier build-on-request wording under H-20260901-canvas-direction-brand/H-20261025-built-order-website-priced. The branded storefront and self-service booking components remain shipped product capabilities: shops can paste the provided components into their own websites. The pricing inclusion list names those capabilities only. The website feature page and FareHarbor guide may invite a separate conversation about website work. FareHarbor's hosted-site price remains attributed to the cited third-party report, never presented as a DiveDay price. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
+  shape `midSeasonCutover` uses for the cutover steps. A new service claim needs product-owner sign-off the same way the price does. **Website work is a discussion, not an included service promise (Aaron, 2026-11-09).** Invite shops to reach out and discuss what they need. Do not promise a custom-built website, an included or free build, a price, a delivery date or a page count. This replaces the earlier build-on-request wording under H-20260901-canvas-direction-brand/H-20261025-built-order-website-priced. The branded storefront and self-service booking components remain shipped product capabilities: shops can paste the provided components into their own websites. The pricing inclusion list names those capabilities only. The website feature page and FareHarbor guide may invite a separate conversation about website work. The FareHarbor guide asks shops to confirm hosting and cancellation terms instead of quoting a third-party price. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
   [human-decisions/](human-decisions/README.md#decision-register), H-20260724-public-founding-shop-price/H-20260802-what-game-is-this).** From 2026-07-27 through
   that date a general founder-direct contact line, routed to `aaron@dive.day`, was authorized here —
   the same promise the "You can reach the founder" section on `/about` made in prose. It is
@@ -236,8 +247,9 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   founder fact from a repo document, a commit, or a plausible-sounding draft. Statements about the
   industry ("shops lose money on X") are claims too — either cite a documented source the way a
   switching guide cites an incumbent, or phrase it as what the founder personally observed, which
-  needs no source but also may not be invented on his behalf. The corporate entity stays off the
-  page entirely until the entity decision closes. **Confirmed by the product owner 2026-07-25** and
+  needs no source but also may not be invented on his behalf. The corporate entity stayed off the
+  pages until 2026-11-11, when Aaron named it for `/terms` and `/privacy` (`src/features/company-identity`;
+  H-20260724-corporate-footing-diveday-operate); `/about` still does not carry it. **Confirmed by the product owner 2026-07-25** and
   published on `/about`: a software engineer who worked on Google Maps, helped build a biotech
   company that went public, and works on self-driving cars; and the origin — a
   conversation with a dive shop owner about what his systems were costing him. Anything beyond that
@@ -278,7 +290,11 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   their careers on software that millions of people rely on, and who dive), speaks in the company's
   plural throughout, including the hero's tie to the product ("That story is why we built
   DiveDay"), and no longer carries the concessions band. The Lonergan section and its limits are
-  unchanged. `src/app/(marketing)/about/copy.test.ts` refuses a named individual, a first-person singular, and
+  unchanged. **Amended 2026-11-11 (Aaron, in the project thread: "You can sign the about page with
+  my name Aaron Buxbaum, Founder, but keep the 'we' terminology").** The "Who we are" band ends
+  with that signature, from `FOUNDER_NAME` in `src/features/company-identity` and `marketing.about.founderRole`.
+  It is the one place a person is named; the prose stays plural and states no CV.
+  `src/app/(marketing)/about/copy.test.ts` refuses a named individual, a first-person singular, and
   the prevention claim in both locales.
 - **Source exports are not importer capabilities (M01/M10, 2026-11-09).** The FareHarbor guide distinguishes the described Contacts and Bookings CSVs from separately supplied certifications, sizes and evidence. Its generic importer reference is a separate disclosure, not a promise about a vendor export. The two operating choices state manual transfer and staff responsibility before the long guide; no live synchronization or replacement distribution network is implied. The import and handover steps keep that scope: staff prepare upcoming departures separately, reconcile booking changes manually, and set timing after a trial rather than promise an afternoon or a ready roster.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
@@ -571,6 +587,14 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   "Booked a dive? Find your booking", a sentence for the diver who followed a shop footer here, not a
   door for the shop deciding. The spec pins it to exactly one link to `/find-your-booking` and counts
   the shop's links without it.
+  **The line waits behind `HOME_DIVER_DOOR` (Aaron, 2026-11-11, #4313).** `/find-your-booking` is
+  empty until a shop is listed, and a shop owner who followed the line read "No shops are listed
+  yet" one click from the headline. The line is hidden unless the variable is exactly `1`
+  (`src/features/home-diver-door`); turn it on once a shop is listed. The page keeps its address.
+  **Under the hero, one band says why the roll call is by name** (Aaron, 2026-11-11): the Lonergan
+  story cut to two sentences, what the roll call does, and a link to `/about`. It keeps every limit
+  the `/about` hero keeps (no operator or skipper named, no sentence saying DiveDay would have
+  prevented it), and `about/copy.test.ts` holds it to them in both languages.
   **The three fields are inside that budget, not beside it** (2026-09-10, ADR
   20260908-one-hand decision 6, possibility Y). The hero now takes a shop's name, one boat and a first
   departure, and redraws itself as that visitor's first day. Three boxes and a "Draw my day" button
@@ -801,6 +825,21 @@ human handoff before they have read the guide.
 
 ## Product visuals
 
+**Editorial scenes (2026-11-10).** The homepage journey introduction and the online booking,
+website, rental gear and courses feature pages include original generated illustrations:
+a welcome at the dock, a conversation in a dive-shop classroom and a rental-gear handover. They supply human atmosphere,
+not customer evidence or depictions of the software. Each is labeled as an illustration, with
+localized alt text. Product mockups remain the functional proof, and the first demo door stays
+before the artwork. About, pricing, the product hub and safety/legal pages are unchanged.
+
+`MarketingIllustration` serves the complete 3:2 scenes from local WebP assets through `next/image`,
+with intrinsic dimensions, responsive sizes and lazy loading. No text is baked into the artwork.
+The approved style, reusable generation brief and acceptance criteria live in
+[marketing art direction](../design/marketing-art.md); the repository carries only compressed
+delivery assets, not generation masters. Keep the illustrations
+separate from claims, real operator evidence and any future customer photographs.
+
+
 The public pages ship deterministic illustrated mockups as the design — not captured screenshots.
 Each visual is a small, hand-built component in `src/components/MarketingScreenFallbacks.tsx`
 rendered through the shared wrappers in `src/components/MarketingSections.tsx`:
@@ -1012,7 +1051,7 @@ Each names one incumbent's own export click-path, renders the import scope table
 is documented fact from [assessments/competitive-strategy.md](archive/assessments/competitive-strategy.md),
 carrying its own `sources` (rendered on the page) and phrased factually, never speculative; the
 safety-adjacent scope copy gets `dive-domain-expert` review like any other. Add a guide by writing
-its `MigrationGuide` entry — only once its export path is verified, since every registered entry is
+its `MigrationGuide` entry — with sourced export instructions or an explicit sample-review path that makes unverified options clear, since every registered entry is
 a published page (there is no draft/planned state). A guide is also **retired** by deleting that
 entry (its bundle keys, hub card, route, and coverage rows go with it) when the incumbent stops
 being worth a page — the DiveAdmin guide shipped 2026-07-23 and was retired 2026-08-05 on market

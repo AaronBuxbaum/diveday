@@ -53,6 +53,31 @@ async function seedWaitlistInterest(
   });
 }
 
+type ExtraTripDef = {
+  title: string;
+  description: string;
+  startsAt: Date;
+  endsAt: Date;
+  capacity: number;
+  plannedDives?: number;
+  siteName?: string;
+  /**
+   * Where the *second* tank goes, when the title names two moorings. Without
+   * it a two-site day would put both dives on the first site and the schedule
+   * card would name one place for a trip whose own title names two.
+   */
+  secondSiteName?: string;
+  courseTitle?: string;
+  isNight?: boolean;
+  isWreck?: boolean;
+  status?: "scheduled" | "cancelled";
+  conditionsHold?: boolean;
+  conditionsSummary?: string;
+  completedDemo?: boolean;
+  roster: number[];
+  priceCents?: number;
+};
+
 /**
  * A fuller month: charters and course sessions beyond the four headline
  * boats seeded above, so the schedule reads like a shop that runs most days
@@ -125,30 +150,6 @@ export async function seedMoreTrips(
   /** The demo shop's ordinary boat fare, for a charter its definition does not price. */
   const DEMO_TWO_TANK_PRICE_CENTS = 9500;
 
-  type ExtraTripDef = {
-    title: string;
-    description: string;
-    startsAt: Date;
-    endsAt: Date;
-    capacity: number;
-    siteName?: string;
-    /**
-     * Where the *second* tank goes, when the title names two moorings. Without
-     * it a two-site day would put both dives on the first site and the schedule
-     * card would name one place for a trip whose own title names two.
-     */
-    secondSiteName?: string;
-    courseTitle?: string;
-    isNight?: boolean;
-    isWreck?: boolean;
-    status?: "scheduled" | "cancelled";
-    conditionsHold?: boolean;
-    conditionsSummary?: string;
-    completedDemo?: boolean;
-    roster: number[];
-    priceCents?: number;
-  };
-
   // Each capacity/booked pair is chosen so its remaining-seat count never
   // reads "3 spots left" (the reef trip's exact, asserted text), "Full" (the
   // wreck charter's alone), or "6 spots left" (reserved for a spec's own
@@ -189,7 +190,7 @@ export async function seedMoreTrips(
       title: "Scuba Refresher — half day",
       description: "A patient skills tune-up before getting back in the water.",
       startsAt: at(4, 9, 0),
-      endsAt: at(4, 12, 0),
+      endsAt: at(4, 13, 0),
       capacity: 4,
       courseTitle: "Scuba Refresher",
       // Both lapsed-card divers from the roster above — exactly who a
@@ -246,6 +247,7 @@ export async function seedMoreTrips(
         "A small, instructor-led first breath underwater. No prior certification required.",
       startsAt: at(12, 13, 0),
       endsAt: at(12, 16, 0),
+      plannedDives: 1,
       capacity: 4,
       courseTitle: "Discover Scuba Diving",
       roster: [27, ...draw(1)],
@@ -496,6 +498,7 @@ export async function seedMoreTrips(
         startsAt: def.startsAt,
         endsAt: def.endsAt,
         capacity: def.capacity,
+        plannedDives: def.plannedDives,
         status: def.status ?? "scheduled",
         conditionsHold: def.conditionsHold ?? false,
         conditionsSummary: def.conditionsSummary,

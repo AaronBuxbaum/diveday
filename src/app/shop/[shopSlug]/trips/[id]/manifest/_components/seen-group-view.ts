@@ -6,7 +6,6 @@ import type { RollCallCheckpoint } from "@/lib/manifests";
 import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
 import { hasSailed } from "@/lib/trips";
 import { deleteSightingAction, type ManifestActionContext, recordSightingAction } from "../actions";
-import { matchSightingsAction } from "../sightings-assist-action";
 import type { ManifestSpecies } from "./manifest-species";
 
 /**
@@ -25,7 +24,6 @@ export function seenGroupView({
   shopPickedSpecies,
   catalogSpecies,
   speciesBySite,
-  canAssist = false,
   sightingsOn = true,
   t,
 }: {
@@ -41,8 +39,6 @@ export function seenGroupView({
   shopPickedSpecies: Awaited<ReturnType<typeof listShopPickedSpecies>>;
   catalogSpecies: readonly ManifestSpecies[];
   speciesBySite: Record<string, readonly ManifestSpecies[]>;
-  /** Claude's "say what you saw" (the `sightings` assist) is available. */
-  canAssist?: boolean;
   /**
    * Whether the shop has sightings on (Features). Off, there is no Seen group;
    * every sighting stays logged.
@@ -81,7 +77,7 @@ export function seenGroupView({
   );
   const seenTallies = seenSite
     ? loggedSightings.flatMap((row) => {
-        const name = speciesName.get(row.speciesSlug);
+        const name = row.customName ?? speciesName.get(row.speciesSlug);
         if (row.diveSiteId !== seenSite.id || !name) return [];
         return [
           {
@@ -136,24 +132,13 @@ export function seenGroupView({
     },
     recordAction: boundRecordSightingAction,
     deleteAction: boundDeleteSightingAction,
-    match:
-      canAssist && sightingContext && seenChips.length > 0
-        ? {
-            action: matchSightingsAction.bind(
-              null,
-              sightingContext,
-              seenChips.map((chip) => chip.slug),
-            ),
-            copy: {
-              label: t("deskAssists.sightings.label"),
-              match: t("deskAssists.sightings.match"),
-              matching: t("deskAssists.sightings.matching"),
-              add: t("deskAssists.sightings.add"),
-              adding: t("words.busy.adding"),
-              none: t("deskAssists.sightings.none"),
-              proposed: t.raw("deskAssists.sightings.proposed"),
-            },
-          }
-        : undefined,
+    autocomplete: {
+      species: catalogSpecies,
+      copy: {
+        label: t("deskAssists.sightings.label"),
+        add: t("deskAssists.sightings.add"),
+        adding: t("words.busy.adding"),
+      },
+    },
   };
 }

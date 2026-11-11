@@ -14,5 +14,6 @@ Part of the **switching-pages** skill ([SKILL.md](SKILL.md)). Read it before the
 | Import scope table (never paraphrase it) | `IMPORT_HONESTY_TABLE` in `src/lib/import.ts` |
 
 A guide is a **live page only** — registering a `MigrationGuide` entry publishes it immediately,
-there is no draft/planned state. Only add one once its incumbent's export path is actually
-verified.
+there is no draft/planned state. Use sourced export instructions. When an owner requests an incumbent whose export path cannot
+be verified, publish an explicitly qualified sample-review plan rather than a guessed menu.
+See [the current review](../../../docs/product/switching-review-20261111.md).

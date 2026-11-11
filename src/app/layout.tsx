@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
+import { deviceTextSizeScript } from "@/features/device-text-size";
 import { boatModeScript } from "@/lib/boat-mode";
 import { THEME_COLORS } from "./_brand/colors";
 import "./globals.css";
@@ -110,6 +111,11 @@ export default function RootLayout({
           suppressHydrationWarning
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static, locally-generated script (no user input) that corrects `lang` before first paint — see lang-script.ts
           dangerouslySetInnerHTML={{ __html: localeCorrectionScript() }}
+        />
+        <script
+          suppressHydrationWarning
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static device-size probe, before first paint (ADR 20260907-in-your-hands, 19d)
+          dangerouslySetInnerHTML={{ __html: deviceTextSizeScript() }}
         />
         <script
           suppressHydrationWarning

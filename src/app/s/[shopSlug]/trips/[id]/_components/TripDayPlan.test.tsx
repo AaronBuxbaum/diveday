@@ -406,6 +406,38 @@ describe("TripDayPlan's profile", () => {
     for (const line of lines()) expect(line).toHaveClass("last:border-b");
   });
 
+  it("renders crew-written custom sightings as text for divers", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        sightings={
+          new Map([
+            [
+              "site-1",
+              {
+                diveSiteId: "site-1",
+                dives: 2,
+                species: [
+                  {
+                    speciesSlug: "custom:abc",
+                    customName: "Seahome <script>",
+                    dives: 1,
+                    total: 1,
+                    lastSeenAt: new Date("2026-07-18T14:00:00Z"),
+                  },
+                ],
+              },
+            ],
+          ])
+        }
+      />,
+    );
+    expect(screen.getByText("Seahome <script> on 1 of 2 logged dives")).toBeInTheDocument();
+    expect(document.querySelector("script")).toBeNull();
+  });
+
   it("lets the months' heading and lines carry themselves, with no disclaimer under the plan", () => {
     // The "what was seen, not what you will see" disclaimer was cut (UX review
     // 2026-10-10, item 22): the heading and lines already carry it.

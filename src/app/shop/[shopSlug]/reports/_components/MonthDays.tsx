@@ -3,6 +3,7 @@ import { getShopYear } from "@/features/reporting";
 import { type ShopYearSummary, summarizeShopYear } from "@/features/shop-year";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { isoDate, type MonthRef } from "@/lib/calendar";
+import { StripLegend } from "./StripLegend";
 import { stripCopy } from "./YearReport";
 import { YearStrip } from "./YearStrip";
 
@@ -31,8 +32,7 @@ export async function readMonthDays(
  * month's window. Only the strip: the figures and the ledger below it keep
  * their own shape (Aaron, 2026-10-17: one visual change, no further folding).
  *
- * Nothing while no boat of the month has sailed, as the year says nothing
- * before its first departure.
+ * Empty months still show their whole calendar; blank context changes no figures.
  */
 export function MonthDays({
   summary,
@@ -46,21 +46,14 @@ export function MonthDays({
   t: StaffTranslator;
 }) {
   const days = new Date(Date.UTC(month.year, month.month, 0)).getUTCDate();
-  if (!summary.hasActivity) return null;
   return (
     <section aria-label={t("reports.monthStripLabel")} className="mb-8">
-      {/* The strip's two ends say what its depths mean (visual review A28);
-          the sentence that explained it under the strip is gone. */}
-      <div className="flex items-center gap-2 text-xs text-muted">
-        <span className="shrink-0">{t("reports.year.stripQuiet")}</span>
-        <YearStrip
-          cells={summary.strip}
-          row={{ days }}
-          copy={stripCopy(t, locale, summary.firstDay)}
-          className="min-w-0 flex-1"
-        />
-        <span className="shrink-0">{t("reports.year.stripFull")}</span>
-      </div>
+      <YearStrip
+        cells={summary.strip}
+        row={{ days }}
+        copy={stripCopy(t, locale, summary.firstDay)}
+      />
+      <StripLegend t={t} />
     </section>
   );
 }

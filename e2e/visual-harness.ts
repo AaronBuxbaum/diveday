@@ -260,6 +260,12 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
  * nothing, which is why `tabletSurfacesAreReal` below refuses it.
  */
 const TABLET_SURFACES: ReadonlySet<string> = new Set([
+  "departure-details-panel",
+  "manifest-device-body-53",
+  "manifest-warnings-device-body-53",
+  "install-entry-device-body-53",
+  "staff-navigation-device-body-53",
+  "settings-editor-device-body-53",
   "today-home-screen-install-safari",
   "today-home-screen-install-native",
   "trip-desk",

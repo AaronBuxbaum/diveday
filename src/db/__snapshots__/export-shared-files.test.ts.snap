@@ -236,6 +236,7 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "room_hotel",
     "currency",
     "total_cents",
+    "tip_cents",
     "amount_paid_cents",
     "refunded_cents",
     "paid_at",

@@ -1,5 +1,4 @@
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "drizzle-orm";
-import { canPersonExportIncidentRecord } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "@/db/manifests";
@@ -767,12 +766,11 @@ export async function getPastDay(
   db: AppDb,
   shop: { id: string; timezone: string },
   date: CalendarDate,
-  personId: string,
   now: Date,
 ) {
   const closeout = await getDayCloseout(db, shop.id, shop.timezone, now, undefined, date);
   const { stations } = assembleEveningClose(closeout.departures, now);
-  const [headCountCloses, canOpenLog, notBack] = await Promise.all([
+  const [headCountCloses, notBack] = await Promise.all([
     listHeadCountCloses(
       db,
       shop.id,
@@ -780,12 +778,11 @@ export async function getPastDay(
         .filter((station) => station.status === "all_home")
         .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
     ),
-    stations.length > 0 && canPersonExportIncidentRecord(db, shop.id, personId),
     listNotBackAfterDive(
       db,
       shop.id,
       stations.map((station) => station.tripId),
     ),
   ]);
-  return { closeout, stations, headCountCloses, canOpenLog, notBack };
+  return { closeout, stations, headCountCloses, notBack };
 }

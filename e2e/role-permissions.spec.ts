@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
 import { openTripAbout, openTripAboutRow, openTripMore } from "./helpers";
 
@@ -41,13 +42,11 @@ async function firstDiverDetailHref(page: Page): Promise<string> {
 }
 
 async function firstTripManageHref(page: Page): Promise<string> {
-  // Signed-in staff see the schedule's rows link straight to trip management.
-  // By the row's door, not the first trip link: a row's flags come before it
-  // and link to the trip's `#details` or `/manifest?checkpoint=…`.
+  // Exercise permissions on the current departure, not an already-returned
+  // row whose planning controls are correctly locked for every role.
   await page.goto(`/shop/${SHOP}/schedule/board`);
   const href = await page
-    .locator("[data-week-board] a[data-departure-door]")
-    .first()
+    .locator(`[data-week-board] a[data-departure-door][href$="/${DEMO_TODAY_TRIP_ID}"]`)
     .getAttribute("href");
   if (!href) throw new Error("no trip management link found");
   return href;

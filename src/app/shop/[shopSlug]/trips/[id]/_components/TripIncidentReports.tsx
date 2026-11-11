@@ -10,6 +10,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import { startIncidentReportAction } from "../incidents/actions";
+import { DepartureLogLink } from "./DepartureLogLink";
 
 /**
  * **A departure's incident reports**, on its Details tab (ADR
@@ -36,52 +37,58 @@ export async function TripIncidentReports({
   const shopSlug = shop.slug;
   const timeZone = shop.timezone;
   const { mayStart, reports } = await listTripIncidentReports(db, shop.id, tripId, personId);
-  if (!mayStart && reports.length === 0) return null;
+  if (!mayStart && reports.length === 0)
+    return <DepartureLogLink shop={shop} personId={personId} tripId={tripId} />;
   return (
-    <SectionCard
-      id="incidents"
-      className="scroll-mt-24"
-      title={t("incidents.trip.title")}
-      description={t("incidents.trip.description")}
-      actions={
-        mayStart ? (
-          <form action={startIncidentReportAction.bind(null, shopSlug, tripId)}>
-            <SubmitButton
-              pendingLabel={t("words.busy.opening")}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("incidents.trip.start")}
-            </SubmitButton>
-          </form>
-        ) : undefined
-      }
-    >
-      {reports.length > 0 ? (
-        <ul className="divide-y divide-border">
-          {reports.map((report) => (
-            <li key={report.id}>
-              <Link
-                href={shopPath(shopSlug, "trips", tripId, "incidents", report.id)}
-                className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 py-2 hover:underline"
+    <>
+      <DepartureLogLink shop={shop} personId={personId} tripId={tripId} />
+      <SectionCard
+        id="incidents"
+        className="scroll-mt-24"
+        title={t("incidents.trip.title")}
+        description={t("incidents.trip.description")}
+        actions={
+          mayStart ? (
+            <form action={startIncidentReportAction.bind(null, shopSlug, tripId)}>
+              <SubmitButton
+                pendingLabel={t("words.busy.opening")}
+                className={buttonClass({ variant: "secondary" })}
               >
-                <Badge size="sm" tone={report.status === "filed" ? "neutral" : "warning"}>
-                  {t(
-                    report.status === "filed" ? "incidents.status.filed" : "incidents.status.draft",
-                  )}
-                </Badge>
-                <span className="font-medium">
-                  {report.occurredAt
-                    ? formatDateTimeTz(report.occurredAt, locale, timeZone)
-                    : t("incidents.trip.notTimed")}
-                </span>
-                <span className="text-sm text-muted">
-                  {t("incidents.trip.writtenBy", { name: report.createdByName })}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </SectionCard>
+                {t("incidents.trip.start")}
+              </SubmitButton>
+            </form>
+          ) : undefined
+        }
+      >
+        {reports.length > 0 ? (
+          <ul className="divide-y divide-border">
+            {reports.map((report) => (
+              <li key={report.id}>
+                <Link
+                  href={shopPath(shopSlug, "trips", tripId, "incidents", report.id)}
+                  className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 py-2 hover:underline"
+                >
+                  <Badge size="sm" tone={report.status === "filed" ? "neutral" : "warning"}>
+                    {t(
+                      report.status === "filed"
+                        ? "incidents.status.filed"
+                        : "incidents.status.draft",
+                    )}
+                  </Badge>
+                  <span className="font-medium">
+                    {report.occurredAt
+                      ? formatDateTimeTz(report.occurredAt, locale, timeZone)
+                      : t("incidents.trip.notTimed")}
+                  </span>
+                  <span className="text-sm text-muted">
+                    {t("incidents.trip.writtenBy", { name: report.createdByName })}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </SectionCard>
+    </>
   );
 }

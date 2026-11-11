@@ -27,7 +27,7 @@ import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
  */
 export default function PromosLoading() {
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <Pending>
         <ShopPageHeader pending eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="money" />

@@ -37,6 +37,7 @@ export function TripMoreActions({
   shopSlug,
   tripId,
   startsAt,
+  mayChangeDeparture = true,
   series,
   crewNames,
   lifecycleStatus,
@@ -49,6 +50,7 @@ export function TripMoreActions({
   shopSlug: string;
   tripId: string;
   startsAt: Date;
+  mayChangeDeparture?: boolean;
   /** The departure's series, to a staffer who may configure it; null otherwise. */
   series: TripOverview["series"] | null;
   /** Who crews this departure, for the series' standing-crew question. */
@@ -59,8 +61,12 @@ export function TripMoreActions({
   locale: string;
   t: StaffTranslator;
 }) {
+  if (!mayChangeDeparture && !series) return null;
   return (
-    <TripMoreDisclosure label={t("trips.about.more")} open={Boolean(lifecycleStatus)}>
+    <TripMoreDisclosure
+      label={t(series ? "trips.about.moreSeries" : "trips.about.more")}
+      open={Boolean(lifecycleStatus)}
+    >
       <FormStatus tone={lifecycleStatus?.tone} className="mb-2">
         {lifecycleStatus?.text}
       </FormStatus>
@@ -75,29 +81,33 @@ export function TripMoreActions({
           locale={locale}
         />
       ) : null}
-      <BlowoutDoors
-        shop={shop}
-        personId={personId}
-        tripId={tripId}
-        startsAt={startsAt}
-        tripLabel={t("trips.detail.weatherBlowout")}
-        dayLabel={t("trips.detail.dayBlowout")}
-      />
-      <form action={cancelTripAction.bind(null, shopSlug, tripId)} className="w-full">
-        <InlineConfirm
-          triggerLabel={t("trips.about.cancel")}
-          message={t("trips.detail.cancelHint")}
-          confirmLabel={t("trips.detail.cancelConfirm")}
-          cancelLabel={t("words.dismiss.neverMind")}
-          pendingLabel={t("words.busy.canceling")}
-          triggerClassName={buttonClass({
-            variant: "danger-ghost",
-            size: "sm",
-            flush: true,
-          })}
-          confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
-        />
-      </form>
+      {mayChangeDeparture ? (
+        <>
+          <BlowoutDoors
+            shop={shop}
+            personId={personId}
+            tripId={tripId}
+            startsAt={startsAt}
+            tripLabel={t("trips.detail.weatherBlowout")}
+            dayLabel={t("trips.detail.dayBlowout")}
+          />
+          <form action={cancelTripAction.bind(null, shopSlug, tripId)} className="w-full">
+            <InlineConfirm
+              triggerLabel={t("trips.about.cancel")}
+              message={t("trips.detail.cancelHint")}
+              confirmLabel={t("trips.detail.cancelConfirm")}
+              cancelLabel={t("words.dismiss.neverMind")}
+              pendingLabel={t("words.busy.canceling")}
+              triggerClassName={buttonClass({
+                variant: "danger-ghost",
+                size: "sm",
+                flush: true,
+              })}
+              confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+            />
+          </form>
+        </>
+      ) : null}
     </TripMoreDisclosure>
   );
 }

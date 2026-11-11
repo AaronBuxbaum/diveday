@@ -7,7 +7,7 @@ import type {
 
 /**
  * **A Connection** is a thing outside the shop that DiveDay talks to on the
- * shop's behalf: Stripe, the shop's WhatsApp number, Shopify, QuickBooks,
+ * shop's behalf: Stripe, the shop's WhatsApp number, Shopify, QuickBooks, Square,
  * Zapier, the backup bucket, and the staff calendar feeds (issue #2741).
  *
  * Each one keeps its own credential table, because each seals a different
@@ -42,6 +42,7 @@ export const CONNECTION_PROVIDERS = [
   "whatsapp",
   "shopify",
   "quickbooks",
+  "square",
   "zapier",
   "backups",
   "calendarFeeds",
@@ -179,6 +180,7 @@ export function connectionState(provider: ConnectionProvider, rows: ConnectionRo
       return whatsappConnection(rows.whatsapp);
     case "shopify":
     case "quickbooks":
+    case "square":
     case "zapier":
       return integrationConnection(provider, rows.integrations);
     case "backups":

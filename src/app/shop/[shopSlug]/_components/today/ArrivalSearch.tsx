@@ -3,6 +3,7 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { SearchField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
+import { SHOP_MAIN_ID } from "../RouteFocus";
 
 /**
  * **Today's arrival lookup**: "which boat is this diver on?", for the staffer
@@ -17,6 +18,7 @@ export function ArrivalSearch({
   query: string;
   copy: { label: string; placeholder: string };
 }) {
+  const searchRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -28,6 +30,19 @@ export function ArrivalSearch({
 
   useEffect(() => {
     setHydrated(true);
+    const active = document.activeElement;
+    const initialFocus =
+      active === document.body ||
+      active === document.getElementById(SHOP_MAIN_ID) ||
+      active === searchRef.current?.closest("main")?.querySelector("h1");
+    const bookingPanelRequested = new URLSearchParams(window.location.search).get("call");
+    if (
+      initialFocus &&
+      !bookingPanelRequested &&
+      !document.querySelector("#call-panel, [data-add-panel-heading], [role=dialog]")
+    ) {
+      searchRef.current?.focus({ preventScroll: true });
+    }
     return () => {
       clearSearchTimer();
     };
@@ -58,6 +73,7 @@ export function ArrivalSearch({
   return (
     <QueryForm ref={formRef} onSubmitCapture={clearSearchTimer}>
       <SearchField
+        ref={searchRef}
         id="arrival-search"
         name="q"
         label={copy.label}

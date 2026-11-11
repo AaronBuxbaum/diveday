@@ -50,10 +50,11 @@ export function SharedDepthAdvisories({
       {sharedAdvisories.map(([text, names]) => (
         <div
           key={text}
+          data-device-text-advisory=""
           className="flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong"
         >
           <StatusMark variant="warning" size="md" />
-          <div>
+          <div className="min-w-0">
             <p>{text}</p>
             <p className="font-semibold">
               {t("manifest.sharedDepthApplies", {

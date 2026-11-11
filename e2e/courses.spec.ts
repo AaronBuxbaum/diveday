@@ -61,7 +61,10 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   // sheet 2026-10-22, item 3): the seed's Discover Scuba includes its gear.
   const coursePlan = page.getByTestId("trip-course-plan");
   await expect(coursePlan.getByText("Your afternoon")).toBeVisible();
-  await expect(coursePlan.getByText("Gear is included.")).toBeVisible();
+  await expect(coursePlan.getByText(/^Included with the course:/)).toContainText(
+    "Mask, Wetsuit, Fins, and Dive computer",
+  );
+  await expect(page.getByText("One dive · site to be confirmed", { exact: true })).toBeVisible();
   // The course session line links out to the course page (a crawlable
   // inbound link for SEO), mirroring the link the schedule list already
   // carries — never just a bare name.
@@ -89,10 +92,14 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
   // The session's own afternoon rides along on her thread (issue #2795).
   await expect(page.getByRole("region", { name: "Your afternoon" })).toBeVisible();
+  await expect(
+    page.getByText("Marcus · Instructor", { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
 
   // Sizes live in the thread's "Gear and sizes" step, and at most one step is
   // open at rest (ADR 20260827-the-divers-thread, decision 3).
   await openThreadStep(page, "gear");
+  await expect(page.getByText(/^Estimated rental:/).filter({ visible: true })).toHaveCount(0);
   await page.getByLabel("BCD size").selectOption("L");
   await page.getByLabel("Wetsuit size").selectOption("XL");
   await page.getByRole("button", { name: "Save rental fit" }).click();
@@ -231,7 +238,7 @@ test.describe("staff", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/courses");
-    await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Certifications" }).waitFor();
 
     // The seed seats this one on the board, so its row carries a date.
     const scheduled = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
@@ -468,6 +475,9 @@ test.describe("staff", () => {
       .filter({ has: page.getByText("Discover Scuba Diving", { exact: true }) });
     await expect(scheduled).toContainText(/Next /);
     await expect(page.getByText("Not scheduled")).toHaveCount(0);
+    await views.getByRole("link", { name: "All", exact: true }).click();
+    await expect(page).not.toHaveURL(/[?&]view=/);
+    await expect(page.getByText("Not scheduled").first()).toBeVisible();
   });
 
   test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({
@@ -1261,7 +1271,9 @@ test.describe("the course editor over a wander through the app", () => {
     };
     const goBySearch = async (name: string) => {
       await page.locator("header").getByRole("button", { name: "Search" }).click();
-      await page.getByRole("combobox").fill(name);
+      await page
+        .getByRole("combobox", { name: "Search divers, trips, and pages", exact: true })
+        .fill(name);
       await page
         .getByRole("option", { name: new RegExp(name) })
         .first()
@@ -1282,7 +1294,9 @@ test.describe("the course editor over a wander through the app", () => {
 
     // Back the way a person would come back: through the search, not history.
     await page.locator("header").getByRole("button", { name: "Search" }).click();
-    await page.getByRole("combobox").fill("Courses");
+    await page
+      .getByRole("combobox", { name: "Search divers, trips, and pages", exact: true })
+      .fill("Courses");
     await page
       .getByRole("option", { name: /Courses/ })
       .first()
@@ -1431,6 +1445,15 @@ test("a course that includes its gear asks the student for sizes, not money", as
   await page.goto(`/shop/${slug}/courses/open-water-diver/edit`);
   await expect(editorHydrated(page)).toBeVisible();
   await page.getByRole("checkbox", { name: "Rental gear is part of the course fee" }).check();
+  // Exercise a deliberately partial kit, independently of the demo full-kit default.
+  const includedKinds = page.getByTestId("course-included-kinds");
+  await expect(includedKinds.getByRole("checkbox")).not.toHaveCount(0);
+  for (const checkbox of await includedKinds.getByRole("checkbox").all()) {
+    await checkbox.uncheck();
+  }
+  for (const kind of ["bcd", "regulator", "weights"]) {
+    await includedKinds.locator(`input[value="${kind}"]`).check();
+  }
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Course page saved");
   await page.reload();

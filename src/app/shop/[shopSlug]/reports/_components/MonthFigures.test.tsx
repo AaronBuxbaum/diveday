@@ -53,7 +53,7 @@ describe("the band's rules", () => {
       expect(cell).toHaveClass("ps-2");
     }
     expect(cells[1]).toHaveClass("sm:ps-6");
-    expect(cells[2]).toHaveClass("lg:ps-6");
+    expect(cells[2]).toHaveClass("xl:ps-6");
   });
 
   it("gives a stacked figure the band's 8px back on the right too, and the 24px gutter only where it has a neighbor", () => {

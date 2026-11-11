@@ -38,8 +38,11 @@ export function orderLedgerRow(
     href: `/shop/${shopSlug}/orders/${row.order.id}`,
     // Include diver and amount, not the date already supplied by the day
     // heading in the accessibility tree and on screen (`OrdersLedger.test.tsx`).
-    linkLabel: t("orders.index.ledger.rowLabel", { name: row.person.fullName, amount }),
-    diver: row.person.fullName,
+    linkLabel: t("orders.index.ledger.rowLabel", {
+      name: row.person?.fullName ?? t("orders.purchase.walkIn"),
+      amount,
+    }),
+    diver: row.person?.fullName ?? t("orders.purchase.walkIn"),
     // The departure or the order's own description.
     detail: (row.trip?.title ?? row.order.description) || null,
     // Paid is routine here, so only exceptional statuses get a badge

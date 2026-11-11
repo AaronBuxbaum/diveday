@@ -19,7 +19,8 @@ import { SETTINGS_GROUPS, settingsRailGatesFor, settingsRailRowsFor } from "./se
  * Settings is a rail and a pane — ADR 20260827-clearwater-surface-language,
  * decision 6. This is the frame that holds the two: the map on the left from
  * `lg` up, the destination on the right, and a compact navigation control
- * on narrower screens.
+ * on narrower screens. Applied device text sizing also uses that compact
+ * reading when the frame is narrow relative to its type (ADR 20260907, 19d).
  *
  * The layout itself awaits nothing above `{children}` — a request-scoped read
  * there would cost every route beneath it its static shell (ADR
@@ -37,11 +38,16 @@ export default function SettingsLayout({
     // The rail is a fixed-width sibling of the pane (a flex row, so the pane
     // takes the rest). Every reader who reaches a settings page may manage the
     // shop: the reader's own account lives under `/me` (issue #2739).
-    <div className="mx-auto w-full max-w-6xl lg:flex lg:gap-8 lg:px-6">
-      <Suspense fallback={<SettingsRailSkeleton />}>
-        <SettingsRailPanel params={params} />
-      </Suspense>
-      <div className="min-w-0 lg:flex-1">{children}</div>
+    <div data-device-text-settings-container="" className="contents">
+      <div
+        data-device-text-settings=""
+        className="mx-auto w-full max-w-6xl lg:flex lg:gap-8 lg:px-6"
+      >
+        <Suspense fallback={<SettingsRailSkeleton />}>
+          <SettingsRailPanel params={params} />
+        </Suspense>
+        <div className="min-w-0 lg:flex-1">{children}</div>
+      </div>
     </div>
   );
 }

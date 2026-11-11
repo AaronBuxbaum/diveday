@@ -382,11 +382,6 @@ export function ShopGroup({
             permission of its own. Settings links to them and holds none. A
             shore-and-pool shop has no hulls to name, so the fleet's door is
             gone rather than empty. */}
-        <SettingsDoorRow
-          href={`/shop/${shopSlug}/dive-sites`}
-          heading={t("settings.main.diveSites.heading")}
-        />
-
         {shop.hasBoatDiving ? (
           <SettingsDoorRow
             href={`/shop/${shopSlug}/boats`}

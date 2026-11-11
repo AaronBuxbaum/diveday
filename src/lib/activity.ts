@@ -390,6 +390,7 @@ type ActivityParamShapes = {
    * customer's name lives on that row, where an erasure scrubs it.
    */
   order_refunded: { actor: string };
+  purchase_recorded: { actor: string };
   /**
    * A staffer recorded an open invoice as paid over the counter, in cash or on
    * the shop's card machine (`recordPaymentOnOpenOrder`), or a bench ticket as
@@ -649,6 +650,7 @@ export const ACTIVITY_CODES = [
   "integration_backfill_sent",
   "running_late_from_message",
   "order_refunded",
+  "purchase_recorded",
   "order_paid_cash",
   "order_paid_card_machine",
   "order_paid_room_charge",

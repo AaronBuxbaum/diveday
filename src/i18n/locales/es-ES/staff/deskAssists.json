@@ -43,11 +43,7 @@
   },
   "sightings": {
     "label": "O di lo que viste",
-    "match": "Buscar",
-    "matching": "Buscando…",
-    "add": "Agregarlos",
-    "none": "Nada de lo que dijiste coincide con las especies de este arrecife.",
-    "proposed": "{name} × {count}"
+    "add": "Agregar"
   },
   "requirement": {
     "nitrox": "Requiere tarjeta de nitrox"

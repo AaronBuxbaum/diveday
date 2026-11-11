@@ -83,9 +83,9 @@ test("the form is collapsed by default and asks for nothing but an email", async
 test("a diver on DiveDay's home page finds their way to a shop's find-my-booking", async ({
   page,
 }) => {
-  await page.goto("/");
-  await page.getByRole("link", { name: "Find your booking" }).click();
-  await page.waitForURL(/\/find-your-booking$/);
+  // The home hero's line to this page waits behind HOME_DIVER_DOOR until a
+  // shop is listed (#4313), so the walk starts at the page's own address.
+  await page.goto("/find-your-booking");
   await expect(page.getByRole("heading", { level: 1, name: "Find your booking" })).toBeVisible();
   const shops = page.getByRole("list", { name: "Shops on DiveDay" });
   // A listed shop only: the demo never appears on a public list.

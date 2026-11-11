@@ -110,6 +110,8 @@ test.describe("course-form disclosure anchors", () => {
     for (let index = 0; index < 2; index++) {
       await parent.locator(":scope > summary").click();
       await expect(parent).not.toHaveAttribute("open", "");
+      await page.getByRole("link", { name: "Certifications", exact: true }).click();
+      await expect(page).toHaveURL("/shop/blue-mantis/certifications");
       await page.getByRole("link", { name: "Courses", exact: true }).click();
       await expect(page).toHaveURL("/shop/blue-mantis/courses");
       await page

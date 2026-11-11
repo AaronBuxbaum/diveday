@@ -197,3 +197,36 @@ test("the one-tap waiver send works from a station row, without leaving the home
   // Still on the home: the sweep never left it.
   await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
 });
+
+test("arrival lookup takes initial focus after client navigation", async ({ page }) => {
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/shop/blue-mantis/divers");
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    await expect(nav).toHaveAttribute("data-hydrated", "true");
+    await nav.getByRole("link", { name: /^Today/ }).click();
+    await expect(page.locator("#arrival-search:visible")).toHaveAttribute("data-hydrated", "true");
+    await expect(page.locator("#arrival-search:visible")).toBeFocused();
+  }
+});
+
+test("the open booking panel keeps focus away from the background arrival lookup", async ({
+  page,
+}, testInfo) => {
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/shop/blue-mantis?call=1");
+    const panel = page.locator("#call-panel");
+    await expect(panel).toBeVisible();
+    const arrival = page.locator("#arrival-search:visible");
+    await expect(arrival).toHaveAttribute("data-hydrated", "true");
+    await expect(arrival).not.toBeFocused();
+    const close = panel.getByRole("link", { name: "Close", exact: true });
+    await close.focus();
+    await expect(close).toBeFocused();
+    await page.screenshot({
+      path: testInfo.outputPath(`booking-panel-${width}.png`),
+      fullPage: true,
+    });
+  }
+});

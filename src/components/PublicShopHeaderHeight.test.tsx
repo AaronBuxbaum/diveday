@@ -55,6 +55,32 @@ describe("the public header's measured inset", () => {
     expect(measured()).toBe("56px");
   });
 
+  it("keeps an enlarged sticky header to half the viewport so a focused form stays readable", () => {
+    vi.stubGlobal("innerHeight", 400);
+    const view = render(header(300));
+    const bar = view.container.querySelector("header");
+    expect(measured()).toBe("200px");
+    expect(bar?.style.top).toBe("-100px");
+    vi.stubGlobal("innerHeight", 300);
+    act(() => window.dispatchEvent(new Event("resize")));
+    expect(measured()).toBe("150px");
+    expect(bar?.style.top).toBe("-150px");
+  });
+
+  it("tracks the available visual viewport and removes its resize listener on cleanup", () => {
+    const viewport = Object.assign(new EventTarget(), { height: 300 });
+    const remove = vi.spyOn(viewport, "removeEventListener");
+    vi.stubGlobal("visualViewport", viewport);
+    const view = render(header(240));
+    expect(measured()).toBe("150px");
+    viewport.height = 200;
+    act(() => viewport.dispatchEvent(new Event("resize")));
+    expect(measured()).toBe("100px");
+    view.unmount();
+    expect(remove).toHaveBeenCalledWith("resize", expect.any(Function));
+    expect(measured()).toBe("");
+  });
+
   it("does not rewrite an unchanged rounded height during observer callbacks", () => {
     const write = vi.spyOn(document.documentElement.style, "setProperty");
     const view = render(header(88.1));

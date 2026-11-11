@@ -13,7 +13,7 @@ test("boarding evidence stays with its heading and every sheet identifies the de
   const { operationalTrust } = privateShop.values as {
     operationalTrust: { tripId: string };
   };
-  await page.goto(`/shop/${privateShop.slug}/trips/${operationalTrust.tripId}/log`);
+  await page.goto(`/shop/${privateShop.slug}/trips/${operationalTrust.tripId}/log/print`);
   await expect(
     page.getByText("Certification evidence read between", { exact: false }).first(),
   ).toBeVisible();

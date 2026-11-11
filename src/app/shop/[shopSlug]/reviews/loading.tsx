@@ -42,7 +42,7 @@ function LedgerRows({ count, quote }: { count: number; quote: "h-6" | "h-5" }) {
 
 export default function ReviewsLoading() {
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <Pending>
         {/* The aggregate line wraps to two lines at 390px, one at 1280; the
             "View public page" door stacks under it on a phone (K-86). */}

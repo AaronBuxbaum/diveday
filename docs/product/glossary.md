@@ -180,7 +180,9 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Payout
 - Pricing configuration
 - Recorded collection
+- Recorded purchase
 - Room charge
+- Square receipt link
 - Stale package invoice
 - Subscription (DiveDay billing)
 

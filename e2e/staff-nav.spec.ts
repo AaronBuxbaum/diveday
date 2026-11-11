@@ -6,7 +6,7 @@ import { mintOnboardFormPath } from "./setup-link";
  * 20261001-logbook, decision 1.
  *
  * A labelled sidebar from `lg` up and a bottom tab bar below it: Today,
- * Schedule, Divers, Inbox, Money, Safety, Courses and Gear when the shop uses them,
+ * Schedule, Divers, Inbox, Money, Safety, Certifications, Dive sites and Gear when the shop uses them,
  * and Settings at the foot. The search is a shortcut to the same places, never
  * the only door, and **a gated section is absent rather than shown and
  * refused** (ADR 20260724-role-gated-surfaces-hide-not-explain).
@@ -139,7 +139,8 @@ test.describe("owner", () => {
       "Inbox",
       "Money",
       "Safety",
-      "Courses",
+      "Certifications",
+      "Dive sites",
       "Gear",
       "Settings",
     ]);
@@ -393,19 +394,19 @@ test.describe("owner", () => {
     expect(await page.evaluate(() => window.scrollY)).toBeLessThanOrEqual(landing.maxTop);
   });
 
-  for (const [suffix, section] of [
-    ["/dive-sites", "Settings"],
-    ["/settings/team", "Settings"],
-    ["/requests", "Inbox"],
-    ["/reviews", "Inbox"],
-    ["/reports", "Money"],
+  for (const [suffix, section, current] of [
+    ["/dive-sites", "Dive sites", "page"],
+    ["/settings/team", "Settings", "true"],
+    ["/requests", "Inbox", "true"],
+    ["/reviews", "Inbox", "true"],
+    ["/reports", "Money", "true"],
   ] as const) {
     test(`${suffix} lights ${section}`, async ({ page }) => {
       const nav = page.getByRole("navigation", { name: "Main", exact: true });
       await page.goto(`/shop/blue-mantis${suffix}`);
       await expect(nav.getByRole("link", { name: section }), suffix).toHaveAttribute(
         "aria-current",
-        "true",
+        current,
       );
       await expect(nav.locator("[aria-current]"), suffix).toHaveCount(1);
     });
@@ -446,9 +447,9 @@ test.describe("owner", () => {
     // mode stays in the menu, where every role reaches it.
     await expect(header.getByRole("button", { name: "Boat mode" })).toBeVisible();
     await header.getByRole("link", { name: "Account settings" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Account security" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Account settings" })).toBeVisible();
     await expect(
-      page.getByRole("navigation", { name: "Account security" }).getByRole("link"),
+      page.getByRole("navigation", { name: "Account settings" }).getByRole("link"),
     ).toHaveText(["Calendar subscription", "Email settings"]);
   });
 
@@ -549,7 +550,8 @@ test.describe("the phone", () => {
       "Inbox",
       "Money",
       "Safety",
-      "Courses",
+      "Certifications",
+      "Dive sites",
       "Gear",
       "Settings",
     ]);

@@ -13,7 +13,7 @@ test.describe("the year on Reports", () => {
     await page.goto("/shop/blue-mantis/reports");
     await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
 
-    await page.getByRole("link", { name: "This year" }).click();
+    await page.getByRole("link", { name: "Year", exact: true }).click();
     // The destination's own render first, then the URL: a client navigation
     // resolves the two in that order, and waiting on the URL alone times out
     // on a loaded box while the page it names is already on its way.
@@ -54,12 +54,23 @@ test.describe("the year on Reports", () => {
   });
 
   test("the month page is one tap back", { tag: READ_ONLY }, async ({ page }) => {
-    await page.goto("/shop/blue-mantis/reports?range=year");
-    await page.getByRole("link", { name: "This month" }).click();
+    await page.goto("/shop/blue-mantis/reports?range=year&year=2025");
+    const months = page.getByRole("navigation", { name: "Choose month" });
+    await expect(months.getByRole("link", { name: "Jan", exact: true })).toBeVisible();
+    await expect(months.getByRole("link", { name: "Dec", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Month", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
     await expect(page.getByRole("region", { name: "This month’s numbers" })).toBeVisible();
     // The month's days as one strip above its figures (issue #2664).
     await expect(page.getByRole("region", { name: "The month’s days" })).toBeVisible();
+  });
+
+  test("an empty early month keeps its full calendar", { tag: READ_ONLY }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/reports?month=2025-01");
+    await expect(page).toHaveURL(/month=2025-01/);
+    const calendar = page.getByRole("region", { name: "The month’s days" });
+    await expect(calendar).toBeVisible();
+    await expect(calendar.locator("span[title]")).toHaveCount(31);
   });
 
   test("the card is an image the year page hands over", { tag: READ_ONLY }, async ({
@@ -74,5 +85,30 @@ test.describe("the year on Reports", () => {
     const response = await request.get(href ?? "");
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toContain("image/png");
+  });
+});
+
+test.describe("phone year controls", () => {
+  signedInAsOwner();
+  test("phone month-chip focus has room inside its scrolling row", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/shop/blue-mantis/reports?range=year&year=2025");
+    const january = page
+      .getByRole("navigation", { name: "Choose month" })
+      .getByRole("link", { name: "Jan", exact: true });
+    await january.focus();
+    const room = await january.evaluate((element) => {
+      const row = element.closest("ul");
+      if (!row) throw new Error("Month chip scrolling row missing");
+      const rect = element.getBoundingClientRect();
+      const bounds = row.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const reach = Number.parseFloat(style.outlineWidth) + Number.parseFloat(style.outlineOffset);
+      return { above: rect.top - bounds.top, below: bounds.bottom - rect.bottom, reach };
+    });
+    expect(room.above).toBeGreaterThanOrEqual(room.reach);
+    expect(room.below).toBeGreaterThanOrEqual(room.reach);
   });
 });

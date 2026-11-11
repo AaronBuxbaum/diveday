@@ -123,6 +123,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   bookkeeper_email_vouched: "records",
   bookkeeper_email_stopped: "records",
   order_refunded: "money",
+  purchase_recorded: "money",
   order_paid_cash: "money",
   order_paid_card_machine: "money",
   order_paid_room_charge: "money",

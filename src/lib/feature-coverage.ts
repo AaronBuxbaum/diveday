@@ -27,8 +27,14 @@ export const STAFF_SHELL_COVERAGE = {
   },
 } satisfies Record<string, FeatureCoverage>;
 
-/** Core options within existing booking flows, rather than separate destinations or subsystems. */
+/** Core options within existing booking/money flows, not separate destinations or subsystems. */
 export const BOOKING_FLOW_COVERAGE = {
+  squareReceiptEvidence: {
+    core: "an evidence attachment in core Orders, offered only after the shop opts in by connecting Square",
+  },
+  recordedPurchases: {
+    core: "recording money already received is part of core Orders and fee correctness, not a POS",
+  },
   groupHolds: {
     core: "a per-seat booking reservation option; its expiry is part of capacity and payment correctness",
   },
@@ -53,6 +59,7 @@ export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCover
   workOrders: "workOrders",
   newWorkOrder: "workOrders",
   rentOut: { core: "gear rental is not switched yet: nitrox lives in the rental items" },
+  certifications: { core: "certification follow-up for courses taught here" },
   courses: { core: "shown by presence: a shop that teaches nothing never sees it" },
   reviews: "reviews",
   requests: "dateRequests",

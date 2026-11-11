@@ -1,6 +1,6 @@
 # integrations
 
-Shop-owned Shopify, QuickBooks Online, and Zapier connections.
+Shop-owned Shopify, QuickBooks Online, Zapier, and read-only Square connections.
 
 The provider register in `registry.ts` is the extension point for future
 integrations. Each provider gets one definition, one credential/API handler,
@@ -30,7 +30,7 @@ Zapier posts selected order events to a Catch Hook URL.
 Calling a provider's API at all is governed by
 `docs/architecture/decisions/20260827-shop-authorized-provider-connectors.md`,
 which supersedes the earlier emit-only rule. Two constraints from it bind every
-adapter here: a connector may push DiveDay's own facts out and read back only
+outbound adapter here: a connector may push DiveDay's own facts out and read back only
 what keeps that push idempotent — never a provider's data as truth — and no app
 registered for these connectors is submitted to a public app directory. A further
 provider is a new ADR, not just a new file. Xero was one and was removed
@@ -39,7 +39,7 @@ before launch; it can return by reverting that commit
 
 ## Deployment configuration
 
-All three providers are optional. The shared `SECRET_ENCRYPTION_KEY` must be a
+All providers are optional. The shared `SECRET_ENCRYPTION_KEY` must be a
 base64-encoded 32-byte key before any credentials can be saved. Configure the
 provider app credentials only for the providers a deployment offers:
 
@@ -56,3 +56,8 @@ The hourly integration dispatcher is scheduled at
 `/api/cron/integrations` and uses the deployment's normal `CRON_SECRET`. A cron pass admits work
 for at most four minutes, with a one-minute ceiling per delivery; writes also dispatch after the
 response with a fifteen-second budget. Timed-out provider work follows the normal retry path.
+
+Square is the explicit read-only receipt-evidence exception, under
+`docs/architecture/decisions/20261111-square-receipt-evidence.md`. It matches an existing
+counter purchase, never imports or takes payment. See
+`docs/engineering/square-receipts-runbook.md` for scopes, setup and operational boundaries.

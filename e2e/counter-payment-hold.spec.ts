@@ -63,6 +63,37 @@ test.describe("the counter payment hold", () => {
     await expect(page.getByRole("button", { name: "Cash", exact: true })).toHaveCount(0);
   });
 
+  test("returning to a page-hidden payment reports the recorded outcome, not a refused Undo", async ({
+    page,
+  }, info) => {
+    await page.clock.install({ time: E2E_FROZEN_CLOCK });
+    await openFirstOpenOrder(page);
+    await page.getByRole("button", { name: "Card machine", exact: true }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: /^Recording \$[\d.,]+ on the card machine/ }),
+    ).toBeVisible();
+    const committed = page.waitForResponse(
+      (response) => response.url().endsWith("/leave") && response.request().method() === "POST",
+    );
+    await page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
+    expect((await committed).status()).toBe(204);
+    await page.clock.runFor(8_500);
+    await expect(
+      page.getByText(staffCopy("orders.detail.notice.paymentRecordedDemo"), { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cash", exact: true })).toHaveCount(0);
+    const shot = info.outputPath("payment-recorded-after-page-return.png");
+    await page.screenshot({ path: shot });
+    await info.attach("payment-recorded-after-page-return", {
+      path: shot,
+      contentType: "image/png",
+    });
+    await page.reload();
+    await expect(
+      page.getByText(staffCopy("orders.detail.status.paid"), { exact: true }).first(),
+    ).toBeVisible();
+  });
+
   test("leaving inside the hold records the payment then, not at the hourly sweep", async ({
     page,
   }) => {

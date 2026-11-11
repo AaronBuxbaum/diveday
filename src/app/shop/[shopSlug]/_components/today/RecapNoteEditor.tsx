@@ -152,7 +152,10 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
           excess is padding (`sm:py-3`), not the room round a centred line:
           until `md` the note may take two lines, and 40px of note centred in
           44 would have hung 10px of text into the card's padding. */}
-      <summary className="flex min-h-11 cursor-pointer list-none flex-wrap content-center items-center gap-x-3 gap-y-0.5 text-sm [&::-webkit-details-marker]:hidden sm:-mb-3 sm:flex-nowrap sm:py-3 sm:group-open/recap:mb-0">
+      <summary
+        data-device-text-row=""
+        className="flex min-h-11 cursor-pointer list-none flex-wrap content-center items-center gap-x-3 gap-y-0.5 text-sm [&::-webkit-details-marker]:hidden sm:-mb-3 sm:flex-nowrap sm:py-3 sm:group-open/recap:mb-0"
+      >
         <span className={`${ledgerKindColumnClass} shrink-0 font-medium`}>
           {t("closeout.recap.summaryHeading")}
         </span>
@@ -169,7 +172,10 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
             already (the paragraph when the recap already went out, "Recap
             sending"'s own line otherwise), and a passing-glance summary has
             nothing left to add beside its own open form. */}
-        <span className="min-w-0 text-muted group-open/recap:hidden max-sm:order-last max-sm:basis-full max-md:line-clamp-2 sm:flex-1 md:truncate">
+        <span
+          data-device-text-sentence=""
+          className="min-w-0 text-muted group-open/recap:hidden max-sm:order-last max-sm:basis-full max-md:line-clamp-2 sm:flex-1 md:truncate"
+        >
           {recapSummary}
         </span>
         <DisclosureCaret className="ms-auto text-muted group-open/recap:rotate-90" />

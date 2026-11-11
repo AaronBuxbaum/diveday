@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { MoreMenu } from "@/components/MoreMenu";
 import { buttonClass } from "@/components/ui/button";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -13,7 +12,7 @@ import { tripPacketPath } from "@/lib/print-sheets";
 import { publicTripPath } from "@/lib/public-routes";
 import { recordTripPrintPdfAction } from "../print-actions";
 import { CopyLinkButton } from "./CopyLinkButton";
-import { DepartureLogLink } from "./DepartureLogLink";
+import { OverflowActions } from "./OverflowActions";
 import { PrintTripBundleButton } from "./PrintTripBundleButton";
 import { PrintWithMedicalAlertsLink } from "./PrintWithMedicalAlertsLink";
 
@@ -37,9 +36,6 @@ export function TripAboutLinks({
   tripId: string;
   t: StaffTranslator;
 }) {
-  // Everything after Copy link: one row from `md`; below it, one "More"
-  // menu, so no door wraps onto a line of its own under the others (visual
-  // review 2026-10-24, A36: "Departure log" sat alone under three).
   const rest = (
     <>
       <Link
@@ -58,26 +54,22 @@ export function TripAboutLinks({
         flush
       />
       <PrintWithMedicalAlertsLink shop={shop} personId={personId} tripId={tripId} />
-      <DepartureLogLink shop={shop} personId={personId} tripId={tripId} />
     </>
   );
   return (
-    <>
-      {/* All flush, so whichever starts a line puts its word on the panel's
-      column; the row's gap hands back what they gave up (TripAboutSection). */}
-      <CopyLinkButton
-        path={publicTripPath(shopSlug, tripId)}
-        label={t("trips.detail.copyBookingLink")}
-        copiedLabel={t("words.did.copied")}
-        failedLabel={t("trips.detail.linkCopyFailed")}
-        flush
-      />
-      <div className="hidden md:contents">{rest}</div>
-      <MoreMenu label={t("trips.about.moreDoors")} size="sm" className="md:hidden">
-        <div className="flex flex-col px-2 [&_a]:w-full [&_a]:justify-start [&_button]:w-full [&_button]:justify-start">
-          {rest}
-        </div>
-      </MoreMenu>
-    </>
+    <OverflowActions
+      label={t("trips.about.moreDoors")}
+      primary={
+        <CopyLinkButton
+          path={publicTripPath(shopSlug, tripId)}
+          label={t("trips.detail.copyBookingLink")}
+          copiedLabel={t("words.did.copied")}
+          failedLabel={t("trips.detail.linkCopyFailed")}
+          flush
+        />
+      }
+    >
+      {rest}
+    </OverflowActions>
   );
 }

@@ -7,11 +7,11 @@ import { MY_ACCOUNT_DESTINATION_IDS, STAFF_DESTINATIONS } from "@/lib/staff-dest
  * **Settings is the door to everything in its nav section.**
  *
  * The sidebar has one row for Settings (ADR 20261001-logbook), so a
- * destination filed under the `settings` section — the site library, the
- * waiver template, the team — is reached through a row on this page or not at
+ * destination filed under the `settings` section — the
+ * waiver template and the team — is reached through a row on this page or not at
  * all, other than the search. The exception is **My account** (sign-in
  * security, calendar feed, email): about the reader rather than the shop, so
- * its door is the identity menu and this page has none (issue #2813). The gear register
+ * its main door is the identity menu. The Account settings entry is also reachable here; its calendar and email subpages are not. The gear register
  * once had no door anywhere a staffer looked (#1937); this test is why that
  * cannot happen to a settings destination.
  *
@@ -50,7 +50,8 @@ describe("Settings is the door to everything in its section", () => {
       if (destination.id === "settings") continue;
       expect(doors.has(destination.suffix), `${destination.id} (${destination.suffix})`).toBe(
         destination.section === "settings" &&
-          !(MY_ACCOUNT_DESTINATION_IDS as readonly string[]).includes(destination.id),
+          (destination.id === "security" ||
+            !(MY_ACCOUNT_DESTINATION_IDS as readonly string[]).includes(destination.id)),
       );
     }
 
@@ -84,7 +85,8 @@ describe("Settings is the door to everything in its section", () => {
     // written for.
     const source = await hubSource();
     const doors = Array.from(source.matchAll(DOOR_HREF), (match) => match[1]);
-    expect(doors).toContain("/dive-sites");
+    expect(doors).toContain("/settings/team");
+    expect(doors).not.toContain("/dive-sites");
     expect(doors.length).toBeGreaterThan(5);
   });
 });

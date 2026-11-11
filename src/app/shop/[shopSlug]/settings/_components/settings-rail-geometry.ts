@@ -17,7 +17,8 @@
  */
 
 /** The rail is compact on narrow screens and a fixed-width sibling from `lg`. */
-export const SETTINGS_RAIL_COLUMN_CLASS = "w-full lg:block lg:w-[264px] lg:shrink-0";
+export const SETTINGS_RAIL_COLUMN_CLASS =
+  "device-text-settings-column w-full lg:block lg:w-[264px] lg:shrink-0";
 
 /**
  * The column's sticky box: pinned under the bar at the bar's own height
@@ -25,7 +26,7 @@ export const SETTINGS_RAIL_COLUMN_CLASS = "w-full lg:block lg:w-[264px] lg:shrin
  * horizontal bar; at desktop width it scrolls vertically. The skeleton clips.
  */
 export const SETTINGS_RAIL_FRAME_CLASS =
-  "max-h-[60svh] overflow-x-auto overscroll-x-contain border-b border-border bg-background px-4 lg:sticky lg:top-(--chrome-h) lg:max-h-[calc(100svh-var(--chrome-h))] lg:overflow-x-hidden lg:rounded-none lg:border-b-0 lg:px-0 lg:pe-2";
+  "device-text-settings-frame max-h-[60svh] overflow-x-auto overscroll-x-contain border-b border-border bg-background px-4 lg:sticky lg:top-(--chrome-h) lg:max-h-[calc(100svh-var(--chrome-h))] lg:overflow-x-hidden lg:rounded-none lg:border-b-0 lg:px-0 lg:pe-2";
 
 /**
  * What the box holds: a one-line horizontal list on phones, and the groups
@@ -35,7 +36,7 @@ export const SETTINGS_RAIL_FRAME_CLASS =
  * scrolled past it showed through that strip (K-221).
  */
 export const SETTINGS_RAIL_CONTENT_CLASS =
-  "flex w-max items-center gap-1 py-2 lg:block lg:w-auto lg:space-y-5 lg:py-6 lg:pb-28";
+  "device-text-settings-content flex w-max items-center gap-1 py-2 lg:block lg:w-auto lg:space-y-5 lg:py-6 lg:pb-28";
 
 /** A group label's gap to its first row. */
 export const SETTINGS_RAIL_LABEL_CLASS = "mb-2";

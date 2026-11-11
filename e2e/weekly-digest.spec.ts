@@ -44,9 +44,9 @@ test.describe("the Monday email preview", () => {
   test("Account settings opens Email settings", async ({ page }) => {
     await page.goto("/shop/blue-mantis/settings");
     await page.locator("header [data-identity-menu]").click();
-    await page.locator("header").getByRole("link", { name: "Account settings" }).click();
+    await page.getByRole("banner").getByRole("link", { name: "Account settings" }).click();
     await page
-      .getByRole("navigation", { name: "Account security" })
+      .getByRole("navigation", { name: "Account settings" })
       .getByRole("link", { name: "Email settings" })
       .click();
     await expect(page.getByRole("heading", { level: 1, name: "Email" })).toBeVisible();

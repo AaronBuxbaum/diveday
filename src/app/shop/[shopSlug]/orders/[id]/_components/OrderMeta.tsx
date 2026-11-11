@@ -35,7 +35,7 @@ export function OrderMeta({
   t,
 }: {
   order: { createdAt: Date };
-  personId: string;
+  personId: string | null;
   /**
    * Who raised it, or `online` when the diver bought it on the shop's public
    * pages and nobody on the staff did.
@@ -57,10 +57,14 @@ export function OrderMeta({
         : createdBy.name
           ? ` · ${t("orders.detail.createdBy", { name: createdBy.name })}`
           : ""}
-      {" · "}
-      <Link href={shopPath(shopSlug, "divers", personId)} className={linkClass}>
-        {t("orders.detail.diverRecord")}
-      </Link>
+      {personId ? (
+        <>
+          {" · "}
+          <Link href={shopPath(shopSlug, "divers", personId)} className={linkClass}>
+            {t("orders.detail.diverRecord")}
+          </Link>
+        </>
+      ) : null}
       {rentalTicketId ? (
         <>
           {" · "}

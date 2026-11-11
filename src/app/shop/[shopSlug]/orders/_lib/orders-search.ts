@@ -2,6 +2,7 @@ import type { NewOrderSearch } from "../_components/NewOrderPanel";
 
 /** The orders index URL: its ledger filters plus the add panel (`?add=1`). */
 export type OrdersSearch = NewOrderSearch & {
+  purchase?: string;
   status?: string;
   /** The toolbar's one search box — diver name, departure title, order note. */
   q?: string;

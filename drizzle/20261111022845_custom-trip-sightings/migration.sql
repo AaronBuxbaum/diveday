@@ -1,0 +1,1 @@
+ALTER TABLE "trip_sightings" ADD COLUMN "custom_name" text;

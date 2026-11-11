@@ -38,7 +38,8 @@
       "nitrox": "Nitrox (por inmersión)",
       "deposit": "Depósito",
       "merchandise": "Merchandising",
-      "other": "Otro"
+      "other": "Otro",
+      "pass_through_fee": "Tasa de terceros"
     },
     "lineItemGroup": "Artículo {number}",
     "lineItemKindLabel": "Tipo",
@@ -51,7 +52,9 @@
   "collection": {
     "cash": "Efectivo",
     "card_machine": "Terminal de pago",
-    "room_charge": "Cargo a la habitación"
+    "room_charge": "Cargo a la habitación",
+    "bank_transfer": "Transferencia bancaria",
+    "other": "Otro pago externo"
   },
   "detail": {
     "fallbackDescription": "Pedido",
@@ -104,7 +107,9 @@
       "cash": "Pagado en efectivo el {date}",
       "card_machine": "Pagado con terminal de pago el {date}",
       "room_charge": "Cargado a la habitación {room} el {date}",
-      "room_charge_hotel": "Cargado a la habitación {room} · {hotel} el {date}"
+      "room_charge_hotel": "Cargado a la habitación {room} · {hotel} el {date}",
+      "bank_transfer": "Pagado por transferencia bancaria el {date}",
+      "other": "Pago externo registrado el {date}"
     },
     "notice": {
       "refreshed": "Estado actualizado desde Stripe",
@@ -271,5 +276,31 @@
       "matching": "Asignando…",
       "openTrip": "Abrir salida"
     }
+  },
+  "purchase": {
+    "title": "Registrar compra",
+    "explanation": "Registra dinero ya recibido. DiveDay no cobra una tarjeta ni envía una factura.",
+    "method": "Pagado con",
+    "reference": "Recibo externo o referencia (opcional)",
+    "item": "Artículo",
+    "tax": "Impuesto incluido (opcional)",
+    "taxHint": "Déjalo en blanco si no lo sabes. Escribe 0 si no se cobró impuesto.",
+    "tip": "Propina incluida (opcional)",
+    "gross": "Total recibido",
+    "submit": "Registrar pago recibido",
+    "invalid": "Revisa el cliente, los artículos y los importes. El impuesto, las propinas y las tasas incluidos no pueden superar el total. Actualiza si cambió la moneda del centro.",
+    "included": "Introduce los precios recibidos, con impuestos y propinas incluidos. Los impuestos, las propinas y las tasas de terceros registrados por separado quedan fuera de la comisión de DiveDay. Registra el pago de una reserva en su salida, no como otra compra.",
+    "refundTitle": "Registrar dinero ya devuelto",
+    "refundExplanation": "Devuelve primero el dinero fuera de DiveDay. Esto registra la devolución y ajusta la comisión de DiveDay; no envía dinero.",
+    "refundAmount": "Importe devuelto ({currency})",
+    "refundReason": "Motivo",
+    "refundSubmit": "Registrar dinero devuelto",
+    "refundHistory": "Devoluciones registradas",
+    "refundRecorded": "Dinero devuelto registrado. DiveDay no envió dinero.",
+    "refundInvalid": "No se registró la devolución. Revisa el importe restante y actualiza antes de volver a intentarlo.",
+    "includedTax": "Impuesto incluido",
+    "includedTip": "Propina incluida",
+    "receiptReference": "Recibo externo o referencia",
+    "walkIn": "Cliente sin registrar"
   }
 }

@@ -174,6 +174,10 @@ describe("which booking system or shop software", () => {
   });
 
   it("preselects the system a reader came from on any guide's door", () => {
+    expect(setupPreselection(guideSource("peek", "concierge"))).toEqual({
+      currentSystem: "booking_system",
+      currentSystemGuide: "peek",
+    });
     expect(setupPreselection(guideSource("fareharbor", "close"))).toEqual({
       currentSystem: "booking_system",
       currentSystemGuide: "fareharbor",

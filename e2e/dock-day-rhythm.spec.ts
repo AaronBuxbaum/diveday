@@ -95,7 +95,11 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
 
   // The packing list stops promising a briefing the shop just said it does
   // not run — the two used to sit three inches apart and disagree.
-  const provided = page.getByRole("list").filter({ hasText: "Tanks and weights" }).last();
+  const provided = page
+    .getByRole("list")
+    .filter({ has: page.getByText("Tanks", { exact: true }) })
+    .last();
+  await expect(provided).toBeVisible();
   await expect(provided).not.toContainText("Crew briefing");
 
   // **Hotel pickups are a Features switch** (fourth UX review, item 8; every

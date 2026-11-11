@@ -28,16 +28,44 @@ function year(input: Partial<ShopYearInput>) {
 }
 
 describe("summarizeShopYear", () => {
-  it("draws one square per day and stops at today", () => {
+  it("draws the whole selected year while keeping today marked", () => {
     const summary = year({});
     // 2026-01-01 is a Thursday, so the year opens with four padding squares.
     expect(summary.strip.slice(0, 4).map((cell) => cell.day)).toEqual([null, null, null, null]);
     expect(summary.strip[4]?.day).toBe("2026-01-01");
-    expect(summary.strip.at(-1)?.day).toBe("2026-08-27");
-    expect(summary.strip.at(-1)?.isToday).toBe(true);
-    // Every square before today's is a real day, and the grid is whole weeks
-    // plus however much of this one has happened.
-    expect(summary.strip).toHaveLength(4 + 239);
+    expect(summary.strip.at(-1)?.day).toBe("2026-12-31");
+    expect(summary.strip.find((cell) => cell.day === "2026-08-27")?.isToday).toBe(true);
+    // Calendar context extends through December, including future days.
+    expect(summary.strip).toHaveLength(4 + 365);
+  });
+
+  it("keeps January through December when the first data arrives in August", () => {
+    const summary = year({ firstDay: "2026-08-01", openedThisYear: true });
+    expect(summary.strip.find((cell) => cell.day)?.day).toBe("2026-01-01");
+    expect(summary.strip.at(-1)?.day).toBe("2026-12-31");
+    expect(summary.firstDay).toBe("2026-08-01");
+    expect(summary.strip.find((cell) => cell.day === "2026-08-28")?.isFuture).toBe(true);
+    expect(summary.quietestMonth).toBeNull();
+  });
+
+  it("keeps every leap-February day without treating future context as activity", () => {
+    const summary = year({
+      year: 2028,
+      startsOn: "2028-02-01",
+      endsOn: "2028-02-29",
+      firstDay: "2028-02-10",
+      lastDay: "2028-02-12",
+      today: "2028-02-12",
+      openedThisYear: true,
+      days: [{ day: "2028-02-10", boats: 1, divers: 2, aboard: 2, seats: 10 }],
+    });
+    const days = summary.strip.filter((cell) => cell.day !== null);
+    expect(days).toHaveLength(29);
+    expect(days.at(-1)).toMatchObject({ day: "2028-02-29", isFuture: true, boats: 0 });
+    expect(summary.firstDay).toBe("2028-02-10");
+    expect(summary.lastDay).toBe("2028-02-12");
+    expect(summary.daysAtSea).toBe(1);
+    expect(summary.quietestMonth).toBeNull();
   });
 
   it("deepens the water with how full the boats were", () => {

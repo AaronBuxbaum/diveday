@@ -24,6 +24,7 @@ import {
   tripScheduleDays,
   trips,
 } from "../../db/schema/index";
+import { tripHasFinalHome } from "../../db/trip-editability";
 
 import {
   composeMovePreflight,
@@ -99,6 +100,7 @@ export async function getMovePreflight(
     paidOrders,
     cancellationWindowHours: trip.cancellationWindowHours,
     rollCallEvidence,
+    finished: await tripHasFinalHome(db, shopId, tripId),
     scheduled: trip.status === "scheduled",
     boatClashes: boat.map((row) => ({ boat: row.boatName, departure: row.otherTitle })),
     crewClashes: crew.clashes.map((row) => ({

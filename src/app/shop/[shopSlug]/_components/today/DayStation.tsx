@@ -15,6 +15,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { formatMoneyScanned, formatTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
+import { FormattedWords } from "./FormattedWords";
 
 /**
  * One departure on Today — ADR 20261001-logbook, decision 4, which supersedes
@@ -112,11 +113,11 @@ export function DayStation({
     station.crewReason !== "crew_none_assigned";
 
   return (
-    <SectionCard as="li" padding="lg">
+    <SectionCard as="li" padding="lg" className="device-text-station">
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {/* A real `<time>`: the list's claim is that these read in clock order. */}
         <time dateTime={station.startsAt.toISOString()} className={FIGURE_INLINE_CLASS}>
-          {formatTime(station.startsAt, locale, timeZone)}
+          <FormattedWords text={formatTime(station.startsAt, locale, timeZone)} />
         </time>
         <span className="text-sm text-muted tabular-nums">
           {/* One range form across the app, the en-dash one the trip header

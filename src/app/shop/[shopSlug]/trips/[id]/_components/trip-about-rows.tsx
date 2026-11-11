@@ -69,6 +69,7 @@ export type TripAboutRowsContext = {
   held?: { id: string; section: string | undefined };
   tell?: string;
   refundsHeld?: boolean;
+  detailsEditable?: boolean;
 };
 
 /** The names of the staff assigned to this departure, in the shop's staff order. */
@@ -138,7 +139,7 @@ function departureEditor(context: TripAboutRowsContext, section: DepartureDetail
   } = context;
   const { trip, diveSiteList, tripDiveList, startWall, endWall, scheduleDays, canConfigure } =
     overview;
-  return canConfigure ? (
+  return canConfigure && context.detailsEditable !== false ? (
     <DetailsEditor
       shop={shop}
       section={section}
@@ -177,7 +178,7 @@ function departureEditor(context: TripAboutRowsContext, section: DepartureDetail
   ) : undefined;
 }
 
-export function tripAboutRows(context: TripAboutRowsContext) {
+function departureDefinitionRows(context: TripAboutRowsContext) {
   const {
     overview,
     liveBoatClashes,
@@ -432,7 +433,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
    other (Lens 17 task 139). */
       editor: (
         <>
-          {canConfigure ? (
+          {canConfigure && context.detailsEditable !== false ? (
             <details
               className="group/boat-edit mb-6"
               open={Boolean(noticeForForm(tripNotice, "boat")) || undefined}
@@ -552,4 +553,21 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         ) : undefined,
     },
   ];
+}
+
+/** A completed departure keeps all facts but none of its definition editors. */
+export function tripAboutRows(context: TripAboutRowsContext) {
+  const rows = departureDefinitionRows(context);
+  if (context.detailsEditable !== false) return rows;
+  return rows.map((row) => {
+    if (row.id === "about-crew")
+      return {
+        ...row,
+        editLabel: context.t("trips.about.correctCrewRecord"),
+        editorOpen: Boolean(noticeForForm(context.tripNotice, "crew")),
+      };
+    if (row.id === "series")
+      return { ...row, editLabel: context.t("trips.about.manageFutureDates") };
+    return { ...row, editor: undefined, editorOpen: false };
+  });
 }

@@ -26,6 +26,8 @@ const {
 
 afterEach(cleanup);
 
+const offer = { plan: "flat_monthly", monthlyCents: 9_900, basisPoints: 0 } as const;
+
 const TAP_TARGET = tapTargetLinkClass.split(" ");
 
 /**
@@ -78,7 +80,16 @@ describe("the sources footnote", () => {
  */
 describe("the guide's back links", () => {
   it("gives the hero's back link a 44px target on a line its text's height", () => {
-    render(<GuideHero locale="en-US" source="switching-eve" eyebrow="E" title="T" lede="L" />);
+    render(
+      <GuideHero
+        offer={offer}
+        locale="en-US"
+        source="switching-eve"
+        eyebrow="E"
+        title="T"
+        lede="L"
+      />,
+    );
     const link = screen.getByRole("link", { name: "← All switching guides" });
     expect(link).toHaveClass(...TAP_TARGET);
     // The line keeps the 14px text's own 20px, so the eyebrow below does not
@@ -246,7 +257,14 @@ describe("the guide body's skeleton", () => {
   function renderPair() {
     const skeleton = render(<GuideBodySkeleton lines={SPREADSHEET_LIKE} />).container;
     const hero = render(
-      <GuideHero locale="en-US" source="switching-spreadsheet" eyebrow="E" title="T" lede="L" />,
+      <GuideHero
+        offer={offer}
+        locale="en-US"
+        source="switching-spreadsheet"
+        eyebrow="E"
+        title="T"
+        lede="L"
+      />,
     ).container;
     const context = render(
       <GuideContext locale="en-US" paragraphs={["One.", "Two."]}>
@@ -258,7 +276,9 @@ describe("the guide body's skeleton", () => {
         />
       </GuideContext>,
     ).container;
-    const [skeletonHero, skeletonContext] = Array.from(skeleton.querySelectorAll("main > section"));
+    const [skeletonHero, , skeletonContext] = Array.from(
+      skeleton.querySelectorAll("main > section"),
+    );
     return { skeleton, skeletonHero, skeletonContext, hero, context };
   }
 
@@ -271,19 +291,16 @@ describe("the guide body's skeleton", () => {
     expect(skeleton.querySelector("main")).toHaveClass("flex-1", "animate-pulse");
   });
 
-  it("draws the hero in GuideHero's own section, box and facts grid", () => {
+  it("draws the hero in GuideHero's own section and box", () => {
     const { skeletonHero, hero } = renderPair();
     const realHero = hero.querySelector("section");
     expect(skeletonHero?.className).toBe(realHero?.className);
     expect(skeletonHero?.firstElementChild?.className).toBe(realHero?.firstElementChild?.className);
-    expect(skeletonHero?.querySelector("dl, .lg\\:grid-cols-4")?.className).toBe(
-      realHero?.querySelector("dl")?.className,
-    );
   });
 
   it("stands a bar the height of each hero line: 20px back link and eyebrow, 40px title lines (48 from sm), 32px lede lines", () => {
     const { skeletonHero } = renderPair();
-    const [back, eyebrow, title, lede, doors, note] = Array.from(
+    const [back, eyebrow, title, lede, doors, demoNote, priceNote, note] = Array.from(
       skeletonHero?.firstElementChild?.children ?? [],
     );
     expect(back).toHaveClass("h-5");
@@ -304,6 +321,8 @@ describe("the guide body's skeleton", () => {
     const doorBars = Array.from(doors.children);
     expect(doorBars).toHaveLength(2);
     for (const bar of doorBars) expect(bar).toHaveClass("h-12");
+    expect(demoNote).toHaveClass("mt-3");
+    expect(priceNote).toHaveClass("mt-2");
     // The note under the doors is two 20px lines on a phone, one from sm.
     expect(note).toHaveClass("mt-3");
     const noteLines = linesIn(note);
@@ -312,18 +331,11 @@ describe("the guide body's skeleton", () => {
     expect(noteLines[1]).toHaveClass("sm:hidden");
   });
 
-  it("draws each fact as its 16px label and a 24px line per line its words wrap to", () => {
-    const { skeletonHero } = renderPair();
-    const facts = Array.from(skeletonHero?.querySelector(".lg\\:grid-cols-4")?.children ?? []);
-    expect(facts).toHaveLength(4);
-    for (const fact of facts) {
-      const [label, value] = Array.from(fact.children);
-      expect(label).toHaveClass("h-4");
-      expect(value).toHaveClass("mt-1");
-      for (const line of linesIn(value)) expect(line).toHaveClass("h-6");
-    }
-    // "What moves" is the tallest: five lines in a phone's half column.
-    expect(linesIn(facts[0].children[1])).toHaveLength(5);
+  it("states the configured offer beside the demo and does not repeat a migration-facts grid", () => {
+    const { hero } = renderPair();
+    expect(hero).toHaveTextContent(diverTranslator("en-US")("marketing.common.demoNote"));
+    expect(hero).toHaveTextContent("$99");
+    expect(hero.querySelector("dl")).toBeNull();
   });
 
   it("draws the you-are-here band in GuideContext's own boxes, a bar per paragraph line", () => {
@@ -358,7 +370,7 @@ describe("the guide body's skeleton", () => {
     const { container } = render(
       <GuideBodySkeleton lines={{ title: 1, lede: 3, context: [2, 2] }} />,
     );
-    const band = container.querySelectorAll("main > section")[1];
+    const band = container.querySelectorAll("main > section")[2];
     expect(band?.firstElementChild?.children).toHaveLength(2);
   });
 });
@@ -368,7 +380,11 @@ describe("guide contents and import reference", () => {
     const { GuideContents } = await import("./guide");
     render(<GuideContents locale="en-US" />);
     const contents = screen.getByRole("navigation", { name: "On this page" });
-    expect(contents.querySelectorAll("a")).toHaveLength(4);
+    expect(contents.querySelectorAll("a")).toHaveLength(5);
+    expect(screen.getByRole("link", { name: "See the dive-day workflow" })).toHaveAttribute(
+      "href",
+      "#dive-day",
+    );
     expect(screen.getByRole("link", { name: "Export your file" })).toHaveAttribute(
       "href",
       "#export",

@@ -333,6 +333,9 @@ export type DepartureOnTheBoard = {
   date: CalendarDate;
   /** Seats a diver could still book, measured as the booking door measures them. */
   seatsLeft: number;
+  /** Recorded assignments, not a statement of availability or qualification. */
+  assignedCrewCount: number;
+  isPrivate: boolean;
 };
 
 /**
@@ -398,6 +401,8 @@ export async function listDeparturesOnDates(
         startsAt: row.trip.startsAt,
         date,
         seatsLeft: Math.max(0, seats - row.booked),
+        assignedCrewCount: row.assignedCrewCount,
+        isPrivate: row.trip.isPrivate,
       },
     ];
   });

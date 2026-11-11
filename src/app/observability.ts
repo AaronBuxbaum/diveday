@@ -23,63 +23,11 @@ export {
 import type * as Sentry from "@sentry/nextjs";
 import { redactCapabilityUrl } from "@/lib/capability-urls";
 
-/** Scrub recognizable credentials, not names, email addresses or diagnostic context.
- * Unlabelled strings cannot be identified as passwords: callers must never log them.
- * An unquoted password assignment consumes the rest of its line: whitespace and
- * punctuation may be part of the password, so preserving that suffix is unsafe.
- */
-function redactDiagnosticText(text: string): string {
-  return text
-    .replace(/https?:\/\/[^\s<>"']+|\/[^\s<>"']+/gi, (url) => redactCapabilityUrl(url))
-    .replace(
-      /(\b(?:password|current[_-]?password|new[_-]?password|confirm[_-]?password|owner[_-]?password)\b["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n]+)/gi,
-      "$1[redacted]",
-    );
-}
-
-function redactDiagnosticValue(value: unknown, seen = new WeakMap<object, unknown>()): unknown {
-  if (typeof value === "string") return redactDiagnosticText(value);
-  if (typeof value === "function") return "[function]";
-  if (!value || typeof value !== "object") return value;
-  if (value instanceof Date)
-    return Number.isNaN(value.getTime()) ? "Invalid Date" : value.toISOString();
-  if (value instanceof URL) return redactDiagnosticText(value.href);
-  if (seen.has(value)) return seen.get(value);
-  const copy: Record<string, unknown> | unknown[] = Array.isArray(value) ? [] : {};
-  seen.set(value, copy);
-  if (value instanceof Error) {
-    Object.assign(copy, {
-      name: redactDiagnosticText(value.name),
-      message: redactDiagnosticText(value.message),
-      stack: value.stack && redactDiagnosticText(value.stack),
-      ...(value.cause === undefined ? {} : { cause: redactDiagnosticValue(value.cause, seen) }),
-    });
-  }
-
-  for (const key of Object.keys(value)) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    const child = descriptor && "value" in descriptor ? descriptor.value : "[accessor]";
-    Object.defineProperty(copy, key, {
-      value:
-        /^(?:password|current[_-]?password|new[_-]?password|confirm[_-]?password|owner[_-]?password)$/i.test(
-          key,
-        )
-          ? "[redacted]"
-          : redactDiagnosticValue(child, seen),
-      enumerable: true,
-      configurable: true,
-      writable: true,
-    });
-  }
-  return copy;
-}
-
 /**
  * Capability URLs taken out of Sentry breadcrumbs (navigation, fetch, xhr).
- * Console breadcrumbs keep diagnostic context but redact recognizable credentials.
+ * Console diagnostics stay whole; Sentry project rules scrub passwords/login links.
  */
 export function redactBreadcrumb(breadcrumb: Sentry.Breadcrumb): Sentry.Breadcrumb {
-  breadcrumb = redactDiagnosticValue(breadcrumb) as Sentry.Breadcrumb;
   const data = breadcrumb.data;
   if (!data) return breadcrumb;
   if (breadcrumb.category === "navigation") {
@@ -139,10 +87,31 @@ const CREDENTIAL_HEADERS = new Set(["cookie", "authorization", "stripe-signature
  * string and referer taken out, and the body, cookies, environment and
  * credential headers deleted outright, the second layer behind
  * `SENTRY_DATA_COLLECTION` for anything an integration attaches regardless.
- * Exception messages and stacks retain context after credential redaction.
+ * Native project rules scrub diagnostic text; frame URLs are cleaned here too.
  */
 export function redactEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
-  event = redactDiagnosticValue(event) as Sentry.ErrorEvent;
+  // Native Sentry rules scrub messages, but verified stack filenames bypass them.
+  if (event.exception?.values) {
+    event = {
+      ...event,
+      exception: {
+        ...event.exception,
+        values: event.exception.values.map((error) => ({
+          ...error,
+          ...(error.stacktrace && {
+            stacktrace: {
+              ...error.stacktrace,
+              frames: error.stacktrace.frames?.map((frame) => ({
+                ...frame,
+                ...(frame.filename && { filename: redactCapabilityUrl(frame.filename) }),
+                ...(frame.abs_path && { abs_path: redactCapabilityUrl(frame.abs_path) }),
+              })),
+            },
+          }),
+        })),
+      },
+    };
+  }
   const request = event.request;
   if (!request) return event;
   if (request.url) {

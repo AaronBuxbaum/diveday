@@ -9,9 +9,11 @@ import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { InboxSeat } from "@/features/inbox-seats";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type InboxIntent, isInboxIntent } from "@/lib/assists/inbox";
+import { mailtoHref } from "@/lib/contact-links";
 import { formatNearDay, formatShortDate, formatTime, formatWeekdayTime } from "@/lib/format";
 import { type InboxChannel, inboxMessageAnchor } from "@/lib/inbox";
 import { shopPath } from "@/lib/staff-notices";
+import { InboxResponseDraft } from "./InboxResponseDraft";
 import { InboxRowOpen, InboxRowToggle, InboxRowView } from "./InboxRowOpen";
 
 /**
@@ -101,7 +103,7 @@ export function InboxRow({
   doneAction,
   seats = [],
   lateAction,
-  requestAction,
+  responseAction,
 }: {
   row: InboxMessageRow;
   shopSlug: string;
@@ -119,13 +121,26 @@ export function InboxRow({
   /** Puts the running-late mark on the chosen late-window seat; required whenever `seats` is passed. */
   lateAction?: (formData: FormData) => Promise<void>;
   /**
-   * Reads the message into a booking request (the `request` assist). Passed
+   * Drafts a response to this message for staff review. Passed
    * only while the shop's assists are on, and with it the row shows what
    * Claude read the message as and its translation.
    */
-  requestAction?: (formData: FormData) => Promise<void>;
+  responseAction?: (messageId: string) => Promise<string | null>;
 }) {
   const { message, personName } = row;
+  const email = isEmailAddress(message.fromAddress)
+    ? message.fromAddress.split("@").map(encodeURIComponent).join("@")
+    : undefined;
+  const replySubject = message.subject
+    ? /^re:/i.test(message.subject.trim())
+      ? message.subject
+      : t("inbox.replySubject", { subject: message.subject })
+    : "";
+  const quoted = `${t("inbox.quoteHeader", { name: personName ?? message.fromAddress, date: formatShortDate(message.receivedAt, locale, timezone), time: formatTime(message.receivedAt, locale, timezone) })}\n${message.body
+    .split(/\r?\n/)
+    .map((line) => `> ${line}`)
+    .join("\n")}`;
+
   const done = message.answeredAt !== null;
   const name = personName ?? t("inbox.unknownSender");
   const subject = message.subject?.trim() || null;
@@ -148,7 +163,7 @@ export function InboxRow({
   // mark names its departure so the desk chooses (issue #2551).
   const lateSeats = seats.filter((seat) => seat.lateWindow);
   const severalLate = lateSeats.length > 1;
-  const assisted = requestAction !== undefined;
+  const assisted = responseAction !== undefined;
   // A keyword reply already says what it asked; Claude's tag would repeat it.
   const intent =
     assisted &&
@@ -289,11 +304,11 @@ export function InboxRow({
                 >
                   {t("inbox.openRecordShort")}
                 </Link>
-              ) : isEmailAddress(message.fromAddress) ? (
+              ) : !responseAction && isEmailAddress(message.fromAddress) ? (
                 // A stranger has no record to write from, so the reply starts in
                 // the staffer's own mail app. A phone number stays words.
                 <a
-                  href={`mailto:${message.fromAddress.split("@").map(encodeURIComponent).join("@")}`}
+                  href={mailtoHref(email ?? "", { subject: replySubject, body: `\n\n${quoted}` })}
                   className={ACT_CLASS}
                 >
                   {t("inbox.replyByEmail")}
@@ -328,18 +343,6 @@ export function InboxRow({
                       </form>
                     ))
                 : null}
-              {requestAction && message.channel !== "page" ? (
-                <form action={requestAction}>
-                  <input type="hidden" name="messageId" value={message.id} />
-                  <SubmitButton
-                    pendingLabel={t("assistsFront.inbox.makingRequest")}
-                    className={ACT_CLASS}
-                    ariaLabel={t("assistsFront.inbox.makeRequestFor", { name })}
-                  >
-                    {t("assistsFront.inbox.makeRequest")}
-                  </SubmitButton>
-                </form>
-              ) : null}
               {seats.map((seat) => (
                 <Link
                   key={seat.bookingId}
@@ -379,6 +382,26 @@ export function InboxRow({
                   </SubmitButton>
                 </form>
               )}
+              {responseAction && message.channel !== "page" ? (
+                <InboxResponseDraft
+                  draft={responseAction.bind(null, message.id)}
+                  email={email}
+                  subject={replySubject}
+                  quoted={quoted}
+                  copy={{
+                    draft: t("assistsFront.inbox.draftResponse"),
+                    pending: t("assistsFront.conversation.drafting"),
+                    empty: t("assistsFront.inbox.responseEmpty"),
+                    label: t("assistsFront.inbox.responseLabel"),
+                    review: t("assistsFront.inbox.responseReview"),
+                    email: t("inbox.replyByEmail"),
+                    copy: t("assistsFront.inbox.copyResponse"),
+                    copied: t("words.did.copied"),
+                    failed: t("assistsFront.inbox.responseCopyFailed"),
+                    changed: t("assistsFront.inbox.responseChanged"),
+                  }}
+                />
+              ) : null}
             </InboxRowView>
           </div>
         </div>

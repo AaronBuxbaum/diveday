@@ -43,11 +43,7 @@
   },
   "sightings": {
     "label": "Or say what you saw",
-    "match": "Match",
-    "matching": "Matching…",
-    "add": "Add these",
-    "none": "Nothing you said matches this reef’s chips.",
-    "proposed": "{name} × {count}"
+    "add": "Add"
   },
   "requirement": {
     "nitrox": "Nitrox card required"

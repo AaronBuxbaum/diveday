@@ -6,9 +6,13 @@
     "heroPriceLine": "Un precio único de {price} {cadence}, sin comisión sobre tus reservas.",
     "diverDoor": "¿Reservaste una inmersión?",
     "diverDoorLink": "Encuentra tu reserva",
-    "phoneFrameLabel": "Un capitán pasando lista en DiveDay en el muelle: 4 de 9 buceadores a bordo, un nombre marcado a bordo y el siguiente aún por llamar.",
+    "phoneFrameLabel": "Un capitán pasando lista importada en el muelle: 4 de 9 buceadores a bordo, un nombre marcado a bordo y el siguiente aún por llamar.",
     "dockEyebrow": "En el muelle",
     "dockDetail": "Guardado en este teléfono antes de que saliera el barco, así que el pase de lista sigue funcionando sin señal.",
+    "whyEyebrow": "Por qué el pase de lista es por nombre",
+    "whyStory": "En enero de 1998, Tom y Eileen Lonergan salieron a bucear en barco a la Gran Barrera de Coral. El barco volvió a puerto sin ellos, y nadie notó que faltaban durante dos días.",
+    "whyTie": "Un recuento es un número, y un número puede cuadrar con alguien todavía en el agua. En DiveDay el pase de lista nombra, antes de que el barco salga y después de cada inmersión, a cada buceador y tripulante.",
+    "whyLink": "Por qué existe DiveDay",
     "stepsTitle": "Una reserva, de tu web al barco y de vuelta a casa",
     "steps": {
       "book": {
@@ -256,55 +260,29 @@
   "guides": {
     "shared": {
       "cutover": {
-        "heading": "Un cambio sin parar el centro",
-        "intro": "Dos sistemas pueden funcionar en paralelo durante un ciclo de salidas, así que nada de esto necesita un fin de semana.",
+        "heading": "Elige tu primera salida en DiveDay",
+        "intro": "Prueba una salida representativa antes de cambiar el sistema que usa tu equipo.",
         "crewFirst": {
           "title": "Deja que tu equipo recorra primero sus pantallas",
           "detail": "El centro de demostración funciona con los mismos roles que tu muelle. Haz que el capitán pase lista y que la recepción vea quién no está listo antes de mover una sola ficha."
         },
         "step1": {
-          "title": "Lleva los dos sistemas durante un ciclo de salidas",
-          "detail": "Importa a DiveDay y empieza a llevar salidas reales con él (exenciones, listado, manifiesto) mientras tu sistema anterior sigue funcionando en paralelo. Nada obliga a un corte en seco el primer día."
+          "title": "Decide dónde se gestiona cada reserva",
+          "detail": "Sigue tomando reservas en tu sistema actual durante la prueba. Si preparas la misma salida en DiveDay, el personal crea la salida y agrega a los buceadores; importar el historial no reserva sus plazas."
         },
         "step2": {
-          "title": "Hazlo coincidir con tu temporada baja",
-          "detail": "Elige una semana con las menos salidas ya reservadas. Cuantas menos reservas vivas queden a caballo del cambio, menos habrá que cuadrar a mano."
+          "title": "Revisa las reservas y los saldos",
+          "detail": "Compara las próximas salidas, los depósitos, los reembolsos y los saldos pendientes antes de cambiar el enlace de reservas. Conserva los registros y recibos originales."
         },
         "step3": {
-          "title": "Una segunda importación actualiza tu lista de buceadores en vez de duplicarla",
-          "detail": "Vuelve a exportar más adelante, cuando tu sistema anterior tenga más reservas. DiveDay reconoce a los buceadores existentes por correo y los actualiza en vez de crear una segunda ficha, y un historial de visitas repetido se fusiona en vez de duplicarse."
+          "title": "Revisa los cambios mientras usas ambos sistemas",
+          "detail": "Volver a importar contactos puede actualizar registros por correo electrónico. No transfiere automáticamente nuevas reservas, cancelaciones ni cambios de fecha. Asigna a alguien para revisar esos cambios en ambos sistemas."
         },
         "step4": {
-          "title": "Cuenta con una tarde, no con una semana",
-          "detail": "Exportar desde el sistema anterior lleva minutos, y la vista previa muestra qué va a entrar antes de guardar nada. Revísala, corrige las filas marcadas e importa de verdad, todo en una sentada."
+          "title": "Elige la fecha después de la prueba",
+          "detail": "Deja tiempo para corregir el archivo, reunir documentos pendientes y practicar con el equipo. El trabajo depende del tamaño y la calidad de tus registros; lo revisamos contigo antes del cambio."
         },
-        "midSeason": "Mitad de temporada está bien. Lleva DiveDay junto a lo que ya usas durante un ciclo de salidas, vuelve a importar, y la segunda importación actualiza a tus buceadores en vez de duplicarlos. Reserva una tarde para eso."
-      },
-      "coexist": {
-        "item1": {
-          "title": "Una preparación que no deja embarcar a un buceador que no está listo",
-          "detail": "La salida y el sitio de buceo deciden qué necesita cada buceador. Si nada del registro deja pasar la certificación o la exención de un buceador, DiveDay nombra cuál y el buceador sigue bloqueado. {competitor} toma la reserva y nunca verifica si el buceador está autorizado a subir al barco."
-        },
-        "item2": {
-          "title": "Controles de certificación que condicionan la inmersión",
-          "detail": "DiveDay condiciona la inmersión a la certificación: un sitio marcado como profundo no deja pasar a un buceador sin la especialidad de Profundidad, y la certificación de nitrox se vuelve a revisar cada vez que se lee la lista de equipo. Los registros que cargas los verifica el personal, y los importados quedan marcados para una confirmación de un toque."
-        },
-        "item3": {
-          "title": "Exenciones nativas con revisión médica, en todos los planes",
-          "detail": "Las exenciones vienen integradas y versionadas frente a tu propia publicación. Una respuesta médica que pide el visto bueno de un médico bloquea al buceador hasta que esa revisión ocurre. Nada de esto es un extra de pago."
-        },
-        "item4": {
-          "title": "Un manifiesto con pase de lista que sobrevive al muelle",
-          "detail": "Un círculo grande por nombre para un pulgar mojado, un pase de lista después de cada inmersión, y un manifiesto que la tripulación guarda en el teléfono para que siga funcionando cuando la señal se cae en la rampa."
-        },
-        "item5": {
-          "title": "Tallas de alquiler y la lista de carga de la salida",
-          "detail": "Las tallas de cada buceador se convierten en la lista de equipo del barco, con un tanque por buceador y por inmersión repartida entre aire y nitrox. {competitor} no sabe la talla de neopreno de un buceador."
-        },
-        "item6": {
-          "title": "El aviso de la noche antes y un recuerdo que comparten",
-          "detail": "Cada buceador recibe la noche antes un aviso en lenguaje llano (hora en el muelle, condiciones, qué traer) y después una página de recuerdo para compartir."
-        }
+        "midSeason": "Puedes probar DiveDay en plena temporada mientras sigues usando tu sistema actual. Empieza con una muestra de la exportación y una salida, y revisa el trabajo pendiente antes de elegir la fecha del cambio."
       },
       "scopeTable": {
         "contact": {
@@ -370,160 +348,144 @@
       }
     },
     "eve": {
-      "cardSummary": "Durante años el sistema de gestión de escritorio para Windows de los centros PADI, hoy propiedad de DiveShop360. Exporta tus clientes y registros de certificación, y tráelos aquí.",
+      "cardSummary": "Compara el trabajo diario del equipo y conserva los procesos de venta y PADI que necesitas.",
       "metaTitle": "Cambiarte de EVE a DiveDay",
-      "metaDescription": "¿Dejas EVE? Una guía paso a paso para exportar tus clientes y certificaciones de EVE y traerlos a DiveDay: qué se traslada, qué no, y por qué.",
-      "heroEyebrow": "Cambiarte a DiveDay",
-      "heroTitle": "Sacar tu centro de EVE",
-      "heroLede": "Años de buceadores y sus registros de certificación están en una base de datos en un solo PC de la trastienda, y los centros cuentan que el historial es lo difícil de sacar limpio. Esta guía es la exportación, paso a paso, y después la tabla de qué llega y qué se queda en EVE.",
+      "metaDescription": "Compara la preparación de salidas y el pase de lista de DiveDay con tu trabajo en EVE. Revisa las exportaciones y los registros antes del cambio.",
+      "heroEyebrow": "Cambiar desde EVE",
+      "heroTitle": "Prepara cada salida con los buceadores que ya conoces",
+      "heroLede": "Ten los registros de cada buceador junto a la salida que prepara tu equipo. Prueba las revisiones previas y el pase de lista importada antes de decidir qué trasladar desde EVE.",
       "context": {
-        "item1": "EVE (de Integrated Scuba Systems) es el sistema de gestión de escritorio que los centros PADI llevaron durante años, y DiveShop360 lo adquirió en 2023. Si planeas dejarlo, esta guía cubre la parte práctica: sacar a tu gente y sus registros de certificación de EVE y traerlos a DiveDay.",
-        "item2": "La parte que hace que irse dé vértigo es real. EVE guarda sus datos en una base de datos en tu propio PC, y hay centros que cuentan que años de historial de reservas son difíciles de extraer limpiamente. DiveDay traslada tu lista de buceadores, sus registros de certificación, sus tallas de alquiler y, mediante el CSV aparte del historial del equipo, los registros de mantenimiento fechados de tu flota etiquetada, para que tu gente y tu equipo estén listos desde la primera reserva.",
-        "item3": "Tú exportas tu propio archivo desde tu propia instalación de EVE. DiveDay nunca inicia sesión en EVE ni entra en otro sistema a buscar tus datos."
+        "item1": "EVE ya gestiona ventas, cursos y trámites de PADI. Si son esenciales para tu negocio, revísalos por separado: DiveDay no sustituye la caja de venta minorista ni envía certificaciones a PADI.",
+        "item2": "La razón para probar DiveDay es el trabajo diario del equipo: revisar registros pendientes antes de salir, preparar el equipo de alquiler y pasar lista a bordo. Recorre esas pantallas con quienes las usarán.",
+        "item3": "Tú eliges los archivos que exportas. Te ayudamos a revisar su contenido antes de comprometerte a cambiar de sistema."
       },
       "exportHeading": "Saca tus datos de EVE",
-      "exportIntro": "EVE funciona en Windows, así que esto ocurre en el PC de la trastienda donde está instalado, no en una web. El objetivo es una hoja de cálculo con tus clientes y sus registros de certificación. Las etiquetas de los menús han cambiado entre versiones de EVE, así que toma estos pasos como la forma del camino, no como botones palabra por palabra.",
+      "exportIntro": "EVE documenta exportaciones de ventas a hojas de cálculo. Las opciones para clientes y certificaciones dependen de tu instalación; confírmalas con soporte de EVE antes de planear el cambio completo.",
       "exportSteps": {
         "step1": {
-          "title": "Abre EVE en el PC del centro y entra con una cuenta de gerente",
-          "detail": "Los informes y las exportaciones viven en la trastienda, tras un acceso de gerente o propietario, no en la caja del punto de venta. Usa el PC donde EVE guarda su base de datos."
+          "title": "Confirma qué registros puedes exportar",
+          "detail": "Consulta con soporte de EVE las exportaciones de clientes, certificaciones e historial de visitas para tu versión. Conserva el acceso hasta revisar los archivos."
         },
         "step2": {
-          "title": "Abre la lista de clientes o un informe de clientes/certificaciones",
-          "detail": "Busca la zona que lista a todos los clientes con los detalles de su certificación, normalmente bajo un menú de Clientes o Informes. Quieres la lista completa, no una ficha suelta."
+          "title": "Conserva una copia original",
+          "detail": "Guarda cada archivo sin modificar. Si recibes un libro de Excel, crea una copia CSV para la vista previa de DiveDay."
         },
         "step3": {
-          "title": "Amplía el rango a todos los clientes, todo el tiempo",
-          "detail": "Si la lista o el informe pide un rango de fechas o un filtro de solo activos, ponlo tan amplio como llegue, para que los clientes inactivos no se queden fuera."
+          "title": "Revisa algunos clientes habituales",
+          "detail": "Busca sus nombres, datos de contacto y números de certificación. Revisa si el historial y las certificaciones requieren archivos separados o vinculación manual."
         },
         "step4": {
-          "title": "Exporta a Excel o CSV y guárdalo",
-          "detail": "Las listas y los informes de EVE se exportan a una hoja de cálculo. Elige CSV si te lo ofrece, o exporta a Excel y usa Archivo → Guardar como → CSV. Guárdalo donde lo encuentres, como el escritorio."
-        },
-        "step5": {
-          "title": "Haz lo mismo con las certificaciones si son un informe aparte",
-          "detail": "Si las certificaciones (agencia, nivel, número de certificación) viven en su propio informe en vez de en la lista de clientes, exporta ese también. El número de certificación es lo que permite que DiveDay traslade un registro."
-        },
-        "step6": {
-          "title": "¿No llegas a la exportación? Pregunta al dueño actual de EVE",
-          "detail": "Si tu licencia ha caducado o la exportación está deshabilitada, DiveShop360 es ahora el propietario de EVE y puede prepararte una exportación de clientes y certificaciones. Pídela por escrito y guarda el archivo. Ese archivo es todo lo que DiveDay necesita."
+          "title": "Revisa la muestra con nosotros",
+          "detail": "La vista previa identifica columnas reconocidas y filas rechazadas. Resuelve los campos pendientes antes de exportar el resto."
         }
       },
       "exportNotes": {
-        "note1": "Hazlo mientras tu instalación de EVE todavía abra y tu licencia esté activa; la exportación que puedes hacer hoy es la que hay que guardar.",
-        "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan EVE y todos los demás sistemas, y te muestra cómo se mapeó cada columna antes de confirmar.",
-        "note3": "Si EVE te da también un informe de ventas o de reservas, llévatelo. Un archivo con una fila por reserva traslada el historial de visitas de tus habituales, para que un cliente de quince años no llegue pareciendo nuevo. Los recibos de caja se quedan en EVE. Los partes de taller no se importan, así que pasa a DiveDay como órdenes de trabajo los que siguen en el taller y guarda los cerrados en tu exportación de EVE; mira la tabla de alcance abajo."
+        "note1": "Estos son pasos de preparación, no una ruta de menús verificada para todas las versiones de EVE.",
+        "note2": "Conserva los registros de venta y los documentos originales aunque no formen parte de la importación.",
+        "note3": "Las visitas históricas no crean salidas ni reservas futuras. Prepara esas salidas por separado con tu equipo."
       }
     },
     "diveshop360": {
-      "cardSummary": "El veterano del POS minorista. Exporta los CSV de clientes y certificaciones que su propia FAQ nombra, y trae a tu gente.",
+      "cardSummary": "Conserva las herramientas de venta que necesitas. Compara la preparación de salidas y el pase de lista.",
       "metaTitle": "Cambiarte de DiveShop360 a DiveDay",
-      "metaDescription": "¿Dejas DiveShop360? Una guía paso a paso para exportar tus clientes y tus datos de certificación como CSV y traerlos a DiveDay: qué se traslada, qué no, y por qué.",
-      "heroEyebrow": "Cambiarte a DiveDay",
-      "heroTitle": "Sacar tu centro de DiveShop360",
-      "heroLede": "Tus clientes y sus registros de certificación viven en la nube de DiveShop360, y la salida son los cuatro CSV que nombran sus propias preguntas frecuentes, descargados de uno en uno (sin exportación masiva, sin API). Necesitas dos de ellos. Esta guía es el camino, y después la tabla de qué llega y qué se queda en DiveShop360.",
+      "metaDescription": "Compara DiveDay con tu trabajo en DiveShop360. Revisa las herramientas de la salida, las necesidades de venta y las exportaciones de clientes y certificaciones.",
+      "heroEyebrow": "Cambiar desde DiveShop360",
+      "heroTitle": "Dale al equipo una vista clara de la próxima salida",
+      "heroLede": "Ve a quién le falta una exención o una revisión de certificación, prepara su equipo y pasa lista desde el barco. Compara ese trabajo en DiveDay antes de sustituir parte de DiveShop360.",
       "context": {
-        "item1": "DiveShop360 nació de un sistema de punto de venta minorista, y ahí es donde es más fuerte: cajas, inventario, catálogos de proveedores. Su propia FAQ nombra cuatro exportaciones a CSV: clientes, inventario, informes de ventas y datos de certificación. Un cambio a DiveDay necesita dos, los clientes y los datos de certificación.",
-        "item2": "DiveDay no sustituye tu punto de venta. Lleva el agua: reservas, preparación, el barco. Trae tu POS y DiveDay lleva el día de buceo, y por eso solo pedimos los archivos de clientes y certificaciones.",
-        "item3": "Tú exportas tu propio CSV desde tu propia cuenta de DiveShop360. DiveDay nunca inicia sesión en DiveShop360 ni entra a buscar tus datos."
+        "item1": "DiveShop360 combina ventas con herramientas de buceo, incluidos alquileres, mantenimiento y cursos. Consérvalo si necesitas su caja, inventario y procesos con proveedores. DiveDay no sustituye un POS minorista.",
+        "item2": "Prueba DiveDay si quieres organizar la preparación por buceador: el registro pendiente, el equipo que llevar y el siguiente pase de lista. La demostración permite evaluar ese trabajo antes de importar.",
+        "item3": "Las preguntas frecuentes de DiveShop360 enumeran exportaciones de clientes, inventario, ventas y certificaciones. Revisa los archivos con nosotros; la lista publicada no determina las columnas de tu cuenta."
       },
       "exportHeading": "Saca tus datos de DiveShop360",
-      "exportIntro": "DiveShop360 funciona en un navegador, y las exportaciones salen de la administración de trastienda y no de la caja. Quieres dos CSV, clientes y datos de certificación. No hay API pública ni exportación masiva, así que es una descarga manual, un conjunto a la vez, y las etiquetas de los menús cambian entre versiones.",
+      "exportIntro": "Empieza por las exportaciones de clientes y certificaciones. DiveShop360 confirma que se pueden exportar; consulta con soporte los pasos y el formato actuales de tu cuenta.",
       "exportSteps": {
         "step1": {
-          "title": "Entra en la administración de DiveShop360 como propietario o gerente",
-          "detail": "Las exportaciones viven en la trastienda, tras un acceso de propietario o gerente, no en la pantalla del punto de venta donde tu mostrador cobra."
+          "title": "Confirma las exportaciones de tu cuenta",
+          "detail": "Usa la ayuda o el soporte de DiveShop360 para encontrar las exportaciones de clientes y certificaciones. No necesitamos acceso a tu cuenta."
         },
         "step2": {
-          "title": "Busca la exportación de clientes",
-          "detail": "Mira bajo Clientes o Informes una exportación CSV de tu lista de clientes. La propia FAQ de DiveShop360 nombra los clientes como uno de los cuatro conjuntos de datos exportables."
+          "title": "Guarda el archivo de clientes",
+          "detail": "Revisa el intervalo y los filtros, incluidos los clientes inactivos que quieras conservar. Guarda una copia sin modificar."
         },
         "step3": {
-          "title": "Exporta todos los clientes a CSV",
-          "detail": "Exporta la lista de clientes completa, no una vista filtrada ni de una sola página, para que nadie se quede atrás. Guarda el archivo donde lo encuentres."
+          "title": "Revisa el archivo de certificaciones",
+          "detail": "Revisa qué campos vinculan cada certificación con un cliente. No supongas que dos archivos separados se pueden vincular sin preparación."
         },
         "step4": {
-          "title": "Exporta también los datos de certificación",
-          "detail": "Las certificaciones son otro de los cuatro conjuntos de datos exportables de DiveShop360. Expórtalo como CSV. Contiene la agencia, el nivel y el número de certificación, y ese número es lo que permite trasladar un registro."
-        },
-        "step5": {
-          "title": "Sáltate el inventario y los informes de ventas",
-          "detail": "Esos son los otros dos conjuntos exportables. No los necesitas para DiveDay, que no es tu POS. Guárdalos para tus propios registros."
-        },
-        "step6": {
-          "title": "¿Atascado con una exportación? Pregunta al soporte de DiveShop360",
-          "detail": "Si un conjunto de datos no se exporta desde la interfaz, su soporte puede prepararte un CSV de clientes o de certificaciones. Pídelo por escrito y guarda el archivo. Ese archivo es todo lo que DiveDay necesita."
+          "title": "Revisa una muestra representativa",
+          "detail": "Te ayudamos a vincular las columnas y revisar los registros antes de importar todo. Convierte una copia a CSV si hace falta."
         }
       },
       "exportNotes": {
-        "note1": "CSV manual, un conjunto a la vez, es el límite de DiveShop360 (sin API, sin exportación masiva, sin webhooks). Hacerlo tú mismo desde la administración es el único camino, y alcanza.",
-        "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan DiveShop360 y todos los demás sistemas, y te muestra cómo se mapeó cada columna antes de confirmar.",
-        "note3": "Si puedes exportar también un informe de reservas o ventas, tráelo. Una fila por reserva se convierte aquí en el historial de visitas de tus buceadores. Los recibos de venta minorista y tu web de comercio electrónico se quedan en DiveShop360. Los partes de taller no se importan, así que pasa a DiveDay como órdenes de trabajo los que siguen en el taller; mira la tabla de alcance abajo."
+        "note1": "Las preguntas frecuentes confirman conjuntos exportables, no una ruta de menús ni una estructura universal.",
+        "note2": "Conserva el inventario, las ventas y los documentos firmados originales aunque queden fuera de la importación de contactos.",
+        "note3": "Los trabajos de reparación abiertos y las reservas futuras requieren preparación aparte; un CSV de contactos no los crea."
       },
-      "importerNote": "DiveShop360 exporta los clientes y los datos de certificación como dos archivos separados. Importa primero el archivo de clientes. DiveDay empareja a las personas por correo, así que el de certificaciones suma a los mismos buceadores en vez de duplicarlos. Ese archivo suele traer una fila por certificación: un buceador con tres certificaciones aparece en tres filas, cada una aterriza en ese único buceador, y una fila que dice “PADI Deep Diver” se convierte en una certificación de especialidad de profundidad."
+      "importerNote": "Empieza por los contactos y revisa cómo identifican al mismo buceador las filas de certificaciones. Los registros importados siguen sujetos a las revisiones de la referencia de campos."
     },
     "smartwaiver": {
-      "cardSummary": "Exporta tu CSV de participantes y trae a la gente. Una exención que tu archivo ya muestra como firmada entra marcada como importada, así nadie tiene que firmar dos veces.",
+      "cardSummary": "Integra las exenciones con las reservas y la preparación de salidas mientras conservas los documentos firmados originales.",
       "metaTitle": "Cambiarte de Smartwaiver a DiveDay",
-      "metaDescription": "¿Dejas Smartwaiver? Una guía paso a paso para exportar tus participantes y traerlos, con sus exenciones ya firmadas, a DiveDay.",
-      "heroEyebrow": "Cambiarte a DiveDay",
-      "heroTitle": "Sacar tus exenciones de Smartwaiver",
-      "heroLede": "Smartwaiver guarda exenciones firmadas y a las personas que las firmaron, exportables como un CSV de participantes. Esta guía cubre cómo traer a esas personas a DiveDay, donde las exenciones son nativas y quedan versionadas frente a tu propia plantilla, junto con cualquier aceptación que tu archivo ya muestre.",
+      "metaDescription": "Compara Smartwaiver con las reservas y la preparación de DiveDay. Exporta participantes, conserva los PDF firmados y revisa qué acepta la importación.",
+      "heroEyebrow": "Cambiar desde Smartwaiver",
+      "heroTitle": "Ve la exención pendiente junto a la próxima salida del buceador",
+      "heroLede": "DiveDay conecta reservas, exenciones y revisiones previas para que el equipo vea qué documentos siguen pendientes. Traslada los participantes de Smartwaiver después de revisar las pruebas firmadas que debes conservar.",
       "context": {
-        "item1": "Smartwaiver hace una sola cosa, exenciones digitales, y algunos centros llegan a él porque su sistema de reservas (DiveShop360 entre ellos) le externaliza las exenciones. Las exenciones de DiveDay son nativas y vienen en todos los planes, así que dejarlo significa traer a la gente y decirle a DiveDay quiénes ya tienen una exención archivada.",
-        "item2": "Las personas migran limpiamente: una exportación de participantes de Smartwaiver lleva nombres, correo, teléfono y a menudo un contacto de emergencia, que es la lista que necesitas. Lo que no contiene son registros de certificación ni tallas de alquiler, porque un sistema de exenciones no es donde viven.",
-        "item3": "Si una fila de tu exportación marca la exención de un buceador como ya aceptada, el importador de DiveDay se fía y traslada también la exención, marcada como importada, fechada con la fecha de aceptación de tu archivo, y satisfaciendo el control de embarque sin pedirle al buceador que firme otra vez. No es una copia del PDF firmado de Smartwaiver (ese se queda en Smartwaiver, o puedes adjuntar una copia guardada durante la importación). Es tu aceptación previa, trasladada.",
-        "item4": "Tú exportas tu propio CSV de participantes desde tu propia cuenta de Smartwaiver. DiveDay nunca inicia sesión en Smartwaiver ni entra a buscar tus datos."
+        "item1": "Smartwaiver es un servicio especializado en exenciones con sus propios procesos de firma y documentación. Consérvalo si esos procesos o tus integraciones actuales te sirven.",
+        "item2": "Elige DiveDay por el trabajo alrededor de la exención: el buceador reserva, completa los formularios y aparece en la lista de preparación. Los requisitos pendientes siguen visibles antes de embarcar.",
+        "item3": "Un CSV de participantes y un PDF firmado son registros distintos. Conserva los originales y revisa la versión, la aceptación y las pruebas médicas antes de confiar en un estado importado. Importar no establece validez legal ni crea una firma nueva.",
+        "item4": "Tus condiciones actuales determinan cuándo alguien debe volver a firmar. Te ayudamos a vincular el archivo; tu centro decide qué pruebas puede aceptar."
       },
       "exportHeading": "Saca tus datos de Smartwaiver",
-      "exportIntro": "Smartwaiver funciona en un navegador. El objetivo es un CSV de participantes, las personas que firmaron tus exenciones. Las etiquetas de los menús cambian con el tiempo, así que toma estos pasos como la forma del camino y no como botones palabra por palabra.",
+      "exportIntro": "Smartwaiver publica instrucciones separadas para datos de participantes y PDF firmados. Conserva ambos al planear el cambio.",
       "exportSteps": {
         "step1": {
-          "title": "Entra en tu panel de Smartwaiver",
-          "detail": "Las exportaciones viven en el panel, tras el acceso de tu cuenta."
+          "title": "Abre Export Data → Participant CSV",
+          "detail": "En el panel de Smartwaiver, elige Export Data en la barra lateral y luego Participant CSV."
         },
         "step2": {
-          "title": "Abre la búsqueda de exenciones o de participantes",
-          "detail": "Busca la zona que lista a las personas que han firmado, normalmente una búsqueda de exenciones o participantes con una opción de exportar."
+          "title": "Elige los registros que necesitas",
+          "detail": "Filtra por fecha de envío, título de exención o etiqueta. Revisa que incluya los participantes y las versiones que quieres conservar."
         },
         "step3": {
-          "title": "Pon el rango de fechas amplio y exporta a CSV",
-          "detail": "Pon el rango tan amplio como llegue (todo el tiempo) para que todos los participantes entren, y exporta la lista a CSV y guárdala donde la encuentres."
+          "title": "Exporta los datos de las exenciones",
+          "detail": "Guarda el CSV sin modificar y crea una copia para la vista previa de DiveDay. Revisa los campos personalizados sin suponer qué datos incluye."
         },
         "step4": {
-          "title": "Ese CSV es tu lista de buceadores",
-          "detail": "Los nombres, el correo, el teléfono y el contacto de emergencia que recogieras son lo que se traslada, junto con la columna de tu exportación que muestre una exención como ya firmada, si la tiene."
+          "title": "Guarda los PDF firmados por separado",
+          "detail": "El soporte de Smartwaiver puede preparar una descarga de PDF por intervalo de fechas. Confirma el acceso y la conservación antes de terminar la suscripción."
         }
       },
       "exportNotes": {
-        "note1": "Smartwaiver guarda exenciones, no registros de certificación ni tallas de equipo, así que sobre todo migran las personas, y esa es la lista que necesitas.",
-        "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan Smartwaiver y todos los demás sistemas, y te muestra cómo se mapeó cada columna antes de confirmar.",
-        "note3": "Un buceador que tu archivo muestra como ya firmado se traslada marcado como importado y no se le pide firmar otra vez. La tabla de alcance abajo dice qué traslada eso y qué no."
+        "note1": "Solo pueden considerarse los campos presentes en la exportación. Las preguntas personalizadas pueden necesitar vinculación manual.",
+        "note2": "La vista previa muestra las columnas reconocidas y las que ignorará. Revisa ambas listas antes de confirmar.",
+        "note3": "Conserva los originales firmados por separado. Un estado de aceptación en CSV no es el documento firmado original."
       },
-      "importerNote": "Una exportación de Smartwaiver es sobre todo datos de contacto. Espera que se importen personas y contactos de emergencia, y ningún registro de certificación ni talla de alquiler, porque un sistema de exenciones no los guarda. Una exención que tu exportación muestra como ya aceptada también se traslada, marcada como importada."
+      "importerNote": "Revisa por separado la identidad del participante y las pruebas de aceptación. Un CSV no garantiza el traslado de PDF firmados, documentos médicos ni todas las respuestas personalizadas."
     },
     "fareharbor": {
-      "cardSummary": "Un motor de reservas para tours, no software de buceo. Consérvalo como escaparate y lleva el día de buceo que él no puede, o deja atrás la comisión por reserva.",
+      "cardSummary": "Compara el trabajo de la salida y planea el cambio de enlaces y canales de reserva.",
       "metaTitle": "FareHarbor y DiveDay: lleva el día de buceo, o cámbiate",
-      "metaDescription": "¿Estás en FareHarbor? Conserva su red de reservas y distribución y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o deja atrás la comisión por reserva. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
-      "heroEyebrow": "FareHarbor + DiveDay",
-      "heroTitle": "FareHarbor llena los asientos. DiveDay lleva el barco",
-      "heroLede": "FareHarbor toma la reserva online y te pone delante de su red de hoteles y revendedores. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva FareHarbor como escaparate, o deja atrás la comisión por reserva y toma también la reserva aquí.",
+      "metaDescription": "Compara FareHarbor y DiveDay para reservas y preparación de buceo. Revisa el traslado manual, los canales de venta y los registros antes del cambio.",
+      "heroEyebrow": "Cambiar desde FareHarbor",
+      "heroTitle": "Sigue recibiendo reservas y prepara a cada buceador para el barco",
+      "heroLede": "Si tu equipo revisa certificaciones, busca formularios y prepara la lista del barco fuera de FareHarbor, prueba ese trabajo en DiveDay. Decide si conservar el canal de reservas o recibirlas aquí después de una prueba.",
       "context": {
-        "item1": "FareHarbor es una plataforma de reservas online para tours, actividades y alquileres, propiedad de Booking Holdings, la empresa detrás de Booking.com, y muchos centros de buceo llevan su escaparate en ella. Es buena en ese trabajo: los clientes reservan y pagan online, y su red de distribución pone tus salidas delante de hoteles, conserjes y revendedores a los que nunca llegarías por tu cuenta.",
-        "item2": "No es software de buceo. FareHarbor no afirma ofrecer control de certificaciones, exenciones médicas que bloqueen a un buceador, tallas de equipo de alquiler ni un manifiesto de barco hecho para un pase de lista. Su “manifiesto” es una lista de pasajeros que puedes descargar, y no tiene concepto de registro de certificación.",
-        "item3": "El escaparate no es gratis. FareHarbor no cobra nada al mes, pero se lleva una comisión de cada reserva, agregada al precio que paga tu cliente, mientras lo uses. No publica la tarifa; la oyes en una llamada comercial, y terceros hablan de alrededor de un 6%. Un centro que crece nota una comisión sobre cada reserva."
+        "item1": "FareHarbor gestiona reservas y distribución. Si sus revendedores te traen clientes, tenlo en cuenta: DiveDay no ofrece una red de distribución equivalente.",
+        "item2": "Compara una salida real. ¿Puede tu equipo encontrar el formulario pendiente, revisar la certificación requerida y pasar lista después de la inmersión? Prueba esas tareas en la demostración y compáralas con tu proceso actual.",
+        "item3": "Compara tu acuerdo actual de FareHarbor con la oferta publicada de DiveDay, incluidos el procesamiento de pagos y los cargos de distribución. El costo depende de tu contrato y tus reservas; esta guía no calcula ahorros."
       },
       "coexist": {
-        "heading": "Conserva FareHarbor. Agrega el día que él no puede llevar",
-        "intro": "DiveDay lleva el lado del agua, todo lo que hay entre “reservado” y “de vuelta en el muelle” que un motor de reservas nunca se construyó para tocar. Punto por punto, esto es lo que FareHarbor deja a tu tablilla:",
-        "bridgeNote": "FareHarbor sigue haciendo lo que se le da bien: tomar la reserva online y ponerte delante de su red de hoteles y revendedores, para la que DiveDay no tiene equivalente. No hay cable entre los dos. Traes a tus buceadores con la exportación CSV de abajo, y reimportas a medida que tu lista crece.",
-        "replaceHeading": "O deja atrás la comisión por reserva",
-        "replaceBody": "Si FareHarbor es solo tu botón de reservas y no te apoyas en su red de distribución, no necesitas seguir pagando por cada reserva para conservarlo. DiveDay toma la reserva por sí mismo: un horario público que cualquiera reserva sin cuenta, pago a través de tu propia cuenta de Stripe, exenciones nativas. Trae a tus buceadores una vez, apunta tu enlace de reservas aquí, y la comisión por reserva se acaba."
+        "heading": "Elige qué conservar en FareHarbor",
+        "intro": "Conserva tu canal de reservas mientras pruebas DiveDay con una salida, o traslada las nuevas reservas directas después. Ambos caminos necesitan un traspaso claro para el equipo.",
+        "bridgeNote": "No hay conexión automática con FareHarbor. Los CSV importan contactos e historial admitidos; el personal crea las próximas salidas y agrega a los buceadores en DiveDay, y revisa nuevas reservas, cambios y cancelaciones en ambos sistemas.",
+        "replaceHeading": "Recibe nuevas reservas directas en DiveDay",
+        "replaceBody": "Tu enlace puede abrir el calendario de DiveDay, con pagos a través de tu cuenta de Stripe. Prueba la reserva y la preparación, y revisa las reservas y los saldos pendientes antes de sustituir el enlace."
       },
       "website": {
-        "heading": "Dejar FareHarbor no significa rehacer tu web",
-        "intro": "Cada botón, marco y enlace que pegaste de ahí tiene su gemelo aquí, con tus colores y tu tipografía.",
+        "heading": "Revisa cada enlace de reservas antes de actualizar la web del centro",
+        "intro": "DiveDay ofrece enlaces y componentes de reserva para un sitio que controles. Revisa la ubicación y el comportamiento de cada componente de FareHarbor antes de sustituirlo.",
         "rows": {
           "row1": {
             "theirs": "Botón “Book Now”",
@@ -562,46 +524,41 @@
             "ours": "Tu escaparate, incluido. Ya es una web por sí misma"
           }
         },
-        "sitesNote": "FareHarbor vende Sites por separado y no publica el precio; terceros lo sitúan en {sitesPrice} al año, antes de su complemento de SEO.",
+        "sitesNote": "Si FareHarbor aloja tu sitio, confirma con ellos la propiedad, el alojamiento y las condiciones de cancelación. Cambiar un componente de reserva no traslada el sitio web.",
         "offerHeading": "Conversemos sobre una web para el centro",
         "offerBody": "Cuéntanos qué necesitas para conversar con una persona de DiveDay sobre el proyecto. Puedes agregar nuestros componentes de reserva a tu web actual por tu cuenta."
       },
       "exportHeading": "Saca tus datos de FareHarbor",
-      "exportIntro": "FareHarbor funciona en un navegador, y tus datos salen de los informes del Dashboard. No hay un único botón de “exportarlo todo”. El objetivo es tu gente en un CSV. Las etiquetas de los menús cambian con el tiempo, así que toma estos pasos como la forma del camino y no como botones palabra por palabra.",
+      "exportIntro": "Usa el informe Contacts para los contactos y revisa las reservas históricas por separado. Las exportaciones dependen de tus permisos en el panel.",
       "exportSteps": {
         "step1": {
-          "title": "Entra en tu Dashboard de FareHarbor como propietario o administrador",
-          "detail": "Los informes viven en el Dashboard, tras un acceso de propietario o administrador, no en la página de reservas de cara al cliente."
+          "title": "Abre una cuenta del panel con acceso a Contacts",
+          "detail": "FareHarbor exige permiso para ver este informe. Consulta al administrador de tu cuenta si no aparece."
         },
         "step2": {
-          "title": "Abre Informes y ejecuta el informe de Contactos (clientes)",
-          "detail": "El informe de Contactos de FareHarbor es tu lista de clientes (nombres, correo, teléfono) para un rango de fechas. Esa lista es lo que necesitas; el resto de los informes son registros de reservas y ventas."
+          "title": "Elige Reports → Customers and marketing → Contacts",
+          "detail": "Genera el informe Contacts. Incluye datos de contacto de clientes para las reservas que seleccionan sus filtros."
         },
         "step3": {
-          "title": "Pon el rango de fechas tan amplio como llegue",
-          "detail": "El informe de Contactos está acotado a un rango, no es un volcado único de todo el tiempo, así que amplíalo tanto como FareHarbor permita antes de ejecutarlo. Si no, una temporada baja o un habitual inactivo se quedan atrás."
+          "title": "Revisa las fechas y los filtros de cancelación",
+          "detail": "Incluye el intervalo y los estados de reserva que necesitas. El filtro predeterminado de cancelación incluye reservas canceladas sin reembolso; revísalo expresamente."
         },
         "step4": {
-          "title": "Descárgalo como CSV",
-          "detail": "Los informes y manifiestos de FareHarbor se descargan como CSV directamente desde el Dashboard. Guarda el archivo donde lo encuentres. Ese archivo es todo lo que DiveDay necesita."
+          "title": "Selecciona Download en la barra del informe",
+          "detail": "Guarda el CSV estandarizado y conserva una copia sin modificar. Revisa sus columnas en DiveDay antes de confirmar la importación."
         },
         "step5": {
-          "title": "No esperes a la API",
-          "detail": "FareHarbor tiene una API, pero el acceso está reservado a socios. Escribes a su soporte para pedirlo, y está pensada para revendedores y no como una exportación autoservicio que puedas ejecutar tú. El CSV del Dashboard es tu salida, y es suficiente."
+          "title": "Revisa el historial de reservas por separado",
+          "detail": "Usa un informe de reservas para visitas anteriores y conserva las referencias originales. Las plazas futuras, los depósitos y los cambios posteriores requieren un traspaso aparte."
         }
       },
       "exportNotes": {
-        "note1": "El informe de Contactos va por fechas y no es una exportación de “todo” en un clic, así que pon el rango tan amplio como FareHarbor permita y los clientes de temporada e inactivos vienen también.",
-        "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan FareHarbor y todos los demás sistemas, y te muestra cómo se mapeó cada columna antes de confirmar.",
-        "note3": "Los registros de certificación y las tallas de alquiler no están en una exportación de FareHarbor, porque un motor de reservas no los guarda (mira la tabla de alcance abajo). Espera personas y sus datos de contacto. Las certificaciones y las tallas las construyes en DiveDay a medida que llegan los buceadores.",
-        "note4": "Lo que FareHarbor sí guarda son reservas, y esas se trasladan. Ejecuta el informe de Reservas sobre el mismo rango amplio de fechas y tus habituales llegan con su historial de visitas en vez de como nombres nuevos."
+        "note1": "Confirma los filtros antes de exportar para incluir las reservas de temporada y las canceladas que correspondan.",
+        "note2": "Revisa las columnas reconocidas e ignoradas; no se garantiza la vinculación automática de un campo personalizado.",
+        "note3": "El informe Contacts no determina qué pruebas de certificación, tallas o exenciones puedes aportar. Revisa esos registros por separado con tu equipo.",
+        "note4": "Las visitas importadas siguen siendo historial. No crean reservas futuras, pedidos ni entradas de pase de lista."
       },
-      "importerNote": "Una exportación de FareHarbor es sobre todo datos de contacto y reservas. Se importan personas, correos, teléfonos y el contacto de emergencia que haya. Los registros de certificación y las tallas de alquiler no, porque una plataforma de reservas no los guarda. Importa primero el archivo de Contactos y después el de Reservas: DiveDay empareja a los buceadores por correo, así que el segundo agrega cada reserva al historial del mismo buceador en vez de duplicarlo.",
-      "percentArm": {
-        "cardSummary": "Un motor de reservas para tours, no software de buceo. Consérvalo como escaparate y lleva el día de buceo que él no puede, o toma también la reserva aquí.",
-        "metaDescription": "¿Estás en FareHarbor? Conserva su red de reservas y distribución y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o toma también la reserva aquí. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
-        "heroLede": "FareHarbor toma la reserva online y te pone delante de su red de hoteles y revendedores. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva FareHarbor como escaparate, o toma también la reserva aquí."
-      },
+      "importerNote": "Revisa primero los contactos. Examina por separado las visitas históricas y los documentos; un contacto puede representar una reserva para varios buceadores.",
       "transferChoice": {
         "title": "Elige cómo llegan las reservas al equipo",
         "note": "Transferencia manual: los cambios no pasan automáticamente entre FareHarbor y DiveDay.",
@@ -613,9 +570,7 @@
         "moveBody": "Dirige tu enlace de reservas al calendario de DiveDay y cobra mediante tu cuenta de Stripe. El equipo revisa los registros importados antes de la primera salida.",
         "moveFlow": "Tu enlace de reservas → calendario de DiveDay → preparación de la salida",
         "moveReview": "DiveDay no sustituye la red de distribución de FareHarbor. Evalúa esa diferencia y los precios antes de cambiar tu enlace de reservas.",
-        "scopeLink": "Revisar el alcance de la transferencia",
-        "movesFact": "Contactos e historial de reservas desde las exportaciones descritas; los demás registros necesitan otra fuente.",
-        "timeFact": "Depende de la exportación, la calidad de los registros y la revisión."
+        "scopeLink": "Revisar el alcance de la transferencia"
       },
       "transferScope": {
         "title": "Desde las exportaciones de FareHarbor descritas aquí",
@@ -672,71 +627,112 @@
       }
     },
     "rezdy": {
-      "cardSummary": "Una plataforma de tours generalista con un gran mercado de revendedores, no software de buceo. Consérvala para la distribución, o deja atrás la cuota mensual y la comisión por reserva.",
+      "cardSummary": "Conserva las conexiones con revendedores mientras pruebas la preparación individual y el pase de lista.",
       "metaTitle": "Rezdy y DiveDay: lleva el día de buceo, o cámbiate",
-      "metaDescription": "¿Estás en Rezdy? Conserva su mercado de revendedores y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o deja atrás la suscripción mensual y la comisión por reserva. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
-      "heroEyebrow": "Rezdy + DiveDay",
-      "heroTitle": "Rezdy vende los asientos. DiveDay lleva el barco",
-      "heroLede": "Rezdy toma la reserva online y empuja tus salidas a su mercado de revendedores y a las grandes OTAs. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva Rezdy como escaparate, o deja atrás la cuota mensual y la comisión por reserva y toma también la reserva aquí.",
+      "metaDescription": "Compara Rezdy y DiveDay para reservas y preparación de buceo. Revisa el traslado manual, los canales de venta y los registros antes del cambio.",
+      "heroEyebrow": "Cambiar desde Rezdy",
+      "heroTitle": "Revisa quién está listo después de recibir la reserva",
+      "heroLede": "Si tu equipo revisa certificaciones, busca formularios y prepara la lista del barco fuera de Rezdy, prueba ese trabajo en DiveDay. Decide si conservar el canal de reservas o recibirlas aquí después de una prueba.",
       "context": {
-        "item1": "Rezdy es una plataforma de reservas online para tours y actividades, nacida en Australia y hoy agrupada con Checkfront y Regiondo bajo una matriz respaldada por capital privado. Muchos centros de buceo llevan su escaparate en ella, y es buena en ese trabajo: los clientes reservan y pagan online, y su gestor de canales empuja tus salidas a revendedores y OTAs como GetYourGuide, Viator, Expedia y Google Things to Do.",
-        "item2": "No es software de buceo. Rezdy no publica control de certificaciones, ni exenciones médicas de buceo, ni un manifiesto de barco hecho para un pase de lista, ni tallas de equipo de alquiler. Vender un curso como producto reservable no es lo mismo que saber si el buceador que tienes delante tiene la certificación para la inmersión.",
-        "item3": "El escaparate no es gratis: Rezdy cobra una suscripción mensual más una comisión de cada reserva online (un 3% en su precio publicado actual). En su favor, Rezdy no te encierra. No hay cuota de alta, ni permanencia, hay una exportación CSV autoservicio y una API que puedes activar tú mismo."
+        "item1": "Rezdy gestiona reservas y distribución. Si sus revendedores te traen clientes, tenlo en cuenta: DiveDay no ofrece una red de distribución equivalente.",
+        "item2": "Compara una salida real. ¿Puede tu equipo encontrar el formulario pendiente, revisar la certificación requerida y pasar lista después de la inmersión? Prueba esas tareas en la demostración y compáralas con tu proceso actual.",
+        "item3": "Compara tu acuerdo actual de Rezdy con la oferta publicada de DiveDay, incluidos el procesamiento de pagos y los cargos de distribución. El costo depende de tu contrato y tus reservas; esta guía no calcula ahorros."
       },
       "coexist": {
-        "heading": "Conserva Rezdy. Agrega el día que él no puede llevar",
-        "intro": "DiveDay lleva el lado del agua, todo lo que hay entre “reservado” y “de vuelta en el muelle” que un motor de reservas nunca se construyó para tocar. Punto por punto, esto es lo que Rezdy deja a tu tablilla:",
-        "bridgeNote": "Rezdy sigue haciendo lo que se le da bien: tomar la reserva online y empujar tus salidas a su mercado de revendedores y a las OTAs, para lo que DiveDay no tiene equivalente. No hay cable entre los dos. Traes a tus buceadores con la exportación CSV de abajo, y reimportas a medida que tu lista crece.",
-        "replaceHeading": "O deja atrás la cuota mensual y la comisión por reserva",
-        "replaceBody": "Si no te apoyas en el mercado de Rezdy, pagas una suscripción mensual y una comisión de cada reserva por un escaparate que podrías llevar aquí: un horario público que cualquiera reserva sin cuenta, pago a través de tu propia cuenta de Stripe, exenciones nativas. Rezdy te lo pone fácil para irte, sin contrato de permanencia, con una exportación CSV autoservicio y una API que activas tú mismo."
+        "heading": "Elige qué conservar en Rezdy",
+        "intro": "Conserva tu canal de reservas mientras pruebas DiveDay con una salida, o traslada las nuevas reservas directas después. Ambos caminos necesitan un traspaso claro para el equipo.",
+        "bridgeNote": "No hay conexión automática con Rezdy. Los CSV importan contactos e historial admitidos; el personal crea las próximas salidas y agrega a los buceadores en DiveDay, y revisa nuevas reservas, cambios y cancelaciones en ambos sistemas.",
+        "replaceHeading": "Recibe nuevas reservas directas en DiveDay",
+        "replaceBody": "Tu enlace puede abrir el calendario de DiveDay, con pagos a través de tu cuenta de Stripe. Prueba la reserva y la preparación, y revisa las reservas y los saldos pendientes antes de sustituir el enlace."
       },
       "exportHeading": "Saca tus datos de Rezdy",
-      "exportIntro": "Rezdy funciona en un navegador y, en su favor, es abierto a la hora de dejar salir tus datos como CSV. El objetivo es tu gente en una hoja de cálculo. Las etiquetas de los menús cambian entre actualizaciones y el propio centro de ayuda de Rezdy es el camino autorizado, así que toma estos pasos como su forma.",
+      "exportIntro": "Rezdy documenta exportaciones CSV de pedidos y clientes. Revisa si el archivo identifica al contacto principal o a cada participante antes de vincularlo con buceadores.",
       "exportSteps": {
         "step1": {
-          "title": "Entra en tu panel de Rezdy como propietario o gerente",
-          "detail": "Los informes y tu lista de clientes viven en el panel, tras un acceso de propietario o gerente."
+          "title": "Abre el informe Sales–Orders",
+          "detail": "Usa el informe Sales–Orders de Rezdy para el período que quieras conservar. Su página de ayuda describe el informe actual."
         },
         "step2": {
-          "title": "Abre el informe de Ventas / Pedidos (o Informes → Exportación de datos)",
-          "detail": "El informe de Pedidos de Rezdy lista tus reservas y los clientes en ellas; la Exportación de datos más nueva cubre el mismo terreno. Cualquiera de los dos es un camino hacia tu gente."
+          "title": "Elige las fechas y revisa la selección",
+          "detail": "Revisa las fechas, los estados y los filtros de productos antes de descargar. Conserva las referencias originales para verificaciones posteriores."
         },
         "step3": {
-          "title": "Pon el rango de fechas amplio y exporta a CSV",
-          "detail": "Pon el rango tan amplio como llegue para que una temporada baja no se quede atrás, y usa Exportar a CSV. La exportación de Rezdy incluye todas las columnas, no solo las que se ven en pantalla."
+          "title": "Elige Export to CSV",
+          "detail": "La exportación incluye los datos del informe. Guarda una copia original y usa otra para preparar la importación de DiveDay."
         },
         "step4": {
-          "title": "O exporta tu lista de clientes directamente",
-          "detail": "Rezdy tiene herramientas de importación y exportación de la lista de clientes, así que tus contactos pueden salir como su propia hoja de cálculo, lo que te resulte más limpio. Guarda el archivo donde lo encuentres."
+          "title": "Revisa a quién representa cada fila de cliente",
+          "detail": "La registro de clientes de Rezdy describe al contacto principal. Una reserva grupal no significa que tengas un registro de cada buceador; reúne los datos faltantes por separado."
         },
         "step5": {
-          "title": "¿Prefieres la API? Es tuya para activarla",
-          "detail": "A diferencia de algunas plataformas de reservas, Rezdy deja que un operador pida una clave de API desde Integraciones → Rezdy API dentro de la aplicación. No la necesitas para este cambio, porque el CSV basta, pero está ahí."
+          "title": "Prepara las salidas futuras fuera de la importación de historial",
+          "detail": "Crea las salidas y agrega a sus buceadores en DiveDay. Compara depósitos, cancelaciones y cambios de fecha con Rezdy antes de usar la nueva lista."
         }
       },
       "exportNotes": {
-        "note1": "Rezdy no encierra tus datos: sin cuota de alta, sin permanencia, exportación CSV autoservicio y una API para operadores. Confirma el camino exacto de los menús en el propio centro de ayuda de Rezdy, porque las etiquetas cambian entre actualizaciones.",
-        "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan Rezdy y todos los demás sistemas, y te muestra cómo se mapeó cada columna antes de confirmar.",
-        "note3": "Los registros de certificación y las tallas de alquiler no están en una exportación de Rezdy, porque un motor de reservas no los guarda (mira la tabla de alcance abajo). Espera personas y sus datos de contacto. Las certificaciones y las tallas las construyes en DiveDay a medida que llegan los buceadores.",
-        "note4": "Lo que Rezdy sí guarda son reservas, y esas se trasladan. La forma de una fila por reserva del informe de Pedidos traslada el historial de visitas de tus habituales con ellos."
+        "note1": "Las instrucciones enlazadas son la fuente de los pasos de exportación. También importan tus permisos y la selección del informe.",
+        "note2": "Las preguntas personalizadas, las pruebas de certificación y las tallas requieren revisar el archivo real.",
+        "note3": "Un CSV de pedidos no implica documentos de exención originales ni credenciales de pago. Conserva las pruebas necesarias por separado.",
+        "note4": "Actualizar contactos no actualiza reservas. El personal debe revisar los cambios en ambos sistemas mientras se usan a la vez."
       },
-      "importerNote": "Una exportación de Rezdy es sobre todo datos de contacto y reservas. Se importan personas, correos, teléfonos y el contacto de emergencia que haya. Los registros de certificación y las tallas de alquiler no, porque una plataforma de reservas no los guarda. Trae el archivo de Pedidos: DiveDay empareja a los buceadores por correo, así que sus filas repetidas de un mismo cliente se convierten en el historial de visitas de ese buceador en vez de en personas duplicadas.",
-      "percentArm": {
-        "cardSummary": "Una plataforma de tours generalista con un gran mercado de revendedores, no software de buceo. Consérvala para la distribución, o toma también la reserva aquí.",
-        "metaDescription": "¿Estás en Rezdy? Conserva su mercado de revendedores y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o toma también la reserva aquí. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
-        "heroLede": "Rezdy toma la reserva online y empuja tus salidas a su mercado de revendedores y a las grandes OTAs. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva Rezdy como escaparate, o toma también la reserva aquí."
-      }
+      "importerNote": "Vincula con cuidado al contacto principal, sobre todo en reservas grupales. Las visitas importadas son historial; no reservan plazas futuras ni concilian depósitos."
+    },
+    "peek": {
+      "cardSummary": "Compara la preparación de buceo con Peek Pro y revisa una muestra de exportación antes del cambio.",
+      "metaTitle": "Peek Pro y DiveDay para centros de buceo",
+      "metaDescription": "¿Evalúas DiveDay junto a Peek Pro o en su lugar? Compara la preparación de buceadores, la distribución y un plan de traslado con una muestra.",
+      "heroEyebrow": "Cambiar desde Peek Pro",
+      "heroTitle": "Sigue a cada buceador desde la reserva hasta el pase de lista",
+      "heroLede": "Si usas Peek Pro y todavía reúnes los registros de buceadores para el equipo, prueba a preparar una salida en DiveDay. Ve los formularios y las revisiones de certificación pendientes juntos y lleva esa lista al barco.",
+      "context": {
+        "item1": "Peek Pro ya ofrece reservas en línea, exenciones digitales, gestión de recursos y distribución. Compara una salida real para valorar el trabajo que hace después tu equipo.",
+        "item2": "Conserva Peek si sus canales de venta, alquileres o pagos te funcionan bien. Prueba DiveDay si el equipo todavía reúne a mano datos de participantes, requisitos de certificación y pase de lista.",
+        "item3": "Pregunta al soporte de Peek qué archivos de clientes y reservas puede exportar tu cuenta. Envíanos una muestra y verificaremos qué se puede trasladar antes de que cambies de sistema."
+      },
+      "coexist": {
+        "heading": "Conserva Peek para las reservas mientras pruebas el trabajo del equipo",
+        "intro": "Usa una salida para evaluar si DiveDay mejora la preparación del equipo. También puedes probar nuevas reservas directas en el calendario de DiveDay.",
+        "bridgeNote": "No hay conexión automática con Peek. El personal prepara la exportación, crea las próximas salidas y agrega buceadores en DiveDay, y revisa cambios y cancelaciones en ambos sistemas. DiveDay no sustituye la red de distribución de Peek.",
+        "replaceHeading": "Evalúa las reservas directas por separado",
+        "replaceBody": "Antes de cambiar un botón de reserva, compara tu acuerdo de Peek con los precios y el procesamiento de pagos de DiveDay. Revisa las reservas abiertas, los anticipos y los canales que te traen clientes."
+      },
+      "exportHeading": "Revisa una exportación de Peek antes de planear el cambio",
+      "exportIntro": "Las opciones de exportación dependen de tu cuenta de Peek. Confirma con su soporte qué archivos tienes disponibles y usa esta lista para revisarlos juntos.",
+      "exportSteps": {
+        "step1": {
+          "title": "Solicita exportaciones de clientes y reservas",
+          "detail": "Pregunta qué registros, intervalos y formatos ofrece tu cuenta. Obtén los archivos tú mismo y conserva una copia sin modificar."
+        },
+        "step2": {
+          "title": "Revisa a quién representa el archivo",
+          "detail": "Quien paga u organiza un grupo no es necesariamente cada buceador de la reserva. Compara nombres y datos con algunas salidas reales."
+        },
+        "step3": {
+          "title": "Revisa la muestra con nosotros",
+          "detail": "Te ayudamos a vincular los campos admitidos a un CSV y revisar la vista previa. Confirma por separado las certificaciones, tallas y exenciones sin suponer que están en la exportación."
+        },
+        "step4": {
+          "title": "Planea el traspaso de reservas activas",
+          "detail": "Enumera salidas futuras, participantes, depósitos y reembolsos pendientes. El personal los prepara aparte; importar historial no reserva plazas activas."
+        }
+      },
+      "exportNotes": {
+        "note1": "Acuerda el alcance del traslado después de revisar una muestra. Confirma los campos que falten antes de contar con ellos para una salida.",
+        "note2": "Conserva los documentos firmados originales y los registros financieros. No incluyas credenciales de tarjetas en el CSV."
+      },
+      "importerNote": "La referencia describe lo que DiveDay acepta cuando se proporciona, no lo que Peek exporta. Revisa la muestra y los registros pendientes antes de usar la nueva lista."
     }
   },
   "about": {
     "eyebrow": "Por qué existe DiveDay",
-    "phoneFrameLabel": "Un capitán pasando lista en DiveDay, nombre por nombre, con un toque en cada círculo.",
+    "phoneFrameLabel": "Un capitán pasando lista importada, nombre por nombre, con un toque en cada círculo.",
     "heroDescription": "En enero de 1998, Tom y Eileen Lonergan salieron en un barco de buceo al arrecife St. Crispin, en la Gran Barrera de Coral. El barco volvió a puerto sin ellos, y nadie notó que faltaban hasta dos días después, cuando apareció a bordo la bolsa con sus pertenencias. Nunca se encontró a ninguno de los dos.",
-    "heroP2": "Por esa historia construimos DiveDay. Un conteo es un número, y un número puede cuadrar con alguien todavía en el agua, así que en DiveDay el pase de lista nombra a cada buceador y tripulante cuando el barco sale y después de cada inmersión, y no termina hasta que cada uno esté confirmado.",
+    "heroP2": "Por esa historia construimos DiveDay. Un recuento es un número, y un número puede cuadrar con alguien todavía en el agua, así que en DiveDay el pase de lista nombra a cada buceador y tripulante antes de que el barco salga y después de cada inmersión, y no termina hasta que cada uno esté confirmado.",
     "peopleEyebrow": "Quiénes somos",
     "peopleTitle": "Buceadores que han llevado software a millones de personas",
     "peopleP1": "Las personas que construyen DiveDay han pasado su carrera en software del que dependen millones de personas, y sus fines de semana en barcos de buceo. Conocemos el mostrador desde el lado del buceador, con la tarjeta de certificación en la mano mientras el dueño busca la exención, y la cubierta, donde un divemaster recorre un portapapeles mojado mientras el barco espera. DiveDay es la herramienta que queríamos en los dos lugares: registros en los que confiar, en una pantalla que se maneja con el pulgar mojado.",
     "peopleP2": "Los centros de buceo que conocemos llevan el día en una pizarra junto a la puerta, un portapapeles que sale en el barco, una hoja de cálculo que alguien actualiza a mano y un puñado de aplicaciones que guardan cada una su propia lista de los mismos buceadores. El dueño conoce a cada buceador por su nombre, y cada mañana parte de ese conocimiento se copia de una herramienta a otra mientras el resto viaja en su cabeza. DiveDay está hecho para que ese conocimiento se escriba una sola vez y salga con el barco en el teléfono del capitán.",
+    "founderRole": "Fundador",
     "buildEyebrow": "Lo primero",
     "buildTitle": "La única tarea en un barco que no puede fallar",
     "buildDescription": "El pase de lista es el único registro de un día de buceo que tiene que salir bien a la primera, así que por ahí empieza DiveDay. La reserva, la exención, la verificación de certificación, las tallas y el pago tienen cada uno su propia pantalla, y cada una de esas pantallas existe para que el capitán abra el manifiesto con los registros en orden y lo único que quede sea leer los nombres.",
@@ -831,11 +827,11 @@
     },
     "seeFullList": "La lista completa está en la página del producto →",
     "feeAnchor": {
-      "title": "Lo que cobran dos canales de reservas, en sus propias palabras",
-      "rezdy": "El precio publicado actualmente por {competitor} combina una suscripción mensual con un 3% de cada reserva en línea.",
-      "fareharbor": "{competitor} no publica ninguna tarifa. No hay cobro mensual. En su lugar, una comisión por cada reserva se agrega al precio que paga tu cliente mientras lo uses, y terceros sitúan esa comisión en torno al 6%.",
+      "title": "Compara los cargos que paga tu centro",
+      "rezdy": "{competitor} publica planes mensuales con cargos por las reservas que recibes en su sistema. El plan, el mercado y el canal de reserva importan: compara las condiciones de tu centro.",
+      "fareharbor": "{competitor} establece los cargos en su contrato con el proveedor. Revisa las condiciones de reservas, pagos, distribución y sitio web en vez de basarte en un solo porcentaje anunciado.",
       "ours": "DiveDay no se lleva ninguna parte de una reserva. Lo que pagas es el número de arriba, en agosto y en enero.",
-      "sourcesNote": "Ambas descripciones vienen de las guías de cambio, donde cada una está citada a las propias páginas del proveedor.",
+      "sourcesNote": "Las guías de cambio enlazan a los precios o condiciones de cada proveedor. Ten a mano tu contrato actual al comparar.",
       "guideLink": "Cómo es dejar {competitor} →"
     },
     "dataExit": {
@@ -991,7 +987,8 @@
     },
     "contact": {
       "heading": "Preguntarnos algo",
-      "body": "Escribe a <email>{address}</email>. Si eres un buceador y no un centro, tu centro tiene tu registro y puede responder más rápido; si no puede, le ayudaremos."
+      "body": "Escribe a <email>{address}</email>. Si eres un buceador y no un centro, tu centro tiene tu registro y puede responder más rápido; si no puede, le ayudaremos.",
+      "operator": "DiveDay es un servicio de {company}, que opera con el nombre comercial DiveDay, con domicilio en {postalAddress}."
     },
     "open": {
       "heading": "Lo que esta página todavía no dice",
@@ -1077,7 +1074,8 @@
     },
     "contact": {
       "heading": "Preguntarnos algo",
-      "body": "Escribe a <email>{address}</email>."
+      "body": "Escribe a <email>{address}</email>.",
+      "operator": "DiveDay es un servicio de {company}, que opera con el nombre comercial DiveDay, con domicilio en {postalAddress}."
     }
   },
   "featureChrome": {
@@ -1085,6 +1083,7 @@
     "breadcrumbLabel": "Ruta de navegación",
     "stepsTitle": "Cómo funciona",
     "includedTitle": "Qué incluye",
+    "includedShowAll": "Ver las {count}",
     "includedPrice": "Cada línea de esta lista entra en el único plan, a {price} {cadence}.",
     "pricingLink": "Ver todo lo que cubre el plan",
     "faqTitle": "Lo que preguntan los centros",
@@ -1452,9 +1451,15 @@
       "paper": "¿En papel? Trae a nuestra primera llamada una foto de la planilla de un día.",
       "spreadsheet": "Guarda tu lista de buceadores como CSV y la leemos contigo.",
       "spreadsheetLink": "Qué leemos en ella",
-      "system": "Mientras esperas, descarga tu lista de clientes del sistema que usas hoy.",
+      "system": "Mientras esperas, descarga tu registro de clientes del sistema que usas hoy.",
       "systemLink": "Pasos de exportación por sistema",
       "systemGuideLink": "Pasos de exportación de {competitor}"
     }
+  },
+  "illustrations": {
+    "caption": "Ilustración creada para DiveDay.",
+    "harborAlt": "Ilustración de buzos y un tripulante reunidos junto a un barco de buceo amarrado.",
+    "classroomAlt": "Ilustración de un instructor y dos adultos conversando sobre equipo de buceo en un centro junto al mar.",
+    "gear-handoverAlt": "Ilustración de una trabajadora de un centro de buceo que entrega unas aletas a un cliente en el mostrador de alquiler."
   }
 }

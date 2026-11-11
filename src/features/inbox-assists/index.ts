@@ -5,6 +5,7 @@ export {
   awaitsTriage,
   diverReplyLanguage,
   draftReplyFor,
+  draftReplyToMessage,
   replyFacts,
   TRIAGE_PER_VIEW,
   translateReplyFor,

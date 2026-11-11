@@ -424,7 +424,7 @@ export function StaffingWeek({
 
       {/* Table semantics for the weekday and person headers; the rows lay
           out on the grid. Paper is the rota sheet (`StaffingRotaSheet`). */}
-      <table className="mt-4 hidden w-full lg:block">
+      <table className="mt-4 hidden w-full xl:block">
         <StaffingWeekHeader days={dayFaces} words={words} grid={WEEK_GRID} />
 
         <tbody className="block">
@@ -502,7 +502,7 @@ export function StaffingWeek({
       {/* Mobile presents the same work and actions as a day list; empty days
           are omitted, while away-only days remain visible (ADR
           20260902-crew-requests-and-blackouts). */}
-      <div className="mt-4 lg:hidden">
+      <div className="mt-4 xl:hidden">
         {listDays.map(({ day, rows, departures }) => {
           return (
             <div key={day.date} className="mt-6 first:mt-0">

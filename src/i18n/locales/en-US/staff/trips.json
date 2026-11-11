@@ -43,11 +43,14 @@
     "oneTime": "One-time departure",
     "perDiver": "per diver",
     "cancel": "Cancel this departure",
-    "more": "More for this departure",
+    "more": "Cancellation and weather",
     "meetingDaysSummary": "{count, plural, other {# days}} · {first} – {last}",
     "timing": "Timing",
     "bookingAndPayment": "Booking and payment",
-    "departureDetails": "Departure details"
+    "departureDetails": "Departure details",
+    "moreSeries": "Repeating dates and cancellations",
+    "correctCrewRecord": "Correct crew record",
+    "manageFutureDates": "Manage future dates"
   },
   "openSeats": {
     "label": "Unsold seats",
@@ -246,7 +249,8 @@
     "courseFormDate": "That didn’t record. The date on the paper can’t be after today.",
     "courseFormEnded": "This session is over, so a paper form can’t be recorded for it.",
     "paymentCurrency": "This receipt uses a different currency from the shop’s current currency. Record the new payment separately in Orders.",
-    "paymentRefundAmount": "Enter the amount returned, greater than zero and no more than the external money still held."
+    "paymentRefundAmount": "Enter the amount returned, greater than zero and no more than the external money still held.",
+    "detailsFinished": "Departure plan is now read-only."
   },
   "pulse": {
     "seats": "{booked} of {capacity} booked · {open, plural, one {# seat open} other {# seats open}}",
@@ -1013,5 +1017,12 @@
     "deleted": "Conservation record deleted.",
     "undoFailed": "This record could not be restored. It may have changed, or Undo is no longer available.",
     "lionfishHint": "Record lionfish removed under local invasive-species rules. Follow local permit and handling requirements."
+  },
+  "safetyRecord": {
+    "heading": "Dive safety record",
+    "correct": "Correct dive safety record",
+    "decompression": "Decompression diving recorded",
+    "noDecompression": "No decompression diving recorded",
+    "stale": "The safety record changed. Review the current value before correcting it."
   }
 }

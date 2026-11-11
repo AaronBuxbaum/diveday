@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ExecutedDive } from "@/db/schema";
-import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
+import { type DepthUnit, maxEnteredDepth, metersToFeet } from "@/lib/depth-units";
 import { scopedId } from "@/lib/element-id";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import {
@@ -256,11 +256,20 @@ function ExecutedDiveForm({
   // unknown; only a missing row gets the planned-site default.
   const executedSite = row ? row.actualSite : plannedSite;
   const [actualSiteId, setActualSiteId] = useState(executedSite?.id ?? "");
-  const [maxDepth, setMaxDepth] = useState(
-    row?.executed.maxDepthMeters == null
-      ? ""
-      : String(depthInUnit(row.executed.maxDepthMeters, depthUnit)),
-  );
+  const [initialDepth] = useState(() => {
+    const meters = row?.executed.maxDepthMeters ?? null;
+    const value =
+      meters === null
+        ? ""
+        : String(Number((depthUnit === "feet" ? metersToFeet(meters) : meters).toFixed(1)));
+    return { meters, value, unit: depthUnit, label: labels.maxDepth };
+  });
+  const [maxDepth, setMaxDepth] = useState(initialDepth.value);
+  // An unrelated edit must not round-trip recorded evidence through display precision.
+  const [depthEdited, setDepthEdited] = useState(false);
+  const depthUnchanged = !depthEdited;
+  const submittedDepth = depthUnchanged ? (initialDepth.meters ?? "") : maxDepth;
+  const submittedUnit = depthUnchanged ? "meters" : initialDepth.unit;
   const [enteredAt, setEnteredAt] = useState(
     dateTimeValue(row?.executed.enteredAt ?? null, timeZone),
   );
@@ -304,6 +313,8 @@ function ExecutedDiveForm({
   return (
     <form action={formAction} className="px-4 pb-4">
       <input type="hidden" name="diveNumber" value={diveNumber} />
+      <input type="hidden" name="maxDepthMeters" value={submittedDepth} />
+      <input type="hidden" name="depthUnit" value={submittedUnit} />
       <h3 className="font-semibold">{diveLabel}</h3>
       <p className="mt-1 text-sm text-muted">{plannedSiteLabel}</p>
       <FieldGrid columns={2} className="mt-4">
@@ -364,17 +375,19 @@ function ExecutedDiveForm({
           />
         </Field>
         <Field
-          label={labels.maxDepth}
+          label={initialDepth.label}
           error={depthError ? labels.refusals.depth_out_of_range : undefined}
         >
           <input
-            name="maxDepthMeters"
             type="number"
             min="0"
-            max={maxEnteredDepth(depthUnit)}
+            max={maxEnteredDepth(initialDepth.unit)}
             step="0.1"
             value={maxDepth}
-            onChange={(event) => setMaxDepth(event.target.value)}
+            onChange={(event) => {
+              setMaxDepth(event.target.value);
+              setDepthEdited(true);
+            }}
             className={`${controlClass} tabular-nums`}
           />
         </Field>

@@ -6,7 +6,7 @@ import { KEIKO, renderWeek, THURSDAY } from "./staffing-week-test-fixtures";
 afterEach(cleanup);
 describe("the phone staffing day", () => {
   function branches(container: HTMLElement) {
-    const list = container.querySelector<HTMLElement>('[class~="lg:hidden"]');
+    const list = container.querySelector<HTMLElement>('[class~="xl:hidden"]');
     if (!list) throw new Error("the week should render a day list");
     return { list };
   }

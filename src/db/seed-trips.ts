@@ -45,6 +45,35 @@ async function crewIdsByRole(db: DbExecutor, shopId: string): Promise<Map<string
   );
 }
 
+async function seedMeetingDays(db: DbExecutor, tripRows: (typeof trips.$inferSelect)[]) {
+  // A multi-day departure's window bounds the run; these meetings exclude the
+  // overnight gaps and match the published course's day-by-day plan.
+  const meetingDays: Record<string, { startsAt: Date; endsAt: Date }[]> = {
+    "Open Water Diver — three-day course": [
+      { startsAt: at(9, 8), endsAt: at(9, 17) },
+      { startsAt: at(10, 8), endsAt: at(10, 17) },
+      { startsAt: at(11, 8), endsAt: at(11, 16) },
+    ],
+    "Night Diver — two evenings": [
+      { startsAt: at(15, 16, 0), endsAt: at(15, 21, 30) },
+      { startsAt: at(16, 17, 0), endsAt: at(16, 21, 0) },
+    ],
+    "Deep Diver — Spiegel Grove & the wall": [
+      { startsAt: at(20, 8, 0), endsAt: at(20, 15, 0) },
+      { startsAt: at(21, 8, 0), endsAt: at(21, 16, 0) },
+    ],
+  };
+  await db.insert(tripScheduleDays).values(
+    tripRows.flatMap((trip) => {
+      const days = meetingDays[trip.title];
+      if (days) {
+        return days.map((day, index) => ({ tripId: trip.id, dayNumber: index + 1, ...day }));
+      }
+      return [{ tripId: trip.id, dayNumber: 1, startsAt: trip.startsAt, endsAt: trip.endsAt }];
+    }),
+  );
+}
+
 /**
  * The Open Water class, the session the course page's "See dates" lands on.
  * It dives a shallow, ungated reef, so the page's date row names where the
@@ -65,6 +94,7 @@ function openWaterSession(session: {
     // session's "N spots left" distinct from every other seeded trip's, which
     // e2e assertions match on by text.
     capacity: 5,
+    plannedDives: 4,
     priceCents: session.coursePriceCents !== null ? null : 59500,
   };
 }
@@ -228,6 +258,7 @@ export async function seedTrips(db: DbExecutor, shopId: string, ctx: SeedTripsCo
           "A small, instructor-led first breath underwater. No prior certification required.",
         startsAt: at(4, 14, 0),
         endsAt: at(4, 17, 0),
+        plannedDives: 1,
         capacity: 4,
         priceCents: 19500,
       },
@@ -239,7 +270,7 @@ export async function seedTrips(db: DbExecutor, shopId: string, ctx: SeedTripsCo
               shopId,
               courseId: openWaterCourse.id,
               startsAt: at(9, 8, 0),
-              endsAt: at(11, 17, 0),
+              endsAt: at(11, 16, 0),
               coursePriceCents: openWaterCourse.priceCents,
             }),
           ]
@@ -313,46 +344,7 @@ export async function seedTrips(db: DbExecutor, shopId: string, ctx: SeedTripsCo
     ])
     .returning();
 
-  /**
-   * When a multi-day departure actually meets.
-   *
-   * `trips.starts_at`/`ends_at` bound the whole run — first morning to last
-   * evening — and say nothing about the nights in between, so every departure
-   * that meets more than once needs a `trip_schedule_days` row per day or the
-   * page prints one continuous 57-hour outing. Anything absent here meets once,
-   * on its own window, which is every ordinary boat.
-   *
-   * Keyed by the session's own title rather than by course id: the Open Water
-   * class was the only entry when this was an `if`, and the two multi-day
-   * course sessions added since silently fell through it. Each set of windows
-   * matches the day-by-day plan on that course's published page
-   * (src/content/course-templates.ts) — a demo whose Night Diver page promises two
-   * evenings while the session it links to spans three is a bug a shop reports.
-   */
-  const meetingDays: Record<string, { startsAt: Date; endsAt: Date }[]> = {
-    "Open Water Diver — three-day course": [
-      { startsAt: at(9, 8), endsAt: at(9, 14) },
-      { startsAt: at(10, 8), endsAt: at(10, 16) },
-      { startsAt: at(11, 9), endsAt: at(11, 17) },
-    ],
-    "Night Diver — two evenings": [
-      { startsAt: at(15, 16, 0), endsAt: at(15, 21, 30) },
-      { startsAt: at(16, 17, 0), endsAt: at(16, 21, 0) },
-    ],
-    "Deep Diver — Spiegel Grove & the wall": [
-      { startsAt: at(20, 8, 0), endsAt: at(20, 15, 0) },
-      { startsAt: at(21, 8, 0), endsAt: at(21, 16, 0) },
-    ],
-  };
-  await db.insert(tripScheduleDays).values(
-    tripRows.flatMap((trip) => {
-      const days = meetingDays[trip.title];
-      if (days) {
-        return days.map((day, index) => ({ tripId: trip.id, dayNumber: index + 1, ...day }));
-      }
-      return [{ tripId: trip.id, dayNumber: 1, startsAt: trip.startsAt, endsAt: trip.endsAt }];
-    }),
-  );
+  await seedMeetingDays(db, tripRows);
 
   /**
    * What each tank actually is. "Dive 1 · Dive 2" tells a diver nothing they

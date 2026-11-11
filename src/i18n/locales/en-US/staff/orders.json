@@ -38,7 +38,8 @@
       "nitrox": "Nitrox (per dive)",
       "deposit": "Deposit",
       "merchandise": "Merchandise",
-      "other": "Other"
+      "other": "Other",
+      "pass_through_fee": "Pass-through fee"
     },
     "lineItemGroup": "Item {number}",
     "lineItemKindLabel": "Kind",
@@ -51,7 +52,9 @@
   "collection": {
     "cash": "Cash",
     "card_machine": "Card machine",
-    "room_charge": "Room charge"
+    "room_charge": "Room charge",
+    "bank_transfer": "Bank transfer",
+    "other": "Other external payment"
   },
   "detail": {
     "fallbackDescription": "Order",
@@ -104,7 +107,9 @@
       "cash": "Paid in cash {date}",
       "card_machine": "Paid by card machine {date}",
       "room_charge": "Charged to room {room} {date}",
-      "room_charge_hotel": "Charged to room {room} · {hotel} {date}"
+      "room_charge_hotel": "Charged to room {room} · {hotel} {date}",
+      "bank_transfer": "Paid by bank transfer {date}",
+      "other": "External payment recorded {date}"
     },
     "notice": {
       "refreshed": "Status refreshed from Stripe",
@@ -271,5 +276,31 @@
       "matching": "Matching…",
       "openTrip": "Open trip"
     }
+  },
+  "purchase": {
+    "title": "Record purchase",
+    "explanation": "Record money already received. DiveDay does not charge a card or send an invoice.",
+    "method": "Paid by",
+    "reference": "External receipt or reference (optional)",
+    "item": "Item",
+    "tax": "Included tax (optional)",
+    "taxHint": "Leave blank if unknown. Enter 0 if no tax was charged.",
+    "tip": "Included tip (optional)",
+    "gross": "Total received",
+    "submit": "Record received payment",
+    "invalid": "Check the customer, items and amounts. Included tax, tips and fees cannot exceed the total. Refresh if the shop currency changed.",
+    "included": "Enter received prices, including any tax and tips. Separately recorded tax, tips and pass-through fees stay outside your DiveDay fee. Record a booking payment on its departure, not as another purchase.",
+    "refundTitle": "Record money already returned",
+    "refundExplanation": "Return the money outside DiveDay first. This records the return and adjusts your DiveDay fee; it does not send money.",
+    "refundAmount": "Amount returned ({currency})",
+    "refundReason": "Reason",
+    "refundSubmit": "Record returned money",
+    "refundHistory": "Recorded returns",
+    "refundRecorded": "Returned money recorded. No money was sent by DiveDay.",
+    "refundInvalid": "The return was not recorded. Check the remaining amount and refresh before trying again.",
+    "includedTax": "Included tax",
+    "includedTip": "Included tip",
+    "receiptReference": "External receipt or reference",
+    "walkIn": "Walk-in customer"
   }
 }

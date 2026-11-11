@@ -6,7 +6,6 @@
     "day": "{date} — {groups, plural, one {# group} other {# groups}} · {divers, plural, one {# diver} other {# divers}}",
     "noDate": "No date named: {count, plural, one {# request} other {# requests}}"
   },
-  "onTheBoard": "On the board: {when} · {title} · {seats, plural, =0 {full} one {# seat left} other {# seats left}}",
   "addDeparture": "Add a departure",
   "openDeparture": "Open a departure for this date",
   "flexible": "Flexible",
@@ -61,5 +60,25 @@
     "booked": "Booked {date}",
     "marked": "Marked done {date}",
     "replied": "Replied {date}"
+  },
+  "plan": {
+    "interestHeading": "Requests for this date",
+    "preferred": "First choice",
+    "alternate": "Second choice",
+    "nearby": "Flexible nearby",
+    "headcount": "{count, plural, one {# diver in stated party sizes} other {# divers in stated party sizes}}",
+    "unknown": "{count, plural, one {# party size unknown} other {# party sizes unknown}}",
+    "interest": "{title} · {count, plural, one {# request} other {# requests}}",
+    "charters": "{count, plural, one {# whole-boat request; review separately} other {# whole-boat requests; review separately}}",
+    "departuresHeading": "Already on the board",
+    "noDepartures": "No scheduled departure on this date.",
+    "departure": "{when} · {title}",
+    "private": "Private departure",
+    "seats": "{count, plural, =0 {No seats left} one {# seat left} other {# seats left}}",
+    "crew": "{count, plural, =0 {No crew assigned} one {# crew member assigned} other {# crew members assigned}}",
+    "review": "Compare seats with requested party sizes. Confirm diver suitability and crew availability before offering a place.",
+    "reviewCrew": "Check the crew schedule",
+    "crewAway": "{count, plural, one {# assigned crew member has time away to confirm} other {# assigned crew members have time away to confirm}}",
+    "dateOverlap": "Flexible requests can appear on more than one date."
   }
 }

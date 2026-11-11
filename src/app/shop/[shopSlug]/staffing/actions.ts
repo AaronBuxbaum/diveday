@@ -14,10 +14,9 @@ import {
 } from "@/db/crew-requests";
 import { getShopById } from "@/db/shops";
 import { changeTripCrew } from "@/db/trips";
-import { formValue, readForm, text } from "@/features/form-parse";
+import { readForm, text } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { requireStaffSession } from "@/features/session";
-import { setCrewPublicConsent } from "@/features/staff-accounts";
 import { createStaffShift, deleteStaffShift } from "@/features/staffing";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -92,12 +91,6 @@ export async function createShiftAction(week: string, formData: FormData) {
 }
 
 const shiftIdForm = z.object({ shiftId: text() });
-/** The consent itself is any non-empty value; the public name is passed raw to its writer. */
-const crewPublicForm = z.object({
-  personId: text(),
-  consented: formValue().transform(Boolean),
-  publicName: formValue().transform((value) => value?.toString() ?? null),
-});
 const blockIdForm = z.object({ blockId: text() });
 const tripIdForm = z.object({ tripId: text() });
 const crewDecisionForm = z.object({ requestId: text(), decision: text() });
@@ -128,62 +121,6 @@ const awaySchema = z.object({
   endsOn: z.string().refine(isValidCalendarDate),
   note: z.string().trim().max(120),
 });
-
-/**
- * **One staff member's own agreement to be named to divers** (issue #1181,
- * delight report D21).
- *
- * Public-name consent belongs beside crew members' other self-service
- * actions: only the person can grant or withdraw permission to publish their
- * name. It is deliberately *not* on the team page,
- * which is behind `canPersonManageStaffAccounts` — a divemaster could never
- * reach a switch that lives there, and a consent an owner recorded on their
- * behalf would not be a consent at all.
- *
- * Which languages a shop can field stays a manager's to curate
- * (`saveStaffLanguagesAction`): that is an operational fact about the shop.
- * Publishing somebody's first name on a page anyone on the internet can read
- * is a fact about *them*.
- *
- * No `canManage` branch and no `<select>`: unlike the away form beside it,
- * there is no case where recording this for somebody else is the right act, so
- * the person is the session's own and any other `personId` is refused outright.
- */
-export async function saveCrewPublicConsentAction(week: string, formData: FormData) {
-  const at = weekExtra(week);
-  const session = await requireStaffSession();
-  const path = shopPath(session.user.shopSlug, "staffing");
-  const crewPublic = readForm(crewPublicForm, formData);
-  const personId = crewPublic.personId;
-  // Not a refusal notice: a request naming somebody else is not a mistake a
-  // form can make, so it gets no explanation and no trace of whether that
-  // person exists.
-  if (!personId || personId !== session.user.personId) redirect(noticeUrl(path, "invalid", at));
-
-  const consented = crewPublic.consented;
-  // Passed through raw: trimming, collapsing, capping and the fall back to the
-  // shop's own record all live in `crewPublicNameToStore`, beside the write, so
-  // the register's rules cannot drift from this one form's reading of them.
-  const saved = await setCrewPublicConsent(await getDb(), {
-    shopId: session.user.shopId,
-    personId,
-    actorPersonId: session.user.personId,
-    consented,
-    publicName: crewPublic.publicName,
-  });
-  // Two codes rather than one, because the words are directional: a single
-  // "Divers will see your first name" told somebody who had just unticked the
-  // box the opposite of what had happened, in a success-toned banner. On any
-  // other form that is a copy nit; on the withdrawal of a consent it is the one
-  // sentence the person reads to decide whether they need to go and find their
-  // owner.
-  const code = saved
-    ? consented
-      ? "crew-consent-saved"
-      : "crew-consent-withdrawn"
-    : "staff-not-found";
-  revalidateAndRedirect(path, noticeUrl(path, code, at));
-}
 
 export async function saveAwayAction(week: string, formData: FormData) {
   const at = weekExtra(week);

@@ -44,13 +44,14 @@ describe("the counter's five-blocker fixture", () => {
     );
   });
 
-  it("carries a price, because it is publicly for sale and says 'paid at booking'", async () => {
+  it("carries a price without promising a payment method or collection time", async () => {
     const { trip } = await counterTrip();
     // `is_private` defaults to false, so this sits on /s/blue-mantis between two
     // priced charters. Unpriced, `checkoutCharge` returns null, the booking
     // action never asks for money, and `payment_due` stands forever for every
     // diver who takes a seat (issue #692).
     expect(trip.priceCents).toBeGreaterThan(0);
+    expect(trip.description).not.toMatch(/paid at booking/i);
   });
 
   it("still leaves seven seats, which the e2e fleet matches trips by", async () => {

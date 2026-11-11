@@ -49,6 +49,8 @@ const METHOD_CODES = {
   stripe_invoice: "stripe",
   cash: "cash",
   card_machine: "card_machine",
+  bank_transfer: "bank_transfer",
+  other: "other",
   room_charge: "room_charge",
 } as const satisfies Record<OrderExportLine["collection"], string>;
 

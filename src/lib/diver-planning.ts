@@ -554,6 +554,7 @@ export function packingConfidence(
    * out, and the instructor briefs the class whatever the dock rhythm says.
    */
   courseIncluded: readonly RentableItemKind[] = [],
+  rentedAtShop: readonly RentableItemKind[] = [],
 ): {
   bring: string[];
   /** Personal gear to bring, said before the shop's own list. */
@@ -575,7 +576,10 @@ export function packingConfidence(
     return {
       ...shared,
       bringPersonal: [],
-      provided: briefs ? ["tanksAndWeights", "crewBriefing"] : ["tanksAndWeights"],
+      provided: [
+        rentedAtShop.includes("weights") ? "tanks" : "tanksAndWeights",
+        ...(briefs ? (["crewBriefing"] as const) : []),
+      ],
       providedKinds: [],
     };
   }

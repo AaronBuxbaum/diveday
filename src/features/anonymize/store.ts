@@ -2180,7 +2180,12 @@ async function scrubOrders(
     // pins the header with a seeded "Split with <name>'s buddy this trip".
     // Excluded from an export and left on the row after an erasure is not a
     // consistent answer (issue #1607, found by a `security-reviewer` pass).
-    .set({ hostedInvoiceUrl: null, invoicePdfUrl: null, description: null })
+    .set({
+      hostedInvoiceUrl: null,
+      invoicePdfUrl: null,
+      description: null,
+      counterReceipt: sql`case when ${orders.counterReceipt} is null then null else jsonb_set(${orders.counterReceipt}, '{reference}', 'null'::jsonb) end`,
+    })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
   // The room a room charge went to (fifth-loop ideas, item 57) placed this
   // diver in one hotel room on one night. Redacted rather than cleared, since a

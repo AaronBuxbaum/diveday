@@ -15,7 +15,7 @@ specific to a guide — read `marketing-page` first if you haven't.
 
 1. Read `docs/product/marketing.md` §"Where the words live" (switching-guide section) — the rules
    this skill implements.
-2. Read [assessments/competitive-strategy.md](../../../docs/product/archive/assessments/competitive-strategy.md)
+2. Read the current [switching review](../../../docs/product/switching-review-20261111.md) before the archived research. Read [assessments/competitive-strategy.md](../../../docs/product/archive/assessments/competitive-strategy.md)
    for why portability is the chosen battleground and the legal guardrail (a shop migrates from
    files *it* exports itself — a guide never tells anyone to hand over a competitor login, and
    DiveDay never reaches into another system).
@@ -42,9 +42,9 @@ below.
 
 Every guide page renders the same guided path from `src/app/(marketing)/switching/_components/guide.tsx`:
 
-`GuideHero` (eyebrow, headline, lede, the demo/trial pair, and the four shared answers a switcher
-arrives with) → the guide's own "what changes" prose, with `DividedList` where it has items →
-`MidCta` at the hinge between the argument and the mechanics → `MovePath`, one numbered rail of
+`GuideHero` (eyebrow, headline, lede, demo/setup pair and shared answers) → `GuideProof`
+(the existing Today screen, feature links and a demo opening on Today) → the guide's own fit
+and tradeoff prose → `MovePath`, one numbered rail of
 `MovePhase`es (`StepList`, `PhaseNotes`, and the shared `ScopePhase` / `ImportPhase`) →
 `SwitchingConcierge` → `ClosingCta` → `SourcesFootnote`.
 

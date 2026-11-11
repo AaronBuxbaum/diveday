@@ -7,6 +7,7 @@ import { onTheWaterByRollCall } from "./manifests";
 import { newestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, tripAssignments, tripStageEvents, trips } from "./schema";
+import { tripHasFinalHome } from "./trip-editability";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -225,7 +226,10 @@ export async function cancelDeparture(
       .limit(1)
       .for("update");
     if (!trip) return { ok: false as const, reason: "not_found" as const };
-    if (await departureMayBeAtSea(tx, { shopId, tripId, startsAt: trip.startsAt, now })) {
+    if (
+      (await tripHasFinalHome(tx, shopId, tripId, now)) ||
+      (await departureMayBeAtSea(tx, { shopId, tripId, startsAt: trip.startsAt, now }))
+    ) {
       return { ok: false as const, reason: "trip_departed" as const };
     }
     await setTripStatus(tx, shopId, tripId, "cancelled", now, options);

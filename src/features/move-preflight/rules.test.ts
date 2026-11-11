@@ -358,3 +358,9 @@ describe("parseMinTurnaroundMinutes", () => {
     }
   });
 });
+
+it("refuses a finished departure without manufacturing roll-call evidence", () => {
+  expect(composeMovePreflight({ ...quiet, finished: true, rollCallEvidence: 0 }).blocked).toBe(
+    "already_sailed",
+  );
+});

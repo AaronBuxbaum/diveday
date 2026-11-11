@@ -136,7 +136,7 @@ describe("the map covers the whole hub", () => {
 
 describe("the selection model", () => {
   it.each(["/dive-sites/site-123", "/dive-sites/site-123/edit"])(
-    "keeps a nested dive-site page under its existing rail row: %s",
+    "does not select a Settings row for a top-level dive-site page: %s",
     (path) => {
       expect(
         currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
@@ -144,7 +144,7 @@ describe("the selection model", () => {
           basePath: BASE,
           sectionId: "timezone",
         }),
-      ).toBe("diveSites");
+      ).toBeNull();
     },
   );
 
@@ -215,8 +215,8 @@ describe("the selection model", () => {
 
 describe("the rail as it renders", () => {
   it.each([
-    ["/dive-sites/site-123", "diveSites"],
-    ["/dive-sites/site-123/edit", "diveSites"],
+    ["/dive-sites/site-123", "Settings sections"],
+    ["/dive-sites/site-123/edit", "Settings sections"],
     ["/me/calendar", "Settings sections"],
     ["/me/email", "Settings sections"],
   ])("selects the current rail row for %s without borrowing Timezone", (path, label) => {
@@ -717,7 +717,7 @@ describe("what the rail hides", () => {
     for (const id of Object.keys(gated)) expect(ids.has(id)).toBe(false);
     // And keeps the ones nobody is gated out of, so an empty gate set is not
     // simply an empty rail.
-    expect(ids.has("diveSites")).toBe(true);
+    expect(ids.has("diveSites")).toBe(false);
     expect(ids.has("yourData")).toBe(true);
   });
 

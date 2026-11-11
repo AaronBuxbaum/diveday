@@ -21,7 +21,8 @@ import { courseTotalCents } from "@/lib/courses";
 import { formatMoneyScanned, formatShortDate, joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
-import { CourseFollowUps, LadderNotice } from "./_components/CourseFollowUps";
+import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { LadderNotice } from "./_components/CourseFollowUps";
 import { CourseRoster, type CourseRosterRow } from "./_components/CourseRoster";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -116,7 +117,7 @@ export default async function CoursesPage({
     keepQuery = true,
   }: {
     target?: number;
-    nextView?: CourseListView;
+    nextView?: CourseListView | null;
     keepQuery?: boolean;
   }) => {
     const search = new URLSearchParams();
@@ -131,7 +132,7 @@ export default async function CoursesPage({
     {
       key: "all",
       label: st("courses.list.views.all"),
-      href: listHref({ nextView: undefined }),
+      href: listHref({ nextView: null }),
       active: !view,
     },
     ...COURSE_LIST_VIEWS.map((key) => ({
@@ -215,7 +216,7 @@ export default async function CoursesPage({
   return (
     <StaffPage width="full">
       <ShopPageHeader
-        title={st("courses.list.title")}
+        title={st("shared.shopSections.courses")}
         actions={
           // The one door to the catalog a diver sees — replacing the
           // arrow-out-of-a-box icon every row used to carry. "How does my
@@ -232,6 +233,13 @@ export default async function CoursesPage({
         }
       />
 
+      <StaffSectionTabs
+        section="courses"
+        current="courses"
+        roles={session.user.roles}
+        shop={shop}
+        t={st}
+      />
       <LadderNotice notice={notice} t={st} />
       {formsAwaitingText[0] ? (
         <ShopNotice tone="warning" className="mt-6">
@@ -310,7 +318,6 @@ export default async function CoursesPage({
       ) : (
         <CourseRoster rows={rows} className="mt-8" />
       )}
-      <CourseFollowUps db={db} shop={shop} locale={locale} t={st} />
       <div>
         <Pager
           page={coursePage.page}

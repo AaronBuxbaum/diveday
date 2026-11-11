@@ -449,8 +449,8 @@ describe("StaffingWeek standing crew clash", () => {
    * on, so the branch that was silent is the one that mattered most.
    */
   function branches(container: HTMLElement) {
-    const grid = container.querySelector<HTMLElement>('[class~="lg:block"]');
-    const list = container.querySelector<HTMLElement>('[class~="lg:hidden"]');
+    const grid = container.querySelector<HTMLElement>('[class~="xl:block"]');
+    const list = container.querySelector<HTMLElement>('[class~="xl:hidden"]');
     if (!grid || !list) throw new Error("the week should render a grid and a day list");
     return { grid, list };
   }
@@ -513,8 +513,8 @@ describe("StaffingWeek standing crew clash", () => {
  */
 describe("StaffingWeek geometry", () => {
   function branches(container: HTMLElement) {
-    const grid = container.querySelector<HTMLElement>('[class~="lg:block"]');
-    const list = container.querySelector<HTMLElement>('[class~="lg:hidden"]');
+    const grid = container.querySelector<HTMLElement>('[class~="xl:block"]');
+    const list = container.querySelector<HTMLElement>('[class~="xl:hidden"]');
     if (!grid || !list) throw new Error("the week should render a grid and a day list");
     return { grid, list };
   }

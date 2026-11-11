@@ -13,6 +13,8 @@ afterEach(cleanup);
 const shop = {
   timezone: "America/New_York",
   packingList: ["Swimsuit and towel"],
+  rentalItems: [],
+  rentalPricing: { setCents: null, perItemCents: {}, nitroxCents: null },
   briefingMinutes: 15,
   temperatureUnit: "celsius",
   dockCallMinutes: 30,

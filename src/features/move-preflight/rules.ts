@@ -47,6 +47,8 @@ export type MovePreflightFacts = {
   rollCallEvidence: number;
   /** False for a cancelled departure, which `moveTrip` refuses too. */
   scheduled: boolean;
+  /** Final return closes the departure even when no roll call was recorded. */
+  finished?: boolean;
   /**
    * Other departures on **the same hull** whose windows overlap where the move
    * proposes to put this one (`boatMoveClashes`, H-20260916-may-one-hull-carry: one hull, one departure
@@ -205,6 +207,6 @@ export function composeMovePreflight(facts: MovePreflightFacts): MovePreflight {
  */
 function blockedReason(facts: MovePreflightFacts): MovePreflight["blocked"] {
   if (!facts.scheduled) return "not_scheduled";
-  if (facts.rollCallEvidence > 0) return "already_sailed";
+  if (facts.finished || facts.rollCallEvidence > 0) return "already_sailed";
   return null;
 }

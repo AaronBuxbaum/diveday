@@ -35,8 +35,11 @@ import { OrderBookingLine } from "./_components/OrderBookingLine";
 import { OrderDisputes, OrderMeta } from "./_components/OrderMeta";
 import { OrderMoreMenu } from "./_components/OrderMoreMenu";
 import { OrderPageFlash } from "./_components/OrderPageFlash";
+import { OrderReceiptLines } from "./_components/OrderReceiptLines";
+import { RecordedPurchaseRefund } from "./_components/RecordedPurchaseRefund";
+import { SquareReceiptCard } from "./_components/SquareReceiptCard";
 import { refundAction } from "./actions";
-import { KIND_KEYS, NOTICES, STATUS_KEYS, undoTooLateText } from "./order-detail-keys";
+import { NOTICES, STATUS_KEYS, undoTooLateText } from "./order-detail-keys";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -124,24 +127,26 @@ export default async function OrderDetailPage({
       />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.orders)}
-        title={order.person.fullName}
+        title={order.person?.fullName ?? t("orders.purchase.walkIn")}
         description={order.order.description || t("orders.detail.fallbackDescription")}
         // One overflow for the dispute sheet and Stripe acts on an open invoice.
         // Record payment stays in the receipt card as the one row of work.
         actions={
-          <OrderMoreMenu
-            t={t}
-            shopSlug={shopSlug}
-            orderId={order.order.id}
-            canDisputeSheet={canDisputeSheet}
-            stripeOpen={stripeOpen}
-            demo={demo}
-          />
+          canDisputeSheet || stripeOpen ? (
+            <OrderMoreMenu
+              t={t}
+              shopSlug={shopSlug}
+              orderId={order.order.id}
+              canDisputeSheet={canDisputeSheet}
+              stripeOpen={stripeOpen}
+              demo={demo}
+            />
+          ) : null
         }
         meta={
           <OrderMeta
             order={order.order}
-            personId={order.person.id}
+            personId={order.person?.id ?? null}
             createdBy={{ name: order.createdBy?.fullName ?? null, online: order.boughtOnline }}
             rentalTicketId={header.rentalTicketId}
             shopSlug={shopSlug}
@@ -180,7 +185,7 @@ export default async function OrderDetailPage({
         {booking ? (
           <OrderBookingLine
             booking={booking}
-            personName={order.person.fullName}
+            personName={order.person?.fullName ?? t("orders.purchase.walkIn")}
             currency={order.order.currency}
             shopSlug={shopSlug}
             locale={locale}
@@ -209,7 +214,7 @@ export default async function OrderDetailPage({
             Only on an order that has actually given something back, so a plain
             paid order gains no line. */}
         {order.order.refundedCents > 0 ? (
-          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-base">
             <div className="flex gap-2">
               <dt className="text-muted">{t("orders.detail.refundedSoFar")}</dt>
               <dd className="font-medium tabular-nums">
@@ -232,35 +237,19 @@ export default async function OrderDetailPage({
             `min-w-0` lets the description shrink below its longest word, so
             `break-words` lets that word break: a SKU or a pasted URL would
             otherwise paint over the price. The price never shrinks. */}
-        <ul className="mt-4 divide-y divide-border">
-          {order.lineItems.map((item) => (
-            <li key={item.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
-              <span className="min-w-0 break-words">
-                {item.description}{" "}
-                <span className="text-muted">
-                  ({t(KIND_KEYS[item.kind])}
-                  {item.quantity > 1 ? ` × ${item.quantity}` : ""})
-                </span>
-              </span>
-              <span className="shrink-0 tabular-nums">
-                {formatMoneyCents(
-                  item.unitAmountCents * item.quantity,
-                  order.order.currency,
-                  locale,
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <OrderReceiptLines
+          lineItems={order.lineItems}
+          currency={order.order.currency}
+          taxCents={order.order.counterReceipt?.taxCents ?? order.order.taxCents}
+          includedTax={Boolean(order.order.counterReceipt)}
+          {...{ locale, t }}
+        />
 
-        {order.order.taxCents > 0 ? (
-          <dl className="mt-3 flex justify-end gap-2 text-sm">
-            <dt className="text-muted">{t("orders.detail.tax")}</dt>
-            <dd className="font-medium tabular-nums">
-              {formatMoneyCents(order.order.taxCents, order.order.currency, locale)}
-            </dd>
-          </dl>
-        ) : null}
+        <RecordedPurchaseRefund
+          order={order.order}
+          history={page.purchaseRefunds}
+          {...{ canRefund, locale, timezone, t }}
+        />
 
         {counterCollection === null && order.order.hostedInvoiceUrl ? (
           <p className="mt-4 text-sm">
@@ -384,6 +373,17 @@ export default async function OrderDetailPage({
           <p className="mt-2 text-xs text-muted">{t("orders.detail.demoRefundHint")}</p>
         ) : null}
       </SectionCard>
+      {counterCollection && !demo ? (
+        <SquareReceiptCard
+          state={page.squareReceipt}
+          matchable={page.can.matchSquareReceipt}
+          orderId={order.order.id}
+          notice={notice}
+          t={t}
+          locale={locale}
+          timezone={timezone}
+        />
+      ) : null}
     </StaffPage>
   );
 }

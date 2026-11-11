@@ -172,7 +172,7 @@ export default async function ReviewsPage({
     ));
 
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <ShopPageHeader
         title={t("shared.shopSections.inbox")}
         actions={

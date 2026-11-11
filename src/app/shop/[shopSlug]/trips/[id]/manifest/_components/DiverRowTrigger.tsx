@@ -55,7 +55,7 @@ export function DiverRowTrigger({
       <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
         {String(index + 1).padStart(2, "0")}
       </span>
-      <span className={`min-w-0 flex-1 ${nameColumn}`}>
+      <span data-person-row-name="" className={`min-w-0 flex-1 ${nameColumn}`}>
         <span className={`block ${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
           {diver.fullName}
         </span>
@@ -69,7 +69,7 @@ export function DiverRowTrigger({
         />
       </span>
       {/* **The capsule's own line, the row's full width**
-        (issue #2008). A Badge never wraps, and the longest
+        (issue #2008). At normal type sizes, the longest
         capsule ("Buddy not back aboard", about 172px; es-ES
         "Compañero sin regresar a bordo", about 229px) is wider than the name column a 390px
         phone leaves (186px), so beside the name it spilled
@@ -84,16 +84,22 @@ export function DiverRowTrigger({
         enough, so the capsule goes back beside the name's
         first line: a second line there only made every
         flagged row taller, and on paper it cost the packet
-        pages (e2e/paper-day). */}
+        pages (e2e/paper-day). At large device sizes, the existing wraps
+        option keeps the whole status within that line, without shrinking
+        safety text (ADR 20260907-in-your-hands, 19d). */}
       {flagged ? (
-        <span className={flagLine}>
+        <span data-person-row-flags="" className={flagLine}>
           {capsule}
           {typeBadge}
           {/* **The diver wrote a medical alert for the crew** (issue #2960):
             the fact, on the row, for every staffer, outside the one-capsule
             chain like the badges beside it. Its words are one tap away in
             the sheet, for the readers allowed them. Never a gate. */}
-          {alerted ? <Badge tone="primary">{t("manifest.medicalAlertChip")}</Badge> : null}
+          {alerted ? (
+            <Badge tone="primary" wraps className="max-w-full">
+              {t("manifest.medicalAlertChip")}
+            </Badge>
+          ) : null}
           {/* **The desk wrote this one off** (#1209). On the
             row and not in the sheet, unlike "Checked in":
             that one is routine and a tap away is fine, this
@@ -114,7 +120,7 @@ export function DiverRowTrigger({
             turns up after all is tapped aboard exactly as
             before. */}
           {diver.notHere ? (
-            <Badge tone="neutral">
+            <Badge tone="neutral" wraps className="max-w-full">
               {diver.turnedAway ? t("manifest.turnedAwayPill") : t("manifest.notHerePill")}
             </Badge>
           ) : null}

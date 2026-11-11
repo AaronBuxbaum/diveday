@@ -500,7 +500,7 @@ export async function grantPackageEntitlementsForPaidOrder(
     .from(orders)
     .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
     .limit(1);
-  if (order?.status !== "paid") return [];
+  if (order?.status !== "paid" || !order.personId) return [];
   const lines = await db
     .select({ packageId: orderLineItems.packageId, quantity: orderLineItems.quantity })
     .from(orderLineItems)

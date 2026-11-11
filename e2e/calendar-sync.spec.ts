@@ -82,9 +82,9 @@ test.describe("staff calendar subscriptions", () => {
     // The door: the identity menu's one "Account settings" row, ungated, and
     // the account page's own links (visual review 2026-10-24, A42).
     await page.locator("header [data-identity-menu]").click();
-    await page.locator("header").getByRole("link", { name: "Account settings" }).click();
+    await page.getByRole("banner").getByRole("link", { name: "Account settings" }).click();
     await page
-      .getByRole("navigation", { name: "Account security" })
+      .getByRole("navigation", { name: "Account settings" })
       .getByRole("link", { name: "Calendar subscription", exact: true })
       .click();
     await expect(

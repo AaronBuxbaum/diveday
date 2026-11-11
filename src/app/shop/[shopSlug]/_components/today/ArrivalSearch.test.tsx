@@ -46,9 +46,57 @@ describe("ArrivalSearch", () => {
     expect(router.replace).toHaveBeenLastCalledWith("/shop/blue-mantis", { scroll: false });
   });
 
-  /** Today is not the counter: the box must not steal focus from the page. */
-  it("does not take focus on arrival", () => {
+  /** The arrival lookup opens ready for a name or scanner. */
+  it("takes focus on arrival", () => {
     render(<ArrivalSearch query="" copy={copy} />);
-    expect(document.activeElement).not.toBe(screen.getByRole("searchbox", { name: copy.label }));
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: copy.label }));
+  });
+  it("leaves focus alone while the booking panel is open", () => {
+    render(
+      <>
+        <section id="call-panel">Add a booking</section>
+        <ArrivalSearch query="" copy={copy} />
+      </>,
+    );
+    expect(document.activeElement).toBe(document.body);
+  });
+  it("leaves focus alone while the requested booking panel is still streaming", () => {
+    const originalUrl = window.location.href;
+    window.history.replaceState({}, "", "/shop/blue-mantis?call=1");
+    try {
+      render(<ArrivalSearch query="" copy={copy} />);
+      expect(document.activeElement).toBe(document.body);
+    } finally {
+      window.history.replaceState({}, "", originalUrl);
+    }
+  });
+  it("does not steal focus from a control used before arrival search hydrates", () => {
+    const link = document.createElement("a");
+    link.href = "#departure";
+    link.textContent = "Open departure";
+    document.body.append(link);
+    link.focus();
+    try {
+      render(<ArrivalSearch query="" copy={copy} />);
+      expect(document.activeElement).toBe(link);
+    } finally {
+      link.remove();
+    }
+  });
+
+  it("takes over the route heading's default focus on client navigation", () => {
+    const { rerender } = render(
+      <main>
+        <h1 tabIndex={-1}>Today</h1>
+      </main>,
+    );
+    screen.getByRole("heading", { name: "Today" }).focus();
+    rerender(
+      <main>
+        <h1 tabIndex={-1}>Today</h1>
+        <ArrivalSearch query="" copy={copy} />
+      </main>,
+    );
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: copy.label }));
   });
 });

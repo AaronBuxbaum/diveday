@@ -91,7 +91,9 @@ describe("moveTrip / duplicateTrip across a DST transition", () => {
     const source = await buildThreeDayCourse(db, shop.id);
     if (!source) throw new Error("source trip not created");
 
-    const outcome = await moveTrip(db, shop.id, source.id, wall(13, 7));
+    const outcome = await moveTrip(db, shop.id, source.id, wall(13, 7), {
+      now: new Date("2026-03-01T12:00:00Z"),
+    });
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
 
@@ -235,7 +237,9 @@ describe("moveTrip / duplicateTrip when the start's clock time also changes", ()
     });
     if (!source) throw new Error("source trip not created");
 
-    const outcome = await moveTrip(db, shop.id, source.id, wall(12, 7, 15));
+    const outcome = await moveTrip(db, shop.id, source.id, wall(12, 7, 15), {
+      now: new Date("2026-03-01T12:00:00Z"),
+    });
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
 

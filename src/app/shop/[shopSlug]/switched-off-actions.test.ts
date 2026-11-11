@@ -201,7 +201,7 @@ describe("actions behind a switched-off feature", () => {
       checkpoint: "after_dive_1" as const,
       diveSiteId: site.id,
     };
-    const tap = form({ speciesSlug: "green-sea-turtle" });
+    const tap = form({ speciesSlug: "green-sea-turtle", "Green sea turtle": "" });
     const logged = () =>
       db
         .select({ id: tripSightings.id })
@@ -213,6 +213,9 @@ describe("actions behind a switched-off feature", () => {
     expect(await recordSightingAction(sightingCtx, undefined, tap)).toEqual({
       status: "switched_off",
     });
+    expect(
+      await recordSightingAction(sightingCtx, undefined, form({ customName: "Seahome" })),
+    ).toEqual({ status: "switched_off" });
     expect(await deleteSightingAction(sightingCtx, undefined, tap)).toEqual({
       status: "switched_off",
     });
@@ -221,6 +224,20 @@ describe("actions behind a switched-off feature", () => {
     await db.update(shops).set({ sightingsEnabled: true }).where(eq(shops.id, shop.id));
     expect(await recordSightingAction(sightingCtx, undefined, tap)).toEqual({ status: "ok" });
     expect(await logged()).toHaveLength(1);
+    expect(
+      await recordSightingAction(sightingCtx, undefined, form({ customName: "Seahome" })),
+    ).toEqual({ status: "ok" });
+    expect(await logged()).toHaveLength(2);
+    expect(await recordSightingAction(sightingCtx, undefined, form({ customName: " " }))).toEqual({
+      status: "error",
+    });
+    expect(
+      await recordSightingAction(
+        sightingCtx,
+        undefined,
+        form({ customName: "Seahome", speciesSlug: "green-sea-turtle" }),
+      ),
+    ).toEqual({ status: "error" });
   });
 
   it("saves the species a form that drew the picker posted, after sightings went off", async () => {
@@ -250,7 +267,13 @@ describe("actions behind a switched-off feature", () => {
       saveExecutedDiveAction(
         diveCtx,
         undefined,
-        form({ diveNumber: "1", actualSiteId: "", maxDepthMeters: "", ...fields }),
+        form({
+          diveNumber: "1",
+          actualSiteId: "",
+          maxDepthMeters: "",
+          depthUnit: "meters",
+          ...fields,
+        }),
       );
 
     // The form loaded with sightings on, so it drew the picker and its marker;

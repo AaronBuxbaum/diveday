@@ -459,8 +459,11 @@ script again.
 | 20261108-configured-pricing | Configure one monthly and percentage… |
 | 20261109-evidence-key-history | Keep signing key identity with… (proposed) |
 | 20261109-operator-browser-and-email-sign-in | Separate database operators from account… |
+| 20261110-custom-sightings-are-crew-words | Autocomplete suggests; the crew can… |
 | 20261110-native-wallet-passes | Sign native departure passes behind… |
 | 20261110-recorded-collections-own-billing | Bill recorded collections, not payment… |
 | 20261110-whatsapp-delivered-usage | Count verified deliveries by sending… |
+| 20261111-recorded-purchases-not-pos | Record a received purchase, not… |
+| 20261111-square-receipt-evidence | Square is read-only receipt evidence,… |
 
 <!-- adr-index:end -->

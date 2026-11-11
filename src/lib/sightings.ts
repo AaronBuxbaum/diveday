@@ -68,6 +68,8 @@ export function sightingWindowStart(now: Date): Date {
 export type SiteSightingTally = {
   /** A `MARINE_LIFE_CATALOG` slug; the words are DiveDay's, resolved at render. */
   speciesSlug: string;
+  /** Crew-written sighting; absent for catalog species. */
+  customName?: string | null;
   /** How many separate departures logged it here. The numerator of the sentence. */
   dives: number;
   /** How many the crews tapped for in total. Kept for a shop's own reading; the page does not print it. */
@@ -91,7 +93,7 @@ export type SiteSightings = {
    * own dive log, or a sighting, whichever they wrote. The denominator.
    */
   dives: number;
-  /** The top species, ranked, at most `MAX_SIGHTING_SPECIES`. */
+  /** Top catalog species plus crew-written sightings, which must remain readable. */
   species: SiteSightingTally[];
 };
 
@@ -114,13 +116,18 @@ export function rankSiteSightings(input: {
 }): SiteSightings | null {
   if (input.tallies.length === 0) return null;
   const dives = Math.max(input.dives, ...input.tallies.map((tally) => tally.dives));
+  let catalogCount = 0;
   const species = [...input.tallies]
     .map((tally) => ({ ...tally, dives: Math.min(tally.dives, dives) }))
     .sort(
       (a, b) =>
         b.dives - a.dives || b.total - a.total || a.speciesSlug.localeCompare(b.speciesSlug),
     )
-    .slice(0, MAX_SIGHTING_SPECIES);
+    .filter((tally) => {
+      if (tally.customName) return true;
+      catalogCount += 1;
+      return catalogCount <= MAX_SIGHTING_SPECIES;
+    });
   return { diveSiteId: input.diveSiteId, dives, species };
 }
 

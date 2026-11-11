@@ -604,7 +604,7 @@ export async function getMonthlyReport(
   const readStandaloneOrderRevenue = async () =>
     db
       .select({
-        total: sum(orders.amountPaidCents),
+        total: sql<string>`sum(${orders.amountPaidCents} - ${orders.tipCents})`,
         tax: sum(orders.taxCents),
         passThrough: sum(orders.passThroughCents),
       })

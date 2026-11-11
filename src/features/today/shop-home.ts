@@ -1,4 +1,3 @@
-import { canPersonExportIncidentRecord } from "@/db/authz";
 import { type AppDb, getDb } from "@/db/client";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import { shopByIdCached } from "@/db/shops";
@@ -168,48 +167,44 @@ async function readTodaySecondWave({
     ...eveningClose.stations,
     ...(eveningClose.carryover ? [eveningClose.carryover] : []),
   ];
-  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMoney] =
-    await Promise.all([
-      getTodayWork(
-        db,
-        shop.id,
-        shopSlug,
-        shopClock(shop, now),
-        lens ? personId : undefined,
-        t,
-        locale,
-        // Stuck Stripe operations and failed photo deletions are owner/manager chores — same gate
-        // as Reports (task 157), read live above.
-        canReadShopMoney,
-        evidence,
-        shopCrewTarget(shop),
-        roles,
-        true,
-        // The reader themselves, for the one row read by who they are: the
-        // unfiled incident reports, re-checked live in the database.
-        personId,
-      ),
-      getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
-      closingStations.length > 0
-        ? Promise.all([
-            listHeadCountCloses(
-              db,
-              shop.id,
-              closingStations
-                .filter((station) => station.status === "all_home")
-                .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
-            ),
-            canPersonExportIncidentRecord(db, shop.id, personId),
-          ])
-        : ([new Map(), false] as [Map<string, { closedAt: Date; closedBy: string }>, boolean]),
-      // The once-ever wording, asked for only in the moment it could apply.
-      eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
-      readDayMoney(db, shop, dayBounds, {
-        personId: personId,
-        withTakings: eveningClose.closing && canReadShopMoney,
-      }),
-    ]);
-  return { work, tomorrowDepartures, headCountCloses, canOpenLog, sailedBefore, dayMoney };
+  const [work, tomorrowDepartures, headCountCloses, sailedBefore, dayMoney] = await Promise.all([
+    getTodayWork(
+      db,
+      shop.id,
+      shopSlug,
+      shopClock(shop, now),
+      lens ? personId : undefined,
+      t,
+      locale,
+      // Stuck Stripe operations and failed photo deletions are owner/manager chores — same gate
+      // as Reports (task 157), read live above.
+      canReadShopMoney,
+      evidence,
+      shopCrewTarget(shop),
+      roles,
+      true,
+      // The reader themselves, for the one row read by who they are: the
+      // unfiled incident reports, re-checked live in the database.
+      personId,
+    ),
+    getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
+    closingStations.length > 0
+      ? listHeadCountCloses(
+          db,
+          shop.id,
+          closingStations
+            .filter((station) => station.status === "all_home")
+            .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
+        )
+      : new Map<string, { closedAt: Date; closedBy: string }>(),
+    // The once-ever wording, asked for only in the moment it could apply.
+    eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
+    readDayMoney(db, shop, dayBounds, {
+      personId: personId,
+      withTakings: eveningClose.closing && canReadShopMoney,
+    }),
+  ]);
+  return { work, tomorrowDepartures, headCountCloses, sailedBefore, dayMoney };
 }
 
 /**

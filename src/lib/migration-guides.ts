@@ -1,39 +1,16 @@
 import type { DiverMessageKey } from "@/i18n/messages";
-import type { PricingPlan } from "@/lib/billing/pricing-plans";
 import type { ImportScopeRowId } from "./import";
 
 /**
- * Public migration guides — the marketing surface of the portability wedge
- * (docs/product/assessments/competitive-strategy.md #3). One page per incumbent:
- * "Switching from EVE", "…from DiveShop360", and so on. Each guide is the same
- * three-part promise made concrete for that system — the exact steps to export
- * your own data from it, the scope table stating what does and doesn't come
- * across, and how DiveDay reads the file back in.
+ * Published switching guides: an outcome to try, an honest fit comparison and
+ * a source-backed export or explicitly qualified sample-review path.
+ * The current claim review is docs/product/switching-review-20261111.md.
+ * Copy lives in every locale's content/marketing.json; this registry contains
+ * bundle keys, ordering and primary-source URLs only.
  *
- * This file holds structure only — slugs, ordering, section shapes, source
- * URLs — as message-bundle *keys*, never words, following the same
- * keys-not-copy pattern as `src/lib/marketing.ts` (ADR
- * 20260731-domain-layer-copy-leaks). The prose itself lives in
- * `src/i18n/locales/<locale>/content/marketing.json` under `marketing.guides.*`
- * (`marketing.guides.shared.*` for the sections every guide shares,
- * `marketing.guides.<slug>.*` for each incumbent) — edit every locale
- * together. The switching pages resolve these keys through the negotiated
- * request locale's `diverTranslator`.
- *
- * Importer capabilities stay in IMPORT_HONESTY_TABLE. Source-specific export
- * coverage is separate: FareHarbor’s guide distinguishes its described CSVs
- * from separately supplied evidence before the generic importer disclosure.
- *
- * Legal guardrail (competitive-strategy.md): a shop migrates from files it
- * exports itself. These guides only ever describe the incumbent's own export;
- * they never tell anyone to hand DiveDay a competitor's login, and DiveDay never
- * reaches into another system (Facebook v. Power Ventures).
- *
- * Content honesty (AGENTS.md): the click-paths are best-effort against desktop
- * software whose menus differ by version and that we cannot drive from here, so
- * each guide says where labels vary and points to the vendor's own support as
- * the authoritative path rather than inventing exact wording we can't stand
- * behind.
+ * IMPORT_HONESTY_TABLE describes importer support, never guaranteed source
+ * coverage. Operators obtain their own files; we never request competitor
+ * credentials or reach into their account.
  */
 
 export type ExportStep = {
@@ -43,35 +20,13 @@ export type ExportStep = {
   detail: DiverMessageKey;
 };
 
-/**
- * Optional "works alongside" framing, for an incumbent that is a booking and
- * distribution *channel* rather than a records system to leave outright (today:
- * FareHarbor and Rezdy — general tours-and-activities booking engines a dive
- * shop bolts a storefront onto). It is the same "bring your POS, we run the
- * water" division of labor the product page already draws, extended to a booking
- * channel: keep the incumbent for the storefront it's genuinely good at, run the
- * dive day it was never built for in DiveDay.
- *
- * Honesty guardrails baked into the shape (marketing.md): there is no
- * integration between DiveDay and any such channel, so `bridgeNote` must state
- * plainly that the CSV import below is the only bridge — never imply a live
- * sync. `runsInDiveDay` items are shipped-only, demonstrable in the live demo.
- * When this field is absent a guide is a straight leave-it migration like the
- * records-system guides. Candidates for the next channel guides are surveyed in
- * docs/product/archive/assessments/switching-guide-landscape.md.
- */
+/** Manual coexistence for booking channels. State what the operator keeps,
+ * what staff must do in both systems, and the direct-booking alternative. */
 export type CoexistFraming = {
-  /** Section heading — coexist-led, the day the incumbent can't run. */
+  /** Section heading naming the coexistence choice. */
   heading: DiverMessageKey;
   /** One or two sentences setting up the division of labor. */
   intro: DiverMessageKey;
-  /**
-   * The dive-day jobs DiveDay runs that a booking engine has no concept of.
-   * Shared keys ({@link COEXIST_RUNS_IN_DIVEDAY}); two of the messages
-   * interpolate `{competitor}`, so render them with the guide's competitor
-   * name as a value.
-   */
-  runsInDiveDay: { title: DiverMessageKey; detail: DiverMessageKey }[];
   /**
    * Concede the incumbent's real strength (its distribution network / checkout)
    * and state the honest no-live-sync caveat: the CSV export below is the bridge.
@@ -79,19 +34,12 @@ export type CoexistFraming = {
   bridgeNote: DiverMessageKey;
   /**
    * The alternative path: drop the channel entirely and take the booking in
-   * DiveDay. Its argument is the incumbent's per-booking fee against a flat
-   * price, so the percentage offer has none ({@link guideForPlan}).
+   * DiveDay. It makes no price comparison; the linked pricing page owns the current offer.
    */
   replace?: { heading: DiverMessageKey; body: DiverMessageKey };
 };
 
-/**
- * The "what does the actual switch look like" section every guide answers the
- * same way — parallel-run, timing, re-import safety, and a rough time
- * estimate are properties of the importer and the switch itself, not of any
- * one incumbent, so this is one shared object every guide points at (like
- * `COEXIST_RUNS_IN_DIVEDAY` below).
- */
+/** A trial, a booking/balance review and a handover selected after seeing the work. */
 export type CutoverSection = {
   heading: DiverMessageKey;
   intro: DiverMessageKey;
@@ -104,14 +52,8 @@ export type CutoverSection = {
  * DiveDay embed that replaces it (ADR 20260901-diveday-reimagined, decisions
  * 2 and 3). Today only FareHarbor carries one.
  *
- * Two claims-policy guardrails live in the shape. `sitesPrice` is the
- * incumbent's hosted-website figure as a currency string — the one source for
- * it, interpolated into `sitesNote` as `{sitesPrice}` so no message bundle
- * carries a currency figure (marketing.test pins that), and it is stated as
- * what third parties report, never as what a shop pays. `offer` is the
- * built-to-order website, an authorized service claim like the concierge: a
- * person's commitment with `{email}` to write to, never a turnaround time or a
- * page count.
+ * Booking components are not a website transfer. Website work is a discussion,
+ * never an included build or a quoted price.
  */
 /**
  * The fragment of a guide's website ledger, so a link from inside the app (the
@@ -132,11 +74,9 @@ export type WebsiteFraming = {
    * left cell already says it, the right cell carries only the difference.
    */
   ledger: { theirs: DiverMessageKey; ours: DiverMessageKey }[];
-  /** The hosted-website comparison; interpolates `{sitesPrice}`. */
+  /** Hosting and ownership need separate review when replacing booking components. */
   sitesNote: DiverMessageKey;
-  /** The incumbent's hosted-website figure, cited in `sources` — a currency string, nowhere else. */
-  sitesPrice: string;
-  /** The built-to-order website; `body` interpolates `{email}`. */
+  /** Invitation to discuss website work, never an included build. */
   offer: { heading: DiverMessageKey; body: DiverMessageKey };
 };
 
@@ -157,23 +97,12 @@ export type MigrationGuide = {
   heroTitle: DiverMessageKey;
   heroLede: DiverMessageKey;
 
-  /**
-   * The percentage offer (ADR 20261022-pricing-ab-test): the
-   * sentences that set the incumbent's per-booking fee against a flat price,
-   * with the contrast taken out. Only the booking-channel guides carry one.
-   */
-  percentArm?: {
-    cardSummary: DiverMessageKey;
-    metaDescription: DiverMessageKey;
-    heroLede: DiverMessageKey;
-  };
-
   /** Honest framing of the incumbent — paragraphs, no marketing puffery. */
   context: DiverMessageKey[];
 
   /**
    * Optional coexist framing, for a booking/distribution channel a shop can
-   * keep rather than a records system to leave (today: FareHarbor, Rezdy).
+   * keep rather than a records system to leave (today: FareHarbor, Peek Pro, Rezdy).
    * Rendered as a section above the export steps; absent for the leave-it guides.
    */
   coexist?: CoexistFraming;
@@ -181,12 +110,12 @@ export type MigrationGuide = {
   /**
    * Optional website ledger — what the shop pasted from the incumbent and the
    * DiveDay embed for each, plus the hosted-website comparison and the
-   * built-to-order offer. Rendered under the coexist section; today FareHarbor
+   * website discussion. Rendered under the coexist section; today FareHarbor
    * only, whose storefront product is what a dive shop's site is built on.
    */
   website?: WebsiteFraming;
 
-  // The export click-path: how to get the data out of the incumbent's system.
+  // Source-backed export instructions or an explicitly qualified review plan.
   exportHeading: DiverMessageKey;
   exportIntro: DiverMessageKey;
   exportSteps: ExportStep[];
@@ -291,40 +220,6 @@ export const IMPORT_SCOPE_ROW_KEYS: Record<
 };
 
 /**
- * Shared body for the two booking-channel guides' `coexist.runsInDiveDay` list
- * (FareHarbor, Rezdy). Four of the six messages name no incumbent at all; the
- * other two (item1, item5) interpolate `{competitor}` — the bundle is the one
- * place that text is authored, so the guides can't drift apart line by line.
- * Render these with `{ competitor: guide.competitor }` as values.
- */
-const COEXIST_RUNS_IN_DIVEDAY: { title: DiverMessageKey; detail: DiverMessageKey }[] = [
-  {
-    title: "marketing.guides.shared.coexist.item1.title",
-    detail: "marketing.guides.shared.coexist.item1.detail",
-  },
-  {
-    title: "marketing.guides.shared.coexist.item2.title",
-    detail: "marketing.guides.shared.coexist.item2.detail",
-  },
-  {
-    title: "marketing.guides.shared.coexist.item3.title",
-    detail: "marketing.guides.shared.coexist.item3.detail",
-  },
-  {
-    title: "marketing.guides.shared.coexist.item4.title",
-    detail: "marketing.guides.shared.coexist.item4.detail",
-  },
-  {
-    title: "marketing.guides.shared.coexist.item5.title",
-    detail: "marketing.guides.shared.coexist.item5.detail",
-  },
-  {
-    title: "marketing.guides.shared.coexist.item6.title",
-    detail: "marketing.guides.shared.coexist.item6.detail",
-  },
-];
-
-/**
  * Shared by every guide (see `CutoverSection` above). The bundle text is
  * verified against the importer's actual behavior, not aspirational: the
  * re-import claim matches `findOrCreatePerson`'s email-match update-in-place
@@ -406,14 +301,6 @@ const eve: MigrationGuide = {
       title: "marketing.guides.eve.exportSteps.step4.title",
       detail: "marketing.guides.eve.exportSteps.step4.detail",
     },
-    {
-      title: "marketing.guides.eve.exportSteps.step5.title",
-      detail: "marketing.guides.eve.exportSteps.step5.detail",
-    },
-    {
-      title: "marketing.guides.eve.exportSteps.step6.title",
-      detail: "marketing.guides.eve.exportSteps.step6.detail",
-    },
   ],
   exportNotes: [
     "marketing.guides.eve.exportNotes.note1",
@@ -424,8 +311,13 @@ const eve: MigrationGuide = {
   sources: [
     {
       // i18n-exempt: cited source title — the document's own name is not translated
-      label: "DiveShop360 acquires EVE Diving (Divernet, 2023)",
-      url: "https://divernet.com/scuba-news/dive-shop-360-acquires-eve-diving/",
+      label: "EVE sales module",
+      url: "https://evediving.com/page/sales_module",
+    },
+    {
+      // i18n-exempt: cited source title
+      label: "EVE courses module",
+      url: "https://evediving.com/page/courses_module",
     },
   ],
 };
@@ -467,14 +359,6 @@ const diveshop360: MigrationGuide = {
     {
       title: "marketing.guides.diveshop360.exportSteps.step4.title",
       detail: "marketing.guides.diveshop360.exportSteps.step4.detail",
-    },
-    {
-      title: "marketing.guides.diveshop360.exportSteps.step5.title",
-      detail: "marketing.guides.diveshop360.exportSteps.step5.detail",
-    },
-    {
-      title: "marketing.guides.diveshop360.exportSteps.step6.title",
-      detail: "marketing.guides.diveshop360.exportSteps.step6.detail",
     },
   ],
   exportNotes: [
@@ -548,13 +432,13 @@ const smartwaiver: MigrationGuide = {
   sources: [
     {
       // i18n-exempt: cited source title — the document's own name is not translated
-      label: "Smartwaiver",
-      url: "https://www.smartwaiver.com/",
+      label: "Smartwaiver participant CSV export",
+      url: "https://support.smartwaiver.com/hc/en-us/articles/360056592012-How-do-I-export-my-completed-waiver-data",
     },
     {
       // i18n-exempt: cited source title — the document's own name is not translated
-      label: "DiveShop360 integrations — Smartwaiver waivers",
-      url: "https://diveshop360.com/integrations",
+      label: "Smartwaiver signed PDF downloads",
+      url: "https://support.smartwaiver.com/hc/en-us/articles/360057047891-Can-I-download-copies-of-my-signed-waivers-as-PDFs",
     },
   ],
 };
@@ -571,11 +455,6 @@ const fareharbor: MigrationGuide = {
   heroEyebrow: "marketing.guides.fareharbor.heroEyebrow",
   heroTitle: "marketing.guides.fareharbor.heroTitle",
   heroLede: "marketing.guides.fareharbor.heroLede",
-  percentArm: {
-    cardSummary: "marketing.guides.fareharbor.percentArm.cardSummary",
-    metaDescription: "marketing.guides.fareharbor.percentArm.metaDescription",
-    heroLede: "marketing.guides.fareharbor.percentArm.heroLede",
-  },
 
   // Three paragraphs, not four: the fourth ("so there are two honest ways
   // DiveDay fits a FareHarbor shop…") announced the section immediately below
@@ -589,7 +468,6 @@ const fareharbor: MigrationGuide = {
   coexist: {
     heading: "marketing.guides.fareharbor.coexist.heading",
     intro: "marketing.guides.fareharbor.coexist.intro",
-    runsInDiveDay: COEXIST_RUNS_IN_DIVEDAY,
     bridgeNote: "marketing.guides.fareharbor.coexist.bridgeNote",
     replace: {
       heading: "marketing.guides.fareharbor.coexist.replaceHeading",
@@ -608,7 +486,6 @@ const fareharbor: MigrationGuide = {
     ),
     sitesNote: "marketing.guides.fareharbor.website.sitesNote",
     // i18n-exempt: currency figure — FareHarbor's hosted-website rate as third parties report it (the Bókun source below), never restated in a bundle
-    sitesPrice: "$5,000",
     offer: {
       heading: "marketing.guides.fareharbor.website.offerHeading",
       body: "marketing.guides.fareharbor.website.offerBody",
@@ -670,6 +547,11 @@ const fareharbor: MigrationGuide = {
   },
   sources: [
     {
+      // i18n-exempt: cited source title
+      label: "FareHarbor Contacts report and download",
+      url: "https://help.fareharbor.com/hc/en-us/articles/40898088413595-Contacts-report",
+    },
+    {
       // i18n-exempt: cited source title — the document's own name is not translated
       label: "FareHarbor — booking software for tours & activities",
       url: "https://fareharbor.com/",
@@ -691,13 +573,8 @@ const fareharbor: MigrationGuide = {
     },
     {
       // i18n-exempt: cited source title — the document's own name is not translated
-      label: "FareHarbor's per-booking fee model, explained (TrekkSoft, third-party)",
-      url: "https://www.trekksoft.com/en/blog/fareharbor-pricing-guide-what-to-know-before-you-buy",
-    },
-    {
-      // i18n-exempt: cited source title — the document's own name is not translated
-      label: "FareHarbor Websites: what to know and how to get started (Bókun, third-party)",
-      url: "https://www.bokun.io/fareharbor-websites",
+      label: "FareHarbor provider terms",
+      url: "https://fareharbor.com/legal/tos-providers/",
     },
   ],
 };
@@ -714,11 +591,6 @@ const rezdy: MigrationGuide = {
   heroEyebrow: "marketing.guides.rezdy.heroEyebrow",
   heroTitle: "marketing.guides.rezdy.heroTitle",
   heroLede: "marketing.guides.rezdy.heroLede",
-  percentArm: {
-    cardSummary: "marketing.guides.rezdy.percentArm.cardSummary",
-    metaDescription: "marketing.guides.rezdy.percentArm.metaDescription",
-    heroLede: "marketing.guides.rezdy.percentArm.heroLede",
-  },
 
   // Three paragraphs — same cut as FareHarbor's, for the same reason.
   context: [
@@ -730,7 +602,6 @@ const rezdy: MigrationGuide = {
   coexist: {
     heading: "marketing.guides.rezdy.coexist.heading",
     intro: "marketing.guides.rezdy.coexist.intro",
-    runsInDiveDay: COEXIST_RUNS_IN_DIVEDAY,
     bridgeNote: "marketing.guides.rezdy.coexist.bridgeNote",
     replace: {
       heading: "marketing.guides.rezdy.coexist.replaceHeading",
@@ -772,6 +643,11 @@ const rezdy: MigrationGuide = {
   cutover: CUTOVER_SECTION,
   sources: [
     {
+      // i18n-exempt: cited source title
+      label: "Rezdy customers and main booking contacts",
+      url: "https://support.rezdy.com/hc/en-us/articles/19867758531612-Customers-Mutual-Guests",
+    },
+    {
       // i18n-exempt: cited source title — the document's own name is not translated
       label: "Rezdy — booking software for tours & activities",
       url: "https://rezdy.com/booking-software/",
@@ -789,7 +665,7 @@ const rezdy: MigrationGuide = {
     {
       // i18n-exempt: cited source title — the document's own name is not translated
       label: "Rezdy Help — the Sales / Orders report and its CSV export",
-      url: "https://support.rezdy.com/hc/en-us/articles/203690794-How-To-Use-the-Sales-Orders-Report",
+      url: "https://support.rezdy.com/hc/en-us/articles/19867797356316-How-To-Use-the-Sales-Orders-Report",
     },
     {
       // i18n-exempt: cited source title — the document's own name is not translated
@@ -808,10 +684,10 @@ const rezdy: MigrationGuide = {
  * Every guide in this registry is a real, published page — there are no
  * roadmap or "coming soon" entries (marketing claims policy in
  * docs/product/marketing.md is shipped-only). A future incumbent gets an entry
- * here, and a route, only once its export click-path is real.
+ * here, and a route, once its claims are verified, or its export uncertainty is explicit.
  *
  * Most entries are a straight leave-it migration; the booking-channel guides
- * (FareHarbor, Rezdy) additionally carry a `coexist` block, because a channel is
+ * (FareHarbor, Peek Pro, Rezdy) additionally carry a `coexist` block, because a channel is
  * something a shop can keep and run DiveDay alongside, not a records system to
  * leave — see CoexistFraming above.
  *
@@ -823,8 +699,78 @@ const rezdy: MigrationGuide = {
  * the fourth and the first. The records-system guides keep their relative order
  * below them.
  */
+const peek: MigrationGuide = {
+  slug: "peek",
+  // i18n-exempt: competitor product name
+  competitor: "Peek Pro",
+  cardSummary: "marketing.guides.peek.cardSummary",
+  metaTitle: "marketing.guides.peek.metaTitle",
+  metaDescription: "marketing.guides.peek.metaDescription",
+  heroEyebrow: "marketing.guides.peek.heroEyebrow",
+  heroTitle: "marketing.guides.peek.heroTitle",
+  heroLede: "marketing.guides.peek.heroLede",
+  exportHeading: "marketing.guides.peek.exportHeading",
+  exportIntro: "marketing.guides.peek.exportIntro",
+  importerNote: "marketing.guides.peek.importerNote",
+  context: [
+    "marketing.guides.peek.context.item1",
+    "marketing.guides.peek.context.item2",
+    "marketing.guides.peek.context.item3",
+  ],
+  coexist: {
+    heading: "marketing.guides.peek.coexist.heading",
+    intro: "marketing.guides.peek.coexist.intro",
+    bridgeNote: "marketing.guides.peek.coexist.bridgeNote",
+    replace: {
+      heading: "marketing.guides.peek.coexist.replaceHeading",
+      body: "marketing.guides.peek.coexist.replaceBody",
+    },
+  },
+  exportSteps: [
+    {
+      title: "marketing.guides.peek.exportSteps.step1.title",
+      detail: "marketing.guides.peek.exportSteps.step1.detail",
+    },
+    {
+      title: "marketing.guides.peek.exportSteps.step2.title",
+      detail: "marketing.guides.peek.exportSteps.step2.detail",
+    },
+    {
+      title: "marketing.guides.peek.exportSteps.step3.title",
+      detail: "marketing.guides.peek.exportSteps.step3.detail",
+    },
+    {
+      title: "marketing.guides.peek.exportSteps.step4.title",
+      detail: "marketing.guides.peek.exportSteps.step4.detail",
+    },
+  ],
+  exportNotes: [
+    "marketing.guides.peek.exportNotes.note1",
+    "marketing.guides.peek.exportNotes.note2",
+  ],
+  cutover: CUTOVER_SECTION,
+  sources: [
+    {
+      // i18n-exempt: cited source title
+      label: "Peek Pro rentals, waivers and resource management",
+      url: "https://www.peekpro.com/rentals",
+    },
+    {
+      // i18n-exempt: cited source title
+      label: "Peek Pro booking and revenue features",
+      url: "https://www.peekpro.com/product/grow-revenue",
+    },
+    {
+      // i18n-exempt: cited source title
+      label: "Peek customer portal and operator settings",
+      url: "https://support.peek.com/hc/en-us/articles/29197460170388-Using-Your-Customer-Portal",
+    },
+  ],
+};
+
 export const MIGRATION_GUIDES: MigrationGuide[] = [
   fareharbor,
+  peek,
   eve,
   diveshop360,
   smartwaiver,
@@ -837,18 +783,4 @@ export const MIGRATION_GUIDE_SLUGS: string[] = MIGRATION_GUIDES.map((guide) => g
 /** Look up a guide by slug; an unknown slug returns null (→ 404). */
 export function getMigrationGuide(slug: string): MigrationGuide | null {
   return MIGRATION_GUIDES.find((entry) => entry.slug === slug) ?? null;
-}
-
-/**
- * A guide as the configured offer reads it (ADR 20261022-pricing-ab-test).
- * The monthly-only offer’s is the guide itself. The percentage offer’s swaps in the
- * sentences without the per-booking-fee contrast and drops the "leave the fee
- * behind" box, a comparison that holds only against a flat price.
- */
-export function guideForPlan(guide: MigrationGuide, plan: PricingPlan): MigrationGuide {
-  if (plan !== "percent_of_volume") return guide;
-  const { percentArm, coexist, ...rest } = guide;
-  if (!coexist) return { ...rest, ...percentArm };
-  const { heading, intro, runsInDiveDay, bridgeNote } = coexist;
-  return { ...rest, ...percentArm, coexist: { heading, intro, runsInDiveDay, bridgeNote } };
 }

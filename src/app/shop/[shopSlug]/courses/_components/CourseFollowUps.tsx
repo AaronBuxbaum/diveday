@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/EmptyState";
 import type { AppDb } from "@/db/client";
 import { queryAll } from "@/db/query-helpers";
 import { listCardsToProcess } from "@/features/agency-processing";
@@ -32,6 +33,10 @@ export async function CourseFollowUps({
     () => getCourseLadder(db, shop.id, now, shop.timezone),
     () => listCardsToProcess(db, shop.id),
   ]);
+  if (!ladder.length && !cards.length)
+    return (
+      <EmptyState title={t("courses.followUpEmpty.title")} body={t("courses.followUpEmpty.body")} />
+    );
   return (
     <>
       <CardsToProcess

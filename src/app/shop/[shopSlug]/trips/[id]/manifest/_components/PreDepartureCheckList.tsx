@@ -78,6 +78,7 @@ function PreDepartureCheckRow({
         <input type="hidden" name="checklistItemId" value={item.id} />
         <input type="hidden" name="status" value={checked ? "cleared" : "checked"} />
         <button
+          data-device-text-check-row=""
           // Only the second tap on a checked item is a submit.
           type={checked && !armed ? "button" : "submit"}
           disabled={isPending}
@@ -91,7 +92,7 @@ function PreDepartureCheckRow({
           className="flex min-h-14 w-full touch-manipulation items-start gap-3 px-4 py-3 text-start text-base font-semibold hover:bg-surface-sunken disabled:opacity-60"
         >
           <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
-          <span className="flex flex-col">
+          <span className="flex min-w-0 flex-col">
             <span>{item.label}</span>
             {armed ? (
               <span className="text-sm font-semibold">{copy.confirmClear}</span>
@@ -243,6 +244,7 @@ export function PreDepartureCheckList({
   return (
     <section
       aria-labelledby={scopedId(idPrefix, "pre-departure-check-heading")}
+      data-device-text-checklist=""
       className={sectionCardClass({ padding: "none" })}
     >
       {carried.length > 0 && !paper ? (

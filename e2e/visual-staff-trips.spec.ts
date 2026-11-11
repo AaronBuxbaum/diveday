@@ -63,6 +63,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-manage", scheme);
       });
 
+      test(`departure Details keeps category labels and actions aligned (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        await openTripAbout(page);
+        await capture(page, "departure-details-panel", scheme);
+      });
+
       test(`the plan editor stays with the dive plan (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         const plan = await openTripAboutRow(page, "The plan");

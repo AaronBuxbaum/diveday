@@ -1,0 +1,139 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ad842a6f-19b7-41b1-8c80-c5267a1cfb76",
+  "prevIds": [
+    "23164f06-4696-4efd-8d19-e77057a8e496"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "order_collection"
+      ],
+      "writes": [
+        "s|enum|public.order_collection"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "orders",
+        "tip_cents"
+      ],
+      "writes": [
+        "s|col|public.orders.tip_cents",
+        "n|col|public.orders.tip_cents",
+        "e|col|public.orders.tip_cents"
+      ],
+      "reads": [
+        "n|tbl|public.orders",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "orders",
+        "counter_receipt"
+      ],
+      "writes": [
+        "s|col|public.orders.counter_receipt",
+        "n|col|public.orders.counter_receipt",
+        "e|col|public.orders.counter_receipt"
+      ],
+      "reads": [
+        "n|tbl|public.orders",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "orders"
+      ],
+      "writes": [
+        "s|ck|public.orders.orders_tip_bounds",
+        "n|ck|public.orders.orders_tip_bounds",
+        "e|ck|public.orders.orders_tip_bounds",
+        "n|con|public.orders.orders_tip_bounds"
+      ],
+      "reads": [
+        "n|tbl|public.orders",
+        "n|sch|public",
+        "n|col|public.orders.tip_cents",
+        "n|col|public.orders.amount_paid_cents"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "orders",
+        "name": "tip_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "orders",
+        "name": "counter_receipt",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "orders",
+        "name": "orders_tip_bounds",
+        "value": "\"tip_cents\" >= 0 and \"tip_cents\" <= \"amount_paid_cents\"",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"order_collection\"]",
+      "set": {
+        "values": [
+          "stripe_invoice",
+          "cash",
+          "card_machine",
+          "bank_transfer",
+          "other",
+          "room_charge"
+        ]
+      }
+    }
+  ]
+}

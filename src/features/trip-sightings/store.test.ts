@@ -6,7 +6,13 @@ import { createTrip } from "../../db/trips";
 import { DAY_MS, HOUR_MS } from "../../lib/clock";
 import { SIGHTING_WINDOW_DAYS } from "../../lib/sightings";
 import { fileScopedShopContext } from "../../test/db";
-import { deleteTripSighting, listTripSightings, recordTripSighting, siteSightings } from "./store";
+import {
+  deleteTripSighting,
+  listShopPickedSpecies,
+  listTripSightings,
+  recordTripSighting,
+  siteSightings,
+} from "./store";
 
 const NOW = new Date("2026-09-10T15:00:00Z");
 
@@ -94,6 +100,59 @@ describe("recordTripSighting", () => {
     const listed = await listTripSightings(db, shop.id, trip.id);
     expect(listed).toHaveLength(1);
     expect(listed[0]).toMatchObject({ speciesSlug: "green-sea-turtle", count: 2 });
+  });
+
+  it("stores custom words, combines repeated entries, and never promotes them to presets", async () => {
+    const { db, shop, owner, site } = await reefFixture();
+    const trip = await departure(db, shop.id, "Custom reef", 1);
+    const input = {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveSiteId: site.id,
+      recordedByPersonId: owner.id,
+      now: NOW,
+    };
+    const picks = await listShopPickedSpecies(db, shop.id);
+    const first = await recordTripSighting(db, { ...input, customName: "  Seahome  " });
+    expect(first).toMatchObject({ ok: true, sighting: { customName: "Seahome", count: 1 } });
+    await recordTripSighting(db, { ...input, customName: "SEAHOME" });
+    const rows = await listTripSightings(db, shop.id, trip.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ customName: "Seahome", count: 2 });
+    expect(await listShopPickedSpecies(db, shop.id)).toEqual(picks);
+    const summary = await siteSightingSummary(db, shop.id, site.id, NOW);
+    expect(summary?.species).toEqual([
+      expect.objectContaining({ customName: "Seahome", total: 2 }),
+    ]);
+    expect(
+      await deleteTripSighting(db, {
+        ...input,
+        speciesSlug: rows[0].speciesSlug,
+        deletedByPersonId: owner.id,
+      }),
+    ).toBe(true);
+    expect(await listTripSightings(db, shop.id, trip.id)).toEqual([]);
+  });
+
+  it("refuses empty, oversized and ambiguous custom sightings", async () => {
+    const { db, shop, owner, site } = await reefFixture();
+    const trip = await departure(db, shop.id, "Custom reef", 1);
+    const input = {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveSiteId: site.id,
+      recordedByPersonId: owner.id,
+      now: NOW,
+    };
+    for (const customName of ["   ", "a".repeat(301)]) {
+      expect(await recordTripSighting(db, { ...input, customName })).toEqual({
+        ok: false,
+        reason: "unknown_species",
+      });
+    }
+    expect(
+      await recordTripSighting(db, { ...input, speciesSlug: "nurse-shark", customName: "seahome" }),
+    ).toEqual({ ok: false, reason: "unknown_species" });
   });
 
   it("refuses a species the catalog does not carry", async () => {

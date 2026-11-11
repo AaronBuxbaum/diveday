@@ -5,7 +5,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { releaseHeldSendAction, undoHeldSendAction } from "@/app/actions/held-sends";
 import { type HeldTicket, SendHold } from "@/components/SendHold";
 import { buttonClass } from "@/components/ui/button";
-import type { HoldCounterPaymentResult } from "../counter-actions";
+import { type HoldCounterPaymentResult, settledCounterPaymentHrefAction } from "../counter-actions";
 
 type HeldCollection = "cash" | "card_machine";
 
@@ -51,9 +51,8 @@ function sendLeave(url: string, heldId: string): void {
  *   app while the hold drains sends `leaveUrl`, and the server records the
  *   payment then, at the tap's time; the hourly sweep is only the fallback.
  * - **Too late is said.** An Undo the server refuses (the hold already ran
- *   out there) or a release that finds the hold gone (another screen, the
- *   sweep, or this screen's own leave recorded it) never redraws the buttons
- *   as if it were undone: the page reloads on "Too late to undo".
+ *   out there) reloads on "Too late to undo". A countdown that finds a gone
+ *   hold instead reconciles the order, since leaving may have recorded it.
  */
 export function CounterPaymentHold({
   orderId,
@@ -148,7 +147,13 @@ export function CounterPaymentHold({
         }}
         release={async (id) => {
           const released = await releaseHeldSendAction(id);
-          if (released.status === "gone") tooLate();
+          if (released.status === "gone") {
+            pending.current = null;
+            const href = held ? await settledCounterPaymentHrefAction(orderId, held) : null;
+            setHeld(null);
+            if (href) router.push(href);
+            else router.refresh();
+          }
           return released;
         }}
         onOutcome={(outcome) => {

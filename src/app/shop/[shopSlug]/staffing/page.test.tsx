@@ -33,7 +33,6 @@ vi.mock("./actions", () => ({
   deleteShiftAction: vi.fn(),
   requestCrewAction: vi.fn(),
   saveAwayAction: vi.fn(),
-  saveCrewPublicConsentAction: vi.fn(),
 }));
 vi.mock("./_components/StaffingWarnings", () => ({ StaffingWarnings: () => null }));
 vi.mock("./_components/StaffingWeek", () => ({
@@ -73,11 +72,11 @@ const roster = [
   },
 ] as StaffingView["staff"];
 
-async function renderPage() {
+async function renderPage(person?: string) {
   render(
     await StaffingPage({
       params: Promise.resolve({ shopSlug: "blue-mantis" }),
-      searchParams: Promise.resolve({}),
+      searchParams: Promise.resolve({ person }),
     }),
   );
 }
@@ -128,7 +127,22 @@ afterEach(() => {
 });
 
 describe("staffing page roster snapshot", () => {
-  it("uses the staffing view roster for both selectors and the reader's own consent", async () => {
+  it("offers scope links without another-person selector to ordinary crew", async () => {
+    awayRead.mockResolvedValue({ blocks: [], canManageStaffAccounts: false });
+    await renderPage("me");
+    expect(screen.getByRole("link", { name: "My schedule" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Full shop" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "View a person" })).toBeNull();
+  });
+  it("offers managers the current shop roster for viewing another person", async () => {
+    await renderPage(OTHER_ID);
+    expect(screen.getByRole("combobox", { name: "View a person" })).toHaveValue(OTHER_ID);
+  });
+
+  it("uses the staffing view roster for both editing selectors, with public profile settings elsewhere", async () => {
     await renderPage();
 
     const shiftOptions = within(screen.getByRole("combobox", { name: "Staff member" }))
@@ -148,15 +162,11 @@ describe("staffing page roster snapshot", () => {
       { value: VIEWER_ID, text: "Zoe Zed" },
     ]);
 
-    expect(screen.getByText("Shown as Zed Public")).toBeInTheDocument();
-    expect(screen.queryByText("Shown as Abe Public")).toBeNull();
-    expect(screen.queryByText("Shown as Wrong Snapshot Person")).toBeNull();
-    expect(
-      screen.getByRole("checkbox", {
-        name: "Let divers see my first name, role and languages on this shop’s public pages.",
-      }),
-    ).toBeChecked();
-
+    expect(screen.queryByText("On public pages")).toBeNull();
+    expect(screen.getByRole("link", { name: "My schedule" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("person=me"),
+    );
     expect(staffingView).toHaveBeenCalledOnce();
     expect(duplicateStaffRead).not.toHaveBeenCalled();
   });

@@ -81,7 +81,8 @@ export async function recordTripStage(
       .select({ id: trips.id })
       .from(trips)
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-      .limit(1);
+      .limit(1)
+      .for("update");
     if (!trip) return { ok: false, reason: "trip_unavailable" } as const;
 
     // The site is snapshotted from the plan as it stands at the tap, never

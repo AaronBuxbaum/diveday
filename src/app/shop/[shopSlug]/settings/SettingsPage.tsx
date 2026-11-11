@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -258,7 +259,14 @@ export default async function SettingsPage({
   return (
     <main className={settingsPaneClass()}>
       <FlashParams params={["notice", "saved"]} />
-      <ShopPageHeader title={t("shared.shopSections.settings")} />
+      <ShopPageHeader
+        title={t("shared.shopSections.settings")}
+        meta={
+          <Link href={`/shop/${shopSlug}/me/security`} className={tapTargetLinkClass}>
+            {t("settings.security.title")}
+          </Link>
+        }
+      />
 
       {banner && !activeSection ? (
         <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner>

@@ -428,8 +428,8 @@ describe("anonymizeDiver — the integration outbox (issue #1016)", () => {
       .select({ id: orders.id, personId: orders.personId })
       .from(orders)
       .where(eq(orders.shopId, shop.id));
-    const order = orderRows.find((row) => !staff.has(row.personId));
-    if (!order) throw new Error("expected a seeded order belonging to a diver");
+    const order = orderRows.find((row) => row.personId && !staff.has(row.personId));
+    if (!order?.personId) throw new Error("expected a seeded order belonging to a diver");
     const [diver] = await db.select().from(people).where(eq(people.id, order.personId)).limit(1);
     if (!diver) throw new Error("expected the order's diver");
 

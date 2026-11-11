@@ -59,7 +59,7 @@ export function BrandPreview({
         <link rel="stylesheet" href={brandDisplayFontStylesheet(face)} precedence="brand-font" />
       ) : null}
       <figcaption className="text-sm font-medium text-muted">{label}</figcaption>
-      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+      <div className="device-text-profile-grid mt-2 grid gap-3 sm:grid-cols-2">
         {[
           { theme: day, ground: BRAND_DEFAULT_SURFACE, ink: BRAND_INK, caption: null },
           { theme: night, ground: BRAND_DARK_GROUND, ink: BRAND_DARK_INK, caption: nightLabel },

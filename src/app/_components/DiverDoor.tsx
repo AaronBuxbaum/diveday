@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { homeDiverDoorEnabled } from "@/features/home-diver-door";
 import type { DiverTranslator } from "@/i18n/messages";
 import { FIND_YOUR_BOOKING_PATH } from "@/lib/public-routes";
 
@@ -9,8 +10,14 @@ import { FIND_YOUR_BOOKING_PATH } from "@/lib/public-routes";
  * the hero's one primary and one secondary stay the shop's, and this is a way
  * through, not a pitch. The terms under the doors are `FunnelCtas`'s
  * `footnotes`.
+ *
+ * **It waits behind `HOME_DIVER_DOOR`** (Aaron, 2026-11-11, #4313): the page it
+ * opens is empty until a shop is listed, and a shop owner who followed the
+ * line read "No shops are listed yet" one click from the headline. The switch
+ * is read here, per deployment, so the cached home body needs no prop for it.
  */
 export function DiverDoor({ t }: { t: DiverTranslator }) {
+  if (!homeDiverDoorEnabled()) return null;
   return (
     <p className="mt-6 text-sm text-muted">
       {t("marketing.home.diverDoor")}{" "}

@@ -75,6 +75,19 @@ export function integrationCallbackUrl(appHost: string, provider: IntegrationPro
 }
 
 export { getIntegrationSettingsPage, INTEGRATION_SETTINGS_GATE } from "./settings-page.store";
+export {
+  exchangeSquareCode,
+  squareAuthorizationUrl,
+  squareConfigFromEnvironment,
+} from "./square-api";
+export type { SquareReceiptResult } from "./square-store";
+export {
+  chooseSquareLocation,
+  getSquareReceiptState,
+  linkSquareReceipt,
+  releaseSquareReceipt,
+  squareLocationsForShop,
+} from "./square-store";
 export type { IntegrationSyncKey } from "./store";
 export {
   getIntegrationSyncRecord,

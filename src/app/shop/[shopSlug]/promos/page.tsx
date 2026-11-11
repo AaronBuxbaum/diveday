@@ -267,7 +267,7 @@ export default async function PromosPage({
     timezone,
   });
   return (
-    <StaffPage width="reading">
+    <StaffPage width="full">
       <FlashParams
         params={[
           "notice",
@@ -329,7 +329,7 @@ export default async function PromosPage({
           `#new-code`. A client navigation to a fragment never runs the
           browser's own reveal, so a plain `<details>` would arrive collapsed
           with the refusal inside it. */}
-      {codesOn && (connected || (promoPage.total > 0 && !shop.isDemo)) ? (
+      {codesOn ? (
         <AutoOpenDetails
           id="new-code"
           openOnHash="new-code"

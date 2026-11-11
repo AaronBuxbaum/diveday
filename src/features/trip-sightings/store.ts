@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, asc, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { livePublicTripForShop, liveTrip, notRehearsal } from "@/db/trips";
 import { hasSailed } from "@/lib/trips";
@@ -53,13 +54,9 @@ export type RecordTripSightingResult =
  * One tap: the first on a chip writes the row at one, every later one adds one
  * to it.
  *
- * **The species is refused, not dropped.** This is the opposite call from
- * `upsertExecutedDive`, and for the opposite reason: there, an unusable slug
- * degrades to null because a decoration must never cost the entry time, exit
- * time and max depth that `buildIncidentExport` seals for an investigator.
- * Here the slug *is* the record — there is nothing else in the row — so a slug
- * with no words to render is a row that would reach a public page as
- * punctuation, and the honest answer is to say no.
+ * Catalog selections keep their slug. Custom words retain a display label and a
+ * normalized, namespaced identity so repeated entries increment the same tally.
+ * Custom entries never write to the catalog or a site's standing field guide.
  *
  * **The catalog, not the site's field guide.** A guide is at most eight faces a
  * shop names because that reef shows them reliably; the reason anybody taps a
@@ -76,12 +73,23 @@ export async function recordTripSighting(
     shopId: string;
     tripId: string;
     diveSiteId: string;
-    speciesSlug: string;
+    speciesSlug?: string;
+    customName?: string;
     recordedByPersonId: string;
     now?: Date;
   },
 ): Promise<RecordTripSightingResult> {
-  if (!isMarineLifeSlug(input.speciesSlug)) return { ok: false, reason: "unknown_species" };
+  const customName = input.customName?.normalize("NFKC").trim().replace(/\s+/gu, " ");
+  if (
+    input.customName !== undefined
+      ? !customName || customName.length > 300 || input.speciesSlug !== undefined
+      : !isMarineLifeSlug(input.speciesSlug ?? "")
+  ) {
+    return { ok: false, reason: "unknown_species" };
+  }
+  const speciesSlug = customName
+    ? `custom:${createHash("sha256").update(customName.toLowerCase()).digest("hex")}`
+    : (input.speciesSlug ?? "");
   const now = input.now ?? nowDate();
   return db.transaction(async (tx): Promise<RecordTripSightingResult> => {
     const [trip] = await tx
@@ -140,7 +148,8 @@ export async function recordTripSighting(
         tripId: input.tripId,
         diveSiteId: site.id,
         diveSiteName: site.name,
-        speciesSlug: input.speciesSlug,
+        speciesSlug,
+        customName: customName ?? null,
         count: 1,
         recordedByPersonId: recorder.id,
         recordedAt: now,
@@ -205,6 +214,7 @@ export async function listTripSightings(db: DbExecutor, shopId: string, tripId: 
       diveSiteId: tripSightings.diveSiteId,
       diveSiteName: tripSightings.diveSiteName,
       speciesSlug: tripSightings.speciesSlug,
+      customName: tripSightings.customName,
       count: tripSightings.count,
       recordedAt: tripSightings.recordedAt,
     })
@@ -293,6 +303,7 @@ export async function siteSightings(
         .select({
           diveSiteId: tripSightings.diveSiteId,
           speciesSlug: tripSightings.speciesSlug,
+          customName: sql<string | null>`min(${tripSightings.customName})`,
           dives: sql<number>`count(distinct ${tripSightings.tripId})::int`,
           total: sql<number>`sum(${tripSightings.count})::int`,
           lastSeenAt: sql<Date>`max(${trips.startsAt})`,
@@ -324,6 +335,7 @@ export async function siteSightings(
     const list = talliesBySite.get(row.diveSiteId) ?? [];
     list.push({
       speciesSlug: row.speciesSlug,
+      customName: row.customName,
       dives: Number(row.dives),
       total: Number(row.total),
       // PGlite hands `max(timestamptz)` back as a Date; a driver that answers

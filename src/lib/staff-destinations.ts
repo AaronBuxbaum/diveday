@@ -80,6 +80,7 @@ export type StaffSection =
   | "inbox"
   | "money"
   | "safety"
+  | "diveSites"
   | "courses"
   | "gear"
   | "settings";
@@ -96,7 +97,8 @@ export const STAFF_NAV_SECTIONS = [
   { section: "inbox", id: "inbox" },
   { section: "money", id: "orders" },
   { section: "safety", id: "safety" },
-  { section: "courses", id: "courses" },
+  { section: "courses", id: "certifications" },
+  { section: "diveSites", id: "diveSites" },
   { section: "gear", id: "gear" },
   { section: "settings", id: "settings" },
 ] as const satisfies readonly { section: StaffSection; id: StaffDestinationId }[];
@@ -145,6 +147,7 @@ export type StaffDestinationId =
   | "newWorkOrder"
   | "rentOut"
   | "courses"
+  | "certifications"
   | "reviews"
   | "requests"
   | "inbox"
@@ -211,6 +214,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   newWorkOrder: "shared.shopNavLinks.newWorkOrder",
   rentOut: "shared.shopNavLinks.rentOut",
   courses: "shared.shopNavLinks.courses",
+  certifications: "shared.shopNavLinks.certifications",
   reviews: "shared.shopNavLinks.reviews",
   requests: "shared.shopNavLinks.requests",
   inbox: "shared.shopNavLinks.inbox",
@@ -321,6 +325,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // same owner/manager gate as Reports, since it reads the same record.
   { id: "safety", suffix: "/safety", section: "safety", gate: "reports" },
   { id: "courses", suffix: "/courses", section: "courses" },
+  { id: "certifications", suffix: "/certifications", section: "courses" },
   // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
   // it (ADR 20261008-gear-work-orders). Ungated: gear is any-staff work
   // (H-20260724-initial-gear-policy-sizing), and a technician is staff.
@@ -333,7 +338,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // 20260815-minimal-gear-register, amended 2026-10-08). Any staff, as gear is.
   { id: "rentOut", suffix: "/gear", query: "add=rental", section: "gear" },
   // What a shop sets up rather than works.
-  { id: "diveSites", suffix: "/dive-sites", section: "settings" },
+  { id: "diveSites", suffix: "/dive-sites", section: "diveSites" },
   // The shop's other registers sit beside the dive sites (issue #2659, glossary
   // "Register and setting"): a table of the shop's things that a departure
   // points at, each at `/shop/<slug>/<noun>` with a gate of its own. The boats
@@ -386,6 +391,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
  * because both read the week on screen.
  */
 export const STAFF_SECTION_TABS = {
+  courses: ["certifications", "courses"],
   gear: ["gear", "workOrders"],
   inbox: ["inbox", "requests", "reviews"],
   money: ["orders", "promoCodes", "reports"],

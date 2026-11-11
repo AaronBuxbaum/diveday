@@ -46,7 +46,7 @@ for (const scheme of ["light", "dark"] as const) {
       // affordance.
       test(`the staff course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses");
-        await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Certifications" }).waitFor();
         await page.getByRole("heading", { level: 2, name: "PADI" }).waitFor();
         await capture(page, "courses-list", scheme);
       });
@@ -63,7 +63,7 @@ for (const scheme of ["light", "dark"] as const) {
         // that disclosure is absent here, and its grammar is held by
         // CardsToProcess.test.tsx under a clock past the cut.
         await seedFacts(request, ["certifiedRecap"]);
-        await page.goto("/shop/blue-mantis/courses");
+        await page.goto("/shop/blue-mantis/certifications");
         // The first ladder row: the demo now seeds two shop-certified cards
         // of its own (H-20261022-demo-seeds-six-hidden), so "See who" is on more than one step.
         const people = page.getByText("See who", { exact: true }).first();
@@ -82,7 +82,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/courses?page=2");
-        await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Certifications" }).waitFor();
         await page.getByRole("heading", { level: 2 }).first().waitFor();
         await capture(page, "courses-list-page-two", scheme);
       });
@@ -598,9 +598,8 @@ for (const scheme of ["light", "dark"] as const) {
       // (slice 9g of ADR 20260827-the-shops-shelves; codes themselves are ADR
       // 20260729-shop-promo-codes). The seed holds a live code and an expired
       // one, so two shelves render and the windows and redemption counts sit on
-      // the rows. The demo has no Stripe account and never connects one, so
-      // nothing stands above the ledger: no Connect ask and no "New code" door
-      // that would open only on one (fourth review, item 53).
+      // the rows. New code stays available even without a Stripe account;
+      // required payment setup is explained inside that panel.
       test(`the discount codes page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/promos");
         await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();

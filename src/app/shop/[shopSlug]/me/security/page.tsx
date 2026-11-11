@@ -33,6 +33,7 @@ import { staffPageClass } from "../../_components/staff-page";
 import { AccountSessionsList } from "./_components/AccountSessionsList";
 import { FactorManagementSection } from "./_components/FactorManagementSection";
 import { PasskeySection } from "./_components/PasskeySection";
+import { PublicProfileSection } from "./_components/PublicProfileSection";
 import { StepUpSection } from "./_components/StepUpSection";
 import {
   beginTotpEnrollmentAction,
@@ -62,7 +63,7 @@ export const instant = true;
  * metadata is a browser tab and a bookmark, not a surface, so the locale it
  * cost a tenant read to negotiate was never worth the negotiation.
  */
-export const metadata: Metadata = { title: "Account security — DiveDay" };
+export const metadata: Metadata = { title: "Account settings — DiveDay" };
 
 export default async function SecurityPage({
   params,
@@ -105,6 +106,10 @@ export default async function SecurityPage({
     }
   })();
   const notice = noticeFromParam<{ tone: NoticeTone; text: string }>(query.notice, {
+    "crew-consent-saved": { tone: "success", text: t("staffing.notice.crewConsentSaved") },
+    "crew-consent-withdrawn": { tone: "success", text: t("staffing.notice.crewConsentWithdrawn") },
+    "staff-not-found": { tone: "danger", text: t("staffing.notice.staffNotFound") },
+    invalid: { tone: "danger", text: t("staffing.notice.invalid") },
     "security-proof-required": {
       tone: "warning",
       text: t("settings.security.factorManagement.description"),
@@ -201,6 +206,9 @@ export default async function SecurityPage({
           (docs/design/forms-and-controls.md). The cards stood 24px apart,
           and the step-up card and the notice hung `mt-6` of their own (K-521). */}
       <div className="space-y-10">
+        {!purpose && account.person ? (
+          <PublicProfileSection shopSlug={shopSlug} person={account.person} t={t} />
+        ) : null}
         <StepUpSection
           shopSlug={shopSlug}
           purpose={purpose}

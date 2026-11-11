@@ -51,7 +51,13 @@ for (const scheme of ["light", "dark"] as const) {
       const rider = page.getByRole("listitem").filter({ hasText: "Dax Reed" });
       await expect(rider.getByText(t("incidentExport.certNone"))).toHaveCount(2);
       await capture(page, "departure-log-boarding-certification", scheme);
-      if (scheme === "light") await capturePrint(page, "departure-log-boarding-certification");
+      if (scheme === "light") {
+        await page.getByRole("link", { name: "Print", exact: true }).click();
+        await page.waitForURL(/\/log\/print$/);
+        await expect(page.locator(".paper-sheet")).toBeVisible();
+        await expect(evidence.getByText(t("incidentExport.certCurrent"))).toBeVisible();
+        await capturePrint(page, "departure-log-boarding-certification");
+      }
     });
   });
 }

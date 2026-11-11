@@ -2,6 +2,7 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { ClosingCta, FunnelCtas, heroPriceLine } from "@/app/_components/FunnelCtas";
 import { JsonLd } from "@/components/JsonLd";
+import { MarketingIllustration } from "@/components/MarketingIllustration";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -26,14 +27,7 @@ import {
 import { featureSource } from "@/lib/funnel";
 import { capabilityGroup, earlyAccessPrice } from "@/lib/marketing";
 import { FeatureScreen } from "./FeatureScreen";
-
-/**
- * One row of the inventory, in or out: a rule under every row, and over the
- * first row of each column (the second row is the right column's first from
- * `sm`).
- */
-const INVENTORY_ROW_CLASS =
-  "flex gap-3 border-b border-border py-3.5 leading-6 first:border-t sm:[&:nth-child(2)]:border-t";
+import { IncludedList } from "./IncludedList";
 
 /**
  * The feature page's sentences that state the plan's terms, for the configured offer
@@ -132,6 +126,16 @@ export async function FeaturePageBody({
   ];
   const included = capabilityGroup(key);
   const related = relatedFeaturePages(page);
+  // Only pages about arrival, learning or gear handover get an editorial scene. Keep the
+  // product hub, safety/legal pages and the owner's About narrative unchanged.
+  const scene =
+    slug === "online-booking" || slug === "website"
+      ? "harbor"
+      : slug === "courses"
+        ? "classroom"
+        : slug === "rental-gear"
+          ? "gear-handover"
+          : null;
 
   return (
     <main className="flex-1">
@@ -227,25 +231,32 @@ export async function FeaturePageBody({
       <MarketingReveal>
         <section className="bg-surface">
           <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20">
-            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.featureChrome.stepsTitle")}
-            </h2>
-            <ol className="mt-10 grid gap-8 md:grid-cols-3 md:gap-10">
-              {steps.map((step, index) => (
-                <li key={step.title} className="flex gap-3 border-t border-border pt-5">
-                  <span
-                    aria-hidden="true"
-                    className="w-4 shrink-0 leading-7 font-semibold text-primary tabular-nums"
-                  >
-                    {index + 1}
-                  </span>
-                  <div>
-                    <h3 className={`${ITEM_TITLE_CLASS} text-balance`}>{step.title}</h3>
-                    <p className="mt-2 leading-7 text-muted">{step.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <div className={scene ? "grid items-center gap-8 lg:grid-cols-2 lg:gap-14" : undefined}>
+              <div>
+                <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
+                  {t("marketing.featureChrome.stepsTitle")}
+                </h2>
+                <ol
+                  className={scene ? "mt-8 space-y-6" : "mt-10 grid gap-8 md:grid-cols-3 md:gap-10"}
+                >
+                  {steps.map((step, index) => (
+                    <li key={step.title} className="flex gap-3 border-t border-border pt-5">
+                      <span
+                        aria-hidden="true"
+                        className="w-4 shrink-0 leading-7 font-semibold text-primary tabular-nums"
+                      >
+                        {index + 1}
+                      </span>
+                      <div>
+                        <h3 className={`${ITEM_TITLE_CLASS} text-balance`}>{step.title}</h3>
+                        <p className="mt-2 leading-7 text-muted">{step.body}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              {scene ? <MarketingIllustration scene={scene} locale={locale} /> : null}
+            </div>
           </div>
         </section>
       </MarketingReveal>
@@ -284,14 +295,12 @@ export async function FeaturePageBody({
               {/* The rule above each column's first row rather than across
                   the list: a rule on the `ul` ran through the gutter the row
                   rules stop at. */}
-              <ul className="grid gap-x-10 sm:grid-cols-2">
-                {included.items.map((itemKey) => (
-                  <li key={itemKey} className={INVENTORY_ROW_CLASS}>
-                    <DiveDayIcon name="check" className="mt-1 size-4 shrink-0 text-primary" />
-                    <span>{t(itemKey)}</span>
-                  </li>
-                ))}
-              </ul>
+              <IncludedList
+                items={included.items.map((itemKey) => t(itemKey))}
+                showAllLabel={t("marketing.featureChrome.includedShowAll", {
+                  count: included.items.length,
+                })}
+              />
             </div>
           </div>
         </section>

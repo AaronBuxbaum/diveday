@@ -1,9 +1,11 @@
 "use server";
 
 import type { HeldTicket } from "@/components/SendHold";
+import { readActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { holdCounterPayment, pendingCounterPayment } from "@/db/counter-payment-hold";
 import {
+  getOrder,
   type RecordPaymentOnOrderOutcome,
   recordPaymentOnOpenOrder,
   voidCounterOrder,
@@ -15,8 +17,10 @@ import { revalidateAndRedirect } from "@/features/navigation";
 import { stepUpChallengeUrl } from "@/features/security-step-up";
 import { requireStaffSession } from "@/features/session";
 import { hasRequiredStepUp } from "@/features/step-up";
+import { isStaff } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 import { recordPaymentNotice } from "./order-detail-keys";
 import { postedCollection, postedOrderId, postedRoom } from "./order-form";
 
@@ -98,6 +102,27 @@ export async function holdCounterPaymentAction(
     // The way the hold carries, which a second tap does not change.
     collection: pending?.payload.collection ?? collection,
   };
+}
+
+/** A countdown can find its hold consumed by this page's leave request or another screen.
+ * Read the actual payment; a missing hold alone proves neither payment nor Undo. */
+export async function settledCounterPaymentHrefAction(
+  orderId: string,
+  collection: "cash" | "card_machine",
+): Promise<string | null> {
+  const session = await requireStaffSession();
+  if (!uuidParam(orderId) || (collection !== "cash" && collection !== "card_machine")) return null;
+  const db = await getDb();
+  const roles = await readActiveStaffRoles(db, session.user.shopId, session.user.personId);
+  if (!roles || !isStaff(roles)) return null;
+  const result = await getOrder(db, session.user.shopId, orderId);
+  if (result?.order.status !== "paid" || result.order.collection !== collection) return null;
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop) return null;
+  return noticeUrl(
+    shopPath(shop.slug, "orders", orderId),
+    shop.isDemo ? "payment-recorded-demo" : "payment-recorded",
+  );
 }
 
 /**

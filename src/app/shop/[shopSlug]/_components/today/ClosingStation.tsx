@@ -14,6 +14,7 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { openRollCallActionText } from "@/i18n/today-labels";
 import { formatRelativeDay, formatTime } from "@/lib/format";
 import type { DaySpineContext } from "./DaySpine";
+import { FormattedWords } from "./FormattedWords";
 
 /**
  * **A station that has settled** — the evening reading of the shop home's day
@@ -43,7 +44,6 @@ export function ClosingStation({
   shopSlug,
   locale,
   timeZone,
-  canOpenLog,
   t,
   countedLaterOn,
   notes,
@@ -56,7 +56,6 @@ export function ClosingStation({
   locale: string;
   timeZone: string;
   /** `canPersonExportIncidentRecord` — the log door is absent for everyone else. */
-  canOpenLog: boolean;
   t: StaffTranslator;
   /**
    * A past day only: the closing mark's own shop day, formatted, when it is a
@@ -129,7 +128,7 @@ export function ClosingStation({
     // card on the bed, not as a gap in a rail. No site tile — the closing
     // reader carries no site — so the time leads, in the muted ink of a boat
     // that is done.
-    <SectionCard as="li" padding="lg">
+    <SectionCard as="li" padding="lg" className="device-text-station">
       <p>
         {/* The same machine-readable instant the morning station renders: the
             spine's whole claim is that these read in clock order, and a
@@ -139,7 +138,7 @@ export function ClosingStation({
           dateTime={close.startsAt.toISOString()}
           className={`block ${FIGURE_CLASS} leading-none tracking-tight text-muted`}
         >
-          {formatTime(close.startsAt, locale, timeZone)}
+          <FormattedWords text={formatTime(close.startsAt, locale, timeZone)} />
         </time>
       </p>
       <h3 className={`mt-1.5 ${ITEM_TITLE_CLASS} tracking-tight`}>
@@ -162,6 +161,7 @@ export function ClosingStation({
           settled={close.status === "all_home"}
           label={t(CLOSEOUT_STATUS_KEYS[close.status])}
           labelClassName="font-medium"
+          className="device-text-station-status"
         >
           <span className={`${detailInk} tabular-nums`}>{detail}</span>
           {counted && countedLaterOn ? (
@@ -188,41 +188,19 @@ export function ClosingStation({
           {note}
         </p>
       ))}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        {/* A boat still out is exactly the row you would chase, so it gets
+      {close.gapReason || close.status === "still_out" ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          {/* A boat still out is exactly the row you would chase, so it gets
             the manifest door too — not only the rows with a recorded gap
             (principle 10: no dead ends on the row that matters most). */}
-        {close.gapReason || close.status === "still_out" ? (
           <Link
             href={`/shop/${shopSlug}/trips/${close.tripId}/manifest?checkpoint=${checkpoint}`}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {openRollCallActionText(t)}
           </Link>
-        ) : null}
-        {/* Writing the day up belongs to the evening, so the departure log
-            is generated from the station rather than from the manifest a
-            crew works at the rail. Owner-only (ADR
-            20260804-incident-export-owner-gate) and absent, never disabled,
-            for everyone else — the gate is the render. A quiet link, at the
-            same weight the live station gives it (slice 16a).
-
-            **A quiet link still has to be tappable.** `tapTargetLinkClass`
-            is the floor and nothing else — no chrome, its own ink — which is
-            precisely what this row wants and what typing the ink by hand left
-            out: 83.7 × **20px**, under WCAG 2.5.8's 24px minimum, which
-            the suite's evening axe scan caught the moment this station
-            moved down the page (the scan was removed on 2026-10-24). This file already spells it that way a few
-            lines up. */}
-        {canOpenLog ? (
-          <Link
-            href={`/shop/${shopSlug}/trips/${close.tripId}/log`}
-            className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
-          >
-            {t("incidentExport.openLink")}
-          </Link>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {/* **One hairline between the station and its recap**, drawn here
           because the recap draws no rule of its own; and nothing renders when
           there is no recap to write, since a rule under thin air is a defect. */}
@@ -253,7 +231,6 @@ export function LastRollCall({ context }: { context: DaySpineContext }) {
           shopSlug={shopSlug}
           locale={locale}
           timeZone={timeZone}
-          canOpenLog={evening.canOpenLog}
           t={t}
         />
       </ol>

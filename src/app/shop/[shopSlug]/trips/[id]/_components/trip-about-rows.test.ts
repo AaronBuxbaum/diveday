@@ -2,9 +2,10 @@ import { eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { courses, diveSites, trips } from "@/db/schema";
-import { listStaff, upcomingTripsWithCounts } from "@/db/trips";
+import { createTripSeries, listStaff, setSeriesRepeat, upcomingTripsWithCounts } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CoursePricing } from "@/lib/courses";
+import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import { listBoats } from "../../../../../../features/boats/store";
 import { listTripLenses } from "../../../../../../features/trip-lenses/store";
@@ -19,10 +20,14 @@ async function rowsFor(
   canConfigure?: boolean,
   held?: Parameters<typeof tripAboutRows>[0]["held"],
   pricing?: { priceCents: number | null; course: CoursePricing | null },
+  detailsEditable = true,
+  subjectTripId?: string,
 ) {
   const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-  const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+  const reef = subjectTripId
+    ? { id: subjectTripId }
+    : trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
   const [staff] = await listStaff(db, shop.id);
   if (!staff) throw new Error("demo staff missing");
@@ -46,6 +51,7 @@ async function rowsFor(
     locale: "en-US",
     t,
     tripNotice,
+    detailsEditable,
     held,
     shopBoats: await listBoats(db, shop.id),
     shopLenses: await listTripLenses(db, shop.id),
@@ -221,4 +227,38 @@ describe("tripAboutRows (in-memory PGlite)", () => {
       "A snorkeler is booked, but every planned site is marked not good for snorkeling.",
     );
   });
+});
+
+it("keeps the plan read-only while separating truthful crew correction after final Home", async () => {
+  const rows = await rowsFor(undefined, true, undefined, undefined, false);
+  expect(rows.filter((row) => row.id !== "about-crew").some((row) => row.editor)).toBe(false);
+  expect(rows.find((row) => row.id === "about-crew")).toMatchObject({
+    editLabel: t("trips.about.correctCrewRecord"),
+    editor: expect.anything(),
+  });
+  expect(rows.find((row) => row.id === "conditions")?.value).toBeTruthy();
+});
+
+it("keeps future-series cadence reachable from a finished occurrence", async () => {
+  const { db, shop } = ctx;
+  const made = await createTripSeries(db, {
+    shopId: shop.id,
+    title: "Finished Monday run",
+    capacity: 6,
+    plannedDives: 1,
+    frequency: "weekly",
+    intervalWeeks: 1,
+    weekdays: weekdaySetFrom([1]),
+    anchorDate: "2026-07-20",
+    endsOn: "2026-07-20",
+    timeZone: shop.timezone,
+    template: {
+      startsAt: new Date("2026-07-20T13:00:00Z"),
+      endsAt: new Date("2026-07-20T17:00:00Z"),
+    },
+  });
+  if (!made?.trips[0]) throw new Error("past series missing");
+  await setSeriesRepeat(db, shop.id, made.series.id, false);
+  const rows = await rowsFor(undefined, true, undefined, undefined, false, made.trips[0].id);
+  expect(rows.find((row) => row.id === "series")?.editor).toBeDefined();
 });

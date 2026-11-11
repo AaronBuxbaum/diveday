@@ -146,6 +146,7 @@ const executedDiveSchema = z.object({
   enteredAt: z.string().optional(),
   exitedAt: z.string().optional(),
   maxDepthMeters: z.union([z.literal(""), z.coerce.number().finite().min(0)]),
+  depthUnit: z.enum(["meters", "feet"]),
   visibility: z.string().trim().max(120).optional(),
   current: z.string().trim().max(120).optional(),
   // Bounded here, believed nowhere: `upsertExecutedDive` checks it against the
@@ -227,7 +228,7 @@ export async function saveExecutedDiveAction(
   const maxDepthMeters =
     notRecorded.includes("depth") || parsed.data.maxDepthMeters === ""
       ? null
-      : depthToMeters(parsed.data.maxDepthMeters, shop.depthUnit);
+      : depthToMeters(parsed.data.maxDepthMeters, parsed.data.depthUnit);
   if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {
     return { status: "error", reason: "depth_out_of_range" };
   }
@@ -262,11 +263,16 @@ export async function saveExecutedDiveAction(
  * A species chip, tapped or taken back — the Seen group's two acts.
  *
  * The slug is bounded here and **believed nowhere**: `recordTripSighting`
- * checks it against `MARINE_LIFE_CATALOG` and refuses one the catalog does not
- * carry, because the slug is the whole record and one with no words to render
- * would reach a public trip page as punctuation.
+ * checks catalog selections against `MARINE_LIFE_CATALOG`. Custom words are
+ * bounded separately and stored as display text, never as a catalog entry.
  */
 const sightingSchema = z.object({ speciesSlug: z.string().trim().min(1).max(80) });
+const recordSightingSchema = z
+  .object({
+    speciesSlug: z.string().trim().min(1).max(80).optional(),
+    customName: z.string().trim().min(1).max(300).optional(),
+  })
+  .refine((value) => Boolean(value.speciesSlug) !== Boolean(value.customName));
 
 /**
  * What a tap is told when it does not land.
@@ -299,7 +305,7 @@ export async function recordSightingAction(
   formData: FormData,
 ): Promise<SightingResult> {
   const staff = await manifestStaff(ctx);
-  const parsed = sightingSchema.safeParse(Object.fromEntries(formData));
+  const parsed = recordSightingSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error" };
   // Sightings switched off: the Seen group is gone, so a tap is a hand-built post.
   if (!(await shopHasFeatureOn(await getDb(), staff.user.shopId, "sightings"))) {
@@ -309,7 +315,7 @@ export async function recordSightingAction(
     shopId: staff.user.shopId,
     tripId: ctx.tripId,
     diveSiteId: ctx.diveSiteId,
-    speciesSlug: parsed.data.speciesSlug,
+    ...parsed.data,
     recordedByPersonId: staff.user.personId,
   });
   if (!saved.ok) return { status: "error" };

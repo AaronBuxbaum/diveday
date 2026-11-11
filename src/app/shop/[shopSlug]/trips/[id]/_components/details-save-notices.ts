@@ -5,6 +5,8 @@
  * shows neither the booked count nor the hull's limits.
  */
 export const DETAILS_SAVE_NOTICES = {
+  "safety-record-stale": { form: "safety-record", tone: "danger", key: "trips.safetyRecord.stale" },
+  "details-finished": { form: "details", tone: "danger", key: "trips.notices.detailsFinished" },
   "end-before-start": { form: "details", tone: "danger", key: "trips.notices.endBeforeStart" },
   "days-out-of-order": { form: "details", tone: "danger", key: "trips.notices.daysOutOfOrder" },
   "capacity-below-booked": {

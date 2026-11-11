@@ -236,13 +236,15 @@ function SiteSeen({
   // A slug the catalog has since retired has no words, and a line of raw slug
   // is worse than one line fewer — the same rule `fieldGuideCards` follows.
   const lines = seen.species.flatMap((tally) => {
-    if (!isMarineLifeSlug(tally.speciesSlug)) return [];
-    const card = marineLifeCard(tally.speciesSlug, t);
+    const name =
+      tally.customName ??
+      (isMarineLifeSlug(tally.speciesSlug) ? marineLifeCard(tally.speciesSlug, t).name : null);
+    if (!name) return [];
     return [
       {
         slug: tally.speciesSlug,
         line: t("trip.seen.line", {
-          species: card.name,
+          species: name,
           seen: tally.dives,
           dives: seen.dives,
         }),
@@ -258,7 +260,7 @@ function SiteSeen({
       <p className="text-sm font-medium">{t("trip.seen.heading")}</p>
       <ul className="mt-1 space-y-1">
         {lines.map((line) => (
-          <li key={line.slug} className="text-sm leading-relaxed">
+          <li key={line.slug} className="break-words text-sm leading-relaxed">
             <span className="block">{line.line}</span>
             {/* The heading already says "this month"; the exact day is a
                 desktop's second line, and on a phone it doubled the list. */}

@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
 import { openIfClosed, signInAsOwner } from "./helpers";
 
@@ -107,6 +108,16 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
 
   const secondDay = dayGroup("Mar 13, 2027");
   await expect(secondDay.getByRole("heading", { level: 2 })).toHaveText(/2 groups · 2 divers/i);
+  await expect(firstDay.getByRole("heading", { name: "Requests for this date" })).toBeVisible();
+  await expect(
+    page.getByText(staffTranslator("en-US")("requests.plan.review"), { exact: true }),
+  ).toHaveCount(1);
+  // Both public forms default to one diver, so these are known party sizes.
+  await expect(firstDay.getByText("2 divers in stated party sizes")).toBeVisible();
+  await expect(firstDay.getByRole("link", { name: "Check the crew schedule" })).toHaveAttribute(
+    "href",
+    "/shop/blue-mantis/staffing?week=2027-03-01",
+  );
   // And that is where it is printed whole.
   await expect(secondDay.getByText("Wants to dive: A shallow reef morning")).toBeVisible();
   await expect(secondDay.getByText("reef.fan.e2e@example.com")).toBeVisible();

@@ -335,7 +335,7 @@ describe("searchShop", () => {
       .from(orders)
       .where(eq(orders.shopId, shop.id))
       .limit(1);
-    if (!order) throw new Error("seed order missing");
+    if (!order?.personId) throw new Error("seed order missing");
     const [buyer] = await db.select().from(people).where(eq(people.id, order.personId)).limit(1);
     if (!buyer) throw new Error("seed order's buyer missing");
 

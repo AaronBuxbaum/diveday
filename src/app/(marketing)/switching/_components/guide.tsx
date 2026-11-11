@@ -5,7 +5,6 @@ import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { DisclosureRow } from "@/components/ui/disclosure";
 import { groupLabelClass } from "@/components/ui/group-label";
 import {
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import type { FunnelSource } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import { fullShopExport } from "@/lib/marketing";
@@ -28,10 +28,8 @@ import { CALLOUT_LINK_CLASS } from "./ReplaceCallout";
  * (`/switching/[competitor]`) and the spreadsheet guide
  * (`/switching/spreadsheet`). Both pages used to be ~500-line siblings of the
  * same nine card-grid sections; these pieces are the guided path that replaced
- * them — you're here (hero, with the four answers a switcher arrives for) →
- * what changes → how the move works (one numbered rail, not three lookalike
- * "Step N" mega-sections) → proof (the scope table, grouped by outcome) →
- * talk to a human → act.
+ * them. The current order is the outcome and demo → concrete crew workflow →
+ * honest fit comparison → move rail and source-specific scope → personal help.
  *
  * Everything here renders inside a `"use cache"` page body, so nothing reads
  * request state: `locale` arrives as a prop, and the session-scoped import
@@ -40,25 +38,12 @@ import { CALLOUT_LINK_CLASS } from "./ReplaceCallout";
  * strings never live here.
  */
 
-/**
- * The four questions a shop owner actually arrives on a switching guide with.
- * Every guide answers the same four, because all four are properties of the
- * importer and the switch rather than of any one incumbent — so they are one
- * shared key set, said once, in the first screenful. The fourth is the
- * *compressed* form of the return trip; the full claim and its terms stay in
- * the one shared `bothWays` block under the scope table (see `ScopePhase`),
- * never re-authored here.
- */
-const GUIDE_FACTS = ["moves", "time", "preview", "back"] as const;
-
 /*
  * The boxes the hero and the "you are here" band are built from, each spelled
  * once and shared with {@link GuideBodySkeleton}, so the skeleton cannot draw a
  * different box from the one that replaces it.
  */
 const HERO_BOX_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-24";
-const FACTS_GRID_CLASS =
-  "mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border pt-6 lg:grid-cols-4";
 const CONTEXT_PARAGRAPHS_CLASS = "mt-5 max-w-2xl space-y-5";
 const DIVIDED_LIST_CLASS = "mt-8 grid gap-x-10 sm:grid-cols-2";
 const DIVIDED_ITEM_CLASS = "border-t border-border py-5";
@@ -70,7 +55,7 @@ const DIVIDED_ITEM_CLASS = "border-t border-border py-5";
  * `SwitchingConcierge`. One string, because the hand copies drifted: "you are
  * here" was `py-14`, so on a phone the rules either side of it sat 56px from
  * its words against the 64 of every band around it (K-518). The hero (`py-24`
- * from `lg`) and the mid-page card (`MidCta`) are deliberately other sizes.
+ * from `lg`) is deliberately a different size.
  */
 export const GUIDE_BAND_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-20";
 
@@ -84,8 +69,7 @@ export const GUIDE_BAND_LEDE_CLASS = "mt-5 max-w-2xl text-lg leading-8 text-mute
 
 /**
  * The guide hero: back link, eyebrow, headline, lede, the buyer's first door
- * out — and {@link GUIDE_FACTS}, stated in the first screenful instead of
- * four to eight sections down.
+ * out — with the demo terms and configured offer beside it.
  */
 export function GuideHero({
   locale,
@@ -93,14 +77,14 @@ export function GuideHero({
   eyebrow,
   title,
   lede,
-  fareHarbor = false,
+  offer,
 }: {
   locale: DiverLocale;
   source: FunnelSource;
   eyebrow: string;
   title: string;
   lede: string;
-  fareHarbor?: boolean;
+  offer: PlanTerms;
 }) {
   const t = diverTranslator(locale);
   return (
@@ -126,22 +110,9 @@ export function GuideHero({
             owner into their own shop's importer and is correct to disappear
             for the signed-out shopper this section is written for. */}
         <div className="mt-8">
-          <FunnelCtas locale={locale} source={source} />
+          <FunnelCtas locale={locale} source={source} footnotes={{ offer }} />
         </div>
         <p className="mt-3 text-sm text-muted">{t("switching.common.heroCtaNote")}</p>
-
-        <dl className={FACTS_GRID_CLASS}>
-          {GUIDE_FACTS.map((fact) => (
-            <div key={fact}>
-              <dt className={groupLabelClass()}>{t(`switching.common.facts.${fact}.label`)}</dt>
-              <dd className="mt-1 text-sm font-medium leading-6">
-                {fareHarbor && (fact === "moves" || fact === "time")
-                  ? t(`marketing.guides.fareharbor.transferChoice.${fact}Fact`)
-                  : t(`switching.common.facts.${fact}.value`)}
-              </dd>
-            </div>
-          ))}
-        </dl>
       </div>
     </section>
   );
@@ -208,21 +179,6 @@ export function DividedList({ items }: { items: { title: string; detail: string 
   );
 }
 
-/**
- * How far each fact's value wraps: five, two, three and three lines in a
- * phone's half column at 390, four, two, two and two in a desk's quarter at
- * 1280. The facts are shared copy, so every guide wraps them alike. Between
- * `sm` and `lg` the grid is still two columns, wider than either measured one,
- * and the values take a line fewer than drawn; the captures hold no width
- * there to count from.
- */
-const GUIDE_FACT_LINES: Record<(typeof GUIDE_FACTS)[number], SkeletonLines> = {
-  moves: { base: 5, sm: 4 },
-  time: 2,
-  preview: { base: 3, sm: 2 },
-  back: { base: 3, sm: 2 },
-};
-
 /** The note under the hero's doors: two lines on a phone, one from `sm`. Shared copy. */
 const HERO_NOTE_LINES: SkeletonLines = { base: 2, sm: 1 };
 
@@ -280,17 +236,43 @@ export function GuideBodySkeleton({ lines }: { lines: GuideSkeletonLines }) {
             <div className={`${door} sm:w-28`} />
           </div>
           <div className="mt-3">
+            <SkeletonLineBars lines={1} height="h-5" width="w-full max-w-md" />
+          </div>
+          <div className="mt-2">
+            <SkeletonLineBars lines={{ base: 3, sm: 1 }} height="h-5" width="w-full max-w-2xl" />
+          </div>
+          <div className="mt-3">
             <SkeletonLineBars lines={HERO_NOTE_LINES} height="h-5" width="w-full max-w-md" />
           </div>
-          <div className={FACTS_GRID_CLASS}>
-            {GUIDE_FACTS.map((fact) => (
-              <div key={fact}>
-                <div className={`h-4 w-24 max-w-full ${bar}`} />
-                <div className="mt-1">
-                  <SkeletonLineBars lines={GUIDE_FACT_LINES[fact]} height="h-6" width="w-full" />
-                </div>
-              </div>
-            ))}
+        </div>
+      </section>
+
+      <div aria-hidden className="mx-auto max-w-4xl px-6 py-6">
+        <div className={`h-12 w-full ${bar}`} />
+      </div>
+      <section aria-hidden className="border-b border-border bg-surface">
+        <div className={GUIDE_BAND_CLASS}>
+          <div className={`h-5 w-52 ${bar}`} />
+          <div className="mt-3">
+            <SkeletonLineBars
+              lines={{ base: 3, sm: 2 }}
+              height="h-9 sm:h-10"
+              width="w-full max-w-2xl"
+            />
+          </div>
+          <div className="mt-5">
+            <SkeletonLineBars lines={{ base: 4, sm: 2 }} height="h-8" width="w-full max-w-2xl" />
+          </div>
+          <div className="mt-8 grid items-start gap-8 md:grid-cols-[1.2fr_1fr]">
+            <div className={`h-[28rem] ${bar}`} />
+            <div className="space-y-6">
+              <div className={`h-36 ${bar}`} />
+              <div className={`h-36 ${bar}`} />
+            </div>
+          </div>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className={`${door} sm:w-40`} />
+            <div className={`${door} sm:w-28`} />
           </div>
         </div>
       </section>
@@ -330,8 +312,7 @@ export function GuideBodySkeleton({ lines }: { lines: GuideSkeletonLines }) {
 /**
  * "How the move works" — the one section that holds the whole mechanical
  * path as a numbered rail of phases. This replaces the three separate
- * "Step 1 / Step 2 / Step 3" mega-sections whose identical dress chopped one
- * afternoon's work into what read as seven screens of process.
+ * "Step 1 / Step 2 / Step 3" mega-sections whose identical dress made the move read as seven screens of process.
  *
  * `moveIntro` carries the concierge in its second sentence, and that is the
  * point of this section's opening line (the 2026-08-27 conversion review's
@@ -342,8 +323,7 @@ export function GuideBodySkeleton({ lines }: { lines: GuideSkeletonLines }) {
  * same breath as the work. The full offer — bidirectional, with the inbox to
  * write to — still stands below in {@link SwitchingConcierge} on every
  * switching page; this is the compressed form, the same shape
- * `GUIDE_FACTS.back` uses for the export claim and `midSeasonCutover` uses for
- * the cutover steps. Compressed here, authored once, never re-worded.
+ * the shared mid-season answer uses for the cutover steps.
  */
 export function GuideContents({
   locale,
@@ -354,6 +334,7 @@ export function GuideContents({
 }) {
   const t = diverTranslator(locale);
   const links = [
+    { id: "dive-day", label: t("switching.common.proofLink") },
     {
       id: spreadsheet ? "columns" : "export",
       label: t(spreadsheet ? "switching.common.fieldReference" : "switching.common.exportFile"),
@@ -363,7 +344,7 @@ export function GuideContents({
     ...(!spreadsheet ? [{ id: "cutover", label: t("switching.common.cutoverLink") }] : []),
   ];
   return (
-    <nav aria-label={t("switching.common.contents")} className="mx-auto max-w-4xl px-6 pb-8">
+    <nav aria-label={t("switching.common.contents")} className="mx-auto max-w-4xl px-6 py-6">
       <ul className="flex flex-wrap gap-x-6">
         {links.map((link) => (
           <li key={link.id}>
@@ -679,41 +660,6 @@ export function ImportPhase({
       )}
       {children}
     </MovePhase>
-  );
-}
-
-/**
- * The mid-page exit, at the hinge between the argument and the mechanics:
- * the reader has just been told what changes and is about to be handed a
- * thousand pixels of export click-path. "Rather see it than read about it?"
- * is exactly the offer that belongs there, and putting it here rather than
- * after the move rail keeps it from landing two screens from the closing
- * band's identical pair.
- */
-export function MidCta({ locale, source }: { locale: DiverLocale; source: FunnelSource }) {
-  const t = diverTranslator(locale);
-  return (
-    <section className="mx-auto max-w-4xl px-6 py-14 lg:py-16">
-      {/* The panel is `SectionCard`, so every guide's hinge CTA is spelled the
-          same as every other bordered panel in the app. The heading and body
-          stay call-site children rather than `title`/`description`: this is a
-          persuasion block, and `description` renders `text-sm`, which would
-          quietly demote the one sentence standing between a reader and the
-          demo. Chrome shared, marketing type scale kept. */}
-      <SectionCard
-        as="div"
-        padding="lg"
-        className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
-      >
-        <div>
-          <h2 className={SUB_TITLE_CLASS}>{t("switching.common.midCtaTitle")}</h2>
-          <p className="mt-2 max-w-xl leading-7 text-muted">{t("switching.common.midCtaBody")}</p>
-        </div>
-        <div className="lg:shrink-0">
-          <FunnelCtas locale={locale} source={source} />
-        </div>
-      </SectionCard>
-    </section>
   );
 }
 

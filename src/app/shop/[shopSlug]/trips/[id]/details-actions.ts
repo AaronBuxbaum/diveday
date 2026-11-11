@@ -17,6 +17,7 @@ import { publishManifestEvent } from "@/db/manifest-events";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getTripRequirements } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
+import { tripDetailsAreEditable } from "@/db/trip-editability";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
   editTrip,
@@ -149,6 +150,8 @@ const detailsSchema = z.object({
 const UPDATE_TRIP_NOTICE: Record<Extract<UpdateTripOutcome, { ok: false }>["reason"], string> = {
   invalid: "invalid",
   not_found: "invalid",
+  finished: "details-finished",
+  stale_safety_record: "safety-record-stale",
   boat_out_of_service: "boat-out-of-service",
   capacity_below_booked: "capacity-below-booked",
   boat_not_found: "boat-not-found",
@@ -156,6 +159,58 @@ const UPDATE_TRIP_NOTICE: Record<Extract<UpdateTripOutcome, { ok: false }>["reas
   planned_dives_below_history: "planned-dives-below-history",
   meeting_day_has_roll_call: "meeting-day-has-roll-call",
 };
+
+/** Actual decompression evidence may be corrected without reopening any plan field. */
+export async function correctDiveSafetyRecord(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const s = await requireTripConfig(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
+  const parsed = readForm(
+    z.object({
+      exceedsNoDecoLimits: checkbox(),
+      expectedExceedsNoDecoLimits: z.enum(["yes", "no"]),
+    }),
+    formData,
+  );
+  const outcome = await editTripSection(
+    await getDb(),
+    s.user.shopId,
+    tripId,
+    {
+      exceedsNoDecoLimits: parsed.exceedsNoDecoLimits,
+      changeActorPersonId: s.user.personId,
+    },
+    { expectedExceedsNoDecoLimits: parsed.expectedExceedsNoDecoLimits === "yes" },
+  );
+  if (!outcome.ok)
+    redirect(
+      noticeUrl(
+        back,
+        outcome.reason === "stale_safety_record" ? "safety-record-stale" : "invalid",
+        { form: "safety-record" },
+      ),
+    );
+  const flySafe = outcome.flySafe;
+  const savedNotice =
+    flySafe === "failed"
+      ? "saved-fly-safe-failed"
+      : flySafe && flySafe.unreached.length > 0
+        ? "saved-fly-safe-unreached"
+        : "saved";
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, savedNotice, {
+      view: "details",
+      form: "safety-record",
+      ...(flySafe && flySafe !== "failed" && flySafe.unreached.length > 0
+        ? { count: flySafe.unreached.length }
+        : {}),
+    }),
+  );
+}
 
 export async function saveDetailsSection(
   shopSlug: string,
@@ -192,6 +247,8 @@ async function saveDepartureDetails(
   const shopNow = await getShopById(dbi, s.user.shopId);
   const tripNow = await getTripWithBooked(dbi, s.user.shopId, tripId);
   if (!shopNow || !tripNow) redirect(noticeUrl(back, "invalid", { form: section ?? "details" }));
+  if (!(await tripDetailsAreEditable(dbi, s.user.shopId, tripId)))
+    redirect(noticeUrl(back, "details-finished", { form: section ?? "details" }));
   const sectionSchemas = {
     departure: detailsSchema.pick({ title: true, description: true, lensId: true }),
     plan: detailsSchema.pick({

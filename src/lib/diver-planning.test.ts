@@ -450,6 +450,18 @@ describe("booking delight planning", () => {
     expect(packingConfidence([], { rentsBcd: true }).rented).toEqual(["bcd"]);
   });
 
+  it("does not promise free weights when the charter offers them as a rental", () => {
+    expect(packingConfidence([], { rentsWeights: true }, true, [], ["weights"]).provided).toEqual([
+      "tanks",
+      "crewBriefing",
+    ]);
+    expect(packingConfidence([], null, false, [], ["weights"]).provided).toEqual(["tanks"]);
+    expect(packingConfidence([], null, true, ["weights"], ["weights"]).provided).toEqual([
+      "tanksAndWeights",
+      "instructorBriefing",
+    ]);
+  });
+
   it("gives every diver the same fixed provided-item codes", () => {
     expect(packingConfidence([], null).provided).toEqual(["tanksAndWeights", "crewBriefing"]);
   });

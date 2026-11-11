@@ -85,7 +85,7 @@ function CrewTable({
   checkpoints: IncidentExportDocument["meta"]["checkpoints"];
 }) {
   return (
-    <Table shellClassName="mt-3">
+    <Table shellClassName="mt-3" minWidth="56rem">
       <THead>
         <Th>{t("incidentExport.colCrewMember")}</Th>
         <Th>{t("incidentExport.colRoles")}</Th>

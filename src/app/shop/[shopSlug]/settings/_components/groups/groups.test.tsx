@@ -108,7 +108,6 @@ describe("each settings group renders as its own component", () => {
     const base = `/shop/${view.shopSlug}`;
     expect(hrefsIn(shopGroup(view))).toEqual([
       `${base}/settings/emergency-reference`,
-      `${base}/dive-sites`,
       `${base}/boats`,
       `${base}/trip-tags`,
       `${base}/safety-checklist`,

@@ -1,5 +1,4 @@
 import { DisclosureRow as Disclosure } from "@/components/ui/disclosure";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { getTripConservationPanel } from "@/features/conservation";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
@@ -52,10 +51,7 @@ export function ConservationPanel({
     },
   };
   return (
-    <section aria-labelledby="conservation-heading" className="space-y-4">
-      <h2 id="conservation-heading" className={SECTION_TITLE_CLASS}>
-        {t("trips.conservation.heading")}
-      </h2>
+    <div className="space-y-4">
       <p className="max-w-prose text-sm text-muted">{t("trips.conservation.hint")}</p>
       <ConservationActions tripId={tripId} shopSlug={shopSlug} copy={copy}>
         {panel.rows.length === 0 ? (
@@ -95,6 +91,6 @@ export function ConservationPanel({
           <p className="text-sm text-muted">{t("trips.conservation.afterReturn")}</p>
         )}
       </ConservationActions>
-    </section>
+    </div>
   );
 }

@@ -32,7 +32,7 @@ export const metadata: Metadata = {
  * come has no close-out and no page.
  *
  * Every staff member may read it, as every staff member reads the home's
- * evening; the departure log door stays the owner's (`canOpenLog`).
+ * evening; the departure log is read from trip Details.
  */
 export default async function PastDayPage({
   params,
@@ -41,7 +41,7 @@ export default async function PastDayPage({
 }) {
   const { shopSlug, date } = await params;
   if (!isShopDayParam(date)) notFound();
-  const { session, db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop } = await requireShopSurface(shopSlug);
   const now = nowDate();
   const today = calendarDateInTimezone(now, shop.timezone);
   if (date === today) redirect(shopPath(shopSlug));
@@ -50,13 +50,7 @@ export default async function PastDayPage({
   const t = staffTranslator(locale);
 
   // Both per-trip readers answer an empty map for no trips, so an empty day reads nothing.
-  const { stations, headCountCloses, canOpenLog, notBack } = await getPastDay(
-    db,
-    shop,
-    date,
-    session.user.personId,
-    now,
-  );
+  const { stations, headCountCloses, notBack } = await getPastDay(db, shop, date, now);
   // What a day read later must say that the evening could leave unsaid. The
   // departure log stays the record; these lines only point at it.
   const stationNotes = (station: (typeof stations)[number]) => {
@@ -106,7 +100,6 @@ export default async function PastDayPage({
                 shopSlug={shopSlug}
                 locale={locale}
                 timeZone={shop.timezone}
-                canOpenLog={canOpenLog}
                 t={t}
               />
             ))}

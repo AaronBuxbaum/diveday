@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
@@ -39,7 +39,7 @@ const MESSAGE: InboxMessageRow["message"] = {
   createdAt: new Date("2026-07-21T13:30:00.000Z"),
 };
 
-function renderRow(requestAction?: (formData: FormData) => Promise<void>) {
+function renderRow(responseAction?: (messageId: string) => Promise<string | null>) {
   render(
     <ul>
       <InboxRow
@@ -51,7 +51,7 @@ function renderRow(requestAction?: (formData: FormData) => Promise<void>) {
         t={t}
         deleteAction={vi.fn()}
         doneAction={vi.fn()}
-        requestAction={requestAction}
+        responseAction={responseAction}
       />
     </ul>,
   );
@@ -68,17 +68,57 @@ describe("a message Claude has read, while the shop's assists are on", () => {
     ).toBeInTheDocument();
   });
 
-  it("offers to make a request from it, posting the message", async () => {
-    renderRow(vi.fn());
+  it("drafts a generic editable response to the selected message", async () => {
+    const draft = vi.fn().mockResolvedValue("We can help with your question.");
+    renderRow(draft);
     await userEvent.click(
       screen.getByRole("button", { name: "More for the message from Lena Vogel" }),
     );
-    const request = screen.getByRole("button", {
-      name: "Draft a booking request from Lena Vogel’s message",
-    });
-    expect(request.closest("form")?.querySelector('input[name="messageId"]')).toHaveValue(
-      MESSAGE.id,
+    await userEvent.click(screen.getByRole("button", { name: "Draft response" }));
+    expect(draft).toHaveBeenCalledWith(MESSAGE.id);
+    expect(await screen.findByRole("textbox", { name: "Response draft" })).toHaveValue(
+      "We can help with your question.",
     );
+    const email = new URL(
+      screen.getByRole("link", { name: "Reply by email" }).getAttribute("href") ?? "",
+    );
+    expect(email.searchParams.get("body")).toContain("> Ich muss leider absagen");
+    expect(email.searchParams.get("body")).toContain("We can help with your question.");
+  });
+  it("does not overwrite edits made while a replacement draft is pending", async () => {
+    let finish: ((value: string) => void) | undefined;
+    const draft = vi
+      .fn()
+      .mockResolvedValueOnce("First draft.")
+      .mockImplementationOnce(
+        () =>
+          new Promise<string>((resolve) => {
+            finish = resolve;
+          }),
+      );
+    renderRow(draft);
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Lena Vogel" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Draft response" }));
+    const field = await screen.findByRole("textbox", { name: "Response draft" });
+    await userEvent.click(screen.getByRole("button", { name: "Draft response" }));
+    await userEvent.clear(field);
+    await userEvent.type(field, "My corrected reply.");
+    await act(async () => {
+      finish?.("Replacement draft.");
+    });
+    expect(field).toHaveValue("My corrected reply.");
+  });
+
+  it("keeps a failed attempt visible without creating a booking", async () => {
+    renderRow(vi.fn().mockResolvedValue(null));
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Lena Vogel" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Draft response" }));
+    expect(await screen.findByText(/Couldn’t draft a safe response/)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
   });
 });
 
@@ -91,6 +131,6 @@ describe("the same message while the assists are dark", () => {
     expect(screen.queryByText("Urgent")).toBeNull();
     expect(screen.queryByText(/Wants to cancel/)).toBeNull();
     expect(screen.queryByText(/In German/)).toBeNull();
-    expect(screen.queryByRole("button", { name: /Draft a booking request/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Draft response/ })).toBeNull();
   });
 });

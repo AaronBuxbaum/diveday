@@ -1433,6 +1433,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // executed_dives.csv carries one: the words are DiveDay's copy in
       // the reader's language and a CSV has no reader to resolve them for.
       "species_slug",
+      "custom_name",
       "count",
       "recorded_by_person_id",
       "recorded_at",
@@ -1447,6 +1448,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.diveSiteId,
         row.diveSiteName,
         row.speciesSlug,
+        row.customName,
         row.count,
         row.recordedByPersonId,
         row.recordedAt,

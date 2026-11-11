@@ -128,7 +128,8 @@
     "training_dive_marked": "{actor} marcó la inmersión de {diver} como formación para {course}",
     "training_dive_cleared": "{actor} quitó la marca de formación de la inmersión de {diver} para {course}{formsOwed, select, yes {, con formularios del curso sin firmar} other {}}",
     "bookkeeper_email_vouched": "{actor} volvió a confirmar el correo del contador para los archivos de fin de mes",
-    "bookkeeper_email_stopped": "El contador dejó los archivos de fin de mes con el enlace de uno de ellos"
+    "bookkeeper_email_stopped": "El contador dejó los archivos de fin de mes con el enlace de uno de ellos",
+    "purchase_recorded": "{actor} registró una compra"
   },
   "unknown": "Una entrada anterior",
   "review": {

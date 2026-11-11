@@ -1,4 +1,5 @@
 import { listBoats } from "@/features/boats";
+import { type CrewAway, crewAwayByTrip } from "@/features/crew-away";
 import { canPersonConfigureTrips } from "../../db/authz";
 import type { AppDb } from "../../db/client";
 import {
@@ -19,7 +20,12 @@ import { groupDateRequests } from "../../lib/date-requests";
  */
 export async function getRequestsPage(
   db: AppDb,
-  shop: { id: string; timezone: string; dateRequestsEnabled: boolean },
+  shop: {
+    id: string;
+    timezone: string;
+    dateRequestsEnabled: boolean;
+    crewScheduleEnabled: boolean;
+  },
   personId: string,
   page: number,
 ) {
@@ -42,8 +48,20 @@ export async function getRequestsPage(
   )) {
     boardByDate.set(departure.date, [...(boardByDate.get(departure.date) ?? []), departure]);
   }
+  const crewAway = shop.crewScheduleEnabled
+    ? await crewAwayByTrip(
+        db,
+        shop.id,
+        [...boardByDate.values()].flat().map((trip) => trip.tripId),
+        shop.timezone,
+      )
+    : new Map<string, CrewAway[]>();
+  const crewAwayCountByTrip = new Map<string, number>(
+    [...crewAway].map(([id, crew]) => [id, crew.filter((member) => !member.acknowledged).length]),
+  );
   return {
     gone: false as const,
+    crewAwayCountByTrip,
     requestPage,
     handled,
     boats,

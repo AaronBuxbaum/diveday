@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { COURSE_TEMPLATES } from "@/content/course-templates";
 import { nowDate } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
+import { CORE_RENTAL_KINDS } from "@/lib/rentals";
 import { seededShopContext } from "@/test/db";
 import { courseForms, courseFormVersions, courses } from "./schema";
 import { courseTemplateDisplayTitle } from "./seed-catalog";
@@ -82,21 +83,23 @@ describe("seeded course forms", () => {
   }, 60_000);
 });
 
-/**
- * **The demo's Discover Scuba includes its gear** (UX sheet 2026-10-22, item
- * 3), as its page's "Complete rental gear" says, so the session's trip page
- * says "Gear is included." where a buyer can see it. No other course claims it.
- */
 describe("seeded gear-included courses", () => {
-  it("are Discover Scuba Diving alone", async () => {
+  it("includes the complete core set whenever the course promises complete rental gear", async () => {
     const { db, shop } = await seededShopContext();
-    const rows = await db
-      .select({ slug: courses.slug, included: courses.includedRentalKinds })
-      .from(courses)
-      .where(eq(courses.shopId, shop.id));
-    expect(rows.length).toBeGreaterThan(1);
-    expect(rows.filter((row) => row.included.length > 0).map((row) => row.slug)).toEqual([
+    const rows = await db.select().from(courses).where(eq(courses.shopId, shop.id));
+    const completeGear = rows.filter((row) =>
+      row.includes.some((item) => /complete rental gear/i.test(item)),
+    );
+    expect(completeGear.map((row) => row.slug).sort()).toEqual([
       "discover-scuba-diving",
+      "open-water-diver",
+      "scuba-refresher",
     ]);
+    for (const course of completeGear) {
+      expect(course.includedRentalKinds, course.slug).toEqual([...CORE_RENTAL_KINDS]);
+    }
+    expect(
+      rows.filter((row) => !completeGear.includes(row) && row.includedRentalKinds.length),
+    ).toEqual([]);
   }, 60_000);
 });

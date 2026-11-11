@@ -598,7 +598,6 @@ export type EveningReading = {
    * settled — the amendment to ADR 20260804-incident-export-owner-gate is
    * explicit that the document is offered on a boat that has not come home.
    */
-  canOpenLog: boolean;
   /**
    * **What today made**, or null — the evening's one money reading (issue
    * #1930). Null means either of the two things the page resolves and a spine
@@ -913,7 +912,6 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
                   shopSlug={shopSlug}
                   locale={locale}
                   timeZone={timeZone}
-                  canOpenLog={evening.canOpenLog}
                   t={t}
                 >
                   {evening.recapEditors.get(entry.close.tripId) ?? null}

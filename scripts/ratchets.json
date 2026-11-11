@@ -685,7 +685,7 @@
     "e2e/integrations.spec.ts": 1,
     "e2e/invoicing.spec.ts": 2,
     "e2e/manifest.spec.ts": 3,
-    "e2e/marketing.spec.ts": 8,
+    "e2e/marketing.spec.ts": 7,
     "e2e/nitrox.spec.ts": 1,
     "e2e/onboard.spec.ts": 1,
     "e2e/package-purchase.spec.ts": 1,
@@ -925,7 +925,7 @@
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1249,
     "src/app/api/webhooks/stripe/route.test.ts": 1695,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 932,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1073,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1027,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1146,
@@ -990,15 +990,14 @@
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 312,
-    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 394,
+    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 392,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 306,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 302,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 305,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 632,
-    "src/db/seed-more-trips.ts#seedMoreTrips": 623,
-    "src/db/seed-trips.ts#seedTrips": 349,
+    "src/db/seed-more-trips.ts#seedMoreTrips": 607,
+    "src/db/seed-trips.ts#seedTrips": 327,
     "src/features/reporting/store.ts#getMonthlyReport": 308,
     "src/lib/import.ts#prepareContactImport": 430
   },
@@ -1042,32 +1041,29 @@
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "//absorbed": [
       {
-        "why": "Merge of lower stack layers into db-codes; nothing added by hand",
+        "why": "NoticeTone and noticeRole import moves to ui/tone, one import line more",
         "files": {
-          "src/app/shop/[shopSlug]/page.tsx": "569 -> 577"
+          "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577"
         }
       },
       {
         "why": "NoticeTone and noticeRole import moves to ui/tone, one import line more",
         "files": {
-          "src/app/(token)/ready/[token]/page.tsx": "616 -> 617",
-          "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577",
-          "src/app/shop/[shopSlug]/page.tsx": "577 -> 578",
-          "src/app/shop/[shopSlug]/staffing/page.tsx": "503 -> 504"
+          "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577"
         }
       }
     ],
-    "src/app/(marketing)/page.tsx": 433,
-    "src/app/(token)/ready/[token]/page.tsx": 617,
+    "src/app/(marketing)/page.tsx": 429,
+    "src/app/(token)/ready/[token]/page.tsx": 615,
     "src/app/s/[shopSlug]/page.tsx": 644,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
-    "src/app/shop/[shopSlug]/orders/page.tsx": 571,
-    "src/app/shop/[shopSlug]/page.tsx": 578,
+    "src/app/shop/[shopSlug]/orders/page.tsx": 565,
+    "src/app/shop/[shopSlug]/page.tsx": 576,
     "src/app/shop/[shopSlug]/promos/page.tsx": 489,
     "src/app/shop/[shopSlug]/reports/page.tsx": 467,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 569,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 504,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 416
+    "src/app/shop/[shopSlug]/staffing/page.tsx": 472,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 409
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

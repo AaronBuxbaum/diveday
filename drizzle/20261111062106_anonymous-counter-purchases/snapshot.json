@@ -1,0 +1,76 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "e3a82147-1607-4384-b4e8-3a179a76625b",
+  "prevIds": [
+    "a15f0467-ca85-4cb0-8a91-6a28328ebb74"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "orders",
+        "person_id"
+      ],
+      "writes": [
+        "s|colprop|public.orders.person_id.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.orders",
+        "n|sch|public",
+        "n|col|public.orders.person_id"
+      ],
+      "sqlHash": "6a3ed9c4a51cdcf6"
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "orders"
+      ],
+      "writes": [
+        "s|ck|public.orders.orders_anonymous_counter_only",
+        "n|ck|public.orders.orders_anonymous_counter_only",
+        "e|ck|public.orders.orders_anonymous_counter_only",
+        "n|con|public.orders.orders_anonymous_counter_only"
+      ],
+      "reads": [
+        "n|tbl|public.orders",
+        "n|sch|public",
+        "n|col|public.orders.person_id",
+        "n|col|public.orders.counter_receipt",
+        "n|col|public.orders.booking_id",
+        "n|col|public.orders.source",
+        "n|col|public.orders.collection",
+        "n|col|public.orders.status",
+        "n|col|public.orders.stripe_invoice_id",
+        "n|col|public.orders.stripe_customer_id",
+        "n|col|public.orders.stripe_payment_intent_id",
+        "n|col|public.orders.stripe_account_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "orders",
+        "name": "orders_anonymous_counter_only",
+        "value": "\"person_id\" is not null or (\n      \"counter_receipt\" is not null and \"booking_id\" is null\n      and \"source\"::text = 'staff'\n      and \"collection\"::text in ('cash', 'card_machine', 'bank_transfer', 'other')\n      and \"status\"::text in ('paid', 'partly_refunded', 'refunded', 'void')\n      and \"stripe_invoice_id\" is null and \"stripe_customer_id\" is null\n      and \"stripe_payment_intent_id\" is null and \"stripe_account_id\" is null\n    )",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"orders\",\"person_id\"]",
+      "set": {
+        "notNull": false
+      }
+    }
+  ]
+}

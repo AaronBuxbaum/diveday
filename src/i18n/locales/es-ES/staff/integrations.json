@@ -86,5 +86,41 @@
     "caution": "Llegan a {provider} como asientos nuevos, del más antiguo al más reciente. Si ese periodo está cerrado en tu contabilidad, no los envíes.",
     "confirm": "Enviar a {provider}",
     "confirming": "Poniendo en cola…"
+  },
+  "square": {
+    "name": "Square",
+    "description": "Vincula recibos de Square con compras que ya registraste. Square cobra el pago; DiveDay lo registra una sola vez.",
+    "connect": "Conectar Square",
+    "reconnect": "Volver a conectar Square",
+    "location": "Ubicación de Square",
+    "locationHelp": "Elige la ubicación de este centro. Solo aparecen las que usan la moneda del centro.",
+    "chooseLocation": "Elige una ubicación",
+    "selected": "Ubicación: {name}",
+    "sandbox": "Conexión de prueba. Solo recibos de prueba.",
+    "noLocations": "Ninguna ubicación activa de Square usa la moneda de este centro.",
+    "unavailable": "No se pudo acceder a Square. Intenta de nuevo o vuelve a conectarlo.",
+    "receiptTitle": "Recibo de Square",
+    "receiptHelp": "Vincula un pago que ya registraste aquí. Esto no cobra, no cambia la compra ni agrega otra comisión de DiveDay.",
+    "paymentId": "ID del pago de Square",
+    "paymentIdHelp": "Usa el ID del pago, no el número corto del recibo. Cada pago se puede vincular a una sola compra.",
+    "checked": "Última revisión: {when}",
+    "needsCheck": "El recibo de Square y esta compra no coinciden. Revisa el recibo y los reembolsos antes de verificar de nuevo.",
+    "checking": "Consultando Square…",
+    "recheck": "Verificar de nuevo",
+    "link": "Vincular recibo",
+    "outcome": {
+      "matched": "El recibo coincide. La compra y la comisión de DiveDay no cambiaron.",
+      "not_connected": "Primero conecta Square y elige una ubicación en Ajustes → Integraciones.",
+      "unavailable": "No se pudo consultar el pago. Revisa el ID o vuelve a conectar Square e intenta de nuevo.",
+      "invalid": "No se puede vincular esta compra con un recibo de Square.",
+      "already_linked": "Ese pago o compra ya tiene un recibo vinculado. No se agregó ninguna compra ni comisión.",
+      "not_completed": "Square aún no completó este pago. No cambió nada aquí.",
+      "location_mismatch": "Este pago pertenece a otra ubicación de Square. No cambió nada aquí.",
+      "amount_mismatch": "La moneda, el total original o la propina no coinciden. Revisa la compra y el recibo de Square. No cambió nada aquí.",
+      "refund_mismatch": "Square y DiveDay muestran distintos totales reembolsados. Registra en DiveDay el dinero que ya devolviste o revisa el reembolso en Square y vuelve a verificar.",
+      "deleted": "Vínculo eliminado. La compra, el registro del reembolso y la comisión de DiveDay no cambiaron."
+    },
+    "deleteLink": "Eliminar vínculo del recibo",
+    "deleting": "Eliminando vínculo…"
   }
 }

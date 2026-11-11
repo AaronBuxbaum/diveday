@@ -82,6 +82,7 @@ const guardedRoots = ["src/app", "src/components"];
  * name. A third locale that disagrees is a decision, not a merge conflict.
  */
 export const DELIBERATELY_IDENTICAL = new Map([
+  ["staff/inbox.json replySubject", "standard email reply subject prefix"],
   ["staff/settings.json security.browser.chrome", "browser or operating system brand name"],
   ["staff/settings.json security.browser.edge", "browser or operating system brand name"],
   ["staff/settings.json security.browser.firefox", "browser or operating system brand name"],
@@ -179,6 +180,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/inbox.json channel.whatsapp", "brand"],
   ["staff/desk.json lostFound.channels.whatsapp", "brand"],
   ["staff/integrations.json quickbooks.name", "brand"],
+  ["staff/integrations.json square.name", "brand"],
   ["staff/integrations.json shopify.name", "brand"],
   ["staff/integrations.json zapier.name", "brand"],
   ["staff/orders.json index.paymentOps.stripeId", "brand"],
@@ -349,8 +351,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/diveSites.json form.depthPreviewFeetRange", "two depths and the unit symbol"],
   ["staff/diveSites.json form.depthPreviewMetersOne", "the unit symbol, unchanged in Spanish"],
   ["staff/diveSites.json form.depthPreviewMetersRange", "two depths and the unit symbol"],
-  ["content/marketing.json guides.fareharbor.heroEyebrow", "two product names"],
-  ["content/marketing.json guides.rezdy.heroEyebrow", "two product names"],
   ["staff/settings.json main.units.celsius", "unit name, the same in Spanish"],
   ["staff/settings.json main.units.fahrenheit", "unit name, the same in Spanish"],
   ["staff/shared.json depth.feet", "unit symbol"],

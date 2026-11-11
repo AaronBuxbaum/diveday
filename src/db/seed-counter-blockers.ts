@@ -98,14 +98,14 @@ export async function seedCounterBlockers(
     .values({
       shopId,
       title: DEMO_COUNTER_BLOCKED_TRIP,
-      description: "Deep wreck penetration on enriched air. Paid at booking.",
+      description: "Deep wreck penetration on enriched air.",
       startsAt,
       endsAt,
       capacity: 8,
       plannedDives: 2,
       // **Priced, because it is publicly for sale.** This departure is on
       // `/s/blue-mantis` between two priced charters — `is_private` defaults to
-      // false — and its own description says "paid at booking". With no price
+      // false. With no price
       // it asked nobody for money and blocked every diver who booked it,
       // forever (issue #692). $195: a shade above the seeded $180 wreck trip,
       // for the deep penetration and the enriched air.

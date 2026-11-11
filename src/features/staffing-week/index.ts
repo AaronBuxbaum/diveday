@@ -1,4 +1,6 @@
 /** staffing-week public contract. Internals are imported only within this module. */
+
+export { filterStaffWeek, staffSchedulePerson } from "./filter";
 export type {
   CrewClash,
   CrewGap,

@@ -14,7 +14,10 @@ async function settledHeader(page: Page) {
         const token = Number.parseFloat(
           getComputedStyle(document.documentElement).getPropertyValue("--chrome-h"),
         );
-        return Math.abs(height - token);
+        // Very tall headers let their excess scroll above the viewport;
+        // the sticky clearance counts only the portion that remains pinned.
+        const top = Number.parseFloat(getComputedStyle(element).top) || 0;
+        return Math.abs(height + top - token);
       }),
     )
     .toBeLessThanOrEqual(1);

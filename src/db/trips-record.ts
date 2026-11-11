@@ -70,6 +70,7 @@ import {
   recordTripChangeEvent,
   tripSiteRunSnapshot,
 } from "./trip-change-events";
+import { tripDetailsAreEditable } from "./trip-editability";
 import { tripPrimarySiteId } from "./trip-primary-site";
 import { rememberUnnotifiedTripStart } from "./trip-reschedule-marker";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
@@ -589,7 +590,7 @@ export type UpdateTripOutcome =
        */
       flySafe?: FlySafeCorrectionOutcome | "failed";
     }
-  | { ok: false; reason: "invalid" | "not_found" }
+  | { ok: false; reason: "invalid" | "not_found" | "finished" | "stale_safety_record" }
   | { ok: false; reason: "capacity_below_booked"; detail: { bookedCount: number } }
   | { ok: false; reason: "boat_not_found" }
   | { ok: false; reason: "capacity_above_certificate"; detail: { limit: number } }
@@ -739,9 +740,17 @@ export async function editTripSection(
   shopId: string,
   tripId: string,
   patch: Partial<TripPatch>,
-  options: { captureRescheduleStart?: boolean } = {},
+  options: { captureRescheduleStart?: boolean; expectedExceedsNoDecoLimits?: boolean } = {},
 ): Promise<UpdateTripOutcome> {
-  return updateTripRecord(db, shopId, tripId, patch, true, options.captureRescheduleStart === true);
+  return updateTripRecord(
+    db,
+    shopId,
+    tripId,
+    patch,
+    true,
+    options.captureRescheduleStart === true,
+    options.expectedExceedsNoDecoLimits,
+  );
 }
 
 function patchAtTripLock(
@@ -842,6 +851,52 @@ async function shopTimeZone(tx: DbExecutor, shopId: string) {
   return shop.timeZone;
 }
 
+/** Lock and read the departure definition before evaluating any stale form or edit policy. */
+async function lockTripForDefinitionEdit(tx: DbExecutor, shopId: string, tripId: string) {
+  const [existing] = await tx
+    .select({
+      id: trips.id,
+      title: trips.title,
+      description: trips.description,
+      capacity: trips.capacity,
+      plannedDives: trips.plannedDives,
+      exceedsNoDecoLimits: trips.exceedsNoDecoLimits,
+      priceCents: trips.priceCents,
+      depositCents: trips.depositCents,
+      cancellationWindowHours: trips.cancellationWindowHours,
+      minimumBookings: trips.minimumBookings,
+      minimumDecisionHours: trips.minimumDecisionHours,
+      // Read so `selfGuided` can be refused against it below. A trip's course
+      // is fixed at creation and `UpdateTripPatch` carries no `courseId`, so
+      // the row's own value is the only place to learn it.
+      courseId: trips.courseId,
+      boatId: trips.boatId,
+      diveMode: trips.diveMode,
+      // Both read for the revision rule below (issue #1165): the two facts a
+      // calendar client re-alerts on are when the boat leaves and where it
+      // goes, so both have to be compared against what the patch asks for.
+      startsAt: trips.startsAt,
+      // Read so a moved start time is told to the crew of a running
+      // departure only (#2283).
+      status: trips.status,
+      // Read so a changed return time files the activity line too (#2313).
+      endsAt: trips.endsAt,
+      meetingPointLabel: trips.meetingPointLabel,
+      meetingPointAddress: trips.meetingPointAddress,
+      arrivalLandmark: trips.arrivalLandmark,
+      arrivalParkingNote: trips.arrivalParkingNote,
+      arrivalTransitNote: trips.arrivalTransitNote,
+      arrivalLookFor: trips.arrivalLookFor,
+      arrivalFirstInteraction: trips.arrivalFirstInteraction,
+      arrivalPhotoUrl: trips.arrivalPhotoUrl,
+    })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1)
+    .for("update");
+  return existing ?? null;
+}
+
 async function updateTripRecord(
   db: AppDb,
   shopId: string,
@@ -849,6 +904,7 @@ async function updateTripRecord(
   requested: Partial<TripPatch>,
   scoped: boolean,
   captureRescheduleStart: boolean,
+  expectedSafetyValue?: boolean,
 ): Promise<UpdateTripOutcome> {
   let timeMoved = false;
   let timesChanged = false;
@@ -858,47 +914,26 @@ async function updateTripRecord(
     // row lock so a writer waiting for an in-flight send never blocks that
     // send while holding the row it still needs.
     await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
-    const [existing] = await tx
-      .select({
-        id: trips.id,
-        title: trips.title,
-        description: trips.description,
-        capacity: trips.capacity,
-        plannedDives: trips.plannedDives,
-        priceCents: trips.priceCents,
-        depositCents: trips.depositCents,
-        cancellationWindowHours: trips.cancellationWindowHours,
-        minimumBookings: trips.minimumBookings,
-        minimumDecisionHours: trips.minimumDecisionHours,
-        // Read so `selfGuided` can be refused against it below. A trip's course
-        // is fixed at creation and `UpdateTripPatch` carries no `courseId`, so
-        // the row's own value is the only place to learn it.
-        courseId: trips.courseId,
-        boatId: trips.boatId,
-        diveMode: trips.diveMode,
-        // Both read for the revision rule below (issue #1165): the two facts a
-        // calendar client re-alerts on are when the boat leaves and where it
-        // goes, so both have to be compared against what the patch asks for.
-        startsAt: trips.startsAt,
-        // Read so a moved start time is told to the crew of a running
-        // departure only (#2283).
-        status: trips.status,
-        // Read so a changed return time files the activity line too (#2313).
-        endsAt: trips.endsAt,
-        meetingPointLabel: trips.meetingPointLabel,
-        meetingPointAddress: trips.meetingPointAddress,
-        arrivalLandmark: trips.arrivalLandmark,
-        arrivalParkingNote: trips.arrivalParkingNote,
-        arrivalTransitNote: trips.arrivalTransitNote,
-        arrivalLookFor: trips.arrivalLookFor,
-        arrivalFirstInteraction: trips.arrivalFirstInteraction,
-        arrivalPhotoUrl: trips.arrivalPhotoUrl,
-      })
-      .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-      .limit(1)
-      .for("update");
+    const existing = await lockTripForDefinitionEdit(tx, shopId, tripId);
     if (!existing) return { ok: false, reason: "not_found" };
+    const safetyEvidenceOnly =
+      scoped &&
+      typeof requested.exceedsNoDecoLimits === "boolean" &&
+      Object.entries(requested).every(
+        ([field, value]) =>
+          value === undefined || field === "exceedsNoDecoLimits" || field === "changeActorPersonId",
+      );
+    if (
+      safetyEvidenceOnly &&
+      expectedSafetyValue !== undefined &&
+      existing.exceedsNoDecoLimits !== expectedSafetyValue
+    )
+      return { ok: false, reason: "stale_safety_record" };
+    if (
+      !(safetyEvidenceOnly && expectedSafetyValue !== undefined) &&
+      !(await tripDetailsAreEditable(tx, shopId, tripId))
+    )
+      return { ok: false, reason: "finished" };
     const patch = patchAtTripLock(existing, requested, scoped);
     const plannedDives = normalizedDiveCount(patch.plannedDives, existing.courseId !== null);
     if (!plannedDives) return { ok: false, reason: "invalid" };
@@ -1259,7 +1294,7 @@ export type TripConditionsPatch = {
 
 export type SetParticipantTermsOutcome =
   | { ok: true }
-  | { ok: false; reason: "not_found" | "invalid" }
+  | { ok: false; reason: "not_found" | "invalid" | "finished" }
   /** Fewer diver seats than divers already booked: the seats already sold stand. */
   | { ok: false; reason: "diver_seats_below_booked"; detail: { divers: number } };
 
@@ -1288,6 +1323,8 @@ export async function setTripParticipantTerms(
       .limit(1)
       .for("update");
     if (!trip) return { ok: false, reason: "not_found" };
+    if (!(await tripDetailsAreEditable(tx, shopId, tripId)))
+      return { ok: false, reason: "finished" };
     if (patch.diverCapacity !== null && patch.diverCapacity > trip.capacity) {
       return { ok: false, reason: "invalid" };
     }
@@ -1339,7 +1376,8 @@ export async function editTripConditions(
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
-    if (!before) return { trip: null, holdStarted: false };
+    if (!before || !(await tripDetailsAreEditable(tx, shopId, tripId)))
+      return { trip: null, holdStarted: false };
 
     const changedAt = nowDate();
     const beforeConditions = tripConditionsSnapshot(before);

@@ -884,6 +884,11 @@
     "introWithScope": "{intro} {scope}."
   },
   "ready": {
+    "estimatedOwnRental": "Your estimated rental: {amount}.",
+    "estimatedAtShopTotal": "Estimated total at the shop: {amount}. The crew confirms the rental at the dock.",
+    "rentalEstimateOwnOnly": "This estimate includes your gear only; other divers’ rentals are extra.",
+    "rentalEstimateUnpriced": "Some selected gear or fills are priced at the shop and are not included in this estimate.",
+    "rentalEstimateUnpricedOnly": "Your selected gear or fills are priced at the shop. They are not included in the seat amount above.",
     "metaTitle": "Your trip readiness — DiveDay",
     "checklistHeading": "Your checklist",
     "namelessFallback": "there",

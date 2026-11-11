@@ -10,6 +10,8 @@ import {
   INTEGRATION_SETTINGS_GATE,
   quickBooksConfigFromEnvironment,
   shopifyConfigFromEnvironment,
+  squareConfigFromEnvironment,
+  squareLocationsForShop,
 } from "@/features/integrations";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
@@ -28,6 +30,7 @@ import {
 } from "./actions";
 import { EarlierCheckoutsCard } from "./EarlierCheckoutsCard";
 import { ConnectedMeta, DisconnectForm, describedWithStatus } from "./integration-parts";
+import { SquareCard } from "./SquareCard";
 import { ZapierCard } from "./ZapierCard";
 
 export const instant = true;
@@ -77,6 +80,14 @@ export default async function IntegrationsSettingsPage({
   const t = staffTranslator(locale);
   const shopify = summaries.find((row) => row.provider === "shopify");
   const quickbooks = summaries.find((row) => row.provider === "quickbooks");
+  const square = summaries.find((row) => row.provider === "square");
+  const squareConfigured = Boolean(
+    squareConfigFromEnvironment() && secretKeyFromEnvironment().status === "ok" && !shop.isDemo,
+  );
+  const squareLocations =
+    square && squareConfigured
+      ? await squareLocationsForShop(db, shop.id, session.user.personId)
+      : null;
   const zapier = summaries.find((row) => row.provider === "zapier");
   const notices = noticeMessages(t);
   const banner = noticeFromParam(notice, notices);
@@ -111,6 +122,7 @@ export default async function IntegrationsSettingsPage({
       ) : null}
 
       <div className="space-y-10">
+        <SquareCard row={square} locations={squareLocations} t={t} configured={squareConfigured} />
         {showShopify ? (
           <SectionCard
             padding="lg"

@@ -106,7 +106,8 @@ test("standalone manifest and log repeat visible departure context including upp
 }, info) => {
   const id = await seededTripId(page, "blue-mantis", REEF_TRIP);
   for (const surface of ["manifest", "log"] as const) {
-    await page.goto(`/shop/blue-mantis/trips/${id.toUpperCase()}/${surface}`);
+    const path = surface === "log" ? "log/print" : surface;
+    await page.goto(`/shop/blue-mantis/trips/${id.toUpperCase()}/${path}`);
     await expect(page.locator("[data-departure-paper]")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: REEF_TRIP })).toBeVisible();
     await verifyPaper(page, info, `standalone-${surface}`, [REEF_TRIP]);

@@ -5,7 +5,6 @@ import { useState, useTransition } from "react";
 import { ConnectivityStatus, type ConnectivityStatusCopy } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { SightingMatch } from "@/features/sightings-match";
 import { scopedId } from "@/lib/element-id";
 import type { SightingResult } from "../actions";
 import { SeenSaid, type SeenSaidCopy } from "./SeenSaid";
@@ -144,7 +143,7 @@ export function SeenGroup({
   copy,
   recordAction,
   deleteAction,
-  match,
+  autocomplete,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
@@ -155,8 +154,8 @@ export function SeenGroup({
   copy: SeenGroupCopy;
   recordAction: SightingAction;
   deleteAction: SightingAction;
-  /** Claude's match of what the crew said to these chips; absent while assists are dark. */
-  match?: { action: (said: string) => Promise<SightingMatch[] | null>; copy: SeenSaidCopy };
+  /** Full-catalog suggestions with arbitrary crew-written sightings. */
+  autocomplete?: { species: readonly SeenChip[]; copy: SeenSaidCopy };
 }) {
   // One flag for the group, set by whichever tap answered last. A success
   // clears it, which is the honest reading: the boat has bars again.
@@ -219,13 +218,12 @@ export function SeenGroup({
           </SeenTap>
         ))}
       </div>
-      {match && chips.length > 0 ? (
+      {autocomplete ? (
         <SeenSaid
-          chips={chips}
-          match={match.action}
+          species={autocomplete.species}
           recordAction={recordAction}
           onResult={onResult}
-          copy={match.copy}
+          copy={autocomplete.copy}
         />
       ) : null}
       {/* The tally, which is the tap's whole answer — announced politely so a
@@ -239,7 +237,7 @@ export function SeenGroup({
             // as gap — the count stays 24px from the word and 16px from its
             // hover fill.
             <li key={tally.slug} className="flex min-h-14 items-center gap-6 py-2">
-              <span className="min-w-0 flex-1 text-base font-medium">{tally.name}</span>
+              <span className="min-w-0 flex-1 break-words text-base font-medium">{tally.name}</span>
               <span className="text-base font-semibold tabular-nums">{tally.count}</span>
               <SeenTap
                 name="delete"

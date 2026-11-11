@@ -1,5 +1,6 @@
 import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { homeDiverDoorEnabled } from "@/features/home-diver-door";
 
 /**
  * The hero's title, a line box per line: `text-5xl` / `sm:text-6xl` /
@@ -38,7 +39,7 @@ const TITLE_LINES = [
  *   - the demo note (`mt-3`) and the price line (`mt-2`): 20px lines, two each
  *     on a phone and one from `sm`;
  *   - the diver's line (`mt-6`): one 20px line, "Booked a dive? Find your
- *     booking" (fourth review, item 50);
+ *     booking" (fourth review, item 50), only while `HOME_DIVER_DOOR` is on;
  *   - the phone: `CaptainPhoneFrame` renders 544px tall at every width (its
  *     height is its mockup's, not a ratio; the skeleton drew 450 after the
  *     roll call grew);
@@ -56,6 +57,7 @@ const TITLE_LINES = [
  * the copy is a column beside the screen again.
  */
 export function HomeBodySkeleton() {
+  const diverDoor = homeDiverDoorEnabled();
   return (
     <main className="flex-1 animate-pulse">
       <section className="border-b border-border">
@@ -89,9 +91,11 @@ export function HomeBodySkeleton() {
             <div className="mt-2">
               <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-64 max-w-full" />
             </div>
-            <div className="mt-6">
-              <SkeletonLineBars lines={1} height="h-5" width="w-52 max-w-full" />
-            </div>
+            {diverDoor ? (
+              <div className="mt-6">
+                <SkeletonLineBars lines={1} height="h-5" width="w-52 max-w-full" />
+              </div>
+            ) : null}
           </div>
           {/* The captain's phone, and the card that overlaps its lower edge. */}
           <div className="mx-auto w-full max-w-sm lg:max-w-md">
@@ -101,6 +105,26 @@ export function HomeBodySkeleton() {
               <div className="mt-1">
                 <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-5" width="w-full" />
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why the roll call is by name: an eyebrow, the story at `text-xl`
+          (five 32px lines on a phone, three 36px lines from `sm`), the tie at
+          `text-lg` (six lines on a phone, three from `sm`) and the link. */}
+      <section className="border-b border-border bg-surface">
+        <div className="mx-auto w-full max-w-7xl px-6 py-14 lg:py-20">
+          <div className="max-w-3xl">
+            <div className="h-5 w-56 rounded bg-surface-sunken" />
+            <div className="mt-4">
+              <SkeletonLineBars lines={{ base: 5, sm: 3 }} height="h-8 sm:h-9" width="w-full" />
+            </div>
+            <div className="mt-4">
+              <SkeletonLineBars lines={{ base: 6, sm: 3 }} height="h-8" width="w-full" />
+            </div>
+            <div className="mt-4 flex h-11 items-center">
+              <div className="h-5 w-40 rounded bg-surface-sunken" />
             </div>
           </div>
         </div>

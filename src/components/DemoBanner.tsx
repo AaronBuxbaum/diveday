@@ -151,14 +151,14 @@ export function DemoBanner({
               that pushed every page down by a screen of role cards. One row
               per role: its name, the sample person, and Switch; the role in
               force reads "Current" and is not a control. */}
-          <div ref={rootRef} className="relative shrink-0">
+          <div ref={rootRef} className="relative min-w-0 max-w-full">
             <button
               type="button"
               ref={triggerRef}
               onClick={() => setIsExpanded((open) => !open)}
               aria-expanded={isExpanded}
               aria-controls="demo-role-picker"
-              className={buttonClass({ variant: "secondary", size: "sm" })}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "max-w-full" })}
             >
               {copy.switchRole}
               <DiveDayIcon
