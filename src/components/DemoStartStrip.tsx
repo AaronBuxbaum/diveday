@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 
@@ -46,10 +47,10 @@ export function DemoStartStrip({
     <section
       aria-label={copy.startTitle}
       aria-busy={pending || undefined}
-      className="mt-3 border-t border-accent/30 pt-3"
+      className="mt-3 rounded-inset border border-border bg-surface-sunken px-4 py-3"
     >
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold">{copy.startTitle}</h2>
+        <h2 className={EYEBROW_CLASS}>{copy.startTitle}</h2>
         <button
           type="button"
           aria-label={copy.dismissStarts}
@@ -66,21 +67,21 @@ export function DemoStartStrip({
           <DiveDayIcon name="close" className="size-4" />
         </button>
       </div>
-      <div className="flex flex-wrap gap-x-5 gap-y-1">
+      <div className="mt-1 flex flex-wrap gap-2">
         {choices.map((choice) => (
           <button
             key={choice.id}
             type="button"
             disabled={pending}
             className={buttonClass({
-              variant: "link",
+              variant: "secondary",
               size: "sm",
-              flush: true,
               className: "text-start",
             })}
             onClick={() => onStart(choice.role, choice.id)}
           >
             {choice.label}
+            <DiveDayIcon name="arrow-right" className="size-3.5 text-primary" />
           </button>
         ))}
       </div>
