@@ -455,7 +455,7 @@ describe("scheduleJsonLd", () => {
 });
 
 describe("coursePageJsonLd", () => {
-  const course: CourseForStructuredData = {
+  const course: CourseForStructuredData & { description: string } = {
     slug: "open-water",
     title: "Open Water Diver",
     agency: "PADI",
@@ -474,10 +474,11 @@ describe("coursePageJsonLd", () => {
     expect(at(graph, "offers.price")).toBe("550.00");
   });
 
-  it("falls back to the long description and the bare title without an agency", () => {
+  it("omits internal staff copy when no published summary exists", () => {
     const graph = coursePageJsonLd(shop, { ...course, agency: null, summary: null }, ORIGIN);
     expect(graph.educationalCredentialAwarded).toBe("Open Water Diver");
-    expect(graph.description).toBe("The long version.");
+    expect(graph.description).toBeUndefined();
+    expect(JSON.stringify(graph)).not.toContain("The long version.");
   });
 });
 

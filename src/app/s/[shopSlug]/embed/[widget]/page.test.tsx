@@ -301,6 +301,8 @@ describe("the departure card", () => {
     id: "trip-1",
     title: "Wreck Trip",
     isPrivate: false,
+    status: "scheduled",
+    conditionsHold: false,
     startsAt: new Date("2026-10-29T16:00:00Z"),
     endsAt: new Date("2026-10-29T20:00:00Z"),
     diveSite: null,
@@ -312,9 +314,13 @@ describe("the departure card", () => {
     booked,
   });
 
-  async function renderDeparture(booked: number, waitlistEnabled: boolean) {
+  async function renderDeparture(
+    booked: number,
+    waitlistEnabled: boolean,
+    changes: Partial<ReturnType<typeof trip>> = {},
+  ) {
     const { getTripWithBooked } = await import("@/db/trips");
-    vi.mocked(getTripWithBooked).mockResolvedValueOnce(trip(booked) as never);
+    vi.mocked(getTripWithBooked).mockResolvedValueOnce({ ...trip(booked), ...changes } as never);
     vi.mocked(shopBySlugCached).mockResolvedValueOnce({ ...shopRow, waitlistEnabled } as never);
     render(
       await EmbedWidgetPage({
@@ -330,6 +336,37 @@ describe("the departure card", () => {
     expect(screen.getByText("6 seats")).toBeInTheDocument();
     expect(screen.getByText("Thu, Oct 29 · 12:00 PM – 4:00 PM EDT")).toBeInTheDocument();
   });
+
+  it.each([
+    [{ status: "cancelled" }, "This trip was canceled"],
+    [{ startsAt: new Date("2026-07-20T16:00:00Z") }, "This one’s already sailed"],
+    [{ conditionsHold: true }, "This trip is on a conditions hold"],
+  ] as const)("retires booking for an unavailable departure: %s", async (changes, label) => {
+    await renderDeparture(4, true, changes);
+    expect(screen.getByRole("heading", { name: "Wreck Trip" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Book" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Ask to be told" })).toBeNull();
+    expect(screen.queryByText("6 seats")).toBeNull();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See the full schedule" })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis",
+    );
+  });
+
+  it.each([null, { ...trip(4), isPrivate: true }])(
+    "refuses missing/deleted and private departures",
+    async (row) => {
+      const { getTripWithBooked } = await import("@/db/trips");
+      vi.mocked(getTripWithBooked).mockResolvedValueOnce(row as never);
+      await expect(
+        EmbedWidgetPage({
+          params: Promise.resolve({ shopSlug: "blue-mantis", widget: "departure" }),
+          searchParams: Promise.resolve({ show: "trip-1" }),
+        }),
+      ).rejects.toThrow();
+    },
+  );
 
   it("drops Book on a full boat and offers the wait list", async () => {
     await renderDeparture(10, true);

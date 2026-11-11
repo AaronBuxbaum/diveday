@@ -197,7 +197,6 @@ export default async function CoursePage({
           title: course.title,
           agency: course.agency,
           summary: course.summary,
-          description: course.description,
           priceCents: courseTotalCents(course),
           durationText: course.durationText,
         },

@@ -1,6 +1,7 @@
 import { DEMO_SHOP_BRAND_COLOR } from "@/db/seed-identifiers";
 import { deriveBrandTheme } from "@/lib/brand";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { cancelEmbeddedDeparture } from "./embed-departure-helpers";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 
 /**
  * The embed catalogue (ADR 20260901-diveday-reimagined, decision 2, slice 13d):
@@ -9,6 +10,24 @@ import { expect, signedInAsOwner, test } from "./fixtures";
  * composes the snippet the loader reads.
  */
 test.describe("the widget views", () => {
+  test("a cancelled embedded departure sends divers back to the schedule", async ({
+    page,
+    browser,
+    staffStorageState,
+  }) => {
+    const staffContext = await browser.newContext({
+      storageState: await staffStorageState("owner"),
+    });
+    try {
+      const staffPage = makeActivitySafe(await staffContext.newPage());
+      // The embed points at the configured public origin (a reserved test
+      // domain in this harness); verify its full-schedule destination and
+      // top-frame target without navigating out of the local test server.
+      await cancelEmbeddedDeparture(staffPage, page);
+    } finally {
+      await staffContext.close();
+    }
+  });
   test("a widget renders chrome-free, allows framing, and carries the credit", async ({ page }) => {
     const response = await page.goto("/s/blue-mantis/embed/grid");
     expect(response?.status()).toBe(200);

@@ -190,6 +190,28 @@ describe("reading the body", () => {
     expect(reviewAnswered(section, "dive-domain-expert")).toBe(false);
   });
 
+  it.each([
+    "launched independently; no blocking exploitable findings. Live synthetic verification was reviewed as historical evidence, not repeated.",
+    "launched; tests were not rerun during the read-only review",
+    "launched, no findings; live browser checks skipped",
+    "launched; no time for an additional optional review",
+  ])("accepts a completed review with a separate caveat: %s", (answer) => {
+    expect(reviewAnswered(`- security-reviewer: ${answer}`, "security-reviewer")).toBe(true);
+  });
+
+  it.each([
+    "not launched",
+    "never launched",
+    "wasn't launched",
+    "wasn’t launched",
+    "skipped; another reviewer launched",
+    "no time to be launched",
+    "skipped",
+    "no time",
+  ])("refuses a review that did not launch: %s", (answer) => {
+    expect(reviewAnswered(`- security-reviewer: ${answer}`, "security-reviewer")).toBe(false);
+  });
+
   it("counts a launch, a finding or a reasoned 'not needed' as an answer, never a placeholder", () => {
     expect(
       reviewAnswered(

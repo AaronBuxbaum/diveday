@@ -5,7 +5,8 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { diverTranslator } from "../src/i18n/messages";
-import { expect, test } from "./fixtures";
+import { cancelEmbeddedDeparture } from "./embed-departure-helpers";
+import { expect, makeActivitySafe, test } from "./fixtures";
 import { bookASeatAndOpenThread, choosePartySize } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
@@ -213,6 +214,23 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/s/blue-mantis/embed/departure?show=${tripId}`);
         await page.getByRole("link", { name: "Book", exact: true }).waitFor();
         await capture(page, "embed-departure", scheme);
+      });
+
+      test(`the cancelled embed departure offers the schedule (${scheme})`, async ({
+        page,
+        browser,
+        staffStorageState,
+      }) => {
+        const staffContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+        });
+        try {
+          const staffPage = makeActivitySafe(await staffContext.newPage());
+          await cancelEmbeddedDeparture(staffPage, page);
+          await capture(page, "embed-departure-cancelled", scheme);
+        } finally {
+          await staffContext.close();
+        }
       });
 
       test(`the embed course list renders true to the design (${scheme})`, async ({ page }) => {
