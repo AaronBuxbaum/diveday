@@ -473,10 +473,15 @@ export function readinessBlockerText(t: StaffTranslator, blocker: ReadinessBlock
   // Naming the card the diver does hold is what makes "not certified" a fact a
   // staffer can check against the plastic, rather than a verdict to take on trust.
   if (blocker.code === "certification_insufficient" && params?.requiredLevel && params.heldLevel) {
-    return t("shared.readiness.blockers.certificationInsufficientHeld", {
-      level: t(CERTIFICATION_LEVEL_KEYS[params.requiredLevel]),
-      held: t(CERTIFICATION_LEVEL_KEYS[params.heldLevel]),
-    });
+    return t(
+      params.heldUnverified
+        ? "shared.readiness.blockers.certificationInsufficientUnverified"
+        : "shared.readiness.blockers.certificationInsufficientHeld",
+      {
+        level: t(CERTIFICATION_LEVEL_KEYS[params.requiredLevel]),
+        held: t(CERTIFICATION_LEVEL_KEYS[params.heldLevel]),
+      },
+    );
   }
   if (params?.requiredLevel) {
     return t(key, { level: t(CERTIFICATION_LEVEL_KEYS[params.requiredLevel]) });

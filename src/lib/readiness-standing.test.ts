@@ -177,6 +177,41 @@ describe("standing: where the two thresholds differ, and only there", () => {
     expect(at(evidence, advanced).verified).toEqual(["certification_insufficient"]);
   });
 
+  it("keeps a submitted lower card on file while naming every unmet Deep Wreck requirement", () => {
+    const evidence = {
+      certifications: [
+        card({ status: "pending", selfDeclaredAt: NOW, identifier: "DEMO-AUDIT-NOT-REAL" }),
+      ],
+      specialtyCertifications: [],
+      nitroxCertifications: [],
+      now: NOW,
+    };
+    expect(
+      standing(
+        demand({
+          minimumCertificationLevel: "advanced_open_water",
+          requiredSpecialties: ["deep"],
+          requiresNitrox: true,
+        }),
+        evidence,
+        "verified",
+      ),
+    ).toEqual([
+      {
+        code: "certification_insufficient",
+        params: {
+          requiredLevel: "advanced_open_water",
+          heldLevel: "open_water",
+          heldUnverified: true,
+        },
+      },
+      { code: "specialty_missing", params: { specialty: "deep" } },
+      { code: "nitrox_missing" },
+    ]);
+    expect(at(evidence, advanced).verified).toEqual(["certification_insufficient"]);
+    expect(at({ certifications: [] }, advanced).verified).toEqual(["certification_missing"]);
+  });
+
   it("does not let a self-declared lower rung or a lower course clear the sale", () => {
     expect(at({ declaredLevel: "open_water" }, advanced).sale).toEqual([
       "certification_insufficient",
