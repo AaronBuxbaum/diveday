@@ -1,6 +1,6 @@
 ---
 name: stacked-prs
-description: Stacked pull requests with gh stack: one-click merge of the whole stack, CI fixed from the top. Use when cutting a branch, opening a PR, or pushing or landing while a stack is open.
+description: DiveDay's cross-thread stack policy: branch from the newest open layer, run CI at the top, and publish through gh stack. Use when creating, publishing, or landing a layer.
 ---
 
 # Stacked pull requests
