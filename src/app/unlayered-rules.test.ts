@@ -147,6 +147,7 @@ describe("unlayered element rules", () => {
       "input, select, textarea",
       "input::placeholder, textarea::placeholder",
       "summary",
+      "html[data-device-text-size]",
       "button, a, summary, input, select, textarea",
     ]) {
       expect(base, prelude).toContain(prelude);
