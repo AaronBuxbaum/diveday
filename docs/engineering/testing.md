@@ -152,7 +152,8 @@ searching open PRs for a fix in flight, or quarantined; never skipped, never giv
   PR, push-gate and local run. `.github/workflows/e2e-nightly.yml` sets
   `DIVEDAY_RUN_QUARANTINE=1` and runs them every night, then runs each spec that failed on CI in
   the last 7 days five times (`--repeat-each=5`, `scripts/e2e-recent-failures.mjs`, at most 8
-  specs). The history reader paginates failed workflow runs, Playwright and visual jobs, and their
+  specs), rerunning the tests that failed by title (`--grep`) rather than every test in those
+  files; a failure whose title is unreadable reruns its whole file. The history reader paginates failed workflow runs, Playwright and visual jobs, and their
   annotations. It resolves helper-thrown failures from the reporter title's spec identity and
   reports the inspected run count and date window. Authentication, API and partial-page failures
   fail the hunt explicitly. An empty result means no existing spec was identified in those

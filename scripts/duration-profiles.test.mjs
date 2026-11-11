@@ -69,4 +69,30 @@ describe("duration profiles", () => {
       worstBinErrorMs: 4,
     });
   });
+  it("adopts a profile when the suite moved by a few files between runs", () => {
+    const files = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`test${i}`, 10 + i]));
+    const run = (runId, extra = {}) => {
+      const durations = { ...files, ...extra };
+      return {
+        version: 2,
+        metadata: {
+          runId,
+          shard: 1,
+          shards: 1,
+          files: Object.keys(durations).length,
+          sha: `sha${runId}`,
+          coverage: true,
+          runner: "linux-x64-ubuntu24",
+          nodeMajor: 24,
+          success: true,
+          createdAt: `2026-11-0${runId}T00:00:00Z`,
+        },
+        durations,
+      };
+    };
+    const adopted = calibrateProfiles([run(1), run(2), run(3, { added: 50 })]);
+    const profile = Object.values(adopted.profiles)[0];
+    expect(profile.validation.commonFiles).toBe(30);
+    expect(profile.durations).not.toHaveProperty("added");
+  });
 });

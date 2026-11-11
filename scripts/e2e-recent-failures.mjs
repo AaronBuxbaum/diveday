@@ -47,6 +47,47 @@ export function rankFailedSpecs(annotationsPerJob, { max = 8, exists = () => tru
     .map(([spec]) => spec);
 }
 
+/** The part of a reporter title after the spec location: the describe blocks and the test. */
+export function annotationTestTitle(annotation) {
+  const identity = stripVTControlCharacters(annotation.title ?? "");
+  const match = identity.match(/e2e\/[^\s:›]+\.spec\.ts:\d+(?::\d+)?\s*›\s*(.+)$/);
+  return match
+    ? match[1]
+        .split("›")
+        .map((part) => part.trim())
+        .join(" ")
+    : null;
+}
+
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * What the flake hunt reruns: the ranked specs plus one `--grep` pattern naming the tests that
+ * failed in them, so five repeats cost the flaky tests and not every neighbour in the file. A
+ * failure whose title cannot be read leaves the pattern out: the whole files rerun, which is
+ * the old behaviour and the safe one.
+ */
+export function rankFailedTests(annotationsPerJob, options = {}) {
+  const specs = rankFailedSpecs(annotationsPerJob, options);
+  const titles = new Set();
+  let unreadable = false;
+  for (const annotations of annotationsPerJob) {
+    for (const a of annotations) {
+      if (a.annotation_level !== "failure") continue;
+      const spec = annotationSpec(a);
+      if (!spec || !specs.includes(spec)) continue;
+      const title = annotationTestTitle(a);
+      if (title) titles.add(title);
+      else unreadable = true;
+    }
+  }
+  return {
+    specs,
+    grep: !unreadable && titles.size > 0 ? `(?:${[...titles].map(escapeRegex).join("|")})$` : null,
+    tests: titles.size,
+  };
+}
+
 /**
  * Spec paths in the order the failed jobs first named them, newest first, capped at `max`:
  * the fast lane's fill (`scripts/fast-lane.mjs`). `annotationsPerJob` is in
@@ -176,7 +217,11 @@ function main() {
     console.error(
       `e2e-recent-failures: inspected ${runCount} failed CI runs since ${since}; Playwright and visual shards`,
     );
-    for (const spec of rankFailedSpecs(perJob, { max, exists: existsSync })) console.log(spec);
+    if (process.argv.includes("--json")) {
+      console.log(JSON.stringify(rankFailedTests(perJob, { max, exists: existsSync })));
+    } else {
+      for (const spec of rankFailedSpecs(perJob, { max, exists: existsSync })) console.log(spec);
+    }
   } catch (error) {
     console.error(`e2e-recent-failures: could not read CI history (${error.message})`);
     process.exitCode = 1;
