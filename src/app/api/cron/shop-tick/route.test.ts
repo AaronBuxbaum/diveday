@@ -185,12 +185,10 @@ describe("GET /api/cron/shop-tick", () => {
     expect(body.recaps).toBeNull();
     expect(body["trip-reminders"]).toEqual({ scanned: 1, sent: 1 });
     expect(sendMissingDiverAlerts).toHaveBeenCalledTimes(1);
-    // The stand-in, never the original: its message can quote a diver's email.
-    expect(Sentry.captureException).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "CronScanFailed", message: "cron scan failed" }),
-      { tags: { cron_scan: "recaps", error_class: "Error" } },
-    );
-    expect(vi.mocked(Sentry.captureException).mock.calls[0]?.[0]).not.toBe(failure);
+    // The real error, message and stack, so the report can be read.
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
+      tags: { cron_scan: "recaps" },
+    });
     expect(lastCheckInStatus()).toBe("error");
   });
 

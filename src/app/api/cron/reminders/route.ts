@@ -7,7 +7,7 @@ import { sendDueCheckoutRecoveries } from "@/features/checkout-recovery";
 import { requireCronSecret } from "@/features/cron-auth";
 import { flushLogs } from "@/features/log-shipping";
 import { retryPendingProcessorErasures } from "@/features/processor-erasure";
-import { reportScrubbedError, sentry } from "@/features/sentry-server";
+import { sentry } from "@/features/sentry-server";
 import { DAY_MS } from "@/lib/clock";
 import { DAILY_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
@@ -97,9 +97,7 @@ async function runScan<T>(scan: string, run: () => Promise<T>): Promise<ScanOutc
   try {
     return { status: "ok", result: await run() };
   } catch (error) {
-    await reportScrubbedError(error, {
-      name: "CronScanFailed",
-      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+    await sentry.captureException(error, {
       tags: { cron_scan: scan },
     });
     log("cron_reminders.scan_failed", "error", { scan });
@@ -252,9 +250,7 @@ export async function GET(request: Request) {
     // migrate. Nothing ran, so there are no counts to report; the check-in
     // still has to be closed out or the monitor would read this as a run that
     // is somehow still in progress.
-    await reportScrubbedError(error, {
-      name: "CronScanFailed",
-      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+    await sentry.captureException(error, {
       tags: { cron_scan: "bootstrap" },
     });
     log("cron_reminders.tick_failed", "error", { scan: "bootstrap" });

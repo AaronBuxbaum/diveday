@@ -3,7 +3,7 @@ import { getDb } from "@/db/client";
 import { claudeSpendUsdBetween } from "@/features/assists";
 import { requireCronSecret } from "@/features/cron-auth";
 import { flushLogs } from "@/features/log-shipping";
-import { reportScrubbedError, sentry } from "@/features/sentry-server";
+import { sentry } from "@/features/sentry-server";
 import { collectUsageSamples } from "@/features/usage";
 import { claimUsageAlert, releaseUsageAlert } from "@/features/usage-alert-ledger";
 import { nowDate } from "@/lib/clock";
@@ -150,9 +150,7 @@ export async function GET(request: Request) {
       try {
         claimed = await claimUsageAlert(db, key, end, now);
       } catch (error) {
-        await reportScrubbedError(error, {
-          name: "CronScanFailed",
-          message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+        await sentry.captureException(error, {
           tags: { ...ceilingTags(evaluation), usage_step: "claim" },
         });
       }
@@ -192,9 +190,7 @@ export async function GET(request: Request) {
       try {
         await releaseUsageAlert(db, key);
       } catch (error) {
-        await reportScrubbedError(error, {
-          name: "CronScanFailed",
-          message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+        await sentry.captureException(error, {
           tags: { ...ceilingTags(evaluation), usage_step: "release" },
         });
       }
@@ -250,9 +246,7 @@ export async function GET(request: Request) {
     // or an unexpected throw the per-probe guards did not cover. The check-in
     // still has to be closed out or the monitor would read this as a run that
     // is somehow still in progress.
-    await reportScrubbedError(error, {
-      name: "CronScanFailed",
-      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+    await sentry.captureException(error, {
       tags: { cron_scan: "usage_bootstrap" },
     });
     log("cron_usage.scan_failed", "error", { scan: "bootstrap" });

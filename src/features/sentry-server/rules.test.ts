@@ -79,22 +79,3 @@ describe("sentry, loaded on first use", () => {
     expect(imported).toHaveBeenCalledTimes(2);
   });
 });
-
-describe("reportScrubbedError", () => {
-  it("sends a stand-in with the caller's words, the class and cause tokens, never the message", async () => {
-    await load("https://key@sentry.invalid/1");
-    const { reportScrubbedError } = await import("./rules");
-    const leaky = new Error("insert failed for nora@example.com", {
-      cause: Object.assign(new Error("dup"), { name: "DatabaseError", code: "23505" }),
-    });
-    await reportScrubbedError(leaky, { name: "XError", message: "X failed", tags: { a: "b" } });
-    const [sent, context] = sdk.captureException.mock.calls[0] as unknown as [Error, unknown];
-    expect(sent.name).toBe("XError");
-    expect(sent.message).toBe("X failed");
-    expect(sent.cause).toBeUndefined();
-    expect(sent.stack).not.toContain("nora@example.com");
-    expect(context).toEqual({
-      tags: { a: "b", error_class: "Error", cause_name: "DatabaseError", cause_code: "23505" },
-    });
-  });
-});

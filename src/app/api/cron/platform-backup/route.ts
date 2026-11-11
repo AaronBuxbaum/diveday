@@ -11,7 +11,7 @@ import {
 } from "@/features/backup-export";
 import { requireCronSecret } from "@/features/cron-auth";
 import { flushLogs } from "@/features/log-shipping";
-import { reportScrubbedError, sentry } from "@/features/sentry-server";
+import { sentry } from "@/features/sentry-server";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -234,9 +234,7 @@ export async function GET(request: Request) {
   } catch (error) {
     // Only reachable before the loop or between shops -- `getDb()` failing, or
     // the shop listing itself. The check-in still has to be closed out.
-    await reportScrubbedError(error, {
-      name: "CronScanFailed",
-      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+    await sentry.captureException(error, {
       tags: { cron_scan: "platform_backup_bootstrap" },
     });
     log("cron_platform_backup.pass_failed", "error", { scan: "bootstrap" });

@@ -92,17 +92,30 @@ query parameter is ever added, update `CAPABILITY_ROUTE_PREFIXES`/`CAPABILITY_QU
 `src/app/observability.ts` once — every consumer (Analytics, Speed Insights, Sentry) picks it up
 from that one place.
 
-### What Sentry never collects
+### What Sentry keeps, and what it never collects
 
-The Sentry SDK collects request bodies, cookies, the user's IP and identity, local variables in
-stack frames and database query values unless told not to. A Stripe webhook body carries a
-customer's name, email and address, a server action's body carries a form, and a cookie is a
-session. `SENTRY_DATA_COLLECTION` in `src/app/observability.ts` turns all of those off in both
-`Sentry.init` calls, and `redactEvent` deletes the request body and cookies and drops the
-`cookie`, `authorization` and `stripe-signature` headers from any event that still has them. An
-error's own message can quote personal data too, so the Stripe webhook sends a stand-in error
-tagged with the event id, the error's class and its cause's code, never the original (issue
-#2334).
+**Errors arrive whole**: the real message, the stack, the route and query string, the console
+lines before the crash, who was signed in, and the client's address. An error you cannot read
+cannot be fixed (Aaron, 2026-11-10; this replaced the earlier rule that replaced every message
+with `[redacted]` and sent the Stripe and cron failures as stand-in errors).
+
+What stays out is only what is a credential or a capability link, and both are cut in
+`src/app/observability.ts`:
+
+- request bodies and cookies (`SENTRY_DATA_COLLECTION`; a body can be a login, a card form or a
+  Stripe webhook, and a cookie is a session), and `redactEvent` deletes them again from any event
+  that still has them, along with the `cookie`, `authorization` and `stripe-signature` headers;
+- capability tokens in URLs, query strings and the referer (`redactCapabilityUrl`).
+
+Handlers report with plain `sentry.captureException(error, { tags })` (`src/features/sentry-server`).
+Local variables in stack frames and database query values stay off.
+
+### If the Sentry dashboard still shows `[redacted]`, or masks values
+
+Server-side scrubbing in the Sentry project can rewrite events after they arrive, whatever the code
+sends. It is set in the Sentry project's settings, which only Aaron can change: Security & Privacy
+(Data Scrubber, Use Default Scrubbers, Prevent Storing of IP Addresses, Sensitive Fields, Safe
+Fields). Tracked in the `human-task` issue "Loosen Sentry's own data scrubbing".
 
 ## When something doesn't arrive
 

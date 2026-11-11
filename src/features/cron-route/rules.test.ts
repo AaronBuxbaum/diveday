@@ -2,13 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/features/log-shipping", () => ({ flushLogs: vi.fn() }));
 vi.mock("@/features/sentry-server", () => ({
-  reportScrubbedError: vi.fn(),
   sentry: { captureCheckIn: vi.fn(), captureException: vi.fn() },
 }));
 vi.mock("../../lib/log", () => ({ log: vi.fn() }));
 
 const { flushLogs } = await import("@/features/log-shipping");
-const { reportScrubbedError, sentry } = await import("@/features/sentry-server");
+const { sentry } = await import("@/features/sentry-server");
 const { log } = await import("../../lib/log");
 const { cronRoute } = await import("./rules");
 
@@ -29,7 +28,6 @@ beforeEach(() => {
   vi.stubEnv("CRON_SECRET", SECRET);
   vi.mocked(sentry.captureCheckIn).mockReset().mockResolvedValue("check-in-id");
   vi.mocked(sentry.captureException).mockReset();
-  vi.mocked(reportScrubbedError).mockReset();
   vi.mocked(flushLogs).mockReset();
   vi.mocked(log).mockReset();
 });
@@ -38,7 +36,6 @@ function expectNothingHappened(run: ReturnType<typeof vi.fn>) {
   expect(run).not.toHaveBeenCalled();
   expect(sentry.captureCheckIn).not.toHaveBeenCalled();
   expect(sentry.captureException).not.toHaveBeenCalled();
-  expect(reportScrubbedError).not.toHaveBeenCalled();
   expect(log).not.toHaveBeenCalled();
   expect(flushLogs).not.toHaveBeenCalled();
 }
@@ -124,14 +121,10 @@ describe("cronRoute pass", () => {
 
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "scan_unavailable" });
-    // Sentry gets a stand-in with the pass's name, never the error's text
-    // (`reportScrubbedError`); nothing reaches the SDK's raw capture.
-    expect(reportScrubbedError).toHaveBeenCalledWith(failure, {
-      name: "CronPassFailed",
-      message: "cron pass daily-sweeps failed",
+    // Sentry gets the real error, tagged with the pass's name.
+    expect(sentry.captureException).toHaveBeenCalledWith(failure, {
       tags: { cron_scan: "daily-sweeps" },
     });
-    expect(sentry.captureException).not.toHaveBeenCalled();
     // The log line names the scan, never the error's text (it can quote a diver).
     expect(log).toHaveBeenCalledWith("cron_daily_sweeps.scan_failed", "error", {
       scan: "daily-sweeps",

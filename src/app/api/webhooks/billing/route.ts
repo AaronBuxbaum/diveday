@@ -7,7 +7,7 @@ import {
   readBillingEvent,
 } from "@/features/billing";
 import { verifyStripeWebhook } from "@/features/payments";
-import { reportScrubbedError } from "@/features/sentry-server";
+import { sentry } from "@/features/sentry-server";
 import { applyBillingEffect } from "@/features/shop-subscriptions";
 import { claimStripeWebhookEvent, releaseStripeWebhookEventClaim } from "@/features/webhook-events";
 import { logWebhookRefusal } from "@/features/webhook-refusal";
@@ -143,15 +143,13 @@ async function handle(
   return outcome;
 }
 
-/** A billing webhook failure, reported without its message (`reportScrubbedError`). */
+/** A billing webhook failure, reported to Sentry with its real message and stack. */
 async function reportBillingFailure(
   error: unknown,
   event: { id: string; type: string },
   stage: "handler" | "claim_release",
 ) {
-  await reportScrubbedError(error, {
-    name: "BillingWebhookError",
-    message: `Billing webhook ${stage} failed`,
+  await sentry.captureException(error, {
     tags: {
       stripe_event_id: event.id,
       billing_webhook_event_type: event.type,
