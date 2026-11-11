@@ -203,7 +203,9 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       const shots = [await snap(diver, index, id, "trip-page")];
       await diver.getByLabel("Name", { exact: true }).fill(DIVER_NAME);
       await diver.getByLabel("Email", { exact: true }).fill("sam.simulation@example.com");
-      await diver.getByRole("button", { name: /^Book/ }).click();
+      // The booking form's own submit: the demo banner's "Book a seat as a diver" start (a
+      // button outside the form) also begins with "Book".
+      await diver.locator("form").getByRole("button", { name: /^Book/ }).click();
       await expect(diver).toHaveURL(/\/ready\//);
       await expect(status()).toBeVisible();
       day.readyPath = new URL(diver.url()).pathname;
