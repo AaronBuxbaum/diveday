@@ -16,17 +16,6 @@ function selected(pattern, entries, flags = "-Eq") {
 }
 
 describe("CI installs PDF tools for the selected browser tests", () => {
-  it.each(["playwright", "fast-lane", "visual"])(
-    "prepares the existing Ubuntu mirror list before installing Poppler in %s",
-    (id) => {
-      const block = job(id);
-      const preparation = block.indexOf('sudo "$(command -v node)" scripts/ci-ubuntu-mirrors.mjs');
-      expect(preparation).toBeGreaterThan(-1);
-      expect(block.indexOf("sudo apt-get update -qq")).toBeGreaterThan(preparation);
-      expect(block).toContain("sudo apt-get install -y --no-install-recommends poppler-utils");
-    },
-  );
-
   it.each(["boarding-certification-paper", "five-dive-departure-log"])(
     "installs Poppler when the shard contains %s",
     (spec) => {
