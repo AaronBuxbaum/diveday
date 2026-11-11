@@ -20,6 +20,7 @@ those rows has sat.
 | [Florida call list](florida-call-list.md) | **A template.** Research criteria, columns, and how to source ten candidate shops | The filled list stays out of this repo; a booked conversation is the output |
 | [First-call script](first-call-script.md) | Call one: discovery designed to disconfirm, not a pitch | A written call note per conversation; anything that changes the product goes to [story-backlog.md](../archive/story-backlog-20261110.md) |
 | [Cold email template](cold-email-template.md) | Opening a shop the founder has no warm route into: the written cousin of the first-call script, aiming at a one-line reply or a forward | A reply is a call note in the script's format; a changed assumption is H-20261025-product-has-never-had evidence |
+| [Operator profile method](operator-profile-method.md) | Repeatable research prompt for a batch of operator profiles from public pages, any region | Filled profiles stay in the shared project files, not here |
 | [V-02 field-test run sheet](v-02-field-test-run-sheet.md) | The printable checklist for the boat day — "the single most important pre-pilot task" | V-02 in the [verification queue](../human-decisions/README.md#human-verification-queue) |
 
 The stakeholder playbooks stay the authority on *who and how* for each conversation
