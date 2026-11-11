@@ -464,6 +464,8 @@
     "worthALook": {
       "sameCourse": "The same course, another day",
       "sameSite": "The same site, another day",
+      "sameSiteEarlier": "The same site, earlier that day",
+      "sameSiteLater": "The same site, later that day",
       "gentler": "The shop rates this site for beginners.",
       "alsoMorning": "Also a morning boat",
       "alsoAfternoon": "Also an afternoon boat",

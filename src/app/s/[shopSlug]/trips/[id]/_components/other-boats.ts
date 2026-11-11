@@ -120,6 +120,7 @@ export function worthALookList(
     seatsOpen: row.seatsOpen,
     reason: row.reason,
     partOfDay: row.partOfDay,
+    sameDay: row.sameDay,
     when: `${formatDayParts(row.startsAt, where.locale, where.timeZone).weekday} ${formatTime(row.startsAt, where.locale, where.timeZone)}`,
     href: where.isEmbed
       ? embedTripPath(where.shopSlug, row.tripId)

@@ -104,4 +104,15 @@ describe("TripAlternatives", () => {
       "/s/blue-mantis/embed/trip/trip-2",
     );
   });
+
+  it("does not call a same-day boat to the same site another day", () => {
+    render(
+      <TripAlternatives
+        alternatives={[alternative({ sameDay: "earlier" })]}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(screen.getByText("The same site, earlier that day")).toBeTruthy();
+    expect(screen.queryByText("The same site, another day")).toBeNull();
+  });
 });
