@@ -25,6 +25,7 @@ import {
   type SuitChoice,
   suitFlags,
 } from "@/lib/rentals";
+import { GearSourceChoice, useGearSource } from "./GearSourceChoice";
 import { RentalSizeFields } from "./RentalSizeFields";
 import type { RentalFit } from "./types";
 
@@ -80,17 +81,6 @@ const SUIT_CHOICE_KIND: Record<SuitChoice, RentableItemKind | null> = {
   rents_wetsuit: "wetsuit",
   own_drysuit: null,
   rents_drysuit: "drysuit",
-};
-
-/** The first question of the gear step: how much of the kit the diver brings. */
-type GearSource = "own" | "some" | "everything";
-
-const GEAR_SOURCES: readonly GearSource[] = ["own", "some", "everything"];
-
-const GEAR_SOURCE_KEYS: Record<GearSource, DiverMessageKey> = {
-  own: "rental.gearSource.own",
-  some: "rental.gearSource.some",
-  everything: "rental.gearSource.everything",
 };
 
 export const RENTABLE_ITEM_HINT_KEYS: Partial<Record<RentableItemKind, DiverMessageKey>> = {
@@ -279,24 +269,7 @@ export function RentalFitForm({
           .map((item) => item.kind),
       ),
   );
-  // **The first question: is the diver bringing their own gear?** (Aaron, 2026-11-11, #4337.) The
-  // default stays "I need everything": it is right for a diver who needs gear. The other two answers
-  // are one tap for a diver who owns it, so finishing the row never means unticking seven things.
-  // A course with gear in its fee has no such question: its ticks already start from the fee.
-  const everythingKinds = new Set(
-    ticked.filter((item) => item.defaultRented && !fee.has(item.kind)).map((item) => item.kind),
-  );
-  const ownSuit: SuitChoice = suitOptions.includes("own_wetsuit") ? "own_wetsuit" : storedSuit;
-  const rentedSuit: SuitChoice =
-    suitOptions.find((choice) => choice === "rents_wetsuit" || choice === "rents_drysuit") ??
-    storedSuit;
-  const sourceOf = (kinds: ReadonlySet<RentableItemKind>, chosenSuit: SuitChoice): GearSource => {
-    const suitRents = suitFlags(chosenSuit).rentsWetsuit || suitFlags(chosenSuit).rentsDrysuit;
-    if (kinds.size === 0 && !suitRents) return "own";
-    const allTicked = [...everythingKinds].every((kind) => kinds.has(kind));
-    return allTicked && (suitRents || suitOptions.length === 0) ? "everything" : "some";
-  };
-  const [gearSource, setGearSource] = useState<GearSource>(() => sourceOf(tickedKinds, suit));
+  const gear = useGearSource({ ticked, fee, suitOptions, storedSuit, tickedKinds, suit });
   // Everything the diver is renting: the ticks, plus the suit when it is ours.
   const suitRented = suitFlags(suit);
   const rentedKinds = new Set<RentableItemKind>(tickedKinds);
@@ -357,43 +330,7 @@ export function RentalFitForm({
           live region alone, read to a screen reader and drawn as nothing
           (visual review 2026-10-24, B25): the gray banner with two gray icons
           stood over the form saying what the form itself asks. */}
-      <div
-        data-testid="gear-status-indicator"
-        role="status"
-        aria-live="polite"
-        className={
-          isConfirmed
-            ? "flex items-center gap-4 rounded-inset border border-success/30 bg-success/5 p-4 transition-all"
-            : "sr-only"
-        }
-      >
-        {isConfirmed ? (
-          <div className="flex gap-2">
-            <BcdIcon active label={t("rental.bcdIconLabel")} />
-            <FinIcon active label={t("rental.finIconLabel")} />
-          </div>
-        ) : null}
-        <div>
-          <p
-            className={`text-sm font-semibold transition-colors ${
-              isConfirmed ? "text-success" : "text-muted"
-            }`}
-          >
-            {rentedKinds.size === 0
-              ? t("rental.ownGear")
-              : isConfirmed
-                ? t("rental.matched")
-                : t("rental.selectSizes")}
-          </p>
-          <p className="text-xs text-muted mt-0.5">
-            {rentedKinds.size === 0
-              ? t("rental.noCharge")
-              : isConfirmed
-                ? t("rental.sizesLocked")
-                : t("rental.addSizes")}
-          </p>
-        </div>
-      </div>
+      <GearStatus rented={rentedKinds.size} confirmed={isConfirmed} />
 
       {saved ? (
         <p
@@ -408,31 +345,17 @@ export function RentalFitForm({
       ) : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
         {includesGear ? null : (
-          <ChoiceFieldset legend={t("rental.gearSourceLegend")}>
-            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
-              {GEAR_SOURCES.map((source) => (
-                <ChoicePill
-                  key={source}
-                  type="radio"
-                  name="gearSource"
-                  value={source}
-                  checked={gearSource === source}
-                  onChange={() => {
-                    setGearSource(source);
-                    if (source === "own") {
-                      setTickedKinds(new Set());
-                      setSuit(ownSuit);
-                    } else if (source === "everything") {
-                      setTickedKinds(new Set(everythingKinds));
-                      setSuit(rentedSuit);
-                    }
-                  }}
-                >
-                  {t(GEAR_SOURCE_KEYS[source])}
-                </ChoicePill>
-              ))}
-            </div>
-          </ChoiceFieldset>
+          <GearSourceChoice
+            value={gear.source}
+            onChange={(source) => {
+              gear.setSource(source);
+              const next = gear.apply(source);
+              if (next) {
+                setTickedKinds(next.kinds);
+                setSuit(next.suit);
+              }
+            }}
+          />
         )}
         <ChoiceFieldset legend={t("rental.suitLegend")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
@@ -451,7 +374,7 @@ export function RentalFitForm({
                   checked={suit === choice}
                   onChange={() => {
                     setSuit(choice);
-                    setGearSource(sourceOf(tickedKinds, choice));
+                    gear.setSource(gear.sourceOf(tickedKinds, choice));
                   }}
                   aside={
                     hintKey || (hasAnyRentalPricing(pricing) && priceCents !== undefined) ? (
@@ -507,7 +430,7 @@ export function RentalFitForm({
                       if (event.target.checked) next.add(kind);
                       else next.delete(kind);
                       setTickedKinds(next);
-                      setGearSource(sourceOf(next, suit));
+                      gear.setSource(gear.sourceOf(next, suit));
                     }}
                     aside={
                       <>
@@ -663,6 +586,54 @@ export function RentalQuoteAmount({
       ) : null}
       <span className="font-medium">{totalLabel}</span>
     </>
+  );
+}
+
+/**
+ * The gear status. Lit once the sizes are in; until then it is the live region alone, read to a
+ * screen reader and drawn as nothing (visual review 2026-10-24, B25): the gray banner with two
+ * gray icons stood over the form saying what the form itself asks.
+ */
+function GearStatus({ rented, confirmed }: { rented: number; confirmed: boolean }) {
+  const t = useTranslations();
+  return (
+    <div
+      data-testid="gear-status-indicator"
+      role="status"
+      aria-live="polite"
+      className={
+        confirmed
+          ? "flex items-center gap-4 rounded-inset border border-success/30 bg-success/5 p-4 transition-all"
+          : "sr-only"
+      }
+    >
+      {confirmed ? (
+        <div className="flex gap-2">
+          <BcdIcon active label={t("rental.bcdIconLabel")} />
+          <FinIcon active label={t("rental.finIconLabel")} />
+        </div>
+      ) : null}
+      <div>
+        <p
+          className={`text-sm font-semibold transition-colors ${
+            confirmed ? "text-success" : "text-muted"
+          }`}
+        >
+          {rented === 0
+            ? t("rental.ownGear")
+            : confirmed
+              ? t("rental.matched")
+              : t("rental.selectSizes")}
+        </p>
+        <p className="text-xs text-muted mt-0.5">
+          {rented === 0
+            ? t("rental.noCharge")
+            : confirmed
+              ? t("rental.sizesLocked")
+              : t("rental.addSizes")}
+        </p>
+      </div>
+    </div>
   );
 }
 

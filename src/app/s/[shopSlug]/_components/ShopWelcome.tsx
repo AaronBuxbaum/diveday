@@ -53,7 +53,7 @@ export function ShopWelcome({
               src={shop.brandHeroImageUrl}
               alt={shop.brandHeroImageAlt ?? ""}
               className="aspect-[16/9] w-full sm:aspect-[4/3]"
-              sizes="(min-width: 1152px) 560px, (min-width: 640px) 45vw, 100vw"
+              sizes="(min-width: 1152px) 508px, (min-width: 640px) 43vw, calc(100vw - 34px)"
               priority
             />
           </div>
