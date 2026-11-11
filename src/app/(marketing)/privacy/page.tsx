@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { LegalDocument, LegalList, LegalSection, LegalTermList } from "@/components/LegalDocument";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { proseLinkClass } from "@/components/ui/button";
+import { COMPANY_LEGAL_NAME, COMPANY_POSTAL_ADDRESS } from "@/features/company-identity";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -65,8 +66,9 @@ export const metadata: Metadata = {
  * Two things are deliberately absent, and both are somebody else's call to
  * make rather than an oversight:
  *
- *  - **No legal entity is named.** H-20260724-corporate-footing-diveday-operate is open, and `docs/product/marketing.md`
- *    keeps the corporate entity off the public pages until it closes.
+ *  - **No governing law.** The operating company is named in the contact
+ *    section (Aaron, 2026-11-11; `src/features/company-identity`); which law governs is
+ *    still counsel's call (H-20260724-corporate-footing-diveday-operate).
  *  - **No retention period for waivers and medical answers.** H-20260730-evidence-retention-period-deletion is open. The
  *    page states what the system does today (they stay until the shop removes
  *    them) and says the policy is under review, which is true and is the one
@@ -247,6 +249,12 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
                 {chunks}
               </a>
             ),
+          })}
+        </p>
+        <p>
+          {t("marketing.privacy.contact.operator", {
+            company: COMPANY_LEGAL_NAME,
+            postalAddress: COMPANY_POSTAL_ADDRESS,
           })}
         </p>
       </LegalSection>

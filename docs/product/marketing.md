@@ -247,8 +247,9 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   founder fact from a repo document, a commit, or a plausible-sounding draft. Statements about the
   industry ("shops lose money on X") are claims too — either cite a documented source the way a
   switching guide cites an incumbent, or phrase it as what the founder personally observed, which
-  needs no source but also may not be invented on his behalf. The corporate entity stays off the
-  page entirely until the entity decision closes. **Confirmed by the product owner 2026-07-25** and
+  needs no source but also may not be invented on his behalf. The corporate entity stayed off the
+  pages until 2026-11-11, when Aaron named it for `/terms` and `/privacy` (`src/features/company-identity`;
+  H-20260724-corporate-footing-diveday-operate); `/about` still does not carry it. **Confirmed by the product owner 2026-07-25** and
   published on `/about`: a software engineer who worked on Google Maps, helped build a biotech
   company that went public, and works on self-driving cars; and the origin — a
   conversation with a dive shop owner about what his systems were costing him. Anything beyond that
@@ -289,7 +290,11 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   their careers on software that millions of people rely on, and who dive), speaks in the company's
   plural throughout, including the hero's tie to the product ("That story is why we built
   DiveDay"), and no longer carries the concessions band. The Lonergan section and its limits are
-  unchanged. `src/app/(marketing)/about/copy.test.ts` refuses a named individual, a first-person singular, and
+  unchanged. **Amended 2026-11-11 (Aaron, in the project thread: "You can sign the about page with
+  my name Aaron Buxbaum, Founder, but keep the 'we' terminology").** The "Who we are" band ends
+  with that signature, from `FOUNDER_NAME` in `src/features/company-identity` and `marketing.about.founderRole`.
+  It is the one place a person is named; the prose stays plural and states no CV.
+  `src/app/(marketing)/about/copy.test.ts` refuses a named individual, a first-person singular, and
   the prevention claim in both locales.
 - **Source exports are not importer capabilities (M01/M10, 2026-11-09).** The FareHarbor guide distinguishes the described Contacts and Bookings CSVs from separately supplied certifications, sizes and evidence. Its generic importer reference is a separate disclosure, not a promise about a vendor export. The two operating choices state manual transfer and staff responsibility before the long guide; no live synchronization or replacement distribution network is implied. The import and handover steps keep that scope: staff prepare upcoming departures separately, reconcile booking changes manually, and set timing after a trial rather than promise an afternoon or a ready roster.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
@@ -582,6 +587,14 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   "Booked a dive? Find your booking", a sentence for the diver who followed a shop footer here, not a
   door for the shop deciding. The spec pins it to exactly one link to `/find-your-booking` and counts
   the shop's links without it.
+  **The line waits behind `HOME_DIVER_DOOR` (Aaron, 2026-11-11, #4313).** `/find-your-booking` is
+  empty until a shop is listed, and a shop owner who followed the line read "No shops are listed
+  yet" one click from the headline. The line is hidden unless the variable is exactly `1`
+  (`src/features/home-diver-door`); turn it on once a shop is listed. The page keeps its address.
+  **Under the hero, one band says why the roll call is by name** (Aaron, 2026-11-11): the Lonergan
+  story cut to two sentences, what the roll call does, and a link to `/about`. It keeps every limit
+  the `/about` hero keeps (no operator or skipper named, no sentence saying DiveDay would have
+  prevented it), and `about/copy.test.ts` holds it to them in both languages.
   **The three fields are inside that budget, not beside it** (2026-09-10, ADR
   20260908-one-hand decision 6, possibility Y). The hero now takes a shop's name, one boat and a first
   departure, and redraws itself as that visitor's first day. Three boxes and a "Draw my day" button

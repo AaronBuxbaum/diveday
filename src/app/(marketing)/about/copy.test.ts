@@ -72,8 +72,28 @@ describe("the /about hero", () => {
   });
 });
 
+describe("the home page's short telling", () => {
+  it.each(LOCALES)("keeps the same limits as the /about hero in %s", (_l, messages) => {
+    // The band under the home hero (Aaron, 2026-11-11) is the same story cut
+    // to two sentences. It names the Lonergans and the year, never the
+    // operator or skipper, and never says what DiveDay would have done.
+    const { whyStory, whyTie } = messages.marketing.home;
+    expect(whyStory).toContain("Lonergan");
+    expect(whyStory).toContain("1998");
+    for (const value of [whyStory, whyTie]) {
+      expect(value).not.toMatch(/outer edge|skipper|patrón|operador|operator/i);
+      expect(value).not.toMatch(
+        /would have|could have|might have|habría|hubiera|hubiese|podría haber/i,
+      );
+    }
+  });
+});
+
 describe("the rest of /about", () => {
   it.each(LOCALES)("names no individual and states no CV in %s", (_l, messages) => {
+    // The one person named is the founder, who signs the "Who we are" band
+    // (Aaron, 2026-11-11): the name is `FOUNDER_NAME` in src/features/company-identity
+    // and never a sentence in the bundle, which is why this still holds.
     // The people who build DiveDay are described in generalities (Aaron,
     // 2026-10-07: "use generalities about people in a company"). The founder's
     // name, the employers that used to carry the page's credibility, and the

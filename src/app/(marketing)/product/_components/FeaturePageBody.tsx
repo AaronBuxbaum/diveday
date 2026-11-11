@@ -27,14 +27,7 @@ import {
 import { featureSource } from "@/lib/funnel";
 import { capabilityGroup, earlyAccessPrice } from "@/lib/marketing";
 import { FeatureScreen } from "./FeatureScreen";
-
-/**
- * One row of the inventory, in or out: a rule under every row, and over the
- * first row of each column (the second row is the right column's first from
- * `sm`).
- */
-const INVENTORY_ROW_CLASS =
-  "flex gap-3 border-b border-border py-3.5 leading-6 first:border-t sm:[&:nth-child(2)]:border-t";
+import { IncludedList } from "./IncludedList";
 
 /**
  * The feature page's sentences that state the plan's terms, for the configured offer
@@ -302,14 +295,12 @@ export async function FeaturePageBody({
               {/* The rule above each column's first row rather than across
                   the list: a rule on the `ul` ran through the gutter the row
                   rules stop at. */}
-              <ul className="grid gap-x-10 sm:grid-cols-2">
-                {included.items.map((itemKey) => (
-                  <li key={itemKey} className={INVENTORY_ROW_CLASS}>
-                    <DiveDayIcon name="check" className="mt-1 size-4 shrink-0 text-primary" />
-                    <span>{t(itemKey)}</span>
-                  </li>
-                ))}
-              </ul>
+              <IncludedList
+                items={included.items.map((itemKey) => t(itemKey))}
+                showAllLabel={t("marketing.featureChrome.includedShowAll", {
+                  count: included.items.length,
+                })}
+              />
             </div>
           </div>
         </section>

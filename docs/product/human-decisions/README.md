@@ -57,7 +57,7 @@ and run the command again.
 | H-20260724-channel-sends-booking-waiver | In progress | 2026-10-14 | Which channel sends booking and waiver notifications, and what consent, copy, timing, and sender… |
 | H-20260724-contact-importer-trust-prior | Implemented | 2026-07-24 | Should the contact importer trust a prior shop's own waiver acceptance — including its… |
 | H-20260724-contact-importer-trust-shop | Implemented | 2026-07-24 | Should the contact importer trust what a shop already had in its own system… |
-| H-20260724-corporate-footing-diveday-operate | Deferred | 2026-11-10 | Corporate footing for DiveDay: operate inside the owner's existing Pseudorandom LLC (S-corp election; current… |
+| H-20260724-corporate-footing-diveday-operate | Deferred | 2026-11-11 | Corporate footing for DiveDay: operate inside the owner's existing Pseudorandom LLC (S-corp election; current… |
 | H-20260724-current-typed-name-explicit | Deferred | 2026-11-10 | Is the current typed name + explicit consent + timestamp sufficient for the intended… |
 | H-20260724-initial-gear-policy-sizing | Implemented | 2026-08-02 | What is the initial gear policy for sizing, preferences, staff assignment, and substitutions? |
 | H-20260724-minimum-age-gate-fail | Implemented | 2026-07-25 | H-20260724-certification-levels-agency-rules's minimum-age gate as approved (2026-07-24, option B — "collect it, fail open") did… |
@@ -187,7 +187,7 @@ and run the command again.
 | H-20261022-future-dated-import-rows | Implemented | 2026-10-22 | What happens to a booking row dated after today in an import? |
 | H-20261022-needs-you-groups-by | Chosen | 2026-10-22 | How does Needs you group a boat’s diver rows? |
 | H-20261022-reminder-fly-safe-in | Implemented | 2026-10-22 | What does the day-before reminder promise about flying? |
-| H-20261022-the-site-says-we | Implemented | 2026-10-22 | Who is "I" on the public site? |
+| H-20261022-the-site-says-we | Implemented | 2026-11-11 | Who is "I" on the public site? |
 | H-20261022-visual-rerun-on-main | Implemented | 2026-10-23 | May a failed visual capture rerun on main? |
 | H-20261023-first-restore-run-by | Chosen | 2026-10-23 | Who runs the first restore, and where are the production secrets backed up? |
 | H-20261023-medical-alert-for-the | Implemented | 2026-10-24 | Where does a diver tell the crew something medical they should know in an emergency? |

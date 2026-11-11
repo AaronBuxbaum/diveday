@@ -9,6 +9,10 @@
     "phoneFrameLabel": "Un capitán pasando lista importada en el muelle: 4 de 9 buceadores a bordo, un nombre marcado a bordo y el siguiente aún por llamar.",
     "dockEyebrow": "En el muelle",
     "dockDetail": "Guardado en este teléfono antes de que saliera el barco, así que el pase de lista sigue funcionando sin señal.",
+    "whyEyebrow": "Por qué el pase de lista es por nombre",
+    "whyStory": "En enero de 1998, Tom y Eileen Lonergan salieron a bucear en barco a la Gran Barrera de Coral. El barco volvió a puerto sin ellos, y nadie notó que faltaban durante dos días.",
+    "whyTie": "Un recuento es un número, y un número puede cuadrar con alguien todavía en el agua. En DiveDay el pase de lista nombra, antes de que el barco salga y después de cada inmersión, a cada buceador y tripulante.",
+    "whyLink": "Por qué existe DiveDay",
     "stepsTitle": "Una reserva, de tu web al barco y de vuelta a casa",
     "steps": {
       "book": {
@@ -723,11 +727,12 @@
     "eyebrow": "Por qué existe DiveDay",
     "phoneFrameLabel": "Un capitán pasando lista importada, nombre por nombre, con un toque en cada círculo.",
     "heroDescription": "En enero de 1998, Tom y Eileen Lonergan salieron en un barco de buceo al arrecife St. Crispin, en la Gran Barrera de Coral. El barco volvió a puerto sin ellos, y nadie notó que faltaban hasta dos días después, cuando apareció a bordo la bolsa con sus pertenencias. Nunca se encontró a ninguno de los dos.",
-    "heroP2": "Por esa historia construimos DiveDay. Un conteo es un número, y un número puede cuadrar con alguien todavía en el agua, así que en DiveDay el pase de lista nombra a cada buceador y tripulante cuando el barco sale y después de cada inmersión, y no termina hasta que cada uno esté confirmado.",
+    "heroP2": "Por esa historia construimos DiveDay. Un recuento es un número, y un número puede cuadrar con alguien todavía en el agua, así que en DiveDay el pase de lista nombra a cada buceador y tripulante antes de que el barco salga y después de cada inmersión, y no termina hasta que cada uno esté confirmado.",
     "peopleEyebrow": "Quiénes somos",
     "peopleTitle": "Buceadores que han llevado software a millones de personas",
     "peopleP1": "Las personas que construyen DiveDay han pasado su carrera en software del que dependen millones de personas, y sus fines de semana en barcos de buceo. Conocemos el mostrador desde el lado del buceador, con la tarjeta de certificación en la mano mientras el dueño busca la exención, y la cubierta, donde un divemaster recorre un portapapeles mojado mientras el barco espera. DiveDay es la herramienta que queríamos en los dos lugares: registros en los que confiar, en una pantalla que se maneja con el pulgar mojado.",
     "peopleP2": "Los centros de buceo que conocemos llevan el día en una pizarra junto a la puerta, un portapapeles que sale en el barco, una hoja de cálculo que alguien actualiza a mano y un puñado de aplicaciones que guardan cada una su propia lista de los mismos buceadores. El dueño conoce a cada buceador por su nombre, y cada mañana parte de ese conocimiento se copia de una herramienta a otra mientras el resto viaja en su cabeza. DiveDay está hecho para que ese conocimiento se escriba una sola vez y salga con el barco en el teléfono del capitán.",
+    "founderRole": "Fundador",
     "buildEyebrow": "Lo primero",
     "buildTitle": "La única tarea en un barco que no puede fallar",
     "buildDescription": "El pase de lista es el único registro de un día de buceo que tiene que salir bien a la primera, así que por ahí empieza DiveDay. La reserva, la exención, la verificación de certificación, las tallas y el pago tienen cada uno su propia pantalla, y cada una de esas pantallas existe para que el capitán abra el manifiesto con los registros en orden y lo único que quede sea leer los nombres.",
@@ -982,7 +987,8 @@
     },
     "contact": {
       "heading": "Preguntarnos algo",
-      "body": "Escribe a <email>{address}</email>. Si eres un buceador y no un centro, tu centro tiene tu registro y puede responder más rápido; si no puede, le ayudaremos."
+      "body": "Escribe a <email>{address}</email>. Si eres un buceador y no un centro, tu centro tiene tu registro y puede responder más rápido; si no puede, le ayudaremos.",
+      "operator": "DiveDay es un servicio de {company}, que opera con el nombre comercial DiveDay, con domicilio en {postalAddress}."
     },
     "open": {
       "heading": "Lo que esta página todavía no dice",
@@ -1068,7 +1074,8 @@
     },
     "contact": {
       "heading": "Preguntarnos algo",
-      "body": "Escribe a <email>{address}</email>."
+      "body": "Escribe a <email>{address}</email>.",
+      "operator": "DiveDay es un servicio de {company}, que opera con el nombre comercial DiveDay, con domicilio en {postalAddress}."
     }
   },
   "featureChrome": {
@@ -1076,6 +1083,7 @@
     "breadcrumbLabel": "Ruta de navegación",
     "stepsTitle": "Cómo funciona",
     "includedTitle": "Qué incluye",
+    "includedShowAll": "Ver las {count}",
     "includedPrice": "Cada línea de esta lista entra en el único plan, a {price} {cadence}.",
     "pricingLink": "Ver todo lo que cubre el plan",
     "faqTitle": "Lo que preguntan los centros",

@@ -11,6 +11,10 @@
 
 **Decided 2026-10-22 (Aaron Buxbaum, in the project thread, the recommended option): the site says "we" and names no person.**
 
+## Amended 2026-11-11
+
+Aaron, in the project thread: “You can sign the about page with my name Aaron Buxbaum, Founder, but keep the ‘we’ terminology.” The site still says "we". `/about`'s "Who we are" band ends with that signature, and no other page names a person (#4316).
+
 ## What shipped
 
 `marketing.home.steps.check.note2` reads "We left it out on purpose" (es-ES "Lo dejamos fuera a propósito"). The `/pricing` line went with the margin note that carried it (item 8 deleted `notes.note4`). The builder's-note rule in [docs/design/brand.md](../../design/brand.md) now says the first person is "we", and `src/lib/marketing.test.ts` refuses a first-person singular in any en-US `noteN`.

@@ -9,6 +9,10 @@
     "phoneFrameLabel": "A captain calling the roll in DiveDay at the dock: 4 of 9 divers aboard, one name tapped aboard and the next still to call.",
     "dockEyebrow": "At the dock",
     "dockDetail": "Saved to this phone before the boat left, so the roll call keeps working with no signal.",
+    "whyEyebrow": "Why the roll call is by name",
+    "whyStory": "In January 1998, Tom and Eileen Lonergan went out on a dive boat to the Great Barrier Reef. The boat went back to port without them, and nobody noticed they were missing for two days.",
+    "whyTie": "A head count is a number, and a number can come out right while someone is still in the water. DiveDay’s roll call names every diver and crew member before the boat leaves and after every dive.",
+    "whyLink": "Why DiveDay exists",
     "stepsTitle": "One booking, from your website to the boat and home again",
     "steps": {
       "book": {
@@ -728,6 +732,7 @@
     "peopleTitle": "Divers who have shipped software to millions of people",
     "peopleP1": "The people who build DiveDay have spent their careers on software that millions of people rely on, and their weekends on dive boats. We know the desk from the diver’s side, cert card out while the owner hunts for the waiver, and the deck, where a divemaster works down a wet clipboard while the boat waits. DiveDay is the tool we wanted in both places: records a shop can trust, on a screen a wet thumb can work.",
     "peopleP2": "The dive shops we know run the day on a whiteboard by the door, a clipboard that goes out on the boat, a spreadsheet somebody updates by hand, and a handful of apps that each keep their own list of the same divers. The owner knows every diver by name, and each morning some of that knowledge gets copied from one tool to the next while the rest rides along in their head. DiveDay is built so that knowledge is written down once and goes out with the boat on the captain’s phone.",
+    "founderRole": "Founder",
     "buildEyebrow": "What comes first",
     "buildTitle": "The one job on a boat that can’t go wrong",
     "buildDescription": "The roll call is the one record on a dive day that has to be right the first time, so it is where DiveDay starts. The booking, the waiver, the certification check, the gear sizes and the payment each have a screen of their own, and every one of those screens is there so that the captain opens the manifest with the records in order and the only job left is reading the names.",
@@ -982,7 +987,8 @@
     },
     "contact": {
       "heading": "Asking us something",
-      "body": "Write to <email>{address}</email>. If you are a diver rather than a shop, your shop holds your record and can answer faster; if they cannot, we will help them."
+      "body": "Write to <email>{address}</email>. If you are a diver rather than a shop, your shop holds your record and can answer faster; if they cannot, we will help them.",
+      "operator": "DiveDay is operated by {company}, doing business as DiveDay, at {postalAddress}."
     },
     "open": {
       "heading": "What this page does not yet say",
@@ -1068,7 +1074,8 @@
     },
     "contact": {
       "heading": "Asking us something",
-      "body": "Write to <email>{address}</email>."
+      "body": "Write to <email>{address}</email>.",
+      "operator": "DiveDay is operated by {company}, doing business as DiveDay, at {postalAddress}."
     }
   },
   "featureChrome": {
@@ -1076,6 +1083,7 @@
     "breadcrumbLabel": "Breadcrumb",
     "stepsTitle": "How it works",
     "includedTitle": "What’s in it",
+    "includedShowAll": "Show all {count}",
     "includedPrice": "Every line here is in the one plan, at {price} {cadence}.",
     "pricingLink": "See everything the plan covers",
     "faqTitle": "Questions shops ask",

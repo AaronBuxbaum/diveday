@@ -650,6 +650,22 @@ export const ENV_GROUPS = [
     ],
   },
   {
+    seam: null,
+    doc: [
+      'The home hero\'s one line for a diver ("Booked a dive? Find your booking").',
+      "It opens /find-your-booking, which is empty until a shop is listed, so the",
+      "line stays hidden unless this is exactly 1. Set it once a shop is listed.",
+    ],
+    keys: [
+      {
+        key: "HOME_DIVER_DOOR",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "the home hero carries no line for a diver; /find-your-booking keeps its address",
+      },
+    ],
+  },
+  {
     seam: "sns-sms",
     doc: [
       "Courtesy SMS reminders through AWS SNS (ADR 20260802-sns-sms-adapter). A",

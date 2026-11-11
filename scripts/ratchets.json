@@ -1055,7 +1055,7 @@
         }
       }
     ],
-    "src/app/(marketing)/page.tsx": 433,
+    "src/app/(marketing)/page.tsx": 429,
     "src/app/(token)/ready/[token]/page.tsx": 617,
     "src/app/s/[shopSlug]/page.tsx": 644,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,

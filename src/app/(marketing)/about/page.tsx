@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { BANNER_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { planCopyParams } from "@/features/billing";
+import { FOUNDER_NAME } from "@/features/company-identity";
 import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -198,6 +199,12 @@ async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTe
             <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
               <p>{t("marketing.about.peopleP1")}</p>
               <p>{t("marketing.about.peopleP2")}</p>
+              {/* The page speaks as "we" and is signed by the one person it
+                  names (Aaron, 2026-11-11; #4316). */}
+              <p className="text-base leading-7 text-foreground">
+                <span className="font-medium">{FOUNDER_NAME}</span>
+                <span className="text-muted">, {t("marketing.about.founderRole")}</span>
+              </p>
             </div>
           </div>
         </div>

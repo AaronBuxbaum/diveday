@@ -6,18 +6,20 @@ import { DiverDoor } from "@/app/_components/DiverDoor";
 import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
+import { HomeHeroPhone } from "@/app/_components/HomeHeroPhone";
+import { HomeWhyBand } from "@/app/_components/HomeWhyBand";
 import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
 import { JsonLd } from "@/components/JsonLd";
 import { ArrivalDeskFallback, WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingIllustration } from "@/components/MarketingIllustration";
-import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
+import { MarketingReveal } from "@/components/MarketingReveal";
 import {
   DiverBookingFallback,
   FrontDeskReadinessFallback,
   RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
-import { CaptainPhoneFrame, MarginNotes, MarketingMockup } from "@/components/MarketingSections";
+import { MarginNotes, MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { requestPricingOffer } from "@/features/pricing-offer";
@@ -260,17 +262,11 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
             />
             <DiverDoor t={t} />
           </div>
-          <MarketingHeroMotion>
-            <div className="mx-auto w-full max-w-sm lg:max-w-md">
-              <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} locale={locale} />
-              <div className="relative z-10 mx-auto -mt-5 w-[88%] rounded-inset border border-border bg-surface px-4 py-3">
-                <Eyebrow>{t("marketing.home.dockEyebrow")}</Eyebrow>
-                <p className="mt-1 text-sm font-medium">{t("marketing.home.dockDetail")}</p>
-              </div>
-            </div>
-          </MarketingHeroMotion>
+          <HomeHeroPhone locale={locale} />
         </div>
       </section>
+
+      <HomeWhyBand t={t} />
 
       {/* The booking's steps, in the order a diver meets the shop:
           alternating rows, each a marker, a title, two of the builder's notes

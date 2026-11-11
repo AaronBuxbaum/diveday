@@ -12,6 +12,10 @@ legal sign-off or selection of an entity.
 Source: [owner-account decision record on #4192](https://github.com/AaronBuxbaum/diveday/issues/4192#issuecomment-6759950843).
 The sections below preserve the original question and rationale, not a second unresolved worklist.
 
+## Named on the public pages — 2026-11-11
+
+Aaron, in the project thread: “The company is Pseudorandom LLC dba DiveDay, located at 12851 Capital St, Suite 100, Oak Park, MI 48237.” `/terms` and `/privacy` now say who operates DiveDay, from `src/features/company-identity` (#4323). This records what the pages state. Counsel review before the first paid contract is still the open task above, and neither page states a governing law.
+
 ## Original question
 
 Corporate footing for DiveDay: operate inside the owner's existing **Pseudorandom LLC** (S-corp election; current business is software contracting and mentorship — owner context recorded 2026-07-24) or form a dedicated DiveDay entity — plus the SaaS contract set nothing can be signed without: design-partner pilot agreement, founding-shop subscription terms encoding the published two-year price lock and same-day support promises (H-20260724-public-founding-shop-price), a privacy policy, and the "your waiver is your responsibility" boundary. The working recommendation is a dedicated LLC before any pilot agreement is signed; analysis and the generalist/CPA question list are in [stakeholders/legal.md](../stakeholders/legal.md#the-entity-decision-h-20260724-corporate-footing-diveday-operate).

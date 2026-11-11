@@ -76,9 +76,11 @@ test("the homepage hero offers one demo door, and states the price at it", async
   // review, item 50): a sentence for the reader who landed here by mistake,
   // not a door for the shop deciding. It is pinned to exactly one link with
   // one destination, so it cannot grow into a second budget.
+  // The line waits behind HOME_DIVER_DOOR until a shop is listed (#4313): an
+  // owner who followed it read "No shops are listed yet" one click from the
+  // headline. `src/features/home-diver-door` holds the switch.
   const diverDoor = heroSection.getByRole("link", { name: "Find your booking", exact: true });
-  await expect(diverDoor).toHaveCount(1);
-  await expect(diverDoor).toHaveAttribute("href", "/find-your-booking");
+  await expect(diverDoor).toHaveCount(0);
   const shopLinks = heroSection.getByRole("link").filter({ hasNotText: "Find your booking" });
   await expect(shopLinks).toHaveCount(1);
   await expect(shopLinks).toHaveAttribute("href", "/get-set-up?from=home-hero");
@@ -1881,11 +1883,11 @@ test("the legal pages are published, honest about what is unsettled, and reachab
   // stale figure is worse than one that quotes none.
   await expect(page.getByText("$99")).toHaveCount(0);
 
-  // H-20260724-corporate-footing-diveday-operate is open, so neither page names a legal entity. A generic template
-  // would have — which is exactly why one wasn't used.
+  // Both pages say who operates DiveDay, once, in the contact section (Aaron,
+  // 2026-11-11; #4323). The name and address come from src/features/company-identity.
   for (const route of ["/privacy", "/terms"]) {
     await page.goto(route);
-    await expect(page.getByText(/\b(Inc\.|LLC|Ltd\.?|GmbH|S\.L\.)\b/)).toHaveCount(0);
+    await expect(page.getByText(/operated by Pseudorandom LLC/)).toHaveCount(1);
   }
 
   // **The footer is the only route to either page from anywhere on the site**

@@ -13,9 +13,13 @@ function heroColumns(container: HTMLElement) {
   return { claim, phone };
 }
 
-/** The booking band under the hero, and its first step's two columns. */
+/**
+ * The booking band, and its first step's two columns. It is the third
+ * section: the band that says why the roll call is by name sits between it
+ * and the hero.
+ */
 function firstStep(container: HTMLElement) {
-  const band = container.querySelectorAll("main > section")[1];
+  const band = container.querySelectorAll("main > section")[2];
   const row = band?.children[1];
   const [copy, screen] = [...(row?.children ?? [])];
   if (!band || !copy || !screen) throw new Error("no first step");
@@ -89,6 +93,18 @@ describe("the landing's skeleton", () => {
  * a step whose title, two notes and feature-page link run 288px, and a screen
  * that renders 323px with no shadow (Logbook frames a screen by its hairline).
  */
+describe("the landing skeleton's band under the hero", () => {
+  it("draws the story and the tie at their line counts, and no diver's line while the flag is off", () => {
+    const { container } = render(<HomeBodySkeleton />);
+    const why = container.querySelectorAll("main > section")[1];
+    expect(why?.className).toContain("bg-surface");
+    expect(why?.querySelectorAll(".h-11")).toHaveLength(1);
+    // The hero keeps two 20px lines under the doors and no third for a diver.
+    const { claim } = heroColumns(container);
+    expect(claim.querySelectorAll(":scope > .mt-6")).toHaveLength(1);
+  });
+});
+
 describe("the landing skeleton's first step", () => {
   it("draws the band's heading as three lines on a phone and two from sm", () => {
     const { container } = render(<HomeBodySkeleton />);
