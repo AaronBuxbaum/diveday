@@ -369,7 +369,7 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * **A first-timer's course session** (UX sheet 2026-10-22, item 3). Under
        * The day, the course's own "Your afternoon" and, since the seed's
-       * Discover Scuba includes its gear, "Gear is included." The page where
+       * Discover Scuba includes its complete rental kit. The page where
        * she pays now says what the course page says.
        */
       test(`a course session's page carries the afternoon and the gear (${scheme})`, async ({
@@ -380,7 +380,11 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: /Discover Scuba — Pool & Reef/ })
           .first()
           .click();
-        await page.getByTestId("trip-course-plan").getByText("Gear is included.").waitFor();
+        const coursePlan = page.getByTestId("trip-course-plan");
+        await expect(coursePlan.getByText("Your afternoon")).toBeVisible();
+        await expect(coursePlan.getByText(/^Included with the course:/)).toHaveText(
+          "Included with the course: Scuba unit (BCD, regulator, tank, weights), Mask, Wetsuit, Fins, and Dive computer.",
+        );
         await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
           "data-hydrated",
           "true",
