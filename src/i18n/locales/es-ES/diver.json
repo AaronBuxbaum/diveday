@@ -1419,6 +1419,12 @@
     "noCharge": "No se te cobrará alquiler en esta salida.",
     "sizesLocked": "Tus tallas están listas para que la tripulación las revise en el muelle.",
     "addSizes": "Agrega tallas para todo lo que has marcado.",
+    "gearSourceLegend": "¿Traes tu propio equipo?",
+    "gearSource": {
+      "own": "Todo es mío",
+      "some": "Una parte",
+      "everything": "Necesito todo"
+    },
     "whatToPlan": "¿Qué preparamos para ti?",
     "suitLegend": "Tu neopreno o traje seco",
     "suitChoices": {

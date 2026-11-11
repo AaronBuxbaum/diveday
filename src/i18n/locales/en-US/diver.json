@@ -1419,6 +1419,12 @@
     "noCharge": "You won’t be charged for rentals on this trip.",
     "sizesLocked": "Your sizes are ready for the crew to check at the dock.",
     "addSizes": "Add sizes for all selected items.",
+    "gearSourceLegend": "Are you bringing your own gear?",
+    "gearSource": {
+      "own": "All my own",
+      "some": "Some of it",
+      "everything": "I need everything"
+    },
     "whatToPlan": "What should we plan to have ready?",
     "suitLegend": "Your suit",
     "suitChoices": {

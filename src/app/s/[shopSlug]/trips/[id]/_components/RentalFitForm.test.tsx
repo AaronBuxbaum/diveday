@@ -825,7 +825,10 @@ describe("RentalFitForm suit choice", () => {
 
   it("offers the diver's own suit either way, and ours only when the shop rents it", () => {
     renderSuit(emptyFit, ["bcd", "wetsuit"]);
-    const names = screen.getAllByRole("radio").map((radio) => radio.getAttribute("value"));
+    const names = screen
+      .getAllByRole("radio")
+      .filter((radio) => radio.getAttribute("name") === "suit")
+      .map((radio) => radio.getAttribute("value"));
     expect(names).toEqual(["own_wetsuit", "rents_wetsuit", "own_drysuit"]);
     // No suit tick left among the pieces: the suit has one question.
     expect(screen.queryByRole("checkbox", { name: /^Wetsuit/ })).toBeNull();
@@ -928,5 +931,67 @@ describe("RentalFitForm currency (task 35)", () => {
     );
 
     expect(screen.getByText("$15.00")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **The first question of the gear step** (Aaron, 2026-11-11, #4337): the full set stays the
+ * default, and one tap says otherwise.
+ */
+describe("RentalFitForm gear source", () => {
+  function renderSource(
+    rentalFit: DiverRentalFit | null,
+    course: Parameters<typeof RentalFitForm>[0]["course"] = null,
+  ) {
+    return renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={rentalFit}
+        rentalItems={["bcd", "regulator", "wetsuit", "mask", "fins"]}
+        course={course}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+  }
+
+  it("starts on I need everything with the full set ticked, as before", () => {
+    renderSource(null);
+    expect(screen.getByRole("radio", { name: "I need everything" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^BCD/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Rent a wetsuit" })).toBeChecked();
+  });
+
+  it("All my own unticks every piece and picks the diver's own suit in one tap", async () => {
+    renderSource(null);
+    await userEvent.click(screen.getByRole("radio", { name: "All my own" }));
+    for (const piece of [/^BCD/, /^Regulator/, /^Mask/, /^Fins/]) {
+      expect(screen.getByRole("checkbox", { name: piece })).not.toBeChecked();
+    }
+    expect(screen.getByRole("radio", { name: /^My own wetsuit/ })).toBeChecked();
+  });
+
+  it("opens on All my own for a saved fit that rents nothing, and I need everything puts the set back", async () => {
+    renderSource({ ...emptyFit });
+    expect(screen.getByRole("radio", { name: "All my own" })).toBeChecked();
+    await userEvent.click(screen.getByRole("radio", { name: "I need everything" }));
+    expect(screen.getByRole("checkbox", { name: /^BCD/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Rent a wetsuit" })).toBeChecked();
+  });
+
+  it("moves to Some of it when the diver changes a single piece", async () => {
+    renderSource(null);
+    await userEvent.click(screen.getByRole("checkbox", { name: /^BCD/ }));
+    expect(screen.getByRole("radio", { name: "Some of it" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^Regulator/ })).toBeChecked();
+  });
+
+  it("is not asked on a course whose fee includes gear", () => {
+    renderSource(null, { nitroxCompatible: false, includedRentalKinds: ["bcd", "regulator"] });
+    expect(screen.queryByRole("radio", { name: "All my own" })).toBeNull();
   });
 });

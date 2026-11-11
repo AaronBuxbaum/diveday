@@ -82,6 +82,17 @@ const SUIT_CHOICE_KIND: Record<SuitChoice, RentableItemKind | null> = {
   rents_drysuit: "drysuit",
 };
 
+/** The first question of the gear step: how much of the kit the diver brings. */
+type GearSource = "own" | "some" | "everything";
+
+const GEAR_SOURCES: readonly GearSource[] = ["own", "some", "everything"];
+
+const GEAR_SOURCE_KEYS: Record<GearSource, DiverMessageKey> = {
+  own: "rental.gearSource.own",
+  some: "rental.gearSource.some",
+  everything: "rental.gearSource.everything",
+};
+
 export const RENTABLE_ITEM_HINT_KEYS: Partial<Record<RentableItemKind, DiverMessageKey>> = {
   bcd: "rental.jargonHints.bcd",
   regulator: "rental.jargonHints.regulator",
@@ -268,6 +279,24 @@ export function RentalFitForm({
           .map((item) => item.kind),
       ),
   );
+  // **The first question: is the diver bringing their own gear?** (Aaron, 2026-11-11, #4337.) The
+  // default stays "I need everything": it is right for a diver who needs gear. The other two answers
+  // are one tap for a diver who owns it, so finishing the row never means unticking seven things.
+  // A course with gear in its fee has no such question: its ticks already start from the fee.
+  const everythingKinds = new Set(
+    ticked.filter((item) => item.defaultRented && !fee.has(item.kind)).map((item) => item.kind),
+  );
+  const ownSuit: SuitChoice = suitOptions.includes("own_wetsuit") ? "own_wetsuit" : storedSuit;
+  const rentedSuit: SuitChoice =
+    suitOptions.find((choice) => choice === "rents_wetsuit" || choice === "rents_drysuit") ??
+    storedSuit;
+  const sourceOf = (kinds: ReadonlySet<RentableItemKind>, chosenSuit: SuitChoice): GearSource => {
+    const suitRents = suitFlags(chosenSuit).rentsWetsuit || suitFlags(chosenSuit).rentsDrysuit;
+    if (kinds.size === 0 && !suitRents) return "own";
+    const allTicked = [...everythingKinds].every((kind) => kinds.has(kind));
+    return allTicked && (suitRents || suitOptions.length === 0) ? "everything" : "some";
+  };
+  const [gearSource, setGearSource] = useState<GearSource>(() => sourceOf(tickedKinds, suit));
   // Everything the diver is renting: the ticks, plus the suit when it is ours.
   const suitRented = suitFlags(suit);
   const rentedKinds = new Set<RentableItemKind>(tickedKinds);
@@ -378,6 +407,33 @@ export function RentalFitForm({
         <CourseGearLine included={included} personal={personal} />
       ) : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
+        {includesGear ? null : (
+          <ChoiceFieldset legend={t("rental.gearSourceLegend")}>
+            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
+              {GEAR_SOURCES.map((source) => (
+                <ChoicePill
+                  key={source}
+                  type="radio"
+                  name="gearSource"
+                  value={source}
+                  checked={gearSource === source}
+                  onChange={() => {
+                    setGearSource(source);
+                    if (source === "own") {
+                      setTickedKinds(new Set());
+                      setSuit(ownSuit);
+                    } else if (source === "everything") {
+                      setTickedKinds(new Set(everythingKinds));
+                      setSuit(rentedSuit);
+                    }
+                  }}
+                >
+                  {t(GEAR_SOURCE_KEYS[source])}
+                </ChoicePill>
+              ))}
+            </div>
+          </ChoiceFieldset>
+        )}
         <ChoiceFieldset legend={t("rental.suitLegend")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
             {suitOptions.map((choice) => {
@@ -393,7 +449,10 @@ export function RentalFitForm({
                   name="suit"
                   value={choice}
                   checked={suit === choice}
-                  onChange={() => setSuit(choice)}
+                  onChange={() => {
+                    setSuit(choice);
+                    setGearSource(sourceOf(tickedKinds, choice));
+                  }}
                   aside={
                     hintKey || (hasAnyRentalPricing(pricing) && priceCents !== undefined) ? (
                       <>
@@ -444,12 +503,11 @@ export function RentalFitForm({
                     name={name}
                     checked={tickedKinds.has(kind)}
                     onChange={(event) => {
-                      setTickedKinds((current) => {
-                        const next = new Set(current);
-                        if (event.target.checked) next.add(kind);
-                        else next.delete(kind);
-                        return next;
-                      });
+                      const next = new Set(tickedKinds);
+                      if (event.target.checked) next.add(kind);
+                      else next.delete(kind);
+                      setTickedKinds(next);
+                      setGearSource(sourceOf(next, suit));
                     }}
                     aside={
                       <>
