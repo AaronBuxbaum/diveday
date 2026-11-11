@@ -40,10 +40,12 @@ import { getShopHome } from "./index";
  * alone; it now watches the page's whole reader, `getShopHome` — the first wave (drafts,
  * money gate, readiness, arrivals, closeout, counts, season scale), the queue and
  * tomorrow's cards, the closing reads, the day's money — which is what the page sends.
+ * 112 → 110 (#4395): the shop's trip, order, course and gear facts are one `shopRenderFacts`
+ * statement shared with the chrome, and a demo shop's Today asks for none of them.
  * 111 → 112 (loop 5, row 6): the crew's thanks beside the tips line (`crew-thanks.ts`), one
  * statement in the day's money (`day-money.ts`), for the crew member's own Today.
  */
-const TODAY_QUERY_CEILING = 112;
+const TODAY_QUERY_CEILING = 110;
 
 /** The seeded shop's owner: the reader whose gates open every door on the home. */
 async function seededOwner(ctx: Awaited<ReturnType<typeof countingShopContext>>) {

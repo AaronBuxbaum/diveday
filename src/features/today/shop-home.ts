@@ -1,8 +1,7 @@
 import { type AppDb, getDb } from "@/db/client";
-import { shopHasEverTakenAnOrder } from "@/db/orders";
+import { shopRenderFacts } from "@/db/shop-render-facts";
 import { shopByIdCached } from "@/db/shops";
 import { shopStripeAccountForRender } from "@/db/stripe-accounts";
-import { countShopTrips } from "@/db/trips";
 import { isOrientationDismissed } from "@/db/user-accounts";
 import { sharedInHorizonReadiness } from "@/features/blockers";
 import { readArrivalLookup } from "@/features/check-in";
@@ -64,9 +63,8 @@ async function readTodayFirstWave({
     evidence,
     { rows: arrivalRows, counterOpen, elsewhere: arrivalElsewhereRows },
     closeout,
-    shopTripCount,
+    renderFacts,
     stripeAccount,
-    everTakenAnOrder,
     firstBookingRead,
     scale,
     orientationDismissed,
@@ -96,16 +94,18 @@ async function readTodayFirstWave({
     // **The day's closing state** (ADR 20260827-clearwater-surface-language, decision 4): how each
     // of today's boats settled, for the evening stations; tomorrow's load-out once they are due back.
     getDayCloseout(db, shop.id, shop.timezone, now, shop),
-    // Whether this shop has ever had a departure: the first-run checklist's gate and the
-    // first-bookable moment's count, below. A demo shop sits out of both, so it is never asked.
-    shop.isDemo ? null : countShopTrips(db, shop.id),
+    // The rarely-changing facts, one statement shared with the chrome (`shopRenderFacts`): whether
+    // the shop has ever had a departure (the first-run checklist's gate and the first-bookable
+    // moment's count) and whether it has taken an order. A demo shop sits out of both below.
+    shop.isDemo ? null : shopRenderFacts(db, shop.id),
     // The setup ledger's Stripe step and the desk's payments row; a demo shop shows neither.
     shop.isDemo ? null : shopStripeAccountForRender(db, shop.id),
-    shop.isDemo ? true : shopHasEverTakenAnOrder(db, shop.id),
     shop.isDemo ? null : shopFirstBooking(db, shop.id, now),
     seasonScale(db, shop.id, shop.timezone, seasonStartInstant(now, shop.timezone, season), now),
     orientationRole === null ? true : isOrientationDismissed(db, personId),
   ]);
+  const shopTripCount = renderFacts?.tripCount ?? null;
+  const everTakenAnOrder = renderFacts?.everTakenAnOrder ?? true;
   return {
     freshDrafts,
     canReadShopMoney,
