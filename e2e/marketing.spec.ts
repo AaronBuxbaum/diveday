@@ -2003,3 +2003,17 @@ for (const [route, scene] of [
     });
   });
 }
+
+test("pricing and about offer the founder's 20-minute call beside Get set up, and the home page does not", async ({
+  page,
+}) => {
+  const call = page.getByRole("link", {
+    name: diverTranslator("en-US")("marketing.common.bookCall"),
+  });
+  for (const path of ["/pricing", "/about"]) {
+    await page.goto(path);
+    await expect(call.first()).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);
+  }
+  await page.goto("/");
+  await expect(call).toHaveCount(0);
+});

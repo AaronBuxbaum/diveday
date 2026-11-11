@@ -198,6 +198,8 @@ chosen battlegrounds — and re-read it before changing the spine.
 The funnel has two doors — **Try the live demo** and **Get set up** — and the order they are
 offered in is a property of the funnel, not of any one page.
 
+**A third, quieter door on two pages (Aaron, 2026-11-11, #4316):** `/pricing` and `/about` also offer **Book a 20-minute call**, a link to the founder's scheduling page beside Get set up (`FunnelCtas` `call`, tagged with the pair's source as `utm_content`). No other page offers it, `/about` stays unsigned, and the site still says “we”.
+
 **Since 2026-09-25 the second door is a request, not a sign-up** ([ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)). Every shop is set up
 by hand, so "Get set up" opens the set-up request form at `/get-set-up?from=<tag>` (since 2026-10-07, [ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md); before that it was a mail), and
 `/onboard` without an open single-use setup link ([ADR 20261009-single-use-setup-links](../architecture/decisions/20261009-single-use-setup-links.md)) is one sentence and a door to that same form. Where this section
