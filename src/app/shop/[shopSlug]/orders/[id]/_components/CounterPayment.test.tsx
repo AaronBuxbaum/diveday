@@ -7,6 +7,7 @@ import { RecordPaymentForm } from "./CounterPayment";
 // The forms post to server actions whose modules reach the database.
 vi.mock("../counter-actions", () => ({
   holdCounterPaymentAction: vi.fn(),
+  settledCounterPaymentHrefAction: vi.fn(),
   recordRoomChargeAction: vi.fn(),
   voidCounterAction: vi.fn(),
 }));
@@ -15,9 +16,12 @@ vi.mock("@/app/actions/held-sends", () => ({
   releaseHeldSendAction: vi.fn(),
 }));
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 
-const { holdCounterPaymentAction } = await import("../counter-actions");
+const { holdCounterPaymentAction, settledCounterPaymentHrefAction } = await import(
+  "../counter-actions"
+);
 const { undoHeldSendAction, releaseHeldSendAction } = await import("@/app/actions/held-sends");
 
 afterEach(() => {
@@ -155,24 +159,39 @@ describe("RecordPaymentForm", () => {
     expect(screen.queryByRole("button", { name: "Cash" })).toBeNull();
   });
 
-  it("says it is too late when the release finds the hold already gone", async () => {
-    vi.useFakeTimers();
-    vi.mocked(releaseHeldSendAction).mockResolvedValue({ status: "gone" });
-    render(
-      <RecordPaymentForm
-        orderId={ORDER_ID}
-        amount="$340.00"
-        t={t}
-        {...urls}
-        initialHold={{ ticket: { id: HOLD_ID, runAt: 0, holdMs: 1_000 }, collection: "cash" }}
-      />,
-    );
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
-    });
-    expect(releaseHeldSendAction).toHaveBeenCalledWith(HOLD_ID);
-    expect(push).toHaveBeenCalledWith(TOO_LATE);
-  });
+  it.each(["/shop/x/orders/1?notice=payment-recorded-demo", null])(
+    "reconciles a completed countdown after page-hide without claiming Undo (%s)",
+    async (href) => {
+      vi.useFakeTimers();
+      vi.mocked(releaseHeldSendAction).mockResolvedValue({ status: "gone" });
+      vi.mocked(settledCounterPaymentHrefAction).mockResolvedValue(href);
+      const fetch = vi.fn(async () => new Response(null, { status: 204 }));
+      vi.stubGlobal("fetch", fetch);
+      render(
+        <RecordPaymentForm
+          orderId={ORDER_ID}
+          amount="$340.00"
+          t={t}
+          {...urls}
+          initialHold={{ ticket: { id: HOLD_ID, runAt: 0, holdMs: 1_000 }, collection: "cash" }}
+        />,
+      );
+      window.dispatchEvent(new Event("pagehide"));
+      expect(fetch).toHaveBeenCalledOnce();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000);
+      });
+      expect(releaseHeldSendAction).toHaveBeenCalledWith(HOLD_ID);
+      expect(settledCounterPaymentHrefAction).toHaveBeenCalledWith(ORDER_ID, "cash");
+      if (href) expect(push).toHaveBeenCalledWith(href);
+      else {
+        expect(refresh).toHaveBeenCalledOnce();
+        expect(push).not.toHaveBeenCalled();
+      }
+      expect(push).not.toHaveBeenCalledWith(TOO_LATE);
+      vi.unstubAllGlobals();
+    },
+  );
 
   it("records the hold as the page goes, once", async () => {
     const fetch = vi.fn(

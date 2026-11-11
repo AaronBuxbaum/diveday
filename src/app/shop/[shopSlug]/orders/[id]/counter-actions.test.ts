@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { orders, people, shops } from "@/db/schema";
+import { orders, people, personRoles, shops } from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -57,7 +57,8 @@ const { getDb } = await import("@/db/client");
 const { hasRequiredStepUp } = await import("../../../../../features/step-up/store");
 const { requireStaffSession } = await import("../../../../../features/session/rules");
 const { recordDemoPaymentOnOpenOrder, recordPaymentOnOpenOrder } = await import("@/db/orders");
-const { holdCounterPaymentAction, recordRoomChargeAction } = await import("./counter-actions");
+const { holdCounterPaymentAction, recordRoomChargeAction, settledCounterPaymentHrefAction } =
+  await import("./counter-actions");
 const { releaseHeldSendAction, undoHeldSendAction } = await import("@/app/actions/held-sends");
 
 async function as({ demo }: { demo: boolean }) {
@@ -223,5 +224,68 @@ describe("record payment on a real shop", () => {
       expect.anything(),
       expect.objectContaining({ collection: "room_charge", room: { number: "412", hotel: null } }),
     );
+  });
+});
+
+describe("countdown reconciliation after a hold is gone", () => {
+  async function paid() {
+    const data = await as({ demo: true });
+    await ctx.db
+      .update(orders)
+      .set({
+        status: "paid",
+        collection: "card_machine",
+        stripeAccountId: null,
+        stripeCustomerId: null,
+        stripeInvoiceId: null,
+      })
+      .where(eq(orders.id, data.orderId));
+    return data;
+  }
+
+  it("reads matching recorded payment without executing another collection", async () => {
+    const { orderId, back } = await paid();
+    vi.mocked(recordDemoPaymentOnOpenOrder).mockClear();
+    vi.mocked(recordPaymentOnOpenOrder).mockClear();
+    expect(await settledCounterPaymentHrefAction(orderId, "card_machine")).toBe(
+      noticeUrl(back, "payment-recorded-demo"),
+    );
+    expect(await settledCounterPaymentHrefAction(orderId, "card_machine")).toBe(
+      noticeUrl(back, "payment-recorded-demo"),
+    );
+    expect(recordDemoPaymentOnOpenOrder).not.toHaveBeenCalled();
+    expect(recordPaymentOnOpenOrder).not.toHaveBeenCalled();
+  });
+
+  it("makes no success claim for an open, mismatched, missing or invalid order", async () => {
+    const { orderId } = await as({ demo: true });
+    expect(await settledCounterPaymentHrefAction(orderId, "card_machine")).toBeNull();
+    await ctx.db
+      .update(orders)
+      .set({
+        status: "paid",
+        collection: "card_machine",
+        stripeAccountId: null,
+        stripeCustomerId: null,
+        stripeInvoiceId: null,
+      })
+      .where(eq(orders.id, orderId));
+    expect(await settledCounterPaymentHrefAction(orderId, "cash")).toBeNull();
+    expect(await settledCounterPaymentHrefAction(crypto.randomUUID(), "cash")).toBeNull();
+    expect(await settledCounterPaymentHrefAction("invalid", "cash")).toBeNull();
+  });
+
+  it("does not expose another shop's paid order", async () => {
+    const { orderId, personId } = await paid();
+    vi.mocked(requireStaffSession).mockResolvedValue(
+      staffSession({ shopId: crypto.randomUUID(), shopSlug: "other", personId }),
+    );
+    expect(await settledCounterPaymentHrefAction(orderId, "card_machine")).toBeNull();
+  });
+
+  it("rechecks live roles before reporting payment", async () => {
+    const { orderId, personId } = await paid();
+    await ctx.db.delete(personRoles).where(eq(personRoles.personId, personId));
+    expect(await settledCounterPaymentHrefAction(orderId, "card_machine")).toBeNull();
   });
 });
