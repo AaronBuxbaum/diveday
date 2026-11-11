@@ -6,7 +6,7 @@
  */
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
-import { bookASeatAndOpenThread } from "./helpers";
+import { bookASeatAndOpenThread, choosePartySize } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
   ADVANCED_CHARTER,
@@ -364,6 +364,20 @@ for (const scheme of ["light", "dark"] as const) {
           "true",
         );
         await capture(page, "public-trip-full", scheme);
+      });
+
+      test(`a wait-list confirmation renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await page.getByRole("link", { name: "Wreck Trip — Spiegel Grove" }).click();
+        await choosePartySize(page, 2);
+        await page.getByRole("textbox", { name: "Name", exact: true }).fill("Astra Waitlist");
+        await page.getByRole("textbox", { name: "Email", exact: true }).fill("astra@example.com");
+        await page.getByRole("button", { name: diverCopy("booking.waitlistHeading") }).click();
+        await page.waitForURL(/\?interest=/);
+        await expect(page.getByRole("status")).toContainText(
+          diverCopy("booking.waitlistConfirmedHeading", { name: "Astra" }),
+        );
+        await capture(page, "public-trip-waitlist-confirmed", scheme);
       });
 
       /**

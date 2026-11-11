@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
+import { ScrollToHash } from "@/components/ScrollToHash";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
@@ -39,6 +40,7 @@ export function FindMyBookingForm({ shopSlug }: { shopSlug: string }) {
 
   return (
     <DisclosureRow id={FIND_MY_BOOKING_FRAGMENT} heading={t("findMyBooking.heading")}>
+      <ScrollToHash onlyHash={FIND_MY_BOOKING_FRAGMENT} focusSelector='input[name="email"]' />
       <p className="text-sm text-muted">{t("findMyBooking.body")}</p>
       <form action={formAction} className="mt-4 flex flex-wrap items-end gap-3">
         <Field label={t("common.email")} className="min-w-64 flex-1">
