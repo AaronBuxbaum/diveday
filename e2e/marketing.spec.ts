@@ -1730,11 +1730,11 @@ test.describe("with Accept-Language: es", () => {
     // either way.
     "/switching": {
       english: diverTranslator("en-US")("switching.hub.title"),
-      spanish: "Trae tu centro contigo",
+      spanish: diverTranslator("es-ES")("switching.hub.title"),
     },
     "/switching/spreadsheet": {
       english: diverTranslator("en-US")("switching.spreadsheet.title"),
-      spanish: "Trae la hoja de cálculo contigo",
+      spanish: diverTranslator("es-ES")("switching.spreadsheet.title"),
     },
     // `/about`'s `h1` is its eyebrow, and the same words are the page's
     // `<title>`. Next streams metadata through the body and React hoists the

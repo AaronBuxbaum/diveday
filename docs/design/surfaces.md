@@ -1066,3 +1066,22 @@ waive checks on new painted controls or actual shared columns.
   it preserves the hero's product proof and first demo door, gives the content breathing room,
   and makes generated artwork visibly distinct from evidence. On phones, instructions remain
   before the supporting scene; the steps retain their reading order.
+
+### Switching hub and guides — `/switching`, `/switching/[competitor]`
+
+**Composition, 2026-11-11 (#4276).**
+
+- **One idea:** compare the working dive day before deciding whether to move records.
+- **Arriving question:** “Will this improve my shop, and what do I lose or have to do?” The
+  competitor-specific opening and keep-or-leave comparison answer fit; the Today sample shows
+  the promised workflow before the guide asks for an export.
+- **Controls dissolved:** the repeated four-fact hero grid and duplicate FareHarbor decision
+  section are removed. One primary demo action leads each opening; product references and
+  migration details remain secondary.
+- **Remove first:** export reference detail stays disclosed below the decision. The honest
+  import scope, live-booking work and original signed documents remain explicit because those
+  change the decision, rather than decorate it.
+- **Composition:** reason to compare → sample dive day → incumbent strengths and tradeoffs →
+  personal help and practical preparation. The hub chooses an existing workflow, including Peek;
+  every guide shares the same rhythm while retaining source-specific limits. The sample is
+  labeled, never presented as customer evidence.
