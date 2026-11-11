@@ -7,6 +7,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   pgView,
@@ -592,6 +593,8 @@ export const orderCollection = pgEnum("order_collection", [
   "stripe_invoice",
   "cash",
   "card_machine",
+  "bank_transfer",
+  "other",
   /**
    * Charged to a hotel guest's room (fifth-loop ideas, item 57; ADR
    * 20261009-counter-payments, amended 2026-10-16): the resort's front desk
@@ -661,6 +664,16 @@ export const orders = pgTable(
     passThroughCents: integer("pass_through_cents").notNull().default(0),
     /** Tax included in Stripe's total, retained separately for reporting and display. */
     taxCents: integer("tax_cents").notNull().default(0),
+    /** Separately recorded gratuity included in the received total; excluded from fees. */
+    tipCents: integer("tip_cents").notNull().default(0),
+    /** Immutable original split for a locally recorded receipt, including zero-basis sales. */
+    counterReceipt: jsonb("counter_receipt").$type<{
+      taxCents: number;
+      taxKnown: boolean;
+      tipCents: number;
+      passThroughCents: number;
+      reference: string | null;
+    }>(),
     amountPaidCents: integer("amount_paid_cents").notNull().default(0),
     /**
      * The running total sent back, in minor units — the sum of every refund
@@ -740,6 +753,11 @@ export const orders = pgTable(
     // half that was scanning every order the shop has ever written.
     index("orders_description_trgm_idx").using("gin", sql`${table.description} gin_trgm_ops`),
     check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),
+    check(
+      "orders_tip_bounds",
+      sql`${table.tipCents} >= 0 and ${table.tipCents} <= ${table.amountPaidCents}`,
+    ),
+
     check(
       "orders_room_charge_names_room",
       // `::text`, so the check never names the enum value it is created with:

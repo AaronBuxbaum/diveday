@@ -1085,3 +1085,13 @@ waive checks on new painted controls or actual shared columns.
   personal help and practical preparation. The hub chooses an existing workflow, including Peek;
   every guide shares the same rhythm while retaining source-specific limits. The sample is
   labeled, never presented as customer evidence.
+
+## Recording a received purchase
+
+**One idea:** record a fact about money already received, without pretending to collect it.
+The questions are who paid, what was received, by which method, and which included amounts are
+excluded from the DiveDay fee. The Money index opens one receipt panel with received-price lines,
+then included tax/tip and external-reference fields; the total and explicit Record action close it.
+A separate catalog/cart composition was rejected because it implies inventory or payment acceptance.
+Returns belong on the receipt, under an explicit already-returned-money label, with the remaining
+amount, reason and recent staff history beside them; booking marks stay with the booked seat.

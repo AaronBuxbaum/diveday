@@ -147,3 +147,45 @@ export function packageDiveValueCents(line: {
 }): number {
   return line.diveCount > 0 ? Math.round(line.unitAmountCents / line.diveCount) : 0;
 }
+
+/** Allocate one inclusive counter receipt's kept revenue exactly across report categories. */
+export function counterReceiptRevenueParts(
+  items: readonly {
+    kind: OrderLineKind;
+    quantity: number;
+    unitAmountCents: number;
+    workOrder: boolean;
+    courseTrip: boolean;
+  }[],
+  keptRevenueCents: number,
+): RevenueLinePart[] {
+  const weights = new Map<RevenueLine, number>();
+  for (const item of items) {
+    const line = revenueLineForOrderItem(item.kind, item);
+    if (line) weights.set(line, (weights.get(line) ?? 0) + item.quantity * item.unitAmountCents);
+  }
+  const total = [...weights.values()].reduce((sum, value) => sum + value, 0);
+  if (total <= 0 || keptRevenueCents <= 0) return [];
+  const target = BigInt(keptRevenueCents);
+  const divisor = BigInt(total);
+  const parts = REVENUE_LINES.flatMap((line) => {
+    const weight = weights.get(line);
+    if (!weight) return [];
+    const numerator = target * BigInt(weight);
+    return [{ line, cents: Number(numerator / divisor), remainder: numerator % divisor }];
+  });
+  let remainder = keptRevenueCents - parts.reduce((sum, part) => sum + part.cents, 0);
+  const ranked = [...parts].sort((a, b) =>
+    a.remainder === b.remainder
+      ? REVENUE_LINES.indexOf(a.line) - REVENUE_LINES.indexOf(b.line)
+      : a.remainder > b.remainder
+        ? -1
+        : 1,
+  );
+  for (const part of ranked) {
+    if (remainder === 0) break;
+    part.cents += 1;
+    remainder -= 1;
+  }
+  return parts.map(({ line, cents }) => ({ line, cents, keptRatio: 1 }));
+}

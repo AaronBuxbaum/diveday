@@ -35,8 +35,10 @@ import { OrderBookingLine } from "./_components/OrderBookingLine";
 import { OrderDisputes, OrderMeta } from "./_components/OrderMeta";
 import { OrderMoreMenu } from "./_components/OrderMoreMenu";
 import { OrderPageFlash } from "./_components/OrderPageFlash";
+import { OrderReceiptLines } from "./_components/OrderReceiptLines";
+import { RecordedPurchaseRefund } from "./_components/RecordedPurchaseRefund";
 import { refundAction } from "./actions";
-import { KIND_KEYS, NOTICES, STATUS_KEYS, undoTooLateText } from "./order-detail-keys";
+import { NOTICES, STATUS_KEYS, undoTooLateText } from "./order-detail-keys";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -232,35 +234,18 @@ export default async function OrderDetailPage({
             `min-w-0` lets the description shrink below its longest word, so
             `break-words` lets that word break: a SKU or a pasted URL would
             otherwise paint over the price. The price never shrinks. */}
-        <ul className="mt-4 divide-y divide-border">
-          {order.lineItems.map((item) => (
-            <li key={item.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
-              <span className="min-w-0 break-words">
-                {item.description}{" "}
-                <span className="text-muted">
-                  ({t(KIND_KEYS[item.kind])}
-                  {item.quantity > 1 ? ` × ${item.quantity}` : ""})
-                </span>
-              </span>
-              <span className="shrink-0 tabular-nums">
-                {formatMoneyCents(
-                  item.unitAmountCents * item.quantity,
-                  order.order.currency,
-                  locale,
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <OrderReceiptLines
+          lineItems={order.lineItems}
+          currency={order.order.currency}
+          taxCents={order.order.taxCents}
+          {...{ locale, t }}
+        />
 
-        {order.order.taxCents > 0 ? (
-          <dl className="mt-3 flex justify-end gap-2 text-sm">
-            <dt className="text-muted">{t("orders.detail.tax")}</dt>
-            <dd className="font-medium tabular-nums">
-              {formatMoneyCents(order.order.taxCents, order.order.currency, locale)}
-            </dd>
-          </dl>
-        ) : null}
+        <RecordedPurchaseRefund
+          order={order.order}
+          history={page.purchaseRefunds}
+          {...{ canRefund, locale, timezone, t }}
+        />
 
         {counterCollection === null && order.order.hostedInvoiceUrl ? (
           <p className="mt-4 text-sm">

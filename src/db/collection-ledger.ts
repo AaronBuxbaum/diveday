@@ -142,9 +142,13 @@ export async function recordOrderCollection(
     )
     .orderBy(asc(collectionEntries.id))
     .limit(1);
-  const originalTax = Number(first?.evidence.originalTaxCents ?? order.taxCents);
+  const originalTax = Number(
+    order.counterReceipt?.taxCents ?? first?.evidence.originalTaxCents ?? order.taxCents,
+  );
   const originalPassThrough = Number(
-    first?.evidence.originalPassThroughCents ?? order.passThroughCents,
+    order.counterReceipt?.passThroughCents ??
+      first?.evidence.originalPassThroughCents ??
+      order.passThroughCents,
   );
   const [lost] = await db
     .select({ cents: sql<string>`coalesce(sum(${paymentDisputes.amountCents}), 0)` })
@@ -160,7 +164,13 @@ export async function recordOrderCollection(
   const held = ["void", "refunded"].includes(order.status)
     ? 0
     : Math.max(0, order.amountPaidCents - Number(lost?.cents ?? 0));
-  const originalBasis = Math.max(0, order.totalCents - originalTax - originalPassThrough);
+  const originalTip = Number(
+    order.counterReceipt?.tipCents ?? first?.evidence.originalTipCents ?? order.tipCents,
+  );
+  const originalBasis = Math.max(
+    0,
+    order.totalCents - originalTax - originalPassThrough - originalTip,
+  );
   const balanceCents =
     order.totalCents > 0 ? collectionShareCents(held, originalBasis, order.totalCents) : 0;
   await recordCollectionBalance(db, {
@@ -174,9 +184,12 @@ export async function recordOrderCollection(
     evidence: {
       grossHeldCents: held,
       originalTaxCents: originalTax,
+      originalTipCents: originalTip,
       originalPassThroughCents: originalPassThrough,
       refundedCents: order.refundedCents,
-      taxSplitRecorded: order.collection === "stripe_invoice" || originalTax > 0,
+      taxSplitRecorded:
+        order.counterReceipt?.taxKnown ??
+        (order.collection === "stripe_invoice" || originalTax > 0),
     },
   });
 }

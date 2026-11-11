@@ -36,6 +36,7 @@ import {
 import { calendarDateInTimezone } from "../../lib/calendar-date";
 import {
   checkoutKeptRatio,
+  counterReceiptRevenueParts,
   type OrderLineKind,
   orderKeptRatio,
   packageDiveValueCents,
@@ -171,6 +172,7 @@ export async function counterTaxIncluded(
         ne(orders.collection, "stripe_invoice"),
         inArray(orders.status, [...KEPT_ORDER_STATUSES]),
         eq(orders.taxCents, 0),
+        sql`coalesce((${orders.counterReceipt}->>'taxKnown')::boolean, false) = false`,
         gt(orders.amountPaidCents, 0),
         gte(orders.paidAt, startUtc),
         lt(orders.paidAt, endUtc),
@@ -255,6 +257,11 @@ async function moneyParts(
   // decide the line; each line's kept share is the order's own.
   const orderLines = await db
     .select({
+      orderId: orders.id,
+      counterReceipt: orders.counterReceipt,
+      taxCents: orders.taxCents,
+      tipCents: orders.tipCents,
+      passThroughCents: orders.passThroughCents,
       kind: orderLineItems.kind,
       quantity: orderLineItems.quantity,
       unitAmountCents: orderLineItems.unitAmountCents,
@@ -366,7 +373,14 @@ async function moneyParts(
     );
 
   const parts: RevenueLinePart[] = [];
+  const counterGroups = new Map<string, typeof orderLines>();
   for (const row of orderLines) {
+    if (row.counterReceipt) {
+      const group = counterGroups.get(row.orderId) ?? [];
+      group.push(row);
+      counterGroups.set(row.orderId, group);
+      continue;
+    }
     const line = revenueLineForOrderItem(row.kind as OrderLineKind, {
       workOrder: Boolean(row.workOrder),
       courseTrip: Boolean(row.courseTrip),
@@ -377,6 +391,24 @@ async function moneyParts(
       cents: row.quantity * row.unitAmountCents,
       keptRatio: orderKeptRatio(row),
     });
+  }
+  for (const group of counterGroups.values()) {
+    const receipt = group[0];
+    if (!receipt) continue;
+    parts.push(
+      ...counterReceiptRevenueParts(
+        group.map((row) => ({
+          ...row,
+          kind: row.kind as OrderLineKind,
+          workOrder: Boolean(row.workOrder),
+          courseTrip: Boolean(row.courseTrip),
+        })),
+        Math.max(
+          0,
+          receipt.amountPaidCents - receipt.taxCents - receipt.tipCents - receipt.passThroughCents,
+        ),
+      ),
+    );
   }
   for (const row of checkoutSeats) {
     const keptRatio = checkoutKeptRatio(row);

@@ -128,7 +128,8 @@
     "training_dive_marked": "{actor} marked {diver}’s dive as training for {course}",
     "training_dive_cleared": "{actor} cleared the training mark on {diver}’s dive for {course}{formsOwed, select, yes {, with course forms still owed} other {}}",
     "bookkeeper_email_vouched": "{actor} re-confirmed the bookkeeper’s email for month-end files",
-    "bookkeeper_email_stopped": "The bookkeeper stopped month-end files with the link in one"
+    "bookkeeper_email_stopped": "The bookkeeper stopped month-end files with the link in one",
+    "purchase_recorded": "{actor} recorded a purchase"
   },
   "unknown": "An earlier entry",
   "review": {

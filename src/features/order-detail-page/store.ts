@@ -1,5 +1,6 @@
 import { getOrderBookingContext } from "@/features/order-booking";
 import { loadOrderHeader } from "@/features/order-header";
+import { purchaseRefundHistory } from "@/features/recorded-purchases";
 import {
   canPersonExportDisputeSheet,
   canPersonManageOrders,
@@ -29,12 +30,13 @@ export async function getOrderDetailPage(
   const order = await getOrder(db, shopId, orderId);
   if (!order) return null;
   const { bookingId } = order.order;
-  const [refund, disputeSheet, voidCounter, header, booking] = await Promise.all([
+  const [refund, disputeSheet, voidCounter, header, booking, purchaseRefunds] = await Promise.all([
     canPersonRefund(db, shopId, personId),
     bookingId ? canPersonExportDisputeSheet(db, shopId, personId) : false,
     isVoidableCounterOrder(order.order) ? canPersonManageOrders(db, shopId, personId) : false,
     loadOrderHeader(db, { shopId, orderId: order.order.id, personId }),
     bookingId ? getOrderBookingContext(db, shopId, bookingId) : null,
+    order.order.counterReceipt ? purchaseRefundHistory(db, shopId, orderId) : [],
   ]);
-  return { order, can: { refund, disputeSheet, voidCounter }, header, booking };
+  return { order, purchaseRefunds, can: { refund, disputeSheet, voidCounter }, header, booking };
 }

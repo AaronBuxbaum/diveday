@@ -990,7 +990,7 @@
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 312,
-    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 394,
+    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 392,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 349,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 306,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 302,
@@ -1059,7 +1059,7 @@
     "src/app/(token)/ready/[token]/page.tsx": 617,
     "src/app/s/[shopSlug]/page.tsx": 644,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
-    "src/app/shop/[shopSlug]/orders/page.tsx": 571,
+    "src/app/shop/[shopSlug]/orders/page.tsx": 565,
     "src/app/shop/[shopSlug]/page.tsx": 576,
     "src/app/shop/[shopSlug]/promos/page.tsx": 489,
     "src/app/shop/[shopSlug]/reports/page.tsx": 467,

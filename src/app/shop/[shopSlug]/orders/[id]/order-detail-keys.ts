@@ -50,7 +50,15 @@ export function lineKindKey(kind: string): StaffMessageKey {
 
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
-export const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+export const NOTICES: Record<
+  string,
+  {
+    tone: NoticeTone;
+    key: StaffMessageKey;
+  }
+> = {
+  "purchase-refund-recorded": { tone: "success", key: "orders.purchase.refundRecorded" },
+  "purchase-refund-invalid": { tone: "danger", key: "orders.purchase.refundInvalid" },
   refreshed: { tone: "success", key: "orders.detail.notice.refreshed" },
   "refresh-failed": { tone: "danger", key: "orders.detail.notice.refreshFailed" },
   voided: { tone: "success", key: "orders.detail.notice.voided" },

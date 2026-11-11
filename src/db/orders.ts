@@ -28,6 +28,7 @@ import {
   type InvoicingProvider,
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
+import { isUuid } from "@/lib/uuid";
 import { canPersonManageOrders, loadActiveStaffRoles } from "./authz";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { recordOrderCollection } from "./collection-ledger";
@@ -54,6 +55,7 @@ import type {
   PaymentOperationIntent,
 } from "./schema";
 import {
+  activityEvents,
   bookings,
   courses,
   divePackages,
@@ -486,9 +488,20 @@ async function issueOrder(
 }
 
 /** How a counter order's money was taken: anything but a Stripe invoice. */
-export type CounterCollection = Extract<OrderCollection, "cash" | "card_machine">;
+export type CounterCollection = Extract<
+  OrderCollection,
+  "cash" | "card_machine" | "bank_transfer" | "other"
+>;
 
 export type NewCounterOrderInput = {
+  /** Stable request UUID: retrying a receipt never creates a second purchase. */
+  attemptId?: string;
+  /** Included amounts, not added to the line total. Omitted tax means unknown. */
+  taxCents?: number;
+  tipCents?: number;
+  receiptReference?: string | null;
+  /** Actual receipt time, no later than the recording clock. */
+  collectedAt?: Date;
   shopId: string;
   /** The person who paid. Must belong to the shop. */
   personId: string;
@@ -507,6 +520,8 @@ export type RecordCounterOrderOutcome =
 const COUNTER_COLLECTIONS: ReadonlySet<string> = new Set<CounterCollection>([
   "cash",
   "card_machine",
+  "bank_transfer",
+  "other",
 ]);
 
 /**
@@ -517,7 +532,8 @@ const COUNTER_COLLECTIONS: ReadonlySet<string> = new Set<CounterCollection>([
 export type OpenOrderCollection = CounterCollection | "room_charge";
 
 const OPEN_ORDER_COLLECTIONS: ReadonlySet<string> = new Set<OpenOrderCollection>([
-  ...(COUNTER_COLLECTIONS as ReadonlySet<CounterCollection>),
+  "cash",
+  "card_machine",
   "room_charge",
 ]);
 
@@ -529,11 +545,16 @@ export const ROOM_HOTEL_MAX = 80;
 export type RoomCharge = { number: string; hotel: string | null };
 
 /**
- * The line kinds a counter order may carry: a rental, and the parts and labor
- * of a bench job paid at pickup (`recordWorkOrderCounterPayment`), which bills
- * as `other` exactly as its Stripe bill does.
+ * Counter receipts cover rentals, merchandise, other services and separately
+ * identified pass-through charges. Package credits and booking fares use
+ * their own stricter writers rather than this any-staff receipt doorway.
  */
-const COUNTER_LINE_KINDS: ReadonlySet<string> = new Set(["rental", "other"]);
+const COUNTER_LINE_KINDS: ReadonlySet<string> = new Set([
+  "rental",
+  "merchandise",
+  "pass_through_fee",
+  "other",
+]);
 
 /**
  * Record money a shop has already taken at the counter, in cash or on its own
@@ -560,6 +581,13 @@ export async function recordCounterOrder(
 ): Promise<RecordCounterOrderOutcome> {
   const invalid = { ok: false, reason: "invalid" } as const;
   if (!COUNTER_COLLECTIONS.has(input.collection)) return invalid;
+  if (input.attemptId !== undefined && !isUuid(input.attemptId)) return invalid;
+  if ((input.receiptReference?.length ?? 0) > 100) return invalid;
+  if (
+    input.collectedAt &&
+    (!Number.isFinite(input.collectedAt.getTime()) || input.collectedAt > nowDate())
+  )
+    return invalid;
   const roles = await loadActiveStaffRoles(db, input.shopId, input.createdByPersonId);
   if (!roles || !isStaff(roles)) return invalid;
   if (input.lineItems.length === 0 || input.lineItems.length > MAX_LINE_ITEMS_PER_ORDER) {
@@ -571,9 +599,8 @@ export async function recordCounterOrder(
   if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
     return invalid;
   }
-  // Counter money is rental money: any staff may record it, so it may not
-  // carry what a broader gate guards, like a dive package's credits (security
-  // review of PR #2308). A new counter use widens this list on purpose.
+  // A receipt grants no entitlement or seat: those transitions retain their
+  // own gates. Merchandise and ordinary services are counter work too.
   if (!input.lineItems.every((item) => COUNTER_LINE_KINDS.has(item.kind) && !item.packageId)) {
     return invalid;
   }
@@ -596,12 +623,24 @@ export async function recordCounterOrder(
       total + (item.kind === "pass_through_fee" ? item.quantity * item.unitAmountCents : 0),
     0,
   );
+  const taxCents = input.taxCents ?? 0;
+  const tipCents = input.tipCents ?? 0;
+  if (
+    ![taxCents, tipCents, totalCents].every(Number.isSafeInteger) ||
+    totalCents < 0 ||
+    totalCents > 2_147_483_647 ||
+    taxCents < 0 ||
+    tipCents < 0 ||
+    taxCents + tipCents + passThroughCents > totalCents
+  )
+    return invalid;
   const now = nowDate();
 
   const order = await db.transaction(async (tx) => {
     const [created] = await tx
       .insert(orders)
       .values({
+        ...(input.attemptId ? { id: input.attemptId } : {}),
         shopId: input.shopId,
         bookingId: null,
         personId: payer.id,
@@ -611,17 +650,74 @@ export async function recordCounterOrder(
         currency,
         totalCents,
         passThroughCents,
-        taxCents: 0,
+        taxCents,
+        tipCents,
+        counterReceipt: {
+          taxCents,
+          taxKnown: input.taxCents !== undefined,
+          tipCents,
+          passThroughCents,
+          reference: input.receiptReference?.trim() || null,
+        },
         amountPaidCents: totalCents,
         description: input.description ?? null,
         stripeAccountId: null,
         stripeCustomerId: null,
         stripeInvoiceId: null,
         finalizedAt: now,
-        paidAt: now,
+        paidAt: input.collectedAt ?? now,
       })
+      .onConflictDoNothing({ target: orders.id })
       .returning();
-    if (!created) throw new Error("recordCounterOrder: insert returned no row");
+    if (!created) {
+      const [existing] = await tx
+        .select()
+        .from(orders)
+        .where(
+          and(
+            eq(orders.id, input.attemptId ?? "00000000-0000-0000-0000-000000000000"),
+            eq(orders.shopId, input.shopId),
+          ),
+        );
+      if (
+        !existing ||
+        existing.personId !== input.personId ||
+        existing.createdByPersonId !== input.createdByPersonId ||
+        existing.collection !== input.collection ||
+        existing.totalCents !== totalCents ||
+        existing.counterReceipt?.reference !== (input.receiptReference?.trim() || null) ||
+        existing.description !== (input.description ?? null)
+      )
+        return null;
+      const items = await tx
+        .select()
+        .from(orderLineItems)
+        .where(
+          and(eq(orderLineItems.orderId, existing.id), eq(orderLineItems.shopId, input.shopId)),
+        );
+      const fingerprint = (
+        rows: { kind: string; description: string; quantity: number; unitAmountCents: number }[],
+      ) =>
+        JSON.stringify(
+          rows
+            .map(({ kind, description, quantity, unitAmountCents }) => [
+              kind,
+              description,
+              quantity,
+              unitAmountCents,
+            ])
+            .sort(),
+        );
+      if (
+        fingerprint(items) !== fingerprint(input.lineItems) ||
+        existing.counterReceipt?.taxCents !== taxCents ||
+        existing.counterReceipt?.tipCents !== tipCents ||
+        existing.counterReceipt?.taxKnown !== (input.taxCents !== undefined) ||
+        (input.collectedAt && existing.paidAt?.getTime() !== input.collectedAt.getTime())
+      )
+        return null;
+      return existing;
+    }
     await recordOrderCollection(tx, created.shopId, created.id);
 
     await tx.insert(orderLineItems).values(
@@ -635,6 +731,27 @@ export async function recordCounterOrder(
         packageId: item.packageId ?? null,
       })),
     );
+
+    const [actor] = await tx
+      .select({ name: people.fullName })
+      .from(people)
+      .where(
+        and(eq(people.id, input.createdByPersonId), eq(people.shopId, input.shopId), livePerson()),
+      );
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      orderId: created.id,
+      actorPersonId: input.createdByPersonId,
+      subjectPersonId: payer.id,
+      code: "purchase_recorded",
+      audience: "staff",
+      params: {
+        actor: actor?.name ?? "",
+        amountCents: String(totalCents),
+        currency,
+        method: input.collection,
+      },
+    });
 
     // The same paid-order consequences `createOrder` runs for an invoice Stripe
     // already reports paid: a package bought over the counter is a package.
@@ -655,7 +772,7 @@ export async function recordCounterOrder(
     return created;
   });
 
-  return { ok: true, order };
+  return order ? { ok: true, order } : invalid;
 }
 
 export type RecordPaymentOnOrderOutcome =
@@ -1086,7 +1203,15 @@ export async function voidPaidCounterOrder(
     const now = nowDate();
     const [updated] = await tx
       .update(orders)
-      .set({ status: "void", voidedAt: now, amountPaidCents: 0, updatedAt: now })
+      .set({
+        status: "void",
+        voidedAt: now,
+        amountPaidCents: 0,
+        taxCents: 0,
+        tipCents: 0,
+        passThroughCents: 0,
+        updatedAt: now,
+      })
       .where(eq(orders.id, current.id))
       .returning();
     if (!updated) return { ok: false, reason: "not_found" };

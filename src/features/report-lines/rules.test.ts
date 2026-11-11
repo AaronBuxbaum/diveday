@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkoutKeptRatio,
+  counterReceiptRevenueParts,
   orderKeptRatio,
   packageDiveValueCents,
   revenueByLine,
@@ -144,5 +145,21 @@ describe("packageDiveValueCents", () => {
     expect(packageDiveValueCents({ unitAmountCents: 45_000, diveCount: 10 })).toBe(4_500);
     expect(packageDiveValueCents({ unitAmountCents: 10_000, diveCount: 3 })).toBe(3_333);
     expect(packageDiveValueCents({ unitAmountCents: 10_000, diveCount: 0 })).toBe(0);
+  });
+});
+
+describe("inclusive counter receipt category allocation", () => {
+  it("allocates indivisible retained revenue once and leaves pass-through outside", () => {
+    const items = [
+      { kind: "merchandise" as const, quantity: 1, unitAmountCents: 1, ...plain },
+      { kind: "rental" as const, quantity: 1, unitAmountCents: 1, ...plain },
+      { kind: "pass_through_fee" as const, quantity: 1, unitAmountCents: 10, ...plain },
+    ];
+    const parts = counterReceiptRevenueParts(items, 1);
+    expect(parts.reduce((sum, part) => sum + part.cents, 0)).toBe(1);
+    expect(parts).toEqual([
+      { line: "rentals", cents: 1, keptRatio: 1 },
+      { line: "retail", cents: 0, keptRatio: 1 },
+    ]);
   });
 });

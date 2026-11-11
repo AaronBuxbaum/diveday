@@ -3,7 +3,6 @@ import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
@@ -36,6 +35,7 @@ import {
   OPEN_TRIP_LINE,
   OPEN_TRIP_LINK,
 } from "./_components/notice-rows";
+import { InvoiceDoor, OrdersHeader } from "./_components/OrdersHeader";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersSeatLines } from "./_components/OrdersSeatLines";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
@@ -43,16 +43,13 @@ import { OwedLine } from "./_components/OwedLine";
 import { MoneyOwedQueues } from "./_components/OwedMoneyQueues";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 import { PayoutLines } from "./_components/PayoutLines";
+import { PurchasePanel } from "./_components/PurchasePanel";
 import type { OrdersSearch } from "./_lib/orders-search";
 import { type OrdersHrefOverrides, orderIndexFilter, ordersIndexHref } from "./order-index-filter";
 
-// This page's loading.tsx can paint before its reads; no request read sits above it.
 export const instant = true;
 
 export const metadata: Metadata = { title: "Orders — DiveDay" };
-
-/* Use concise canonical status labels here; enum-keyed copy keeps new database
- * statuses from silently appearing as raw values in the filter. */
 
 /** Show the unfinished money operation in shop language; keep its Stripe id
  * available on demand for lookup. The fallback avoids exposing raw enum values. */
@@ -78,6 +75,7 @@ function safeImportedDocumentUrl(url: string | null): string | null {
 /** Keep refusals from creating an order on the order surface, where every staff
  * role can still read orders and find payment guidance. */
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+  "purchase-refund-invalid": { tone: "danger", key: "orders.purchase.refundInvalid" },
   "payment-not-connected": { tone: "warning", key: "orders.index.notice.paymentNotConnected" },
   "not-authorized": { tone: "danger", key: "orders.index.notice.notAuthorized" },
   "not-authorized-refund": { tone: "danger", key: "orders.index.notice.notAuthorizedRefund" },
@@ -190,11 +188,7 @@ export default async function OrdersIndexPage({
   const door = newOrderDoorFor(shopSlug, search.add, can.manageOrders, paymentsConnected);
   const banner = door.adding ? null : noticeFromParam(door.refusal ?? notice, NOTICES);
   // Reuse one permission-gated door in both the header and empty state.
-  const newOrderDoor = door.href ? (
-    <Link href={door.href} className={buttonClass()}>
-      {t("orders.index.newOrder")}
-    </Link>
-  ) : null;
+  const newOrderDoor = <InvoiceDoor href={door.href} t={t} />;
   const orderPage = ledger.page;
   const hasImportedHistory = Boolean(importedHistoryPage && importedHistoryPage.total > 0);
 
@@ -255,17 +249,10 @@ export default async function OrdersIndexPage({
   return (
     <StaffPage width="full">
       <FlashParams params={["notice"]} />
-      <ShopPageHeader
-        title={t("shared.shopSections.money")}
-        actions={
-          <>
-            {/* Keep one primary action when the empty state already offers it;
-                payment setup belongs to the setup card below. */}
-            {!paymentsConnected || (orderPage.total === 0 && !hasImportedHistory && !hasFilters)
-              ? null
-              : newOrderDoor}
-          </>
-        }
+      <OrdersHeader
+        {...{ shopSlug, t, search }}
+        showInvoice={paymentsConnected && (orderPage.total > 0 || hasImportedHistory || hasFilters)}
+        invoiceDoor={newOrderDoor}
       />
       <StaffSectionTabs
         section="money"
@@ -276,8 +263,15 @@ export default async function OrdersIndexPage({
       />
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
+      <PurchasePanel
+        open={search.purchase === "1"}
+        surface={{ db, shop, session }}
+        search={search}
+        {...{ t, locale }}
+        personId={personFilter}
+      />
       <OrdersAddPanel
-        open={door.adding}
+        open={door.adding && search.purchase !== "1"}
         {...{ surface: { db, shop, session }, shopSlug, search, t, locale }}
       />
 

@@ -29,6 +29,9 @@ export const STAFF_SHELL_COVERAGE = {
 
 /** Core options within existing booking flows, rather than separate destinations or subsystems. */
 export const BOOKING_FLOW_COVERAGE = {
+  recordedPurchases: {
+    core: "recording money already received is part of core Orders and fee correctness, not a POS",
+  },
   groupHolds: {
     core: "a per-seat booking reservation option; its expiry is part of capacity and payment correctness",
   },

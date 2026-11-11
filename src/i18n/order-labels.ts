@@ -38,6 +38,8 @@ type CounterCollection = Exclude<OrderCollection, "stripe_invoice">;
 export const ORDER_COLLECTION_KEYS: Record<CounterCollection, StaffMessageKey> = {
   cash: "orders.collection.cash",
   card_machine: "orders.collection.card_machine",
+  bank_transfer: "orders.collection.bank_transfer",
+  other: "orders.collection.other",
   room_charge: "orders.collection.room_charge",
 };
 
@@ -48,6 +50,8 @@ export const ORDER_PAID_AT_COUNTER_KEYS: Record<
 > = {
   cash: "orders.detail.paidAtCounter.cash",
   card_machine: "orders.detail.paidAtCounter.card_machine",
+  bank_transfer: "orders.detail.paidAtCounter.bank_transfer",
+  other: "orders.detail.paidAtCounter.other",
 };
 
 /**
