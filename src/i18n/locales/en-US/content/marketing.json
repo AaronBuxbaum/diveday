@@ -1456,5 +1456,10 @@
       "systemLink": "Export steps by system",
       "systemGuideLink": "Export steps for {competitor}"
     }
+  },
+  "illustrations": {
+    "caption": "Illustration created for DiveDay.",
+    "harborAlt": "Illustration of divers and a crew member meeting beside a moored dive boat.",
+    "classroomAlt": "Illustration of an instructor and two adults talking over dive equipment in a coastal shop."
   }
 }

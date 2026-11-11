@@ -162,7 +162,8 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   // The screen is the claim in every step, so each one is shown rather than
   // described, and named for a screen reader by a label the *caller* resolves
   // from the bundle, never an English literal in the component.
-  await expect(stepsBand.getByRole("img")).toHaveCount(5);
+  await expect(stepsBand.locator(":scope > ol").getByRole("img")).toHaveCount(5);
+  await expect(stepsBand.locator("[data-marketing-illustration] img")).toHaveCount(1);
   await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
   // The roll-call step draws the dock check-in, the check-in feature page's
   // own screen by its key (H-20260802-may-public-pages-say, applied 2026-10-25): the screen the crew taps
@@ -1856,3 +1857,43 @@ test("guide contents reveal the complete spreadsheet reference on the same page"
   await expect(reference).toHaveAttribute("open", "");
   await expect(reference.getByRole("heading", { name: "Identity and contact" })).toBeInViewport();
 });
+
+for (const [route, scene] of [
+  ["/", "harbor"],
+  ["/product/online-booking", "harbor"],
+  ["/product/website", "harbor"],
+  ["/product/courses", "classroom"],
+  ["/product/rental-gear", "classroom"],
+] as const) {
+  test(`editorial illustration loads without replacing product proof on ${route}`, async ({
+    page,
+  }) => {
+    await page.goto(route);
+    const illustration = page.locator(`[data-marketing-illustration="${scene}"]`);
+    await illustration.scrollIntoViewIfNeeded();
+    await expect(illustration.getByRole("img")).toBeVisible();
+    await expect(illustration.locator("figcaption")).toHaveText(
+      "Illustration created for DiveDay.",
+    );
+    await expect
+      .poll(() => illustration.locator("img").evaluate((img: HTMLImageElement) => img.naturalWidth))
+      .toBeGreaterThan(0);
+    await expect(
+      page.getByRole("button", { name: "Try the live demo", exact: true }).first(),
+    ).toBeVisible();
+    const slots = [];
+    for (const viewport of [390, 768, 1280, 1920]) {
+      await page.setViewportSize({ width: viewport, height: 900 });
+      const box = await illustration.locator("img").boundingBox();
+      if (!box) throw new Error("Editorial image has no rendered box");
+      expect(box.width).toBeGreaterThan(0);
+      expect(box.width).toBeLessThanOrEqual(viewport);
+      expect(box.width / box.height).toBeCloseTo(1.5, 2);
+      slots.push({ viewport, width: box.width });
+    }
+    await test.info().attach("editorial-slot-widths", {
+      body: JSON.stringify({ route, scene, slots }),
+      contentType: "application/json",
+    });
+  });
+}

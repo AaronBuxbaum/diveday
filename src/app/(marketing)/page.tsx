@@ -10,6 +10,7 @@ import { homeSoftwareJsonLd } from "@/app/_components/home-json-ld";
 import { JsonLd } from "@/components/JsonLd";
 import { ArrivalDeskFallback, WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
+import { MarketingIllustration } from "@/components/MarketingIllustration";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import {
   DiverBookingFallback,
@@ -276,12 +277,11 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
           and the feature page's name beside a large drawing (`STEPS`). */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-          <div className="max-w-2xl">
-            {/* One sentence and no lede: the rows beneath are the whole of
-                what the band has to say. */}
-            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
+          <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-14">
+            <h2 className={`max-w-2xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.home.stepsTitle")}
             </h2>
+            <MarketingIllustration scene="harbor" locale={locale} />
           </div>
 
           {/* 96px between steps at every width, against 20px inside one below

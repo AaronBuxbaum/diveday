@@ -162,5 +162,14 @@
       "1280": 305,
       "1920": 333
     }
+  },
+  "src/components/MarketingIllustration.tsx :: (min-width: 1280px) 600px, (min-width: 1024px) 50vw, calc(100vw - 48px)": {
+    "measured": "2026-11-11, all five editorial illustration slots on /, /product/online-booking, /product/website, /product/courses and /product/rental-gear. Real Chromium production-build CSS widths, recorded by marketing.spec.ts; E2E disables optimizer but does not change the slot geometry. The guard checks the source sizes declaration against these measured widths.",
+    "rendered": {
+      "390": 342,
+      "768": 720,
+      "1280": 588,
+      "1920": 588
+    }
   }
 }

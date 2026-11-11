@@ -1015,3 +1015,18 @@ class also covers different semantic positions, so its 33/138px starts do not es
 column. A native radio has no separate outline because ChoicePill draws focus around the whole
 rounded label. These four probe clusters are dismissed for those specific structures; they do not
 waive checks on new painted controls or actual shared columns.
+
+### Editorial scenes on the marketing journey, 2026-11-10
+
+- **One idea:** a product demonstration belongs to a human dive day.
+- **Arriving question:** can I picture my guests and crew here? The illustrations add a welcoming
+  dock and a small teaching moment while the existing screens answer what the product does.
+- **Controls that dissolved:** no new controls. The demo still leads; artwork adds no carousel,
+  modal, playback button, fabricated proof or secondary sales pitch.
+- **Remove first:** captions beyond the short illustration label, then duplicate scenes on one
+  page. The complete image remains visible at every width; no text is embedded or overlaid.
+- **Composition:** considered a full-bleed photo-like hero behind the headline, and supporting
+  editorial scenes beside the existing journey introduction or numbered steps. Chose the latter:
+  it preserves the hero's product proof and first demo door, gives the content breathing room,
+  and makes generated artwork visibly distinct from evidence. On phones, instructions remain
+  before the supporting scene; the steps retain their reading order.

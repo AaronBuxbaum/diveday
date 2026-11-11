@@ -2,6 +2,7 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { ClosingCta, FunnelCtas, heroPriceLine } from "@/app/_components/FunnelCtas";
 import { JsonLd } from "@/components/JsonLd";
+import { MarketingIllustration } from "@/components/MarketingIllustration";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -132,6 +133,14 @@ export async function FeaturePageBody({
   ];
   const included = capabilityGroup(key);
   const related = relatedFeaturePages(page);
+  // Only pages about arrival or learning get an editorial scene. Keep the
+  // product hub, safety/legal pages and the owner's About narrative unchanged.
+  const scene =
+    slug === "online-booking" || slug === "website"
+      ? "harbor"
+      : slug === "courses" || slug === "rental-gear"
+        ? "classroom"
+        : null;
 
   return (
     <main className="flex-1">
@@ -227,25 +236,32 @@ export async function FeaturePageBody({
       <MarketingReveal>
         <section className="bg-surface">
           <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20">
-            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.featureChrome.stepsTitle")}
-            </h2>
-            <ol className="mt-10 grid gap-8 md:grid-cols-3 md:gap-10">
-              {steps.map((step, index) => (
-                <li key={step.title} className="flex gap-3 border-t border-border pt-5">
-                  <span
-                    aria-hidden="true"
-                    className="w-4 shrink-0 leading-7 font-semibold text-primary tabular-nums"
-                  >
-                    {index + 1}
-                  </span>
-                  <div>
-                    <h3 className={`${ITEM_TITLE_CLASS} text-balance`}>{step.title}</h3>
-                    <p className="mt-2 leading-7 text-muted">{step.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <div className={scene ? "grid items-center gap-8 lg:grid-cols-2 lg:gap-14" : undefined}>
+              <div>
+                <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
+                  {t("marketing.featureChrome.stepsTitle")}
+                </h2>
+                <ol
+                  className={scene ? "mt-8 space-y-6" : "mt-10 grid gap-8 md:grid-cols-3 md:gap-10"}
+                >
+                  {steps.map((step, index) => (
+                    <li key={step.title} className="flex gap-3 border-t border-border pt-5">
+                      <span
+                        aria-hidden="true"
+                        className="w-4 shrink-0 leading-7 font-semibold text-primary tabular-nums"
+                      >
+                        {index + 1}
+                      </span>
+                      <div>
+                        <h3 className={`${ITEM_TITLE_CLASS} text-balance`}>{step.title}</h3>
+                        <p className="mt-2 leading-7 text-muted">{step.body}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              {scene ? <MarketingIllustration scene={scene} locale={locale} /> : null}
+            </div>
           </div>
         </section>
       </MarketingReveal>

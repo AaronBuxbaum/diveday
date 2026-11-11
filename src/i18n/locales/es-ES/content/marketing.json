@@ -1456,5 +1456,10 @@
       "systemLink": "Pasos de exportación por sistema",
       "systemGuideLink": "Pasos de exportación de {competitor}"
     }
+  },
+  "illustrations": {
+    "caption": "Ilustración creada para DiveDay.",
+    "harborAlt": "Ilustración de buzos y un tripulante reunidos junto a un barco de buceo amarrado.",
+    "classroomAlt": "Ilustración de un instructor y dos adultos conversando sobre equipo de buceo en un centro junto al mar."
   }
 }
