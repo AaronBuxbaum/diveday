@@ -7,7 +7,7 @@ import {
   recordCollectionBalance,
   recordOrderCollection,
 } from "./collection-ledger";
-import { setBookingPayment } from "./payments";
+import { getBookingPayment, setBookingPayment } from "./payments";
 import {
   bookingCheckouts,
   bookings,
@@ -221,6 +221,137 @@ describe("received-money collection ledger", () => {
       (await db.select().from(bookingCheckouts).where(eq(bookingCheckouts.id, checkout.id)))[0]
         ?.collectionNeedsReview,
     ).toBe(true);
+    expect(await db.select().from(collectionEntries)).toHaveLength(0);
+  });
+
+  it("repairs late tax evidence without reviving an expired checkout or duplicating its receipt", async () => {
+    const { db, shop, booking } = await fixture();
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: booking.tripId,
+        stripeAccountId: "acct_late_tax",
+        stripeSessionId: "cs_late_tax",
+        status: "expired",
+        currency: "usd",
+        totalCents: 10_000,
+        amountPerDiverCents: 10_000,
+        taxEnabled: true,
+      })
+      .returning();
+    if (!checkout) throw new Error("checkout missing");
+    const read = async () =>
+      (await db.select().from(bookingCheckouts).where(eq(bookingCheckouts.id, checkout.id)))[0];
+
+    // A tax figure without an exact total is not enough. Later partial or
+    // contradictory deliveries may fill in the total but cannot invent tax.
+    for (const [total, tax] of [
+      [undefined, 1_000],
+      [10_000, undefined],
+      [10_000, null],
+      [10_000, -1],
+      [10_000, 1.5],
+      [10_000, 20_000],
+    ]) {
+      expect(
+        await markCheckoutPaidBySessionId(db, "cs_late_tax", "acct_late_tax", total, tax),
+      ).toBeNull();
+      expect(await read()).toMatchObject({
+        status: "expired",
+        collectionNeedsReview: true,
+        taxCents: null,
+      });
+      expect(await db.select().from(collectionEntries)).toHaveLength(0);
+    }
+    const firstReceiptAt = (await read())?.paidAfterCloseAt;
+    expect(firstReceiptAt).toBeInstanceOf(Date);
+    await markCheckoutPaidBySessionId(db, "cs_late_tax", "acct_late_tax", 10_000, 1_000);
+    expect(await read()).toMatchObject({
+      status: "expired",
+      collectionNeedsReview: false,
+      paidAfterCloseAt: firstReceiptAt,
+      paidAfterCloseCents: 10_000,
+      settledTotalCents: 10_000,
+      taxCents: 1_000,
+    });
+    const receipt = await db.select().from(collectionEntries);
+    expect(receipt).toHaveLength(1);
+    expect(receipt[0]).toMatchObject({
+      sourceId: checkout.id,
+      currency: "usd",
+      amountCents: 9_000,
+      recordedAt: firstReceiptAt,
+    });
+
+    // Once exact evidence is recorded, a redelivery cannot replace it or
+    // append a second collection, even if its reported figures differ.
+    await markCheckoutPaidBySessionId(db, "cs_late_tax", "acct_late_tax", 15_000, 2_000);
+    expect(await read()).toMatchObject({ settledTotalCents: 10_000, taxCents: 1_000 });
+    expect(await db.select().from(collectionEntries)).toEqual(receipt);
+    expect((await db.select().from(bookings).where(eq(bookings.id, booking.id)))[0]?.status).toBe(
+      "booked",
+    );
+    expect(await getBookingPayment(db, shop.id, booking.id)).toBeNull();
+  });
+
+  it("flags a contradictory completed replay even when its first exact figures cannot change", async () => {
+    const { db, shop, booking } = await fixture();
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: booking.tripId,
+        stripeAccountId: "acct_replayed_tax",
+        stripeSessionId: "cs_replayed_tax",
+        status: "completed",
+        currency: "usd",
+        totalCents: 10_000,
+        amountPerDiverCents: 10_000,
+        settledTotalCents: 10_000,
+        taxCents: 0,
+        taxEnabled: true,
+      })
+      .returning();
+    if (!checkout) throw new Error("checkout missing");
+    for (const tax of [20_000, 20_000]) {
+      await markCheckoutPaidBySessionId(db, "cs_replayed_tax", "acct_replayed_tax", 10_000, tax);
+      expect(
+        (await db.select().from(bookingCheckouts).where(eq(bookingCheckouts.id, checkout.id)))[0],
+      ).toMatchObject({
+        status: "completed",
+        settledTotalCents: 10_000,
+        taxCents: 0,
+        collectionNeedsReview: true,
+      });
+      expect(await db.select().from(collectionEntries)).toHaveLength(0);
+    }
+  });
+
+  it("holds tax exceeding the quote when the completed event omitted its actual total", async () => {
+    const { db, shop, booking } = await fixture();
+    const [checkout] = await db
+      .insert(bookingCheckouts)
+      .values({
+        shopId: shop.id,
+        tripId: booking.tripId,
+        stripeAccountId: "acct_missing_total",
+        stripeSessionId: "cs_missing_total",
+        currency: "usd",
+        totalCents: 10_000,
+        amountPerDiverCents: 10_000,
+        taxEnabled: true,
+      })
+      .returning();
+    if (!checkout) throw new Error("checkout missing");
+    await markCheckoutPaidBySessionId(db, "cs_missing_total", "acct_missing_total", null, 12_000);
+    expect(
+      (await db.select().from(bookingCheckouts).where(eq(bookingCheckouts.id, checkout.id)))[0],
+    ).toMatchObject({
+      status: "completed",
+      settledTotalCents: null,
+      collectionNeedsReview: true,
+    });
     expect(await db.select().from(collectionEntries)).toHaveLength(0);
   });
 
