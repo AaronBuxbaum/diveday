@@ -121,16 +121,18 @@ describe("the glossary's trip-stage entry", () => {
     // absent rather than "Unknown".
     expect(text).toMatch(/Never inferred/);
     expect(text).toContain('"Unknown"');
-    // One-way: a tap settles a station the clock would leave open, and never
-    // the reverse (issue #1480).
+    // Final-day Home can settle early; a speaking non-home word keeps the
+    // boat out when overdue. An earlier course day's Home finishes nothing.
     expect(text).toContain("#1480");
-    expect(text).toMatch(/settle a station the clock would leave open/);
+    expect(text).toMatch(/final-meeting-day `home` can settle a counted station/);
+    expect(text).toMatch(/non-home stage keeps it out even when overdue/);
+    expect(text).toMatch(/Earlier-day course Home\s+finishes nothing/);
   });
 
   it("says a stale stage is silence rather than a contradiction", async () => {
     const text = await entry();
     expect(text).toContain("`stage_stale` rung");
     expect(text).toMatch(/stale\s+rather than wrong/);
-    expect(text).toMatch(/says nothing about whether the day may close/);
+    expect(text).toMatch(/expired staff word hands the question back to the clock/);
   });
 });
