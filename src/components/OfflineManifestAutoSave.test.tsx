@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nowMs } from "@/lib/clock";
 import {
   beginOfflineTenantVerificationRound,
   primeOfflineManifestShell,
@@ -10,6 +11,11 @@ import {
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestPayload } from "@/lib/offline-manifests";
 import { MIN_TRIGGERED_GAP_MS, OfflineManifestAutoSave } from "./OfflineManifestAutoSave";
+
+vi.mock("@/lib/clock", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/clock")>()),
+  nowMs: vi.fn(() => Date.now()),
+}));
 
 vi.mock("@/lib/offline-manifest-store", () => ({
   beginOfflineTenantVerificationRound: vi.fn().mockResolvedValue(1),
@@ -311,7 +317,7 @@ describe("OfflineManifestAutoSave", () => {
       setOnline(true);
       vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
       let clock = 1_000;
-      vi.spyOn(performance, "now").mockImplementation(() => clock);
+      vi.mocked(nowMs).mockImplementation(() => clock);
       vi.mocked(fetch).mockImplementation(async () => upcomingResponse([payloadFor("a")]));
 
       render(<OfflineManifestAutoSave />);
@@ -328,10 +334,27 @@ describe("OfflineManifestAutoSave", () => {
       await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     });
 
+    it("treats a clock set backwards as an expired gap", async () => {
+      setOnline(true);
+      vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
+      let clock = 10_000_000;
+      vi.mocked(nowMs).mockImplementation(() => clock);
+      vi.mocked(fetch).mockImplementation(async () => upcomingResponse([]));
+
+      render(<OfflineManifestAutoSave />);
+      await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(purgeOfflineManifestsExceptShop).toHaveBeenCalled());
+      await Promise.resolve();
+
+      clock -= 60 * 60 * 1000;
+      visibleAgain();
+      await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    });
+
     it("does not hold the gate shut after a failed run", async () => {
       setOnline(true);
       vi.mocked(primeOfflineManifestShell).mockResolvedValue(undefined);
-      vi.spyOn(performance, "now").mockReturnValue(1_000);
+      vi.mocked(nowMs).mockReturnValue(1_000);
       vi.mocked(fetch).mockResolvedValueOnce(new Response("no", { status: 500 }));
 
       render(<OfflineManifestAutoSave />);

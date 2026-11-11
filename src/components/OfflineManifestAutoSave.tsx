@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { nowMs } from "@/lib/clock";
 import {
   beginOfflineTenantVerificationRound,
   primeOfflineManifestShell,
@@ -38,8 +39,9 @@ export const MIN_TRIGGERED_GAP_MS = 90 * 1000;
  */
 export function OfflineManifestAutoSave() {
   const inFlight = useRef<Promise<void> | null>(null);
-  // Monotonic, so a changed system clock cannot hold the gate shut. Set only by a run whose
-  // saves finished; a failed run leaves the next trigger free to try again.
+  // Wall clock on purpose: a monotonic clock stops while a phone sleeps, and a copy that is
+  // forty minutes old after an unlock must refetch. A clock set backwards counts as expired.
+  // Set only by a run whose saves finished; a failed run leaves the next trigger free to try.
   const lastSuccessAt = useRef<number | null>(null);
 
   const run = useCallback((): Promise<void> => {
@@ -87,7 +89,7 @@ export function OfflineManifestAutoSave() {
             }).catch(() => {}),
           ),
         );
-        lastSuccessAt.current = performance.now();
+        lastSuccessAt.current = nowMs();
       } catch {
         // Best-effort; see the module comment.
       }
@@ -100,9 +102,11 @@ export function OfflineManifestAutoSave() {
 
   useEffect(() => {
     void run();
-    const recentlySaved = () =>
-      lastSuccessAt.current !== null &&
-      performance.now() - lastSuccessAt.current < MIN_TRIGGERED_GAP_MS;
+    const recentlySaved = () => {
+      if (lastSuccessAt.current === null) return false;
+      const elapsed = nowMs() - lastSuccessAt.current;
+      return elapsed >= 0 && elapsed < MIN_TRIGGERED_GAP_MS;
+    };
     const onOnline = () => {
       if (navigator.onLine && !recentlySaved()) void run();
     };
