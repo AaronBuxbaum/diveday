@@ -2,12 +2,7 @@ import { describe, expect, it } from "vitest";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { INTERNAL_VOCABULARY } from "@/test/copy";
-import {
-  getMigrationGuide,
-  guideForPlan,
-  MIGRATION_GUIDE_SLUGS,
-  MIGRATION_GUIDES,
-} from "./migration-guides";
+import { getMigrationGuide, MIGRATION_GUIDE_SLUGS, MIGRATION_GUIDES } from "./migration-guides";
 
 const t = diverTranslator("en-US");
 
@@ -37,13 +32,6 @@ it.each(DIVER_LOCALES)("keeps FareHarbor cutover timing conditional in %s", (loc
 function en(key: DiverMessageKey, values?: Record<string, string>): string {
   const resolved = t(key, values);
   expect(resolved, `bundle is missing ${key}`).not.toBe(key);
-  return resolved;
-}
-
-const tEs = diverTranslator("es-ES");
-function es(key: DiverMessageKey): string {
-  const resolved = tEs(key);
-  expect(resolved, `es-ES bundle is missing ${key}`).not.toBe(key);
   return resolved;
 }
 
@@ -117,26 +105,16 @@ describe("help arrives before the homework", () => {
    * surface is likeliest to make (marketing.md: competitor statements must be
    * documented fact, phrased factually).
    */
-  it("opens the DiveShop360 lede on the export limit its own FAQ documents", () => {
-    const lede = en("marketing.guides.diveshop360.heroLede");
-    // The four datasets and the two a move needs are context.item1's, sourced
-    // to the DiveShop360 FAQ in `sources`; no bulk export and no API is
-    // exportNotes.note1's. The lede compresses, it does not add.
-    expect(lede).toMatch(/four CSVs its own FAQ names/);
-    expect(lede).toMatch(/no bulk export, no API/);
-    expect(lede).toMatch(/You need two of them/);
-    expect(en("marketing.guides.diveshop360.context.item1")).toMatch(/four CSV exports/);
-    expect(en("marketing.guides.diveshop360.exportNotes.note1")).toMatch(/no API, no bulk export/);
-    expect(getMigrationGuide("diveshop360")?.sources.some((s) => /FAQ/.test(s.label))).toBe(true);
-  });
-
-  it("opens the EVE lede on the history problem, attributed the way the page attributes it", () => {
-    const lede = en("marketing.guides.eve.heroLede");
-    expect(lede).toMatch(/database on one back-office PC/);
-    // Reported, never asserted as our own finding — the same attribution
-    // context.item2 already carries, kept verbatim in the compressed form.
-    expect(lede).toMatch(/shops report/);
-    expect(en("marketing.guides.eve.context.item2")).toMatch(/shops report/);
+  it("makes the crew workflow the reason to compare, without unsupported competitor limits", () => {
+    expect(en("marketing.guides.diveshop360.heroLede")).toMatch(/crew|certification|boat/);
+    expect(en("marketing.guides.diveshop360.context.item1")).toMatch(
+      /not a retail POS replacement/,
+    );
+    expect(en("marketing.guides.eve.context.item1")).toMatch(/PADI/);
+    for (const guide of MIGRATION_GUIDES) {
+      const lede = en(guide.heroLede);
+      expect(lede).not.toMatch(/no API|no bulk export|one back-office PC|shops report/);
+    }
   });
 
   it("keeps leave-it guides free of a coexist block", () => {
@@ -188,7 +166,7 @@ describe("help arrives before the homework", () => {
       }
       // What it says instead: the sheet holds, and the checking is the reader's
       // hands. Both halves, so a rewrite cannot drop the second one.
-      expect(intro).toMatch(locale === "es-ES" ? /verifica/i : /checks? nothing|checking/i);
+      expect(intro).toMatch(locale === "es-ES" ? /revisar/i : /checks? nothing|checking/i);
       expect(intro).toMatch(locale === "es-ES" ? /a mano/i : /by hand/i);
     });
   }
@@ -201,7 +179,7 @@ describe("migration guides", () => {
     // already be on, and the one the hub pairs with its spreadsheet card at the
     // top of the page. The named incumbents from the strategy are all present.
     expect(MIGRATION_GUIDE_SLUGS[0]).toBe("fareharbor");
-    for (const slug of ["eve", "diveshop360", "smartwaiver", "fareharbor", "rezdy"]) {
+    for (const slug of ["eve", "diveshop360", "smartwaiver", "fareharbor", "rezdy", "peek"]) {
       expect(MIGRATION_GUIDE_SLUGS).toContain(slug);
     }
   });
@@ -219,15 +197,9 @@ describe("migration guides", () => {
   it("carries the coexist framing only on the booking-channel guides, not the leave-it ones", () => {
     // FareHarbor and Rezdy are booking/distribution channels, so they earn the
     // coexist block; the records-system guides stay straight leave-it migrations.
-    for (const slug of ["fareharbor", "rezdy"]) {
+    for (const slug of ["fareharbor", "rezdy", "peek"]) {
       const guide = getMigrationGuide(slug);
       expect(guide?.coexist, `${slug} coexist`).toBeDefined();
-      expect(guide?.coexist?.runsInDiveDay.length).toBeGreaterThan(0);
-      const values = { competitor: guide?.competitor ?? "" };
-      for (const item of guide?.coexist?.runsInDiveDay ?? []) {
-        expect(en(item.title, values).trim().length).toBeGreaterThan(0);
-        expect(en(item.detail, values).trim().length).toBeGreaterThan(0);
-      }
       const coexist = guide?.coexist;
       if (!coexist) throw new Error("unreachable");
       expect(en(coexist.bridgeNote).trim().length).toBeGreaterThan(0);
@@ -239,18 +211,49 @@ describe("migration guides", () => {
     }
   });
 
-  it("interpolates the competitor's name into the shared coexist items, never a placeholder", () => {
-    // The runsInDiveDay list is authored once in the bundle; two of its
-    // messages take the competitor name as an ICU value. Rendered with the
-    // guide's competitor, no message may leak a raw `{competitor}`.
-    for (const slug of ["fareharbor", "rezdy"]) {
-      const guide = getMigrationGuide(slug);
-      const values = { competitor: guide?.competitor ?? "" };
-      const details = (guide?.coexist?.runsInDiveDay ?? []).map((item) => en(item.detail, values));
-      expect(details.join(" ")).not.toContain("{competitor}");
-      // The parameterised items really carry the incumbent's own name.
-      expect(details.some((d) => d.includes(guide?.competitor ?? ""))).toBe(true);
+  it("describes manual booking work on every channel guide", () => {
+    for (const slug of ["fareharbor", "rezdy", "peek"]) {
+      const bridge = getMigrationGuide(slug)?.coexist?.bridgeNote;
+      if (!bridge) throw new Error(slug);
+      for (const locale of DIVER_LOCALES) {
+        const copy = diverTranslator(locale)(bridge);
+        expect(copy).toMatch(locale === "en-US" ? /no automatic/i : /no hay conexión automática/i);
+        expect(copy).toMatch(locale === "en-US" ? /cancellations/ : /cancelaciones/);
+      }
     }
+  });
+
+  it("qualifies Peek export uncertainty rather than inventing a dashboard path", () => {
+    const guide = getMigrationGuide("peek");
+    expect(guide?.competitor).toBe("Peek Pro");
+    expect(en("marketing.guides.peek.context.item3")).toContain("Ask Peek support");
+    expect(en("marketing.guides.peek.exportIntro")).toContain("depend on your Peek account");
+    expect(en("marketing.guides.peek.importerNote")).toContain("not what Peek exports");
+    expect(guide?.sources.every(({ url }) => /peekpro.com|peek.com/.test(url))).toBe(true);
+  });
+
+  it("replaces fixed migration times with a sample and trip trial", () => {
+    for (const guide of MIGRATION_GUIDES) {
+      const copy = [
+        guide.heroLede,
+        guide.cutover.intro,
+        ...guide.cutover.steps.flatMap((s) => [s.title, s.detail]),
+      ]
+        .map((key) => en(key))
+        .join(" ");
+      expect(copy).not.toMatch(/an afternoon|one sitting|without downtime/);
+      expect(copy).toMatch(/trial/i);
+    }
+  });
+
+  it("keeps Smartwaiver participant data distinct from signed originals", () => {
+    expect(en("marketing.guides.smartwaiver.exportSteps.step1.title")).toContain("Participant CSV");
+    expect(en("marketing.guides.smartwaiver.exportNotes.note3")).toContain(
+      "not the original signed document",
+    );
+    expect(en("marketing.guides.smartwaiver.context.item3")).toContain(
+      "does not establish legal validity",
+    );
   });
 
   it("every guide carries the full three-part promise — no empty shell can ship", () => {
@@ -290,15 +293,10 @@ describe("migration guides", () => {
     // We migrate from files the shop exports itself; the copy must not describe
     // logging DiveDay into the incumbent or handing over its credentials.
     for (const guide of MIGRATION_GUIDES) {
-      const values = { competitor: guide.competitor };
       const coexist = guide.coexist
         ? [
             en(guide.coexist.heading),
             en(guide.coexist.intro),
-            ...guide.coexist.runsInDiveDay.flatMap((i) => [
-              en(i.title, values),
-              en(i.detail, values),
-            ]),
             en(guide.coexist.bridgeNote),
             ...(guide.coexist.replace
               ? [en(guide.coexist.replace.heading), en(guide.coexist.replace.body)]
@@ -310,7 +308,7 @@ describe("migration guides", () => {
             en(guide.website.heading),
             en(guide.website.intro),
             ...guide.website.ledger.flatMap((row) => [en(row.theirs), en(row.ours)]),
-            en(guide.website.sitesNote, { sitesPrice: guide.website.sitesPrice }),
+            en(guide.website.sitesNote),
             en(guide.website.offer.heading),
             en(guide.website.offer.body),
           ]
@@ -356,7 +354,7 @@ describe("migration guides", () => {
               en(guide.website.heading),
               en(guide.website.intro),
               ...guide.website.ledger.flatMap((row) => [en(row.theirs), en(row.ours)]),
-              en(guide.website.sitesNote, { sitesPrice: guide.website.sitesPrice }),
+              en(guide.website.sitesNote),
               en(guide.website.offer.heading),
               en(guide.website.offer.body),
             ]
@@ -403,20 +401,14 @@ describe("the website ledger", () => {
    * pays, and no message bundle carries a currency figure — the number has one
    * source, the guide, where the citation sits beside it.
    */
-  it("states the hosted-website figure once, as third parties report it, cited", () => {
-    expect(website.sitesPrice).toMatch(/^\$\d[\d,]*$/);
+  it("asks shops to confirm hosting terms instead of quoting an unverified price", () => {
     for (const locale of DIVER_LOCALES) {
-      const t = diverTranslator(locale);
-      const raw = diverTranslator(locale)(website.sitesNote, { sitesPrice: "{sitesPrice}" });
-      expect(raw).toContain("{sitesPrice}");
-      expect(raw).not.toMatch(/\p{Sc}\s?\d/u);
-      const rendered = t(website.sitesNote, { sitesPrice: website.sitesPrice });
-      expect(rendered).toContain(website.sitesPrice);
-      expect(rendered).toMatch(locale === "en-US" ? /third parties/i : /terceros/i);
+      const copy = diverTranslator(locale)(website.sitesNote);
+      expect(copy).not.toMatch(/\p{Sc}\s?\d/u);
+      expect(copy).toMatch(
+        locale === "en-US" ? /ownership, hosting and cancellation/ : /propiedad, el alojamiento/,
+      );
     }
-    expect(guide.sources.some((s) => s.url === "https://www.bokun.io/fareharbor-websites")).toBe(
-      true,
-    );
   });
 
   /**
@@ -433,35 +425,6 @@ describe("the website ledger", () => {
       );
       expect(body).toMatch(locale === "en-US" ? /discuss/ : /conversar/);
       expect(body).toMatch(locale === "en-US" ? /a person at DiveDay/ : /una persona de DiveDay/);
-    }
-  });
-});
-
-describe("guideForPlan (ADR 20261022-pricing-ab-test)", () => {
-  it("is the guide itself for the flat arm", () => {
-    for (const guide of MIGRATION_GUIDES) {
-      expect(guideForPlan(guide, "flat_monthly")).toBe(guide);
-    }
-  });
-
-  it("takes the per-booking-fee contrast out for the percent arm, in both locales", () => {
-    for (const slug of ["fareharbor", "rezdy"]) {
-      const registered = getMigrationGuide(slug);
-      if (!registered) throw new Error(slug);
-      const guide = guideForPlan(registered, "percent_of_volume");
-      expect(guide.coexist?.replace).toBeUndefined();
-      expect(guide.coexist?.bridgeNote).toBe(registered.coexist?.bridgeNote);
-      for (const key of [guide.cardSummary, guide.metaDescription, guide.heroLede]) {
-        expect(en(key)).not.toMatch(/per-booking|cut\b|fee behind/);
-        expect(es(key)).not.toMatch(/comisión por reserva/);
-      }
-    }
-  });
-
-  it("leaves the leave-it guides' words alone for the percent arm", () => {
-    for (const slug of ["eve", "diveshop360", "smartwaiver"]) {
-      const registered = getMigrationGuide(slug);
-      expect(registered && guideForPlan(registered, "percent_of_volume")).toEqual(registered);
     }
   });
 });

@@ -256,55 +256,29 @@
   "guides": {
     "shared": {
       "cutover": {
-        "heading": "Cutover without downtime",
-        "intro": "Two systems can run side by side for a trip cycle, so nothing here needs a weekend.",
+        "heading": "Choose your first trip in DiveDay",
+        "intro": "Try one representative trip before changing the system your crew relies on.",
         "crewFirst": {
           "title": "Let the crew walk their screens first",
           "detail": "The live demo runs the same roles your dock does. Have the captain run a roll call and the desk see who’s not ready before you move a single record."
         },
         "step1": {
-          "title": "Run both systems for one trip cycle",
-          "detail": "Import into DiveDay and start taking real trips through it (waivers, roster, manifest) while your old system keeps running alongside. Nothing forces a hard cutoff on day one."
+          "title": "Choose where each booking is managed",
+          "detail": "Keep taking bookings in your current system during the trial. If you prepare the same trip in DiveDay, staff create its departure and add the divers; importing history does not book their seats."
         },
         "step2": {
-          "title": "Time it to your slow season",
-          "detail": "Pick a week with the fewest trips already on the books. Fewer live bookings straddling the switch means less to reconcile by hand."
+          "title": "Check bookings and balances together",
+          "detail": "Compare upcoming departures, deposits, refunds and outstanding balances before changing your booking link. Keep the original records and receipts."
         },
         "step3": {
-          "title": "A second import updates your roster instead of duplicating it",
-          "detail": "Re-run the export later, once your old system has more bookings in it. DiveDay matches existing divers by email and updates them instead of creating a second record, and a repeated visit history collapses instead of doubling."
+          "title": "Review changes while both systems run",
+          "detail": "A contact re-import can update records matched by email. It does not transfer new bookings, cancellations or reschedules automatically. Assign someone to check those changes in both systems."
         },
         "step4": {
-          "title": "Budget an afternoon, not a week",
-          "detail": "Exporting from the old system is minutes of work, and the preview shows what will land before anything saves. Review it, fix any flagged rows, and import for real, all in one sitting."
+          "title": "Set the date after your trial",
+          "detail": "Allow time to correct the file, collect missing documents and let the crew practice. The size and quality of your records determine the work; we review that with you before the move."
         },
-        "midSeason": "Mid-season is fine. Run DiveDay beside what you have for one trip cycle, then import again, and the second import updates your divers instead of duplicating them. Budget an afternoon for it."
-      },
-      "coexist": {
-        "item1": {
-          "title": "Readiness that stops an unready diver boarding",
-          "detail": "The trip and the dive site decide what each diver needs. If nothing on file clears a diver’s certification or waiver, DiveDay names which one and the diver stays blocked. {competitor} takes the booking and never checks whether the diver is cleared to get on the boat."
-        },
-        "item2": {
-          "title": "Certification checks that gate the dive",
-          "detail": "DiveDay gates the dive on certification: a site marked deep will not clear a diver without the deep card, and the nitrox card is re-checked every time the prep list is read. Records you enter are verified by staff, and imported records are flagged for a one-tap confirmation."
-        },
-        "item3": {
-          "title": "Native waivers with medical review, in every tier",
-          "detail": "Waivers are built in and versioned against your own release. A medical answer that calls for a physician’s sign-off blocks the diver until that review happens. There is no paid add-on for any of it."
-        },
-        "item4": {
-          "title": "A roll-call manifest that survives the dock",
-          "detail": "One large circle per name for a wet thumb, a roll call after every dive, and a manifest the crew saves to the phone so it keeps working after the signal drops at the ramp."
-        },
-        "item5": {
-          "title": "Rental fit and the trip’s packing list",
-          "detail": "Every diver’s sizes become the boat’s kit list, with a tank per diver per dive split by air and nitrox. {competitor} doesn’t know a diver’s wetsuit size."
-        },
-        "item6": {
-          "title": "The night-before brief and a recap they share",
-          "detail": "Each diver gets a plain-language brief the night before (dock time, conditions, what to bring) and a shareable recap page after."
-        }
+        "midSeason": "You can trial DiveDay mid-season while your current system stays in use. Start with a sample export and one trip, then review the remaining work before choosing a handover date."
       },
       "scopeTable": {
         "contact": {
@@ -370,160 +344,144 @@
       }
     },
     "eve": {
-      "cardSummary": "Long the Windows desktop shop-management system for PADI retailers, now owned by DiveShop360. Export your customers and certification records, then bring them here.",
+      "cardSummary": "Compare the crew’s daily work, while keeping the retail and PADI processes you rely on.",
       "metaTitle": "Switching from EVE to DiveDay",
-      "metaDescription": "Leaving EVE? A step-by-step guide to exporting your customers and certifications from EVE and bringing them into DiveDay: what comes across, what does not, and why.",
-      "heroEyebrow": "Switching to DiveDay",
-      "heroTitle": "Moving your shop off EVE",
-      "heroLede": "Years of divers and their certification records are sitting in a database on one back-office PC, and shops report the history is the hard part to pull out cleanly. This guide is the export, step by step, then the table of what comes across and what stays in EVE.",
+      "metaDescription": "Compare DiveDay’s trip preparation and roll call with your EVE workflow. Review export options, retained records and the work involved before moving.",
+      "heroEyebrow": "Switching from EVE",
+      "heroTitle": "Bring your regular divers into a better-prepared dive day",
+      "heroLede": "Keep each diver’s records close to the trip your crew is preparing. Try the morning checks and roll call in DiveDay before deciding what to move from EVE.",
       "context": {
-        "item1": "EVE (from Integrated Scuba Systems) is the desktop shop-management system PADI retailers ran for years, and DiveShop360 acquired it in 2023. If you are planning a move off it, this guide covers the practical part: getting your people and their certification records out of EVE and into DiveDay.",
-        "item2": "The part that makes leaving feel risky is real. EVE stores its data in a database on your own PC, and shops report that years of booking history can be hard to pull out cleanly. DiveDay brings over your roster, certification records, rental sizes, and, through the separate gear-history CSV, your tagged fleet’s dated service records, so your people and equipment are ready from the first booking.",
-        "item3": "You export your own file from your own EVE install. DiveDay never logs into EVE and never reaches across to another system to pull your data."
+        "item1": "EVE already handles dive-shop sales, courses and PADI processing. If those are central to your business, test them separately: DiveDay does not replace a retail register or submit certifications to PADI.",
+        "item2": "The reason to try DiveDay is the crew’s daily work: checking missing records before departure, preparing the rental kit and calling every person aboard. Walk those screens with the people who will use them.",
+        "item3": "You choose the files to export. We help review what they contain before you commit to changing systems."
       },
       "exportHeading": "Get your data out of EVE",
-      "exportIntro": "EVE runs on Windows, so this happens on the back-office PC where it’s installed, not on a website. The goal is a spreadsheet of your customers and their certification records. Menu labels shifted across EVE versions, so treat these as the shape of the path, not word-for-word buttons.",
+      "exportIntro": "EVE documents spreadsheet exports for sales. Customer and certification export options depend on your setup; confirm them with EVE support before planning a full move.",
       "exportSteps": {
         "step1": {
-          "title": "Open EVE on the shop PC and sign in with a manager account",
-          "detail": "Reporting and exports live in the back office, behind a manager or owner login, not the point-of-sale till. Use the PC where EVE holds its database."
+          "title": "Confirm which records you can export",
+          "detail": "Ask EVE support about customer, certification and visit-history exports for the version you use. Keep access to EVE until you have checked the files."
         },
         "step2": {
-          "title": "Open the customer list or a customer/certification report",
-          "detail": "Find the area that lists every customer with their certification details, usually under a Customers or Reports menu. You want the full roster, not a single record."
+          "title": "Keep an original copy",
+          "detail": "Save each file unchanged. If it arrives as an Excel workbook, make a CSV copy for the DiveDay preview."
         },
         "step3": {
-          "title": "Widen the range to all customers, all time",
-          "detail": "If the list or report asks for a date range or an active-only filter, set it as broad as it goes so lapsed customers are not left out."
+          "title": "Check a few returning divers",
+          "detail": "Look for their names, contact details and certification numbers. Check whether history and certifications need separate files or manual matching."
         },
         "step4": {
-          "title": "Export to Excel or CSV and save it",
-          "detail": "EVE’s lists and reports export to a spreadsheet. Choose CSV if it is offered, or export to Excel and use File → Save As → CSV. Save it somewhere you will find it, like the desktop."
-        },
-        "step5": {
-          "title": "Do the same for certifications if they’re a separate report",
-          "detail": "If certifications (agency, level, certification number) live in their own report rather than on the customer list, export that too. A certification number is what lets DiveDay bring a record across at all."
-        },
-        "step6": {
-          "title": "Can’t reach the export? Ask EVE’s current owner",
-          "detail": "If your license has lapsed or the export is grayed out, DiveShop360 now owns EVE and can produce a customer and certification export for you. Ask in writing and keep the file. That file is all DiveDay needs."
+          "title": "Preview the sample with us",
+          "detail": "The preview identifies recognized columns and rejected rows. Resolve any missing fields before exporting the rest."
         }
       },
       "exportNotes": {
-        "note1": "Do this while your EVE install still opens and your license is active; an export you can run today is the one to keep.",
-        "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names EVE and every other system use, and shows you how each column mapped before you commit.",
-        "note3": "If EVE will give you a sales or booking report as well, take it. A file with one row per booking brings your regulars’ visit history across, so a fifteen-year customer does not arrive looking brand new. Register receipts stay in EVE. Repair tickets do not import, so put any still on the bench into DiveDay as work orders and keep the closed ones in your EVE export; see the scope table below."
+        "note1": "These are preparation steps, not a verified menu path for every EVE version.",
+        "note2": "Keep retail records and original documents even if they are not part of your DiveDay import.",
+        "note3": "Historical visits do not create future departures or bookings. Prepare those departures separately with your crew."
       }
     },
     "diveshop360": {
-      "cardSummary": "The retail-POS incumbent. Export the customer and certification CSVs its own FAQ names, then bring your people across.",
+      "cardSummary": "Keep the retail tools you need. Compare trip preparation, diver readiness and the crew’s roll call.",
       "metaTitle": "Switching from DiveShop360 to DiveDay",
-      "metaDescription": "Leaving DiveShop360? A step-by-step guide to exporting your customers and certification data as CSV and bringing them into DiveDay: what comes across, what does not, and why.",
-      "heroEyebrow": "Switching to DiveDay",
-      "heroTitle": "Moving your shop off DiveShop360",
-      "heroLede": "Your customers and their certification records live in DiveShop360’s cloud, and the way out is the four CSVs its own FAQ names, downloaded one at a time (no bulk export, no API). You need two of them. This guide is the path, then the table of what comes across and what stays in DiveShop360.",
+      "metaDescription": "Compare DiveDay with your DiveShop360 workflow. See the dive-day tools, what your retail shop would still need, and how to review customer and certification exports.",
+      "heroEyebrow": "Switching from DiveShop360",
+      "heroTitle": "Give the crew a clear view of the next departure",
+      "heroLede": "See who still needs a waiver or a certification check, prepare their gear and run roll call from the boat. Compare that work in DiveDay before replacing any part of DiveShop360.",
       "context": {
-        "item1": "DiveShop360 grew out of a retail point-of-sale system, and that is where it is strongest: registers, inventory, vendor catalogs. Its own FAQ names four CSV exports: customers, inventory, sales reports, and certification data. A move to DiveDay needs two of them, customers and certification data.",
-        "item2": "DiveDay does not replace your point of sale. It runs the water: bookings, readiness, the boat. Bring your POS and DiveDay runs the dive day, which is why we only ask for the customer and certification files.",
-        "item3": "You export your own CSV from your own DiveShop360 account. DiveDay never signs into DiveShop360 and never reaches across to pull your data."
+        "item1": "DiveShop360 combines retail sales with dive-shop tools, including rentals, servicing and courses. Keep it if its register, inventory and vendor workflows are doing work you need. DiveDay is not a retail POS replacement.",
+        "item2": "Try DiveDay if you want trip preparation organized around each diver: the missing record, the kit to pack and the next roll-call checkpoint. The demo lets your crew judge that fit before an import.",
+        "item3": "DiveShop360’s FAQ lists customer, inventory, sales and certification exports. Review the actual files with us; the published list does not establish the columns your account will provide."
       },
       "exportHeading": "Get your data out of DiveShop360",
-      "exportIntro": "DiveShop360 runs in a browser, and exports come from the back-office admin rather than the register. You want two CSVs, customers and certification data. There is no public API or bulk export, so it is a manual download one dataset at a time, and menu labels shift between versions.",
+      "exportIntro": "Start with customer and certification exports. DiveShop360 confirms those datasets are exportable; ask its support for the current steps and file format for your account.",
       "exportSteps": {
         "step1": {
-          "title": "Sign into DiveShop360 admin as an owner or manager",
-          "detail": "Exports live in the back office, behind an owner or manager login, not the point-of-sale screen your front desk rings sales on."
+          "title": "Confirm the export options for your account",
+          "detail": "Use DiveShop360’s help or support to find the customer and certification exports. We do not need access to your account."
         },
         "step2": {
-          "title": "Find the customer export",
-          "detail": "Look under Customers or Reports for a CSV export of your customer list. DiveShop360’s own FAQ lists customers as one of the four datasets you can export."
+          "title": "Save the customer file",
+          "detail": "Check the selected date range and filters, including inactive customers you want to keep. Keep an unchanged copy of the export."
         },
         "step3": {
-          "title": "Export all customers to CSV",
-          "detail": "Export the whole customer list, not a filtered or single-page view, so no one is left behind. Save the file where you’ll find it."
+          "title": "Inspect the certification file",
+          "detail": "Check which fields connect a certification to a customer. Do not assume two separate files can be matched without preparation."
         },
         "step4": {
-          "title": "Export the certification data too",
-          "detail": "Certifications are a separate one of DiveShop360’s four exportable datasets. Export it as CSV. It holds the agency, level, and certification number, and that number is what lets a record come across at all."
-        },
-        "step5": {
-          "title": "Skip inventory and sales reports",
-          "detail": "Those are the other two exportable datasets. You do not need them for DiveDay, which is not your POS. Keep them for your own records."
-        },
-        "step6": {
-          "title": "Stuck on an export? Ask DiveShop360 support",
-          "detail": "If a dataset will not export from the UI, their support can produce a customer or certification CSV. Ask in writing and keep the file. That file is all DiveDay needs."
+          "title": "Preview a representative sample",
+          "detail": "We help map the columns and check the records before the full import. Convert a copy to CSV if needed."
         }
       },
       "exportNotes": {
-        "note1": "Manual CSV, one dataset at a time, is DiveShop360’s limit (no API, no bulk export, no webhooks). Doing it yourself from the admin is the only path, and it is enough.",
-        "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names DiveShop360 and every other system use, and shows you how each column mapped before you commit.",
-        "note3": "If you can also export a booking or sales report, bring it. One row per booking becomes your divers’ visit history here. Retail receipts and your e-commerce site stay in DiveShop360. Repair tickets do not import, so put any still on the bench into DiveDay as work orders; see the scope table below."
+        "note1": "The FAQ confirms exportable datasets, not a universal click path or file schema.",
+        "note2": "Keep inventory, sales and original signed documents for your own records, even when they are outside the contact import.",
+        "note3": "Open repair jobs and future bookings need separate preparation; a contact CSV does not create them."
       },
-      "importerNote": "DiveShop360 exports customers and certification data as two separate files. Import the customer file first. DiveDay matches people by email, so the certification file adds to the same divers instead of duplicating them. That file usually holds one row per certification: a diver with three certifications appears on three rows, each landing on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty certification."
+      "importerNote": "Start with contacts, then review how any certification rows identify the same diver. Imported records remain subject to the checks in the field reference below."
     },
     "smartwaiver": {
-      "cardSummary": "Export your participant CSV and bring the people across. A waiver your file already shows as signed comes in marked imported, so nobody has to sign twice.",
+      "cardSummary": "Bring waiver collection into the booking and trip-preparation workflow while preserving your signed originals.",
       "metaTitle": "Switching from Smartwaiver to DiveDay",
-      "metaDescription": "Moving off Smartwaiver? A step-by-step guide to exporting your participants and bringing them, and their already-signed waivers, into DiveDay.",
-      "heroEyebrow": "Switching to DiveDay",
-      "heroTitle": "Moving your waivers off Smartwaiver",
-      "heroLede": "Smartwaiver holds signed waivers and the people who signed them, exportable as a participant CSV. This guide covers bringing those people into DiveDay, where waivers are native and versioned against your own template, along with any acceptance your file already shows.",
+      "metaDescription": "Compare Smartwaiver with DiveDay’s booking and trip-preparation workflow. Export participant data, preserve signed PDFs and review what the import can accept.",
+      "heroEyebrow": "Switching from Smartwaiver",
+      "heroTitle": "Put the missing waiver beside the diver’s next trip",
+      "heroLede": "DiveDay connects bookings, release forms and departure checks, so the crew can see whose paperwork still needs attention. Bring your participant records from Smartwaiver after reviewing the signed evidence you need to keep.",
       "context": {
-        "item1": "Smartwaiver does one thing, digital waivers, and some shops reach it because their booking system (DiveShop360 among them) outsources waivers to it. DiveDay’s waivers are native and in every tier, so moving off means bringing the people across and telling DiveDay which of them already have a waiver on file.",
-        "item2": "The people migrate cleanly: a Smartwaiver participant export carries names, email, phone, and often an emergency contact, which is the roster you need. What it does not hold is certification records or rental sizes, because a waiver system is not where those live.",
-        "item3": "If a row in your export marks a diver’s waiver as already accepted, DiveDay’s importer trusts that and brings the waiver across too, marked imported, dated to the acceptance date in your file, and satisfying the boarding gate without asking the diver to sign again. It is not a copy of the signed Smartwaiver PDF itself (that stays in Smartwaiver, or you can attach a saved copy of it during import). It is your prior acceptance, carried forward.",
-        "item4": "You export your own participant CSV from your own Smartwaiver account. DiveDay never signs into Smartwaiver and never reaches across to pull your data."
+        "item1": "Smartwaiver is a dedicated waiver service with its own collection and document workflows. Keep it if those workflows or your current integrations are the right fit.",
+        "item2": "Choose DiveDay for the work around the waiver: a diver books, completes the required forms and appears on the crew’s preparation list. An unresolved requirement stays visible before boarding.",
+        "item3": "A participant CSV and the signed waiver PDF are different records. Preserve the originals and review the release version, acceptance and any medical evidence before relying on an imported status. Importing does not establish legal validity or create a new signature.",
+        "item4": "Your existing terms determine when someone needs to sign again. We help map the file; your shop decides which evidence it can rely on."
       },
       "exportHeading": "Get your data out of Smartwaiver",
-      "exportIntro": "Smartwaiver runs in a browser. The goal is a participant CSV, the people who signed your waivers. Menu labels shift over time, so treat these as the shape of the path rather than word-for-word buttons.",
+      "exportIntro": "Smartwaiver publishes separate instructions for participant data and signed PDFs. Keep both when planning the move.",
       "exportSteps": {
         "step1": {
-          "title": "Sign into your Smartwaiver dashboard",
-          "detail": "Exports live in the dashboard, behind your account login."
+          "title": "Open Export Data → Participant CSV",
+          "detail": "In the Smartwaiver dashboard, choose Export Data from the sidebar, then Participant CSV."
         },
         "step2": {
-          "title": "Open the waiver or participant search",
-          "detail": "Find the area that lists the people who have signed, usually a waivers or participants search with an export option."
+          "title": "Choose the records you need",
+          "detail": "Filter by submission date, waiver title or tag. Check the selection includes the participants and release versions you intend to retain."
         },
         "step3": {
-          "title": "Set the date range wide, then export to CSV",
-          "detail": "Set the range as broad as it goes (all time) so every participant is included, then export the list to CSV and save it where you will find it."
+          "title": "Select Export Waiver Data",
+          "detail": "Save the CSV unchanged, then make a copy for the DiveDay preview. Inspect custom fields rather than assuming which details are present."
         },
         "step4": {
-          "title": "That CSV is your roster",
-          "detail": "Names, email, phone, and any emergency contact you collected are what come across, along with whichever column in your export shows a waiver as already signed, if it has one."
+          "title": "Save the signed PDFs separately",
+          "detail": "Smartwaiver’s support can arrange a bulk PDF download for a date range. Confirm access and retention before ending your subscription."
         }
       },
       "exportNotes": {
-        "note1": "Smartwaiver holds waivers, not certification records or gear sizes, so mostly it is the people who migrate, and that is the roster you need.",
-        "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names Smartwaiver and every other system use, and shows you how each column mapped before you commit.",
-        "note3": "A diver your file shows as already signed comes across marked imported and is not asked to sign again. The scope table below says what that does and does not carry over."
+        "note1": "Only fields present in your export can be considered for import. Custom questions may need manual mapping.",
+        "note2": "The preview names the columns it recognizes and those it will ignore. Check both lists before confirming.",
+        "note3": "Keep the signed originals independently. A CSV acceptance status is not the original signed document."
       },
-      "importerNote": "A Smartwaiver export is mostly contact data. Expect people and emergency contacts to import, and no certification records or rental sizes, since a waiver system does not hold them. A waiver your export shows as already accepted comes across too, marked imported."
+      "importerNote": "Review participant identity and any acceptance evidence separately. A CSV does not guarantee that signed PDFs, medical documents or every custom answer will transfer."
     },
     "fareharbor": {
-      "cardSummary": "A booking engine for tours, not dive software. Keep it for the storefront and run the dive day it cannot, or leave the per-booking fee behind.",
+      "cardSummary": "Compare the dive-day workflow, and plan what happens to your booking links and distribution.",
       "metaTitle": "FareHarbor and DiveDay: run the dive day, or switch",
-      "metaDescription": "On FareHarbor? Keep its booking and distribution network and run the dive day it was never built for (cert checks, waivers, and the roll-call manifest), or leave the per-booking fee behind. Bring your divers across with a clear picture of what comes with them.",
-      "heroEyebrow": "FareHarbor + DiveDay",
-      "heroTitle": "FareHarbor fills the seats. DiveDay runs the boat",
-      "heroLede": "FareHarbor takes the online booking and puts you in front of its hotel and reseller network. Then the dive day still runs on a clipboard, because a general booking engine was never built for certification checks, waivers, or a roll call on the water. Keep FareHarbor for the storefront, or leave the per-booking fee behind and take the booking here too.",
+      "metaDescription": "Compare FareHarbor and DiveDay for dive-shop bookings and trip preparation. Review the manual transfer, distribution tradeoffs and records before switching.",
+      "heroEyebrow": "Switching from FareHarbor",
+      "heroTitle": "Keep the bookings coming. Prepare every diver for the boat",
+      "heroLede": "If your crew still checks cards, chases forms and builds the boat list outside FareHarbor, try that work in DiveDay. Decide whether to keep your booking channel or take new bookings here after a trial.",
       "context": {
-        "item1": "FareHarbor is an online booking platform for tours, activities, and rentals, owned by Booking Holdings, the company behind Booking.com, and plenty of dive shops run their storefront on it. It is good at that job: guests book and pay online, and its distribution network puts your trips in front of hotels, concierges, and resellers you would never reach on your own.",
-        "item2": "It is not dive software. FareHarbor makes no claim to certification gating, medical waivers that block a diver, rental-gear fit, or a boat manifest built for a roll call. Its “manifest” is a passenger list you can download, and it has no concept of a certification record.",
-        "item3": "The storefront is not free. FareHarbor charges nothing monthly, but takes a fee on every booking, added to your guest’s checkout price, for as long as you use it. It does not publish the rate; you hear it on a sales call, and third parties report around 6%. A growing shop feels a cut of every booking."
+        "item1": "FareHarbor handles booking and distribution. If its reseller relationships bring you customers, include that value in your decision: DiveDay does not provide an equivalent distribution network.",
+        "item2": "The useful comparison is a real departure. Can your crew find the missing form, check the required certification and account for each diver after the dive? Try those tasks in the demo against the process you use now.",
+        "item3": "Compare your current FareHarbor agreement with DiveDay’s published offer, including payment processing and any distribution charges. Your contract and booking mix determine the cost; this guide does not estimate savings."
       },
       "coexist": {
-        "heading": "Keep FareHarbor. Add the day it can’t run",
-        "intro": "DiveDay runs the water side, everything between “booked” and “back at the dock” that a booking engine was never built to touch. Point for point, this is what FareHarbor leaves to your clipboard:",
-        "bridgeNote": "FareHarbor keeps doing what it is good at: taking the online booking and putting you in front of its hotel and reseller network, which DiveDay has no equivalent for. There is no wire between the two. You bring your divers in with the CSV export below, and re-import as your roster grows.",
-        "replaceHeading": "Or leave the per-booking fee behind",
-        "replaceBody": "If FareHarbor is only your booking button and you are not leaning on its distribution network, you do not need to keep paying on every booking to keep it. DiveDay takes the booking itself: a public schedule anyone can book without an account, checkout through your own Stripe account, native waivers. Bring your divers across once, point your booking link here, and the per-booking fee stops."
+        "heading": "Choose what stays in FareHarbor",
+        "intro": "Keep your booking channel while testing DiveDay with one departure, or move new direct bookings after the trial. Either path needs a clear handover for the crew.",
+        "bridgeNote": "There is no automatic connection to FareHarbor. CSV imports bring supported contacts and historical records; staff create upcoming departures and seat divers in DiveDay, then check new bookings, changes and cancellations in both places.",
+        "replaceHeading": "Take new direct bookings in DiveDay",
+        "replaceBody": "Your booking link can open the DiveDay schedule, with payment through your Stripe account. Test the booking and preparation flow, then review outstanding bookings and balances before replacing the link."
       },
       "website": {
-        "heading": "Leaving FareHarbor does not mean rebuilding your site",
-        "intro": "Every button, frame and link you pasted from it has a twin here, in your colors and your typeface.",
+        "heading": "Check every booking link before changing your website",
+        "intro": "DiveDay provides booking links and components you can add to a site you control. Review the placement and behavior of each existing FareHarbor component before replacing it.",
         "rows": {
           "row1": {
             "theirs": "Book Now button",
@@ -562,46 +520,41 @@
             "ours": "Your storefront, included. It is already a website of its own"
           }
         },
-        "sitesNote": "FareHarbor sells Sites separately and doesn’t publish the price; third parties report {sitesPrice} a year, before its SEO add-on.",
+        "sitesNote": "If FareHarbor hosts your website, confirm ownership, hosting and cancellation terms with them. A booking-component change does not transfer the website itself.",
         "offerHeading": "Talk to us about your website",
         "offerBody": "Tell us what you need, and a person at DiveDay will discuss the website work with you. You can add our booking components to your existing site yourself."
       },
       "exportHeading": "Get your data out of FareHarbor",
-      "exportIntro": "FareHarbor runs in a browser, and your data comes out of the Dashboard’s reports. There is no single “export everything” button. The goal is your people as a CSV. Menu labels shift over time, so treat these as the shape of the path rather than word-for-word buttons.",
+      "exportIntro": "Use the Contacts report for contact data, and review historical bookings separately. Export availability depends on your Dashboard permissions.",
       "exportSteps": {
         "step1": {
-          "title": "Sign into your FareHarbor Dashboard as an owner or admin",
-          "detail": "Reports live in the Dashboard, behind an owner or admin login, not the guest-facing booking page."
+          "title": "Open a Dashboard account with Contacts access",
+          "detail": "FareHarbor requires permission to view this report. Ask your account administrator if it is missing."
         },
         "step2": {
-          "title": "Open Reports and run the Contacts (customer) report",
-          "detail": "FareHarbor’s Contacts report is your customer list (names, email, phone) for a date range. That roster is what you need; the rest of the reports are booking and sales records."
+          "title": "Choose Reports → Customers and marketing → Contacts",
+          "detail": "Generate the Contacts report. It provides customer contact information for the bookings selected by its filters."
         },
         "step3": {
-          "title": "Set the date range as wide as it goes",
-          "detail": "The Contacts report is scoped to a range, not a single all-time dump, so widen it as far as FareHarbor allows before you run it. Otherwise a slow season or a lapsed regular gets left behind."
+          "title": "Review dates and cancellation filters",
+          "detail": "Include the date range and booking statuses you need. The cancellation filter defaults to canceled bookings that were not refunded; check it deliberately."
         },
         "step4": {
-          "title": "Download it as CSV",
-          "detail": "FareHarbor’s reports and manifests download as CSV straight from the Dashboard. Save the file where you will find it. That file is all DiveDay needs."
+          "title": "Select Download in the report toolbar",
+          "detail": "Save the standardized CSV and keep an unchanged copy. Preview its columns in DiveDay before confirming the import."
         },
         "step5": {
-          "title": "Don’t wait on the API",
-          "detail": "FareHarbor has an API, but access is partner-gated. You email their support to request it, and it is built for resellers rather than a self-serve export you can run yourself. The Dashboard CSV is your route out, and it is enough."
+          "title": "Review booking history separately",
+          "detail": "Use a booking report for past visits, keeping source booking references. Future seats, deposits and later changes need a separate handover."
         }
       },
       "exportNotes": {
-        "note1": "The Contacts report is date-scoped rather than a one-click “everything” export, so set the range as wide as FareHarbor allows and seasonal and lapsed customers come along.",
-        "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names FareHarbor and every other system use, and shows you how each column mapped before you commit.",
-        "note3": "Certification records and rental sizes are not in a FareHarbor export, because a booking engine does not hold them (see the scope table below). Expect people and their contact details. Certs and sizes you build in DiveDay as divers arrive.",
-        "note4": "What FareHarbor does hold is bookings, and those come across. Run the Bookings report over the same wide date range and your regulars arrive with their visit history rather than as new names."
+        "note1": "Confirm your filter selection before exporting so seasonal and canceled bookings are handled as intended.",
+        "note2": "Check the preview’s recognized and ignored columns; a custom field is not guaranteed to map automatically.",
+        "note3": "The Contacts report does not establish what certification, size or waiver evidence you can supply. Review those records separately with your staff.",
+        "note4": "Imported past visits remain history. They do not create future bookings, orders or roll-call entries."
       },
-      "importerNote": "A FareHarbor export is mostly contact and booking data. People, emails, phones, and any emergency contact import. Certification records and rental sizes do not, because a booking platform does not hold them. Import Contacts first, then Bookings: DiveDay matches divers by email, so the second file adds each booking to the same diver’s history instead of duplicating them.",
-      "percentArm": {
-        "cardSummary": "A booking engine for tours, not dive software. Keep it for the storefront and run the dive day it cannot, or take the booking here too.",
-        "metaDescription": "On FareHarbor? Keep its booking and distribution network and run the dive day it was never built for (cert checks, waivers, and the roll-call manifest), or take the booking here too. Bring your divers across with a clear picture of what comes with them.",
-        "heroLede": "FareHarbor takes the online booking and puts you in front of its hotel and reseller network. Then the dive day still runs on a clipboard, because a general booking engine was never built for certification checks, waivers, or a roll call on the water. Keep FareHarbor for the storefront, or take the booking here too."
-      },
+      "importerNote": "Preview contacts first. Review historical visits and source documents separately; a customer contact can represent a booking for several divers.",
       "transferChoice": {
         "title": "Choose how bookings reach your crew",
         "note": "Manual transfer: changes do not travel automatically between FareHarbor and DiveDay.",
@@ -613,9 +566,7 @@
         "moveBody": "Point your booking link to DiveDay’s schedule and take payment through your Stripe account. Staff review imported records before the first trip.",
         "moveFlow": "Your booking link → DiveDay schedule → trip preparation",
         "moveReview": "DiveDay does not replace FareHarbor’s distribution network. Evaluate that tradeoff and the pricing before changing your booking link.",
-        "scopeLink": "Check the transfer scope",
-        "movesFact": "Contacts and booking history from the described exports; other records need a separate source.",
-        "timeFact": "Depends on your export, record quality and review."
+        "scopeLink": "Check the transfer scope"
       },
       "transferScope": {
         "title": "From the FareHarbor exports described here",
@@ -672,60 +623,100 @@
       }
     },
     "rezdy": {
-      "cardSummary": "A general tours platform with a big reseller marketplace, not dive software. Keep it for distribution, or leave the monthly fee and per-booking cut behind.",
+      "cardSummary": "Keep useful reseller connections while you test individual diver preparation and roll call.",
       "metaTitle": "Rezdy and DiveDay: run the dive day, or switch",
-      "metaDescription": "On Rezdy? Keep its reseller marketplace and run the dive day it was never built for (cert checks, waivers, and the roll-call manifest), or leave the monthly subscription and per-booking fee behind. Bring your divers across with a clear picture of what comes with them.",
-      "heroEyebrow": "Rezdy + DiveDay",
-      "heroTitle": "Rezdy sells the seats. DiveDay runs the boat",
-      "heroLede": "Rezdy takes the online booking and pushes your trips to its reseller marketplace and the big OTAs. Then the dive day still runs on a clipboard, because a general booking engine was never built for certification checks, waivers, or a roll call on the water. Keep Rezdy for the storefront, or leave the monthly fee and the per-booking cut behind and take the booking here too.",
+      "metaDescription": "Compare Rezdy and DiveDay for dive-shop bookings and trip preparation. Review the manual transfer, distribution tradeoffs and records before switching.",
+      "heroEyebrow": "Switching from Rezdy",
+      "heroTitle": "Know who is ready after the booking comes in",
+      "heroLede": "If your crew still checks cards, chases forms and builds the boat list outside Rezdy, try that work in DiveDay. Decide whether to keep your booking channel or take new bookings here after a trial.",
       "context": {
-        "item1": "Rezdy is an online booking platform for tours and activities, Australian-built and now grouped with Checkfront and Regiondo under a private-equity-backed parent. Plenty of dive shops run their storefront on it, and it is good at that job: guests book and pay online, and its channel manager pushes your trips to resellers and OTAs such as GetYourGuide, Viator, Expedia, and Google Things to Do.",
-        "item2": "It is not dive software. Rezdy publishes no certification gating, no dive-medical waivers, no boat manifest built for a roll call, and no rental-gear fit. Selling a course as a bookable product is not the same as knowing the diver in front of you has the certification for the dive.",
-        "item3": "The storefront is not free: Rezdy charges a monthly subscription plus a cut of every online booking (3% on its current published pricing). To its credit, Rezdy does not lock you in. There is no setup fee, no contract, a self-serve CSV export, and an API you can turn on yourself."
+        "item1": "Rezdy handles booking and distribution. If its reseller relationships bring you customers, include that value in your decision: DiveDay does not provide an equivalent distribution network.",
+        "item2": "The useful comparison is a real departure. Can your crew find the missing form, check the required certification and account for each diver after the dive? Try those tasks in the demo against the process you use now.",
+        "item3": "Compare your current Rezdy agreement with DiveDay’s published offer, including payment processing and any distribution charges. Your contract and booking mix determine the cost; this guide does not estimate savings."
       },
       "coexist": {
-        "heading": "Keep Rezdy. Add the day it can’t run",
-        "intro": "DiveDay runs the water side, everything between “booked” and “back at the dock” that a booking engine was never built to touch. Point for point, this is what Rezdy leaves to your clipboard:",
-        "bridgeNote": "Rezdy keeps doing what it is good at: taking the online booking and pushing your trips to its reseller marketplace and the OTAs, which DiveDay has no equivalent for. There is no wire between the two. You bring your divers in with the CSV export below, and re-import as your roster grows.",
-        "replaceHeading": "Or leave the monthly fee and the per-booking cut behind",
-        "replaceBody": "If you are not leaning on Rezdy’s marketplace, you are paying a monthly subscription and a slice of every booking for a storefront you could run here: a public schedule anyone can book without an account, checkout through your own Stripe account, native waivers. Rezdy makes going easy, with no lock-in contract, a self-serve CSV export, and an API you can turn on yourself."
+        "heading": "Choose what stays in Rezdy",
+        "intro": "Keep your booking channel while testing DiveDay with one departure, or move new direct bookings after the trial. Either path needs a clear handover for the crew.",
+        "bridgeNote": "There is no automatic connection to Rezdy. CSV imports bring supported contacts and historical records; staff create upcoming departures and seat divers in DiveDay, then check new bookings, changes and cancellations in both places.",
+        "replaceHeading": "Take new direct bookings in DiveDay",
+        "replaceBody": "Your booking link can open the DiveDay schedule, with payment through your Stripe account. Test the booking and preparation flow, then review outstanding bookings and balances before replacing the link."
       },
       "exportHeading": "Get your data out of Rezdy",
-      "exportIntro": "Rezdy runs in a browser and, to its credit, is open about letting your data out as CSV. The goal is your people as a spreadsheet. Menu labels shift between updates, and Rezdy’s own help center is the authoritative path, so treat these as the shape of it.",
+      "exportIntro": "Rezdy documents CSV exports for orders and customers. Check whether your file identifies the main booking contact or every participant before mapping it to diver records.",
       "exportSteps": {
         "step1": {
-          "title": "Sign into your Rezdy dashboard as an owner or manager",
-          "detail": "Reports and your customer list live in the dashboard, behind an owner or manager login."
+          "title": "Open the Sales–Orders report",
+          "detail": "Use Rezdy’s Sales–Orders report for the period you want to retain. Its help page below describes the current report."
         },
         "step2": {
-          "title": "Open the Sales / Orders report (or Reports → Data export)",
-          "detail": "Rezdy’s Orders report lists your bookings and the customers on them; the newer Data export covers the same ground. Either one is a route to your people."
+          "title": "Set the dates and review the selection",
+          "detail": "Check booking dates, statuses and product filters before downloading. Keep source order references for later checks."
         },
         "step3": {
-          "title": "Set the date range wide and export to CSV",
-          "detail": "Set the range as wide as it goes so a slow season is not left behind, then use Export to CSV. Rezdy’s export includes every column, not only the ones shown on screen."
+          "title": "Choose Export to CSV",
+          "detail": "The export includes the report data. Save an original copy and use a second copy for preparing the DiveDay import."
         },
         "step4": {
-          "title": "Or export your customer list directly",
-          "detail": "Rezdy has customer-list import and export tooling, so your contacts can come out as their own spreadsheet, whichever is cleaner for you. Save the file where you will find it."
+          "title": "Check who each customer row represents",
+          "detail": "Rezdy’s customer list describes the main booking contact. A group booking does not mean you have a record for every diver; collect missing participant details separately."
         },
         "step5": {
-          "title": "Prefer the API? It’s yours to turn on",
-          "detail": "Unlike some booking platforms, Rezdy lets an operator request an API key from Integrations → Rezdy API inside the app. You do not need it for this move, since the CSV is enough, but it is there."
+          "title": "Prepare future departures outside the history import",
+          "detail": "Create the departures and add their divers in DiveDay. Compare deposits, cancellations and reschedules with Rezdy before using the new roster."
         }
       },
       "exportNotes": {
-        "note1": "Rezdy does not lock your data in: no setup fee, no contract, self-serve CSV export and an operator API. Confirm the exact menu path against Rezdy’s own help center, since labels shift between updates.",
-        "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names Rezdy and every other system use, and shows you how each column mapped before you commit.",
-        "note3": "Certification records and rental sizes are not in a Rezdy export, because a booking engine does not hold them (see the scope table below). Expect people and their contact details. Certs and sizes you build in DiveDay as divers arrive.",
-        "note4": "What Rezdy does hold is bookings, and those come across. The Orders report’s one-row-per-booking shape carries your regulars’ visit history over with them."
+        "note1": "The linked report instructions are the source for the export steps. Your account permissions and report selection still matter.",
+        "note2": "Custom questions, certification evidence and size information need a review of the actual file.",
+        "note3": "Original waiver documents and payment credentials are not implied by an order CSV. Keep the evidence your shop needs separately.",
+        "note4": "Contact updates are not booking updates. Staff must check changes in both systems while they run together."
       },
-      "importerNote": "A Rezdy export is mostly contact and booking data. People, emails, phones, and any emergency contact import. Certification records and rental sizes do not, because a booking platform does not hold them. Bring the Orders file: DiveDay matches divers by email, so its repeated rows for one customer become that diver’s visit history rather than duplicate people.",
-      "percentArm": {
-        "cardSummary": "A general tours platform with a big reseller marketplace, not dive software. Keep it for distribution, or take the booking here too.",
-        "metaDescription": "On Rezdy? Keep its reseller marketplace and run the dive day it was never built for (cert checks, waivers, and the roll-call manifest), or take the booking here too. Bring your divers across with a clear picture of what comes with them.",
-        "heroLede": "Rezdy takes the online booking and pushes your trips to its reseller marketplace and the big OTAs. Then the dive day still runs on a clipboard, because a general booking engine was never built for certification checks, waivers, or a roll call on the water. Keep Rezdy for the storefront, or take the booking here too."
-      }
+      "importerNote": "Match the main contact carefully, especially on group bookings. Imported visits are historical records; they do not reserve future seats or reconcile deposits."
+    },
+    "peek": {
+      "cardSummary": "Compare dive preparation with Peek Pro, then review a sample export before planning the move.",
+      "metaTitle": "Peek Pro and DiveDay for dive shops",
+      "metaDescription": "Considering DiveDay alongside or instead of Peek Pro? Compare the diver preparation workflow, distribution tradeoffs and sample-first migration plan.",
+      "heroEyebrow": "Switching from Peek Pro",
+      "heroTitle": "Follow each diver from their booking to the roll call",
+      "heroLede": "If you are using Peek Pro and still assembling diver records for the crew, try preparing a departure in DiveDay. See the missing forms and certification checks together, then take that roster onto the boat.",
+      "context": {
+        "item1": "Peek Pro already offers online bookings, digital waivers, resource management and distribution. Bring a real departure to the comparison so you can judge the work your crew does next.",
+        "item2": "Keep Peek where its sales channels, rental setup or checkout are working well for you. Try DiveDay if the crew still has to join participant details, certification requirements and roll call by hand.",
+        "item3": "Ask Peek support which customer and booking files your account can export. Send us a sample; we’ll check what can move before you change systems."
+      },
+      "coexist": {
+        "heading": "Keep Peek for bookings while you try the crew’s work",
+        "intro": "Use one departure to judge whether DiveDay improves preparation for your crew. You can also evaluate taking new direct bookings on DiveDay’s own schedule.",
+        "bridgeNote": "There is no automatic Peek connection. Staff prepare the export, create upcoming trips and seat divers in DiveDay, then check booking changes and cancellations in both systems. DiveDay does not replace Peek’s distribution network.",
+        "replaceHeading": "Review direct bookings as a separate decision",
+        "replaceBody": "Before changing a booking button, compare your Peek agreement with DiveDay’s current pricing and payment processing. Review your open bookings, prepaid amounts and the channels that bring you customers."
+      },
+      "exportHeading": "Review a Peek export before planning the move",
+      "exportIntro": "Export options depend on your Peek account. Confirm the available files with Peek support, then use this checklist to review them together.",
+      "exportSteps": {
+        "step1": {
+          "title": "Request customer and booking exports",
+          "detail": "Ask which records, date ranges and formats your account can provide. Obtain the files yourself and keep an unchanged copy."
+        },
+        "step2": {
+          "title": "Check who is represented in the file",
+          "detail": "A payer or group organizer is not necessarily every diver on the booking. Check names and contact details against a few real departures."
+        },
+        "step3": {
+          "title": "Review the sample with us",
+          "detail": "We help map supported fields to a CSV and inspect the preview. Confirm any certification, size or waiver evidence separately rather than assuming it is in the export."
+        },
+        "step4": {
+          "title": "Plan the live-booking handover",
+          "detail": "List future departures, participants, deposits and unresolved refunds. Staff prepare those separately; historical imports do not reserve live seats."
+        }
+      },
+      "exportNotes": {
+        "note1": "Agree the transfer scope after reviewing a sample. Confirm any fields missing from the file before relying on them for a departure.",
+        "note2": "Preserve original signed documents and financial records. Payment-card credentials must not be included in your CSV."
+      },
+      "importerNote": "The field reference describes what DiveDay accepts when supplied, not what Peek exports. Check the sample and missing records before relying on the new roster."
     }
   },
   "about": {
@@ -831,11 +822,11 @@
     },
     "seeFullList": "The full list is on the product page →",
     "feeAnchor": {
-      "title": "What two booking channels charge, in their own words",
-      "rezdy": "{competitor}’s pricing is a monthly subscription plus 3% of every online booking.",
-      "fareharbor": "{competitor} publishes no rate at all. There is no monthly charge. Instead a fee on every booking is added to your guest’s checkout price for as long as you use it, and third parties report that fee at around 6%.",
+      "title": "Compare the fees your shop pays",
+      "rezdy": "{competitor} publishes monthly plans with online-booking fees. The plan, market and booking channel matter, so compare the terms for your shop.",
+      "fareharbor": "{competitor} sets fees in its provider agreement. Check your booking, payment, distribution and website terms rather than relying on a single advertised percentage.",
       "ours": "DiveDay takes no cut of a booking. What you pay is the number above, in August and in January.",
-      "sourcesNote": "Both descriptions come from the switching guides, where each one is cited to the incumbent’s own pages.",
+      "sourcesNote": "The switching guides link to the providers’ pricing or terms. Keep your current agreement beside the comparison.",
       "guideLink": "What moving off {competitor} looks like →"
     },
     "dataExit": {

@@ -19,6 +19,17 @@ has no separate team, tooling, or CMS: copy is code, reviewed like code, tested 
 `schema.ts` is governed by the schema-change skill. A session editing these pages carries both
 jobs — marketer and maintainer — and must leave both the pages and this rulebook consistent.
 
+## Switching review (2026-11-11)
+
+The current switching composition and source review are in
+[switching-review-20261111.md](switching-review-20261111.md). It supersedes older switching
+claims and composition descriptions below: the reason to try DiveDay precedes export work,
+competitor absence claims and fixed migration-time estimates are removed, and Peek Pro joins
+as an explicitly qualified sample-review guide. An unverified export menu is never invented.
+The actual file determines transfer scope. All guides use the same truthful copy across pricing
+offers, with no savings arithmetic or competitor price figures. The unchanged importer reference
+continues to state supported fields, not guaranteed source exports.
+
 ## Configured pricing (2026-11-08)
 
 Every visitor sees the same configured offer. `PRICING_MONTHLY_CENTS` and
@@ -124,7 +135,8 @@ argue from **proof we can demonstrate**, in one sentence:
   a full sample shop minted fresh for each visitor, plus a trial shop of your own that starts clean.
   Demo before trial: it is the lowest-friction proof we own.
 - **Safe to run the boat on** — boat-day depth (roll-call checkpoints, append-only history, the
-  offline manifest) and fail-closed readiness ("no silent passes"). Verified rivals have neither.
+  offline manifest) and readiness that names unresolved requirements. Demonstrate these workflows; do not infer
+  that competitors lack them from silence in their documentation.
 - **Safe to leave** — the full-shop export (one ZIP, documented CSVs, every tier, self-serve) and
   the honesty-table importer. This is the counter to "you're new and unproven" — make it explicit,
   never assume it's implied.
@@ -207,8 +219,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   ([marketing-review-20260827.md](archive/marketing-review-20260827.md)'s third diagnosis, "help arrives
   after the homework"). The reader deciding whether they can face this now meets the alternative in
   the same breath as the work. Compressed at the top, authored once, never re-worded — the same
-  shape `midSeasonCutover` uses for the cutover steps and `GUIDE_FACTS.back` uses for the export
-  claim. A new service claim needs product-owner sign-off the same way the price does. **Website work is a discussion, not an included service promise (Aaron, 2026-11-09).** Invite shops to reach out and discuss what they need. Do not promise a custom-built website, an included or free build, a price, a delivery date or a page count. This replaces the earlier build-on-request wording under H-20260901-canvas-direction-brand/H-20261025-built-order-website-priced. The branded storefront and self-service booking components remain shipped product capabilities: shops can paste the provided components into their own websites. The pricing inclusion list names those capabilities only. The website feature page and FareHarbor guide may invite a separate conversation about website work. FareHarbor's hosted-site price remains attributed to the cited third-party report, never presented as a DiveDay price. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
+  shape `midSeasonCutover` uses for the cutover steps. A new service claim needs product-owner sign-off the same way the price does. **Website work is a discussion, not an included service promise (Aaron, 2026-11-09).** Invite shops to reach out and discuss what they need. Do not promise a custom-built website, an included or free build, a price, a delivery date or a page count. This replaces the earlier build-on-request wording under H-20260901-canvas-direction-brand/H-20261025-built-order-website-priced. The branded storefront and self-service booking components remain shipped product capabilities: shops can paste the provided components into their own websites. The pricing inclusion list names those capabilities only. The website feature page and FareHarbor guide may invite a separate conversation about website work. The FareHarbor guide asks shops to confirm hosting and cancellation terms instead of quoting a third-party price. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
   [human-decisions/](human-decisions/README.md#decision-register), H-20260724-public-founding-shop-price/H-20260802-what-game-is-this).** From 2026-07-27 through
   that date a general founder-direct contact line, routed to `aaron@dive.day`, was authorized here —
   the same promise the "You can reach the founder" section on `/about` made in prose. It is
@@ -1027,7 +1038,7 @@ Each names one incumbent's own export click-path, renders the import scope table
 is documented fact from [assessments/competitive-strategy.md](archive/assessments/competitive-strategy.md),
 carrying its own `sources` (rendered on the page) and phrased factually, never speculative; the
 safety-adjacent scope copy gets `dive-domain-expert` review like any other. Add a guide by writing
-its `MigrationGuide` entry — only once its export path is verified, since every registered entry is
+its `MigrationGuide` entry — with sourced export instructions or an explicit sample-review path that makes unverified options clear, since every registered entry is
 a published page (there is no draft/planned state). A guide is also **retired** by deleting that
 entry (its bundle keys, hub card, route, and coverage rows go with it) when the incumbent stops
 being worth a page — the DiveAdmin guide shipped 2026-07-23 and was retired 2026-08-05 on market

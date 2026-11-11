@@ -350,8 +350,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/diveSites.json form.depthPreviewFeetRange", "two depths and the unit symbol"],
   ["staff/diveSites.json form.depthPreviewMetersOne", "the unit symbol, unchanged in Spanish"],
   ["staff/diveSites.json form.depthPreviewMetersRange", "two depths and the unit symbol"],
-  ["content/marketing.json guides.fareharbor.heroEyebrow", "two product names"],
-  ["content/marketing.json guides.rezdy.heroEyebrow", "two product names"],
   ["staff/settings.json main.units.celsius", "unit name, the same in Spanish"],
   ["staff/settings.json main.units.fahrenheit", "unit name, the same in Spanish"],
   ["staff/shared.json depth.feet", "unit symbol"],

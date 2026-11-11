@@ -8,10 +8,13 @@ import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow } from "@/components/ui/disclosure";
 import { groupLabelClass } from "@/components/ui/group-label";
+import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { sharedLinkCard } from "@/lib/marketing";
+import { GuideProof } from "../_components/GuideProof";
 import {
   ClosingCta,
   DividedList,
@@ -19,7 +22,6 @@ import {
   GuideContext,
   GuideHero,
   ImportPhase,
-  MidCta,
   MovePath,
   MovePhase,
   ScopePhase,
@@ -111,12 +113,13 @@ export const metadata: Metadata = {
  * as the locale; the body must not wait on that.
  */
 export default async function SpreadsheetSwitchPage() {
-  const locale = await requestLocale();
+  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
   const t = diverTranslator(locale);
   return (
     <div className="flex flex-1 flex-col">
       <SpreadsheetBody
         locale={locale}
+        offer={offer}
         importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
       />
       <Suspense fallback={<MarketingFooterFallback />}>
@@ -154,9 +157,11 @@ const WEDGE_ITEMS = [
  */
 async function SpreadsheetBody({
   locale,
+  offer,
   importCta,
 }: {
   locale: DiverLocale;
+  offer: PlanTerms;
   importCta: ReactNode;
 }) {
   "use cache";
@@ -168,12 +173,15 @@ async function SpreadsheetBody({
       <GuideHero
         locale={locale}
         source="switching-spreadsheet"
+        offer={offer}
         eyebrow={t("switching.spreadsheet.eyebrow")}
         title={t("switching.spreadsheet.title")}
         lede={t("switching.spreadsheet.heroLede")}
       />
 
       <GuideContents locale={locale} spreadsheet />
+
+      <GuideProof locale={locale} source="switching-spreadsheet-mid" />
 
       {/* What changes. The two paragraphs set up the trade and the second one
           ends in a colon, so the four jobs are that sentence's own list rather
@@ -192,8 +200,6 @@ async function SpreadsheetBody({
           }))}
         />
       </GuideContext>
-
-      <MidCta locale={locale} source="switching-spreadsheet-mid" />
 
       {/* The whole mechanical path, as one rail: ready your own sheet → the
           importer's own scope table, verbatim → the importer. */}

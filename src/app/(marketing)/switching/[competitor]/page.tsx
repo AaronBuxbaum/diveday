@@ -14,18 +14,18 @@ import { requestPricingOffer } from "@/features/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { guideSource, setUpHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import {
   getMigrationGuide,
-  guideForPlan,
   MIGRATION_GUIDE_SLUGS,
   type MigrationGuide,
   WEBSITE_LEDGER_ID,
 } from "@/lib/migration-guides";
+import { GuideProof } from "../_components/GuideProof";
 import {
   ClosingCta,
-  DividedList,
   FareHarborTransferChoice,
   GUIDE_BAND_CLASS,
   GUIDE_BAND_LEDE_CLASS,
@@ -34,7 +34,6 @@ import {
   GuideContext,
   GuideHero,
   ImportPhase,
-  MidCta,
   MovePath,
   MovePhase,
   PhaseNotes,
@@ -69,8 +68,7 @@ export async function generateMetadata({
   const { competitor } = await params;
   const found = getMigrationGuide(competitor);
   if (!found) return { title: "Switching to DiveDay" };
-  // For the configured offer; this reads nothing from the request.
-  const guide = guideForPlan(found, (await requestPricingOffer()).plan);
+  const guide = found;
   // Fixed to the default locale, like the hub page's static `metadata`:
   // negotiating here would read request headers inside `generateMetadata` and
   // cost the registered slugs their prerendered shells.
@@ -157,14 +155,12 @@ async function GuideRoute({ params }: { params: Promise<{ competitor: string }> 
   );
 }
 
-async function LocalizedGuideBody({ guide: registered }: { guide: MigrationGuide }) {
+async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
   const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
-  // The guide as this configured offer reads it, so the cache keys on it.
-  const guide = guideForPlan(registered, offer.plan);
   const t = diverTranslator(locale);
   const label = t("switching.common.openImportCta");
   const importCta = <SwitchingImportCta label={label} from={guide.slug} />;
-  return <GuideBody locale={locale} guide={guide} importCta={importCta} />;
+  return <GuideBody locale={locale} guide={guide} offer={offer} importCta={importCta} />;
 }
 
 /**
@@ -186,10 +182,12 @@ const WEBSITE_LEDGER_COLUMNS = "grid-cols-[8rem_1fr] gap-3 sm:grid-cols-[15rem_1
 async function GuideBody({
   locale,
   guide,
+  offer,
   importCta,
 }: {
   locale: DiverLocale;
   guide: MigrationGuide;
+  offer: PlanTerms;
   importCta: ReactNode;
 }) {
   "use cache";
@@ -205,13 +203,15 @@ async function GuideBody({
         eyebrow={t(guide.heroEyebrow)}
         title={t(guide.heroTitle)}
         lede={t(guide.heroLede)}
-        fareHarbor={guide.slug === "fareharbor"}
+        offer={offer}
       />
-
-      {guide.slug === "fareharbor" && <FareHarborTransferChoice locale={locale} />}
 
       {/* Honest framing of the incumbent. */}
       <GuideContents locale={locale} />
+
+      <GuideProof locale={locale} source={guideSource(guide.slug, "mid")} />
+
+      {guide.slug === "fareharbor" && <FareHarborTransferChoice locale={locale} />}
 
       <GuideContext locale={locale} paragraphs={guide.context.map((key) => t(key))} />
 
@@ -220,20 +220,12 @@ async function GuideBody({
           labor, plus the honest alternative of leaving. Absent for the
           leave-it guides. Ruled below only: `GuideContext` above it draws the
           rule on top (K-204). */}
-      {guide.coexist && (
+      {guide.coexist && guide.slug !== "fareharbor" && (
         <section className="border-b border-border">
           <div className={GUIDE_BAND_CLASS}>
             <Eyebrow>{t("switching.competitor.keepOrLeaveEyebrow")}</Eyebrow>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.coexist.heading)}</h2>
             <p className={GUIDE_BAND_LEDE_CLASS}>{t(guide.coexist.intro)}</p>
-
-            {/* Shared messages — two of them interpolate the competitor's name. */}
-            <DividedList
-              items={guide.coexist.runsInDiveDay.map((item) => ({
-                title: t(item.title),
-                detail: t(item.detail, { competitor: guide.competitor }),
-              }))}
-            />
 
             <p className="mt-8 max-w-2xl leading-7 text-muted">{t(guide.coexist.bridgeNote)}</p>
 
@@ -284,9 +276,7 @@ async function GuideBody({
               ))}
             </ul>
 
-            <p className="mt-8 max-w-2xl leading-7 text-muted">
-              {t(guide.website.sitesNote, { sitesPrice: guide.website.sitesPrice })}
-            </p>
+            <p className="mt-8 max-w-2xl leading-7 text-muted">{t(guide.website.sitesNote)}</p>
 
             <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
               <h3 className={`${ITEM_TITLE_CLASS} tracking-tight`}>
@@ -307,8 +297,6 @@ async function GuideBody({
           </div>
         </section>
       )}
-
-      <MidCta locale={locale} source={guideSource(guide.slug, "mid")} />
 
       {/* The whole mechanical path, as one rail: export (files the shop makes
           itself) → the importer's own scope table, verbatim → the importer →

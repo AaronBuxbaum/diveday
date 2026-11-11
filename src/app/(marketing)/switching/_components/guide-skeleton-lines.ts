@@ -27,6 +27,15 @@ import type { GuideSkeletonLines } from "./guide";
 
 /** Keyed by `MigrationGuide.slug`; `guide-skeleton-lines.test.ts` holds every registered guide to an entry. */
 export const GUIDE_SKELETON_LINES: Record<string, GuideSkeletonLines> = {
+  peek: {
+    title: { base: 4, sm: 2 },
+    lede: { base: 7, sm: 3 },
+    context: [
+      { base: 7, sm: 4 },
+      { base: 7, sm: 4 },
+      { base: 7, sm: 4 },
+    ],
+  },
   eve: {
     title: { base: 2, sm: 1 },
     lede: { base: 7, sm: 4 },

@@ -81,6 +81,7 @@ const pages = {
   switching: async () => SwitchHubPage(),
   rezdy: async () => GuidePage({ params: Promise.resolve({ competitor: "rezdy" }) }),
   fareharbor: async () => GuidePage({ params: Promise.resolve({ competitor: "fareharbor" }) }),
+  peek: async () => GuidePage({ params: Promise.resolve({ competitor: "peek" }) }),
 };
 
 async function pageText(page: keyof typeof pages) {
@@ -131,17 +132,18 @@ describe("with the original monthly-only pricing", () => {
     expect(text).not.toContain("card money");
   });
 
-  it("the switching pages keep the fee contrast", async () => {
+  it("the switching pages state our price without promising savings against a rival", async () => {
     asReader("percent_of_volume");
-    expect(await pageText("switching")).toContain(
-      "or leave the monthly fee and per-booking cut behind.",
-    );
-    const rezdy = await pageText("rezdy");
-    expect(rezdy).toContain("Or leave the monthly fee and the per-booking cut behind");
-    expect(rezdy).toContain("leave the monthly fee and the per-booking cut behind and take");
-    expect(await pageText("fareharbor")).toContain("Or leave the per-booking fee behind");
-    const metadata = await guideMetadata({ params: Promise.resolve({ competitor: "rezdy" }) });
-    expect(metadata.description).toContain("per-booking fee behind");
+    expect(await pageText("switching")).toContain("Switching from Peek Pro");
+    for (const guide of ["rezdy", "fareharbor", "peek"] as const) {
+      const text = await pageText(guide);
+      expect(text).toContain(
+        "One flat price of $99 per location / month, and no cut of your bookings.",
+      );
+      expect(text).not.toMatch(/leave the .*fee.*behind|around 6%/i);
+      const metadata = await guideMetadata({ params: Promise.resolve({ competitor: guide }) });
+      expect(JSON.stringify(metadata)).not.toMatch(FLAT_CLAIMS);
+    }
   });
 
   it("the home page's structured data carries today's offer", async () => {
@@ -166,7 +168,9 @@ describe("with default percentage pricing", () => {
     asReader("flat_monthly");
     expect(await pageText("about")).toContain("We take no cut of your bookings.");
     expect(await pageText("payments")).toContain("No. DiveDay is one flat monthly price.");
-    expect(await pageText("rezdy")).toContain("Or leave the monthly fee and the per-booking cut");
+    expect(await pageText("rezdy")).toContain(
+      "One flat price of $99 per location / month, and no cut of your bookings.",
+    );
   });
 
   it("gives the percentage offer its own terms on /about, /product and a feature page", async () => {
@@ -206,14 +210,14 @@ describe("with default percentage pricing", () => {
     expect(await pageText("about")).toContain("3% on receipts and $29 a month. See the full list");
   });
 
-  it("takes the fee contrast off the switching pages for the percentage offer", async () => {
+  it("states the percentage offer beside the same honest switching comparison", async () => {
     asReader("percent_of_volume");
     const hub = await pageText("switching");
-    expect(hub).toContain("Keep it for distribution, or take the booking here too.");
+    expect(hub).toContain("Switching from Peek Pro");
     expect(hub).not.toMatch(FLAT_CLAIMS);
-    for (const guide of ["rezdy", "fareharbor"] as const) {
+    for (const guide of ["rezdy", "fareharbor", "peek"] as const) {
       const text = await pageText(guide);
-      expect(text).toContain("or take the booking here too.");
+      expect(text).toContain("3% when you record a payment, with no monthly fee.");
       expect(text).not.toMatch(FLAT_CLAIMS);
       const metadata = await guideMetadata({ params: Promise.resolve({ competitor: guide }) });
       expect(JSON.stringify(metadata)).not.toMatch(FLAT_CLAIMS);
@@ -233,7 +237,7 @@ describe("with default percentage pricing", () => {
     expect(payments).toContain("También cuentan el efectivo y los pagos externos.");
     expect(payments).not.toContain("DiveDay es un precio mensual fijo");
     const rezdy = await pageText("rezdy");
-    expect(rezdy).toContain("o toma también la reserva aquí.");
+    expect(rezdy).toMatch(/El 3\s?% al registrar un pago recibido, sin cuota mensual/);
     expect(rezdy).not.toContain("comisión por reserva y toma");
     expect(rezdy).not.toContain("O deja atrás la cuota mensual");
   });

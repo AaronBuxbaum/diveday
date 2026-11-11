@@ -25,6 +25,7 @@ export const HUB_PREVIEW_BOX_CLASS = "mx-auto max-w-4xl px-6 py-16 lg:py-20";
  */
 export const HUB_ROW_SUMMARY_LINES: Record<string, SkeletonLines> = {
   spreadsheet: { base: 3, sm: 1 },
+  peek: { base: 3, sm: 2 },
   fareharbor: { base: 4, sm: 2 },
   eve: { base: 5, sm: 2 },
   diveshop360: { base: 4, sm: 2 },

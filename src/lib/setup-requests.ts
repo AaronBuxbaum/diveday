@@ -61,6 +61,7 @@ export function asksWhichSystem(system: unknown): boolean {
 const GUIDE_SYSTEM: Record<string, SetupCurrentSystem> = {
   fareharbor: "booking_system",
   rezdy: "booking_system",
+  peek: "booking_system",
   eve: "shop_software",
   diveshop360: "shop_software",
   smartwaiver: "shop_software",
