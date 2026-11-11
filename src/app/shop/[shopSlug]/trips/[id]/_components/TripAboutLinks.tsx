@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { OverflowActions } from "@/components/OverflowActions";
 import { buttonClass } from "@/components/ui/button";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -14,6 +13,7 @@ import { publicTripPath } from "@/lib/public-routes";
 import { recordTripPrintPdfAction } from "../print-actions";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { DepartureLogLink } from "./DepartureLogLink";
+import { OverflowActions } from "./OverflowActions";
 import { PrintTripBundleButton } from "./PrintTripBundleButton";
 import { PrintWithMedicalAlertsLink } from "./PrintWithMedicalAlertsLink";
 

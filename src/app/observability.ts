@@ -42,6 +42,7 @@ function redactDiagnosticValue(value: unknown, seen = new WeakMap<object, unknow
   if (typeof value === "function") return "[function]";
   if (!value || typeof value !== "object") return value;
   if (value instanceof Date)
+    // i18n-exempt: JavaScript diagnostic sentinel, never displayed as interface copy.
     return Number.isNaN(value.getTime()) ? "Invalid Date" : value.toISOString();
   if (value instanceof URL) return redactDiagnosticText(value.href);
   if (seen.has(value)) return seen.get(value);
