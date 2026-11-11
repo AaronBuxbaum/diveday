@@ -422,6 +422,8 @@ for (const scheme of ["light", "dark"] as const) {
           "trip.rentalItems.wetsuit",
           "trip.rentalItems.fins",
           "trip.rentalItems.diveComputer",
+          "trip.personalGear.snorkel",
+          "trip.personalGear.boots",
         ] as const) {
           await expect(facts.getByText(copy(key), { exact: true })).toBeVisible();
         }

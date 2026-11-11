@@ -11,6 +11,7 @@ import { groupSeatSettled } from "@/lib/group-holds";
 /** One party seat as the organizer's surfaces render it. */
 export type PartyClaimSeat = {
   paymentStatus?: string | null;
+  seatPriceCents?: number | null;
   groupHoldUntil?: Date | null;
   groupHoldExpired?: boolean;
   bookingId: string;
@@ -53,11 +54,15 @@ export function PartyClaimPanel({
   signWaiverAction,
   payAction = null,
   organizerSettled,
+  organizerPriceCents,
+  paymentsAtShop = false,
   organizerHoldUntil,
   timeZone,
 }: {
   readOnly?: boolean;
   organizerSettled?: boolean;
+  organizerPriceCents?: number | null;
+  paymentsAtShop?: boolean;
   organizerHoldUntil?: Date | null;
   timeZone?: string;
   /** The negotiated request locale, not the shop's stored default. */
@@ -79,6 +84,14 @@ export function PartyClaimPanel({
   const hasPaymentDeadline = Boolean(
     organizerHoldUntil || seats.some((seat) => seat.groupHoldUntil),
   );
+  const pricedSeats = seats.filter(
+    (seat) => seat.seatPriceCents === undefined || (seat.seatPriceCents ?? 0) > 0,
+  );
+  const organizerPriced = organizerPriceCents === undefined || (organizerPriceCents ?? 0) > 0;
+  const paymentSeatCount = pricedSeats.length + Number(organizerPriced);
+  const settledCount =
+    pricedSeats.filter((seat) => groupSeatSettled(seat.paymentStatus)).length +
+    Number(organizerPriced && organizerSettled);
   // The default `md` inset, the one "Where to go" and "Anything changed" take
   // above it on /ready, so the thread's card titles share one left edge.
   return (
@@ -87,14 +100,14 @@ export function PartyClaimPanel({
       title={t("seatClaim.panelHeading")}
       description={readOnly ? undefined : t("seatClaim.panelBody")}
     >
-      {organizerSettled !== undefined ? (
+      {organizerSettled !== undefined && paymentSeatCount > 0 ? (
         <p className="mb-3 text-base font-semibold">
-          {t("seatClaim.paidSummary", {
-            paid:
-              seats.filter((seat) => groupSeatSettled(seat.paymentStatus)).length +
-              Number(organizerSettled),
-            total: seats.length + 1,
-          })}
+          {paymentsAtShop && !hasPaymentDeadline && !readOnly && settledCount < paymentSeatCount
+            ? t("seatClaim.atShopSummary")
+            : t("seatClaim.paidSummary", {
+                paid: settledCount,
+                total: paymentSeatCount,
+              })}
         </p>
       ) : null}
       {organizerHoldUntil && timeZone ? (
@@ -131,14 +144,17 @@ export function PartyClaimPanel({
                 </span>
               )}
             </div>
-            {seat.paymentStatus !== undefined ? (
+            {seat.paymentStatus !== undefined &&
+            (seat.seatPriceCents === undefined || (seat.seatPriceCents ?? 0) > 0) ? (
               <p className="mt-1 text-base text-muted">
                 {t(
                   seat.groupHoldExpired
                     ? "seatClaim.holdExpired"
                     : groupSeatSettled(seat.paymentStatus)
                       ? "seatClaim.paymentReceived"
-                      : "seatClaim.paymentNeeded",
+                      : paymentsAtShop && !seat.groupHoldUntil
+                        ? "seatClaim.paysAtShop"
+                        : "seatClaim.paymentNeeded",
                 )}
               </p>
             ) : null}

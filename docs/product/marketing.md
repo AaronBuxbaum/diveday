@@ -121,8 +121,10 @@ The homepage follows the essential booking-to-boat scenes, including dock check-
 then explains bringing records in while keeping control of them. Its compact Product link opens `/product#full-list`;
 the repeated twelve-feature catalogue lives on Product alone. Home and Product heroes keep a
 content-sized demo beside a quiet 44px setup link. The demo doors and accurate migration qualifications remain. Home does not repeat a price
-sentence; the canonical pricing page remains available through navigation. Product keeps its existing
-material and gains no new hero scene.
+sentence; the canonical pricing page remains available through navigation. Product keeps its feature
+catalogue and pairs the introduction with the existing Today readiness proof screen. On phones the
+demo and setup actions precede that screen. Storefront previews use the vetted reef photograph
+inside their existing screen frames; the approved illustrations remain unchanged.
 
 The mobile marketing header keeps the brand, demo or staff return, and Menu on one row.
 Secondary destinations, including Sign in, are disclosed with keyboard focus and Escape return.

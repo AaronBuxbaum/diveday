@@ -6,6 +6,7 @@ import {
   type CourseDepthFormat,
   courseCertifiesStudents,
   courseCharges,
+  courseDaysForMeetings,
   courseDepthPlaceholderIssues,
   courseSlug,
   courseTotalCents,
@@ -19,6 +20,7 @@ import {
   resolveCourseDepths,
   sanitizeFaqs,
   sanitizeLearningMaterials,
+  sanitizeScheduleDays,
   splitCourseImageUrls,
 } from "./courses";
 import { depthInUnit, feetToMeters, metersToFeet } from "./depth-units";
@@ -540,5 +542,40 @@ describe("learning materials (ADR 20261008-course-learning-materials)", () => {
       // The cap is on stored rows, so the two bad rows spend two places.
       expect(readLearningMaterials(stored)).toHaveLength(MAX_LEARNING_MATERIALS - 2);
     });
+  });
+});
+
+describe("course day meeting places", () => {
+  it("keeps a shop-authored place without deriving it from the day's prose", () => {
+    expect(
+      sanitizeScheduleDays([
+        { title: "Pool day", meetingPlace: "  Shop pool entrance  ", items: ["Classroom first"] },
+      ]),
+    ).toEqual([
+      { title: "Pool day", meetingPlace: "Shop pool entrance", items: ["Classroom first"] },
+    ]);
+    expect(sanitizeScheduleDays([{ title: "Pool day", items: ["Meet at a pool"] }])).toEqual([
+      { title: "Pool day", items: ["Meet at a pool"] },
+    ]);
+  });
+
+  it("requires a title for a place-only row and refuses an overlong place", () => {
+    expect(sanitizeScheduleDays([{ meetingPlace: "Shop pool" }])).toBeNull();
+    expect(
+      sanitizeScheduleDays([{ title: "Day 1", meetingPlace: "x".repeat(241), items: [] }]),
+    ).toBeNull();
+  });
+});
+
+describe("courseDaysForMeetings", () => {
+  const days = [
+    { title: "Pool", meetingPlace: "Training pool", items: [] },
+    { title: "Ocean", meetingPlace: "Shop dock", items: [] },
+  ];
+  it("pairs only a complete authored plan with the actual meeting days", () => {
+    expect(courseDaysForMeetings(days, 2)).toEqual(days);
+    expect(courseDaysForMeetings(days, 1)).toEqual([]);
+    expect(courseDaysForMeetings(days, 3)).toEqual([]);
+    expect(courseDaysForMeetings([], 0)).toEqual([]);
   });
 });

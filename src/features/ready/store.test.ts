@@ -1,7 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
-  addPartySeat,
   cancelBooking,
   confirmCarriedFacts,
   createBooking,
@@ -19,6 +18,7 @@ import { getRentalFit, toDiverRentalFit } from "../../db/rental-fit";
 import {
   bookings,
   cards,
+  courses,
   people,
   priorVisits,
   rollCallEvents,
@@ -134,20 +134,6 @@ describe("getReadyPageData", () => {
     expect((await getReadyPageData(db, bookingId))?.owesAtShop).toBe(false);
   });
 
-  /** UX review 2026-10-11, item 13: the page draws "Add a seat" only where it can work. */
-  it("offers a seat to add on a booking that may lead one, never on a party member's seat", async () => {
-    const { db, shop, bookingId } = await unpaidBooking();
-    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
-    const added = await addPartySeat(db, {
-      shopId: shop.id,
-      leadBookingId: bookingId,
-      seatName: "Milo",
-    });
-    if (!added.ok) throw new Error("add failed");
-    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
-    expect((await getReadyPageData(db, added.bookingId))?.canAddSeat).toBe(false);
-  });
-
   /**
    * Layer 3 review (dde-2 #1, dde-1 F2): a seat the desk released before the
    * boat left is not the diver's to pay for or prepare. Without this, a diver
@@ -176,52 +162,6 @@ describe("getReadyPageData", () => {
     // Erasure-shaped: the fact without the category still reads turned away.
     await db.update(bookings).set({ turnedAwayReason: null }).where(eq(bookings.id, bookingId));
     expect((await getReadyPageData(db, bookingId))?.turnedAway).toBe(true);
-  });
-
-  /**
-   * Security review of layer 8, D3: the link is shared by design, so a lead
-   * who has not paid on a page that takes payment cannot fill the boat with
-   * unpaid seats. Paying (or a page that takes no payment) opens the door.
-   */
-  it("offers no seat to add until a lead the page could charge has paid", async () => {
-    const { db, shop, bookingId } = await unpaidBooking();
-    await upsertShopStripeAccount(db, shop.id, "acct_ready_add_seat");
-    await setShopStripeAccountStatus(db, "acct_ready_add_seat", {
-      chargesEnabled: true,
-      payoutsEnabled: true,
-      detailsSubmitted: true,
-    });
-    const owing = await getReadyPageData(db, bookingId);
-    expect(owing?.canPay).toBe(true);
-    expect(owing?.canAddSeat).toBe(false);
-    // A page that can take the card is not money owed at the shop.
-    expect(owing?.owesAtShop).toBe(false);
-
-    await setBookingPayment(db, {
-      shopId: shop.id,
-      bookingId,
-      status: "paid",
-      currency: "usd",
-      amountCents: 12_000,
-      provider: "stripe",
-      providerRef: "pi_ready_add_seat",
-    });
-    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
-  });
-
-  it("offers no seat to add on a held seat or a canceled one", async () => {
-    const { db, shop, bookingId } = await unpaidBooking();
-    await db
-      .update(bookings)
-      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Nora Q" })
-      .where(eq(bookings.id, bookingId));
-    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(false);
-    await db
-      .update(bookings)
-      .set({ identityUnconfirmedAt: null, identityBookedAs: null })
-      .where(eq(bookings.id, bookingId));
-    await cancelBooking(db, shop.id, bookingId);
-    expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(false);
   });
 
   it("offers the cancel for a plain booked seat on a future departure", async () => {
@@ -872,4 +812,36 @@ describe("getReadyPageData — the nitrox card behind the planning line", () => 
     await db.update(cards).set({ reviewedAt: nowDate() }).where(eq(cards.id, cardId));
     expect((await getReadyPageData(db, bookingId))?.nitroxCardVerified).toBe(true);
   });
+});
+
+it("the immediate booked card pairs authored places only with the full meeting plan", async () => {
+  const { db, shop, bookingId, open: trip } = await unpaidBooking();
+  const [course] = await db.select().from(courses).where(eq(courses.shopId, shop.id)).limit(1);
+  if (!course) throw new Error("seeded course missing");
+  await db.update(tripTable).set({ courseId: course.id }).where(eq(tripTable.id, trip.id));
+  const before = await getBookedCard(db, { shopId: shop.id, bookingId });
+  if (!before?.days?.length) throw new Error("seeded meeting day missing");
+  const plan = before.days.map((_, i) => ({
+    title: `Day ${i + 1}`,
+    meetingPlace: `Authored place ${i + 1}`,
+    items: [],
+  }));
+  await db
+    .update(courses)
+    .set({ scheduleDays: plan })
+    .where(and(eq(courses.id, course.id), eq(courses.shopId, shop.id)));
+  const fullReady = await getReadyPageData(db, bookingId);
+  expect(fullReady?.trip.course).toMatchObject({ scheduleDays: plan });
+  const matched = await getBookedCard(db, { shopId: shop.id, bookingId });
+  expect(matched?.days?.map((day) => day.meetingPlace)).toEqual(
+    plan.map((day) => day.meetingPlace),
+  );
+  await db
+    .update(courses)
+    .set({
+      scheduleDays: [...plan, { title: "Extra day", meetingPlace: "Do not guess", items: [] }],
+    })
+    .where(eq(courses.id, course.id));
+  const partial = await getBookedCard(db, { shopId: shop.id, bookingId });
+  expect(partial?.days?.every((day) => day.meetingPlace === undefined)).toBe(true);
 });

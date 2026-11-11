@@ -1,6 +1,8 @@
 import { ChoiceFieldset, ChoiceRow } from "@/components/ui/form";
+import { COURSE_PERSONAL_GEAR_STAFF_KEYS } from "@/i18n/packing-labels";
 import { rentableItemLabel } from "@/i18n/rental-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { COURSE_PERSONAL_GEAR, type CoursePersonalGear } from "@/lib/course-personal-gear";
 import {
   type RentableItemKind,
   SCUBA_UNIT_PRESET,
@@ -76,13 +78,19 @@ export function CourseSwitches({
   rentalItems,
   t,
 }: {
-  course: { nitroxCompatible: boolean; includedRentalKinds: RentableItemKind[] };
+  course: {
+    nitroxCompatible: boolean;
+    includedRentalKinds: RentableItemKind[];
+    includedPersonalGear?: readonly CoursePersonalGear[];
+  };
   /** The shop's rental catalog (`shops.rental_items`): the kinds the fee can include. */
   rentalItems: readonly string[];
   t: StaffTranslator;
 }) {
   const included = course.includedRentalKinds;
-  const ticked = new Set(included.length > 0 ? included : SCUBA_UNIT_PRESET);
+  const personal = course.includedPersonalGear ?? [];
+  const hasIncluded = included.length > 0 || personal.length > 0;
+  const ticked = new Set(hasIncluded ? included : SCUBA_UNIT_PRESET);
   const kinds = includableKinds(rentalItems, included);
   return (
     <>
@@ -98,30 +106,41 @@ export function CourseSwitches({
           name="gearIncluded"
           label="courses.edit.gearIncludedLabel"
           hint="courses.edit.gearIncludedHint"
-          checked={included.length > 0}
+          checked={hasIncluded}
           t={t}
         />
-        {kinds.length > 0 ? (
-          <ChoiceFieldset
-            legend={t("courses.edit.includedKindsLegend")}
-            data-testid="course-included-kinds"
-            className="hidden ps-7 group-has-[input[name=gearIncluded]:checked]/gear:block"
-            bodyClassName="grid grid-cols-2 gap-x-4 sm:grid-cols-3"
-          >
-            {kinds.map((kind) => (
-              <ChoiceRow
-                key={kind}
-                type="checkbox"
-                name="includedRentalKind"
-                value={kind}
-                defaultChecked={ticked.has(kind)}
-                className="text-sm"
-              >
-                {rentableItemLabel(t, kind)}
-              </ChoiceRow>
-            ))}
-          </ChoiceFieldset>
-        ) : null}
+
+        <ChoiceFieldset
+          legend={t("courses.edit.includedKindsLegend")}
+          data-testid="course-included-kinds"
+          className="hidden ps-7 group-has-[input[name=gearIncluded]:checked]/gear:block"
+          bodyClassName="grid grid-cols-2 gap-x-4 sm:grid-cols-3"
+        >
+          {kinds.map((kind) => (
+            <ChoiceRow
+              key={kind}
+              type="checkbox"
+              name="includedRentalKind"
+              value={kind}
+              defaultChecked={ticked.has(kind)}
+              className="text-sm"
+            >
+              {rentableItemLabel(t, kind)}
+            </ChoiceRow>
+          ))}
+          {COURSE_PERSONAL_GEAR.map((kind) => (
+            <ChoiceRow
+              key={kind}
+              type="checkbox"
+              name="includedPersonalGear"
+              value={kind}
+              defaultChecked={personal.includes(kind)}
+              className="text-sm"
+            >
+              {t(COURSE_PERSONAL_GEAR_STAFF_KEYS[kind])}
+            </ChoiceRow>
+          ))}
+        </ChoiceFieldset>
       </div>
     </>
   );

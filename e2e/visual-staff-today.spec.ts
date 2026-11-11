@@ -30,6 +30,7 @@ import { seedFacts } from "./shop-facts";
 import { todayCatchUpScenario } from "./today-catch-up-helper";
 import {
   capture,
+  diverCopy,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
   registerExpectedVisualCapture,
@@ -48,6 +49,28 @@ for (const scheme of ["light", "dark"] as const) {
     // Base viewport for navigation and clicks; `capture` resizes to each entry
     // in VIEWPORTS for the screenshots and restores this afterward.
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    // A visual-only mint keeps the header identity stable; the homepage journey
+    // remains covered by demo.spec.ts. This scope has its own private-shop login.
+    test.describe("private demo", () => {
+      test.use({ privateShopSlug: `demo-first-arrival-${scheme}`, privateShopDemo: true });
+
+      test(`the demo's first-arrival choices render true to the design (${scheme})`, async ({
+        page,
+        privateShop,
+      }) => {
+        await page.goto(`/shop/${privateShop.slug}`);
+        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
+        const starts = page.getByRole("region", { name: diverCopy("demo.startTitle") });
+        await expect(starts).toBeVisible();
+        for (const key of ["demo.startCaptain", "demo.startDesk", "demo.startDiver"] as const) {
+          await expect(
+            starts.getByRole("button", { name: diverCopy(key), exact: true }),
+          ).toBeVisible();
+        }
+        await capture(page, "demo-first-arrival", scheme);
+      });
+    });
 
     test.describe("staff", () => {
       signedInAsOwner();
@@ -254,16 +277,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "identity-menu-open", scheme);
         await page.keyboard.press("Escape");
         await expect(trigger).toHaveAttribute("aria-expanded", "false");
-      });
-
-      test(`the demo's first-arrival choices render true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/");
-        await page.getByRole("button", { name: "Try the live demo" }).first().click();
-        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
-        await expect(page.getByRole("region", { name: "Start here" })).toBeVisible();
-        await capture(page, "demo-first-arrival", scheme);
       });
 
       /**

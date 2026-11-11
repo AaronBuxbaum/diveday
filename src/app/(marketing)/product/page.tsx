@@ -6,7 +6,8 @@ import { Eyebrow } from "@/app/_components/Eyebrow";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingSectionMotion } from "@/components/MarketingReveal";
-import { FeatureDirectory } from "@/components/MarketingSections";
+import { FrontDeskReadinessFallback } from "@/components/MarketingScreenFallbacks";
+import { FeatureDirectory, MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
 import { requestPricingOffer } from "@/features/pricing-offer";
@@ -91,32 +92,38 @@ async function ProductBody({ locale, offer }: { locale: DiverLocale; offer: Plan
   return (
     <main className="flex-1">
       <MarketingSectionMotion />
-      {/* The hero, left-aligned on the directory's own column and open at
-          the bottom: no rule and no band boundary between the promise and the
-          list that keeps it, so the title, the lede and the three phases share
-          one left edge (design review, 2026-10-05). It was centred over a
-          left-aligned grid, with a rule and 213px of air between them, and
-          read as two bands. */}
+      {/* One current Today screen shows the product before the directory.
+          On phones the existing demo door stays before the preview. */}
       <section>
         <div className="mx-auto max-w-6xl px-6 pt-8 pb-10 lg:pt-16">
-          <Eyebrow>{t("marketing.product.eyebrow")}</Eyebrow>
-          <h1 className={`mt-4 max-w-4xl ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
-            {t("marketing.product.heroTitle")}
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
-            {t("marketing.product.heroDescription")}
-          </p>
-          {/* The nav tap that lands here is the most evaluation-intent click
-              on the site; without its own CTA the first offered action was
-              the nav's trial link — the wrong ask while a buyer is still
-              verifying claims. Same one-primary block as the home hero. */}
-          <FunnelCtas
-            locale={locale}
-            source="product"
-            hero
-            footnotes={{ offer }}
-            className="mt-6"
-          />
+          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
+            <div>
+              <Eyebrow>{t("marketing.product.eyebrow")}</Eyebrow>
+              <h1 className={`mt-4 max-w-4xl ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
+                {t("marketing.product.heroTitle")}
+              </h1>
+              <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
+                {t("marketing.product.heroDescription")}
+              </p>
+              {/* The nav tap that lands here is the most evaluation-intent click
+                  on the site; without its own CTA the first offered action was
+                  the nav's trial link — the wrong ask while a buyer is still
+                  verifying claims. Same one-primary block as the home hero. */}
+              <FunnelCtas
+                locale={locale}
+                source="product"
+                hero
+                footnotes={{ offer }}
+                className="mt-6"
+              />
+            </div>
+            <MarketingMockup
+              label={t("marketing.home.steps.check.mockupLabel")}
+              className="w-full max-w-xl justify-self-center lg:justify-self-end"
+            >
+              <FrontDeskReadinessFallback locale={locale} />
+            </MarketingMockup>
+          </div>
         </div>
       </section>
 

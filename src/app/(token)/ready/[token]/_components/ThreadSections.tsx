@@ -55,6 +55,7 @@ export type ReadyThreadSectionsContext = {
   changeEvents: Awaited<ReturnType<typeof listTripChangeEvents>>;
   publicCrew: Awaited<ReturnType<typeof tripPublicCrew>>;
   partySeatClaims: Awaited<ReturnType<typeof issuePartySeatClaims>>;
+  groupClaim?: { token: string } | null;
   /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
   partyAllSet: boolean;
   /** When to fly home, as a plan (fifth-loop ideas, item 18); null when nothing honest can be said. */
@@ -176,7 +177,10 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
         <PartySection
           locale={locale}
           seats={partySeats}
+          groupClaim={context.groupClaim}
+          paymentsAtShop={data.paymentsAtShop}
           organizerSettled={data.paymentSettled}
+          organizerPriceCents={data.trip.seatPriceCents}
           organizerHoldUntil={data.groupHoldUntil}
           timeZone={detail.shop.timezone}
           allSet={partyAllSet}

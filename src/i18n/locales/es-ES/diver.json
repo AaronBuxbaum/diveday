@@ -372,7 +372,7 @@
     "money": {
       "fare": "{price} × {count, plural, one {# buceador} other {# buceadores}}",
       "courseFee": "Curso",
-      "eLearning": "E-learning",
+      "eLearning": "Materiales del curso en línea",
       "gear": "Equipo de alquiler",
       "tax": "Impuesto",
       "taxAtCheckout": "se suma al pagar",
@@ -1402,7 +1402,13 @@
     "holdPaymentWindow": "Abre el pago en línea al menos 31 minutos antes del plazo. Después, pide al centro que cobre el pago.",
     "paymentNeeded": "Pago pendiente",
     "expiredOrganizerHeading": "Los pagos de tu grupo",
-    "expiredOrganizerBody": "Tu reserva sin pagar venció. Las plazas pagadas de tu grupo siguen reservadas."
+    "expiredOrganizerBody": "Tu reserva sin pagar venció. Las plazas pagadas de tu grupo siguen reservadas.",
+    "groupHeading": "Elige tu plaza",
+    "groupBody": "La persona que organiza el grupo ha reservado estas plazas. Elige la tuya para agregar tus datos y prepararte.",
+    "groupEmpty": "Todos han reclamado su plaza. Pide un enlace a la persona que organiza el grupo si aún lo necesitas.",
+    "shareGroup": "Compartir con el grupo",
+    "paysAtShop": "Paga en el centro",
+    "atShopSummary": "El pago se hace en el centro."
   },
   "rental": {
     "ownGear": "Traes tu propio equipo, así que no hace falta alquiler.",
@@ -1496,7 +1502,9 @@
     "useMainContactEmail": "Usar el correo del contacto principal para este buceador",
     "under18": "Menor de 18 años",
     "under18Hint": "Un padre, madre o tutor legal también firma la exención.",
-    "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro."
+    "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro.",
+    "guestN": "Invitado {number}",
+    "bigGroupRequest": "¿Son más de {count}? Pregunta por una salida para el grupo."
   },
   "site": {
     "page": {

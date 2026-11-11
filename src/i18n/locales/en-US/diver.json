@@ -372,7 +372,7 @@
     "money": {
       "fare": "{price} × {count, plural, one {# diver} other {# divers}}",
       "courseFee": "Course fee",
-      "eLearning": "E-learning",
+      "eLearning": "Online course materials",
       "gear": "Rental gear",
       "tax": "Tax",
       "taxAtCheckout": "added at checkout",
@@ -1402,7 +1402,13 @@
     "holdPaymentWindow": "Open online checkout at least 31 minutes before the deadline. After that, ask the shop to take payment.",
     "paymentNeeded": "Payment needed",
     "expiredOrganizerHeading": "Your group’s payment ledger",
-    "expiredOrganizerBody": "Your unpaid seat hold expired. Paid seats in your group stay booked."
+    "expiredOrganizerBody": "Your unpaid seat hold expired. Paid seats in your group stay booked.",
+    "groupHeading": "Choose your seat",
+    "groupBody": "Your organizer has booked these seats. Choose yours to add your details and get ready.",
+    "groupEmpty": "Everyone has claimed their seat. Ask your organizer if you still need a link.",
+    "shareGroup": "Share with the group",
+    "paysAtShop": "Pays at the shop",
+    "atShopSummary": "Payment is due at the shop."
   },
   "rental": {
     "ownGear": "Bringing own gear, so no rental needed",
@@ -1496,7 +1502,9 @@
     "useMainContactEmail": "Use the main contact’s email for this diver",
     "under18": "Under 18",
     "under18Hint": "A parent or guardian signs the waiver too.",
-    "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop."
+    "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop.",
+    "guestN": "Guest {number}",
+    "bigGroupRequest": "Bringing more than {count}? Ask about a group trip."
   },
   "site": {
     "page": {

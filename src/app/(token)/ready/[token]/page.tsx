@@ -185,7 +185,7 @@ async function DiverReadinessPage({
   search: { saved, error, pay, justBooked },
   anonT,
   underBookedHeader,
-  actionReads: { dataPromise, partyClaimsPromise },
+  actionReads: { dataPromise, partyClaimsPromise, groupClaimPromise },
 }: {
   db: AppDb;
   token: string;
@@ -561,7 +561,7 @@ async function DiverReadinessPage({
             tripDives,
             changeEvents,
             publicCrew,
-            partySeatClaims,
+            ...{ partySeatClaims, groupClaim: await groupClaimPromise },
             partyAllSet,
             flySafePlan,
           }}

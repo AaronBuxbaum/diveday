@@ -197,13 +197,13 @@ describe("PackingSection — the logbook line", () => {
 
 /** **"Bring" and "Provided" follow what the course fee includes** (issue #2796). */
 describe("PackingSection — a course's included gear", () => {
-  function renderCourse(includedRentalKinds: string[]) {
+  function renderCourse(includedRentalKinds: string[], includedPersonalGear: string[] = []) {
     const trip = {
       startsAt: new Date("2026-08-12T12:00:00Z"),
       endsAt: new Date("2026-08-12T16:00:00Z"),
       plannedDives: 2,
       waterTemperatureC: null,
-      course: { includedRentalKinds, isIntroCourse: false },
+      course: { includedRentalKinds, includedPersonalGear, isIntroCourse: false },
     } as unknown as Trip;
     return render(
       <PackingSection
@@ -224,6 +224,13 @@ describe("PackingSection — a course's included gear", () => {
     expect(column("Bring")).toContain("Mask");
     expect(column("Bring")).toContain("Fins");
     expect(column("We provide")).toContain("Scuba unit (BCD, regulator, tank, weights)");
+  });
+
+  it("puts supplied personal kit under Provided instead of Bring", () => {
+    renderCourse(["mask", "fins"], ["snorkel", "boots"]);
+    expect(column("We provide")).toContain("Snorkel");
+    expect(column("We provide")).toContain("Boots");
+    expect(column("Bring")).not.toMatch(/Snorkel|Boots/);
   });
 
   it("moves mask, fins and the wetsuit under Provided when the fee includes them", () => {

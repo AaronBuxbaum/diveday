@@ -90,3 +90,65 @@ describe("PartyClaimPanel pay line", () => {
     expect(screen.getByRole("button", { name: "Pagar esta plaza" })).toBeInTheDocument();
   });
 });
+
+it("reassures an at-shop group without claiming an unpaid seat is paid", () => {
+  render(
+    <PartyClaimPanel
+      locale="en-US"
+      paymentsAtShop
+      organizerSettled={false}
+      seats={[
+        seat({ paymentStatus: "unpaid" }),
+        seat({ bookingId: "paid-seat", paymentStatus: "paid" }),
+      ]}
+    />,
+  );
+  expect(screen.getByText("Payment is due at the shop.")).toBeInTheDocument();
+  expect(screen.getByText("Pays at the shop")).toBeInTheDocument();
+  expect(screen.queryByText("Payment needed")).toBeNull();
+  expect(screen.queryByText("1 of 3 paid or covered")).toBeNull();
+});
+
+it("keeps the paid summary once every at-shop seat is covered", () => {
+  render(
+    <PartyClaimPanel
+      locale="en-US"
+      paymentsAtShop
+      organizerSettled
+      seats={[seat({ paymentStatus: "paid" })]}
+    />,
+  );
+  expect(screen.getByText("2 of 2 paid or covered")).toBeInTheDocument();
+  expect(screen.queryByText("Payment is due at the shop.")).toBeNull();
+});
+
+it("keeps an unpaid hold deadline explicit even if online collection becomes unavailable", () => {
+  render(
+    <PartyClaimPanel
+      locale="en-US"
+      paymentsAtShop
+      organizerSettled={false}
+      seats={[seat({ paymentStatus: "unpaid", groupHoldUntil: new Date("2030-06-01T12:00:00Z") })]}
+    />,
+  );
+  expect(screen.getByText("Payment needed")).toBeInTheDocument();
+  expect(screen.queryByText("Pays at the shop")).toBeNull();
+});
+
+it.each([null, 0])(
+  "does not imply charges for an unpriced or free group (%s)",
+  (seatPriceCents) => {
+    render(
+      <PartyClaimPanel
+        locale="en-US"
+        paymentsAtShop
+        organizerSettled={false}
+        organizerPriceCents={seatPriceCents}
+        seats={[seat({ paymentStatus: "unpaid", seatPriceCents })]}
+      />,
+    );
+    expect(screen.getByText("Maya Alvarez")).toBeInTheDocument();
+    expect(screen.queryByText("Payment is due at the shop.")).toBeNull();
+    expect(screen.queryByText("Pays at the shop")).toBeNull();
+  },
+);

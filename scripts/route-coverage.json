@@ -3,6 +3,10 @@
   "/claim/[token]": {
     "visual": ["seat-claim"]
   },
+  "/claim/[token]/group": {
+    "e2e": ["group-seat-share.spec.ts"],
+    "visual": ["group-seat-picker"]
+  },
   "/email-sign-in": {
     "e2e": ["account-lifecycle.spec.ts"]
   },

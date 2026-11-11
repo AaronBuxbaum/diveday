@@ -1,3 +1,4 @@
+import { MarketingStorefrontPhoto } from "@/components/MarketingStorefrontPhoto";
 import { RollCallMark } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -493,6 +494,7 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
     <div className="bg-background">
       <AppBar label={t("fallback.schedule")} />
       <div className={MOCK_BODY}>
+        <MarketingStorefrontPhoto />
         <p className={groupLabelClass("primary")}>{t("fallback.upcomingTrips")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.findNextDive")}</h3>
         <div className="mt-4 space-y-3">

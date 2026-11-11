@@ -496,6 +496,17 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 ### The product page — `/product`
 
+**Product proof, 2026-11-11 (#4320).** One Today screen now sits beside the hero on desktop
+and follows its existing demo and setup doors on a phone. The directory still answers which job
+DiveDay handles; the preview gives the buyer a concrete starting point before that list. It reuses
+the homepage’s current readiness preview and accessible description, with no added control or claim.
+This supersedes the earlier no-screen choice below. Remove a second screen or repeated feature
+list first; the existing directory remains the complete catalogue.
+
+The homepage booking preview and website preview include the demo shop’s bundled Molasses Reef
+cover. The real reef photo is part of the sample storefront, separate from the approved editorial
+illustrations. It adds no customer endorsement or evidence, and the original artwork stays intact.
+
 **Composition, 2026-10-26 (#3069).** The twelve-feature catalogue lives here, reached by the
 homepage’s quiet full-list door. The existing hero starts sooner; no new hero scene is added.
 The homepage retains all five essential journey scenes, including dock check-in, with compact
@@ -1154,3 +1165,13 @@ Rendered review at 390 and 1280 pixels covered Home, About, Product, Pricing, se
 The arriving questions determine the composition: Home shows what a crew can do; About shows why the builders care and how they help; Product and feature pages connect each job to its proof screen; Pricing explains the actual charge; switching explains a realistic move; setup makes a human request concrete. Demo remains the primary action, setup the secondary one, and pricing/export are quiet destinations. The first elements to remove were the repeated commercial cards and export pitch; the remaining controls answer distinct questions. The pricing examples use a compact ledger instead of another card grid.
 
 Independent review confirmed and then rechecked two fixes: About’s export link ran into its sentence on desktop, and feature breadcrumbs had 18px targets. Both now pass browser geometry regressions and new phone/desktop captures. Remaining probe flags describe separate mockup/editorial alignment systems, a deliberately faded static gear-chip row, the choice-pill wrapper’s visible focus ring, a visible Spanish status label extending its measurement box, and a decorative rule yielding to a long eyebrow. None hides text or an interactive target in the reviewed images. The Home description shell reserves Spanish’s five phone lines (English uses four) and three desktop lines. The inherited longer Spanish title has a separate loading-shell follow-up, issue #4372.
+
+### The group seat picker — `/claim/[token]/group`
+
+The arriving question is “Which seat is mine?” One list of remaining companion seats opens each
+seat’s existing claim form. The organizer shares one group link beside the retained individual
+links. Unnamed seats read Guest 2, Guest 3 and so on until claimed. Payment due at the shop says
+so without presenting an unpaid seat as already paid. Medical, payment and organizer prep facts
+stay off this invitation. The empty state says every seat has been claimed.
+
+**Amended 2026-11-11 (#4332, authored course meeting places):** the course editor accepts an optional meeting place per plan day and prompts for learning-material access instructions. The public and printable course plans show that authored place; the enrolled student's actual dated meetings pair it only when the session covers the complete plan. Saved arrival cards retain those dates and places, use course-start wording, and preserve scheduled hotel pickup precedence. Partial sessions do not infer a place from activity prose. The separate online course materials fee keeps its own price line.

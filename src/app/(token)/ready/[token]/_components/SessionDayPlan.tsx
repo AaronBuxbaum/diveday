@@ -1,6 +1,7 @@
 import { courseDayPlan } from "@/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
+import type { CoursePersonalGear } from "@/lib/course-personal-gear";
 import { type CourseScheduleDay, formatScheduleDayTime } from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { RentableItemKind } from "@/lib/rentals";
@@ -14,7 +15,11 @@ export function SessionDayPlan({
   locale,
 }: {
   course:
-    | { scheduleDays: CourseScheduleDay[]; includedRentalKinds: readonly RentableItemKind[] }
+    | {
+        scheduleDays: CourseScheduleDay[];
+        includedRentalKinds: readonly RentableItemKind[];
+        includedPersonalGear?: readonly CoursePersonalGear[];
+      }
     | null
     | undefined;
   /** How many days this session meets on (`trip_schedule_days`). */
@@ -38,6 +43,9 @@ export function SessionDayPlan({
             <div key={day.title}>
               {multiple ? <h3 className="text-base font-semibold">{day.title}</h3> : null}
               {time ? <p className="mt-1 text-sm text-muted tabular-nums">{time}</p> : null}
+              {day.meetingPlace ? (
+                <p className="mt-1 text-sm font-medium">{day.meetingPlace}</p>
+              ) : null}
               {day.items.length > 0 ? (
                 <ul className="mt-2 list-disc space-y-1 ps-5 text-sm text-muted">
                   {day.items.map((item) => (

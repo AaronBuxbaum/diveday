@@ -337,6 +337,9 @@ for (const scheme of ["light", "dark"] as const) {
       // objection FAQ. Copy changes here are product changes.
       test(`the product page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/product");
+        await expect(
+          page.getByRole("img", { name: diverCopy("marketing.home.steps.check.mockupLabel") }),
+        ).toBeVisible();
         await capture(page, "product", scheme);
       });
 

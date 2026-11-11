@@ -19,8 +19,9 @@ import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
-import { publicTripPath } from "@/lib/public-routes";
+import { publicGroupRequestPath, publicTripPath } from "@/lib/public-routes";
 import { unionRequirements } from "@/lib/requirement";
+import { shopDayOf } from "@/lib/shop-day";
 import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
@@ -48,7 +49,7 @@ import { TripItinerary, TripSupportingDetails } from "./_components/TripDaySecti
 import { TripBoatPhoto, TripHero } from "./_components/TripHero";
 import { TripPaperSheet } from "./_components/TripPaperSheet";
 import { pitchOpensOnDoor } from "./_components/TripPitch";
-import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
+import { ERROR_MESSAGE_KEYS, isErrorCode, type Shop, type Trip } from "./_components/types";
 import { dayBriefings } from "./_lib/day-briefings";
 import { departureJsonLd } from "./_lib/departure-json-ld";
 import { fullFootLabel } from "./_lib/foot-bar-label";
@@ -81,6 +82,16 @@ const TRIP_PAGE_NAMESPACES = [
   "rental",
   "trip",
 ] as const;
+
+/** Prefill a date request for a group larger than the seats still available. */
+function groupRequestFor(shop: Shop, trip: Trip, remaining: number) {
+  if (!shop.dateRequestsEnabled) return undefined;
+  return publicGroupRequestPath(shop.slug, {
+    title: trip.title,
+    date: shopDayOf(trip.startsAt, shop.timezone),
+    count: remaining + 1,
+  });
+}
 
 /** Also the framed page, `embed/trip/[id]`, which sets `isEmbed`: never the query (ADR 20260726-schedule-embed). */
 export async function TripDetailPage({
@@ -379,6 +390,7 @@ export async function TripDetailPage({
                   withAnchor: false,
                   tripRef,
                   remaining,
+                  groupRequestHref: groupRequestFor(shop, trip, remaining),
                   errorMessage,
                   payAtBooking: payAtBooking && checkoutMode(stripeAccount),
                   offerCodeField,

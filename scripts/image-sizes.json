@@ -171,5 +171,14 @@
       "1280": 588,
       "1920": 588
     }
+  },
+  "src/components/MarketingStorefrontPhoto.tsx :: (max-width: 1023px) calc(100vw - 88px), 605px": {
+    "measured": "2026-11-11, optimized local dev Home and /product/website; maximum slot across both surfaces. Home desktop 604.53125px; website desktop 556.25px. Both phone 300px and tablet 678px.",
+    "rendered": {
+      "390": 300,
+      "768": 678,
+      "1280": 604.53125,
+      "1920": 604.53125
+    }
   }
 }

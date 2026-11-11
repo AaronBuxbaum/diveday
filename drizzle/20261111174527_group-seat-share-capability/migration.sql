@@ -1,0 +1,1 @@
+ALTER TYPE "booking_capability_purpose" ADD VALUE 'group_claim' BEFORE 'readiness';

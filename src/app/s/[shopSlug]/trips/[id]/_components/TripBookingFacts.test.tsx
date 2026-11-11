@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { TripBookingFacts } from "./TripBookingFacts";
 import type { Shop, Trip } from "./types";
@@ -56,6 +56,20 @@ describe("TripBookingFacts", () => {
     expect(screen.getByText("Mask")).toBeInTheDocument();
     expect(screen.queryByText(/Rental gear from/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Full set/)).not.toBeInTheDocument();
+  });
+  it("names included personal kit as provided before booking without selling it as a rental", () => {
+    show(shop, {
+      ...trip,
+      course: { includedRentalKinds: shop.rentalItems, includedPersonalGear: ["snorkel", "boots"] },
+    } as Trip);
+    const provided = screen.getByText("We provide").closest("div");
+    const bring = screen.getByText("Bring").closest("div");
+    if (!provided || !bring) throw new Error("packing sections missing");
+    for (const item of ["Snorkel", "Boots"]) {
+      expect(within(provided).getByText(item)).toBeInTheDocument();
+      expect(within(bring).queryByText(item)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText(/Rental gear from|Full set/)).not.toBeInTheDocument();
   });
   it("does not invent rental prices or cancellation terms the shop has not set", () => {
     show(

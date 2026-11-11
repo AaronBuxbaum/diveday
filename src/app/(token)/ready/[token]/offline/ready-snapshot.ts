@@ -11,6 +11,7 @@ import {
   formatDateTimeTz,
   formatPlannedDateTimeTz,
   formatShortDate,
+  formatTime,
   formatTimeRangeTz,
 } from "@/lib/format";
 import type { ChecklistDetailCode } from "@/lib/readiness-summary";
@@ -26,6 +27,8 @@ import { siteRunsLine } from "@/lib/site-runs";
  */
 export type ReadySnapshotFacts = {
   locale: string;
+  courseSession?: boolean;
+  courseMeetings?: readonly { startsAt: Date; endsAt: Date; meetingPlace?: string }[];
   /** Server clock now. */
   generatedAt: number;
   shop: {
@@ -74,6 +77,11 @@ function arrivalLine(facts: ReadySnapshotFacts, t: DiverTranslator): string | nu
       location: facts.pickup.location ?? t("ready.hotelPickupLocationNotSet"),
     });
   }
+  if (facts.courseSession) {
+    return t("ready.courseStartLine", {
+      time: formatTime(facts.trip.startsAt, facts.locale, facts.shop.timezone),
+    });
+  }
   return arrivalDockCallLine(
     t,
     facts.trip.startsAt,
@@ -110,14 +118,27 @@ export function buildReadySnapshot(facts: ReadySnapshotFacts): ReadySnapshot {
         count: facts.flySafe.hours,
       })
     : null;
+  const firstMeeting = facts.courseSession ? facts.courseMeetings?.[0] : undefined;
+  const firstWindow = firstMeeting ?? trip;
   const card = {
     locale,
     title: `${t("trip.arrivalHeading")} · ${trip.title}`,
     shopName: shop.name,
     tripTitle: trip.title,
-    when: `${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}`,
+    when: `${formatShortDate(firstWindow.startsAt, locale, shop.timezone)} · ${formatTimeRangeTz(firstWindow.startsAt, firstWindow.endsAt, locale, shop.timezone)}`,
     dockCallLine: arrivalLine(facts, t),
     fields: [
+      ...(facts.courseSession
+        ? (facts.courseMeetings ?? []).map((day) => ({
+            label: formatShortDate(day.startsAt, locale, shop.timezone),
+            value: [
+              formatTimeRangeTz(day.startsAt, day.endsAt, locale, shop.timezone),
+              day.meetingPlace,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          }))
+        : []),
       {
         label: t("ready.offlineOutstandingHeading"),
         value: openItems.length > 0 ? semicolonList(openItems) : t("ready.offlineOutstandingNone"),
