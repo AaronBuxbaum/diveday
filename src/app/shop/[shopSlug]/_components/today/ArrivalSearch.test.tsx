@@ -51,6 +51,25 @@ describe("ArrivalSearch", () => {
     render(<ArrivalSearch query="" copy={copy} />);
     expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: copy.label }));
   });
+  it("leaves focus alone while the booking panel is open", () => {
+    render(
+      <>
+        <section id="call-panel">Add a booking</section>
+        <ArrivalSearch query="" copy={copy} />
+      </>,
+    );
+    expect(document.activeElement).toBe(document.body);
+  });
+  it("leaves focus alone while the requested booking panel is still streaming", () => {
+    const originalUrl = window.location.href;
+    window.history.replaceState({}, "", "/shop/blue-mantis?call=1");
+    try {
+      render(<ArrivalSearch query="" copy={copy} />);
+      expect(document.activeElement).toBe(document.body);
+    } finally {
+      window.history.replaceState({}, "", originalUrl);
+    }
+  });
   it("does not steal focus from a control used before arrival search hydrates", () => {
     const link = document.createElement("a");
     link.href = "#departure";

@@ -209,3 +209,24 @@ test("arrival lookup takes initial focus after client navigation", async ({ page
     await expect(page.locator("#arrival-search:visible")).toBeFocused();
   }
 });
+
+test("the open booking panel keeps focus away from the background arrival lookup", async ({
+  page,
+}, testInfo) => {
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/shop/blue-mantis?call=1");
+    const panel = page.locator("#call-panel");
+    await expect(panel).toBeVisible();
+    const arrival = page.locator("#arrival-search:visible");
+    await expect(arrival).toHaveAttribute("data-hydrated", "true");
+    await expect(arrival).not.toBeFocused();
+    const close = panel.getByRole("link", { name: "Close", exact: true });
+    await close.focus();
+    await expect(close).toBeFocused();
+    await page.screenshot({
+      path: testInfo.outputPath(`booking-panel-${width}.png`),
+      fullPage: true,
+    });
+  }
+});

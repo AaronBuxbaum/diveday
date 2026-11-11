@@ -35,7 +35,12 @@ export function ArrivalSearch({
       active === document.body ||
       active === document.getElementById(SHOP_MAIN_ID) ||
       active === searchRef.current?.closest("main")?.querySelector("h1");
-    if (initialFocus && !document.querySelector("[data-add-panel-heading], [role=dialog]")) {
+    const bookingPanelRequested = new URLSearchParams(window.location.search).get("call");
+    if (
+      initialFocus &&
+      !bookingPanelRequested &&
+      !document.querySelector("#call-panel, [data-add-panel-heading], [role=dialog]")
+    ) {
       searchRef.current?.focus({ preventScroll: true });
     }
     return () => {
