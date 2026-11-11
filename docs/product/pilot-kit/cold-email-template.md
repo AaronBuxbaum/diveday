@@ -42,8 +42,8 @@ one, because improvising it at send time is exactly where template-smell gets in
 
 ## Before sending — the research, ten minutes per shop
 
-`[RESEARCHED DETAIL]` is the load-bearing slot. Fill it with **one thing read on the shop's own
-pages**: a named departure and time, a specific trip on their schedule, the charter they run
+`[RESEARCHED QUESTION]` is the load-bearing slot. Write **one question that restates one thing read on the shop's own
+pages**, never a claim about how they work: a named departure and time, a specific trip on their schedule, the charter they run
 Saturdays. It must be current and checkable.
 
 - **If nothing can be verified, use the no-detail version** of the question below. Sending with no
@@ -68,27 +68,29 @@ sales-tool shape there is, and it is spotted before the email is opened.
 
 > [FIRST NAME],
 >
-> I write software and I dive, and for a while now I've been building something for running dive days, booking through the head count on the boat. I've never run a shop. That's why this is a question rather than a pitch.
+> I dive and I write software (I was an engineer at Google), and I've been building a tool for running dive days, from booking through the head count on the boat. I've never run a shop, so this is a question and not a pitch.
 >
-> Most of what I know came from one owner walking me through an ordinary Saturday. Whiteboard, clipboard, a spreadsheet someone updates by hand. He said the worst hour was the one before the boat left. I've been building off that single conversation longer than I should have.
+> [RESEARCHED QUESTION]
 >
-> The part I can't work out from a desk is the water. The count between dives, three miles out, where the bars run out. Divers get counted there with the radio off, but it has never been on a real boat, and I'm not willing to say it holds until someone has had it in the sun with wet hands.
+> The part I can't test from a desk is the water. Divers get counted between dives with the radio off, but it has never been on a real boat, in the sun, with wet hands, and I'm not willing to say it holds until someone has had it there.
 >
-> So: is [RESEARCHED DETAIL] anything like that morning, or is that hour already sorted and I'm describing a problem you don't have? Either answer is useful to me.
+> Is that morning a real problem for you, or already sorted? Either answer is useful to me.
 >
-> If the boat side is someone else's call there, I'd be glad to be pointed their way.
+> If the boat side is someone else's call, I'd be glad to be pointed their way.
 >
 > Aaron Buxbaum
 > [CELL]
 > dive.day
 
-Slots: `[FIRST NAME]`, `[RESEARCHED DETAIL]`, `[CELL]`. Nothing else is variable.
+Slots: `[FIRST NAME]`, `[RESEARCHED QUESTION]`, `[CELL]`. Nothing else is variable.
 
 **If nothing about the shop could be verified**, the question paragraph is sent in this form
 instead — written out because the alternative is splicing a fragment at 11pm on the eleventh email
 of the week, which is where template-smell gets in:
 
-> So: does that hour exist at your place, or do your trip mornings run themselves and I'm describing a problem you don't have? Either answer is useful to me.
+> Does the hour before the boat leaves exist at your place, or do your trip mornings run themselves and I'm describing a problem you don't have?
+
+In that version, drop the closing "Is that morning a real problem" line, since this paragraph already asks it.
 
 ### Before you hit send
 
@@ -101,7 +103,7 @@ Six checks, in the order they'd fail:
       marketing email is identified by its formatting before a word of it is read, and a template
       that announces itself defeats every sentence above.
 - [ ] **No merge field in the subject line.**
-- [ ] **`[RESEARCHED DETAIL]` is something actually read on their pages** — or the no-detail
+- [ ] **`[RESEARCHED QUESTION]` restates something actually read on their pages** — or the no-detail
       version above is used instead. No guesses, and no vendor named.
 - [ ] **A real cell number under the signature.** It is the mechanism for the phone call this email
       is hoping for: a mildly curious owner will text a number at 9pm, and will not click, book, or
@@ -114,8 +116,9 @@ Six checks, in the order they'd fail:
 
 | Part | Doing what |
 | --- | --- |
+| "I was an engineer at Google" | One clause, in parentheses. It answers "who is this" with something true and checkable, and is the only credential in the email. No diver cert level unless it is exact, and no shop count, quote or testimonial: there are none. |
 | "I've never run a shop" | The first paragraph's real content. It sets the relationship — someone asking, not someone selling — and it is why the rest of the email is allowed to ask a question. One clause says what DiveDay is, and the paragraph does not return to it. |
-| The Saturday paragraph | Describes a shop rather than a product, and attributes it to a named third party the founder actually spoke to. It asserts nothing about *this* shop, so there is nothing to defend against. "Longer than I should have" is the admission that makes the question sincere rather than rhetorical. |
+| The researched question | Placed where the owner story used to be. It proves the founder read this shop's pages, asks about their morning instead of describing a product, and asserts nothing about how they work, so there is nothing to defend. The owner story was cut for length; the "I've never run a shop" clause carries the same job. |
 | The water paragraph | The genuine reason this email exists rather than an ad, and the thing the reader has that the founder needs. It asserts only the half that is true and says the rest is untested — see [the offline line](#the-offline-line--read-this-before-editing-the-water-paragraph). |
 | The question, last | Asked up front it reads as qualification; asked after the reader knows why, answering feels like helping. "Either answer is useful to me" is what makes a *no* safe to send — without it the reader assumes a no invites a rebuttal and says nothing at all. |
 | "I'd be glad to be pointed their way" | The forwarding hatch, phrased as a request to a person rather than an instruction to a lead. A reader who isn't the decider gets a way to not-decide, which is the outcome this email most often wins. |
@@ -234,10 +237,7 @@ each is an existing rule rather than a new one:
   commercial position. Anything beyond it gets written down and taken away, never agreed to live.
 - **The price as a number in prose.** Send the pricing page; the figure has one source
   (`earlyAccessPrice` in `src/lib/marketing.ts`).
-- **Roll call working without signal, on the boat, or with no bars.** The crew half of a checkpoint
-  is **read-only** on a device copy today, so an after-dive count offshore cannot be closed from it
-  unless the crew results were already in the snapshot. That is the finding V-02 exists to produce;
-  do not describe it as solved.
+- **Roll call "proven" without signal, on the boat, or with no bars.** Divers and rostered crew can both be counted on a device copy with no signal (H-20260814-where-diveday-sit-between), but V-02 has not run, so it has never been on a real boat and that is the only claim the email makes. Do not describe it as proven.
 - **A field test that stands in for the shop's own paper.** V-02 rides *alongside* the printed
   manifest and whatever the crew already does, never in place of either; a missing, expired, or
   stale device copy is never a boarding source (H-20260724-product-now-uses-explicit, [run sheet](v-02-field-test-run-sheet.md)).
