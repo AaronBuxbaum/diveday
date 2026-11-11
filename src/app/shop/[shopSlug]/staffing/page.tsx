@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -15,8 +14,8 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
-import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { ShopNotice } from "@/components/ui/outcome";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { noticeRole } from "@/components/ui/tone";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
@@ -28,7 +27,7 @@ import { ScheduleViews } from "../schedule/_components/ScheduleViews";
 import { CrewPageHeader } from "./_components/CrewPageHeader";
 import { staffingGapWords } from "./_components/gap-words";
 import { StaffingWarnings } from "./_components/StaffingWarnings";
-import { StaffingWeek, weekTailRowClass } from "./_components/StaffingWeek";
+import { StaffingWeek } from "./_components/StaffingWeek";
 import { readStaffingWeek } from "./_components/staffing-week-read";
 import { staffingWeekWords } from "./_components/staffing-week-words";
 import {
@@ -110,7 +109,7 @@ export default async function StaffingPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ week?: string; notice?: string; person?: string }>;
+  searchParams: Promise<{ week?: string; notice?: string; person?: string; view?: string }>;
 }) {
   const { shopSlug } = await params;
   const query = await searchParams;
@@ -131,6 +130,7 @@ export default async function StaffingPage({
     t,
   });
   if (!read) redirect(shopPath(shopSlug, "staffing"));
+  const plan = query.view === "plan";
   const { today, weekStart, weekEnd, view, blocks, canManage, week, selectedPerson } = read;
   // **What the Add-a-shift form opens on: today, when the week on screen
   // contains it.** Defaulting to `weekStart` unconditionally put a Friday
@@ -144,7 +144,7 @@ export default async function StaffingPage({
   const defaultShiftDate = today >= weekStart && today <= weekEnd ? today : weekStart;
   const notice = noticeFromParam(query.notice, notices);
   const onShiftForm =
-    canManage && query.notice !== undefined && ADD_SHIFT_NOTICES.has(query.notice);
+    canManage && plan && query.notice !== undefined && ADD_SHIFT_NOTICES.has(query.notice);
   const shiftStatus = onShiftForm ? notice : undefined;
   const pageNotice = onShiftForm ? undefined : notice;
 
@@ -183,41 +183,36 @@ export default async function StaffingPage({
       <ScheduleViews
         shopSlug={shopSlug}
         crewSchedule
-        current="crew"
+        current={plan ? "plan" : "crew"}
         week={weekStart}
         copy={{
           label: t("schedule.views.label"),
           week: t("schedule.views.week"),
           crew: t("schedule.views.crew"),
+          plan: t("schedule.views.plan"),
         }}
       />
 
-      <nav
-        aria-label={t("staffing.filter.label")}
-        className="mb-6 flex flex-wrap items-center gap-3"
-      >
-        {(["all", "me"] as const).map((value) => (
-          <Link
-            key={value}
-            href={`${staffingPath}?week=${weekStart}&person=${value}`}
-            aria-current={selectedValue === value ? "page" : undefined}
-            className={buttonClass({
-              variant: selectedValue === value ? "primary" : "secondary",
-              size: "sm",
-            })}
-          >
-            {t(`staffing.filter.${value}`)}
-          </Link>
-        ))}
-        {canManage ? (
-          <form action={staffingPath} className="flex flex-wrap items-end gap-2">
-            <input type="hidden" name="week" value={weekStart} />
-            <Field label={t("staffing.filter.person")}>
+      {plan ? null : (
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <SegmentedControl
+            ariaLabel={t("staffing.filter.label")}
+            currentKey={selectedValue === "all" || selectedValue === "me" ? selectedValue : null}
+            items={(["all", "me"] as const).map((value) => ({
+              key: value,
+              label: t(`staffing.filter.${value}`),
+              href: `${staffingPath}?week=${weekStart}&person=${value}`,
+            }))}
+          />
+          {canManage ? (
+            <form action={staffingPath} className="flex items-center gap-2">
+              <input type="hidden" name="week" value={weekStart} />
               <select
                 key={selectedValue}
                 name="person"
                 defaultValue={selectedValue}
-                className={controlClass}
+                aria-label={t("staffing.filter.person")}
+                className={`${controlClass} w-auto min-w-48`}
               >
                 <option value="all">{t("staffing.filter.all")}</option>
                 <option value="me">{t("staffing.filter.me")}</option>
@@ -229,16 +224,19 @@ export default async function StaffingPage({
                     </option>
                   ))}
               </select>
-            </Field>
-            <SubmitButton
-              pendingLabel={t("staffing.filter.show")}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("staffing.filter.show")}
-            </SubmitButton>
-          </form>
-        ) : null}
-      </nav>
+              <SubmitButton
+                pendingLabel={t("staffing.filter.show")}
+                className={buttonClass({
+                  variant: "secondary",
+                  className: "shrink-0 whitespace-nowrap",
+                })}
+              >
+                {t("staffing.filter.show")}
+              </SubmitButton>
+            </form>
+          ) : null}
+        </div>
+      )}
 
       {pageNotice ? (
         <div className="mb-6">
@@ -271,36 +269,11 @@ export default async function StaffingPage({
             ) : null
           }
         />
-      ) : (
+      ) : plan ? (
         <>
-          {!selectedPerson ? (
-            <StaffingWarnings shop={shop} shopSlug={shopSlug} view={view} locale={locale} />
-          ) : null}
-          <StaffingWeek
-            week={week}
-            gapWords={gapWords}
-            locale={locale}
-            timeZone={shop.timezone}
-            shopSlug={shopSlug}
-            canManage={canManage}
-            canDecide={canManage}
-            deleteShiftAction={deleteShift}
-            requestAction={requestCrew}
-            decideRequestAction={decideRequest}
-            links={{
-              rangeLabel: formatCalendarDateRange(weekStart, weekEnd, locale),
-              previousHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, -1)}${selectionQuery}`,
-              nextHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, 1)}${selectionQuery}`,
-              thisWeekHref:
-                weekStart === weekStartOf(today)
-                  ? null
-                  : `${staffingPath}?person=${encodeURIComponent(selectedValue)}`,
-            }}
-            words={staffingWeekWords(t, week)}
-          />
-
+          <StaffingWarnings shop={shop} shopSlug={shopSlug} view={view} locale={locale} />
           {canManage ? (
-            <AddDoor id="add-shift" label={t("staffing.addShift.heading")} open={onShiftForm}>
+            <PlanSection id="add-shift" label={t("staffing.addShift.heading")}>
               <FieldGrid as="form" action={createShift} columns={2}>
                 <Field label={t("staffing.addShift.person")}>
                   <select name="personId" required className={controlClass}>
@@ -338,7 +311,7 @@ export default async function StaffingPage({
                   </FormStatus>
                 </FieldActions>
               </FieldGrid>
-            </AddDoor>
+            </PlanSection>
           ) : null}
 
           {/* **The crew member's own door** (issue #1235, ADR
@@ -347,7 +320,7 @@ export default async function StaffingPage({
               point of the slice. A manager's `<select>` lets them record a
               range for somebody who phoned on a Sunday; everyone else writes
               their own row and the domain layer refuses anything else. */}
-          <AddDoor id="add-away" label={t("staffing.away.heading")}>
+          <PlanSection id="add-away" label={t("staffing.away.heading")}>
             <FieldGrid as="form" action={saveAway} columns={2}>
               {canManage ? (
                 <Field label={t("staffing.away.person")}>
@@ -413,7 +386,35 @@ export default async function StaffingPage({
                 ))}
               </ul>
             ) : null}
-          </AddDoor>
+          </PlanSection>
+        </>
+      ) : (
+        <>
+          {!selectedPerson ? (
+            <StaffingWarnings shop={shop} shopSlug={shopSlug} view={view} locale={locale} />
+          ) : null}
+          <StaffingWeek
+            week={week}
+            gapWords={gapWords}
+            locale={locale}
+            timeZone={shop.timezone}
+            shopSlug={shopSlug}
+            canManage={canManage}
+            canDecide={canManage}
+            deleteShiftAction={deleteShift}
+            requestAction={requestCrew}
+            decideRequestAction={decideRequest}
+            links={{
+              rangeLabel: formatCalendarDateRange(weekStart, weekEnd, locale),
+              previousHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, -1)}${selectionQuery}`,
+              nextHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, 1)}${selectionQuery}`,
+              thisWeekHref:
+                weekStart === weekStartOf(today)
+                  ? null
+                  : `${staffingPath}?person=${encodeURIComponent(selectedValue)}`,
+            }}
+            words={staffingWeekWords(t, week)}
+          />
         </>
       )}
     </StaffPage>
@@ -421,52 +422,24 @@ export default async function StaffingPage({
 }
 
 /**
- * The tail row that *is* a form's door — the shape both of this page's add
- * forms wear (ADR 20260827-the-shops-shelves, decision 3: "the two add-forms
- * become one '+ Add a shift' door").
- *
- * A native `<details>` on a hairline row, so the form opens in place under the
- * ledger it belongs to and a JS failure still leaves it one tap away. It sits
- * at the tail rather than in the page header — where the artboard draws it —
- * for a mechanical reason: a disclosure renders its body inside itself, and a
- * summary in the header would open a two-column form into a right-aligned
- * action slot. The `+` is the affordance; a caret beside it would be the same
- * promise made twice.
+ * One of the Shifts and away tab's two forms: a heading over the form, always
+ * open, because the tab exists to fill them in.
  */
-function AddDoor({
+function PlanSection({
   id,
   label,
-  open,
-  as: Tag = "div",
   children,
 }: {
   id: string;
   label: string;
-  /** Server-decided: a refusal reopens the form it came from. */
-  open?: boolean;
-  /** `li` when the door is the tail row of a ledger's own `<ul>`. */
-  as?: "li" | "div";
   children: React.ReactNode;
 }) {
   return (
-    // The hairline belongs to the row, not to the `<details>`. In the
-    // credentials' list (`li`) the door is that ledger's tail row, on a ledger
-    // row's box, so `last:` closes the list and its rules end where the rows'
-    // do. On the page (`div`) it hangs under the week, which has already
-    // closed itself, so it draws only its own closing rule (K-195).
-    <Tag className={`list-none ${Tag === "li" ? ledgerRowBoxClass : weekTailRowClass}`}>
-      <AutoOpenDetails id={id} openOnHash={id} open={open} className="group/add scroll-mt-8">
-        <summary
-          className={buttonClass({
-            variant: "link",
-            flush: true,
-            className: "list-none select-none [&::-webkit-details-marker]:hidden",
-          })}
-        >
-          {label}
-        </summary>
-        <div className="pt-1 pb-6">{children}</div>
-      </AutoOpenDetails>
-    </Tag>
+    <section aria-labelledby={`${id}-heading`} id={id} className="scroll-mt-8 pt-2 pb-8">
+      <h2 id={`${id}-heading`} className="mb-4 font-semibold">
+        {label}
+      </h2>
+      {children}
+    </section>
   );
 }

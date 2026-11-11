@@ -66,7 +66,7 @@ async function requireStaffingManager(week: Record<string, string | undefined>) 
 }
 
 export async function createShiftAction(week: string, formData: FormData) {
-  const at = weekExtra(week);
+  const at = { ...weekExtra(week), view: "plan" };
   const session = await requireStaffingManager(at);
   const path = shopPath(session.user.shopSlug, "staffing");
   const parsed = shiftSchema.safeParse(Object.fromEntries(formData));
@@ -123,7 +123,7 @@ const awaySchema = z.object({
 });
 
 export async function saveAwayAction(week: string, formData: FormData) {
-  const at = weekExtra(week);
+  const at = { ...weekExtra(week), view: "plan" };
   const session = await requireStaffSession();
   const path = shopPath(session.user.shopSlug, "staffing");
   const parsed = awaySchema.safeParse(Object.fromEntries(formData));
@@ -146,7 +146,7 @@ export async function saveAwayAction(week: string, formData: FormData) {
 }
 
 export async function deleteAwayAction(week: string, formData: FormData) {
-  const at = weekExtra(week);
+  const at = { ...weekExtra(week), view: "plan" };
   const session = await requireStaffSession();
   const path = shopPath(session.user.shopSlug, "staffing");
   const { blockId } = readForm(blockIdForm, formData);
