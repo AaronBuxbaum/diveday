@@ -305,3 +305,79 @@ export function splitCardsToProcess<T extends { issuedAt: Date }>(
   }
   return { current, earlier };
 }
+
+/**
+ * A card a diver has on file that nobody has checked against the agency yet:
+ * entered by staff or by the diver, `pending`, and so not clearing any gate.
+ */
+export type CardToValidate = {
+  kind: CardKind;
+  certificationId: string;
+  agency: Card["agency"];
+  what: CardWhat;
+  personId: string;
+  fullName: string;
+  /** The number on file, or null for a card entered with none yet. */
+  identifier: string | null;
+  /** When the card came onto the record. */
+  addedAt: Date;
+};
+
+/**
+ * Every live card in the shop still `pending`, of every kind, oldest first:
+ * the list a desk works down to look each one up with its agency and mark it
+ * verified on the diver's record. A verified card, a removed card and a
+ * removed or erased diver are never listed.
+ */
+export async function listCardsToValidate(
+  db: DbExecutor,
+  shopId: string,
+): Promise<CardToValidate[]> {
+  const rows = await db
+    .select({
+      kind: cards.kind,
+      certificationId: cards.id,
+      agency: cards.agency,
+      level: levelCardLevel,
+      specialty: specialtyCardSpecialty,
+      identifier: cards.identifier,
+      addedAt: cards.createdAt,
+      personId: people.id,
+      fullName: people.fullName,
+    })
+    .from(cards)
+    .innerJoin(people, personJoin(shopId))
+    .where(
+      and(
+        eq(cards.shopId, shopId),
+        eq(cards.status, "pending"),
+        isNull(cards.deletedAt),
+        livePerson(),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .orderBy(asc(cards.createdAt), asc(people.fullName), asc(cards.id));
+  return rows.flatMap((row): CardToValidate[] => {
+    const what: CardWhat | null =
+      row.kind === "level" && row.level
+        ? { kind: "level", level: row.level }
+        : row.kind === "specialty" && row.specialty
+          ? { kind: "specialty", specialty: row.specialty }
+          : row.kind === "nitrox"
+            ? { kind: "nitrox" }
+            : null;
+    if (!what) return [];
+    return [
+      {
+        kind: row.kind,
+        certificationId: row.certificationId,
+        agency: row.agency,
+        what,
+        personId: row.personId,
+        fullName: row.fullName,
+        identifier: row.identifier?.trim() || null,
+        addedAt: row.addedAt,
+      },
+    ];
+  });
+}

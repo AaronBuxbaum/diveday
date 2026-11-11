@@ -9,6 +9,7 @@ import {
   cardProcessingSince,
   issuedCardsForTrip,
   listCardsToProcess,
+  listCardsToValidate,
   setCardProcessed,
   splitCardsToProcess,
 } from "./store";
@@ -282,5 +283,55 @@ describe("agency processing", () => {
     expect(splitCardsToProcess([old], before)).toEqual({ current: [old], earlier: [] });
     expect(cardIsLate(old.issuedAt, before)).toBe(true);
     expect(cardIsLate(new Date(before.getTime() - 9 * DAY_MS), before)).toBe(false);
+  });
+});
+
+describe("cards to validate", () => {
+  it("lists a live pending card until it is verified or removed, oldest first", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const [ann, ben] = await db
+      .insert(people)
+      .values(
+        ["Ann Validate", "Ben Validate"].map((fullName) => ({
+          shopId: shop.id,
+          fullName,
+          email: `${fullName.split(" ")[0].toLowerCase()}-${now.getTime()}@validate.example`,
+        })),
+      )
+      .returning();
+    const [annCard, benCard] = await db
+      .insert(cards)
+      .values([
+        {
+          kind: "level" as const,
+          shopId: shop.id,
+          personId: ann.id,
+          agency: "padi" as const,
+          level: "open_water" as const,
+          status: "pending" as const,
+          identifier: "OW-777",
+        },
+        {
+          kind: "level" as const,
+          shopId: shop.id,
+          personId: ben.id,
+          agency: "ssi" as const,
+          level: "open_water" as const,
+          status: "verified" as const,
+          identifier: "OW-888",
+        },
+      ])
+      .returning();
+    const mine = async () =>
+      (await listCardsToValidate(db, shop.id)).filter((row) =>
+        [ann.id, ben.id].includes(row.personId),
+      );
+    expect((await mine()).map((row) => [row.fullName, row.identifier])).toEqual([
+      ["Ann Validate", "OW-777"],
+    ]);
+    expect(benCard.status).toBe("verified");
+    await db.update(cards).set({ deletedAt: now }).where(eq(cards.id, annCard.id));
+    expect(await mine()).toEqual([]);
   });
 });
