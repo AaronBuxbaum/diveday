@@ -142,9 +142,16 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   // screen that does it, two of the builder's notes, and the feature page that
   // tells the rest. (Check-in at the counter was a sixth until review cut it
   // the same day: its screen read as the readiness step's twin.) It replaced four annotated screens whose headline
-  // described the page rather than what a shop gets. The band is the second
-  // section of the page; the hero is first.
-  const stepsBand = page.getByRole("main").locator("section").nth(1);
+  // described the page rather than what a shop gets. The band is the third
+  // section of the page: the hero is first, and since 2026-11-11 the band
+  // that says why the roll call is by name sits between them (Aaron).
+  const whyBand = page.getByRole("main").locator("section").nth(1);
+  await expect(whyBand.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
+  await expect(whyBand.getByRole("link", { name: /Why DiveDay exists/ })).toHaveAttribute(
+    "href",
+    "/about",
+  );
+  const stepsBand = page.getByRole("main").locator("section").nth(2);
   await expect(
     stepsBand.getByRole("heading", {
       level: 2,
@@ -740,15 +747,19 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // (Aaron, 2026-10-07: "we built DiveDay").
   await expect(page.getByText(/That story is why we built DiveDay/)).toBeVisible();
 
-  // Who is behind it, in generalities. The page names no individual and
-  // states no CV: the founder's name, the employers that used to carry the
-  // page's credibility, and the head count of the team are pinned out by
-  // value, so none of them comes back under a new heading.
+  // Who is behind it, in generalities, signed by the founder (Aaron,
+  // 2026-11-11: "sign the about page with my name Aaron Buxbaum, Founder, but
+  // keep the 'we' terminology"). The name appears once, as that signature.
+  // The page states no CV: the employers that used to carry its credibility
+  // and the head count of the team are pinned out by value, so neither comes
+  // back under a new heading.
   await expect(
     page.getByRole("heading", { name: "Divers who have shipped software to millions of people" }),
   ).toBeVisible();
   const rendered = await page.locator("body").innerText();
-  expect(rendered).not.toMatch(/Aaron|Google|biotech|self-driving|two of us/);
+  expect(rendered.match(/Aaron/g)).toHaveLength(1);
+  expect(rendered).toContain("Aaron Buxbaum, Founder");
+  expect(rendered).not.toMatch(/Google|biotech|self-driving|two of us/);
 
   // The four standards every screen is held to, as cards under a statement
   // heading. Each is a shipped behavior a visitor can reproduce in the demo.
