@@ -28,7 +28,12 @@ describe("MarketingIllustration", () => {
   }
   it("keeps the original hero product proof and the website help and embeds copy", () => {
     const home = readFileSync(join(process.cwd(), "src/app/(marketing)/page.tsx"), "utf8");
-    expect(home).toContain("<CaptainPhoneFrame");
+    expect(home).toContain("<HomeHeroPhone");
+    const heroPhone = readFileSync(
+      join(process.cwd(), "src/app/_components/HomeHeroPhone.tsx"),
+      "utf8",
+    );
+    expect(heroPhone).toContain("<CaptainPhoneFrame");
     expect(home).toContain("<MarketingMockup");
     const copy = readFileSync(
       join(process.cwd(), "src/i18n/locales/en-US/content/marketing.json"),
