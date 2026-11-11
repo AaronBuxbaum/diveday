@@ -444,7 +444,7 @@ export async function TripDetailPage({
             list), not a dead-ended thumb (task 12). Both destinations share
             the `#book` anchor: `BookSpotSection` and `TripFullSection`'s
             wait-list form each carry it. */}
-        {!confirmed && !inPast && !trip.conditionsHold ? (
+        {offersAnotherBoat ? (
           <PhoneFootBar href="#book">
             {t(full ? fullFootLabel(shop) : "booking.bookVerb")}
           </PhoneFootBar>

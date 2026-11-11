@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -9,6 +10,86 @@ import {
 } from "./helpers";
 
 signedInAsOwner();
+
+const diver = diverTranslator("en-US");
+
+for (const [device, viewport] of [
+  ["desktop", { width: 1258, height: 735 }],
+  ["phone", { width: 390, height: 844 }],
+] as const) {
+  test.describe(`scrolled wait-list confirmation on ${device}`, () => {
+    test.use({ viewport, isMobile: device === "phone", hasTouch: device === "phone" });
+
+    test("reveals and announces a persisted party, including a repeated join", async ({
+      page,
+    }, testInfo) => {
+      // Two submissions, a reload, and staff verification cross six routes.
+      test.setTimeout(45_000);
+      await page.goto("/s/blue-mantis");
+      await page.getByRole("link", { name: "Wreck Trip — Spiegel Grove" }).click();
+      await expect(page.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
+      const publicUrl = page.url().split(/[?#]/)[0];
+      const heading = page.getByRole("heading", {
+        name: diver("booking.waitlistConfirmedHeading", { name: "Astra" }),
+      });
+      const confirmation = page.getByRole("status").filter({ has: heading });
+      let confirmationUrl = "";
+
+      // diveday:allow-e2e-hygiene retry-loop: each submission must pass; the second verifies idempotence, never retries a failure.
+      for (const attempt of ["first", "repeat"]) {
+        if (attempt === "repeat") await page.goto(publicUrl);
+        await choosePartySize(page, 2);
+        if (device === "phone") {
+          await expect(
+            page.getByRole("link", { name: diver("booking.waitlistHeading"), exact: true }),
+          ).toBeVisible();
+        }
+        await page.getByRole("textbox", { name: "Name", exact: true }).fill("Astra Waitlist");
+        await page
+          .getByRole("textbox", { name: "Email", exact: true })
+          .fill(`astra-${device}@example.com`);
+        const submit = page.getByRole("button", {
+          name: diver("booking.waitlistHeading"),
+          exact: true,
+        });
+        await submit.evaluate((button) =>
+          button.scrollIntoView({ block: "end", behavior: "instant" }),
+        );
+        expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+        await submit.click();
+        await page.waitForURL(/\?interest=/);
+        await expect(heading).toBeInViewport({ ratio: 1 });
+        await expect(heading).toBeFocused();
+        await expect(confirmation).toContainText(diver("booking.waitlistConfirmedBody"));
+        await expect(confirmation).toBeInViewport({ ratio: 1 });
+        await expect(
+          page.getByRole("link", { name: diver("booking.waitlistHeading"), exact: true }),
+        ).toHaveCount(0);
+        if (attempt === "first") {
+          confirmationUrl = page.url();
+          const screenshot = testInfo.outputPath(`waitlist-${device}-scrolled-confirmation.png`);
+          await page.screenshot({ path: screenshot });
+          await testInfo.attach(`waitlist-${device}-scrolled-confirmation`, {
+            path: screenshot,
+            contentType: "image/png",
+          });
+          await page.reload();
+          await expect(heading).toBeInViewport({ ratio: 1 });
+        } else {
+          expect(page.url()).toBe(confirmationUrl);
+        }
+      }
+
+      await page.goto(publicUrl.replace("/s/", "/shop/"));
+      await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+      await expect(page.getByText("Astra Waitlist", { exact: true })).toHaveCount(1);
+      const savedParty = page.locator("li").filter({
+        has: page.getByText("Astra Waitlist", { exact: true }),
+      });
+      await expect(savedParty).toContainText("Party of 2");
+    });
+  });
+}
 
 /**
  * **The thread between departures** (fourth UX review, items 31, 34 and 35).

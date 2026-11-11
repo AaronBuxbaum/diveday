@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { SCROLL_SETTLED_ATTRIBUTE } from "@/components/PreserveFormScroll";
 
 /**
  * Scrolls to the anchor the page was opened at, after the anchor exists.
@@ -31,7 +32,15 @@ import { useEffect } from "react";
  */
 export const HASH_LANDED_ATTRIBUTE = "data-hash-landed";
 
-export function ScrollToHash() {
+export function ScrollToHash({
+  onlyHash,
+  focusSelector,
+}: {
+  /** A form can opt in to its own fragment without changing other landings. */
+  onlyHash?: string;
+  /** Explicit fragment navigation may put the cursor inside its target. */
+  focusSelector?: string;
+} = {}) {
   useEffect(() => {
     // Stamped on the way out of every branch below rather than at each return:
     // a marker that is only set on the interesting path is a marker a waiter
@@ -39,6 +48,7 @@ export function ScrollToHash() {
     const landed = () => document.documentElement.setAttribute(HASH_LANDED_ATTRIBUTE, "true");
     const { hash } = window.location;
     if (!hash || hash.length < 2) return landed();
+    if (onlyHash && hash !== `#${onlyHash}`) return landed();
     let target: Element | null = null;
     try {
       target = document.querySelector(hash);
@@ -48,11 +58,38 @@ export function ScrollToHash() {
       return landed();
     }
     if (!target) return landed();
+    if (focusSelector) {
+      const field = target.querySelector<HTMLElement>(focusSelector);
+      if (!field) return landed();
+      // AutoOpenDetails opens in a sibling effect. Wait until its contents
+      // are drawn and route scroll restoration has finished before landing.
+      let frame = 0;
+      let frames = 0;
+      let lastY = Number.NaN;
+      let stillFrames = 0;
+      const reveal = () => {
+        if (window.location.hash !== hash) return landed();
+        const rendered = typeof field.checkVisibility !== "function" || field.checkVisibility();
+        const settled = document.documentElement.hasAttribute(SCROLL_SETTLED_ATTRIBUTE);
+        stillFrames = window.scrollY === lastY ? stillFrames + 1 : 0;
+        lastY = window.scrollY;
+        if (!rendered || !settled || stillFrames < 2) {
+          if (frames++ < 60) frame = requestAnimationFrame(reveal);
+          else landed();
+          return;
+        }
+        field.focus({ preventScroll: true });
+        target.scrollIntoView({ block: "start", behavior: "instant" });
+        landed();
+      };
+      frame = requestAnimationFrame(reveal);
+      return () => cancelAnimationFrame(frame);
+    }
     // `scroll-mt-*` on the target is what keeps it clear of the sticky header;
     // "start" is what honours it.
     target.scrollIntoView({ block: "start", behavior: "instant" });
     landed();
-  }, []);
+  }, [onlyHash, focusSelector]);
 
   return null;
 }
