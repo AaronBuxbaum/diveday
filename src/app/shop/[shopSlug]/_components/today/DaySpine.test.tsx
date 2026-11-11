@@ -315,16 +315,8 @@ describe("the evening reading", () => {
     },
   );
 
-  it("offers the departure log only to a reader who may generate one", () => {
+  it("keeps the departure log on trip Details instead of Today", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
-    expect(screen.getByRole("link", { name: "Departure log" })).toBeInTheDocument();
-
-    cleanup();
-    renderSpine({
-      departures: [],
-      evening: evening([closed({ tripId: "t1" })], { canOpenLog: false }),
-    });
-    // Absent, never disabled — the gate is the render (AGENTS.md).
     expect(screen.queryByRole("link", { name: "Departure log" })).toBeNull();
   });
 
@@ -467,10 +459,7 @@ describe("the evening reading", () => {
     const live = screen.getByRole("link", { name: "Two-Tank Reef" }).closest("li");
     if (!live) throw new Error("the live departure did not render a station");
     expect(within(live).queryByRole("link", { name: "Departure log" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Departure log" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/trips/t2/log",
-    );
+    expect(screen.queryByRole("link", { name: "Departure log" })).toBeNull();
   });
 
   it("says how the head count ended, once, on the station that owns it", () => {

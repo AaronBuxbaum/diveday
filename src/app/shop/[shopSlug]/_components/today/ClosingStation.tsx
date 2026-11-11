@@ -43,7 +43,6 @@ export function ClosingStation({
   shopSlug,
   locale,
   timeZone,
-  canOpenLog,
   t,
   countedLaterOn,
   notes,
@@ -56,7 +55,6 @@ export function ClosingStation({
   locale: string;
   timeZone: string;
   /** `canPersonExportIncidentRecord` — the log door is absent for everyone else. */
-  canOpenLog: boolean;
   t: StaffTranslator;
   /**
    * A past day only: the closing mark's own shop day, formatted, when it is a
@@ -200,28 +198,6 @@ export function ClosingStation({
             {openRollCallActionText(t)}
           </Link>
         ) : null}
-        {/* Writing the day up belongs to the evening, so the departure log
-            is generated from the station rather than from the manifest a
-            crew works at the rail. Owner-only (ADR
-            20260804-incident-export-owner-gate) and absent, never disabled,
-            for everyone else — the gate is the render. A quiet link, at the
-            same weight the live station gives it (slice 16a).
-
-            **A quiet link still has to be tappable.** `tapTargetLinkClass`
-            is the floor and nothing else — no chrome, its own ink — which is
-            precisely what this row wants and what typing the ink by hand left
-            out: 83.7 × **20px**, under WCAG 2.5.8's 24px minimum, which
-            the suite's evening axe scan caught the moment this station
-            moved down the page (the scan was removed on 2026-10-24). This file already spells it that way a few
-            lines up. */}
-        {canOpenLog ? (
-          <Link
-            href={`/shop/${shopSlug}/trips/${close.tripId}/log`}
-            className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}
-          >
-            {t("incidentExport.openLink")}
-          </Link>
-        ) : null}
       </div>
       {/* **One hairline between the station and its recap**, drawn here
           because the recap draws no rule of its own; and nothing renders when
@@ -253,7 +229,6 @@ export function LastRollCall({ context }: { context: DaySpineContext }) {
           shopSlug={shopSlug}
           locale={locale}
           timeZone={timeZone}
-          canOpenLog={evening.canOpenLog}
           t={t}
         />
       </ol>

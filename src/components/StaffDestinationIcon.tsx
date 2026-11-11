@@ -277,6 +277,12 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <circle cx="8" cy="8" r="1.5" />
     </>
   ),
+  certifications: (
+    <>
+      <rect x="3" y="4" width="18" height="14" rx="2" />
+      <path d="M7 8h6M7 12h3m5 0 2 2 3-4" />
+    </>
+  ),
   // Courses: teaching — an open book.
   courses: (
     <>

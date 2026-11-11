@@ -58,6 +58,15 @@ function figuresIn(node: unknown): { label: string; value: string }[] {
   return figuresIn(node.props.children);
 }
 
+function linksIn(node: unknown): string[] {
+  if (Array.isArray(node)) return node.flatMap(linksIn);
+  if (!isValidElement<{ children?: unknown; href?: string }>(node)) return [];
+  return [
+    ...(typeof node.props.href === "string" ? [node.props.href] : []),
+    ...linksIn(node.props.children),
+  ];
+}
+
 async function renderTree(viewerRoles: Role[], searchParams: { year?: string } = {}) {
   const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, "blue-mantis");
@@ -96,9 +105,18 @@ describe("the Safety page", () => {
   it.each([["owner"], ["manager"]] as const)("opens for a %s", async (role) => {
     const text = await renderAs([role]);
     expect(text).toContain("Safety");
+    expect(text).toContain("Crew credentials");
+    expect(text).toContain("Pre-departure checklist");
+    expect(text).toContain("Review status and renewal dates.");
     expect(text).not.toContain("Money");
     expect(text).toContain("Print month");
     expect(text).toContain("Year view");
+  });
+
+  it("opens current crew records and the actual checklist route", async () => {
+    const links = linksIn(await renderTree(["owner"]));
+    expect(links).toContain("/shop/blue-mantis/settings/team#credentials");
+    expect(links).toContain("/shop/blue-mantis/safety-checklist");
   });
 
   /**

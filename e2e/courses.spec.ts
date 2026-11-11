@@ -145,7 +145,7 @@ test("a signed-out visitor browses the public course catalog, with the editor st
   page,
 }) => {
   await page.goto("/s/blue-mantis/courses");
-  await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Certifications" })).toBeVisible();
   // Rows are h3 under the prerequisite group's own h2 ("Start here",
   // "Requires Open Water or higher") — the ladder grouping from the
   // 2026-08-28 diver-views review, finding 13.
@@ -231,7 +231,7 @@ test.describe("staff", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/courses");
-    await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Certifications" }).waitFor();
 
     // The seed seats this one on the board, so its row carries a date.
     const scheduled = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
@@ -556,7 +556,7 @@ test.describe("staff", () => {
     await expect(page).toHaveURL(/\/sign-in/);
     await page.goto("/s/blue-mantis/courses");
     await expect(page).not.toHaveURL(/\/sign-in/);
-    await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Certifications" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
   });
 

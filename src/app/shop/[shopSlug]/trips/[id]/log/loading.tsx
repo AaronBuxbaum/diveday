@@ -1,11 +1,14 @@
-import { PACKET_PAPER } from "@/lib/print-sheets";
-import { SheetLoading } from "../../../print/_components/SheetLoading";
-
-/**
- * The departure log arrives as a sheet (issue #2745), so it waits as one: the
- * band, a few lines, the fold, at the packet paper's width
- * (ADR 20260804-instant-navigation).
- */
-export default function IncidentExportLoading() {
-  return <SheetLoading paper={PACKET_PAPER} />;
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { Bone, Pending } from "@/components/ui/pending";
+import { StaffPage } from "../../../_components/StaffPage";
+export default function Loading() {
+  return (
+    <StaffPage width="full">
+      <Pending>
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-48" description={false} />
+        <Bone className="h-12 w-64" />
+        <Bone className="h-48 w-full" />
+      </Pending>
+    </StaffPage>
+  );
 }

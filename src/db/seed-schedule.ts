@@ -46,6 +46,7 @@ import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSafeCrew } from "./seed-safe-crew";
+import { seedSafetyDrills } from "./seed-safety-drills";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSharedDemoRecapPhoto } from "./seed-shared-demo-recap-photo";
 import { seedSightings } from "./seed-sightings";
@@ -559,6 +560,7 @@ const THE_DAY: readonly SeedStep[] = [
   // head count — so nothing seeded before it moves.
   demo((db, c) => seedSightings(db, c.shopId)),
   demo((db, c) => seedConservation(db, c.shopId, c.staff.instructor.id)),
+  demo((db, c) => seedSafetyDrills(db, c.shopId)),
   // Adds-only and late: a snorkeler and a rider on today's reef boat, into the
   // two places `seed-trips.ts` holds for them (src/db/seed-mixed-boat.ts, ADR
   // 20261007-participant-types).

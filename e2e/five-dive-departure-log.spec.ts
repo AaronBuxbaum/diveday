@@ -20,6 +20,9 @@ test("five-dive departure log keeps the final head count on screen and paper", a
   await expect(
     page.getByRole("row").filter({ hasText: "Ari Vale" }).getByText("Not back aboard"),
   ).toBeVisible();
+  await page.getByRole("link", { name: "Print", exact: true }).click();
+  await page.waitForURL(/\/log\/print$/);
+  await expect(page.getByRole("columnheader", { name: "After dive 5" }).first()).toBeVisible();
   await page.emulateMedia({ media: "print" });
   const contact = page
     .locator("tr:visible")

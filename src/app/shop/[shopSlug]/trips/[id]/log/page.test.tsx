@@ -90,10 +90,11 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-async function renderLog() {
+async function renderLog(print = true) {
   return render(
     await IncidentExportPage({
       params: Promise.resolve({ shopSlug: "blue-mantis", id: TRIP_ID }),
+      print,
     }),
   );
 }
@@ -105,6 +106,20 @@ async function renderLog() {
  * interactive is rendered inside it, not because a stylesheet hides it.
  */
 describe("the departure log", () => {
+  it("opens a readable screen with a separate printable document", async () => {
+    const { container } = await renderLog(false);
+    expect(container.querySelector(".paper-sheet")).toBeNull();
+    expect(screen.getByRole("link", { name: "Print" })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${TRIP_ID}/log/print`,
+    );
+    expect(screen.getByRole("heading", { name: "Roll-call timeline" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Trip" })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/trips/${TRIP_ID}?view=details`,
+    );
+  });
+
   it("renders as one sheet of the shop's paper with no control inside", async () => {
     const { container } = await renderLog();
     const sheets = container.querySelectorAll(".paper-sheet");

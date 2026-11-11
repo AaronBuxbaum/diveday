@@ -308,7 +308,8 @@
     "calendarFeed": "Calendar subscription",
     "emailSettings": "Email settings",
     "security": "Security",
-    "activity": "Activity"
+    "activity": "Activity",
+    "certifications": "Follow-up"
   },
   "shopSections": {
     "navAriaLabel": "Main",
@@ -318,7 +319,7 @@
     "inbox": "Inbox",
     "money": "Money",
     "safety": "Safety",
-    "courses": "Courses",
+    "courses": "Certifications",
     "gear": "Gear",
     "settings": "Settings",
     "more": "More"

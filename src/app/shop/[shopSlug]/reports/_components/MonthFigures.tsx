@@ -50,22 +50,22 @@ export function figureCellClass(index: number): string {
       : // Second figure: its own row on a phone, beside the first from `sm` up.
         index === 1
         ? "border-t border-border sm:border-t-0"
-        : "border-t border-border lg:border-t-0";
+        : "border-t border-border xl:border-t-0";
   const gutter =
     index === 0
       ? ""
       : // Odd figures are second-in-row at two columns and stay so at five.
         index % 2 === 1
         ? "sm:border-s sm:border-border sm:ps-6"
-        : "lg:border-s lg:border-border lg:ps-6";
+        : "xl:border-s xl:border-border xl:ps-6";
   return `py-5 ps-2 pe-2 sm:pe-6 ${rule} ${gutter}`.replace(/\s+/g, " ").trim();
 }
 
 /** Literal Tailwind grids shared by month and year rows (ADR 20260908-one-hand, decision 6, lever T; UX review 4, item 25). */
 const FIGURE_COLUMNS = {
-  3: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-3",
-  4: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-4",
-  5: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 lg:grid-cols-5",
+  3: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 xl:grid-cols-3",
+  4: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 xl:grid-cols-4",
+  5: "-mx-2 grid grid-cols-1 border-y border-border sm:grid-cols-2 xl:grid-cols-5",
 } as const;
 
 export function MonthFigures({
@@ -80,7 +80,7 @@ export function MonthFigures({
   caption?: string;
   /** The month's five figures, in reading order. */
   figures: MonthFigure[];
-  /** How many the row holds at `lg`. The hairline rules read the index alone and need no telling. */
+  /** How many the row holds at `xl`. The hairline rules read the index alone and need no telling. */
   columns?: keyof typeof FIGURE_COLUMNS;
 }) {
   // The page's empty state replaces an empty figure row.
@@ -94,14 +94,17 @@ export function MonthFigures({
             key={figure.key}
             className={`${figureCellClass(index)}${
               // Span the final figure when an odd count leaves it alone at `sm`.
-              lastSpansTheRow && index === figures.length - 1 ? " sm:col-span-2 lg:col-span-1" : ""
+              lastSpansTheRow && index === figures.length - 1 ? " sm:col-span-2 xl:col-span-1" : ""
             }`}
           >
             <dt className={groupLabelClass()}>{figure.label}</dt>
             <dd className="mt-2">
               {/* Keep the figure size on the value; its detail lines use a smaller size. */}
               {figure.href ? (
-                <Link href={figure.href} className={`block ${FIGURE_LARGE_CLASS} hover:underline`}>
+                <Link
+                  href={figure.href}
+                  className={`flex min-h-11 items-center ${FIGURE_LARGE_CLASS} hover:underline`}
+                >
                   {figure.value}
                 </Link>
               ) : (

@@ -267,7 +267,13 @@
     },
     "incidentsValue": "{filed} filed{drafts, plural, =0 {} one { · # draft} other { · # drafts}}",
     "monthView": "Month view",
-    "printMonth": "Print month"
+    "printMonth": "Print month",
+    "preparation": {
+      "title": "Crew and preparation",
+      "credentials": "Crew credentials",
+      "credentialsSummary": "{count, plural, one {# record} other {# records}} on file for {people, plural, one {# crew member} other {# crew members}}. Review status and renewal dates.",
+      "checklistSummary": "Review the checks the crew completes before leaving the dock."
+    }
   },
   "discard": {
     "title": "Delete this draft",

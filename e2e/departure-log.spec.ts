@@ -55,6 +55,14 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
   await page.getByRole("link", { name: "Departure log" }).click();
   await page.waitForURL(/\/log$/);
 
+  // The screen keeps the full evidence table readable on a phone; the sheet lifts this floor.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const rosterTable = page.getByRole("table").first();
+  expect(
+    await rosterTable.evaluate((table) => table.getBoundingClientRect().width),
+  ).toBeGreaterThanOrEqual(896);
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   // The document header states what this is — and what it is not.
   await expect(page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ })).toBeVisible();
   await expect(
@@ -130,6 +138,11 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
   // The tamper-evidence code: a full SHA-256 in the footer, with its recipe's version.
   await expect(page.getByText("Integrity code (SHA-256) · version 4")).toBeVisible();
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible();
+  await expect(page.locator(".paper-sheet")).toHaveCount(0);
+  await page.getByRole("link", { name: "Print", exact: true }).click();
+  await page.waitForURL(/\/log\/print$/);
+  await expect(page.locator(".paper-sheet")).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toBeVisible();
 });
 
 test("a trip id that is not this shop's renders the not-found refusal, never a document", async ({

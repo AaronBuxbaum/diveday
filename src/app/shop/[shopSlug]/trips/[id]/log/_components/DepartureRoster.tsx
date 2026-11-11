@@ -48,7 +48,7 @@ function RosterTable({
   checkpoints: RollCallCheckpoint[];
 }) {
   return (
-    <Table shellClassName="mt-3">
+    <Table shellClassName="mt-3" minWidth="56rem">
       <THead>
         <Th>{t("incidentExport.colDiver")}</Th>
         <Th>{t("incidentExport.colEmergencyContact")}</Th>

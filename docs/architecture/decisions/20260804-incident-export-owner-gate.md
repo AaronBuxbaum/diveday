@@ -131,3 +131,7 @@ overdue needs the record now), so the door is not removed from live departures; 
 
 The gate and the route are unchanged.
 
+
+## Amendment 2026-11-11: one door on trip Details
+
+Aaron requested the Departure log beside Incident reports on trip Details, not on Today. This is now its only departure door, whether the boat is live or home. `/log` is a readable staff page with a separate `/log/print` sheet. Both retain the live owner gate, tenant scoping and the identical recorded evidence and integrity hash.

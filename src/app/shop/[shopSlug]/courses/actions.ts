@@ -28,7 +28,7 @@ const inviteSchema = z.object({ personId: z.uuid(), tripId: z.uuid() });
  */
 export async function inviteToCourseSessionAction(shopSlug: string, formData: FormData) {
   const { session, shop } = await requireShopSurface(shopSlug);
-  const back = shopPath(shopSlug, "courses");
+  const back = shopPath(shopSlug, "certifications");
   const parsed = inviteSchema.safeParse({
     personId: formData.get("personId"),
     tripId: formData.get("tripId"),
@@ -85,7 +85,7 @@ const processedSchema = z.object({ certificationId: z.uuid(), kind: z.enum(CARD_
  */
 export async function markCardProcessedFromCoursesAction(shopSlug: string, formData: FormData) {
   const { session } = await requireShopSurface(shopSlug);
-  const back = shopPath(shopSlug, "courses");
+  const back = shopPath(shopSlug, "certifications");
   const parsed = processedSchema.safeParse({
     certificationId: formData.get("certificationId"),
     kind: formData.get("cardKind"),

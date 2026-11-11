@@ -53,6 +53,7 @@ export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCover
   workOrders: "workOrders",
   newWorkOrder: "workOrders",
   rentOut: { core: "gear rental is not switched yet: nitrox lives in the rental items" },
+  certifications: { core: "certification follow-up for courses taught here" },
   courses: { core: "shown by presence: a shop that teaches nothing never sees it" },
   reviews: "reviews",
   requests: "dateRequests",

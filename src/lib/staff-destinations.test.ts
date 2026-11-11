@@ -85,6 +85,7 @@ describe("the staff destination registry", () => {
       "money",
       "safety",
       "courses",
+      "diveSites",
       "gear",
       "settings",
     ];
@@ -232,6 +233,7 @@ describe("permission gating", () => {
       "inbox",
       "money",
       "courses",
+      "diveSites",
       "gear",
     ]);
   });
@@ -248,7 +250,8 @@ describe("what each consumer derives", () => {
       ["inbox", "inbox"],
       ["money", "orders"],
       ["safety", "safety"],
-      ["courses", "courses"],
+      ["courses", "certifications"],
+      ["diveSites", "diveSites"],
       ["gear", "gear"],
       ["settings", "settings"],
     ]);
@@ -289,10 +292,10 @@ describe("what each consumer derives", () => {
     expect(bySection("inbox")).toEqual(["inbox", "requests", "reviews"]);
     expect(bySection("money")).toEqual(["orders", "reports", "promoCodes"]);
     expect(bySection("safety")).toEqual(["safety"]);
-    expect(bySection("courses")).toEqual(["courses"]);
+    expect(bySection("courses")).toEqual(["courses", "certifications"]);
+    expect(bySection("diveSites")).toEqual(["diveSites"]);
     expect(bySection("gear")).toEqual(["gear", "workOrders", "newWorkOrder", "rentOut"]);
     expect(bySection("settings")).toEqual([
-      "diveSites",
       "boats",
       "tripTags",
       "safetyChecklist",
@@ -482,7 +485,7 @@ describe("currentStaffDestination and the section it lights", () => {
   });
 
   it("lights Settings for what a shop sets up, and Money for what it earns", () => {
-    for (const suffix of ["/dive-sites", "/waivers", "/settings", "/settings/team"]) {
+    for (const suffix of ["/waivers", "/settings", "/settings/team"]) {
       expect(section(`${root}${suffix}`), suffix).toBe("settings");
     }
     for (const suffix of ["/orders", "/reports", "/promos"]) {
@@ -641,4 +644,15 @@ describe("a switched-off feature leaves every list", () => {
     expect(ids).not.toContain("lostFound");
     expect(ids).not.toContain("workOrders");
   });
+});
+
+it("gives certification follow-up and dive sites their own navigation", () => {
+  expect(staffNavSections(owner, everything).map((item) => item.destination.id)).toContain(
+    "certifications",
+  );
+  expect(currentStaffSection("/shop/blue/dive-sites", "/shop/blue", owner)).toBe("diveSites");
+  expect(staffSectionTabs("courses", owner, ALL_SWITCHES_ON).map((item) => item.id)).toEqual([
+    "certifications",
+    "courses",
+  ]);
 });

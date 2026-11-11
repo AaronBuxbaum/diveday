@@ -113,7 +113,6 @@ export function evening(
     takings: null,
     headCountCloses: new Map(),
     recapEditors: new Map(),
-    canOpenLog: true,
     firstEver: false,
     ...overrides,
   };

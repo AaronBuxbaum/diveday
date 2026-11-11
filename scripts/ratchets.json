@@ -925,7 +925,7 @@
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1249,
     "src/app/api/webhooks/stripe/route.test.ts": 1695,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 932,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1075,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1073,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1027,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1146,
@@ -1041,17 +1041,10 @@
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "//absorbed": [
       {
-        "why": "Merge of lower stack layers into db-codes; nothing added by hand",
-        "files": {
-          "src/app/shop/[shopSlug]/page.tsx": "569 -> 577"
-        }
-      },
-      {
         "why": "NoticeTone and noticeRole import moves to ui/tone, one import line more",
         "files": {
           "src/app/(token)/ready/[token]/page.tsx": "616 -> 617",
           "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577",
-          "src/app/shop/[shopSlug]/page.tsx": "577 -> 578",
           "src/app/shop/[shopSlug]/staffing/page.tsx": "503 -> 504"
         }
       }
@@ -1061,7 +1054,7 @@
     "src/app/s/[shopSlug]/page.tsx": 644,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 571,
-    "src/app/shop/[shopSlug]/page.tsx": 578,
+    "src/app/shop/[shopSlug]/page.tsx": 576,
     "src/app/shop/[shopSlug]/promos/page.tsx": 489,
     "src/app/shop/[shopSlug]/reports/page.tsx": 467,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 569,

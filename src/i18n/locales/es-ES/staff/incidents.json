@@ -267,7 +267,13 @@
     },
     "incidentsValue": "{filed, plural, one {# presentado} other {# presentados}}{drafts, plural, =0 {} one { · # borrador} other { · # borradores}}",
     "monthView": "Vista mensual",
-    "printMonth": "Imprimir mes"
+    "printMonth": "Imprimir mes",
+    "preparation": {
+      "title": "Tripulación y preparación",
+      "credentials": "Credenciales de la tripulación",
+      "credentialsSummary": "{count, plural, one {# registro} other {# registros}} de {people, plural, one {# tripulante} other {# tripulantes}}. Revisa su estado y fechas de renovación.",
+      "checklistSummary": "Revisa las verificaciones que la tripulación completa antes de salir del muelle."
+    }
   },
   "discard": {
     "title": "Eliminar este borrador",

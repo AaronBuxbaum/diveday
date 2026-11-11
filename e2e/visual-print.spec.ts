@@ -308,7 +308,7 @@ test.describe("print", () => {
   test("the departure log prints as a sheet", async ({ page }) => {
     await openReefTrip(page);
     const tripPath = new URL(page.url()).pathname;
-    await page.goto(`${tripPath}/log`);
+    await page.goto(`${tripPath}/log/print`);
     await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
     const sheet = page.locator(".paper-sheet");
     await expect(sheet).toHaveCount(1);

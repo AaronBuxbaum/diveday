@@ -46,7 +46,7 @@ for (const scheme of ["light", "dark"] as const) {
       // affordance.
       test(`the staff course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses");
-        await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Certifications" }).waitFor();
         await page.getByRole("heading", { level: 2, name: "PADI" }).waitFor();
         await capture(page, "courses-list", scheme);
       });
@@ -63,7 +63,7 @@ for (const scheme of ["light", "dark"] as const) {
         // that disclosure is absent here, and its grammar is held by
         // CardsToProcess.test.tsx under a clock past the cut.
         await seedFacts(request, ["certifiedRecap"]);
-        await page.goto("/shop/blue-mantis/courses");
+        await page.goto("/shop/blue-mantis/certifications");
         // The first ladder row: the demo now seeds two shop-certified cards
         // of its own (H-20261022-demo-seeds-six-hidden), so "See who" is on more than one step.
         const people = page.getByText("See who", { exact: true }).first();
@@ -82,7 +82,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/courses?page=2");
-        await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Certifications" }).waitFor();
         await page.getByRole("heading", { level: 2 }).first().waitFor();
         await capture(page, "courses-list-page-two", scheme);
       });

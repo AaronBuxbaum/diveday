@@ -49,6 +49,7 @@ const HIDE_BELOW = {
 const MIN_WIDTH = {
   "36rem": "min-w-[36rem]",
   "40rem": "min-w-[40rem]",
+  "56rem": "min-w-[56rem]",
 } as const;
 
 export type TableMinWidth = keyof typeof MIN_WIDTH;

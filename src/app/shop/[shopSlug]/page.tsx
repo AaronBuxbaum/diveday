@@ -252,7 +252,6 @@ async function TodayBody({
     work,
     tomorrowDepartures,
     headCountCloses,
-    canOpenLog,
     sailedBefore,
     dayMoney,
     firstRun,
@@ -387,7 +386,6 @@ async function TodayBody({
     takings: dayTakingsReading,
     headCountCloses,
     recapEditors,
-    canOpenLog,
     firstEver: firstBoatEver,
   };
   // The page's one idea is the work (ADR 20260720-today-work-queue), so

@@ -8,8 +8,9 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { canPersonViewShopReports } from "@/features/safety-report";
+import { canPersonViewShopReports, listStaffCredentials } from "@/features/safety-report";
 import { requireShopSurface } from "@/features/session";
 import { monthKey, monthLabel } from "@/lib/calendar";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -66,6 +67,8 @@ export default async function SafetyReportPage({
     locale,
     t,
   });
+  const credentials = await listStaffCredentials(db, shop.id);
+  const credentialPeople = new Set(credentials.map(({ person }) => person.id)).size;
   const banner = noticeFromParam(notice, drillNoticeMessages(t));
 
   const navClass = buttonClass({ variant: "secondary", size: "icon" });
@@ -175,6 +178,34 @@ export default async function SafetyReportPage({
           />
         </div>
       )}
+      <section aria-labelledby="safety-preparation-title" className="mt-10">
+        <h2 id="safety-preparation-title" className={SECTION_TITLE_CLASS}>
+          {t("incidents.safety.preparation.title")}
+        </h2>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <Link
+            href={`${shopPath(shopSlug, "settings", "team")}#credentials`}
+            className={sectionCardClass({ className: "hover:underline" })}
+          >
+            <h3 className="font-medium">{t("incidents.safety.preparation.credentials")}</h3>
+            <p className="mt-1 text-sm text-muted">
+              {t("incidents.safety.preparation.credentialsSummary", {
+                count: credentials.length,
+                people: credentialPeople,
+              })}
+            </p>
+          </Link>
+          <Link
+            href={shopPath(shopSlug, "safety-checklist")}
+            className={sectionCardClass({ className: "hover:underline" })}
+          >
+            <h3 className="font-medium">{t("shared.shopNavLinks.safetyChecklist")}</h3>
+            <p className="mt-1 text-sm text-muted">
+              {t("incidents.safety.preparation.checklistSummary")}
+            </p>
+          </Link>
+        </div>
+      </section>
       <div className="mt-10">
         <DrillLog view={drills} />
       </div>

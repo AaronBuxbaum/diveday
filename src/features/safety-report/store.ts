@@ -276,3 +276,5 @@ export async function getSafetyPage(
   const incidents = await listShopIncidentReports(db, shopId, personId, from, to);
   return { yearMonths, safety, incidents };
 }
+
+export { listStaffCredentials } from "../../db/staff-credentials";
