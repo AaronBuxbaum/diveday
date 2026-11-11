@@ -36,7 +36,11 @@ test("the owner hides and restores conservation without losing recorded actions"
     page.getByRole("status").filter({ hasText: t("settings.main.features.saved") }),
   ).toBeVisible();
   await page.goto(`${path}?view=details`);
-  await expect(page.getByRole("heading", { name: t("trips.conservation.heading") })).toHaveCount(0);
+  await expect(
+    page
+      .locator("#about #conservation")
+      .getByText(t("trips.conservation.heading"), { exact: true }),
+  ).toHaveCount(0);
   await page.goto(`/shop/${privateShop.slug}/settings/features`);
   await page.locator("#conservation").getByRole("checkbox").check();
   await page.getByRole("button", { name: t("settings.main.features.save"), exact: true }).click();
@@ -44,6 +48,10 @@ test("the owner hides and restores conservation without losing recorded actions"
     page.getByRole("status").filter({ hasText: t("settings.main.features.saved") }),
   ).toBeVisible();
   await page.goto(`${path}?view=details`);
-  await expect(page.getByRole("heading", { name: t("trips.conservation.heading") })).toBeVisible();
+  await expect(
+    page
+      .locator("#about #conservation")
+      .getByText(t("trips.conservation.heading"), { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText(/Recorded cleanup site/).first()).toBeVisible();
 });
