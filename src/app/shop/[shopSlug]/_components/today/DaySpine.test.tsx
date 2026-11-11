@@ -56,6 +56,11 @@ afterEach(() => {
  * one-element rule, and the log door's owner gate.
  */
 describe("the evening reading", () => {
+  it("does not reserve action space on a settled station without a roll-call door", () => {
+    renderSpine({ departures: [], evening: evening([closed({ tripId: "home" })]) });
+    expect(document.querySelector("div.mt-3.flex:empty")).toBeNull();
+  });
+
   it("says a station still out in words while another has come home", () => {
     // One boat home, one due back in an hour.
     renderSpine({

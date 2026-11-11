@@ -188,19 +188,19 @@ export function ClosingStation({
           {note}
         </p>
       ))}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        {/* A boat still out is exactly the row you would chase, so it gets
+      {close.gapReason || close.status === "still_out" ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          {/* A boat still out is exactly the row you would chase, so it gets
             the manifest door too — not only the rows with a recorded gap
             (principle 10: no dead ends on the row that matters most). */}
-        {close.gapReason || close.status === "still_out" ? (
           <Link
             href={`/shop/${shopSlug}/trips/${close.tripId}/manifest?checkpoint=${checkpoint}`}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {openRollCallActionText(t)}
           </Link>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {/* **One hairline between the station and its recap**, drawn here
           because the recap draws no rule of its own; and nothing renders when
           there is no recap to write, since a rule under thin air is a defect. */}
