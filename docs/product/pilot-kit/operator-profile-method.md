@@ -55,29 +55,7 @@ Claude can do the research pass and the drafting pass. Run it in a Claude Code s
 
 ## The email
 
-The first email stays the [cold email template](cold-email-template.md): a question, no trial, no offer, no vendor named. Review of the 2026-11-11 hybrid draft found that a months-long trial and a fly-in offer in the first email turn a four-word reply into a decision, break the template's own "no trial, no signup" rule, and put open terms on the table (see H-20260724-public-founding-shop-price). The trial belongs in the reply, after the captain says the morning is a real problem. Naming the shop's booking tool is out for the same reason.
-
-What the founder's own email does well is kept in the template: a diver and an engineer who has never run a shop, the boat as the one thing he cannot test from a desk, and "either answer helps". If Aaron wants wording from his own email in the template, record that as a human decision, then get the `dive-domain-expert` re-review the template asks for.
-
-A tighter draft for review, about 140 words:
-
-> [First name],
->
-> I dive and I write software (I was an engineer at Google). I've been building a tool for dive days, from booking through the head count on the boat. I've never run a shop, so this is a question, not a pitch.
->
-> [A QUESTION RESTATING ONE FACT READ ON THEIR SITE, for example: Your site has guests sign the waiver online and check in at the shop. When two people in a group of eight haven't signed, what does that morning look like?]
->
-> The part I can't test from a desk is the boat. Divers get counted between dives with the radio off, but it has never been on a real boat, and I won't say it holds until it has.
->
-> Is that morning a real problem for you, or already sorted? Either answer helps.
->
-> If the boat side is someone else's call, I'd be glad to be pointed their way.
->
-> Aaron Buxbaum
-> [CELL]
-> dive.day
-
-Subject: the hour before the boat leaves. For a general inbox use "for whoever runs the boat schedule". If nothing could be read, use the template's no-detail question.
+The first email is the [cold email template](cold-email-template.md), rewritten 2026-11-11 from the founder's own email and three reviews. It keeps his strongest parts (a diver and engineer who has never run a shop, the boat he cannot test from a desk, "either answer helps") and adds one question restating a fact read on the shop's own page. A months-long trial, a fly-in offer and naming the shop's booking tool are out of the first email: they turn a four-word reply into a decision and put open terms on the table (H-20260724-public-founding-shop-price). They belong in the reply, once the captain says the morning is a real problem.
 
 ## Follow-up and channel
 

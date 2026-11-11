@@ -68,11 +68,11 @@ sales-tool shape there is, and it is spotted before the email is opened.
 
 > [FIRST NAME],
 >
-> I dive and I write software (I was an engineer at Google), and I've been building a tool for running dive days, from booking through the head count on the boat. I've never run a shop, so this is a question and not a pitch.
+> I dive and I write software (I used to work on Google Maps), and I've been building a tool for running dive days, from booking through the head count on the boat. I've never run a shop, so this is a question and not a pitch.
 >
 > [RESEARCHED QUESTION]
 >
-> The part I can't test from a desk is the water. Divers get counted between dives with the radio off, but it has never been on a real boat, in the sun, with wet hands, and I'm not willing to say it holds until someone has had it there.
+> The part I can't test from a desk is the water. Divers get counted between dives with the radio off, once the phone has the manifest saved, but it has never been on a real boat, in the sun, with wet hands, and I'm not willing to say it holds until someone has had it there.
 >
 > Is that morning a real problem for you, or already sorted? Either answer is useful to me.
 >
@@ -116,7 +116,7 @@ Six checks, in the order they'd fail:
 
 | Part | Doing what |
 | --- | --- |
-| "I was an engineer at Google" | One clause, in parentheses. It answers "who is this" with something true and checkable, and is the only credential in the email. No diver cert level unless it is exact, and no shop count, quote or testimonial: there are none. |
+| "I used to work on Google Maps" | One clause, in parentheses. It answers "who is this" with something true and checkable, and is the only credential in the email. No diver cert level unless it is exact, and no shop count, quote or testimonial: there are none. |
 | "I've never run a shop" | The first paragraph's real content. It sets the relationship — someone asking, not someone selling — and it is why the rest of the email is allowed to ask a question. One clause says what DiveDay is, and the paragraph does not return to it. |
 | The researched question | Placed where the owner story used to be. It proves the founder read this shop's pages, asks about their morning instead of describing a product, and asserts nothing about how they work, so there is nothing to defend. The owner story was cut for length; the "I've never run a shop" clause carries the same job. |
 | The water paragraph | The genuine reason this email exists rather than an ad, and the thing the reader has that the founder needs. It asserts only the half that is true and says the rest is untested — see [the offline line](#the-offline-line--read-this-before-editing-the-water-paragraph). |
@@ -126,7 +126,7 @@ Six checks, in the order they'd fail:
 
 ### The offline line — read this before editing the water paragraph
 
-"Divers get counted there with the radio off, but it has never been on a real boat" is doing two
+"Divers get counted between dives with the radio off, once the phone has the manifest saved, but it has never been on a real boat" is doing two
 jobs, and each half is load-bearing.
 
 **The assertion is scoped to what has been *tested*, not to what has been built.** Both halves now
@@ -137,7 +137,7 @@ recorded and this paragraph scoped the claim to the diver half for that reason).
 What has not changed is the reason the line stays narrow. The
 [claims policy](../marketing.md#claims-policy-hard-rules) holds that offline roll call may not be
 spoken about as *proven* until V-02 passes, and V-02 has not run. So the email still says *divers
-get counted there with the radio off* — an understatement now rather than a scoping — and still
+get counted between dives with the radio off* — an understatement now rather than a scoping — and still
 never says *roll call is proven offline*. If you widen it to name the crew half as well, keep the
 "it has never been on a real boat" clause welded to it: the second half of the sentence is what
 makes the first half honest, and it is doing more work now that the product does more.
@@ -237,7 +237,7 @@ each is an existing rule rather than a new one:
   commercial position. Anything beyond it gets written down and taken away, never agreed to live.
 - **The price as a number in prose.** Send the pricing page; the figure has one source
   (`earlyAccessPrice` in `src/lib/marketing.ts`).
-- **Roll call "proven" without signal, on the boat, or with no bars.** Divers and rostered crew can both be counted on a device copy with no signal (H-20260814-where-diveday-sit-between), but V-02 has not run, so it has never been on a real boat and that is the only claim the email makes. Do not describe it as proven.
+- **Roll call "proven" without signal, on the boat, or with no bars.** Divers and rostered crew can both be counted on a device copy with no signal (H-20260814-where-diveday-sit-between), but V-02 has not run, so it has never been on a real boat and that is the only offline claim the email makes. Do not describe it as proven.
 - **A field test that stands in for the shop's own paper.** V-02 rides *alongside* the printed
   manifest and whatever the crew already does, never in place of either; a missing, expired, or
   stale device copy is never a boarding source (H-20260724-product-now-uses-explicit, [run sheet](v-02-field-test-run-sheet.md)).
