@@ -67,7 +67,7 @@ sales-tool shape there is, and it is spotted before the email is opened.
 
 > [GREETING]
 >
-> I'm a diver and an ex-Google software engineer, and I'm building DiveDay, software for running a dive day: booking, waivers, cert checks and the head count on the boat. I'm writing because I think it could help [SHOP], and I'd like to find out if I'm right.
+> I'm a diver and an ex-Google software engineer, and I'm building DiveDay, software for running a dive day: booking, waivers, cert checks, and the head count on the boat. I'm writing because I think it could help [SHOP], and I'd like to find out if I'm right.
 >
 > [RESEARCHED STATEMENT]
 >
