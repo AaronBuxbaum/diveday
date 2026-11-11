@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
+
+/**
+ * The eyebrow's rung, spelled here rather than imported from `ShopPageHeader`:
+ * this component rides in the shared staff and public shells, and importing
+ * that module would pull the whole header into the shared first-load chunk.
+ */
+const EYEBROW_CLASS = "text-[11px] leading-4 font-bold tracking-[0.16em] uppercase text-primary";
 
 export interface DemoStartCopy {
   startTitle: string;
