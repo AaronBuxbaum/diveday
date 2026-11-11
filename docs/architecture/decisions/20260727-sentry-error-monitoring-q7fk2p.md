@@ -69,7 +69,12 @@ Zero new dependency, zero new cost.
   `docs/engineering/capability-telemetry-runbook.md` already requires for Analytics/Speed
   Insights — a `beforeSend`/`beforeBreadcrumb` pair scrubs the event's request URL/referrer and
   navigation/xhr/fetch breadcrumbs. A waiver/ready/recap/verify/reset-password token must not leak
-  into a third observability vendor any more than the first two.
+  into a third observability vendor any more than the first two. *Amended 2026-11-10:* that, with
+  cookies, request bodies and credential headers, is now the whole of the redaction. Exception
+  messages, console breadcrumbs and client addresses were being stripped too (every message read
+  `[redacted]`, and webhook and cron failures went as stand-in errors), which left errors
+  unreadable. Aaron's standing call is debuggability over speculative privacy worries
+  (`.claude/rules/ux-over-hardening.md`); errors now arrive whole.
 - Sentry's own alert rules (configured on the Sentry project, not in this repo) are the actual
   "email me when something breaks" — the same division of labor as Resend's dashboard/webhook vs.
   this app's notification code. Point the Sentry project's alert email at `alerts@dive.day`.

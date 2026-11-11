@@ -29,7 +29,7 @@ import {
   verifyStripeWebhook,
 } from "@/features/payments";
 import { recordStripeRefundFailure } from "@/features/refund-failures";
-import { reportScrubbedError } from "@/features/sentry-server";
+import { sentry } from "@/features/sentry-server";
 import { tellOwnersPaymentsRestricted } from "@/features/stripe-restricted";
 import {
   claimStripeWebhookEvent,
@@ -872,15 +872,13 @@ async function releaseClaimAfterFailure(
   }
 }
 
-/** A webhook failure, reported without its message (`reportScrubbedError`). */
+/** A webhook failure, reported to Sentry with its real message and stack. */
 async function reportToSentry(
   error: unknown,
   event: { id: string; type: string },
   stage: "handler" | "claim_release",
 ) {
-  await reportScrubbedError(error, {
-    name: "StripeWebhookError",
-    message: `Stripe webhook ${stage} failed`,
+  await sentry.captureException(error, {
     tags: {
       stripe_event_id: event.id,
       stripe_webhook_event_type: event.type,

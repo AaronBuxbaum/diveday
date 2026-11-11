@@ -102,13 +102,10 @@ describe("GET /api/cron/integrations", () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
     expect(response.status).toBe(503);
-    // Sentry gets the pass's name and the error's class, never its text.
-    const [reported, context] = vi.mocked(Sentry.captureException).mock.calls[0] ?? [];
-    expect(reported).toBeInstanceOf(Error);
-    expect((reported as Error).name).toBe("CronPassFailed");
-    expect((reported as Error).message).toBe("cron pass integrations failed");
-    expect(JSON.stringify(context)).not.toContain("ada@example.com");
-    expect(context).toEqual({ tags: { cron_scan: "integrations", error_class: "Error" } });
+    // Sentry gets the real error, tagged with the pass's name.
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
+      tags: { cron_scan: "integrations" },
+    });
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(2, {
       checkInId: "check-in-id",
       monitorSlug: "diveday-integrations",

@@ -4,7 +4,7 @@ import { DEMO_SCHEDULE_MIN_RUNWAY_DAYS, refreshCanonicalDemoSchedule } from "@/d
 import { sqlStateOf } from "@/db/query-helpers";
 import { requireCronSecret } from "@/features/cron-auth";
 import { flushLogs } from "@/features/log-shipping";
-import { reportScrubbedError, sentry } from "@/features/sentry-server";
+import { sentry } from "@/features/sentry-server";
 import { log } from "@/lib/log";
 
 /**
@@ -99,9 +99,7 @@ export async function GET(request: Request) {
     // restore runs in one transaction, so the demo is whatever it was before
     // this pass -- an aging board, not a half-wiped shop -- and tomorrow's tick
     // re-attempts it.
-    await reportScrubbedError(error, {
-      name: "CronScanFailed",
-      message: "cron scan failed", // i18n-exempt: Sentry event title, never shown to a person
+    await sentry.captureException(error, {
       tags: { cron_pass: "demo_refresh" },
     });
     // The payload used to be `{}`, which said a pass failed and nothing about
