@@ -5,6 +5,7 @@ import {
   departurePaperRule,
   formatPaperDateTime,
   normalizePaperFact,
+  paperAttributionLines,
   paperCssString,
   paperFactLines,
 } from "./DeparturePaperIdentity";
@@ -42,6 +43,25 @@ describe("departure paper identity", () => {
     expect(topMargin(long)).toBeGreaterThan(topMargin(normal));
     expect(paperFactLines(title).join("")).toBe(title.trim());
     expect(long).toContain('counter(page) " / " counter(pages)');
+  });
+
+  it("keeps the printer's words and timezone abbreviation together", () => {
+    const attribution = "Printed by Dana Reyes · Jul 21, 2026 · 9:30 AM EDT · America/New_York";
+    const lines = paperAttributionLines(attribution);
+    expect(lines.join(" ")).toBe(attribution);
+    expect(lines.some((line) => line.includes("EDT"))).toBe(true);
+    const wideName = "W".repeat(160);
+    expect(paperAttributionLines(wideName).join("")).toBe(wideName);
+    expect(paperAttributionLines(wideName).every((line) => line.length <= 48)).toBe(true);
+  });
+
+  it("reserves footer space for a long printer name instead of covering body text", () => {
+    const printed = `Printed by ${"W".repeat(240)} · Nov 10, 2026`;
+    const normal = departurePaperRule("departure-a", ["Shop"], "Printed today");
+    const long = departurePaperRule("departure-a", ["Shop"], printed);
+    const bottomMargin = (css: string) => Number(css.match(/margin-bottom:(\d+)mm/)?.[1]);
+    expect(bottomMargin(long)).toBeGreaterThan(bottomMargin(normal));
+    expect(long).toContain("\\a ");
   });
 
   it("normalizes adversarial newlines and Unicode break characters before sizing and rendering", () => {

@@ -447,7 +447,7 @@ export async function getMonthlyReport(
           eq(bookingCheckouts.isDeposit, true),
           eq(bookingCheckouts.status, "completed"),
           fareCheckout(),
-          eq(bookingPayments.status, "paid"),
+          replacementPaymentOwnsBalance(),
         ),
       )
       .groupBy(trips.id);
@@ -1423,4 +1423,12 @@ export async function crewYearFacts(
     facts.set(row.personId, { ...seen, daysAtSea: Number(row.days) });
   }
   return facts;
+}
+
+/** A later invoice owns the balance; a retained mixed pointer does not. */
+function replacementPaymentOwnsBalance() {
+  return and(
+    eq(bookingPayments.status, "paid"),
+    sql`${bookingPayments.providerRef} is distinct from ${bookingCheckouts.stripeSessionId}`,
+  );
 }

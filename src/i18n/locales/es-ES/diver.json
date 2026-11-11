@@ -823,7 +823,8 @@
       "byShop": "Registrado por {shopName}",
       "litter_kg": "{quantity} kg de residuos recogidos",
       "litter_items": "{quantity} objetos recogidos",
-      "line_m": "{quantity} m de sedal recogido"
+      "line_m": "{quantity} m de sedal recogido",
+      "lionfish_count": "Peces león recolectados: {quantity}"
     }
   },
   "register": {
@@ -3407,7 +3408,10 @@
       "verify": "Verificar",
       "restart": "Tu inicio de sesión venció. Vuelve a ingresar tu correo y contraseña.",
       "demoUnavailable": "La demo no se abrió. Quizá la probaste varias veces en esta hora. Espera un poco y vuelve a intentar.",
-      "rateLimit": "Demasiados intentos. Espera un momento antes de volver a intentar."
+      "rateLimit": "Demasiados intentos. Espera un momento antes de volver a intentar.",
+      "passkey": "Entrar con una clave de acceso",
+      "passkeyPending": "Verificando tu clave de acceso…",
+      "passkeyError": "No se completó el acceso. Inténtalo de nuevo o usa tu contraseña."
     },
     "onboard": {
       "eyebrow": "Empieza un centro",

@@ -1,33 +1,29 @@
-import { and, desc, eq, isNotNull, isNull, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { realShop } from "@/features/founder-metrics";
-import { cardMoneyThroughDiveDayCents } from "@/features/report-lines";
+import { fareCheckout } from "../../db/checkout-purpose";
 import type { AppDb, DbExecutor } from "../../db/client";
-import { pricingVolumeStatements, shopSubscriptions, shops } from "../../db/schema/index";
+import {
+  bookingCheckouts,
+  collectionEntries,
+  pricingVolumeStatements,
+  shopSubscriptions,
+  shops,
+} from "../../db/schema/index";
+import { getShopCurrency } from "../../db/stripe-accounts";
 import type { PlanTerms } from "../../lib/billing/pricing-plans";
 import { percentFeeCents } from "../../lib/billing/pricing-plans";
-import { type MonthRef, monthKey, parseMonthKey } from "../../lib/calendar";
+import {
+  addMonths,
+  compareMonths,
+  type MonthRef,
+  monthKey,
+  parseMonthKey,
+} from "../../lib/calendar";
 import { nowDate } from "../../lib/clock";
-import { shopMonthBounds } from "../../lib/zoned";
-
-/**
- * **The percent plan's volume and its monthly statements** (ADR
- * 20261022-pricing-ab-test).
- *
- * Volume is card money the shop took through DiveDay in its own calendar
- * month, by the rules the Reports page's money-by-line already applies
- * (`cardMoneyThroughDiveDayCents` in `./report-lines.ts`): never tips, tax,
- * pass-through fees, money taken at the counter or imported history, and net
- * of the refunds recorded by the time it is read. Money taken while the shop
- * was still in its free time is not billed, so a month is read from the later
- * of its first instant and the end of the shop's free time.
- */
+import { shopMonthBounds, utcToWallTime } from "../../lib/zoned";
 
 export type PricingStatement = typeof pricingVolumeStatements.$inferSelect;
 
-/**
- * The shop-local month as UTC bounds, its start moved past the shop's free
- * time and its end, for a subscription that ended inside it, back to the end.
- */
 export function billableWindow(
   month: MonthRef,
   timeZone: string,
@@ -40,11 +36,59 @@ export function billableWindow(
   return { from: from.getTime() < to.getTime() ? from : to, to };
 }
 
-/**
- * Card money paid through DiveDay in the shop's calendar month, in cents,
- * from `freeUntil` on when the month began inside the shop's free time. A
- * window that has not started (a month entirely free) is zero.
- */
+const MAX_COLLECTION_ENTRIES_PER_CLOSE = 50_000;
+
+async function entriesBefore(db: DbExecutor, shopId: string, currency: string, to: Date) {
+  const rows = await db
+    .select()
+    .from(collectionEntries)
+    .where(
+      and(
+        eq(collectionEntries.shopId, shopId),
+        eq(collectionEntries.currency, currency),
+        lt(collectionEntries.recordedAt, to),
+      ),
+    )
+    .orderBy(asc(collectionEntries.id))
+    .limit(MAX_COLLECTION_ENTRIES_PER_CLOSE + 1);
+  if (rows.length > MAX_COLLECTION_ENTRIES_PER_CLOSE) throw new Error("pricing_close_entry_limit");
+  return rows;
+}
+
+type Entry = typeof collectionEntries.$inferSelect;
+function lotReturned(entries: Entry[], id: number): number {
+  const reversals = entries.filter(
+    (entry) => entry.reversesEntryId === id && entry.amountCents < 0,
+  );
+  const restored = entries.filter(
+    (entry) =>
+      entry.amountCents > 0 && reversals.some((reversal) => entry.reversesEntryId === reversal.id),
+  );
+  return (
+    -reversals.reduce((sum, entry) => sum + entry.amountCents, 0) -
+    restored.reduce((sum, entry) => sum + entry.amountCents, 0)
+  );
+}
+function collectionLots(
+  entries: Entry[],
+  from: Date,
+  to: Date,
+): Array<{ entryId: number; amountCents: number }> {
+  return entries
+    .filter(
+      (entry) =>
+        entry.amountCents > 0 &&
+        entry.reversesEntryId === null &&
+        entry.recordedAt >= from &&
+        entry.recordedAt < to,
+    )
+    .map((entry) => ({
+      entryId: entry.id,
+      amountCents: Math.max(0, entry.amountCents - lotReturned(entries, entry.id)),
+    }));
+}
+
+/** Native-currency collections actually recorded received, after same-month reversals. */
 export async function processedVolumeCents(
   db: DbExecutor,
   shopId: string,
@@ -52,37 +96,170 @@ export async function processedVolumeCents(
   timeZone: string,
   freeUntil: Date | null = null,
   endedAt: Date | null = null,
+  currency?: string,
 ): Promise<number> {
   const window = billableWindow(month, timeZone, freeUntil, endedAt);
-  if (window.from.getTime() >= window.to.getTime()) return 0;
-  return cardMoneyThroughDiveDayCents(db, shopId, window.from, window.to);
+  if (window.from >= window.to) return 0;
+  const ownCurrency = currency ?? (await getShopCurrency(db, shopId));
+  return collectionLots(
+    await entriesBefore(db, shopId, ownCurrency, window.to),
+    window.from,
+    window.to,
+  ).reduce((sum, lot) => sum + lot.amountCents, 0);
 }
 
-/** The meter event's identifier: one per shop per month, so Stripe deduplicates a retry too. */
-export function meterIdentifier(shopId: string, month: MonthRef): string {
-  return `diveday-fee-${shopId}-${monthKey(month)}`;
+/** A visible hold, not a guessed zero-dollar receipt. */
+export async function hasIncompleteCollectionEvidence(
+  db: DbExecutor,
+  shopId: string,
+  currency: string,
+  freeUntil: Date | null = null,
+): Promise<boolean> {
+  // diveday:any-checkout-purpose: tips are excluded; this is a fare receipt evidence check.
+  const [row] = await db
+    .select({ id: bookingCheckouts.id })
+    .from(bookingCheckouts)
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.currency, currency),
+        fareCheckout(),
+        or(
+          and(
+            eq(bookingCheckouts.status, "completed"),
+            gte(bookingCheckouts.completedAt, freeUntil ?? new Date(0)),
+          ),
+          gte(bookingCheckouts.paidAfterCloseAt, freeUntil ?? new Date(0)),
+        ),
+        or(
+          eq(bookingCheckouts.collectionNeedsReview, true),
+          isNull(bookingCheckouts.settledTotalCents),
+          and(eq(bookingCheckouts.taxEnabled, true), isNull(bookingCheckouts.taxCents)),
+        ),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
-/** The month as the statement's `month` column holds it: its first day. */
+export async function collectionCurrencies(db: DbExecutor, shopId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ currency: collectionEntries.currency })
+    .from(collectionEntries)
+    .where(eq(collectionEntries.shopId, shopId));
+  // A receipt without a lot still needs a visible hold, including after a
+  // shop changes its default currency before settlement evidence arrives.
+  // diveday:any-checkout-purpose: fare receipts only, never tips.
+  const receipts = await db
+    .selectDistinct({ currency: bookingCheckouts.currency })
+    .from(bookingCheckouts)
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        fareCheckout(),
+        or(eq(bookingCheckouts.status, "completed"), isNotNull(bookingCheckouts.paidAfterCloseAt)),
+      ),
+    );
+  return [
+    ...new Set([
+      await getShopCurrency(db, shopId),
+      ...rows.map((row) => row.currency),
+      ...receipts.map((row) => row.currency),
+    ]),
+  ].sort();
+}
+
+/** Bounded new accounting progresses independently of recent provider retries. */
+export async function pricingMonthsToClose(
+  db: DbExecutor,
+  shopId: string,
+  currency: string,
+  last: MonthRef,
+  timeZone: string,
+): Promise<MonthRef[]> {
+  const where = and(
+    eq(pricingVolumeStatements.shopId, shopId),
+    eq(pricingVolumeStatements.currency, currency),
+  );
+  const retries = await db
+    .select({ month: pricingVolumeStatements.month })
+    .from(pricingVolumeStatements)
+    .where(and(where, isNull(pricingVolumeStatements.reportedAt)))
+    .orderBy(desc(pricingVolumeStatements.month))
+    .limit(8);
+  const [latest] = await db
+    .select({ month: pricingVolumeStatements.month })
+    .from(pricingVolumeStatements)
+    .where(where)
+    .orderBy(desc(pricingVolumeStatements.month))
+    .limit(1);
+  const latestMonth = parseMonthKey(latest?.month.slice(0, 7));
+  let start = latestMonth ? addMonths(latestMonth, 1) : last;
+  if (!latest) {
+    const [first] = await db
+      .select({ at: collectionEntries.recordedAt })
+      .from(collectionEntries)
+      .where(and(eq(collectionEntries.shopId, shopId), eq(collectionEntries.currency, currency)))
+      .orderBy(asc(collectionEntries.recordedAt))
+      .limit(1);
+    const receiptWhere = and(
+      eq(bookingCheckouts.shopId, shopId),
+      eq(bookingCheckouts.currency, currency),
+      fareCheckout(),
+    );
+    const [completed] = await db
+      .select({ at: bookingCheckouts.completedAt })
+      .from(bookingCheckouts)
+      .where(
+        and(
+          receiptWhere,
+          fareCheckout(),
+          eq(bookingCheckouts.status, "completed"),
+          isNotNull(bookingCheckouts.completedAt),
+        ),
+      )
+      .orderBy(asc(bookingCheckouts.completedAt))
+      .limit(1);
+    const [late] = await db
+      .select({ at: bookingCheckouts.paidAfterCloseAt })
+      .from(bookingCheckouts)
+      .where(and(receiptWhere, fareCheckout(), isNotNull(bookingCheckouts.paidAfterCloseAt)))
+      .orderBy(asc(bookingCheckouts.paidAfterCloseAt))
+      .limit(1);
+    const dates = [first?.at, completed?.at, late?.at].filter(
+      (at): at is Date => at instanceof Date,
+    );
+    if (dates.length) {
+      const wall = utcToWallTime(new Date(Math.min(...dates.map((at) => at.getTime()))), timeZone);
+      start = { year: wall.year, month: wall.month };
+    }
+  }
+  const months = retries
+    .map((row) => parseMonthKey(row.month.slice(0, 7)))
+    .filter((month): month is MonthRef => month !== null && compareMonths(month, last) <= 0);
+  for (
+    let month = start;
+    compareMonths(month, last) <= 0 && months.length < 24;
+    month = addMonths(month, 1)
+  )
+    months.push(month);
+  if (months.length === 0 && latestMonth && compareMonths(latestMonth, last) === 0)
+    months.push(last);
+  return months.sort(compareMonths);
+}
+
+export function meterIdentifier(shopId: string, month: MonthRef, currency = "usd"): string {
+  return `diveday-fee-${shopId}-${monthKey(month)}-${currency}`;
+}
 export function statementMonth(month: MonthRef): string {
   return `${monthKey(month)}-01`;
 }
 
 /**
- * Close one month for one shop: the statement, written once. A second call
- * for the same month returns the row the first wrote, figures unchanged, so a
- * re-run never re-reads a month whose late refund would move its fee after
- * Stripe was told.
- *
- * **A refund recorded after its month closed nets in the month it is
- * recorded** (issue 3024). Each earlier statement keeps the card money it
- * read (`monthCardCents`) and how much of it later statements have already
- * credited (`refundedSinceCloseCents`); what its month reads now falls short
- * of that by the refunds nobody has credited yet. This statement takes them,
- * with what the one before carried, off its own card money, never below
- * zero: the rest carries to the next statement. Reading cumulative figures
- * rather than individual refunds is what keeps a refund from being credited
- * twice or lost, however the closes and refunds interleave.
+ * One immutable statement per shop, month and currency. The shop row serializes
+ * all closes, not only two closes of the same month. Credits are fee amounts
+ * computed at the original statement's rate and rounding, never old volume
+ * repriced at today's rate. A linked reversal cannot refund a free collection.
  */
 export async function closePricingMonth(
   db: AppDb,
@@ -92,112 +269,162 @@ export async function closePricingMonth(
     timeZone: string;
     terms: PlanTerms;
     freeUntil: Date | null;
-    /** A subscription that ended inside the month: its volume is read up to here. */
     endedAt?: Date | null;
+    currency?: string;
+    now?: Date;
   },
 ): Promise<PricingStatement> {
   const month = statementMonth(input.month);
-  const existing = await getPricingStatement(db, input.shopId, month);
-  if (existing) return existing;
+  const currency = input.currency ?? (await getShopCurrency(db, input.shopId));
   return db.transaction(async (tx) => {
-    const [claimed] = await tx
-      .insert(pricingVolumeStatements)
-      .values({
-        shopId: input.shopId,
-        month,
-        volumeCents: 0,
-        basisPoints: input.terms.basisPoints,
-        feeCents: 0,
-        stripeMeterIdentifier: meterIdentifier(input.shopId, input.month),
-        createdAt: nowDate(),
-      })
-      .onConflictDoNothing({
-        target: [pricingVolumeStatements.shopId, pricingVolumeStatements.month],
-      })
-      .returning({ id: pricingVolumeStatements.id });
-    if (!claimed) {
-      const row = await getPricingStatement(tx, input.shopId, month);
-      if (!row) throw new Error("closePricingMonth: statement missing after insert");
-      return row;
-    }
-    const monthCardCents = await processedVolumeCents(
-      tx,
-      input.shopId,
+    const [shop] = await tx
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.id, input.shopId))
+      .for("no key update");
+    if (!shop) throw new Error("pricing_close_shop_missing");
+    const existing = await getPricingStatement(tx, input.shopId, month, currency);
+    if (existing) return existing;
+    const earlier = await tx
+      .select()
+      .from(pricingVolumeStatements)
+      .where(
+        and(
+          eq(pricingVolumeStatements.shopId, input.shopId),
+          eq(pricingVolumeStatements.currency, currency),
+        ),
+      )
+      .orderBy(desc(pricingVolumeStatements.month));
+    if (earlier.some((row) => row.month > month)) throw new Error("pricing_close_out_of_order");
+    const bounds = shopMonthBounds(input.month, input.timeZone);
+    if (bounds.to > (input.now ?? nowDate())) throw new Error("pricing_close_month_not_finished");
+    const window = billableWindow(
       input.month,
       input.timeZone,
       input.freeUntil,
       input.endedAt ?? null,
     );
-    const late = await creditLateRefunds(tx, input, month);
-    const lateRefundCents = late.newlyRefundedCents + late.carriedInCents;
-    const volumeCents = Math.max(0, monthCardCents - lateRefundCents);
-    const [row] = await tx
-      .update(pricingVolumeStatements)
-      .set({
-        monthCardCents,
-        lateRefundCents,
-        refundCarryCents: Math.max(0, lateRefundCents - monthCardCents),
-        volumeCents,
-        feeCents: percentFeeCents(volumeCents, input.terms.basisPoints),
+    const [incomplete] = await tx
+      .select({ id: bookingCheckouts.id })
+      .from(bookingCheckouts)
+      .where(
+        and(
+          eq(bookingCheckouts.shopId, input.shopId),
+          eq(bookingCheckouts.currency, currency),
+          fareCheckout(),
+          or(
+            and(
+              eq(bookingCheckouts.status, "completed"),
+              gte(bookingCheckouts.completedAt, input.freeUntil ?? new Date(0)),
+              lt(bookingCheckouts.completedAt, window.to),
+            ),
+            and(
+              gte(bookingCheckouts.paidAfterCloseAt, input.freeUntil ?? new Date(0)),
+              lt(bookingCheckouts.paidAfterCloseAt, window.to),
+            ),
+          ),
+          or(
+            eq(bookingCheckouts.collectionNeedsReview, true),
+            and(
+              eq(bookingCheckouts.status, "completed"),
+              isNull(bookingCheckouts.settledTotalCents),
+            ),
+            and(eq(bookingCheckouts.taxEnabled, true), isNull(bookingCheckouts.taxCents)),
+          ),
+        ),
+      )
+      .limit(1);
+    if (incomplete) throw new Error("pricing_close_incomplete_settlement");
+    const entries = await entriesBefore(tx, input.shopId, currency, bounds.to);
+    const closedMonths = new Set(earlier.map((row) => row.month));
+    if (
+      entries.some((entry) => {
+        if (
+          entry.amountCents <= 0 ||
+          entry.reversesEntryId !== null ||
+          entry.recordedAt >= bounds.from ||
+          entry.recordedAt < (input.freeUntil ?? new Date(0)) ||
+          (input.endedAt && entry.recordedAt >= input.endedAt)
+        )
+          return false;
+        const wall = utcToWallTime(entry.recordedAt, input.timeZone);
+        return !closedMonths.has(statementMonth({ year: wall.year, month: wall.month }));
       })
-      .where(eq(pricingVolumeStatements.id, claimed.id))
+    )
+      throw new Error("pricing_close_missing_earlier_month");
+    const collections = collectionLots(entries, window.from, window.to);
+    const monthCollectedCents = collections.reduce((sum, lot) => sum + lot.amountCents, 0);
+    const credits: PricingStatement["credits"] = [];
+    for (const original of earlier) {
+      let cumulativeReturned = 0;
+      for (const lot of original.collections) {
+        const totalReturned = lotReturned(entries, lot.entryId);
+        const positive = entries.find((entry) => entry.id === lot.entryId);
+        // The lot's allocation already netted same-month refunds. Only the
+        // amount returned after that net balance can produce a late credit.
+        const returnedBefore = positive ? positive.amountCents - lot.amountCents : 0;
+        cumulativeReturned += Math.min(lot.amountCents, totalReturned - returnedBefore);
+      }
+      const credited = earlier
+        .flatMap((row) => row.credits)
+        .filter((credit) => credit.statementId === original.id);
+      const alreadyBasis = credited.reduce((sum, credit) => sum + credit.basisCents, 0);
+      const alreadyFee = credited.reduce((sum, credit) => sum + credit.feeCents, 0);
+      const basisCents = cumulativeReturned - alreadyBasis;
+      const feeCents =
+        original.grossFeeCents -
+        percentFeeCents(
+          Math.max(0, original.volumeCents - cumulativeReturned),
+          original.basisPoints,
+        ) -
+        alreadyFee;
+      if (basisCents !== 0 || feeCents !== 0)
+        credits.push({ statementId: original.id, basisCents, feeCents });
+    }
+    const grossFeeCents = percentFeeCents(monthCollectedCents, input.terms.basisPoints);
+    const refundCreditCents =
+      (earlier[0]?.feeCreditCarryCents ?? 0) +
+      credits.reduce((sum, credit) => sum + credit.feeCents, 0);
+    const [row] = await tx
+      .insert(pricingVolumeStatements)
+      .values({
+        shopId: input.shopId,
+        month,
+        currency,
+        collections,
+        credits,
+        monthCollectedCents,
+        volumeCents: monthCollectedCents,
+        basisPoints: input.terms.basisPoints,
+        lateRefundCents: credits.reduce((sum, credit) => sum + credit.basisCents, 0),
+        grossFeeCents,
+        refundCreditCents,
+        feeCreditCarryCents: Math.max(0, refundCreditCents - grossFeeCents),
+        feeCents: Math.max(0, grossFeeCents - refundCreditCents),
+        stripeMeterIdentifier: meterIdentifier(input.shopId, input.month, currency),
+        createdAt: nowDate(),
+      })
       .returning();
-    if (!row) throw new Error("closePricingMonth: statement missing after insert");
+    if (!row) throw new Error("pricing_close_statement_missing");
     return row;
   });
-}
-
-/**
- * Re-read every earlier statement's month, mark what has been refunded since
- * it closed as credited, and return that with the carry of the latest one.
- */
-async function creditLateRefunds(
-  tx: DbExecutor,
-  input: { shopId: string; timeZone: string; freeUntil: Date | null },
-  month: string,
-): Promise<{ newlyRefundedCents: number; carriedInCents: number }> {
-  const earlier = await tx
-    .select()
-    .from(pricingVolumeStatements)
-    .where(
-      and(
-        eq(pricingVolumeStatements.shopId, input.shopId),
-        lt(pricingVolumeStatements.month, month),
-      ),
-    )
-    .orderBy(desc(pricingVolumeStatements.month));
-  let newlyRefundedCents = 0;
-  for (const statement of earlier) {
-    const ref = parseMonthKey(statement.month.slice(0, 7));
-    if (!ref) throw new Error(`closePricingMonth: unreadable month ${statement.month}`);
-    const readsNow = await processedVolumeCents(
-      tx,
-      input.shopId,
-      ref,
-      input.timeZone,
-      input.freeUntil,
-    );
-    const newly = statement.monthCardCents - statement.refundedSinceCloseCents - readsNow;
-    if (newly <= 0) continue;
-    newlyRefundedCents += newly;
-    await tx
-      .update(pricingVolumeStatements)
-      .set({ refundedSinceCloseCents: statement.refundedSinceCloseCents + newly })
-      .where(eq(pricingVolumeStatements.id, statement.id));
-  }
-  return { newlyRefundedCents, carriedInCents: earlier[0]?.refundCarryCents ?? 0 };
 }
 
 export async function getPricingStatement(
   db: DbExecutor,
   shopId: string,
   month: string,
+  currency?: string,
 ): Promise<PricingStatement | null> {
   const [row] = await db
     .select()
     .from(pricingVolumeStatements)
     .where(
-      and(eq(pricingVolumeStatements.shopId, shopId), eq(pricingVolumeStatements.month, month)),
+      and(
+        eq(pricingVolumeStatements.shopId, shopId),
+        eq(pricingVolumeStatements.month, month),
+        currency ? eq(pricingVolumeStatements.currency, currency) : undefined,
+      ),
     )
     .limit(1);
   return row ?? null;
@@ -207,11 +434,17 @@ export async function getPricingStatement(
 export async function latestPricingStatement(
   db: DbExecutor,
   shopId: string,
+  currency?: string,
 ): Promise<PricingStatement | null> {
   const [row] = await db
     .select()
     .from(pricingVolumeStatements)
-    .where(eq(pricingVolumeStatements.shopId, shopId))
+    .where(
+      and(
+        eq(pricingVolumeStatements.shopId, shopId),
+        currency ? eq(pricingVolumeStatements.currency, currency) : undefined,
+      ),
+    )
     .orderBy(desc(pricingVolumeStatements.month))
     .limit(1);
   return row ?? null;

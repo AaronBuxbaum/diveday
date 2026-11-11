@@ -19,6 +19,8 @@ const COPY: PaymentStatusControlCopy = {
   update: "Update",
   updating: "Updating…",
   amountLabel: "Amount taken",
+  refundAmountLabel: "External amount returned now",
+  refundHint: "Record money already returned",
   methodLabel: "Paid by",
   methods: { cash: "Cash", card: "Card", other: "Other" },
   forgiving: { typedAs: "Typed as {raw}" },
@@ -88,6 +90,32 @@ describe("PaymentStatusControl control row", () => {
     expect(group).toHaveClass("flex", "items-center", "gap-2");
     // The label is the row's other item, outside the pair.
     expect(group?.contains(screen.getByText(/Payment:/))).toBe(false);
+  });
+});
+
+describe("recording external refunds", () => {
+  it("offers a return amount only for external money, even while online money is still held", () => {
+    render(
+      <PaymentStatusControl
+        bookingId="b1"
+        status="paid"
+        action={vi.fn()}
+        sourceNote={null}
+        refundNote={null}
+        allowedStatuses={["paid", "refunded"]}
+        mark={{ ...MARK, manualHeldCents: 7_000, handMarkRefused: true }}
+        copy={{
+          ...COPY,
+          refundAmountLabel: "External amount returned now",
+          refundHint: "Record money already returned",
+        }}
+      />,
+    );
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "refunded" } });
+    expect(screen.getByRole("textbox", { name: /External amount returned now/ })).toHaveValue(
+      "$70",
+    );
+    expect(screen.queryByLabelText(COPY.amountLabel)).toBeNull();
   });
 });
 

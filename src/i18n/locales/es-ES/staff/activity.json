@@ -80,7 +80,7 @@
     "paid_after_close_refunded": "{actor} reembolsó un pago hecho con el cobro ya cerrado",
     "seat_refunded": "{actor} quitó a {diver} y reembolsó la plaza con tarjeta",
     "payment_waived": "{actor} marcó la plaza de {diver} como exonerada",
-    "payment_marked_refunded": "{actor} marcó la plaza de {diver} como reembolsada",
+    "payment_marked_refunded": "{actor} registró una devolución de dinero para la plaza de {diver}",
     "payment_balance_written_off": "{actor} dio por saldado el resto de la plaza de {diver}",
     "party_marked_paid": "{actor} cobró la parte de {diver} del pago del grupo",
     "dashboard_refund_matched": "{actor} asignó a la plaza de {diver} un reembolso hecho en Stripe",

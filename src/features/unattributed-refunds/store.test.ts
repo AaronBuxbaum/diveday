@@ -16,6 +16,7 @@ import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import { fakeCheckout } from "../../test/fakes";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "../../test/staff-session";
+import { recordStripeRefundFailure } from "../refund-failures/store";
 import { attributeUnattributedRefund, listUnattributedRefunds } from "./store";
 
 /**
@@ -152,6 +153,113 @@ describe("a dashboard refund on a party checkout", () => {
 });
 
 describe("attributeUnattributedRefund", () => {
+  it("attributes only the original online portion of a mixed seat, preserving its cash", async () => {
+    const { db, shop, lead, guest, actor, checkout } = await paidParty();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: lead,
+      status: "paid",
+      amountCents: 17_000,
+      manualHeldCents: 7_000,
+      currency: "usd",
+      provider: "mixed",
+      providerRef: checkout.stripeSessionId,
+      method: "cash",
+    });
+    await dashboardRefund(db, 15_000);
+    const [held] = await listUnattributedRefunds(db, shop.id);
+    if (!held) throw new Error("held missing");
+    expect(held.seats.find((seat) => seat.bookingId === lead)?.heldCents).toBe(10_000);
+    expect(
+      await attributeUnattributedRefund(db, {
+        shopId: shop.id,
+        intentId: held.intentId,
+        bookingId: lead,
+        actorPersonId: actor,
+      }),
+    ).toMatchObject({ status: "attributed", remainingCents: 5_000 });
+    expect(await getBookingPayment(db, shop.id, lead)).toMatchObject({
+      status: "partly_refunded",
+      amountCents: 7_000,
+      manualHeldCents: 7_000,
+      provider: "mixed",
+      providerRef: checkout.stripeSessionId,
+      method: "cash",
+    });
+    expect(
+      (await listUnattributedRefunds(db, shop.id))[0]?.seats.map((seat) => seat.bookingId),
+    ).toEqual([guest]);
+  });
+
+  it("parks restored party card money for reconciliation when its attributed refund fails", async () => {
+    const { db, shop, lead, actor, checkout } = await paidParty();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: lead,
+      status: "paid",
+      amountCents: 17_000,
+      manualHeldCents: 7_000,
+      currency: "usd",
+      provider: "mixed",
+      providerRef: checkout.stripeSessionId,
+      method: "cash",
+    });
+    await dashboardRefund(db, 10_000);
+    const [held] = await listUnattributedRefunds(db, shop.id);
+    if (!held) throw new Error("held missing");
+    await attributeUnattributedRefund(db, {
+      shopId: shop.id,
+      intentId: held.intentId,
+      bookingId: lead,
+      actorPersonId: actor,
+    });
+    await recordStripeRefundFailure(db, {
+      stripeAccountId: "acct_party",
+      paymentIntentId: "pi_party",
+      refund: {
+        id: "re_party_fail",
+        amountCents: 10_000,
+        currency: "usd",
+        status: "failed",
+        failureReason: null,
+      },
+      occurredAt: nowDate(),
+    });
+    const operations = await listUnfinished(db, shop.id, "payment_operation", {
+      olderThan: new Date("2100-01-01T00:00:00Z"),
+    });
+    expect(operations).toContainEqual(
+      expect.objectContaining({
+        intent: expect.objectContaining({
+          checkoutId: checkout.id,
+          stripeObjectId: "re_party_fail",
+          amountCents: 10_000,
+          errorMessage: "refund_failed_attribution",
+        }),
+      }),
+    );
+    expect(await listUnfinished(db, shop.id, "failed_refund")).toContainEqual(
+      expect.objectContaining({ amountCents: 10_000 }),
+    );
+    expect(await getBookingPayment(db, shop.id, lead)).toMatchObject({
+      amountCents: 7_000,
+      manualHeldCents: 7_000,
+    });
+    expect(
+      await setBookingPayment(db, {
+        shopId: shop.id,
+        bookingId: lead,
+        status: "paid",
+        currency: "usd",
+        amountCents: 8_000,
+        manualHeldCents: 8_000,
+        provider: "mixed",
+        providerRef: checkout.stripeSessionId,
+        method: "cash",
+      }),
+    ).toBeNull();
+  });
+
   it("writes the refund onto the seat staff picked and clears the queue", async () => {
     const { db, shop, lead, guest, actor } = await paidParty();
     await dashboardRefund(db, 6_000);

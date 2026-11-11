@@ -3807,3 +3807,14 @@ phones and tablets. Only a real browser event offers a native install button; Sa
 Chrome otherwise get their own menu instructions. Device dismissal, installed/desktop/embed
 suppression and storage failure paths are tested. Installation makes no offline-readiness promise
 and changes neither permissions nor the service worker.
+
+## Staff passkeys (built 2026-11-10)
+
+Slice 19a of [ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md),
+recovered by #4232, adds staff-only passkey sign-in and named key management under My account →
+Security. Device-verified assertions can satisfy the existing session/purpose-bound money,
+export and backup step-up. Password recovery, enabled two-factor and explicit consequential
+confirmations remain. Protected factor changes need a separate five-minute proof from an
+existing factor or the actual current password. Browser capability never claims the device owns
+a particular account's key. This is built behavior, not production credential configuration or
+activation.

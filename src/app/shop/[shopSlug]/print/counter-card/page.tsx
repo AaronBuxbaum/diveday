@@ -13,6 +13,7 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { SheetCode } from "../_components/SheetCode";
 import { SheetDocument } from "../_components/SheetDocument";
+import { sheetAttribution } from "../_components/ShopSheet";
 
 export const instant = true;
 
@@ -35,7 +36,7 @@ export default async function CounterCardPage({
   params: Promise<{ shopSlug: string }>;
 }) {
   const { shopSlug } = await params;
-  const { shop } = await requireShopSurface(shopSlug);
+  const { shop, session } = await requireShopSurface(shopSlug);
   // Counter sign-up switched off on Features: no card to print, and no error.
   if (!shop.selfRegistrationEnabled) redirect(shopPath(shopSlug, "settings"));
   const locale = await requestLocale(shop.defaultLocale);
@@ -58,9 +59,11 @@ export default async function CounterCardPage({
             <span className="font-brand-display text-xs font-bold">{shop.name}</span>
           </>
         }
-        foldLeft={t("print.sheet.printed", {
-          date: formatDateWithYear(nowDate(), locale, shop.timezone),
-        })}
+        foldLeft={sheetAttribution(
+          t,
+          formatDateWithYear(nowDate(), locale, shop.timezone),
+          session.user.name,
+        )}
         foldRight={registerUrl}
       >
         <h1 className="font-brand-display text-xl leading-tight font-extrabold">

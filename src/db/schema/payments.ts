@@ -425,6 +425,8 @@ export const bookingPaymentEvents = pgTable(
      * reversed nothing). A partial refund writes what is still held.
      */
     amountCents: integer("amount_cents"),
+    /** Retained money received outside Stripe, separate from the original capture pointer. */
+    manualHeldCents: integer("manual_held_cents").notNull().default(0),
     /**
      * ISO 4217, lowercase, copied from the mutation that caused this row.
      * No default on purpose: an amount whose currency was guessed is not
@@ -466,6 +468,10 @@ export const bookingPaymentEvents = pgTable(
       table.seq,
     ),
     check(
+      "booking_payment_events_manual_held_check",
+      sql`${table.manualHeldCents} >= 0 and (${table.amountCents} is null or ${table.manualHeldCents} <= ${table.amountCents})`,
+    ),
+    check(
       "booking_payment_events_amount_nonnegative",
       sql`${table.amountCents} is null or ${table.amountCents} >= 0`,
     ),
@@ -500,10 +506,11 @@ export const bookingPayments = pgView("booking_payments", {
   method: manualPaymentMethod("method"),
   recordedByPersonId: uuid("recorded_by_person_id"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  manualHeldCents: integer("manual_held_cents").notNull(),
   /** When the newest entry was written; kept so the old table's shape reads unchanged. */
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 }).as(
-  sql`select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at, created_at from booking_payment_events order by shop_id, booking_id, occurred_at desc, seq desc`,
+  sql`select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at, created_at, manual_held_cents from booking_payment_events order by shop_id, booking_id, occurred_at desc, seq desc`,
 );
 
 /**
@@ -960,6 +967,8 @@ export const bookingCheckouts = pgTable(
      * asked amounts rather than treating null as zero.
      */
     settledTotalCents: integer("settled_total_cents"),
+    /** Exact provider settlement evidence is incomplete or contradicts the quote. Billing must wait. */
+    collectionNeedsReview: boolean("collection_needs_review").notNull().default(false),
     /**
      * True when the amount charged is a deposit (a balance is still due), so a
      * completed session settles the covered bookings to `deposit_paid` rather

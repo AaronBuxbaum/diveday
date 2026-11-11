@@ -15,6 +15,7 @@ import { seatBalanceOwedCentsFromJoinedRow } from "../../db/seat-balance";
 import { recordShopActivityWithin } from "../../db/shop-activity";
 
 import {
+  heldAfterDepositReceipt,
   heldAfterMark,
   type ManualPaymentMethodCode,
   type PartyShare,
@@ -24,6 +25,10 @@ import {
 export type PaymentMarkFacts = {
   /** The shop's currency: what an amount typed into the mark is read in. */
   shopCurrency: string;
+  paymentEntryId?: string | null;
+  paymentCurrency?: string | null;
+  onlineHeldCents?: number | null;
+  manualHeldCents?: number;
   /** What the seat still owes, or null when it owes nothing or names no price. */
   balanceOwedCents: number | null;
   /** The last hand mark that recorded money, while it is the seat's current state. */
@@ -50,8 +55,11 @@ const markColumns = {
   courseTitle: courses.title,
   coursePriceCents: courses.priceCents,
   courseELearningPriceCents: courses.eLearningPriceCents,
+  paymentEntryId: bookingPayments.id,
   paymentStatus: bookingPayments.status,
   paymentAmountCents: bookingPayments.amountCents,
+  paymentManualHeldCents: bookingPayments.manualHeldCents,
+  paymentProvider: bookingPayments.provider,
   paymentCurrency: bookingPayments.currency,
   paymentMethod: bookingPayments.method,
   recordedByName: markRecorder.fullName,
@@ -68,8 +76,11 @@ type MarkRow = {
   courseTitle: string | null;
   coursePriceCents: number | null;
   courseELearningPriceCents: number | null;
+  paymentEntryId?: string | null;
   paymentStatus: (typeof bookingPayments.$inferSelect)["status"] | null;
   paymentAmountCents: number | null;
+  paymentManualHeldCents?: number | null;
+  paymentProvider?: string | null;
   paymentCurrency: string | null;
   paymentMethod: ManualPaymentMethodCode | null;
   recordedByName: string | null;
@@ -79,11 +90,23 @@ type MarkRow = {
 function markFacts(row: MarkRow): PaymentMarkFacts {
   return {
     shopCurrency: row.shopCurrency,
+    paymentEntryId: row.paymentEntryId ?? null,
+    paymentCurrency: row.paymentCurrency,
+    manualHeldCents: row.paymentManualHeldCents ?? 0,
+    onlineHeldCents:
+      row.paymentProvider === "mixed"
+        ? Math.max(0, (row.paymentAmountCents ?? 0) - (row.paymentManualHeldCents ?? 0))
+        : row.paymentProvider === "stripe"
+          ? row.paymentAmountCents
+          : 0,
     balanceOwedCents: seatBalanceOwedCentsFromJoinedRow(row),
     mark:
       row.paymentMethod && row.paymentAmountCents !== null && row.paymentCurrency
         ? {
-            amountCents: row.paymentAmountCents,
+            amountCents:
+              row.paymentProvider === "mixed"
+                ? (row.paymentManualHeldCents ?? 0)
+                : row.paymentAmountCents,
             currency: row.paymentCurrency,
             method: row.paymentMethod,
             recordedByName: row.recordedByName,
@@ -218,7 +241,12 @@ async function readPartySplit(
     inOrder.map((seat) => ({
       bookingId: seat.id,
       owedCents: facts.get(seat.id)?.balanceOwedCents ?? null,
-      handMarkRefused: Boolean(payments.get(seat.id)?.provider),
+      handMarkRefused:
+        Boolean(payments.get(seat.id)?.provider) &&
+        !(
+          payments.get(seat.id)?.status === "deposit_paid" &&
+          ["stripe", "mixed"].includes(payments.get(seat.id)?.provider ?? "")
+        ),
     })),
   );
   if (split.kind === "over") return { kind: "over", owedCents: split.owedCents };
@@ -289,31 +317,37 @@ export async function markPartyPaid(
     if (read.kind !== "split") return read;
     if (read.owedCents !== input.expectedOwedCents) return { kind: "changed" };
     const { payments, ...result } = read;
+    if (
+      result.shares.some((share) => {
+        const payment = payments.get(share.bookingId);
+        return payment && payment.currency !== input.currency;
+      })
+    )
+      return { kind: "refused" };
     for (const share of result.shares) {
       const current = payments.get(share.bookingId) ?? null;
       const status = share.settles ? "paid" : "deposit_paid";
       // A share only ever adds to a deposit taken by hand: the single-seat
       // mark replaces one it is correcting, but a party payment corrects
       // nothing, and replacing here would erase cash the shop already holds.
-      const priorDeposit =
-        current?.status === "deposit_paid" && current.provider === null
-          ? (current.amountCents ?? 0)
-          : 0;
       const held =
-        status === "paid"
-          ? heldAfterMark(current, status, {
+        current?.status === "deposit_paid"
+          ? heldAfterDepositReceipt(current, {
               kind: "money",
               amountCents: share.amountCents,
               method: input.method,
             })
-          : { amountCents: priorDeposit + share.amountCents, method: input.method };
+          : heldAfterMark(current, status, {
+              kind: "money",
+              amountCents: share.amountCents,
+              method: input.method,
+            });
       const saved = await setBookingPayment(tx, {
         shopId: input.shopId,
         bookingId: share.bookingId,
         status,
         currency: input.currency,
-        amountCents: held.amountCents,
-        method: held.method,
+        ...held,
         recordedByPersonId: input.recordedByPersonId,
       });
       if (!saved) throw new Error("party payment: a locked seat refused its own write");

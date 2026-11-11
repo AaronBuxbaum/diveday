@@ -1167,6 +1167,13 @@ select:not([multiple]):not([size]):dir(rtl) {
   font-weight: 800;
 }
 
+/* A packet fragments in normal flow. A column flex container can place its
+   footer using the unfragmented body's height, over the body's final lines
+   after page breaks add padding. Small cards keep their bottom-aligned fold. */
+.paper-sheet-long {
+  display: block;
+}
+
 .paper-sheet-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -1181,6 +1188,7 @@ select:not([multiple]):not([size]):dir(rtl) {
    Two halves too long for one line stack rather than wrap beside each other,
    so a long address is never read interleaved with the date. */
 .paper-sheet-fold {
+  break-inside: avoid;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -1191,6 +1199,11 @@ select:not([multiple]):not([size]):dir(rtl) {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.5rem;
   letter-spacing: 0.02em;
+}
+
+.paper-sheet-fold > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 @page {
@@ -1338,6 +1351,13 @@ select:not([multiple]):not([size]):dir(rtl) {
   .paper-sheet * {
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
+  }
+
+  /* The structural wrapper has padding, not a border to close. Repeating its
+     gutters at every page break can strand the attribution on an empty page. */
+  .paper-sheet-long > .paper-sheet-body {
+    box-decoration-break: slice;
+    -webkit-box-decoration-break: slice;
   }
 
   /* On paper the frame stops being a frame, and every sheet starts a page. */

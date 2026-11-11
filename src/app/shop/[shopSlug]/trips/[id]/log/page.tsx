@@ -16,6 +16,7 @@ import { PACKET_PAPER } from "@/lib/print-sheets";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { SheetDocument } from "../../../print/_components/SheetDocument";
+import { sheetAttribution } from "../../../print/_components/ShopSheet";
 import { DeparturePaperIdentity, formatPaperDateTime } from "../_components/DeparturePaperIdentity";
 import { PacketSheet } from "../_components/packet/TripPacket";
 import { BoatAtDeparture } from "./_components/BoatAtDeparture";
@@ -119,7 +120,7 @@ export default async function IncidentExportPage({
     doc.roster.map((diver) => (diver.identityWithheld ? null : diver.waiver)),
   );
 
-  const printed = `${t("print.sheet.printed", { date: formatPaperDateTime(new Date(doc.meta.generatedAt), locale, doc.meta.timezone) })} · ${doc.meta.timezone}`;
+  const printed = `${sheetAttribution(t, formatPaperDateTime(new Date(doc.meta.generatedAt), locale, doc.meta.timezone), session.user.name)} · ${doc.meta.timezone}`;
 
   // Section rhythm is the wrapper's, one `space-y-6`, and no section hangs a
   // margin of its own (docs/design/forms-and-controls.md): they used to step
@@ -217,7 +218,7 @@ export default async function IncidentExportPage({
             </section>
 
             <BoatAtDeparture doc={doc} locale={locale} dateTime={dateTime} t={t} />
-            <section aria-labelledby="incident-evidence-heading">
+            <section aria-labelledby="incident-evidence-heading" className="break-inside-avoid">
               <h2 id="incident-evidence-heading" className={SECTION_TITLE_CLASS}>
                 {t("incidentExport.evidenceHeading")}
               </h2>

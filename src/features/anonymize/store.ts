@@ -94,6 +94,8 @@ import { crewMarks, seatMarks } from "../../db/roll-call-subject";
 import type { ProcessorErasureObligation } from "../../db/schema/index";
 import * as schema from "../../db/schema/index";
 import {
+  accountPasskeyChallenges,
+  accountPasskeys,
   accountSecurity,
   accountSessions,
   accountSignInChallenges,
@@ -1315,6 +1317,12 @@ async function scrubDiverLogin(
     .where(eq(userAccounts.personId, personId))
     .limit(1);
   if (account) {
+    // The account is redacted in place, so its FK cannot erase credential names/material.
+    // Include soft-deleted keys; anonymous ceremonies have no account and are untouched.
+    await tx.delete(accountPasskeys).where(eq(accountPasskeys.userAccountId, account.id));
+    await tx
+      .delete(accountPasskeyChallenges)
+      .where(eq(accountPasskeyChallenges.userAccountId, account.id));
     await tx
       .delete(accountSignInChallenges)
       .where(eq(accountSignInChallenges.userAccountId, account.id));

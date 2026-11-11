@@ -9,6 +9,7 @@ import { PACKET_PAPER } from "@/lib/print-sheets";
 import { shopPath } from "@/lib/staff-notices";
 import { WEEK_PARAM } from "@/lib/week-board";
 import { SheetDocument } from "../../print/_components/SheetDocument";
+import { sheetAttribution } from "../../print/_components/ShopSheet";
 import { formatPaperDateTime } from "../../trips/[id]/_components/DeparturePaperIdentity";
 import { PacketSheet } from "../../trips/[id]/_components/packet/TripPacket";
 import { staffingGapWords } from "../_components/gap-words";
@@ -50,7 +51,7 @@ export default async function StaffingPrintPage({
   if (!read) redirect(shopPath(shopSlug, "staffing", "print"));
   const { weekStart, weekEnd, view, week } = read;
   const rangeLabel = formatCalendarDateRange(weekStart, weekEnd, locale);
-  const printed = `${t("print.sheet.printed", { date: formatPaperDateTime(nowDate(), locale, shop.timezone) })} · ${shop.timezone}`;
+  const printed = `${sheetAttribution(t, formatPaperDateTime(nowDate(), locale, shop.timezone), session.user.name)} · ${shop.timezone}`;
 
   return (
     <SheetDocument

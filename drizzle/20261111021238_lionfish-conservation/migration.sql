@@ -1,0 +1,4 @@
+-- diveday:allow-destructive drop-constraint trip_conservation.trip_conservation_kind: the same atomic ALTER replaces the check with a superset of all previously valid kinds; existing writers remain valid.
+ALTER TABLE "trip_conservation" DROP CONSTRAINT "trip_conservation_kind", ADD CONSTRAINT "trip_conservation_kind" CHECK ("kind" in ('litter_kg', 'litter_items', 'line_m', 'lionfish_count'));--> statement-breakpoint
+-- diveday:allow-destructive drop-constraint trip_conservation.trip_conservation_quantity: the same atomic ALTER preserves every prior kind and quantity; whole-fish validation applies only to the newly admitted lionfish_count kind.
+ALTER TABLE "trip_conservation" DROP CONSTRAINT "trip_conservation_quantity", ADD CONSTRAINT "trip_conservation_quantity" CHECK ("quantity" > 0 and "quantity" <= 100000 and ("kind" not in ('litter_items', 'lionfish_count') or "quantity" = trunc("quantity"::numeric)));

@@ -7,10 +7,10 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 signedInAsOwner();
 const staff = staffTranslator("en-US");
 
-async function catalogCamera(page: Page) {
-  return page.evaluate(() => {
+async function mapCamera(page: Page, view: "catalog" | "library") {
+  return page.evaluate((mapView) => {
     const key = Object.keys(sessionStorage).find(
-      (candidate) => candidate.startsWith("diveday:map:") && candidate.endsWith(":catalog"),
+      (candidate) => candidate.startsWith("diveday:map:") && candidate.endsWith(`:${mapView}`),
     );
     return key
       ? (JSON.parse(sessionStorage.getItem(key) ?? "null") as {
@@ -19,8 +19,10 @@ async function catalogCamera(page: Page) {
           zoom: number;
         } | null)
       : null;
-  });
+  }, view);
 }
+
+const catalogCamera = (page: Page) => mapCamera(page, "catalog");
 
 async function markerPositions(page: Page) {
   return page.locator(".leaflet-container").evaluate((map) => {
@@ -70,9 +72,12 @@ test("a standalone site opens immediately and closing its card clears selection"
   await expect(page.locator(".leaflet-site-marker button.ring-4")).toHaveCount(1);
   await expect
     .poll(() =>
-      page.locator(".leaflet-shop-marker [role=img]").evaluate((shop) => {
-        const map = shop.closest(".leaflet-container");
-        if (!map) throw new Error("Dive center is outside the map");
+      page.locator(".leaflet-container").evaluate((map) => {
+        // A view-end refresh can replace the shop marker. Query from the
+        // stable map in the same browser task rather than measuring a marker
+        // that Playwright resolved just before it was removed.
+        const shop = map.querySelector<HTMLElement>(".leaflet-shop-marker [role=img]");
+        if (!shop) return -1;
         const bounds = map.getBoundingClientRect();
         // A shop whose spot the card panned off the map is not drawn at all.
         if (!shop.checkVisibility()) return 0;
@@ -109,6 +114,33 @@ test("a standalone site opens immediately and closing its card clears selection"
   await close.click();
   await expect(popup).toHaveCount(0);
   await expect(page.locator(".leaflet-site-marker button.ring-4")).toHaveCount(0);
+});
+
+test("zooming out restores sites while the selected site stays open", async ({ page }) => {
+  const { pin, name } = await firstLibraryPin(page);
+  await pin.click();
+  const map = page.locator(".leaflet-container");
+  const selected = map.locator(".leaflet-site-popup").filter({
+    has: page.getByRole("heading", { name, exact: true }),
+  });
+  await expect(selected).toBeVisible();
+  const zoomIn = map.getByRole("button", { name: "Zoom in", exact: true });
+  const zoomOut = map.getByRole("button", { name: "Zoom out", exact: true });
+  const zoom = async (button: typeof zoomIn) => {
+    const before = await mapCamera(page, "library");
+    await button.click();
+    await expect.poll(() => mapCamera(page, "library")).not.toEqual(before);
+    await waitForMarkerLayer(page);
+  };
+  for (let i = 0; i < 4; i += 1) await zoom(zoomIn);
+  const sites = map.locator(".leaflet-site-marker button, .leaflet-site-cluster");
+  const zoomedInCount = await sites.count();
+  for (let i = 0; i < 4; i += 1) await zoom(zoomOut);
+  await expect.poll(() => sites.count()).toBeGreaterThan(zoomedInCount);
+  await expect(selected).toBeVisible();
+  await expect(
+    map.locator(".leaflet-site-marker").getByRole("button", { name, exact: true }),
+  ).toHaveClass(/ring-4/);
 });
 
 test("the dive center stays separate and identifies itself without opening a popup", async ({

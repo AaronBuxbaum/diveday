@@ -174,6 +174,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // what a window is for, and why they have one.
   "user_accounts",
   "account_security",
+  "account_passkeys", // live credential state; deleted with its staff account
   "account_step_ups",
   "auth_provider_accounts",
   "auth_verifications",

@@ -2,6 +2,7 @@
   "sheet": {
     "door": "Imprimir",
     "printed": "Impresa el {date}",
+    "printedBy": "Impreso por {name} · {date}",
     "pass": {
       "eyebrow": "Tu pase",
       "bringHeading": "Trae",

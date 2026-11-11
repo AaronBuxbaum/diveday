@@ -100,9 +100,15 @@ describe("/pricing with default percentage pricing", () => {
   it("shows the percentage offer its own lines, and none of the monthly-only offer’s", async () => {
     const { text } = await pricingBody("percent_of_volume");
     expect(text).toContain("3%");
-    expect(text).toContain("of the card money taken through DiveDay, each month");
+    expect(text).toContain("when you mark money received, billed monthly");
     expect(text).toContain("DiveDay’s fee");
     expect(text).toContain("What counts toward the 3%?");
+    expect(text).toContain(
+      "whether paid online, in cash, by bank transfer, on your own card machine or another method",
+    );
+    expect(text).toContain("Packages count when sold, never again when redeemed");
+    expect(text).toContain("Refunds receive a credit at the original rate");
+    expect(text).not.toContain("card money taken through DiveDay");
     expect(text).toContain("DiveDay has no monthly charge.");
     expect(text).not.toContain("Cut of your bookings");
     expect(text).not.toContain("no cut");
@@ -149,7 +155,7 @@ describe("/pricing with default percentage pricing", () => {
   it("shows the percentage offer in es-ES", async () => {
     const { text } = await pricingBody("percent_of_volume", "es-ES");
     expect(text).toMatch(/3\s?%/);
-    expect(text).toContain("del dinero cobrado con tarjeta a través de DiveDay, cada mes");
+    expect(text).toContain("al marcar dinero recibido, cobrado cada mes");
     expect(text).toContain("La tarifa de DiveDay");
     expect(text).not.toContain("Comisión por reserva");
   });

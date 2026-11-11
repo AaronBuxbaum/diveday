@@ -40,10 +40,13 @@ export const tripConservation = pgTable(
     index("trip_conservation_live_idx")
       .on(table.shopId, table.tripId)
       .where(sql`${table.deletedAt} is null`),
-    check("trip_conservation_kind", sql`${table.kind} in ('litter_kg', 'litter_items', 'line_m')`),
+    check(
+      "trip_conservation_kind",
+      sql`${table.kind} in ('litter_kg', 'litter_items', 'line_m', 'lionfish_count')`,
+    ),
     check(
       "trip_conservation_quantity",
-      sql`${table.quantity} > 0 and ${table.quantity} <= 100000 and (${table.kind} <> 'litter_items' or ${table.quantity} = trunc(${table.quantity}::numeric))`,
+      sql`${table.quantity} > 0 and ${table.quantity} <= 100000 and (${table.kind} not in ('litter_items', 'lionfish_count') or ${table.quantity} = trunc(${table.quantity}::numeric))`,
     ),
   ],
 );

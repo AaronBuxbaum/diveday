@@ -72,7 +72,7 @@ export default async function DisputeSheetPage({
         shop={shop}
         shopSlug={shopSlug}
         name={t("disputeSheet.title")}
-        printed={sheetPrinted(t, sheet.generatedAt, locale, timezone)}
+        printed={sheetPrinted(t, sheet.generatedAt, locale, timezone, session.user.name)}
       >
         <DisputeSheetPaper sheet={sheet} t={t} locale={locale} timezone={timezone} />
       </ShopSheet>

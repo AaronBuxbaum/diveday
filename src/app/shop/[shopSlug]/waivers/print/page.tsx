@@ -35,7 +35,7 @@ export default async function BlankReleasePage({
   params: Promise<{ shopSlug: string }>;
 }) {
   const { shopSlug } = await params;
-  const { db, shop } = await requireShopSurface(shopSlug, {
+  const { db, shop, session } = await requireShopSurface(shopSlug, {
     allow: canPersonManageWaiverTemplates,
     refusal: { notice: "waivers-not-authorized" },
   });
@@ -56,7 +56,7 @@ export default async function BlankReleasePage({
         paper={PACKET_PAPER}
         shop={shop}
         shopSlug={shopSlug}
-        printed={sheetPrinted(t, nowDate(), locale, shop.timezone)}
+        printed={sheetPrinted(t, nowDate(), locale, shop.timezone, session.user.name)}
       >
         <BlankRelease
           version={current.version}

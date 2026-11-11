@@ -24,6 +24,7 @@ export function ConservationPanel({
 }) {
   if (!panel) return null;
   const copy: ConservationCopy = {
+    lionfishHint: t("trips.conservation.lionfishHint"),
     kind: t("trips.conservation.kind"),
     quantity: t("trips.conservation.quantity"),
     location: t("trips.conservation.location"),
@@ -40,6 +41,7 @@ export function ConservationPanel({
       litter_kg: t("trips.conservation.kinds.litter_kg"),
       litter_items: t("trips.conservation.kinds.litter_items"),
       line_m: t("trips.conservation.kinds.line_m"),
+      lionfish_count: t("trips.conservation.kinds.lionfish_count"),
     },
     errors: {
       invalid: t("trips.conservation.errors.invalid"),

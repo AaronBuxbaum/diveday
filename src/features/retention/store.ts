@@ -3,6 +3,7 @@ import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { AppDb } from "../../db/client";
 import { boundLockWaits } from "../../db/lock-bounds";
 import {
+  accountPasskeyChallenges,
   accountSessions,
   accountSignInChallenges,
   activityEvents,
@@ -340,6 +341,11 @@ export const PRUNE_ARMS = {
     from: accountSignInChallenges,
     id: accountSignInChallenges.id,
     clock: accountSignInChallenges.expiresAt,
+  },
+  account_passkey_challenges: {
+    from: accountPasskeyChallenges,
+    id: accountPasskeyChallenges.id,
+    clock: accountPasskeyChallenges.expiresAt,
   },
   account_sessions: {
     from: accountSessions,

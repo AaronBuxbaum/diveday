@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
-import { addPartySeat, createBooking } from "@/db/bookings";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { addPartySeat } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import { activityEvents, trips } from "@/db/schema";
+import { activityEvents, collectionEntries, shops } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips";
+import { closePricingMonth } from "@/features/pricing-volume";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -14,6 +15,10 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import {
+  paymentForm,
+  unpaidSeatAt120,
+} from "@/test/substrate-fixtures/db/roster-payment-action.test-support";
 import { shopClock } from "../../../../../features/shop-clock/rules";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -65,20 +70,6 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
     shop: surface.shop,
     clock: shopClock(surface.shop),
   }));
-}
-
-/** A fresh unpaid seat on a $120 departure, so every balance below is known. */
-async function unpaidSeatAt120(db: AppDb, shopId: string, tripId: string) {
-  await db.update(trips).set({ priceCents: 12_000 }).where(eq(trips.id, tripId));
-  const seated = await createBooking(db, {
-    actor: "staff",
-    shopId,
-    tripId,
-    fullName: "Ines Calloway",
-    email: "ines.calloway@example.com",
-  });
-  if (!seated.ok) throw new Error("seat not booked");
-  return seated.bookingId;
 }
 
 async function activityLines(db: AppDb, bookingId: string, code: string) {
@@ -217,7 +208,7 @@ describe("marking a party paid", () => {
     expect(await getBookingPayment(db, shop.id, leadBookingId)).toBeNull();
   });
 
-  it("refuses the whole party when one seat that owes was paid online, and keeps its Stripe pointer", async () => {
+  it("refuses a stale party preview after a new online deposit, preserving its Stripe pointer", async () => {
     const { db, shop, tripId, captain } = await context();
     const { leadBookingId, friends } = await partyOfThree(db, shop.id, tripId);
     await setBookingPayment(db, {
@@ -233,7 +224,7 @@ describe("marking a party paid", () => {
     const to = await redirectedTo(() =>
       markPartyPaidAction(shop.slug, tripId, partyForm(leadBookingId, "100")),
     );
-    expect(to).toContain("notice=payment-online");
+    expect(to).toContain("notice=party-changed");
     expect(await getBookingPayment(db, shop.id, leadBookingId)).toBeNull();
     expect(await getBookingPayment(db, shop.id, friends[1] as string)).toMatchObject({
       provider: "stripe",
@@ -284,14 +275,6 @@ describe("marking a party paid", () => {
   });
 });
 
-/** A Paid mark's own form, as the roster's control posts it. */
-function paymentForm(bookingId: string, status: string): FormData {
-  const data = new FormData();
-  data.set("bookingId", bookingId);
-  data.set("status", status);
-  return data;
-}
-
 describe("a Paid mark the server refuses", () => {
   /**
    * Issue #2607: a refused Paid mark reopens holding what was typed. The amount
@@ -330,6 +313,427 @@ describe("a Paid mark the server refuses", () => {
     expect(params.get("markMethod")).toBe("cash");
     expect(params.has("markAmount")).toBe(false);
     expect(to).not.toContain("lots");
+  });
+
+  it("requires a posted version for an incremental deposit receipt and rejects a repeated one", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    const before = await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "deposit_paid",
+      amountCents: 5_000,
+      currency: "usd",
+      method: "cash",
+    });
+    if (!before) throw new Error("payment missing");
+    signIn(shop, owner);
+    const form = paymentForm(bookingId, "deposit_paid");
+    form.set("amount", "20");
+    form.set("method", "cash");
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+      "notice=invalid",
+    );
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      id: before.id,
+      amountCents: 5_000,
+    });
+    form.set("paymentEntryId", before.id);
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+      "notice=payment",
+    );
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+      "notice=invalid",
+    );
+    expect(
+      (
+        await db.select().from(collectionEntries).where(eq(collectionEntries.sourceId, bookingId))
+      ).map((entry) => entry.amountCents),
+    ).toEqual([5_000, 2_000]);
+  });
+
+  it("does not let crew clear recorded cash by changing a paid seat to unpaid or lowering its amount", async () => {
+    const { db, shop, tripId, captain } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    const before = await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      amountCents: 12_000,
+      currency: "usd",
+      method: "cash",
+    });
+    if (!before) throw new Error("payment missing");
+    signIn(shop, captain);
+    expect(
+      await redirectedTo(() =>
+        markPaymentAction(shop.slug, tripId, paymentForm(bookingId, "unpaid")),
+      ),
+    ).toContain("notice=not-authorized");
+    const lower = paymentForm(bookingId, "paid");
+    lower.set("amount", "50");
+    lower.set("method", "cash");
+    lower.set("paymentEntryId", before.id);
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, lower))).toContain(
+      "notice=not-authorized",
+    );
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      id: before.id,
+      amountCents: 12_000,
+      manualHeldCents: 12_000,
+      status: "paid",
+    });
+    expect(
+      (
+        await db.select().from(collectionEntries).where(eq(collectionEntries.sourceId, bookingId))
+      ).map((entry) => entry.amountCents),
+    ).toEqual([12_000]);
+  });
+
+  it.each(["30", ""])(
+    "preserves held cash after a partial return when the next Paid mark records %s",
+    async (newAmount) => {
+      const { db, shop, tripId, owner } = await context();
+      const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+      const before = await setBookingPayment(db, {
+        shopId: shop.id,
+        bookingId,
+        status: "paid",
+        amountCents: 12_000,
+        currency: "usd",
+        method: "cash",
+      });
+      if (!before) throw new Error("payment missing");
+      signIn(shop, owner);
+      const refund = paymentForm(bookingId, "refunded");
+      refund.set("refundAmount", "30");
+      refund.set("paymentEntryId", before.id);
+      await redirectedTo(() => markPaymentAction(shop.slug, tripId, refund));
+      const afterRefund = await getBookingPayment(db, shop.id, bookingId);
+      expect(afterRefund).toMatchObject({ status: "partly_refunded", amountCents: 9_000 });
+      const receipt = paymentForm(bookingId, "paid");
+      receipt.set("amount", newAmount);
+      receipt.set("method", "cash");
+      receipt.set("paymentEntryId", afterRefund?.id ?? "");
+      await redirectedTo(() => markPaymentAction(shop.slug, tripId, receipt));
+      expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+        status: "paid",
+        amountCents: newAmount ? 12_000 : 9_000,
+        manualHeldCents: newAmount ? 12_000 : 9_000,
+      });
+      expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, receipt))).toContain(
+        "notice=invalid",
+      );
+      expect(
+        (
+          await db.select().from(collectionEntries).where(eq(collectionEntries.sourceId, bookingId))
+        ).map((entry) => entry.amountCents),
+      ).toEqual(newAmount ? [12_000, -3_000, 3_000] : [12_000, -3_000]);
+    },
+  );
+
+  it.each([true, false])(
+    "keeps external-only mixed money after a return and requires its version (posted: %s)",
+    async (postVersion) => {
+      const { db, shop, tripId, owner } = await context();
+      const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+      const before = await setBookingPayment(db, {
+        shopId: shop.id,
+        bookingId,
+        status: "partly_refunded",
+        amountCents: 7_000,
+        manualHeldCents: 7_000,
+        provider: "mixed",
+        providerRef: "cs_card_already_returned",
+        currency: "usd",
+        method: "cash",
+      });
+      if (!before) throw new Error("payment missing");
+      signIn(shop, owner);
+      const receipt = paymentForm(bookingId, "paid");
+      receipt.set("amount", "30");
+      receipt.set("method", "cash");
+      if (postVersion) receipt.set("paymentEntryId", before.id);
+      else receipt.delete("paymentEntryId");
+      const url = await redirectedTo(() => markPaymentAction(shop.slug, tripId, receipt));
+      expect(url).toContain(postVersion ? "notice=payment" : "notice=invalid");
+      expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+        status: postVersion ? "paid" : "partly_refunded",
+        amountCents: postVersion ? 10_000 : 7_000,
+        manualHeldCents: postVersion ? 10_000 : 7_000,
+        provider: "mixed",
+        providerRef: "cs_card_already_returned",
+      });
+      expect(
+        (
+          await db.select().from(collectionEntries).where(eq(collectionEntries.sourceId, bookingId))
+        ).map((entry) => entry.amountCents),
+      ).toEqual(postVersion ? [7_000, 3_000] : [7_000]);
+    },
+  );
+
+  it("records a partial external refund once, retaining online money and crediting only the returned cash", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    const before = await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      amountCents: 12_000,
+      manualHeldCents: 7_000,
+      currency: "usd",
+      method: "cash",
+      provider: "mixed",
+      providerRef: "cs_partial",
+    });
+    if (!before) throw new Error("payment missing");
+    signIn(shop, owner);
+    const form = paymentForm(bookingId, "refunded");
+    form.set("refundAmount", "30");
+    form.set("paymentEntryId", before.id);
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+      "notice=payment",
+    );
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      status: "partly_refunded",
+      amountCents: 9_000,
+      manualHeldCents: 4_000,
+      currency: "usd",
+      provider: "mixed",
+      providerRef: "cs_partial",
+      method: "cash",
+    });
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+      "notice=invalid",
+    );
+    expect(
+      (
+        await db.select().from(collectionEntries).where(eq(collectionEntries.sourceId, bookingId))
+      ).map((entry) => entry.amountCents),
+    ).toEqual([7_000, -3_000]);
+  });
+
+  it("credits a dedicated partial cash refund at the original closed month's rate", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    await db.delete(collectionEntries);
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+    vi.stubEnv("DIVEDAY_CLOCK", "2031-06-15T12:00:00Z");
+    const before = await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      amountCents: 12_000,
+      currency: "usd",
+      method: "cash",
+    });
+    if (!before) throw new Error("payment missing");
+    const input = {
+      shopId: shop.id,
+      timeZone: "UTC",
+      freeUntil: null,
+      now: new Date("2031-08-02T12:00:00Z"),
+      terms: { plan: "percent_of_volume" as const, monthlyCents: 0, basisPoints: 300 },
+    };
+    const original = await closePricingMonth(db, { ...input, month: { year: 2031, month: 6 } });
+    expect(original.feeCents).toBe(360);
+    vi.stubEnv("DIVEDAY_CLOCK", "2031-07-15T12:00:00Z");
+    signIn(shop, owner);
+    const form = paymentForm(bookingId, "refunded");
+    form.set("refundAmount", "30");
+    form.set("paymentEntryId", before.id);
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+      "notice=payment",
+    );
+    expect(
+      await closePricingMonth(db, {
+        ...input,
+        month: { year: 2031, month: 7 },
+        terms: { ...input.terms, basisPoints: 100 },
+      }),
+    ).toMatchObject({
+      volumeCents: 0,
+      refundCreditCents: 90,
+      feeCreditCarryCents: 90,
+      credits: [{ statementId: original.id, basisCents: 3_000, feeCents: 90 }],
+    });
+    // A later real receipt is new volume at the new rate, not a reversal of
+    // the original-rate refund credit and not a replacement of retained cash.
+    vi.stubEnv("DIVEDAY_CLOCK", "2031-08-15T12:00:00Z");
+    const receipt = paymentForm(bookingId, "paid");
+    receipt.set("amount", "30");
+    receipt.set("method", "cash");
+    receipt.set("paymentEntryId", (await getBookingPayment(db, shop.id, bookingId))?.id ?? "");
+    await redirectedTo(() => markPaymentAction(shop.slug, tripId, receipt));
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({ amountCents: 12_000 });
+    expect(
+      await closePricingMonth(db, {
+        ...input,
+        month: { year: 2031, month: 8 },
+        now: new Date("2031-09-02T12:00:00Z"),
+        terms: { ...input.terms, basisPoints: 500 },
+      }),
+    ).toMatchObject({
+      volumeCents: 3_000,
+      grossFeeCents: 150,
+      refundCreditCents: 90,
+      credits: [],
+      feeCreditCarryCents: 0,
+      feeCents: 60,
+    });
+  });
+
+  it("requires a current payment version and write-off permission for an explicit cash return", async () => {
+    const { db, shop, tripId, owner, captain } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    const before = await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      amountCents: 12_000,
+      currency: "usd",
+      method: "cash",
+    });
+    if (!before) throw new Error("payment missing");
+    const form = paymentForm(bookingId, "refunded");
+    form.set("refundAmount", "30");
+    form.set("paymentEntryId", before.id);
+    signIn(shop, captain);
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+      "notice=not-authorized",
+    );
+    signIn(shop, owner);
+    form.delete("paymentEntryId");
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+      "notice=invalid",
+    );
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      id: before.id,
+      amountCents: 12_000,
+    });
+  });
+
+  it.each(["0", "-1", "121", "nonsense", ""])(
+    "refuses an invalid external refund amount %s without changing money",
+    async (amount) => {
+      const { db, shop, tripId, owner } = await context();
+      const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+      const before = await setBookingPayment(db, {
+        shopId: shop.id,
+        bookingId,
+        status: "paid",
+        amountCents: 12_000,
+        currency: "usd",
+        method: "cash",
+      });
+      if (!before) throw new Error("payment missing");
+      signIn(shop, owner);
+      const form = paymentForm(bookingId, "refunded");
+      form.set("refundAmount", amount);
+      form.set("paymentEntryId", before.id);
+      expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+        "notice=payment-refund-amount",
+      );
+      expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+        id: before.id,
+        amountCents: 12_000,
+      });
+    },
+  );
+
+  it("retains the original Stripe pointer when staff mark the remaining mixed cash returned", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "partly_refunded",
+      amountCents: 7_000,
+      manualHeldCents: 7_000,
+      currency: "usd",
+      method: "cash",
+      provider: "mixed",
+      providerRef: "cs_returned",
+    });
+    signIn(shop, owner);
+    expect(
+      await redirectedTo(() =>
+        markPaymentAction(shop.slug, tripId, paymentForm(bookingId, "refunded")),
+      ),
+    ).toContain("notice=payment");
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      status: "refunded",
+      currency: "usd",
+      manualHeldCents: 0,
+      provider: "mixed",
+      providerRef: "cs_returned",
+    });
+    expect(
+      (
+        await db.select().from(collectionEntries).where(eq(collectionEntries.sourceId, bookingId))
+      ).reduce((sum, entry) => sum + entry.amountCents, 0),
+    ).toBe(0);
+  });
+
+  it("reverses a cash receipt in its original currency after the shop default changes", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      amountCents: 12_000,
+      currency: "usd",
+      method: "cash",
+    });
+    await db.update(shops).set({ currency: "mxn" }).where(eq(shops.id, shop.id));
+    signIn(shop, owner);
+    expect(
+      await redirectedTo(() =>
+        markPaymentAction(shop.slug, tripId, paymentForm(bookingId, "refunded")),
+      ),
+    ).toContain("notice=payment");
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      status: "refunded",
+      currency: "usd",
+      manualHeldCents: 0,
+    });
+    const entries = await db
+      .select()
+      .from(collectionEntries)
+      .where(eq(collectionEntries.sourceId, bookingId));
+    expect(entries.map((entry) => [entry.currency, entry.amountCents])).toEqual([
+      ["usd", 12_000],
+      ["usd", -12_000],
+    ]);
+  });
+
+  it("refuses new receipts after a source currency changes instead of throwing or relabeling money", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "deposit_paid",
+      amountCents: 5_000,
+      currency: "usd",
+      method: "cash",
+    });
+    await db.update(shops).set({ currency: "mxn" }).where(eq(shops.id, shop.id));
+    signIn(shop, owner);
+    const form = paymentForm(bookingId, "paid");
+    form.set("amount", "70");
+    form.set("method", "cash");
+    expect(await redirectedTo(() => markPaymentAction(shop.slug, tripId, form))).toContain(
+      "notice=payment-currency",
+    );
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      status: "deposit_paid",
+      currency: "usd",
+      amountCents: 5_000,
+    });
   });
 
   it("adds nothing to the URL when a non-money status is refused", async () => {

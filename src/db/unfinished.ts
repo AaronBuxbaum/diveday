@@ -30,7 +30,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
 import type { AppDb } from "./client";
-import { heldUnattributedRefund } from "./payment-operations";
+import { heldUnattributedRefund, immediatePaymentReconciliation } from "./payment-operations";
 import type {
   MediaDeletionAttempt,
   PaymentOperationIntent,
@@ -183,11 +183,14 @@ const paymentOperations: KindReader<"payment_operation"> = async (
     .where(
       and(
         eq(paymentOperationIntents.shopId, shopId),
-        ledgerUnfinished(
-          "payment_operation",
-          paymentOperationIntents.status,
-          paymentOperationIntents.startedAt,
-          olderThan,
+        or(
+          ledgerUnfinished(
+            "payment_operation",
+            paymentOperationIntents.status,
+            paymentOperationIntents.startedAt,
+            olderThan,
+          ),
+          immediatePaymentReconciliation(),
         ),
         options.withoutUnattributedRefunds ? not(heldUnattributedRefund()) : undefined,
       ),

@@ -159,14 +159,17 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Cancellation notice
 - Card dispute
 - Checkout sale / tip sale
+- Collection lot
 - Dashboard refund
 - Desk payment
 - Dive (package unit)
 - Dives owed on packages
 - Failed refund
+- Fee credit
 - First paid month
 - Free term
 - Late cancel
+- Mixed payment
 - Month-end email
 - Owed
 - Paid after close
@@ -176,6 +179,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Payments restricted
 - Payout
 - Pricing configuration
+- Recorded collection
 - Room charge
 - Stale package invoice
 - Subscription (DiveDay billing)
@@ -507,6 +511,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Address confirmation token
 - Booking link
 - Capability
+- Passkey
 - Pending sign-in challenge
 - Recovery code
 - Step-up

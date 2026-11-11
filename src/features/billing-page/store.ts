@@ -1,4 +1,9 @@
-import { latestPricingStatement, processedVolumeCents } from "@/features/pricing-volume";
+import {
+  collectionCurrencies,
+  hasIncompleteCollectionEvidence,
+  latestPricingStatement,
+  processedVolumeCents,
+} from "@/features/pricing-volume";
 import { getShopSubscription } from "@/features/shop-subscriptions";
 import type { AppDb } from "../../db/client";
 import type { MonthRef } from "../../lib/calendar";
@@ -27,9 +32,15 @@ export async function getBillingPercentMonth(
   timeZone: string,
   freeUntil: Date | null,
 ) {
-  const [volumeCents, statement] = await Promise.all([
-    processedVolumeCents(db, shopId, month, timeZone, freeUntil),
-    latestPricingStatement(db, shopId),
-  ]);
-  return { volumeCents, statement };
+  const currencies = await collectionCurrencies(db, shopId);
+  return Promise.all(
+    currencies.map(async (currency) => {
+      const [volumeCents, statement, pendingEvidence] = await Promise.all([
+        processedVolumeCents(db, shopId, month, timeZone, freeUntil, null, currency),
+        latestPricingStatement(db, shopId, currency),
+        hasIncompleteCollectionEvidence(db, shopId, currency, freeUntil),
+      ]);
+      return { currency, volumeCents, statement, pendingEvidence };
+    }),
+  );
 }

@@ -51,7 +51,7 @@ export default async function SignedWaiverSheetPage({
         shop={shop}
         shopSlug={shopSlug}
         name={t("waiversStaff.record.title")}
-        printed={sheetPrinted(t, nowDate(), locale, shop.timezone)}
+        printed={sheetPrinted(t, nowDate(), locale, shop.timezone, session.user.name)}
       >
         <SignedWaiverPaper record={record} locale={locale} timezone={shop.timezone} t={t} />
       </ShopSheet>

@@ -67,7 +67,7 @@ export const ERASURE_KEEPS: Record<string, string> = {
   processor_erasure_obligations:
     "kept deliberately by ADR 20260803-processor-erasure-obligations: it names the erased person and whoever discharged the obligation, which is how an unfinished erasure stays visible",
   account_step_ups:
-    "cleared by ON DELETE CASCADE from `user_accounts` and `account_sessions`, both of which the erasure deletes",
+    "cleared by ON DELETE CASCADE from the account_sessions rows the erasure deletes; user_accounts is retained with its identity redacted and disabled",
   trip_series_crew:
     "who sails with a repeating departure on every new date — a staff roster row, like `trip_assignments`",
   customer_gear_notices:

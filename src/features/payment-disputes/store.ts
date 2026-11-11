@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { recordCheckoutCollection, recordOrderCollection } from "@/db/collection-ledger";
 import type { AppDb, AppTransaction } from "../../db/client";
 import type { PaymentDispute } from "../../db/schema/index";
 import {
@@ -166,7 +167,21 @@ export async function recordStripeDispute(
     return written ? { status: "recorded", dispute: written } : { status: "stale" };
   }
 
-  const written = await write(db);
+  const written = await db.transaction(async (tx) => {
+    const source = target.kind === "order" ? orders : bookingCheckouts;
+    const sourceId = target.kind === "order" ? target.order.id : target.checkout.id;
+    await tx
+      .select({ id: source.id })
+      .from(source)
+      .where(and(eq(source.shopId, shopId), eq(source.id, sourceId)))
+      .for("update");
+    const saved = await write(tx);
+    if (saved) {
+      if (target.kind === "order") await recordOrderCollection(tx, shopId, sourceId);
+      else await recordCheckoutCollection(tx, shopId, sourceId);
+    }
+    return saved;
+  });
   return written ? { status: "recorded", dispute: written } : { status: "stale" };
 }
 

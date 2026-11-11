@@ -25,15 +25,18 @@ test("recorded conservation action and its editor (light)", async ({ page }) => 
   await page.goto(`${path}?view=details`);
   const add = page.locator("#conservation-add");
   await add.locator("summary").click();
-  await add.getByRole("spinbutton", { name: t("trips.conservation.quantity") }).fill("1.8");
+  await add
+    .getByRole("combobox", { name: t("trips.conservation.kind") })
+    .selectOption("lionfish_count");
+  await add.getByRole("spinbutton", { name: t("trips.conservation.quantity") }).fill("3");
   await add.getByRole("textbox", { name: t("trips.conservation.location") }).fill("Molasses Reef");
   await add
     .getByRole("textbox", { name: t("trips.conservation.note") })
-    .fill("Loose litter collected during the dive.");
+    .fill("Lionfish collected under local rules.");
   await add.getByRole("button", { name: t("trips.conservation.add"), exact: true }).click();
   const item = page
     .locator("li")
-    .filter({ hasText: "Loose litter collected during the dive." })
+    .filter({ hasText: "Lionfish collected under local rules." })
     .filter({ has: page.locator('details[id^="conservation-"]') });
   await expect(item).toHaveCount(1);
   await page.mouse.move(0, 0);

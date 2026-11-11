@@ -14,6 +14,12 @@ import { bounceThreeConfirmations } from "./bounce-three-confirmations";
 import { bringEveryBoatHome, eveningArgs } from "./bring-every-boat-home";
 import { cancelADepartureSomebodyPaidFor } from "./cancel-a-departure-somebody-paid-for";
 import { carrySomebodyWhoIsNotDiving } from "./carry-somebody-who-is-not-diving";
+import {
+  seedCashReceipt,
+  seedCollectionBilling,
+  seedMixedCashReceipt,
+  seedMixedDeposit,
+} from "./collection-billing";
 import { countHeadsOnADepartureNobodyWillMove } from "./count-heads-on-a-departure-nobody-will-move";
 import { crewARatingThatStartsTomorrow } from "./crew-a-rating-that-starts-tomorrow";
 import {
@@ -77,7 +83,11 @@ import { sayPriyaIsRunningLate } from "./say-priya-is-running-late";
 import { seatSomebodyOffTheNamePrompt } from "./seat-somebody-off-the-name-prompt";
 import { seedOwedMoney } from "./seed-owed-money";
 import { departTripArgs, sendADepartureOut } from "./send-a-departure-out";
-import { failTheLatestBackup, giveTheFirstBoatAPhoto } from "./settings-states";
+import {
+  failTheLatestBackup,
+  giveTheFirstBoatAPhoto,
+  pinStaffSessionsSeenNow,
+} from "./settings-states";
 import { slideOneDepartureOntoAnother } from "./slide-one-departure-onto-another";
 import {
   connectStripe,
@@ -225,6 +235,15 @@ const FACTS = {
   mixedTraining: ({ db, shop, now }) => bookOneInstructorTwice(db, shop, now),
   boatPhoto: privateOnly(({ db, shop }) => giveTheFirstBoatAPhoto(db, shop)),
   backupFailed: ({ db, shop, now }) => failTheLatestBackup(db, shop, now),
+  staffSessionsSeenNow: privateOnly(({ db, shop, now }) => pinStaffSessionsSeenNow(db, shop, now)),
+  cashReceipt: privateOnly(({ db, shop, actorId, now }) => seedCashReceipt(db, shop, actorId, now)),
+  collectionBilling: privateOnly(({ db, shop, actorId, now }) =>
+    seedCollectionBilling(db, shop, actorId, now),
+  ),
+  mixedCashReceipt: privateOnly(({ db, shop, actorId, now }) =>
+    seedMixedCashReceipt(db, shop, actorId, now),
+  ),
+  mixedDeposit: privateOnly(({ db, shop, now }) => seedMixedDeposit(db, shop, now)),
   authChallengeExpired: privateOnly((context) =>
     expireThePendingSignIn(context.db, context.shop, requestOf(context).headers, context.now),
   ),

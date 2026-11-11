@@ -39,3 +39,6 @@ meter configuration. Revisit if shops need a self-service plan selector; that wo
 presentation and subscription-change behavior rather than restoring random assignment.
 
 Setup and test-mode verification: [percentage billing setup](../../engineering/percentage-billing-setup.md).
+
+The receipt fee base and refund accounting were amended by
+[20261110-recorded-collections-own-billing](20261110-recorded-collections-own-billing.md).

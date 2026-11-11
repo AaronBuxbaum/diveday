@@ -20,6 +20,7 @@ import {
   completePendingSignIn,
   startCredentialSignIn,
   startMagicSignIn,
+  startPasskeySignIn,
 } from "@/db/sign-in";
 import { trackEvent } from "@/lib/analytics";
 import { authSecret } from "@/lib/auth-secret";
@@ -38,6 +39,7 @@ import { clientIp } from "@/lib/request-ip";
 import { readSessionCookieCache } from "@/lib/session-cookie-cache";
 import { STAFF_IDLE_LIMIT_MS } from "@/lib/session-idle";
 import { withHashedSessionTokens } from "@/lib/session-token-hash";
+import { passkeyAssertionSchema, passkeyCookie, passkeyRelyingParty } from "./passkeys";
 import { runtimeMode } from "./runtime-mode";
 
 /**
@@ -73,6 +75,47 @@ function diveDayCredentialsPlugin(db: DbExecutor) {
   return {
     id: "diveday-credentials",
     endpoints: {
+      signInDiveDayPasskey: createAuthEndpoint(
+        "/sign-in/diveday-passkey",
+        { method: "POST", body: z.object({ response: passkeyAssertionSchema }) },
+        async (ctx) => {
+          const rp = passkeyRelyingParty(origins, ctx.headers?.get("origin") ?? null);
+          if (!rp || !trustedSignInOrigin(ctx.headers, Boolean(ctx.request), origins))
+            throw new APIError("FORBIDDEN", { message: "invalid_origin" });
+          const ip = await clientIp(ctx.headers ?? null);
+          if (
+            !(await checkRateLimit(rateLimitKey("sign-in-ip", ip), RATE_LIMITS.signInByIp)).allowed
+          )
+            throw new APIError("UNAUTHORIZED", { message: "rate_limited" });
+          const ceremonyCookie = passkeyCookie("sign-in", runtimeMode().secureSessionCookies);
+          const result = await startPasskeySignIn(
+            db,
+            rp,
+            readPendingHandle(ctx.headers, ceremonyCookie.name),
+            ctx.body.response,
+            readPendingHandle(ctx.headers, cookie.name),
+            createProviderSession,
+          );
+          ctx.setCookie(ceremonyCookie.name, "", { ...ceremonyCookie.attributes, maxAge: 0 });
+          ctx.setCookie(cookie.name, "", { ...cookie.attributes, maxAge: 0 });
+          if (result.status === "invalid")
+            throw new APIError("UNAUTHORIZED", { message: "invalid_credentials" });
+          if (result.status === "pending") {
+            deleteSessionCookie(ctx);
+            ctx.setCookie(cookie.name, result.handle, cookie.attributes);
+            return ctx.json({ pending: true as const, user: null, shopSlug: null });
+          }
+          try {
+            await setSessionCookie(ctx, result.value);
+          } catch (error) {
+            await ctx.context.internalAdapter
+              .deleteSession(result.value.session.token)
+              .catch(() => undefined);
+            throw error;
+          }
+          return ctx.json(signedInResponse(result.value));
+        },
+      ),
       signInDiveDayMagicLink: createAuthEndpoint(
         "/sign-in/diveday-magic-link",
         { method: "POST", body: z.object({ token: z.string().max(100) }) },

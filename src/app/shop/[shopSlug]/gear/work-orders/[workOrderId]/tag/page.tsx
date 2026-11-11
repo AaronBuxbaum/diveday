@@ -48,7 +48,7 @@ export default async function ClaimTagPage({
   const workOrderId = uuidParam(rawId);
   if (!workOrderId) notFound();
 
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   // Gear servicing switched off (the Features page): the bench is gone, the
   // register is where Gear opens, and no ticket is deleted.
   if (!shop.workOrdersEnabled) redirect(shopPath(shopSlug, "gear"));
@@ -79,7 +79,7 @@ export default async function ClaimTagPage({
         shop={shop}
         shopSlug={shopSlug}
         name={t("workOrders.tag.eyebrow")}
-        printed={sheetPrinted(t, nowDate(), locale, shop.timezone)}
+        printed={sheetPrinted(t, nowDate(), locale, shop.timezone, session.user.name)}
       >
         <ClaimTag
           t={t}

@@ -1,7 +1,9 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { recordCheckoutCollection, recordOrderCollection } from "@/db/collection-ledger";
 import { lockSeatsInOrder } from "../../db/checkouts";
 import type { AppDb, AppTransaction } from "../../db/client";
-import { setBookingPayment } from "../../db/payments";
+import { REFUND_FAILURE_ATTRIBUTION } from "../../db/payment-operations";
+import { getBookingPayment, setBookingPayment } from "../../db/payments";
 import type { BookingCheckout, Order } from "../../db/schema/index";
 import {
   bookingCheckoutBookings,
@@ -9,6 +11,7 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   orders,
+  paymentOperationIntents,
   stripeRefundFailures,
 } from "../../db/schema/index";
 import { findStripePaymentTarget } from "../../db/stripe-payment-targets";
@@ -202,14 +205,19 @@ async function reverseOnOrder(
         updatedAt: input.occurredAt,
       })
       .where(eq(orders.id, current.id));
+    await recordOrderCollection(tx, current.shopId, current.id, true);
     if (current.bookingId) {
+      const seat = await getBookingPayment(tx, current.shopId, current.bookingId);
+      const manualHeldCents = seat?.provider === "mixed" ? seat.manualHeldCents : 0;
       await setBookingPayment(tx, {
         shopId: current.shopId,
         bookingId: current.bookingId,
         status,
-        amountCents: status === "paid" ? current.totalCents : amountPaidCents,
+        amountCents: amountPaidCents + manualHeldCents,
+        manualHeldCents,
+        method: manualHeldCents > 0 ? (seat?.method ?? null) : null,
         currency: current.currency,
-        provider: "stripe",
+        provider: manualHeldCents > 0 ? "mixed" : "stripe",
         providerRef: current.stripeInvoiceId,
         operation: "refund_failed",
       });
@@ -330,9 +338,45 @@ async function reverseOnCheckout(
       // diveday:any-checkout-purpose: the fare this reversal was checked against above
       .set({ refundedCents: current.refundedCents - reversed })
       .where(eq(bookingCheckouts.id, current.id));
+    await recordCheckoutCollection(tx, current.shopId, current.id, true);
     const bookingId = paidAfterClose
       ? null
       : await restoreRefundedSeat(tx, current, coveredIds, input.refund.id);
+    if (!paidAfterClose && !bookingId && coveredIds.length === 1 && coveredIds[0]) {
+      const seat = await getBookingPayment(tx, current.shopId, coveredIds[0]);
+      if (
+        seat &&
+        (seat.provider === "mixed" || seat.provider === "stripe") &&
+        seat.providerRef === current.stripeSessionId
+      ) {
+        await setBookingPayment(tx, {
+          shopId: current.shopId,
+          bookingId: seat.bookingId,
+          status: isCapturedPaymentStatus(seat.status) ? seat.status : "partly_refunded",
+          amountCents:
+            (isCapturedPaymentStatus(seat.status) ? (seat.amountCents ?? 0) : 0) + reversed,
+          manualHeldCents: seat.manualHeldCents,
+          method: seat.method,
+          currency: seat.currency,
+          provider: seat.manualHeldCents > 0 ? "mixed" : "stripe",
+          providerRef: current.stripeSessionId,
+          operation: "refund_failed",
+        });
+      }
+    }
+    if (!paidAfterClose && !bookingId && coveredIds.length > 1) {
+      // The provider names a failed refund, not the party seat(s) staff
+      // attributed it to. Do not guess a reverse allocation. Preserve the
+      // amount and lookup ID for staff, and block further source reversals.
+      await tx.insert(paymentOperationIntents).values({
+        shopId: current.shopId,
+        checkoutId: current.id,
+        kind: "refund",
+        stripeObjectId: input.refund.id,
+        amountCents: reversed,
+        errorMessage: REFUND_FAILURE_ATTRIBUTION,
+      });
+    }
     await tx.insert(stripeRefundFailures).values({
       shopId: current.shopId,
       stripeAccountId: input.stripeAccountId,

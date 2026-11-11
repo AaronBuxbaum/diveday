@@ -1,5 +1,5 @@
 import { and, eq, gt, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
-import { HOUR_MS, nowDate, nowMs } from "@/lib/clock";
+import { HOUR_MS, MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
 import {
   openingKeys,
   openSecretWithKeyring,
@@ -17,6 +17,7 @@ import {
 } from "@/lib/totp";
 import type { AppDb, DbExecutor } from "./client";
 import {
+  accountPasskeys,
   accountSecurity,
   accountSessions,
   accountSignInChallenges,
@@ -176,10 +177,10 @@ export async function verifyAccountSecondFactor(
   db: DbExecutor,
   userAccountId: string,
   code: string,
-  options: { consumeTotpStep?: boolean } = {},
+  options: { consumeTotpStep?: boolean; requireEnabled?: boolean } = {},
 ): Promise<boolean> {
   const security = await getAccountSecurity(db, userAccountId);
-  if (!security?.totpEnabledAt) return true;
+  if (!security?.totpEnabledAt) return options.requireEnabled !== true;
 
   const opened = openTotpSecret(security);
   const now = nowMs();
@@ -392,7 +393,7 @@ export async function grantStepUp(
   input: {
     userAccountId: string;
     accountSessionId: string;
-    purpose: "money" | "export" | "backup";
+    purpose: "money" | "export" | "backup" | "security";
   },
 ) {
   const now = nowDate();
@@ -409,7 +410,13 @@ export async function grantStepUp(
   if (!session) return null;
   const [row] = await db
     .insert(accountStepUps)
-    .values({ ...input, verifiedAt: now, expiresAt: new Date(now.getTime() + STEP_UP_TTL_MS) })
+    .values({
+      ...input,
+      verifiedAt: now,
+      expiresAt: new Date(
+        now.getTime() + (input.purpose === "security" ? 5 * MINUTE_MS : STEP_UP_TTL_MS),
+      ),
+    })
     .returning();
   return row ?? null;
 }
@@ -419,7 +426,7 @@ export async function hasStepUp(
   input: {
     userAccountId: string;
     accountSessionId: string;
-    purpose: "money" | "export" | "backup";
+    purpose: "money" | "export" | "backup" | "security";
   },
 ) {
   const [row] = await db
@@ -442,7 +449,12 @@ export async function hasStepUp(
  * there is one, its second factor, sessions and pending secret. Null when the
  * person has no account.
  */
-export async function getAccountSecurityPage(db: AppDb, personId: string) {
+export async function getAccountSecurityPage(
+  db: AppDb,
+  personId: string,
+  shopId: string,
+  accountSessionId?: string,
+) {
   const accountId = await getAccountIdForPerson(db, personId);
   if (!accountId) return null;
   const [security, sessions, secret] = await Promise.all([
@@ -450,5 +462,23 @@ export async function getAccountSecurityPage(db: AppDb, personId: string) {
     listAccountSessions(db, accountId),
     getTotpSecret(db, accountId),
   ]);
-  return { accountId, security, sessions, secret };
+  const passkeys = await db
+    .select({
+      id: accountPasskeys.id,
+      name: accountPasskeys.name,
+      createdAt: accountPasskeys.createdAt,
+      lastUsedAt: accountPasskeys.lastUsedAt,
+    })
+    .from(accountPasskeys)
+    .where(
+      and(
+        eq(accountPasskeys.userAccountId, accountId),
+        eq(accountPasskeys.shopId, shopId),
+        isNull(accountPasskeys.deletedAt),
+      ),
+    );
+  const factorManagementVerified = accountSessionId
+    ? await hasStepUp(db, { userAccountId: accountId, accountSessionId, purpose: "security" })
+    : false;
+  return { accountId, security, sessions, secret, passkeys, factorManagementVerified };
 }

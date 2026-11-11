@@ -73,7 +73,7 @@ export default async function SafetyPrintPage({
         shop={{ name: shop.name, brandColor: shop.brandColor }}
         shopSlug={shopSlug}
         name={t("shared.shopSections.safety")}
-        printed={sheetPrinted(t, now, locale, tz)}
+        printed={sheetPrinted(t, now, locale, tz, session.user.name)}
       >
         <div className="mb-4 text-sm">
           <p className="font-medium">{report.printedFor}</p>

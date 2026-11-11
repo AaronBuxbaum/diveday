@@ -34,7 +34,7 @@ const CAPTURED_PAYMENT_STATUSES = [
 /** See {@link CAPTURED_PAYMENT_STATUSES} — the array form, for `inArray`. */
 export const capturedPaymentStatuses: readonly PaymentStatusValue[] = CAPTURED_PAYMENT_STATUSES;
 
-export type PaymentSourceCode = "online" | "package" | "counter" | "waived";
+export type PaymentSourceCode = "online" | "mixed" | "package" | "counter" | "waived";
 
 /** True when the shop holds money on this seat that a refund could return. */
 export function isCapturedPaymentStatus(
@@ -59,6 +59,7 @@ export function paymentSourceLine(
   provider: string | null | undefined,
 ): PaymentSourceCode | null {
   if (isCapturedPaymentStatus(status)) {
+    if (provider === "mixed") return "mixed";
     if (provider === "stripe") return "online";
     if (provider === "dive_package") return "package";
     return "counter";

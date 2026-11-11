@@ -35,7 +35,7 @@ test("boarding evidence stays with its heading and every sheet identifies the de
     for (const sheet of sheets) {
       expect(sheet.split("\n").filter((line) => line.trim()).length).toBeGreaterThan(8);
       expect(sheet).toContain("Operational trust departure");
-      expect(sheet).toContain("Printed Jul 21, 2026");
+      expect(sheet.replace(/\s+/gu, " ")).toMatch(/Printed by .+? · Jul 21, 2026/);
     }
     const evidence = sheets.find((sheet) =>
       sheet.includes("Certification evidence and waiver status"),

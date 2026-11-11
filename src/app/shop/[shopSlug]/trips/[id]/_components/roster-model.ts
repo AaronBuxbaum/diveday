@@ -633,6 +633,8 @@ export function rosterPaymentStatusCopy(t: StaffTranslator): PaymentStatusContro
     update: t("trips.roster.paymentUpdate"),
     updating: t("trips.roster.paymentUpdating"),
     amountLabel: t("trips.roster.paymentAmountLabel"),
+    refundAmountLabel: t("trips.roster.paymentRefundAmountLabel"),
+    refundHint: t("trips.roster.paymentRefundHint"),
     methodLabel: t("trips.roster.paymentMethodLabel"),
     methods: {
       cash: t("trips.roster.paymentMethodCash"),

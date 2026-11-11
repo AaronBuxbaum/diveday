@@ -113,7 +113,7 @@ describe("markPartyPaid", () => {
     for (const id of [leadId, ...seatIds]) expect(await held(id)).toBeNull();
   });
 
-  it("refuses the whole party when a seat that still owes was paid online", async () => {
+  it("refuses the stale preview if a Stripe deposit changed the amount owed", async () => {
     const { leadId, seatIds, base, db, shop } = await aPartyOfThree();
     await setBookingPayment(db, {
       shopId: shop.id,
@@ -125,11 +125,41 @@ describe("markPartyPaid", () => {
       providerRef: "pi_party",
     });
     const result = await markPartyPaid(db, { ...base, amountCents: FARE });
-    expect(result.kind).toBe("refused");
+    expect(result.kind).toBe("changed");
     // Nothing landed on the seats that could have taken it, and the online
     // payment still points at its Stripe record.
     expect(await held(leadId)).toBeNull();
     expect((await getBookingPayment(db, shop.id, seatIds[1] as string))?.provider).toBe("stripe");
+  });
+
+  it("pays a Stripe deposit's remaining balance without replacing its captured pointer", async () => {
+    const { leadId, seatIds, base, db, shop } = await aPartyOfThree();
+    const seat = seatIds[1] as string;
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId: seat,
+      status: "deposit_paid",
+      currency: "usd",
+      amountCents: 2_000,
+      provider: "stripe",
+      providerRef: "cs_party_mixed",
+    });
+    expect(
+      (
+        await markPartyPaid(db, {
+          ...base,
+          expectedOwedCents: FARE * 3 - 2_000,
+          amountCents: FARE * 3 - 2_000,
+        })
+      ).kind,
+    ).toBe("split");
+    expect(await getBookingPayment(db, shop.id, seat)).toMatchObject({
+      provider: "mixed",
+      providerRef: "cs_party_mixed",
+      amountCents: FARE,
+      manualHeldCents: FARE - 2_000,
+    });
+    expect(await held(leadId)).toEqual({ status: "paid", amountCents: FARE });
   });
 
   it("skips a seat already paid online in full rather than refusing", async () => {

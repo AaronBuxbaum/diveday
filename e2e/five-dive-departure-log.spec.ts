@@ -44,7 +44,7 @@ test("five-dive departure log keeps the final head count on screen and paper", a
     expect(pages.length).toBeGreaterThan(1);
     for (const sheet of pages) {
       expect(sheet).toContain("Operational trust departure");
-      expect(sheet).toContain("Printed Jul");
+      expect(sheet.replace(/\s+/gu, " ")).toMatch(/Printed by .+? · Jul 21, 2026/);
     }
     expect(text).toContain("+1-305-555-0148");
     expect(text).toContain("Not back aboard");

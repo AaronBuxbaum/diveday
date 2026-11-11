@@ -116,6 +116,45 @@ function contextFor(status: "ready" | "blocked"): RosterRowContext {
 }
 
 describe("RosterRow", () => {
+  it("lets staff record cash returned after the online part of a mixed payment was refunded", () => {
+    const context = contextFor("blocked");
+    context.trip.mayWriteOffPayment = true;
+    context.trip.requiresPayment = true;
+    context.rows.readinessByBooking = new Map([
+      [
+        "b-1",
+        {
+          ...context.rows.readinessByBooking.get("b-1"),
+          paymentStatus: "partly_refunded",
+          paymentProvider: "mixed",
+        },
+      ],
+    ]) as ReadinessByBooking;
+    context.rows.paymentMarksByBooking = new Map([
+      [
+        "b-1",
+        {
+          shopCurrency: "usd",
+          paymentCurrency: "usd",
+          onlineHeldCents: 0,
+          balanceOwedCents: null,
+          mark: { amountCents: 7_000, currency: "usd", method: "cash", recordedByName: null },
+        },
+      ],
+    ]);
+    render(
+      <ul>
+        <RosterRow entry={seat} settled={false} context={context} />
+      </ul>,
+    );
+    const select = screen.getByRole("combobox", { name: /payment status/i });
+    expect(
+      Array.from(select.querySelectorAll("option")).some((option) => option.value === "refunded"),
+    ).toBe(true);
+    fireEvent.change(select, { target: { value: "paid" } });
+    expect(screen.getByLabelText(t("trips.roster.paymentAmountLabel"))).toHaveValue("");
+  });
+
   it("draws one seat as a deep-linkable list item under its diver's name", () => {
     const { container } = render(
       <ul>

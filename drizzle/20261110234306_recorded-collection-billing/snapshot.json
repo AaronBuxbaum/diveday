@@ -1,0 +1,966 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "5de38def-cdeb-45dc-aff8-5a562912d95a",
+  "prevIds": [
+    "16059de0-3e8d-4408-b2d0-12c65f5cf7bf"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "collection_entries"
+      ],
+      "writes": [
+        "s|tbl|public.collection_entries",
+        "n|tbl|public.collection_entries",
+        "e|tbl|public.collection_entries",
+        "n|rel|public.collection_entries",
+        "n|type|public.collection_entries",
+        "n|rel|public.collection_entries_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_view",
+      "statementTarget": [
+        "view",
+        "public",
+        "booking_payments"
+      ],
+      "writes": [
+        "s|view|public.booking_payments",
+        "n|view|public.booking_payments",
+        "e|view|public.booking_payments",
+        "n|rel|public.booking_payments",
+        "n|type|public.booking_payments"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "currency"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.currency",
+        "n|col|public.pricing_volume_statements.currency",
+        "e|col|public.pricing_volume_statements.currency"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "collections"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.collections",
+        "n|col|public.pricing_volume_statements.collections",
+        "e|col|public.pricing_volume_statements.collections"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "gross_fee_cents"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.gross_fee_cents",
+        "n|col|public.pricing_volume_statements.gross_fee_cents",
+        "e|col|public.pricing_volume_statements.gross_fee_cents"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "refund_credit_cents"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.refund_credit_cents",
+        "n|col|public.pricing_volume_statements.refund_credit_cents",
+        "e|col|public.pricing_volume_statements.refund_credit_cents"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "fee_credit_carry_cents"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.fee_credit_carry_cents",
+        "n|col|public.pricing_volume_statements.fee_credit_carry_cents",
+        "e|col|public.pricing_volume_statements.fee_credit_carry_cents"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "credits"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.credits",
+        "n|col|public.pricing_volume_statements.credits",
+        "e|col|public.pricing_volume_statements.credits"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "booking_checkouts",
+        "collection_needs_review"
+      ],
+      "writes": [
+        "s|col|public.booking_checkouts.collection_needs_review",
+        "n|col|public.booking_checkouts.collection_needs_review",
+        "e|col|public.booking_checkouts.collection_needs_review"
+      ],
+      "reads": [
+        "n|tbl|public.booking_checkouts",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "booking_payment_events",
+        "manual_held_cents"
+      ],
+      "writes": [
+        "s|col|public.booking_payment_events.manual_held_cents",
+        "n|col|public.booking_payment_events.manual_held_cents",
+        "e|col|public.booking_payment_events.manual_held_cents"
+      ],
+      "reads": [
+        "n|tbl|public.booking_payment_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "refund_carry_cents"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.refund_carry_cents",
+        "n|col|public.pricing_volume_statements.refund_carry_cents",
+        "e|col|public.pricing_volume_statements.refund_carry_cents"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "pricing_volume_statements",
+        "refunded_since_close_cents"
+      ],
+      "writes": [
+        "s|col|public.pricing_volume_statements.refunded_since_close_cents",
+        "n|col|public.pricing_volume_statements.refunded_since_close_cents",
+        "e|col|public.pricing_volume_statements.refunded_since_close_cents"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "recreate_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "pricing_volume_statements",
+        "pricing_volume_statements_shop_month_unique"
+      ],
+      "writes": [
+        "s|idx|public.pricing_volume_statements_shop_month_unique",
+        "n|idx|public.pricing_volume_statements_shop_month_unique",
+        "e|idx|public.pricing_volume_statements_shop_month_unique",
+        "n|rel|public.pricing_volume_statements_shop_month_unique"
+      ],
+      "reads": [
+        "n|tbl|public.pricing_volume_statements",
+        "n|sch|public",
+        "n|col|public.pricing_volume_statements.shop_id",
+        "n|col|public.pricing_volume_statements.month",
+        "n|col|public.pricing_volume_statements.currency"
+      ],
+      "sharedWrites": [
+        "e|uniqueness|public.pricing_volume_statements.month.shop_id"
+      ],
+      "sqlHash": "3e69a464aea09d57"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "collection_entries",
+        "collection_entries_shop_id_unique"
+      ],
+      "writes": [
+        "s|idx|public.collection_entries_shop_id_unique",
+        "n|idx|public.collection_entries_shop_id_unique",
+        "e|idx|public.collection_entries_shop_id_unique",
+        "n|rel|public.collection_entries_shop_id_unique"
+      ],
+      "reads": [
+        "n|tbl|public.collection_entries",
+        "n|sch|public",
+        "n|col|public.collection_entries.shop_id",
+        "n|col|public.collection_entries.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "collection_entries",
+        "collection_entries_source_idx"
+      ],
+      "writes": [
+        "s|idx|public.collection_entries_source_idx",
+        "n|idx|public.collection_entries_source_idx",
+        "e|idx|public.collection_entries_source_idx",
+        "n|rel|public.collection_entries_source_idx"
+      ],
+      "reads": [
+        "n|tbl|public.collection_entries",
+        "n|sch|public",
+        "n|col|public.collection_entries.shop_id",
+        "n|col|public.collection_entries.source_type",
+        "n|col|public.collection_entries.source_id",
+        "n|col|public.collection_entries.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "collection_entries",
+        "collection_entries_month_idx"
+      ],
+      "writes": [
+        "s|idx|public.collection_entries_month_idx",
+        "n|idx|public.collection_entries_month_idx",
+        "e|idx|public.collection_entries_month_idx",
+        "n|rel|public.collection_entries_month_idx"
+      ],
+      "reads": [
+        "n|tbl|public.collection_entries",
+        "n|sch|public",
+        "n|col|public.collection_entries.shop_id",
+        "n|col|public.collection_entries.recorded_at"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "collection_entries"
+      ],
+      "writes": [
+        "s|fk|public.collection_entries.collection_entries_shop_id_shops_id_fkey",
+        "n|fk|public.collection_entries.collection_entries_shop_id_shops_id_fkey",
+        "e|fk|public.collection_entries.collection_entries_shop_id_shops_id_fkey",
+        "n|con|public.collection_entries.collection_entries_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.collection_entries",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.collection_entries.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "collection_entries"
+      ],
+      "writes": [
+        "s|fk|public.collection_entries.collection_entries_reversal_shop_fk",
+        "n|fk|public.collection_entries.collection_entries_reversal_shop_fk",
+        "e|fk|public.collection_entries.collection_entries_reversal_shop_fk",
+        "n|con|public.collection_entries.collection_entries_reversal_shop_fk"
+      ],
+      "reads": [
+        "n|tbl|public.collection_entries",
+        "n|sch|public",
+        "n|tbl|public.collection_entries",
+        "n|sch|public",
+        "n|col|public.collection_entries.shop_id",
+        "n|col|public.collection_entries.reverses_entry_id",
+        "n|col|public.collection_entries.shop_id",
+        "n|col|public.collection_entries.id",
+        "e|uniqueness|public.collection_entries.id.shop_id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_payment_events"
+      ],
+      "writes": [
+        "s|ck|public.booking_payment_events.booking_payment_events_manual_held_check",
+        "n|ck|public.booking_payment_events.booking_payment_events_manual_held_check",
+        "e|ck|public.booking_payment_events.booking_payment_events_manual_held_check",
+        "n|con|public.booking_payment_events.booking_payment_events_manual_held_check"
+      ],
+      "reads": [
+        "n|tbl|public.booking_payment_events",
+        "n|sch|public",
+        "n|col|public.booking_payment_events.manual_held_cents",
+        "n|col|public.booking_payment_events.amount_cents"
+      ]
+    },
+    {
+      "statementType": "create_view",
+      "statementTarget": [
+        "view",
+        "public",
+        "booking_payments"
+      ],
+      "writes": [
+        "s|view|public.booking_payments",
+        "n|view|public.booking_payments",
+        "e|view|public.booking_payments",
+        "n|rel|public.booking_payments",
+        "n|type|public.booking_payments"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "collection_entries",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "id",
+        "type": "bigserial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "source_type",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "source_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "currency",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "method",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "amount_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "reverses_entry_id",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "evidence",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "recorded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "currency",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'usd'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "collections",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "gross_fee_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "refund_credit_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "fee_credit_carry_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "pricing_volume_statements",
+        "name": "credits",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_checkouts",
+        "name": "collection_needs_review",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_payment_events",
+        "name": "manual_held_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "collection_entries_shop_id_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "collection_entries_source_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "source_type",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "source_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "collection_entries_month_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "recorded_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "collection_entries_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "collection_entries_reversal_shop_fk",
+        "nameExplicit": true,
+        "columns": [
+          "shop_id",
+          "reverses_entry_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "collection_entries",
+        "columnsTo": [
+          "shop_id",
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "collection_entries_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "collection_entries_source_check",
+        "value": "\"source_type\" in ('order', 'checkout', 'booking')",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "collection_entries_currency_check",
+        "value": "\"currency\" ~ '^[a-z]{3}$'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "collection_entries",
+        "name": "collection_entries_reversal_check",
+        "value": "\"amount_cents\" <> 0 and (\"amount_cents\" > 0 or \"reverses_entry_id\" is not null)",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_payment_events",
+        "name": "booking_payment_events_manual_held_check",
+        "value": "\"manual_held_cents\" >= 0 and (\"amount_cents\" is null or \"manual_held_cents\" <= \"amount_cents\")",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"pricing_volume_statements\",\"refund_carry_cents\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"pricing_volume_statements\",\"refunded_since_close_cents\"]"
+    },
+    {
+      "op": "alter",
+      "key": "indexes\u0000[\"public\",\"pricing_volume_statements_shop_month_unique\"]",
+      "set": {
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "month",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "currency",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ]
+      }
+    },
+    {
+      "op": "alter",
+      "key": "views\u0000[\"public\",\"booking_payments\"]",
+      "set": {
+        "definition": "select distinct on (shop_id, booking_id) id, shop_id, booking_id, status, amount_cents, currency, provider, provider_ref, note, method, recorded_by_person_id, occurred_at as updated_at, created_at, manual_held_cents from booking_payment_events order by shop_id, booking_id, occurred_at desc, seq desc"
+      }
+    }
+  ]
+}

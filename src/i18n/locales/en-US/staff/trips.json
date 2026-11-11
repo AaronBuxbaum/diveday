@@ -198,7 +198,7 @@
     "requirementsBlocking": "Requirements updated. Some divers already booked on this trip no longer meet them, so check the divers.",
     "requirementsBlockingCount": "{count, plural, one {Requirements updated. # booked diver no longer meets them, so check the divers.} other {Requirements updated. # booked divers no longer meet them, so check the divers.}}",
     "payment": "Payment status updated",
-    "paymentAmount": "Enter the amount taken, like 120 or 54.50.",
+    "paymentAmount": "Enter only the amount received now, like 120 or 54.50.",
     "paymentMethod": "Pick how it was paid.",
     "paymentShort": "That’s less than the seat owes. Mark it Deposit paid, or ask an owner or manager to write off the rest.",
     "paymentOnline": "This seat was paid online or from a package, so its payment can’t be changed by hand.",
@@ -244,7 +244,9 @@
     "courseFormUnavailable": "That form can’t be recorded for this seat any more. Reload to see what is still owed.",
     "courseFormPaperCopy": "That didn’t record. Tick that you have the signed paper copy.",
     "courseFormDate": "That didn’t record. The date on the paper can’t be after today.",
-    "courseFormEnded": "This session is over, so a paper form can’t be recorded for it."
+    "courseFormEnded": "This session is over, so a paper form can’t be recorded for it.",
+    "paymentCurrency": "This receipt uses a different currency from the shop’s current currency. Record the new payment separately in Orders.",
+    "paymentRefundAmount": "Enter the amount returned, greater than zero and no more than the external money still held."
   },
   "pulse": {
     "seats": "{booked} of {capacity} booked · {open, plural, one {# seat open} other {# seats open}}",
@@ -610,7 +612,7 @@
     "noteDeletedToast": "Private note deleted",
     "paymentDepositPaid": "Deposit paid",
     "paymentPaid": "Paid",
-    "paymentAmountLabel": "Amount taken",
+    "paymentAmountLabel": "Amount received now",
     "paymentBalanceOwed": "Balance owed: {amount}",
     "paymentMethodLabel": "Paid by",
     "paymentMethodCash": "Cash",
@@ -741,7 +743,10 @@
     "moveSeatAvailability": "{count, plural, one {# seat left} other {# seats left}}",
     "moveSeatFull": "Full",
     "contactHeading": "Contact",
-    "preparationHeading": "Preparation and reference"
+    "preparationHeading": "Preparation and reference",
+    "paymentSourceMixed": "Paid online and externally · Refund each part by its original method",
+    "paymentRefundAmountLabel": "External amount returned now",
+    "paymentRefundHint": "Record money already returned by its original payment method. This does not send a payment."
   },
   "offlineManifestManager": {
     "checkingDevice": "Checking this device…",
@@ -995,16 +1000,18 @@
     "kinds": {
       "litter_kg": "Litter collected (kg)",
       "litter_items": "Litter collected (items)",
-      "line_m": "Fishing line removed (m)"
+      "line_m": "Fishing line removed (m)",
+      "lionfish_count": "Lionfish removed (fish)"
     },
     "errors": {
-      "invalid": "Enter a positive measured quantity, with whole numbers for items. Keep the location under 120 characters and the note under 500.",
+      "invalid": "Enter a positive measured quantity, with whole numbers for items and fish. Keep the location under 120 characters and the note under 500.",
       "not_authorized": "You no longer have permission to record actions for this shop.",
       "unavailable": "This departure or feature is no longer available.",
       "not_returned": "Record actions after the departure has returned.",
       "stale": "This record changed. Refresh the page before editing it again."
     },
     "deleted": "Conservation record deleted.",
-    "undoFailed": "This record could not be restored. It may have changed, or Undo is no longer available."
+    "undoFailed": "This record could not be restored. It may have changed, or Undo is no longer available.",
+    "lionfishHint": "Record lionfish removed under local invasive-species rules. Follow local permit and handling requirements."
   }
 }
