@@ -295,7 +295,8 @@ export default async function DiveSitePage({
                     </span>
                   }
                 >
-                  <span className="block text-sm font-medium">
+                  <span className="block break-words text-sm font-medium">{departure.title}</span>
+                  <span className="block text-sm text-muted tabular-nums">
                     {formatShortDate(departure.startsAt, locale, shop.timezone)}
                   </span>
                   <span className="block text-sm text-muted tabular-nums">

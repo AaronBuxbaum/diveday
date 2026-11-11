@@ -580,6 +580,19 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "dive-site-page", scheme);
       });
 
+      test(`the dive-site departures distinguish courses from charters (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis/sites/uscgc-duane");
+        const departures = page.locator("#departures");
+        const courseTitle = "Advanced Open Water Diver — two-day course";
+        await expect(departures.getByText(courseTitle, { exact: true })).toBeVisible();
+        await expect(
+          departures.getByText("Deep Adventure — USCGC Duane", { exact: true }),
+        ).toBeVisible();
+        await capture(page, "dive-site-mixed-departures", scheme);
+      });
+
       // The diver's catalog index. It used to be the signed-out half of a
       // staff page inside /shop and so had no baseline of its own; it is a
       // standalone public surface now (ADR 20260803-public-shop-namespace).
