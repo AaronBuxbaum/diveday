@@ -78,9 +78,11 @@ html[data-device-text-size] [data-person-sheet] {
 /* Applied only when the head probe actually enlarges text. Leave the ordinary
    composition alone; scaled rem columns must not consume the whole viewport.
    ADR 20260907-in-your-hands, 19d. */
-html[data-device-text-size] {
-  overflow-wrap: anywhere;
-  --sidebar-w: min(14rem, 33vw);
+@layer base {
+  html[data-device-text-size] {
+    overflow-wrap: anywhere;
+    --sidebar-w: min(14rem, 33vw);
+  }
 }
 html[data-device-text-size] :is(a, button, summary) {
   max-inline-size: 100%;
