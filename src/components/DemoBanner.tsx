@@ -2,6 +2,7 @@
 
 import { unstable_rethrow } from "next/navigation";
 import { useCallback, useRef, useState, useTransition } from "react";
+import { type DemoStartCopy, DemoStartStrip } from "@/components/DemoStartStrip";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -18,7 +19,7 @@ interface DemoRoleInfo {
   switchAriaLabel: string;
 }
 
-interface DemoBannerCopy {
+interface DemoBannerCopy extends DemoStartCopy {
   shopLabel: string;
   viewingAs: string;
   switchRole: string;
@@ -35,6 +36,7 @@ interface DemoBannerProps {
   shopSlug: string;
   /** Every role this shop can show, in display order, already filtered to who's seeded. */
   roles: DemoRoleInfo[];
+  starts?: readonly { id: string; role: string; label: string }[];
   copy: DemoBannerCopy;
   /**
    * A per-visitor minted demo (not the shared fixture): addressable by slug and
@@ -46,7 +48,7 @@ interface DemoBannerProps {
    * never import from `src/app` (pnpm check:architecture) — the route that owns
    * the surface hands its actions in as props.
    */
-  switchRole: (roleId: string, shopSlug: string) => Promise<void>;
+  switchRole: (roleId: string, shopSlug: string, start?: string) => Promise<void>;
 }
 
 export function DemoBanner({
@@ -54,6 +56,7 @@ export function DemoBanner({
   currentName,
   shopSlug,
   roles,
+  starts = [],
   copy,
   isMintedDemo = false,
   switchRole,
@@ -71,13 +74,13 @@ export function DemoBanner({
 
   const activeInfo = roles.find((r) => r.id === currentRole);
 
-  const handleRoleSwitch = (roleId: string) => {
-    if (roleId === currentRole) return;
+  const handleRoleSwitch = (roleId: string, start?: string) => {
+    if (roleId === currentRole && !start) return;
     setSwitchingTo(roleId);
     setSwitchFailed(false);
     startTransition(async () => {
       try {
-        await switchRole(roleId, shopSlug);
+        await switchRole(roleId, shopSlug, start);
       } catch (err) {
         // The action ends every path — success included — in `redirect()`,
         // whose sentinel reaches this catch on the client too. Without the
@@ -214,6 +217,16 @@ export function DemoBanner({
             ) : null}
           </div>
         </div>
+
+        {isMintedDemo ? (
+          <DemoStartStrip
+            shopSlug={shopSlug}
+            copy={copy}
+            choices={starts.filter((start) => roles.some(({ id }) => id === start.role))}
+            pending={isPending}
+            onStart={handleRoleSwitch}
+          />
+        ) : null}
 
         {switchFailed ? (
           <p role="alert" className="mt-2 text-sm font-medium text-danger">

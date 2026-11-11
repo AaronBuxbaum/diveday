@@ -3805,7 +3805,12 @@
       "diver": {
         "title": "Diver"
       }
-    }
+    },
+    "startTitle": "Start here",
+    "startCaptain": "Call the roll as the captain",
+    "startDesk": "Check a diver in at the desk",
+    "startDiver": "Book a seat as a diver",
+    "dismissStarts": "Dismiss starting places"
   },
   "errorBoundary": {
     "title": "That didn’t go through",

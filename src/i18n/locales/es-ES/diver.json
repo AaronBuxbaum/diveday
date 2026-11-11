@@ -3805,7 +3805,12 @@
       "diver": {
         "title": "Buceador"
       }
-    }
+    },
+    "startTitle": "Empieza aquí",
+    "startCaptain": "Pasa lista como capitán",
+    "startDesk": "Haz el check-in de un buceador en el mostrador",
+    "startDiver": "Reserva una plaza como buceador",
+    "dismissStarts": "Cerrar lugares de inicio"
   },
   "errorBoundary": {
     "title": "Eso no salió bien",

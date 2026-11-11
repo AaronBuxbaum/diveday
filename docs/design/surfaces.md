@@ -1115,3 +1115,17 @@ return; refunded and still-held totals use a separate current balance and the 16
 Read-only labels no longer say optional, and absent action menus leave no header gap. The final
 18 probes reported no flags; the focused browser regression checks the original tax and remaining
 balance after a partial return, including the balance's computed type size.
+
+### First-arrival demo choices — demo banner
+
+**Built 2026-11-11 (#4318).**
+
+- **One idea:** give a visitor one recognizable job to try before they learn the staff navigation.
+- **Question on arrival:** where do I begin? Three named places open a working screen as the
+  matching role; they do not ask the visitor to understand roles first.
+- **Controls that dissolved:** no separate tour, modal or next button. Three quiet links share
+  one compact strip with a dismiss action. The existing role menu remains the repeat-visit control.
+- **Remove first:** any explanatory sentence above the choices. Their names carry the instruction.
+- **Composition:** a short strip under the current-role row, wrapping each action whole on a
+  phone. A modal would hide the product the visitor came to try, and three cards would compete
+  with Today. Dismissal lasts for the tab's demo session.

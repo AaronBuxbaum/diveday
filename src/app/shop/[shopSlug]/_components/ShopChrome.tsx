@@ -13,6 +13,7 @@ import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { countGearItems } from "@/db/gear";
 import { hasActiveCourses } from "@/features/courses";
+import { DEMO_STARTS, demoStartFrom } from "@/features/demo-starts";
 import { shopClock } from "@/features/shop-clock";
 import { listShopRolesPresent } from "@/features/shop-roles";
 import { shopBySlugCached } from "@/features/shops-cached";
@@ -291,6 +292,12 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
         <DemoBanner
           switchRole={switchDemoRoleAction}
           currentRole={currentRole}
+          starts={DEMO_STARTS.flatMap((start) => {
+            const destination = demoStartFrom(start.id);
+            return destination
+              ? [{ id: start.id, role: destination.role, label: demoT(`demo.${start.copy}`) }]
+              : [];
+          })}
           currentName={session?.user?.name}
           shopSlug={shopSlug}
           roles={DEMO_ROLE_META.filter((role) => availableRoles.includes(role.id)).map((role) => {
@@ -309,6 +316,8 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
             current: demoT("demo.current"),
             switchAction: demoT("demo.switchAction"),
             switchFailed: demoT("demo.switchFailed"),
+            startTitle: demoT("demo.startTitle"),
+            dismissStarts: demoT("demo.dismissStarts"),
           }}
           // A minted (per-visitor) demo is addressable by its slug and readable
           // by anyone who has it, so warn against entering real customer data;

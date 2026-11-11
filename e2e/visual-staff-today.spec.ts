@@ -256,6 +256,16 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(trigger).toHaveAttribute("aria-expanded", "false");
       });
 
+      test(`the demo's first-arrival choices render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/");
+        await page.getByRole("button", { name: "Try the live demo" }).first().click();
+        await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
+        await expect(page.getByRole("region", { name: "Start here" })).toBeVisible();
+        await capture(page, "demo-first-arrival", scheme);
+      });
+
       /**
        * **The demo banner's "Switch role" menu, open** (issue #2513): the
        * rewritten role descriptions live only here, and no capture opened it.
