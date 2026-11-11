@@ -4,14 +4,14 @@ import { daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 /**
- * The seven-field composer is a door now, not a standing form: reading the
- * ledger is daily and writing a code is a few times a season, so the fields
- * wait behind one control (slice E3-4). It opens itself on `#new-code` and on
- * a refusal bounced back onto one of its boxes; everywhere a spec *types* a
- * new code, it opens it first.
+ * The seven-field composer is a panel the header's "New code" opens (`?add=1`,
+ * like Record purchase): reading the ledger is daily and writing a code is a
+ * few times a season. It also opens on a refusal bounced back onto one of its
+ * boxes; everywhere a spec *types* a new code, it opens it first.
  */
 async function openNewCodeForm(page: Page) {
-  await page.locator("summary").filter({ hasText: "New code" }).click();
+  await page.getByRole("link", { name: "New code" }).click();
+  await expect(page.locator("#new-code")).toBeVisible();
 }
 
 /**
@@ -98,9 +98,8 @@ test.describe("as owner", () => {
     await expect(
       page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true }),
     ).toHaveCount(1);
-    const add = page.locator("summary").filter({ hasText: "New code" });
-    await expect(add).toBeVisible();
-    await add.click();
+    await expect(page.getByRole("link", { name: "New code" })).toBeVisible();
+    await openNewCodeForm(page);
     await expect(page.getByText(/before creating a code/)).toBeVisible();
   });
 

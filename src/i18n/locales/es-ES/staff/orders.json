@@ -289,7 +289,6 @@
     "gross": "Total recibido",
     "submit": "Registrar pago recibido",
     "invalid": "Revisa el cliente, los artículos y los importes. El impuesto, las propinas y las tasas incluidos no pueden superar el total. Actualiza si cambió la moneda del centro.",
-    "included": "Introduce los precios recibidos, con impuestos y propinas incluidos. Los impuestos, las propinas y las tasas de terceros registrados por separado quedan fuera de la comisión de DiveDay. Registra el pago de una reserva en su salida, no como otra compra.",
     "refundTitle": "Registrar dinero ya devuelto",
     "refundExplanation": "Devuelve primero el dinero fuera de DiveDay. Esto registra la devolución y ajusta la comisión de DiveDay; no envía dinero.",
     "refundAmount": "Importe devuelto ({currency})",

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
-import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { AddPanel } from "@/components/AddPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
@@ -10,17 +11,6 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import {
-  controlClass,
-  DateField,
-  Field,
-  FieldActions,
-  FieldGrid,
-  FormStatus,
-} from "@/components/ui/form";
 import {
   canAcceptPayments,
   canPersonManagePaymentSettings,
@@ -29,7 +19,7 @@ import {
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { timeZoneLabel } from "@/i18n/timezone-labels";
+import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
@@ -37,8 +27,9 @@ import { PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN, promoLedgerGroup } from "@/lib/
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DivePackagesSection, TripDealsSection } from "./_components/DealsAndPackages";
+import { NewCodeForm } from "./_components/NewCodeForm";
 import { PromoConnectNotice } from "./_components/PromoConnectNotice";
-import { PromoDiscountFields, promoDiscountText } from "./_components/PromoDiscountFields";
+import { promoDiscountText } from "./_components/PromoDiscountFields";
 import { PromoCodeLedger, type PromoCodeRow } from "./_components/PromoLedger";
 import { codeOutcomeFact, tripDealRows } from "./_components/promo-outcomes";
 import {
@@ -50,7 +41,6 @@ import {
   STATUS_BADGES,
 } from "./_components/promo-page-copy";
 import {
-  createPromoAction,
   deletePromoAction,
   restorePromoAction,
   retryPromoAction,
@@ -85,6 +75,7 @@ export default async function PromosPage({
     undoMaxRedemptions?: string;
     page?: string;
     dealsPage?: string;
+    add?: string;
   }>;
 }) {
   const { shopSlug } = await params;
@@ -100,6 +91,7 @@ export default async function PromosPage({
     undoMaxRedemptions,
     page,
     dealsPage,
+    add,
   } = await searchParams;
   // Lands on Today, with its own notice code so the reader gets the
   // promo-specific explanation (`promos.notice.notAuthorized`) rather than a
@@ -158,6 +150,8 @@ export default async function PromosPage({
   const noticeField = noticeFromParam(notice, NOTICE_FIELD);
   const createStatus = notice && CREATE_FORM_NOTICES.has(notice) ? banner : undefined;
   const pageBanner = noticeField || createStatus ? undefined : banner;
+  // A refusal on one of the form's own boxes reopens the panel it came from.
+  const addOpen = codesOn && (addPanelOpen(add) || Boolean(createStatus || noticeField));
   /** This box's refusal, already worded — or nothing, when the refusal was elsewhere. */
   const fieldError = (field: "code" | "discount" | "startsAt") =>
     noticeField === field && banner
@@ -281,7 +275,16 @@ export default async function PromosPage({
           "undoMaxRedemptions",
         ]}
       />
-      <ShopPageHeader title={t("shared.shopSections.money")} />
+      <ShopPageHeader
+        title={t("shared.shopSections.money")}
+        actions={
+          codesOn && !addOpen ? (
+            <Link href={addPanelHref(base)} className={buttonClass({ variant: "secondary" })}>
+              {t("promos.newCode.heading")}
+            </Link>
+          ) : undefined
+        }
+      />
       <StaffSectionTabs
         section="money"
         current="promoCodes"
@@ -318,119 +321,34 @@ export default async function PromosPage({
         <PromoConnectNotice t={t} shopSlug={shopSlug} className="mb-6" />
       )}
 
-      {/* **And when it can submit, it is a door rather than a standing form.**
-          Reading the ledger is daily; writing a code is a few times a season,
-          so the seven fields wait behind one `secondary` control and the list
-          leads the page (principle 8, "collapse the rare path").
-
-          `AutoOpenDetails` because the anchor has to keep working from three
-          places: the empty state's own button, a `?notice=` the create action
-          bounced back with a refusal on one of these boxes, and any bookmark of
-          `#new-code`. A client navigation to a fragment never runs the
-          browser's own reveal, so a plain `<details>` would arrive collapsed
-          with the refusal inside it. */}
+      {/* **Adding a code is a panel on this index** (`?add=1`, the same shape as
+          Record purchase on Orders): reading the ledger is daily, writing a
+          code a few times a season, so the form waits behind the header's
+          "New code" and a refusal bounces back with the panel already open. */}
       {codesOn ? (
-        <AutoOpenDetails
+        <AddPanel
+          open={addOpen}
           id="new-code"
-          openOnHash="new-code"
-          open={Boolean(createStatus || noticeField)}
-          className="group/new-code mt-8 scroll-mt-24"
+          title={t("promos.newCode.heading")}
+          description={connected ? t("promos.newCode.detail") : undefined}
+          closeHref={addPanelCloseHref(base, { page, dealsPage })}
+          closeLabel={t("shared.addPanel.close")}
         >
-          <summary
-            className={`${buttonClass({ variant: "secondary" })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-          >
-            {t("promos.newCode.heading")}
-            {/* The disclosure caret, not the navigate chevron: which way it
-                points is what says "this opens here" rather than "this leaves"
-                (docs/design/settled-questions.md). */}
-            <DisclosureCaret className="group-open/new-code:rotate-90" />
-          </summary>
-          {connected ? null : <PromoConnectNotice t={t} shopSlug={shopSlug} className="mt-4" />}
-          {connected ? (
-            <SectionCard className="mt-4" padding="lg" description={t("promos.newCode.detail")}>
-              <FieldGrid as="form" action={createPromoAction} columns={2}>
-                <Field
-                  label={t("promos.fields.code")}
-                  hint={t("promos.fields.codeHint")}
-                  error={fieldError("code")}
-                >
-                  <input
-                    name="code"
-                    required
-                    maxLength={40}
-                    placeholder={t("promos.fields.codePlaceholder")}
-                    autoComplete="off"
-                    className={`${controlClass} uppercase`}
-                  />
-                </Field>
-                <Field label={t("promos.fields.goodFor")}>
-                  <select name="scope" defaultValue="all" className={controlClass}>
-                    {Object.entries(SCOPE_KEYS).map(([value, key]) => (
-                      <option key={value} value={value}>
-                        {t(key)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <PromoDiscountFields
-                  t={t}
-                  currency={currency}
-                  locale={locale}
-                  error={fieldError("discount")}
-                />
-                <Field
-                  label={t("promos.fields.redemptionCap")}
-                  hint={t("promos.fields.redemptionCapHint")}
-                >
-                  <input
-                    name="maxRedemptions"
-                    type="number"
-                    min={1}
-                    placeholder={t("promos.fields.redemptionCapPlaceholder")}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={t("promos.fields.starts")}
-                  hint={t("promos.fields.startsHint")}
-                  error={fieldError("startsAt")}
-                >
-                  <DateField name="startsAt" type="datetime-local" />
-                </Field>
-                <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
-                  <DateField name="expiresAt" type="datetime-local" />
-                </Field>
-                {/* The human zone name, never the raw IANA id — "America/New_York"
-              with its underscore is implementation surfacing (principle 4). */}
-                <p className="-mt-2 text-xs text-muted sm:col-span-2">
-                  {t("promos.fields.timezoneHint", {
-                    timezone: timeZoneLabel(now, locale, timezone),
-                  })}
-                </p>
-                <Field label={t("promos.fields.whatFor")} hint={t("promos.fields.whatForHint")}>
-                  <input
-                    name="description"
-                    maxLength={200}
-                    placeholder={t("promos.fields.whatForPlaceholder")}
-                    className={controlClass}
-                  />
-                </Field>
-                <FieldActions>
-                  <SubmitButton pendingLabel={t("promos.creating")} className={buttonClass()}>
-                    {t("promos.createCode")}
-                  </SubmitButton>
-                  <FormStatus tone={createStatus?.tone}>
-                    {createStatus ? t(createStatus.key) : undefined}
-                  </FormStatus>
-                </FieldActions>
-                {/* Keyed on the notice so an identical repeat refusal still re-fires
-              the focus move — the effect is otherwise skipped on a re-render
-              that changed nothing it depends on. */}
-                <FieldErrorFocus key={notice} scope="new-code" />
-              </FieldGrid>
-            </SectionCard>
-          ) : null}
-        </AutoOpenDetails>
+          <NewCodeForm
+            {...{
+              t,
+              shopSlug,
+              connected,
+              currency,
+              locale,
+              timezone,
+              now,
+              notice,
+              createStatus,
+              fieldError,
+            }}
+          />
+        </AddPanel>
       ) : null}
 
       {!codesOn ? null : promos.length === 0 ? (
@@ -441,9 +359,9 @@ export default async function PromosPage({
              unconnected the banner above is the only next move there is. */
           action={
             connected ? (
-              <a href="#new-code" className={buttonClass()}>
+              <Link href={addPanelHref(base)} className={buttonClass()}>
                 {t("promos.empty.action")}
-              </a>
+              </Link>
             ) : null
           }
           className="mt-8"

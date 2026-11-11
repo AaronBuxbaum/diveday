@@ -78,7 +78,6 @@ async function PurchasePanelBody({
         submit: t("orders.purchase.submit"),
         busy: t("words.busy.recording"),
         invalid: t("orders.purchase.invalid"),
-        included: t("orders.purchase.included"),
         methods: (["cash", "card_machine", "bank_transfer", "other"] as const).map((value) => ({
           value,
           label: t(ORDER_COLLECTION_KEYS[value]),

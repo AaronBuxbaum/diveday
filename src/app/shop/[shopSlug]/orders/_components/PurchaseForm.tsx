@@ -28,7 +28,6 @@ type Words = {
   submit: string;
   busy: string;
   invalid: string;
-  included: string;
   kinds: { value: string; label: string }[];
   methods: { value: string; label: string }[];
 };
@@ -118,7 +117,6 @@ export function PurchaseForm({
             </select>
           </Field>
         </FieldGrid>
-        <p className="text-sm text-muted">{words.included}</p>
         <div className="space-y-4">
           {rows.map((row, index) => (
             <fieldset key={row.id} className="space-y-3 rounded-lg border border-border p-4">

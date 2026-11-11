@@ -138,9 +138,9 @@ export function registerRequestPaymentOverlayAuditCaptures(
       request,
     }) => {
       await seedFacts(request, ["stripeAccount"], { slug: privateShop.slug });
-      await page.goto(`/shop/${privateShop.slug}/promos`);
+      await page.goto(`/shop/${privateShop.slug}/promos?add=1`);
       const composer = page.locator("#new-code");
-      await openIfClosed(composer);
+      await composer.waitFor();
       await composer
         .getByRole("textbox", {
           name: `${staffCopy("promos.fields.code")} ${staffCopy("promos.fields.codeHint")}`,
