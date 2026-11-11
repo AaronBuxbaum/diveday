@@ -72,9 +72,12 @@ test("a standalone site opens immediately and closing its card clears selection"
   await expect(page.locator(".leaflet-site-marker button.ring-4")).toHaveCount(1);
   await expect
     .poll(() =>
-      page.locator(".leaflet-shop-marker [role=img]").evaluate((shop) => {
-        const map = shop.closest(".leaflet-container");
-        if (!map) throw new Error("Dive center is outside the map");
+      page.locator(".leaflet-container").evaluate((map) => {
+        // A view-end refresh can replace the shop marker. Query from the
+        // stable map in the same browser task rather than measuring a marker
+        // that Playwright resolved just before it was removed.
+        const shop = map.querySelector<HTMLElement>(".leaflet-shop-marker [role=img]");
+        if (!shop) return -1;
         const bounds = map.getBoundingClientRect();
         // A shop whose spot the card panned off the map is not drawn at all.
         if (!shop.checkVisibility()) return 0;
