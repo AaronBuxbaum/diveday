@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import {
@@ -12,6 +12,20 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import { rankBoatRows } from "./spine-reading";
+
+/** Preserve Intl's characters; only applied scaling enables these word boundaries. */
+function DepartureLabel({ text }: { text: string }) {
+  return (
+    <span>
+      {[...text.matchAll(/[^\u00a0\u202f]*[\u00a0\u202f]|[^\u00a0\u202f]+$/g)].map((part) => (
+        <Fragment key={part.index}>
+          {part[0]}
+          <wbr className="device-text-word-break" />
+        </Fragment>
+      ))}
+    </span>
+  );
+}
 
 /**
  * **Needs you, one heading per boat** (fifth loop, item 11): the boat's time
@@ -56,7 +70,7 @@ export function NeedsYouGroups({
                 href={shopPath(shopSlug, "trips", group.departure.tripId)}
                 className={`${tapTargetLinkClass} hover:underline`}
               >
-                {group.departure.label}
+                <DepartureLabel text={group.departure.label} />
               </Link>
             }
           >

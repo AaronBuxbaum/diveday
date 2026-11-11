@@ -127,7 +127,7 @@ export function ClosingStation({
     // card on the bed, not as a gap in a rail. No site tile — the closing
     // reader carries no site — so the time leads, in the muted ink of a boat
     // that is done.
-    <SectionCard as="li" padding="lg">
+    <SectionCard as="li" padding="lg" className="device-text-station">
       <p>
         {/* The same machine-readable instant the morning station renders: the
             spine's whole claim is that these read in clock order, and a
@@ -160,6 +160,7 @@ export function ClosingStation({
           settled={close.status === "all_home"}
           label={t(CLOSEOUT_STATUS_KEYS[close.status])}
           labelClassName="font-medium"
+          className="device-text-station-status"
         >
           <span className={`${detailInk} tabular-nums`}>{detail}</span>
           {counted && countedLaterOn ? (

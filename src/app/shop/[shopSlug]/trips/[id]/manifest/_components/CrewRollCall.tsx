@@ -280,7 +280,7 @@ export function CrewRollCall({
                */
               const clashes = isDeparture && !rc ? (member.clashes ?? []) : [];
               const crewTrigger = (
-                <span className="min-w-0 flex-1">
+                <span data-person-row-name="" className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className={`${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
                       {member.fullName}

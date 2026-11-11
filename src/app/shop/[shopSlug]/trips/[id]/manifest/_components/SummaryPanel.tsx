@@ -240,7 +240,10 @@ export function SummaryPanel({
         labelledBy={scopedId(idPrefix, "roll-call-progress-heading")}
         className="sticky top-(--chrome-h) z-10 mt-4 rounded-panel border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          data-device-text-count-heading=""
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
           <div>
             <p className={groupLabelClass("primary")}>{t("manifest.activeCheckpoint")}</p>
             <h2
@@ -353,6 +356,7 @@ export function SummaryPanel({
             help anyone find a missing person. */}
         {missing.length > 0 ? (
           <ul
+            data-device-text-missing=""
             className="mt-2 flex flex-wrap gap-2"
             aria-label={t("manifest.notBackAboardListLabel")}
           >

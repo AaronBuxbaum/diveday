@@ -89,7 +89,7 @@ export function GroupLabel({
   );
   if (meta == null) return label;
   return (
-    <div className="flex items-baseline justify-between gap-3">
+    <div data-device-text-row="" className="flex items-baseline justify-between gap-3">
       {label}
       <span className={GROUP_META_CLASS}>{meta}</span>
     </div>

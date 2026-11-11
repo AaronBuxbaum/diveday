@@ -31,6 +31,21 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ## Entries
 
+### Device text size — shared root, manifest and public forms
+
+**Slice [19d / #4234](https://github.com/AaronBuxbaum/diveday/issues/4234), 2026-11-10** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md)).
+
+- **One idea:** the same working surface at the device's readable type size, never below its floor.
+- **The arriving question:** names, safety states and form labels remain the answer at larger sizes.
+- **Controls that dissolved:** there is no new text-size setting; the supported device supplies it.
+- **Remove first:** nothing is added to the surface, and unsupported readings change nothing.
+- **Composition:** existing rows and forms wrap; an oversized public header scrolls its excess
+  above the viewport instead of covering the form, while oversized safety counts remain in page
+  flow with full-width names rather than hiding content in nested scrollers; narrow checklist,
+  status and departure tracks stack their marks rather than break ordinary words into columns.
+  No text or target shrinks. Mac WebKit and simulated body readings are the available evidence;
+  an actual iPhone system-setting change remains unmeasured.
+
 ### The shop home — `/shop/[shopSlug]`
 
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): on a floor with no decoration, no eyebrow, no greeting and one shell, the home is a large title over the day's boats — each a group whose first row is the boat (A), a title with its count at the end over hairline rows (B), or four figures in tiles over A's groups (C). Pending H-20260918-three-directions-inset-b, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.

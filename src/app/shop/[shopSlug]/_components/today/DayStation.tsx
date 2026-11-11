@@ -112,7 +112,7 @@ export function DayStation({
     station.crewReason !== "crew_none_assigned";
 
   return (
-    <SectionCard as="li" padding="lg">
+    <SectionCard as="li" padding="lg" className="device-text-station">
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {/* A real `<time>`: the list's claim is that these read in clock order. */}
         <time dateTime={station.startsAt.toISOString()} className={FIGURE_INLINE_CLASS}>

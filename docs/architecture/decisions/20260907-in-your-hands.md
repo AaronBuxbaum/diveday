@@ -194,15 +194,49 @@ form.
 
 ### 5. The type follows the phone
 
-On a device that knows `-apple-system-body`, the root font size becomes the app's 16px or the
-device's body size scaled to it (17 → 16), **whichever is larger**: a setting above the default
-scales every rem measure in the ladder — names, figures, tap targets — together, and a setting below
-it changes nothing, because the ladder's floor is the dock test's and the floor stands. A one-line
-probe in the pre-hydration script that already sets `lang` and `dir` measures the keyword and writes
-the root before first paint, so nothing jumps; a platform that does not know the keyword writes
-nothing. Every surface takes it, boat mode included. The visual spec gains one capture of the
-manifest at the largest root, so a fixed-px width that clips a name is a diff rather than a report
-from the rail.
+On a device that exposes `font: -apple-system-body`, the root keeps its browser default or uses
+the device body size scaled from 17 to the app's 16px, **whichever is larger**. A larger browser
+default is preserved, not multiplied by the device request. Every rem measure in the ladder grows together; a device
+setting below the default changes nothing. The font family, layout tokens, safety-text and
+touch-target floors are unchanged, boat mode included. Native fieldsets/legends and the demo
+role switch stay within the form width. If a public header grows beyond half the available
+viewport, its excess can scroll upward; sticky clearance counts only the pinned portion, so
+larger type does not cover the form. Identity and recovery wrap only when their minimum readable
+widths cannot share a line. Count, safety-label and mark rows wrap; the count dial keeps its
+usual maximum size and square shape within the available width. A count panel that would cover the boarding targets stays in ordinary page flow and publishes
+zero pinned clearance. The internally scrolling alternative was rejected after the largest-size
+capture showed only a checkpoint heading, hiding the count itself. Page flow retains the whole
+count and every warning without a second scroller or a new control; normal-size pinning returns
+when the panel fits. Zoom and keyboard reductions of the visual viewport are included even when
+the computed root remains 16px. Name rows stack the index/caret above the full-width name when
+their container becomes narrow relative to the type. This layout fallback uses the existing
+post-hydration size observer; the root font bridge remains synchronous before first content paint.
+
+Slice [19d / #4234](https://github.com/AaronBuxbaum/diveday/issues/4234) uses
+`src/features/device-text-size` synchronously in the root layout's head, before
+body content can paint. It feature-detects the system-font shorthand, reads a temporary hidden
+probe, removes it even on failure, and writes only a finite reading above 17. Unsupported,
+unavailable, default and smaller readings leave the root untouched. No UA guess or persisted
+preference is involved. It reads again on a document load, not on client-side navigation.
+Only an applied increase marks the root for reflow: the sidebar cannot take more than a third
+of the viewport, departure tabs keep wrapping on wider screens, and day-header, station, ledger
+and recap rows can use separate lines within their available width. Unchanged/default readings
+keep their existing composition. A whole-page Logbook and tablet-manifest width regression pins
+this integration, not just the install row inside an otherwise widened page.
+Font-relative compact tracks also keep checklist labels, warning names, status badges, saved-copy
+state and departure titles readable as words. When nested insets or a mark would consume their
+measure, the mark moves above the full text track and the existing compact inset is reused.
+Recovery and catch-up controls reserve their longest word rather than a one-grapheme flex basis.
+The ordinary 16px composition is not marked for these changes.
+
+[WebKit's system-font documentation](https://webkit.org/blog/3709/using-the-system-font-in-web-content/)
+describes the iOS Dynamic Type shorthand; ordinary rem sizing alone does not read that setting.
+On 2026-11-10, pinned Playwright WebKit 27.2 on macOS exposed the shorthand and measured a 13px
+body, while Chrome 157 rejected it; both kept the 16px app root. Focused tests simulate 34px
+(200%) and 53px device-body readings at the capability boundary and capture the current manifest
+and navigation. These simulations and macOS WebKit are **not** a physical iPhone Dynamic Type
+setting change or proof of the largest setting on every current iOS release. No iOS simulator or
+physical iPhone was available in this run; that validation limit is retained in the change report.
 
 ### 6. On the home screen
 
@@ -266,7 +300,7 @@ drawing or motion is added; the work remains the home’s one idea.
 - **The reader** is not built (decision 4, declined). No Textract, no manual step, no `/privacy`
   sentence, no change to `CardSightingForm`; the certification form keeps carrying no photograph,
   which `anonymize.ts` already states beside its erasure of the card rows.
-- **The root probe** is one line in the existing pre-hydration script and one visual capture;
+- **The root probe** is a small synchronous head script and focused enlarged-text captures;
   `check:tokens` and the loading-skeleton guard are unchanged, and any px measure that stops scaling
   is a visual diff to fix.
 - **The home-screen line** is one conditional row after the Logbook’s operational reading, with a

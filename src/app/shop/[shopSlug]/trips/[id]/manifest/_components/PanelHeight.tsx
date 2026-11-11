@@ -37,14 +37,45 @@ export function PanelHeight({
     const card = ref.current;
     const column = card?.parentElement;
     if (!card || !column || typeof ResizeObserver === "undefined") return;
+    const write = (observedHeight = card.getBoundingClientRect().height) => {
+      const naturalHeight = Math.max(observedHeight, card.scrollHeight);
+      const viewport = Math.min(
+        window.innerHeight,
+        window.visualViewport?.height ?? window.innerHeight,
+      );
+      // A panel taller than the usable viewport must not cover boarding
+      // targets or conceal the count in a nested scroller. Leave the entire
+      // panel in ordinary page flow in that case (ADR 20260907-in-your-hands,
+      // 19d). This also covers zoom/keyboard viewports with a 16px root.
+      const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      // One 3.5rem boat target plus its existing 1rem scroll clearance.
+      const rowRoom = Math.max(44, rootSize * 4.5);
+      // Desktop chrome still occupies the panel's resolved sticky inset.
+      // Budget the space below that inset, not the whole viewport.
+      const pinnedTop = Math.max(0, Number.parseFloat(getComputedStyle(card).top) || 0);
+      const flows = naturalHeight > viewport - pinnedTop - rowRoom;
+      card.style.position = flows ? "static" : "";
+      if (flows) card.setAttribute("data-roll-call-panel-flow", "true");
+      else card.removeAttribute("data-roll-call-panel-flow");
+      column.style.setProperty(
+        ROLL_CALL_PANEL_HEIGHT_VAR,
+        flows ? "0px" : `${Math.ceil(observedHeight)}px`,
+      );
+    };
     const observer = new ResizeObserver((entries) => {
       const entry = entries[entries.length - 1];
-      const height = entry?.borderBoxSize?.[0]?.blockSize ?? card.getBoundingClientRect().height;
-      column.style.setProperty(ROLL_CALL_PANEL_HEIGHT_VAR, `${Math.ceil(height)}px`);
+      write(entry?.borderBoxSize?.[0]?.blockSize ?? card.getBoundingClientRect().height);
     });
+    const resize = () => write();
+    window.addEventListener("resize", resize);
+    window.visualViewport?.addEventListener("resize", resize);
     observer.observe(card, { box: "border-box" });
     return () => {
       observer.disconnect();
+      window.removeEventListener("resize", resize);
+      window.visualViewport?.removeEventListener("resize", resize);
+      card.style.removeProperty("position");
+      card.removeAttribute("data-roll-call-panel-flow");
       column.style.removeProperty(ROLL_CALL_PANEL_HEIGHT_VAR);
     };
   }, []);

@@ -847,3 +847,13 @@ describe("the boat's one-tap waiver row", () => {
     expect(screen.queryByText(/^4 things/)).toBeNull();
   });
 });
+
+it("preserves the formatted departure label while offering scaling-only word boundaries", () => {
+  const label = "Two-Tank Reef · Jul\u00a021, 10:00\u00a0AM\u202fEDT";
+  renderSpine({ actions: [action({ departure: boat("t1", label) })] });
+  const heading = screen.getByRole("heading", { level: 3, name: /Two-Tank Reef · Jul/ });
+  expect(heading.querySelector("a")?.textContent).toBe(label);
+  // Three Intl nonbreaking separators plus the harmless final boundary.
+  // Default-size CSS hides these; the browser word regression proves reflow.
+  expect(heading.querySelectorAll("wbr.device-text-word-break")).toHaveLength(4);
+});

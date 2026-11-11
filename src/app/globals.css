@@ -22,6 +22,324 @@
  */
 @import "tailwindcss" source("../");
 
+/* Native fieldsets otherwise take their legend's min-content width. Keep the
+   same form and type at large device text sizes without widening the phone
+   (ADR 20260907-in-your-hands, slice 19d). */
+html[data-device-text-size] fieldset {
+  min-inline-size: 0;
+}
+/* Long safety words may wrap at a large device size; never clip their ink. */
+html[data-device-text-size] .boat-mode {
+  overflow-wrap: anywhere;
+}
+/* Index and caret stay together when scaled type leaves too little room for
+   a readable name column. Container rem units follow the root size; ordinary
+   rows retain their current composition (ADR 20260907-in-your-hands, 19d). */
+html[data-device-text-size] [data-person-row] {
+  flex-wrap: wrap;
+}
+html[data-device-text-size] [data-person-row-trigger] {
+  flex-basis: 16rem;
+  max-inline-size: 100%;
+  container: person-row / inline-size;
+  flex-wrap: wrap;
+}
+@container person-row (max-width: 12rem) {
+  [data-person-row-name] {
+    flex: 0 0 100%;
+    order: 1;
+  }
+  [data-person-row-flags] {
+    flex: 0 0 100%;
+    order: 2;
+  }
+  .person-row-caret {
+    margin-inline-start: auto;
+  }
+}
+
+/* Keep the existing close target clear of the title when enlarged type no
+   longer fits beside it. Both stay in the sheet's normal reading/scroll flow. */
+html[data-device-text-size] [data-person-sheet] {
+  container: person-sheet / inline-size;
+}
+@container person-sheet (max-width: 12rem) {
+  [data-person-sheet] > header > h2 {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  [data-person-sheet] > header > div {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+}
+
+/* Applied only when the head probe actually enlarges text. Leave the ordinary
+   composition alone; scaled rem columns must not consume the whole viewport.
+   ADR 20260907-in-your-hands, 19d. */
+html[data-device-text-size] {
+  overflow-wrap: anywhere;
+  --sidebar-w: min(14rem, 33vw);
+}
+html[data-device-text-size] :is(a, button, summary) {
+  max-inline-size: 100%;
+}
+/* A short control's min-content measure is its longest word, not a glyph.
+   Inheriting wrap-anywhere made "Find my booking" a one-letter flex column. */
+html[data-device-text-size] .device-text-public-identity {
+  width: 100%;
+  flex-wrap: wrap;
+}
+/* Formatted time units keep their nonbreaking spaces at ordinary sizes.
+   Applied scaling may break between their parts, never inside the zone word. */
+.device-text-word-break {
+  display: none;
+}
+html[data-device-text-size] .device-text-word-break {
+  display: inline;
+}
+html[data-device-text-size] .device-text-recovery {
+  flex-grow: 1;
+  flex-basis: min-content;
+  max-inline-size: max-content;
+  overflow-wrap: normal;
+}
+html[data-device-text-size] [data-device-text-catch-up] form {
+  flex: 0 0 auto;
+  max-inline-size: 100%;
+}
+html[data-device-text-size] [data-device-text-catch-up] button {
+  overflow-wrap: normal;
+}
+
+/* At a large root, nested rem insets and a mark cannot own the text's measure.
+   Reuse the compact half-rem inset and put the mark above a full text track.
+   A font-relative container leaves roomy/default compositions alone. */
+html[data-device-text-size] :is([data-device-text-checklist], [data-offline-copy]) {
+  container: device-text-card / inline-size;
+}
+@container device-text-card (max-width: 18rem) {
+  :is(summary, [data-device-text-check-row]) {
+    flex-wrap: wrap;
+    padding-inline: 0.5rem;
+  }
+  :is(summary, [data-device-text-check-row]) > :last-child {
+    flex-basis: 100%;
+  }
+  [data-offline-copy] summary .rounded-full {
+    display: block;
+    max-inline-size: 100%;
+    padding-inline: 0.5rem;
+  }
+}
+html[data-device-text-size] [data-roll-call-panel] {
+  container: device-text-count / inline-size;
+  padding-inline: 0.5rem;
+}
+@container device-text-count (max-width: 24rem) {
+  [data-device-text-count-heading] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  [data-device-text-missing] > li {
+    flex-basis: 100%;
+    min-inline-size: 0;
+  }
+  [data-device-text-missing] a {
+    display: block;
+    padding-inline: 0.25rem;
+  }
+}
+html[data-device-text-size] [data-person-row-flags] > span {
+  display: block;
+  max-inline-size: 100%;
+  padding-inline: 0.25rem;
+}
+html[data-device-text-size] [data-person-row-flags] > span > svg {
+  display: block;
+}
+html[data-device-text-size] [data-device-text-advisory] {
+  flex-wrap: wrap;
+  padding-inline: 0.5rem;
+}
+html[data-device-text-size] [data-device-text-advisory] > div {
+  flex: 1 1 12rem;
+  max-inline-size: 100%;
+}
+html[data-device-text-size] .device-text-station {
+  container: device-text-station / inline-size;
+  padding-inline: 0.25rem;
+}
+@container device-text-station (max-width: 18rem) {
+  .device-text-station-status {
+    flex-direction: column;
+  }
+  .device-text-station h3 a {
+    display: block;
+    /* Reuse the ordinary px-2 hover inset, not another scaled inner gutter. */
+    padding-inline: 8px;
+    margin-inline: -8px;
+  }
+}
+html[data-device-text-size] [data-staff-sidebar] a {
+  flex-wrap: wrap;
+  padding-block: 0.25rem;
+  padding-inline: 0.5rem;
+}
+html[data-device-text-size] [data-device-text-day-heading] {
+  flex-wrap: wrap;
+}
+html[data-device-text-size] [data-device-text-day-heading] > :first-child {
+  flex: 1 1 12rem;
+}
+html[data-device-text-size] [data-device-text-day-heading] > * {
+  max-inline-size: 100%;
+}
+html[data-device-text-size] .device-text-station .whitespace-nowrap {
+  white-space: normal;
+}
+html[data-device-text-size] :is([data-device-text-ledger], [data-device-text-row]) {
+  container: device-text-row / inline-size;
+  flex-wrap: wrap;
+}
+html[data-device-text-size] :is([data-device-text-ledger], [data-device-text-row]) > * {
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+/* Keep a roomy row's original composition. Only rows narrow relative to the
+   enlarged type need the sentence/editor beneath their kind and action. */
+@container device-text-row (max-width: 32rem) {
+  [data-device-text-sentence] {
+    flex-basis: 100%;
+    order: 3;
+  }
+  [data-device-text-ledger="plain"] > [data-device-text-sentence] {
+    order: 0;
+  }
+  [data-device-text-below] {
+    order: 4;
+  }
+  [data-ledger-fix] {
+    order: 2;
+  }
+}
+html[data-device-text-size] [data-ledger-fix] > * {
+  max-inline-size: 100%;
+}
+html[data-device-text-size] [data-trip-tabs] > ul {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5rem), 1fr));
+  grid-auto-flow: row;
+  width: 100%;
+}
+
+/* Two fixed viewport columns left Tomorrow's name and count one letter wide.
+   Keep those horizons on full readable tracks when type needs the room. */
+html[data-device-text-size] .grid:has(> details > [data-device-text-horizon]) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+html[data-device-text-size] .grid:has(> details > [data-device-text-horizon]) > details[open] {
+  grid-column: 1 / -1;
+}
+html[data-device-text-size] [data-device-text-horizon] {
+  column-gap: 0.25rem;
+  padding-inline: 0.25rem;
+}
+
+/* Equal targets remain one horizontally scrolling row. At applied device
+   sizes the labels need more than the 56px baseline track; use the existing
+   phone inset and let a phrase wrap inside its target, never into its neighbor. */
+html[data-device-text-size] .device-text-boat-track {
+  grid-auto-columns: minmax(6rem, 1fr);
+}
+html[data-device-text-size] .device-text-boat-track :is(button, a) {
+  padding-inline: 0.5rem;
+  white-space: normal;
+}
+
+/* Reuse the settings rail's compact, horizontally scrollable reading when
+   enlarged type leaves too little room for its fixed column and an editor.
+   The ordinary frame and skeleton keep their existing geometry. */
+html[data-device-text-size] [data-device-text-settings-container] {
+  display: block;
+  container: device-text-settings / inline-size;
+}
+@container device-text-settings (max-width: 56rem) {
+  .device-text-settings-editor {
+    padding-inline: 0.5rem;
+  }
+  [data-device-text-settings] {
+    display: block;
+    padding-inline: 0;
+  }
+  .device-text-settings-column {
+    width: 100%;
+  }
+  .device-text-settings-frame {
+    position: static;
+    max-height: 60svh;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-bottom-width: 1px;
+    padding-inline: 1rem;
+  }
+  .device-text-settings-content {
+    display: flex;
+    width: max-content;
+    align-items: center;
+    padding-block: 0.5rem;
+  }
+  .device-text-settings-content > div {
+    display: contents;
+  }
+  .device-text-settings-content .settings-rail-label {
+    display: none;
+  }
+  .device-text-settings-content ul {
+    display: flex;
+    width: max-content;
+  }
+  .device-text-settings-content li {
+    flex-shrink: 0;
+  }
+  .device-text-settings-content a {
+    width: max-content;
+    white-space: nowrap;
+  }
+}
+
+/* A scaled logo must not become the Field subgrid's minimum inline track.
+   Bound the existing media tiles to their editor, keep square logos square,
+   and let the media grid use a full readable cell when two cannot fit. */
+html[data-device-text-size] .device-text-settings-editor .grid-cols-2:has(> label > input) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 6rem), 1fr));
+}
+html[data-device-text-size]
+  .device-text-settings-editor
+  :is(.self-end.text-pretty, .content-start) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+html[data-device-text-size] .device-text-settings-editor :is(.w-24, .size-24) {
+  max-inline-size: 100%;
+}
+html[data-device-text-size] .device-text-settings-editor .size-24 {
+  block-size: auto;
+  aspect-ratio: 1;
+}
+html[data-device-text-size] .device-text-settings-editor .border-dashed {
+  padding-inline: 0.25rem;
+}
+html[data-device-text-size] .device-text-settings-editor .content-start > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+html[data-device-text-size] legend {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
 /*
  * Design tokens — the single source of truth for color, motion, and radius.
  * Semantic names only: components never reference raw hex values.

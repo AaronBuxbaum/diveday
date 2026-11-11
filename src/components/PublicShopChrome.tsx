@@ -77,10 +77,11 @@ export function PublicShopHeader({
       stackedOnPhone
       naturalHeight
       leading={
-        /* The flexible identity yields to recovery's natural width. Fixed
-           8px gaps preserve room for a first grapheme plus the full ellipsis
-           when text grows; enlarged gutters must not consume that budget. */
-        <div className="flex min-w-0 items-center justify-between gap-[8px]">
+        /* Identity yields to recovery's natural width. Min-content flex basis
+           lets recovery move to another line only when even its longest word
+           cannot fit beside the name's floor (ADR 20260907-in-your-hands, 19d).
+           Fixed 8px gaps keep the first grapheme and complete ellipsis. */
+        <div className="device-text-public-identity flex min-w-0 items-center justify-between gap-[8px]">
           <Link
             href={publicSchedulePath(shop.slug)}
             // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
@@ -101,7 +102,7 @@ export function PublicShopHeader({
           {recoveryLabel ? (
             <a
               href={recoveryHref}
-              className="inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
+              className="device-text-recovery inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
             >
               {recoveryLabel}
             </a>

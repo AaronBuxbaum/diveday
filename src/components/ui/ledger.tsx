@@ -150,14 +150,22 @@ export function LedgerGroup({
           settings and other folded groups. Horizons opt into the row grammar
           below so their label, count and door match the sibling week row. */}
       {summaryVariant === "row" ? (
-        <summary className={HORIZON_SUMMARY_CLASS}>
+        <summary
+          data-device-text-row=""
+          data-device-text-horizon=""
+          className={HORIZON_SUMMARY_CLASS}
+        >
           {/* The door's own glyph at the edge of a horizon row, beside its
               counts, so Tomorrow and This week read as the same door — turned
               a quarter when the fold is open. */}
           <SummaryLabel id={id} className={HORIZON_LABEL_CLASS}>
             {label}
           </SummaryLabel>
-          {meta != null ? <span className={HORIZON_META_CLASS}>{meta}</span> : null}
+          {meta != null ? (
+            <span data-device-text-sentence="" className={HORIZON_META_CLASS}>
+              {meta}
+            </span>
+          ) : null}
           {caret === "down" ? (
             <DisclosureCaret
               direction="down"
@@ -503,6 +511,7 @@ export function LedgerRow({
 } & LedgerRowDoor) {
   return (
     <Tag
+      data-device-text-ledger={kind ? "kind" : "plain"}
       id={id}
       className={`relative flex items-center gap-3 ${below != null ? "flex-wrap" : ""} ${
         closed ? ledgerRowBoxClass : ledgerRowOpenBoxClass
@@ -526,6 +535,7 @@ export function LedgerRow({
           the row must render byte-for-byte as it always has, so opting a
           surface in can only ever change the phone. */}
       <div
+        data-device-text-sentence=""
         className={
           stacked
             ? kind
@@ -568,7 +578,9 @@ export function LedgerRow({
         </div>
       ) : null}
       {below != null ? (
-        <div className="w-full min-w-0 basis-full max-sm:order-4">{below}</div>
+        <div data-device-text-below="" className="w-full min-w-0 basis-full max-sm:order-4">
+          {below}
+        </div>
       ) : null}
       {href || reserveDoorSlot ? (
         // The door's glyph, last on the line at every width. It sits below

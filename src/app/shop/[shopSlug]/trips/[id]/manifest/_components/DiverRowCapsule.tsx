@@ -27,19 +27,29 @@ export function diverCapsule(
       </span>
     </Badge>
   ) : capsuleKind === "blocked" ? (
-    <Badge tone={readinessStatusTone(diverStatus)}>{readinessStatusText(t, diverStatus)}</Badge>
+    <Badge tone={readinessStatusTone(diverStatus)} wraps className="max-w-full">
+      {readinessStatusText(t, diverStatus)}
+    </Badge>
   ) : capsuleKind === "medicalHold" && medicalHold ? (
-    <Badge tone="warning">{medicalHoldChip(t, medicalHold)}</Badge>
+    <Badge tone="warning" wraps className="max-w-full">
+      {medicalHoldChip(t, medicalHold)}
+    </Badge>
   ) : capsuleKind === "medical" ? (
-    <Badge tone="warning">{medicalWarningChips(t, medicalDays)[0]}</Badge>
+    <Badge tone="warning" wraps className="max-w-full">
+      {medicalWarningChips(t, medicalDays)[0]}
+    </Badge>
   ) : capsuleKind === "minor" ? (
-    <Badge tone="warning" tabularNums>
+    <Badge tone="warning" tabularNums wraps className="max-w-full">
       {t("manifest.minorAge", { age: diver.age ?? 0 })}
     </Badge>
   ) : capsuleKind === "depth" ? (
-    <Badge tone="warning">{t("manifest.depthChip")}</Badge>
+    <Badge tone="warning" wraps className="max-w-full">
+      {t("manifest.depthChip")}
+    </Badge>
   ) : capsuleKind === "birthday" && diver.birthday ? (
-    <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
+    <Badge tone="primary" wraps className="max-w-full">
+      {birthdayCalloutText(t, diver.birthday)}
+    </Badge>
   ) : null;
 }
 
@@ -53,9 +63,13 @@ export function diverTypeBadge(
   // it is not an exception to act on, it is who this body is.
   const seatNote = staffSeatTypeNote(t, diver);
   const typeBadge = seatNote ? (
-    <Badge tone="warning">{seatNote}</Badge>
+    <Badge tone="warning" wraps className="max-w-full">
+      {seatNote}
+    </Badge>
   ) : diver.participantType && diver.participantType !== "diver" ? (
-    <Badge tone="neutral">{staffParticipantTypeLabel(t, diver.participantType)}</Badge>
+    <Badge tone="neutral" wraps className="max-w-full">
+      {staffParticipantTypeLabel(t, diver.participantType)}
+    </Badge>
   ) : null;
   return typeBadge;
 }

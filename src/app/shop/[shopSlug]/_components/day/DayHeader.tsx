@@ -36,7 +36,7 @@ export function DayHeader({
 }) {
   return (
     <header className="mb-8">
-      <div className="flex items-start gap-4">
+      <div data-device-text-day-heading="" className="flex items-start gap-4">
         <div className="min-w-0">
           <p className="text-sm font-medium text-muted">{weekday}</p>
           <h1 className={PAGE_TITLE_CLASS}>{date}</h1>

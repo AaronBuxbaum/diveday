@@ -46,7 +46,13 @@ export function SettingsEditorPage({
         actions={actions}
       />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
-      {unframed ? children : <SectionCard padding="lg">{children}</SectionCard>}
+      {unframed ? (
+        children
+      ) : (
+        <SectionCard padding="lg" className="device-text-settings-editor">
+          {children}
+        </SectionCard>
+      )}
     </main>
   );
 }

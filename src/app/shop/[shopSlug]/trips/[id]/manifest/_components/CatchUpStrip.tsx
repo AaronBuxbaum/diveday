@@ -60,6 +60,7 @@ export function CatchUpStrip({
   return (
     <section
       aria-labelledby={scopedId(idPrefix, "catch-up-label")}
+      data-device-text-catch-up=""
       className="mt-4 rounded-inset bg-surface-sunken p-4"
     >
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">

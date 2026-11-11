@@ -97,7 +97,7 @@ export function HeadCount({
   // dividing by it, and the water cannot rise past the brim.
   const fraction = out > 0 ? Math.min(1, Math.max(0, aboard / out)) : 0;
   return (
-    <div className={`flex items-center gap-3 ${className}`.trim()}>
+    <div className={`flex flex-wrap items-center gap-3 ${className}`.trim()}>
       <div
         role="progressbar"
         aria-label={t("manifest.progressAriaLabel")}
@@ -109,7 +109,7 @@ export function HeadCount({
             ? t("participants.headCount.aboardOfTotalPeople", { aboard, total: out })
             : t("manifest.aboardOfTotal", { aboard, total: out })
         }
-        className={`relative size-20 shrink-0 overflow-hidden rounded-full bg-surface-sunken ${
+        className={`relative aspect-square w-20 max-w-full shrink-0 overflow-hidden rounded-full bg-surface-sunken ${
           over ? "border-2 border-danger" : "border border-border"
         }`}
       >
@@ -144,7 +144,7 @@ export function HeadCount({
           settled, and outside the total above, so neither counts them.
           The words are not `aria-hidden`: the progressbar's text says the
           count, and these say what the count does not. */}
-      <div className="text-base font-semibold tabular-nums">
+      <div className="min-w-0 text-base font-semibold tabular-nums">
         <p aria-hidden="true">
           {people
             ? t("participants.headCount.ofTotalAboardPeople", { total: out })

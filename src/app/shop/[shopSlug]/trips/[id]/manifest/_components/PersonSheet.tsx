@@ -144,6 +144,7 @@ export function PersonSheet({
         ref={sheetRef}
         id={sheetId}
         role="dialog"
+        data-person-sheet=""
         {...dialogProps}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
@@ -238,8 +239,10 @@ export function PersonSheet({
           where a mark hung 10px from the top of an `items-start` row stayed
           put while the index and caret moved to the new middle: 19px above
           them on a phone (K-266). The sheet itself is portalled, so nothing
-          else shares this row. */}
-      <div className="flex items-center">
+          else shares this row. At large device text sizes, targets may wrap
+          onto separate lines rather than squeeze the name or the mark
+          (ADR 20260907-in-your-hands, 19d). */}
+      <div data-person-row="" className="flex items-center">
         <button
           ref={triggerRef}
           type="button"
@@ -248,13 +251,14 @@ export function PersonSheet({
           aria-controls={sheetId}
           aria-label={triggerLabel}
           data-hydrated={hydrated ? "true" : undefined}
+          data-person-row-trigger=""
           className={triggerClassName}
           onClick={() => setOpen(true)}
         >
           {trigger}
           {/* `size-4`, not the default `size-3`: a 4×8px tick beside an 18px
               semibold name read as a stray mark (K-549). */}
-          <DisclosureCaret className="size-4 shrink-0" />
+          <DisclosureCaret className="size-4 shrink-0 person-row-caret" />
         </button>
         {/* The mark's own box. `ps-3` is the real gap between two adjacent
             targets that do opposite things (`ROW_DISCLOSURE_SUMMARY_CLASS`).
