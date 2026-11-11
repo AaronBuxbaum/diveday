@@ -10,6 +10,7 @@ import { type CrewRollCallSubject, crewIsAccountedFor, crewRollCallCounts } from
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { AFTER_DIVE_GAP_REASONS, type RollCallGapReason } from "@/lib/roll-call-gaps";
 import { shopDayOf } from "@/lib/shop-day";
+import { boatStageOf, finalHomeSaid, type MeetingWindow } from "@/lib/trip-phase";
 import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
 import { hasReturned, hasSailed } from "@/lib/trips";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -127,10 +128,11 @@ export type CloseoutTripInput = {
   crew: readonly CrewRollCallSubject[];
   /**
    * The crew's last tap on the manifest (`src/lib/trip-stages.ts`), or null.
-   * Read through `liveStageOf`, never raw: a word the crew stopped maintaining
-   * stops speaking, and a stale one must not move this reading either way.
+   * Read through the staff boat-stage rule: a late boat keeps its recorded
+   * word while the roster and Today still count it as out.
    */
   stage?: TripStageReading | null;
+  meetingWindows?: readonly MeetingWindow[];
   /** Dives whose actual site was not the planned one. */
   planChanges?: readonly CloseoutPlanChange[];
   /**
@@ -274,9 +276,8 @@ export type DayCloseoutState = {
 };
 
 /**
- * How one departure reads tonight, in strict precedence: an open head count
- * first, then the clock, and only then the crew's own word — which may settle
- * a station the clock would leave open, and never reopen one it has closed.
+ * How one departure reads tonight: unresolved roll calls first, then the
+ * staff boat reading, with the clock as fallback when no crew word speaks.
  */
 function departureStatus(
   trip: CloseoutTripInput,
@@ -314,37 +315,24 @@ function departureStatus(
   if (!hasSailed(trip.startsAt, now)) {
     return { status: "not_departed", ...none };
   }
-  if (!hasReturned(trip.endsAt, now)) {
-    // **A crew tap settles a station the clock would leave open; it never
-    // reopens one the clock has closed** (issue #1480). The late-arrival hour
-    // is there so a *time-based inference* cannot call a boat home early; a
-    // crew member tapping Home at the rail is not an inference, it is the
-    // statement the buffer was standing in for, so `home` promotes. The
-    // asymmetry is the rule and not a hole in it: no stage demotes, and a
-    // stale or contrary stage is silence rather than a contradiction.
-    // `liveStageOf` is what stops a tap outliving its shelf life
-    // (`stage_stale` on the departure clock is two buffers).
-    //
-    // Which leaves the overdue hour — from `endsAt` plus one buffer, where the
-    // clock starts saying home, to the clock's `stage_stale` rung, where
-    // the word stops speaking — in which this branch no longer runs, a live
-    // `underway` is outvoted, and the departure still reads `all_home`. What
-    // keeps that from being a boat lost quietly is the gap branch above, which
-    // returns first: this line is only reached over a departure whose head
-    // count is complete, every diver counted back aboard, and a shop running
-    // no roll call gets `no_roll_call` and never arrives here at all. Read the
-    // other way, a tap the crew forgot to update would hold a finished day
-    // open until the word went stale.
-    //
-    // `hasSailed` above carries no matching promotion either: a crew tapping
-    // Boarding at 07:50 on an 08:00 boat reads `not_departed` until 09:00.
-    // Nothing turns on that — `not_departed` and `still_out` are both
-    // unsettled, and neither ends the day — so it stays one clock reading
-    // rather than a second rule to keep in step with it.
-    const recorded = liveStageOf(trip.stage ?? null, trip.endsAt, now);
-    if (recorded?.stage !== "home") {
-      return { status: "still_out", ...none };
-    }
+  // A completed head count means everybody is back aboard, not that the
+  // boat reached the dock. Use the same crew word as the roster and Today’s
+  // boats-out reading, including when the scheduled return is overdue.
+  const reading = {
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    now,
+    timeZone,
+    stage: trip.stage ?? null,
+    cancelled: false,
+    meetingWindows: trip.meetingWindows,
+  };
+  const recorded = boatStageOf(reading);
+  if (
+    (recorded && recorded.stage !== "home") ||
+    (!hasReturned(trip.endsAt, now) && !finalHomeSaid(reading))
+  ) {
+    return { status: "still_out", ...none };
   }
   return { status: "all_home", ...none };
 }
@@ -754,7 +742,9 @@ export function assembleEveningClose(
   const crew = stations.reduce((total, station) => total + station.crewSailed, 0);
   const out = divers + crew;
   const back = stations.reduce((total, station) => total + station.back + station.crewBack, 0);
-  const closing = stations.length > 0 && stations.every((station) => station.settled);
+  const closing =
+    stations.length > 0 &&
+    stations.every((station) => station.settled && station.status !== "still_out");
   const allHome =
     closing &&
     out > 0 &&
