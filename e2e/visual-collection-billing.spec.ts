@@ -15,9 +15,13 @@ test.use(VISUAL_STEP_BOUNDS);
 const t = staffTranslator("en-US");
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
-    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "collection-review-divers",
+    });
     test.describe("billing statement", () => {
-      test.use({ privateShopFacts: ["collectionBilling"] });
+      test.use({ privateShopFacts: ["collectionBilling"], privateShopDemo: false });
       test(`native collection statements and refund credits (${scheme})`, async ({
         page,
         privateShop,
@@ -42,6 +46,31 @@ for (const scheme of ["light", "dark"] as const) {
           .selectOption("refunded");
         await expect(row.getByLabel(t("trips.roster.paymentRefundAmountLabel"))).toBeVisible();
         await capture(page, "roster-external-partial-refund", scheme);
+      });
+    });
+    test.describe("new cash after a return", () => {
+      test.use({ privateShopFacts: ["cashReceipt"] });
+      test(`new receipt amount stays blank after a partial return (${scheme})`, async ({
+        page,
+        privateShop,
+      }) => {
+        const fact = privateShop.values.cashReceipt as { tripId: string; name: string };
+        await page.goto(`/shop/${privateShop.slug}/trips/${fact.tripId}`);
+        const row = page.locator("li").filter({ hasText: fact.name }).filter({ visible: true });
+        await openRosterDetails(row);
+        const status = row.getByRole("combobox", { name: t("trips.roster.paymentStatusLabel") });
+        await status.selectOption("refunded");
+        await row.getByLabel(t("trips.roster.paymentRefundAmountLabel")).fill("30");
+        await row.getByRole("button", { name: "Update", exact: true }).click();
+        await page.waitForURL(/notice=payment/);
+        await expect(status).toHaveValue("partly_refunded");
+        // Capture the persisted form, not the action's transient success toast.
+        await page.goto(`/shop/${privateShop.slug}/trips/${fact.tripId}`);
+        await openRosterDetails(row);
+        await expect(status).toHaveValue("partly_refunded");
+        await status.selectOption("paid");
+        await expect(row.getByLabel(t("trips.roster.paymentAmountLabel"))).toBeEmpty();
+        await capture(page, "roster-cash-receipt-after-return", scheme);
       });
     });
     test.describe("external balance", () => {

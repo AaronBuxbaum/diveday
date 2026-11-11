@@ -28,7 +28,10 @@ function paymentMarkForSeat(
   return {
     paymentEntryId: markFacts?.paymentEntryId ?? null,
     manualHeldCents: markFacts?.manualHeldCents ?? 0,
-    amountCents: markFacts?.balanceOwedCents ?? markFacts?.mark?.amountCents ?? null,
+    amountCents:
+      paymentStatus === "partly_refunded"
+        ? null
+        : (markFacts?.balanceOwedCents ?? markFacts?.mark?.amountCents ?? null),
     currency: markCurrency,
     locale,
     // On a deposit, the field opens on the balance; the hint says that is

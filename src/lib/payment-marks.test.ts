@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addsToHeldMoney,
   heldAfterMark,
   markNeedsWriteOffRight,
   markRetryParams,
@@ -272,4 +273,23 @@ describe("splitPartyPayment", () => {
       "split",
     );
   });
+});
+
+describe("additional external receipts", () => {
+  it.each([
+    ["deposit_paid", null, 5_000, 5_000, true],
+    ["deposit_paid", "stripe", 5_000, 0, true],
+    ["deposit_paid", "mixed", 9_000, 4_000, true],
+    ["deposit_paid", "package", 5_000, 0, false],
+    ["partly_refunded", null, 9_000, 9_000, true],
+    ["partly_refunded", "mixed", 7_000, 7_000, true],
+    ["partly_refunded", "mixed", 9_000, 4_000, false],
+    ["partly_refunded", "stripe", 5_000, 0, false],
+    ["paid", null, 12_000, 12_000, false],
+  ] as const)(
+    "recognizes %s/%s with held%d and manual%d",
+    (status, provider, amountCents, manualHeldCents, expected) => {
+      expect(addsToHeldMoney({ status, provider, amountCents, manualHeldCents })).toBe(expected);
+    },
+  );
 });

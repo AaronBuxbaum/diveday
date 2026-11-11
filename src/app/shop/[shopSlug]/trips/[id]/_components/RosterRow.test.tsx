@@ -151,6 +151,8 @@ describe("RosterRow", () => {
     expect(
       Array.from(select.querySelectorAll("option")).some((option) => option.value === "refunded"),
     ).toBe(true);
+    fireEvent.change(select, { target: { value: "paid" } });
+    expect(screen.getByLabelText(t("trips.roster.paymentAmountLabel"))).toHaveValue("");
   });
 
   it("draws one seat as a deep-linkable list item under its diver's name", () => {

@@ -15,6 +15,11 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+import {
+  moneyForm,
+  paymentForm,
+  unpaidSeatAt120,
+} from "@/test/substrate-fixtures/db/roster-payment-action.test-support";
 import { shopClock } from "../../../../../features/shop-clock/rules";
 import { TRIP_CONFIG_ACTIONS } from "./action-gate-test-fixtures";
 
@@ -163,14 +168,6 @@ function requirementsForm(
   if (toggles.requiresWaiver) formData.set("requiresWaiver", "on");
   if (toggles.requiresPayment) formData.set("requiresPayment", "on");
   return formData;
-}
-
-/** One booking's payment submission, as the roster's control posts it. */
-function paymentForm(bookingId: string, status: string): FormData {
-  const data = new FormData();
-  data.set("bookingId", bookingId);
-  data.set("status", status);
-  return data;
 }
 
 /** Strip a departure's price, to reach the unpriced-and-payment-gated state. */
@@ -909,11 +906,23 @@ describe("money on the trip page", () => {
       recordedByPersonId: captain,
     });
 
-    // A Paid mark with no money in it is a free seat by another name.
-    await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("unpaid")));
-    const noMoney = await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("paid")));
+    // Crew cannot erase cash by relabeling it unpaid.
+    expect(
+      await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("unpaid"))),
+    ).toContain("notice=not-authorized");
+    expect(await getBookingPayment(db, shop.id, booking.id)).toMatchObject({
+      status: "paid",
+      amountCents: 12_000,
+    });
+    // A Paid mark with no money on a fresh seat is a write-off.
+    const freshBookingId = await unpaidSeatAt120(db, shop.id, tripId);
+    const noMoney = await redirectedTo(() =>
+      markPaymentAction(shop.slug, tripId, paymentForm(freshBookingId, "paid")),
+    );
     expect(noMoney).toContain("notice=payment-amount");
-    expect((await getBookingPayment(db, shop.id, booking.id))?.status).toBe("unpaid");
+    expect((await getBookingPayment(db, shop.id, freshBookingId))?.status ?? "unpaid").toBe(
+      "unpaid",
+    );
 
     // A free seat is not.
     const waived = await redirectedTo(() => markPaymentAction(shop.slug, tripId, form("waived")));
@@ -971,27 +980,6 @@ describe("money on the trip page", () => {
       recordedByPersonId: owner,
     });
   });
-
-  /** A fresh unpaid seat on a $120 departure, so every balance below is known. */
-  async function unpaidSeatAt120(db: AppDb, shopId: string, tripId: string) {
-    await db.update(trips).set({ priceCents: 12_000 }).where(eq(trips.id, tripId));
-    const seated = await createBooking(db, {
-      actor: "staff",
-      shopId,
-      tripId,
-      fullName: "Ines Calloway",
-      email: "ines.calloway@example.com",
-    });
-    if (!seated.ok) throw new Error("seat not booked");
-    return seated.bookingId;
-  }
-
-  function moneyForm(bookingId: string, status: string, amount: string, method = "cash") {
-    const data = paymentForm(bookingId, status);
-    data.set("amount", amount);
-    data.set("method", method);
-    return data;
-  }
 
   /**
    * **A hand mark never touches a seat paid online** (security review of batch
@@ -1072,9 +1060,9 @@ describe("money on the trip page", () => {
       amountCents: 1,
     });
     // The rest of the fare, in full, is crew work again.
-    await redirectedTo(() =>
-      markPaymentAction(shop.slug, tripId, moneyForm(bookingId, "paid", "119.99")),
-    );
+    const balance = moneyForm(bookingId, "paid", "119.99");
+    balance.set("paymentEntryId", (await getBookingPayment(db, shop.id, bookingId))?.id ?? "");
+    await redirectedTo(() => markPaymentAction(shop.slug, tripId, balance));
     expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
       status: "paid",
       amountCents: 12_000,
@@ -1112,7 +1100,9 @@ describe("money on the trip page", () => {
     );
 
     signIn(shop, owner);
-    await redirectedTo(() => markPaymentAction(shop.slug, tripId, paymentForm(bookingId, "paid")));
+    const writeOff = paymentForm(bookingId, "paid");
+    writeOff.set("paymentEntryId", (await getBookingPayment(db, shop.id, bookingId))?.id ?? "");
+    await redirectedTo(() => markPaymentAction(shop.slug, tripId, writeOff));
     expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
       status: "paid",
       amountCents: 5_000,

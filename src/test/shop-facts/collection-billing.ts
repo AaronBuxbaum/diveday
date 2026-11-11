@@ -155,7 +155,7 @@ export async function seedCollectionBilling(
   };
 }
 
-export async function seedMixedDeposit(db: AppDb, shop: { id: string }, now: Date) {
+async function collectionSeat(db: AppDb, shop: { id: string }, now: Date) {
   const [trip] = await db
     .select()
     .from(trips)
@@ -181,13 +181,32 @@ export async function seedMixedDeposit(db: AppDb, shop: { id: string }, now: Dat
     email: "casey-collection@example.test",
   });
   if (!seated.ok) throw new FactRefused(seated.reason);
+  return { tripId: trip.id, bookingId: seated.bookingId, name: "Casey Colton" };
+}
+
+export async function seedCashReceipt(db: AppDb, shop: { id: string }, actorId: string, now: Date) {
+  const fact = await collectionSeat(db, shop, now);
+  await setBookingPayment(db, {
+    shopId: shop.id,
+    bookingId: fact.bookingId,
+    status: "paid",
+    currency: "usd",
+    amountCents: 12_000,
+    method: "cash",
+    recordedByPersonId: actorId,
+  });
+  return fact;
+}
+
+export async function seedMixedDeposit(db: AppDb, shop: { id: string }, now: Date) {
+  const fact = await collectionSeat(db, shop, now);
   const [checkout] = await db
     .insert(bookingCheckouts)
     .values({
       shopId: shop.id,
-      tripId: trip.id,
+      tripId: fact.tripId,
       stripeAccountId: "acct_visual_collection",
-      stripeSessionId: `cs_visual_${seated.bookingId}`,
+      stripeSessionId: `cs_visual_${fact.bookingId}`,
       currency: "usd",
       amountPerDiverCents: 5_000,
       totalCents: 5_000,
@@ -198,7 +217,7 @@ export async function seedMixedDeposit(db: AppDb, shop: { id: string }, now: Dat
   await db.insert(bookingCheckoutBookings).values({
     shopId: shop.id,
     checkoutId: checkout.id,
-    bookingId: seated.bookingId,
+    bookingId: fact.bookingId,
     tripCents: 5_000,
   });
   await markCheckoutPaidBySessionId(
@@ -208,7 +227,7 @@ export async function seedMixedDeposit(db: AppDb, shop: { id: string }, now: Dat
     5_000,
     0,
   );
-  return { tripId: trip.id, bookingId: seated.bookingId, name: "Casey Colton" };
+  return fact;
 }
 
 /** Mixed receipt ready for the external-return control, using the product writer. */

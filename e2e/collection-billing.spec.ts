@@ -6,7 +6,7 @@ import { openRosterDetails } from "./helpers";
 const t = staffTranslator("en-US");
 
 test.describe("recorded collection statements", () => {
-  test.use({ privateShopFacts: ["collectionBilling"] });
+  test.use({ privateShopFacts: ["collectionBilling"], privateShopDemo: false });
   test("shows original-rate credits and native currencies without combining them", async ({
     page,
     privateShop,
@@ -106,5 +106,32 @@ test.describe("external partial returns", () => {
     await page.reload();
     await openRosterDetails(row);
     await expect(status).toHaveValue("partly_refunded");
+  });
+});
+
+test.describe("cash receipt after a partial return", () => {
+  test.use({ privateShopFacts: ["cashReceipt"] });
+  test("adds only new cash without erasing money still held", async ({ page, privateShop }) => {
+    const fact = privateShop.values.cashReceipt as { tripId: string; name: string };
+    await page.goto(`/shop/${privateShop.slug}/trips/${fact.tripId}`);
+    const row = page.locator("li").filter({ hasText: fact.name }).filter({ visible: true });
+    await openRosterDetails(row);
+    const status = row.getByRole("combobox", { name: t("trips.roster.paymentStatusLabel") });
+    await status.selectOption("refunded");
+    await row.getByLabel(t("trips.roster.paymentRefundAmountLabel")).fill("30");
+    await row.getByRole("button", { name: "Update", exact: true }).click();
+    await page.waitForURL(/notice=payment/);
+    await expect(status).toHaveValue("partly_refunded");
+    await status.selectOption("paid");
+    const amount = row.getByLabel(t("trips.roster.paymentAmountLabel"));
+    await expect(amount).toBeEmpty();
+    await amount.fill("30");
+    await row.getByRole("radio", { name: "Cash", exact: true }).check();
+    await row.getByRole("button", { name: "Update", exact: true }).click();
+    await page.waitForURL(/notice=payment/);
+    await expect(status).toHaveValue("paid");
+    await expect(
+      row.getByText(formatMoneyCents(12_000, "usd", "en-US"), { exact: false }),
+    ).toBeVisible();
   });
 });

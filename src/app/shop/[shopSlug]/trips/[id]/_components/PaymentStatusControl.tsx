@@ -14,7 +14,7 @@ import {
 /**
  * Every value the column can hold — which is not the same as every value this
  * control may *set*. `partly_refunded` is here so a seat that reached it
- * through an actual Stripe partial refund still shows its own word in the
+ * through a recorded partial refund still shows its own word in the
  * select (the filter below always keeps the current status), and it is
  * deliberately absent from `PAYMENT_STATUSES_ALL` in `RosterSection`, because
  * no amount of hand-setting a dropdown moves money (issue #699).

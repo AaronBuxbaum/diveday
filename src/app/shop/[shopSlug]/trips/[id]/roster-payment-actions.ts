@@ -13,6 +13,7 @@ import { revalidateAndRedirect } from "@/features/navigation";
 import { paymentMarkFactsForTrip } from "@/features/payment-marks";
 import { requireShopSurface } from "@/features/session";
 import {
+  addsToHeldMoney,
   heldAfterDepositReceipt,
   heldAfterMark,
   markNeedsWriteOffRight,
@@ -42,7 +43,7 @@ const PAYMENT_STATUS_CLASS: Record<PaymentStatus, "record" | "write_off"> = {
   // Money went back out, so changing away from it is a decision about money
   // even though some is still held. Note it is absent from
   // `paymentStatusSchema` above on purpose: `partly_refunded` is only ever
-  // reached by an actual Stripe partial refund, never set by hand from the
+  // reached by a recorded partial refund, never selected directly from the
   // roster select (issue #699).
   partly_refunded: "write_off",
   refunded: "write_off",
@@ -126,12 +127,11 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // not already hold: a staffer recording the cash on a seat already marked
   // paid is a real write, and a re-submit with the amount left blank is not
   // a request to wipe one.
-  const depositReceipt =
-    current?.status === "deposit_paid" &&
-    (current.provider === null || current.provider === "stripe" || current.provider === "mixed") &&
-    (mark.kind === "money" || (submitted === "paid" && mark.kind === "no_money"));
-  if (depositReceipt && version === null) redirect(noticeUrl(back, "invalid", { bid: bookingId }));
-  const held = depositReceipt
+  const incrementalReceipt =
+    current && addsToHeldMoney(current) && (mark.kind === "money" || mark.kind === "no_money");
+  if (incrementalReceipt && version === null)
+    redirect(noticeUrl(back, "invalid", { bid: bookingId }));
+  const held = incrementalReceipt
     ? heldAfterDepositReceipt(current, mark as Extract<typeof mark, { kind: "money" | "no_money" }>)
     : heldAfterMark(current ?? null, submitted, mark);
   if (
@@ -155,10 +155,10 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
     submitted === "refunded" &&
     (current?.manualHeldCents ?? 0) > 0 &&
     (current?.provider === null || current?.provider === "mixed");
-  if (current?.provider && !depositReceipt && !externalOnlyMixed && !externalRefund) {
+  if (current?.provider && !incrementalReceipt && !externalOnlyMixed && !externalRefund) {
     redirect(noticeUrl(back, "payment-online", { bid: bookingId }));
   }
-  if (depositReceipt && current.currency !== currency) {
+  if (incrementalReceipt && current.currency !== currency) {
     redirect(noticeUrl(back, "invalid", { bid: bookingId }));
   }
   const nextManualHeldCents =

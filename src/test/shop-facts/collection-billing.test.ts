@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { getBookingPayment } from "@/db/payments";
-import { shopSubscriptions } from "@/db/schema";
+import { collectionEntries, shopSubscriptions } from "@/db/schema";
 import { getBillingPercentMonth } from "@/features/billing-page";
 import { paymentMarkFactsForTrip } from "@/features/payment-marks";
 import { shopPricing } from "@/features/shop-subscriptions";
@@ -11,6 +11,7 @@ import { utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import {
+  seedCashReceipt,
   seedCollectionBilling,
   seedMixedCashReceipt,
   seedMixedDeposit,
@@ -18,6 +19,24 @@ import {
 
 const ctx = fileScopedShopContext();
 describe("collection billing browser facts", () => {
+  it("opens a real cash receipt without creating an online capture", async () => {
+    const { db, shop } = ctx;
+    const actor = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const fact = await seedCashReceipt(db, shop, actor, nowDate());
+    expect(await getBookingPayment(db, shop.id, fact.bookingId)).toMatchObject({
+      provider: null,
+      amountCents: 12_000,
+      manualHeldCents: 12_000,
+    });
+    expect(
+      (
+        await db
+          .select()
+          .from(collectionEntries)
+          .where(eq(collectionEntries.sourceId, fact.bookingId))
+      ).map((entry) => entry.amountCents),
+    ).toEqual([12_000]);
+  });
   it("builds real closed credit statements and separate native currency estimates", async () => {
     const { db, shop } = ctx;
     const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);

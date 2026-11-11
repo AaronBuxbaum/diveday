@@ -15,6 +15,7 @@ import { bringEveryBoatHome, eveningArgs } from "./bring-every-boat-home";
 import { cancelADepartureSomebodyPaidFor } from "./cancel-a-departure-somebody-paid-for";
 import { carrySomebodyWhoIsNotDiving } from "./carry-somebody-who-is-not-diving";
 import {
+  seedCashReceipt,
   seedCollectionBilling,
   seedMixedCashReceipt,
   seedMixedDeposit,
@@ -235,6 +236,7 @@ const FACTS = {
   boatPhoto: privateOnly(({ db, shop }) => giveTheFirstBoatAPhoto(db, shop)),
   backupFailed: ({ db, shop, now }) => failTheLatestBackup(db, shop, now),
   staffSessionsSeenNow: privateOnly(({ db, shop, now }) => pinStaffSessionsSeenNow(db, shop, now)),
+  cashReceipt: privateOnly(({ db, shop, actorId, now }) => seedCashReceipt(db, shop, actorId, now)),
   collectionBilling: privateOnly(({ db, shop, actorId, now }) =>
     seedCollectionBilling(db, shop, actorId, now),
   ),

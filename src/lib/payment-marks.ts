@@ -302,7 +302,25 @@ export function readPartyAsk(raw: {
   return { leadBookingId, amountCents, method: raw.method };
 }
 
-/** A deposit's next receipt keeps online money and manually received money separate. */
+/** Whether a new manual receipt must add to money already held. */
+export function addsToHeldMoney(previous: {
+  status: string;
+  amountCents: number | null;
+  manualHeldCents?: number;
+  provider: string | null;
+}): boolean {
+  if (previous.status === "deposit_paid")
+    return (
+      previous.provider === null || previous.provider === "stripe" || previous.provider === "mixed"
+    );
+  return (
+    previous.status === "partly_refunded" &&
+    (previous.provider === null ||
+      (previous.provider === "mixed" && previous.amountCents === previous.manualHeldCents))
+  );
+}
+
+/** An additional receipt keeps online money and manually received money separate. */
 export function heldAfterDepositReceipt(
   previous: {
     status: string;
