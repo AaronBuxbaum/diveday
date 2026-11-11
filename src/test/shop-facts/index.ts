@@ -33,6 +33,7 @@ import {
   returningDiverArgs,
 } from "./diver-states";
 import { emptyTheBoard, offSeasonArgs } from "./empty-the-board";
+import { executedDepthArgs, seedExecutedDepth } from "./executed-depth";
 import { expireThePendingSignIn } from "./expire-the-pending-sign-in";
 import { failTheFlySafeCorrections } from "./fail-the-fly-safe-corrections";
 import { flagFourUnitsOnTheReefBoat } from "./flag-four-units-on-the-reef-boat";
@@ -231,6 +232,11 @@ const FACTS = {
   fiveDivePrint: ({ db, shop, now }) => logFiveDivesForPrint(db, shop, now),
   flySafeFollowUp: ({ db, shop, now }) => failTheFlySafeCorrections(db, shop, now),
   futureCrew: privateOnly(({ db, shop, now }) => crewARatingThatStartsTomorrow(db, shop, now)),
+  executedDepth: withArgs(
+    executedDepthArgs,
+    ({ db, shop }, args) => seedExecutedDepth(db, shop.id, args),
+    { privateOnly: true },
+  ),
   mixedDepth: ({ db, shop, now }) => markTwoDepthsOnOneCharter(db, shop, now),
   mixedTraining: ({ db, shop, now }) => bookOneInstructorTwice(db, shop, now),
   boatPhoto: privateOnly(({ db, shop }) => giveTheFirstBoatAPhoto(db, shop)),
