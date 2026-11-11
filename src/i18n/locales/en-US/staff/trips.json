@@ -1000,16 +1000,18 @@
     "kinds": {
       "litter_kg": "Litter collected (kg)",
       "litter_items": "Litter collected (items)",
-      "line_m": "Fishing line removed (m)"
+      "line_m": "Fishing line removed (m)",
+      "lionfish_count": "Lionfish removed (fish)"
     },
     "errors": {
-      "invalid": "Enter a positive measured quantity, with whole numbers for items. Keep the location under 120 characters and the note under 500.",
+      "invalid": "Enter a positive measured quantity, with whole numbers for items and fish. Keep the location under 120 characters and the note under 500.",
       "not_authorized": "You no longer have permission to record actions for this shop.",
       "unavailable": "This departure or feature is no longer available.",
       "not_returned": "Record actions after the departure has returned.",
       "stale": "This record changed. Refresh the page before editing it again."
     },
     "deleted": "Conservation record deleted.",
-    "undoFailed": "This record could not be restored. It may have changed, or Undo is no longer available."
+    "undoFailed": "This record could not be restored. It may have changed, or Undo is no longer available.",
+    "lionfishHint": "Record lionfish removed under local invasive-species rules. Follow local permit and handling requirements."
   }
 }

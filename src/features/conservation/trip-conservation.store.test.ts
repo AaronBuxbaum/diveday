@@ -1,5 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { loadShopExportBundleInput } from "../../db/export";
+import { table } from "../../db/export-bundle-table.test-support";
 import {
   people,
   personRoles,
@@ -208,3 +210,64 @@ it("undo restores only the exact deleted revision and rechecks the feature switc
   expect(await tripConservationFacts(db, shop.id, trip.id)).toEqual([{ id: row.id, ...fact }]);
   expect(await recordTripConservation(db, restore)).toEqual({ ok: false, reason: "stale" });
 });
+
+it("keeps lionfish counts distinct through correction, deletion, restoration and export", async () => {
+  const { db, shop, trip, input } = await fixture();
+  const lionfish = {
+    kind: "lionfish_count",
+    quantity: 3,
+    location: "Reef",
+    note: "Local removal program",
+  };
+  expect(
+    await recordTripConservation(db, { ...input, fact: { ...lionfish, quantity: 1.5 } }),
+  ).toEqual({ ok: false, reason: "invalid" });
+  expect(await recordTripConservation(db, { ...input, fact: lionfish })).toEqual({ ok: true });
+  const panel = await getTripConservationPanel(db, shop.id, trip.id, input.personId);
+  const row = panel?.rows[0];
+  if (!row) throw new Error("Expected lionfish record");
+  expect(
+    await recordTripConservation(db, {
+      ...input,
+      id: row.id,
+      revision: 1,
+      fact: { ...lionfish, quantity: 4 },
+    }),
+  ).toEqual({ ok: true });
+  expect(await tripConservationFacts(db, shop.id, trip.id)).toEqual([
+    { id: row.id, ...lionfish, quantity: 4 },
+  ]);
+  expect(
+    await recordTripConservation(db, { ...input, id: row.id, revision: 2, operation: "delete" }),
+  ).toEqual({ ok: true });
+  expect(await tripConservationFacts(db, shop.id, trip.id)).toEqual([]);
+  const exported = await loadShopExportBundleInput(db, shop.id);
+  if (!exported) throw new Error("Expected shop export");
+  const csv = table(exported, "trip_conservation.csv");
+  const exportedRow = csv.rows.find((values) => values[0] === row.id);
+  expect(exportedRow?.[csv.header.indexOf("kind")]).toBe("lionfish_count");
+  expect(exportedRow?.[csv.header.indexOf("quantity")]).toBe(4);
+  expect(exportedRow?.[csv.header.indexOf("deleted_at")]).not.toBeNull();
+  expect(
+    await recordTripConservation(db, { ...input, id: row.id, revision: 3, operation: "restore" }),
+  ).toEqual({ ok: true });
+  expect(await tripConservationFacts(db, shop.id, trip.id)).toEqual([
+    { id: row.id, ...lionfish, quantity: 4 },
+  ]);
+});
+
+it.each([0, -1, 1.5, 100001])(
+  "the database refuses an invalid lionfish count %s",
+  async (quantity) => {
+    const { db, shop, trip, owner } = await fixture();
+    await expect(
+      db.insert(tripConservation).values({
+        shopId: shop.id,
+        tripId: trip.id,
+        recordedByPersonId: owner.id,
+        kind: "lionfish_count",
+        quantity,
+      }),
+    ).rejects.toThrow();
+  },
+);

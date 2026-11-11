@@ -1,0 +1,65 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "50c7f499-ec85-4504-a72f-7843db697da5",
+  "prevIds": [
+    "5de38def-cdeb-45dc-aff8-5a562912d95a"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_conservation"
+      ],
+      "writes": [
+        "s|ck|public.trip_conservation.trip_conservation_kind"
+      ],
+      "reads": [
+        "n|tbl|public.trip_conservation",
+        "n|sch|public",
+        "n|col|public.trip_conservation.kind",
+        "e|col|public.trip_conservation.kind"
+      ],
+      "sqlHash": "cad97eb5b3866ff7"
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_conservation"
+      ],
+      "writes": [
+        "s|ck|public.trip_conservation.trip_conservation_quantity"
+      ],
+      "reads": [
+        "n|tbl|public.trip_conservation",
+        "n|sch|public",
+        "n|col|public.trip_conservation.quantity",
+        "n|col|public.trip_conservation.kind",
+        "e|col|public.trip_conservation.quantity",
+        "e|col|public.trip_conservation.kind"
+      ],
+      "sqlHash": "c89eff5cefaff6d1"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"trip_conservation\",\"trip_conservation_kind\"]",
+      "set": {
+        "value": "\"kind\" in ('litter_kg', 'litter_items', 'line_m', 'lionfish_count')"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"trip_conservation\",\"trip_conservation_quantity\"]",
+      "set": {
+        "value": "\"quantity\" > 0 and \"quantity\" <= 100000 and (\"kind\" not in ('litter_items', 'lionfish_count') or \"quantity\" = trunc(\"quantity\"::numeric))"
+      }
+    }
+  ]
+}

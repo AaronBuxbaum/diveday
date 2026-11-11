@@ -180,7 +180,9 @@
   per-reader, per-departure manifest catch-up marks, so acknowledging one does not clear the other.
 
 - **Conservation record** — a shop-attributed, quantified action on a returned departure: litter
-  collected in kilograms or whole items, or fishing line removed in meters. Staff can record,
+  collected in kilograms or whole items, fishing line removed in meters, or lionfish removed as a
+  whole-fish count under local invasive-species rules. Lionfish counts record removal or collection,
+  not sightings or an assumption that lionfish are invasive everywhere. Staff can record,
   correct and delete entries in the departure’s Details tab. A revision refuses stale edits;
   deletion is soft. Live entries appear on that departure’s diver recap with the shop’s optional
   location and collection note, never as an inferred ecological benefit or a diver’s achievement.

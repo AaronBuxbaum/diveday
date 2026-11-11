@@ -1000,16 +1000,18 @@
     "kinds": {
       "litter_kg": "Residuos recogidos (kg)",
       "litter_items": "Residuos recogidos (objetos)",
-      "line_m": "Sedal recogido (m)"
+      "line_m": "Sedal recogido (m)",
+      "lionfish_count": "Peces león recolectados (peces)"
     },
     "errors": {
-      "invalid": "Ingresa una cantidad medida positiva, con números enteros para objetos. Usa menos de 120 caracteres para el lugar y de 500 para la nota.",
+      "invalid": "Ingresa una cantidad medida positiva, con números enteros para objetos y peces. Usa menos de 120 caracteres para el lugar y de 500 para la nota.",
       "not_authorized": "Ya no tienes permiso para registrar acciones de este centro.",
       "unavailable": "Esta salida o función ya no está disponible.",
       "not_returned": "Registra acciones después del regreso de la salida.",
       "stale": "Este registro cambió. Actualiza la página antes de volver a editarlo."
     },
     "deleted": "Registro de conservación eliminado.",
-    "undoFailed": "No se pudo restaurar este registro. Puede haber cambiado o la opción Deshacer ya no está disponible."
+    "undoFailed": "No se pudo restaurar este registro. Puede haber cambiado o la opción Deshacer ya no está disponible.",
+    "lionfishHint": "Registra los peces león recolectados según las normas locales sobre especies invasoras. Sigue los permisos y las indicaciones de manejo locales."
   }
 }

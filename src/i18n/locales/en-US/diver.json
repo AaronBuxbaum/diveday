@@ -823,7 +823,8 @@
       "byShop": "Recorded by {shopName}",
       "litter_kg": "{quantity} kg of litter collected",
       "litter_items": "{quantity} litter items collected",
-      "line_m": "{quantity} m of fishing line removed"
+      "line_m": "{quantity} m of fishing line removed",
+      "lionfish_count": "{quantity} lionfish removed"
     }
   },
   "register": {

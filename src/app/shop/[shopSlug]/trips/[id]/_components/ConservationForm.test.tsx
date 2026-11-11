@@ -16,6 +16,7 @@ beforeEach(() => {
 });
 const copy: ConservationCopy = {
   kind: "Action",
+  lionfishHint: "Follow local removal rules.",
   quantity: "Quantity",
   location: "Location",
   note: "Note",
@@ -27,7 +28,12 @@ const copy: ConservationCopy = {
   undo: "Undo",
   dismiss: "Dismiss",
   saved: "Saved",
-  kinds: { litter_kg: "Litter kg", litter_items: "Litter items", line_m: "Line m" },
+  kinds: {
+    litter_kg: "Litter kg",
+    litter_items: "Litter items",
+    line_m: "Line m",
+    lionfish_count: "Lionfish removed",
+  },
   errors: {
     invalid: "Enter a measured quantity",
     not_authorized: "No access",
@@ -87,4 +93,29 @@ it("deletes immediately and keeps an Undo action above the removed row", async (
   const form = undo.mock.calls.at(-1)?.[1] as FormData;
   expect(form.get("undo")).toBe("trip-conservation");
   expect(form.get("undoRevision")).toBe("2");
+});
+
+it("uses whole counts and local guidance only for lionfish, and preserves a draft on kind changes", async () => {
+  render(
+    <ConservationActions shopSlug="blue-mantis" tripId="departure" copy={copy}>
+      <ConservationForm tripId="departure" copy={copy} />
+    </ConservationActions>,
+  );
+  const user = userEvent.setup();
+  const kind = screen.getByRole("combobox", { name: "Action" });
+  const quantity = screen.getByRole("spinbutton", { name: "Quantity" });
+  await user.type(quantity, "1.5");
+  await user.selectOptions(kind, "lionfish_count");
+  expect(screen.getByText(copy.lionfishHint)).toBeVisible();
+  expect(quantity).toHaveAttribute("step", "1");
+  expect(quantity).toHaveAttribute("min", "1");
+  expect(quantity).toHaveValue(1.5);
+  expect(quantity).toBeInvalid();
+  await user.clear(quantity);
+  await user.type(quantity, "3");
+  expect(quantity).toBeValid();
+  await user.selectOptions(kind, "line_m");
+  expect(screen.queryByText(copy.lionfishHint)).not.toBeInTheDocument();
+  expect(quantity).toHaveAttribute("step", "0.01");
+  expect(quantity).toHaveValue(3);
 });
