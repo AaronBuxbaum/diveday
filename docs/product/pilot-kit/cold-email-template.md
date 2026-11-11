@@ -42,7 +42,7 @@ one, because improvising it at send time is exactly where template-smell gets in
 
 ## Before sending — the research, ten minutes per shop
 
-`[RESEARCHED STATEMENT]` is the load-bearing slot. Write **one sentence naming the specific problem this shop's setup creates**, ending "is the kind of thing I'm building for." No fun fact first: a fact true of every shop (guests sign online and check in at the shop) or a pointless one (the boat runs wreck trips) adds nothing, and the sentence that follows has to stand alone. Test: if the sentence would fit any dive shop, rewrite it or use the no-detail line. For example: "Checking everyone's certification before the Vandenberg boat leaves is the kind of thing I'm building for."
+`[RESEARCHED STATEMENT]` is the load-bearing slot. **Default (Aaron, 2026-11-11): talk about the problem space**, with this sentence: "When a group of eight or ten checks in and a few haven't signed the boat release, someone has to chase them before the boat leaves. That chase is the kind of morning I'm building for." Replace it only when the shop's own pages give a better, specific fact that creates a real problem for them, such as a shop and a boat at different marinas, or bookings that arrive only by phone. Never lead with a fun fact, and never a fact true of every dive shop. Test: would the replacement land harder than the default? If not, keep the default.
 Saturdays. It must be current and checkable.
 
 - **If nothing can be verified, use the no-detail line** below. Sending with no
