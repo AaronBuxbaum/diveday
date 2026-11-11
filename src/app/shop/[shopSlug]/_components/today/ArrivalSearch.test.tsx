@@ -51,4 +51,33 @@ describe("ArrivalSearch", () => {
     render(<ArrivalSearch query="" copy={copy} />);
     expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: copy.label }));
   });
+  it("does not steal focus from a control used before arrival search hydrates", () => {
+    const link = document.createElement("a");
+    link.href = "#departure";
+    link.textContent = "Open departure";
+    document.body.append(link);
+    link.focus();
+    try {
+      render(<ArrivalSearch query="" copy={copy} />);
+      expect(document.activeElement).toBe(link);
+    } finally {
+      link.remove();
+    }
+  });
+
+  it("takes over the route heading's default focus on client navigation", () => {
+    const { rerender } = render(
+      <main>
+        <h1 tabIndex={-1}>Today</h1>
+      </main>,
+    );
+    screen.getByRole("heading", { name: "Today" }).focus();
+    rerender(
+      <main>
+        <h1 tabIndex={-1}>Today</h1>
+        <ArrivalSearch query="" copy={copy} />
+      </main>,
+    );
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: copy.label }));
+  });
 });

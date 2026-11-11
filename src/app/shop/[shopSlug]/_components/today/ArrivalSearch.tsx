@@ -3,6 +3,7 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { SearchField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
+import { SHOP_MAIN_ID } from "../RouteFocus";
 
 /**
  * **Today's arrival lookup**: "which boat is this diver on?", for the staffer
@@ -29,7 +30,12 @@ export function ArrivalSearch({
 
   useEffect(() => {
     setHydrated(true);
-    if (!document.querySelector("[data-add-panel-heading], [role=dialog]")) {
+    const active = document.activeElement;
+    const initialFocus =
+      active === document.body ||
+      active === document.getElementById(SHOP_MAIN_ID) ||
+      active === searchRef.current?.closest("main")?.querySelector("h1");
+    if (initialFocus && !document.querySelector("[data-add-panel-heading], [role=dialog]")) {
       searchRef.current?.focus({ preventScroll: true });
     }
     return () => {
