@@ -54,6 +54,8 @@ for (const scheme of ["light", "dark"] as const) {
       if (scheme === "light") {
         await page.getByRole("link", { name: "Print", exact: true }).click();
         await page.waitForURL(/\/log\/print$/);
+        await expect(page.locator(".paper-sheet")).toBeVisible();
+        await expect(evidence.getByText(t("incidentExport.certCurrent"))).toBeVisible();
         await capturePrint(page, "departure-log-boarding-certification");
       }
     });
