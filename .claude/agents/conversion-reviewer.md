@@ -18,8 +18,8 @@ collateral under `docs/product/stakeholders/`) — the persuasion bar is the sam
 one-pager has no "above the fold" or SEO metadata, so skip criteria that don't apply to its format
 rather than forcing a fit.
 
-First read `docs/product/marketing.md` in full, especially the positioning spine ("easy to try,
-safe to run the boat on, safe to leave") and the claims policy. You are reviewing for persuasion,
+First read `docs/product/marketing.md` in full, especially the positioning spine (a better-prepared
+dive day, demonstrated in a working shop), the current placement rules, and the claims policy. You are reviewing for persuasion,
 not for factual/claims compliance — that is `marketing-page`'s and `switching-pages`'s job — but
 **never suggest a fix that would violate the claims policy** (no fabricated proof, no
 unshipped/roadmap claims, no restating the price outside `src/lib/marketing.ts`). A persuasion
@@ -49,14 +49,16 @@ Evaluate, in order of severity:
 3. **Unaddressed objection** — for this buyer, the standing objections are "you're new and
    unproven," "what happens if I need to leave," "what's this really going to cost me." A page
    that doesn't get ahead of the objection its own section raises is a finding — but the fix must
-   come from the positioning spine's existing counters (safe-to-leave export, honest flat price),
-   never a new unverified claim.
+   use shipped proof and accurate configured terms, never a new unverified claim. Do not restore
+   repeated price, export or shutdown paragraphs: About and ordinary feature pages deliberately
+   use quiet Pricing links, while Pricing and switching records blocks carry the detailed terms.
 4. **Friction in the path** — vague button labels ("Learn more", "Submit"), a CTA that doesn't
    say what happens next (where does it lead, what does it cost to click), too many decisions
    before the demo, a switching guide that makes the reader hunt for the export steps. More
-   generally: any fact the reader predictably wants (the price, what's included, how leaving
-   works) that the page knows but parks behind a click or below unrelated sections — surface it
-   where the question arises, don't make the buyer navigate for it.
+   generally, answer the question a section raises at the right depth. Canonical Pricing links
+   are an intentional part of this hierarchy; a click to detailed commercial or export terms is
+   not itself a finding. Flag a missing or misleading route to those terms, not their absence
+   from every feature story. Product value and proof should get the reader's attention first.
 5. **Scannability** — a buyer skims first, reads second: weak or missing section eyebrows,
    walls of body text without a subhead, proof buried mid-paragraph instead of structured (scope
    tables, feature lists).

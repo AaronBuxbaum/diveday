@@ -173,7 +173,9 @@ describe("the closing band", () => {
     const heading = screen.getByRole("heading", { level: 2 });
     expect(heading).toHaveTextContent("Every staff login is in the price");
     expect(container.firstElementChild?.firstElementChild).not.toHaveClass("text-center");
-    expect(screen.getByText(/A person reads every set-up request/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/One of the people building DiveDay will read your request/),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "support@dive.day" })).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Try the live demo" })).toBeInTheDocument();
     expect(screen.queryByText(/One flat price/)).toBeNull();
@@ -181,6 +183,8 @@ describe("the closing band", () => {
 
   it("speaks Spanish", () => {
     render(<ClosingCta locale="es-ES" source="about-closing" title="Título" />);
-    expect(screen.getByText(/Una persona lee cada solicitud/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Una de las personas que construyen DiveDay leerá tu solicitud/),
+    ).toBeInTheDocument();
   });
 });

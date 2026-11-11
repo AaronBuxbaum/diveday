@@ -19,9 +19,11 @@ Layout stays inside the design system: semantic tokens only, `buttonClass()` for
 things, `<Field>`/`<FieldGrid>` for forms — but inside those mechanics, compose for the argument
 (`docs/design/principles.md` §10–11): before building a new page or section, state its one idea in
 a sentence and sketch at least two compositions in prose, picking the one shaped by the content —
-the hero-plus-card-stack is the fallback, not the target. Surface the facts a buyer predictably
-wants (price, what's included, how leaving works) where the question arises rather than behind a
-click, and keep one primary CTA per screen — before adding a button, ask whether the layout could
-make it unnecessary. A new page's one argument and one ask go in
+the hero-plus-card-stack is the fallback, not the target. Lead with product value and demonstrable
+screens. Keep commercial terms and portability easy to find through canonical Pricing navigation
+and contextual links, without repeating price and export copy on every page. About uses “See
+pricing”; ordinary feature pages use one quiet Pricing link beside plan inclusion and no dedicated
+export strip. Keep one primary CTA per screen; before adding a button, ask whether the layout
+could make it unnecessary. A new page's one argument and one ask go in
 [`docs/design/surfaces.md`](../../../docs/design/surfaces.md), which is where the holistic pass is
 written down.

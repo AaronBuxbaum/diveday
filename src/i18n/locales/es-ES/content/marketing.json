@@ -2,7 +2,7 @@
   "home": {
     "eyebrow": "Software para centros de buceo",
     "heroTitle": "Cada buceador reservado, firmado, verificado y localizado",
-    "heroDescription": "Desde la reserva online hasta el muelle, ve quién está listo y qué le falta a cada buceador.",
+    "heroDescription": "Recibe al grupo sabiendo quién está listo y qué le falta a cada buceador. Las reservas, los formularios y los detalles de la salida están juntos, desde el mostrador hasta el muelle.",
     "heroPriceLine": "Un precio único de {price} {cadence}, sin comisión sobre tus reservas.",
     "diverDoor": "¿Reservaste una inmersión?",
     "diverDoorLink": "Encuentra tu reserva",
@@ -17,7 +17,7 @@
     "steps": {
       "book": {
         "when": "Días antes",
-        "title": "Un buceador reserva y paga sin llamar al centro",
+        "title": "Deja que los buceadores reserven mientras tú estás buceando",
         "note1": "Las plazas que quedan se cuentan contra el barco, en vivo. Un barco lleno lo dice y no toma más.",
         "note2": "Sin inicio de sesión en esta página. El buceador reserva, paga y recibe por correo un enlace a su salida.",
         "mockupLabel": "El horario público de Blue Mantis, dos salidas próximas con las plazas que quedan en cada una."
@@ -40,25 +40,20 @@
       },
       "recap": {
         "when": "Después de que vuelva el barco",
-        "title": "Cada buceador recibe el recuerdo del día, con el nombre de tu centro",
+        "title": "Que los buceadores se lleven un recuerdo del día",
         "note1": "El registro de arriba es del centro, escrito una vez: barco, tripulación, sitio, condiciones.",
         "note2": "La nota de la tripulación es una cita. Es lo que la tripulación escribió, sin plantilla detrás.",
         "mockupLabel": "La página de recuerdo de un buceador, con el registro del día, una nota de la tripulación y una sola petición de opinión."
       }
     },
-    "featuresLink": "La lista completa de lo que incluye cada función →",
-    "exportTitle": "Cómo llegan los registros, y cómo se van",
-    "arrivingLabel": "Al entrar",
-    "exportDescription1": "Sube una hoja de cálculo. Antes de guardar nada, la vista previa muestra en qué se convirtió cada columna y qué filas va a saltar. O envíanos el archivo por correo y una persona hace la importación contigo, gratis.",
+    "featuresLink": "Explora las funciones",
+    "exportTitle": "Prepara tus registros para tu siguiente día de buceo",
+    "exportDescription1": "Trae una muestra de tu lista de buceadores. Sube una hoja de cálculo y revisa las columnas y las filas que se omitirán antes de guardar, o envíanosla por correo y una persona te ayudará a importarla, gratis.",
     "spreadsheetLink": "Tu hoja de cálculo, columna por columna →",
-    "leavingLabel": "Lo que sale",
-    "exportDescription2": "{claim} {terms}",
-    "guidesLink": "Guías para dejar {competitors}, y una para una hoja de cálculo →",
-    "tryTitle": "Cada buceador reservado, firmado y contado a bordo, desde tu primera salida",
+    "guidesLink": "Encuentra la guía para tu sistema actual",
+    "tryTitle": "Ven a organizar un día de buceo en el centro de demostración",
     "stepLink": "{name} →",
-    "percentArm": {
-      "heroPriceLine": "{hasBase, select, yes {El {percent} de los pagos que marcas como recibidos, más {base} al mes. Sin cuota de alta.} other {El {percent} al registrar un pago recibido, sin cuota mensual.}}"
-    }
+    "percentArm": {}
   },
   "common": {
     "gettingReady": "Preparando tu centro…",
@@ -67,14 +62,15 @@
     "demoShopNameHint": "Lo usamos para nombrar tu demo.",
     "getSetUp": "Pide tu centro",
     "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
-    "closingSupport": "Una persona lee cada solicitud, y cualquier otra pregunta puede ir a {email}.",
-    "recordsLink": "Llevarte tus registros"
+    "closingSupport": "Cuéntanos sobre tu centro. Una de las personas que construyen DiveDay leerá tu solicitud. También puedes escribir a {email}.",
+    "recordsLink": "Ve qué incluye tu exportación"
   },
   "price": {
     "name": "Centro fundador",
     "cadence": "por ubicación / mes",
     "item3": "Las funciones nuevas según salen, sin un nivel superior",
-    "item7": "Un escaparate con tu marca, además de botones de reserva y calendarios para tu propia web"
+    "item7": "Un escaparate con tu marca, además de botones de reserva y calendarios para tu propia web",
+    "receivedMoneyFee": "El {percent} del dinero registrado como recibido en DiveDay, incluido el efectivo{hasBase, select, yes {, más {base} al mes} other {, sin cuota mensual}}."
   },
   "export": {
     "claim": "Ajustes → Exportación de datos descarga un ZIP con CSV simples y documentados (buceadores, reservas, registros de exenciones, historial de pagos), encabezados por un archivo de contactos con la forma que espera el asistente de importación de otro sistema. Cada foto guardada (evidencia de certificación, fotos de sitios, recapitulaciones) va dentro como archivo.",
@@ -744,49 +740,34 @@
       "noSilentPasses": {
         "title": "Un hueco en el registro aparece en el mostrador, no en el barco",
         "body": "Cuando nada en el registro de un buceador lo habilita, DiveDay lo marca como Bloqueado en el manifiesto y dice qué falta, así que la tripulación lo ve en el mostrador esa mañana, con el buceador ahí y tiempo para resolverlo."
-      },
-      "onePrice": {
-        "title": "Un precio cubre el centro",
-        "body": "El plan es {price} {cadence}, y cubre cada parte de DiveDay y una cuenta para cada persona de tu personal. No nos quedamos con nada de tus reservas. La página de precios enumera cada cosa que cubre."
-      },
-      "yourRecords": {
-        "title": "Descarga cada registro de tu centro, cualquier día",
-        "body": "Llega como un solo ZIP de archivos simples que abres donde quieras. El plan va mes a mes, sin cuota de alta y sin contrato."
       }
     },
     "workEyebrow": "Cómo trabajamos con los centros",
     "workTitle": "Configuramos tu centro contigo",
     "workP1": "Escríbenos y alguien de aquí arma tu centro contigo: los barcos, los sitios, el calendario, la exención, los precios y los registros que ya tengas. Si esos registros viven en otro sistema o en una hoja de cálculo, mándanos la exportación y traemos a los buceadores nosotros mismos, con sus certificaciones y tallas donde el archivo las tenga.",
     "workP2": "Después de eso, tu correo llega a las personas que construyen DiveDay. Cuéntanos qué decía la pantalla y qué intentabas hacer, y la respuesta viene de alguien que puede cambiar el producto.",
-    "seeCost": "Un precio único de {price} {cadence}. Mira la lista completa",
-    "switchingLink": "Cómo entran tus registros, y cómo salen →",
+    "seeCost": "Ver precios",
+    "switchingLink": "Ve cómo traer tus registros",
     "whereLiveLabel": "Dónde viven tus registros",
     "whereLiveValue": "En servidores en Estados Unidos, en un ZIP que puedes descargar cualquier día y, si la activas, en una copia semanal entregada al almacenamiento que tu centro controla.",
-    "committingLabel": "Cómo funciona el plan",
-    "committingValue": "Mes a mes, por ubicación, sin cuota de alta y sin contrato anual.",
     "whoAnswersLabel": "Quién te responde",
     "whoAnswersValue": "Una de las personas que construyen DiveDay, en {email}.",
-    "closingTitle": "La demo es un centro en marcha, con buceadores en el barco de hoy",
-    "percentArm": {
-      "onePriceTitle": "Un plan cubre el centro",
-      "onePriceBody": "El plan cubre cada parte de DiveDay y una cuenta para cada persona de tu personal. Tu centro paga el {percent} sobre sus cobros registrados{hasBase, select, yes { más {base} al mes} other {, sin cuota mensual}}. Las propinas nunca cuentan. La página de precios tiene el desglose completo.",
-      "seeCost": "El {percent} sobre los cobros{hasBase, select, yes { y {base} al mes} other {}}. Mira la lista completa"
-    }
+    "closingTitle": "La demo es un centro en marcha, con buceadores en el barco de hoy"
   },
   "product": {
     "eyebrow": "Funciones",
     "heroTitle": "De la primera reserva al pase de lista después de la última inmersión",
-    "heroDescription": "Reservas, exenciones, control de certificaciones, el manifiesto del barco, equipo de alquiler, cursos y pagos funcionan en una sola aplicación. Cada función de abajo tiene una página que muestra su pantalla y lleva a la demo ahí mismo.",
+    "heroDescription": "Reúne las reservas, las fichas de los buceadores y la preparación de las salidas, desde el mostrador hasta el teléfono del capitán.",
     "boxDescription": "Antes del día de buceo, el propio día y toda la temporada están en un solo plan.",
     "whatsInIt": "Qué incluye",
-    "closingTitle": "Cada tarea de esta página funciona en el centro de demostración, como la haría tu equipo",
+    "closingTitle": "Prueba una mañana en el centro de demostración",
     "spreadsheetLink": "Mira cómo DiveDay lee tu hoja de cálculo →",
     "alsoInPlan": "También en el plan"
   },
   "pricing": {
     "heroTitle": "Lo que paga un centro, línea por línea",
     "lockNote": "El precio de hoy, congelado dos años para los centros fundadores.",
-    "trialNote": "La prueba es un centro tuyo, gratis 3 semanas sin tarjeta, y nada se apaga cuando termina. Para pasar al plan de pago, escribe a {email}.",
+    "trialNote": "Prueba un centro propio gratis durante 3 semanas, sin tarjeta. Tu centro sigue funcionando después de la prueba mientras acuerdas el paso a un plan de pago con {email}.",
     "earlyAccessBadge": "Acceso anticipado",
     "invoice": {
       "title": "La factura",
@@ -815,7 +796,7 @@
         "value": "Mes a mes"
       },
       "leaving": {
-        "label": "Irse",
+        "label": "Exportación de datos",
         "value": "Un ZIP desde Ajustes, cualquier día",
         "pointer": "Tus registros se van contigo. Míralo más abajo."
       }
@@ -836,7 +817,7 @@
     },
     "dataExit": {
       "eyebrow": "Tus registros",
-      "title": "Una exportación completa cuando la necesites",
+      "title": "Tus registros siguen siendo tuyos",
       "door": "Abre la demo como propietario →",
       "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y las credenciales de cuenta que siguen protegidas"
     },
@@ -877,16 +858,44 @@
       "multipleLocations": {
         "question": "¿Qué pasa con varias ubicaciones?",
         "answer": "Cada centro de DiveDay lleva una ubicación por ahora. Si operas más de una, escribe a {email}."
+      },
+      "shopSize": {
+        "question": "¿Cuánto pagaría un centro de mi tamaño?",
+        "answer": "Los meses de ejemplo muestran cómo se aplica el mismo plan a distintos importes recibidos. El número de barcos y los accesos del personal no cambian la tarifa."
+      },
+      "diverApp": {
+        "question": "¿Los buceadores necesitan una app o una cuenta?",
+        "answer": "No. Reservan en tu página pública y abren su propio enlace para firmar los formularios y preparar la salida."
+      },
+      "printedManifest": {
+        "question": "¿La tripulación puede llevar un manifiesto impreso?",
+        "answer": "Sí. Imprime el manifiesto de la salida para que la tripulación lo lleve a bordo."
+      },
+      "devices": {
+        "question": "¿Qué teléfono o tableta necesitamos?",
+        "answer": "DiveDay funciona en el navegador de un teléfono, una tableta o una computadora. Prueba la demo en los dispositivos que ya usa tu tripulación."
+      },
+      "currency": {
+        "question": "¿En qué moneda se factura?",
+        "answer": "La facturación automática es en USD. Un centro que cobra en otra moneda necesita acordar cómo se facturará antes de cualquier cargo; los importes en distintas monedas nunca se suman ni se convierten."
       }
     },
     "closingTitle": "Todas las funciones y todos los accesos del personal están en el precio",
     "percentArm": {
-      "cadence": "{hasBase, select, yes {al marcar dinero recibido, más {base} al mes} other {al marcar dinero recibido, cobrado cada mes}}",
+      "cadence": "del dinero registrado como recibido en DiveDay{hasBase, select, yes {, más {base} al mes} other {, sin cuota mensual}}",
       "invoiceFeeLabel": "La tarifa de DiveDay",
-      "invoiceFeeValue": "{percent} del dinero registrado como recibido en DiveDay",
-      "ours": "{hasBase, select, yes {DiveDay cobra {base} al mes más el {percent} del dinero que tu centro registra como recibido en DiveDay.} other {DiveDay no tiene cuota mensual. Su tarifa es el {percent} del dinero que tu centro registra como recibido en DiveDay.}} No se suma nada al precio de tu cliente.",
+      "invoiceFeeValue": "El {percent} del dinero registrado como recibido en DiveDay",
       "whatCountsQuestion": "¿Qué cuenta para el {percent}?",
       "whatCountsAnswer": "El dinero registrado como recibido en DiveDay, ya sea por internet, en efectivo, por transferencia, con tu propia terminal o por otro medio. Los depósitos cuentan cuando se reciben; una reserva sin pagar no cuenta. Los paquetes cuentan al venderse, nunca otra vez al canjearse. Se excluyen las propinas, los impuestos y los cargos de terceros registrados por separado, y el historial importado. Si no hay un desglose de impuestos, cuenta el importe completo. Los reembolsos generan un crédito con el porcentaje original."
+    },
+    "examples": {
+      "title": "Cuánto podría costar un mes",
+      "note": "Meses de ejemplo en USD, antes de los créditos por reembolsos y las comisiones de tarjeta de Stripe. Los importes recibidos excluyen las propinas, los impuestos y los cargos de terceros registrados por separado.",
+      "none": "Un mes sin dinero recibido",
+      "oneBoat": "Un mes para un centro con un barco",
+      "threeBoats": "Un mes para un centro con tres barcos",
+      "received": "{amount} recibidos",
+      "fee": "{amount} de tarifa de DiveDay"
     }
   },
   "privacy": {
@@ -1084,8 +1093,8 @@
     "stepsTitle": "Cómo funciona",
     "includedTitle": "Qué incluye",
     "includedShowAll": "Ver las {count}",
-    "includedPrice": "Cada línea de esta lista entra en el único plan, a {price} {cadence}.",
-    "pricingLink": "Ver todo lo que cubre el plan",
+    "includedPrice": "Incluido en el plan de tu centro.",
+    "pricingLink": "Ver precios",
     "faqTitle": "Lo que preguntan los centros",
     "relatedTitle": "Funciones relacionadas",
     "allFeatures": "Todas las funciones",
@@ -1096,9 +1105,8 @@
     },
     "demoNote": "La demo se abre en {place}. Es un centro de muestra en funcionamiento, sin registro y sin tarjeta.",
     "percentArm": {
-      "includedPrice": "Cada línea está incluida por el {percent} de los pagos que ingresas como recibidos{hasBase, select, yes { más {base} al mes} other {}}.",
       "paymentsNote3": "Ninguna fila lleva una comisión de DiveDay. El {percent} de DiveDay se te cobra una vez al mes, en una factura aparte.",
-      "paymentsFaq1A": "Sí. La tarifa es el {percent} del dinero registrado como recibido en DiveDay{hasBase, select, yes {, más {base} al mes} other {}}, cobrada cada mes. También cuentan el efectivo y los pagos externos. Se excluyen las propinas, los impuestos y los cargos de terceros registrados por separado. No se suma nada al precio de tu cliente. Stripe cobra sus propias comisiones de tarjeta."
+      "paymentsFaq1A": "Sí. {fee} Los pagos con tarjeta en línea cuentan automáticamente; registra el efectivo y los pagos externos al recibirlos. Se excluyen las propinas, los impuestos y los cargos de terceros registrados por separado. No se agrega nada al precio del cliente. Stripe cobra sus propias comisiones de tarjeta."
     }
   },
   "featurePages": {
@@ -1133,8 +1141,8 @@
       "summary": "Una página de reservas con los colores de tu centro, y botones de reserva para la web que ya tienes.",
       "metaTitle": "Web y página de reservas para centros de buceo",
       "metaDescription": "Una página de reservas con el color, la tipografía y las fotos de tu centro, además de un botón de reservar, un calendario y una cuadrícula de salidas para WordPress, Squarespace o Wix.",
-      "title": "Los buceadores hacen su reserva en una página con los colores de tu centro, valorada solo por quienes bucearon contigo",
-      "lede": "Tu página de reservas lleva tu color, tu tipografía y tus fotos, y sus botones se pegan en la web que ya tienes. ¿Necesitas ayuda con un sitio web nuevo? Escríbenos para conversar sobre lo que tienes en mente.",
+      "title": "Una página de reservas con la imagen de tu centro",
+      "lede": "Dales a los buceadores una idea de tu centro antes de que lleguen, con tus fotos, colores y tipografía. Las valoraciones son solo de quienes bucearon contigo. Agrega botones de reserva a tu sitio o escríbenos para conversar sobre uno nuevo.",
       "screenLabel": "La página pública de reservas de un centro: el nombre y la valoración del centro, el próximo barco con plazas y las salidas de la semana.",
       "note1": "El color del centro, la tipografía de su nombre y “Desde 1987” se configuran una vez, en Ajustes.",
       "note2": "El próximo barco con plazas va primero, para el buceador que quiere salir mañana.",
@@ -1185,7 +1193,7 @@
       "summary": "Cada buceador figura como Listo o Bloqueado en cada salida, con la tarjeta, el formulario o el pago que falta.",
       "metaTitle": "Control de certificaciones de buceo en cada salida",
       "metaDescription": "DiveDay compara las tarjetas de cada buceador con lo que piden la salida y sus sitios de buceo, como buceo profundo, naufragios, nocturno o nitrox, y nombra lo que falta días antes de zarpar.",
-      "title": "Sabe quién puede embarcar días antes de que salga el barco, y qué les falta a los demás",
+      "title": "Conoce lo que necesita cada buceador para la salida",
       "lede": "DiveDay compara a cada buceador con el nivel y la tarjeta de buceo profundo, naufragios o nitrox que piden la salida y sus sitios, además de la exención, el formulario médico y el pago que exige, y nombra lo que falta.",
       "screenLabel": "Hoy en DiveDay: la barra de preparación de una salida y luego la lista Pendiente, con el motivo junto a cada nombre.",
       "note1": "La barra son las plazas de la salida: verde para los listos, rojo para los bloqueados y el resto todavía libre.",
@@ -1211,7 +1219,7 @@
       "summary": "Confirmaciones, un recordatorio una semana antes, un aviso el día antes y el recuerdo salen solos, y las respuestas por correo llegan a un solo lugar.",
       "metaTitle": "Recordatorios automáticos de reserva y mensajes para buceadores",
       "metaDescription": "Correos de confirmación y de exención, un recordatorio una semana antes, un aviso el día antes con la hora en el muelle y un recuerdo después de bucear. Las respuestas por correo de los buceadores llegan a un solo lugar.",
-      "title": "El día antes, cada buceador recibe la hora en el muelle y una lista de lo que aún le toca hacer",
+      "title": "Envía a los buceadores la hora de llegada al muelle y lo que les queda por hacer",
       "lede": "Las confirmaciones, un recordatorio una semana antes y un aviso el día antes salen por correo con un mensaje de texto al lado, y un correo fallido le aparece a tu personal con un botón Reenviar.",
       "screenLabel": "La página de la noche anterior en el teléfono de un buceador: la hora en el muelle, la exención y la certificación hechas, y el equipo por completar.",
       "note1": "La hora en el muelle abre la página, porque es lo primero que el buceador mira por la mañana.",
@@ -1289,8 +1297,8 @@
       "summary": "La ruta, las referencias y la vida marina de cada sitio, escritas una vez y mostradas a cada buceador de un barco que va allí.",
       "metaTitle": "Briefings de sitios de buceo para tus buceadores",
       "metaDescription": "Escribe cada sitio de buceo una vez: profundidad, ruta, referencias con fotos y lo que vive allí. Cada buceador reservado en un barco a ese sitio lee el briefing antes de venir.",
-      "title": "Escribe cada sitio de buceo una vez",
-      "lede": "Los buceadores leen la ruta, las referencias y los avistamientos recientes antes de venir. La profundidad, el mapa del relieve, las fotos y las especies de cada sitio se reúnen en la página de su salida.",
+      "title": "Ayuda a los buceadores a imaginar la inmersión antes de llegar",
+      "lede": "Comparte la ruta, los puntos de referencia y los avistamientos recientes que dan ganas de conocer un sitio. La profundidad, los mapas y las fotos están juntos en la página de la salida de cada buceador.",
       "screenLabel": "El briefing de un sitio de buceo como lo leen los buceadores antes de la salida: el sitio, su profundidad y el tiempo en el agua, la ruta y lo que se vio allí este mes.",
       "note1": "La profundidad es la del sitio, en las unidades de tu centro, y el tiempo en el agua es tu habitual para esa inmersión.",
       "note2": "La ruta empieza en un círculo vacío y termina en uno relleno, así que el buceador lee hacia dónde avanza la inmersión.",
@@ -1315,8 +1323,8 @@
       "summary": "Cada unidad de tu pared con su talla y su próximo mantenimiento, reservada para un buceador a la vez, y el equipo de tus clientes en el taller.",
       "metaTitle": "Alquiler de equipo de buceo y control de mantenimiento",
       "metaDescription": "Lleva cada chaleco, regulador, neopreno y tanque por etiqueta, talla y fecha de mantenimiento. El personal aparta una unidad para una reserva, y el registro no se la da a un segundo buceador en las mismas fechas.",
-      "title": "Sabe qué neopreno lleva cada buceador y qué regulador toca revisar",
-      "lede": "Registra tus propias unidades por etiqueta, talla y número de serie, aparta una para una reserva desde la pestaña Equipo de la salida y mira la próxima fecha de mantenimiento de cada regulador, tanque y chaleco. Cuando un cliente trae su propio regulador, entra al taller como orden de trabajo y se le avisa cuando está listo.",
+      "title": "Ve qué equipo está fuera, cuál está disponible y cuál necesita mantenimiento",
+      "lede": "Cuando el equipo empieza a preparar el material por la mañana, ve las tallas que enviaron los buceadores y las unidades disponibles para entregar. Lleva el control de cada unidad identificada, sus devoluciones y fechas de mantenimiento. Las reparaciones de clientes tienen sus propias órdenes de trabajo, con un aviso cuando el equipo está listo.",
       "screenLabel": "El registro de equipo: unidades por tipo con sus cantidades, y la etiqueta, el modelo, la talla y el estado de cada unidad.",
       "note1": "Los contadores muestran las unidades de cada tipo, así que un estante corto se nota antes de la mañana.",
       "note2": "Una unidad apartada nombra a su buceador, y el registro no se la da a nadie más.",
@@ -1341,8 +1349,8 @@
       "summary": "Arma las salidas de la temporada, repite las habituales y mira qué barco aún necesita tripulación.",
       "metaTitle": "Programación de salidas de buceo y planificación de la tripulación",
       "metaDescription": "Agrega, mueve y copia salidas en el sitio, repite una salida semanal sin fecha final y asigna tripulación a cada barco. La vista de tripulación muestra qué salida está sin cubrir.",
-      "title": "Las salidas habituales se repiten solas, y un barco todavía sin tripulación lo dice en el tablero de la semana",
-      "lede": "Cuando suspendes un barco por mal tiempo, un toque confirmado lo cancela, le envía por correo a cada buceador las salidas a las que puede ir y reembolsa sus pagos con tarjeta en línea.",
+      "title": "Organiza la semana y ve qué barcos aún necesitan tripulación",
+      "lede": "Pon las salidas en el calendario semanal, repite tus salidas habituales y asigna la tripulación. Los barcos sin tripulación se distinguen y los turnos que se solapan quedan señalados.",
       "screenLabel": "El horario de la semana: salidas por día con sus horas, la tripulación y las plazas ocupadas, y un botón Agregar en cada día.",
       "note1": "Cada fila muestra cuántas plazas del barco están ocupadas, así que una salida floja se nota pronto.",
       "note2": "“Tripulación: nadie todavía” marca un barco sin nadie asignado, en la misma fila que sus plazas.",
@@ -1417,7 +1425,7 @@
   },
   "setUp": {
     "title": "Pide tu centro",
-    "description": "Abrimos cada centro a mano y te escribimos para abrir el tuyo.",
+    "description": "Cuéntanos sobre tu centro. Te ayudaremos a configurarlo para la forma en que trabaja tu equipo.",
     "shopName": "Nombre del centro",
     "region": "Ciudad o región",
     "runsBoat": "¿Tienes barco?",
@@ -1438,7 +1446,7 @@
     "email": "Correo electrónico",
     "phone": "Teléfono",
     "website": "Sitio web",
-    "submit": "Enviar",
+    "submit": "Solicitar configuración",
     "errors": {
       "required": "Completa este campo.",
       "invalid": "Revisa este dato.",

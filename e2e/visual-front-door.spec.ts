@@ -35,6 +35,36 @@ for (const scheme of ["light", "dark"] as const) {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
     test.describe("public", () => {
+      test.describe("Spanish marketing copy", () => {
+        test.use({ locale: SPANISH });
+        for (const [route, name] of [
+          ["/", "landing"],
+          ["/about", "about"],
+          ["/product", "product"],
+          ["/pricing", "pricing"],
+          ["/get-set-up", "get-set-up"],
+          ["/switching", "switching-hub"],
+          ["/product/website", "feature-website"],
+          ["/product/certifications", "feature-certifications"],
+          ["/product/messages", "feature-messages"],
+          ["/product/schedule", "feature-schedule"],
+          ["/product/rental-gear", "feature-rental-gear"],
+          ["/product/online-booking", "feature-online-booking"],
+          ["/product/waivers", "feature-waivers"],
+          ["/product/check-in", "feature-check-in"],
+          ["/product/boat-manifest", "feature-boat-manifest"],
+          ["/product/dive-sites", "feature-dive-sites"],
+          ["/product/courses", "feature-courses"],
+          ["/product/payments", "feature-payments"],
+        ]) {
+          test(`${name} renders the revised copy (${scheme})`, async ({ page }) => {
+            await page.goto(route);
+            await page.getByRole("heading", { level: 1 }).waitFor();
+            await capture(page, name, scheme, { locale: SPANISH });
+          });
+        }
+      });
+
       for (const locale of ["en-US", SPANISH] as const) {
         test.describe(`marketing menu ${locale}`, () => {
           test.use({ locale });

@@ -33,12 +33,25 @@ continues to state supported fields, not guaranteed source exports.
 ## Configured pricing (2026-11-08)
 
 Every visitor sees the same configured offer. `PRICING_MONTHLY_CENTS` and
-`PRICING_BASIS_POINTS` independently set the monthly fee and percentage of eligible card receipts
-collected through DiveDay. Omit either component when configuring the other to charge only that
-component. With both unset, the default is $0/month plus 3%; explicit zeroes mean free.
+`PRICING_BASIS_POINTS` independently set the monthly fee and percentage of money recorded as
+received in DiveDay by any payment method. Omit either component when configuring the other to
+charge only that component. With both unset, the default is $0/month plus 3%; explicit zeroes mean free.
 Copy names only the components charged, and percentage offers never claim no cut of bookings.
 Existing subscribers keep their sold terms. This supersedes references below to a universal flat
 price; see [configured pricing](../architecture/decisions/20261108-configured-pricing.md).
+
+## One fee description and worked months (2026-11-11)
+
+Percentage offers use `marketingFee.summaryKey` from `src/lib/marketing.ts` wherever public
+copy states the fee: money recorded as received in DiveDay, cash included. Online card payments
+count automatically; cash and external payments count when recorded received. This follows
+[recorded collections billing](../architecture/decisions/20261110-recorded-collections-own-billing.md).
+The pricing page shows three explicitly illustrative USD months, including no money received,
+using `pricingExampleMonths` and the configured fee calculation. These are examples, never
+customer results or forecasts. A month with no trips can still have deposits or package sales;
+only a month with no eligible money received has no percentage fee. A configured monthly base
+still applies in that month. Do not describe the examples as typical one-boat or three-boat
+results; boat count does not determine collections.
 
 ## One page per feature, and every section sells (decided 2026-10-05, H-20261005-public-pages-sell)
 
@@ -55,16 +68,13 @@ and listed the rest in a closed index on `/product`.
   payments. The list, its order, and each page's demo role, landing screen and three related pages
   are one registry, `src/lib/feature-pages.ts`. An unknown slug is refused at the edge
   (`src/features/public-route-shape/rules.ts`), and the sitemap lists all twelve.
-- **One template**, `src/app/(marketing)/product/_components/FeaturePageBody.tsx`: the hero says what the shop
-  gets in one sentence of lede beside the screen that proves it, with three builder's notes, and
-  the price under its doors; then how it works in three steps; then everything the feature
-  includes, which is that feature's whole group of `productCapabilityIndex`, and the plan's terms beside it (the flat price, and the
-  Data export button with `fullShopExport`'s terms); then three questions shops ask, marked up as
-  `FAQPage`; then the close; and last three related pages, for the reader the close did not
-  convince yet. The order is the order a buyer's doubts arrive in, and the ask lands at the end of
-  the argument rather than after a detour (conversion review, 2026-10-05). Every page has every
-  section, and `src/lib/feature-pages.test.ts` refuses a page whose copy has a field the others
-  lack.
+- **One template**, `src/app/(marketing)/product/_components/FeaturePageBody.tsx`: the hero says
+  what the shop gets beside the screen that proves it, with builder's notes and a contextual demo
+  door; then how it works, the feature's whole group of `productCapabilityIndex`, its questions,
+  the close, and related pages. The included list says “Included in your shop’s plan.” with one
+  quiet Pricing link. Ordinary feature pages carry no hero price, repeated included-price sentence
+  or dedicated export strip. Feature-specific payment explanations keep their accurate fee scope.
+  The same sections and copy shape are held by `src/lib/feature-pages.test.ts`.
 - **The demo opens on the page's screen.** The hero's "Try the live demo" carries the page's role
   and landing (`src/lib/demo-landings.ts`, a closed list the server action re-checks), so a reader
   of the gear page arrives on the gear register as the owner, not on Today. The two pages about what
@@ -103,15 +113,15 @@ and listed the rest in a closed index on `/product`.
   the sticky chapter strip and the payment band were deleted the same day; each chapter's screen
   and notes live on the feature page that owns them.
 - **What did not change:** the claims policy, the two doors and their order, the demo note once per
-  page, the price stated where the question arises, and `/about`'s company voice (H-20261006-about-say-whose-voice).
+  page, readily findable commercial terms, and `/about`'s company voice (H-20261006-about-say-whose-voice).
 
 ## The homepage journey and Product catalogue (owner decision, 2026-10-26)
 
 The homepage follows the essential booking-to-boat scenes, including dock check-in (H-20260802-may-public-pages-say),
-then answers how records arrive and leave. Its compact Product link opens `/product#full-list`;
+then explains bringing records in while keeping control of them. Its compact Product link opens `/product#full-list`;
 the repeated twelve-feature catalogue lives on Product alone. Home and Product heroes keep a
-content-sized demo beside a quiet 44px setup link. Hero, migration and closing copy retain the
-price, demo door and accurate migration qualifications. Product keeps its existing
+content-sized demo beside a quiet 44px setup link. The demo doors and accurate migration qualifications remain. Home does not repeat a price
+sentence; the canonical pricing page remains available through navigation. Product keeps its existing
 material and gains no new hero scene.
 
 The mobile marketing header keeps the brand, demo or staff return, and Menu on one row.
@@ -124,24 +134,48 @@ reference expand in place, with direct fragment links that open the reference. I
 excluded record categories remain visible before expansion; the complete mapping, exclusions,
 source links and CSV download remain available. This changes composition, not import scope.
 
+## Warmth comes from the dive day (owner direction, 2026-11-11)
+
+Lead with the people and moments the product helps: welcoming the morning group, a booking made while the crew is diving, gear being pulled for the boat and the recap a diver takes home. Supporting copy and proof screens still name the actual behavior and its limits. Invite an owner to use the demo; do not describe the page as a test catalogue. Home’s practical journey follows the hero, with the unchanged compact origin account later and the full story on About. Records setup is one arrival-led section; portability is a quiet link, never an equal-weight departure pitch. Keep the approved harbor, classroom and gear-handover artwork readable. Warmth does not mean invented testimonials, savings, safety guarantees, generic stock divers or extra card grids.
+
 ## The positioning spine
 
 We are late to the market with zero customers, so the pages cannot argue from social proof. They
 argue from **proof we can demonstrate**, in one sentence:
 
-> **Easy to try, safe to run the boat on, safe to leave.**
+> **A better-prepared dive day, demonstrated in a working shop.**
 
-- **Easy to try** — the live demo (walk the day as owner, instructor, divemaster, captain, diver),
-  a full sample shop minted fresh for each visitor, plus a trial shop of your own that starts clean.
-  Demo before trial: it is the lowest-friction proof we own.
-- **Safe to run the boat on** — boat-day depth (roll-call checkpoints, append-only history, the
-  offline manifest) and readiness that names unresolved requirements. Demonstrate these workflows; do not infer
-  that competitors lack them from silence in their documentation.
-- **Safe to leave** — the full-shop export (one ZIP, documented CSVs, every tier, self-serve) and
-  the honesty-table importer. This is the counter to "you're new and unproven" — make it explicit,
-  never assume it's implied.
-- **Honest flat price** — one number, no setup fee, no per-seat math, no feature tiers. Contrast
-  with concrete buyer fears, not with named-competitor digs.
+- **Lead with the work** — bookings, diver records and trip preparation held together, from the
+  desk to the captain's phone. Show the shipped screen and the decision it helps staff make.
+- **Make it easy to try** — the live demo opens the relevant screen and role. A sample shop is
+  proof the reader can explore before asking us to set up their own.
+- **Keep the limits beside the claim** — readiness relies on staff checks, and offline roll call
+  needs a copy saved while the phone has signal. Software supports the crew; it never guarantees
+  safety or replaces their judgment.
+- **Make commercial terms easy to find** — `/pricing` states the configured fee and scope,
+  contract facts, export contents and exact continuity promise. These are useful reassurance,
+  not a required repeated narrative on every page.
+
+**Placement is deliberate (Aaron, 2026-11-11).** Repeating price, departure and shutdown language
+makes reassurance sound like anxiety. Product value and proof lead; navigation and contextual
+links make the terms readily available. This supersedes the former “safe to leave” pillar and
+historical instructions to repeat price and export claims across every surface. It changes
+hierarchy, not the fee, the authorized assistance or the continuity commitment.
+
+`/about` preserves the Lonergan account, “That story is why we built DiveDay,” the company and
+software-builders story, the wet clipboard, and the founder visual/signature. Its sequence is why
+we built it → who builds it → operational standards → setup and human support → demo. Two
+operational standards cards retain offline and readiness qualifications. Records ownership,
+U.S. hosting and the optional backup to shop-owned storage sit quietly with the setup/support
+facts, with an export-details link. There is no price standard, priced CTA footnote, repeated
+contract fact or shutdown sentence on About. Its pricing door says “See pricing.”
+
+Home leads with preparing records for the next dive day, accurate import preview and human help.
+One quiet inline link opens `/pricing#export` for the actual export contents and terms; there is no separate exit pitch.
+Keep the working import preview on the switching hub, and do not imply importing historical
+records prepares future departures. A guide's dedicated records-control block retains exit
+assistance; its close invites a sample and a review of the move instead of pitching departure
+assistance again.
 
 Concede loudly what we don't do: retail POS, agency (PADI) sync. An honest no on these buys
 trust our claims can't. **Gear inventory is not on that list** — the gear register shipped
@@ -208,8 +242,9 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   Currently authorized (a Jane-style concierge, authorized 2026-07-24, extended H-20260724-contact-importer-trust-shop): **free,
   personal, bidirectional help switching — a person will help a shop bring its data *in* (map any
   export or spreadsheet, migrate the roster with them) and, if DiveDay is ever not right, take its
-  data back *out* just as personally.** It lives on **every** `/switching` page as the shared
-  `SwitchingConcierge` block, whose door is the Get set up form tagged per page (2026-10-22; until then a `switch@dive.day` mail link); on the hub, which has no guide below it, the same offer is the closing band's support line (`switching.hub.closingSupport`, visual review 2026-10-24, B15), so the page closes once. Phrase these as a human
+  data back *out* just as personally.** On guides, the dedicated records-control and assistance blocks retain this offer. The hub
+  and shared close invite a sample of the records and a review of the move, so the page ends on
+  arrival rather than repeating exit assistance. Phrase these as a human
   commitment ("we'll map it with you", "we'll help you carry it out"), never as an automated product
   capability, and never promise a turnaround time. **It is offered twice on a guide, and the compressed
   form comes first** (2026-08-28): `switching.common.moveIntro`, the line that opens
@@ -228,8 +263,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   positioning DiveDay wants. **What replaces it:** a plain `support@dive.day` inbox, reaching the
   same small team without naming an individual or promising a response time — phrase it as "write in
   and a real person reads it," never "the founder personally answers" or any response-time
-  guarantee. It appears on `/about` (the "How we work with shops" band; since 2026-10-07 the page names no
-  individual at all, H-20261006-about-say-whose-voice), the marketing footer, `/pricing`, the homepage's closing contact band
+  guarantee. It appears on `/about` in the "How we work with shops" band, the marketing footer, `/pricing`, the homepage's closing contact band
   (which leaves the "real person" clause to the set-up note a few lines above it, so the close says
   it once), the sign-up
   reassurance card, and the signed-in shop settings page. **Trial upgrades get their own address,**
@@ -238,7 +272,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   soft expiry — see `src/features/trial/rules.ts`). Both addresses are hosted mailboxes reaching the same
   people as `aaron@dive.day` always did; see
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md#divedays-own-addresses).
-- **A third service commitment was authorized 2026-10-07 (H-20261007-continuity-promise): the continuity promise.** Aaron Buxbaum, in the project thread: "We can publish that exact promise." The sentence is "If DiveDay ever shuts down, you get 90 days' notice, your export, and your backups keep running until the last day." It answers the objection the demo cannot (a new vendor closing, market audit 2026-10-07 item 46), and it rests on things that ship: the one-ZIP export (`fullShopExport`) and the weekly scheduled backup to storage the shop owns (`src/features/backup-export/`). It is one shared key, `continuityPromise` in `src/lib/marketing.ts` (`marketing.export.continuity`), rendered on `/pricing` as the answer to the FAQ row "What happens to my shop if DiveDay shuts down?" (`faq.shutdown`, beside the records row) and on `/about` as the second paragraph of the "Download every record" card. Its words are the owner's: no rewording, no added timeline or refund, and no other page carries it without a new decision. `src/lib/marketing.test.ts` pins the English word for word and the three commitments in every locale.
+- **A third service commitment was authorized 2026-10-07 (H-20261007-continuity-promise): the continuity promise.** Aaron Buxbaum, in the project thread: "We can publish that exact promise." The sentence is "If DiveDay ever shuts down, you get 90 days’ notice, your export, and your backups keep running until the last day." It answers the objection the demo cannot (a new vendor closing, market audit 2026-10-07 item 46), and it rests on things that ship: the one-ZIP export (`fullShopExport`) and the weekly scheduled backup to storage the shop owns (`src/features/backup-export/`). It is one shared key, `continuityPromise` in `src/lib/marketing.ts` (`marketing.export.continuity`), rendered on `/pricing` as the answer to the FAQ row "What happens to my shop if DiveDay shuts down?" (`faq.shutdown`). The 2026-11-11 hierarchy change removes its prominent About placement while keeping this exact answer accessible on Pricing. Its words are the owner's: no rewording, no added timeline or refund, and no other page carries it without a new decision. `src/lib/marketing.test.ts` pins the English word for word and the three commitments in every locale.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Biography is a claim like any other.** `/about` names a real person and describes real history,
@@ -301,36 +335,20 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
   over naming the rival. Switching guides may name incumbents; they cite sources and never
   speculate.
-- **Anchoring the price against a rival's is the one place naming them earns its keep** — a flat
-  number means nothing until the reader sees the model it replaces. `/pricing` carries that anchor
-  (`marketing.pricing.feeAnchor.*`), and it is bounded hard: only figures already documented in a
-  switching guide may appear, each presented as *the incumbent's own published terms* and linked to
-  the guide that carries the citation; an unpublished fee is stated as unpublished and attributed to
-  whoever reported it (FareHarbor's ~6%), never as their price. **No figure for what a shop pays in
-  practice, no booking volume, no savings arithmetic, no "typical shop" —** with zero customers we
-  have no basis for any of it, and a comparison invented to flatter the flat price is the same
-  fabricated-proof failure as an invented testimonial, wearing a spreadsheet. A figure not already
-  in the repo does not go on the page; it goes into a switching guide first, with its source.
-- **The price renders only from `src/lib/marketing.ts`.** Never restate the figure in prose, docs,
-  JSON-LD literals, or images — every copy is a future stale claim. The product owner has **approved
-  the price for now** (H-20260724-public-founding-shop-price, 2026-07-24; early-access and still moving), so it may be shown from
-  `marketing.ts` as today's price. `src/lib/marketing.test.ts` enforces the single source where it
-  is easiest to break — no `marketing.*` message in either locale may carry a currency figure, and
-  every sentence that shows the price must carry `{price}` and `{cadence}`. H-20260724-public-founding-shop-price also closed two
-  commercial terms, now published as
-  founding-shop claims (the price hero's "What the price covers" list + FAQ in
-  `src/app/(marketing)/pricing/page.tsx`, the home and product heroes plus the home closing
-  band, all sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
-  two years for the founding cohort** and **founder-direct support** for the founding cohort.
-  **H-20260802-what-game-is-this (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
-  venture-scale** (see [vision.md](vision.md#what-kind-of-business-this-is)) and dropped the
-  earlier "same-day response" wording from the support claim — keep the support commitment worded
-  as a founder-direct line, without a stated response-time SLA, until support-hour capacity is
-  scoped for real. Billing cadence, taxes/fees, and the contract flow remain undecided
-  ([human-decisions/](human-decisions/README.md)); do not publish billing terms through any new channel
-  without that decision. The two-year price lock and the founder-direct support promise are
-  **binding commercial commitments** and taxes/fees are jurisdiction-dependent — both carry an open
-  legal/tax-review dependency (H-20260724-public-founding-shop-price); do not treat the closed *price* as clearing them.
+- **Comparisons explain terms, never invented savings.** `/pricing` links to the switching
+  guides' sources for a competitor's published terms. Do not revive removed competitor figures,
+  fixed migration-time estimates or promises about undocumented exports. No invented customer
+  results, “typical shop” collections or savings arithmetic. The explicitly hypothetical worked
+  months above illustrate our configured fee alone, with both a monthly base and percentage
+  applied when configured; they are not market evidence.
+- **The price renders only from `src/lib/marketing.ts` and the configured offer.** Never restate
+  a rate or fee amount in prose, JSON-LD literals or images. Every public percentage-fee sentence
+  uses the shared fee key and calculated parameters. Preserve the published fee scope, exclusions,
+  refund credits and contract terms on Pricing and in canonical terms. Founding shops' existing
+  sold commitments remain binding; this copy hierarchy change creates or rescinds none. The
+  general founder-direct support offer was retired as described above, and a new service promise
+  still needs owner authorization. `/about` and ordinary feature pages need only their quiet
+  Pricing link; do not restore priced buttons or repeated fee paragraphs there.
 - **Offline claims stay precise and human**: the device keeps its own copy current automatically
   while online, with a manual "Refresh now" for right before losing signal; it never transfers
   between devices or guarantees stale readiness is live. Captain's words ("this phone stays
@@ -369,66 +387,29 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
 The product voice ([design/principles.md](../design/principles.md) §4 — competent divemaster, not
 a lawyer or a mascot) applies, plus marketing-specific rules:
 
-- **Headlines state an outcome in the buyer's world**, not a category label. "Roll-call buttons big
-  enough for wet thumbs" beats "mobile-first manifest management". Test: could a rival paste this
-  headline onto their site truthfully? If yes, sharpen it. **The test binds `/about` too**, which is
-  where it is easiest to forget: that page's hero read "Built by divers, for divers." until
-  2026-08-03 — true of every dive-adjacent vendor alive, and therefore an eyebrow wearing a
-  headline's clothes. A trust page that opens with a sentence anyone could sign has spent its most
-  valuable line arguing nothing. It has since failed three more times in the *other* direction, all
-  recorded in `e2e/marketing.spec.ts`: "One person owns every line of code running on this boat."
-  conceded smallness until it read as a vendor with no infrastructure behind it; "Small enough to
-  answer you." (2026-08-05 to 2026-08-12) spent the line on the company's size — the one fact about
-  DiveDay a buyer has no reason to want; and "We'd rather be checked than believed." fixed the
-  register but picked a fight, presuming the reader's distrust and answering it with a dare. The hero
-  is now **"Your season doesn't hang on us."** — the reassurance stated as a fact about the shop's
-  operation rather than a posture about us, with the sentence beneath it carrying the proof (the
-  shop's own Stripe account, the export ZIP, roll call with no signal). **The lesson that outlived
-  all four:** on this page the headline's job is to say something true about *the buyer's* position,
-  not to characterize DiveDay — as a vendor, as a size, or as an attitude.
-  **And the test binds every h2 on that page, not only its h1** (2026-08-28). Slice 12f fixed the
-  "From day one" band's heading — the band carrying the export terms, the plan terms and who
-  answers, which is the page's best material and the answer to the buyer's strongest objection — by
-  replacing a heading about *us* with the metaphor "What you're standing on.", and shipped a fifth
-  failure of the same test: a rival could paste it unchanged. The heading is now **"Month to month,
-  and the export is one button."** — the plan terms printed six inches beneath it, and the export
-  the rules band dares the reader to go and run. `/about`'s headings are the only part of that page
-  a skimmer reads, so one that argues nothing costs the band it stands over.
-  `src/app/(marketing)/about/copy.test.ts` makes the test mechanical for that heading: some clause of it has to
-  appear in the band's own published prose, which no metaphor can satisfy.
-  **Since 2026-09-24 (H-20260903-voice-public-pages-speak) `/about` is written as speech**, and every heading on it is the shop
-  owner's question repeated back without a mark. **Since the 2026-10-06 rewrite** (Aaron: "I don't
-  like the copy on the about section. Redo it completely") they run "Why did you build this" (the
-  H1), "Who am I dealing with", "How do I know any of that's true", "Who answers when something
-  breaks", "What's the catch", "What happens to my records if I go", "How do I try it". The
-  sentence that survived four failures ("your season doesn't hang on us") now closes the "Who am I
-  dealing with" band, with its proof beside it. The headline test binds the first sentence of
-  each answer rather than the question, and the copy test's arithmetic moved with it: the exit
-  heading names the thing its band publishes (a content word of the question appears in the band's
-  own prose), carries no mark at either end, and is none of the three retired headings.
-  **Since the 2026-10-07 rewrite (H-20261006-about-say-whose-voice; Aaron: "I really really don't like the copy on About. Let's
-  redo it entirely")** the spoken register is retired. The owner kept the hero alone, with the
-  question heading over it removed and the tie made the company's; every heading under it is a
-  statement with a full stop ("Divers who have shipped software to millions of people.", "The one job on a boat
-  that can't go wrong.", "We set your shop up with you.", "The demo is a working shop, with divers
-  booked on today's boat."), the eyebrow "Why DiveDay exists" is the page's h1, and the copy test's
-  arithmetic moved again: statement headings, no individual named, no first-person singular, the
-  Lonergan limits, and the retired questions refused by value. The register is "The about page"
-  in [design/brand.md](../design/brand.md).
+- **Headlines state an outcome in the buyer's world**, not a category label or narration about
+  the page. “Roll-call buttons big enough for wet thumbs” beats “mobile-first manifest
+  management.” Support the outcome with the screen and the operational qualifications that make
+  it true. The Product hub names the connected work, rather than explaining that each job has a
+  page. Feature titles stay short enough to scan on a phone; details belong in supporting copy.
+  **About keeps its own company voice.** The Lonergan account opens the page under the eyebrow
+  “Why DiveDay exists”; the sections below use statement headings, not rhetorical questions.
+  Preserve the approved account and its limits. The founder signature is the one named person
+  outside the factual origin account; the prose remains “we,” without a CV or invented biography.
+  `src/app/(marketing)/about/copy.test.ts` holds these constraints in both languages.
 - **Concede the facts; never apologize for them.** This is the rule the page-level version of the
   claims policy kept losing. "DiveDay is new" and "it's still changing" are honesty the policy
   requires, and they stayed on `/about` until 2026-10-07, when the owner's rewrite dropped the
   concessions band (H-20261006-about-say-whose-voice: "Don't get overly truthful, just make a compelling case"; the protection
-  they described, the export on the first day and the month-to-month plan, is stated on the page as
-  what the shop gets); its scope card ("it doesn't do everything") left in the
+  they described remains available on Pricing); its scope card ("it doesn't do everything") left in the
   2026-10-06 rewrite, the day the "What it doesn't do" sections came off the public pages. What is banned is the register that grew up around them — by
   2026-08-12 nine framings of *we're small, we're new, you've never heard of us, don't take us on
   faith* had accumulated across the five pages, including the `/about` H1, the lead-in to its four
   checkable rules, the homepage's export band, `/product`'s honest-no, and the `/pricing` FAQ
   question "DiveDay is new. What happens to my data if this doesn't work out?" Every one read as
   reasonable candor alone; together they argued the buyer out of the sale before the product got a
-  word in. The fix in each case was to keep the fact and drop the flinch — the pricing question is
-  now "What happens to my records if I leave?" with the same answer underneath. **A test enforces
+  word in. The fix in each case was to keep the fact and drop the flinch — Pricing now heads its export section “Your records stay yours,” with the accurate export
+  contents and terms underneath. **A test enforces
   this** ("no marketing page apologizes for the company's size or age"), pinning the specific
   phrasings out by name, because each one shipped as a sentence its author thought was honest.
 - **A person wrote it, not a model.** Every word of these pages is written by a language model,
@@ -534,31 +515,19 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   not the homepage close — because that is where the decision is made; a reader who scrolls past it
   has already read it. Deleting it from a page entirely is a different change and not an allowed
   one: `e2e/marketing.spec.ts` asserts it on `/`.
-  **`/about` carried it nowhere at all until 2026-08-28**, which is the failure this rule is worded
-  to catch and did not: the page had one demo door, in its closing band, and no note under it. When
-  slice 12f moved the first door up to the four-rules band the gap became the expensive kind — a
-  page that has just dared a burned buyer to go and check four things, offering an unlabeled button
-  at the moment of maximum impulse. The note stands under `about-rules` now, in `/product`'s hero
-  shape, and the closing band repeats the door and not the note. The spec asserts both halves there:
-  present in the rules band, and exactly once in `<main>`.
-  **`/pricing` states the trial once beside the price, plus its FAQ answer** (2026-10-22, the
-  market sheet's item 8). `marketing.pricing.trialNote` — free, three weeks, no card, and the soft
-  expiry `src/features/trial/rules.ts` implements — stands under the hero's pair only. The invoice's trial row,
-  the margin note about day 22 and the closing band's copy were deleted: the page said the trial five
-  times. Card fees are the invoice's "Card processing" row and nowhere else on the page.
-  **Both notes at a door carry the same weight** (`font-medium`), which on `/pricing` means the
-  trial note matches the demo note rather than sitting a step under it. They are one kind of object
-  — terms at a door — and the trial is the door with the higher friction, so setting only the demo's
-  terms in medium put the heavier ink on the easier ask. `/` is not this case and does not change:
-  the regular-weight line under its medium demo note is a *price line*, context beside terms rather
-  than terms of its own.
-- **What "Get set up" leads to is said once per page, at the close** (issue #2097, approved by the
-  product owner 2026-10-09). `marketing.common.setUpNote`, "A person reads every request and sets
-  your shop up with you.", stands under the closing pair of `/`, `/pricing`, `/about` and every
-  feature page, the band where a reader commits. It names a person and nothing else: no response
-  time, no "free", no count of anything. Any change to its wording is a service claim and needs the
-  same sign-off. `FunnelCtas` draws it under a closing pair, chosen by the tag (`isClosingSource`), so
-  no page places it by hand; `e2e/marketing.spec.ts` asserts it once in each of those pages' `<main>`.
+  On `/about`, the demo note stands under the first pair in the operational standards band,
+  exactly once in `<main>`, without a price footnote. The closing band repeats the doors, not the
+  note. The feature-page note also names the screen and role the demo opens.
+  **`/pricing` states the trial once beside the price.** `marketing.pricing.trialNote` says the
+  shop's trial is free for three weeks with no card, and that it keeps working while the shop
+  arranges the move to paid with `onboarding@dive.day`. The trial rules use soft expiry; do not
+  invent automatic billing, a cutoff or an indefinite free-service promise. The invoice's card
+  processing row states Stripe's fee once; the fee-scope FAQ supplies the necessary detail.
+- **The setup door says what happens next.** The close names the person who reads the request,
+  using `marketing.common.closingSupport`; each page keeps the shared `FunnelCtas` behavior.
+  `/get-set-up` asks the visitor to tell us about the shop so we can set it up for the way the crew
+  works, and its button says “Request setup.” Do not invent a reply-time or same-week readiness
+  promise, or make a new commercial promise to explain the form.
 - **One primary CTA per screen.** The demo leads everywhere through the shared `FunnelCtas`
   pair (the 2026-08-22 two-doors decision above — this bullet said "the trial on `/pricing`"
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply
@@ -569,13 +538,9 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   spec asserts it carries no primary fill. A screen's role door (above) is a
   link-weight submit and spends none of the screen's budget; the spec asserts it carries no primary
   fill, the way it asserts `/about`'s support door does not.
-  `/product` is where the budget is easiest to lose — the longest page on the site, offering the
-  demo from four positions inside its body, each added by a different review answering a different
-  objection. `e2e/marketing.spec.ts` counts the primary in *every* band of that page rather than
-  only at the door most recently added, which is the shape that let the homepage hero reach nine
-  choices before it was cut back. **`/about` is counted the same way** since 2026-08-28, when the
-  band holding its four checkable rules gained the pair (`about-rules`) and the support mailto two
-  bands below it demoted to secondary — a page with two doors is a page that can grow a third.
+  The Product hub and About each keep two demo positions, hero or standards and close.
+  `e2e/marketing.spec.ts` counts primary actions in each band so an additional section cannot
+  quietly add another competing door.
   **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
   secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
   demo, trial), which is a menu, not an ask. Cutting a hero control never means deleting the
@@ -591,61 +556,19 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   empty until a shop is listed, and a shop owner who followed the line read "No shops are listed
   yet" one click from the headline. The line is hidden unless the variable is exactly `1`
   (`src/features/home-diver-door`); turn it on once a shop is listed. The page keeps its address.
-  **Under the hero, one band says why the roll call is by name** (Aaron, 2026-11-11): the Lonergan
+  **After the practical journey, one band says why the roll call is by name** (Aaron, 2026-11-11): the Lonergan
   story cut to two sentences, what the roll call does, and a link to `/about`. It keeps every limit
   the `/about` hero keeps (no operator or skipper named, no sentence saying DiveDay would have
   prevented it), and `about/copy.test.ts` holds it to them in both languages.
-  **The three fields are inside that budget, not beside it** (2026-09-10, ADR
-  20260908-one-hand decision 6, possibility Y). The hero now takes a shop's name, one boat and a first
-  departure, and redraws itself as that visitor's first day. Three boxes and a "Draw my day" button
-  look like the budget growing by four, and the rule the budget encodes is about *decisions*, not
-  elements: a text box is not a destination, and "Draw my day" is **disabled until there is something
-  to draw**, so the count of things a visitor can act on at first paint is still one primary and one
-  secondary. `e2e/marketing.spec.ts` counts it exactly as before and did not move for this change,
-  which is the check that this claim is true rather than merely argued.
-  **The drawn hero is a different screen and gets its own budget.** Once a visitor has typed their
-  own shop into the page, the demo is no longer the leading ask — they are looking at their own
-  morning — so the drawn state offers one primary ("Open {shop}"), the three rows above it that go to
-  the same door under the same funnel tag (`home-drawn`), and a quiet way back to the fields. The nav
-  still carries the demo, which is what "the demo leads, everywhere" is for. Nothing about the drawn
-  hero is stored, fetched or looked up: DiveDay never reads a visitor's website, listing or logo, and
-  the hero says so on its face ("Drawn from what you typed", "Nothing is saved until you open it"),
-  which is what keeps it inside the claims policy rather than a demo of data we do not have.
-  **Two defaults the hero guesses, recorded because nobody typed them.** The first boat gets
-  **six seats** — capacity is the ceiling every gate downstream defends, and on a US uninspected
-  vessel six passengers is a legal line, so the only safe direction to guess in is low; a shop
-  raises it in the boat register. The first departure runs **four hours, on tomorrow's date in the
-  shop's own zone** — the same run the schedule builder's own blank form opens with, and tomorrow
-  rather than today because a shop signing up at 9 AM has already missed a 7:30 boat. (These
-  belong in ADR 20260908-one-hand's decision 6, possibility Y; that decision arrives with the
-  round-4 canvas commit and is not in the tree yet, so they are recorded here and move there when
-  it lands.)
   **The homepage hero carries the demo note without a price sentence** (Aaron, 2026-11-11).
-  Pricing remains on `/pricing` and the other marketing pages; the configured offer still
+  Pricing remains on `/pricing`, with navigation and contextual links from the other pages; the configured offer still
   supplies the homepage's structured data. This changes copy placement, not billing terms.
-  **`/product`'s money band is the same move made on a door that already existed** (2026-08-28).
-  The one band on that page about money read "What DiveDay itself costs →" — it raised the cost
-  question and parked our own half of the answer behind a click, which is what a burned buyer reads
-  as a card wall. The figure now stands in the link's own words ("One flat {price} {cadence} — see
-  everything it covers →"), so the band spends no new control and the reader learns the number
-  where the question is asked.
-  **`/about`'s pricing door went the same way on the same day**, and it was the worse offender: that
-  page raises the cost question three times — the "One price, no seats." rule sends the reader to
-  the pricing page to *check it*, the "How it's run" heading promises straightforward pricing, and
-  the paragraph beneath it says the whole of it is on one page — and then offered "See what it
-  costs", which on a page whose entire argument is that nothing here is hidden reads as *they won't
-  say*. It now reads "One flat {price} {cadence} — see the whole list", closing the loop the rules
-  card opened. Four sentences now interpolate `earlyAccessPrice` rather than one; their keys are
-  pinned in `src/lib/marketing.test.ts`, and a fifth that spells the number out instead fails
-  there.
-  The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
-  user-facing labels. **A label a reader sees names a thing, not a strategy** — and after the
-  2026-08-13 redesign the homepage names things in two idioms, deliberately: an uppercase eyebrow
-  for a whole thing (the hero's category line, the directory's three parts of a shop's year), and
-  a sentence-case marker with a hairline rule for a *part* of a section (a step's place in the
-  booking, a direction in the records diptych). The redesign deleted the standing section eyebrows that
-  merely restated the heading beneath them ("Your records", "Try it", "The whole shop, one place");
-  a heading that needs an eyebrow to be understood is a heading that needs rewriting.
+  **About and feature pages keep Pricing at link weight.** About says “See pricing”; ordinary
+  feature pages pair “Included in your shop’s plan.” with one quiet Pricing link. The dedicated
+  pricing page answers price and export questions in full. Repeating its copy elsewhere is not a
+  transparency requirement.
+  A label a reader sees names a thing or a next step, not an internal positioning pillar.
+  Eyebrows should distinguish content, not merely repeat the heading beneath them.
 
 ## SEO and shared links
 
@@ -770,28 +693,17 @@ payment, so "every line" was no longer true of it (#2094). `/product` keeps two 
 close, under the page's own tag. Since 2026-10-09 the demo takes a test-mode card once its Stripe
 pair is set (ADR 20261009-demo-test-mode-payments); the dare stays retired.
 
-`about-rules` (2026-08-28) is the same argument on the trust page, and the one where the door was
-furthest from the impulse. `/about`'s four operating rules each end in the demo action that proves
-them — *save a manifest to your phone, turn the network off, and run roll call anyway* — and the
-nearest thing a convinced reader could act on was a primary-weight `mailto:` two bands down, with
-the demo waiting past the founder story, the concessions and the export terms
-([marketing-review-20260827.md](archive/marketing-review-20260827.md), "help arrives after the homework").
-The pair now closes the band that makes the dare, wordless because the four "Check it" lines above
-it are its caption. The demo note stands beneath the pair, because
-this is now the page's first door and the terms belong at the first one (the once-per-page rule
-above). **The support mailto demoted to secondary in
-the same change** — it is a real offer and stays on the page, level with the pricing door beside it,
-but "email a stranger and wait" is a slower answer than the one the rules had just earned, and
-primary weight on it made it the heaviest thing on the page. `/about` now spends its budget where
-`/product` and `/pricing` spend theirs: one primary per screen, pinned in `e2e/marketing.spec.ts`
-band by band.
+`about-rules` keeps the first demo pair beneath the operational standards. Its demo note appears
+once, without a commercial footnote; the closing pair keeps `about-closing`. Setup and pricing
+links in the work-with-shops section remain secondary, and no funnel tag changes with this copy
+hierarchy update.
 
 **Not every tagged door is a conversion.** Some links carry a tag without firing either event: the
 diver-preview link into the demo shop's public schedule (`scheduleAttributionHref`) and **every
 in-page door onto the switching surface** (`switchingHref`). As of 2026-08-15 that is all four of
 them — `home-records` to the hub and `home-records-arriving` to the spreadsheet guide from the
 homepage records band, `product-spreadsheet` from `/product`'s closing band, and `about-switching`
-from `/about`'s "how you leave" band. They all build a `?from=` the Vercel `<Analytics />` page view
+from `/about`'s setup/support band. They all build a `?from=` the Vercel `<Analytics />` page view
 already carries, so they need no companion event; a switching page retags its own demo and trial
 CTAs with its own source, which is exactly why the hop *into* it has to be attributed on the way in.
 Read them as reach, not as conversion — they say which door a reader chose, and the guide's own
@@ -855,8 +767,8 @@ rendered through the shared wrappers in `src/components/MarketingSections.tsx`:
 | `CoursePageFallback` | A course's public page | The courses page |
 | `OrdersLedgerFallback` | One day of orders | The payments page |
 | `RecapPageFallback` | The recap a diver opens after the dive | The homepage's recap step |
-| `ImportPreviewFallback` | The contacts importer's preview step | `/switching` hub, and the homepage records band |
-| `ExportBundleFallback` | Settings -> Data export | `/pricing`'s "if you leave" band |
+| `ImportPreviewFallback` | The contacts importer's preview step | `/switching` hub, reached from Home |
+| `ExportBundleFallback` | Settings -> Data export | `/pricing`'s “Your records stay yours” section |
 
 The nine feature-page screens live in `src/components/MarketingFeatureScreens.tsx`, the rest in
 `src/components/MarketingScreenFallbacks.tsx`; a feature page names its screen in the registry
@@ -880,97 +792,13 @@ It draws no `photos/` row on purpose -- the bundled images are a directory in th
 the counted files, so a row for them would be an element the real screen does not have, and the
 band's own copy is where the photos claim belongs.
 
-It sits between the fee anchor and the included list rather than in the FAQ, because that is where
-the objection lands: the fee anchor has just made switching look attractive, and the next thought a
-shop owner has is about being stuck again. The `faq.dataIfNotWorking` row still answers it in words
-for a reader who scans that far, and the `faq.shutdown` row beside it carries the continuity
-promise (H-20261007-continuity-promise) for the reader whose worry is DiveDay leaving rather than the shop.
+The export screen and terms live in `/pricing#export`, headed “Your records stay yours.” The
+separate `faq.shutdown` row carries the exact authorized continuity promise. Removing repeated
+export prose from other pages does not change either promise.
 
-**The homepage records band shows both halves, in the order the copy argues them**: the import
-preview (arriving) beside the export inventory (leaving). Arriving is a picture — the importer's
-real preview step, because "we'll show you exactly what comes across before anything saves" is a
-claim only a screen can settle. Leaving is a list, because what a shop wants to know on the way out
-is *what is in the box*, and a mockup of a ZIP file shows nothing. That band is the portability
-wedge, which is DiveDay's strongest claim against every incumbent, and until 2026-08-12 it made
-that claim in two paragraphs and a checklist — all telling, on the highest-traffic page on the
-site.
+**The homepage records band leads with arrival.** It explains the import preview and realistic mid-season handover scope in one setup section, with a direct spreadsheet-guide link and “Find the guide for your current system.” The preview itself remains on the switching hub. “See what’s in your export” is a quiet inline link to `/pricing#export`, with no separate confidence paragraph or exit column. Home does not repeat ZIP/CSV contents or export terms. Keep the existing `home-records` and `home-records-arriving` tags and spreadsheet `#columns` destination.
 
-**Its geometry is the claim.** On 2026-08-13 the band stopped being a copy-left / visual-right
-split — the third section in a row on that page to use one, after the hero and the first daily
-moment — and became a mirrored diptych: one statement, then two equal columns divided by a rule,
-same marker, same weight, arriving left and leaving right. "Come in clean, and *leave the same
-way*" is an argument about symmetry, so the section that makes it is the one place on the page
-where the layout should be symmetric. The two column markers ("Coming in" / "Going out") are the
-copy that used to open each paragraph — `exportDescription1` lost "Arriving is a file, not a
-project" for "A file, not a project", `exportDescription2` lost "Leaving is built to the same
-standard as arriving", and the export card's own "In the export" eyebrow retired rather than sit
-stacked under "Going out". The inventory also lost its card border and became a hairline manifest:
-a second rounded box beside the import mockup read as the mockup's twin, when the two halves are a
-picture and a list.
-
-**The arriving column answers mid-season, in the guides' own words** (2026-08-28). A shop reading
-"bring your records in clean" in August is not asking whether an import works — it is doing the
-arithmetic of switching with a season's bookings already on the books, and the four-phase move rail
-that answers it lives several thousand pixels away on a switching guide this reader may never open.
-One sentence now sits under the arriving lede, and it renders
-`marketing.guides.shared.cutover.midSeason` through `midSeasonCutover` in `src/lib/marketing.ts`
-rather than a homepage wording of the same promise: the guides walk the cutover step by step (five
-of them since 2026-08-28), `/` compresses it to one, and both live in the same block of the bundle
-so an editor rewriting either is reading the other. This is the export claim's rule applied to a
-second claim. The guides do not additionally render the summary — beside the steps it compresses,
-it would be a caption restating its own section.
-
-**The band carries two links, and they are not the same door twice.** The 2026-08-13 redesign merged
-two stacked link CTAs under the section copy — one to `/switching`, one straight to
-`/switching/spreadsheet` — into a single hub link, on the reasoning that the hub already forks and
-two stacked links to one destination-shaped surface were one door pretending to be two. That
-reasoning holds for the *stack*, and the stack is not coming back. What it cost was the direct one:
-`/switching/spreadsheet` — the guide aimed at what this file calls the largest under-served pool of
-dive shops — lost its only inbound link from the highest-traffic page on the site, and a reader who
-self-identifies as "coming off a spreadsheet" landed instead on a hub whose every card above the
-fold names a competitor they have never used. On 2026-08-15 the direct door came back **inside the
-"Coming in" column, under the import-preview mockup** (`marketing.home.spreadsheetLink`): the mockup
-is the importer reading a sheet, so the reader who recognizes their own sheet in it is already
-looking there, and the link belongs to the arriving half specifically while the hub link still
-closes the whole band. Restoring it as a second link *under the section copy* would be re-adding the
-shape the redesign removed; this is a different position with a different owner, and the two read as
-one door per scope rather than two doors per destination.
-
-Three details make that hold, and each was one conversion review away from being lost:
-
-- **The closing link now sits under a full-width rule** (`mt-12 border-t border-border pt-6`). The
-  arriving column is the taller half — a mockup against a four-row list — so the section's own
-  closing link lands at the same left margin as the column's, a short gap below it, and the two scan
-  as a stacked pair unless a line says otherwise. The band is hairlines throughout (marker rules, the
-  column divider, the inventory's `divide-y`), so the rule reads as its footer: this link closes both
-  columns.
-- **The column link is a label, not a fourth sentence.** "Your spreadsheet, column by column →" —
-  declarative, so it does not rhyme question-then-arrow with the closing link, and short enough to
-  read as a caption on the mockup above it. The paragraph beside it has already asked this reader for
-  their sheet ("send us the sheet and we'll bring your divers in with you, free"), so a link opening
-  "Running the day on a spreadsheet?" would re-qualify an audience the copy just addressed and
-  restate a promise made 40px earlier.
-- **The hub link kept a catch-all.** It now reads "Switching from {competitors} — or something else?
-  Read the guides →". Dropping its old "Coming off a spreadsheet?" clause was right — with a direct
-  door in the column, that clause hailed one audience twice in one band — but deleting it outright
-  left a pure vendor-name filter, and a shop on Peek, an Access database or a paper book reads a list
-  it is not on and takes the band's terminal action to mean "not for me". The replacement clause is
-  not a new claim: the hub's own last row is `switching.hub.dontSeeSystem`, "Something else, or
-  nothing at all?"
-
-Both are now tagged (`home-records` on the hub link, `home-records-arriving` on the spreadsheet
-one), which the pre-2026-08-13 pair never was. That is the point of splitting them: the follow-up
-that re-opened this question could not be settled from the numbers, because the click-through it
-needed had never been counted. It can be next time.
-
-**The homepage's breadth band is the feature directory, and every claim in it is a link.** Until
-2026-10-05 it was `FeatureGroupsGrid`'s four cards, the one band on the page that asked a reader to
-take a claim on trust; now each row names a feature page and its one sentence, and the page behind
-it shows the screen (H-20261005-public-pages-sell, and "The homepage breadth band" near the top of this file). It still
-carries no demo door of its own: the close is one band away, and three banded CTAs in a row read as
-pressure, not confidence (the mid-page door retired in the 2026-08-13 redesign for that reason).
-Revisit the band when the page-level `demo_entered`/`setup_requested` pairs (`home-hero` /
-`home-closing`) have numbers.
+**Home links quietly to the full feature directory on Product.** Its illustrated practical journey shows the essential booking-to-recap scenes, each linked to the relevant feature page. “Explore the features” opens `/product#full-list`; a second catalogue on Home would repeat the destination. The Home demo doors remain at the hero and close, and retain the `home-hero` / `home-closing` funnel tags.
 
 **`SectionMarker` is deliberately page-local.** The homepage's kicker — a short sentence-case label
 with a hairline rule running out to the edge of its column — lives in `src/app/(marketing)/page.tsx` rather than
@@ -981,8 +809,7 @@ still its only caller, and no other marketing page has grown the idiom — the t
 `h-px flex-1` rules in the tree are the public schedule, its loading skeleton, and the schedule
 builder, none of them marketing. Promoting a one-caller atom is how a shared module fills up with
 things nobody else wanted. Move it the day a second marketing page wants the same kicker, keeping
-its `as?: "p" | "h3"` prop — the portability diptych's columns need the `h3` (the marker is their
-only label, so it carries them in the document outline) and the booking's step rows need the `p`
+its `as?: "p" | "h3"` prop — the arrival marker is an `h3` in the document outline and the booking's step rows use `p`
 (they already have an `h3` below).
 
 These mockups render identically in every checkout and in both light and dark modes, and they use
@@ -1001,10 +828,10 @@ structure* live; none of them may contain an English sentence:
 
 | Content | Structure / keys | Words |
 | --- | --- | --- |
-| Every feature page's name and one-sentence summary, listed on `/` and `/product` | `src/lib/feature-pages.ts` (the registry and `FEATURE_PHASES`), rendered by `FeatureDirectory` in `src/components/MarketingSections.tsx` | `marketing.featurePages.<page>.name` / `.summary`, and `marketing.featureChrome.phases.*` |
-| Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the `$99` figure is the only literal, and the only place it exists | `marketing.price.*` in the bundles |
-| Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
-| Continuity promise shared by pricing + about (H-20261007-continuity-promise) | `src/lib/marketing.ts` (`continuityPromise`) | `marketing.export.continuity` in the bundles |
+| Every feature page's name and one-sentence summary, listed on `/product` | `src/lib/feature-pages.ts` (the registry and `FEATURE_PHASES`), rendered by `FeatureDirectory` in `src/components/MarketingSections.tsx` | `marketing.featurePages.<page>.name` / `.summary`, and `marketing.featureChrome.phases.*` |
+| Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) and the configured offer; fee amounts are calculated, never copied | `marketing.price.*` in the bundles |
+| Canonical export claim on Pricing and dedicated switching records blocks | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
+| Exact continuity promise in Pricing FAQ (H-20261007-continuity-promise) | `src/lib/marketing.ts` (`continuityPromise`) | `marketing.export.continuity` in the bundles |
 | Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product`, one group per feature page | `src/lib/marketing.ts` (`productCapabilityIndex`, `capabilityGroup()`) | `marketing.capabilities.*` in the bundles; a feature page's group is titled by its `name` |
@@ -1052,28 +879,21 @@ entry (its bundle keys, hub card, route, and coverage rows go with it) when the 
 being worth a page — the DiveAdmin guide shipped 2026-07-23 and was retired 2026-08-05 on market
 share, and the strategy doc keeps the dated record.
 
-**Every switching surface reads in both directions.** The wedge is not "escape your incumbent", it
-is "your records import cleanly when you arrive and export cleanly if you ever go" — the no-lock-in
-point is a *reason to join*, not a goodbye, so a page that only walks a shop out of somewhere else
-is only half written. Concretely: the hub says so in its own words, and every guide (incumbents and
-`/switching/spreadsheet` alike) carries the shared `switching.common.bothWays*` block directly under
-the scope table, composing `fullShopExport`'s `claimKey`/`termsKey` rather than re-authoring the
-exit promise. The homepage's records band follows the same order — arriving first, leaving second.
-Never let a surface restate the export claim in its own words; that is what the shared keys exist
-to prevent.
+**Switching pages preserve records control without ending on departure.** Every guide keeps the
+shared `switching.common.bothWays*` block under the scope table, composing `fullShopExport`'s
+claims rather than rewriting them. Authorized personal exit assistance remains available there.
+The shared close asks for a sample and offers to review the move. Home keeps one quiet canonical
+export link beside its arrival guidance, rather than the guides' full records block. A reader can find the exit
+terms without every surface making leaving its central argument.
 
 A guide for a booking/distribution **channel** rather than a records system (today: **FareHarbor**
-and **Rezdy**, general tours engines) additionally carries an optional `coexist` block and is
-**coexist-led**: it opens with "keep the storefront and its network, run the dive day it can't" —
-the product page's "bring your POS, we run the water" division of labor extended to a booking
-channel — then offers the clean leave path (DiveDay takes the booking, the recurring/per-booking fee
-stops) over the same shared export/scope/import mechanics. Two extra honesty rules bind these:
-**never imply an integration or live sync** (coexistence is "run alongside, bridged by the CSV
-import"), and **never state a competitor's unpublished fee as their published price** (FareHarbor's
-rate is reported-only, "reported at around 6%"; Rezdy's 3% is dated to its current published page).
-See [assessments/fareharbor-positioning.md](archive/assessments/fareharbor-positioning.md) for the pattern
-and [assessments/switching-guide-landscape.md](archive/assessments/switching-guide-landscape.md) for which
-channels get a guide next.
+and **Rezdy**) additionally carries a `coexist` block. It invites the shop to try preparing a
+DiveDay departure before deciding whether to keep the booking channel or move new bookings.
+Keep the manual transfer and staff responsibility explicit: there is no live synchronization or
+replacement distribution network. Check the shop's actual agreement and the linked current
+sources rather than promising a fee saving or repeating an old advertised percentage. The dated
+[coexist assessment](archive/assessments/fareharbor-positioning.md) is historical context, not
+permission to restore the claims removed in the current switching review.
 
 The one non-incumbent guide is `/switching/spreadsheet` ("Coming from a spreadsheet"). A shop on a
 spreadsheet has no vendor to leave, so the page has no incumbent context, no export click-path to
@@ -1097,9 +917,9 @@ at the dock, the blocker queue, the no-login diver arc.
 - **A claim is invalidated** (feature removed, behavior changed) → fix the page in the same PR
   that invalidates it. If code and copy disagree, one of them is the bug.
 - **Verification is the product bar**: the local gate green (`pnpm check:repo`, `pnpm lint`,
-  `pnpm typecheck`, `pnpm verify:push`) and CI's `pnpm check`; `pnpm e2e marketing.spec.ts`;
-  screenshots of every touched page in light + dark, desktop + phone, actually looked at
-  (design-review skill); visual triage after push (visual-triage skill).
+  `pnpm typecheck`) and CI's `pnpm check`; `pnpm e2e marketing.spec.ts`;
+  screenshots of every touched page in light, desktop + phone, actually looked at (dark also
+  for color work), following the design-review skill; visual triage after push (visual-triage skill).
 - Copy changes update the e2e assertions that pin headlines/price visibility — deliberately: a
   failing marketing spec on a copy change is the test doing its job.
 - **Re-check positioning** (this doc's spine + the assessments) when: a rival ships a response

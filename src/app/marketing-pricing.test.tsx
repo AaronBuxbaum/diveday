@@ -107,24 +107,25 @@ describe("with the original monthly-only pricing", () => {
     vi.stubEnv("PRICING_MONTHLY_CENTS", "9900");
     vi.stubEnv("PRICING_BASIS_POINTS", "0");
   });
-  it("/about says today's price, whatever arm a request claims", async () => {
+  it("/about keeps its story and standards without repeated commercial terms", async () => {
     asReader("percent_of_volume");
     const text = await pageText("about");
-    expect(text).toContain("One price covers the shop");
-    expect(text).toContain(
-      "The plan is $99 per location / month, and it covers every part of DiveDay and a login for everyone on your staff. We take no cut of your bookings.",
-    );
-    expect(text).toContain("One flat $99 per location / month. See the full list");
-    expect(text).not.toContain("card money");
+    expect(text).toContain("That story is why we built DiveDay");
+    expect(text).toContain("wet clipboard");
+    expect(text).toContain("See pricing");
+    expect(text).toContain("/pricing#export");
+    expect(text).not.toMatch(/\$99|One price covers|shuts down/);
   });
 
-  it("/product and a feature page say today's price", async () => {
+  it("/product states the price while features link to the plan", async () => {
     asReader("percent_of_volume");
     const line = "One flat price of $99 per location / month, and no cut of your bookings.";
     expect(await pageText("product")).toContain(line);
     const text = await pageText("payments");
-    expect(text).toContain(line);
-    expect(text).toContain("Every line here is in the one plan, at $99 per location / month.");
+    expect(text).not.toContain(line);
+    expect(text).toContain("Included in your shop’s plan.");
+    expect(text.match(/\/pricing\b/g)).toHaveLength(1);
+    expect(text).not.toContain("/pricing#export");
     // The feature page's close is the two doors alone (B09/B15): the price
     // stands once, under its hero.
     expect(text).not.toContain("with every feature in it");
@@ -169,7 +170,7 @@ describe("with default percentage pricing", () => {
     vi.stubEnv("PRICING_BASIS_POINTS", "0");
     vi.stubEnv("PRICING_MONTHLY_CENTS", "9900");
     asReader("flat_monthly");
-    expect(await pageText("about")).toContain("We take no cut of your bookings.");
+    expect(await pageText("about")).toContain("See pricing");
     expect(await pageText("payments")).toContain("No. DiveDay is one flat monthly price.");
     expect(await pageText("rezdy")).toContain(
       "One flat price of $99 per location / month, and no cut of your bookings.",
@@ -187,26 +188,28 @@ describe("with default percentage pricing", () => {
   it("gives the percentage offer its own terms on /about, /product and a feature page", async () => {
     asReader("percent_of_volume");
     const about = await pageText("about");
-    expect(about).toContain("One plan covers the shop");
-    expect(about).toContain("Your shop pays 3% on its recorded receipts, with no monthly fee.");
-    expect(about).toContain("3% on receipts. See the full list");
-    expect(about).not.toMatch(FLAT_CLAIMS);
+    expect(about).toContain("See pricing");
+    expect(about).not.toMatch(/3%|\$99|shuts down/);
 
     const product = await pageText("product");
-    expect(product).toContain("3% when you record a payment, with no monthly fee.");
+    expect(product).toContain(
+      "3% of money recorded as received in DiveDay, cash included, with no monthly fee.",
+    );
     expect(product).not.toMatch(FLAT_CLAIMS);
 
     const payments = await pageText("payments");
     expect(payments).toContain(
-      "Every line is included for 3% of the payments you enter as received.",
+      "3% of money recorded as received in DiveDay, cash included, with no monthly fee.",
     );
     expect(payments).toContain("DiveDay’s 3% is billed to you once a month");
     expect(payments).toContain(
-      "Yes. The fee is 3% of money recorded as received in DiveDay, billed monthly.",
+      "Yes. 3% of money recorded as received in DiveDay, cash included, with no monthly fee.",
     );
     expect(payments).not.toMatch(FLAT_CLAIMS);
     expect(payments).not.toContain("$99");
-    expect(payments).toContain("Cash and external payments count too.");
+    expect(payments).toContain(
+      "Online card payments count automatically; record cash and external payments when received.",
+    );
     expect(payments).not.toContain("card money taken through DiveDay");
   });
 
@@ -214,11 +217,11 @@ describe("with default percentage pricing", () => {
     vi.stubEnv("PRICING_BASIS_POINTS", "300");
     vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
     asReader("percent_of_volume");
-    expect(await pageText("about")).toContain("on its recorded receipts plus $29 a month.");
+    expect(await pageText("about")).not.toContain("$29");
     expect(await pageText("payments")).toContain(
-      "recorded as received in DiveDay, plus $29 a month, billed",
+      "recorded as received in DiveDay, cash included, plus $29 a month.",
     );
-    expect(await pageText("about")).toContain("3% on receipts and $29 a month. See the full list");
+    expect(await pageText("about")).toContain("See pricing");
   });
 
   it("states the percentage offer beside the same honest switching comparison", async () => {
@@ -228,7 +231,9 @@ describe("with default percentage pricing", () => {
     expect(hub).not.toMatch(FLAT_CLAIMS);
     for (const guide of ["rezdy", "fareharbor", "peek"] as const) {
       const text = await pageText(guide);
-      expect(text).toContain("3% when you record a payment, with no monthly fee.");
+      expect(text).toContain(
+        "3% of money recorded as received in DiveDay, cash included, with no monthly fee.",
+      );
       expect(text).not.toMatch(FLAT_CLAIMS);
       const metadata = await guideMetadata({ params: Promise.resolve({ competitor: guide }) });
       expect(JSON.stringify(metadata)).not.toMatch(FLAT_CLAIMS);
@@ -238,17 +243,16 @@ describe("with default percentage pricing", () => {
   it("says the percentage offer’s terms in es-ES", async () => {
     asReader("percent_of_volume", "es-ES");
     const about = await pageText("about");
-    expect(about).toContain("Un plan cubre el centro");
-    expect(about).toMatch(
-      /Tu centro paga el 3\s?% sobre sus cobros registrados, sin cuota mensual/,
-    );
-    expect(about).not.toContain("No nos quedamos con nada de tus reservas");
+    expect(about).toContain("Ver precios");
+    expect(about).not.toMatch(/3\s?%|\$99/);
     const payments = await pageText("payments");
-    expect(payments).toMatch(/Sí\. La tarifa es el 3\s?%/);
-    expect(payments).toContain("También cuentan el efectivo y los pagos externos.");
+    expect(payments).toMatch(/Sí\. El 3\s?%/);
+    expect(payments).toContain("Los pagos con tarjeta en línea cuentan automáticamente");
     expect(payments).not.toContain("DiveDay es un precio mensual fijo");
     const rezdy = await pageText("rezdy");
-    expect(rezdy).toMatch(/El 3\s?% al registrar un pago recibido, sin cuota mensual/);
+    expect(rezdy).toMatch(
+      /El 3\s?% del dinero registrado como recibido en DiveDay, incluido el efectivo, sin cuota mensual/,
+    );
     expect(rezdy).not.toContain("comisión por reserva y toma");
     expect(rezdy).not.toContain("O deja atrás la cuota mensual");
   });
@@ -258,3 +262,18 @@ describe("with default percentage pricing", () => {
     expect(homeSoftwareJsonLd(await requestPricingOffer()).offers).toBeUndefined();
   });
 });
+
+it.each(["en-US", "es-ES"] as const)(
+  "keeps ordinary features focused on the product in %s",
+  async (locale) => {
+    asReader(null, locale);
+    for (const feature of ["website", "certifications", "messages", "schedule", "rental-gear"]) {
+      const text = await textOf(await FeaturePage({ params: Promise.resolve({ feature }) }));
+      expect(text).toContain(
+        locale === "en-US" ? "Included in your shop’s plan." : "Incluido en el plan de tu centro.",
+      );
+      expect(text.match(/\/pricing\b/g)).toHaveLength(1);
+      expect(text).not.toMatch(/#export|3\s?%|\$99|shuts down/);
+    }
+  },
+);

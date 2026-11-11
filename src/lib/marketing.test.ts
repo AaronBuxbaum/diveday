@@ -47,27 +47,8 @@ function marketingMessages(locale: (typeof DIVER_LOCALES)[number]): Record<strin
  * both render it the same way.
  */
 describe("the price is interpolated, never spelled out in a bundle", () => {
-  /**
-   * The sentences that carry the figure: the hero and the closing band of `/`
-   * (the hub's hero reads the same `heroPriceLine`), `/about`'s pricing door
-   * — a trust page that raises the cost question three times and answers it
-   * with "See what it costs" is the same unlabeled door, on the one page whose
-   * whole argument is that nothing here is hidden — and the two lines every
-   * feature page prints beside its checklist and its close. `/product`'s
-   * money band carried one from 2026-08-28 until the hub became the directory
-   * of the feature pages (H-20261005-public-pages-sell). Each addition here is the point: a new
-   * surface that shows the price must interpolate it or this list is where it
-   * fails.
-   */
-  const priceSentenceKeys = [
-    "marketing.home.heroPriceLine",
-    "marketing.about.seeCost",
-    // The "One price covers the shop." standard on `/about` states the figure
-    // where the question is raised rather than a band away from it
-    // (2026-10-07; the pricing door below it still carries it too).
-    "marketing.about.rules.onePrice.body",
-    "marketing.featureChrome.includedPrice",
-  ] as const;
+  // Explicit price placements interpolate the configured amount.
+  const priceSentenceKeys = ["marketing.home.heroPriceLine"] as const;
 
   for (const locale of DIVER_LOCALES) {
     it(`keeps every marketing message in ${locale} free of a currency figure`, () => {
@@ -152,8 +133,8 @@ describe("the mid-season answer is one shared key", () => {
 describe("the trial's terms stand at the pricing doors", () => {
   /** What the note must name, in each locale's own words. */
   const trialTerms = {
-    "en-US": [/free/i, /3 weeks/, /no card/i, /nothing switches off/i],
-    "es-ES": [/gratis/i, /3 semanas/, /sin tarjeta/i, /nada se apaga/i],
+    "en-US": [/free/i, /3 weeks/, /no card/i, /keeps working/i],
+    "es-ES": [/gratis/i, /3 semanas/, /sin tarjeta/i, /sigue funcionando/i],
   } as const;
 
   /**
@@ -286,8 +267,8 @@ describe("the pricing FAQ promises the import preview once", () => {
  */
 describe("the closing band says a person reads a request", () => {
   const person = {
-    "en-US": /person reads/i,
-    "es-ES": /\bpersona\b/i,
+    "en-US": /people building DiveDay.*read/i,
+    "es-ES": /personas.*DiveDay.*leer/i,
   } as const;
 
   for (const locale of DIVER_LOCALES) {
@@ -476,13 +457,13 @@ describe("the continuity promise", () => {
     });
   }
 
-  it.each([
-    ["/pricing", "src/app/(marketing)/pricing/faq.ts"],
-    ["/about", "src/app/(marketing)/about/page.tsx"],
-  ])("is rendered on %s from the shared key", (_route, file) => {
-    const source = readFileSync(join(process.cwd(), file), "utf8");
-    expect(source).toContain("t(continuityPromise.claimKey)");
-  });
+  it.each([["/pricing", "src/app/(marketing)/pricing/faq.ts"]])(
+    "is rendered on %s from the shared key",
+    (_route, file) => {
+      const source = readFileSync(join(process.cwd(), file), "utf8");
+      expect(source).toContain("t(continuityPromise.claimKey)");
+    },
+  );
 });
 
 it.each(DIVER_LOCALES)("separates self-service embeds from website discussions in %s", (locale) => {

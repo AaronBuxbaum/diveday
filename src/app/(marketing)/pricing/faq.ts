@@ -1,7 +1,7 @@
 import { planCopyParams, planMoney, planPercent } from "@/features/billing";
 import type { DiverTranslator } from "@/i18n/messages";
-import type { PlanTerms } from "@/lib/billing/pricing-plans";
-import { continuityPromise, earlyAccessPrice } from "@/lib/marketing";
+import { type PlanTerms, percentFeeCents } from "@/lib/billing/pricing-plans";
+import { continuityPromise, earlyAccessPrice, pricingExampleMonths } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 /**
@@ -69,6 +69,10 @@ export function pricingFaq(
       answer: t("marketing.pricing.faq.billing.answer"),
     },
     ...percentRow,
+    ...(["shopSize", "diverApp", "printedManifest", "devices", "currency"] as const).map((key) => ({
+      question: t(`marketing.pricing.faq.${key}.question`),
+      answer: t(`marketing.pricing.faq.${key}.answer`),
+    })),
     {
       // The per-seat fear, answered where the flat price raises it: the
       // number above is per *location*, and the roles it covers are the six
@@ -136,4 +140,13 @@ export function pricingFaq(
       answer: t("marketing.pricing.faq.multipleLocations.answer", { email: SUPPORT_EMAIL }),
     },
   ];
+}
+
+/** Worked examples use the same integer fee calculation as billing. */
+export function pricingExamples(offer: PlanTerms, locale: string) {
+  return pricingExampleMonths.map(({ id, receivedCents }) => ({
+    id,
+    received: planMoney(receivedCents, locale),
+    fee: planMoney(offer.monthlyCents + percentFeeCents(receivedCents, offer.basisPoints), locale),
+  }));
 }

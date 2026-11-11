@@ -113,21 +113,14 @@ test("the homepage follows one booking to the boat and home, a feature page per 
 }) => {
   await page.goto("/");
 
-  // Since 2026-10-05 (H-20261005-public-pages-sell) the band under the hero is one booking, followed
-  // from the shop's website to the boat and home again: five steps, each the
-  // screen that does it, two of the builder's notes, and the feature page that
-  // tells the rest. (Check-in at the counter was a sixth until review cut it
-  // the same day: its screen read as the readiness step's twin.) It replaced four annotated screens whose headline
-  // described the page rather than what a shop gets. The band is the third
-  // section of the page: the hero is first, and since 2026-11-11 the band
-  // that says why the roll call is by name sits between them (Aaron).
-  const whyBand = page.getByRole("main").locator("section").nth(1);
+  // The practical dive day welcomes the reader before the compact origin story.
+  const whyBand = page.getByRole("main").locator("section").nth(2);
   await expect(whyBand.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
   await expect(whyBand.getByRole("link", { name: /Why DiveDay exists/ })).toHaveAttribute(
     "href",
     "/about",
   );
-  const stepsBand = page.getByRole("main").locator("section").nth(2);
+  const stepsBand = page.getByRole("main").locator("section").nth(1);
   await expect(
     stepsBand.getByRole("heading", {
       level: 2,
@@ -139,11 +132,11 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   // draw headings of their own ("Find your next dive"), which a screen reader
   // never hears inside a `role="img"` but a heading query still finds.
   await expect(stepsBand.locator("ol > li > div:first-child h3")).toHaveText([
-    "A diver books and pays without calling the shop",
+    diverTranslator("en-US")("marketing.home.steps.book.title"),
     "They sign the release and answer the medical form at home",
     "Anyone who can’t board yet is named, with the reason",
     "The crew calls the roll by name, signal or not",
-    "Each diver gets the day’s recap, under your shop’s name",
+    diverTranslator("en-US")("marketing.home.steps.recap.title"),
   ]);
   // The screen is the claim in every step, so each one is shown rather than
   // described, and named for a screen reader by a label the *caller* resolves
@@ -214,8 +207,12 @@ test("the homepage answers mid-season where it disqualifies", async ({ page }) =
   // mid-season, and the four-phase move rail that answers it lives on a
   // switching guide this reader may never open.
   const arrivingColumn = page
-    .locator("div")
-    .filter({ has: page.getByRole("heading", { name: "Coming in" }) })
+    .locator("section")
+    .filter({
+      has: page.getByRole("heading", {
+        name: diverTranslator("en-US")("marketing.home.exportTitle"),
+      }),
+    })
     .filter({ has: page.getByRole("link", { name: "Your spreadsheet, column by column →" }) })
     .last();
   const midSeason = arrivingColumn.getByText(
@@ -237,26 +234,19 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByRole("link", { name: "Product" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Pricing" }).first()).toBeVisible();
 
-  // The portability story is a first-class band on the homepage, and it reads
-  // in both directions — records arrive cleanly and leave the same way, which
-  // is the reason to join, not a goodbye.
+  // Arrival leads; the export detail remains one clearly labeled link away.
   await expect(
-    page.getByRole("heading", { name: "How records arrive, and how they leave" }),
+    page.getByRole("heading", { name: diverTranslator("en-US")("marketing.home.exportTitle") }),
   ).toBeVisible();
   // The importer's preview is drawn once on the site, on the switching hub
-  // this band's closing link opens (visual review 2026-10-24, B14); here the
-  // export inventory for leaving is the list, and the preview is a link away.
+  // this band's closing link opens (visual review 2026-10-24, B14).
   await expect(page.getByRole("img", { name: /import preview/i })).toHaveCount(0);
   await expect(
-    page.getByText(diverTranslator("en-US")("marketing.export.claim"), { exact: false }),
+    page.getByText(diverTranslator("en-US")("marketing.home.exportDescription1"), { exact: true }),
   ).toBeVisible();
-  // The two directions are named, and the geometry that names them is the
-  // claim: a mirrored pair of columns for a section arguing that records leave
-  // the same way they arrive (2026-08-13 redesign, docs/product/marketing.md).
-  // Headings rather than text, so a future edit cannot demote them back into
-  // an eyebrow that leaves each column unnamed in the outline.
-  await expect(page.getByRole("heading", { name: "Coming in" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Going out" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: diverTranslator("en-US")("marketing.common.recordsLink") }),
+  ).toHaveAttribute("href", "/pricing#export");
 
   await page.getByRole("link", { name: "Product" }).first().click();
   await expect(
@@ -337,7 +327,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // The hero says what DiveDay runs, then what each row below holds. It was
   // five annotated screens of the day from 2026-09-24 until 2026-10-05, when
   // each feature got its own page and this one became their directory (H-20261005-public-pages-sell).
-  await expect(productHero.getByText(/^Booking, waivers, certification checks/)).toBeVisible();
+  await expect(
+    productHero.getByText(diverTranslator("en-US")("marketing.product.heroDescription")),
+  ).toBeVisible();
   // The demo CTA lands on the product page — three demo doors: the nav (every marketing page's single CTA), the hero
   // (the most evaluation-intent click on the site must offer proof above the
   // fold), and the closing band. A fourth stood under the capability index
@@ -460,6 +452,21 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   for (const pattern of [/\bsave[sd]? (you )?\$?\d/i, /shops (pay|save) (around|about|roughly)/i]) {
     expect(pricingBody, `unfounded savings claim matching ${pattern}`).not.toMatch(pattern);
   }
+  const pricingCopy = diverTranslator("en-US");
+  const examples = page.getByRole("region", {
+    name: pricingCopy("marketing.pricing.examples.title"),
+  });
+  await expect(examples).toBeVisible();
+  for (const id of ["none", "oneBoat", "threeBoats"] as const) {
+    await expect(
+      examples.getByRole("heading", { name: pricingCopy(`marketing.pricing.examples.${id}`) }),
+    ).toBeVisible();
+  }
+  for (const key of ["shopSize", "diverApp", "printedManifest", "devices", "currency"] as const) {
+    await expect(
+      page.getByRole("heading", { name: pricingCopy(`marketing.pricing.faq.${key}.question`) }),
+    ).toBeVisible();
+  }
   // The objection layer answers the deal-killers, and a skeptic can reach the
   // demo without committing to a trial form. This row asked "DiveDay is new.
   // What happens to my data if this doesn't work out?" until 2026-08-12: a FAQ
@@ -469,7 +476,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // not the flinch (docs/product/marketing.md, "Concede the facts; never
   // apologize for them").
   await expect(
-    page.getByRole("heading", { name: "What happens to my records if I leave?" }),
+    page.getByRole("heading", {
+      name: diverTranslator("en-US")("marketing.pricing.dataExit.title"),
+    }),
   ).toBeVisible();
   // Same shared label as everywhere else — "Try the live demo first" was the
   // exact per-page synonym drift the one-label rule exists to catch. Three of
@@ -737,7 +746,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   expect(rendered).toContain("Aaron Buxbaum, Founder");
   expect(rendered).not.toMatch(/Google|biotech|self-driving|two of us/);
 
-  // The four standards every screen is held to, as cards under a statement
+  // The operational standards every screen is held to, as cards under a statement
   // heading. Each is a shipped behavior a visitor can reproduce in the demo.
   await expect(
     page.getByRole("heading", { name: "The one job on a boat that can’t go wrong" }),
@@ -745,17 +754,30 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   await expect(
     page.getByRole("heading", { name: "The roll call runs with no signal" }),
   ).toBeVisible();
-  // The export terms are said in full on /pricing and the home page only
-  // (visual review 2026-10-24, B10); the records card links to them.
+  // Records ownership and backup details link to the canonical export terms.
   await expect(page.getByText(/No export fee, no support ticket/)).toHaveCount(0);
   await expect(
-    page.getByRole("main").getByRole("link", { name: "Taking your records with you" }),
+    page
+      .getByRole("main")
+      .getByRole("link", { name: diverTranslator("en-US")("marketing.common.recordsLink") }),
   ).toHaveAttribute("href", "/pricing#export");
   await expect(
     page.getByRole("heading", {
       name: "Gaps in a diver’s record show up at the desk, not on the boat",
     }),
   ).toBeVisible();
+
+  // The export link is its own row, separated from the ownership sentence.
+  const exportGap = await page
+    .getByRole("link", { name: diverTranslator("en-US")("marketing.common.recordsLink") })
+    .evaluate((link) => {
+      const description = link.closest("dd")?.firstChild;
+      if (!description) throw new Error("Missing records description");
+      const range = document.createRange();
+      range.selectNodeContents(description);
+      return link.getBoundingClientRect().top - range.getBoundingClientRect().bottom;
+    });
+  expect(exportGap).toBeGreaterThanOrEqual(8);
 
   // Every band's heading is a statement the band can be read against, never a
   // question: the spoken register's question headings are retired by value in
@@ -828,33 +850,23 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     }
   }
 
-  // The how-we-work band offers three peer doors and no primary: the set-up
-  // mail (its first paragraph is the set-up offer, so its door is the pair's
-  // second door and not a support mailto, which until 2026-10-07 sent a reader
-  // who had just decided to the wrong inbox), at the outline weight
-  // (`bg-primary` is the primary variant's own fill, src/components/ui/
-  // button.ts, so its absence is the demotion, asserted where a reader would
-  // feel it rather than in a class list nobody reads); the pricing door, which
-  // states the figure rather than parking it behind itself (the figure read
-  // out of the one source rather than typed here, which is also the proof the
-  // interpolation ran: `src/lib/marketing.test.ts` pins the key among those
-  // that must carry `{price}`); and the one in-page switching door, tagged
-  // like every other (2026-08-15; the nav and footer ones stay bare on
-  // purpose, since they render on every marketing page and one tag across
-  // them answers nothing, src/lib/funnel.ts).
-  const aboutPriceDoor = aboutMain.getByRole("link", { name: /^One flat / });
+  // Setup, pricing and arrival remain available beside the practical records facts.
+  const aboutPriceDoor = aboutMain.getByRole("link", { name: "See pricing" });
   await expect(aboutPriceDoor).toHaveAttribute("href", "/pricing");
-  await expect(aboutPriceDoor).toContainText(earlyAccessPrice.price);
+  await expect(aboutMain).not.toContainText(earlyAccessPrice.price);
+  await expect(aboutMain).not.toContainText("If DiveDay ever shuts down");
   await expect(
-    aboutMain.getByRole("link", { name: /How your records come in, and how they leave/ }),
+    aboutMain.getByRole("link", {
+      name: diverTranslator("en-US")("marketing.about.switchingLink"),
+    }),
   ).toHaveAttribute("href", "/switching?from=about-switching");
   // `has:` is resolved from the outer match, so it takes a page-rooted
   // locator rather than `aboutPriceDoor` — the same shape `standardsBand` uses.
   const workBand = aboutMain
     .locator("section")
-    .filter({ has: page.getByRole("link", { name: /^One flat / }) });
+    .filter({ has: page.getByRole("link", { name: "See pricing" }) });
   await expect(workBand.locator("button:not([disabled])")).toHaveCount(0);
-  await expect(workBand.locator("a")).toHaveCount(3);
+  await expect(workBand.locator("a")).toHaveCount(4);
   const setUpDoor = workBand.locator(SET_UP_DOOR);
   await expect(setUpDoor).toHaveCount(1);
   // Anchored on both sides, or `hover:bg-surface-sunken` would satisfy it and
@@ -1229,29 +1241,38 @@ test("a feature page lists all of its feature and leads on to the next question"
     page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Features" }),
   ).toHaveAttribute("href", "/product");
 
-  // The first door says where the demo opens, and the price stands under it.
+  const breadcrumb = page
+    .getByRole("navigation", { name: "Breadcrumb" })
+    .getByRole("link", { name: "Features" });
+  expect((await breadcrumb.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+
+  // The first door says where the demo opens; pricing stays with the checklist.
   const hero = page.getByRole("main").locator("section").first();
   await expect(hero).toContainText(
     "The demo opens on the release and every signed copy, as the owner.",
   );
-  await expect(hero).toContainText(earlyAccessPrice.price);
+  await expect(hero).not.toContainText(earlyAccessPrice.price);
 
   // The checklist is the page's whole group from the capability index, not a
   // selection: the list a buyer holds against a competitor's feature page.
   // It names only what is in it (the "What it doesn't do" rows were cut on
-  // 2026-10-06), and how leaving works stands beside it with the price.
+  // 2026-10-06), with a single pricing link beside it.
   const included = page
     .getByRole("main")
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "What’s in it" }) });
   await expect(included.getByRole("list")).toHaveCount(1);
   await expect(included.getByRole("listitem")).toHaveCount(capabilityGroup("waivers").items.length);
-  await expect(included).toContainText(earlyAccessPrice.price);
-  // How leaving works is a link to the one place the export is said in full
-  // (visual review 2026-10-24, B10).
+  await expect(included).toContainText(
+    diverTranslator("en-US")("marketing.featureChrome.includedPrice"),
+  );
+  // One pricing link replaces repeated hero-price and export-strip copy.
   await expect(
-    included.getByRole("link", { name: "Taking your records with you" }),
-  ).toHaveAttribute("href", "/pricing#export");
+    included.getByRole("link", {
+      name: diverTranslator("en-US")("marketing.featureChrome.pricingLink"),
+    }),
+  ).toHaveAttribute("href", "/pricing");
+  await expect(included.locator('a[href="/pricing#export"]')).toHaveCount(0);
 
   const main = page.getByRole("main");
   await expect(main.getByRole("heading", { name: "Questions shops ask" })).toBeVisible();
@@ -1259,7 +1280,9 @@ test("a feature page lists all of its feature and leads on to the next question"
 
   await main.getByRole("link", { name: /^Certification checks/ }).click();
   await expect(page).toHaveURL(/\/product\/certifications$/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Know who can board");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    diverTranslator("en-US")("marketing.featurePages.certifications.title"),
+  );
 });
 
 test("a feature page's demo door opens the demo on the screen the page is about", async ({

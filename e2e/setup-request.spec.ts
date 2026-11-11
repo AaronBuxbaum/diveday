@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 
 /**
@@ -32,7 +33,9 @@ test("a shop asks to be set up from the pricing page and lands on the thank-you 
   // An address with no dot in its domain passes the browser's own check and
   // not the server's, so this is the server's refusal.
   await page.getByLabel("Email").fill(`${unique}@example`);
-  await page.getByRole("button", { name: "Send" }).click();
+  await page
+    .getByRole("button", { name: diverTranslator("en-US")("marketing.setUp.submit") })
+    .click();
   await expect(page.getByText("Check the address.")).toBeVisible();
   await expect(page).toHaveURL(/\/get-set-up\?from=pricing$/);
   await expect(page.getByLabel("Shop name")).toHaveValue("Reef Line Divers");
@@ -41,7 +44,9 @@ test("a shop asks to be set up from the pricing page and lands on the thank-you 
   );
 
   await page.getByLabel("Email").fill(`${unique}@example.com`);
-  await page.getByRole("button", { name: "Send" }).click();
+  await page
+    .getByRole("button", { name: diverTranslator("en-US")("marketing.setUp.submit") })
+    .click();
   // The sent page carries what the shop uses today, for its export step.
   await expect(page).toHaveURL(/\/get-set-up\/sent(?:\?|$)/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Request sent");
@@ -98,7 +103,9 @@ test("a shop leaving FareHarbor asks from its guide and is sent back to that gui
   await page.getByRole("radio", { name: "Yes" }).check();
   await page.getByLabel("Your name").fill("Ana Ruiz");
   await page.getByLabel("Email").fill(`fareharbor-${Date.now()}@example.com`);
-  await page.getByRole("button", { name: "Send" }).click();
+  await page
+    .getByRole("button", { name: diverTranslator("en-US")("marketing.setUp.submit") })
+    .click();
 
   await expect(page).toHaveURL(/\/get-set-up\/sent\?uses=booking_system&guide=fareharbor$/);
   await expect(page.getByRole("link", { name: "Export steps for FareHarbor" })).toHaveAttribute(
@@ -115,7 +122,9 @@ test("a shop can request setup without choosing a current tool", async ({ page }
   await page.getByLabel("Email").fill(`optional-tool-${Date.now()}@example.com`);
   await page.getByRole("radio", { name: "No", exact: true }).check();
   await expect(page.getByRole("combobox", { name: "Current tool (optional)" })).toHaveValue("");
-  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await page
+    .getByRole("button", { name: diverTranslator("en-US")("marketing.setUp.submit"), exact: true })
+    .click();
   await expect(page).toHaveURL(/\/get-set-up\/sent$/);
   await expect(page.getByRole("heading", { name: "Request sent", exact: true })).toBeVisible();
 });

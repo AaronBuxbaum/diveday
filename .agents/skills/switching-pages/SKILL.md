@@ -5,9 +5,9 @@ description: "Add or edit a competitive switching guide (/switching/*, src/lib/m
 
 # Switching-guide work
 
-Switching guides are the sharpest edge of the positioning spine — "safe to leave" made concrete
-for one named incumbent, and our highest-intent, lowest-competition SEO surface ("leaving
-&lt;incumbent&gt;" searches). They are marketing pages first: everything in the `marketing-page`
+Switching guides help a shop try a better-prepared dive day and understand the work of bringing
+its records across. Product proof leads; accurate transfer scope and records control support the
+decision. They also serve high-intent searches for a current system. They are marketing pages first: everything in the `marketing-page`
 skill's claims policy, voice, and verify steps applies here too. This skill is the added procedure
 specific to a guide — read `marketing-page` first if you haven't.
 
@@ -16,7 +16,7 @@ specific to a guide — read `marketing-page` first if you haven't.
 1. Read `docs/product/marketing.md` §"Where the words live" (switching-guide section) — the rules
    this skill implements.
 2. Read the current [switching review](../../../docs/product/switching-review-20261111.md) before the archived research. Read [assessments/competitive-strategy.md](../../../docs/product/archive/assessments/competitive-strategy.md)
-   for why portability is the chosen battleground and the legal guardrail (a shop migrates from
+   for historical positioning context and the legal guardrail (a shop migrates from
    files *it* exports itself — a guide never tells anyone to hand over a competitor login, and
    DiveDay never reaches into another system).
 3. Check [assessments/switching-guide-landscape.md](../../../docs/product/archive/assessments/switching-guide-landscape.md)
@@ -31,8 +31,8 @@ specific to a guide — read `marketing-page` first if you haven't.
 
 | Shape | When | Structure |
 | --- | --- | --- |
-| **Leave-it** (records system) | EVE, DiveShop360, Smartwaiver, Checkfront, … | Incumbent's own export click-path → `IMPORT_HONESTY_TABLE` verbatim → demo CTA |
-| **Coexist-led** (booking channel) | FareHarbor, Rezdy | Opens "keep the storefront and its network, run the dive day it can't" → `runsInDiveDay` jobs → same export/scope/import mechanics → clean-leave option |
+| **Leave-it** (records system) | EVE, DiveShop360, Smartwaiver, Checkfront, … | Product proof → sourced export instructions or qualified sample review → `IMPORT_HONESTY_TABLE` verbatim → demo CTA |
+| **Coexist-led** (booking channel) | FareHarbor, Rezdy | Product proof → keep or replace the current booking channel after a trial → manual handover and import scope |
 
 `/switching/spreadsheet` is a third, static case: no vendor, no export click-path, no `sources`.
 Its *content* is not a template for an incumbent guide — but its **shape is the same one**, see
@@ -70,8 +70,10 @@ measure down the whole page.
   restate it, instead of fixing the importer, is a claims-policy violation.
 - Safety-adjacent scope copy (waiver/cert/medical claims about what imports) gets
   `dive-domain-expert` review, same as any other safety-adjacent copy.
-- Prefer contrasting with the buyer's fear (setup fees, export limits, per-seat math) over digging
-  at the incumbent by name outside of documented, sourced facts.
+- Lead with the crew's work and the screen that proves it, not fear about the current vendor.
+  Keep exit assistance in the dedicated records-control block. The shared close invites a sample
+  and a review of the move, without repeating departure assistance or promising a turnaround.
+- Never imply importing history books future seats or prepares departures automatically.
 
 ## Verify (in addition to marketing-page's verify steps)
 

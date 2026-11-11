@@ -12,7 +12,7 @@ import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import type { DemoLanding } from "@/lib/demo-landings";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { type FunnelSource, setUpHref } from "@/lib/funnel";
-import { earlyAccessPrice } from "@/lib/marketing";
+import { earlyAccessPrice, marketingFee } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 /**
@@ -141,7 +141,7 @@ export function FunnelCtas({
 export function heroPriceLine(t: DiverTranslator, offer: PlanTerms, locale: string): string {
   const params = planCopyParams(offer, locale);
   return offer.plan === "percent_of_volume"
-    ? t("marketing.home.percentArm.heroPriceLine", params)
+    ? t(marketingFee.summaryKey, params)
     : t("marketing.home.heroPriceLine", {
         price: params.price,
         cadence: t(earlyAccessPrice.cadenceKey),

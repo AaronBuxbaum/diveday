@@ -57,11 +57,11 @@ function LineBars({ lines, type, width }: { lines: HeroLines; type: string; widt
  *
  * Shaped like the hero above the fold, at the hero's own grid and margins,
  * and sized from the twelve pages as they render (re-measured 2026-10-05,
- * after the ledes became one sentence and the price joined the demo note):
+ * with the feature hero and demo note):
  * the title is five lines on a phone and three from `sm`, five again from
  * `lg` where the claim takes half the width, and four from `xl`; the lede
  * five, three, four and three; the demo note three lines on a phone and two
- * from `sm`; the price line two on a phone and one from `sm`. The screen is
+ * from `sm`. The screen is
  * the middle of the twelve drawings' heights at each width, and its three
  * notes wrap as most of the pages' do. Every page wears the same skeleton, so
  * a page that wraps a line further than these bars moves the page below it by
@@ -73,7 +73,9 @@ export function FeaturePageSkeleton() {
       <section className="border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)] gap-12 px-6 py-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start lg:gap-16 lg:py-20">
           <div className="max-w-2xl lg:pt-2.5">
-            <LineBars lines={{ base: 1, sm: 1, lg: 1, xl: 1 }} type="text-sm" width="w-44" />
+            <div className="flex h-11 items-center">
+              <LineBars lines={{ base: 1, sm: 1, lg: 1, xl: 1 }} type="text-sm" width="w-44" />
+            </div>
             <div className="mt-5">
               <LineBars
                 lines={{ base: 5, sm: 3, lg: 5, xl: 4 }}
@@ -97,13 +99,6 @@ export function FeaturePageSkeleton() {
                 lines={{ base: 3, sm: 2, lg: 2, xl: 2 }}
                 type="text-sm"
                 width="w-96 max-w-full"
-              />
-            </div>
-            <div className="mt-2">
-              <LineBars
-                lines={{ base: 2, sm: 1, lg: 1, xl: 1 }}
-                type="text-sm"
-                width="w-80 max-w-full"
               />
             </div>
           </div>

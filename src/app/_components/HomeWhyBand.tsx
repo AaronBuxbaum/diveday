@@ -3,7 +3,7 @@ import { Eyebrow } from "@/app/_components/Eyebrow";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**
- * **Why the roll call is by name**, under the home hero (Aaron, 2026-11-11).
+ * **Why the roll call is by name**, after the practical home journey (Aaron, 2026-11-11).
  * The Lonergan story, cut to what the public record holds, then what the roll
  * call does, then a link to `/about`, which tells it in full. It keeps every
  * limit that page keeps: no operator or skipper named, and no sentence saying

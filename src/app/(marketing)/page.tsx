@@ -28,9 +28,7 @@ import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { type FeaturePageSlug, featurePagePath, getFeaturePage } from "@/lib/feature-pages";
 import { switchingHref } from "@/lib/funnel";
-import { cachedListFormat } from "@/lib/intl-cache";
-import { fullShopExport, midSeasonCutover, sharedLinkCard } from "@/lib/marketing";
-import { MIGRATION_GUIDES } from "@/lib/migration-guides";
+import { midSeasonCutover, sharedLinkCard } from "@/lib/marketing";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary placed inside the page — the root
@@ -216,15 +214,15 @@ const STEPS: readonly {
 /**
  * The whole home page body, cached per negotiated locale (DIVER_LOCALES —
  * two entries). Everything here is deterministic given `locale`:
- * message-bundle copy and the migration-guide competitor list. Nothing
+ * message-bundle copy and the feature registry. Nothing
  * session-scoped lives in this tree — the CTA forms only reference
  * `enterDemoAction` (a Server Action reference, safe to pass through per
  * Next's `"use cache"` interleaving rules).
  *
  * The page's shape (redesigned 2026-08-13, its middle rewritten 2026-10-05 for
  * H-20261005-public-pages-sell): the hero says what DiveDay is and what a shop gets, the steps follow
- * one booking to the boat, the directory names every feature page, and the
- * records band and the close answer how a shop arrives, leaves and pays. Each
+ * one booking to the boat and home again, then the compact origin account
+ * gives the roll call its context. Records setup leads into the demo invitation. Each
  * section has its own composition rather than six renders of the same
  * eyebrow/h2/lede/card-grid template. Two demo doors, hero and close, with the
  * demo's cost stated once at the first of them (docs/product/marketing.md).
@@ -233,11 +231,6 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
-  // Generated from the migration-guides registry, never hand-listed, so a new
-  // guide can't be silently omitted from the pitch that sends shops to it.
-  const competitors = cachedListFormat(locale, { type: "disjunction" }).format(
-    MIGRATION_GUIDES.map((guide) => guide.competitor),
-  );
 
   return (
     <main className="flex-1">
@@ -258,8 +251,6 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           <HomeHeroPhone locale={locale} />
         </div>
       </section>
-
-      <HomeWhyBand t={t} />
 
       {/* The booking's steps, in the order a diver meets the shop:
           alternating rows, each a marker, a title, two of the builder's notes
@@ -344,76 +335,47 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
         </Link>
       </div>
 
-      {/* The portability band, and the one section whose geometry *is* its
-          argument: records come in clean and leave the same way, so the two
-          directions are a mirrored pair of equal columns under one statement —
-          same marker, same rule, same weight — rather than the copy-left /
-          visual-right split it shares with the hero and the steps.
-          Arriving reads first (docs/product/marketing.md). */}
+      {/* The practical journey comes first; the short origin account keeps its
+          own quiet band and the full story remains on About. */}
+      <HomeWhyBand t={t} />
+
+      {/* One arrival-led setup section. Export details remain a quiet link,
+          without a second pitch or a repeated terms inventory. */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
           <h2 className={`max-w-3xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.home.exportTitle")}
           </h2>
-
-          <div className="mt-12 grid gap-12 lg:mt-16 lg:grid-cols-2 lg:gap-0">
-            <div className="flex flex-col gap-5 lg:pr-14">
-              <SectionMarker as="h3">{t("marketing.home.arrivingLabel")}</SectionMarker>
-              <p className="leading-7 text-muted">{t("marketing.home.exportDescription1")}</p>
-              {/* The mid-season objection, answered in the column where it is
-                actually raised: a shop reading "bring your records in" in
-                August is doing the arithmetic of a switch mid-season, and the
-                four-phase move rail that answers it lives several thousand
-                pixels away on a switching guide this reader may never open
-                (docs/product/marketing-review-20260827.md). It renders the
-                guides' own shared key rather than a homepage wording of the
-                same promise — see `midSeasonCutover`. */}
-              <p className="leading-7 text-muted">{t(midSeasonCutover.claimKey)}</p>
-              {/* The import preview is drawn once on the site, on the switching
-                  hub this band's closing link opens (B14). */}
-              {/* The spreadsheet door belongs to this column, under the
-                paragraph that asks for the sheet. `self-start` keeps the flex
-                item its own width; `#columns` lands on the column table the
-                link's words name, through `switchingHref` so the fragment
-                follows the `?from=` tag. */}
-              <Link
-                href={switchingHref("/switching/spreadsheet", "home-records-arriving", "columns")}
-                className={buttonClass({
-                  variant: "link",
-                  flush: true,
-                  className: "self-start text-left",
-                })}
-              >
-                {t("marketing.home.spreadsheetLink")}
-              </Link>
-            </div>
-
-            <div className="flex flex-col gap-5 lg:border-l lg:border-border lg:pl-14">
-              <SectionMarker as="h3">{t("marketing.home.leavingLabel")}</SectionMarker>
-              <p className="leading-7 text-muted">
-                {t("marketing.home.exportDescription2", {
-                  claim: t(fullShopExport.claimKey),
-                  terms: t(fullShopExport.termsKey),
-                })}
-              </p>
-            </div>
+          <div className="mt-6 max-w-2xl space-y-5 leading-7 text-muted">
+            <p>{t("marketing.home.exportDescription1")}</p>
+            {/* Retain the shared sample-review and handover qualifications. */}
+            <p>{t(midSeasonCutover.claimKey)}</p>
           </div>
-
-          {/* The full-width rule closes both portability columns before the
-              switching hub link, keeping it distinct from the spreadsheet link. */}
-          <div className="mt-12 border-t border-border pt-6">
+          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
             <Link
               href={switchingHref("/switching", "home-records")}
-              className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+              className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
             >
-              {t("marketing.home.guidesLink", { competitors })}
+              {t("marketing.home.guidesLink")}
+            </Link>
+            <Link
+              href={switchingHref("/switching/spreadsheet", "home-records-arriving", "columns")}
+              className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+            >
+              {t("marketing.home.spreadsheetLink")}
+            </Link>
+            <Link
+              href="/pricing#export"
+              className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
+            >
+              {t("marketing.common.recordsLink")}
             </Link>
           </div>
         </section>
       </MarketingReveal>
 
       {/* The one close (B15): what the shop gets, who reads a request, and
-          the pair. The price is the hero's footnote, said once. */}
+          the pair. Commercial details remain available through Pricing. */}
       <MarketingReveal>
         <ClosingCta locale={locale} source="home-closing" title={t("marketing.home.tryTitle")} />
       </MarketingReveal>

@@ -60,6 +60,18 @@ export const earlyAccessPrice = {
   includedKeys: readonly DiverMessageKey[];
 };
 
+/** One sentence for the percentage offer wherever a public page states the fee. */
+export const marketingFee = {
+  summaryKey: "marketing.price.receivedMoneyFee",
+} as const satisfies { summaryKey: DiverMessageKey };
+
+/** Illustrative eligible receipts, not customer results or forecasts. Amounts are USD cents. */
+export const pricingExampleMonths = [
+  { id: "none", receivedCents: 0 },
+  { id: "oneBoat", receivedCents: 1_000_000 },
+  { id: "threeBoats", receivedCents: 6_000_000 },
+] as const;
+
 /**
  * The bare amount inside `earlyAccessPrice.price`, for structured data that
  * needs a number (JSON-LD offers). Derived here so the figure still has exactly
@@ -85,8 +97,8 @@ export const fullShopExport = {
  * edited without the product owner. It rests on mechanisms that ship: the
  * one-ZIP export above and the weekly scheduled backup to the shop's own
  * bucket (`src/features/backup-export/`). Rendered on `/pricing` (the
- * `faq.shutdown` answer) and `/about` (the records card); `src/lib/marketing.test.ts`
- * pins it on both, in every locale.
+ * `faq.shutdown` answer); `src/lib/marketing.test.ts`
+ * pins the exact promise in every locale.
  */
 export const continuityPromise = {
   claimKey: "marketing.export.continuity",

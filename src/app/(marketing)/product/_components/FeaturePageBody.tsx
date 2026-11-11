@@ -1,12 +1,12 @@
 import { cacheLife } from "next/cache";
 import Link from "next/link";
-import { ClosingCta, FunnelCtas, heroPriceLine } from "@/app/_components/FunnelCtas";
+import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { JsonLd } from "@/components/JsonLd";
 import { MarketingIllustration } from "@/components/MarketingIllustration";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
@@ -25,7 +25,7 @@ import {
   relatedFeaturePages,
 } from "@/lib/feature-pages";
 import { featureSource } from "@/lib/funnel";
-import { capabilityGroup, earlyAccessPrice } from "@/lib/marketing";
+import { capabilityGroup, marketingFee } from "@/lib/marketing";
 import { FeatureScreen } from "./FeatureScreen";
 import { IncludedList } from "./IncludedList";
 
@@ -42,21 +42,12 @@ function featureArmCopy(t: DiverTranslator, key: FeaturePageKey, offer: PlanTerm
     note3: t(`marketing.featurePages.${key}.note3`),
     faq1A: t(`marketing.featurePages.${key}.faq1A`),
   };
-  if (offer.plan !== "percent_of_volume") {
-    const price = { price: params.price, cadence: t(earlyAccessPrice.cadenceKey) };
-    return {
-      ...own,
-      includedPrice: t("marketing.featureChrome.includedPrice", price),
-    };
-  }
+  if (offer.plan !== "percent_of_volume" || key !== "payments") return own;
   return {
-    ...(key === "payments"
-      ? {
-          note3: t("marketing.featureChrome.percentArm.paymentsNote3", params),
-          faq1A: t("marketing.featureChrome.percentArm.paymentsFaq1A", params),
-        }
-      : own),
-    includedPrice: t("marketing.featureChrome.percentArm.includedPrice", params),
+    note3: t("marketing.featureChrome.percentArm.paymentsNote3", params),
+    faq1A: t("marketing.featureChrome.percentArm.paymentsFaq1A", {
+      fee: t(marketingFee.summaryKey, params),
+    }),
   };
 }
 
@@ -67,10 +58,9 @@ function featureArmCopy(t: DiverTranslator, key: FeaturePageKey, offer: PlanTerm
  * the close; and last the pages a reader asks about next.
  *
  * The order is the order a shop owner's doubts arrive in. The headline and the
- * screen answer "does it do the thing", and the price under the doors answers
- * the question that comes straight after it. The steps answer "how much work
+ * screen answer "does it do the thing". The steps answer "how much work
  * is it for us", the inventory answers "does it do *all* of the thing" with a
- * competitor's page open beside it, and the questions answer the objections, leaving included, before the close asks for
+ * competitor's page open beside it, and the questions answer the feature-specific objections, before the close asks for
  * anything. The close ends the argument, and the related pages come after it
  * for the reader who is not ready yet (conversion review, 2026-10-05). The
  * demo door sits at the top and again in the close, and both open the demo on
@@ -171,7 +161,7 @@ export async function FeaturePageBody({
                 <li>
                   <Link
                     href="/product"
-                    className="font-medium text-muted underline-offset-4 hover:text-foreground hover:underline"
+                    className={`${tapTargetLinkClass} font-medium text-muted underline-offset-4 hover:text-foreground hover:underline`}
                   >
                     {t("marketing.featureChrome.breadcrumb")}
                   </Link>
@@ -201,10 +191,6 @@ export async function FeaturePageBody({
                 place: t(`marketing.featurePages.${key}.demoPlace`),
               })}
             </p>
-            {/* The price at the first door, as on `/` and `/product`: a page
-                reached from a search is the most evaluating landing on the
-                site, and "what does it cost" is its second question. */}
-            <p className="mt-2 text-sm text-muted">{heroPriceLine(t, offer, locale)}</p>
           </div>
           <MarketingHeroMotion>
             {/* The roll call is a phone, narrower than the column, so its
@@ -264,9 +250,7 @@ export async function FeaturePageBody({
       {/* Everything in it: the whole group from the capability index, the
           list a buyer reads against a competitor's feature page. The two
           "What it doesn't do" rows that ended it were cut (Aaron, 2026-10-06):
-          a sales page lists what a shop gets. Beside it, the plan's terms: the price, where "is all of this extra?" is
-          asked, and how leaving works, the third pillar of the positioning in
-          the words `/product` and the pricing FAQ use (`fullShopExport`). */}
+          a sales page lists what a shop gets. Beside it, one quiet pricing link answers "is all of this extra?". */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-20">
           <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
@@ -274,22 +258,15 @@ export async function FeaturePageBody({
               <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.featureChrome.includedTitle")}
               </h2>
-              <p className="mt-4 leading-7 text-muted">{copy.includedPrice}</p>
+              <p className="mt-4 leading-7 text-muted">
+                {t("marketing.featureChrome.includedPrice")}
+              </p>
               <Link
                 href="/pricing"
                 className={buttonClass({ variant: "link", flush: true, className: "mt-2" })}
               >
                 {t("marketing.featureChrome.pricingLink")}
               </Link>
-              {/* The export promise is written once, on /pricing's table (B10). */}
-              <div className="mt-6 border-t border-border pt-5">
-                <Link
-                  href="/pricing#export"
-                  className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
-                >
-                  {t("marketing.common.recordsLink")}
-                </Link>
-              </div>
             </div>
             <div>
               {/* The rule above each column's first row rather than across
@@ -329,7 +306,7 @@ export async function FeaturePageBody({
 
       {/* The close is the site's one closing band (B15): this page's
           heading, who reads a request, and the pair opening the demo on this
-          page's screen. The price is the hero's line, said once. */}
+          page's screen. The plan is linked beside the included features. */}
       <MarketingReveal>
         <ClosingCta
           locale={locale}

@@ -67,7 +67,7 @@
     "dontSeeSystem": "No está en la lista",
     "dontSeeSystemBody": "Cuéntanos qué usas y qué quieres mejorar. Podemos revisar una muestra de exportación contigo antes de decidir el cambio.",
     "closingTitle": "Prueba una salida antes de trasladar tus registros",
-    "closingSupport": "Envíanos lo que tengas y una persona del equipo traerá a tus buceadores contigo, gratis, o te ayudará a llevártelo todo si DiveDay deja de encajar; cualquier otra pregunta puede ir a {email}."
+    "closingSupport": "Envíanos una muestra de tus registros y revisaremos el traslado contigo. También puedes escribir a {email}."
   },
   "competitor": {
     "keepOrLeaveEyebrow": "Consérvalo, o déjalo",

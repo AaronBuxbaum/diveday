@@ -33,8 +33,8 @@ const TITLE_LINES = [
  * the 2026-10-05 rewrite (H-20261005-public-pages-sell) shortened the title and lengthened the lede:
  *   - the eyebrow, `MARKETING_EYEBROW_CLASS`: one 20px `text-sm` line;
  *   - the title, `mt-4`: `TITLE_LINES` above;
- *   - the description, `mt-4`, `leading-8`: three 32px lines on a phone, two
- *     from `sm` in its `max-w-xl`;
+ *   - the description, `mt-4`, `leading-8`: reserve five 32px lines on a phone
+ *     for Spanish (English uses four), three from `sm` in its `max-w-xl`;
  *   - the doors, `mt-6`: a 48px demo button and a 44px setup link on one wrapping row;
  *   - the demo note (`mt-3`): 20px lines, two on a phone and one from `sm`;
  *   - the diver's line (`mt-6`): one 20px line, "Booked a dive? Find your
@@ -78,7 +78,7 @@ export function HomeBodySkeleton() {
               )}
             </div>
             <div className="mt-4">
-              <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-8" width="w-full max-w-xl" />
+              <SkeletonLineBars lines={{ base: 5, sm: 3 }} height="h-8" width="w-full max-w-xl" />
             </div>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
               <div className="h-12 w-44 rounded-lg bg-surface-sunken" />
@@ -101,26 +101,6 @@ export function HomeBodySkeleton() {
               <div className="mt-1">
                 <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-5" width="w-full" />
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Why the roll call is by name: an eyebrow, the story at `text-xl`
-          (five 32px lines on a phone, three 36px lines from `sm`), the tie at
-          `text-lg` (six lines on a phone, three from `sm`) and the link. */}
-      <section className="border-b border-border bg-surface">
-        <div className="mx-auto w-full max-w-7xl px-6 py-14 lg:py-20">
-          <div className="max-w-3xl">
-            <div className="h-5 w-56 rounded bg-surface-sunken" />
-            <div className="mt-4">
-              <SkeletonLineBars lines={{ base: 5, sm: 3 }} height="h-8 sm:h-9" width="w-full" />
-            </div>
-            <div className="mt-4">
-              <SkeletonLineBars lines={{ base: 6, sm: 3 }} height="h-8" width="w-full" />
-            </div>
-            <div className="mt-4 flex h-11 items-center">
-              <div className="h-5 w-40 rounded bg-surface-sunken" />
             </div>
           </div>
         </div>
