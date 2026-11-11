@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { MediaDeletionKind, PaymentOperationKind, WorkOrderLineKindValue } from "@/db/schema";
 import { BOAT_PAPERS, MUST_CARRY_KIT_KINDS } from "@/lib/boat-safety";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
+import { COURSE_PERSONAL_GEAR } from "@/lib/course-personal-gear";
 import type { DepthUnit } from "@/lib/depth-units";
 import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
@@ -88,7 +89,7 @@ import {
   ORDER_PAID_AT_COUNTER_KEYS,
   ORDER_STATUS_KEYS,
 } from "./order-labels";
-import { RENTAL_ITEM_KEYS } from "./packing-labels";
+import { COURSE_PERSONAL_GEAR_STAFF_KEYS, RENTAL_ITEM_KEYS } from "./packing-labels";
 import {
   DIVER_PARTICIPANT_CHOICE_KEYS,
   DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
@@ -559,6 +560,13 @@ const CASES: readonly LabelMapCase[] = [
     map: "STAFF_DIVE_INTENT_KEYS",
     rows: codeRows(DIVE_INTENTS, (locale, intent) =>
       staffDiveIntentLine(staffTranslator(locale), [{ intent, count: 2 }], locale),
+    ),
+  },
+  {
+    module: "packing-labels.ts",
+    map: "COURSE_PERSONAL_GEAR_STAFF_KEYS",
+    rows: codeRows(COURSE_PERSONAL_GEAR, (locale, kind) =>
+      staffTranslator(locale)(COURSE_PERSONAL_GEAR_STAFF_KEYS[kind]),
     ),
   },
   {
