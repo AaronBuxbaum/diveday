@@ -101,6 +101,7 @@ describe("Sentry credential redaction", () => {
   it("preserves special diagnostic values without invoking getters", () => {
     const value = {
       date: new Date("2026-01-01T00:00:00Z"),
+      invalidDate: new Date(Number.NaN),
       url: new URL("https://dive.day/email-sign-in/secret"),
       error: new Error("Mail failed", { cause: new Error("Delivery refused") }),
       get unsafe() {
@@ -109,6 +110,7 @@ describe("Sentry credential redaction", () => {
     };
     const breadcrumb = redactBreadcrumb({ data: value });
     expect(breadcrumb.data?.date).toBe("2026-01-01T00:00:00.000Z");
+    expect(breadcrumb.data?.invalidDate).toBe("Invalid Date");
     expect(breadcrumb.data?.url).toBe("/email-sign-in/[token]");
     expect(JSON.stringify(breadcrumb)).toContain("Delivery refused");
     expect(breadcrumb.data?.unsafe).toBe("[accessor]");

@@ -42,7 +42,7 @@ function redactDiagnosticValue(value: unknown, seen = new WeakMap<object, unknow
   if (typeof value === "function") return "[function]";
   if (!value || typeof value !== "object") return value;
   if (value instanceof Date)
-    return Number.isNaN(value.getTime()) ? "Invalid Date" : value.toISOString();
+    return Number.isNaN(value.getTime()) ? value.toString() : value.toISOString();
   if (value instanceof URL) return redactDiagnosticText(value.href);
   if (seen.has(value)) return seen.get(value);
   const copy: Record<string, unknown> | unknown[] = Array.isArray(value) ? [] : {};
