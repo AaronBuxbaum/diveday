@@ -446,9 +446,9 @@ test.describe("owner", () => {
     // mode stays in the menu, where every role reaches it.
     await expect(header.getByRole("button", { name: "Boat mode" })).toBeVisible();
     await header.getByRole("link", { name: "Account settings" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Account security" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Account settings" })).toBeVisible();
     await expect(
-      page.getByRole("navigation", { name: "Account security" }).getByRole("link"),
+      page.getByRole("navigation", { name: "Account settings" }).getByRole("link"),
     ).toHaveText(["Calendar subscription", "Email settings"]);
   });
 

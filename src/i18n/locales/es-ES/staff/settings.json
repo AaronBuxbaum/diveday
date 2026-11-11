@@ -1218,7 +1218,7 @@
     "importantExclusions": "Las certificaciones de nivel importadas pueden cumplir el requisito de nivel. Las especialidades y las cargas de nitrox siguen necesitando confirmación del personal. Se confía en la aceptación de la exención del centro anterior, incluida la autorización médica, y se marca como importada. Las respuestas médicas individuales y las tarjetas de pago guardadas no se transfieren."
   },
   "security": {
-    "title": "Seguridad de la cuenta",
+    "title": "Configuración de la cuenta",
     "twoFactorHeading": "Autenticación en dos pasos",
     "twoFactorDescription": "Usa una aplicación de autenticación para las acciones sensibles.",
     "enabled": "Activada",

@@ -137,5 +137,12 @@
     "shownAs": "Shown as {name}",
     "notShown": "Not shown",
     "save": "Save"
+  },
+  "filter": {
+    "label": "Schedule scope",
+    "all": "Full shop",
+    "me": "My schedule",
+    "person": "View a person",
+    "show": "Show schedule"
   }
 }

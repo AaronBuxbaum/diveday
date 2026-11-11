@@ -1,6 +1,6 @@
 import type { requireShopSurface } from "@/features/session";
 import { getStaffingPage } from "@/features/staffing";
-import { staffWeek } from "@/features/staffing-week";
+import { filterStaffWeek, staffSchedulePerson, staffWeek } from "@/features/staffing-week";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabels } from "@/i18n/staff-role-labels";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
@@ -26,10 +26,12 @@ export async function readStaffingWeek({
   session,
   week: weekParam,
   t,
+  person,
 }: Pick<ShopSurface, "db" | "session" | "shop"> & {
   /** The raw `?week=` value. */
   week: string | undefined;
   t: StaffTranslator;
+  person?: string;
 }) {
   // Through the clock, not `new Date()`, and through the *shop's* zone, not
   // the host's: this one value decides which week the page opens on, which
@@ -106,5 +108,20 @@ export async function readStaffingWeek({
     today,
   });
 
-  return { today, weekStart, weekEnd, view, blocks, canManage, week };
+  const selectedPerson = staffSchedulePerson({
+    requested: person,
+    viewerId: session.user.personId,
+    canManage,
+    staffIds: view.staff.map((member) => member.person.id),
+  });
+  return {
+    today,
+    weekStart,
+    weekEnd,
+    view,
+    blocks,
+    canManage,
+    week: filterStaffWeek(week, selectedPerson),
+    selectedPerson,
+  };
 }

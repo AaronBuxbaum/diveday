@@ -38,7 +38,7 @@ export default async function StaffingPrintPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; person?: string }>;
 }) {
   const { shopSlug } = await params;
   const query = await searchParams;
@@ -47,15 +47,22 @@ export default async function StaffingPrintPage({
   if (!shop.crewScheduleEnabled) redirect(shopPath(shopSlug, "schedule", "board"));
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const read = await readStaffingWeek({ db, shop, session, week: query[WEEK_PARAM], t });
+  const read = await readStaffingWeek({
+    db,
+    shop,
+    session,
+    week: query[WEEK_PARAM],
+    person: query.person,
+    t,
+  });
   if (!read) redirect(shopPath(shopSlug, "staffing", "print"));
-  const { weekStart, weekEnd, view, week } = read;
+  const { weekStart, weekEnd, view, week, selectedPerson } = read;
   const rangeLabel = formatCalendarDateRange(weekStart, weekEnd, locale);
   const printed = `${sheetAttribution(t, formatPaperDateTime(nowDate(), locale, shop.timezone), session.user.name)} · ${shop.timezone}`;
 
   return (
     <SheetDocument
-      backHref={`${shopPath(shopSlug, "staffing")}?${WEEK_PARAM}=${weekStart}`}
+      backHref={`${shopPath(shopSlug, "staffing")}?${WEEK_PARAM}=${weekStart}&person=${encodeURIComponent(selectedPerson ?? "all")}`}
       paper={PACKET_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
       backLabel={t("schedule.views.crew")}

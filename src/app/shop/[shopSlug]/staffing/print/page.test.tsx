@@ -84,11 +84,11 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-async function renderRota(week = "2026-10-26") {
+async function renderRota(week = "2026-10-26", person?: string) {
   return render(
     await StaffingPrintPage({
       params: Promise.resolve({ shopSlug: "blue-mantis" }),
-      searchParams: Promise.resolve({ week }),
+      searchParams: Promise.resolve({ week, person }),
     }),
   );
 }
@@ -118,8 +118,17 @@ describe("the crew rota page", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/Oct\s26/);
     expect(screen.getByRole("link", { name: "Crew" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/staffing?week=2026-10-26",
+      "/shop/blue-mantis/staffing?week=2026-10-26&person=all",
     );
+  });
+
+  it("keeps the personal schedule selected when returning from paper", async () => {
+    await renderRota("2026-10-26", "me");
+    expect(screen.getByRole("link", { name: "Crew" })).toHaveAttribute(
+      "href",
+      `/shop/blue-mantis/staffing?week=2026-10-26&person=${PERSON_ID}`,
+    );
+    expect(screen.getByRole("rowheader", { name: /Zoe Zed/ })).toBeTruthy();
   });
 
   it("is the Crew view's to print: a shop that keeps no crew schedule has none", async () => {

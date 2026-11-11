@@ -14,7 +14,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
  *
  * **Every name here is that person's own decision.** `tripPublicCrew` filters
  * to `crew_public_consent_at`, which only the person themselves can write
- * (`saveCrewPublicConsentAction`, on the staffing page beside their own
+ * (`saveCrewPublicConsentAction`, in Account settings beside their own
  * blackouts). A shop that has switched nothing on renders nothing at all, and
  * so does a departure whose crew have not — which is why this returns null
  * rather than an empty heading.

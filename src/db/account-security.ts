@@ -22,6 +22,7 @@ import {
   accountSessions,
   accountSignInChallenges,
   accountStepUps,
+  people,
   userAccounts,
 } from "./schema";
 import { getAccountIdForPerson } from "./user-accounts";
@@ -455,6 +456,16 @@ export async function getAccountSecurityPage(
   shopId: string,
   accountSessionId?: string,
 ) {
+  const [person] = await db
+    .select({
+      id: people.id,
+      fullName: people.fullName,
+      crewPublicName: people.crewPublicName,
+      crewPublicConsentAt: people.crewPublicConsentAt,
+    })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)));
+  if (!person) return null;
   const accountId = await getAccountIdForPerson(db, personId);
   if (!accountId) return null;
   const [security, sessions, secret] = await Promise.all([
@@ -480,5 +491,5 @@ export async function getAccountSecurityPage(
   const factorManagementVerified = accountSessionId
     ? await hasStepUp(db, { userAccountId: accountId, accountSessionId, purpose: "security" })
     : false;
-  return { accountId, security, sessions, secret, passkeys, factorManagementVerified };
+  return { accountId, security, sessions, secret, passkeys, factorManagementVerified, person };
 }

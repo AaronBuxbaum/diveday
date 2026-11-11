@@ -7,9 +7,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import {
-  ChoiceRow,
   controlClass,
   DateField,
   Field,
@@ -23,7 +21,6 @@ import { noticeRole } from "@/components/ui/tone";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { CREW_PUBLIC_NAME_MAX, defaultCrewPublicName } from "@/lib/crew-public-name";
 import { formatCalendarDateRange } from "@/lib/format";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
@@ -41,7 +38,6 @@ import {
   deleteShiftAction,
   requestCrewAction,
   saveAwayAction,
-  saveCrewPublicConsentAction,
 } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — this segment's
@@ -64,8 +60,6 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   "shift-deleted": { tone: "success", key: "staffing.notice.shiftDeleted" },
   overlap: { tone: "danger", key: "staffing.notice.overlap" },
   "staff-not-found": { tone: "danger", key: "staffing.notice.staffNotFound" },
-  "crew-consent-saved": { tone: "success", key: "staffing.notice.crewConsentSaved" },
-  "crew-consent-withdrawn": { tone: "success", key: "staffing.notice.crewConsentWithdrawn" },
   invalid: { tone: "danger", key: "staffing.notice.invalid" },
   "not-authorized": { tone: "danger", key: "staffing.notice.notAuthorized" },
 
@@ -116,13 +110,7 @@ export default async function StaffingPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  /**
-   * `?week=` only. The old `?from=`/`?to=` window is gone — the week *is* the
-   * window now — and the two are ignored rather than refused, so an old
-   * bookmark lands on this week instead of nowhere (`FlashParams` then clears
-   * them out of the address bar).
-   */
-  searchParams: Promise<{ week?: string; notice?: string }>;
+  searchParams: Promise<{ week?: string; notice?: string; person?: string }>;
 }) {
   const { shopSlug } = await params;
   const query = await searchParams;
@@ -134,9 +122,16 @@ export default async function StaffingPage({
   // member reads dates and copy in their own language, not the shop row's.
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const read = await readStaffingWeek({ db, shop, session, week: query[WEEK_PARAM], t });
+  const read = await readStaffingWeek({
+    db,
+    shop,
+    session,
+    week: query[WEEK_PARAM],
+    person: query.person,
+    t,
+  });
   if (!read) redirect(shopPath(shopSlug, "staffing"));
-  const { today, weekStart, weekEnd, view, blocks, canManage, week } = read;
+  const { today, weekStart, weekEnd, view, blocks, canManage, week, selectedPerson } = read;
   // **What the Add-a-shift form opens on: today, when the week on screen
   // contains it.** Defaulting to `weekStart` unconditionally put a Friday
   // afternoon's last-minute crew change — the busy-dock case this page exists
@@ -156,14 +151,8 @@ export default async function StaffingPage({
   const gapWords = staffingGapWords(t);
 
   const myBlocks = blocks.filter((block) => block.personId === session.user.personId);
-  // The reader's own consent and public name, from the staffing view's roster.
-  const me = view.staff.find((member) => member.person.id === session.user.personId)?.person;
-  const crewConsented = me?.crewPublicConsentAt != null;
-  // What ships, or what would if they said yes. Somebody who has already agreed
-  // sees the string that is on their departures right now; somebody who has not
-  // sees the first token of the shop's record, which is what the box would
-  // store unedited (issue #1351).
-  const crewPublicName = me?.crewPublicName ?? defaultCrewPublicName(me?.fullName ?? "");
+  const selectedValue = selectedPerson === session.user.personId ? "me" : (selectedPerson ?? "all");
+  const selectionQuery = `&person=${encodeURIComponent(selectedValue)}`;
   const staffingPath = shopPath(shopSlug, "staffing");
   // **Every act carries the week it was performed in.** The page grew a week
   // dimension and the actions did not, so building next week's roster — the
@@ -174,13 +163,12 @@ export default async function StaffingPage({
   // to choose, and one binding cannot drift from another.
   const createShift = createShiftAction.bind(null, weekStart);
   const deleteShift = deleteShiftAction.bind(null, weekStart);
-  // Crew requests, availability and public-name consent, plus the manager's
+  // Crew requests and availability, plus the manager's
   // answer (issue #1235). Each carries the week so a save keeps the reader on
   // the roster they were editing.
   const requestCrew = requestCrewAction.bind(null, weekStart);
   const decideRequest = decideCrewRequestAction.bind(null, weekStart);
   const saveAway = saveAwayAction.bind(null, weekStart);
-  const saveCrewConsent = saveCrewPublicConsentAction.bind(null, weekStart);
   const deleteAway = deleteAwayAction.bind(null, weekStart);
   return (
     <StaffPage width="full">
@@ -189,7 +177,7 @@ export default async function StaffingPage({
       <FlashParams params={["notice"]} />
       {/* Schedule's Crew view (ADR 20261001-logbook) carries the week across. */}
       <CrewPageHeader
-        printHref={`${shopPath(shopSlug, "staffing", "print")}?${WEEK_PARAM}=${weekStart}`}
+        printHref={`${shopPath(shopSlug, "staffing", "print")}?${WEEK_PARAM}=${weekStart}${selectionQuery}`}
         t={t}
       />
       <ScheduleViews
@@ -203,6 +191,54 @@ export default async function StaffingPage({
           crew: t("schedule.views.crew"),
         }}
       />
+
+      <nav
+        aria-label={t("staffing.filter.label")}
+        className="mb-6 flex flex-wrap items-center gap-3"
+      >
+        {(["all", "me"] as const).map((value) => (
+          <Link
+            key={value}
+            href={`${staffingPath}?week=${weekStart}&person=${value}`}
+            aria-current={selectedValue === value ? "page" : undefined}
+            className={buttonClass({
+              variant: selectedValue === value ? "primary" : "secondary",
+              size: "sm",
+            })}
+          >
+            {t(`staffing.filter.${value}`)}
+          </Link>
+        ))}
+        {canManage ? (
+          <form action={staffingPath} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="week" value={weekStart} />
+            <Field label={t("staffing.filter.person")}>
+              <select
+                key={selectedValue}
+                name="person"
+                defaultValue={selectedValue}
+                className={controlClass}
+              >
+                <option value="all">{t("staffing.filter.all")}</option>
+                <option value="me">{t("staffing.filter.me")}</option>
+                {view.staff
+                  .filter((member) => member.person.id !== session.user.personId)
+                  .map((member) => (
+                    <option key={member.person.id} value={member.person.id}>
+                      {member.person.fullName}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <SubmitButton
+              pendingLabel={t("staffing.filter.show")}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("staffing.filter.show")}
+            </SubmitButton>
+          </form>
+        ) : null}
+      </nav>
 
       {pageNotice ? (
         <div className="mb-6">
@@ -237,7 +273,9 @@ export default async function StaffingPage({
         />
       ) : (
         <>
-          <StaffingWarnings shop={shop} shopSlug={shopSlug} view={view} locale={locale} />
+          {!selectedPerson ? (
+            <StaffingWarnings shop={shop} shopSlug={shopSlug} view={view} locale={locale} />
+          ) : null}
           <StaffingWeek
             week={week}
             gapWords={gapWords}
@@ -251,9 +289,12 @@ export default async function StaffingPage({
             decideRequestAction={decideRequest}
             links={{
               rangeLabel: formatCalendarDateRange(weekStart, weekEnd, locale),
-              previousHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, -1)}`,
-              nextHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, 1)}`,
-              thisWeekHref: weekStart === weekStartOf(today) ? null : staffingPath,
+              previousHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, -1)}${selectionQuery}`,
+              nextHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, 1)}${selectionQuery}`,
+              thisWeekHref:
+                weekStart === weekStartOf(today)
+                  ? null
+                  : `${staffingPath}?person=${encodeURIComponent(selectedValue)}`,
             }}
             words={staffingWeekWords(t, week)}
           />
@@ -373,79 +414,6 @@ export default async function StaffingPage({
               </ul>
             ) : null}
           </AddDoor>
-
-          {/* **The third crew-owned act on this page** (issue #1181, D21), and
-              the reason it is here rather than on the team page: that page is
-              behind `canPersonManageStaffAccounts`, so a divemaster could
-              never reach a switch that lived there — and a consent an owner
-              recorded on somebody's behalf would not be a consent.
-
-              The shop has always been able to tell divers "we speak German"
-              without naming anyone (`tripCrewSpokenLanguages`). Saying
-              "Marcus, your divemaster, speaks German" is a fact about a person
-              on a page the whole internet can read, so it is theirs to switch
-              on. Which languages the shop can field stays a manager's to
-              curate; who gets named does not.
-
-              **Summary-first, not a standing form.** It used to render its
-              checkbox, its text field and its Save button open at the foot of
-              every visit — a bordered personal form beneath the shop's whole
-              week, for a switch a person flips once and then never again.
-              What the reader needs at rest is the answer, so the row states it
-              ("Shown as Dana" / "Not shown") and opens the form on a tap. The
-              answer is still on the glass, which is the thing burying a consent
-              behind a chevron would cost; what is gone is the form. */}
-          {/* `mt-10`, the gap the credentials keep above themselves too: the
-              tail's groups sat 24px and then 40px apart (K-195). */}
-          <CompactDisclosureRow
-            className="mt-10"
-            label={t("staffing.crewConsent.rowLabel")}
-            value={
-              crewConsented
-                ? t("staffing.crewConsent.shownAs", { name: crewPublicName })
-                : t("staffing.crewConsent.notShown")
-            }
-          >
-            <form action={saveCrewConsent} className="flex flex-col gap-3">
-              <input type="hidden" name="personId" value={session.user.personId} />
-              <ChoiceRow
-                type="checkbox"
-                name="consented"
-                defaultChecked={crewConsented}
-                className="text-sm"
-              >
-                {t("staffing.crewConsent.label")}
-              </ChoiceRow>
-              {/* **The box is the disclosure.** Before this, the published name
-                  was `full_name.split(/\s+/)[0]` computed at render time, so a
-                  person typed into the shop's records as "Tanaka Keiko" agreed
-                  to a first name and got their surname on an indexed page
-                  (issue #1351). What is in this field is character-for-character
-                  what divers see, so the sentence above it is now true.
-
-                  No caption under it saying so. The value *is* the claim, and a
-                  line explaining that the box means what it shows is the kind of
-                  sentence AGENTS.md deletes. The per-trip role is not previewed
-                  for a different reason: it is a different word on every
-                  departure, so any single one shown here would be a lie. */}
-              <Field label={t("staffing.crewConsent.nameLabel")}>
-                <input
-                  name="publicName"
-                  defaultValue={crewPublicName}
-                  maxLength={CREW_PUBLIC_NAME_MAX}
-                  className={controlClass}
-                />
-              </Field>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("words.busy.saving")}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
-                >
-                  {t("staffing.crewConsent.save")}
-                </SubmitButton>
-              </FieldActions>
-            </form>
-          </CompactDisclosureRow>
         </>
       )}
     </StaffPage>

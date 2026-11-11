@@ -43,7 +43,7 @@ export default function StaffingLoading() {
           <Bone className="ms-2 h-5 w-40" />
         </div>
 
-        <div className="mt-4 hidden lg:block">
+        <div className="mt-4 hidden xl:block">
           <div className={WEEK_GRID.row}>
             <div className={WEEK_GRID.personHead} />
             {DAYS.map((day) => (
@@ -90,7 +90,7 @@ export default function StaffingLoading() {
         {/* The day list below `lg`: a day's label, then its people as
             hairline rows — a name's line over one 44px entry, the loaded
             row's 84px — with days 24px apart and no rule above a label. */}
-        <div className="mt-4 lg:hidden">
+        <div className="mt-4 xl:hidden">
           {[0, 1, 2].map((day) => (
             <div key={day} className="mt-6 first:mt-0">
               <Bone className="h-4 w-32" />

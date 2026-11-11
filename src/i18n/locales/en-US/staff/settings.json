@@ -1218,7 +1218,7 @@
     "importantExclusions": "Imported level cards can clear the level gate. Specialties and nitrox fills still need staff confirmation. Prior-shop waiver acceptance, including medical clearance, is trusted and marked imported. Individual medical answers and saved payment cards do not transfer."
   },
   "security": {
-    "title": "Account security",
+    "title": "Account settings",
     "twoFactorHeading": "Two-factor authentication",
     "twoFactorDescription": "Use an authenticator app for sensitive account actions.",
     "enabled": "Enabled",

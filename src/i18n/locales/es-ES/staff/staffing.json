@@ -137,5 +137,12 @@
     "shownAs": "Se muestra como {name}",
     "notShown": "No se muestra",
     "save": "Guardar"
+  },
+  "filter": {
+    "label": "Alcance del horario",
+    "all": "Todo el centro",
+    "me": "Mi horario",
+    "person": "Ver una persona",
+    "show": "Ver horario"
   }
 }

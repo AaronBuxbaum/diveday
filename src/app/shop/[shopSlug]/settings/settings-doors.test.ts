@@ -50,7 +50,8 @@ describe("Settings is the door to everything in its section", () => {
       if (destination.id === "settings") continue;
       expect(doors.has(destination.suffix), `${destination.id} (${destination.suffix})`).toBe(
         destination.section === "settings" &&
-          !(MY_ACCOUNT_DESTINATION_IDS as readonly string[]).includes(destination.id),
+          (destination.id === "security" ||
+            !(MY_ACCOUNT_DESTINATION_IDS as readonly string[]).includes(destination.id)),
       );
     }
 
