@@ -34,7 +34,7 @@ export function BrandColorField({
   // six digits with or without the `#` (issue #1897).
   const picked = parseBrandColor(value).value ?? DIVEDAY_BRAND_COLOR;
   return (
-    <div className="flex items-center gap-3">
+    <div className="device-text-brand-color flex items-center gap-3">
       <input
         type="color"
         aria-label={pickerLabel}

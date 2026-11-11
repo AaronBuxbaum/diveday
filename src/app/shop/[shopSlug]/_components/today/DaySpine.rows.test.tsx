@@ -857,3 +857,25 @@ it("preserves the formatted departure label while offering scaling-only word bou
   // Default-size CSS hides these; the browser word regression proves reflow.
   expect(heading.querySelectorAll("wbr.device-text-word-break")).toHaveLength(4);
 });
+
+it.each([2, 8])(
+  "keeps each AM/PM station time intact with scaling-only boundaries (%s hours)",
+  (hours) => {
+    const { container } = renderSpine({
+      departures: [departure({ startsAt: hoursFromNow(hours) })],
+    });
+    const time = container.querySelector(".device-text-station time");
+    expect(time?.textContent).toMatch(/\d+:\d{2}\u00a0[AP]M/);
+    expect(time?.querySelector("wbr.device-text-word-break")).not.toBeNull();
+  },
+);
+
+it("offers whole time-word boundaries on completed departure stations too", () => {
+  const { container } = renderSpine({
+    departures: [],
+    evening: evening([closed({ tripId: "home" })]),
+  });
+  const time = container.querySelector(".device-text-station time");
+  expect(time?.textContent).toMatch(/\d+:\d{2}\u00a0[AP]M/);
+  expect(time?.querySelector("wbr.device-text-word-break")).not.toBeNull();
+});

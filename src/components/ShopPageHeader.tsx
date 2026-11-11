@@ -191,7 +191,7 @@ function ResolvedShopPageHeader({
 }) {
   const hasBrand = Boolean(brand?.logoUrl || brand?.tagline || brand?.description);
   return (
-    <header className="mb-8">
+    <header className="mb-8" data-device-text-page-header="">
       {/* **From `sm` up, a row with doors is a grid, so the title keeps its
           longest word.** As a flex row beside a `shrink-0` band of doors, the
           title column took whatever the doors left: at 640 the schedule

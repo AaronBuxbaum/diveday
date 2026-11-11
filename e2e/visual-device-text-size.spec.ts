@@ -153,6 +153,23 @@ test.describe("light mode largest device body after-dive warnings", () => {
     await expect(missingLinks).toHaveCount(2);
     for (const link of await missingLinks.all()) {
       expect.soft(await fragmentedWords(link)).toEqual([]);
+      const shape = await link.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          radius: Number.parseFloat(style.borderTopLeftRadius),
+          height: box.height,
+          display: style.display,
+          align: style.alignItems,
+          inset: Number.parseFloat(style.paddingBlockStart),
+        };
+      });
+      expect
+        .soft(shape.radius, "multiline name must not become an ellipse")
+        .toBeLessThan(shape.height / 2);
+      expect.soft(shape.display).toBe("flex");
+      expect.soft(shape.align).toBe("center");
+      expect.soft(shape.inset).toBeGreaterThan(0);
     }
     await page.emulateMedia({ colorScheme: "dark" });
     await capture(page, "manifest-warnings-device-body-53", "dark", { darkPhone: true });

@@ -54,7 +54,12 @@ export function ProfileForm({
     tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
   };
   return (
-    <FieldGrid as="form" action={saveProfileAction} columns={1} className={`${className}`}>
+    <FieldGrid
+      as="form"
+      action={saveProfileAction}
+      columns={1}
+      className={`device-text-profile ${className}`}
+    >
       <Field label={t("settings.main.profile.tagline")}>
         <textarea
           name="tagline"
@@ -103,7 +108,7 @@ export function ProfileForm({
           />
         </div>
       </Field>
-      <FieldGrid columns={2}>
+      <FieldGrid columns={2} className="device-text-profile-grid">
         <Field
           label={t("settings.main.profile.brandColor")}
           // The shade the storefront uses, shown as a swatch rather than
@@ -174,7 +179,7 @@ export function ProfileForm({
           />
         </div>
       </Field>
-      <FieldGrid columns={2}>
+      <FieldGrid columns={2} className="device-text-profile-grid">
         <Field label={t("settings.main.profile.heroAlt")}>
           <input
             name="brandHeroImageAlt"
@@ -203,7 +208,7 @@ export function ProfileForm({
       <ChoiceFieldset
         legend={t("settings.main.profile.badges")}
         hint={t("settings.main.profile.badgesHint")}
-        bodyClassName="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+        bodyClassName="device-text-profile-grid grid grid-cols-1 gap-2.5 sm:grid-cols-2"
       >
         {BRAND_BADGE_CODES.map((code) => (
           <ChoiceRow

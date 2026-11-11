@@ -14,6 +14,7 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { openRollCallActionText } from "@/i18n/today-labels";
 import { formatRelativeDay, formatTime } from "@/lib/format";
 import type { DaySpineContext } from "./DaySpine";
+import { FormattedWords } from "./FormattedWords";
 
 /**
  * **A station that has settled** — the evening reading of the shop home's day
@@ -137,7 +138,7 @@ export function ClosingStation({
           dateTime={close.startsAt.toISOString()}
           className={`block ${FIGURE_CLASS} leading-none tracking-tight text-muted`}
         >
-          {formatTime(close.startsAt, locale, timeZone)}
+          <FormattedWords text={formatTime(close.startsAt, locale, timeZone)} />
         </time>
       </p>
       <h3 className={`mt-1.5 ${ITEM_TITLE_CLASS} tracking-tight`}>

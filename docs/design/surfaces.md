@@ -45,6 +45,12 @@ So an entry here is the index; the constraint lives beside the code it constrain
   status and departure tracks stack their marks rather than break ordinary words into columns.
   No text or target shrinks. Mac WebKit and simulated body readings are the available evidence;
   an actual iPhone system-setting change remains unmeasured.
+- **Final correction review, 2026-11-11:** missing-name warnings use padded rounded panels,
+  both upcoming and completed departure times keep AM/PM whole, and scaled Settings headers,
+  branding fields, previews and badge choices stack at their actual text measure. Independent
+  review accepted warning panels at390/1280, Settings at1024, departure times at390 and
+  ordinary-size manifest/settings controls. These are simulated readings and selected surfaces,
+  not a claim that every page or physical iPhone setting was tested.
 
 ### The shop home — `/shop/[shopSlug]`
 

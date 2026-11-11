@@ -76,6 +76,17 @@ test("largest phone departure titles and live status keep readable words", async
     }
     expect.soft(fragments).toEqual([]);
   }
+  const stationTimes = page.locator(".device-text-station time");
+  await expect(stationTimes).not.toHaveCount(0);
+  for (const time of await stationTimes.all()) {
+    expect
+      .soft(await fragmentedWords(time), (await time.textContent()) ?? "departure time")
+      .toEqual([]);
+  }
+  await page.screenshot({
+    path: test.info().outputPath("departure-times-390.png"),
+    fullPage: true,
+  });
   const status = page.getByText("Still out", { exact: true }).first();
   await expect(status).toBeVisible();
   expect.soft(await fragmentedWords(status.locator(".."))).toEqual([]);
@@ -99,9 +110,52 @@ test("largest settings pane gives the actual rail and editor a readable measure"
   await exposeDeviceBody(page, 53);
   await page.goto("/shop/blue-mantis/settings/profile");
   const field = page.getByRole("textbox", { name: "Tagline", exact: true });
+  await field.click();
+  await expect(field).toBeFocused();
   await field.fill("Large type check");
+  await expect(field).toHaveValue("Large type check");
   for (const width of [360, 390, 820, 1024, 1280]) {
     await page.setViewportSize({ width, height: 844 });
+    // The full title word fits these panes; phone-sized headings may genuinely exceed a line.
+    if (width >= 820)
+      expect
+        .soft(await fragmentedWords(page.locator("main h1")), `settings title at ${width}`)
+        .toEqual([]);
+    if (width === 820 || width === 1024) {
+      const previews = page.locator("main figure p, main figure span");
+      await expect(previews).not.toHaveCount(0);
+      for (const sample of await previews.all())
+        expect.soft(await fragmentedWords(sample), `brand preview at ${width}`).toEqual([]);
+      const badges = page.locator("fieldset label").filter({ has: page.getByRole("checkbox") });
+      await expect(badges).not.toHaveCount(0);
+      for (const badge of await badges.all())
+        expect.soft(await fragmentedWords(badge), `badge at ${width}`).toEqual([]);
+      const colorMeasure = await page.locator('input[name="brandColor"]').evaluate((element) => ({
+        width: element.getBoundingClientRect().width,
+        font: Number.parseFloat(getComputedStyle(element).fontSize),
+      }));
+      expect
+        .soft(colorMeasure.width, `hex field at ${width}`)
+        .toBeGreaterThanOrEqual(colorMeasure.font * 5);
+    }
+    if (width === 820 || width === 1024) {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+      const titleGeometry = await page.locator("main h1").evaluate((element) => ({
+        top: element.getBoundingClientRect().top,
+        chromeBottom:
+          document.querySelector("[data-chrome-bar]")?.getBoundingClientRect().bottom ?? 0,
+      }));
+      expect(titleGeometry.top, `title starts below chrome at ${width}`).toBeGreaterThanOrEqual(
+        titleGeometry.chromeBottom,
+      );
+      await page.screenshot({ path: test.info().outputPath(`settings-top-${width}.png`) });
+    }
+    if (width === 820 || width === 1024)
+      await page.screenshot({
+        path: test.info().outputPath(`settings-header-${width}.png`),
+        fullPage: true,
+      });
     const geometry = await field.evaluate((element) => ({
       width: element.getBoundingClientRect().width,
       font: Number.parseFloat(getComputedStyle(element).fontSize),
