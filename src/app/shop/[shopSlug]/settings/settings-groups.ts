@@ -158,12 +158,6 @@ const RAIL_ROWS = [
     target: { kind: "route", path: "/settings/emergency-reference" },
   },
   {
-    id: "diveSites",
-    labelKey: "settings.main.diveSites.heading",
-    group: "shop",
-    target: { kind: "route", path: "/dive-sites" },
-  },
-  {
     id: "boats",
     labelKey: "boats.heading",
     group: "shop",

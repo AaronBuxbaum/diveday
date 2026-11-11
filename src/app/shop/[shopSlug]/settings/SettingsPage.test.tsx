@@ -579,9 +579,10 @@ describe("the diving options a shop runs", () => {
     }
     // The registers (glossary "Register and setting", #2659) sit beside dive
     // sites at `/shop/<slug>/<noun>`; the hub links to them and holds none.
-    for (const noun of ["boats", "trip-tags", "safety-checklist", "dive-sites"]) {
+    for (const noun of ["boats", "trip-tags", "safety-checklist"]) {
       expect(hrefs).toContain(`/shop/${SHOP_SLUG}/${noun}`);
     }
+    expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/dive-sites`);
     const names = inputNamesIn(element);
     for (const name of [
       "boatId",
