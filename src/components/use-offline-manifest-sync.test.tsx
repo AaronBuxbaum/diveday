@@ -193,3 +193,57 @@ describe("useOfflineManifestSync on a network that stops answering", () => {
     await waitFor(() => expect(result.current.message).toBe("could not reach"));
   });
 });
+
+describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)", () => {
+  const SNAPSHOT_ID = "55555555-5555-4555-8555-555555555555";
+  const pagePayload: OfflineManifestPayload = { ...payload, readAtErasureEpoch: 4 };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("saves the rows under the snapshot the server issues for the epoch they were read at", async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      url === "/api/offline-manifests/identity"
+        ? Response.json({ shop: { slug: "blue-mantis" } })
+        : Response.json({ snapshotId: SNAPSHOT_ID, erasureEpochToken: "4.7.signed" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderHook(() => useOfflineManifestSync(pagePayload, copy));
+
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    const [saved] = vi.mocked(saveOfflineManifest).mock.calls[0] ?? [];
+    expect(saved).toEqual({ ...payload, snapshotId: SNAPSHOT_ID, erasureEpochToken: "4.7.signed" });
+    expect(saved).not.toHaveProperty("readAtErasureEpoch");
+    const claim = fetchMock.mock.calls.find(
+      ([url]) => url === `/api/offline-manifests/${TRIP_ID}/snapshot`,
+    ) as unknown as [string, RequestInit] | undefined;
+    expect(claim?.[1].method).toBe("POST");
+    expect(JSON.parse(String(claim?.[1].body))).toEqual({ erasureEpoch: 4 });
+  });
+
+  it("saves nothing and re-reads the page when an erasure landed after the read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ error: "erasure_epoch_moved" }, { status: 409 })),
+    );
+
+    renderHook(() => useOfflineManifestSync(pagePayload, copy));
+
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalled());
+    expect(saveOfflineManifest).not.toHaveBeenCalled();
+  });
+
+  it("saves nothing when the snapshot cannot be issued", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ error: "x" }, { status: 500 })),
+    );
+
+    const { result } = renderHook(() => useOfflineManifestSync(pagePayload, copy));
+
+    await waitFor(() => expect(result.current.message).toBe("save failed"));
+    expect(saveOfflineManifest).not.toHaveBeenCalled();
+  });
+});

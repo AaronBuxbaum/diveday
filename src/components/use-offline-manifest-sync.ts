@@ -12,7 +12,9 @@ import {
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import {
+  claimOfflineManifestSnapshot,
   fetchOfflineManifestShopSlug,
+  OFFLINE_MANIFEST_ERASURE_EPOCH_MOVED,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
 } from "@/lib/offline-manifests";
@@ -245,7 +247,17 @@ export function useOfflineManifestSync(
           setSaved(existing);
           return;
         }
-        const envelope = await saveOfflineManifest(currentPayload, { tenantRound });
+        // The page issues no snapshot (issue #4391): trade the epoch its rows
+        // were read at for one now. An erasure since then means those rows may
+        // still name the erased diver, so they are not saved; the re-read page
+        // lands as a new payload and is saved by the effect below.
+        const claimed = await claimOfflineManifestSnapshot(currentPayload);
+        if (claimed === OFFLINE_MANIFEST_ERASURE_EPOCH_MOVED) {
+          router.refresh();
+          return;
+        }
+        if (!claimed) throw new Error(copy.saveErrorFallback);
+        const envelope = await saveOfflineManifest(claimed, { tenantRound });
         setSaved(envelope);
         lastPendingCount.current = envelope.events.filter(
           (event) => event.syncStatus === "pending",
@@ -272,7 +284,7 @@ export function useOfflineManifestSync(
         if (!opts.silent) setBusy(false);
       }
     },
-    [copy, tripId],
+    [copy, tripId, router],
   );
 
   const save = useCallback(

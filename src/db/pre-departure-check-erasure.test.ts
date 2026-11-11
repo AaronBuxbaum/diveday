@@ -4,7 +4,10 @@ import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
-import { issueOfflineManifestSnapshot } from "../features/offline-manifest-snapshots/store";
+import {
+  issueOfflineManifestSnapshot,
+  readOfflineManifestRoster,
+} from "../features/offline-manifest-snapshots/store";
 import { listChecklistItems, recordPreDepartureCheck } from "./pre-departure-check";
 import { preDepartureCheckEvents } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -134,8 +137,10 @@ describe("pre-departure checklist notes and diver erasure", () => {
       personId: booking.booking.personId,
       actorPersonId: owner.id,
     });
-    const snapshot = await issueOfflineManifestSnapshot(db, shop.id, trip.id);
-    if (!snapshot) throw new Error("fresh offline snapshot missing");
+    const roster = await readOfflineManifestRoster(db, shop.id, trip.id);
+    if (!roster) throw new Error("fresh offline roster missing");
+    const snapshot = await issueOfflineManifestSnapshot(db, shop.id, trip.id, roster.erasureEpoch);
+    if (!snapshot.ok) throw new Error("fresh offline snapshot missing");
     const occurredAt = nowDate();
 
     const result = await recordPreDepartureCheck(db, {

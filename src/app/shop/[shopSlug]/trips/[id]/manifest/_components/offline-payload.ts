@@ -1,6 +1,6 @@
 import type { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import type { OpenSnag } from "@/features/boat-snags";
-import type { issueOfflineManifestSnapshot } from "@/features/offline-manifest-snapshots";
+import type { readOfflineManifestRoster } from "@/features/offline-manifest-snapshots";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -17,7 +17,7 @@ import { snagSentences } from "./pre-departure-check-view";
  * so the copy at sea cannot disagree with the page at the dock.
  */
 export function offlineManifestPayload({
-  snapshot,
+  roster,
   shop,
   checklistItems,
   checklistChecks,
@@ -27,7 +27,7 @@ export function offlineManifestPayload({
   locale,
   t,
 }: {
-  snapshot: NonNullable<Awaited<ReturnType<typeof issueOfflineManifestSnapshot>>>;
+  roster: NonNullable<Awaited<ReturnType<typeof readOfflineManifestRoster>>>;
   shop: OfflineManifestPayload["shop"];
   checklistItems: Awaited<ReturnType<typeof listChecklistItems>>;
   checklistChecks: Awaited<ReturnType<typeof latestPreDepartureChecksForTrip>>;
@@ -42,7 +42,7 @@ export function offlineManifestPayload({
   const boundaries = rollCallDayBoundariesOf(meetingWindows);
   return {
     ...serializeManifests(
-      snapshot.manifests,
+      roster.manifests,
       {
         slug: shop.slug,
         name: shop.name,
@@ -73,7 +73,9 @@ export function offlineManifestPayload({
           : depthWarningText(t, advisory),
     ),
     ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
-    snapshotId: snapshot.snapshotId,
-    erasureEpochToken: snapshot.erasureEpochToken,
+    // The device trades this for a snapshot id, revision and signed token when
+    // it saves (`claimOfflineManifestSnapshot`), refused if an erasure landed
+    // since these rows were read (issue #4391).
+    readAtErasureEpoch: roster.erasureEpoch,
   };
 }

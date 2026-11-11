@@ -150,6 +150,14 @@ export type OfflineManifestPayload = {
   snapshotId?: string;
   /** HMAC-authenticated shop erasure epoch; clients must carry it unchanged. */
   erasureEpochToken?: string;
+  /**
+   * **The manifest page's payload only** (issue #4391): the shop erasure epoch
+   * its rows were read at, in place of `snapshotId` and `erasureEpochToken`.
+   * The page render issues no snapshot; the device trades this for one when it
+   * saves (`claimOfflineManifestSnapshot`), and the claimed payload no longer
+   * carries it, so a saved copy never does.
+   */
+  readAtErasureEpoch?: number;
   /** Absent on older snapshots, which cannot claim junior checks were captured. */
   juniorAdvisoriesChecked?: true;
   /** Absent on copies made before site-only training readiness; queued events remain intact. */
@@ -1106,6 +1114,66 @@ export async function fetchOfflineManifestShopSlug(): Promise<string | null> {
     });
     if (!response.ok) return null;
     return offlineManifestShopSlug(await response.json());
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** `POST /api/offline-manifests/[tripId]/snapshot`'s body: the epoch the page read its rows at. */
+export type OfflineManifestSnapshotRequest = { erasureEpoch: number };
+
+/** Its 200 answer: what makes the page's rows a saved, ordered, epoch-signed copy. */
+export type OfflineManifestSnapshotResponse = { snapshotId: string; erasureEpochToken: string };
+
+/** Its 409 answer: an erasure landed after the page read its rows. */
+export const OFFLINE_MANIFEST_ERASURE_EPOCH_MOVED = "erasure_epoch_moved";
+
+function offlineManifestSnapshotIssued(body: unknown): OfflineManifestSnapshotResponse | null {
+  if (!body || typeof body !== "object") return null;
+  const { snapshotId, erasureEpochToken } = body as Partial<OfflineManifestSnapshotResponse>;
+  return typeof snapshotId === "string" && typeof erasureEpochToken === "string"
+    ? { snapshotId, erasureEpochToken }
+    : null;
+}
+
+/**
+ * **Make the manifest page's payload a copy this device may save** (issue
+ * #4391). The page reads its rows on the pool and issues no snapshot; this
+ * asks the server for the snapshot id, the next revision and the signed epoch,
+ * under the erasure fence, at the moment the device saves.
+ *
+ * A payload that already carries a token (the background board's) comes back
+ * as it is. `"erasure_epoch_moved"` when an erasure landed after the page read
+ * its rows: those rows may still name the erased diver, so they are not saved,
+ * and the caller re-reads the page instead. `null` when the answer cannot be
+ * established (offline, signed out, a failed or timed-out request): nothing is
+ * saved, as when the tenant cannot be verified.
+ */
+export async function claimOfflineManifestSnapshot(
+  payload: OfflineManifestPayload,
+): Promise<OfflineManifestPayload | typeof OFFLINE_MANIFEST_ERASURE_EPOCH_MOVED | null> {
+  const { readAtErasureEpoch, ...rest } = payload;
+  if (readAtErasureEpoch === undefined) return payload;
+  const tripId = payload.manifests[0]?.trip.id;
+  if (!tripId) return null;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TENANT_LOOKUP_TIMEOUT_MS);
+  try {
+    const body: OfflineManifestSnapshotRequest = { erasureEpoch: readAtErasureEpoch };
+    const response = await fetch(`/api/offline-manifests/${encodeURIComponent(tripId)}/snapshot`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (response.status === 409) return OFFLINE_MANIFEST_ERASURE_EPOCH_MOVED;
+    if (!response.ok) return null;
+    const issued = offlineManifestSnapshotIssued(await response.json());
+    return issued ? { ...rest, ...issued } : null;
   } catch {
     return null;
   } finally {

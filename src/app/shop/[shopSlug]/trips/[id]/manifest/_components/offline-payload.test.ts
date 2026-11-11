@@ -6,14 +6,12 @@ import { offlineManifestPayload } from "./offline-payload";
 describe("offlineManifestPayload", () => {
   it("carries every checkpoint, the shop's emergency reference and the boat check", () => {
     const payload = offlineManifestPayload({
-      snapshot: {
+      roster: {
         manifests: [
           tripManifest({ checkpoint: "departure", divers: [diver()] }),
           tripManifest({ checkpoint: "after_dive_1", divers: [diver()] }),
         ],
-        snapshotId: "11111111-1111-4111-8111-111111111111",
-        erasureEpochToken: "authenticated-epoch",
-        snapshotRevision: 1,
+        erasureEpoch: 3,
       },
       shop: {
         slug: "blue-mantis",
@@ -31,8 +29,11 @@ describe("offlineManifestPayload", () => {
     });
     expect(payload.snags).toBeUndefined();
     expect(payload.shop.slug).toBe("blue-mantis");
-    expect(payload.snapshotId).toBe("11111111-1111-4111-8111-111111111111");
-    expect(payload.erasureEpochToken).toBe("authenticated-epoch");
+    // The epoch the rows were read at, for the device to trade for a signed
+    // token when it saves; the page itself issues no snapshot (issue #4391).
+    expect(payload.readAtErasureEpoch).toBe(3);
+    expect(payload).not.toHaveProperty("snapshotId");
+    expect(payload).not.toHaveProperty("erasureEpochToken");
     expect(payload.manifests.map((entry) => entry.checkpoint)).toEqual([
       "departure",
       "after_dive_1",
@@ -41,11 +42,9 @@ describe("offlineManifestPayload", () => {
 
   it("carries the boat's open snags, carried and its own, worded for the crew", () => {
     const payload = offlineManifestPayload({
-      snapshot: {
+      roster: {
         manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
-        snapshotId: "22222222-2222-4222-8222-222222222222",
-        erasureEpochToken: "authenticated-epoch",
-        snapshotRevision: 1,
+        erasureEpoch: 0,
       },
       shop: {
         slug: "blue-mantis",
@@ -112,11 +111,9 @@ describe("offlineManifestPayload", () => {
       locale: "en-US",
       t,
     };
-    const snapshot = {
+    const roster = {
       manifests: [tripManifest({ checkpoint: "departure", divers: [diver()] })],
-      snapshotId: "33333333-3333-4333-8333-333333333333" as const,
-      erasureEpochToken: "authenticated-epoch",
-      snapshotRevision: 1,
+      erasureEpoch: 0,
     };
     const day = (date: number) => ({
       startsAt: new Date(Date.UTC(2026, 6, date, 10)),
@@ -124,12 +121,12 @@ describe("offlineManifestPayload", () => {
     });
     // Halfway between day one's end (14:00) and day two's start (10:00 the next day).
     expect(
-      offlineManifestPayload({ ...base, snapshot, meetingWindows: [day(20), day(21)] })
+      offlineManifestPayload({ ...base, roster, meetingWindows: [day(20), day(21)] })
         .rollCallDayBoundaries,
     ).toEqual(["2026-07-21T00:00:00.000Z"]);
     expect(
       "rollCallDayBoundaries" in
-        offlineManifestPayload({ ...base, snapshot, meetingWindows: [day(20)] }),
+        offlineManifestPayload({ ...base, roster, meetingWindows: [day(20)] }),
     ).toBe(false);
   });
 });

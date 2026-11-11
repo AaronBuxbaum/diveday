@@ -60,9 +60,9 @@ export async function readManifestView({
   const read = await readManifestPage(db, shop.id, tripId, session.user.personId);
   const { completeManifests, boatCheck } = read;
   const departureManifest = completeManifests?.[0];
-  if (!departureManifest || !completeManifests || !boatCheck.offlineSnapshot)
+  if (!departureManifest || !completeManifests || !boatCheck.offlineRoster)
     return { status: "missing" as const };
-  const offlineSnapshot = boatCheck.offlineSnapshot;
+  const offlineRoster = boatCheck.offlineRoster;
   const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t, locale);
 
   const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
@@ -151,7 +151,7 @@ export async function readManifestView({
     status: "ready" as const,
     ...read,
     completeManifests,
-    offlineSnapshot,
+    offlineRoster,
     departureManifest,
     boatSafety,
     checkpoint,

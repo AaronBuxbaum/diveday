@@ -38,22 +38,52 @@ export async function nextOfflineManifestSnapshotRevision(
 }
 
 /**
- * Issue the identity-bearing part of a saved manifest from one shop-fenced
- * read. The epoch and roster must share the fence: signing a stale roster with
- * a post-erasure epoch would authorize its queued notes after the cutoff.
+ * **The manifest page's read** (issue #4391): the departure's manifests and
+ * the shop's offline erasure epoch they were read at, on the pool, writing
+ * nothing. The epoch is read first and every manifest statement starts after
+ * it, so the rows already reflect every erasure that epoch counts (an erasure
+ * bumps the epoch in the same transaction that sweeps the rows). A later
+ * erasure can only make the rows *more* erased than the epoch claims, never
+ * less. A device that saves these rows trades the epoch for a signed token
+ * through `issueOfflineManifestSnapshot`, which refuses once it has moved.
  */
-export async function issueOfflineManifestSnapshot(db: AppDb, shopId: string, tripId: string) {
+export async function readOfflineManifestRoster(db: AppDb, shopId: string, tripId: string) {
+  const erasureEpoch = await getShopOfflineErasureEpoch(db, shopId);
+  if (erasureEpoch === null) return null;
+  const manifests = await getTripManifests(db, shopId, tripId);
+  if (!manifests) return null;
+  return { manifests, erasureEpoch };
+}
+
+export type IssuedOfflineManifestSnapshot =
+  | { ok: true; snapshotId: string; erasureEpochToken: string; snapshotRevision: number }
+  | { ok: false; reason: "not_found" | "erasure_epoch_moved" };
+
+/**
+ * Issue the identity-bearing part of a saved manifest: a snapshot id, the next
+ * server revision and the signed erasure epoch, for rows a page read at
+ * `readAtErasureEpoch` (`readOfflineManifestRoster`). Under the shared shop
+ * fence an erasure cannot commit while this runs, and an epoch that moved since
+ * the read is refused before any revision is written: signing a pre-erasure
+ * roster with a post-erasure epoch would authorize its queued notes after the
+ * cutoff. The device re-reads the page and saves that.
+ */
+export async function issueOfflineManifestSnapshot(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  readAtErasureEpoch: number,
+): Promise<IssuedOfflineManifestSnapshot> {
   return db.transaction(async (tx) => {
     await lockBoardingCertificationEvidence(tx, shopId, "boarding");
     const epoch = await getShopOfflineErasureEpoch(tx, shopId);
-    if (epoch === null) return null;
+    if (epoch === null) return { ok: false, reason: "not_found" } as const;
+    if (epoch !== readAtErasureEpoch) return { ok: false, reason: "erasure_epoch_moved" } as const;
     const snapshotRevision = await nextOfflineManifestSnapshotRevision(tx, shopId, tripId);
-    if (snapshotRevision === null) return null;
-    const manifests = await getTripManifests(tx as unknown as AppDb, shopId, tripId);
-    if (!manifests) return null;
+    if (snapshotRevision === null) return { ok: false, reason: "not_found" } as const;
     const snapshotId = randomUUID();
     return {
-      manifests,
+      ok: true,
       snapshotId,
       erasureEpochToken: signOfflineErasureEpoch({
         shopId,
@@ -63,6 +93,6 @@ export async function issueOfflineManifestSnapshot(db: AppDb, shopId: string, tr
         snapshotRevision,
       }),
       snapshotRevision,
-    };
+    } as const;
   });
 }
