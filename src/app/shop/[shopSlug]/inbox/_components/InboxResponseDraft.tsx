@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { AssistDraftButton } from "@/components/assists/AssistDraftButton";
 import { Copyable } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field } from "@/components/ui/form";
+import { Field, textareaClassFor } from "@/components/ui/form";
 import { mailtoHref } from "@/lib/contact-links";
 
 /** Staff review the draft here. No send or booking action runs automatically. */
@@ -73,7 +73,7 @@ export function InboxResponseDraft({
             <textarea
               ref={field}
               id={id}
-              className={controlClass}
+              className={textareaClassFor(6)}
               rows={6}
               value={text}
               onChange={(event) => {
