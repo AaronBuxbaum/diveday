@@ -26,7 +26,7 @@ import type { RentalFit, Shop, Trip } from "./types";
  * rental prep list) resolves against the staff bundle — the English words
  * happen to match, but the two bundles stay independent on purpose.
  */
-const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
+export const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
   scubaUnit: "trip.providedItems.scubaUnit",
   tanksAndWeights: "trip.providedItems.tanksAndWeights",
   tanks: "trip.providedItems.tanks",

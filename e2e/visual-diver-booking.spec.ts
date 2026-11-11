@@ -49,6 +49,16 @@ for (const scheme of ["light", "dark"] as const) {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
     test.describe("public", () => {
+      test(`the trip states inclusions before booking (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        await page.waitForURL(/\/s\/blue-mantis\/trips\//);
+        await expect(
+          page.getByRole("heading", { name: diverCopy("trip.goodToKnow") }),
+        ).toBeVisible();
+        await capture(page, "trip-before-booking-facts", scheme);
+      });
+
       /**
        * The moment the whole public funnel exists for: `/ready` as it looks in
        * the seconds after a seat is taken — the "You've got a seat" earned

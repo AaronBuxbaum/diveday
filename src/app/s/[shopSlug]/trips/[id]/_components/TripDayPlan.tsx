@@ -129,7 +129,9 @@ export function CoursePlan({
   plan,
   t,
   locale,
+  showIncludedGear = true,
 }: {
+  showIncludedGear?: boolean;
   plan: CourseDayPlan;
   t: DiverTranslator;
   locale: string;
@@ -154,7 +156,7 @@ export function CoursePlan({
           </div>
         );
       })}
-      {plan.includedRentalKinds.length > 0 ? (
+      {showIncludedGear && plan.includedRentalKinds.length > 0 ? (
         <p className="text-sm">
           {includesScubaUnitOnly(plan.includedRentalKinds)
             ? t("trip.courseGearIncluded")
@@ -291,6 +293,7 @@ export function TripDayPlan({
   nextOpensOnRule = false,
   siteReviews,
   content = "full",
+  showIncludedGear = true,
 }: {
   briefings: DiveBriefing[];
   /**
@@ -324,6 +327,8 @@ export function TripDayPlan({
   siteReviews?: readonly SiteReview[];
   /** Keep the public itinerary compact; its site reports follow booking. Embeds retain the full plan. */
   content?: "full" | "itinerary" | "reports";
+  /** Booking facts own inclusions while they are shown beside this itinerary. */
+  showIncludedGear?: boolean;
 }) {
   const t = diverTranslator(locale);
   const course = profile
@@ -336,7 +341,9 @@ export function TripDayPlan({
       {rhythm}
     </p>
   ) : null;
-  const coursePlan = course ? <CoursePlan plan={course} t={t} locale={locale} /> : null;
+  const coursePlan = course ? (
+    <CoursePlan plan={course} t={t} locale={locale} showIncludedGear={showIncludedGear} />
+  ) : null;
   if (course && course.days.length > 1 && content !== "reports") {
     return (
       <section>

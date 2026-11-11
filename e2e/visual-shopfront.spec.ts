@@ -414,9 +414,17 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         const coursePlan = page.getByTestId("trip-course-plan");
         await expect(coursePlan.getByText("Your afternoon")).toBeVisible();
-        await expect(coursePlan.getByText(/^Included with the course:/)).toHaveText(
-          "Included with the course: Scuba unit (BCD, regulator, tank, weights), Mask, Wetsuit, Fins, and Dive computer.",
-        );
+        const copy = diverTranslator("en-US");
+        const facts = page.getByRole("region", { name: copy("trip.goodToKnow") });
+        for (const key of [
+          "trip.providedItems.scubaUnit",
+          "trip.rentalItems.mask",
+          "trip.rentalItems.wetsuit",
+          "trip.rentalItems.fins",
+          "trip.rentalItems.diveComputer",
+        ] as const) {
+          await expect(facts.getByText(copy(key), { exact: true })).toBeVisible();
+        }
         await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(
           "data-hydrated",
           "true",

@@ -430,6 +430,11 @@ across the course, so the full plan replaces charter dive slots when the meeting
 partial session never guesses its place in the course outline. No new control is needed beyond the
 existing booking form; extra explanatory copy is the first thing to remove.
 
+Before the booking form, **Good to know** shows the course’s included gear, the shop’s packing
+list, current rental quotes, the meeting address and configured cancellation terms. It uses
+the same packing, quote and arrival rules as the booked diver’s page; unset prices and terms
+stay absent. Course inclusions appear here once; the itinerary retains its gear line only when booking facts are absent.
+
 **Composition, 2026-10-27 (#3140) — rendered review pending**
 
 - **One idea:** understand the selected day and book in one place.

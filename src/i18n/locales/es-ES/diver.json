@@ -350,7 +350,10 @@
     "runLine": "Sale {cadence} · la próxima, {date}",
     "crewToBeConfirmed": "{role} · por confirmar",
     "changedByShop": "Cambiado por el centro el {when}",
-    "changedByCrew": "Cambiado por la tripulación el {when}"
+    "changedByCrew": "Cambiado por la tripulación el {when}",
+    "goodToKnow": "Conviene saber",
+    "rentalFrom": "Equipo de alquiler desde {price}",
+    "rentalFullSet": "Equipo completo {price}"
   },
   "booking": {
     "enrollAndPay": "Inscribirme y pagar",

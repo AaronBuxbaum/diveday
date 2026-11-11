@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
+import { ScrollToHash } from "@/components/ScrollToHash";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { getDb } from "@/db/client";
 import { checkoutMode } from "@/db/stripe-accounts";
@@ -40,6 +41,7 @@ import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { TripAlternatives } from "./_components/TripAlternatives";
+import { TripBookingFacts } from "./_components/TripBookingFacts";
 import { TripContactLine } from "./_components/TripContactLine";
 import { dayCoverPhoto, dayProfileFacts } from "./_components/TripDayPlan";
 import { TripItinerary, TripSupportingDetails } from "./_components/TripDaySections";
@@ -269,6 +271,7 @@ export async function TripDetailPage({
       shop={shop}
       locale={locale}
       profile={profile}
+      showIncludedGear={!!confirmed || inPast}
     >
       {!isEmbed ? <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} /> : null}
     </TripItinerary>
@@ -311,7 +314,7 @@ export async function TripDetailPage({
             than the reading stretches that row rather than the gaps between
             sections. A phone reads the compact itinerary before the booking fields;
             supporting wildlife and site prose stay below (public audit P2, #3140). */}
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(5,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           <TripHero
             shop={shop}
             trip={trip}
@@ -325,11 +328,15 @@ export async function TripDetailPage({
             t={t}
           />
           {!isEmbed ? dayPlan : null}
+          {!confirmed && !inPast ? (
+            <TripBookingFacts shop={shop} trip={trip} locale={locale} />
+          ) : null}
           {/* The selected departure’s next action, after the compact day plan. */}
           <div
             id={confirmed || waitlistConfirmation ? undefined : "book"}
-            className="mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-6 lg:row-start-1"
+            className="mt-10 scroll-mt-4 space-y-10 lg:mt-0 lg:col-start-2 lg:row-span-7 lg:row-start-1"
           >
+            <ScrollToHash onlyHash="book" />
             {confirmed ? null : conditionsLine}
             {confirmed && bookingToken ? (
               <EmbedBookedNotice

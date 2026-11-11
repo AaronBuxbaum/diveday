@@ -350,7 +350,10 @@
     "runLine": "Runs {cadence} · next {date}",
     "crewToBeConfirmed": "{role} · to be confirmed",
     "changedByShop": "Changed by the shop on {when}",
-    "changedByCrew": "Changed by the crew on {when}"
+    "changedByCrew": "Changed by the crew on {when}",
+    "goodToKnow": "Good to know",
+    "rentalFrom": "Rental gear from {price}",
+    "rentalFullSet": "Full set {price}"
   },
   "booking": {
     "enrollAndPay": "Enroll and pay",
