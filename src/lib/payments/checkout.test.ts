@@ -450,3 +450,34 @@ describe("the demo's test-mode account", () => {
     vi.restoreAllMocks();
   });
 });
+
+describe("sessionIsSettled", () => {
+  it("is Stripe saying paid, whatever else the payload carries", async () => {
+    const { sessionIsSettled } = await import("./checkout");
+    expect(sessionIsSettled({ paymentStatus: "paid" })).toBe(true);
+    expect(sessionIsSettled({ paymentStatus: "paid", amountTotalCents: null })).toBe(true);
+  });
+
+  it("is a complete no-cost order: no payment required and a total of exactly zero", async () => {
+    const { sessionIsSettled } = await import("./checkout");
+    const noCost = {
+      stripeStatus: "complete",
+      paymentStatus: "no_payment_required",
+      amountTotalCents: 0,
+    };
+    expect(sessionIsSettled(noCost)).toBe(true);
+    // Each fact is needed: an open page, a real total, or no total at all is not settled.
+    expect(sessionIsSettled({ ...noCost, stripeStatus: "open" })).toBe(false);
+    expect(sessionIsSettled({ ...noCost, stripeStatus: undefined })).toBe(false);
+    expect(sessionIsSettled({ ...noCost, amountTotalCents: 1 })).toBe(false);
+    expect(sessionIsSettled({ ...noCost, amountTotalCents: null })).toBe(false);
+  });
+
+  it("is never an unpaid or async-pending session", async () => {
+    const { sessionIsSettled } = await import("./checkout");
+    expect(
+      sessionIsSettled({ stripeStatus: "complete", paymentStatus: "unpaid", amountTotalCents: 0 }),
+    ).toBe(false);
+    expect(sessionIsSettled({})).toBe(false);
+  });
+});

@@ -40,6 +40,7 @@ import { logWebhookRefusal } from "@/features/webhook-refusal";
 import { nowDate } from "@/lib/clock";
 import { errorCauseTokens, errorClassToken } from "@/lib/error-token";
 import { type LogContext, log } from "@/lib/log";
+import { stripeSessionIsSettled } from "@/lib/payments/checkout";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
@@ -63,6 +64,8 @@ const invoiceObjectSchema = z.object({
 const checkoutSessionObjectSchema = z.object({
   id: z.string().min(1),
   payment_status: z.string().optional(),
+  // Stripe's session lifecycle, read to recognise a no-cost order.
+  status: z.string().optional(),
   // What the session actually settled for, after any discount Stripe applied.
   // Optional/nullable so a fixture or an unusual payload without it still
   // parses — the completion then falls back to the amounts DiveDay asked for
@@ -613,7 +616,7 @@ export async function POST(request: Request) {
         // "completed" alone is not "paid": async payment methods complete the
         // session before the money settles. Only Stripe saying paid clears the
         // booking payment gate (docs ADR 20260721-checkout-at-booking).
-        if (session.success && session.data.payment_status === "paid") {
+        if (session.success && stripeSessionIsSettled(session.data)) {
           // A tip is a checkout too (issue #2718); `markCheckoutPaidBySessionId`
           // settles it without reaching the seat (ADR 20260726-post-trip-tipping).
           logOutcome(paidOutcome(await settleCheckoutPaid(db, session.data, event.account)));

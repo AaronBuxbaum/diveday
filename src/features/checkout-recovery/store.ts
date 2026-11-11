@@ -29,7 +29,7 @@ import {
   type NotificationProvider,
   publicAppUrl,
 } from "../../lib/notifications/index";
-import type { CheckoutProvider } from "../../lib/payments/checkout";
+import { type CheckoutProvider, sessionIsSettled } from "../../lib/payments/checkout";
 import { dueCheckoutRecovery, RECOVERY_DELAY_HOURS } from "./rules";
 
 /** One cron tick's worth of work — keeps a growing backlog from starving the other jobs on the same daily run. */
@@ -284,7 +284,7 @@ export async function sendDueCheckoutRecoveries(
         stripeCustomerId: lookup.session.stripeCustomerId,
       });
     }
-    if (lookup.session.paymentStatus === "paid") {
+    if (sessionIsSettled(lookup.session)) {
       // Stripe's own settled total travels with the lookup — pass it through so
       // a checkout resolved by this scan records what settled, exactly as the
       // webhook path does (PAY-H1/H2).

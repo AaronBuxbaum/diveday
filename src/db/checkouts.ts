@@ -6,7 +6,11 @@ import { log } from "@/lib/log";
 import { isDiver, type ParticipantType } from "@/lib/participant-types";
 import { parsePassThroughFee, passThroughTotalCents } from "@/lib/pass-through-fee";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
-import { type CheckoutProvider, stripeLineDescription } from "@/lib/payments/checkout";
+import {
+  type CheckoutProvider,
+  sessionIsSettled,
+  stripeLineDescription,
+} from "@/lib/payments/checkout";
 import type { PromotionProvider } from "@/lib/payments/promotions";
 import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
@@ -1740,7 +1744,7 @@ export async function refreshCheckoutFromStripe(
       stripeCustomerId: result.session.stripeCustomerId,
     });
   }
-  if (result.session.paymentStatus === "paid") {
+  if (sessionIsSettled(result.session)) {
     // The snapshot already carries Stripe's own settled total; pass it through
     // rather than dropping it, so this fallback path records the same money
     // the webhook path would have (PAY-H1/H2).
