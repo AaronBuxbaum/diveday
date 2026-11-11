@@ -66,7 +66,7 @@ Alternates: `never been on a real boat` · `a question about your Saturday morni
 **No merge field in the subject line.** `Saturday mornings at [SHOP NAME]` is the most recognizable
 sales-tool shape there is, and it is spotted before the email is opened.
 
-> [FIRST NAME],
+> [GREETING]
 >
 > I'm a diver and an ex-Google software engineer, and I'm building DiveDay, software for running a dive day: booking, waivers, cert checks and the head count on the boat. I'm writing because I think it could help [SHOP], and I'd like to find out if I'm right.
 >
@@ -80,7 +80,7 @@ sales-tool shape there is, and it is spotted before the email is opened.
 > [CELL]
 > dive.day
 
-Slots: `[FIRST NAME]`, `[SHOP]`, `[RESEARCHED STATEMENT]`, `[CELL]`. Nothing else is variable.
+Slots: `[GREETING]` ("Hi Dan," when the shop's own page names the person who runs it; "Hello," or "Hello, Horizon Divers crew," when it does not; never a guessed first name), `[SHOP]`, `[RESEARCHED STATEMENT]`, `[CELL]`. Nothing else is variable.
 
 **If nothing about the shop could be verified**, replace the researched statement with this line instead
 of splicing a fragment at 11pm on the eleventh email of the week:
