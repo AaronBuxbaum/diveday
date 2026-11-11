@@ -32,11 +32,15 @@ const THREAD_PAGES = [
   "app/(token)/waivers/[token]/page.tsx",
   "app/(token)/recap/[token]/page.tsx",
   "app/(token)/claim/[token]/page.tsx",
+  "app/(token)/claim/[token]/group/page.tsx",
   "app/(token)/ready/[token]/forms/page.tsx",
   "app/(token)/ready/[token]/waiver/doctor/page.tsx",
 ] as const;
 
-const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "loading.tsx"));
+// The group claim's loading file re-exports the claim's own skeleton.
+const THREAD_LOADING = THREAD_PAGES.filter(
+  (page) => page !== "app/(token)/claim/[token]/group/page.tsx",
+).map((page) => page.replace("page.tsx", "loading.tsx"));
 
 /**
  * The modules that mount `ThreadShell` directly: bearer pages or their masthead.
