@@ -884,6 +884,11 @@
     "introWithScope": "{intro} {scope}."
   },
   "ready": {
+    "estimatedOwnRental": "Tu alquiler estimado: {amount}.",
+    "estimatedAtShopTotal": "Total estimado en el centro: {amount}. La tripulación confirma el alquiler en el muelle.",
+    "rentalEstimateOwnOnly": "Esta estimación incluye solo tu equipo; los alquileres de otros buceadores se pagan aparte.",
+    "rentalEstimateUnpriced": "El precio de algunos equipos o cargas seleccionados se confirma en el centro y no está incluido en esta estimación.",
+    "rentalEstimateUnpricedOnly": "El precio de tus equipos o cargas seleccionados se confirma en el centro. No está incluido en el importe de la plaza de arriba.",
     "metaTitle": "Tu preparación para la salida — DiveDay",
     "checklistHeading": "Tu lista de pasos",
     "namelessFallback": "buceador",

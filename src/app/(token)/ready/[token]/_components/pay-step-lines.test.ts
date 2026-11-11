@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import { atShopMoneyLine, payStepLines } from "./pay-step-lines";
+import { atShopMoneyLine, atShopRentalLines, payStepLines } from "./pay-step-lines";
 
 const t = diverTranslator("en-US");
 const money = (cents: number) => `$${cents / 100}`;
@@ -86,5 +86,102 @@ describe("atShopMoneyLine (fourth UX review, item 5)", () => {
   it("says nothing when nothing is owed at the shop", () => {
     expect(atShopMoneyLine(t, "en-US", "usd", { ...owes, owesAtShop: false }, trip, [])).toBeNull();
     expect(atShopMoneyLine(t, "en-US", "usd", owes, null, [])).toBeNull();
+  });
+});
+
+describe("saved rental estimate beside the seat amount", () => {
+  const trip = { priceCents: 9_000, depositCents: null, snorkelerPriceCents: 4_000, course: null };
+  const data = {
+    owesAtShop: true,
+    participantType: "diver" as const,
+    rentalFit: { fitStatedAt: new Date("2026-01-01T00:00:00Z"), rentsWeights: true },
+    wantsNitrox: false,
+    shop: {
+      rentalItems: ["weights"],
+      rentalPricing: { setCents: null, perItemCents: { weights: 4_500 }, nitroxCents: null },
+    },
+    trip: { plannedDives: 2, course: null },
+  };
+  it("adds the saved rental to the seat, not a second per-person fare", () => {
+    const lines = atShopRentalLines(t, "en-US", "usd", data, trip, []);
+    expect(lines).toContain("Your estimated rental: $45.00.");
+    expect(lines).toContain(
+      "Estimated total at the shop: $135.00. The crew confirms the rental at the dock.",
+    );
+  });
+  it("adds only this diver’s gear to the party fare, never multiplying their fit", () => {
+    const lines = atShopRentalLines(t, "en-US", "usd", data, trip, [
+      { claimed: false, participantType: "diver" },
+      { claimed: true, participantType: "diver" },
+    ]);
+    expect(lines).toContain(
+      "Estimated total at the shop: $225.00. The crew confirms the rental at the dock.",
+    );
+    expect(lines).toContain(
+      "This estimate includes your gear only; other divers’ rentals are extra.",
+    );
+  });
+  it("does not invent an estimate for an unstated fit, paid seat, or included course gear", () => {
+    expect(atShopRentalLines(t, "en-US", "usd", { ...data, rentalFit: null }, trip, [])).toEqual(
+      [],
+    );
+    expect(
+      atShopRentalLines(
+        t,
+        "en-US",
+        "usd",
+        { ...data, rentalFit: { ...data.rentalFit, fitStatedAt: null } },
+        trip,
+        [],
+      ),
+    ).toEqual([]);
+    expect(atShopRentalLines(t, "en-US", "usd", { ...data, owesAtShop: false }, trip, [])).toEqual(
+      [],
+    );
+    expect(
+      atShopRentalLines(
+        t,
+        "en-US",
+        "usd",
+        {
+          ...data,
+          trip: {
+            ...data.trip,
+            course: { includedRentalKinds: ["weights"], nitroxCompatible: false },
+          },
+        },
+        trip,
+        [],
+      ),
+    ).toEqual([]);
+  });
+  it("does not conceal selected gear whose price the shop has not published", () => {
+    const unpriced = {
+      ...data,
+      rentalFit: { ...data.rentalFit, rentsBcd: true },
+      shop: { ...data.shop, rentalItems: ["weights", "bcd"] },
+    };
+    expect(atShopRentalLines(t, "en-US", "usd", unpriced, trip, [])).toContain(
+      t("ready.rentalEstimateUnpriced"),
+    );
+  });
+  it("discloses an unpriced nitrox fill alongside priced gear", () => {
+    const fill = {
+      ...data,
+      wantsNitrox: true,
+      shop: { ...data.shop, rentalItems: ["weights", "nitrox"] },
+    };
+    expect(atShopRentalLines(t, "en-US", "usd", fill, trip, [])).toContain(
+      t("ready.rentalEstimateUnpriced"),
+    );
+  });
+  it("keeps an all-unpriced rental visible without inventing a numeric total", () => {
+    const unknown = {
+      ...data,
+      shop: { ...data.shop, rentalPricing: { ...data.shop.rentalPricing, perItemCents: {} } },
+    };
+    expect(atShopRentalLines(t, "en-US", "usd", unknown, trip, [])).toEqual([
+      t("ready.rentalEstimateUnpricedOnly"),
+    ]);
   });
 });

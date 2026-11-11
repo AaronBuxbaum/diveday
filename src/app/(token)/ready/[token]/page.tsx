@@ -36,6 +36,7 @@ import {
 } from "@/lib/thread-steps";
 import { HeldAfterDiveCard, NoShowCard, releasedSeat } from "./_components/AfterDiveDoors";
 import { AfterState } from "./_components/AfterState";
+import { AtShopMoney } from "./_components/AtShopMoney";
 import { readAfterTheDive } from "./_components/after-dive-reads";
 import { readyAfterStateProps } from "./_components/after-state-actions";
 import { BoatStageLine } from "./_components/BoatStageLine";
@@ -47,7 +48,7 @@ import { DayOfDetails } from "./_components/DayOfDetails";
 import { readyDeadLink } from "./_components/dead-link";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { PayStepBody } from "./_components/PayStepBody";
-import { atShopMoneyLine, payStepLines } from "./_components/pay-step-lines";
+import { payStepLines } from "./_components/pay-step-lines";
 import { resolvePaymentReceipt } from "./_components/payment-receipt";
 import * as ReadyCards from "./_components/ReadyBookedShell";
 import { ReadyFitForm } from "./_components/ReadyFitForm";
@@ -411,9 +412,6 @@ async function DiverReadinessPage({
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
     const paid = payStepLines(t, money, paymentReceipt, packageDives, data.shop.deskPayment);
 
-    // What is owed at the shop, said once (fourth UX review, item 5).
-    const atShopLine = atShopMoneyLine(t, locale, shop.currency, data, fullTrip, partySeatClaims);
-
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
     const stepLine = (step: ThreadStep): string | null =>
       readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine: paid.paidLine });
@@ -548,7 +546,7 @@ async function DiverReadinessPage({
               settled={spine.done === spine.countable}
             />
             <ThreadSpine steps={spineSteps} heading={t("ready.checklistHeading")} />
-            {atShopLine ? <p className="mt-4 text-base text-muted">{atShopLine}</p> : null}
+            <AtShopMoney {...{ t, locale, data, fullTrip, partySeatClaims }} />
           </>
         )}
         <CourseNextStepNote db={db} shopId={shop.id} bookingId={bookingId} t={t} />

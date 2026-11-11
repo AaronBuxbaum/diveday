@@ -5,6 +5,16 @@ import type { DeskPayment } from "@/lib/desk-payment";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import type { ParticipantType } from "@/lib/participant-types";
+import { seatRentalItems } from "@/lib/participant-types";
+import {
+  chargedRentalKinds,
+  nitroxAvailableOn,
+  offeredRentableItems,
+  quoteRentalFit,
+  type RentableItemKind,
+  type RentalFitField,
+  type RentalPricing,
+} from "@/lib/rentals";
 
 /** What the Pay step needs from the booking's receipt. */
 type Receipt = {
@@ -115,4 +125,57 @@ export function atShopMoneyLine(
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+/** The lead’s stated gear, never guessed or multiplied across their party. */
+export function atShopRentalLines(
+  t: DiverTranslator,
+  locale: string,
+  currency: string,
+  data: {
+    owesAtShop: boolean;
+    participantType: ParticipantType;
+    rentalFit: (Partial<Record<RentalFitField, boolean>> & { fitStatedAt: Date | null }) | null;
+    wantsNitrox: boolean;
+    shop: { rentalItems: string[]; rentalPricing: RentalPricing };
+    trip: {
+      plannedDives: number;
+      course: { includedRentalKinds: RentableItemKind[]; nitroxCompatible: boolean } | null;
+    };
+  },
+  trip: Parameters<typeof atShopMoneyLine>[4],
+  partySeats: Parameters<typeof atShopMoneyLine>[5],
+): string[] {
+  if (!data.owesAtShop || !trip || !data.rentalFit?.fitStatedAt) return [];
+  const included = data.trip.course?.includedRentalKinds ?? [];
+  const catalog = seatRentalItems(data.participantType, data.shop.rentalItems);
+  const offered = offeredRentableItems(catalog, included).filter(
+    (item) => !included.includes(item.kind),
+  );
+  const wantsNitrox = data.wantsNitrox && nitroxAvailableOn(catalog, data.trip.course);
+  const quote = quoteRentalFit(data.shop.rentalPricing, {
+    rentedKinds: chargedRentalKinds(
+      offered.filter((item) => data.rentalFit?.[item.field] === true).map((item) => item.kind),
+      included,
+    ),
+    offeredKinds: offered.map((item) => item.kind),
+    wantsNitrox,
+    plannedDives: data.trip.plannedDives,
+  });
+  const hasUnpriced =
+    quote.unpricedKinds.length > 0 || (wantsNitrox && data.shop.rentalPricing.nitroxCents === null);
+  if (quote.subtotalCents <= 0) return hasUnpriced ? [t("ready.rentalEstimateUnpricedOnly")] : [];
+  const types = [
+    data.participantType,
+    ...partySeats.filter((seat) => !seat.claimed).map((seat) => seat.participantType),
+  ];
+  const terms = partyMoneyTerms(trip, trip.course, types, false);
+  if (terms?.due !== "at_shop") return [];
+  const money = (cents: number) => formatMoneyCents(cents, toShopCurrency(currency), locale);
+  return [
+    t("ready.estimatedOwnRental", { amount: money(quote.subtotalCents) }),
+    t("ready.estimatedAtShopTotal", { amount: money(terms.amountCents + quote.subtotalCents) }),
+    ...(partySeats.some((seat) => !seat.claimed) ? [t("ready.rentalEstimateOwnOnly")] : []),
+    ...(hasUnpriced ? [t("ready.rentalEstimateUnpriced")] : []),
+  ];
 }
