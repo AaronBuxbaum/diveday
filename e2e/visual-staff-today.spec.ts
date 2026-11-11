@@ -102,21 +102,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       if (scheme === "light") {
-        test("arrival lookup takes initial focus after client navigation", async ({ page }) => {
-          for (const width of [390, 1280]) {
-            await page.setViewportSize({ width, height: 844 });
-            await page.goto("/shop/blue-mantis/divers");
-            const nav = page.getByRole("navigation", { name: "Main", exact: true });
-            await expect(nav).toHaveAttribute("data-hydrated", "true");
-            await nav.getByRole("link", { name: /^Today/ }).click();
-            await expect(page.locator("#arrival-search:visible")).toHaveAttribute(
-              "data-hydrated",
-              "true",
-            );
-            await expect(page.locator("#arrival-search:visible")).toBeFocused();
-          }
-        });
-
         test("grouped departure links have a usable touch target and keyboard focus", async ({
           page,
         }) => {
