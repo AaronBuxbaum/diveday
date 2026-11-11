@@ -8,7 +8,7 @@ import {
   upcomingScheduleRange,
 } from "@/db/trips";
 import { listBoats } from "@/features/boats";
-import { listActiveCourses } from "@/features/courses";
+import { listShelfCourses } from "@/features/courses";
 import { getShopReviewAggregate } from "@/features/reviews";
 import { listTripLenses } from "@/features/trip-lenses";
 import { EMPTY_REVIEW_AGGREGATE } from "@/lib/reviews";
@@ -121,8 +121,8 @@ export async function readSchedulePage(
     }).then((page) => ({ ...page, trips: page.trips.map(seatsOnSale) })),
   );
   const rangeRead = upcomingScheduleRange(db, shop.id, now, { publicOnly: true });
-  const activeCoursesRead = isEmbed ? Promise.resolve([]) : listActiveCourses(db, shop.id);
-  const shelfIds = activeCoursesRead.then((shelf) => shelf.slice(0, 3).map((course) => course.id));
+  const activeCoursesRead = isEmbed ? Promise.resolve([]) : listShelfCourses(db, shop.id);
+  const shelfIds = activeCoursesRead.then((shelf) => shelf.map((course) => course.id));
   const [
     lenses,
     activeLens,
