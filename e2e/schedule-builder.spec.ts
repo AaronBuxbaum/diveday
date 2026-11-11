@@ -26,6 +26,44 @@ async function chooseRowAction(page: Page, verb: string, title: string) {
 }
 
 test.describe("schedule builder", () => {
+  for (const width of [390, 1280]) {
+    test(`persists combined Move edits through save and reload at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      const title = `Move fields ${width}`;
+      const originalDate = daysFromNow(3);
+      const newDate = daysFromNow(4);
+      await page.goto(`${BOARD}?add=1`);
+      await page.getByLabel("What is it").fill(title);
+      await page.getByLabel("Date", { exact: true }).fill(originalDate);
+      await page.getByLabel("Departs").fill("09:00");
+      await page.getByLabel("Returns").fill("13:00");
+      await page.getByLabel("Passenger places").fill("8");
+      await page.getByRole("button", { name: "Put it on the board" }).click();
+      await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
+
+      const date = page.getByLabel("New date", { exact: true });
+      const time = page.getByLabel("New departure time (America/New_York)");
+      await chooseRowAction(page, "Move", title);
+      await date.fill(newDate);
+      await expect(date).toHaveValue(newDate);
+      await time.fill("10:00");
+      await time.blur();
+      await expect(date).toHaveValue(newDate);
+      await expect(time).toHaveValue("10:00 AM");
+      await page.getByRole("button", { name: "Move it", exact: true }).click();
+      const movedDay = page.locator(`[data-week-day="${newDate}"]`);
+      await expect(
+        movedDay.getByRole("button", {
+          name: new RegExp(`^Move, copy, or remove ${title}, .*10:00 AM – 2:00 PM$`),
+        }),
+      ).toBeVisible();
+      await page.reload();
+      await chooseRowAction(page, "Move", title);
+      await expect(date).toHaveValue(newDate);
+      await expect(time).toHaveValue("10:00 AM");
+    });
+  }
+
   test("does not trust fabricated move result query values", async ({ page }) => {
     const staff = staffTranslator("en-US");
     const message = staff("schedule.notices.movedGearReleased", { count: 2 });
