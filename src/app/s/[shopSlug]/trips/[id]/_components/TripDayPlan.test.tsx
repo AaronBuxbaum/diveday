@@ -540,10 +540,9 @@ describe("TripDayPlan's course plan", () => {
       ],
       includedRentalKinds: [],
     };
-    // A session records no plan day of its own, so neither a one-meeting
-    // session nor the whole three-meeting run can say which day it is.
+    // A partial session has no plan-day mapping; the full run can show the outline.
     expect(courseDayPlan(threeDays, t, "meters", 1)).toBeUndefined();
-    expect(courseDayPlan(threeDays, t, "meters", 3)).toBeUndefined();
+    expect(courseDayPlan(threeDays, t, "meters", 3)?.days).toEqual(threeDays.scheduleDays);
     // The gear line is the course's, whichever day this is.
     expect(
       courseDayPlan(
@@ -553,7 +552,7 @@ describe("TripDayPlan's course plan", () => {
         1,
       )?.days,
     ).toEqual([]);
-    for (const dayCount of [1, 3]) {
+    for (const dayCount of [1, 2]) {
       cleanup();
       render(
         <TripDayPlan

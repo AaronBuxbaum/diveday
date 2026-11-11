@@ -605,3 +605,13 @@ staff*, checked live, not any bearer of a token that used to say staff.
 Revisit if a pilot shop reports a sighting somebody was not entitled to make. Nothing about this
 decision blocks narrowing later: the predicate would be one `canPersonSightCard` in `src/db/authz.ts`
 and one call, and the form already has a place to say so.
+
+## Amendment 2026-11-11 — a diver may bring the card to check-in
+
+The readiness page now accepts agency and level without a number through “I’ll show my card at
+check-in” (#4335), reusing the self-declared row and its existing sighting requirement. The diver
+checklist marks that answer as waiting with the shop and explicitly asks the diver to bring the
+card; optional number entry stays available. Reminder composition retains that bring-card
+instruction. The boarding blocker remains `certification_self_declared`, and the row stays pending
+until staff record the required card sighting. This changes online preparation, never the evidence
+needed to board.

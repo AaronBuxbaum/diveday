@@ -651,6 +651,8 @@ describe("getBookedCard", () => {
       defaultLocale: data.shop.defaultLocale,
       dockCallMinutes: data.shop.dockCallMinutes,
     });
+    expect(card.days).toEqual(data.meetingDays);
+    expect(card.courseSession).toBe(data.courseSession);
     expect(card.greetingName).toBe(data.greetingName);
     expect(card.greetingName).toBe("Nora Quinn");
     expect(card.pickup).toEqual({

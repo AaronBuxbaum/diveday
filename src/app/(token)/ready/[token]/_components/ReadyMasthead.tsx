@@ -30,6 +30,7 @@ import type { DiveDayMilestone } from "@/lib/visit-milestones";
  * 2026-10-10, item 7).
  */
 export type MastheadFacts = {
+  courseSession?: boolean;
   walletUrl?: string;
   shop: { name: string; slug: string; timezone: string; dockCallMinutes: number };
   trip: { id: string; title: string; startsAt: Date; endsAt: Date };
@@ -106,6 +107,11 @@ export function mastheadArrivalLine(
     return t("ready.hotelPickupHeaderLine", {
       time: facts.pickup.time,
       location: facts.pickup.location ?? t("ready.hotelPickupLocationNotSet"),
+    });
+  }
+  if (facts.courseSession) {
+    return t("ready.courseStartLine", {
+      time: formatTime(facts.trip.startsAt, locale, facts.shop.timezone),
     });
   }
   const dockCallAt = new Date(facts.trip.startsAt.getTime() - facts.shop.dockCallMinutes * 60_000);
@@ -228,6 +234,7 @@ export function ReadyBookedHeader({
       >
         <p className="font-semibold text-foreground">{bindTitleDash(facts.trip.title)}</p>
         <BookedWhen facts={facts} locale={locale} now={now} />
+        <MastheadDays facts={facts} locale={locale} t={t} />
         {dateActions}
         <p className="mt-1 font-medium text-foreground">{mastheadArrivalLine(facts, locale, t)}</p>
         {milestone ? (
@@ -345,6 +352,7 @@ export function readyMastheadFacts(data: ReadyPageData): MastheadFacts {
     },
     trip: data.detail.trip,
     days: data.meetingDays,
+    courseSession: data.courseSession,
     pickup: { time: data.pickupTime, location: data.hotelPickupLocation },
   };
 }

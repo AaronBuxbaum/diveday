@@ -93,7 +93,7 @@ export function SignStepActions({
         <Link
           href={`/ready/${token}/forms`}
           prefetch={false}
-          className={waiverCode ? buttonClass({ variant: "secondary", size: "sm" }) : actionButton}
+          className={waiverCode ? buttonClass({ variant: "secondary", size: "md" }) : actionButton}
         >
           {t("ready.signCourseForms")}
         </Link>

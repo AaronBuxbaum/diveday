@@ -1,7 +1,9 @@
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ReadyPageData } from "@/features/ready";
 import type { DiverTranslator } from "@/i18n/messages";
+import { mailtoHref } from "@/lib/contact-links";
 import { isLearningMaterialLink } from "@/lib/courses";
 
 /**
@@ -19,9 +21,11 @@ import { isLearningMaterialLink } from "@/lib/courses";
  */
 export function CourseMaterials({
   data,
+  contactEmail,
   t,
 }: {
   data: Pick<ReadyPageData, "learningMaterials" | "courseMaterialsDone" | "courseStarted">;
+  contactEmail?: string | null;
   t: DiverTranslator;
 }) {
   const materials = data.learningMaterials;
@@ -47,7 +51,7 @@ export function CourseMaterials({
                 href={material.url}
                 target="_blank"
                 rel="noreferrer"
-                className="font-medium text-primary hover:underline"
+                className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
               >
                 {material.name}
               </a>
@@ -58,6 +62,14 @@ export function CourseMaterials({
           </li>
         ))}
       </ul>
+      {!data.courseMaterialsDone && contactEmail ? (
+        <a
+          href={mailtoHref(contactEmail)}
+          className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+        >
+          {t("ready.materialsAccess")}
+        </a>
+      ) : null}
     </section>
   );
 }

@@ -94,12 +94,10 @@ export function dayProfileFacts(
  * shop edits, never written again here, with its depth markers said in the
  * shop's unit as the course page says them.
  *
- * **One session, one day.** A trip page is one session, so it says that
- * session's day of the plan and never the whole multi-day plan. A session
- * records no plan day of its own (`trip_schedule_days` numbers its meetings,
- * not the course's days), so the only day it can be matched to is a
- * one-meeting session of a one-day plan: Discover Scuba's afternoon. Any other
- * session says no plan day at all; the gear line is the course's either way.
+ * A booking covering the full course plan can show all its planned days. A
+ * partial session still has no plan-day mapping, so a different meeting count
+ * must not guess which subset it covers. Actual dates/hours are shown separately
+ * from this course-authored outline.
  */
 export type CourseDayPlan = {
   days: CourseScheduleDay[];
@@ -114,8 +112,7 @@ export function courseDayPlan(
   meetingDays: number,
 ): CourseDayPlan | undefined {
   if (!course) return undefined;
-  const sessionDays =
-    meetingDays === 1 && course.scheduleDays.length === 1 ? course.scheduleDays : [];
+  const sessionDays = meetingDays === course.scheduleDays.length ? course.scheduleDays : [];
   if (sessionDays.length === 0 && course.includedRentalKinds.length === 0) return undefined;
   const format = courseDepthFormat(t, depthUnit);
   return {
@@ -340,6 +337,14 @@ export function TripDayPlan({
     </p>
   ) : null;
   const coursePlan = course ? <CoursePlan plan={course} t={t} locale={locale} /> : null;
+  if (course && course.days.length > 1 && content !== "reports") {
+    return (
+      <section>
+        <GroupLabel as="h2">{t("trip.coursePlanHeading")}</GroupLabel>
+        {coursePlan}
+      </section>
+    );
+  }
   // Durations, never a clock: how long a dive runs and the boat sits between
   // two are facts about the day; its hours belong to the booked diver's thread.
   const rows = profile

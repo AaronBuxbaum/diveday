@@ -697,3 +697,40 @@ describe("TripFullSection with the wait list off", () => {
     expect(screen.queryByRole("link", { name: "Find another trip" })).toBeNull();
   });
 });
+
+describe("course enrollment wording", () => {
+  it.each([false, true] as const)(
+    "names enrollment when payment at booking is %s",
+    (payAtBooking) => {
+      renderDiver(
+        <BookSpotSection
+          context={{
+            trip: {
+              ...trip(),
+              course: {
+                minimumAge: 10,
+                nitroxCompatible: false,
+                includedRentalKinds: [],
+              },
+            },
+            tripRef,
+            remaining: 6,
+            payAtBooking,
+            perDiverPriceCents: 45000,
+            currency: "usd",
+            locale: "en-US",
+            timeZone: "America/New_York",
+            rentalItems: [],
+            rentalPricing: EMPTY_RENTAL_PRICING,
+          }}
+        />,
+      );
+      expect(screen.getByRole("heading", { name: "Enroll in this course" })).toBeVisible();
+      expect(
+        screen.getByRole("button", {
+          name: payAtBooking ? "Enroll and pay" : "Enroll",
+        }),
+      ).toBeVisible();
+    },
+  );
+});

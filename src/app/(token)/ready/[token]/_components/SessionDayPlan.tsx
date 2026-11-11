@@ -5,19 +5,7 @@ import { type CourseScheduleDay, formatScheduleDayTime } from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { RentableItemKind } from "@/lib/rentals";
 
-/**
- * **The session's own day, on the thread** (issue #2795): Discover Scuba's
- * "Your afternoon", read off the course row exactly as the trip page's "The
- * day" reads it (`courseDayPlan`), so the two never disagree about which day
- * of the plan this session is, and its depths are said in the shop's unit.
- * Only a one-meeting session of a one-day plan has a day to say; every other
- * session, and every ordinary departure, renders nothing.
- *
- * It stands where a charter's dock-day rhythm stands, under the packing list:
- * a course session has no dock rhythm (`PackingSection`), and this is its
- * answer to "what happens when I get there". The gear line stays with the gear
- * step and the packing list, which already say it.
- */
+/** The course-authored outline for the whole run, without guessing a partial session's day. */
 export function SessionDayPlan({
   course,
   meetingDays,
@@ -35,22 +23,32 @@ export function SessionDayPlan({
   t: DiverTranslator;
   locale: string;
 }) {
-  const day = courseDayPlan(course, t, depthUnit, meetingDays)?.days[0];
-  if (!day) return null;
-  const time = formatScheduleDayTime(day, locale);
+  const days = courseDayPlan(course, t, depthUnit, meetingDays)?.days ?? [];
+  if (days.length === 0) return null;
+  const multiple = days.length > 1;
   return (
     <section aria-labelledby="session-day-heading" data-testid="ready-session-day">
       <h2 id="session-day-heading" className={SECTION_TITLE_CLASS}>
-        {day.title}
+        {multiple ? t("trip.coursePlanHeading") : days[0].title}
       </h2>
-      {time ? <p className="mt-1 text-sm text-muted tabular-nums">{time}</p> : null}
-      {day.items.length > 0 ? (
-        <ul className="mt-3 list-disc space-y-1 ps-5 text-sm text-muted">
-          {day.items.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      ) : null}
+      <div className="mt-3 space-y-4">
+        {days.map((day) => {
+          const time = formatScheduleDayTime(day, locale);
+          return (
+            <div key={day.title}>
+              {multiple ? <h3 className="text-base font-semibold">{day.title}</h3> : null}
+              {time ? <p className="mt-1 text-sm text-muted tabular-nums">{time}</p> : null}
+              {day.items.length > 0 ? (
+                <ul className="mt-2 list-disc space-y-1 ps-5 text-sm text-muted">
+                  {day.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

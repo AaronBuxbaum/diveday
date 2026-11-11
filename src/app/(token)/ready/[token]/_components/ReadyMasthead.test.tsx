@@ -84,6 +84,12 @@ describe("mastheadArrivalLine", () => {
     expect(mastheadArrivalLine(FACTS, "en-US", t)).toContain("6:30");
   });
 
+  it("names a course start without inventing a boat or meeting place", () => {
+    const line = mastheadArrivalLine({ ...FACTS, courseSession: true }, "en-US", t);
+    expect(line).toMatch(/Your course starts at 7:00/);
+    expect(line).not.toMatch(/dock|sail/);
+  });
+
   it("names the hotel pickup in its place when one is scheduled", () => {
     const line = mastheadArrivalLine(
       { ...FACTS, pickup: { time: "6:10 AM", location: "Reef Inn" } },
@@ -301,6 +307,22 @@ describe("a departure that meets on several days", () => {
       { startsAt: new Date("2026-10-17T12:00:00Z"), endsAt: new Date("2026-10-17T20:00:00Z") },
     ],
   };
+
+  it("keeps all meeting dates visible immediately after booking", () => {
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={{ ...course, courseSession: true }}
+          greetingName="Priya"
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+        />,
+      ),
+    );
+    expect(screen.getByTestId("ready-meeting-days").querySelectorAll("li")).toHaveLength(2);
+  });
 
   it("states day one's own hours on the when line, not the whole run's", () => {
     const { hours } = mastheadWhenParts(course, "en-US", NIGHT_BEFORE);

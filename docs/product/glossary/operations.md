@@ -787,6 +787,11 @@
   course session needs an instructor and a signed waiver; the shop controls its two prices, its
   course page, and whether the course appears when scheduling. Hiding never rewrites existing
   sessions.
+  A booking whose meeting count matches the full course plan shows that outline on booking and
+  prep pages, beside the actual dated meetings. A partial session never guesses which plan days
+  it covers. The immediate booking confirmation carries the same meeting dates as the full prep
+  page. Course arrival copy states the start time without assuming a dock or boat; a material's
+  access instructions remain shop-authored, with a contact link when the student needs help.
 - **Course page** — the diver-facing page for one course: subhead, overview, photos, spec chips
   (duration, group size, minimum age, prerequisite), a day-by-day plan, what the fee covers, an
   FAQ, and the upcoming sessions it can be booked through. There is no separate draft/publish

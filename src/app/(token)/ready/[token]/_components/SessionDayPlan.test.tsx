@@ -63,3 +63,23 @@ describe("SessionDayPlan", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+it("shows every course day when this booking covers the full plan", () => {
+  render(
+    <SessionDayPlan
+      course={{
+        scheduleDays: [
+          { title: "Day 1: pool", items: ["Pool skills"] },
+          { title: "Day 2: ocean", items: ["Open-water dives"] },
+        ],
+        includedRentalKinds: [],
+      }}
+      meetingDays={2}
+      depthUnit="meters"
+      t={t}
+      locale="en-US"
+    />,
+  );
+  expect(screen.getByText("Pool skills")).toBeVisible();
+  expect(screen.getByText("Open-water dives")).toBeVisible();
+});

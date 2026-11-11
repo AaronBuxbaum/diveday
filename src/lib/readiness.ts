@@ -923,7 +923,8 @@ function certificationBlocker(
   // Below every state backed by something the shop holds, and above plain
   // `missing` only because it can say more: the diver told us a level and gave
   // no number, so nobody has anything to look up. Both are "the shop is holding
-  // nothing usable", and both offer the diver the card-entry form. A claim that
+  // nothing usable". The declared level can wait for check-in, with optional
+  // number entry; a missing level still asks for an answer. A claim that
   // *does* carry a number was answered as `pending` above.
   if (
     certifications.some(

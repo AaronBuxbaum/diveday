@@ -76,7 +76,17 @@ import {
  * still holds the seat, so the card is true of them; whether they board is the
  * thread's to say, directly under it.
  */
+const meetingDayRows = sql<{ startsAt: string; endsAt: string }[] | null>`(
+        select json_agg(
+          json_build_object('startsAt', d.starts_at, 'endsAt', d.ends_at) order by d.day_number
+        )
+        from ${tripScheduleDays} d
+        where d.trip_id = ${trips.id}
+      )`;
+
 export type BookedCard = {
+  courseSession?: boolean;
+  days?: { startsAt: Date; endsAt: Date }[];
   shop: {
     name: string;
     slug: string;
@@ -108,6 +118,8 @@ export async function getBookedCard(
       personName: people.fullName,
       tripId: trips.id,
       tripTitle: trips.title,
+      tripCourseId: trips.courseId,
+      meetingDayRows,
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       tripStatus: trips.status,
@@ -144,6 +156,11 @@ export async function getBookedCard(
       walletPassesEnabled: row.walletPassesEnabled,
     },
     trip: { id: row.tripId, title: row.tripTitle, startsAt: row.startsAt, endsAt: row.endsAt },
+    courseSession: row.tripCourseId !== null,
+    days: (row.meetingDayRows ?? []).map((day) => ({
+      startsAt: new Date(day.startsAt),
+      endsAt: new Date(day.endsAt),
+    })),
     greetingName: identityHeld ? row.identityBookedAs?.trim() || "" : row.personName,
     // Said even after the shop stops offering hotel pickups (the Features
     // page): a pickup already promised still happens.
@@ -473,6 +490,7 @@ export type ReadyPageData = {
    */
   courseMaterialsDone: boolean;
   /** The session's first day has begun: the list is reference now, not a to-do. */
+  courseSession?: boolean;
   courseStarted: boolean;
 };
 
@@ -536,13 +554,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       tripCourseId: trips.courseId,
       // The departure's meeting days in this same statement (#2558), in day
       // order, so the masthead's day list costs no read of its own.
-      meetingDayRows: sql<{ startsAt: string; endsAt: string }[] | null>`(
-        select json_agg(
-          json_build_object('startsAt', d.starts_at, 'endsAt', d.ends_at) order by d.day_number
-        )
-        from ${tripScheduleDays} d
-        where d.trip_id = ${trips.id}
-      )`,
+      meetingDayRows,
       tripLunchAboard: trips.lunchAboard,
       // Any live card of any kind, verified or not: whether a course student
       // has dives to log (`packsLogbook`, issue #2795). A nitrox or Deep card
@@ -891,6 +903,7 @@ export async function getReadyPageData(
     welcomeHello: row.welcomeSharedAt !== null ? row.welcomeHello : null,
     learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
     courseMaterialsDone: row.courseMaterialsDoneAt !== null || materialsDoneElsewhere,
+    courseSession: row.tripCourseId !== null,
     courseStarted: trip.startsAt.getTime() <= now.getTime(),
   };
 }
