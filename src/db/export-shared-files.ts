@@ -576,6 +576,7 @@ export const BOOKING_PAYMENT_EVENTS_CSV = sharedFile<ShopRow<"paymentEventRows">
     { header: "status", in: "both", value: (row) => row.status },
     { header: "previous_status", in: "both", value: (row) => row.previousStatus },
     { header: "amount_cents", in: "both", value: (row) => row.amountCents },
+    { header: "manual_held_cents", in: "both", value: (row) => row.manualHeldCents },
     { header: "currency", in: "both", value: (row) => row.currency },
     { header: "provider", in: "both", value: (row) => row.provider },
     { header: "provider_ref", in: "shop", value: (row) => row.providerRef },

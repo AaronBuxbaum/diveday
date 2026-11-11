@@ -989,3 +989,27 @@ The eye reaches the work before this unboxed, muted row, including on an empty o
 The sentence and platform’s own menu words carry the hierarchy without a new heading or decoration.
 One available native install action is secondary, with a flush dismissal that holds on this device.
 Installed, desktop, embedded, unsupported and dismissed states remove the row rather than explain it.
+
+
+## Recorded collections and external returns — 2026-11-11
+
+Billing answers how much was recorded received, the rate, and the credits on the last closed
+month. Native currency headings prevent a yen amount from reading as dollars. The existing plan
+panel keeps these facts together; a new finance dashboard would separate the fee from its terms.
+The filled USD/JPY and original-rate-credit state was reviewed at 390 and 1280 pixels. Money and
+period facts use the base 16px type, while the basis explanation remains secondary.
+
+The roster keeps the original online source beside an incremental external receipt. An external
+return asks only for money already returned, with a clear statement that Update sends no payment.
+The partial-return form and deposit balance were reviewed on phone and desktop. Receipt amount
+and method share FieldGrid’s caption/control tracks, and the method pills use 48px field targets.
+The browser regression measures their top edges and keyboard focus on the pill, rather than on
+its native radio dot.
+
+The probe’s transparent waiver-action wrapper contains 6px of extra top space, not a painted
+control whose label needs centering. Individual actions keep their own targets. Advisory pills
+align at the row’s end and vary in width; their left edges are not a column. The reused size-4 SVG
+class also covers different semantic positions, so its 33/138px starts do not establish an icon
+column. A native radio has no separate outline because ChoicePill draws focus around the whole
+rounded label. These four probe clusters are dismissed for those specific structures; they do not
+waive checks on new painted controls or actual shared columns.

@@ -5,12 +5,19 @@
     "price": "DiveDay, {price} a month",
     "nextCharge": "Next charge",
     "endsOn": "Ends",
-    "percentPrice": "{hasBase, select, yes {DiveDay, {percent} of card money taken through DiveDay plus {base} a month} other {DiveDay, {percent} of card money taken through DiveDay}}",
+    "percentPrice": "{hasBase, select, yes {DiveDay, {percent} of money recorded as received plus {base} a month} other {DiveDay, {percent} of money recorded as received}}",
     "percentNotConfigured": "Billing for this plan isn’t turned on yet, so nothing is charged.",
     "thisMonth": "This month so far",
-    "volume": "Card money through DiveDay",
+    "volume": "Recorded collections",
     "fee": "Fee",
-    "lastMonth": "Last closed month, {month}"
+    "lastMonth": "Last closed month, {month}",
+    "rate": "Rate",
+    "estimatedFee": "Fee before credits",
+    "refundCredit": "Refund credit adjustment",
+    "creditCarried": "Credit carried forward",
+    "collectionBasis": "Cash and external payments count. Unpaid bookings and package redemptions do not. Separately recorded tips, tax and pass-through fees are excluded; amounts without a tax breakdown count in full.",
+    "currencyNotConfigured": "Automatic billing for this currency is not configured. No conversion or charge is made.",
+    "pendingEvidence": "Some receipts still need confirmed amounts or tax details before their fee can be finalized."
   },
   "status": {
     "trialing": "Free trial, {count, plural, one {# day} other {# days}} left",

@@ -117,6 +117,7 @@ export async function listUnattributedRefunds(
       bookingId: bookingCheckoutBookings.bookingId,
       diverName: people.fullName,
       heldCents: bookingPayments.amountCents,
+      manualHeldCents: bookingPayments.manualHeldCents,
       providerRef: bookingPayments.providerRef,
     })
     .from(bookingCheckoutBookings)
@@ -154,11 +155,16 @@ export async function listUnattributedRefunds(
     tripTitle: row.tripTitle,
     tripStartsAt: row.tripStartsAt,
     seats: seatRows
-      .filter((seat) => seat.checkoutId === row.checkoutId && seat.providerRef === row.sessionId)
+      .filter(
+        (seat) =>
+          seat.checkoutId === row.checkoutId &&
+          seat.providerRef === row.sessionId &&
+          (seat.heldCents ?? 0) > seat.manualHeldCents,
+      )
       .map((seat) => ({
         bookingId: seat.bookingId,
         diverName: seat.diverName,
-        heldCents: seat.heldCents ?? 0,
+        heldCents: Math.max(0, (seat.heldCents ?? 0) - seat.manualHeldCents),
       })),
   }));
 }
@@ -253,7 +259,8 @@ export async function attributeUnattributedRefund(
         ),
       )
       .limit(1);
-    const heldCents = payment?.amountCents ?? 0;
+    const manualHeldCents = payment?.manualHeldCents ?? 0;
+    const heldCents = Math.max(0, (payment?.amountCents ?? 0) - manualHeldCents);
     if (!payment || heldCents <= 0) return { status: "nothing_held" };
 
     const taken = Math.min(heldCents, intent.amountCents);
@@ -263,10 +270,12 @@ export async function attributeUnattributedRefund(
       bookingId,
       // The shape a one-seat dashboard refund writes: a partial leaves what the
       // shop still holds and stays `partly_refunded`.
-      status: kept > 0 ? "partly_refunded" : "refunded",
-      amountCents: kept > 0 ? kept : heldCents,
+      status: kept + manualHeldCents > 0 ? "partly_refunded" : "refunded",
+      amountCents: kept + manualHeldCents > 0 ? kept + manualHeldCents : heldCents,
+      manualHeldCents,
+      method: payment.method,
       currency: payment.currency,
-      provider: "stripe",
+      provider: payment.provider === "mixed" ? "mixed" : "stripe",
       providerRef: checkout.stripeSessionId,
       operation: "stripe_dashboard_refund",
     });

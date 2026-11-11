@@ -14,6 +14,10 @@
  * `setup_requests` records a prospective shop and has its own window rationale
  * below (code review 2026-10-11, item 14).
  *
+ * **`collection_entries` is deliberately unbounded.** It is the immutable
+ * evidence behind shop billing and credits; removing a lot could erase an
+ * outstanding refund credit. ADR 20261110-recorded-collections-own-billing.
+ *
  * **`certification_junior_reviews` is deliberately unbounded.** Corrections
  * stay with the card; requested erasure removes the person's evidence, and
  * deleting the card cascades it (#2810, 2026-10-27).
@@ -146,6 +150,7 @@ export const ACCOUNT_TOKEN_RETENTION_DAYS = 90;
  * Whether the argument is any *good* is a reviewer's call, not a test's.
  */
 export const UNBOUNDED_BY_DECISION: readonly string[] = [
+  "collection_entries",
   "certification_junior_reviews",
   "gear_service_events",
   "trip_stage_events",

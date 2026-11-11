@@ -53,7 +53,7 @@
     "tryTitle": "Cada buceador reservado, firmado y contado a bordo, desde tu primera salida",
     "stepLink": "{name} →",
     "percentArm": {
-      "heroPriceLine": "{hasBase, select, yes {El {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes, sin cuota de alta.} other {El {percent} del dinero cobrado con tarjeta a través de DiveDay, sin cuota mensual.}}"
+      "heroPriceLine": "{hasBase, select, yes {El {percent} de los pagos que marcas como recibidos, más {base} al mes. Sin cuota de alta.} other {El {percent} al registrar un pago recibido, sin cuota mensual.}}"
     }
   },
   "common": {
@@ -773,8 +773,8 @@
     "closingTitle": "La demo es un centro en marcha, con buceadores en el barco de hoy",
     "percentArm": {
       "onePriceTitle": "Un plan cubre el centro",
-      "onePriceBody": "El plan es el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {, sin cuota mensual}}, y cubre cada parte de DiveDay y una cuenta para cada persona de tu personal. Las propinas nunca cuentan. La página de precios enumera cada cosa que cubre.",
-      "seeCost": "El {percent} del dinero cobrado con tarjeta{hasBase, select, yes { y {base} al mes} other { a través de DiveDay}}. Mira la lista completa"
+      "onePriceBody": "El plan cubre cada parte de DiveDay y una cuenta para cada persona de tu personal. Tu centro paga el {percent} sobre sus cobros registrados{hasBase, select, yes { más {base} al mes} other {, sin cuota mensual}}. Las propinas nunca cuentan. La página de precios tiene el desglose completo.",
+      "seeCost": "El {percent} sobre los cobros{hasBase, select, yes { y {base} al mes} other {}}. Mira la lista completa"
     }
   },
   "product": {
@@ -885,12 +885,12 @@
     },
     "closingTitle": "Todas las funciones y todos los accesos del personal están en el precio",
     "percentArm": {
-      "cadence": "{hasBase, select, yes {del dinero cobrado con tarjeta a través de DiveDay, más {base} al mes} other {del dinero cobrado con tarjeta a través de DiveDay, cada mes}}",
+      "cadence": "{hasBase, select, yes {al marcar dinero recibido, más {base} al mes} other {al marcar dinero recibido, cobrado cada mes}}",
       "invoiceFeeLabel": "La tarifa de DiveDay",
-      "invoiceFeeValue": "{percent} del dinero cobrado con tarjeta a través de DiveDay",
-      "ours": "{hasBase, select, yes {DiveDay cobra {base} al mes más el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.} other {DiveDay no tiene cuota mensual. Su tarifa es el {percent} del dinero que tu centro cobra con tarjeta a través de DiveDay.}} No se suma nada al precio de tu cliente.",
+      "invoiceFeeValue": "{percent} del dinero registrado como recibido en DiveDay",
+      "ours": "{hasBase, select, yes {DiveDay cobra {base} al mes más el {percent} del dinero que tu centro registra como recibido en DiveDay.} other {DiveDay no tiene cuota mensual. Su tarifa es el {percent} del dinero que tu centro registra como recibido en DiveDay.}} No se suma nada al precio de tu cliente.",
       "whatCountsQuestion": "¿Qué cuenta para el {percent}?",
-      "whatCountsAnswer": "El dinero que tu centro cobra con tarjeta a través de DiveDay: las reservas hechas por internet, y las facturas y los paquetes que los buceadores pagan con tarjeta. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el dinero cobrado en el mostrador y el historial importado del sistema que usabas antes nunca cuentan. Un reembolso se descuenta del mes en que se registra."
+      "whatCountsAnswer": "El dinero registrado como recibido en DiveDay, ya sea por internet, en efectivo, por transferencia, con tu propia terminal o por otro medio. Los depósitos cuentan cuando se reciben; una reserva sin pagar no cuenta. Los paquetes cuentan al venderse, nunca otra vez al canjearse. Se excluyen las propinas, los impuestos y los cargos de terceros registrados por separado, y el historial importado. Si no hay un desglose de impuestos, cuenta el importe completo. Los reembolsos generan un crédito con el porcentaje original."
     }
   },
   "privacy": {
@@ -1039,21 +1039,21 @@
       "body": "Los buceadores pagan al centro, no a nosotros. Los pagos con tarjeta pasan por la cuenta de Stripe del propio centro, así que el dinero del centro nunca está con DiveDay e irse no significa sacarnos fondos. A esos pagos se les aplican las comisiones y condiciones de Stripe. Lo que cobra DiveDay por sí mismo está en la página de precios."
     },
     "percentPlan": {
-      "heading": "Planes con precio en un porcentaje de los pagos con tarjeta",
-      "intro": "Estas condiciones se aplican si el plan acordado para tu centro incluye un porcentaje de los pagos con tarjeta. Tu suscripción conserva el porcentaje y la cuota mensual que acordaste.",
+      "heading": "Planes con precio en un porcentaje de los cobros registrados",
+      "intro": "Estas condiciones se aplican si el plan acordado para tu centro incluye un porcentaje de los cobros registrados. Tu suscripción conserva el porcentaje y la cuota mensual que acordaste.",
       "feeTerm": "La tarifa",
-      "feeBody": "el {percent} del dinero que tu centro recibe en pagos con tarjeta a través de DiveDay en un mes calendario{hasBase, select, yes {, con una cuota base de {base} cada mes además} other {}}. El mes sigue la zona horaria de tu centro.",
+      "feeBody": "el {percent} del dinero que tu centro registra como recibido en DiveDay en un mes calendario{hasBase, select, yes {, con una cuota base de {base} cada mes además} other {}}. El mes sigue la zona horaria de tu centro.",
       "countsTerm": "Qué cuenta",
-      "countsBody": "los pagos con tarjeta que tu centro recibe a través de DiveDay con Stripe Connect: reservas por internet, facturas y paquetes. Las propinas, los impuestos, las tasas de parque y otros cargos de terceros, el efectivo del mostrador, el dinero marcado como pagado en el mostrador y el historial importado de otro sistema nunca cuentan.",
+      "countsBody": "el dinero que tu centro registra como recibido en DiveDay por cualquier medio de pago, incluidos el efectivo y los pagos externos. Un depósito cuenta cuando se registra como recibido, y solo el saldo posterior cuenta cuando llega. No cuentan las reservas sin pagar, el canje de paquetes ni el historial importado. Los paquetes cuentan una vez, al venderse. Se excluyen las propinas, los impuestos, las tasas de parque y otros cargos de terceros registrados por separado. Sin un desglose de impuestos, cuenta el importe completo.",
       "refundsTerm": "Reembolsos",
-      "refundsBody": "un reembolso se descuenta en el mes en que se registra el reembolso: sale del dinero con tarjeta del primer estado de cuenta mensual que se emita después de registrarlo, sea cual sea el mes en que se cobró el pago. Lo que el dinero con tarjeta de ese mes no cubra pasa al estado de cuenta siguiente, de modo que una comisión nunca queda por debajo de cero.",
+      "refundsBody": "un reembolso o una corrección registrados revierten la tarifa de ese dinero con el porcentaje y el redondeo del estado de cuenta original. Un estado posterior aplica el crédito una sola vez. El crédito no usado pasa al siguiente estado en la misma moneda y no vence si un mes no tiene cobros. Un reembolso fallido revierte su crédito. Contáctanos para liquidar el crédito no usado después de cancelar.",
       "statementTerm": "Un estado de cuenta mensual",
-      "statementBody": "a principios del mes siguiente, Ajustes le muestra a tu centro el dinero del mes, la tasa y la tarifa, y la tarifa se cobra con tu suscripción a DiveDay.",
+      "statementBody": "a principios del mes siguiente, Configuración muestra los cobros registrados, el porcentaje, los créditos por reembolsos, el crédito acumulado y la tarifa por separado para cada moneda. No se convierten ni se suman importes de distintas monedas. El cobro automático admite solo USD por ahora; otras monedas requieren un acuerdo de facturación antes de cualquier cargo. La estimación del mes no incluye créditos.",
       "whoPaysTerm": "Quién paga la tarifa",
       "whoPaysBody": "el centro, nunca el buceador. DiveDay no suma nada al precio ni al pago del buceador.",
       "noticeTerm": "Cambios en el plan",
       "noticeBody": "avisamos a tu centro con al menos 30 días de anticipación antes de cambiar la tasa, la cuota base o lo que cuenta para la tarifa.",
-      "feeBodyAgreed": "El porcentaje y cualquier cuota mensual acordados para tu centro se aplican al dinero que tu centro recibe en pagos con tarjeta a través de DiveDay en un mes calendario. El mes sigue la zona horaria de tu centro."
+      "feeBodyAgreed": "El porcentaje y cualquier cuota mensual acordados para tu centro se aplican al dinero que tu centro registra como recibido en DiveDay en un mes calendario. El mes sigue la zona horaria de tu centro."
     },
     "data": {
       "heading": "De quién son los datos",
@@ -1097,9 +1097,9 @@
     },
     "demoNote": "La demo se abre en {place}. Es un centro de muestra en funcionamiento, sin registro y sin tarjeta.",
     "percentArm": {
-      "includedPrice": "Cada línea de esta lista entra en el único plan, por el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {}}.",
+      "includedPrice": "Cada línea está incluida por el {percent} de los pagos que ingresas como recibidos{hasBase, select, yes { más {base} al mes} other {}}.",
       "paymentsNote3": "Ninguna fila lleva una comisión de DiveDay. El {percent} de DiveDay se te cobra una vez al mes, en una factura aparte.",
-      "paymentsFaq1A": "Sí. La tarifa es el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, no {} other {, más {base} al mes}}, cobrada una vez al mes. Las propinas, los impuestos y el dinero cobrado en el mostrador nunca cuentan, y no se suma nada al precio de tu cliente. Stripe cobra sus propias comisiones de tarjeta en tu cuenta de Stripe."
+      "paymentsFaq1A": "Sí. La tarifa es el {percent} del dinero registrado como recibido en DiveDay{hasBase, select, yes {, más {base} al mes} other {}}, cobrada cada mes. También cuentan el efectivo y los pagos externos. Se excluyen las propinas, los impuestos y los cargos de terceros registrados por separado. No se suma nada al precio de tu cliente. Stripe cobra sus propias comisiones de tarjeta."
     }
   },
   "featurePages": {
@@ -1399,7 +1399,7 @@
       "screenLabel": "La página de Pedidos: los pedidos de un día con su cantidad y su subtotal, y el estado de cada pedido.",
       "note1": "Los pedidos se archivan por día con la cantidad y el subtotal del día, como se cuenta la caja al cerrar.",
       "note2": "Abierto significa que el pedido todavía tiene dinero pendiente.",
-      "note3": "Ninguna fila lleva una comisión de DiveDay, porque DiveDay no se queda con un porcentaje de ningún pedido.",
+      "note3": "La tarifa del software de DiveDay se cobra cada mes, por separado del pago de cada cliente.",
       "step1Title": "Conecta tu cuenta de Stripe",
       "step1Body": "Los pagos, las disputas y el historial quedan en la propia cuenta de Stripe del centro.",
       "step2Title": "Cobra al reservar",

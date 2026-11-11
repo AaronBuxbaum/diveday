@@ -2,9 +2,11 @@ import type { AppDb } from "@/db/client";
 import type { BillingProvider, PercentBillingConfig } from "@/features/billing";
 import {
   closePricingMonth,
+  collectionCurrencies,
   listBillableShops,
   markPricingReportAttempted,
   markPricingStatementReported,
+  pricingMonthsToClose,
 } from "@/features/pricing-volume";
 import {
   holdsLiveSubscription,
@@ -14,7 +16,7 @@ import {
 } from "@/features/shop-subscriptions";
 import { trialEndsAt } from "@/features/trial";
 import type { PricingConfig } from "@/lib/billing/pricing-plans";
-import { freeTimeEndsAt } from "@/lib/billing/standing";
+import { freePeriodEndsAt } from "@/lib/billing/standing";
 import { addMonths, type MonthRef, monthKey } from "@/lib/calendar";
 import { log } from "@/lib/log";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
@@ -104,101 +106,140 @@ export async function closePercentMonths(
   for (const { shop, subscription } of await listBillableShops(db)) {
     const customerId = subscription.stripeCustomerId;
     if (!customerId) continue;
-    const month = lastClosedMonth(now, shop.timezone);
-    const bounds = shopMonthBounds(month, shop.timezone);
+    const lastMonth = lastClosedMonth(now, shop.timezone);
     const live = holdsLiveSubscription(subscription);
     const endedAt = live ? null : subscriptionEndedAt(subscription);
-    if (!live && !(endedAt && endedAt.getTime() > bounds.from.getTime())) continue;
+    if (!live && !endedAt) continue;
     const terms = live
       ? shopPricing(subscription, options.config)
       : soldPricing(subscription, options.config);
     if (terms.plan !== "percent_of_volume") continue;
-    const statement = await closePricingMonth(db, {
-      shopId: shop.id,
-      month,
-      timeZone: shop.timezone,
-      terms,
-      freeUntil: freeTimeEndsAt({
-        now: bounds.from,
-        timeZone: shop.timezone,
-        trialEndsAt: trialEndsAt(shop.createdAt),
-        freeTermEndsOn: subscription.freeTermEndsOn,
-      }),
-      endedAt,
-    });
-    summary.closed += 1;
-    const logged = { shopId: shop.id, month: monthKey(month) };
-    if (statement.reportedAt) {
-      summary.alreadyReported += 1;
-      continue;
-    }
-    if (statement.feeCents === 0) {
-      await markPricingStatementReported(db, statement.id, now);
-      summary.nothingToReport += 1;
-      continue;
-    }
-    if (!provider || !percent) {
-      summary.notConfigured += 1;
-      continue;
-    }
+    for (const currency of await collectionCurrencies(db, shop.id)) {
+      for (const month of await pricingMonthsToClose(
+        db,
+        shop.id,
+        currency,
+        lastMonth,
+        shop.timezone,
+      )) {
+        const bounds = shopMonthBounds(month, shop.timezone);
+        try {
+          const statement = await closePricingMonth(db, {
+            currency,
+            now,
+            shopId: shop.id,
+            month,
+            timeZone: shop.timezone,
+            terms,
+            freeUntil: freePeriodEndsAt({
+              timeZone: shop.timezone,
+              trialEndsAt: trialEndsAt(shop.createdAt),
+              freeTermEndsOn: subscription.freeTermEndsOn,
+            }),
+            endedAt,
+          });
+          summary.closed += 1;
+          const logged = { shopId: shop.id, month: monthKey(month), currency };
+          if (statement.reportedAt) {
+            summary.alreadyReported += 1;
+            continue;
+          }
+          if (statement.feeCents === 0) {
+            await markPricingStatementReported(db, statement.id, now);
+            summary.nothingToReport += 1;
+            continue;
+          }
+          // This configured meter and final-invoice path are USD only. A native
+          // currency amount must never be relabeled as dollars or silently converted.
+          if (statement.currency !== "usd") {
+            summary.notConfigured += 1;
+            log("pricing_close.currency_not_configured", "warn", logged);
+            continue;
+          }
+          if (!provider || !percent) {
+            summary.notConfigured += 1;
+            continue;
+          }
 
-    if (!live) {
-      const invoiced = await provider.invoiceFinalMonth({
-        customerId,
-        amountCents: statement.feeCents,
-        identifier: statement.stripeMeterIdentifier,
-        month: monthKey(month),
-      });
-      if (invoiced.status !== "ok") {
-        summary.failed += 1;
-        log("pricing_close.final_month_failed", "warn", logged);
-        continue;
-      }
-      await markPricingStatementReported(db, statement.id, now);
-      summary.finalMonths += 1;
-      continue;
-    }
+          if (!live) {
+            if (endedAt && endedAt <= bounds.from) {
+              summary.failed += 1;
+              log("pricing_close.ended_subscription_adjustment", "warn", logged);
+              continue;
+            }
+            const invoiced = await provider.invoiceFinalMonth({
+              customerId,
+              amountCents: statement.feeCents,
+              identifier: statement.stripeMeterIdentifier,
+              month: monthKey(month),
+            });
+            if (invoiced.status !== "ok") {
+              summary.failed += 1;
+              log("pricing_close.final_month_failed", "warn", logged);
+              continue;
+            }
+            await markPricingStatementReported(db, statement.id, now);
+            summary.finalMonths += 1;
+            continue;
+          }
 
-    const firstAttempt = statement.firstReportAttemptAt;
-    if (firstAttempt && now.getTime() - firstAttempt.getTime() >= REPORT_RECHECK_AFTER_MS) {
-      const held = await provider.meterValueReported({
-        priceId: percent.priceId,
-        customerId,
-        from: bounds.from,
-        to: bounds.to,
-      });
-      if (held.status !== "ok") {
-        summary.failed += 1;
-        log("pricing_close.meter_check_failed", "warn", logged);
-        continue;
-      }
-      if (held.value >= statement.feeCents) {
-        await markPricingStatementReported(db, statement.id, now);
-        summary.reconciled += 1;
-        continue;
-      }
-      if (held.value > 0) {
-        // Part of the fee on the meter is nothing this close sent: a person decides.
-        summary.failed += 1;
-        log("pricing_close.meter_mismatch", "warn", logged);
-        continue;
+          if (now.getTime() - bounds.to.getTime() > 34 * 24 * 60 * 60 * 1000) {
+            summary.failed += 1;
+            log("pricing_close.historical_invoice_required", "warn", logged);
+            continue;
+          }
+          const firstAttempt = statement.firstReportAttemptAt;
+          if (firstAttempt && now.getTime() - firstAttempt.getTime() >= REPORT_RECHECK_AFTER_MS) {
+            const held = await provider.meterValueReported({
+              priceId: percent.priceId,
+              customerId,
+              from: bounds.from,
+              to: bounds.to,
+            });
+            if (held.status !== "ok") {
+              summary.failed += 1;
+              log("pricing_close.meter_check_failed", "warn", logged);
+              continue;
+            }
+            if (held.value >= statement.feeCents) {
+              await markPricingStatementReported(db, statement.id, now);
+              summary.reconciled += 1;
+              continue;
+            }
+            if (held.value > 0) {
+              // Part of the fee on the meter is nothing this close sent: a person decides.
+              summary.failed += 1;
+              log("pricing_close.meter_mismatch", "warn", logged);
+              continue;
+            }
+          }
+          await markPricingReportAttempted(db, statement.id, now);
+          const outcome = await provider.reportMeterEvent({
+            eventName: percent.meterEventName,
+            customerId,
+            valueCents: statement.feeCents,
+            identifier: statement.stripeMeterIdentifier,
+            timestamp: new Date(bounds.to.getTime() - 60_000),
+          });
+          if (outcome.status !== "ok") {
+            summary.failed += 1;
+            log("pricing_close.report_failed", "warn", logged);
+            continue;
+          }
+          await markPricingStatementReported(db, statement.id, now);
+          summary.reported += 1;
+        } catch {
+          summary.failed += 1;
+          log("pricing_close.statement_failed", "error", {
+            shopId: shop.id,
+            month: monthKey(month),
+            currency,
+          });
+          // Never close past a failed month: repaired evidence belongs to its original month.
+          break;
+        }
       }
     }
-    await markPricingReportAttempted(db, statement.id, now);
-    const outcome = await provider.reportMeterEvent({
-      eventName: percent.meterEventName,
-      customerId,
-      valueCents: statement.feeCents,
-      identifier: statement.stripeMeterIdentifier,
-      timestamp: new Date(bounds.to.getTime() - 60_000),
-    });
-    if (outcome.status !== "ok") {
-      summary.failed += 1;
-      log("pricing_close.report_failed", "warn", logged);
-      continue;
-    }
-    await markPricingStatementReported(db, statement.id, now);
-    summary.reported += 1;
   }
   return summary;
 }

@@ -56,6 +56,22 @@ export function readManualPaymentMark(
   return { kind: "money", amountCents, method: methodRaw };
 }
 
+/** An external refund records money already returned, never more than held. */
+export function readExternalRefundAmount(
+  raw: FormDataEntryValue | null,
+  heldCents: number,
+  currency: string,
+): number | null {
+  if (raw === null) return heldCents > 0 ? heldCents : null;
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  const reading = readTypedMoney(raw, currency);
+  if (!reading) return null;
+  const amountCents = majorToMinor(Number(reading.canonical), currency);
+  return Number.isSafeInteger(amountCents) && amountCents > 0 && amountCents <= heldCents
+    ? amountCents
+    : null;
+}
+
 /**
  * **What a bounced Paid mark carries back, and nothing else** (issue #2607). A
  * Paid mark the server refuses redirects to the roster with a notice; without
@@ -284,4 +300,37 @@ export function readPartyAsk(raw: {
   const amountCents = Number(raw.amount);
   if (amountCents > MARK_RETRY_MAX_CENTS || !isManualPaymentMethod(raw.method)) return null;
   return { leadBookingId, amountCents, method: raw.method };
+}
+
+/** A deposit's next receipt keeps online money and manually received money separate. */
+export function heldAfterDepositReceipt(
+  previous: {
+    status: string;
+    amountCents: number | null;
+    manualHeldCents?: number;
+    provider: string | null;
+    providerRef?: string | null;
+    method: ManualPaymentMethodCode | null;
+  },
+  reading: Extract<ManualPaymentMarkReading, { kind: "money" | "no_money" }>,
+) {
+  const online = previous.provider === "stripe" || previous.provider === "mixed";
+  const manualBefore =
+    previous.provider === "mixed"
+      ? (previous.manualHeldCents ?? 0)
+      : online
+        ? 0
+        : (previous.amountCents ?? 0);
+  const stripeHeldCents = online ? Math.max(0, (previous.amountCents ?? 0) - manualBefore) : 0;
+  const manualHeldCents = manualBefore + (reading.kind === "money" ? reading.amountCents : 0);
+  return {
+    amountCents: stripeHeldCents + manualHeldCents,
+    manualHeldCents,
+    provider:
+      stripeHeldCents > 0 || (previous.provider === "mixed" && previous.providerRef)
+        ? "mixed"
+        : null,
+    providerRef: online ? (previous.providerRef ?? null) : null,
+    method: reading.kind === "money" ? reading.method : previous.method,
+  };
 }

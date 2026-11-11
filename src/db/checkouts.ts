@@ -12,6 +12,7 @@ import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
 import { fareCheckout, tipCheckout } from "./checkout-purpose";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { recordCheckoutCollection } from "./collection-ledger";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
 import {
   checkoutPaidKey,
@@ -1329,21 +1330,38 @@ export async function markCheckoutPaidBySessionId(
       // diver's card was charged, so the money goes on the Orders index for
       // staff to refund (`listPaidAfterCloseCheckouts`). Write-once: a
       // redelivery keeps the first report.
-      if (checkout.paidAfterCloseAt === null) {
+      if (checkout.paidAfterCloseAt === null || checkout.collectionNeedsReview) {
+        const exactTotal =
+          checkout.settledTotalCents ??
+          (settledTotalCents !== undefined &&
+          settledTotalCents !== null &&
+          Number.isSafeInteger(settledTotalCents) &&
+          settledTotalCents >= 0
+            ? settledTotalCents
+            : null);
+        const exactTax =
+          checkout.taxCents ??
+          (settledTaxCents !== undefined &&
+          settledTaxCents !== null &&
+          Number.isSafeInteger(settledTaxCents) &&
+          settledTaxCents >= 0 &&
+          exactTotal !== null &&
+          settledTaxCents <= exactTotal
+            ? settledTaxCents
+            : null);
         await tx
           .update(bookingCheckouts)
           .set({
-            paidAfterCloseAt: nowDate(),
-            paidAfterCloseCents:
-              settledTotalCents !== undefined &&
-              settledTotalCents !== null &&
-              Number.isInteger(settledTotalCents) &&
-              settledTotalCents >= 0
-                ? settledTotalCents
-                : checkout.totalCents,
+            paidAfterCloseAt: checkout.paidAfterCloseAt ?? nowDate(),
+            collectionNeedsReview:
+              exactTotal === null || (checkout.taxEnabled && exactTax === null),
+            settledTotalCents: exactTotal,
+            taxCents: exactTax,
+            paidAfterCloseCents: exactTotal ?? checkout.paidAfterCloseCents ?? checkout.totalCents,
           })
           .where(and(eq(bookingCheckouts.id, checkout.id), fareCheckout()));
       }
+      await recordCheckoutCollection(tx, checkout.shopId, checkout.id);
       logPaidDisqualified(checkout, checkout.status);
       return null;
     }
@@ -1401,6 +1419,9 @@ export async function markCheckoutPaidBySessionId(
       reportedSettledCents === null ? null : Math.min(reportedSettledCents, settledCeiling);
     const settledCents = checkout.settledTotalCents ?? usableSettledCents;
     const taxCents = checkout.taxCents ?? usableTaxCents;
+    const contradictoryTax =
+      (reportedTaxCents !== null && reportedTaxCents > (settledCents ?? checkout.totalCents)) ||
+      (settledCents !== null && taxCents !== null && taxCents > settledCents);
 
     const updated =
       checkout.status === "completed"
@@ -1409,11 +1430,17 @@ export async function markCheckoutPaidBySessionId(
           // payload, an internal repair run), so the repaired payment rows
           // below are written from Stripe's figure rather than the asked one.
           (checkout.settledTotalCents === null && settledCents !== null) ||
-          (checkout.taxCents === null && taxCents !== null)
+          (checkout.taxCents === null && taxCents !== null) ||
+          (contradictoryTax && !checkout.collectionNeedsReview)
           ? ((
               await tx
                 .update(bookingCheckouts)
-                .set({ settledTotalCents: settledCents, taxCents })
+                .set({
+                  settledTotalCents: settledCents,
+                  taxCents,
+                  collectionNeedsReview:
+                    checkout.collectionNeedsReview || reportedOverCeiling || contradictoryTax,
+                })
                 .where(and(eq(bookingCheckouts.id, checkout.id), fareCheckout()))
                 .returning()
             )[0] ?? null)
@@ -1425,6 +1452,7 @@ export async function markCheckoutPaidBySessionId(
                 status: "completed",
                 completedAt: nowDate(),
                 settledTotalCents: settledCents,
+                collectionNeedsReview: reportedOverCeiling || contradictoryTax,
                 taxCents,
               })
               // Belt to the lock's braces: only a still-pending row completes.
@@ -1441,6 +1469,7 @@ export async function markCheckoutPaidBySessionId(
       if (checkout.status === "pending") logPaidDisqualified(checkout, "no_longer_pending");
       return null;
     }
+    await recordCheckoutCollection(tx, updated.shopId, updated.id);
     firstCompletion = checkout.status === "pending";
 
     const linked = await tx
@@ -1541,6 +1570,7 @@ export async function markCheckoutPaidBySessionId(
         // the trail only appends when something actually changed — see
         // `setBookingPayment` (ADR 20260803-booking-payment-events).
         operation: "checkout_settled",
+        receiptSource: { checkoutId: checkout.id },
       });
     }
     // One sale for the shop's books (batch 6 item 9, H-20261014-checkouts-reach-the-books): the whole

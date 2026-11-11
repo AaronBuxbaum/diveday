@@ -12,7 +12,13 @@ import { formValue, readForm, text } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { paymentMarkFactsForTrip } from "@/features/payment-marks";
 import { requireShopSurface } from "@/features/session";
-import { heldAfterMark, markNeedsWriteOffRight, readPaymentMarkForm } from "@/lib/payment-marks";
+import {
+  heldAfterDepositReceipt,
+  heldAfterMark,
+  markNeedsWriteOffRight,
+  readExternalRefundAmount,
+  readPaymentMarkForm,
+} from "@/lib/payment-marks";
 import { noticeUrl } from "@/lib/staff-notices";
 import { requireRosterBooking, tripPath } from "./roster-booking";
 
@@ -76,6 +82,10 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   const s = (await requireShopSurface(shopSlug)).session;
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, noticeUrl(back, "invalid"));
   const current = await getBookingPayment(db, s.user.shopId, bookingId);
+  const version = formData.get("paymentEntryId");
+  if (version !== null && String(version) !== (current?.id ?? "")) {
+    redirect(noticeUrl(back, "invalid", { bid: bookingId }));
+  }
   // Checked before the gate: the control keeps a booking's *current* status
   // selectable, so a captain looking at a waived seat can submit `waived`
   // unchanged. Nothing is decided by a tap that changes nothing, and refusing
@@ -92,7 +102,8 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // Counter cash is still money the shop took in its own currency — stamping
   // this row `usd` by default told a Mexican shop's diver their balance was in
   // dollars. The amount is read in the same currency's major unit.
-  const currency = await getShopCurrency(db, s.user.shopId);
+  const shopCurrency = await getShopCurrency(db, s.user.shopId);
+  const currency = current?.currency ?? shopCurrency;
   // **The Paid mark says how much and how** (batch 6 item 1). A paid row with
   // no amount reached every revenue sum as $0, so cash taken at the dock never
   // showed on Reports. An amount that cannot be read is refused rather than
@@ -108,11 +119,21 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
       }),
     );
   }
+  if (mark.kind === "money" && current && current.currency !== shopCurrency) {
+    redirect(noticeUrl(back, "payment-currency", { bid: bookingId }));
+  }
   // An unchanged status changes nothing unless it brings money the row does
   // not already hold: a staffer recording the cash on a seat already marked
   // paid is a real write, and a re-submit with the amount left blank is not
   // a request to wipe one.
-  const held = heldAfterMark(current ?? null, submitted, mark);
+  const depositReceipt =
+    current?.status === "deposit_paid" &&
+    (current.provider === null || current.provider === "stripe" || current.provider === "mixed") &&
+    (mark.kind === "money" || (submitted === "paid" && mark.kind === "no_money"));
+  if (depositReceipt && version === null) redirect(noticeUrl(back, "invalid", { bid: bookingId }));
+  const held = depositReceipt
+    ? heldAfterDepositReceipt(current, mark as Extract<typeof mark, { kind: "money" | "no_money" }>)
+    : heldAfterMark(current ?? null, submitted, mark);
   if (
     current?.status !== undefined &&
     current.status === submitted &&
@@ -126,10 +147,34 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // `provider`/`providerRef` and the automatic refund lost the payment it
   // would reverse. Money that came through Stripe goes back through Stripe:
   // the seat's own refund, never this control.
-  if (current?.provider) {
+  const externalOnlyMixed =
+    current?.provider === "mixed" &&
+    (!["paid", "deposit_paid", "partly_refunded"].includes(current.status) ||
+      current.amountCents === current.manualHeldCents);
+  const externalRefund =
+    submitted === "refunded" &&
+    (current?.manualHeldCents ?? 0) > 0 &&
+    (current?.provider === null || current?.provider === "mixed");
+  if (current?.provider && !depositReceipt && !externalOnlyMixed && !externalRefund) {
     redirect(noticeUrl(back, "payment-online", { bid: bookingId }));
   }
+  if (depositReceipt && current.currency !== currency) {
+    redirect(noticeUrl(back, "invalid", { bid: bookingId }));
+  }
+  const nextManualHeldCents =
+    "manualHeldCents" in held && typeof held.manualHeldCents === "number"
+      ? held.manualHeldCents
+      : ["paid", "deposit_paid", "partly_refunded"].includes(submitted)
+        ? (held.amountCents ?? 0)
+        : 0;
+  const reducesManualMoney = (current?.manualHeldCents ?? 0) > nextManualHeldCents;
+  const clearsCapturedMark =
+    submitted === "unpaid" &&
+    current?.provider === null &&
+    ["paid", "deposit_paid", "partly_refunded"].includes(current.status);
   const decidesAboutMoney =
+    reducesManualMoney ||
+    clearsCapturedMark ||
     (status.success && paymentStatusClass(status.data) === "write_off") ||
     (current?.status !== undefined && paymentStatusClass(current.status) === "write_off");
   // What the seat owes before this mark: Paid on less is the rest written off.
@@ -154,17 +199,59 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
           }),
     );
   }
+  let refundPatch: {
+    status: PaymentStatus;
+    amountCents: number;
+    manualHeldCents: number;
+    provider: string | null;
+    providerRef: string | null;
+    method: "cash" | "card" | "other" | null;
+  } | null = null;
+  if (externalRefund && current) {
+    if (formData.has("refundAmount") && version === null)
+      redirect(noticeUrl(back, "invalid", { bid: bookingId }));
+    const returned = readExternalRefundAmount(
+      formData.get("refundAmount"),
+      current.manualHeldCents,
+      current.currency,
+    );
+    if (returned === null) redirect(noticeUrl(back, "payment-refund-amount", { bid: bookingId }));
+    const manualHeldCents = current.manualHeldCents - returned;
+    const amountCents = Math.max(0, (current.amountCents ?? 0) - returned);
+    refundPatch = {
+      status: amountCents > 0 ? "partly_refunded" : "refunded",
+      amountCents,
+      manualHeldCents,
+      provider: current.provider,
+      providerRef: current.providerRef,
+      method: current.method,
+    };
+  }
   const saved =
     bookingId && status.success
       ? await setBookingPayment(db, {
           shopId: s.user.shopId,
           bookingId,
           status: status.data,
+          expectedPaymentEntryId: current?.id ?? null,
           currency,
           // A blank Paid mark keeps a deposit taken by hand: writing off the
           // rest never erases cash the shop already holds.
-          amountCents: held.amountCents,
+          ...held,
+          // Retain the original online pointer even after its refund: a later
+          // refund.failed must still be able to restore that part of the seat.
+          ...(externalOnlyMixed
+            ? {
+                provider: "mixed",
+                providerRef: current.providerRef,
+                manualHeldCents:
+                  status.data === "refunded" || status.data === "unpaid" || status.data === "waived"
+                    ? 0
+                    : (held.amountCents ?? 0),
+              }
+            : {}),
           method: held.method,
+          ...refundPatch,
           // Who marked it, on every hand mark: the trail row carries it too,
           // so a dispute about the cash box has a name to start from.
           recordedByPersonId: s.user.personId,

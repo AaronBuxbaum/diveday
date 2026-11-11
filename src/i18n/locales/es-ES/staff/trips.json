@@ -198,7 +198,7 @@
     "requirementsBlocking": "Requisitos actualizados. Algunos buceadores ya reservados en esta salida dejan de cumplirlos, así que revisa la lista de asistentes.",
     "requirementsBlockingCount": "{count, plural, one {Requisitos actualizados. # buceador reservado ya no los cumple: revisa el listado.} other {Requisitos actualizados. # buceadores reservados ya no los cumplen: revisa el listado.}}",
     "payment": "Estado del pago actualizado",
-    "paymentAmount": "Escribe el importe cobrado, como 120 o 54,50.",
+    "paymentAmount": "Ingresa solo el importe recibido ahora, por ejemplo 120 o 54,50.",
     "paymentMethod": "Elige cómo se pagó.",
     "paymentShort": "Es menos de lo que debe la plaza. Márcala como Depósito pagado, o pide a un propietario o gerente que dé por saldado el resto.",
     "paymentOnline": "Esta plaza se pagó en línea o con un paquete de inmersiones, así que su pago no se puede cambiar a mano.",
@@ -244,7 +244,9 @@
     "courseFormUnavailable": "Ese formulario ya no se puede registrar para esta plaza. Recarga para ver lo que falta.",
     "courseFormPaperCopy": "No se registró. Marca que tienes la copia firmada en papel.",
     "courseFormDate": "No se registró. La fecha del papel no puede ser posterior a hoy.",
-    "courseFormEnded": "Esta sesión ya terminó, así que no se puede registrar un formulario en papel."
+    "courseFormEnded": "Esta sesión ya terminó, así que no se puede registrar un formulario en papel.",
+    "paymentCurrency": "Este recibo usa una moneda distinta de la moneda actual del centro. Registra el nuevo pago por separado en Pedidos.",
+    "paymentRefundAmount": "Indica el importe devuelto, mayor que cero y no superior al dinero externo que aún se conserva."
   },
   "pulse": {
     "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",
@@ -610,7 +612,7 @@
     "noteDeletedToast": "Nota privada eliminada",
     "paymentDepositPaid": "Depósito pagado",
     "paymentPaid": "Pagado",
-    "paymentAmountLabel": "Importe cobrado",
+    "paymentAmountLabel": "Importe recibido ahora",
     "paymentBalanceOwed": "Saldo pendiente: {amount}",
     "paymentMethodLabel": "Forma de pago",
     "paymentMethodCash": "Efectivo",
@@ -741,7 +743,10 @@
     "moveSeatAvailability": "{count, plural, one {# lugar disponible} other {# lugares disponibles}}",
     "moveSeatFull": "Llena",
     "contactHeading": "Contacto",
-    "preparationHeading": "Preparación y referencia"
+    "preparationHeading": "Preparación y referencia",
+    "paymentSourceMixed": "Pagado en línea y por otro medio · Reembolsa cada parte por su medio original",
+    "paymentRefundAmountLabel": "Importe externo devuelto ahora",
+    "paymentRefundHint": "Registra dinero ya devuelto por su método de pago original. Esto no envía ningún pago."
   },
   "offlineManifestManager": {
     "checkingDevice": "Verificando este dispositivo…",

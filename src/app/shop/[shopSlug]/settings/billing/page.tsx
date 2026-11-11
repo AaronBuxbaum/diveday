@@ -26,12 +26,12 @@ import { trialDaysRemaining, trialEndsAt } from "@/features/trial";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { percentFeeCents } from "@/lib/billing/pricing-plans";
-import { type BillingStatus, billingStanding, freeTimeEndsAt } from "@/lib/billing/standing";
+import { type BillingStatus, billingStanding, freePeriodEndsAt } from "@/lib/billing/standing";
 import { formatCalendarDate, formatCalendarMonth } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear, formatMoneyCents } from "@/lib/format";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
+import { utcToWallTime } from "@/lib/zoned";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { billingNoticeMessages } from "../sub-page-notices";
 import { openBillingPortalAction, startBillingCheckoutAction } from "./actions";
@@ -133,38 +133,62 @@ export default async function BillingSettingsPage({
         : t("billing.notConfigured");
 
   // The percent plan's running month and its last closed one, in the shop's zone.
-  const money = (cents: number) => formatMoneyCents(cents, "usd", locale);
-  let percentFacts: {
+  type FeeFact = {
+    heading: string;
+    currency: string;
     volumeCents: number;
     feeCents: number;
-    last: { month: string; volumeCents: number; feeCents: number } | null;
-  } | null = null;
+    basisPoints: number;
+    refundCreditCents: number;
+    carryCents: number;
+    estimated: boolean;
+    pendingEvidence: boolean;
+  };
+  let percentFacts: FeeFact[] = [];
   if (percentPlan && !shop.isDemo) {
     const wall = utcToWallTime(now, shop.timezone);
     const month = { year: wall.year, month: wall.month };
-    const { volumeCents, statement } = await getBillingPercentMonth(
+    const months = await getBillingPercentMonth(
       db,
       shop.id,
       month,
       shop.timezone,
-      freeTimeEndsAt({
-        now: shopMonthBounds(month, shop.timezone).from,
+      freePeriodEndsAt({
         timeZone: shop.timezone,
         trialEndsAt: trialEndsAt(shop.createdAt),
         freeTermEndsOn: row?.freeTermEndsOn ?? null,
       }),
     );
-    percentFacts = {
-      volumeCents,
-      feeCents: percentFeeCents(volumeCents, terms.basisPoints),
-      last: statement
-        ? {
-            month: formatCalendarMonth(statement.month, locale),
-            volumeCents: statement.volumeCents,
-            feeCents: statement.feeCents,
-          }
-        : null,
-    };
+    percentFacts = months.flatMap(({ currency, volumeCents, statement, pendingEvidence }) => [
+      {
+        heading: t("billing.plan.thisMonth"),
+        currency,
+        volumeCents,
+        feeCents: percentFeeCents(volumeCents, terms.basisPoints),
+        basisPoints: terms.basisPoints,
+        refundCreditCents: 0,
+        carryCents: 0,
+        estimated: true,
+        pendingEvidence,
+      },
+      ...(statement
+        ? [
+            {
+              heading: t("billing.plan.lastMonth", {
+                month: formatCalendarMonth(statement.month, locale),
+              }),
+              currency: statement.currency,
+              volumeCents: statement.volumeCents,
+              feeCents: statement.feeCents,
+              basisPoints: statement.basisPoints,
+              refundCreditCents: statement.refundCreditCents,
+              carryCents: statement.feeCreditCarryCents,
+              estimated: false,
+              pendingEvidence: false,
+            },
+          ]
+        : []),
+    ]);
   }
   const canAct = configured && !shop.isDemo;
   const canCancel = standing.hasSubscription && standing.nextChargeAt !== null;
@@ -193,32 +217,51 @@ export default async function BillingSettingsPage({
           shop.isDemo ? null : <Badge tone={STATUS_TONE[standing.status]}>{statusText}</Badge>
         }
       >
-        <p className="text-sm">
+        <p className="text-base">
           {percentPlan
             ? t("billing.plan.percentPrice", planCopyParams(terms, locale))
             : t("billing.plan.price", { price: planMoney(terms.monthlyCents, locale) })}
         </p>
-        {percentFacts ? (
-          <div className="mt-4 space-y-3 text-sm">
-            {[
-              { heading: t("billing.plan.thisMonth"), ...percentFacts },
-              ...(percentFacts.last
-                ? [
-                    {
-                      heading: t("billing.plan.lastMonth", { month: percentFacts.last.month }),
-                      ...percentFacts.last,
-                    },
-                  ]
-                : []),
-            ].map((fact) => (
-              <div key={fact.heading}>
-                <p className="font-medium">{fact.heading}</p>
+        {percentFacts.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-muted">{t("billing.plan.collectionBasis")}</p>
+            {percentFacts.map((fact) => (
+              <div key={`${fact.heading}-${fact.currency}`}>
+                <p className="font-medium">
+                  {fact.heading} · {fact.currency.toUpperCase()}
+                </p>
                 <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">
                   <dt className="text-muted">{t("billing.plan.volume")}</dt>
-                  <dd>{money(fact.volumeCents)}</dd>
-                  <dt className="text-muted">{t("billing.plan.fee")}</dt>
-                  <dd>{money(fact.feeCents)}</dd>
+                  <dd>{formatMoneyCents(fact.volumeCents, fact.currency, locale)}</dd>
+                  <dt className="text-muted">{t("billing.plan.rate")}</dt>
+                  <dd>
+                    {planCopyParams({ ...terms, basisPoints: fact.basisPoints }, locale).percent}
+                  </dd>
+                  {fact.refundCreditCents !== 0 ? (
+                    <>
+                      <dt className="text-muted">{t("billing.plan.refundCredit")}</dt>
+                      <dd>{formatMoneyCents(fact.refundCreditCents, fact.currency, locale)}</dd>
+                    </>
+                  ) : null}
+                  <dt className="text-muted">
+                    {t(fact.estimated ? "billing.plan.estimatedFee" : "billing.plan.fee")}
+                  </dt>
+                  <dd>{formatMoneyCents(fact.feeCents, fact.currency, locale)}</dd>
+                  {fact.carryCents > 0 ? (
+                    <>
+                      <dt className="text-muted">{t("billing.plan.creditCarried")}</dt>
+                      <dd>{formatMoneyCents(fact.carryCents, fact.currency, locale)}</dd>
+                    </>
+                  ) : null}
                 </dl>
+                {fact.pendingEvidence ? (
+                  <p className="mt-1 text-sm text-muted">{t("billing.plan.pendingEvidence")}</p>
+                ) : null}
+                {fact.currency !== "usd" ? (
+                  <p className="mt-1 text-sm text-muted">
+                    {t("billing.plan.currencyNotConfigured")}
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>

@@ -45,3 +45,9 @@ callbacks count once. Provider category, pricing model/type and billable flag de
 they do not establish its price, recipient market, rate version or invoice payer. The ledger holds
 no recipient or message content and expires with the 400-day delivery trail. See
 [the accounting decision](../../architecture/decisions/20261110-whatsapp-delivered-usage.md).
+
+- **Recorded collection** — money recorded received in DiveDay, in its stated currency, by any payment method. A deposit counts when recorded and a later balance counts only its increment; an unpaid booking is not a collection.
+- **Collection lot** — one immutable increase in a receipt's chargeable balance. Refunds and corrections link back to the lots they reverse, newest first; package redemption and receipt-to-seat cascades do not mint lots.
+- **Fee credit** — the original-rate, original-rounding fee reversed by a recorded refund. Unused credit carries in its own currency and a failed refund reverses the credit; it is never refunded volume repriced at a new rate.
+
+- **Mixed payment** — a seat paid partly through Stripe and partly externally. Its total and manual-held amount are separate, and its original Stripe pointer remains intact. Refund each portion by its original method; an automatic Stripe refund never includes external money.

@@ -10,6 +10,7 @@ import { releasePackageCoverageForBooking } from "./bookings";
 import { fareCheckout } from "./checkout-purpose";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { recordCheckoutCollection } from "./collection-ledger";
 import { checkoutRefundKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
 import { boundLockWaits } from "./lock-bounds";
 import { applyStripeRefundedTotalToOrder } from "./orders";
@@ -363,7 +364,10 @@ async function countCheckoutRefund(
   // counts it, keyed on the running total, so the `charge.refunded` webhook
   // that reports this same refund later finds nothing new to send (batch 6
   // item 9).
-  if (counted) await enqueueCheckoutRefundEvent(tx, counted, plan.refundCents);
+  if (counted) {
+    await recordCheckoutCollection(tx, counted.shopId, counted.id);
+    await enqueueCheckoutRefundEvent(tx, counted, plan.refundCents);
+  }
 }
 
 /** One refund against a completed checkout, for QuickBooks and Zapier (H-20261014-checkouts-reach-the-books). */
@@ -986,6 +990,7 @@ async function countPaidAfterCloseRefund(
       .update(bookingCheckouts)
       .set({ refundedCents: reversedTotal })
       .where(and(eq(bookingCheckouts.id, current.id), fareCheckout()));
+    await recordCheckoutCollection(tx, current.shopId, current.id);
     return { status: "checkout_refunded" };
   });
 }
@@ -1103,6 +1108,7 @@ async function applyStripeChargeRefund(
       .update(bookingCheckouts)
       .set({ refundedCents: current.refundedCents + delta })
       .where(and(eq(bookingCheckouts.id, current.id), fareCheckout()));
+    await recordCheckoutCollection(tx, current.shopId, current.id);
     await enqueueCheckoutRefundEvent(
       tx,
       { id: current.id, shopId: current.shopId, refundedCents: current.refundedCents + delta },
@@ -1159,7 +1165,9 @@ async function applyStripeChargeRefund(
     }
 
     const held = seat.amountCents ?? 0;
-    const remaining = Math.max(0, held - delta);
+    const manualHeldCents = seat.provider === "mixed" ? seat.manualHeldCents : 0;
+    const stripeRemaining = Math.max(0, held - manualHeldCents - delta);
+    const remaining = stripeRemaining + manualHeldCents;
     await setBookingPayment(tx, {
       shopId: current.shopId,
       bookingId: seat.bookingId,
@@ -1168,10 +1176,13 @@ async function applyStripeChargeRefund(
       status: remaining > 0 ? "partly_refunded" : "refunded",
       amountCents: remaining > 0 ? remaining : held,
       currency: seat.currency,
-      provider: "stripe",
+      manualHeldCents,
+      method: manualHeldCents > 0 ? seat.method : null,
+      provider: manualHeldCents > 0 ? "mixed" : "stripe",
       providerRef: current.stripeSessionId,
       operation: "stripe_dashboard_refund",
     });
+    await recordCheckoutCollection(tx, current.shopId, current.id);
     return { status: "checkout_refunded" };
   });
 }

@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import { recordCheckoutCollection } from "@/db/collection-ledger";
 import { fareCheckout } from "../../db/checkout-purpose";
 import type { AppDb } from "../../db/client";
 import {
@@ -243,11 +244,14 @@ export async function refundPaidAfterCloseCheckout(
   }
   // Durable the moment Stripe confirms it, before the count below (CR-005).
   if (result.refundId) await recordPaymentOperationStripeObject(db, intent.id, result.refundId);
-  await db
-    .update(bookingCheckouts)
-    // diveday:any-checkout-purpose: the fare row claimed above, by its id
-    .set({ refundedCents: sql`${bookingCheckouts.refundedCents} + ${owedCents}` })
-    .where(and(eq(bookingCheckouts.id, row.id), eq(bookingCheckouts.shopId, shopId)));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(bookingCheckouts)
+      // diveday:any-checkout-purpose: the fare row claimed above, by its id
+      .set({ refundedCents: sql`${bookingCheckouts.refundedCents} + ${owedCents}` })
+      .where(and(eq(bookingCheckouts.id, row.id), eq(bookingCheckouts.shopId, shopId)));
+    await recordCheckoutCollection(tx, shopId, row.id);
+  });
   await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
   log("checkout.paid_after_close_refunded", "info", { shopId, checkoutId: row.id });
   await recordShopActivity(db, {

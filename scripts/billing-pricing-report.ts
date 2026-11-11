@@ -17,7 +17,7 @@ async function main(): Promise<number> {
       canceled: row.canceled,
       revenue: dollars(row.revenueCents),
       "per paying shop": row.payingShops > 0 ? dollars(row.revenueCents / row.payingShops) : "-",
-      "card volume": dollars(row.volumeCents),
+      "recorded USD collections": dollars(row.volumeCents),
     })),
   );
   return 0;

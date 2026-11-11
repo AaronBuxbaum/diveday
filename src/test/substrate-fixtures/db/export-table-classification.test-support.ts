@@ -69,6 +69,7 @@ export const EXCLUDED_TABLES = [
   // Stripe account mean nothing elsewhere; the invoices are Stripe's, emailed to the owner.
   "shop_subscriptions",
   "pricing_volume_statements",
+  "collection_entries", // DiveDay fee evidence; source receipts remain in the shop export
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
   "claude_demo_spend", // what every minted demo together spent on Claude; no shop's record
   "stripe_webhook_events", // provider webhook-delivery ledger, not a shop record — same reasoning as payment_operation_intents

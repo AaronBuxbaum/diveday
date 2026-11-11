@@ -5,12 +5,19 @@
     "price": "DiveDay, {price} al mes",
     "nextCharge": "Próximo cobro",
     "endsOn": "Termina",
-    "percentPrice": "{hasBase, select, yes {DiveDay, el {percent} del dinero cobrado con tarjeta a través de DiveDay más {base} al mes} other {DiveDay, el {percent} del dinero cobrado con tarjeta a través de DiveDay}}",
+    "percentPrice": "{hasBase, select, yes {DiveDay, el {percent} del dinero registrado como recibido más {base} al mes} other {DiveDay, el {percent} del dinero registrado como recibido}}",
     "percentNotConfigured": "La facturación de este plan todavía no está activada, así que no se cobra nada.",
     "thisMonth": "Este mes hasta hoy",
-    "volume": "Dinero cobrado con tarjeta a través de DiveDay",
+    "volume": "Cobros registrados",
     "fee": "Tarifa",
-    "lastMonth": "Último mes cerrado, {month}"
+    "lastMonth": "Último mes cerrado, {month}",
+    "rate": "Porcentaje",
+    "estimatedFee": "Tarifa antes de créditos",
+    "refundCredit": "Ajuste del crédito por reembolsos",
+    "creditCarried": "Crédito para el siguiente estado",
+    "collectionBasis": "Cuentan el efectivo y los pagos externos. No cuentan las reservas sin pagar ni el canje de paquetes. Se excluyen las propinas, los impuestos y los cargos de terceros registrados por separado; sin un desglose de impuestos, cuenta el importe completo.",
+    "currencyNotConfigured": "El cobro automático en esta moneda no está configurado. No se convierte ni se cobra el importe.",
+    "pendingEvidence": "Algunos cobros necesitan importes o impuestos confirmados antes de finalizar su tarifa."
   },
   "status": {
     "trialing": "Prueba gratuita, {count, plural, one {queda # día} other {quedan # días}}",

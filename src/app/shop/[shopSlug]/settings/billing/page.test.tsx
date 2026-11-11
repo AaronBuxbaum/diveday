@@ -187,14 +187,14 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
   it("states the default percentage offer, whatever plan is stored", async () => {
     configure();
     const { lines } = await render(percentShop);
-    expect(lines).toContain("DiveDay, 3% of card money taken through DiveDay");
+    expect(lines).toContain("DiveDay, 3% of money recorded as received");
   });
 
   it("states the percent plan, this month's volume and fee, in en-US", async () => {
     configurePercent();
     const { lines, forms } = await render(percentShop);
-    expect(lines).toContain("DiveDay, 3% of card money taken through DiveDay");
-    expect(lines).toContain(COPY.plan.thisMonth);
+    expect(lines).toContain("DiveDay, 3% of money recorded as received");
+    expect(lines.some((line) => String(line).includes(COPY.plan.thisMonth))).toBe(true);
     expect(forms.map((form) => form.props.action)).toEqual([startBillingCheckoutAction]);
   });
 
@@ -202,7 +202,7 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
     configurePercent();
     vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
     const { lines } = await render(percentShop);
-    expect(lines).toContain("DiveDay, 3% of card money taken through DiveDay plus $29 a month");
+    expect(lines).toContain("DiveDay, 3% of money recorded as received plus $29 a month");
   });
 
   it("states the percent plan in es-ES", async () => {
@@ -214,9 +214,11 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
     expect(
       lines
         .map(String)
-        .some((line) => /^DiveDay, el 3\s?% del dinero cobrado con tarjeta/.test(line)),
+        .some((line) => /^DiveDay, el 3\s?% del dinero registrado como recibido/.test(line)),
     ).toBe(true);
-    expect(lines).toContain(STAFF_MESSAGES["es-ES"].billing.plan.thisMonth);
+    expect(
+      lines.some((line) => String(line).includes(STAFF_MESSAGES["es-ES"].billing.plan.thisMonth)),
+    ).toBe(true);
   });
 
   it("offers no card while the percent plan's Stripe side is not configured", async () => {

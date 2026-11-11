@@ -43,8 +43,8 @@ export function pricingFaq(
   offer: PlanTerms,
   locale: string,
 ): readonly PricingFaqRow[] {
-  // The percentage offer’s one extra row, right after billing: what the share is
-  // of (ADR 20261022-pricing-ab-test), in the words of `cardMoneyThroughDiveDayCents`.
+  // The percentage offer explains recorded collections, including cash and
+  // external payments (ADR 20261110-recorded-collections-own-billing).
   const percentRow: PricingFaqRow[] =
     offer.plan === "percent_of_volume"
       ? [

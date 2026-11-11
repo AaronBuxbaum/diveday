@@ -75,3 +75,12 @@ sweep that produced it, not a follow-up.
 
 The last two are the strongest argument for the register: both were drafted as issues and **killed by
 measuring**. Without a written home, the next sweep spends the same afternoon reaching the same answer.
+
+
+## Recorded collection views
+
+| Looks wrong | Why it is right | Source of truth |
+| --- | --- | --- |
+| A transparent roster waiver-action wrapper is 6px off centre | The measurement includes top spacing around two independent actions, not the centre of a painted target | The recorded-collections review in `surfaces.md`; the waiver-action group in `roster-row-outstanding.tsx` |
+| Advisory pill left edges and size-4 SVG starts vary across roster rows | Pills align at the end and vary in width; icons with the same utility class occupy different semantic groups | The recorded-collections review in `surfaces.md`; filled collection-billing captures in `e2e/visual-collection-billing.spec.ts` |
+| A payment method radio gains no outline around its dot | Keyboard focus belongs to the enclosing rounded pill | The radio focus comment and `radioRingClass` in `src/components/ui/form.tsx`; the keyboard-focus browser assertion in `e2e/collection-billing.spec.ts` |

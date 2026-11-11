@@ -1,3 +1,4 @@
+import type { PaymentMarkFacts } from "@/features/payment-marks";
 import { depthWarningOrNull } from "@/i18n/depth-labels";
 import { identityReasonText } from "@/i18n/identity-check-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
@@ -13,6 +14,39 @@ import { paymentSourceLine } from "@/lib/payment-source";
 import type { RosterRowContext } from "./RosterRow";
 import { rosterSeatWaiver, seatMoveForRow } from "./roster-model";
 import type { RosterEntry } from "./types";
+
+function paymentMarkForSeat(
+  markFacts: PaymentMarkFacts | null,
+  paymentStatus: string | null | undefined,
+  paymentSourceCode: ReturnType<typeof paymentSourceLine>,
+  bookingId: string,
+  markCurrency: string,
+  locale: string,
+  t: RosterRowContext["t"],
+  paymentMarkRetry: RosterRowContext["rows"]["paymentMarkRetry"],
+) {
+  return {
+    paymentEntryId: markFacts?.paymentEntryId ?? null,
+    manualHeldCents: markFacts?.manualHeldCents ?? 0,
+    amountCents: markFacts?.balanceOwedCents ?? markFacts?.mark?.amountCents ?? null,
+    currency: markCurrency,
+    locale,
+    // On a deposit, the field opens on the balance; the hint says that is
+    // what it is, so a staffer taking a different figure knows what is left.
+    balanceHint:
+      paymentStatus === "deposit_paid" && markFacts?.balanceOwedCents
+        ? t("trips.roster.paymentBalanceOwed", {
+            amount: formatMoneyCents(markFacts.balanceOwedCents, markCurrency, locale),
+          })
+        : null,
+    handMarkRefused:
+      paymentSourceCode === "package" ||
+      ((paymentSourceCode === "online" ||
+        (paymentSourceCode === "mixed" && markFacts?.onlineHeldCents !== 0)) &&
+        paymentStatus !== "deposit_paid"),
+    retry: paymentMarkRetry?.bookingId === bookingId ? paymentMarkRetry : null,
+  };
+}
 
 /**
  * The course session's own acts on a seat, handed through as they came: the
@@ -146,22 +180,18 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
           method: markFacts.mark.method,
         }
       : null;
-  const markCurrency = markFacts?.shopCurrency ?? markFacts?.mark?.currency ?? "usd";
-  const paymentMark = {
-    amountCents: markFacts?.balanceOwedCents ?? markFacts?.mark?.amountCents ?? null,
-    currency: markCurrency,
+  const markCurrency =
+    markFacts?.paymentCurrency ?? markFacts?.shopCurrency ?? markFacts?.mark?.currency ?? "usd";
+  const paymentMark = paymentMarkForSeat(
+    markFacts,
+    paymentStatus,
+    paymentSourceCode,
+    booking.id,
+    markCurrency,
     locale,
-    // On a deposit, the field opens on the balance; the hint says that is
-    // what it is, so a staffer taking a different figure knows what is left.
-    balanceHint:
-      paymentStatus === "deposit_paid" && markFacts?.balanceOwedCents
-        ? t("trips.roster.paymentBalanceOwed", {
-            amount: formatMoneyCents(markFacts.balanceOwedCents, markCurrency, locale),
-          })
-        : null,
-    handMarkRefused: paymentSourceCode === "online" || paymentSourceCode === "package",
-    retry: paymentMarkRetry?.bookingId === booking.id ? paymentMarkRetry : null,
-  };
+    t,
+    paymentMarkRetry,
+  );
   // Party payment is offered on the lead while two or more seats owe and
   // none was paid online; the server refuses those payments too (#2605).
   const partySeats = rows.roster.filter(
@@ -193,15 +223,17 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
           name: markFacts.mark.recordedByName,
         })
       : t("trips.roster.paymentMarkLineUnnamed", counterMark)
-    : paymentSourceCode === "online"
-      ? t("trips.roster.paymentSourceOnline")
-      : paymentSourceCode === "package"
-        ? t("trips.roster.paymentSourcePackage")
-        : paymentSourceCode === "counter"
-          ? t("trips.roster.paymentSourceCounter")
-          : paymentSourceCode === "waived"
-            ? t("trips.roster.paymentSourceWaived")
-            : null;
+    : paymentSourceCode === "mixed"
+      ? t("trips.roster.paymentSourceMixed")
+      : paymentSourceCode === "online"
+        ? t("trips.roster.paymentSourceOnline")
+        : paymentSourceCode === "package"
+          ? t("trips.roster.paymentSourcePackage")
+          : paymentSourceCode === "counter"
+            ? t("trips.roster.paymentSourceCounter")
+            : paymentSourceCode === "waived"
+              ? t("trips.roster.paymentSourceWaived")
+              : null;
   const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
   // **The seat's waiver word is the diver record's** (`seatWaiverStanding`,
   // issue #3775): a release the diver outlived reads lapsed, a minor's solo

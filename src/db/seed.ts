@@ -33,6 +33,7 @@ import {
   buddyTeamMembers,
   capabilities,
   cards,
+  collectionEntries,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -887,6 +888,7 @@ export async function clearDemoSchedule(
   // The demo shop is excluded from platform backup, but clear its scheduler
   // checkpoint with the rest of its resettable state if a local run wrote one.
   await db.delete(platformBackupProgress).where(eq(platformBackupProgress.shopId, shopId));
+  await db.delete(collectionEntries).where(eq(collectionEntries.shopId, shopId));
   await db.delete(shopBackupDeliveryClaims).where(eq(shopBackupDeliveryClaims.shopId, shopId));
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
   const tripIds = shopTrips.map((t) => t.id);

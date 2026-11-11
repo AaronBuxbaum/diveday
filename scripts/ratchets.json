@@ -941,7 +941,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1158,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1170,
+    "src/db/export.test.ts": 939,
     "src/db/incident-reports.test.ts": 966,
     "src/db/manifests.test.ts": 3566,
     "src/db/notifications.test.ts": 1860,

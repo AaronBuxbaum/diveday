@@ -11,7 +11,6 @@ export {
 } from "./rules";
 export type { MonthMoneyDetail } from "./store";
 export {
-  cardMoneyThroughDiveDayCents,
   counterTaxIncluded,
   getMonthMoneyDetail,
   packageDivesOwedAt,
