@@ -182,7 +182,6 @@ export default async function DiveSitesPage({
     <StaffPage width="full">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
         title={t("diveSites.list.title")}
         // An empty library gets no header action: the empty card below is
         // already the whole page, and it carries both doors. Two identical
