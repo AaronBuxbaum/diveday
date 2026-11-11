@@ -80,7 +80,7 @@ sales-tool shape there is, and it is spotted before the email is opened.
 > [CELL]
 > dive.day
 
-Slots: `[GREETING]` ("Hi Dan," when the shop's own page names the person who runs it; "Hello," or "Hello, Horizon Divers crew," when it does not; never a guessed first name), `[SHOP]`, `[RESEARCHED STATEMENT]`, `[CELL]`. Nothing else is variable.
+Slots: `[GREETING]` ("Hello [SHOP] crew," by default; "Hi Dan," only when the shop's own page names the person who runs it; never a guessed first name), `[SHOP]`, `[RESEARCHED STATEMENT]`, `[CELL]`. Nothing else is variable.
 
 **If nothing about the shop could be verified**, replace the researched statement with this line instead
 of splicing a fragment at 11pm on the eleventh email of the week:
