@@ -90,7 +90,7 @@ export function ShopfrontStory({
       />
       {shop.shopfrontPhotoUrls.length > 0 ? (
         <div className="mt-8">
-          <ShopPhotoStrip urls={shop.shopfrontPhotoUrls} label={t("schedule.shopPhotos")} />
+          <ShopPhotoStrip urls={shop.shopfrontPhotoUrls} label={t("schedule.shopPhotos")} t={t} />
         </div>
       ) : null}
     </section>

@@ -1,3 +1,4 @@
+import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import type { AppDb } from "@/db/client";
@@ -8,6 +9,7 @@ import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import type { MinimumSeatsState } from "@/lib/minimum-seats";
 import { publicTripCalendarPath } from "@/lib/public-routes";
 import { runCadenceWords } from "../../../_components/run-cadence";
+import { lightboxWords } from "../../../_components/ShopPhotoStrip";
 import { TripActions } from "./TripActions";
 import { TripHeader } from "./TripHeader";
 
@@ -134,15 +136,17 @@ export async function TripBoatPhoto({
   if (!boat?.photoUrl) return null;
   return (
     <figure className="flex items-center gap-4">
-      <StoredPhoto
-        src={boat.photoUrl}
-        alt={boat.name}
-        className="size-24 shrink-0 rounded-lg"
-        sizes="96px"
-      />
+      <div className="size-24 shrink-0">
+        <PhotoLightbox
+          photos={[{ src: boat.photoUrl, alt: boat.name }]}
+          words={lightboxWords(t)}
+          sizes="96px"
+          thumbClassName="size-24 rounded-lg"
+          renderThumb={(thumb) => thumb}
+        />
+      </div>
       <figcaption>
-        <p className="text-sm text-muted">{t("trip.boatLabel")}</p>
-        <p className="font-medium">{boat.name}</p>
+        <p className="font-medium">{t("trip.boatYoullBeOn", { name: boat.name })}</p>
       </figcaption>
     </figure>
   );

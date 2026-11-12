@@ -1,4 +1,4 @@
-import { StoredPhoto } from "@/components/StoredPhoto";
+import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { sectionCardClass } from "@/components/ui/card";
 import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { Boat } from "@/features/boats";
@@ -18,7 +18,15 @@ import type { DiverTranslator } from "@/i18n/messages";
  *
  * Renders nothing when the shop has uploaded none, which is the default.
  */
-export function ShopPhotoStrip({ urls, label }: { urls: readonly string[]; label: string }) {
+export function ShopPhotoStrip({
+  urls,
+  label,
+  t,
+}: {
+  urls: readonly string[];
+  label: string;
+  t: DiverTranslator;
+}) {
   if (urls.length === 0) return null;
   return (
     <ul
@@ -27,18 +35,29 @@ export function ShopPhotoStrip({ urls, label }: { urls: readonly string[]; label
       tabIndex={0}
       className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 focus-visible:focus-ring-inset sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4"
     >
-      {urls.map((url) => (
-        <li key={url} className="w-[78%] shrink-0 snap-start sm:w-auto">
-          <StoredPhoto
-            src={url}
-            alt=""
-            className="aspect-[4/3] w-full rounded-inset"
-            sizes="(min-width: 1024px) 17rem, (min-width: 640px) 30vw, 72vw"
-          />
-        </li>
-      ))}
+      <PhotoLightbox
+        photos={urls.map((src) => ({ src, alt: "" }))}
+        words={lightboxWords(t)}
+        sizes="(min-width: 1024px) 17rem, (min-width: 640px) 30vw, 72vw"
+        thumbClassName="aspect-[4/3] w-full rounded-inset"
+        renderThumb={(thumb, index) => (
+          <li key={urls[index]} className="w-[78%] shrink-0 snap-start sm:w-auto">
+            {thumb}
+          </li>
+        )}
+      />
     </ul>
   );
+}
+
+/** The words the large view needs, from the diver bundle. */
+export function lightboxWords(t: DiverTranslator) {
+  return {
+    label: t("schedule.photoLarge"),
+    close: t("schedule.photoClose"),
+    previous: t("schedule.photoPrevious"),
+    next: t("schedule.photoNext"),
+  };
 }
 
 export function BoatsShelf({
@@ -63,11 +82,12 @@ export function BoatsShelf({
             className={sectionCardClass({ className: "flex min-h-14 flex-col gap-1" })}
           >
             {boat.photoUrl ? (
-              <StoredPhoto
-                src={boat.photoUrl}
-                alt={boat.name}
-                className="mb-3 aspect-video w-full rounded-md"
+              <PhotoLightbox
+                photos={[{ src: boat.photoUrl, alt: boat.name }]}
+                words={lightboxWords(t)}
                 sizes="(min-width: 1152px) 315px, (min-width: 1024px) calc(33.333vw - 66px), (min-width: 640px) calc(50vw - 72px), calc(100vw - 64px)"
+                thumbClassName="mb-3 aspect-video w-full rounded-md"
+                renderThumb={(thumb) => thumb}
               />
             ) : null}
             <div className="flex items-baseline justify-between gap-3">
