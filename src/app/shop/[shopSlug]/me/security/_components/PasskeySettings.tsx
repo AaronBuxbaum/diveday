@@ -1,6 +1,5 @@
 "use client";
 
-import { startRegistration } from "@simplewebauthn/browser";
 import { useEffect, useState, useTransition } from "react";
 import {
   beginPasskeyRegistrationAction,
@@ -140,6 +139,7 @@ export function PasskeySettings({
             change(async () => {
               const options = await beginPasskeyRegistrationAction(shopSlug);
               if (!options) return false;
+              const { startRegistration } = await import("@simplewebauthn/browser");
               const response = await startRegistration({ optionsJSON: options });
               const accepted = await completePasskeyRegistrationAction(
                 shopSlug,
