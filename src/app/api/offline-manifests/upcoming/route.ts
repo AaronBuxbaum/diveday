@@ -40,7 +40,7 @@ const AUTO_SAVE_WINDOW_MS = 48 * 60 * 60 * 1000;
  * asks `GET /api/offline-manifests/identity` instead, which answers with one
  * string and none of this.
  */
-async function getUpcomingManifests(request?: Request) {
+async function getUpcomingManifests(request: Request) {
   const access = await authorizeOfflineManifestStaff();
   if (access.ok === false) return access.response;
   if (!supportsCausalRollCall(request))
@@ -61,7 +61,7 @@ async function getUpcomingManifests(request?: Request) {
   return Response.json(body, { headers: OFFLINE_MANIFEST_NO_STORE });
 }
 
-export function GET(request?: Request) {
+export function GET(request: Request) {
   return withE2EApiTiming("/api/offline-manifests/upcoming GET", () =>
     getUpcomingManifests(request),
   );

@@ -74,6 +74,10 @@
       "seeSchedule": "See the schedule"
     },
     "shopPhotos": "Photos from the shop",
+    "photoLarge": "Photo, enlarged",
+    "photoClose": "Close",
+    "photoPrevious": "Previous photo",
+    "photoNext": "Next photo",
     "timesInZone": "All times below are local to {shop} ({zone}).",
     "timesInZoneFooter": "Times are local to {shop} ({zone}).",
     "embedSeeFullSchedule": "See the full schedule",
@@ -148,7 +152,7 @@
   },
   "trip": {
     "coursePlanHeading": "Your course plan",
-    "boatLabel": "Boat",
+    "boatYoullBeOn": "You’ll be on {name}",
     "courseSession": "Course session",
     "privateCharter": "Private charter",
     "depositLine": "{deposit} deposit at booking · {balance} balance at the dock",

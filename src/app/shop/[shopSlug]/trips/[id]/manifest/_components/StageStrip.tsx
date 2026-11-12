@@ -38,6 +38,8 @@ export type StageStripCopy = {
   taps: { stage: TripStage; label: string; shortLabel: string }[];
   /** "Keiko Tanaka · 7:04 AM", composed server-side, or undefined if nobody has said anything. */
   recordedLine?: string;
+  /** A tap saved before the departure's day: said so, with the day it starts to show. */
+  earlyLine?: string;
   /**
    * The last after-dive roll call still has somebody unmarked (batch 6, item
    * 4; `homewardCheckpointGap`): the line and the one tap to it. Said only
@@ -148,6 +150,11 @@ export function StageStrip({
       ) : null}
       {copy.recordedLine ? (
         <p className="mt-2 text-sm text-muted tabular-nums">{copy.recordedLine}</p>
+      ) : null}
+      {copy.earlyLine ? (
+        <p role="status" className="mt-2 text-sm text-muted">
+          {copy.earlyLine}
+        </p>
       ) : null}
       {rollCallOpen ? (
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
