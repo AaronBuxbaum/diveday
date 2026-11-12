@@ -4,7 +4,11 @@ import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { purgeMintedDemoShops } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { e2eTestRouteAuthorized, testRouteRefused } from "@/features/e2e-test-routes";
+import {
+  clearNavigationGates,
+  e2eTestRouteAuthorized,
+  testRouteRefused,
+} from "@/features/e2e-test-routes";
 import {
   type DemoReset,
   resetDemoFromSnapshot,
@@ -32,6 +36,7 @@ import { restoreBootClock } from "../../../../features/test-clock/rules";
  */
 export async function POST(request: Request) {
   if (!e2eTestRouteAuthorized(request)) return testRouteRefused();
+  clearNavigationGates();
   const startedAt = performance.now();
   // The clock is a fact the reset restores, ahead of the rows: a test that moved
   // it (the `clock` fixture) must not hand the next test a later day (#2761).
