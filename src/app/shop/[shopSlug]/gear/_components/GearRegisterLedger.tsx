@@ -1,5 +1,5 @@
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Pager, staffPagerWords } from "@/components/Pager";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";

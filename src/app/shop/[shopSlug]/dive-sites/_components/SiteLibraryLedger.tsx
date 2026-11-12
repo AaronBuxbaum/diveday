@@ -1,4 +1,4 @@
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { SiteLibraryGroup } from "@/db/dive-sites";
@@ -256,7 +256,7 @@ export function CatalogDoor({
         linkLabel={title}
         // Trimmed and sized by height: the pin's ink starts on the column the
         // row's words start on, 12px (the row's gap) before them.
-        leading={<DiveDayIcon name="diveSites" trim className="h-5 w-auto text-muted" />}
+        leading={<StaffDestinationIcon id="diveSites" trim className="h-5 w-auto text-muted" />}
       >
         <div className="min-w-0">
           <p className="font-medium">{title}</p>

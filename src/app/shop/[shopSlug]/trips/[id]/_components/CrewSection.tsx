@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { EmptyState } from "@/components/EmptyState";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";

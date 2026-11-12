@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { GROUP_META_CLASS, GroupLabel, type GroupLabelElement } from "@/components/ui/group-label";

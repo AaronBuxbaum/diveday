@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ToastShell } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";

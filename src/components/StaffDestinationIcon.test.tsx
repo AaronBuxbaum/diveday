@@ -9,7 +9,8 @@ import {
   STAFF_DESTINATIONS,
   type StaffDestinationId,
 } from "@/lib/staff-destinations";
-import { DiveDayIcon, StaffDestinationIcon } from "./StaffDestinationIcon";
+import { DiveDayIcon } from "./DiveDayIcon";
+import { StaffDestinationIcon } from "./StaffDestinationIcon";
 
 afterEach(cleanup);
 
@@ -43,6 +44,20 @@ describe("the destination icons", () => {
     expect(svg).not.toBeNull();
     expect(svg?.querySelectorAll("path, circle, rect").length).toBeGreaterThan(0);
   });
+
+  /**
+   * The language picker, the info hint and the diver pages draw a caret or a
+   * tick through `DiveDayIcon`; when it lived beside the destination artwork
+   * every route's first load carried that record too. The leaf imports
+   * nothing that draws a destination.
+   */
+  it("stay out of the shared marks' module", () => {
+    const leaf = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "DiveDayIcon.tsx"),
+      "utf8",
+    );
+    expect(leaf).not.toMatch(/from\s+["'][^"']*(StaffDestinationIcon|staff-destinations)["']/);
+  });
 });
 
 /**
@@ -54,24 +69,26 @@ describe("the destination icons", () => {
  */
 describe("a trimmed glyph", () => {
   it("crops its box to the ink's width and keeps the full height", () => {
-    const { container } = render(<DiveDayIcon name="diveSites" trim className="h-5 w-auto" />);
+    const { container } = render(
+      <StaffDestinationIcon id="diveSites" trim className="h-5 w-auto" />,
+    );
     // The pin's geometry spans x 5–19; the 1.8 stroke adds 0.9 either side.
     expect(container.querySelector("svg")).toHaveAttribute("viewBox", "4.1 0 15.8 24");
   });
 
   it("follows a heavier stroke out to its edge", () => {
-    const { container } = render(<DiveDayIcon name="diveSites" trim strokeWidth={3} />);
+    const { container } = render(<StaffDestinationIcon id="diveSites" trim strokeWidth={3} />);
     expect(container.querySelector("svg")).toHaveAttribute("viewBox", "3.5 0 17 24");
   });
 
   it("leaves every glyph drawn without it in the shared square", () => {
-    const { container } = render(<DiveDayIcon name="diveSites" />);
+    const { container } = render(<StaffDestinationIcon id="diveSites" />);
     expect(container.querySelector("svg")).toHaveAttribute("viewBox", "0 0 24 24");
   });
 
   it("is refused, at compile time, on a glyph whose ink it does not know", () => {
     // @ts-expect-error — `today` has no recorded ink extent to trim to.
-    const { container } = render(<DiveDayIcon name="today" trim />);
+    const { container } = render(<StaffDestinationIcon id="today" trim />);
     expect(container.querySelector("svg")).toHaveAttribute("viewBox", "0 0 24 24");
   });
 });

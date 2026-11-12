@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { ShopNotice } from "@/components/ui/outcome";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";

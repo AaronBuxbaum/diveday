@@ -1,4 +1,4 @@
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -47,7 +47,7 @@ export function DiveSitesPeek({
               />
             ) : (
               <div className="flex h-32 w-full items-center justify-center bg-surface-sunken text-primary">
-                <DiveDayIcon name="diveSites" className="size-10" />
+                <StaffDestinationIcon id="diveSites" className="size-10" />
               </div>
             )}
             <div className="p-4">

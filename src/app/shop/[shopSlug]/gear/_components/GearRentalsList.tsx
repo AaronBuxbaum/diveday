@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Pager, staffPagerWords } from "@/components/Pager";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";

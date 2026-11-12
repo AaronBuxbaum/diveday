@@ -1,11 +1,11 @@
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { JsonLd } from "@/components/JsonLd";
 import { MarketingIllustration } from "@/components/MarketingIllustration";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import { MarginNotes } from "@/components/MarketingSections";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import {
   BANNER_TITLE_CLASS,

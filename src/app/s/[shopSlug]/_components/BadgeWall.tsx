@@ -1,4 +1,4 @@
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { brandBadgeLabel } from "@/i18n/brand-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { BrandBadgeCode } from "@/lib/brand";

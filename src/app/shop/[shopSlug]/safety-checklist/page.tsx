@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";

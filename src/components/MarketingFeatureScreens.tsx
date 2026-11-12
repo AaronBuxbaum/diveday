@@ -1,6 +1,6 @@
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { RouteWaypoint } from "@/components/RouteWaypoint";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";

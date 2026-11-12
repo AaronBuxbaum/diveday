@@ -1,7 +1,7 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 
@@ -50,7 +50,7 @@ export function TripAddBookingLink({
       }}
       className={buttonClass({ variant: "link", className: "gap-1.5" })}
     >
-      <DiveDayIcon name="addBooking" className="size-4" />
+      <StaffDestinationIcon id="addBooking" className="size-4" />
       {label}
     </a>
   );

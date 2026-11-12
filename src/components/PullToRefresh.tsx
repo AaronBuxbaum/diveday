@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 
 export type PullToRefreshCopy = {
   pulling: string;

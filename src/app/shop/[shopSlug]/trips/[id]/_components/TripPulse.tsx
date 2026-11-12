@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { RowIconName } from "@/app/shop/[shopSlug]/_components/today/row-glyph";
 import { BoardingSeats } from "@/components/BoardingBar";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 
 export type TripPulseFact = {

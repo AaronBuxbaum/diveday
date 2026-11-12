@@ -3,7 +3,7 @@
 import { unstable_rethrow } from "next/navigation";
 import { useCallback, useRef, useState, useTransition } from "react";
 import { type DemoStartCopy, DemoStartStrip } from "@/components/DemoStartStrip";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { MENU_PANEL } from "@/components/ui/menu";

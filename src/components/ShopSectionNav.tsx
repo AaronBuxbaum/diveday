@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
-import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
+import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { MENU_PANEL } from "@/components/ui/menu";
 import { SEGMENT_CORNER } from "@/components/ui/segmented";

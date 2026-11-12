@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { type ReactNode, Suspense } from "react";
 import { AddPanelFocus } from "@/components/AddPanelFocus";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { Bone, Pending } from "@/components/ui/pending";

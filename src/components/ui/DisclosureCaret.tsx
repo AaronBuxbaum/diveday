@@ -1,4 +1,4 @@
-import { type DisclosureCaretDirection, DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { type DisclosureCaretDirection, DiveDayIcon } from "@/components/DiveDayIcon";
 
 export type { DisclosureCaretDirection };
 
