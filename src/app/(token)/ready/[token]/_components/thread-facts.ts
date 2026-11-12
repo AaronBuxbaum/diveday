@@ -23,12 +23,17 @@ import { liveStageOf, STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
  */
 export function boatStageLine(
   boatStage: Awaited<ReturnType<typeof latestTripStage>>,
-  trip: { title: string; endsAt: Date | null },
+  trip: {
+    title: string;
+    startsAt: Date;
+    endsAt: Date | null;
+    meetingWindows?: readonly import("@/lib/trip-phase").MeetingWindow[];
+  },
   timeZone: string,
   locale: DiverLocale,
   t: DiverTranslator,
 ): { sentence: string; said: string } | null {
-  const liveStage = liveStageOf(boatStage, trip.endsAt ?? null, nowDate());
+  const liveStage = liveStageOf(boatStage, { ...trip, timeZone }, nowDate());
   return liveStage
     ? {
         sentence:
@@ -43,6 +48,22 @@ export function boatStageLine(
         }),
       }
     : null;
+}
+
+/** Use the already-authorized ready data, including the real meeting windows. */
+export function readyBoatStageLine(
+  stage: Awaited<ReturnType<typeof latestTripStage>>,
+  data: ReadyPageData,
+  locale: DiverLocale,
+  t: DiverTranslator,
+) {
+  return boatStageLine(
+    stage,
+    { ...data.detail.trip, meetingWindows: data.meetingDays },
+    data.detail.shop.timezone,
+    locale,
+    t,
+  );
 }
 
 /**

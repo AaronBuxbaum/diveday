@@ -180,6 +180,8 @@ describe("native departure pass lifecycle", () => {
     });
     expect(send.apple).toHaveBeenCalledTimes(1);
     expect(await pushChangedWalletPasses(db, { providers: send })).toMatchObject({ pushed: 0 });
+    // The moved departure is tomorrow; a stage begins speaking on its local day.
+    advanceClock(24 * 60 * 60 * 1000);
     await db
       .insert(tripStageEvents)
       .values({ shopId, tripId: trip.id, stage: "boarding", recordedByPersonId: person.id });

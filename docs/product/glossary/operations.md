@@ -1537,8 +1537,7 @@
 - **At sea** — a departure that has left the dock (`departureSailed`, `src/lib/trip-phase.ts`; fourth review item 16). From then on nothing on its pages is for sale or still to pack: the header stops counting seats and prep's sizes and pick prompts go, on the trip header, prep, the Divers tab and the Boat tab alike. Back is at sea's end and counts as sailed. Before that the crew's word answers: `underway`, `surface` and `heading_in` are at sea; a course's `home` from an earlier day is tied up for the night. With no word, a single sailing is at sea once its hour and the departure buffer have passed (`hasSailed`); **Boarding yields to the clock the same way**, because the tap a busy dock forgets is Underway and a tap never holds a boat at the dock longer than silence would (review F3). Never by the clock for a multi-day course, whose later days still need their kit. Unlike the **Trip phase**, this reading is drawn on screen (it hides the seats chip), so the clock does reach a word here. **Left aboard** opens later, at `heading_in` or `home`, or once the departure is Back (`leftAboardOpen`): a form for what was found after the trip is no question while the boat is still diving (see **Lost item**, [day-of-the-dive.md](day-of-the-dive.md)).
 - **Trip stage** — where a departure is, in the crew's own word: one of five (`boarding`,
   `underway`, `surface`, `heading_in`, `home`) tapped on the **manifest** and then repeated, with
-  the time it was tapped, everywhere DiveDay draws that boat — the shop home's station chip, the
-  storefront's live line, the **follow link**, and a diver's own link (ADR
+  the time it was tapped, on the shop home’s station chip and the diver’s ready link and wallet pass (ADR
   [20260904-reef-all-the-way-down](../../architecture/decisions/20260904-reef-all-the-way-down.md),
   decision 2; `src/lib/trip-stages.ts`). **Never inferred and never a position.** A clock implies no
   stage: a departure nobody tapped has none, renders nothing, and never renders "Unknown"; and
@@ -1546,8 +1545,10 @@
   staff member of that shop, on a live departure, records one (`recordTripStage`,
   `src/features/trip-stages/store.ts`), and records rather than edits: `trip_stage_events` is append-only, a
   crew that taps the wrong word taps the right one, and the newest row wins. **A stage goes stale
-  rather than wrong** — on the anonymous surfaces (the storefront, the follow link, the diver link)
-  it stops speaking two late-arrival buffers past the departure's own end (`liveStageOf`, the
+  rather than wrong** — on the ready link and wallet pass, a tap before the departure’s local day
+  is silent and an earlier meeting’s tap expires at the end of its local day or midnight-crossing
+  meeting window, whichever is later. The final meeting’s word stops speaking strictly after two
+  late-arrival buffers past the departure’s own end (`liveStageOf`, the
   **departure clock**'s `stage_stale` rung), because a crew that tapped *Underway* and then got busy would otherwise
   leave a diver's family reading "out on the reef" at midnight. The staff surfaces (the departure
   header, the shop home's station chip) read `boatStageOf` instead, whose staleness is the end of
@@ -1561,9 +1562,7 @@
   not counted": a fact about that moment, which a count recorded since does not change, and a
   second Home keeps the largest count any earlier Home stored (issue #3896, Aaron 2026-11-05;
   review fixes). `home` alone carries
-  the roll call's success tone, and `home` alone is withheld from the anonymous surfaces: the diver
-  who was aboard reads it on their own link, a storefront panel about tomorrow does not. It was a
-  display word until issue #1480 made it load-bearing. The **close-out** uses the staff
+  the roll call's success tone. It was a display word until issue #1480 made it load-bearing. The **close-out** uses the staff
   **trip phase** rule: a final-meeting-day `home` can settle a counted station before the clock
   would; a speaking non-home stage keeps it out even when overdue. Earlier-day course Home
   finishes nothing. An expired staff word hands the question back to the clock.

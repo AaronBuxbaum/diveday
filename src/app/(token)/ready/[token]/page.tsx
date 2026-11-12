@@ -64,7 +64,7 @@ import { readyOfflineWords } from "./_components/ready-offline-words";
 import { SignStepActions } from "./_components/SignStepActions";
 import { ThreadSections } from "./_components/ThreadSections";
 import { ThreadSpine, ThreadStatus, threadSpineSteps } from "./_components/ThreadSpine";
-import { boatStageLine, readyStepLine, readyThreadFacts } from "./_components/thread-facts";
+import { readyBoatStageLine, readyStepLine, readyThreadFacts } from "./_components/thread-facts";
 import { YourDays } from "./_components/YourDays";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
 import { saveEmergencyContactFromReady } from "./paperwork-actions";
@@ -374,7 +374,7 @@ async function DiverReadinessPage({
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
 
-    const stageLine = boatStageLine(boatStage, detail.trip, detail.shop.timezone, locale, t);
+    const stageLine = readyBoatStageLine(boatStage, data, locale, t);
 
     const facts = readyThreadFacts(data, Boolean(fullTrip), locale);
     const { items, hasRentalFit, hasLastDived, nitroxCardEntryOffered, carriedFacts } = facts;

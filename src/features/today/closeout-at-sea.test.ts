@@ -96,6 +96,17 @@ describe("an open count on a boat still out", () => {
     expect(departure?.diveNumber).toBe(diveNumber);
   };
 
+  it("does not let an early Home tap end a count in progress", () => {
+    const gap = diveTwo("after_dive_uncounted");
+    expect(
+      read(atSea({ stage: stage("home", new Date("2026-07-21T03:59:59Z")) }), gap)?.status,
+    ).toBe("still_out");
+    expectLoud(
+      read(atSea({ stage: stage("home", new Date("2026-07-21T04:00:00Z")) }), gap),
+      "after_dive_uncounted",
+    );
+  });
+
   it("reads still out while she is out, for divers and for crew, and keeps the open checkpoint", () => {
     for (const reason of ["after_dive_uncounted", "crew_uncounted"] as const) {
       const departure = read(atSea(), diveTwo(reason));
