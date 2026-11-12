@@ -4,7 +4,10 @@ import { cacheOfflineShell, shellBuildId } from "./offline-shell-cache";
 function fakeCaches(failPutFor?: string, stores = new Map<string, Map<string, Response>>()) {
   const caches = {
     match: async (key: string, options?: MultiCacheQueryOptions) =>
-      stores.get(options?.cacheName ?? "")?.get(key)?.clone(),
+      stores
+        .get(options?.cacheName ?? "")
+        ?.get(key)
+        ?.clone(),
     open: async (name: string) => {
       const store = stores.get(name) ?? new Map<string, Response>();
       stores.set(name, store);
@@ -169,9 +172,7 @@ describe("cacheOfflineShell", () => {
       const before = new Map(stores.get("shell-v"));
       await expect(cacheOfflineShell(e)).rejects.toThrow(/lazy\.js could not be loaded/);
       expect(stores.get("shell-v")).toEqual(before);
-      expect(stores.get("shell-v")?.get("/offline-manifest")).toBe(
-        before.get("/offline-manifest"),
-      );
+      expect(stores.get("shell-v")?.get("/offline-manifest")).toBe(before.get("/offline-manifest"));
     });
   });
 });
