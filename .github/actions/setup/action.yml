@@ -1,6 +1,6 @@
 name: Setup pnpm and install
 description: >
-  Sets up pnpm, Node 24 with the pnpm cache, and installs dependencies with a
+  Sets up pnpm, Node 26 with the pnpm cache, and installs dependencies with a
   frozen lockfile — the setup steps every CI job needs before it can run
   anything else.
 inputs:
@@ -16,7 +16,7 @@ runs:
         # Build evidence includes the exact runtime. A major selector accepts
         # different cached patches on different runners, breaking artifact reuse.
         # Source of truth: CI_NODE_VERSION in scripts/check-node-version.mjs.
-        node-version: 24.22.0
+        node-version: 26.13.1
     # The pinned pnpm installer alone retries classified registry failures. It
     # keeps each attempt's output, and never wraps dependency install or tests.
     - run: |
@@ -25,7 +25,7 @@ runs:
       shell: bash
     - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        node-version: 24.22.0
+        node-version: 26.13.1
         # GitHub-hosted runners start empty, so they restore the pnpm store
         # from the Actions cache. The Mac's runners keep theirs on a shared
         # volume (scripts/mac-runner/start.sh), and restoring it there would

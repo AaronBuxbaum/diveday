@@ -23,15 +23,19 @@ function escapeForScriptContext(json: string): string {
  */
 export function localeDirection(locale: string): "ltr" | "rtl" {
   try {
-    // `textInfo` is Stage 3 and shipped in every engine this runs on, but
-    // TypeScript's `Intl.Locale` does not declare it yet — so the shape is
-    // stated here rather than reached for with `any`. Both call sites are
-    // server-side (the root layout, and the pre-hydration script's lookup
-    // table, which is built here), so this only ever needs Node's `Intl`.
+    // Text direction is Stage 3 and TypeScript's `Intl.Locale` does not declare
+    // it, so the shape is stated here rather than reached for with `any`. Node 26
+    // moved it from the `textInfo` getter to `getTextInfo()`; older engines have
+    // only the getter. Both call sites are server-side (the root layout, and the
+    // pre-hydration script's lookup table, which is built here), so this only
+    // ever needs Node's `Intl`.
+    type TextInfo = { direction?: string };
     const parsed = new Intl.Locale(locale) as Intl.Locale & {
-      textInfo?: { direction?: string };
+      getTextInfo?: () => TextInfo;
+      textInfo?: TextInfo;
     };
-    return parsed.textInfo?.direction === "rtl" ? "rtl" : "ltr";
+    const info = parsed.getTextInfo?.() ?? parsed.textInfo;
+    return info?.direction === "rtl" ? "rtl" : "ltr";
   } catch {
     // An unparseable tag is not a reason to render a document with no
     // direction; every locale this app ships reads left to right.

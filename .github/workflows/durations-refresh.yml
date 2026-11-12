@@ -58,7 +58,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           # CI_NODE_VERSION in scripts/check-node-version.mjs, as every other job.
-          node-version: 24.22.0
+          node-version: 26.13.1
       # The newest successful push run on main that ran the shards: a
       # docs-only main run skips them and uploads nothing, so it is passed
       # over rather than read as "every file vanished".
