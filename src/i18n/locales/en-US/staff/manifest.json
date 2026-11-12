@@ -12,6 +12,7 @@
     "shortHeadingIn": "Inbound",
     "shortHome": "Home",
     "recordedLine": "{name} · {time}",
+    "earlyLine": "{stage} saved at {time}. It shows from {date}.",
     "errorRefusal": "That didn’t save. Check your connection and tap again.",
     "openRollCall": "Open roll call",
     "homeConfirmQuestion": "Mark the boat home anyway?",
