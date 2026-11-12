@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { cacheOfflineShell, shellBuildId } from "./offline-shell-cache";
 
-function fakeCaches(failPutFor?: string) {
-  const stores = new Map<string, Map<string, Response>>();
+function fakeCaches(failPutFor?: string, stores = new Map<string, Map<string, Response>>()) {
   const caches = {
+    match: async (key: string, options?: MultiCacheQueryOptions) =>
+      stores.get(options?.cacheName ?? "")?.get(key)?.clone(),
     open: async (name: string) => {
       const store = stores.get(name) ?? new Map<string, Response>();
       stores.set(name, store);
@@ -29,9 +30,18 @@ function env(
     missing?: string;
     /** The build id the network's shell HTML names. */
     served?: string | null;
+    /** What a previous prime of this build left in the cache. */
+    cached?: Record<string, string>;
   },
 ) {
-  const { caches, stores } = fakeCaches();
+  const previous = new Map<string, Map<string, Response>>();
+  if (overrides.cached) {
+    previous.set(
+      "shell-v",
+      new Map(Object.entries(overrides.cached).map(([key, body]) => [key, new Response(body)])),
+    );
+  }
+  const { caches, stores } = fakeCaches(undefined, previous);
   const served = overrides.served === undefined ? "build-1" : overrides.served;
   const requested: string[] = [];
   return {
@@ -114,6 +124,55 @@ describe("cacheOfflineShell", () => {
     });
     expect(inits).toHaveLength(ASSETS.length);
     for (const init of inits) expect(init?.cache).toBe("reload");
+  });
+
+  describe("a later prime of the same build", () => {
+    const previousPrime = {
+      "/offline-manifest": shellHtml("build-1"),
+      [ASSETS[0]]: "a-from-last-prime",
+    };
+
+    it("does not fetch an asset this build's cache already holds", async () => {
+      const { env: e, requested } = env({ cached: previousPrime });
+      await cacheOfflineShell(e);
+      expect(requested).not.toContain(ASSETS[0]);
+    });
+
+    it("fetches, past the HTTP cache, an asset the cache is missing", async () => {
+      const inits = new Map<string, RequestInit | undefined>();
+      const { env: e, stores } = env({ cached: previousPrime });
+      const inner = e.fetch;
+      await cacheOfflineShell({
+        ...e,
+        fetch: (input, init) => {
+          inits.set(input, init);
+          return inner(input);
+        },
+      });
+      expect([...inits.keys()].sort()).toEqual(["/offline-manifest", ASSETS[1]].sort());
+      expect(inits.get(ASSETS[1])?.cache).toBe("reload");
+      expect(await stores.get("shell-v")?.get(ASSETS[1])?.text()).toBe(ASSETS[1]);
+      expect(await stores.get("shell-v")?.get(ASSETS[0])?.text()).toBe("a-from-last-prime");
+    });
+
+    it("still refreshes the shell document", async () => {
+      const { env: e, stores } = env({ cached: { ...previousPrime, [ASSETS[1]]: "lazy" } });
+      const cachedShell = stores.get("shell-v")?.get("/offline-manifest");
+      await cacheOfflineShell(e);
+      const shell = stores.get("shell-v")?.get("/offline-manifest");
+      expect(shell).toBeDefined();
+      expect(shell).not.toBe(cachedShell);
+    });
+
+    it("fails, leaving the previous cache as it was, when a missing asset cannot be fetched", async () => {
+      const { env: e, stores } = env({ cached: previousPrime, missing: ASSETS[1] });
+      const before = new Map(stores.get("shell-v"));
+      await expect(cacheOfflineShell(e)).rejects.toThrow(/lazy\.js could not be loaded/);
+      expect(stores.get("shell-v")).toEqual(before);
+      expect(stores.get("shell-v")?.get("/offline-manifest")).toBe(
+        before.get("/offline-manifest"),
+      );
+    });
   });
 });
 
