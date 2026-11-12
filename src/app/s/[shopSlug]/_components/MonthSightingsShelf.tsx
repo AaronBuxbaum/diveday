@@ -6,7 +6,7 @@ import { getDb } from "@/db/client";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import type { MonthSightings } from "@/features/month-sightings";
 import { monthSightings } from "@/features/month-sightings";
-import { cacheStamp, reportCacheRead } from "@/features/runtime-cache";
+import { cacheStamp, reportCacheRead, shopRowsCacheGeneration } from "@/features/runtime-cache";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
@@ -46,13 +46,16 @@ export function MonthSightingsSection({
  * `hours` lets a crew's log from this morning count by the afternoon. The
  * cached scope opens the database itself, stamps when it computed, and every
  * read logs `cache.read` (docs/architecture/performance-budgets.md, "Runtime
- * caches").
+ * caches"). Also keyed on `shopRowsCacheGeneration()`, 0 in a deployment, so
+ * the e2e routes that rewrite a shop's rows expire the entry: a seeded
+ * `monthSightings` fact must not meet the empty entry an earlier test cached.
  */
 async function publicMonthSightings(
   shopId: string,
   timeZone: string,
-  // Read by nothing in the body: it is here to be part of the cache key.
+  // Read by nothing in the body: they are here to be part of the cache key.
   _shopMonth: number,
+  _rowsGeneration: number,
 ) {
   "use cache";
   cacheLife("hours");
@@ -72,7 +75,7 @@ async function MonthSightingsLoaded({
   t: DiverTranslator;
 }) {
   const shopMonth = utcToWallTime(nowDate(), tz).month;
-  const cached = await publicMonthSightings(shopId, tz, shopMonth);
+  const cached = await publicMonthSightings(shopId, tz, shopMonth, shopRowsCacheGeneration());
   reportCacheRead("month_sightings", cached.computedAtMs, { shopId });
   const sightings = cached.sightings;
   if (!sightings) return null;

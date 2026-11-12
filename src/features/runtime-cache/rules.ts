@@ -19,6 +19,27 @@ import { type LogContext, log } from "../../lib/log";
  * decides behaviour, so the frozen instant is not needed.
  */
 
+type GenerationGlobal = typeof globalThis & { __divedayShopRowsCacheGeneration?: number };
+
+/**
+ * **Which generation of a shop's rows a `"use cache"` scope was computed
+ * from**, passed as one of its arguments so it is part of the key. Always 0 in
+ * a deployment: an entry there turns over on its `cacheLife`. The e2e routes
+ * that rewrite a shop's rows (`/api/test/reset`, `/api/test/shop`) call
+ * `expireShopRowsCaches()`, so a test reads the rows it seeded rather than an
+ * entry an earlier test's view cached. Held on `globalThis`, like the e2e
+ * routes' own state, so the route bundles and the page bundles see one value.
+ */
+export function shopRowsCacheGeneration(): number {
+  return (globalThis as GenerationGlobal).__divedayShopRowsCacheGeneration ?? 0;
+}
+
+/** Start a new generation: every entry keyed on the old one is never read again. */
+export function expireShopRowsCaches(): void {
+  const shared = globalThis as GenerationGlobal;
+  shared.__divedayShopRowsCacheGeneration = shopRowsCacheGeneration() + 1;
+}
+
 /** A value younger than this was computed during the render that reads it. */
 const SAME_RENDER_MS = 2_000;
 

@@ -13,6 +13,7 @@ import {
   takeNonDemoFixture,
   testRouteRefused,
 } from "@/features/e2e-test-routes";
+import { expireShopRowsCaches } from "@/features/runtime-cache";
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import { dropOnboardFixture } from "@/test/onboard-fixture";
@@ -179,6 +180,9 @@ export async function POST(request: Request) {
       if (error.code === "not_available") return testRouteRefused();
       return NextResponse.json({ error: error.code, ...error.detail }, { status: error.status });
     }
+    // A fact rewrites the shop's rows: a cached read of them taken before it
+    // (the shopfront's month sightings) is read afresh.
+    expireShopRowsCaches();
   }
 
   return NextResponse.json({
