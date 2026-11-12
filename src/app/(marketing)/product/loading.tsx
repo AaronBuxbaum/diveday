@@ -47,40 +47,52 @@ export default function ProductLoading() {
     <div className="flex flex-1 flex-col">
       <Pending as="main" className="flex-1">
         {/* Hero: eyebrow, the title, the lede, the CTA pair, the demo note and
-            the price line, left-aligned on the list's own column. */}
+            the price line, beside the same preview-sized panel as the page. */}
         <section>
           <div className="mx-auto max-w-6xl px-6 pt-8 pb-10 lg:pt-16">
-            <SkeletonLineBars lines={1} height={`h-lh ${MARKETING_EYEBROW_CLASS}`} width="w-40" />
-            <div className="mt-4 max-w-4xl">
-              <SkeletonLineBars
-                lines={{ base: 3, sm: 2 }}
-                height={`h-lh ${DISPLAY_TITLE_CLASS} sm:text-6xl`}
-                width="w-full"
-              />
-            </div>
-            <div className="mt-4 max-w-2xl">
-              <SkeletonLineBars
-                lines={{ base: 5, sm: 3 }}
-                height="h-lh text-lg leading-8"
-                width="w-full"
-              />
-            </div>
-            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
-              <Bone shape="control" className="h-12 w-44" />
-              <Bone shape="control" className="h-11 w-24" />
-            </div>
-            <div className="mt-3">
-              <SkeletonLineBars
-                lines={{ base: 2, sm: 1 }}
-                height="h-lh text-sm"
-                width="w-72 max-w-full"
-              />
-            </div>
-            <div className="mt-2">
-              <SkeletonLineBars
-                lines={{ base: 2, sm: 1 }}
-                height="h-lh text-sm"
-                width="w-80 max-w-full"
+            <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
+              <div>
+                <SkeletonLineBars
+                  lines={1}
+                  height={`h-lh ${MARKETING_EYEBROW_CLASS}`}
+                  width="w-40"
+                />
+                <div className="mt-4 max-w-4xl">
+                  <SkeletonLineBars
+                    lines={{ base: 3, sm: 2 }}
+                    height={`h-lh ${DISPLAY_TITLE_CLASS} sm:text-6xl`}
+                    width="w-full"
+                  />
+                </div>
+                <div className="mt-4 max-w-2xl">
+                  <SkeletonLineBars
+                    lines={{ base: 5, sm: 3 }}
+                    height="h-lh text-lg leading-8"
+                    width="w-full"
+                  />
+                </div>
+                <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">
+                  <Bone shape="control" className="h-12 w-44" />
+                  <Bone shape="control" className="h-11 w-24" />
+                </div>
+                <div className="mt-3">
+                  <SkeletonLineBars
+                    lines={{ base: 2, sm: 1 }}
+                    height="h-lh text-sm"
+                    width="w-72 max-w-full"
+                  />
+                </div>
+                <div className="mt-2">
+                  <SkeletonLineBars
+                    lines={{ base: 2, sm: 1 }}
+                    height="h-lh text-sm"
+                    width="w-80 max-w-full"
+                  />
+                </div>
+              </div>
+              <Bone
+                shape="panel"
+                className="h-96 w-full max-w-xl justify-self-center lg:justify-self-end"
               />
             </div>
           </div>

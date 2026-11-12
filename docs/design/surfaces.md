@@ -485,6 +485,17 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 ### The product page — `/product`
 
+**Product proof, 2026-11-11 (#4320).** One Today screen now sits beside the hero on desktop
+and follows its existing demo and setup doors on a phone. The directory still answers which job
+DiveDay handles; the preview gives the buyer a concrete starting point before that list. It reuses
+the homepage’s current readiness preview and accessible description, with no added control or claim.
+This supersedes the earlier no-screen choice below. Remove a second screen or repeated feature
+list first; the existing directory remains the complete catalogue.
+
+The homepage booking preview and website preview include the demo shop’s bundled Molasses Reef
+cover. The real reef photo is part of the sample storefront, separate from the approved editorial
+illustrations. It adds no customer endorsement or evidence, and the original artwork stays intact.
+
 **Composition, 2026-10-26 (#3069).** The twelve-feature catalogue lives here, reached by the
 homepage’s quiet full-list door. The existing hero starts sooner; no new hero scene is added.
 The homepage retains all five essential journey scenes, including dock check-in, with compact
