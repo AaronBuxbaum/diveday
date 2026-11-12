@@ -1202,3 +1202,14 @@ The control changes the URL; the trip’s live booking count sets the actual upp
 A short boat’s muted title repeats no claim of availability: its words name both seats left and party size.
 A separate party-search panel was considered; keeping the count on the existing filter form preserves
 one list and puts the question beside its answer without introducing another browsing surface.
+
+
+## Public schedule: evidence for the day (#4377)
+
+The ledger helps a visitor picture a real day while keeping each departure one object to open.
+Its first planned site may supply a small photo; one extra fact answers what the crew posted for a
+departure in the next 48 hours, otherwise what eligible recent logs record at that site.
+Neither image nor fact creates another control, and a row without evidence keeps its existing shape.
+Descriptions and badges are the first things to remove: they turn the list into repeated pitches.
+A card grid was considered; the retained ledger keeps day scanning, seat counts, and the single row
+link together while evidence remains subordinate to the departure’s title.

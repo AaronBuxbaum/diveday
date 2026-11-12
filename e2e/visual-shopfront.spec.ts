@@ -43,6 +43,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public schedule renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link").waitFor();
+        await publicReefCard(page).locator("[data-schedule-fact]").waitFor();
         await capture(page, "schedule", scheme);
       });
 

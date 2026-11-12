@@ -409,3 +409,20 @@ test("the first schedule control changes only the URL party preference", {
     page.getByRole("group", { name: t("schedule.filters.partySize") }).getByRole("status"),
   ).toHaveText("4");
 });
+
+test("a public schedule row adds its site photo and one fact without another tap target", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.goto("/s/blue-mantis");
+  const reef = page
+    .locator("form + ul")
+    .getByRole("listitem")
+    .filter({
+      has: page.getByRole("heading", { name: "Two-Tank Reef — Molasses & French", exact: true }),
+    })
+    .first();
+  await expect(reef.locator('img[alt=""]')).toHaveCount(1);
+  await expect(reef.locator("[data-schedule-fact]")).toHaveCount(1);
+  await expect(reef.locator("[data-schedule-fact]")).not.toBeEmpty();
+  await expect(reef.getByRole("link")).toHaveCount(1);
+});

@@ -11,6 +11,7 @@ import { listBoats } from "@/features/boats";
 import { listShelfCourses } from "@/features/courses";
 import { getShopReviewAggregate } from "@/features/reviews";
 import { listTripLenses } from "@/features/trip-lenses";
+import { siteSightings } from "@/features/trip-sightings";
 import { EMPTY_REVIEW_AGGREGATE } from "@/lib/reviews";
 import { resolveLens } from "@/lib/trip-lenses";
 import { seatsOnSale } from "@/lib/trips";
@@ -54,7 +55,7 @@ export function listedDepartureSummaries(db: AppDb, shopId: string, tripIds: str
  */
 export async function readSchedulePage(
   db: AppDb,
-  shop: { id: string; reviewsEnabled: boolean },
+  shop: { id: string; reviewsEnabled: boolean; sightingsEnabled?: boolean },
   {
     isEmbed = false,
     lens,
@@ -134,6 +135,7 @@ export async function readSchedulePage(
     everHadDeparture,
     [diveSitesByTrip, requirementsByTrip],
     shelfNextStarts,
+    recentSightings,
   ] = await Promise.all([
     lensesRead,
     activeLensRead,
@@ -156,6 +158,16 @@ export async function readSchedulePage(
     ),
     // The shelf's next starts: a diver reads it, so only storefront sessions count.
     shelfIds.then((ids) => upcomingSessionsByCourse(db, shop.id, ids)),
+    isEmbed || !shop.sightingsEnabled
+      ? new Map()
+      : upcomingRead.then(({ trips: listed }) =>
+          siteSightings(
+            db,
+            shop.id,
+            listed.flatMap((trip) => (trip.diveSite ? [trip.diveSite.id] : [])),
+            now,
+          ),
+        ),
   ]);
   return {
     lenses,
@@ -170,5 +182,6 @@ export async function readSchedulePage(
     diveSitesByTrip,
     requirementsByTrip,
     shelfNextStarts,
+    recentSightings,
   };
 }

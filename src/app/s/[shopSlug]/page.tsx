@@ -124,8 +124,6 @@ export default async function SchedulePage({
   const { partySize, hasSpaceFilter, tripTypeFilter, canDiveFilter, hideAboveFilter } =
     scheduleFiltersFor(query);
   const db = await getDb();
-  // The same row `generateMetadata` above already read: one query for both
-  // (issue #1737).
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) {
     notFound();
@@ -157,6 +155,7 @@ export default async function SchedulePage({
     diveSitesByTrip,
     requirementsByTrip,
     shelfNextStarts,
+    recentSightings,
   } = await readSchedulePage(db, shop, {
     lens,
     cursor: { after, before },
@@ -233,6 +232,7 @@ export default async function SchedulePage({
 
   const weekRows = weekLedgerRows({
     listedTrips: visibleUpcoming,
+    facts: { now, shop, sightings: recentSightings },
     partySize,
     lenses,
     diveSitesByTrip,
@@ -353,9 +353,9 @@ export default async function SchedulePage({
             ) : null}
           </div>
 
-          {/* The filter form stays directly before the list; the calendar
-              above it is one group. On phones the disclosure holds the lens
-              chips as well as the advanced controls (public audit P3, #3140), which must stay directly before the list:
+          {/* The shop’s lens chips (ADR 20260904-reef-all-the-way-down, D02)
+              stay visible; the disclosure holds the advanced controls. The form,
+              with its chips and controls, stays directly before the list:
               `e2e/schedule-filters.spec.ts` and `e2e/trip-admission.spec.ts`
               address the departures as `form + ul`. None of it renders in the
               frame (issue #805): `FilterChips` is a `<nav>` landmark and

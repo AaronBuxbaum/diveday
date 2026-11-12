@@ -3,7 +3,8 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { readSchedulePage } from "./schedule-reads";
 
-const ctx = fileScopedShopContext();
+// Sightings require the past departures that the history fixture records.
+const ctx = fileScopedShopContext({ history: true });
 
 const VIEW = {
   lens: undefined,
@@ -26,11 +27,13 @@ describe("readSchedulePage (in-memory PGlite)", () => {
     }
     expect(reads.diveSitesByTrip.size).toBeGreaterThan(0);
     expect(reads.activeLens).toBeNull();
+    expect(reads.recentSightings.size).toBeGreaterThan(0);
   });
 
   it("reads no lenses, courses, fleet or rating inside the frame", async () => {
     const { db, shop } = ctx;
     const reads = await readSchedulePage(db, shop, { ...VIEW, isEmbed: true, now: nowDate() });
+    expect(reads.recentSightings.size).toBe(0);
     expect(reads.lenses).toEqual([]);
     expect(reads.activeCourses).toEqual([]);
     expect(reads.boats).toEqual([]);
@@ -49,4 +52,14 @@ describe("readSchedulePage (in-memory PGlite)", () => {
     expect(reads.activeLens).toBeNull();
     expect(reads.upcoming.length).toBeGreaterThan(0);
   });
+});
+
+it("omits sightings when the shop switches them off", async () => {
+  const { db, shop } = ctx;
+  const reads = await readSchedulePage(
+    db,
+    { ...shop, sightingsEnabled: false },
+    { ...VIEW, isEmbed: false, now: nowDate() },
+  );
+  expect(reads.recentSightings.size).toBe(0);
 });

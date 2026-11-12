@@ -143,7 +143,8 @@
       "line": "Seen on {seen} of the {trips, plural, one {# {month} trip} other {# {month} trips}} our crews logged",
       "honest": "What our crews logged on {month} trips, in every season on record. It says what was seen, not what you will see."
     },
-    "boatCapacity": "{count, plural, one {# person aboard, including crew} other {# people aboard, including crew}}"
+    "boatCapacity": "{count, plural, one {# person aboard, including crew} other {# people aboard, including crew}}",
+    "recentSighting": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}} in the past 30 days"
   },
   "trip": {
     "coursePlanHeading": "Your course plan",

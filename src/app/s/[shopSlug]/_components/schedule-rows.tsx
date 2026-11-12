@@ -10,12 +10,16 @@ import {
   resolveCourseDepths,
   resolveImageAlt,
 } from "@/lib/courses";
+import type { DepthUnit } from "@/lib/depth-units";
 import { embedTripPath } from "@/lib/embed-routes";
 import { formatDayParts, formatMoneyScanned, formatShortDate, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
 import { publicCoursePath } from "@/lib/public-routes";
+import type { SiteSightings } from "@/lib/sightings";
+import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { listedDepartureSummaries } from "./schedule-reads";
+import { scheduleRowFact } from "./schedule-row-facts";
 import {
   type RequirementsByTrip,
   scheduleSeatState,
@@ -53,6 +57,7 @@ export function seatPriceLabel(
 
 export function weekLedgerRows({
   listedTrips,
+  facts,
   lenses,
   diveSitesByTrip,
   requirementsByTrip,
@@ -67,6 +72,11 @@ export function weekLedgerRows({
   t,
 }: {
   listedTrips: UpcomingTrips;
+  facts?: {
+    now: Date;
+    shop: { depthUnit: DepthUnit; temperatureUnit?: TemperatureUnit | null };
+    sightings: ReadonlyMap<string, SiteSightings>;
+  };
   lenses: Awaited<ReturnType<typeof listTripLenses>>;
   diveSitesByTrip: Awaited<ReturnType<typeof listedDepartureSummaries>>[0];
   requirementsByTrip: RequirementsByTrip;
@@ -115,6 +125,15 @@ export function weekLedgerRows({
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       title: trip.title,
+      photoUrl: !isEmbed ? (trip.diveSite?.imageUrls?.[0] ?? null) : null,
+      fact:
+        !isEmbed && facts
+          ? scheduleRowFact(
+              trip,
+              trip.diveSite ? facts.sightings.get(trip.diveSite.id) : undefined,
+              { ...facts, t },
+            )
+          : null,
       lens: trip.lensId ? (lensById.get(trip.lensId) ?? null) : null,
       course: trip.course
         ? {

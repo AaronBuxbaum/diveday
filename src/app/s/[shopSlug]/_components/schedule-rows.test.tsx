@@ -57,6 +57,7 @@ function rows(
     above?: string[];
     listedTrips?: UpcomingTrips;
     partySize?: number;
+    facts?: Parameters<typeof weekLedgerRows>[0]["facts"];
   } = {},
 ) {
   return weekLedgerRows({
@@ -84,6 +85,7 @@ function rows(
     shopSlug: "blue-mantis",
     isEmbed: overrides.isEmbed ?? false,
     partySize: overrides.partySize,
+    facts: overrides.facts,
     timezone: TZ,
     currency: "usd",
     locale: "en-US",
@@ -179,4 +181,28 @@ it("keeps insufficient boats visible, names their seats, and carries the party t
   expect(party[0]?.href).toBe("/s/blue-mantis/trips/t1?partySize=4");
   expect(party[1]?.insufficientSeats).toBe(false);
   expect(rows({ partySize: 4, isEmbed: true })[0]?.href).toBe("/s/blue-mantis/embed/trip/t1");
+});
+
+it("uses only the first planned site’s photo and keeps the embed unchanged", () => {
+  const listedTrips = [
+    {
+      ...listed[0],
+      diveSite: { id: "first-site", imageUrls: ["/uploads/first.jpg", "/uploads/second.jpg"] },
+      waterTemperatureC: 27,
+      visibilityMeters: 18,
+      surfaceConditions: null,
+      conditionsSummary: null,
+    },
+  ] as unknown as UpcomingTrips;
+  const facts = {
+    now: new Date("2026-07-24T12:00:00Z"),
+    shop: { depthUnit: "feet" as const, temperatureUnit: "fahrenheit" as const },
+    sightings: new Map(),
+  };
+  const [normal] = rows({ listedTrips, facts });
+  expect(normal?.photoUrl).toBe("/uploads/first.jpg");
+  expect(normal?.fact).toContain("81°F water");
+  const [embed] = rows({ listedTrips, facts, isEmbed: true });
+  expect(embed?.photoUrl).toBeNull();
+  expect(embed?.fact).toBeNull();
 });

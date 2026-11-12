@@ -50,7 +50,7 @@ export default function TripsLoading() {
               <div className="h-px flex-1 bg-border" />
             </div>
             {[0, 1].map((row) => (
-              <div key={row} className={`${WEEK_ROW_BOX_CLASS} sm:items-start`}>
+              <div key={row} className={`${WEEK_ROW_BOX_CLASS} lg:items-start`}>
                 <div className={WEEK_TIME_RAIL_CLASS}>
                   <Bone className="h-6 w-36" />
                 </div>

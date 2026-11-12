@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { type CSSProperties, Fragment, type ReactNode } from "react";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { DoorChevron } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
@@ -19,8 +20,8 @@ import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
  *
  * So a row is **the time, the title, and one meta line** — course session,
  * where it goes, what it asks of you — with the seat state and the price as the
- * row's trailing facts. The rule the tests hold this to: one meta line, and no
- * second detail line ever comes back.
+ * row's trailing facts. A photo and one evidence-backed fact may follow: posted conditions for the next
+ * 48 hours, otherwise one recent sighting (#4377, approved 2026-11-12).
  *
  * Two things the row keeps that look like detail and are not. **"+ 1 more dive
  * site"** rides the site fragment, because a two-tank day showing one site is
@@ -48,6 +49,8 @@ export type WeekLedgerRow = {
   startsAt: Date;
   endsAt: Date;
   title: string;
+  photoUrl?: string | null;
+  fact?: string | null;
   /**
    * The shop's own word for this kind of day, leading the meta line (ADR
    * 20260904-reef-all-the-way-down, decision 2).
@@ -91,7 +94,7 @@ export type WeekLedgerRow = {
  * currency sign a little wider than a digit (€ is about 1.1ch) in a price with
  * no separator to give the difference back ("€95"). The width is a custom
  * property on the list, so `ch` resolves in the price's own face, and each
- * row's column reads it from `sm` up. Null when no row has a price: a list with
+ * row's column reads it from `lg` up. Null when no row has a price: a list with
  * nothing to charge draws no column at all.
  */
 function priceColumnWidth(rows: readonly WeekLedgerRow[]): string | null {
@@ -172,12 +175,13 @@ export function WeekLedger({
  * The row's box: below `sm` it bleeds `-mx-3` into the gutter so its hover
  * fill has room and its words stay on the column; from `sm` it sits on the
  * column with 16px inside. Its `py-4 sm:py-5` is the room the list hands back
- * below itself.
+ * below itself. Time and price stay on their own lines until `lg`: at 640px
+ * their fixed rails plus a photo left about 41px for the title (#4377).
  */
 export const WEEK_ROW_BOX_CLASS =
-  "-mx-3 flex flex-col gap-2 px-3 py-4 sm:mx-0 sm:flex-row sm:gap-4 sm:px-4 sm:py-5";
+  "-mx-3 flex flex-col gap-2 px-3 py-4 sm:mx-0 lg:flex-row lg:gap-4 sm:px-4 sm:py-5";
 /** The row's time rail, wide enough for an eight-digit range. */
-export const WEEK_TIME_RAIL_CLASS = "shrink-0 sm:w-44";
+export const WEEK_TIME_RAIL_CLASS = "shrink-0 lg:w-44";
 /** The day rule's numeral: two tabular digits wide whatever the day. */
 export const DAY_NUMERAL_CLASS = `${FIGURE_LARGE_CLASS} min-w-[2ch] leading-none`;
 /** The day rule's weekday-over-month column, as wide as the longest label. */
@@ -303,14 +307,14 @@ function Row({
   const quiet = row.capacityTone === "full" || row.aboveLevel !== null || row.insufficientSeats;
   return (
     <li id={anchorId} className={anchorId ? "scroll-mt-16" : undefined}>
-      {/* `sm:items-baseline`: the seat group centres a 28px badge, taller than
+      {/* `lg:items-baseline`: the seat group centres a 28px badge, taller than
           the title's 24px line, so top-aligned its price and chevron sat 2–3px
           below the title. On one baseline — the badge's word's — they share
           its line. The fill answers the row's own door (`>a`, the overlay
           link, a direct child), not the course link nested in its meta line,
           which lit the whole row as if the row had focus. */}
       <div
-        className={`${WEEK_ROW_BOX_CLASS} group relative rounded-lg transition-colors hover:bg-surface has-[>a:focus-visible]:bg-surface sm:items-baseline`}
+        className={`${WEEK_ROW_BOX_CLASS} group relative rounded-lg transition-colors hover:bg-surface has-[>a:focus-visible]:bg-surface lg:items-baseline`}
       >
         {/* The ring is drawn inside the row: below `sm` the row bleeds
             `-mx-3` into a 16px gutter, 4px from the screen's edge, which cut
@@ -336,29 +340,44 @@ function Row({
             {row.timeRange}
           </p>
         </div>
-        <div className="min-w-0 flex-1">
-          <h3
-            className={`text-base font-semibold group-hover:text-primary${quiet ? " text-muted" : ""}`}
-          >
-            {row.title}
-          </h3>
-          {meta.length > 0 ? (
-            <p className="mt-1 text-sm text-muted">
-              {meta.map((part, index) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: the separator's only identity is its position
-                <Fragment key={index}>
-                  {index > 0 ? " · " : null}
-                  {part}
-                </Fragment>
-              ))}
-            </p>
+        <div className="flex min-w-0 flex-1 gap-3">
+          {row.photoUrl ? (
+            <StoredPhoto
+              src={row.photoUrl}
+              alt=""
+              className="pointer-events-none size-16 shrink-0 rounded-inset"
+              sizes="64px"
+            />
           ) : null}
+          <div className="min-w-0 flex-1">
+            <h3
+              className={`text-base font-semibold group-hover:text-primary${quiet ? " text-muted" : ""}`}
+            >
+              {row.title}
+            </h3>
+            {meta.length > 0 ? (
+              <p className="mt-1 text-sm text-muted">
+                {meta.map((part, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the separator's only identity is its position
+                  <Fragment key={index}>
+                    {index > 0 ? " · " : null}
+                    {part}
+                  </Fragment>
+                ))}
+              </p>
+            ) : null}
+            {row.fact ? (
+              <p data-schedule-fact className="mt-1 line-clamp-1 text-base text-muted">
+                {row.fact}
+              </p>
+            ) : null}
+          </div>
         </div>
         {/* The seat count is one neutral fact in muted text, full or not
             (visual review 2026-10-24, B19): no chip, no scarcity colour. The
             chevron is the row's one at-rest tap cue: with no border, a phone row
             (where hover does not exist) read as a text listing rather than as a
-            pressable thing. Below `sm` the row is a column and this group is
+            pressable thing. Below `lg` the row is a column and this group is
             stretched to its width, so the chevron takes `ms-auto` to hold the
             row's end rather than trailing each row's words. It is the doors'
             glyph (`DoorChevron`), its box cropped to its ink, so the arrow
@@ -374,12 +393,12 @@ function Row({
               chevron where the others' are rather than sliding 43px into the
               price's place. It is as wide as the list's longest price
               (`--price-col`, `priceColumnWidth`) and set to its end, so seat
-              states end on one x too. Below `sm` the group packs from the
+              states end on one x too. Below `lg` the group packs from the
               start and the chevron holds the row's end by itself, so an empty
               column there is only a gap and stands down. */}
           {priceColumn ? (
             <p
-              className={`text-base font-semibold tabular-nums sm:min-w-(--price-col) sm:text-end${row.price ? "" : " max-sm:hidden"}`}
+              className={`text-base font-semibold tabular-nums lg:min-w-(--price-col) lg:text-end${row.price ? "" : " max-lg:hidden"}`}
             >
               {row.price}
             </p>

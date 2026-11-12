@@ -60,6 +60,15 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
+function PartySizeNotice({ requested, remaining }: { requested: number; remaining: number }) {
+  const t = useTranslations("booking");
+  return requested > remaining ? (
+    <p role="status" className="text-base text-muted">
+      {t("partyExceedsSeats", { requested, remaining })}
+    </p>
+  ) : null;
+}
+
 export function WaitlistConfirmation({
   firstName,
   shopSlug,
@@ -226,6 +235,8 @@ export function TripFullSection({
     reason: "same_run" | "same_course" | "same_site";
   }[];
 }) {
+  const waitlistLimit = Math.min(trip.capacity, MAX_PUBLIC_PARTY_SIZE);
+  const waitlistTooSmall = requestedPartySize > waitlistLimit;
   const t = useTranslations("booking");
   const tTrip = useTranslations("trip");
   return (
@@ -318,11 +329,11 @@ export function TripFullSection({
               texting consent) and no certification question for a seat
               that may never open (visual review 2026-10-24, B57). Booking
               asks both when a seat does. */}
-          {requestedPartySize > Math.min(trip.capacity, MAX_PUBLIC_PARTY_SIZE) ? (
+          {waitlistTooSmall ? (
             <p className="text-base text-muted">
               {t("waitlistPartyExceedsLimit", {
                 requested: requestedPartySize,
-                limit: Math.min(trip.capacity, MAX_PUBLIC_PARTY_SIZE),
+                limit: waitlistLimit,
               })}
             </p>
           ) : null}
@@ -640,11 +651,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
           setMemorySlotUnavailable(!token);
         }}
       >
-        {(context.requestedPartySize ?? 1) > remaining ? (
-          <p role="status" className="text-base text-muted">
-            {t("partyExceedsSeats", { requested: context.requestedPartySize ?? 1, remaining })}
-          </p>
-        ) : null}
+        <PartySizeNotice requested={context.requestedPartySize ?? 1} remaining={remaining} />
         {requirement ? <p className="text-sm text-muted">{requirement}</p> : null}
         <input type="hidden" name="returningDiverDeviceToken" defaultValue="" />
         <input type="hidden" name="returningDiverDeviceGeneration" defaultValue="" />
