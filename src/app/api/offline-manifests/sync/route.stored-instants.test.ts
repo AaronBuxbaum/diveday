@@ -4,6 +4,7 @@ import { createChecklistItem } from "@/db/pre-departure-check";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowMs } from "@/lib/clock";
+import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { advanceClock } from "@/test/clock";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import {
@@ -25,7 +26,7 @@ const iso = (ms: number) => new Date(ms).toISOString();
 function request(body: unknown) {
   return new Request("http://localhost/api/offline-manifests/sync", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { ...ROLL_CALL_CAUSAL_HEADERS, "content-type": "application/json" },
     body: JSON.stringify(body),
   });
 }
@@ -172,25 +173,40 @@ describe("offline sync returns committed instants without inferring chronology",
           request({ includeStoredInstants: true, sentAt: iso(start + MINUTE), events: [event] }),
         );
         expect(response.status).toBe(200);
-        expect((await response.json()).results[0]).toMatchObject(
-          scenario === "delayed"
-            ? { status: "rejected", reason: "newer_event_exists" }
-            : { status: "applied", storedOccurredAt: iso(start) },
-        );
+        expect((await response.json()).results[0]).toMatchObject({
+          status: "applied",
+          storedOccurredAt: iso(start),
+        });
         if (scenario === "delayed") {
           const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
           const standing =
             subject === "diver"
-              ? manifest?.divers.find((row) => row.bookingId === booking.booking.id)?.rollCall
-              : manifest?.crew.find((row) => row.id === crewId)?.rollCall;
-          expect(standing).toMatchObject({ state: "not_boarded" });
-        } else {
-          advanceClock(2 * MINUTE);
-          const retry = await POST(request({ includeStoredInstants: true, events: [event] }));
-          expect((await retry.json()).results[0]).toMatchObject({
-            status: "duplicate",
-            storedOccurredAt: iso(start),
+              ? manifest?.divers.find((row) => row.bookingId === booking.booking.id)
+              : manifest?.crew.find((row) => row.id === crewId);
+          // Retain both statements for explicit reconciliation. Neither tap time
+          // nor send/receive delay proves that the aboard mark saw the alarm.
+          expect(standing?.rollCall).toMatchObject({ state: "not_boarded" });
+          expect(standing?.rollCallContext).toMatchObject({
+            conflict: true,
+            orderingUnknown: true,
           });
+          expect(standing?.rollCallContext?.observedEvidenceIds).toHaveLength(2);
+        }
+        advanceClock(2 * MINUTE);
+        const retry = await POST(request({ includeStoredInstants: true, events: [event] }));
+        expect((await retry.json()).results[0]).toMatchObject({
+          status: "duplicate",
+          storedOccurredAt: iso(start),
+        });
+        if (scenario === "delayed") {
+          const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+          const standing =
+            subject === "diver"
+              ? manifest?.divers.find((row) => row.bookingId === booking.booking.id)
+              : manifest?.crew.find((row) => row.id === crewId);
+          expect(standing?.rollCall).toMatchObject({ state: "not_boarded" });
+          expect(standing?.rollCallContext?.conflict).toBe(true);
+          expect(standing?.rollCallContext?.observedEvidenceIds).toHaveLength(2);
         }
       });
     }

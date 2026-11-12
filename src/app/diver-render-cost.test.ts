@@ -233,6 +233,37 @@ describe("what a diver's page sends", () => {
     const { stats } = await withQueryStats(() => publicSchedulePageReads(db, shop.slug));
     expect(report("public schedule", stats.queries)).toBeLessThanOrEqual(PUBLIC_SCHEDULE_CEILING);
   });
+
+  it("keeps schedule query count fixed as listed departures and first sites grow", async () => {
+    const { db, shop } = await timedSeededShop({ history: true });
+    const view = {
+      isEmbed: false,
+      lens: undefined,
+      cursor: { after: undefined, before: undefined },
+      now: nowDate(),
+      listMonthBounds: null,
+      hasSpaceFilter: false,
+      tripTypeFilter: undefined,
+    } as const;
+    const wide = await withQueryStats(() => readSchedulePage(db, shop, view));
+    const first = wide.result.upcoming.find((trip) => trip.diveSite);
+    if (!first) throw new Error("the schedule fixture has no planned site");
+    const narrow = await withQueryStats(() =>
+      readSchedulePage(db, shop, {
+        ...view,
+        listMonthBounds: {
+          monthStart: first.startsAt,
+          monthEnd: new Date(first.startsAt.getTime() + 1),
+        },
+      }),
+    );
+    const sites = (rows: typeof wide.result.upcoming) =>
+      new Set(rows.flatMap((trip) => (trip.diveSite ? [trip.diveSite.id] : [])));
+    expect(wide.result.upcoming.length).toBeGreaterThan(narrow.result.upcoming.length);
+    expect(sites(wide.result.upcoming).size).toBeGreaterThan(sites(narrow.result.upcoming).size);
+    expect(wide.stats.queries).toBe(narrow.stats.queries);
+    expect(wide.stats.queries).toBeLessThanOrEqual(PUBLIC_SCHEDULE_CEILING);
+  });
 });
 
 describe("how many round trips a diver's page waits for, one after another", () => {
@@ -319,5 +350,8 @@ const RECAP_PHASE_CEILING = 5;
 // The shop, `readSchedulePage`'s batch with its chained reads, then the
 // board's-end read. 16 → 14 statements and 7 → 5 phases (item 29): the
 // running series' templates are one read, not one per series.
-const PUBLIC_SCHEDULE_CEILING = 14;
+// #4377 adds exactly three batched statements from the existing siteSightings reader:
+// recorded dives, tapped departures, and species tallies for all listed first sites.
+// Site photos and posted conditions reuse the schedule’s already-joined rows.
+const PUBLIC_SCHEDULE_CEILING = 17;
 const PUBLIC_SCHEDULE_PHASE_CEILING = 5;

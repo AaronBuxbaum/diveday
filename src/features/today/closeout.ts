@@ -113,6 +113,8 @@ export type CloseoutTripInput = {
    * input rather than optional.
    */
   sailed: number;
+  /** Same person in both roles; back requires positive final evidence in both. */
+  physicalOverlap?: { out: number; back: number };
   /** Seats the departure had. */
   capacity: number;
   /** Decides the closing checkpoint the crew are counted at. */
@@ -213,6 +215,8 @@ export type CloseoutDeparture = {
   booked: number;
   /** See `CloseoutTripInput.sailed` — the divers aboard, never the seats sold. */
   sailed: number;
+  /** Same person in both roles; back requires positive final evidence in both. */
+  physicalOverlap?: { out: number; back: number };
   capacity: number;
   plannedDives: number;
   /** See `CloseoutTripInput.crew` — the assigned crew, at the closing checkpoint. */
@@ -457,6 +461,7 @@ export function assembleDayCloseout(input: {
       endsAt: trip.endsAt,
       booked: trip.booked,
       sailed: trip.sailed,
+      physicalOverlap: trip.physicalOverlap,
       capacity: trip.capacity,
       plannedDives: trip.plannedDives,
       crew: trip.crew,
@@ -531,6 +536,8 @@ export type StationClose = {
    * would come to disagree (issue #1689).
    */
   sailed: number;
+  /** Same person in both roles; back requires positive final evidence in both. */
+  physicalOverlap?: { out: number; back: number };
   /**
    * **{@link sailed} less the headline gap's own count** — not a head count of
    * everyone who came back.
@@ -720,6 +727,7 @@ export function assembleEveningClose(
         ...(departure.openCount ? { openCount: departure.openCount } : {}),
         booked: departure.booked,
         sailed: departure.sailed,
+        physicalOverlap: departure.physicalOverlap,
         back: Math.max(0, departure.sailed - missing),
         crewSailed,
         crewAccountedFor: crewIsAccountedFor(closingCheckpoint, departure.crew),
@@ -740,8 +748,16 @@ export function assembleEveningClose(
     );
   const divers = stations.reduce((total, station) => total + station.sailed, 0);
   const crew = stations.reduce((total, station) => total + station.crewSailed, 0);
-  const out = divers + crew;
-  const back = stations.reduce((total, station) => total + station.back + station.crewBack, 0);
+  const out = stations.reduce(
+    (total, station) =>
+      total + station.sailed + station.crewSailed - (station.physicalOverlap?.out ?? 0),
+    0,
+  );
+  const back = stations.reduce(
+    (total, station) =>
+      total + station.back + station.crewBack - (station.physicalOverlap?.back ?? 0),
+    0,
+  );
   const closing =
     stations.length > 0 &&
     stations.every((station) => station.settled && station.status !== "still_out");

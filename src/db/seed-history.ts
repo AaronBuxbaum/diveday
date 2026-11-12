@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { DAY_MS } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { demoEmail } from "@/lib/simulator-email";
@@ -16,7 +17,6 @@ import {
   orders,
   people,
   personRoles,
-  rollCallEvents,
   tripAssignments,
   tripDives,
   tripLenses,
@@ -786,7 +786,7 @@ export async function seedHistory(
   // A no-show gets one explicit `not_boarded` at departure and nothing after.
   // Carry-forward propagates that absence on its own, and it may never be
   // handed a fabricated `boarded` — "off the boat stays off the boat".
-  const rollCallRows = plans.flatMap((plan, i): (typeof rollCallEvents.$inferInsert)[] => {
+  const rollCallRows = plans.flatMap((plan, i): SeedRollCallEvidenceInput[] => {
     const booking = bookingRows[i];
     if (!booking || plan.status === "cancelled") return [];
     const trip = histTrips.find((row) => row.id === plan.tripId);
@@ -1192,12 +1192,13 @@ async function writeHistoryTrails(
   input: {
     shopId: string;
     createdByPersonId: string;
-    rollCallRows: (typeof rollCallEvents.$inferInsert)[];
+    rollCallRows: SeedRollCallEvidenceInput[];
     plans: readonly { tripId: string; status: string; createdAt: Date }[];
     bookingRows: readonly ({ id: string } | undefined)[];
   },
 ): Promise<void> {
-  if (input.rollCallRows.length > 0) await db.insert(rollCallEvents).values(input.rollCallRows);
+  if (input.rollCallRows.length > 0)
+    await seedRollCallEvidence(db, input.rollCallRows, { observesPrevious: false });
   await seedArrivals(
     db,
     input.plans.flatMap((plan, i) => {

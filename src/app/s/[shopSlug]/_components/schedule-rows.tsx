@@ -1,4 +1,4 @@
-import type { nextSessionStartByCourse } from "@/db/trips";
+import type { upcomingSessionsByCourse } from "@/db/trips";
 import { type listShelfCourses, SHELF_COURSE_COUNT } from "@/features/courses";
 import type { listTripLenses } from "@/features/trip-lenses";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -10,14 +10,22 @@ import {
   resolveCourseDepths,
   resolveImageAlt,
 } from "@/lib/courses";
+import type { DepthUnit } from "@/lib/depth-units";
 import { embedTripPath } from "@/lib/embed-routes";
 import { formatDayParts, formatMoneyScanned, formatShortDate, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
-import { publicCoursePath, publicTripPath } from "@/lib/public-routes";
-import { courseNextStartLabel } from "../course-date-label";
+import { publicCoursePath } from "@/lib/public-routes";
+import type { SiteSightings } from "@/lib/sightings";
+import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { listedDepartureSummaries } from "./schedule-reads";
-import { type RequirementsByTrip, scheduleSeatState, type UpcomingTrips } from "./schedule-view";
+import { scheduleRowFact } from "./schedule-row-facts";
+import {
+  type RequirementsByTrip,
+  scheduleSeatState,
+  scheduleTripHref,
+  type UpcomingTrips,
+} from "./schedule-view";
 import type { WeekLedgerRow } from "./WeekLedger";
 
 /**
@@ -49,6 +57,7 @@ export function seatPriceLabel(
 
 export function weekLedgerRows({
   listedTrips,
+  facts,
   lenses,
   diveSitesByTrip,
   requirementsByTrip,
@@ -56,12 +65,18 @@ export function weekLedgerRows({
   dayKeyOf,
   shopSlug,
   isEmbed = false,
+  partySize = 1,
   timezone,
   currency,
   locale,
   t,
 }: {
   listedTrips: UpcomingTrips;
+  facts?: {
+    now: Date;
+    shop: { depthUnit: DepthUnit; temperatureUnit?: TemperatureUnit | null };
+    sightings: ReadonlyMap<string, SiteSightings>;
+  };
   lenses: Awaited<ReturnType<typeof listTripLenses>>;
   diveSitesByTrip: Awaited<ReturnType<typeof listedDepartureSummaries>>[0];
   requirementsByTrip: RequirementsByTrip;
@@ -72,6 +87,7 @@ export function weekLedgerRows({
   shopSlug: string;
   /** The framed schedule's rows open the framed trip page (`embed/trip/<id>`). */
   isEmbed?: boolean;
+  partySize?: number;
   timezone: string;
   currency: ShopCurrency;
   locale: string;
@@ -97,7 +113,9 @@ export function weekLedgerRows({
       id: trip.id,
       dayKey: dayKeyOf(trip.startsAt),
       dayParts: formatDayParts(trip.startsAt, locale, timezone),
-      href: isEmbed ? embedTripPath(shopSlug, trip.id) : publicTripPath(shopSlug, trip.id),
+      href: isEmbed
+        ? embedTripPath(shopSlug, trip.id)
+        : scheduleTripHref(shopSlug, trip.id, partySize),
       linkLabel: t("schedule.tripCardLabel", {
         when: `${formatShortDate(trip.startsAt, locale, timezone)} · ${formatTimeRange(trip.startsAt, trip.endsAt, locale, timezone)}`,
         trip: trip.title,
@@ -107,6 +125,15 @@ export function weekLedgerRows({
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       title: trip.title,
+      photoUrl: !isEmbed ? (trip.diveSite?.imageUrls?.[0] ?? null) : null,
+      fact:
+        !isEmbed && facts
+          ? scheduleRowFact(
+              trip,
+              trip.diveSite ? facts.sightings.get(trip.diveSite.id) : undefined,
+              { ...facts, t },
+            )
+          : null,
       lens: trip.lensId ? (lensById.get(trip.lensId) ?? null) : null,
       course: trip.course
         ? {
@@ -132,7 +159,14 @@ export function weekLedgerRows({
       // Marked, never removed, unless the reader asked for the shorter list
       // (issue #696) — and the word is what gives the dimming a name.
       aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
-      capacityText: seats.text,
+      insufficientSeats: !isEmbed && trip.capacity - trip.booked < partySize,
+      capacityText:
+        !isEmbed && trip.capacity - trip.booked < partySize
+          ? t("schedule.filters.partySeats", {
+              count: Math.max(0, trip.capacity - trip.booked),
+              party: partySize,
+            })
+          : seats.text,
       capacityTone: seats.tone,
       // A course session reads the course total the booking charges, never
       // the trip row's own figure (fourth UX review item 2, H-20261014-course-session-price).
@@ -157,7 +191,7 @@ export function shelfCourseCards({
   t,
 }: {
   activeCourses: Awaited<ReturnType<typeof listShelfCourses>>;
-  shelfNextStarts: Awaited<ReturnType<typeof nextSessionStartByCourse>>;
+  shelfNextStarts: Awaited<ReturnType<typeof upcomingSessionsByCourse>>;
   shop: { depthUnit: Parameters<typeof courseDepthFormat>[1]; timezone: string };
   shopSlug: string;
   currency: ShopCurrency;
@@ -169,10 +203,9 @@ export function shelfCourseCards({
     text === null ? null : resolveCourseDepths(text, depthFormat);
   return activeCourses.slice(0, SHELF_COURSE_COUNT).map((course) => {
     const total = courseTotalCents(course);
-    const nextStart = shelfNextStarts.get(course.id) ?? null;
     return {
+      sessions: shelfNextStarts.get(course.id) ?? [],
       duration: resolve(course.durationText),
-      nextStart: nextStart ? courseNextStartLabel(nextStart, locale, shop.timezone, t) : null,
       id: course.id,
       title: course.title,
       summary: resolve(course.summary),

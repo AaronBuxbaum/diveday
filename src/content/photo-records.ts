@@ -32,7 +32,20 @@ export type PhotoRecord = {
 
 export type Unphotographed = { reason: string; checked: string };
 
+export type DemoPlaceholderRecord = {
+  subject: string;
+  generated: true;
+  generator: string;
+  approval: string;
+  reviewed: string;
+  sourceSize: [number, number];
+  marking: string;
+  rights: string;
+};
+
 export type PhotoRecords = {
+  /** Generated demo-only artwork, never included in the licensed photo audit. */
+  demoPlaceholders?: Record<string, DemoPlaceholderRecord>;
   /** Keyed by the path under `public/`, e.g. `marine-life/blue-tang.jpg`. */
   photos: Record<string, PhotoRecord>;
   /** Keyed by subject. Only `site:` subjects may be here: every species card needs a photo. */
@@ -51,7 +64,7 @@ export async function writePhotoRecords(records: PhotoRecords): Promise<void> {
     Object.fromEntries(Object.entries(object).sort(([a], [b]) => a.localeCompare(b)));
   await writeFile(
     photoRecordsPath,
-    `${JSON.stringify({ photos: sorted(records.photos), unphotographed: sorted(records.unphotographed) }, null, 2)}\n`,
+    `${JSON.stringify({ photos: sorted(records.photos), unphotographed: sorted(records.unphotographed), ...(records.demoPlaceholders ? { demoPlaceholders: sorted(records.demoPlaceholders) } : {}) }, null, 2)}\n`,
   );
 }
 

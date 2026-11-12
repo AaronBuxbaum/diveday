@@ -602,6 +602,8 @@ export function boatSafetyNotices(input: {
    * checkpoint so far (0 before boarding starts).
    */
   passengers: { booked: number; boarded: number };
+  /** Unique physical totals when stable identities are available. */
+  persons?: { booked: number; boarded: number };
   /**
    * The crew named on the departure, and how many of them the crew roll call
    * has recorded aboard at the departure checkpoint. Read only against total
@@ -634,8 +636,8 @@ export function boatSafetyNotices(input: {
     // The same switch as the passenger line, with the crew added on both
     // sides: who is named for the boat, then who is counted aboard once more
     // of them are than the certificate allows.
-    const booked = input.passengers.booked + input.crew.assigned;
-    const boarded = input.passengers.boarded + input.crew.boarded;
+    const booked = input.persons?.booked ?? input.passengers.booked + input.crew.assigned;
+    const boarded = input.persons?.boarded ?? input.passengers.boarded + input.crew.boarded;
     if (boarded > totalLimit) {
       notices.push({
         code: "over_total_persons",

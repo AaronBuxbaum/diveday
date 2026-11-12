@@ -30,6 +30,7 @@
   "summaryNotBackAboard": "Sin regresar a bordo",
   "summaryAshore": "En tierra",
   "summaryAwaiting": "Pendientes",
+  "soulsOnBoardOverlap": "{count, plural, one {# persona tiene ambos roles} other {# personas tienen ambos roles}}",
   "soulsOnBoardLine": "Pasajeros {passengers} · Tripulación {crew} · Personas a bordo {souls}",
   "soulsOnBoardLineSplit": "Pasajeros {passengers} ({split}) · Tripulación {crew} · Personas a bordo {souls}",
   "passengerDivers": "{count, plural, one {# buceador} other {# buceadores}}",
@@ -363,5 +364,21 @@
   "missingDiverAlert": {
     "pushTitle": "Buceador desaparecido",
     "pushBody": "{title}: el equipo presentó un reporte de buceador desaparecido."
+  },
+  "conflicts": {
+    "heading": "Resolver marcas contradictorias de {name}",
+    "unknownOrder": "Se desconoce el orden de estas marcas.",
+    "unknownDay": "Se desconoce el día de reunión de parte de la información.",
+    "aboard": "A bordo",
+    "missing": "No regresó a bordo",
+    "ashore": "No embarcó",
+    "cleared": "Marca deshecha",
+    "confirmAboard": "Confirmar a bordo",
+    "confirmMissing": "Confirmar que no regresó a bordo",
+    "confirmAshore": "Confirmar que no embarcó",
+    "takeBack": "Deshacer estas marcas",
+    "meetingDay": "Día de reunión",
+    "legacyReconnect": "Vuelve a conectarte para revisar y resolver las marcas guardadas.",
+    "summary": "Marcas contradictorias; hay que resolverlas"
   }
 }

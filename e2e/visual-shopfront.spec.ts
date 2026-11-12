@@ -43,7 +43,19 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public schedule renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link").waitFor();
+        await publicReefCard(page).locator("[data-schedule-fact]").waitFor();
         await capture(page, "schedule", scheme);
+      });
+
+      test(`the schedule shows room for a party (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis?partySize=4");
+        await page.getByRole("group", { name: "How many of you?" }).waitFor();
+        await page
+          .locator("form + ul")
+          .getByText(/party of 4/)
+          .first()
+          .waitFor();
+        await capture(page, "schedule-party-size", scheme);
       });
 
       /**
@@ -627,6 +639,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await expect(page.getByRole("list", { name: "Find your course" })).toBeVisible();
         await capture(page, "public-courses", scheme);
       });
     });

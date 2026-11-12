@@ -18,7 +18,7 @@ import {
   listChecklistItemsForTrip,
 } from "../../db/pre-departure-check";
 import { listTripReadiness } from "../../db/readiness";
-import { oldestMarkFirst } from "../../db/roll-call-order";
+import { auditMarkFirst } from "../../db/roll-call-order";
 import { asCrewMark, asSeatMark, crewMarks, seatMarks } from "../../db/roll-call-subject";
 import { activityEvents, bookings, people, rollCallEvents } from "../../db/schema/index";
 import { getShopById } from "../../db/shops";
@@ -131,14 +131,14 @@ export async function getIncidentExport(
       // document is hashed, so two orderings of the same events produce two
       // different SHA-256 integrity codes for one departure. A tie on
       // transaction time would make the hash a coin toss.
-      .orderBy(...oldestMarkFirst()),
+      .orderBy(...auditMarkFirst()),
     db
       .select({ event: rollCallEvents, subject: people, recorder: recorders })
       .from(rollCallEvents)
       .innerJoin(people, eq(people.id, rollCallEvents.crewPersonId))
       .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
       .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
-      .orderBy(...oldestMarkFirst()),
+      .orderBy(...auditMarkFirst()),
     listExecutedDives(db, shopId, tripId),
   ]);
   const diverEventRows = diverEventReads.map((row) => ({ ...row, event: asSeatMark(row.event) }));
@@ -230,7 +230,7 @@ export async function getIncidentExport(
         ? bookedAs?.trim() || subject.fullName
         : (survivorNames.get(subject.id) ?? subject.fullName),
       checkpoint: event.checkpoint,
-      status: event.status,
+      status: event.statementStatus ?? event.status,
       source: event.source,
       recordedByName: recorder.fullName,
       note: event.note,
@@ -241,7 +241,7 @@ export async function getIncidentExport(
       subjectKind: "crew" as const,
       subjectName: subject.fullName,
       checkpoint: event.checkpoint,
-      status: event.status,
+      status: event.statementStatus ?? event.status,
       source: event.source,
       recordedByName: recorder.fullName,
       note: event.note,

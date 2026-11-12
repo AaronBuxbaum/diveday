@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
@@ -22,7 +23,6 @@ import {
   orderLineItems,
   orders,
   people,
-  rollCallEvents,
   tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
@@ -837,7 +837,8 @@ async function seedShopCertified(
         : new Date((logged[index - 1]?.exitedAt ?? window.startsAt).getTime() + 5 * 60_000),
   }));
   if (seated.length > 0) {
-    await db.insert(rollCallEvents).values(
+    await seedRollCallEvidence(
+      db,
       seated.flatMap((bookingId, seat) =>
         counts.map(({ checkpoint, occurredAt }) => ({
           shopId,
@@ -850,9 +851,11 @@ async function seedShopCertified(
           occurredAt: new Date(occurredAt.getTime() + seat * 1_000),
         })),
       ),
+      { observesPrevious: false },
     );
   }
-  await db.insert(rollCallEvents).values(
+  await seedRollCallEvidence(
+    db,
     counts.map(({ checkpoint, occurredAt }) => ({
       shopId,
       tripId: trip.id,
@@ -864,6 +867,7 @@ async function seedShopCertified(
       source: "live" as const,
       occurredAt: new Date(occurredAt.getTime() + seated.length * 1_000),
     })),
+    { observesPrevious: false },
   );
 }
 

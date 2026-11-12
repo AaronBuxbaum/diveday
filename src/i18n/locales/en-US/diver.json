@@ -109,7 +109,9 @@
       "canDive": "What can you dive?",
       "canDiveUnsaid": "Rather not say",
       "hideAboveLevel": "Hide what needs more",
-      "aboveLevelChip": "Above your level"
+      "aboveLevelChip": "Above your level",
+      "partySize": "How many of you?",
+      "partySeats": "{count, plural, one {# seat left} other {# seats left}} · party of {party}"
     },
     "showLater": "Show later departures",
     "showEarlier": "Show earlier departures",
@@ -141,7 +143,8 @@
       "line": "Seen on {seen} of the {trips, plural, one {# {month} trip} other {# {month} trips}} our crews logged",
       "honest": "What our crews logged on {month} trips, in every season on record. It says what was seen, not what you will see."
     },
-    "boatCapacity": "{count, plural, one {# person aboard, including crew} other {# people aboard, including crew}}"
+    "boatCapacity": "{count, plural, one {# person aboard, including crew} other {# people aboard, including crew}}",
+    "recentSighting": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}} in the past 30 days"
   },
   "trip": {
     "coursePlanHeading": "Your course plan",
@@ -500,7 +503,9 @@
     "findAnotherTrip": "Find another trip",
     "holdSeats": "Hold these seats",
     "holdGroup": "Hold seats while everyone pays",
-    "holdGroupNote": "Each person pays from their own link within 24 hours, or before departure if sooner. Unpaid seats go back on sale."
+    "holdGroupNote": "Each person pays from their own link within 24 hours, or before departure if sooner. Unpaid seats go back on sale.",
+    "partyExceedsSeats": "Your party has {requested} people; {remaining, plural, one {# seat is available} other {# seats are available}}.",
+    "waitlistPartyExceedsLimit": "Your party has {requested} people; this wait list accepts up to {limit}."
   },
   "bookingGear": {
     "heading": "Rental gear",
@@ -662,7 +667,14 @@
       "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point.",
       "requires": "Requires {level} or higher",
       "groupStart": "Start here",
-      "askForADate": "Ask for a date"
+      "askForADate": "Ask for a date",
+      "doorsLabel": "Find your course",
+      "doors": {
+        "try": "Try it for a day",
+        "certify": "Get certified",
+        "refresh": "It’s been a while"
+      },
+      "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}"
     },
     "shelf": {
       "allCourses": "All courses",
@@ -3811,6 +3823,7 @@
     }
   },
   "demo": {
+    "illustrationDisclosure": "Illustrations are generated placeholders for this fictional demo shop.",
     "shopLabel": "Demo shop",
     "viewingAs": "Viewing as",
     "switchRole": "Switch role",
@@ -4602,5 +4615,9 @@
       "heading_in": "Heading in",
       "home": "Home"
     }
+  },
+  "staffProfiles": {
+    "heading": "Who you’ll dive with",
+    "since": "Diving since {year}"
   }
 }

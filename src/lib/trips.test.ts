@@ -175,3 +175,25 @@ describe("acceptsNewDivers", () => {
     expect(acceptsNewDivers({ ...open, conditionsHold: true }, before)).toBe(false);
   });
 });
+
+describe("schedule party size", () => {
+  it("accepts only whole URL counts from one to eight", async () => {
+    const { schedulePartySize } = await import("./trips");
+    expect([undefined, "", "0", "9", "2.5", "2people", ["2", "3"]].map(schedulePartySize)).toEqual([
+      1, 1, 1, 1, 1, 1, 1,
+    ]);
+    expect(["1", "4", "8"].map(schedulePartySize)).toEqual([1, 4, 8]);
+  });
+});
+
+describe("booking party prefill", () => {
+  it("bounds a requested party by live seats and the measured public limit", async () => {
+    const { initialBookingPartySize, MAX_PUBLIC_PARTY_SIZE } = await import("./trips");
+    expect(initialBookingPartySize(4, 3)).toBe(3);
+    expect(initialBookingPartySize(MAX_PUBLIC_PARTY_SIZE + 1, 100)).toBe(MAX_PUBLIC_PARTY_SIZE);
+    expect(initialBookingPartySize(4, 0)).toBe(1);
+    expect(initialBookingPartySize(0, 10)).toBe(1);
+    expect(initialBookingPartySize(2.5, 10)).toBe(1);
+    expect(initialBookingPartySize(Number.NaN, 10)).toBe(1);
+  });
+});

@@ -8,6 +8,7 @@ import { newestMarkFirst } from "./roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, tripAssignments, tripStageEvents, trips } from "./schema";
 import { tripHasFinalHome } from "./trip-editability";
+import { currentMeetingDayMarks } from "./trip-meeting-windows";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -190,6 +191,7 @@ async function crewDockWords(
         crewMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.checkpoint, "departure"),
+        currentMeetingDayMarks(),
       ),
     )
     .orderBy(...newestMarkFirst());
@@ -253,6 +255,7 @@ async function dockWordBySeat(
         seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.checkpoint, "departure"),
+        currentMeetingDayMarks(),
         bookingIds ? inArray(rollCallEvents.bookingId, [...bookingIds]) : undefined,
       ),
     )
@@ -290,6 +293,7 @@ async function crewMarkedAshore(
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.crewPersonId, personId),
         eq(rollCallEvents.checkpoint, "departure"),
+        currentMeetingDayMarks(),
       ),
     )
     .orderBy(...newestMarkFirst())

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { advanceClock } from "@/test/clock";
@@ -9,7 +10,7 @@ import { createBoat } from "../features/boats/store";
 import { createTripLens, deleteTripLens } from "../features/trip-lenses/store";
 import { captureDepartureBoatSafety } from "./boat-safety";
 import { crewSubject } from "./roll-call-subject";
-import { courses, departureBoatSafetySnapshots, rollCallEvents, tripDives, trips } from "./schema";
+import { courses, departureBoatSafetySnapshots, tripDives, trips } from "./schema";
 import {
   createTrip,
   deleteTrip,
@@ -306,7 +307,7 @@ describe("schedule edits after roll-call evidence", () => {
     });
     if (!sailed) throw new Error("failed to create trip");
 
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: sailed.id,
       ...crewSubject(staffId),

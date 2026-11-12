@@ -8,11 +8,8 @@ import {
   unreviewCertification,
   upsertTripRequirements,
 } from "@/db/readiness";
-import {
-  bookings as bookingsTable,
-  rollCallEvents as rollCallEventsTable,
-  trips as tripsTable,
-} from "@/db/schema";
+import { bookings as bookingsTable, trips as tripsTable } from "@/db/schema";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
@@ -397,7 +394,7 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
           checkpoint: string;
           occurredAt?: Date;
         }) {
-          await ctx.db.insert(rollCallEventsTable).values({
+          await seedRollCallEvidence(ctx.db, {
             shopId: ctx.shop.id,
             tripId: input.tripId,
             bookingId: input.bookingId,
@@ -688,7 +685,8 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         .set({ participantType: "rider" })
         .where(eq(bookingsTable.id, riderSeat));
       await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
-      await db.insert(rollCallEventsTable).values(
+      await seedRollCallEvidence(
+        db,
         bookingIds.map((bookingId) => ({
           shopId: shop.id,
           tripId: trip.id,

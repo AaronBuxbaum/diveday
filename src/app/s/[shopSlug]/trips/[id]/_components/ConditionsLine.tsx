@@ -1,8 +1,9 @@
 import { Suspense } from "react";
 import { ledgerRowRoomClass } from "@/components/ui/ledger";
+import { conditionReadings } from "@/i18n/condition-labels";
 import { diverTranslator } from "@/i18n/messages";
 import type { ReaderUnits } from "@/i18n/reader-units";
-import { depthText, seaStateText, temperatureText, windText } from "@/i18n/unit-labels";
+import { seaStateText, windText } from "@/i18n/unit-labels";
 import { formatDateTimeTz } from "@/lib/format";
 import { seaStateReading, windReading } from "@/lib/marine-forecast";
 import { temperatureUnitFor } from "@/lib/temperature-units";
@@ -126,25 +127,21 @@ function ConditionsLineView({
   const seaState = crewPrediction ? null : seaStateReading(automatedForecast?.surface ?? null);
   const windState = crewPrediction ? null : windReading(automatedForecast?.wind ?? null);
   const wind = windState ? windText(t, windState) : null;
-  const surfaceText = crewPrediction
+  const surfaceText: string | null = crewPrediction
     ? trip.surfaceConditions
-    : (seaState ? seaStateText(t, seaState) : null)?.label;
+    : seaState
+      ? seaStateText(t, seaState).label
+      : null;
   // Only the crew ever records underwater visibility — the marine model has no
   // such reading (see `AutomatedMarineForecast`).
   const visibilityMeters = crewPrediction ? trip.visibilityMeters : null;
 
   const parts = [
-    waterTemperatureC !== null
-      ? t("trip.conditionsWater", {
-          value: temperatureText(t, waterTemperatureC, temperatureUnit, readerUnits?.temperature),
-        })
-      : null,
-    visibilityMeters !== null
-      ? t("trip.conditionsVisibility", {
-          value: depthText(t, visibilityMeters, depthUnit, readerUnits?.depth),
-        })
-      : null,
-    surfaceText ?? null,
+    ...conditionReadings(
+      t,
+      { waterTemperatureC, visibilityMeters, surfaceText },
+      { depth: depthUnit, temperature: temperatureUnit, reader: readerUnits },
+    ),
     wind?.label ?? null,
     crewLanguages ? t("trip.conditionsLanguages", { languages: crewLanguages }) : null,
   ].filter((part): part is string => Boolean(part));

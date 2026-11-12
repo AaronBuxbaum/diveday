@@ -103,6 +103,9 @@ describe("securityHeaderRules (specialist-optimization-audit-20260731.md §5)", 
     expect(catchAll?.headers.find((h) => h.key === "X-Content-Type-Options")?.value).toBe(
       "nosniff",
     );
+    expect(catchAll?.headers.find((h) => h.key === "Permissions-Policy")?.value).toBe(
+      "camera=(), microphone=(), geolocation=()",
+    );
     expect(catchAll?.headers.find((h) => h.key === "Referrer-Policy")?.value).toBe(
       "strict-origin-when-cross-origin",
     );

@@ -36,7 +36,7 @@ const BASELINE_SECURITY_HEADERS: ConfigHeader[] = [
   // Nothing on this product needs any of these browser features.
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+    value: "camera=(), microphone=(), geolocation=()",
   },
 ];
 

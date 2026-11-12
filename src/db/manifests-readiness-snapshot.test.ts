@@ -1,5 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
@@ -61,7 +62,7 @@ async function seat(titlePrefix: string, wanting?: "ready") {
   };
   /** The dock count of a blocked diver, as the crew's earlier boat left it (the gate refuses it live). */
   const boardAtDock = () =>
-    db.insert(rollCallEvents).values({
+    seedRollCallEvidence(db, {
       ...base,
       status: "boarded",
       checkpoint: "departure",
@@ -162,7 +163,7 @@ describe("a roll-call event keeps what readiness said", () => {
   it("refuses a snapshot on an event that is not a count aboard", async () => {
     const { db, base } = await seat("Night Dive");
     await expect(
-      db.insert(rollCallEvents).values({
+      seedRollCallEvidence(db, {
         ...base,
         status: "not_boarded",
         checkpoint: "departure",

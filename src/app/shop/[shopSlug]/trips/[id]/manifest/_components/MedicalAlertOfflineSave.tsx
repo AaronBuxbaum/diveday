@@ -9,6 +9,7 @@ import {
   saveOfflineMedicalAlerts,
 } from "@/lib/offline-manifest-store";
 import type { OfflineMedicalAlertsResponse } from "@/lib/offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 
 export type MedicalAlertOfflineSaveCopy = {
   heading: string;
@@ -80,6 +81,7 @@ export function MedicalAlertOfflineSave({
         const response = await fetch(`/api/offline-manifests/${tripId}/medical-alerts`, {
           method: "POST",
           credentials: "same-origin",
+          headers: ROLL_CALL_CAUSAL_HEADERS,
         });
         const answer = response.ok ? parsed(await response.json()) : null;
         if (!answer) {

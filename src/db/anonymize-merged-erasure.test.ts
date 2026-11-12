@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "../features/anonymize/store";
 import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
@@ -166,7 +167,7 @@ describe("anonymizeDiver — a third-party roll-call note that names the diver",
       });
       expect(written).toMatchObject({ ok: true });
     }
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: otherShop.id,
       tripId: otherTrip.id,
       ...crewSubject(otherPerson.id),

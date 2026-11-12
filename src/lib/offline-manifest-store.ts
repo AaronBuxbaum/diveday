@@ -14,15 +14,21 @@ import {
   type OfflineChecklistEvent,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
+  type OfflineManifestUpcomingResponse,
   type OfflineMedicalAlertsSavedBy,
   type OfflineRollCallEvent,
   offlineArrivalEvents,
   offlineManifestExpiresAt,
+  offlineManifestMayHoldMedicalAlertWords,
+  offlineManifestPayloads,
+  offlineManifestShopSlug,
+  offlineManifestViewerPersonId,
   offlineRollCallSubject,
   offlineSnapshotTokenClaims,
   pendingOfflineEventCount,
   withMedicalAlertWords,
 } from "./offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "./roll-call-protocol";
 
 const DB_NAME = "diveday-offline-manifests";
 const DB_VERSION = 1;
@@ -264,6 +270,7 @@ export type OfflineSyncResult = {
 /** The sync route's answer: one result per event, and each departure's snapshot revision. */
 type OfflineSyncResponse = {
   results: OfflineSyncResult[];
+  refreshedManifests?: OfflineManifestUpcomingResponse;
   /** Absent from a server that predates it, or when its read failed; see `offlineEventInCopy`. */
   snapshotRevisions?: Record<string, number>;
 };
@@ -1033,6 +1040,9 @@ export async function saveOfflineManifest(
     const manifests = withMedicalAlertWords(payload.manifests, kept);
     const carriesWords = Object.keys(medicalAlertWordsOf(manifests)).length > 0;
     const envelope: OfflineManifestEnvelope = {
+      ...(existing?.selectedRollCallMeetingDay !== undefined
+        ? { selectedRollCallMeetingDay: existing.selectedRollCallMeetingDay }
+        : {}),
       snapshot: {
         ...payload,
         manifests,
@@ -1191,20 +1201,30 @@ export async function deleteOfflineManifest(
  * storage, syncs, and is a claim about the one thing this surface exists to
  * record.
  *
- * `retractsClientEventId` rides along on a `cleared` and names the statement it
- * takes back, which is what makes the retraction a compare-and-set on the server
- * rather than a blind newest-wins write (ADR
- * 20260815-an-offline-retraction-names-its-target). Nothing is validated about
- * it here: the only honest check is against the newest event the *server* holds,
- * and this function runs where there is no server.
+ * A `cleared` names the exact statement it withdraws. Its identity and
+ * observed basis are captured at tap and preserved while queued; only the
+ * server validates the named target in the tenant/subject/checkpoint scope.
+ * Receipt order and clocks cannot retarget it to another crew member's fact.
+
  */
 export async function appendOfflineRollCall(
   tripId: string,
   input: Pick<
     OfflineRollCallEvent,
-    "bookingId" | "crewPersonId" | "checkpoint" | "status" | "retractsClientEventId" | "note"
-  >,
+    | "bookingId"
+    | "crewPersonId"
+    | "checkpoint"
+    | "status"
+    | "retractsClientEventId"
+    | "note"
+    | "observedEvidenceIds"
+    | "reconcilesEvidence"
+    | "meetingDay"
+  > &
+    Partial<Pick<OfflineRollCallEvent, "snapshotId" | "snapshotSavedAt" | "erasureEpochToken">>,
 ): Promise<OfflineManifestEnvelope> {
+  const capturedAt = nowDate().toISOString();
+  const eventIdentity = crypto.randomUUID();
   return withManifestLock(tripId, async () => {
     const envelope = await loadOfflineManifest(tripId);
     if (!envelope) throw new OfflineManifestError("unavailable");
@@ -1237,12 +1257,14 @@ export async function appendOfflineRollCall(
     }
     envelope.events.push({
       ...input,
-      clientEventId: crypto.randomUUID(),
-      snapshotId: envelope.snapshot.snapshotId,
-      snapshotSavedAt: envelope.snapshot.savedAt,
-      erasureEpochToken: envelope.snapshot.erasureEpochToken,
+      clientEventId: eventIdentity,
+      snapshotId: input.snapshotId ?? envelope.snapshot.snapshotId,
+      snapshotSavedAt: input.snapshotSavedAt ?? envelope.snapshot.savedAt,
+      erasureEpochToken: input.snapshotId
+        ? input.erasureEpochToken
+        : envelope.snapshot.erasureEpochToken,
       tripId,
-      occurredAt: nowDate().toISOString(),
+      occurredAt: capturedAt,
       syncStatus: "pending",
     });
     const db = await openDatabase();
@@ -1374,6 +1396,7 @@ async function postPendingEvents(batch: {
   events: OfflineRollCallEvent[];
   checklistEvents: OfflineChecklistEvent[];
   arrivalEvents: OfflineArrivalEvent[];
+  refreshTripId: string;
 }): Promise<OfflineSyncResponse> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -1386,8 +1409,8 @@ async function postPendingEvents(batch: {
   const roundTrip = (async () => {
     const response = await fetch("/api/offline-manifests/sync", {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ...batch, includeStoredInstants: true }),
+      headers: { ...ROLL_CALL_CAUSAL_HEADERS, "content-type": "application/json" },
+      body: JSON.stringify({ ...batch, includeStoredInstants: true, includeCausalSnapshots: true }),
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -1412,10 +1435,49 @@ async function postPendingEvents(batch: {
   }
 }
 
+/** Privacy disposal is independent of accepting a new causal snapshot. */
+async function discardSyncReceiptNotes(
+  tripId: string,
+  shopSlug: string,
+  tenantRound: number,
+  postedIds: ReadonlySet<string>,
+  results: OfflineSyncResult[],
+) {
+  const discarded = new Map(
+    results
+      .filter(
+        (result) =>
+          postedIds.has(result.clientEventId) &&
+          (result.noteDisposition === "discarded_erasure_cutoff" ||
+            result.noteDisposition === "discarded_unverified_snapshot"),
+      )
+      .map((result) => [result.clientEventId, result.noteDisposition]),
+  );
+  if (!discarded.size) return;
+  await withManifestLock(tripId, async () => {
+    const current = await loadOfflineManifest(tripId);
+    if (!current || current.snapshot.shop.slug !== shopSlug) return;
+    const clear = <T extends OfflineRollCallEvent | OfflineChecklistEvent>(event: T): T => {
+      const disposition = discarded.get(event.clientEventId);
+      return disposition ? { ...event, note: null, noteDisposition: disposition } : event;
+    };
+    current.events = current.events.map(clear);
+    current.checklistEvents = current.checklistEvents.map(clear);
+    const db = await openDatabase();
+    try {
+      if (!(await persistEnvelope(db, current, tenantRound, "sync")))
+        throw new OfflineManifestError("shop_changed");
+    } finally {
+      db.close();
+    }
+  });
+}
+
 export async function syncOfflineManifest(
   tripId: string,
   expectedShopSlug?: string,
   requestTenantRound?: number,
+  options: { refreshWhenQuiet?: boolean } = {},
 ): Promise<OfflineManifestEnvelope | null> {
   const envelope = await loadOfflineManifest(tripId);
   if (!envelope) return null;
@@ -1426,13 +1488,57 @@ export async function syncOfflineManifest(
   const pendingArrivals = offlineArrivalEvents(envelope).filter(
     (event) => event.syncStatus === "pending",
   );
-  if (pendingOfflineEventCount(envelope) === 0 || !navigator.onLine) return envelope;
+  if ((!options.refreshWhenQuiet && pendingOfflineEventCount(envelope) === 0) || !navigator.onLine)
+    return envelope;
   const tenantRound = requestTenantRound ?? (await beginOfflineTenantVerificationRound());
   const body = await postPendingEvents({
     ...(expectedShopSlug ? { expectedShopSlug } : {}),
     events: pending,
     checklistEvents: pendingChecklist,
     arrivalEvents: pendingArrivals,
+    refreshTripId: tripId,
+  });
+  await discardSyncReceiptNotes(
+    tripId,
+    envelope.snapshot.shop.slug,
+    tenantRound,
+    new Set(
+      [...pending, ...pendingChecklist, ...pendingArrivals].map((event) => event.clientEventId),
+    ),
+    body.results,
+  );
+  const refreshed = body.refreshedManifests;
+  const payload = offlineManifestPayloads(refreshed).find(
+    (item) => item.manifests[0]?.trip.id === tripId,
+  );
+  if (!refreshed || !payload) throw new OfflineManifestError("sync_unreachable");
+  if (
+    offlineManifestShopSlug(refreshed) !== envelope.snapshot.shop.slug ||
+    payload.shop?.slug !== envelope.snapshot.shop.slug
+  )
+    throw new OfflineManifestError("shop_changed");
+  if (!payload.snapshotId || !payload.manifests.every((item) => item.trip.id === tripId))
+    throw new OfflineManifestError("sync_unreachable");
+  const beforeClaims = offlineSnapshotTokenClaims(envelope.snapshot.erasureEpochToken);
+  const receivedClaims = offlineSnapshotTokenClaims(payload.erasureEpochToken);
+  if (
+    !receivedClaims ||
+    (beforeClaims &&
+      (receivedClaims.epoch < beforeClaims.epoch ||
+        (receivedClaims.epoch === beforeClaims.epoch &&
+          receivedClaims.revision <= beforeClaims.revision)))
+  ) {
+    throw new OfflineManifestError("sync_unreachable");
+  }
+  // Never settle success against an old frontier. Saving uses the existing
+  // locked merge and erasure/medical-viewer gates, preserving concurrent taps.
+  await wipeOfflineMedicalAlerts(
+    offlineManifestViewerPersonId(refreshed) ?? undefined,
+    tenantRound,
+  );
+  await saveOfflineManifest(payload, {
+    keepMedicalAlertWords: offlineManifestMayHoldMedicalAlertWords(refreshed, tripId),
+    tenantRound,
   });
   // One map for both arrays: a roll-call event id and a checklist event id are
   // both `crypto.randomUUID()`, so they never collide, and the sync route
@@ -1556,5 +1662,27 @@ export async function getActiveOfflineShellVersion(): Promise<string | null> {
       resolve(typeof event.data?.version === "string" ? event.data.version : null);
     };
     active.postMessage({ type: "GET_SHELL_VERSION" }, [channel.port2]);
+  });
+}
+
+/** Keep the crew's explicit meeting-day choice across reloads without recording a mark. */
+export async function selectOfflineRollCallDay(
+  tripId: string,
+  day: number,
+): Promise<OfflineManifestEnvelope> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope) throw new OfflineManifestError("unavailable");
+    const total = envelope.snapshot.rollCallMeetingDays?.length ?? 1;
+    if (!Number.isInteger(day) || day < 0 || day >= total)
+      throw new OfflineManifestError("not_allowed");
+    envelope.selectedRollCallMeetingDay = day;
+    const db = await openDatabase();
+    try {
+      await persistEnvelope(db, envelope, undefined, "record");
+    } finally {
+      db.close();
+    }
+    return envelope;
   });
 }

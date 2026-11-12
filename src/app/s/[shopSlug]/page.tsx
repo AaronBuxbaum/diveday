@@ -7,6 +7,7 @@ import { ShopReviews } from "@/components/ShopReviews";
 import { PAGE_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { type AppDb, getDb } from "@/db/client";
 import { listRunningPublicSeries, type pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { listPublicStaffProfiles } from "@/features/public-staff-profiles";
 import { connectionForRoute } from "@/features/render-connection";
 import { listPublishedShopReviews } from "@/features/reviews";
 import { shopBySlugCached } from "@/features/shops-cached";
@@ -16,16 +17,10 @@ import { requestTranslator } from "@/i18n/request";
 import { monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
-import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import {
-  publicAvailabilityPath,
-  publicCoursesPath,
-  publicSchedulePath,
-  publicTripPath,
-} from "@/lib/public-routes";
+import { publicAvailabilityPath, publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
 import type { ReviewAggregate } from "@/lib/reviews";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
@@ -39,6 +34,7 @@ import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { OurYearSection } from "./_components/OurYear";
 import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
+import { PublicStaffProfiles } from "./_components/PublicStaffProfiles";
 import { ScheduleFilterBar } from "./_components/ScheduleFilterBar";
 import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { SchedulePaperSheet, scheduleSheetEmpty } from "./_components/SchedulePaperSheet";
@@ -49,25 +45,24 @@ import { readSchedulePage } from "./_components/schedule-reads";
 import { seatPriceLabel, shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
 import {
   aboveStatedLevelIds,
+  type ScheduleQuery,
   type ScheduleView,
   scheduleDayWords,
+  scheduleFiltersFor,
   scheduleMonthBounds,
   scheduleMonthRail,
   scheduleNextBoat,
   scheduleOffSeason,
   schedulePagerHrefs,
   scheduleSeatState,
+  scheduleTripHref,
   scheduleViewLinks,
   scheduleZoneLine,
 } from "./_components/schedule-view";
 import { SHOP_MAIN_CLASS } from "./_components/shop-main";
 import { WeekLedger } from "./_components/WeekLedger";
 
-// `instant = true`: this route has a real static shell. Every request-scoped
-// read below sits inside this segment's `loading.tsx` boundary, so the frame
-// paints without waiting on the request and the data streams into it —
-// and `next build` fails if that ever stops being true.
-// See ADR 20260804-instant-navigation.
+// Request reads stream inside the loading boundary (ADR 20260804-instant-navigation).
 export const instant = true;
 
 /**
@@ -120,36 +115,15 @@ export default async function SchedulePage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{
-    month?: string;
-    after?: string;
-    /** The page before this departure: Previous page reads the keyset in reverse. */
-    before?: string;
-    hasSpace?: string;
-    tripType?: string;
-    canDive?: string;
-    hideAbove?: string;
-    /** One of the shop's own words for a kind of day (ADR 20260904-reef-all-the-way-down). */
-    lens?: string;
-  }>;
+  searchParams: Promise<ScheduleQuery>;
 }) {
   await connectionForRoute("/s/[shopSlug]"); // live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, before, hasSpace, tripType, canDive, hideAbove, lens } = await searchParams;
-  const hasSpaceFilter = hasSpace === "1";
-  const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
-  // **A stated preference, never a gate** (issue #696). It marks the list and
-  // nothing else: `src/lib/trip-admission.ts` and `src/lib/readiness.ts` are
-  // untouched by it, a diver who says "Rescue" here and books an Advanced
-  // charter still meets the ordinary admission check, and the answer is not
-  // persisted anywhere or prefilled into the booking form — a casual filter tap
-  // must never become evidence a readiness engine reasons about (ADRs
-  // 20260814-self-declared-cards, 20260820-attested-at-booking-verified-at-boarding).
-  const canDiveFilter = DECLARABLE_CERTIFICATION_LEVELS.find((level) => level === canDive);
-  const hideAboveFilter = Boolean(canDiveFilter) && hideAbove === "1";
+  const query = await searchParams;
+  const { month, after, before, lens } = query;
+  const { partySize, hasSpaceFilter, tripTypeFilter, canDiveFilter, hideAboveFilter } =
+    scheduleFiltersFor(query);
   const db = await getDb();
-  // The same row `generateMetadata` above already read: one query for both
-  // (issue #1737).
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) {
     notFound();
@@ -181,6 +155,7 @@ export default async function SchedulePage({
     diveSitesByTrip,
     requirementsByTrip,
     shelfNextStarts,
+    recentSightings,
   } = await readSchedulePage(db, shop, {
     lens,
     cursor: { after, before },
@@ -191,6 +166,7 @@ export default async function SchedulePage({
   });
   const view: ScheduleView = {
     shopSlug,
+    partySize,
     month,
     hasSpaceFilter,
     tripTypeFilter,
@@ -256,6 +232,8 @@ export default async function SchedulePage({
 
   const weekRows = weekLedgerRows({
     listedTrips: visibleUpcoming,
+    facts: { now, shop, sightings: recentSightings },
+    partySize,
     lenses,
     diveSitesByTrip,
     requirementsByTrip,
@@ -338,7 +316,7 @@ export default async function SchedulePage({
             ) : null}
             {nextBoat ? (
               <NextBoatCard
-                href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
+                href={`${scheduleTripHref(shopSlug, nextBoat.id, partySize)}#book`}
                 when={whenWord(nextBoat.startsAt)}
                 time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
                 title={nextBoat.title}
@@ -375,9 +353,9 @@ export default async function SchedulePage({
             ) : null}
           </div>
 
-          {/* The filter form stays directly before the list; the calendar
-              above it is one group. On phones the disclosure holds the lens
-              chips as well as the advanced controls (public audit P3, #3140), which must stay directly before the list:
+          {/* The shop’s lens chips (ADR 20260904-reef-all-the-way-down, D02)
+              stay visible; the disclosure holds the advanced controls. The form,
+              with its chips and controls, stays directly before the list:
               `e2e/schedule-filters.spec.ts` and `e2e/trip-admission.spec.ts`
               address the departures as `form + ul`. None of it renders in the
               frame (issue #805): `FilterChips` is a `<nav>` landmark and
@@ -385,6 +363,7 @@ export default async function SchedulePage({
               filters and the list re-renders server-side (ADR
               20260812-javascript-is-required). */}
           <ScheduleFilterBar
+            partySize={partySize}
             month={month ?? null}
             lenses={lenses}
             activeLens={activeLens}
@@ -457,7 +436,7 @@ export default async function SchedulePage({
         courses={shelfCourses}
         allCoursesHref={publicCoursesPath(shopSlug)}
         className={SECTION_GAP}
-        t={t}
+        dates={{ shopSlug, locale, timeZone: shop.timezone, t }}
       />
       <ShopfrontStory
         shop={shop}
@@ -466,6 +445,7 @@ export default async function SchedulePage({
         t={t}
         className={SECTION_GAP}
       />
+      <PublicStaffProfiles profiles={await listPublicStaffProfiles(db, shop.id)} locale={locale} />
       <BoatsShelf boats={boats} t={t} className={SECTION_GAP} />
       <MonthSightingsSection shop={shop} tz={tz} locale={locale} t={t} />
       {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { identifySavedRollCall } from "@/test/identified-offline-roll-call";
 import {
   boardedAt,
   crewMember,
@@ -148,8 +149,10 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
       savedAt: "2026-07-20T11:45:00.000Z",
       expiresAt: "2026-07-27T16:00:00.000Z",
     };
+    identifySavedRollCall(snapshot, { bookingId: "a" }, "departure", 0);
+    const observed = identifySavedRollCall(snapshot, { bookingId: "b" }, "departure", 0);
     const ashore: OfflineRollCallEvent = {
-      clientEventId: "buddy-ashore",
+      clientEventId: crypto.randomUUID(),
       snapshotId: snapshot.snapshotId,
       snapshotSavedAt: snapshot.savedAt,
       tripId: trip.id,
@@ -158,6 +161,8 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
       status: "not_boarded",
       occurredAt: "2026-07-20T11:46:00.000Z",
       syncStatus: "pending",
+      meetingDay: 0,
+      observedEvidenceIds: [observed],
     };
     const alert = (events: OfflineRollCallEvent[]) =>
       buddyAlertFor("departure", latestOfflineRollCall(snapshot, events, "a", "departure"), [
@@ -165,7 +170,15 @@ describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () =
       ]);
     expect(alert([ashore])).toBe("teammate_ashore");
     expect(
-      alert([ashore, { ...ashore, clientEventId: "buddy-returned", status: "boarded" }]),
+      alert([
+        ashore,
+        {
+          ...ashore,
+          clientEventId: crypto.randomUUID(),
+          status: "boarded",
+          observedEvidenceIds: [`client:${ashore.clientEventId}`],
+        },
+      ]),
     ).toBeNull();
   });
 

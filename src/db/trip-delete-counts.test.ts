@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import { countDeparturesByBoat, createBoat } from "../features/boats/store";
 import { countDeparturesByTripLens, createTripLens } from "../features/trip-lenses/store";
 import { createBooking } from "./bookings";
 import { crewSubject } from "./roll-call-subject";
-import { bookings, rollCallEvents, tripAssignments, trips } from "./schema";
+import { bookings, tripAssignments, trips } from "./schema";
 import { getTripRoster, listStaff } from "./trips";
 import { createTrip } from "./trips-create";
 
@@ -60,7 +61,7 @@ describe("boat and trip-tag deletion counts", () => {
       checkpoint: string,
       minute: number,
     ) {
-      await db.insert(rollCallEvents).values({
+      await seedRollCallEvidence(db, {
         shopId: shop.id,
         tripId,
         bookingId,
@@ -119,7 +120,7 @@ describe("boat and trip-tag deletion counts", () => {
       .insert(tripAssignments)
       .values({ tripId: crewAfterDive.trip.id, personId: staff.person.id })
       .onConflictDoNothing();
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: crewAfterDive.trip.id,
       ...crewSubject(staff.person.id),
@@ -137,7 +138,7 @@ describe("boat and trip-tag deletion counts", () => {
       .insert(tripAssignments)
       .values({ tripId: crewCleared.trip.id, personId: staff.person.id })
       .onConflictDoNothing();
-    await db.insert(rollCallEvents).values([
+    await seedRollCallEvidence(db, [
       {
         shopId: shop.id,
         tripId: crewCleared.trip.id,

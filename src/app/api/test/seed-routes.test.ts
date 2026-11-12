@@ -338,6 +338,7 @@ const EMAIL = "diver@example.com";
  * fails "every fact has a sample", which is the registry's half of this file.
  */
 const FACT_SAMPLES: Record<string, Record<string, unknown>> = {
+  causalRollCallConflict: { role: "diver" },
   operationalTrust: { state: "capacity" },
   executedDepth: { unit: "feet", meters: 18.4404 },
   evening: { heads: "closed" },

@@ -73,6 +73,10 @@ export function offlineManifestPayload({
           : depthWarningText(t, advisory),
     ),
     ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
+    rollCallMeetingDays: meetingWindows?.map((day) => ({
+      startsAt: day.startsAt.toISOString(),
+      endsAt: day.endsAt.toISOString(),
+    })),
     // The device trades this for a snapshot id, revision and signed token when
     // it saves (`claimOfflineManifestSnapshot`), refused if an erasure landed
     // since these rows were read or another copy was issued since (issue #4391).

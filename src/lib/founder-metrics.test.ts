@@ -157,7 +157,7 @@ describe("countDiveDays", () => {
     ).toEqual({ diveDays: 0, shops: 0 });
   });
 
-  it("reads the newest event by occurred, then created, then seq, whatever order rows arrive in", () => {
+  it("reads the latest effective projection by sequence despite capture clocks and row order", () => {
     expect(
       countDiveDays([
         event({
@@ -173,13 +173,32 @@ describe("countDiveDays", () => {
           occurredAt: at("2026-10-10T12:00:00Z"),
         }),
       ]),
-    ).toEqual({ diveDays: 1, shops: 1 });
+    ).toEqual({ diveDays: 0, shops: 0 });
     expect(
       countDiveDays([
         event({ bookingId: "b1", status: "cleared", seq: 10 }),
         event({ bookingId: "b1", status: "boarded", seq: 9 }),
       ]),
     ).toEqual({ diveDays: 0, shops: 0 });
+    // A later aboard projection counts even when its raw clock runs behind
+    // the earlier withdrawal. Arrival order cannot change that answer.
+    const earlierWithdrawal = event({
+      status: "cleared",
+      seq: 10,
+      occurredAt: at("2026-10-10T12:10:00Z"),
+      createdAt: at("2026-10-10T12:15:00Z"),
+    });
+    const latestAboard = event({
+      status: "boarded",
+      seq: 11,
+      occurredAt: at("2026-10-10T11:55:00Z"),
+      createdAt: at("2026-10-10T12:00:00Z"),
+    });
+    for (const rows of [
+      [earlierWithdrawal, latestAboard],
+      [latestAboard, earlierWithdrawal],
+    ])
+      expect(countDiveDays(rows)).toEqual({ diveDays: 1, shops: 1 });
   });
 
   it("is zero for a week with no departure roll call at all", () => {

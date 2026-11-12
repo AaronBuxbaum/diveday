@@ -1,14 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { createBooking } from "../../db/bookings";
-import {
-  bookings,
-  courses,
-  rollCallEvents,
-  tripAssignments,
-  tripScheduleDays,
-  trips,
-} from "../../db/schema/index";
+import { bookings, courses, tripAssignments, tripScheduleDays, trips } from "../../db/schema/index";
 import { createTrip, editTrip, listStaff, setTripCrew } from "../../db/trips";
 import { nowDate, nowMs } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
@@ -107,7 +101,7 @@ describe("mixed training advisory", () => {
       .set({ identityUnconfirmedAt: nowDate() })
       .where(eq(bookings.id, booking.bookingId));
     expect(await mixedTrainingAdvisories(db, shop.id, a.id)).toHaveLength(1);
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: b.id,
       bookingId: booking.bookingId,

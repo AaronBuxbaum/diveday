@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { snapshot } from "@/test/substrate-fixtures/lib/offline-manifests-fixtures";
+import { clientRollCallEvidenceId } from "@/lib/roll-call-causality";
+import { crewSnapshot, snapshot } from "@/test/substrate-fixtures/lib/offline-manifests-fixtures";
 import {
   latestOfflineChecklistCheck,
+  latestOfflineCrewRollCall,
   latestOfflineRollCall,
   type OfflineChecklistEvent,
   type OfflineRollCallEvent,
@@ -98,7 +100,7 @@ describe("server time and device queue order", () => {
       pending: false,
     });
   });
-  it("keeps the offline undo when the saved copy holds this device's committed instant", () => {
+  it("keeps the offline undo when the saved copy names this device's event", () => {
     const copy = snapshot();
     copy.erasureEpochToken = `3.9.${"a".repeat(43)}`;
     const row = copy.manifests
@@ -114,6 +116,24 @@ describe("server time and device queue order", () => {
       storedOccurredAt: "2026-07-20T14:00:00.000Z",
       syncedAtRevision: 7,
     });
+    if (!event.storedOccurredAt) throw new Error("fixture requires stored capture instant");
+    row.rollCallContext = {
+      meetingDay: 0,
+      observedEvidenceIds: [clientRollCallEvidenceId(event.clientEventId)],
+      conflict: false,
+      orderingUnknown: false,
+      unknownMeetingDay: false,
+      evidence: [
+        {
+          id: clientRollCallEvidenceId(event.clientEventId),
+          status: "boarded",
+          occurredAt: event.storedOccurredAt,
+          recordedByName: "Sal",
+          note: null,
+          meetingDay: 0,
+        },
+      ],
+    };
     expect(latestOfflineRollCall(copy, [event], "ready", "after_dive_1")).toMatchObject({
       state: "boarded",
       occurredAt: event.storedOccurredAt,
@@ -121,11 +141,15 @@ describe("server time and device queue order", () => {
       local: true,
     });
   });
-  it("files a synced alarm under its committed meeting day and ignores refused or other-diver corrections", () => {
+  it("retains a named prior-day alarm despite capture-clock changes and unrelated corrections", () => {
     const copy = snapshot();
     copy.rollCallDayBoundaries = ["2026-07-21T00:00:00.000Z"];
+    copy.rollCallMeetingDay = 0;
+    copy.selectedRollCallMeetingDay = 1;
     const alarm = tap({
       status: "not_boarded",
+      meetingDay: 0,
+      observedEvidenceIds: [],
       occurredAt: "2026-07-21T00:03:00.000Z",
       storedOccurredAt: "2026-07-20T23:58:00.000Z",
     });
@@ -150,7 +174,7 @@ describe("server time and device queue order", () => {
         "after_dive_1",
         new Date("2026-07-21T14:00:00.000Z"),
       ),
-    ).toMatchObject({ state: "not_boarded", local: false, occurredAt: alarm.storedOccurredAt });
+    ).toMatchObject({ state: "not_boarded", local: true, occurredAt: alarm.storedOccurredAt });
   });
   it("orders local checklist taps by raw time and compares the winning tap to saved server time", () => {
     const copy = snapshot();
@@ -200,3 +224,88 @@ describe("server time and device queue order", () => {
     });
   });
 });
+
+for (const role of ["diver", "crew"] as const) {
+  it(`retains an older clock-refused missing statement for ${role} without offering a false undo`, () => {
+    const copy = role === "crew" ? crewSnapshot() : snapshot();
+    const crewId = copy.manifests[0].crew[0]?.id;
+    if (!crewId && role === "crew") throw new Error("fixture crew missing");
+    const alarm: OfflineRollCallEvent = {
+      clientEventId: crypto.randomUUID(),
+      tripId: "trip-1",
+      snapshotId: copy.snapshotId,
+      snapshotSavedAt: copy.savedAt,
+      ...(role === "diver" ? { bookingId: "ready" } : { crewPersonId: crewId }),
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      occurredAt: "2026-07-20T13:00:00.000Z",
+      syncStatus: "rejected",
+      rejectionReason: "newer_event_exists",
+    };
+    const result =
+      role === "diver"
+        ? latestOfflineRollCall(copy, [alarm], "ready", "after_dive_1")
+        : latestOfflineCrewRollCall(copy, [alarm], crewId ?? "unavailable-crew", "after_dive_1");
+    expect(result).toMatchObject({ state: "not_boarded", local: false, pending: false });
+    expect(result?.clientEventId).toBeUndefined();
+  });
+}
+
+for (const role of ["diver", "crew"] as const) {
+  it(`holds a refused dock exemption awaiting only within its subject/checkpoint/day for ${role}`, () => {
+    const copy = crewSnapshot();
+    const subject = role === "diver" ? { bookingId: "ready" } : { crewPersonId: "crew-dana" };
+    const ashore: OfflineRollCallEvent = {
+      ...subject,
+      tripId: "trip-1",
+      snapshotId: copy.snapshotId,
+      snapshotSavedAt: copy.savedAt,
+      clientEventId: crypto.randomUUID(),
+      checkpoint: "departure",
+      meetingDay: 0,
+      status: "not_boarded",
+      occurredAt: "2026-07-20T12:00:00.000Z",
+      syncStatus: "applied",
+    };
+    const refused: OfflineRollCallEvent = {
+      ...ashore,
+      clientEventId: crypto.randomUUID(),
+      status: "cleared",
+      retractsClientEventId: ashore.clientEventId,
+      observedEvidenceIds: [clientRollCallEvidenceId(ashore.clientEventId)],
+      syncStatus: "rejected",
+      rejectionReason: "retraction_superseded",
+    };
+    const read = (
+      events: OfflineRollCallEvent[],
+      checkpoint: "departure" | "after_dive_1" = "departure",
+    ) =>
+      role === "diver"
+        ? latestOfflineRollCall(copy, events, "ready", checkpoint)
+        : latestOfflineCrewRollCall(copy, events, "crew-dana", checkpoint);
+    const events = [ashore, refused];
+    expect(read(events)).toBeUndefined();
+    expect(read(events, "after_dive_1")).toBeUndefined();
+    expect(read([ashore, { ...refused, meetingDay: 1 }])).toMatchObject({ state: "not_boarded" });
+    expect(read([ashore, { ...refused, checkpoint: "after_dive_2" }])).toMatchObject({
+      state: "not_boarded",
+    });
+    expect(
+      read([
+        ashore,
+        {
+          ...refused,
+          ...(role === "diver" ? { bookingId: "other" } : { crewPersonId: "crew-sal" }),
+        },
+      ]),
+    ).toMatchObject({ state: "not_boarded" });
+    const alarm: OfflineRollCallEvent = {
+      ...ashore,
+      checkpoint: "after_dive_1",
+      clientEventId: crypto.randomUUID(),
+    };
+    expect(read([...events, alarm], "after_dive_1")).toMatchObject({ state: "not_boarded" });
+    expect(events[1]).toEqual(refused);
+    expect(events).toHaveLength(2);
+  });
+}

@@ -158,7 +158,7 @@ describe("offline manifest policy", () => {
     expect(canRecordOfflineStatus(saved, "missing", "not_boarded", "after_dive_3")).toBe(false);
   });
 
-  it("uses the latest non-rejected device event and exposes pending state", () => {
+  it("exposes a pending device statement and its exact undo identity", () => {
     const saved = snapshot();
     const latest = latestOfflineRollCall(
       saved,
@@ -178,7 +178,7 @@ describe("offline manifest policy", () => {
       "ready",
       "departure",
     );
-    expect(latest).toEqual({
+    expect(latest).toMatchObject({
       state: "boarded",
       occurredAt: "2026-07-20T11:05:00.000Z",
       pending: true,
@@ -277,7 +277,7 @@ describe("offline manifest policy", () => {
       "ready",
       "after_dive_1",
     );
-    expect(latest).toEqual({
+    expect(latest).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T14:00:00.000Z",
       pending: false,
@@ -337,7 +337,7 @@ describe("offline manifest policy", () => {
     };
     expect(
       latestOfflineRollCall(saved, [alarm, refusedRetraction], "ready", "after_dive_1"),
-    ).toEqual({
+    ).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T14:00:00.000Z",
       pending: false,
@@ -493,10 +493,8 @@ describe("offline manifest policy", () => {
     });
   });
 
-  // And the asymmetry is exactly that: it may never run the other way. An
-  // applied "boarded" under a rejected "not_boarded" is the stale optimism the
-  // snapshot fallback exists to overrule, after a dive as much as at the dock.
-  it("never resurrects a superseded boarded when the correction is rejected after a dive", () => {
+  // A refused missing statement remains evidence; it must not revive optimism.
+  it("preserves a refused alarm as conflicting evidence rather than reviving aboard", () => {
     const saved = snapshot();
     const latest = latestOfflineRollCall(
       saved,
@@ -527,18 +525,10 @@ describe("offline manifest policy", () => {
       "ready",
       "after_dive_1",
     );
-    expect(latest).toBeUndefined();
+    expect(latest).toMatchObject({ state: "not_boarded", evidenceConflict: true, local: false });
   });
 
-  /*
-   * And the bound on that rescue: it outranks the snapshot's *silence*, never
-   * a later sighting (dive-domain review, 2026-08-15). The two-device boat is
-   * the one big enough to need offline manifests — a second crew member
-   * records the diver back aboard on the live manifest, this device's next
-   * auto-save brings that home, and a rejection here must not re-raise an
-   * alarm the server has since settled.
-   */
-  it("does not re-raise an alarm the snapshot has since answered with a later sighting", () => {
+  it("retains an opaque alarm opposed by a later saved sighting with unknown order", () => {
     const saved = snapshot();
     const afterDive1 = saved.manifests.find((manifest) => manifest.checkpoint === "after_dive_1");
     const diver = afterDive1?.divers.find((entry) => entry.bookingId === "ready");
@@ -578,10 +568,11 @@ describe("offline manifest policy", () => {
       "after_dive_1",
     );
     expect(latest).toMatchObject({
-      state: "boarded",
-      occurredAt: "2026-07-20T14:03:00.000Z",
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:00:00.000Z",
       implied: false,
-      recordedByName: "Sal Ortiz",
+      evidenceConflict: true,
+      local: false,
     });
   });
 
@@ -649,7 +640,7 @@ describe("offline manifest policy", () => {
         syncStatus: "applied" as const,
       },
     ];
-    expect(latestOfflineRollCall(saved, events, "ready", "departure")).toEqual({
+    expect(latestOfflineRollCall(saved, events, "ready", "departure")).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T11:30:00.000Z",
       pending: false,
@@ -662,7 +653,7 @@ describe("offline manifest policy", () => {
     // `implied` result, so no control offers a retraction here — and one aimed
     // here anyway would be refused by the server, whose newest-event lookup is
     // scoped to *this* checkpoint, where the dock event is not.
-    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")).toEqual({
+    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T11:30:00.000Z",
       pending: false,
@@ -670,7 +661,7 @@ describe("offline manifest policy", () => {
       local: true,
       clientEventId: "event-dock",
     });
-    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_2")).toEqual({
+    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_2")).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T11:30:00.000Z",
       pending: false,
@@ -714,13 +705,9 @@ describe("offline manifest policy", () => {
     expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")).toBeUndefined();
   });
 
-  /*
-   * The retraction (ADR 20260815-offline-can-unsay-a-missing-diver). A
-   * `cleared` event returns the row to awaiting, exactly as it does on the
-   * live manifest — and must not fall through to the snapshot's own stale
-   * result, which would make the undo a no-op.
-   */
-  it("returns a row to awaiting when the latest device event is a retraction", () => {
+  // A local undo names its exact target. An older saved alarm with no causal
+  // identity cannot be silently assumed to be that same target from its clock.
+  it("takes back exactly the named local alarm while retaining opaque saved evidence", () => {
     const saved = snapshot();
     const afterDive1 = saved.manifests.find((manifest) => manifest.checkpoint === "after_dive_1");
     const diver = afterDive1?.divers.find((entry) => entry.bookingId === "ready");
@@ -745,6 +732,8 @@ describe("offline manifest policy", () => {
       },
       {
         clientEventId: "event-retraction",
+        retractsClientEventId: "event-mistap",
+        observedEvidenceIds: ["client:event-mistap"],
         snapshotId: saved.snapshotId,
         snapshotSavedAt: saved.savedAt,
         tripId: "trip-1",
@@ -756,7 +745,11 @@ describe("offline manifest policy", () => {
         syncStatus: "pending" as const,
       },
     ];
-    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")).toBeUndefined();
+    expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")).toMatchObject({
+      state: "not_boarded",
+      recordedByName: "Dana Divemaster",
+      local: false,
+    });
   });
 
   // A retraction is never refused: it takes nobody onto a boat, and a crew
@@ -784,11 +777,11 @@ describe("offline manifest policy", () => {
         state: "not_boarded",
         occurredAt: "2026-07-20T11:02:00.000Z",
         recordedByName: "Dana Divemaster",
-        implied: true,
+        implied: false,
       },
     });
 
-    const carried = latestOfflineRollCall(saved, [], "carried", "departure");
+    const carried = latestOfflineRollCall(saved, [], "carried", "after_dive_1");
     expect(carried).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T11:02:00.000Z",
@@ -1485,7 +1478,7 @@ describe("the dock copy carries what the crew observed", () => {
       occurredAt: "2026-07-20T14:00:00.000Z",
       recordedByName: "Captain Sol",
     };
-    expect(latestOfflineRollCall(saved, [], "ready", "after_dive_1")).not.toHaveProperty("note");
+    expect(latestOfflineRollCall(saved, [], "ready", "after_dive_1")?.note).toBeNull();
   });
 });
 
@@ -1567,7 +1560,7 @@ describe("offline crew roll call", () => {
         syncStatus: "pending" as const,
       },
     ];
-    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")).toEqual({
+    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T14:05:00.000Z",
       pending: true,
@@ -1648,7 +1641,7 @@ describe("offline crew roll call", () => {
         syncStatus: "rejected" as const,
       },
     ];
-    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")).toEqual({
+    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T14:05:00.000Z",
       pending: false,
@@ -1674,7 +1667,7 @@ describe("offline crew roll call", () => {
       occurredAt: "2026-07-20T11:30:00.000Z",
       syncStatus: "applied" as const,
     };
-    expect(latestOfflineCrewRollCall(saved, [ashore], "crew-dana", "after_dive_1")).toEqual({
+    expect(latestOfflineCrewRollCall(saved, [ashore], "crew-dana", "after_dive_1")).toMatchObject({
       state: "not_boarded",
       occurredAt: "2026-07-20T11:30:00.000Z",
       pending: false,
@@ -1685,6 +1678,8 @@ describe("offline crew roll call", () => {
     const retraction = {
       ...ashore,
       clientEventId: "event-crew-retraction",
+      retractsClientEventId: ashore.clientEventId,
+      observedEvidenceIds: ["client:event-crew-dock"],
       status: "cleared" as const,
       occurredAt: "2026-07-20T11:31:00.000Z",
       syncStatus: "pending" as const,
@@ -1701,23 +1696,7 @@ describe("offline crew roll call", () => {
     expect(canRecordOfflineCrewStatus(saved, "nobody", "cleared", "after_dive_1")).toBe(false);
   });
 
-  /*
-   * Two taps at one timestamp, on both halves of one head count.
-   *
-   * `occurredAt` is millisecond-resolution, so in production two deliberate taps
-   * landing on the same value is close to unreachable. In the e2e fleet it is
-   * the *normal* case: the clock is frozen so visual baselines stay pixel-stable
-   * (AGENTS.md's clock rule), which means every offline event for one subject in
-   * every test shares one timestamp. That is how this surfaced.
-   *
-   * The rule these pin is insertion order — the later-queued event wins —
-   * because that is what the SERVER already does with an equal timestamp:
-   * `recordRollCall`/`recordCrewRollCall` refuse an offline event only when
-   * `newest.occurredAt > occurredAt`, so an equal one is accepted, and the read
-   * back orders by `desc(occurredAt), desc(createdAt)`. A device that kept the
-   * older tap disagreed with the server about the same two events.
-   */
-  it("keeps the later-queued result when two crew taps share a timestamp", () => {
+  it("keeps an observed crew correction at an equal clock regardless of transport order", () => {
     const saved = crewSnapshot();
     const base = {
       snapshotId: saved.snapshotId,
@@ -1734,20 +1713,24 @@ describe("offline crew roll call", () => {
     // millisecond. The screen must show the fix, not the mistake.
     const events = [
       { ...base, clientEventId: "event-mistake", status: "not_boarded" as const },
-      { ...base, clientEventId: "event-correction", status: "boarded" as const },
+      {
+        ...base,
+        clientEventId: "event-correction",
+        status: "boarded" as const,
+        observedEvidenceIds: ["client:event-mistake"],
+      },
     ];
 
     expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")?.state).toBe(
       "boarded",
     );
-    // ...and it is the ORDER that decides, not the status: the same two events
-    // queued the other way round read the other way round.
+    // Transport order cannot change a correction whose basis was captured at tap.
     expect(
       latestOfflineCrewRollCall(saved, [events[1], events[0]], "crew-dana", "after_dive_1")?.state,
-    ).toBe("not_boarded");
+    ).toBe("boarded");
   });
 
-  it("keeps the later-queued result when two diver taps share a timestamp", () => {
+  it("keeps an observed diver correction at an equal clock regardless of transport order", () => {
     const saved = crewSnapshot();
     const base = {
       snapshotId: saved.snapshotId,
@@ -1761,16 +1744,21 @@ describe("offline crew roll call", () => {
     };
     const events = [
       { ...base, clientEventId: "event-mistake", status: "not_boarded" as const },
-      { ...base, clientEventId: "event-correction", status: "boarded" as const },
+      {
+        ...base,
+        clientEventId: "event-correction",
+        status: "boarded" as const,
+        observedEvidenceIds: ["client:event-mistake"],
+      },
     ];
 
     expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")?.state).toBe("boarded");
     expect(
       latestOfflineRollCall(saved, [events[1], events[0]], "ready", "after_dive_1")?.state,
-    ).toBe("not_boarded");
+    ).toBe("boarded");
   });
 
-  it("keeps the last of three results that all share a timestamp", () => {
+  it("follows three explicitly observed corrections at the same clock", () => {
     const saved = crewSnapshot();
     const base = {
       snapshotId: saved.snapshotId,
@@ -1782,12 +1770,21 @@ describe("offline crew roll call", () => {
       occurredAt: "2026-07-20T14:05:00.000Z",
       syncStatus: "pending" as const,
     };
-    // Three taps, not two: "later-queued wins" has to be transitively the LAST
-    // one, not whichever end of the list a comparison happens to favour.
+    // Each correction explicitly names the preceding rendered statement.
     const events = [
       { ...base, clientEventId: "event-1", status: "not_boarded" as const },
-      { ...base, clientEventId: "event-2", status: "boarded" as const },
-      { ...base, clientEventId: "event-3", status: "not_boarded" as const },
+      {
+        ...base,
+        clientEventId: "event-2",
+        status: "boarded" as const,
+        observedEvidenceIds: ["client:event-1"],
+      },
+      {
+        ...base,
+        clientEventId: "event-3",
+        status: "not_boarded" as const,
+        observedEvidenceIds: ["client:event-2"],
+      },
     ];
 
     expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")?.state).toBe(
@@ -1828,7 +1825,7 @@ describe("offline crew roll call", () => {
     expect(latestOfflineRollCall(saved, [confused], "ready", "after_dive_1")).toBeUndefined();
   });
 
-  it("still prefers a genuinely newer timestamp over queue position", () => {
+  it("keeps opposed opaque evidence conflicted regardless of clocks or queue position", () => {
     const saved = crewSnapshot();
     const base = {
       snapshotId: saved.snapshotId,
@@ -1839,8 +1836,7 @@ describe("offline crew roll call", () => {
       note: null,
       syncStatus: "pending" as const,
     };
-    // Queued newest-first, which a resync or a merge can produce. Time still
-    // wins; insertion order only breaks a tie.
+    // Independent opaque statements establish no observation in either order.
     const events = [
       {
         ...base,
@@ -1856,14 +1852,18 @@ describe("offline crew roll call", () => {
       },
     ];
 
-    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")).toEqual({
-      state: "boarded",
-      occurredAt: "2026-07-20T14:09:00.000Z",
+    expect(latestOfflineCrewRollCall(saved, events, "crew-dana", "after_dive_1")).toMatchObject({
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:05:00.000Z",
       pending: true,
       implied: false,
-      local: true,
-      clientEventId: "event-newer",
+      local: false,
+      evidenceConflict: true,
+      clientEventId: undefined,
     });
+    expect(
+      latestOfflineCrewRollCall(saved, [...events].reverse(), "crew-dana", "after_dive_1"),
+    ).toMatchObject({ state: "not_boarded", evidenceConflict: true });
   });
 
   it("attributes an event to exactly one subject, and refuses to guess", () => {

@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "../../db/client";
-import { shopMilestones, shops } from "../../db/schema/index";
+import { rollCallEvents, shopMilestones, shops } from "../../db/schema/index";
 import { countDiveDays } from "../../lib/founder-metrics";
 import { fileScopedShopContext } from "../../test/db";
 import {
@@ -118,6 +118,23 @@ describe("listShopActivation and markStallsAlerted", () => {
 });
 
 describe("departureRollCallEvents", () => {
+  it("feeds stored effective projections rather than the original tap statements", async () => {
+    const { db } = await realShopContext();
+    const events = await departureRollCallEvents(db, ALL_TIME);
+    expect(events.length).toBeGreaterThan(0);
+    const sequences = events.map((event) => event.seq);
+    // Deliberately distinct persisted columns make a raw-statement reader fail.
+    // This tests the read projection, not a new operational write path.
+    for (const seq of sequences)
+      await db
+        .update(rollCallEvents)
+        .set({ status: "not_boarded", statementStatus: "boarded" })
+        .where(eq(rollCallEvents.seq, seq));
+    const projected = await departureRollCallEvents(db, ALL_TIME);
+    expect(projected.every((event) => event.status === "not_boarded")).toBe(true);
+    expect(countDiveDays(projected)).toEqual({ diveDays: 0, shops: 0 });
+  });
+
   it("feeds the north star the shop's departure roll calls, on the shop's own calendar", async () => {
     const { db } = await realShopContext();
     const events = await departureRollCallEvents(db, ALL_TIME);

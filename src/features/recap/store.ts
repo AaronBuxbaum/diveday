@@ -620,8 +620,8 @@ export async function departureAfterLateBoarding<T extends string | null>(
  * At the dock `not_boarded` means "never left" (`src/lib/roll-call.ts`), so
  * there was no day to look back on and the recap would thank them for one
  * (issue #2105). It is read through the manifest's own readers rather than a
- * query of its own, so "the latest result" means here what it means on the
- * boat: newest event wins and a `cleared` undo drops out. A booking on a
+ * query of its own, so the standing result agrees with the boat's causal
+ * projection: observed corrections and exact-target withdrawals can settle it. A booking on a
  * departure with no roll call at all is never in the set — a shop that does
  * not take one still sends every recap. A booking the crew never counted, on a
  * departure whose roll call was taken, is in it

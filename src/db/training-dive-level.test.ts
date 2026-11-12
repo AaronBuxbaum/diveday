@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import {
   type CharterContext,
@@ -16,7 +17,6 @@ import {
   cards,
   courses,
   diveSites,
-  rollCallEvents,
   tripAssignments,
   tripDives,
   tripRequirements,
@@ -406,7 +406,7 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     const ctx = await advancedCharter();
     await teachesAndAboard(ctx);
     await markSeat(ctx);
-    await ctx.db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(ctx.db, {
       shopId: ctx.shop.id,
       tripId: ctx.charter.id,
       ...crewSubject(ctx.instructor),

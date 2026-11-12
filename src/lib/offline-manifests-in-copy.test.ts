@@ -8,6 +8,7 @@ import {
   offlineEventInCopy,
   offlineSnapshotTokenClaims,
 } from "./offline-manifests";
+import { clientRollCallEvidenceId } from "./roll-call-causality";
 
 const ITEM = "item-oxygen";
 
@@ -108,7 +109,26 @@ describe("a synced tap that was undone on the live manifest", () => {
       status: "boarded" as const,
       note: null,
     };
-    // A wrong "back aboard" can still be taken back offline, naming the event.
+    const ownId = clientRollCallEvidenceId(mine.clientEventId);
+    diver.rollCallContext = {
+      meetingDay: 0,
+      observedEvidenceIds: [ownId],
+      conflict: false,
+      orderingUnknown: false,
+      unknownMeetingDay: false,
+      evidence: [
+        {
+          id: ownId,
+          status: "boarded",
+          occurredAt: diver.rollCall.occurredAt,
+          recordedByName: diver.rollCall.recordedByName,
+          note: null,
+          meetingDay: 0,
+          observedEvidenceIds: [],
+        },
+      ],
+    };
+    // The saved identity, rather than a matching clock, names this tablet's tap.
     expect(latestOfflineRollCall(saved, [mine], "ready", "after_dive_1")).toMatchObject({
       state: "boarded",
       pending: false,

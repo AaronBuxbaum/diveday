@@ -1,4 +1,6 @@
 /** courses public contract. Internals are imported only within this module. */
+
+export { courseDoors } from "./doors";
 export type {
   CourseContentPatch,
   CourseContentSave,

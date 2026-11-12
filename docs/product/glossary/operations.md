@@ -1050,8 +1050,25 @@
   reads it. Spanish: "Sin pase de lista".
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
   left with: passengers (divers, snorkelers and riders) plus crew, one number, no distinction
-  between who paid and who works. It is
-  printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
+  between who paid and who works.
+  A booked staff member may also hold a crew assignment. Physical-person totals
+  count a confirmed person once across those roles; role-specific passenger and
+  crew counts and both roll-call trails remain. A booked staff member still
+  counts against the passenger certificate: a staff role establishes no
+  jurisdictional exemption. Printed totals name the overlap so role subtotals
+  need not be mistaken for separate people. An opposing missing-person statement
+  remains visible; a physical count never settles it. Unconfirmed identities,
+  erased identities and older offline copies without identity evidence are not
+  guessed into an overlap. The encrypted offline addition is optional and never
+  purges queued events (#4308). The evening's physical totals remove overlaps
+  within each departure; the same person sailing twice counts once per sailing.
+  A shared return is removed only with positive final-checkpoint evidence in
+  both roles. Its accepted unresolved-gap back-count approximation is unchanged
+  (`StationClose.back`); missing and uncounted reasons still withhold all-home.
+  A crew mark ashore at the dock is not an after-dive missing statement: a later
+  positive return on that person's booked seat remains physical evidence. Both
+  role trails stay visible; this historical role mismatch adds no sticky alarm.
+  It is printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
   **static** fact about the departure — how many the trip carries, how many crew it names — never a
   live roll-call count, because a "Boarded 6" printed at 07:12 is wrong by 07:20 and paper cannot
   correct itself. The screen answers the live question, in the checkpoint panel. **One screen does

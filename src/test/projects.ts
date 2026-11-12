@@ -15,14 +15,14 @@ import { originalTestPath, relocatedTestProject } from "./relocated-test-origins
  * - **`db`** — imports the database fixture (`@/test/db`, `@/test/postgres`,
  *   `@/test/query-count`) or builds a database directly. Forks, isolated, and
  *   the only projects that run the PGlite global setup.
- * - **`dbShared`** — a `db` file that touches no process-wide state (no `vi.`
+ * - **`dbShared`** — a `db` file with no directly detected process-wide state (no `vi.`
  *   call at all, no `process.env`, no `globalThis`). It still gets a fresh
  *   PGlite per test, but shares a fork and its module cache with the next such
  *   file (`isolate: false`), because re-importing the same module graph was
  *   about 35% of a `db` file's time (issue #4416). One-week trial from
- *   2026-11-12: a file that fails only when shared is moved back to `db` by
- *   adding the call or global it depends on to the source it reads, and the
- *   trial is reverted if any file needs that more than once.
+ *   2026-11-12: revert the project on any shared-only or order-dependent
+ *   failure. This scan does not prove imported singletons are safe; three
+ *   shuffled full CI trials and paired isolated baselines remain required.
  * - **`ui`** — opts into jsdom with a `// @vitest-environment jsdom` docblock.
  *   The docblock stays the switch; the project just groups the files that pay
  *   the jsdom boot so `pnpm test:ui` can run them alone.
@@ -79,7 +79,8 @@ const MODULE_STATE =
  * Anything that leaves a trace for the next file in a shared worker: any
  * `vi.` call (mocks, spies, fake timers, stubs), the environment, or globals.
  */
-const WORKER_STATE = /\bvi\.|\bprocess\.env\b|\bglobalThis\b/;
+const WORKER_STATE =
+  /\bvi\b|\bvitest\s*[.[]|\bimport\s*\*\s*as\s+\w+\s+from\s*["']vitest["']|\bprocess\s*(?:\.\s*env\b|\[)|\bglobalThis\b/;
 /** Reads a file off disk. */
 const READS_FILES = /\breadFileSync\s*\(|\breadFile\s*\(|\breaddirSync\s*\(/;
 /**

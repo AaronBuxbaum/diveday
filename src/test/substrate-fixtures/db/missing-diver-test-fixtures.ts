@@ -1,6 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import type { AppDb } from "../../../db/client";
-import { bookings, incidentReports, rollCallEvents, shops } from "../../../db/schema/index";
+import { bookings, incidentReports, shops } from "../../../db/schema/index";
 import { nowDate } from "../../../lib/clock";
 import type { Notification, NotificationProvider } from "../../../lib/notifications/index";
 import { fixture } from "./incident-reports-test-fixtures";
@@ -29,7 +30,7 @@ export function recorder(status: "sent" | "failed" = "sent") {
 
 export type Fixture = Awaited<ReturnType<typeof fixture>>;
 
-/** One after-dive roll-call mark on a seat, as the manifest records it. */
+/** Fixture evidence: observation is explicit, even when its source is live. */
 export async function mark(
   db: AppDb,
   shopId: string,
@@ -38,17 +39,22 @@ export async function mark(
   status: "boarded" | "not_boarded",
   occurredAt: Date,
   source: "live" | "offline" = "live",
+  observation: { observesPrevious: boolean } = { observesPrevious: false },
 ) {
-  await db.insert(rollCallEvents).values({
-    shopId,
-    tripId: f.trip.id,
-    bookingId,
-    recordedByPersonId: f.crew.id,
-    status,
-    checkpoint: "after_dive_1",
-    source,
-    occurredAt,
-  });
+  await seedRollCallEvidence(
+    db,
+    {
+      shopId,
+      tripId: f.trip.id,
+      bookingId,
+      recordedByPersonId: f.crew.id,
+      status,
+      checkpoint: "after_dive_1",
+      source,
+      occurredAt,
+    },
+    observation,
+  );
 }
 
 /** The fixture's departure, its seat marked not back aboard. */

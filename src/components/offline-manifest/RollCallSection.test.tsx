@@ -198,6 +198,12 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
         bookingId: "diver-priya",
         checkpoint: "after_dive_1",
         status: "boarded",
+        observedEvidenceIds: [],
+        meetingDay: undefined,
+        note: undefined,
+        snapshotId: saved.snapshot.snapshotId,
+        snapshotSavedAt: saved.snapshot.savedAt,
+        erasureEpochToken: saved.snapshot.erasureEpochToken,
       }),
     );
     // No refusal message — the tap actually recorded, matching what the

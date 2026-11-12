@@ -32,6 +32,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto(`/s/${privateShop.slug}`);
       const photo = page.getByRole("img", { name: boat.name });
       await expect(photo).toBeVisible();
+      await photo.scrollIntoViewIfNeeded();
       await expect
         .poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth))
         .toBeGreaterThan(0);
@@ -39,6 +40,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto(`/s/${privateShop.slug}/trips/${trip.id}`);
       const tripPhoto = page.getByRole("img", { name: boat.name });
       await expect(tripPhoto).toBeVisible();
+      await tripPhoto.scrollIntoViewIfNeeded();
       await expect
         .poll(() => tripPhoto.evaluate((image: HTMLImageElement) => image.naturalWidth))
         .toBeGreaterThan(0);

@@ -30,6 +30,7 @@
   "summaryNotBackAboard": "Not back aboard",
   "summaryAshore": "Ashore",
   "summaryAwaiting": "Awaiting",
+  "soulsOnBoardOverlap": "{count, plural, one {# person has both roles} other {# people have both roles}}",
   "soulsOnBoardLine": "Passengers {passengers} · Crew {crew} · Souls on board {souls}",
   "soulsOnBoardLineSplit": "Passengers {passengers} ({split}) · Crew {crew} · Souls on board {souls}",
   "passengerDivers": "{count, plural, one {# diver} other {# divers}}",
@@ -363,5 +364,21 @@
   "missingDiverAlert": {
     "pushTitle": "Missing diver reported",
     "pushBody": "{title}: the crew filed a missing-diver report."
+  },
+  "conflicts": {
+    "heading": "Resolve conflicting marks for {name}",
+    "unknownOrder": "The order of these marks is unknown.",
+    "unknownDay": "Some saved marks do not say which trip day they belong to.",
+    "aboard": "Aboard",
+    "missing": "Not back aboard",
+    "ashore": "Did not board",
+    "cleared": "Mark taken back",
+    "confirmAboard": "Confirm aboard",
+    "confirmMissing": "Confirm not back aboard",
+    "confirmAshore": "Confirm did not board",
+    "takeBack": "Take these marks back",
+    "meetingDay": "Meeting day",
+    "legacyReconnect": "Reconnect to review these saved marks with the crew.",
+    "summary": "Conflicting marks; crew must check"
   }
 }

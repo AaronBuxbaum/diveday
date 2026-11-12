@@ -119,6 +119,10 @@ const CIRCLES: ReadonlySet<ButtonSize> = new Set(["mark"]);
  * because two utilities for one property resolve by stylesheet order, not by
  * the order you wrote them — the same reason `flush` exists (see below).
  *
+ * Both retain 70% opacity: the public schedule's disabled decrement fell to
+ * 4.397:1 at 60%, so unavailability must not make its label hard to read.
+ * Cursor and native disabled semantics still distinguish unavailable and busy.
+ *
  * Each is said twice: for the control itself, and for a `<label>` wearing
  * `buttonClass` round the input it stands in for — a weekday chip round its
  * hidden checkbox. A label is never `:disabled`; the input inside it is,
@@ -128,7 +132,7 @@ const CIRCLES: ReadonlySet<ButtonSize> = new Set(["mark"]);
  */
 const DISABLED = {
   default:
-    "disabled:cursor-not-allowed disabled:opacity-60 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-60",
+    "disabled:cursor-not-allowed disabled:opacity-70 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-70",
   busy: "disabled:cursor-wait disabled:opacity-70 has-[input:disabled]:cursor-wait has-[input:disabled]:opacity-70",
 } as const;
 

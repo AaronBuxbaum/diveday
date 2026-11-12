@@ -164,7 +164,7 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   // machine where the first visible frame is already hydrated.
   expect(samples[0]?.[1]).toBe(false);
 
-  // One count for the whole window, and it is the two filters and nothing else.
+  // One exact control inventory for the whole window.
   // (The sampler only records changes, so a stable row is exactly one entry;
   // asserting the value rather than just the length is what stops an empty or
   // never-found form passing as "never changed".)
@@ -176,7 +176,16 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   // Four with the "More filters" button, which has sat inside the form since
   // the row became one row (visual review 2026-10-24, B18): it renders on
   // first paint for every reader, so it is in every sample or none.
-  expect([...new Set(samples.map(([count]) => count))]).toEqual([4]);
+  // Seven since #4378: the party-size decrement, increment and hidden form
+  // value are all server-rendered, alongside those four existing controls.
+  expect([...new Set(samples.map(([count]) => count))]).toEqual([7]);
+  const copy = diverTranslator("en-US");
+  const form = page.locator('form:has(select[name="tripType"])');
+  await expect(form.getByRole("button", { name: copy("party.fewerPeople") })).toHaveCount(1);
+  await expect(form.getByRole("button", { name: copy("party.morePeople") })).toHaveCount(1);
+  const partySize = form.locator('input[type="hidden"][name="partySize"]');
+  await expect(partySize).toHaveCount(1);
+  await expect(partySize).toHaveValue("1");
 
   // And no Apply button at any point, for any reader.
   await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);
@@ -351,4 +360,78 @@ test("phone schedule filters reveal the trip tags and summarize a closed selecti
   ).toBeVisible();
   await openFilters(page);
   await expect(page.getByLabel(copy("schedule.filters.tripType"))).toHaveValue("course");
+});
+
+test("a party preference keeps short boats visible and explains the live booking limit", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  const t = diverTranslator("en-US");
+  await page.goto("/s/blue-mantis?partySize=4");
+  const people = page.getByRole("group", { name: t("schedule.filters.partySize") });
+  await expect(people).toBeVisible();
+  await expect(people.getByRole("status")).toHaveText("4");
+  const list = page.locator("form + ul");
+  await expect(list.getByText(/party of 4/).first()).toBeVisible();
+  const trip = list.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).first();
+  await expect(trip).toHaveAttribute("href", /partySize=4/);
+  await trip.click();
+  const count = page.getByRole("group", { name: t("party.numberOfDivers") });
+  await expect(count).toHaveAttribute("data-hydrated", "true");
+  await expect(count.getByRole("status")).toHaveText(t("party.diverCountOption", { count: 3 }));
+  await expect(
+    page.getByText(t("booking.partyExceedsSeats", { requested: 4, remaining: 3 })),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Diver 4 name" })).toHaveCount(0);
+});
+
+test("a party preference pre-fills four people on a boat with room", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  const t = diverTranslator("en-US");
+  await page.goto("/s/blue-mantis?partySize=4");
+  const trip = page
+    .locator("form + ul")
+    .getByRole("link", { name: /Two-Tank Reef — Benwood & Elbow/ })
+    .first();
+  await expect(trip).toHaveAttribute("href", /partySize=4/);
+  await trip.click();
+  const count = page.getByRole("group", { name: t("party.numberOfDivers") });
+  await expect(count).toHaveAttribute("data-hydrated", "true");
+  await expect(count.getByRole("status")).toHaveText(t("party.diverCountOption", { count: 4 }));
+  await expect(page.getByRole("textbox", { name: "Diver 4 name" })).toBeVisible();
+});
+
+test("the first schedule control changes only the URL party preference", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  const t = diverTranslator("en-US");
+  await page.goto("/s/blue-mantis?partySize=3&tripType=fun_dive");
+  await expect(page.locator('select[name="tripType"]')).toHaveAttribute("data-hydrated", "true");
+  await page
+    .getByRole("group", { name: t("schedule.filters.partySize") })
+    .getByRole("button", { name: t("party.morePeople") })
+    .click();
+  await expect(page).toHaveURL(/partySize=4/);
+  await expect(page).toHaveURL(/tripType=fun_dive/);
+  await page.reload();
+  await expect(
+    page.getByRole("group", { name: t("schedule.filters.partySize") }).getByRole("status"),
+  ).toHaveText("4");
+});
+
+test("a public schedule row adds its site photo and one fact without another tap target", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.goto("/s/blue-mantis");
+  const reef = page
+    .locator("form + ul")
+    .getByRole("listitem")
+    .filter({
+      has: page.getByRole("heading", { name: "Two-Tank Reef — Molasses & French", exact: true }),
+    })
+    .first();
+  await expect(reef.locator('img[alt=""]')).toHaveCount(1);
+  await expect(reef.locator("[data-schedule-fact]")).toHaveCount(1);
+  await expect(reef.locator("[data-schedule-fact]")).not.toBeEmpty();
+  await expect(reef.getByRole("link")).toHaveCount(1);
 });

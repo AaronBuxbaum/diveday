@@ -15,7 +15,7 @@ import type { CsvValue, ExportTable } from "@/lib/export";
 import { tipAmountCents, tipCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { assertDiverBookingRead, assertDiverExportColumn } from "./person-columns";
-import { oldestMarkFirst } from "./roll-call-order";
+import { auditMarkFirst } from "./roll-call-order";
 import {
   activityEvents,
   boatSnags,
@@ -402,7 +402,7 @@ export const EXPORT_TABLES = {
     // `seq`, not `id`: the id is a random uuid, so two events sharing an
     // `occurred_at` came out in a different order every export — of the one
     // file a shop is meant to be able to diff against last week's.
-    order: [...oldestMarkFirst()],
+    order: [...auditMarkFirst()],
     // Both halves, seat and crew: the shop bundle splits them into
     // roll_call_events.csv and roll_call_crew_events.csv by `subject_kind`
     // (`splitRollCallRows`), and a diver's scope by booking reads seats only.

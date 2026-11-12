@@ -1,0 +1,1 @@
+ALTER TABLE "roll_call_events" ADD COLUMN "capture_context" jsonb;

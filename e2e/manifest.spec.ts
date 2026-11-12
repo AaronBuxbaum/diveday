@@ -1,4 +1,5 @@
 import type { Page, Route } from "@playwright/test";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
 import {
   DEMO_MEDICAL_ALERT,
   DEMO_MEDICAL_ALERT_DIVER,
@@ -8,6 +9,7 @@ import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { OFFLINE_MANIFEST_SHELL_VERSION } from "../src/lib/offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "../src/lib/roll-call-protocol";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
@@ -266,9 +268,11 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   page,
   context,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripTab(page, "Manifest");
+  // This journey exercises the device copy; the booking smoke covers board navigation.
+  await page.goto(`/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest`);
+  await expect(
+    page.getByRole("heading", { name: DEMO_TODAY_TRIP_TITLE, exact: true }),
+  ).toBeVisible();
 
   // The device copy now saves itself automatically once the page has signal —
   // no tap required. Wait for that to land (the offline link only appears
@@ -726,8 +730,16 @@ test("the offline shell asks who it is signed in as without pulling the roster t
   // the identity one matters more, because a cached answer on a shared tablet
   // tells the *next* shop's browser it is the *previous* shop — so the purge
   // deletes the current captain's manifests and keeps the previous shop's.
+  const legacyRoster = await page.request.get(
+    new URL("/api/offline-manifests/upcoming", page.url()).toString(),
+  );
+  expect(legacyRoster.status()).toBe(426);
+  expect(legacyRoster.headers()["cache-control"]).toBe("private, no-store");
+  expect(await legacyRoster.json()).toEqual({ error: "offline_update_required" });
   for (const path of ["/api/offline-manifests/upcoming", "/api/offline-manifests/identity"]) {
-    const response = await page.request.get(new URL(path, page.url()).toString());
+    const response = await page.request.get(new URL(path, page.url()).toString(), {
+      headers: path.endsWith("/upcoming") ? ROLL_CALL_CAUSAL_HEADERS : undefined,
+    });
     expect(response.status()).toBe(200);
     expect(response.headers()["cache-control"]).toBe("private, no-store");
   }

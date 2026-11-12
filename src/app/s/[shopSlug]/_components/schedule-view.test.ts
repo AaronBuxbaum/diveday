@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import {
   aboveStatedLevelIds,
@@ -7,6 +7,7 @@ import {
   type ScheduleView,
   scheduleDayWords,
   scheduleFilterCopy,
+  scheduleFiltersFor,
   scheduleMonthBounds,
   scheduleMonthRail,
   scheduleNextBoat,
@@ -295,4 +296,22 @@ describe("the next-boat card", () => {
     const listed = trips({ booked: 10 }, { booked: 10 });
     expect(scheduleNextBoat({ ...base, visibleUpcoming: listed }).nextBoat).toBeNull();
   });
+});
+
+it("keeps a party preference through month, lens and page navigation", () => {
+  const view = { ...VIEW, partySize: 4 };
+  const links = scheduleViewLinks(view);
+  expect(links.monthHref("2026-08")).toContain("partySize=4");
+  expect(links.lensHref("reef")).toContain("partySize=4");
+  const pager = schedulePagerHrefs({ view, prevCursor: "before", nextCursor: "after" });
+  for (const href of [pager.earlier, pager.later, pager.backToNext])
+    expect(href).toContain("partySize=4");
+});
+
+it("resolves only supported trip types and keeps their literal contract", () => {
+  const course = scheduleFiltersFor({ tripType: "course", partySize: "4" });
+  expectTypeOf(course.tripTypeFilter).toEqualTypeOf<"course" | "fun_dive" | undefined>();
+  expect(course.tripTypeFilter).toBe("course");
+  expect(scheduleFiltersFor({ tripType: "fun_dive" }).tripTypeFilter).toBe("fun_dive");
+  expect(scheduleFiltersFor({ tripType: "unknown" }).tripTypeFilter).toBeUndefined();
 });

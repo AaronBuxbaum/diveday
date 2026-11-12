@@ -1,3 +1,4 @@
+import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 // @vitest-environment jsdom
 import "fake-indexeddb/auto";
 import { eq } from "drizzle-orm";
@@ -171,7 +172,7 @@ describe("offline sync when the authenticated tenant changes in flight", () => {
         const response = await POST(
           new Request("http://localhost/api/offline-manifests/sync", {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers: { ...ROLL_CALL_CAUSAL_HEADERS, "content-type": "application/json" },
             body: JSON.stringify(body),
           }),
         );
@@ -205,7 +206,7 @@ describe("offline sync when the authenticated tenant changes in flight", () => {
     const unhinted = await POST(
       new Request("http://localhost/api/offline-manifests/sync", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { ...ROLL_CALL_CAUSAL_HEADERS, "content-type": "application/json" },
         body: JSON.stringify({
           events: [queued.events[0]],
         }),

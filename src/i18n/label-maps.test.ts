@@ -152,9 +152,8 @@ import {
 /**
  * **Every code-to-message-key map in this directory, rendered** (issue #1701).
  *
- * A `Record<Code, StaffMessageKey>` proves two things and stops: that every
- * code is mapped, and that the key's *name* is a member of the bundle's key
- * union. It does not prove that the key a code is mapped **to** resolves to a
+ * A `Record<Code, StaffMessageKey>` proves every code has a valid key name.
+ * It does not prove that the key a code is mapped **to** resolves to a
  * sentence, and `pnpm check:locale` deliberately does not either — its own doc
  * comment scopes it to "what is extracted is translated", which is a
  * comparison of two JSON files and renders nothing. So the gap is invisible
@@ -356,6 +355,7 @@ const MEDIA_DELETION_KINDS = everyCodeOf<MediaDeletionKind>({
   dive_site_photo: true,
   shop_logo: true,
   shop_hero: true,
+  staff_profile: true,
   boat_photo: true,
   arrival_photo: true,
   payment_receipt: true,
@@ -730,28 +730,28 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
-    module: "participant-labels.ts",
+    module: "staff-participant-labels.ts",
     map: "STAFF_PARTICIPANT_TYPE_KEYS",
     rows: codeRows(keysOf(STAFF_PARTICIPANT_TYPE_KEYS), (locale, type) =>
       staffParticipantTypeLabel(staffTranslator(locale), type),
     ),
   },
   {
-    module: "participant-labels.ts",
+    module: "staff-participant-labels.ts",
     map: "STAFF_LEFT_DIVING_KEYS",
     rows: codeRows(keysOf(STAFF_LEFT_DIVING_KEYS), (locale, type) =>
       staffLeftDivingLabel(staffTranslator(locale), type),
     ),
   },
   {
-    module: "participant-labels.ts",
+    module: "staff-participant-labels.ts",
     map: "STAFF_JOINED_DIVING_KEYS",
     rows: codeRows(keysOf(STAFF_JOINED_DIVING_KEYS), (locale, type) =>
       staffJoinedDivingLabel(staffTranslator(locale), type),
     ),
   },
   {
-    module: "participant-labels.ts",
+    module: "staff-participant-labels.ts",
     map: "STAFF_PASSENGER_COUNT_KEYS",
     rows: codeRows(keysOf(STAFF_PASSENGER_COUNT_KEYS), (locale, type) =>
       staffTranslator(locale)(STAFF_PASSENGER_COUNT_KEYS[type], { count: 2 }),

@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
@@ -766,9 +767,11 @@ describe("refreshCanonicalDemoSchedule", () => {
         source: "live" as const,
         occurredAt: new Date(last.occurredAt.getTime() + 1_000),
       });
-      await db
-        .insert(rollCallEvents)
-        .values([drill(first, "cleared"), drill(second, "not_boarded")]);
+      await seedRollCallEvidence(db, [drill(first, "cleared"), drill(second, "not_boarded")], {
+        // These are deliberate edits of the two displayed return marks,
+        // not concurrent statements from a device that has not seen them.
+        observesPrevious: true,
+      });
 
       expect(await bringDemoBoatsAtSeaHome(db, anHourLater)).toBeGreaterThanOrEqual(1);
 

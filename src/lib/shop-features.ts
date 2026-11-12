@@ -57,6 +57,7 @@ export const SHOP_FEATURES = [
   "fieldGuide",
   "seatSoldAlerts",
   "privateCharters",
+  "publicStaffProfiles",
 ] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
@@ -100,6 +101,7 @@ export const SHOP_FEATURE_COLUMNS = {
   fieldGuide: "fieldGuideEnabled",
   seatSoldAlerts: "seatSoldAlertsEnabled",
   privateCharters: "privateChartersEnabled",
+  publicStaffProfiles: "publicStaffProfilesEnabled",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];

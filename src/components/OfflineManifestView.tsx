@@ -1,6 +1,8 @@
 "use client";
+
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { watchRollCallTouches } from "@/components/roll-call-touch-guard";
+import { selectOfflineRollCallDay } from "@/lib/offline-manifest-store";
 import { pendingOfflineEventCount } from "@/lib/offline-manifests";
 import type { OfflineTripControls } from "./offline-manifest/controls";
 import { OfflineManifestList } from "./offline-manifest/ManifestList";
@@ -89,6 +91,7 @@ function OfflineManifestScreen() {
       delete document.documentElement.dataset.offlineSettled;
     };
   }, [storeRead]);
+  const [selectedDay, setSelectedDay] = useState<{ tripId: string; day: number } | null>(null);
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [busyChecklistItem, setBusyChecklistItem] = useState<string | null>(null);
   // Its own busy key, like the checklist's: a counter tap must never appear to
@@ -188,12 +191,22 @@ function OfflineManifestScreen() {
     );
   }
 
-  const view = offlineTripView(envelope, checkpoint);
+  const displayEnvelope = {
+    ...envelope,
+    snapshot: {
+      ...envelope.snapshot,
+      selectedRollCallMeetingDay:
+        selectedDay?.tripId === tripId
+          ? selectedDay.day
+          : (envelope.selectedRollCallMeetingDay ?? envelope.snapshot.rollCallMeetingDay),
+    },
+  };
+  const view = offlineTripView(displayEnvelope, checkpoint);
   if (!view) return null;
   const { record, recordChecklistCheck, recordArrival } = offlineRecorders({
     t,
     tripId,
-    envelope,
+    envelope: displayEnvelope,
     checkpoint,
     expired: view.expired,
     noteDrafts,
@@ -217,6 +230,13 @@ function OfflineManifestScreen() {
     liveOffer:
       liveAnswering && liveHref && pendingOfflineEventCount(envelope) === 0 ? liveHref : null,
     setCheckpoint,
+    selectedMeetingDay: displayEnvelope.snapshot.selectedRollCallMeetingDay ?? 0,
+    setMeetingDay: (day) => {
+      setSelectedDay({ tripId, day });
+      void selectOfflineRollCallDay(tripId, day)
+        .then((next) => dispatchSaved({ type: "loaded", envelope: next }))
+        .catch(() => setMessage(t("shared.offlineManifest.single.record.genericError")));
+    },
     busyBooking,
     busyChecklistItem,
     busyArrival,

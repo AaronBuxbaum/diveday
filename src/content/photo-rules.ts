@@ -234,3 +234,20 @@ export function plain(html: string | null | undefined): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/** Aaron's #4381 exception applies only to clearly marked, fictional demo artwork.
+ * It never weakens the Commons photography rules or supplies catalog evidence.
+ */
+export function demoPlaceholderAllowed(input: {
+  isDemo: boolean;
+  file: string;
+  subject: string;
+  marked: boolean;
+}): boolean {
+  return (
+    input.isDemo &&
+    input.file.startsWith("demo-shop/generated/") &&
+    /^demo:(boat|dock|briefing|student|reef|oxygen)$/.test(input.subject) &&
+    input.marked
+  );
+}

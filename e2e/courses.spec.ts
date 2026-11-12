@@ -159,6 +159,30 @@ test("a gear-included course session quotes no rental at booking", async ({
   await expect(page.locator("#book").getByText(/Gear for this diver/)).toHaveCount(0);
 });
 
+test("the beginner doors precede agency choices and link to the shop catalog", async ({ page }) => {
+  const diver = diverTranslator("en-US");
+  await page.goto("/s/blue-mantis/courses?agency=ssi");
+  const doors = page.getByRole("list", { name: diver("courses.index.doorsLabel") });
+  await expect(
+    doors.getByRole("link", { name: diver("courses.index.doors.try"), exact: true }),
+  ).toHaveAttribute("href", "/s/blue-mantis/courses/discover-scuba-diving");
+  await expect(
+    doors.getByRole("link", { name: diver("courses.index.doors.certify"), exact: true }),
+  ).toHaveAttribute("href", "/s/blue-mantis/courses/open-water-diver");
+  await expect(
+    doors.getByRole("link", { name: diver("courses.index.doors.refresh"), exact: true }),
+  ).toHaveAttribute("href", "/s/blue-mantis/courses/scuba-refresher");
+  const tabs = page.getByRole("navigation", { name: diver("courses.index.agencyTabsLabel") });
+  const doorBox = await doors.boundingBox();
+  const tabBox = await tabs.boundingBox();
+  if (!doorBox || !tabBox) throw new Error("course choices are missing");
+  expect(doorBox.y).toBeLessThan(tabBox.y);
+  await doors.getByRole("link", { name: diver("courses.index.doors.try"), exact: true }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Discover Scuba Diving" }),
+  ).toBeVisible();
+});
+
 test("a signed-out visitor browses the public course catalog, with the editor still gated", async ({
   page,
 }) => {
@@ -176,7 +200,11 @@ test("a signed-out visitor browses the public course catalog, with the editor st
   const openWater = page
     .getByRole("listitem")
     .filter({ has: page.getByRole("heading", { name: "Open Water Diver", exact: true }) });
-  await expect(openWater).toContainText(/Next \w{3},\s\w{3}\s\d{1,2}/);
+  await expect(openWater).toContainText(/\w{3},\s\w{3}\s\d{1,2}/);
+  await expect(openWater.getByRole("link", { name: /seats? left/ }).first()).toHaveAttribute(
+    "href",
+    /^\/s\/blue-mantis\/trips\//,
+  );
   const ask = page.getByRole("link").filter({ hasText: "Ask for a date" }).first();
   await expect(ask).toHaveAttribute("href", /^\/s\/blue-mantis\/courses\/[^#]+#get-in-touch$/);
   // No staff affordance renders at all — not disabled, absent (AGENTS.md
@@ -1019,13 +1047,17 @@ test.describe("courses on the shopfront", () => {
     await expect(shelf).toBeVisible();
     // Three, and no more: a shelf that grew to the whole catalog would be a
     // second page glued under the first.
-    const cards = shelf.getByRole("listitem");
+    // Session dates have their own nested list; the shelf still owns exactly
+    // three course cards, not a second catalog.
+    const cards = shelf.locator(":scope > ul > li");
     await expect(cards).toHaveCount(3);
     await expect(shelf.getByRole("link", { name: "All courses" })).toHaveAttribute(
       "href",
       "/s/blue-mantis/courses",
     );
-    await cards.first().getByRole("link").click();
+    const courseDoor = cards.first().locator(":scope > a");
+    await expect(courseDoor).toHaveAttribute("href", /^\/s\/blue-mantis\/courses\/[a-z0-9-]+$/);
+    await courseDoor.click();
     await expect(page).toHaveURL(/\/s\/blue-mantis\/courses\/[a-z0-9-]+$/);
   });
 

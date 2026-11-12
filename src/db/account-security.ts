@@ -462,6 +462,8 @@ export async function getAccountSecurityPage(
       fullName: people.fullName,
       crewPublicName: people.crewPublicName,
       crewPublicConsentAt: people.crewPublicConsentAt,
+      publicStaffProfileEnabled: people.publicStaffProfileEnabled,
+      publicStaffProfile: people.publicStaffProfile,
     })
     .from(people)
     .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)));

@@ -1,16 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { createBooking, createBookingParty } from "../../db/bookings";
 import type { AppDb } from "../../db/client";
 import { recordInboundMessage } from "../../db/inbound-messages";
-import {
-  bookings,
-  inboundMessages,
-  people,
-  rollCallEvents,
-  staffReplies,
-  trips,
-} from "../../db/schema/index";
+import { bookings, inboundMessages, people, staffReplies, trips } from "../../db/schema/index";
 import { listStaff, upcomingTripsWithCounts } from "../../db/trips";
 import type { Notification, NotificationProvider } from "../../lib/notifications/index";
 import { fileScopedShopContext } from "../../test/db";
@@ -240,7 +234,7 @@ describe("handleInboundReplyKeyword — what it refuses", () => {
     const provider = acceptingProvider();
     const [recorder] = await listStaff(db, shop.id);
     if (!recorder) throw new Error("seeded staff missing");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip.id,
       bookingId,

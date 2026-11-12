@@ -1,6 +1,7 @@
 import { and, eq, notExists } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
+import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate, nowMs } from "@/lib/clock";
 import { compareMarkOrder } from "@/lib/roll-call";
 import { fileScopedShopContext } from "@/test/db";
@@ -45,10 +46,10 @@ async function reefWithCrew(db: AppDb, shopId: string) {
 }
 
 /** One insert in its own savepoint, so a refusal does not abort the test's transaction. */
-async function refusal(db: AppDb, row: typeof rollCallEvents.$inferInsert) {
+async function refusal(db: AppDb, row: SeedRollCallEvidenceInput) {
   try {
     await db.transaction(async (tx) => {
-      await tx.insert(rollCallEvents).values(row);
+      await seedRollCallEvidence(tx, row);
     });
   } catch (error) {
     const cause = (error as { cause?: { constraint?: string } }).cause;
@@ -290,7 +291,7 @@ describe("an after-dive count with a diver still down", () => {
       .select({ personId: tripAssignments.personId })
       .from(tripAssignments)
       .where(eq(tripAssignments.tripId, tripId));
-    await db.insert(rollCallEvents).values([
+    await seedRollCallEvidence(db, [
       { ...seat, status: "boarded", checkpoint: "departure", occurredAt: at },
       { ...seat, status: "not_boarded", checkpoint: "after_dive_1", occurredAt: at },
       ...assigned.flatMap(({ personId }) =>
@@ -366,8 +367,8 @@ describe("the order of roll-call marks (one helper, src/db/roll-call-order.ts)",
       createdAt: at,
     };
     // The second insert is the later tap: "not back aboard" after "boarded".
-    await db.insert(rollCallEvents).values({ ...base, status: "boarded" });
-    await db.insert(rollCallEvents).values({ ...base, status: "not_boarded" });
+    await seedRollCallEvidence(db, { ...base, status: "boarded" });
+    await seedRollCallEvidence(db, { ...base, status: "not_boarded" });
     const scope = and(
       eq(rollCallEvents.shopId, shop.id),
       crewMarks(),

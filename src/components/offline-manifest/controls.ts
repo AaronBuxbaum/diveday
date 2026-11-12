@@ -43,6 +43,8 @@ export type OfflineTripControls = {
   liveOffer: string | null;
   setCheckpoint: Dispatch<SetStateAction<RollCallCheckpoint>>;
   /** The diver or crew row saving now, by booking or person id. */
+  selectedMeetingDay?: number;
+  setMeetingDay?: (day: number) => void;
   busyBooking: string | null;
   busyChecklistItem: string | null;
   busyArrival: string | null;

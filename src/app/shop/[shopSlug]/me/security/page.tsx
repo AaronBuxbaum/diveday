@@ -106,6 +106,8 @@ export default async function SecurityPage({
     }
   })();
   const notice = noticeFromParam<{ tone: NoticeTone; text: string }>(query.notice, {
+    "staff-profile-saved": { tone: "success", text: t("staffing.publicProfile.saved") },
+    "staff-profile-withdrawn": { tone: "success", text: t("staffing.publicProfile.withdrawn") },
     "crew-consent-saved": { tone: "success", text: t("staffing.notice.crewConsentSaved") },
     "crew-consent-withdrawn": { tone: "success", text: t("staffing.notice.crewConsentWithdrawn") },
     "staff-not-found": { tone: "danger", text: t("staffing.notice.staffNotFound") },

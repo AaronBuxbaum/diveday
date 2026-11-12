@@ -1,10 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import { crewSubject } from "./roll-call-subject";
-import { rollCallEvents, tripStageEvents } from "./schema";
+import { tripStageEvents } from "./schema";
 import {
   cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
@@ -68,7 +69,7 @@ describe("cancelOffCadenceSeriesTrips and a boat at sea", () => {
     if (!staff) throw new Error("seed staff missing");
     // Out before its time: an after-dive result on the crew list, and a stage
     // past Boarding with no roll call at all.
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: early.id,
       ...crewSubject(staff.person.id),
@@ -84,7 +85,7 @@ describe("cancelOffCadenceSeriesTrips and a boat at sea", () => {
       recordedByPersonId: staff.person.id,
     });
     // Counted aboard at the dock, still tied up.
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: tiedUp.id,
       ...crewSubject(staff.person.id),

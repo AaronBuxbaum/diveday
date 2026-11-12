@@ -28,7 +28,6 @@ describe("a blocked diver aboard a course that meets a fortnight apart", () => {
       divers: 1,
       title: "Blocked Aboard, a fortnight on — Molasses",
     });
-    await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
     const dayOneStart = new Date(trip.startsAt.getTime() - 15 * 24 * HOUR);
     await db.update(trips).set({ startsAt: dayOneStart }).where(eq(trips.id, trip.id));
     await db.insert(tripScheduleDays).values([
@@ -40,6 +39,14 @@ describe("a blocked diver aboard a course that meets a fortnight apart", () => {
       },
       { tripId: trip.id, dayNumber: 2, startsAt: trip.startsAt, endsAt: trip.endsAt },
     ]);
+    // The crew explicitly count the selected second meeting day after its schedule exists.
+    await boardAtDeparture(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      staffId,
+      bookingIds,
+      meetingDay: 1,
+    });
     const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
     expect(work.outTripIds).toContain(trip.id);
     expect(

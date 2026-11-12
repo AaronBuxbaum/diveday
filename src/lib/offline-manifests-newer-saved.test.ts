@@ -8,11 +8,9 @@ import {
 } from "./offline-manifests";
 
 /**
- * A two-device boat. This tablet's own mark reached DiveDay; a second crew
- * member then said something newer about the same person on the live
- * manifest, and the tablet's next refresh brought that statement home in the
- * saved copy. The tablet keeps its own events for good, so which of the two
- * it shows is this reader's decision.
+ * A two-device boat with retained copies that predate causal context. Capture
+ * clocks cannot prove either crew member observed the other statement. Opposed
+ * evidence remains visible until named reconciliation, in either clock order.
  */
 function tap(
   saved: OfflineManifestSnapshot,
@@ -43,7 +41,7 @@ function refreshed(state: "boarded" | "not_boarded"): OfflineManifestSnapshot {
   return saved;
 }
 
-describe("a saved statement newer than this tablet's own", () => {
+describe("opaque saved evidence and this tablet's own evidence", () => {
   it("shows the other device's 'did not come back' over this tablet's synced 'back aboard'", () => {
     const saved = refreshed("not_boarded");
     const mine = tap(saved, {
@@ -55,6 +53,7 @@ describe("a saved statement newer than this tablet's own", () => {
       state: "not_boarded",
       occurredAt: "2026-07-20T14:05:00.000Z",
       local: false,
+      evidenceConflict: true,
     });
   });
 
@@ -75,10 +74,11 @@ describe("a saved statement newer than this tablet's own", () => {
     expect(latestOfflineRollCall(saved, events, "ready", "after_dive_1")).toMatchObject({
       state: "not_boarded",
       local: false,
+      evidenceConflict: true,
     });
   });
 
-  it("shows it over a tap still waiting to sync, which DiveDay will refuse as older", () => {
+  it("preserves the saved missing evidence against an unobserved pending aboard statement", () => {
     const saved = refreshed("not_boarded");
     const mine = tap(saved, {
       status: "boarded",
@@ -88,10 +88,11 @@ describe("a saved statement newer than this tablet's own", () => {
     expect(latestOfflineRollCall(saved, [mine], "ready", "after_dive_1")).toMatchObject({
       state: "not_boarded",
       local: false,
+      evidenceConflict: true,
     });
   });
 
-  it("stops showing this tablet's alarm once somebody has counted the diver back since", () => {
+  it("keeps an opaque saved aboard statement conflicted with this tablet's alarm", () => {
     const saved = refreshed("boarded");
     const mine = tap(saved, {
       status: "not_boarded",
@@ -99,8 +100,9 @@ describe("a saved statement newer than this tablet's own", () => {
       syncStatus: "applied",
     });
     expect(latestOfflineRollCall(saved, [mine], "ready", "after_dive_1")).toMatchObject({
-      state: "boarded",
+      state: "not_boarded",
       local: false,
+      evidenceConflict: true,
     });
   });
 
@@ -130,11 +132,12 @@ describe("a saved statement newer than this tablet's own", () => {
     expect(latestOfflineRollCall(saved, [mine], "ready", "departure")).toMatchObject({
       state: "boarded",
       local: false,
+      evidenceConflict: true,
     });
     expect(latestOfflineRollCall(saved, [mine], "ready", "after_dive_1")).toBeUndefined();
   });
 
-  it("still shows this tablet's own mark when it is the newer of the two", () => {
+  it("keeps this tablet's pending alarm visible without claiming clock-based precedence", () => {
     const saved = refreshed("boarded");
     const mine = tap(saved, {
       status: "not_boarded",
@@ -143,7 +146,8 @@ describe("a saved statement newer than this tablet's own", () => {
     });
     expect(latestOfflineRollCall(saved, [mine], "ready", "after_dive_1")).toMatchObject({
       state: "not_boarded",
-      local: true,
+      local: false,
+      evidenceConflict: true,
       pending: true,
     });
   });
@@ -170,6 +174,7 @@ describe("a saved statement newer than this tablet's own", () => {
     expect(latestOfflineCrewRollCall(saved, [mine], "crew-dana", "after_dive_1")).toMatchObject({
       state: "not_boarded",
       local: false,
+      evidenceConflict: true,
     });
   });
 });

@@ -142,5 +142,20 @@
     "all": "Todo el centro",
     "me": "Mi horario",
     "person": "Ver una persona"
+  },
+  "publicProfile": {
+    "heading": "Presentación pública",
+    "visible": "Visible para buceadores",
+    "hidden": "Oculta",
+    "consent": "Mostrar mi presentación y fotos en las páginas públicas del centro, las salidas y los cursos. Al desmarcar se borran mi presentación y mis fotos.",
+    "firstName": "Nombre que quieres mostrar",
+    "role": "Tu función",
+    "since": "Buceo desde (año)",
+    "languages": "Idiomas que hablas",
+    "description": "En tus propias palabras",
+    "photos": "Fotos (hasta 4; agrega 2 por guardado)",
+    "removePhoto": "Eliminar foto {number}",
+    "saved": "Tu presentación pública se guardó.",
+    "withdrawn": "Tu presentación pública está oculta y sus fotos se están eliminando."
   }
 }

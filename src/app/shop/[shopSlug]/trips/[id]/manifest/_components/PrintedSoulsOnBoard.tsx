@@ -1,6 +1,8 @@
 import { staffSoulsOnBoardLine } from "@/i18n/participant-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { physicalPeople } from "@/lib/manifest-person-counts";
 import type { TripManifest } from "@/lib/manifests";
+import { isTurnedAwayOffBoat } from "@/lib/manifests";
 
 /**
  * The souls-on-board line the printed manifest opens with — divers carried,
@@ -40,7 +42,15 @@ export function PrintedSoulsOnBoard({
       <p className="mt-4 text-base font-semibold tabular-nums">
         {manifest.trip.isRehearsal ? `${t("trips.rehearsal.label")} · ` : null}
         {vesselName ? `${vesselName} · ` : null}
-        {staffSoulsOnBoardLine(t, manifest.summary, manifest.crew.length)}
+        {staffSoulsOnBoardLine(
+          t,
+          manifest.summary,
+          manifest.crew.length,
+          physicalPeople(
+            manifest.divers.filter((diver) => !isTurnedAwayOffBoat(diver)),
+            manifest.crew,
+          ),
+        )}
         {/* Keep the overlap qualification beside the radio-read count; a
           crew member claimed by another boat makes that count unsettled
           (issue #1779). This is a static roster fact, not a live boarded

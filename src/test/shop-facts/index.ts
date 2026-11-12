@@ -15,6 +15,10 @@ import { bringEveryBoatHome, eveningArgs } from "./bring-every-boat-home";
 import { cancelADepartureSomebodyPaidFor } from "./cancel-a-departure-somebody-paid-for";
 import { carrySomebodyWhoIsNotDiving } from "./carry-somebody-who-is-not-diving";
 import {
+  causalRollCallConflictArgs,
+  seedCausalRollCallConflict,
+} from "./causal-roll-call-conflict";
+import {
   seedCashReceipt,
   seedCollectionBilling,
   seedMixedCashReceipt,
@@ -32,6 +36,7 @@ import {
   putSomebodyOnTheLastMinuteList,
   returningDiverArgs,
 } from "./diver-states";
+import { seedDualRoleManifest } from "./dual-role-manifest";
 import { emptyTheBoard, offSeasonArgs } from "./empty-the-board";
 import { executedDepthArgs, seedExecutedDepth } from "./executed-depth";
 import { expireThePendingSignIn } from "./expire-the-pending-sign-in";
@@ -64,6 +69,7 @@ import {
 } from "./mint-tokens";
 import { operationalTrustArgs, seedOperationalTrustFact } from "./operational-trust";
 import { makeRoomForPartyWaiverCaptures } from "./party-waiver-capacity-state";
+import { introduceAssignedInstructor } from "./public-staff-profile";
 import { putARehearsalOnTomorrow } from "./put-a-rehearsal-on-tomorrow";
 import { putOneUnitOutToday } from "./put-one-unit-out-today";
 import { putTheBenchBehind } from "./put-the-bench-behind";
@@ -226,12 +232,19 @@ const FACTS = {
   gearUncollected: ({ db, shop, now }) => leaveTwoUnitsUncollected(db, shop.id, now, shop.timezone),
   boatClash: ({ db, shop, now }) => slideOneDepartureOntoAnotherHull(db, shop.id, now),
   mergeCandidates: ({ db, shop, now }) => mergeCandidatesState(db, shop.id, now),
+  causalRollCallConflict: withArgs(
+    causalRollCallConflictArgs,
+    ({ db, shop, now }, args) => seedCausalRollCallConflict(db, shop, args, now),
+    { privateOnly: true },
+  ),
+  dualRoleManifest: privateOnly(({ db, shop, now }) => seedDualRoleManifest(db, shop, now)),
   manifestOverCapacity: ({ db, shop, now }) => seedManifestOverCapacityState(db, shop.id, now),
   operationalTrust: withArgs(operationalTrustArgs, ({ db, shop, now }, args) =>
     seedOperationalTrustFact(db, shop, args, now),
   ),
   fiveDivePrint: ({ db, shop, now }) => logFiveDivesForPrint(db, shop, now),
   flySafeFollowUp: ({ db, shop, now }) => failTheFlySafeCorrections(db, shop, now),
+  publicStaffProfile: privateOnly(introduceAssignedInstructor),
   futureCrew: privateOnly(({ db, shop, now }) => crewARatingThatStartsTomorrow(db, shop, now)),
   executedDepth: withArgs(
     executedDepthArgs,

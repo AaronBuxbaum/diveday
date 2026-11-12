@@ -90,8 +90,10 @@ What each area must keep true; its tests hold most of these, and its ADR the rea
   feeds no readiness, admission, capacity or checkpoint input.
 - **Offline manifests**: a copy is encrypted, freshness-labelled, expiring and never an editable
   roster; every seat tap writes an event and an idempotent repeat writes nothing; sync replays by
-  `client_event_id`, rechecks live readiness, and newer server history wins; a copy kept past
-  retention only for an unsynced event is labelled expired.
+  `client_event_id` and rechecks live readiness. Roll-call statements merge by tap-observed
+  evidence, compatible updates merge automatically, and actual conflicts need explicit crew
+  reconciliation (ADR 20261112-roll-call-observes-evidence); clocks never establish observation.
+  A copy kept past retention only for an unsynced event is labelled expired.
 - **Nitrox**: only a verified nitrox card allows an EANx fill, enforced at write; only 22 to 40%
   O2 is accepted; MOD is derived from the mix and the ppO2 ceiling, never taken from the caller; a
   fill is append-only evidence.

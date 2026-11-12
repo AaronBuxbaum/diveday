@@ -109,7 +109,9 @@
       "canDive": "¿Qué puedes bucear?",
       "canDiveUnsaid": "Prefiero no decirlo",
       "hideAboveLevel": "Ocultar las que piden más",
-      "aboveLevelChip": "Por encima de tu nivel"
+      "aboveLevelChip": "Por encima de tu nivel",
+      "partySize": "¿Cuántos vienen?",
+      "partySeats": "{count, plural, one {# plaza libre} other {# plazas libres}} · grupo de {party}"
     },
     "showLater": "Ver salidas posteriores",
     "showEarlier": "Ver salidas anteriores",
@@ -141,7 +143,8 @@
       "line": "Visto en {seen} de las {trips, plural, one {# salida de {month}} other {# salidas de {month}}} que registraron nuestras tripulaciones",
       "honest": "Lo que registraron nuestras tripulaciones en las salidas de {month}, en todas las temporadas registradas. Dice lo que se vio, no lo que verás."
     },
-    "boatCapacity": "{count, plural, one {# persona a bordo, incluida la tripulación} other {# personas a bordo, incluida la tripulación}}"
+    "boatCapacity": "{count, plural, one {# persona a bordo, incluida la tripulación} other {# personas a bordo, incluida la tripulación}}",
+    "recentSighting": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}} en los últimos 30 días"
   },
   "trip": {
     "coursePlanHeading": "El plan de tu curso",
@@ -500,7 +503,9 @@
     "findAnotherTrip": "Buscar otra salida",
     "holdSeats": "Reservar estas plazas",
     "holdGroup": "Reservar plazas mientras todos pagan",
-    "holdGroupNote": "Cada persona paga desde su enlace en un plazo de 24 horas, o antes de la salida si es más pronto. Las plazas sin pagar vuelven a estar disponibles."
+    "holdGroupNote": "Cada persona paga desde su enlace en un plazo de 24 horas, o antes de la salida si es más pronto. Las plazas sin pagar vuelven a estar disponibles.",
+    "partyExceedsSeats": "Tu grupo tiene {requested} personas; {remaining, plural, one {queda # plaza libre} other {quedan # plazas libres}}.",
+    "waitlistPartyExceedsLimit": "Tu grupo tiene {requested} personas; esta lista de espera acepta hasta {limit}."
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
@@ -662,7 +667,14 @@
       "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
       "requires": "Requiere {level} o superior",
       "groupStart": "Empieza aquí",
-      "askForADate": "Pide una fecha"
+      "askForADate": "Pide una fecha",
+      "doorsLabel": "Encuentra tu curso",
+      "doors": {
+        "try": "Pruébalo por un día",
+        "certify": "Obtén tu certificación",
+        "refresh": "Hace tiempo que no buceo"
+      },
+      "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}"
     },
     "shelf": {
       "allCourses": "Todos los cursos",
@@ -3811,6 +3823,7 @@
     }
   },
   "demo": {
+    "illustrationDisclosure": "Las ilustraciones son imágenes generadas para este centro de demostración ficticio.",
     "shopLabel": "Centro de demostración",
     "viewingAs": "Viendo como",
     "switchRole": "Cambiar de rol",
@@ -4602,5 +4615,9 @@
       "heading_in": "De regreso",
       "home": "En el muelle"
     }
+  },
+  "staffProfiles": {
+    "heading": "Con quién vas a bucear",
+    "since": "Buceando desde {year}"
   }
 }

@@ -1,4 +1,5 @@
 import { and, eq, gte, inArray, isNull, notInArray } from "drizzle-orm";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import type { AppDb } from "../../db/client";
 import { getBookingReadiness } from "../../db/readiness";
 import { seatMarks } from "../../db/roll-call-subject";
@@ -168,16 +169,20 @@ export async function leaveASeatUncounted(
     const [refused] = await db.insert(bookings).values(seat(turnedAway.id)).returning();
     if (refused) {
       await seen(refused.id);
-      await db.insert(rollCallEvents).values({
-        shopId,
-        tripId: trip.id,
-        bookingId: refused.id,
-        recordedByPersonId: counted.recorderId,
-        status: "not_boarded",
-        checkpoint: "departure",
-        source: "live",
-        occurredAt: trip.startsAt,
-      });
+      await seedRollCallEvidence(
+        db,
+        {
+          shopId,
+          tripId: trip.id,
+          bookingId: refused.id,
+          recordedByPersonId: counted.recorderId,
+          status: "not_boarded",
+          checkpoint: "departure",
+          source: "live",
+          occurredAt: trip.startsAt,
+        },
+        { observesPrevious: false },
+      );
     }
   }
   return { tripId: trip.id, personName: person.fullName };

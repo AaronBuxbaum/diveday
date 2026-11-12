@@ -78,9 +78,9 @@ export function ReadyDaySheet({
     .join(" · ");
   return (
     <div className="paper-sheet-frame" data-paper-print-only="">
+      {/* Nonprinting rules must not count as a preceding sheet sibling. */}
+      <style data-print-sheet="">{printSheetPageRule(PACKET_PAPER)}</style>
       <div>
-        {/* Fixed rules built from the sheet's own paper, never a request value. */}
-        <style data-print-sheet="">{printSheetPageRule(PACKET_PAPER)}</style>
         <PaperSheet
           paper={PACKET_PAPER}
           band={

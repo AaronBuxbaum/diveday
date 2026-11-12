@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
-import { bookings, people, rollCallEvents, shops, trips } from "@/db/schema";
+import { bookings, people, shops, trips } from "@/db/schema";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowMs } from "@/lib/clock";
@@ -52,7 +53,7 @@ async function countedAtTheDock(db: AppDb, shopId: string, daysAgo: number) {
   if (!booking) throw new Error("fixture booking insert returned no row");
   // Seen at the desk before the boat: checked in is the arrival trail (issue #2702).
   await markArrived(db, booking.id, { occurredAt: new Date(startsAt.getTime() - HOUR) });
-  await db.insert(rollCallEvents).values({
+  await seedRollCallEvidence(db, {
     shopId,
     tripId: trip.id,
     bookingId: booking.id,
@@ -63,7 +64,7 @@ async function countedAtTheDock(db: AppDb, shopId: string, daysAgo: number) {
     occurredAt: startsAt,
   });
   const backAboard = (occurredAt: Date) =>
-    db.insert(rollCallEvents).values({
+    seedRollCallEvidence(db, {
       shopId,
       tripId: trip.id,
       bookingId: booking.id,
@@ -220,7 +221,7 @@ describe("a past day's dock count", () => {
       const [staff] = await listStaff(db, input.shopId);
       if (!staff) throw new Error("fixture staff missing");
       for (const mark of input.marks) {
-        await db.insert(rollCallEvents).values({
+        await seedRollCallEvidence(db, {
           shopId: input.shopId,
           tripId: trip.id,
           bookingId: seats[mark.seat] ?? "",
@@ -387,7 +388,7 @@ describe("listNotBackAfterDive", () => {
       .returning();
     if (!seat) throw new Error("fixture booking missing");
     const mark = (checkpoint: string, status: "boarded" | "not_boarded", minutes: number) =>
-      db.insert(rollCallEvents).values({
+      seedRollCallEvidence(db, {
         shopId: shop.id,
         tripId: trip.id,
         bookingId: seat.id,

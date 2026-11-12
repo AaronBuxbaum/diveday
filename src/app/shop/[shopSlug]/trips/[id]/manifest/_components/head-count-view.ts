@@ -2,6 +2,7 @@ import {
   passengersAboveCertificateAboard,
   personsAboveTotalPersonsAboard,
 } from "@/lib/boat-safety";
+import { physicalPeople } from "@/lib/manifest-person-counts";
 import {
   blockedAtDock,
   type RollCallCheckpoint,
@@ -62,9 +63,10 @@ export function headCountView({
     // Everyone aboard, crew included, against the certificate's total persons
     // (dive-domain review D2). A crew member recorded ashore is not aboard.
     overTotalPersons: personsAboveTotalPersonsAboard(
-      manifest.summary.boarded +
-        manifest.crew.filter((member) => rollCallRowState(checkpoint, member.rollCall).boarded)
-          .length,
+      physicalPeople(
+        manifest.divers.filter((diver) => rollCallRowState(checkpoint, diver.rollCall).boarded),
+        manifest.crew.filter((member) => rollCallRowState(checkpoint, member.rollCall).boarded),
+      ),
       manifest.trip.certifiedTotalPersons,
     ),
   };

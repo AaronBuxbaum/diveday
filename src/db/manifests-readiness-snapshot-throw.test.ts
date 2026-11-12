@@ -1,5 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import { recordRollCall } from "./manifests";
 import { rollCallEvents } from "./schema";
@@ -43,7 +44,7 @@ describe("a readiness read that throws at an after-dive count", () => {
       recordedByPersonId: staff.person.id,
     };
     // The dock count, before the engine is made to fail.
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       ...base,
       status: "boarded",
       checkpoint: "departure",

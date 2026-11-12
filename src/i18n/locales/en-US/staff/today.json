@@ -282,7 +282,8 @@
       "shopLogo": "Shop logo",
       "shopHero": "Shop cover photo",
       "boatPhoto": "Boat photo",
-      "paymentReceipt": "Imported receipt"
+      "paymentReceipt": "Imported receipt",
+      "staffProfile": "Staff profile picture"
     },
     "stuckDetail": "{kind} started {when} and never finished. Check Stripe.",
     "mediaDeletionDetail": "Removed from the app, but the file is still stored.",

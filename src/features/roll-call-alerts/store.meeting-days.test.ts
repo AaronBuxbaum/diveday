@@ -1,13 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import {
-  bookings,
-  people,
-  rollCallEvents,
-  shops,
-  tripScheduleDays,
-  trips,
-} from "../../db/schema/index";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { bookings, people, shops, tripScheduleDays, trips } from "../../db/schema/index";
 import { listStaff } from "../../db/trips";
 import type { Notification, NotificationProvider } from "../../lib/notifications/index";
 import { fileScopedShopContext } from "../../test/db";
@@ -80,7 +74,7 @@ async function course(days = [DAY_ONE, DAY_TWO], divers = 1) {
       .returning();
     if (!booking) throw new Error("booking insert failed");
     marks.push((checkpoint, status, occurredAt) =>
-      db.insert(rollCallEvents).values({
+      seedRollCallEvidence(db, {
         shopId: shop.id,
         tripId: trip.id,
         bookingId: booking.id,

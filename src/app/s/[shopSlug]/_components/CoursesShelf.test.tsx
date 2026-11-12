@@ -7,6 +7,7 @@ import { CoursesShelf } from "./CoursesShelf";
 
 /** The courses shelf's pins for ADR 20260827-clearwater-surface-language, decision 8. */
 const t = diverTranslator("en-US");
+const dateProps = { shopSlug: "blue-mantis", locale: "en-US", timeZone: "America/Cancun", t };
 
 afterEach(cleanup);
 
@@ -20,7 +21,7 @@ function course(n: number, overrides: Record<string, unknown> = {}) {
     href: `/s/blue-mantis/courses/course-${n}`,
     price: "$195.00",
     duration: null as string | null,
-    nextStart: null as string | null,
+    sessions: [] as { id: string; startsAt: Date; seatsLeft: number }[],
     ...overrides,
   };
 }
@@ -29,9 +30,9 @@ describe("three cards and one door", () => {
   it("renders a card per course plus the All courses link", () => {
     render(
       <CoursesShelf
+        dates={dateProps}
         courses={[course(1), course(2), course(3)]}
         allCoursesHref="/s/blue-mantis/courses"
-        t={t}
       />,
     );
 
@@ -44,7 +45,7 @@ describe("three cards and one door", () => {
 
   it("renders nothing at all for a shop that teaches nothing", () => {
     const { container } = render(
-      <CoursesShelf courses={[]} allCoursesHref="/s/blue-mantis/courses" t={t} />,
+      <CoursesShelf dates={dateProps} courses={[]} allCoursesHref="/s/blue-mantis/courses" />,
     );
 
     expect(container).toBeEmptyDOMElement();
@@ -55,7 +56,13 @@ describe("three cards and one door", () => {
     // stand the baseline row 44px tall and push the heading down 7px. It is
     // spelled as the storefront's other text doors are ("Follow", the season
     // link), so all four draw one ring.
-    render(<CoursesShelf courses={[course(1)]} allCoursesHref="/s/blue-mantis/courses" t={t} />);
+    render(
+      <CoursesShelf
+        dates={dateProps}
+        courses={[course(1)]}
+        allCoursesHref="/s/blue-mantis/courses"
+      />,
+    );
     const door = screen.getByRole("link", { name: "All courses" });
 
     expect(door.className).toBe(buttonClass({ variant: "link", size: "sm", flush: true }));
@@ -73,7 +80,13 @@ describe("a card's focus ring", () => {
    * photo to the same corners and never clips the link's own outline.
    */
   it("clips the photo on the link, so nothing clips the link's ring", () => {
-    render(<CoursesShelf courses={[course(1)]} allCoursesHref="/s/blue-mantis/courses" t={t} />);
+    render(
+      <CoursesShelf
+        dates={dateProps}
+        courses={[course(1)]}
+        allCoursesHref="/s/blue-mantis/courses"
+      />,
+    );
     const card = screen.getByRole("listitem");
     const link = screen.getByRole("link", { name: /Course 1/ });
     expect(card).not.toHaveClass("overflow-hidden");
@@ -89,7 +102,13 @@ describe("a card's inset", () => {
    * course's title started at 105 against 109 beside it.
    */
   it("pads its body as a card does, 16px then 20px", () => {
-    render(<CoursesShelf courses={[course(1)]} allCoursesHref="/s/blue-mantis/courses" t={t} />);
+    render(
+      <CoursesShelf
+        dates={dateProps}
+        courses={[course(1)]}
+        allCoursesHref="/s/blue-mantis/courses"
+      />,
+    );
     const body = screen.getByRole("heading", { name: "Course 1" }).parentElement;
     expect(body).toHaveClass("p-4", "sm:p-5");
   });
@@ -98,7 +117,11 @@ describe("a card's inset", () => {
 describe("the photo-less tile", () => {
   it("keeps a course's photo slot as a plain sunken tile, with nothing drawn on it", () => {
     const { container } = render(
-      <CoursesShelf courses={[course(1)]} allCoursesHref="/s/blue-mantis/courses" t={t} />,
+      <CoursesShelf
+        dates={dateProps}
+        courses={[course(1)]}
+        allCoursesHref="/s/blue-mantis/courses"
+      />,
     );
 
     const placeholder = container.querySelector(".bg-surface-sunken");
@@ -114,9 +137,9 @@ describe("the photo-less tile", () => {
   it("stands down the moment the shop supplies a photo", () => {
     const { container } = render(
       <CoursesShelf
+        dates={dateProps}
         courses={[course(1, { heroImageUrl: "/uploads/ow.jpg" })]}
         allCoursesHref="/s/blue-mantis/courses"
-        t={t}
       />,
     );
 
@@ -128,9 +151,9 @@ describe("a card says only what the shop wrote", () => {
   it("leaves out the summary and the price a shop has not set", () => {
     render(
       <CoursesShelf
+        dates={dateProps}
         courses={[course(1, { summary: null, price: null })]}
         allCoursesHref="/s/blue-mantis/courses"
-        t={t}
       />,
     );
 
@@ -145,16 +168,25 @@ describe("the two facts under a card", () => {
   it("says how long and when next, only when the shop has each", () => {
     render(
       <CoursesShelf
+        dates={dateProps}
         courses={[
-          course(1, { duration: "4 days", nextStart: "Next Sep 7" }),
+          course(1, {
+            duration: "4 days",
+            sessions: [
+              { id: "session-one", startsAt: new Date("2031-09-07T12:00:00Z"), seatsLeft: 4 },
+            ],
+          }),
           course(2, { duration: "2 days" }),
           course(3),
         ]}
         allCoursesHref="/s/blue-mantis/courses"
-        t={t}
       />,
     );
-    expect(screen.getByText("4 days · Next Sep 7")).toBeInTheDocument();
+    expect(screen.getByText("4 days")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /4 seats left/ })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/trips/session-one",
+    );
     expect(screen.getByText("2 days")).toBeInTheDocument();
     // A card with neither says nothing in their place.
     const third = screen.getAllByRole("listitem")[2];

@@ -23,6 +23,7 @@ import {
   tripScheduleDays,
   trips,
 } from "../../db/schema/index";
+import { rollCallDayIndex } from "../../db/trip-meeting-windows";
 
 import { HOUR_MS, nowDate } from "../../lib/clock";
 import { perDiverBookingPriceCents } from "../../lib/courses";
@@ -30,7 +31,7 @@ import { isTurnedAwayOffBoat, isTurnedAwaySeat, rollCallCheckpoints } from "../.
 import { type DayMark, seenAfter, standingByDay } from "../../lib/roll-call-days";
 import type { RollCallGapReason } from "../../lib/roll-call-gaps";
 import { inAfterDivePopulation, isAccountedForAfterDive } from "../../lib/roll-call-population";
-import { meetingDayWindows, rollCallDayOf, rollCallDayStarts } from "../../lib/trip-days";
+import { meetingDayWindows, rollCallDayStarts } from "../../lib/trip-days";
 
 /**
  * How long an unclosed head count is still *dock work* (DOM-H3). Two days: long
@@ -330,6 +331,8 @@ export async function listRollCallGaps(
         bookingId: markBookingId(),
         checkpoint: rollCallEvents.checkpoint,
         status: rollCallEvents.status,
+        day: rollCallDayIndex(),
+        evidenceConflict: rollCallEvents.evidenceConflict,
         occurredAt: rollCallEvents.occurredAt,
         id: rollCallEvents.id,
         retracts: rollCallEvents.retractsEventId,
@@ -357,6 +360,8 @@ export async function listRollCallGaps(
         personId: markCrewPersonId(),
         checkpoint: rollCallEvents.checkpoint,
         status: rollCallEvents.status,
+        day: rollCallDayIndex(),
+        evidenceConflict: rollCallEvents.evidenceConflict,
         occurredAt: rollCallEvents.occurredAt,
         id: rollCallEvents.id,
         retracts: rollCallEvents.retractsEventId,
@@ -418,8 +423,6 @@ export async function listRollCallGaps(
     [...daysByTrip].map(([tripId, days]) => [tripId, rollCallDayStarts(days)] as const),
   );
   const tripOfBooking = new Map(roster.map((row) => [row.bookingId, row.tripId] as const));
-  const dayOf = (tripId: string | undefined, at: Date) =>
-    rollCallDayOf((tripId && dayStartsByTrip.get(tripId)) || [], at);
 
   // Each trip's results filed by meeting day, oldest first, folded by the one
   // rule every roll-call reader shares (`standingByDay`, src/lib/roll-call-days.ts):
@@ -432,7 +435,7 @@ export async function listRollCallGaps(
     const tripId = tripOfBooking.get(event.bookingId);
     if (!tripId) continue;
     const marks = diverMarksByTrip.get(tripId) ?? [];
-    marks.push({ ...event, subject: event.bookingId, day: dayOf(tripId, event.occurredAt) });
+    marks.push({ ...event, subject: event.bookingId, day: event.day });
     diverMarksByTrip.set(tripId, marks);
   }
 
@@ -444,7 +447,7 @@ export async function listRollCallGaps(
   const crewMarksByTrip = new Map<string, CrewMark[]>();
   for (const event of crewEvents) {
     const marks = crewMarksByTrip.get(event.tripId) ?? [];
-    marks.push({ ...event, subject: event.personId, day: dayOf(event.tripId, event.occurredAt) });
+    marks.push({ ...event, subject: event.personId, day: event.day });
     crewMarksByTrip.set(event.tripId, marks);
     const people = crewByTripId.get(event.tripId) ?? new Set<string>();
     people.add(event.personId);
@@ -467,13 +470,23 @@ export async function listRollCallGaps(
     const diverStanding = standingByDay(diverMarksByTrip.get(trip.id) ?? []);
     const crewStanding = standingByDay(crewMarksByTrip.get(trip.id) ?? []);
     const stateOf = (
-      event: { status: "boarded" | "not_boarded" | "cleared" } | undefined,
+      event:
+        | {
+            status: "boarded" | "not_boarded" | "cleared";
+            checkpoint?: string;
+            evidenceConflict?: boolean;
+          }
+        | undefined,
     ): "boarded" | "not_boarded" | undefined =>
       // A latest `cleared` is staff undoing a mistake: the person reads as
       // awaiting again, so it must re-alarm rather than stay resolved. Only the
       // state decides a head count; the recorder's name and note are the
       // manifest's display fields, so they are deliberately not queried.
-      !event || event.status === "cleared" ? undefined : event.status;
+      !event ||
+      event.status === "cleared" ||
+      (event.checkpoint === "departure" && event.evidenceConflict)
+        ? undefined
+        : event.status;
     // **Dives numbered on across the run.** A later day whose first result is
     // at a later checkpoint (a weekend course logging dives 3 and 4 on day
     // two) carries on the earlier days' numbering: the checkpoints below it
@@ -498,6 +511,8 @@ export async function listRollCallGaps(
         const first = firstCheckpointOf(day);
         return checkpoints.map((checkpoint, index) => {
           const key = `${subject}\u0000${checkpoint}`;
+          const unknown = standing.get(-1)?.get(key);
+          if (index > 0 && unknown?.status === "not_boarded") return "not_boarded";
           if (index >= first) return stateOf(standing.get(day)?.get(key));
           for (let earlier = day - 1; earlier >= 0; earlier--) {
             const mark = standing.get(earlier)?.get(key);
@@ -542,6 +557,20 @@ export async function listRollCallGaps(
         turnedAwayIds,
         diverStates: (bookingId) => diverStates(day, bookingId),
         crewStates: (personId) => crewStates(day, personId),
+        diverRisk: (id) =>
+          [...(diverStanding.get(-1)?.values() ?? [])].some(
+            (mark) => mark.subject === id && mark.status !== "cleared",
+          ),
+        crewRisk: (id) =>
+          [...(crewStanding.get(-1)?.values() ?? [])].some(
+            (mark) => mark.subject === id && mark.status !== "cleared",
+          ),
+        diverProtected: (id, checkpoint) =>
+          !!diverStanding.get(day)?.get(`${id}\u0000${checkpoint}`)?.evidenceConflict ||
+          diverStanding.get(-1)?.get(`${id}\u0000${checkpoint}`)?.status === "not_boarded",
+        crewProtected: (id, checkpoint) =>
+          !!crewStanding.get(day)?.get(`${id}\u0000${checkpoint}`)?.evidenceConflict ||
+          crewStanding.get(-1)?.get(`${id}\u0000${checkpoint}`)?.status === "not_boarded",
         // Somebody counted on a later meeting day at the dock, or at this
         // checkpoint or a later one, is not lost from an earlier day: they
         // stood on the dock since (`seenAfter`, #4056).
@@ -625,6 +654,10 @@ function dayGaps(input: {
   turnedAwayIds: ReadonlySet<string>;
   diverStates: (bookingId: string) => ("boarded" | "not_boarded" | undefined)[];
   crewStates: (personId: string) => ("boarded" | "not_boarded" | undefined)[];
+  diverRisk?: (bookingId: string) => boolean;
+  crewRisk?: (personId: string) => boolean;
+  diverProtected?: (bookingId: string, checkpoint: string) => boolean;
+  crewProtected?: (personId: string, checkpoint: string) => boolean;
   diverSeenLater: (bookingId: string, checkpoint: string) => boolean;
   crewSeenLater: (personId: string, checkpoint: string) => boolean;
   latestEventAt: (checkpoint: string) => Date | null;
@@ -664,17 +697,25 @@ function dayGaps(input: {
     ) {
       dockOffBoat += 1;
     } else if (states[0] === undefined) departureAwaiting += 1;
-    if (!inAfterDivePopulation(states)) continue;
+    if (!inAfterDivePopulation(states) && !input.diverRisk?.(bookingId)) continue;
     for (let dive = 1; dive < checkpoints.length; dive++) {
       const state = states[dive];
       population[dive] = (population[dive] ?? 0) + 1;
       if (state !== undefined) recorded[dive] = (recorded[dive] ?? 0) + 1;
-      const seenLater = input.diverSeenLater(bookingId, checkpoints[dive] as string);
+      const protectedMissing =
+        input.diverProtected?.(bookingId, checkpoints[dive] as string) === true;
+      const seenLater =
+        !protectedMissing && input.diverSeenLater(bookingId, checkpoints[dive] as string);
       if (isAccountedForAfterDive(state) || seenLater) continue;
       // The latest checkpoint speaks (issue #2404): "not back" after dive 1
       // is settled by "back aboard" after a later dive, the rule
       // `listUnaccountedForByTrip` and `homewardCheckpointGap` keep.
-      if (state === "not_boarded" && states.slice(dive + 1).includes("boarded")) continue;
+      if (
+        !protectedMissing &&
+        state === "not_boarded" &&
+        states.slice(dive + 1).includes("boarded")
+      )
+        continue;
       unaccounted[dive] = (unaccounted[dive] ?? 0) + 1;
       if (state === "not_boarded") notBackAboard[dive] = (notBackAboard[dive] ?? 0) + 1;
       // Counted back aboard after a later dive: they are back, and the record
@@ -690,22 +731,33 @@ function dayGaps(input: {
     // A crew result is a roll call. A trip whose only head count is of its
     // crew has started one, so it is not a `no_roll_call` trip.
     if (states.some((state) => state !== undefined)) anyEvent = true;
-    if (!inAfterDivePopulation(states)) continue;
+    if (!inAfterDivePopulation(states) && !input.crewRisk?.(personId)) continue;
     // Recorded not back and not counted aboard since: missing, never "not counted".
     const missingCrew = states.some(
       (state, dive) =>
-        dive >= 1 && state === "not_boarded" && !states.slice(dive + 1).includes("boarded"),
+        dive >= 1 &&
+        state === "not_boarded" &&
+        (input.crewProtected?.(personId, checkpoints[dive] as string) ||
+          !states.slice(dive + 1).includes("boarded")),
     );
     for (let dive = 1; dive < checkpoints.length; dive++) {
       const state = states[dive];
       crewPopulation[dive] = (crewPopulation[dive] ?? 0) + 1;
       if (state !== undefined) crewRecorded[dive] = (crewRecorded[dive] ?? 0) + 1;
-      const seenLater = input.crewSeenLater(personId, checkpoints[dive] as string);
+      const protectedMissing =
+        input.crewProtected?.(personId, checkpoints[dive] as string) === true;
+      const seenLater =
+        !protectedMissing && input.crewSeenLater(personId, checkpoints[dive] as string);
       if (isAccountedForAfterDive(state) || seenLater) continue;
       // The latest checkpoint speaks for crew as it does for divers above: a
       // divemaster "not back" after dive 1 and counted aboard after dive 2
       // is back (dock review S2 of #3884).
-      if (state === "not_boarded" && states.slice(dive + 1).includes("boarded")) continue;
+      if (
+        !protectedMissing &&
+        state === "not_boarded" &&
+        states.slice(dive + 1).includes("boarded")
+      )
+        continue;
       crewUnaccounted[dive] = (crewUnaccounted[dive] ?? 0) + 1;
       if (state === "not_boarded") crewNotBackAboard[dive] = (crewNotBackAboard[dive] ?? 0) + 1;
       // Named on the record as a diver is (dock review S1 of #3896).

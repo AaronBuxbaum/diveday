@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { DEMO_SHOP_DESK } from "@/db/seed-shop-brand";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { PackingSection } from "./PackingSection";
 import type { Shop, Trip } from "./types";
@@ -241,5 +242,44 @@ describe("PackingSection — a course's included gear", () => {
     expect(column("Bring")).not.toContain("Mask");
     expect(column("Bring")).toContain("Snorkel");
     expect(column("Bring")).toContain("Boots");
+  });
+});
+
+/** Demo defaults must use the same course-aware bag on phone and paper. */
+describe("PackingSection — demo course context", () => {
+  function renderDemo(intro: boolean) {
+    const trip = {
+      startsAt: new Date("2026-08-12T12:00:00Z"),
+      endsAt: new Date("2026-08-12T16:00:00Z"),
+      plannedDives: 2,
+      waterTemperatureC: null,
+      course: intro ? { includedRentalKinds: [], isIntroCourse: true } : null,
+    } as unknown as Trip;
+    return render(
+      <PackingSection
+        shop={{ ...shop, ...DEMO_SHOP_DESK, packingLogbook: true } as Shop}
+        trip={trip}
+        multiDay={false}
+        holdsCertification={false}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+  }
+  it("suggests the logbook once on an ordinary demo departure", () => {
+    renderDemo(false);
+    expect(
+      screen.getAllByRole("listitem").filter((item) => /logbook/i.test(item.textContent ?? "")),
+    ).toHaveLength(1);
+  });
+  it("asks an uncertified try-diver for neither a certification card nor a logbook", () => {
+    renderDemo(true);
+    expect(screen.queryByText(/certification card|logbook/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Swimsuit and towel")).toBeInTheDocument();
+  });
+  it("gives no blanket medicine timing advice on the packing list or in reply notes", () => {
+    renderDemo(false);
+    expect(screen.queryByText(/tablets.*night before/i)).not.toBeInTheDocument();
+    expect(DEMO_SHOP_DESK.replyNotes).not.toMatch(/medicine.*night before/i);
+    expect(DEMO_SHOP_DESK.replyNotes).toContain("Do not give medical advice");
   });
 });

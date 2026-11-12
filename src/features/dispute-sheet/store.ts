@@ -166,6 +166,8 @@ export async function getDisputeSheet(
         .select({
           checkpoint: rollCallEvents.checkpoint,
           status: rollCallEvents.status,
+          statementStatus: rollCallEvents.statementStatus,
+          evidenceConflict: rollCallEvents.evidenceConflict,
           occurredAt: rollCallEvents.occurredAt,
           createdAt: rollCallEvents.createdAt,
           seq: rollCallEvents.seq,

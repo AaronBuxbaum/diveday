@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { HOUR_MS } from "@/lib/clock";
 import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
 import { fileScopedShopContext } from "@/test/db";
@@ -21,7 +22,6 @@ import {
   orders,
   people,
   personRoles,
-  rollCallEvents,
   shops,
   trips,
 } from "./schema";
@@ -602,7 +602,7 @@ describe("rehearsal coverage: a real rehearsal", () => {
     ] as const;
     for (const event of evidence) {
       const { db, shop, trip, bookingId, ownerId } = await rehearsalWithASeat();
-      await db.insert(rollCallEvents).values({
+      await seedRollCallEvidence(db, {
         shopId: shop.id,
         tripId: trip.id,
         bookingId,
@@ -622,7 +622,7 @@ describe("rehearsal coverage: a real rehearsal", () => {
 
   it("clears a rehearsal whose only roll call is a dockside not-boarded", async () => {
     const { db, shop, trip, bookingId, ownerId } = await rehearsalWithASeat();
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: trip.id,
       bookingId,

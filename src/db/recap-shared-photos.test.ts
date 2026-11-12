@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -10,7 +11,7 @@ import {
   unshareRecapPhoto,
 } from "../features/recap/store";
 import { createBookingParty } from "./bookings";
-import { bookings, people, rollCallEvents } from "./schema";
+import { bookings, people } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -47,15 +48,19 @@ describe("a photo shared with the boat (H-20261014-share-photo-with-boat)", () =
     if (!photo.ok) throw new Error("photo not added");
     let minute = 0;
     const record = (bookingId: string, status: "boarded" | "not_boarded", checkpoint: string) =>
-      db.insert(rollCallEvents).values({
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId,
-        recordedByPersonId: staff.person.id,
-        status,
-        checkpoint,
-        occurredAt: new Date(reef.startsAt.getTime() + minute++ * 60_000),
-      });
+      seedRollCallEvidence(
+        db,
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          bookingId,
+          recordedByPersonId: staff.person.id,
+          status,
+          checkpoint,
+          occurredAt: new Date(reef.startsAt.getTime() + minute++ * 60_000),
+        },
+        { observesPrevious: true },
+      );
     await record(viewer, "boarded", "departure");
     await record(sharer, "not_boarded", "departure");
     const ashore = await getRecapPageState(db, viewer);

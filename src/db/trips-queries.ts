@@ -1298,6 +1298,49 @@ async function nextSellableSessionByCourse(
   return next;
 }
 
+/** Up to three bookable dates per course, in one read for the whole catalog. */
+export async function upcomingSessionsByCourse(
+  db: AppDb,
+  shopId: string,
+  courseIds: readonly string[],
+  now: Date = nowDate(),
+): Promise<Map<string, { id: string; startsAt: Date; seatsLeft: number }[]>> {
+  if (courseIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      id: trips.id,
+      courseId: trips.courseId,
+      startsAt: trips.startsAt,
+      seatsLeft: sql<number>`${tripSellableSeatsSql()} - count(${bookings.id})`.mapWith(Number),
+    })
+    .from(trips)
+    .leftJoin(bookings, liveBookingJoin)
+    .where(
+      and(
+        liveTrip(),
+        notRehearsal(),
+        eq(trips.shopId, shopId),
+        inArray(trips.courseId, [...courseIds]),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        eq(trips.conditionsHold, false),
+        gte(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
+      ),
+    )
+    .groupBy(trips.id)
+    .having(hasSpaceHaving(true))
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
+  const result = new Map<string, { id: string; startsAt: Date; seatsLeft: number }[]>();
+  for (const row of rows) {
+    if (!row.courseId) continue;
+    const sessions = result.get(row.courseId) ?? [];
+    if (sessions.length < 3)
+      sessions.push({ id: row.id, startsAt: row.startsAt, seatsLeft: row.seatsLeft });
+    result.set(row.courseId, sessions);
+  }
+  return result;
+}
+
 /** One single-day departure as the week board draws it. */
 export type WeekBoardEntry = {
   tripId: string;

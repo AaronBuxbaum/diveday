@@ -138,6 +138,16 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
   it("reads complete once the saved snapshot has a result for every assigned crew member", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
     const saved = richEnvelope("trip-1", { withCarriedNotBoarded: true, crewCalled: true });
+    // The carried exemption has an original dock statement, not only an implied display.
+    const dockMarcus = saved.snapshot.manifests[0].divers.find(
+      (row) => row.bookingId === "diver-marcus",
+    );
+    if (!dockMarcus) throw new Error("Marcus missing");
+    dockMarcus.rollCall = {
+      state: "not_boarded",
+      occurredAt: saved.snapshot.savedAt,
+      recordedByName: "Dana Divemaster",
+    };
     vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
     vi.mocked(appendOfflineRollCall).mockResolvedValue({

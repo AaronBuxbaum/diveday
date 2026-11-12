@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { stripComments } from "@/test/source";
 import { offlineManifestTranslator } from "./offline-manifest-messages";
+import { staffSoulsOnBoardLine } from "./staff-participant-labels";
 
 /**
  * **What the offline boat manifest is allowed to cost a diver at the rail**
@@ -120,6 +121,21 @@ function staffNamespacesIn(file: string, known: readonly string[]): string[] {
 }
 
 describe("the offline manifest's message bundle", () => {
+  it("resolves the real passenger split and overlapping-role copy through the narrow bundle", () => {
+    for (const locale of ["en-US", "es-ES"]) {
+      const t = offlineManifestTranslator(locale);
+      const line = staffSoulsOnBoardLine(
+        t,
+        { totalDivers: 6, byType: { diver: 3, snorkeler: 2, rider: 1 } },
+        2,
+        7,
+      );
+      expect(line).toContain("7");
+      expect(line).not.toContain("manifest.");
+      expect(line).not.toContain("participants.");
+    }
+  });
+
   it("ships every staff namespace the view and its helpers can reach", () => {
     const known = staffNamespaces();
     expect(known.length, "expected the staff bundle to have namespaces").toBeGreaterThan(20);

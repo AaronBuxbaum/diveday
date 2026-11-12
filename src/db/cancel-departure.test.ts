@@ -1,11 +1,12 @@
 import { eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelDeparture } from "./aboard-at-sea";
 import type { AppDb } from "./client";
 import { crewSubject } from "./roll-call-subject";
-import { rollCallEvents, shops, tripAssignments, tripStageEvents, trips } from "./schema";
+import { shops, tripAssignments, tripStageEvents, trips } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -52,7 +53,7 @@ describe("cancelDeparture refuses a boat that may be on the water", () => {
     if (!entry) throw new Error("expected a booking to record a roll call against");
     const [staff] = await listStaff(db, shopId);
     if (!staff) throw new Error("expected seeded staff missing");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId,
       tripId,
       bookingId: entry.booking.id,
@@ -88,7 +89,7 @@ describe("cancelDeparture refuses a boat that may be on the water", () => {
     status: "boarded" | "not_boarded",
     checkpoint = "departure",
   ) {
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId,
       tripId,
       ...crewSubject(personId),

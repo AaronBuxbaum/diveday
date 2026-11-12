@@ -13,8 +13,20 @@ import {
   PER_TEST_PLAIN_COST,
   partition,
   readDurations,
+  shuffledFileOrder,
   weigh,
 } from "./shard-sequencer";
+
+describe("shuffledFileOrder", () => {
+  it("changes neighbours by seed without losing files or depending on discovery/cache order", () => {
+    const files = Array.from({ length: 30 }, (_, i) => `file-${i}`);
+    const first = shuffledFileOrder(files, 441601, (file) => file);
+    expect(first).not.toEqual(files);
+    expect([...first].sort()).toEqual([...files].sort());
+    expect(shuffledFileOrder([...files].reverse(), 441601, (file) => file)).toEqual(first);
+    expect(shuffledFileOrder(files, 441602, (file) => file)).not.toEqual(first);
+  });
+});
 
 describe("estimateCost", () => {
   it("charges a database-backed file per test, at the hydration rate", () => {

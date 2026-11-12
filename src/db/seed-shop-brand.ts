@@ -1,10 +1,9 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { demoIllustration } from "@/content/demo-illustrations";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops } from "./schema";
 import { DEMO_SHOP_BRAND_COLOR } from "./seed-identifiers";
-
-const bundled = (file: string) => `/dive-sites/${encodeURIComponent(file)}`;
 
 /**
  * **Blue Mantis's profile and brand: everything a trading shop fills in on
@@ -15,8 +14,8 @@ const bundled = (file: string) => `/dive-sites/${encodeURIComponent(file)}`;
  * setting up (Aaron, 2026-10-22).
  *
  * The logo is a drawn mark served from `public/demo-shop/`, not a photograph, so it
- * repeats no picture on the storefront (`seed-brand-photos.test.ts`). Every
- * photo is a bundled, credited Commons frame (`public/dive-sites/README.md`):
+ * repeats no picture on the storefront (`seed-brand-photos.test.ts`). Generated
+ * demo-only illustrations are recorded in `src/content/photo-records.json`:
  * the fleet configures no media storage, and a demo that renders broken images
  * the first time a network hiccups is worse than none.
  */
@@ -29,22 +28,15 @@ export const DEMO_SHOP_BRAND = {
   logoUrl: "/demo-shop/blue-mantis-logo.png",
   brandColor: DEMO_SHOP_BRAND_COLOR,
   brandDisplayFont: "outfit",
-  brandHeroImageUrl: bundled("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+  brandHeroImageUrl: demoIllustration("boat").url,
   // i18n-exempt: a shop writes its own alt text, like its tagline.
-  brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
+  brandHeroImageAlt: demoIllustration("boat").alt,
   establishedYear: 1998,
   brandBadges: ["padi_5_star", "padi_idc", "green_fins", "blue_star", "dan_partner", "tripadvisor"],
-  // The photo strip under the cover: the reef, and the divers on it.
-  shopfrontPhotoUrls: [
-    "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
-    "US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg",
-    "French Angelfish Pickles Reef 20230713.jpg",
-    "BORSTAR divers training in Panama City, Fla. (29842460786).jpg",
-    "FGBNMS - nurse shark (27551309652).jpg",
-    "Diver at USNS General Hoyt S. Vandenberg (T-AGM-10) wreck off Key West in January 2015.jpg",
-    "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
-    "Sponge 06 Molasses Reef 20230714.jpg",
-  ].map(bundled),
+  // Fictional demo scenes, never claimed as photographs of the operator.
+  shopfrontPhotoUrls: (["dock", "briefing", "student", "reef", "oxygen"] as const).map(
+    (scene) => demoIllustration(scene).url,
+  ),
 } satisfies Partial<typeof shops.$inferInsert>;
 
 /**
@@ -62,6 +54,9 @@ export async function syncDemoShopBrand(db: DbExecutor): Promise<void> {
     .set(DEMO_SHOP_BRAND)
     .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true), isNull(shops.logoUrl)));
 }
+
+// i18n-exempt: the fictional shop's own packing suggestion.
+const OPTIONAL_SEASICKNESS_SUPPLIES = "Seasickness supplies, if you use them";
 
 /**
  * **What Blue Mantis tells its AI drafts and its rental counter**, in the
@@ -85,15 +80,14 @@ Cancellations and weather: the captain decides by 6:00 the evening before. If we
 
 Beginners: Discover Scuba runs in the pool first, then the reef. No certification needed; ages 10 and up. Open Water takes three days.
 
-Common questions: we dive Molasses, French, Pickles, Christ of the Abyss and Benwood, and the Spiegel Grove when the current allows. Water is 78 to 84°F. We rent GoPros. Seasick divers should take medicine the night before.`,
+Common questions: we dive Molasses, French, Pickles, Christ of the Abyss and Benwood, and the Spiegel Grove when the current allows. Water is 78 to 84°F. We rent GoPros.`,
   // i18n-exempt: the shop's own packing list, like its notes for AI.
   packingList: [
     "Swimsuit and towel",
     "Reef-safe sun protection",
     "Light layer for the ride back",
-    "Seasickness tablets, taken the night before",
+    OPTIONAL_SEASICKNESS_SUPPLIES,
     "Refillable water bottle",
-    "Your certification card and logbook",
   ],
   // i18n-exempt: a review link is a URL the shop pastes in.
   reviewUrl: "https://g.page/r/blue-mantis-divers/review",
@@ -101,3 +95,30 @@ Common questions: we dive Molasses, French, Pickles, Christ of the Abyss and Ben
   rentalTerms:
     "Gear is due back at the dock when the boat ties up. A late return is $15 per day. A lost or damaged unit is charged at replacement cost.",
 } satisfies Partial<typeof shops.$inferInsert>;
+
+/** Correct known demo defaults without replacing a shop's own checklist or notes. */
+export async function syncDemoShopPackingCopy(db: DbExecutor): Promise<void> {
+  // i18n-exempt: exact previously seeded shop-authored words, not rendered copy.
+  const timedMedicine = "Seasickness tablets, taken the night before";
+  // i18n-exempt: exact previously seeded shop-authored words, as above.
+  const combinedCardAndLogbook = "Your certification card and logbook";
+  // i18n-exempt: exact previously seeded shop-authored words, as above.
+  const timedReply = " Seasick divers should take medicine the night before.";
+  await db
+    .update(shops)
+    .set({
+      packingList: sql`coalesce((select jsonb_agg(case when item.value = ${timedMedicine} then ${OPTIONAL_SEASICKNESS_SUPPLIES} else item.value end order by item.ordinality) from jsonb_array_elements_text(${shops.packingList}) with ordinality as item(value, ordinality) where item.value <> ${combinedCardAndLogbook}), '[]'::jsonb)`,
+      replyNotes: sql`replace(${shops.replyNotes}, ${timedReply}, '')`,
+    })
+    .where(
+      and(
+        eq(shops.slug, DEMO_SHOP_SLUG),
+        eq(shops.isDemo, true),
+        or(
+          sql`${shops.packingList} ? ${timedMedicine}`,
+          sql`${shops.packingList} ? ${combinedCardAndLogbook}`,
+          sql`strpos(coalesce(${shops.replyNotes}, ''), ${timedReply}) > 0`,
+        ),
+      ),
+    );
+}

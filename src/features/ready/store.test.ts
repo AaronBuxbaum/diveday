@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import {
   cancelBooking,
   confirmCarriedFacts,
@@ -21,7 +22,6 @@ import {
   courses,
   people,
   priorVisits,
-  rollCallEvents,
   shops,
   trips as tripTable,
   waiverRecords,
@@ -308,7 +308,7 @@ describe("getReadyPageData", () => {
     expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(true);
     const [recorder] = await listStaff(db, shop.id);
     if (!recorder) throw new Error("seeded staff missing");
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: open.id,
       bookingId,

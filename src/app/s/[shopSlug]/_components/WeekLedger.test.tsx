@@ -150,7 +150,7 @@ describe("the time rail", () => {
     );
 
     const rail = screen.getByText("10:00 AM – 12:30 PM").parentElement;
-    expect(rail).toHaveClass("shrink-0", "sm:w-44");
+    expect(rail).toHaveClass("shrink-0", "lg:w-44");
   });
 });
 
@@ -414,8 +414,8 @@ describe("seat state and price", () => {
     );
 
     const box = screen.getByRole("link", { name: /Two-Tank Reef/ }).parentElement;
-    expect(box).toHaveClass("sm:items-baseline");
-    expect(box).not.toHaveClass("sm:items-start");
+    expect(box).toHaveClass("lg:items-baseline");
+    expect(box).not.toHaveClass("lg:items-start");
   });
 
   it("leaves routine availability as a quiet fact rather than a badge", () => {
@@ -499,13 +499,13 @@ describe("seat state and price", () => {
     expect(priced).toHaveLength(3);
     expect(unpriced).toHaveLength(3);
     expect(priced[1]).toHaveTextContent("$95.00");
-    expect(priced[1]).toHaveClass("sm:min-w-(--price-col)", "sm:text-end");
+    expect(priced[1]).toHaveClass("lg:min-w-(--price-col)", "lg:text-end");
     expect(unpriced[1]).toBeEmptyDOMElement();
-    expect(unpriced[1]).toHaveClass("sm:min-w-(--price-col)");
-    // Below `sm` the group packs from the start and the chevron holds the
+    expect(unpriced[1]).toHaveClass("lg:min-w-(--price-col)");
+    // Below `lg` the group packs from the start and the chevron holds the
     // row's end on its own, so an empty column there would only add a gap.
-    expect(unpriced[1]).toHaveClass("max-sm:hidden");
-    expect(priced[1]).not.toHaveClass("max-sm:hidden");
+    expect(unpriced[1]).toHaveClass("max-lg:hidden");
+    expect(priced[1]).not.toHaveClass("max-lg:hidden");
   });
 
   /**
@@ -536,7 +536,7 @@ describe("seat state and price", () => {
     ).toBe("12.5ch");
     for (const item of screen.getAllByRole("listitem")) {
       const column = item.querySelector("svg")?.parentElement?.children[1];
-      expect(column).toHaveClass("sm:min-w-(--price-col)");
+      expect(column).toHaveClass("lg:min-w-(--price-col)");
     }
   });
 
@@ -672,4 +672,18 @@ describe("the day rule", () => {
     // 56px: es-ES "SEPT" at its tracking is about 51px, en-US "MON" 46.
     expect(column).toHaveClass("min-w-14");
   });
+});
+
+it("adds the optional first-site image and only one fact without adding a tap target", () => {
+  const { container } = render(
+    <WeekLedger
+      rows={[row({ photoUrl: "/uploads/reef.jpg", fact: "81°F water · 59 ft visibility" })]}
+      listLabel="Upcoming trips"
+      stickyTop="top-0"
+    />,
+  );
+  expect(container.querySelector('img[alt=""]')).toHaveAttribute("src");
+  expect(container.querySelectorAll("[data-schedule-fact]")).toHaveLength(1);
+  expect(screen.getByText("81°F water · 59 ft visibility")).toBeInTheDocument();
+  expect(screen.getAllByRole("link")).toHaveLength(1);
 });

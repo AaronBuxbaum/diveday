@@ -1,10 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import {
-  bookings as bookingsTable,
-  people,
-  rollCallEvents as rollCallEventsTable,
-  trips as tripsTable,
-} from "../../../db/schema/index";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { bookings as bookingsTable, people, trips as tripsTable } from "../../../db/schema/index";
 import { seedArrivals } from "../../../db/seed-arrivals";
 import { listStaff } from "../../../db/trips";
 import { livePerson } from "../../../db/trips-live";
@@ -95,10 +91,17 @@ export async function returnedTrip(
  */
 export async function boardAtDeparture(
   db: ReturnType<typeof fileScopedShopContext>["db"],
-  input: { shopId: string; tripId: string; staffId: string; bookingIds: readonly string[] },
+  input: {
+    shopId: string;
+    tripId: string;
+    staffId: string;
+    bookingIds: readonly string[];
+    meetingDay?: number;
+  },
   occurredAt = new Date(nowMs() - 5 * HOUR),
 ) {
-  await db.insert(rollCallEventsTable).values(
+  await seedRollCallEvidence(
+    db,
     input.bookingIds.map((bookingId) => ({
       shopId: input.shopId,
       tripId: input.tripId,
@@ -106,8 +109,10 @@ export async function boardAtDeparture(
       recordedByPersonId: input.staffId,
       status: "boarded" as const,
       checkpoint: "departure",
+      meetingDay: input.meetingDay,
       source: "live" as const,
       occurredAt,
     })),
+    { observesPrevious: false },
   );
 }

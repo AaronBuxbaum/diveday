@@ -85,10 +85,9 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         fitTone: "welcoming" as const,
         fitNote:
           "Shallow, bright and forgiving — a good first ocean dive after a pool course, and still worth a hundredth.",
-        // The elkhorn frame is the shop's cover photo, so the site leads with
-        // a frame of its own (UX review 2026-10-10, item 19).
+        // Sharp, correctly located Commons reef photo; the cover now shows the fictional boat.
         imageUrls: [
-          commonsImage("French Angelfish Molasses Reef 20080309.jpg"),
+          commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
           commonsImage("Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg"),
         ],
         // The three routes below used to be hand-authored SVG in

@@ -46,6 +46,7 @@ export const MEDIA_KEY_PREFIXES = [
   "recap",
   "shop-heroes",
   "shop-logos",
+  "staff-profiles",
 ] as const;
 
 export type MediaKeyPrefix = (typeof MEDIA_KEY_PREFIXES)[number];
@@ -248,6 +249,13 @@ export async function storeShopLogoImage(
  * the failure was invisible from here: the upload succeeded and returned a URL,
  * and every viewer got nothing.
  */
+export async function storeStaffProfileImage(
+  upload: Omit<ImageUpload, "keyPrefix">,
+  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
+): Promise<StoredImage> {
+  return storeImage({ ...upload, keyPrefix: "staff-profiles" }, MAX_SHOP_HERO_BYTES, provider);
+}
+
 export async function storeShopHeroImage(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),

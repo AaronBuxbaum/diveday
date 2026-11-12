@@ -7,7 +7,8 @@ import {
   startIncidentReport,
   startMissingDiverReport,
 } from "@/db/incident-reports";
-import { bookings, incidentReports, rollCallEvents, tripAssignments, trips } from "@/db/schema";
+import { bookings, incidentReports, tripAssignments, trips } from "@/db/schema";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -264,7 +265,7 @@ async function markedMissing(db: AppDb, shopId: string, tripId: string, recorder
     .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")))
     .limit(1);
   if (!seat) throw new Error("expected a seat");
-  await db.insert(rollCallEvents).values({
+  await seedRollCallEvidence(db, {
     shopId,
     tripId,
     bookingId: seat.id,

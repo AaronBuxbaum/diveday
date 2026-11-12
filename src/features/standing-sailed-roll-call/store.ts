@@ -31,6 +31,7 @@ export function tripHasStandingSailedRollCall(db: DbExecutor) {
         eq(newerDiver.tripId, diver.tripId),
         eq(newerDiver.bookingId, diver.bookingId),
         eq(newerDiver.checkpoint, diver.checkpoint),
+        sql`coalesce(${newerDiver.meetingDay}, 0) = coalesce(${diver.meetingDay}, 0)`,
         isNewerMark(newerDiver, diver),
       ),
     );
@@ -60,6 +61,7 @@ export function tripHasStandingSailedRollCall(db: DbExecutor) {
         eq(newerCrew.tripId, crew.tripId),
         eq(newerCrew.crewPersonId, crew.crewPersonId),
         eq(newerCrew.checkpoint, crew.checkpoint),
+        sql`coalesce(${newerCrew.meetingDay}, 0) = coalesce(${crew.meetingDay}, 0)`,
         isNewerMark(newerCrew, crew),
       ),
     );

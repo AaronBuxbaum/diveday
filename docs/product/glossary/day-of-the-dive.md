@@ -1,5 +1,14 @@
 # Day of the dive
 
+- **Roll-call conflict** — opposing statements about the same person's checkpoint that were made
+  without observing one another. Compatible statements combine automatically. A conflict keeps the
+  count open until crew explicitly reconcile the statements they can see. When older evidence cannot
+  establish what was observed, its ordering is unknown rather than assumed from a device's clock.
+- **Roll-call reconciliation** — the crew's deliberate resolution of the conflicting statements
+  shown for one person's checkpoint. It names the evidence being resolved; another unobserved
+  statement can still reopen the count. An ordinary correction of an observed mark remains an
+  ordinary correction.
+
 - **Blow-out** — the captain's call that weather or sea state makes a departure un-runnable: the
   trip is cancelled by the shop, not the diver. Distinct from a **conditions hold** (below), which
   is reversible and keeps bookings live. In DiveDay a blow-out is called per departure, or for

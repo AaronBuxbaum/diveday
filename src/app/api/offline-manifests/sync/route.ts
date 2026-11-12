@@ -3,9 +3,11 @@ import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
+import { getShopById } from "@/db/shops";
 import { offlineSyncTripsBelongToShop } from "@/db/trips";
 import { checkInBooking, undoCheckInBooking } from "@/features/check-in";
 import {
+  buildOfflineManifestCopies,
   latestOfflineManifestSnapshotRevisions,
   offlineSyncInstants,
 } from "@/features/offline-manifest-snapshots";
@@ -13,7 +15,10 @@ import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { log } from "@/lib/log";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
+import type { OfflineManifestUpcomingResponse } from "@/lib/offline-manifests";
 import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
+import { causalReplayOrder, rollCallEvidenceIdPattern } from "@/lib/roll-call-causality";
+import { supportsCausalRollCall } from "@/lib/roll-call-protocol";
 
 /**
  * One event carries **exactly one** subject: a `bookingId` (a diver's paid
@@ -34,6 +39,9 @@ import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 const eventSchema = z
   .object({
     clientEventId: z.string().uuid(),
+    observedEvidenceIds: z.array(z.string().regex(rollCallEvidenceIdPattern)).max(200).optional(),
+    reconcilesEvidence: z.boolean().optional(),
+    meetingDay: z.number().int().min(0).optional(),
     snapshotId: z.string().uuid(),
     snapshotSavedAt: z.iso.datetime(),
     erasureEpochToken: z.string().max(128).optional(),
@@ -46,47 +54,34 @@ const eventSchema = z
      * and it joined the offline vocabulary on 2026-08-15 (ADR
      * 20260815-offline-can-unsay-a-missing-diver). It grants a device no new
      * authority: `recordRollCall`/`recordCrewRollCall` have accepted it from
-     * the live manifest since roll call had an undo, and an offline `cleared`
-     * goes through the identical gauntlet every other offline status does —
-     * dedup on `clientEventId`, the staleness bound, and the newest-wins
-     * refusal, which is what stops a device that has been in a dry bag for an
-     * hour erasing a mark another device recorded since.
+     * the live manifest since roll call had an undo. Offline retractions retain
+     * their tap identity and exact target, while the shared causal projection
+     * preserves other evidence the crew did not take back. Arrival order and
+     * device clocks cannot turn an undo into a new observation (ADR
+     * 20261112-roll-call-observes-evidence).
      */
     status: z.enum(ROLL_CALL_EVENT_STATUSES),
     /**
      * Which statement a `cleared` takes back — the `clientEventId` of the event
      * the device was actually looking at when somebody tapped undo (ADR
-     * 20260815-an-offline-retraction-names-its-target). The writers apply the
-     * retraction only while that event is still the newest one standing at this
-     * subject and checkpoint, which is what stops an *honest, updated* device
-     * holding a stale copy from unsaying a different device's "did not come back
-     * from the dive".
+     * 20260815-an-offline-retraction-names-its-target). The writers validate the
+     * target against this tenant, trip, subject and checkpoint, then require it
+     * to remain in the causal frontier. Taking back one statement never takes
+     * back another device's independent missing report. This is a correctness
+     * contract, not an authorization boundary: the caller must already be live
+     * staff of this shop.
      *
-     * Honest and updated, and that is the whole of it: because the field is
-     * optional (below), a caller that omits it at `departure` still gets the
-     * old newest-wins write; after a dive it is refused (below). This is a
-     * correctness guard against staleness, **not an authorization boundary**,
-     * and nothing downstream may treat it as one (security review, 2026-08-15).
-     * At `departure` nobody gains anything by omitting it — the caller is
-     * already live staff of this shop, who can issue the identical `cleared`
-     * from the live manifest one tab away.
+     * Optional for retained queues. Without captured causal context or a named
+     * target, an after-dive retraction is refused as `retraction_superseded`
+     * (issue #3951). An opaque departure retraction proves no relation either:
+     * the causal projection cannot invent its target or remove another
+     * statement. Updated ordinary undo names a standing target; deliberate
+     * reconciliation is a separate explicit intent.
      *
-     * **Optional, and what its absence means depends on the checkpoint.** An
-     * event with no `retractsClientEventId` was queued by a build that
-     * predates the field, or forged. At `departure` it takes the path it took
-     * before, scoped on the device to that device's own statement
-     * (`OfflineRollCallResult.local`). After a dive it is refused as
-     * `retraction_superseded` (issue #3951): there a `cleared` reaches back to
-     * an earlier meeting day's missing diver, and a retraction that names
-     * nothing must not take back an alarm it never named
-     * (`retractionSuperseded`, src/db/manifests.ts).
-     *
-     * A uuid because the device mints it with `crypto.randomUUID()`. Unlike
-     * `clientEventId` above it never reaches Postgres — it is compared in
-     * JavaScript, case-folded, against the newest row's `client_event_id`
-     * (`retractionSuperseded`, src/db/manifests.ts) — so this rule is
-     * shape validation and nothing more. Say so plainly, because the hazard
-     * inverts if the comparison ever moves into SQL.
+     * A UUID because the device mints it with `crypto.randomUUID()`. Shape
+     * validation here does not establish the target relation; the scoped writer
+     * resolves and retains that exact relation, including its original target
+     * form for replay validation.
      */
     retractsClientEventId: z.string().uuid().optional(),
     /**
@@ -157,18 +152,27 @@ const bodySchema = z
     /** Optimistic tenant fence; session/shop ownership checks below remain authoritative. */
     expectedShopSlug: z.string().min(1).max(64).optional(),
     includeStoredInstants: z.literal(true).optional(),
+    includeCausalSnapshots: z.literal(true).optional(),
+    refreshTripId: z.string().uuid().optional(),
     events: z.array(eventSchema).max(200),
     checklistEvents: z.array(checklistEventSchema).max(200).optional(),
     arrivalEvents: z.array(arrivalEventSchema).max(200).optional(),
   })
-  // A batch naming neither is refused rather than accepted as a no-op — the
-  // caller always has at least one pending event when it POSTs at all
-  // (`syncOfflineManifest`'s own guard), so an empty pair means a malformed
-  // request, not a legitimately quiet device.
+  // A quiet shell may request one tenant-owned fresh snapshot. Otherwise a
+  // request needs queued evidence; snapshot refresh cannot mix other trips.
   .refine(
     (body) =>
       body.events.length + (body.checklistEvents?.length ?? 0) + (body.arrivalEvents?.length ?? 0) >
-      0,
+        0 ||
+      (body.includeCausalSnapshots === true && body.refreshTripId !== undefined),
+  )
+  .refine(
+    (body) =>
+      !body.includeCausalSnapshots ||
+      (body.refreshTripId !== undefined &&
+        [...body.events, ...(body.checklistEvents ?? []), ...(body.arrivalEvents ?? [])].every(
+          (event) => event.tripId === body.refreshTripId,
+        )),
   );
 
 /**
@@ -226,6 +230,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "authentication_required" }, { status: 401 });
   }
 
+  if (!supportsCausalRollCall(request))
+    return Response.json(
+      { error: "offline_update_required" },
+      { status: 426, headers: { "Cache-Control": "no-store" } },
+    );
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return Response.json({ error: "json_required" }, { status: 415 });
   }
@@ -243,6 +252,7 @@ export async function POST(request: Request) {
   }
   const tripIds = [
     ...new Set([
+      ...(parsed.data.refreshTripId ? [parsed.data.refreshTripId] : []),
       ...parsed.data.events.map((event) => event.tripId),
       ...(parsed.data.checklistEvents ?? []).map((event) => event.tripId),
       ...(parsed.data.arrivalEvents ?? []).map((event) => event.tripId),
@@ -254,21 +264,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "events_unavailable" }, { status: 404 });
   }
 
-  // Oldest first, and `sort` is stable — so two events sharing one `occurredAt`
-  // keep the order the device queued them in and the later tap is applied last,
-  // taking the later `created_at` that `desc(occurredAt), desc(createdAt)` reads
-  // back first. That is the same tie-break `latestQueuedAttempt`
-  // (src/lib/offline-manifests.ts) applies on the device, and the two have to
-  // agree: a captain who marks the wrong row and corrects it within the same
-  // millisecond must not watch the screen change back after a sync. Replacing
-  // this with an unstable ordering, or sorting the payload anywhere else, breaks
-  // that quietly.
-  const sorted = [...parsed.data.events].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  // Captured predecessors precede their observers, independently of clocks
+  // and payload order. Unobserved compatible facts merge; opposition persists.
+  const sorted = causalReplayOrder(parsed.data.events);
   const results = [];
   for (const event of sorted) {
     // Everything except the subject column is identical, and both recorders
-    // apply the same offline contract (dedup on `clientEventId`, the shared
-    // staleness bound, newest-wins) — so the dispatch is the only thing that
+    // apply the same causal contract (stable identity, captured basis and
+    // exact named targets) — so the dispatch is the only thing that
     // branches here. `shopId` still comes straight off the session on both
     // paths; a crew event's `crewPersonId` is proven to be on *this* trip's
     // roster inside `recordCrewRollCall`'s own transaction.
@@ -280,6 +283,9 @@ export async function POST(request: Request) {
       checkpoint: event.checkpoint as RollCallCheckpoint,
       source: "offline" as const,
       clientEventId: event.clientEventId,
+      observedEvidenceIds: event.observedEvidenceIds,
+      reconcilesEvidence: event.reconcilesEvidence,
+      meetingDay: event.meetingDay,
       offlineSnapshotId: event.snapshotId,
       offlineErasureEpochToken: event.erasureEpochToken,
       retractsClientEventId: event.retractsClientEventId,
@@ -405,13 +411,29 @@ export async function POST(request: Request) {
           .map((result) => result.clientEventId),
       )
     : new Map<string, string>();
-  return Response.json({
-    results: results.map((result) => ({
-      ...result,
-      ...(stored.has(result.clientEventId)
-        ? { storedOccurredAt: stored.get(result.clientEventId) }
-        : {}),
-    })),
-    ...(snapshotRevisions ? { snapshotRevisions } : {}),
-  });
+  // A success receipt must also tell the sending device the current roster
+  // and frontier, under the same erasure/medical-viewer gates as priming.
+  // Failure leaves the request unacknowledged; retries keep original IDs.
+  let refreshedManifests: OfflineManifestUpcomingResponse | undefined;
+  if (parsed.data.includeCausalSnapshots) {
+    const shop = await getShopById(db, session.user.shopId);
+    if (!shop) return Response.json({ error: "events_unavailable" }, { status: 404 });
+    refreshedManifests = await buildOfflineManifestCopies(db, shop, session.user.personId, tripIds);
+    if (refreshedManifests.payloads.length !== tripIds.length) {
+      return Response.json({ error: "refresh_unavailable" }, { status: 503 });
+    }
+  }
+  return Response.json(
+    {
+      results: results.map((result) => ({
+        ...result,
+        ...(stored.has(result.clientEventId)
+          ? { storedOccurredAt: stored.get(result.clientEventId) }
+          : {}),
+      })),
+      ...(snapshotRevisions ? { snapshotRevisions } : {}),
+      ...(refreshedManifests ? { refreshedManifests } : {}),
+    },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }

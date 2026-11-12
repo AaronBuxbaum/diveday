@@ -282,7 +282,8 @@
       "shopLogo": "Logotipo del centro",
       "shopHero": "Foto de portada del centro",
       "boatPhoto": "Foto de la embarcación",
-      "paymentReceipt": "Recibo importado"
+      "paymentReceipt": "Recibo importado",
+      "staffProfile": "Foto del perfil del equipo"
     },
     "stuckDetail": "{kind} empezó el {when} y nunca terminó. Revísalo en Stripe.",
     "mediaDeletionDetail": "Eliminada de la aplicación, pero el archivo sigue guardado.",

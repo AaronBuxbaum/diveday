@@ -52,7 +52,13 @@ const listed = [
 ] as unknown as UpcomingTrips;
 
 function rows(
-  overrides: { isEmbed?: boolean; above?: string[]; listedTrips?: UpcomingTrips } = {},
+  overrides: {
+    isEmbed?: boolean;
+    above?: string[];
+    listedTrips?: UpcomingTrips;
+    partySize?: number;
+    facts?: Parameters<typeof weekLedgerRows>[0]["facts"];
+  } = {},
 ) {
   return weekLedgerRows({
     listedTrips: overrides.listedTrips ?? listed,
@@ -78,6 +84,8 @@ function rows(
     dayKeyOf: (date) => date.toISOString().slice(0, 10),
     shopSlug: "blue-mantis",
     isEmbed: overrides.isEmbed ?? false,
+    partySize: overrides.partySize,
+    facts: overrides.facts,
     timezone: TZ,
     currency: "usd",
     locale: "en-US",
@@ -142,7 +150,9 @@ describe("shelfCourseCards", () => {
     });
     const cards = shelfCourseCards({
       activeCourses: ["a", "b", "c", "d"].map(course),
-      shelfNextStarts: new Map([["a", new Date("2026-08-01T12:00:00Z")]]),
+      shelfNextStarts: new Map([
+        ["a", [{ id: "session-a", startsAt: new Date("2026-08-01T12:00:00Z"), seatsLeft: 4 }]],
+      ]),
       shop: { depthUnit: "meters", timezone: TZ },
       shopSlug: "blue-mantis",
       currency: "usd",
@@ -150,8 +160,10 @@ describe("shelfCourseCards", () => {
       t,
     });
     expect(cards.map((card) => card.id)).toEqual(["a", "b", "c"]);
-    expect(cards[0]?.nextStart).toMatch(/^Next Sat,\sAug\s1$/);
-    expect(cards[1]?.nextStart).toBeNull();
+    expect(cards[0]?.sessions).toEqual([
+      { id: "session-a", startsAt: new Date("2026-08-01T12:00:00Z"), seatsLeft: 4 },
+    ]);
+    expect(cards[1]?.sessions).toEqual([]);
     expect(cards[0]?.href).toBe("/s/blue-mantis/courses/a");
     // Depth markers resolve into the shop's own unit before anything reads them.
     expect(cards[0]?.summary).toBe("Down to 18 meters");
@@ -159,4 +171,38 @@ describe("shelfCourseCards", () => {
     expect(cards[0]?.title).toBe("Course a");
     expect(cards[0]?.price).toBe("$500");
   });
+});
+
+it("keeps insufficient boats visible, names their seats, and carries the party to booking", () => {
+  const party = rows({ partySize: 4 });
+  expect(party).toHaveLength(3);
+  expect(party[0]?.insufficientSeats).toBe(true);
+  expect(party[0]?.capacityText).toBe("1 seat left · party of 4");
+  expect(party[0]?.href).toBe("/s/blue-mantis/trips/t1?partySize=4");
+  expect(party[1]?.insufficientSeats).toBe(false);
+  expect(rows({ partySize: 4, isEmbed: true })[0]?.href).toBe("/s/blue-mantis/embed/trip/t1");
+});
+
+it("uses only the first planned site’s photo and keeps the embed unchanged", () => {
+  const listedTrips = [
+    {
+      ...listed[0],
+      diveSite: { id: "first-site", imageUrls: ["/uploads/first.jpg", "/uploads/second.jpg"] },
+      waterTemperatureC: 27,
+      visibilityMeters: 18,
+      surfaceConditions: null,
+      conditionsSummary: null,
+    },
+  ] as unknown as UpcomingTrips;
+  const facts = {
+    now: new Date("2026-07-24T12:00:00Z"),
+    shop: { depthUnit: "feet" as const, temperatureUnit: "fahrenheit" as const },
+    sightings: new Map(),
+  };
+  const [normal] = rows({ listedTrips, facts });
+  expect(normal?.photoUrl).toBe("/uploads/first.jpg");
+  expect(normal?.fact).toContain("81°F water");
+  const [embed] = rows({ listedTrips, facts, isEmbed: true });
+  expect(embed?.photoUrl).toBeNull();
+  expect(embed?.fact).toBeNull();
 });

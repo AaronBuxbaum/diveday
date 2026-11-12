@@ -6,6 +6,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { getDb } from "@/db/client";
 import { checkoutMode } from "@/db/stripe-accounts";
+import { assignedPublicStaffProfiles } from "@/features/public-staff-profiles";
 import { connectionForRoute } from "@/features/render-connection";
 import { shopBySlugCached } from "@/features/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
@@ -22,7 +23,7 @@ import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicGroupRequestPath, publicTripPath } from "@/lib/public-routes";
 import { unionRequirements } from "@/lib/requirement";
 import { shopDayOf } from "@/lib/shop-day";
-import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
+import { hasSailed, isFull, schedulePartySize, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
 import {
@@ -102,6 +103,7 @@ export async function TripDetailPage({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{
     booking?: string;
+    partySize?: string | string[];
     interest?: string;
     error?: string;
     /** Stripe's cancel return, embed only — see `EmbedBookedNotice`. */
@@ -121,6 +123,7 @@ export async function TripDetailPage({
   if (!uuidParam(tripId)) notFound();
   const {
     booking: bookingToken,
+    partySize: requestedPartySize,
     interest: interestId,
     error,
     pay,
@@ -196,7 +199,6 @@ export async function TripDetailPage({
       />
     );
   }
-  const crewLanguagesLine = crewLanguagesSentence(crewLanguages, locale);
   // Public conditions off drops only the automated outlook (`publicForecast`).
   const { crewPrediction, automatedForecast } = publicForecast(shop, trip);
   const knownDiverPanel = knownDiverPanelFor(knownDiver, t, {
@@ -264,7 +266,7 @@ export async function TripDetailPage({
       trip={trip}
       crewPrediction={crewPrediction}
       automatedForecast={automatedForecast}
-      crewLanguages={crewLanguagesLine}
+      crewLanguages={crewLanguagesSentence(crewLanguages, locale)}
       locale={locale}
       readerUnits={readerUnits}
       paper={paper}
@@ -376,6 +378,7 @@ export async function TripDetailPage({
                 shopSlug={shopSlug}
                 trip={bookingFormTrip(trip)}
                 tripRef={tripRef}
+                requestedPartySize={isEmbed ? 1 : schedulePartySize(requestedPartySize)}
                 withAnchor={false}
                 errorMessage={errorMessage}
                 alternatives={alternatives}
@@ -390,6 +393,7 @@ export async function TripDetailPage({
                   withAnchor: false,
                   tripRef,
                   remaining,
+                  requestedPartySize: isEmbed ? 1 : schedulePartySize(requestedPartySize),
                   groupRequestHref: groupRequestFor(shop, trip, remaining),
                   errorMessage,
                   payAtBooking: payAtBooking && checkoutMode(stripeAccount),
@@ -431,6 +435,7 @@ export async function TripDetailPage({
                 two stand a section apart. An empty block takes no room: its
                 margins collapse through it. */}
             <TripSupportingDetails
+              profiles={await assignedPublicStaffProfiles(db, shop.id, [trip], shop.timezone)}
               briefings={diveBriefings}
               crew={publicCrew}
               locale={locale}

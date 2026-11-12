@@ -1,3 +1,5 @@
+import type { DbExecutor } from "@/db/client";
+import { bookings, tripAssignments } from "@/db/schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "../../../db/trips";
 import { getCurrentWaiverTemplate } from "../../../db/waivers";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../../lib/medical";
@@ -21,4 +23,26 @@ export async function manifestContext() {
   const [staff] = await listStaff(db, shop.id);
   if (!staff) throw new Error("demo staff missing");
   return { db, shop, reef, booking, template, staff: staff.person };
+}
+
+/** The assigned crew member's paid seat, for dual-role roll-call scenarios. */
+export async function manifestCrewSeat(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  staffId: string,
+) {
+  await db.insert(tripAssignments).values({ tripId, personId: staffId }).onConflictDoNothing();
+  const [seat] = await db
+    .insert(bookings)
+    .values({
+      bookedAs: "diver",
+      shopId,
+      tripId,
+      personId: staffId,
+      status: "booked",
+    })
+    .returning({ id: bookings.id });
+  if (!seat) throw new Error("expected the crew member's own seat");
+  return seat;
 }

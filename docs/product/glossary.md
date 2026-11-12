@@ -126,6 +126,8 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Last time line
 - Logbook suggestion
 - Lost item
+- Roll-call conflict
+- Roll-call reconciliation
 - Saved trip-prep copy
 - Snag
 - Staff note
@@ -528,6 +530,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Crew public name
 - Lens
 - Our year
+- Public staff profile
 - Published desk hours
 - Register
 - Setting

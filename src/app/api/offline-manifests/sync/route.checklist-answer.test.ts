@@ -10,6 +10,7 @@ import {
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
+import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { createBoat } from "../../../../features/boats/store";
@@ -35,7 +36,7 @@ const { POST } = await import("./route");
 function postRequest(body: unknown) {
   return new Request("http://localhost/api/offline-manifests/sync", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { ...ROLL_CALL_CAUSAL_HEADERS, "content-type": "application/json" },
     body: JSON.stringify(body),
   });
 }

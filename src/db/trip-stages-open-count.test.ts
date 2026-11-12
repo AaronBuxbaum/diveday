@@ -1,5 +1,6 @@
 import { and, desc, eq, lt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -12,7 +13,7 @@ import {
   HOUR,
   returnedTrip,
 } from "../test/substrate-fixtures/db/roll-call-test-fixtures";
-import { rollCallEvents, tripAssignments, trips } from "./schema";
+import { tripAssignments, trips } from "./schema";
 import { resetDemoSchedule } from "./seed";
 import { liveTrip } from "./trips-live";
 
@@ -37,7 +38,7 @@ async function boat() {
   let minute = 0;
   const say = async (bookingId: string, checkpoint: string, status: "boarded" | "not_boarded") => {
     minute += 1;
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: made.trip.id,
       bookingId,
@@ -59,7 +60,7 @@ async function boat() {
     });
   const crew = async (checkpoint: string, status: "boarded" | "not_boarded") => {
     minute += 1;
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: made.trip.id,
       subjectKind: "crew",
@@ -337,7 +338,7 @@ describe("readDepartureStage: crew counted back at a later dive", () => {
     let minute = 30;
     const crew = async (checkpoint: string, status: "boarded" | "not_boarded") => {
       minute += 1;
-      await db.insert(rollCallEvents).values({
+      await seedRollCallEvidence(db, {
         shopId: shop.id,
         tripId: trip.id,
         subjectKind: "crew",

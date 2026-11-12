@@ -14,6 +14,7 @@ import { listUpcomingSessionsForCourse } from "@/db/trips";
 import { withLocalizedOpenWaterTemplateCopy } from "@/features/course-template-localization";
 import { getCourseBySlug } from "@/features/courses";
 import { diverCrewWithAway } from "@/features/crew-away-diver";
+import { assignedPublicStaffProfiles } from "@/features/public-staff-profiles";
 import { getShopReviewAggregate } from "@/features/reviews";
 import { isLiveShopStaff } from "@/features/session";
 import { shopBySlugCached } from "@/features/shops-cached";
@@ -31,6 +32,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath } from "@/lib/public-routes";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { coursePageJsonLd } from "@/lib/structured-data";
+import { PublicStaffProfiles } from "../../_components/PublicStaffProfiles";
 import { CoursePaperSheet } from "./_components/CoursePaperSheet";
 import {
   CourseAdmission,
@@ -275,6 +277,10 @@ export default async function CoursePage({
         groupSize={course.groupSizeText}
         locale={locale}
         t={t}
+      />
+      <PublicStaffProfiles
+        profiles={await assignedPublicStaffProfiles(db, shop.id, scheduled, shop.timezone, true)}
+        locale={locale}
       />
       <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />
       <CourseSessions

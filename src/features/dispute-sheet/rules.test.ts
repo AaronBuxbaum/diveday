@@ -45,6 +45,7 @@ const roll = (
 ) => ({
   checkpoint,
   status,
+  statementStatus: status,
   occurredAt: at(hours),
   createdAt: at(hours),
   seq,
@@ -282,6 +283,29 @@ describe("assembleDisputeSheet: roll call and check-in", () => {
     ]);
     expect(sheet.rollCall[0]).toMatchObject({ at: at(14), recordedByName: "Sam Reyes" });
     expect(sheet.rollCall[1]).toMatchObject({ at: null, recordedByName: null });
+  });
+
+  it.each([
+    ["boarded", "not_boarded"],
+    ["not_boarded", "boarded"],
+  ] as const)("does not attribute derived %s to a raw %s reporter", (status, statementStatus) => {
+    const sheet = assembleDisputeSheet(
+      input({
+        rollCallEvents: [
+          {
+            ...roll("after_dive_1", status, 15, 2),
+            statementStatus,
+            recordedByName: "Opposing reporter",
+          },
+        ],
+      }),
+    );
+    expect(sheet.rollCall[1]).toMatchObject({
+      result: status,
+      at: null,
+      recordedByName: null,
+      offline: false,
+    });
   });
 
   it("never carries a dock result forward to a checkpoint nobody recorded", () => {

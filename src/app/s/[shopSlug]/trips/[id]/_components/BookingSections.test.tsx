@@ -764,3 +764,57 @@ describe("the booking decision beside its button", () => {
     expect(screen.getByText("Nothing is charged now.")).toBeInTheDocument();
   });
 });
+
+it("explains a party that cannot fit instead of silently promising its requested seats", () => {
+  renderDiver(
+    <BookSpotSection
+      context={{
+        trip: trip(),
+        tripRef,
+        remaining: 2,
+        requestedPartySize: 4,
+        payAtBooking: false,
+        perDiverPriceCents: 10_000,
+        currency: "usd",
+        locale: "en-US",
+        timeZone: "America/New_York",
+        rentalItems: [],
+        rentalPricing: EMPTY_RENTAL_PRICING,
+      }}
+    />,
+  );
+  expect(screen.getByText("Your party has 4 people; 2 seats are available.")).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: "People" })).toContainElement(
+    screen.getByRole("button", { name: "More people" }),
+  );
+  expect(screen.getByRole("button", { name: "More people" })).toBeDisabled();
+  expect(screen.getByRole("textbox", { name: "Diver 2 name" })).toBeInTheDocument();
+});
+
+it("keeps a full boat’s party preference in its waitlist picker without offering a seat", () => {
+  renderDiver(
+    <TripFullSection
+      shopSlug="reef-shop"
+      trip={trip({ capacity: 6, booked: 6 })}
+      tripRef={tripRef}
+      requestedPartySize={4}
+    />,
+  );
+  expect(screen.getByRole("radio", { name: "4 people" })).toBeChecked();
+  expect(document.querySelector('input[name="partySize"]:checked')).toHaveAttribute("value", "4");
+});
+
+it("states the existing waitlist limit when the requested party is too large", () => {
+  renderDiver(
+    <TripFullSection
+      shopSlug="reef-shop"
+      trip={trip({ capacity: 2, booked: 2 })}
+      tripRef={tripRef}
+      requestedPartySize={4}
+    />,
+  );
+  expect(
+    screen.getByText("Your party has 4 people; this wait list accepts up to 2."),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: "2 people" })).toBeChecked();
+});

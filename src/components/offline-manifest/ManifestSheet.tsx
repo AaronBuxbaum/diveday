@@ -7,6 +7,7 @@ import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
 import { buttonClass } from "@/components/ui/button";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
+import { staffSoulsOnBoardLine } from "@/i18n/staff-participant-labels";
 import { nowDate } from "@/lib/clock";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { formatDateTimeTz } from "@/lib/format";
@@ -205,11 +206,12 @@ export function OfflineManifestSheet({
                   })}
                 </p>
                 <p data-sheet-souls="" className="mt-1 font-semibold tabular-nums">
-                  {t("manifest.soulsOnBoardLine", {
-                    passengers: view.totalDivers,
-                    crew: view.crewAssigned,
-                    souls: view.totalDivers + view.crewAssigned,
-                  })}
+                  {staffSoulsOnBoardLine(
+                    t,
+                    { totalDivers: view.totalDivers },
+                    view.crewAssigned,
+                    view.physicalTotal,
+                  )}
                 </p>
                 <p className="tabular-nums">
                   {[

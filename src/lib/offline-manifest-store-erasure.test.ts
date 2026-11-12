@@ -3,6 +3,7 @@ import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
 import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
 import {
   appendOfflineChecklistCheck,
@@ -108,21 +109,27 @@ describe("discarded offline roll-call notes", () => {
 
     server.use(
       http.post("/api/offline-manifests/sync", () =>
-        HttpResponse.json({
-          results: [
-            ...envelope.events.map((event, index) => ({
-              clientEventId: event.clientEventId,
-              status: "applied",
-              noteDisposition:
-                index === 0 ? "discarded_erasure_cutoff" : "discarded_unverified_snapshot",
-            })),
+        HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
             {
-              clientEventId: envelope.checklistEvents[0]?.clientEventId,
-              status: "applied",
-              noteDisposition: "discarded_erasure_cutoff",
+              results: [
+                ...envelope.events.map((event, index) => ({
+                  clientEventId: event.clientEventId,
+                  status: "applied",
+                  noteDisposition:
+                    index === 0 ? "discarded_erasure_cutoff" : "discarded_unverified_snapshot",
+                })),
+                {
+                  clientEventId: envelope.checklistEvents[0]?.clientEventId,
+                  status: "applied",
+                  noteDisposition: "discarded_erasure_cutoff",
+                },
+              ],
             },
-          ],
-        }),
+            { events: envelope.events, checklistEvents: envelope.checklistEvents },
+          ),
+        ),
       ),
     );
 
@@ -191,12 +198,18 @@ describe("discarded offline roll-call notes", () => {
     ];
     server.use(
       http.post("/api/offline-manifests/sync", () =>
-        HttpResponse.json({
-          results: [...queued.events, ...queued.checklistEvents].map((event) => ({
-            clientEventId: event.clientEventId,
-            status: "applied",
-          })),
-        }),
+        HttpResponse.json(
+          withRefreshedSyncFrame(
+            queued.snapshot,
+            {
+              results: [...queued.events, ...queued.checklistEvents].map((event) => ({
+                clientEventId: event.clientEventId,
+                status: "applied",
+              })),
+            },
+            { events: queued.events, checklistEvents: queued.checklistEvents },
+          ),
+        ),
       ),
     );
     const applied = await syncOfflineManifest(tripId);

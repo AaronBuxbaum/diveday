@@ -262,6 +262,18 @@ Existing team actions remain beside their member chips, with no warning-specific
 Each caution earns its place because course, age, clearance, and a buddy staying ashore carry
 different consequences. The team ledger stays the composition, and its caution opens with the team.
 
+**In review 2026-11-12, conflicting saved marks** (#4418): the one idea is a head count
+whose conflicting reports stay visible until crew check the person. The arriving question is
+which marks disagree and who needs checking, answered beside that person's live or saved roll
+call with both original statements rather than an apparently settled count. Compatible marks
+need no new control; only an actual conflict exposes the three possible crew decisions beside
+its evidence, with confirmation before the selected decision is recorded. Removing the original
+statements or the explicit decision would hide uncertainty, so both stay; repeated sync machinery
+does not earn a separate panel. The composition extends the existing name-and-count ledger with
+an evidence list at the affected person, keeping ordinary roll call quiet instead of adding a
+second dashboard. Phone and desktop, live and saved-copy states are captured separately; these
+browser simulations do not establish physical-device or at-sea usability.
+
 ### The departure log — `/shop/[shopSlug]/trips/[id]/log`
 
 **Reviewed 2026-10-21, preserved boat identity** (#2727): the one idea is a departure record whose
@@ -1178,3 +1190,38 @@ so without presenting an unpaid seat as already paid. Medical, payment and organ
 stay off this invitation. The empty state says every seat has been claimed.
 
 **Amended 2026-11-11 (#4332, authored course meeting places):** the course editor accepts an optional meeting place per plan day and prompts for learning-material access instructions. The public and printable course plans show that authored place; the enrolled student's actual dated meetings pair it only when the session covers the complete plan. Saved arrival cards retain those dates and places, use course-start wording, and preserve scheduled hotel pickup precedence. Partial sessions do not infer a place from activity prose. The separate online course materials fee keeps its own price line.
+
+## Public staff introductions (#4383)
+
+The buying pages introduce the people who choose to appear, in their own words. Divers arrive asking who leads the day, which languages they speak, and whether the person feels familiar; the first name, chosen role, diving year, languages and description answer those questions together. An inline introduction beside its picture keeps the person and their words together; a separate profile page would make the diver leave the booking, so the inline composition is used. The shopfront shows the team; course and trip details show only assigned people available for those dates, with the trip's introductions inside its existing detail disclosure. The editor lives beside the person's existing name visibility control, with an explicit separate publication choice, optional fields, bounded pictures and immediate withdrawal; the shop can hide the display through Features.
+
+
+## Public course catalog: a first step before an agency (#4384)
+
+The catalog’s one idea is to help a visitor choose the kind of course they need, then choose a date.
+A newcomer asks whether they can try diving, earn their first certification, or return after a break;
+the shop’s matching offers and up to three bookable dates answer that before agency tabs.
+Each date is its own link on the course, with seats left, rather than a detached booking button.
+The first thing to remove is an explanatory caption: the three plain door labels already do that work.
+A boxed three-card introduction was considered; the chosen open three-column list uses type and top
+rules so it introduces the catalog without competing with the shop’s course titles or date links.
+
+## Public schedule: room for the party (#4378)
+
+The schedule lets a visitor ask whether their party fits before opening a departure.
+A visible count from one to eight leads the filters, while every boat keeps its seat count and link.
+The control changes the URL; the trip’s live booking count sets the actual upper bound.
+A short boat’s muted title repeats no claim of availability: its words name both seats left and party size.
+A separate party-search panel was considered; keeping the count on the existing filter form preserves
+one list and puts the question beside its answer without introducing another browsing surface.
+
+
+## Public schedule: evidence for the day (#4377)
+
+The ledger helps a visitor picture a real day while keeping each departure one object to open.
+Its first planned site may supply a small photo; one extra fact answers what the crew posted for a
+departure in the next 48 hours, otherwise what eligible recent logs record at that site.
+Neither image nor fact creates another control, and a row without evidence keeps its existing shape.
+Descriptions and badges are the first things to remove: they turn the list into repeated pitches.
+A card grid was considered; the retained ledger keeps day scanning, seat counts, and the single row
+link together while evidence remains subordinate to the departure’s title.

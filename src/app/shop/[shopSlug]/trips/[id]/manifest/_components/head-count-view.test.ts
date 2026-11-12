@@ -75,6 +75,13 @@ describe("headCountView", () => {
       tripManifest({
         trip: { ...tripManifest().trip, certifiedPassengers: 12, certifiedTotalPersons: 13 },
         summary: { ...tripManifest().summary, totalDivers: 12, boarded },
+        divers: Array.from({ length: 12 }, (_, index) =>
+          diver({
+            bookingId: `b-${index}`,
+            personId: `p-${index}`,
+            rollCall: index < boarded ? aboard : undefined,
+          }),
+        ),
         crew,
       });
     const view = (boarded: number) =>

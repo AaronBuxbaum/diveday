@@ -7,6 +7,7 @@ import { crewDives, needsDecompressionCardReminder } from "@/lib/decompression-r
 import { isHeldSeat } from "@/lib/held-seat";
 import { countParticipants, hasNonDivers, joinPassengerSplit } from "@/lib/participant-types";
 import { mixedTrainingDepthAdvisory } from "@/lib/training-mark";
+import { OfflineCausalConflicts } from "./CausalConflicts";
 import { OfflineCrewRollCall } from "./CrewRollCall";
 import type { OfflineTripControls } from "./controls";
 import { OfflineDiverRollCall } from "./DiverRollCall";
@@ -212,6 +213,7 @@ export function OfflineRollCallSection({
             {t("shared.offlineManifest.single.buddyReadOnlyHere")}
           </p>
         ) : null}
+        <OfflineCausalConflicts view={view} controls={controls} />
         <OfflineDiverRollCall view={view} controls={controls} />
       </section>
     </>

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import type { AppDb } from "./client";
@@ -10,7 +11,6 @@ import {
   incidentReports,
   people,
   personRoles,
-  rollCallEvents,
   shops,
   tripAssignments,
   trips,
@@ -85,7 +85,7 @@ async function twoMoreCrew(
     ids.push(person.id);
   }
   const [second, missing] = ids as [string, string];
-  await db.insert(rollCallEvents).values({
+  await seedRollCallEvidence(db, {
     shopId: at.shopId,
     tripId: at.tripId,
     ...crewSubject(missing),

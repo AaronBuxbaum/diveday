@@ -8,6 +8,7 @@ import {
   watchRollCallTouches,
 } from "@/components/roll-call-touch-guard";
 import { textareaClassFor } from "@/components/ui/form";
+import { useRollCallCausalContext } from "./roll-call-causal-context";
 
 /**
  * The result a roll-call server action returns instead of redirecting, so the
@@ -89,7 +90,9 @@ export function RollCallButton({
   noteField,
   observabilityAction,
   retracts,
+  reconcilesEvidence = false,
 }: {
+  reconcilesEvidence?: boolean;
   action: RollCallAction;
   /**
    * On an undo (`status="cleared"`): the stored event id of the mark on
@@ -170,6 +173,8 @@ export function RollCallButton({
   /** Stable action label used by the app-wide mutation-duration reporter. */
   observabilityAction?: string;
 }) {
+  const causal = useRollCallCausalContext(subject.field, subject.id);
+  const eventIdInput = useRef<HTMLInputElement>(null);
   const [result, formAction, isPending] = useActionState(action, null);
   const startedAt = useRef<number | null>(null);
   const sawPending = useRef(false);
@@ -205,7 +210,25 @@ export function RollCallButton({
   }, [result]);
   return (
     <>
-      <form action={formAction} className={formClassName}>
+      <form
+        action={formAction}
+        className={formClassName}
+        onSubmit={() => {
+          if (eventIdInput.current) eventIdInput.current.value = crypto.randomUUID();
+        }}
+      >
+        <input ref={eventIdInput} type="hidden" name="clientEventId" defaultValue="" />
+        {causal ? (
+          <>
+            <input
+              type="hidden"
+              name="observedEvidenceIds"
+              value={JSON.stringify(causal.observedEvidenceIds)}
+            />
+            <input type="hidden" name="meetingDay" value={causal.meetingDay} />
+            <input type="hidden" name="reconcilesEvidence" value={String(reconcilesEvidence)} />
+          </>
+        ) : null}
         <input type="hidden" name={subject.field} value={subject.id} />
         <input type="hidden" name="status" value={status} />
         {status === "cleared" && retracts ? (
@@ -232,7 +255,7 @@ export function RollCallButton({
         ) : null}
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || (causal?.conflict === true && !reconcilesEvidence)}
           aria-busy={isPending}
           // Spray and a wet palm land as several contacts at once; a press
           // made under more than one does not submit (roll-call-touch-guard),

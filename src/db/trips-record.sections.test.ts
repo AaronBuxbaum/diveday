@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "../features/boats/store";
-import { boats, rollCallEvents } from "./schema";
+import { boats } from "./schema";
 import {
   createTrip,
   editTripSection,
@@ -104,7 +105,7 @@ it("retains booked-seat and recorded-roll-call floors for partial section edits"
   const [entry] = await getTripRoster(db, shop.id, reef.id);
   const [staff] = await listStaff(db, shop.id);
   if (!entry || !staff) throw new Error("seeded diver or crew missing");
-  await db.insert(rollCallEvents).values({
+  await seedRollCallEvidence(db, {
     shopId: shop.id,
     tripId: reef.id,
     bookingId: entry.booking.id,

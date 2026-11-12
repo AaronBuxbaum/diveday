@@ -49,6 +49,7 @@ const MEDIA_KIND_KEYS: Record<MediaDeletionKind, StaffMessageKey> = {
   dive_site_photo: "settings.main.dataJobs.mediaKind.dive_site_photo",
   shop_logo: "settings.main.dataJobs.mediaKind.shop_logo",
   shop_hero: "settings.main.dataJobs.mediaKind.shop_hero",
+  staff_profile: "settings.main.dataJobs.mediaKind.staff_profile",
   boat_photo: "settings.main.dataJobs.mediaKind.boat_photo",
   payment_receipt: "settings.main.dataJobs.mediaKind.payment_receipt",
 };

@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate, nowMs } from "@/lib/clock";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
@@ -11,7 +12,6 @@ import {
   paymentOperationIntents,
   people,
   personRoles,
-  rollCallEvents,
 } from "./schema";
 import { CAPTAIN_NAME, type Cast } from "./seed-cast";
 import { at, dateAt, nextCreatedAt } from "./seed-clock";
@@ -123,16 +123,20 @@ export async function seedFrontDeskLists(
         )
         .limit(1);
       if (recorder) {
-        await db.insert(rollCallEvents).values({
-          shopId,
-          tripId: wreckId,
-          bookingId: booking.id,
-          recordedByPersonId: recorder.id,
-          status: "boarded",
-          checkpoint: "departure",
-          source: "live",
-          occurredAt: nowDate(),
-        });
+        await seedRollCallEvidence(
+          db,
+          {
+            shopId,
+            tripId: wreckId,
+            bookingId: booking.id,
+            recordedByPersonId: recorder.id,
+            status: "boarded",
+            checkpoint: "departure",
+            source: "live",
+            occurredAt: nowDate(),
+          },
+          { observesPrevious: false },
+        );
       }
       const [checkout] = await db
         .insert(bookingCheckouts)

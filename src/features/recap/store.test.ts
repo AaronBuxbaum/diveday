@@ -1,5 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { createBookingParty } from "../../db/bookings";
 import { upsertExecutedDive } from "../../db/executed-dives";
 import { recordCrewRollCall, recordRollCall } from "../../db/manifests";
@@ -14,7 +15,6 @@ import {
   people,
   priorVisits,
   recapPhotos,
-  rollCallEvents,
   tripAssignments,
   trips,
 } from "../../db/schema/index";
@@ -50,43 +50,14 @@ import {
   unpauseTripRecapAutoSend,
 } from "./store";
 
+import { recapFixtureContext, recordObservedRecapMark } from "./store.test-support";
+
 const ORIGIN = "https://diveday.test";
 
-const RAE = { fullName: "Rae Recap", email: "recap-rae@example.com" };
-
-/**
- * Books a diver onto the demo reef day, in the file's shared database unless a
- * test hands it another. A test that needs a second booking on the same day
- * names a second diver: the same one twice is refused as `already_booked`.
- */
-async function recapContext(
+const recapContext = (
   source: Awaited<ReturnType<typeof seededShopContext>> = ctx,
-  diver: { fullName: string; email: string } = RAE,
-) {
-  const { db, shop } = source;
-  const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-  const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
-  if (!reef) throw new Error("demo reef trip missing");
-  const party = await createBookingParty(db, [
-    {
-      actor: "staff",
-      shopId: shop.id,
-      tripId: reef.id,
-      ...diver,
-    },
-  ]);
-  if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
-  const bookingId = party.bookings[0].bookingId;
-  // **The morning after**, so the cases below are about the four-hour pause
-  // and nothing else. A recap is also held outside the shop's own civil hours
-  // (`src/lib/send-window.ts`, issue #697) — the reef boat ties up at 6 PM, so
-  // its recap comes due at 11 PM and is held until morning. That rule has its
-  // own cases at the bottom of this file; mixing it into every delay assertion
-  // would test two things at once. Fifteen hours after the boat ties up is
-  // 9 AM local: past the mandatory four-hour pause and inside the window.
-  const afterTrip = new Date(reef.endsAt.getTime() + 15 * 60 * 60 * 1000);
-  return { db, shop, reef, bookingId, afterTrip };
-}
+  diver?: { fullName: string; email: string },
+) => recapFixtureContext(source, diver);
 
 const rowsFor = (db: Awaited<ReturnType<typeof recapContext>>["db"], bookingId: string) =>
   db.select().from(notificationDeliveries).where(eq(notificationDeliveries.bookingId, bookingId));
@@ -279,7 +250,7 @@ describe("getRecapPageData", () => {
       .update(trips)
       .set({ startsAt: dayBefore, endsAt: new Date(dayBefore.getTime() + 3 * 60 * 60 * 1000) })
       .where(eq(trips.id, other.id));
-    await db.insert(rollCallEvents).values({
+    await seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: other.id,
       bookingId: seat,
@@ -650,16 +621,21 @@ describe("a diver who never left the dock", () => {
       bookingId: string,
       status: "boarded" | "not_boarded" | "cleared",
       checkpoint = "departure",
+      observesPrevious = false,
     ) =>
-      ctx.db.insert(rollCallEvents).values({
-        shopId: ctx.shop.id,
-        tripId: ctx.reef.id,
-        bookingId,
-        recordedByPersonId: staff.person.id,
-        status,
-        checkpoint,
-        occurredAt: new Date(ctx.reef.startsAt.getTime() + minute++ * 60 * 1000),
-      });
+      seedRollCallEvidence(
+        ctx.db,
+        {
+          shopId: ctx.shop.id,
+          tripId: ctx.reef.id,
+          bookingId,
+          recordedByPersonId: staff.person.id,
+          status,
+          checkpoint,
+          occurredAt: new Date(ctx.reef.startsAt.getTime() + minute++ * 60 * 1000),
+        },
+        { observesPrevious },
+      );
     // Rae (the context's own booking) is left at the dock.
     await record(boarded, "boarded");
     await record(ctx.bookingId, "not_boarded");
@@ -718,14 +694,14 @@ describe("a diver who never left the dock", () => {
     expect(await getRecapPageData(db, noRollCall)).toBeNull();
   });
 
-  it("gives the recap back when a newer departure result says otherwise", async () => {
+  it("gives the recap back after an observed departure correction", async () => {
     const { db, ashore, record, afterTrip } = await dockContext();
     await record(ashore, "cleared"); // unsaid on a counted departure: still shut (issue #3822)
     expect(await getRecapPageData(db, ashore)).toBeNull();
 
     await record(ashore, "not_boarded");
     expect(await getRecapPageData(db, ashore)).toBeNull();
-    await record(ashore, "boarded");
+    await record(ashore, "boarded", "departure", true);
     expect(await getRecapPageData(db, ashore)).not.toBeNull();
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
@@ -753,14 +729,14 @@ describe("a diver who never left the dock", () => {
     const one = [{ booking: { id: ashore }, shop: { id: shop.id }, trip: { id: reef.id } }];
     expect(await bookingsLeftAtTheDock(db, one)).toEqual(new Set([ashore]));
     // The question `/ready` asks: the same answer once they joined later.
-    await record(ashore, "boarded", "after_dive_1");
+    await record(ashore, "boarded", "after_dive_1", true);
     expect(await bookingsLeftAtTheDock(db, one)).toEqual(new Set());
   });
 
   it("still sends to a diver who boarded at departure and sat out a later dive", async () => {
     const { db, boarded, record, afterTrip } = await dockContext();
     await record(boarded, "not_boarded", "after_dive_2");
-    await record(boarded, "boarded", "after_dive_2");
+    await record(boarded, "boarded", "after_dive_2", true);
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, boarded)).toHaveLength(1);
@@ -799,30 +775,40 @@ describe("a departure with somebody not back aboard", () => {
       bookingId: string,
       status: "boarded" | "not_boarded" | "cleared",
       checkpoint: string,
+      observesPrevious = false,
     ) =>
-      ctx.db.insert(rollCallEvents).values({
-        shopId: ctx.shop.id,
-        tripId: ctx.reef.id,
-        bookingId,
-        recordedByPersonId: staff.person.id,
-        status,
-        checkpoint,
-        occurredAt: at(),
-      });
+      seedRollCallEvidence(
+        ctx.db,
+        {
+          shopId: ctx.shop.id,
+          tripId: ctx.reef.id,
+          bookingId,
+          recordedByPersonId: staff.person.id,
+          status,
+          checkpoint,
+          occurredAt: at(),
+        },
+        { observesPrevious },
+      );
     const recordCrew = (
       personId: string,
       status: "boarded" | "not_boarded" | "cleared",
       checkpoint: string,
+      observesPrevious = false,
     ) =>
-      ctx.db.insert(rollCallEvents).values({
-        shopId: ctx.shop.id,
-        tripId: ctx.reef.id,
-        ...crewSubject(personId),
-        recordedByPersonId: staff.person.id,
-        status,
-        checkpoint,
-        occurredAt: at(),
-      });
+      seedRollCallEvidence(
+        ctx.db,
+        {
+          shopId: ctx.shop.id,
+          tripId: ctx.reef.id,
+          ...crewSubject(personId),
+          recordedByPersonId: staff.person.id,
+          status,
+          checkpoint,
+          occurredAt: at(),
+        },
+        { observesPrevious },
+      );
     // Rae (the context's own booking) sailed, came back after dive one, and
     // was marked not back aboard after dive two. Bo was counted back each time.
     for (const bookingId of [ctx.bookingId, boatmate]) {
@@ -905,9 +891,20 @@ describe("a departure with somebody not back aboard", () => {
     expect(await missingRow()).toBe(true);
     expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
 
-    await record(missing, "boarded", "after_dive_2");
+    await record(missing, "boarded", "after_dive_2", true);
     expect(await missingRow()).toBe(false);
     expect(await getRecapPageData(db, missing, undefined, afterTrip)).not.toBeNull();
+  });
+
+  it("keeps recaps held when an unobserved opposing aboard report arrives", async () => {
+    const { db, missing, boatmate, record, afterTrip } = await missingContext();
+    await record(missing, "not_boarded", "after_dive_2");
+    await record(missing, "boarded", "after_dive_2");
+    expect((await getRecapPageState(db, boatmate, undefined, afterTrip)).kind).toBe("waiting");
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(afterTrip, email));
+    expect(recapsTo(email, missing)).toHaveLength(0);
+    expect(recapsTo(email, boatmate)).toHaveLength(0);
   });
 
   it("sends the recap once the same diver is counted back aboard", async () => {
@@ -915,7 +912,7 @@ describe("a departure with somebody not back aboard", () => {
     await record(missing, "not_boarded", "after_dive_2");
     await sendDueRecaps(db, sendOptions(afterTrip, fakeEmail()));
 
-    await record(missing, "boarded", "after_dive_2");
+    await record(missing, "boarded", "after_dive_2", true);
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, missing)).toHaveLength(1);
@@ -926,7 +923,7 @@ describe("a departure with somebody not back aboard", () => {
   it("sends the recap once the not-back word is undone", async () => {
     const { db, missing, record, afterTrip } = await missingContext();
     await record(missing, "not_boarded", "after_dive_2");
-    await record(missing, "cleared", "after_dive_2");
+    await record(missing, "cleared", "after_dive_2", true);
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, missing)).toHaveLength(1);
@@ -936,8 +933,8 @@ describe("a departure with somebody not back aboard", () => {
     // The latest checkpoint speaks (#2404): counted back after dive two settles
     // dive one's word, as Today's row and the manifest already read it.
     const { db, missing, record, afterTrip } = await missingContext();
-    await record(missing, "not_boarded", "after_dive_1");
-    await record(missing, "boarded", "after_dive_2");
+    await record(missing, "not_boarded", "after_dive_1", true);
+    await record(missing, "boarded", "after_dive_2", true);
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, missing)).toHaveLength(1);
@@ -964,7 +961,7 @@ describe("a departure with somebody not back aboard", () => {
     expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
     expect(await getRecapPageData(db, boatmate, undefined, afterTrip)).toBeNull();
 
-    await recordCrew(staffId, "boarded", "after_dive_1");
+    await recordCrew(staffId, "boarded", "after_dive_1", true);
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, boatmate)).toHaveLength(1);
@@ -1035,7 +1032,7 @@ describe("a departure with somebody not back aboard", () => {
     it("when a diver is marked not back aboard, and keeps it paused once corrected", async () => {
       const { db, shop, reef, missing, boatmate, staffId, afterTrip } = await missingContext();
       const say = (status: "boarded" | "not_boarded") =>
-        recordRollCall(db, {
+        recordObservedRecapMark(db, {
           shopId: shop.id,
           tripId: reef.id,
           bookingId: missing,
@@ -1106,7 +1103,7 @@ describe("a departure with somebody not back aboard", () => {
   it("still sends once released, days after the boat came home", async () => {
     const { db, shop, reef, missing, boatmate, staffId, afterTrip } = await missingContext();
     const say = (status: "boarded" | "not_boarded") =>
-      recordRollCall(db, {
+      recordObservedRecapMark(db, {
         shopId: shop.id,
         tripId: reef.id,
         bookingId: missing,

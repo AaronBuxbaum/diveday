@@ -340,7 +340,7 @@ describe("useSavedManifest on a trip", () => {
     const { result } = at("trip=trip-1");
     act(() => purgeState.latest?.onTenantVerified("blue-mantis"));
     await waitFor(() => expect(result.current.message).toBe(line("allCaughtUp")));
-    expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis", 1);
+    expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis", 1, { refreshWhenQuiet: true });
     expect(result.current.envelope).toBe(synced);
   });
 
@@ -449,7 +449,9 @@ describe("useSavedManifest on a trip", () => {
         }),
     );
     const { result } = at("trip=trip-1");
-    await waitFor(() => expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis", 1));
+    await waitFor(() =>
+      expect(sync).toHaveBeenCalledWith("trip-1", "blue-mantis", 1, { refreshWhenQuiet: true }),
+    );
 
     tenant.setVerified("reef-runners");
     await act(async () => {

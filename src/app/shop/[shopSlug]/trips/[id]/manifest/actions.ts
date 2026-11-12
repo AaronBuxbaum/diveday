@@ -35,18 +35,18 @@ import { recordTripStage } from "@/features/trip-stages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters, MAX_ENTERED_DEPTH_METERS } from "@/lib/depth-units";
-import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
+import type { RollCallCheckpoint } from "@/lib/manifests";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { teamUpRefusal } from "@/lib/party-teams";
 import { PLAN_CHANGE_NOTE_MAX, PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
-import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 import { shopPath } from "@/lib/staff-notices";
 import { TRIP_STAGES } from "@/lib/trip-stages";
 import { UUID_SOURCE } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { formShowedSpecies } from "./_components/species-shown";
-import { retractsEventIdSchema, supersededOr } from "./roll-call-undo";
+import { crewRollCallSchema, rollCallSchema } from "./roll-call-causal-fields";
+import { supersededOr } from "./roll-call-undo";
 
 /* -------------------------------------------------------------------------- *
  * The boat manifest's mutations
@@ -126,19 +126,6 @@ function manifestBack(ctx: ManifestActionContext): string {
   // append query params of its own to the URL a notice is then added to.
   return `${manifestPath(ctx)}?checkpoint=${encodeURIComponent(ctx.checkpoint)}&buddies=open`;
 }
-
-const rollCallSchema = z.object({
-  bookingId: z.string().uuid(),
-  status: z.enum(ROLL_CALL_EVENT_STATUSES),
-  /**
-   * What the crew observed about a person who is unaccounted for. Bounded here
-   * and narrowed again in the write, which keeps it only at an after-dive
-   * checkpoint (`rollCallNoteAllowed`) — so this field cannot put free text on
-   * a departure event the surface never offered a box for.
-   */
-  note: z.string().trim().max(ROLL_CALL_NOTE_MAX).optional(),
-  retractsEventId: retractsEventIdSchema,
-});
 
 const executedDiveSchema = z.object({
   diveNumber: z.coerce.number().int().min(1).max(20),
@@ -367,13 +354,6 @@ const privateNoteSchema = z.object({
 
 // The crew subject is a `people.id`, never a booking. The server re-proves the
 // person is assigned to *this* trip before writing anything (`recordCrewRollCall`).
-const crewRollCallSchema = z.object({
-  personId: z.string().uuid(),
-  status: z.enum(ROLL_CALL_EVENT_STATUSES),
-  /** The same, for the other half of the head count. */
-  note: z.string().trim().max(ROLL_CALL_NOTE_MAX).optional(),
-  retractsEventId: retractsEventIdSchema,
-});
 
 /**
  * A team member as the form carries one: `diver:<bookingId>` or
@@ -541,6 +521,10 @@ export async function rollCallAction(
       status: parsed.data.status,
       note: parsed.data.note,
       retractsEventId: parsed.data.retractsEventId,
+      clientEventId: parsed.data.clientEventId,
+      observedEvidenceIds: parsed.data.observedEvidenceIds,
+      meetingDay: parsed.data.meetingDay,
+      reconcilesEvidence: parsed.data.reconcilesEvidence,
       // Re-proved against this trip's own `plannedDives` inside the write's
       // transaction (`invalid_checkpoint`).
       checkpoint,
@@ -766,6 +750,10 @@ export async function crewRollCallAction(
       status: parsed.data.status,
       note: parsed.data.note,
       retractsEventId: parsed.data.retractsEventId,
+      clientEventId: parsed.data.clientEventId,
+      observedEvidenceIds: parsed.data.observedEvidenceIds,
+      meetingDay: parsed.data.meetingDay,
+      reconcilesEvidence: parsed.data.reconcilesEvidence,
       // Same re-proof the diver write runs: the checkpoint is checked against
       // the trip row inside the transaction, never against anything posted.
       checkpoint,

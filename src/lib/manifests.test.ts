@@ -142,8 +142,8 @@ describe("buildTripManifest", () => {
         blockedDiver("aboard", { rollCall: boardedAt() }),
         blockedDiver("left-ashore", { rollCall: notBoardedAt() }),
         blockedDiver("released", { notHere: true }),
-        // The desk released the seat, then the crew boarded them anyway: the
-        // crew's result is the row's answer, and it is aboard.
+        blockedDiver("ready", { readiness: { status: "ready", blockers: [] } }),
+        // A crew boarding supersedes the desk release: the person is aboard.
         blockedDiver("reclaimed", { notHere: true, rollCall: boardedAt() }),
       ],
     });
@@ -347,13 +347,13 @@ describe("buildTripManifest", () => {
     ).toBe(4);
   });
 
-  const mark = (bookingId: string, checkpoint: string, status: string, at: Date) => ({
+  const mark = (bookingId: string, checkpoint: string, status: string, at: Date, seq = 0) => ({
     bookingId,
     checkpoint,
     status,
     occurredAt: at,
     createdAt: at,
-    seq: 0,
+    seq,
   });
 
   it("ignores a checkpoint whose latest event for that diver is a clear — the mis-tap-then-undo case (dive-domain-expert review finding, CR-006)", () => {
@@ -366,7 +366,7 @@ describe("buildTripManifest", () => {
     expect(
       maxRecordedDiveNumber([
         mark("b1", "after_dive_3", "boarded", t0),
-        mark("b1", "after_dive_3", "cleared", t1),
+        mark("b1", "after_dive_3", "cleared", t1, 1),
         mark("b1", "after_dive_2", "boarded", t0),
       ]),
     ).toBe(2);
@@ -376,7 +376,7 @@ describe("buildTripManifest", () => {
     expect(
       maxRecordedDiveNumber([
         mark("b1", "after_dive_3", "boarded", t0),
-        mark("b1", "after_dive_3", "cleared", t1),
+        mark("b1", "after_dive_3", "cleared", t1, 1),
         mark("b2", "after_dive_3", "boarded", t0),
       ]),
     ).toBe(3);

@@ -6,6 +6,7 @@ import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
 import {
   appendOfflineArrival,
   appendOfflineChecklistCheck,
@@ -14,7 +15,12 @@ import {
   saveOfflineManifest,
   syncOfflineManifest,
 } from "./offline-manifest-store";
-import type { OfflineManifestPayload } from "./offline-manifests";
+import type {
+  OfflineArrivalEvent,
+  OfflineChecklistEvent,
+  OfflineManifestPayload,
+  OfflineRollCallEvent,
+} from "./offline-manifests";
 
 const payload: OfflineManifestPayload = {
   shop: {
@@ -185,15 +191,21 @@ describe("syncOfflineManifest on a network that never answers", () => {
     server.use(
       http.post("/api/offline-manifests/sync", async ({ request }) => {
         posts += 1;
-        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
+        const body = (await request.json()) as { events: OfflineRollCallEvent[] };
         sentIds.push(body.events.map((event) => event.clientEventId));
         if (!answer) return new Promise<never>(() => {});
-        return HttpResponse.json({
-          results: body.events.map((event) => ({
-            clientEventId: event.clientEventId,
-            status: "applied",
-          })),
-        });
+        return HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: body.events.map((event) => ({
+                clientEventId: event.clientEventId,
+                status: "applied",
+              })),
+            },
+            { events: body.events },
+          ),
+        );
       }),
     );
 
@@ -232,14 +244,20 @@ describe("syncOfflineManifest on a network that never answers", () => {
     server.use(
       http.post("/api/offline-manifests/sync", async ({ request }) => {
         posts += 1;
-        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
+        const body = (await request.json()) as { events: OfflineRollCallEvent[] };
         if (!answer) return new Promise<never>(() => {});
-        return HttpResponse.json({
-          results: body.events.map((event) => ({
-            clientEventId: event.clientEventId,
-            status: "duplicate",
-          })),
-        });
+        return HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: body.events.map((event) => ({
+                clientEventId: event.clientEventId,
+                status: "duplicate",
+              })),
+            },
+            { events: body.events },
+          ),
+        );
       }),
     );
 
@@ -265,16 +283,22 @@ describe("syncOfflineManifest on a network that never answers", () => {
       http.post("/api/offline-manifests/sync", async ({ request }) => {
         posts += 1;
         pass += 1;
-        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
+        const body = (await request.json()) as { events: OfflineRollCallEvent[] };
         const status = pass === 1 ? "rejected" : "applied";
         if (pass === 1) await new Promise((resolve) => setTimeout(resolve, 10_001));
-        return HttpResponse.json({
-          results: body.events.map((event) => ({
-            clientEventId: event.clientEventId,
-            status,
-            ...(status === "rejected" ? { reason: "newer_event_exists" } : {}),
-          })),
-        });
+        return HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: body.events.map((event) => ({
+                clientEventId: event.clientEventId,
+                status,
+                ...(status === "rejected" ? { reason: "newer_event_exists" } : {}),
+              })),
+            },
+            { events: body.events },
+          ),
+        );
       }),
     );
 
@@ -308,15 +332,21 @@ describe("syncOfflineManifest on a network that never answers", () => {
     server.use(
       http.post("/api/offline-manifests/sync", async ({ request }) => {
         posts += 1;
-        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
+        const body = (await request.json()) as { events: OfflineRollCallEvent[] };
         sentIds.push(body.events.map((event) => event.clientEventId));
         if (!answer) return new Promise<never>(() => {});
-        return HttpResponse.json({
-          results: body.events.map((event) => ({
-            clientEventId: event.clientEventId,
-            status: "applied",
-          })),
-        });
+        return HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: body.events.map((event) => ({
+                clientEventId: event.clientEventId,
+                status: "applied",
+              })),
+            },
+            { events: body.events },
+          ),
+        );
       }),
     );
 
@@ -354,10 +384,11 @@ describe("syncOfflineManifest on a network that never answers", () => {
    * when the server answers that it already holds them.
    */
   it("keeps checklist and arrival taps through a give-up, and settles them on the same ids", async () => {
-    await saveOfflineManifest({
+    const serverPayload = {
       ...payload,
       checklist: { items: [{ id: "item-radio", label: "Radio check" }] },
-    });
+    };
+    await saveOfflineManifest(serverPayload);
     const ticked = (
       await appendOfflineChecklistCheck(tripId, {
         checklistItemId: "item-radio",
@@ -378,17 +409,23 @@ describe("syncOfflineManifest on a network that never answers", () => {
       http.post("/api/offline-manifests/sync", async ({ request }) => {
         posts += 1;
         const body = (await request.json()) as {
-          checklistEvents: Array<{ clientEventId: string }>;
-          arrivalEvents: Array<{ clientEventId: string }>;
+          checklistEvents: OfflineChecklistEvent[];
+          arrivalEvents: OfflineArrivalEvent[];
         };
         const ids = [...body.checklistEvents, ...body.arrivalEvents].map(
           (event) => event.clientEventId,
         );
         sent.push(ids);
         if (!answer) return new Promise<never>(() => {});
-        return HttpResponse.json({
-          results: ids.map((clientEventId) => ({ clientEventId, status: "duplicate" })),
-        });
+        return HttpResponse.json(
+          withRefreshedSyncFrame(
+            serverPayload,
+            {
+              results: ids.map((clientEventId) => ({ clientEventId, status: "duplicate" })),
+            },
+            { checklistEvents: body.checklistEvents, arrivalEvents: body.arrivalEvents },
+          ),
+        );
       }),
     );
 
@@ -407,6 +444,8 @@ describe("syncOfflineManifest on a network that never answers", () => {
     ]);
     expect(settled?.checklistEvents.map((event) => event.syncStatus)).toEqual(["applied"]);
     expect(settled?.arrivalEvents?.map((event) => event.syncStatus)).toEqual(["applied"]);
+    expect(settled?.snapshot.checklist?.items[0].check?.state).toBe("checked");
+    expect(settled?.snapshot.manifests[0].divers[0].checkedIn).toBe(true);
   });
 });
 
@@ -421,11 +460,17 @@ describe("syncOfflineManifest and the revision DiveDay answered at", () => {
   async function syncAnswering(status: "applied" | "duplicate" | "rejected", revision?: unknown) {
     server.use(
       http.post("/api/offline-manifests/sync", async ({ request }) => {
-        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
-        return HttpResponse.json({
-          results: body.events.map((event) => ({ clientEventId: event.clientEventId, status })),
-          ...(revision === undefined ? {} : { snapshotRevisions: { [tripId]: revision } }),
-        });
+        const body = (await request.json()) as { events: OfflineRollCallEvent[] };
+        return HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: body.events.map((event) => ({ clientEventId: event.clientEventId, status })),
+              ...(revision === undefined ? {} : { snapshotRevisions: { [tripId]: revision } }),
+            },
+            { events: body.events },
+          ),
+        );
       }),
     );
     await syncOfflineManifest(tripId);

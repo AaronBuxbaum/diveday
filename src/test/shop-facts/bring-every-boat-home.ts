@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { z } from "zod";
+import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import type { AppDb } from "../../db/client";
 import { oldestMarkFirst } from "../../db/roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "../../db/roll-call-subject";
@@ -357,8 +358,8 @@ async function closeHeadCounts(
   const rosterByTrip = byTrip(roster, (row) => row.bookingId);
   const crewByTrip = byTrip(crewRoster, (row) => row.personId);
 
-  const diverRows: (typeof rollCallEvents.$inferInsert)[] = [];
-  const crewRows: (typeof rollCallEvents.$inferInsert)[] = [];
+  const diverRows: SeedRollCallEvidenceInput[] = [];
+  const crewRows: SeedRollCallEvidenceInput[] = [];
 
   for (const trip of departures) {
     const checkpoints = rollCallCheckpoints(trip.plannedDives);
@@ -447,8 +448,8 @@ async function closeHeadCounts(
     }
   }
 
-  if (diverRows.length > 0) await db.insert(rollCallEvents).values(diverRows);
-  if (crewRows.length > 0) await db.insert(rollCallEvents).values(crewRows);
+  if (diverRows.length > 0) await seedRollCallEvidence(db, diverRows, { observesPrevious: true });
+  if (crewRows.length > 0) await seedRollCallEvidence(db, crewRows, { observesPrevious: true });
   return { ok: true, eventsWritten: diverRows.length + crewRows.length };
 }
 

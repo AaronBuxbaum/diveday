@@ -642,7 +642,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   // Stored image and document URLs referenced by the export's CSVs.
   const photoUrls = [
-    ...recapPhotoRows.map((row) => row.imageUrl),
+    ...profileAndRecapPhotoUrls(peopleRows, recapPhotoRows),
     ...tripRecapPhotoRows.map(({ photo }) => photo.imageUrl),
     ...tripRows.map((row) => row.arrivalPhotoUrl).concat(boatRows.map((row) => row.photoUrl)),
     ...siteRows.flatMap((row) => [row.satelliteImageUrl, row.routeImageUrl, ...row.imageUrls]),
@@ -1189,6 +1189,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   const courseTitle = new Map(inquiryCourseRows.map((row) => [row.id, row.title]));
 
   const photoUrls = [
+    ...(person.publicStaffProfile?.photoUrls ?? []),
     ...recapPhotoRows.map((row) => row.imageUrl),
     // The imported signed release and its scanned medical intake form: the
     // medical answers ship (H-20261025-per-diver-record-export, answered
@@ -1571,3 +1572,14 @@ export async function canPersonExportShopData(
 
 /** The backups page's page depth, so that page reads through this one module. */
 export { PAGE_SIZE } from "./paging";
+
+/** Public introductions hold personal pictures even when their shop display is off. */
+function profileAndRecapPhotoUrls(
+  peopleRows: readonly { publicStaffProfile: { photoUrls: string[] } | null }[],
+  recapPhotoRows: readonly { imageUrl: string }[],
+) {
+  return [
+    ...peopleRows.flatMap((row) => row.publicStaffProfile?.photoUrls ?? []),
+    ...recapPhotoRows.map((row) => row.imageUrl),
+  ];
+}

@@ -14,6 +14,7 @@ import {
   nextOfflineManifestSnapshotRevision,
   readOfflineManifestRoster,
 } from "./store";
+import { offlineSyncInstants } from "./sync-instants";
 
 const context = fileScopedShopContext();
 
@@ -33,6 +34,11 @@ async function tripTitled(prefix: string) {
 }
 
 describe("offline manifest snapshot ordering", () => {
+  it("returns no stored instants for an empty retry request", async () => {
+    const { db, shop } = context;
+    expect(await offlineSyncInstants(db, shop.id, [])).toEqual(new Map());
+  });
+
   it("reads the roster, the erasure epoch and the snapshot revision it was read at, writing nothing (issue #4391)", async () => {
     const { db, shop } = context;
     const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));

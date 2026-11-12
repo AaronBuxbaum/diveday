@@ -15,6 +15,7 @@ import {
   offlineManifestShopSlug,
   offlineManifestViewerPersonId,
 } from "@/lib/offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "@/lib/roll-call-protocol";
 
 // Matches the single-trip cadence in OfflineManifestManager (ADR
 // 20260726-shopwide-offline-manifest-priming). No UI: failures have nowhere
@@ -57,6 +58,7 @@ export function OfflineManifestAutoSave() {
         const tenantRound = await beginOfflineTenantVerificationRound();
         const response = await fetch("/api/offline-manifests/upcoming", {
           credentials: "same-origin",
+          headers: ROLL_CALL_CAUSAL_HEADERS,
         });
         if (!response.ok) return;
         // Parsed, never cast: an unchecked body could yield an undefined slug

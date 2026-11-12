@@ -4,6 +4,7 @@ import { getShopById } from "@/db/shops";
 import { isCrossSiteRequest } from "@/features/same-origin";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { supportsCausalRollCall } from "@/lib/roll-call-protocol";
 import { uuidParam } from "@/lib/uuid";
 
 /** Per-session and medical: never held by any cache. */
@@ -36,6 +37,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ tri
   if (!session?.user || !isStaff(session.user.roles)) {
     return Response.json({ error: "authentication_required" }, { status: 401, headers: NO_STORE });
   }
+  if (!supportsCausalRollCall(request))
+    return Response.json({ error: "offline_update_required" }, { status: 426, headers: NO_STORE });
   const tripId = uuidParam((await params).tripId);
   if (!tripId) return Response.json({ error: "not_found" }, { status: 404, headers: NO_STORE });
   const db = await getDb();

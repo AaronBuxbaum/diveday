@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { sendDueRecaps } from "@/test/words-wiring";
@@ -9,7 +10,7 @@ import {
   getRecapPageData,
 } from "../features/recap/store";
 import { createBookingParty } from "./bookings";
-import { bookingArrivalEvents, notificationDeliveries, rollCallEvents } from "./schema";
+import { bookingArrivalEvents, notificationDeliveries } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -46,7 +47,7 @@ async function counted() {
   if (!cy || !una) throw new Error("party bookings missing");
   let minute = 0;
   const record = (bookingId: string, status: "boarded" | "not_boarded", checkpoint = "departure") =>
-    db.insert(rollCallEvents).values({
+    seedRollCallEvidence(db, {
       shopId: shop.id,
       tripId: reef.id,
       bookingId,

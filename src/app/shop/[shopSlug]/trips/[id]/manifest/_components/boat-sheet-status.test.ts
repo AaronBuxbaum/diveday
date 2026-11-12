@@ -12,7 +12,7 @@ type Result = { state: "boarded" | "not_boarded" } | undefined;
 
 function at(
   checkpoint: RollCallCheckpoint,
-  divers: { fullName: string; rollCall: Result }[],
+  divers: { bookingId?: string; fullName: string; rollCall: Result }[],
   crew: { id: string; fullName: string; rollCall?: Result }[] = [],
 ) {
   const boarded = divers.filter((d) => d.rollCall?.state === "boarded").length;
@@ -78,6 +78,25 @@ describe("the Boat tab sheet's status lines", () => {
     expect(lines.join(" ")).toContain("Theo Lind");
     expect(lines.join(" ")).toContain("not back aboard");
   });
+
+  it.each([false, true])(
+    "keeps a namesake's later missing warning in either roster order (reversed=%s)",
+    (reversed) => {
+      const rows = [
+        { bookingId: "missing-seat", fullName: "Alex Chen", rollCall: MISSING },
+        { bookingId: "aboard-seat", fullName: "Alex Chen", rollCall: BOARDED },
+      ];
+      const later = reversed ? [...rows].reverse() : rows;
+      const counted = later.map((row) => ({ ...row, rollCall: BOARDED }));
+      const lines = status("after_dive_1", [
+        at("departure", counted),
+        at("after_dive_1", counted),
+        at("after_dive_2", later),
+      ]);
+      expect(lines.join(" ")).toContain("1 person not back aboard (Alex Chen)");
+      expect(lines.join(" ")).toContain("This sheet is out of date");
+    },
+  );
 
   it("does not warn at the latest checkpoint", () => {
     const lines = status("after_dive_2", [

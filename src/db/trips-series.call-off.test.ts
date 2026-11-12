@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
@@ -7,7 +8,7 @@ import { fakeCheckout, fakeEmail } from "@/test/fakes";
 import { getTripBlowout } from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { crewNotices, people, rollCallEvents, trips } from "./schema";
+import { crewNotices, people, trips } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   cancelFutureSeriesTrips,
@@ -168,7 +169,7 @@ describe("calling a run's dates off (in-memory PGlite)", () => {
       const run = await narrowedRun();
       const [staff] = await listStaff(run.db, run.shop.id);
       if (!staff) throw new Error("seed staff missing");
-      await run.db.insert(rollCallEvents).values({
+      await seedRollCallEvidence(run.db, {
         shopId: run.shop.id,
         tripId: run.dropped.id,
         bookingId: run.bookingId,

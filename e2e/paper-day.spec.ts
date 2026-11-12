@@ -32,6 +32,7 @@ test.describe("the paper day", () => {
     // same day rather than the packet against itself.
     const stationHeadings = page
       .getByRole("heading", { level: 3 })
+      .and(page.locator(".device-text-station h3"))
       .filter({ has: page.locator('a[href*="/trips/"]') });
     // The spine streams its stations in behind the route's own `loading.tsx`,
     // so wait for the first one the page actually renders. `allInnerTexts`
@@ -39,8 +40,23 @@ test.describe("the paper day", () => {
     // never retries, so reading it straight after `goto` raced the stream and
     // returned an empty list — the page was still fetching when it answered.
     await expect(stationHeadings.first()).toBeVisible();
-    const stationTitles = await stationHeadings.allInnerTexts();
-    expect(stationTitles.length).toBeGreaterThan(0);
+    // Needs-you groups may name older departures with unresolved work. They
+    // are not today's stations. Read each station's actual linked title,
+    // excluding its badges and any CSS text-transform applied to a heading.
+    const stations = await stationHeadings.evaluateAll((headings) =>
+      headings.map((heading) => {
+        const link = heading.querySelector<HTMLAnchorElement>('a[href*="/trips/"]');
+        return {
+          tripId: link?.getAttribute("href")?.match(/\/trips\/([^/?#]+)(?:[?#]|$)/)?.[1] ?? "",
+          title: link?.textContent?.trim() ?? "",
+        };
+      }),
+    );
+    expect(stations.length).toBeGreaterThan(0);
+    for (const station of stations) {
+      expect(station.tripId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(station.title).not.toBe("");
+    }
 
     const popupPromise = page.waitForEvent("popup");
     await page.getByRole("link", { name: "Print the day" }).click();
@@ -72,11 +88,13 @@ test.describe("the paper day", () => {
     // more — a departure that sailed an hour ago has left the spine's
     // forward-looking stations and is still very much on today's sheet — so
     // this is containment, not equality.
-    for (const title of stationTitles) {
-      // A Needs-you group heading also links its boat and adds the time
-      // after " · "; the boat's title is what the packet prints.
-      const boat = title.split("\n")[0].split(" · ")[0].trim();
-      await expect(popup.getByText(boat, { exact: false }).first()).toBeVisible();
+    for (const station of stations) {
+      const plan = popup.locator(
+        `[data-packet-section][aria-labelledby="print-dives-${station.tripId}"]`,
+      );
+      await expect(plan).toHaveCount(1);
+      await expect(plan.locator("[data-packet-departure]")).toHaveText(station.title);
+      await expect(plan.locator("[data-packet-departure]")).toBeVisible();
     }
 
     // The sheet says which day it is: paper outlives the morning it left the
