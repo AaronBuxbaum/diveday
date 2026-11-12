@@ -14,10 +14,18 @@ import { clientRollCallEvidenceId } from "@/lib/roll-call-causality";
 import { advanceClock } from "@/test/clock";
 import { manifestContext } from "../test/substrate-fixtures/db/manifests-test-fixtures";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
+import { manifestCausalContexts } from "./roll-call-causal-store";
 import { rollCallEvents, tripScheduleDays } from "./schema";
 
 vi.mock("@/lib/log", () => ({ log: vi.fn() }));
 const MINUTE = 60_000;
+
+it("keeps shared server crew reads out of the causal context transport", async () => {
+  const { db, shop, reef } = await manifestContext();
+  const frame = await manifestCausalContexts(db, shop.id, reef.id);
+  expect(Object.keys(frame).sort()).toEqual(["contexts", "meetingDay"]);
+  expect(frame.contexts).toBeInstanceOf(Map);
+});
 
 describe("unobserved opposing roll-call statements", () => {
   for (const role of ["diver", "crew"] as const) {

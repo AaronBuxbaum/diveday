@@ -71,7 +71,7 @@ import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
 import {
   causalRetractionTarget,
-  manifestCausalContexts,
+  manifestRollCallReads,
   prepareCausalRollCall,
   refreshCausalRollCall,
 } from "./roll-call-causal-store";
@@ -221,56 +221,6 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
     byId.set(person.id, crew);
   }
   return [...byId.values()].map(({ shopRoles: _shopRoles, ...crew }) => crew);
-}
-
-/**
- * The latest per-person crew roll-call result for one trip, keyed
- * `checkpoint\u0000personId`. Same "newest `occurredAt`, then `createdAt`"
- * supersession and the same "a latest `cleared` reads as no result" undo
- * semantics as `listLatestRollCallsByCheckpoint` — one rule for both subject kinds
- * (ADR 20260803-per-person-crew-roll-call).
- */
-async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string) {
-  const rows = await db
-    .select({
-      event: rollCallEvents,
-      recorder: people,
-      day: rollCallDayIndex(),
-      currentDay: rollCallCurrentDayIndex(),
-    })
-    .from(rollCallEvents)
-    .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
-    .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
-    .orderBy(...newestMarkFirst());
-  // The meeting day being counted, with an earlier day's stated missing still
-  // open carried onto it (`manifestRollCallView`, #2557). Oldest first for the fold.
-  const view = manifestRollCallView(
-    rows
-      .map((row) => ({
-        ...row,
-        subject: row.event.crewPersonId ?? "",
-        checkpoint: row.event.checkpoint,
-        status: row.event.status,
-        evidenceConflict: row.event.evidenceConflict,
-        id: row.event.id,
-        retracts: row.event.retractsEventId,
-      }))
-      .reverse(),
-    rows[0]?.currentDay ?? 0,
-  );
-  const latest = new Map<string, RollCallRecord>();
-  for (const { event, recorder, day, currentDay } of view.values()) {
-    if (event.status === "cleared") continue;
-    latest.set(`${event.checkpoint}\u0000${event.crewPersonId}`, {
-      state: event.status,
-      occurredAt: event.occurredAt,
-      recordedByName: recorder.fullName,
-      note: event.note,
-      eventId: event.id,
-      ...(day < currentDay ? { fromEarlierDay: true } : {}),
-    });
-  }
-  return latest;
 }
 
 /**
@@ -1144,7 +1094,7 @@ export async function getTripManifests(
   const trip = await getTripWithBooked(db, shopId, tripId);
   if (!trip) return null;
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
-  const causal = await manifestCausalContexts(db, shopId, tripId);
+  const { causal, crewRollCalls } = await manifestRollCallReads(db, shopId, tripId);
   const [
     shop,
     roster,
@@ -1153,7 +1103,6 @@ export async function getTripManifests(
     fitByBooking,
     gearByBooking,
     crew,
-    crewRollCalls,
     buddyTeams,
     standingClashes,
     welcomeInputs,
@@ -1172,7 +1121,6 @@ export async function getTripManifests(
     // same read the Gear tab's prep list hands the same rule.
     () => listTripGearAssignments(db, shopId, tripId),
     () => listTripCrew(db, shopId, tripId),
-    () => listLatestCrewRollCalls(db, shopId, tripId),
     () => listTripBuddyTeams(db, shopId, tripId),
     // Who on this crew is also on another departure these hours overlap. Read
     // here rather than on the page so the offline snapshot and every other

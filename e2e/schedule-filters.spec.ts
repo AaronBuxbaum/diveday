@@ -164,7 +164,7 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   // machine where the first visible frame is already hydrated.
   expect(samples[0]?.[1]).toBe(false);
 
-  // One count for the whole window, and it is the two filters and nothing else.
+  // One exact control inventory for the whole window.
   // (The sampler only records changes, so a stable row is exactly one entry;
   // asserting the value rather than just the length is what stops an empty or
   // never-found form passing as "never changed".)
@@ -176,7 +176,16 @@ test("no control comes or goes from the filter row while it hydrates", { tag: RE
   // Four with the "More filters" button, which has sat inside the form since
   // the row became one row (visual review 2026-10-24, B18): it renders on
   // first paint for every reader, so it is in every sample or none.
-  expect([...new Set(samples.map(([count]) => count))]).toEqual([4]);
+  // Seven since #4378: the party-size decrement, increment and hidden form
+  // value are all server-rendered, alongside those four existing controls.
+  expect([...new Set(samples.map(([count]) => count))]).toEqual([7]);
+  const copy = diverTranslator("en-US");
+  const form = page.locator('form:has(select[name="tripType"])');
+  await expect(form.getByRole("button", { name: copy("party.fewerPeople") })).toHaveCount(1);
+  await expect(form.getByRole("button", { name: copy("party.morePeople") })).toHaveCount(1);
+  const partySize = form.locator('input[type="hidden"][name="partySize"]');
+  await expect(partySize).toHaveCount(1);
+  await expect(partySize).toHaveValue("1");
 
   // And no Apply button at any point, for any reader.
   await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);

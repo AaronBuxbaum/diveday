@@ -28,6 +28,9 @@ vi.mock("@/db/trips", () => ({ listUpcomingSessionsForCourse: vi.fn() }));
 vi.mock("../../../../../features/crew-away-diver/store", () => ({
   diverCrewWithAway: vi.fn(async () => []),
 }));
+vi.mock("@/features/public-staff-profiles", () => ({
+  assignedPublicStaffProfiles: vi.fn(async () => []),
+}));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn(async () => null) }));
 vi.mock("../../../../../features/session/rules", () => ({
   isLiveShopStaff: vi.fn(async () => false),
@@ -43,6 +46,7 @@ const { submitInquiryAction } = await import("@/app/actions/inquiry");
 const { getCourseBySlug } = await import("../../../../../features/courses/store");
 const { shopBySlugCached } = await import("../../../../../features/shops-cached/store");
 const { listUpcomingSessionsForCourse } = await import("@/db/trips");
+const { assignedPublicStaffProfiles } = await import("@/features/public-staff-profiles");
 const { default: CoursePage } = await import("./page");
 
 const course: Course = {
@@ -163,6 +167,15 @@ describe.each(["en-US", "es-ES"] as const)("public course requests in %s", (loca
       await CoursePage({
         params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
       }),
+    );
+    // This suite owns the request/contact form; the profile reader's real
+    // eligibility and privacy rules are tested at its database boundary.
+    expect(assignedPublicStaffProfiles).toHaveBeenCalledWith(
+      {},
+      "shop-1",
+      hasSession ? [scheduled] : [],
+      "America/New_York",
+      true,
     );
 
     const inquiryElement = container.querySelector<HTMLDetailsElement>("#get-in-touch");

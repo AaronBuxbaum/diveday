@@ -1,5 +1,6 @@
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { compareMarkOrder, type RollCallRecord } from "@/lib/roll-call";
 import {
   canonicalRollCallEvidenceId,
   causalScopeAllowsObservation,
@@ -7,7 +8,7 @@ import {
   type RollCallCausalContext,
   type RollCallEvidence,
 } from "@/lib/roll-call-causality";
-import { carriedMissing, standingByDay } from "@/lib/roll-call-days";
+import { carriedMissing, manifestRollCallView, standingByDay } from "@/lib/roll-call-days";
 import { rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
 import type { DbExecutor } from "./client";
 import { crewMarks, seatMarks } from "./roll-call-subject";
@@ -109,6 +110,14 @@ export async function refreshCausalRollCall(db: DbExecutor, subject: RollCallCau
 
 /** Evidence rendered with a checkpoint, including awaiting rows after an undo. */
 export async function manifestCausalContexts(db: DbExecutor, shopId: string, tripId: string) {
+  return (await manifestRollCallReads(db, shopId, tripId)).causal;
+}
+
+/**
+ * Server-side manifest reads share one scoped event set. Raw rows stay local;
+ * the context-only reader above retains its existing transport shape.
+ */
+export async function manifestRollCallReads(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
     .select({ event: rollCallEvents, recorder: people.fullName })
     // diveday:roll-call-both-subjects: keys include kind; context is for the complete manifest.
@@ -228,7 +237,38 @@ export async function manifestCausalContexts(db: DbExecutor, shopId: string, tri
       evidence,
     });
   }
-  return { meetingDay, contexts };
+  // The same selected-day and carry fold as the crew's former separate read,
+  // using the event set already read for this tenant/trip's causal context.
+  const crewView = manifestRollCallView(
+    rows
+      .filter(({ event }) => event.subjectKind === "crew")
+      .sort((a, b) => compareMarkOrder(a.event, b.event))
+      .map(({ event, recorder }) => ({
+        event,
+        recorder,
+        day: event.meetingDay ?? (windows.length > 1 ? -1 : 0),
+        subject: event.crewPersonId ?? "",
+        checkpoint: event.checkpoint,
+        status: event.status,
+        evidenceConflict: event.evidenceConflict,
+        id: event.id,
+        retracts: event.retractsEventId,
+      })),
+    meetingDay,
+  );
+  const crewRollCalls = new Map<string, RollCallRecord>();
+  for (const { event, recorder, day } of crewView.values()) {
+    if (event.status === "cleared") continue;
+    crewRollCalls.set(`${event.checkpoint}\u0000${event.crewPersonId}`, {
+      state: event.status,
+      occurredAt: event.occurredAt,
+      recordedByName: recorder,
+      note: event.note,
+      eventId: event.id,
+      ...(day < meetingDay ? { fromEarlierDay: true } : {}),
+    });
+  }
+  return { causal: { meetingDay, contexts }, crewRollCalls };
 }
 
 /** An ordinary undo names one standing statement; it is never an opinion about everybody else. */
