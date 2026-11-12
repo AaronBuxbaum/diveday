@@ -52,7 +52,8 @@ permissions:
   drizzle-kit:
     skills: true
 
-virtualStoreType: global
+# Keep the shared pnpm store, with project-local links for Next/Sentry loaders.
+# Global links currently fail Turbopack instrumentation and portable Webpack tracing.
 
 # Next's declarations import React types from its real global-store location.
 # Declare the type peer so strict callback inference does not rely on project hoisting.

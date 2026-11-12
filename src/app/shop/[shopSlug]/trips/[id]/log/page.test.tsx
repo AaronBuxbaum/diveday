@@ -29,6 +29,7 @@ vi.mock("./_components/CrewAwayWorkingLog", () => ({ CrewAwayWorkingLog: () => n
 
 const { requireShopSurface } = await import("../../../../../../features/session/rules");
 const { default: IncidentExportPage } = await import("./page");
+const { default: IncidentPrintPage } = await import("./print/page");
 
 const DOC: IncidentExportDocument = {
   meta: {
@@ -91,10 +92,10 @@ afterEach(() => {
 });
 
 async function renderLog(print = true) {
+  const Page = print ? IncidentPrintPage : IncidentExportPage;
   return render(
-    await IncidentExportPage({
+    await Page({
       params: Promise.resolve({ shopSlug: "blue-mantis", id: TRIP_ID }),
-      print,
     }),
   );
 }
@@ -167,9 +168,20 @@ describe("the departure log", () => {
     );
   });
 
-  it("refuses anyone but an owner before it reads the record", async () => {
-    mayExport.mockResolvedValue(false);
-    await expect(renderLog()).rejects.toThrow(/redirect .*log-not-authorized/);
-    expect(exportRead).not.toHaveBeenCalled();
-  });
+  it.each([false, true])(
+    "refuses a non-owner before reading the record (print=%s)",
+    async (print) => {
+      mayExport.mockResolvedValue(false);
+      await expect(renderLog(print)).rejects.toThrow(/redirect .*log-not-authorized/);
+      expect(exportRead).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([false, true])(
+    "uses the same session-scoped record on screen and paper (print=%s)",
+    async (print) => {
+      await renderLog(print);
+      expect(exportRead).toHaveBeenCalledWith("shop-id", TRIP_ID, "person-owner");
+    },
+  );
 });
