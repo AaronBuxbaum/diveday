@@ -14,7 +14,15 @@ import { originalTestPath } from "./relocated-test-origins.ts";
  *
  * - **`db`** — imports the database fixture (`@/test/db`, `@/test/postgres`,
  *   `@/test/query-count`) or builds a database directly. Forks, isolated, and
- *   the only project that runs the PGlite global setup.
+ *   the only projects that run the PGlite global setup.
+ * - **`dbShared`** — a `db` file that touches no process-wide state (no `vi.`
+ *   call at all, no `process.env`, no `globalThis`). It still gets a fresh
+ *   PGlite per test, but shares a fork and its module cache with the next such
+ *   file (`isolate: false`), because re-importing the same module graph was
+ *   about 35% of a `db` file's time (issue #4416). One-week trial from
+ *   2026-11-12: a file that fails only when shared is moved back to `db` by
+ *   adding the call or global it depends on to the source it reads, and the
+ *   trial is reverted if any file needs that more than once.
  * - **`ui`** — opts into jsdom with a `// @vitest-environment jsdom` docblock.
  *   The docblock stays the switch; the project just groups the files that pay
  *   the jsdom boot so `pnpm test:ui` can run them alone.
@@ -38,10 +46,11 @@ import { originalTestPath } from "./relocated-test-origins.ts";
  * `include` matches, and every matched file lands in exactly one project
  * (`projects.test.ts` pins that).
  */
-export type ProjectName = "db" | "ui" | "guards" | "lib" | "scripts" | "node";
+export type ProjectName = "db" | "dbShared" | "ui" | "guards" | "lib" | "scripts" | "node";
 
 export const PROJECT_NAMES: readonly ProjectName[] = [
   "db",
+  "dbShared",
   "ui",
   "guards",
   "lib",
@@ -66,6 +75,11 @@ const JSDOM_DOCBLOCK = /^\s*(?:\/\/|\/?\*+)\s*@vitest-environment\s+jsdom\b/m;
 /** Anything that makes a file's module registry its own business. */
 const MODULE_STATE =
   /\bvi\.(?:mock|doMock|unmock|doUnmock|resetModules|importActual|importMock|stubGlobal|stubEnv)\s*\(/;
+/**
+ * Anything that leaves a trace for the next file in a shared worker: any
+ * `vi.` call (mocks, spies, fake timers, stubs), the environment, or globals.
+ */
+const WORKER_STATE = /\bvi\.|\bprocess\.env\b|\bglobalThis\b/;
 /** Reads a file off disk. */
 const READS_FILES = /\breadFileSync\s*\(|\breadFile\s*\(|\breaddirSync\s*\(/;
 /**
@@ -103,7 +117,9 @@ export function isSourceGuard(source: string): boolean {
 export function classifyTestFile(file: string, source: string): ProjectName {
   const posix = originalTestPath(file.split(path.sep).join("/"));
   if (posix.startsWith("scripts/")) return "scripts";
-  if (DB_IMPORT.test(source) || DB_FACTORY.test(source)) return "db";
+  if (DB_IMPORT.test(source) || DB_FACTORY.test(source)) {
+    return WORKER_STATE.test(source) ? "db" : "dbShared";
+  }
   if (JSDOM_DOCBLOCK.test(source)) return "ui";
   if (posix.startsWith("src/") && isSourceGuard(source)) return "guards";
   if (posix.startsWith("src/lib/") && !MODULE_STATE.test(source)) return "lib";

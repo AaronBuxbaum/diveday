@@ -703,6 +703,14 @@ per test file): reusing one process across files skips Node's startup and the mo
 `isolate` still gives each file its own module registry regardless of pool. Measured ~13% faster on
 the full suite locally with identical pass counts across repeated runs.
 
+Database test files that touch no process-wide state (no `vi.` call, no `process.env`, no
+`globalThis`) run in the `dbShared` project, which shares a fork and its module cache between files
+(`isolate: false`); each test still gets its own PGlite. `src/test/projects.ts` selects the files,
+so a file that later adds a mock or a stub moves back to `db` by itself. Locally the 669 files ran
+in 196 s shuffled against 403 s isolated, all passing (issue #4416). A one-week trial from
+2026-11-12: a file that fails only when shared goes back to `db`, and the project is reverted if
+that happens more than once.
+
 ## Conventions
 
 - **A spec never quotes a sentence.** A `getByText`/`toContainText` string of 40+ characters is
