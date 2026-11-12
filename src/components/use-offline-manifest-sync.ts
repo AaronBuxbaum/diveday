@@ -28,7 +28,7 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000;
 /** The reads (`trip:epoch:revision`) this tab already saved as an offline copy. */
 const savedReads = new Set<string>();
 
-/** Forget which reads this tab saved (a sign-out, or a test starting clean). */
+/** Forget which reads this tab saved (a test starting clean). */
 export function forgetSavedOfflineReads() {
   savedReads.clear();
 }
