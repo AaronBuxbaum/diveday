@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "730c74c6-ee4f-4a23-b394-530069f8f570",
+  "prevIds": [
+    "297cc90a-9890-412a-b6c4-21f2eedae558"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "demo_starts_dismissed_at"
+      ],
+      "writes": [
+        "s|col|public.shops.demo_starts_dismissed_at",
+        "n|col|public.shops.demo_starts_dismissed_at",
+        "e|col|public.shops.demo_starts_dismissed_at"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "demo_starts_dismissed_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

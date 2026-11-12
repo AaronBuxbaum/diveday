@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { after, connection } from "next/server";
 import { cache } from "react";
-import { switchDemoRoleAction } from "@/app/actions/demo";
+import { dismissDemoStartsAction, switchDemoRoleAction } from "@/app/actions/demo";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { setLocaleAction } from "@/app/actions/set-locale";
 import { LazyDemoBanner } from "@/components/LazyDemoBanner";
@@ -289,6 +289,8 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
       {ownShop && showBanner && demoT ? (
         <LazyDemoBanner
           switchRole={switchDemoRoleAction}
+          dismissStarts={dismissDemoStartsAction}
+          startsDismissed={shop?.demoStartsDismissedAt != null}
           currentRole={currentRole}
           starts={DEMO_STARTS.flatMap((start) => {
             const destination = demoStartFrom(start.id);

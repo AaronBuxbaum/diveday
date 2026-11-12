@@ -708,6 +708,13 @@ export const shops = pgTable(
     unitsConfirmedAt: timestamp("units_confirmed_at", { withTimezone: true }),
     isDemo: boolean("is_demo").notNull().default(false),
     /**
+     * When the visitor closed the demo banner's "Start here" strip. Null shows it.
+     * On the shop, not the signed-in role: a demo is minted per visitor, and the
+     * visitor switches roles (a different account each time) inside the one shop,
+     * so a per-account stamp would bring the strip back on every switch.
+     */
+    demoStartsDismissedAt: timestamp("demo_starts_dismissed_at", { withTimezone: true }),
+    /**
      * When this shop asked to be left out of search engines. Null — the
      * default — means its public pages are in the sitemap and indexable, which
      * is what a shop is on DiveDay for (ADR 20260813-search-listing-is-a-choice).

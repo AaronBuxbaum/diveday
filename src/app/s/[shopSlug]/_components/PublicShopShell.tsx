@@ -23,7 +23,7 @@ import { DEMO_STARTS, demoStartFrom } from "@/features/demo-starts";
  */
 
 import { headers } from "next/headers";
-import { switchDemoRoleAction } from "@/app/actions/demo";
+import { dismissDemoStartsAction, switchDemoRoleAction } from "@/app/actions/demo";
 import { setLocaleAction } from "@/app/actions/set-locale";
 import { BrandStyle } from "@/components/BrandStyle";
 import type { LanguageChoice } from "@/components/LanguageChoices";
@@ -200,6 +200,8 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
       {showBanner && shop ? (
         <LazyDemoBanner
           switchRole={switchDemoRoleAction}
+          dismissStarts={dismissDemoStartsAction}
+          startsDismissed={shop?.demoStartsDismissedAt != null}
           currentRole={currentRole}
           starts={DEMO_STARTS.flatMap((start) => {
             const destination = demoStartFrom(start.id);

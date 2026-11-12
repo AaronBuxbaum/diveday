@@ -8,6 +8,7 @@ import type { AppDb } from "./client";
 import { courses, divePackages, shops, trips } from "./schema";
 import {
   clearPassedReopensOn,
+  dismissDemoStarts,
   getShopBySlug,
   listShopsForDiverPicker,
   listShopsForSitemap,
@@ -481,5 +482,28 @@ describe("clearPassedReopensOn", () => {
     const { db, shop } = ctx;
     await setShopReopensOn(db, shop.id, null);
     expect(await clearPassedReopensOn(db, new Date("2030-06-02T01:00:00.000Z"))).toBe(0);
+  });
+});
+
+describe("dismissDemoStarts", () => {
+  async function shopWith(slug: string, isDemo: boolean) {
+    const [shop] = await ctx.db
+      .insert(shops)
+      .values({ name: `Shop ${slug}`, slug, timezone: "America/New_York", isDemo })
+      .returning();
+    if (!shop) throw new Error("test shop insert failed");
+    return shop;
+  }
+  const stamp = async (id: string) =>
+    (await ctx.db.select().from(shops).where(eq(shops.id, id)))[0]?.demoStartsDismissedAt;
+
+  it("stamps a demo shop and leaves a real shop alone", async () => {
+    const demo = await shopWith("dismiss-demo", true);
+    const real = await shopWith("dismiss-real", false);
+    expect(await stamp(demo.id)).toBeNull();
+    await dismissDemoStarts(ctx.db, demo.id);
+    await dismissDemoStarts(ctx.db, real.id);
+    expect(await stamp(demo.id)).not.toBeNull();
+    expect(await stamp(real.id)).toBeNull();
   });
 });

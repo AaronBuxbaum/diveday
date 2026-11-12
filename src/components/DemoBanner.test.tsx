@@ -6,7 +6,6 @@ import { DemoBanner } from "./DemoBanner";
 
 afterEach(() => {
   cleanup();
-  localStorage.clear();
 });
 
 const COPY = {
@@ -42,6 +41,7 @@ function renderBanner() {
       roles={ROLES}
       copy={COPY}
       switchRole={async () => {}}
+      dismissStarts={async () => {}}
     />,
   );
 }
@@ -102,6 +102,7 @@ describe("DemoBanner", () => {
         ]}
         copy={{ ...COPY, switchAction: "Cambiar" }}
         switchRole={async () => {}}
+        dismissStarts={async () => {}}
       />,
     );
     const trigger = screen.getByRole("button", { name: /Cambiar rol/ });
@@ -147,6 +148,7 @@ describe("DemoBanner", () => {
           roles={TWO_ROLES}
           copy={{ ...COPY, switchFailed: "That role switch didn’t go through." }}
           switchRole={switchRole}
+          dismissStarts={async () => {}}
         />,
       );
       fireEvent.click(screen.getByRole("button", { name: /Cambiar rol/ }));
@@ -204,8 +206,9 @@ describe("DemoBanner", () => {
 });
 
 describe("first-arrival starting places", () => {
-  function starts(shopSlug = "demo-first") {
+  function starts(shopSlug = "demo-first", startsDismissed = false) {
     const switchRole = vi.fn(async () => {});
+    const dismissStarts = vi.fn(async () => {});
     const view = render(
       <DemoBanner
         currentRole="owner"
@@ -223,9 +226,11 @@ describe("first-arrival starting places", () => {
         copy={COPY}
         isMintedDemo
         switchRole={switchRole}
+        dismissStarts={dismissStarts}
+        startsDismissed={startsDismissed}
       />,
     );
-    return { ...view, switchRole };
+    return { ...view, switchRole, dismissStarts };
   }
 
   it("offers the feature pages' role and landing, including the current role", async () => {
@@ -246,15 +251,13 @@ describe("first-arrival starting places", () => {
     await waitFor(() => expect(switchRole).toHaveBeenCalledWith("diver", "demo-first", "diver"));
   });
 
-  it("keeps a dismissal for this demo shop across visits without hiding a new demo's choices", () => {
+  it("records a dismissal on the shop and stays closed when the shop says so", () => {
     const first = starts();
     fireEvent.click(screen.getByRole("button", { name: COPY.dismissStarts }));
     expect(screen.queryByRole("button", { name: COPY.startCaptain })).toBeNull();
+    expect(first.dismissStarts).toHaveBeenCalledWith("demo-first");
     first.unmount();
-    const again = starts();
+    starts("demo-first", true);
     expect(screen.queryByRole("button", { name: COPY.startCaptain })).toBeNull();
-    again.unmount();
-    starts("another-demo");
-    expect(screen.getByRole("button", { name: COPY.startCaptain })).toBeVisible();
   });
 });

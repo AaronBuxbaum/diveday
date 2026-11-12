@@ -746,6 +746,14 @@ export async function setShopSearchListing(
   return shop ?? null;
 }
 
+/** Records that this demo's visitor closed the "Start here" strip, so it never returns. */
+export async function dismissDemoStarts(db: AppDb, shopId: string, now: Date = nowDate()) {
+  await db
+    .update(shops)
+    .set({ demoStartsDismissedAt: now })
+    .where(and(eq(shops.id, shopId), eq(shops.isDemo, true)));
+}
+
 /**
  * Where a post-trip review request sends a diver. An empty string clears it —
  * with none set, the recap flow skips the review ask entirely rather than

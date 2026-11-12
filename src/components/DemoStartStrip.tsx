@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { buttonClass } from "@/components/ui/button";
 
@@ -17,43 +17,27 @@ export interface DemoStartCopy {
   dismissStarts: string;
 }
 
-function subscribe(listener: () => void) {
-  window.addEventListener("storage", listener);
-  return () => window.removeEventListener("storage", listener);
-}
-
 /**
- * Dismissal is remembered by this browser for this demo shop (a demo is minted per
- * visitor, so that is once per visitor per shop), across tabs and visits. A different
- * shop keeps its own choices.
+ * Dismissal is stored on the demo shop (a demo is minted per visitor), so it
+ * holds across tabs, devices and role switches.
  */
 export function DemoStartStrip({
-  shopSlug,
   copy,
   choices,
   pending,
   onStart,
+  dismissed: dismissedOnShop,
+  onDismiss,
 }: {
-  shopSlug: string;
   copy: DemoStartCopy;
   choices: readonly { id: string; role: string; label: string }[];
   pending: boolean;
   onStart: (role: string, start: string) => void;
+  dismissed: boolean;
+  onDismiss: () => void;
 }) {
-  const key = `diveday-demo-starts:${shopSlug}`;
   const [dismissed, setDismissed] = useState(false);
-  const stored = useSyncExternalStore(
-    subscribe,
-    () => {
-      try {
-        return localStorage.getItem(key) === "dismissed";
-      } catch {
-        return false;
-      }
-    },
-    () => false,
-  );
-  if (dismissed || stored) return null;
+  if (dismissed || dismissedOnShop) return null;
   return (
     <section
       aria-label={copy.startTitle}
@@ -68,11 +52,7 @@ export function DemoStartStrip({
           className={buttonClass({ variant: "ghost", size: "icon-sm" })}
           onClick={() => {
             setDismissed(true);
-            try {
-              localStorage.setItem(key, "dismissed");
-            } catch {
-              /* This view still dismisses when storage is unavailable. */
-            }
+            onDismiss();
           }}
         >
           <DiveDayIcon name="close" className="size-4" />
