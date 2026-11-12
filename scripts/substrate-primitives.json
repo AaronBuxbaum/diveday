@@ -63,5 +63,6 @@
   "src/lib/trip-admission-gate.ts": "Admission gate response projection shared by seating action adapters and their user-facing decision controls. Concrete consumer: src/app/actions/seat-diver-surfaces.ts.",
   "src/lib/usual-crew.ts": "Pure usual-crew suggestions are read by the interactive WeekBoard without importing a staff-store barrel. Concrete consumer: src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx.",
   "src/lib/web-push-key.ts": "Web-push public key conversion is a client-safe primitive used by reusable PushOptIn. Concrete consumer: src/components/PushOptIn.tsx.",
-  "src/lib/week-seats.ts": "Pure weekly seat summaries are shared by the interactive WeekBoard and board-week view composition. Concrete consumer: src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx."
+  "src/lib/week-seats.ts": "Pure weekly seat summaries are shared by the interactive WeekBoard and board-week view composition. Concrete consumer: src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx.",
+  "src/lib/zod-jitless.ts": "Turns Zod's jitless flag on for the browser bundle without importing Zod there. Concrete consumer: src/instrumentation-client.ts."
 }
