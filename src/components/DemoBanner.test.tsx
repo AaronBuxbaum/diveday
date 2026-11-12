@@ -6,7 +6,7 @@ import { DemoBanner } from "./DemoBanner";
 
 afterEach(() => {
   cleanup();
-  sessionStorage.clear();
+  localStorage.clear();
 });
 
 const COPY = {
@@ -246,7 +246,7 @@ describe("first-arrival starting places", () => {
     await waitFor(() => expect(switchRole).toHaveBeenCalledWith("diver", "demo-first", "diver"));
   });
 
-  it("keeps a dismissal for this demo session without hiding a new demo's choices", () => {
+  it("keeps a dismissal for this demo shop across visits without hiding a new demo's choices", () => {
     const first = starts();
     fireEvent.click(screen.getByRole("button", { name: COPY.dismissStarts }));
     expect(screen.queryByRole("button", { name: COPY.startCaptain })).toBeNull();

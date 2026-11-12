@@ -22,7 +22,11 @@ function subscribe(listener: () => void) {
   return () => window.removeEventListener("storage", listener);
 }
 
-/** Dismissal lasts for this tab's demo session, not the next shop a visitor tries. */
+/**
+ * Dismissal is remembered by this browser for this demo shop (a demo is minted per
+ * visitor, so that is once per visitor per shop), across tabs and visits. A different
+ * shop keeps its own choices.
+ */
 export function DemoStartStrip({
   shopSlug,
   copy,
@@ -42,7 +46,7 @@ export function DemoStartStrip({
     subscribe,
     () => {
       try {
-        return sessionStorage.getItem(key) === "dismissed";
+        return localStorage.getItem(key) === "dismissed";
       } catch {
         return false;
       }
@@ -65,7 +69,7 @@ export function DemoStartStrip({
           onClick={() => {
             setDismissed(true);
             try {
-              sessionStorage.setItem(key, "dismissed");
+              localStorage.setItem(key, "dismissed");
             } catch {
               /* This view still dismisses when storage is unavailable. */
             }
