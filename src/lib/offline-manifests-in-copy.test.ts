@@ -90,15 +90,43 @@ describe("a synced tap that was undone on the live manifest", () => {
     });
   });
 
-  it("shows the copy's own word for an alarm it holds, as somebody else's to undo", () => {
+  it("keeps the undo on this tablet's own mark when the copy shows exactly that mark", () => {
     const saved = copyAt(9);
     const diver = saved.manifests
       .find((manifest) => manifest.checkpoint === "after_dive_1")
       ?.divers.find((entry) => entry.bookingId === "ready");
     if (!diver) throw new Error("fixture lost its diver");
     diver.rollCall = {
-      state: "not_boarded",
+      state: "boarded",
       occurredAt: "2026-07-20T14:00:00.000Z",
+      recordedByName: "Dana Divemaster",
+    };
+    const mine = {
+      ...base(saved),
+      bookingId: "ready",
+      checkpoint: "after_dive_1" as const,
+      status: "boarded" as const,
+      note: null,
+    };
+    // A wrong "back aboard" can still be taken back offline, naming the event.
+    expect(latestOfflineRollCall(saved, [mine], "ready", "after_dive_1")).toMatchObject({
+      state: "boarded",
+      pending: false,
+      local: true,
+      clientEventId: "event-1",
+    });
+  });
+
+  it("shows the copy's own word for an alarm it holds, as somebody else's to undo", () => {
+    const saved = copyAt(9);
+    const diver = saved.manifests
+      .find((manifest) => manifest.checkpoint === "after_dive_1")
+      ?.divers.find((entry) => entry.bookingId === "ready");
+    if (!diver) throw new Error("fixture lost its diver");
+    // Somebody else said it again five minutes after this tablet did.
+    diver.rollCall = {
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:05:00.000Z",
       recordedByName: "Dana Divemaster",
     };
     const alarm = {

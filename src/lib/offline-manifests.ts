@@ -2301,12 +2301,35 @@ function offlineRollCallAt(
   queued: readonly OfflineRollCallEvent[],
   checkpoint: OfflineCheckpoint,
   matches: OfflineSubjectMatch,
-  savedAt: (checkpoint: OfflineCheckpoint) => OfflineRollCallResult | undefined,
+  savedOf: (checkpoint: OfflineCheckpoint) => OfflineRollCallResult | undefined,
   now: Date,
 ): OfflineRollCallResult | undefined {
   // A tap the copy already holds is the copy's to answer (`offlineEventInCopy`):
   // whatever was said or undone since is in the saved results below.
   const events = queued.filter((event) => !offlineEventInCopy(snapshot, event));
+  // **Still this device's own mark when the copy shows exactly it.** The saved
+  // result that stands is the tap this device made (same person, checkpoint,
+  // state and instant), so the row keeps offering its undo and names the event
+  // for it. Without this a "back aboard" tapped on the wrong diver, once in
+  // the copy, could only be corrected offline by raising an alarm about
+  // somebody standing on deck. DiveDay still checks the named event against
+  // the newest one it holds, so a stale undo is refused.
+  const savedAt = (at: OfflineCheckpoint): OfflineRollCallResult | undefined => {
+    const saved = savedOf(at);
+    if (!saved || saved.implied) return saved;
+    const own = queued.find((event) => {
+      const subject = offlineRollCallSubject(event);
+      return (
+        subject !== null &&
+        matches(subject) &&
+        event.checkpoint === at &&
+        event.status === saved.state &&
+        event.occurredAt === saved.occurredAt &&
+        offlineEventInCopy(snapshot, event)
+      );
+    });
+    return own ? { ...saved, local: true, clientEventId: own.clientEventId } : saved;
+  };
   const starts = offlineDayStarts(snapshot);
   const today = rollCallDayOf(starts, now);
   const dayOfEvent = (event: OfflineRollCallEvent) =>

@@ -37,6 +37,12 @@ export async function readManifestPage(
 ) {
   // The manifest rows, the raw team membership, and the desk's own notes don't
   // depend on one another — resolve them together instead of serially.
+  // The manifests and the erasure epoch they were read at, on the pool and
+  // writing nothing (issue #4391). The page shows these rows and the device
+  // saves these same rows, so the screen and the copy cannot differ; the
+  // save trades the epoch for a signed token, refused if an erasure landed
+  // since (`issueOfflineManifestSnapshot`, `/api/offline-manifests/[tripId]/snapshot`).
+  const roster = readOfflineManifestRoster(db, shopId, tripId);
   const [
     offlineRoster,
     buddyTeamsList,
@@ -61,12 +67,7 @@ export async function readManifestPage(
     mayReadMedicalAlerts,
     emergencyStanding,
   ] = await Promise.all([
-    // The manifests and the erasure epoch they were read at, on the pool and
-    // writing nothing (issue #4391). The page shows these rows and the device
-    // saves these same rows, so the screen and the copy cannot differ; the
-    // save trades the epoch for a signed token, refused if an erasure landed
-    // since (`issueOfflineManifestSnapshot`, `/api/offline-manifests/[tripId]/snapshot`).
-    readOfflineManifestRoster(db, shopId, tripId),
+    roster,
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
     // until dissolved), while the manifest derivation already dropped that
@@ -79,7 +80,11 @@ export async function readManifestPage(
     // trip's booking below so every interface reads the same source of truth.
     listDiverNotesForTrip(db, shopId, tripId),
     listChecklistItems(db, shopId),
-    latestPreDepartureChecksForTrip(db, shopId, tripId),
+    // After the roster, never beside it: the saved copy carries these ticks
+    // under the roster's snapshot revision, and a device reads its own synced
+    // tick as in the copy by that revision (`offlineEventInCopy`). Read before
+    // the revision, a tick could be older than the copy claims.
+    roster.then(() => latestPreDepartureChecksForTrip(db, shopId, tripId)),
     listTripDives(db, shopId, tripId),
     listExecutedDives(db, shopId, tripId),
     listDiveSites(db, shopId),
