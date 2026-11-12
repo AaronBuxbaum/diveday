@@ -2,7 +2,13 @@ import Image from "next/image";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import { ChoiceRow, controlClass, Field, FieldActions } from "@/components/ui/form";
+import {
+  ChoiceRow,
+  controlClass,
+  Field,
+  FieldActions,
+  textareaClassFor,
+} from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { CREW_PUBLIC_NAME_MAX, defaultCrewPublicName } from "@/lib/crew-public-name";
 import type { PublicStaffProfile } from "@/lib/public-staff-profile";
@@ -121,7 +127,8 @@ export function PublicProfileSection({
           </Field>
           <Field label={t("staffing.publicProfile.description")}>
             <textarea
-              className={controlClass}
+              className={textareaClassFor(3)}
+              rows={3}
               name="profileDescription"
               maxLength={1000}
               defaultValue={person.publicStaffProfile?.description ?? ""}

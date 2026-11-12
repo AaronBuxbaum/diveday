@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { demoIllustration } from "@/content/demo-illustrations";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
@@ -55,6 +55,9 @@ export async function syncDemoShopBrand(db: DbExecutor): Promise<void> {
     .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true), isNull(shops.logoUrl)));
 }
 
+// i18n-exempt: the fictional shop's own packing suggestion.
+const OPTIONAL_SEASICKNESS_SUPPLIES = "Seasickness supplies, if you use them";
+
 /**
  * **What Blue Mantis tells its AI drafts and its rental counter**, in the
  * shop's own words (Settings → Features → Notes for AI; Rent out). Policies,
@@ -77,15 +80,14 @@ Cancellations and weather: the captain decides by 6:00 the evening before. If we
 
 Beginners: Discover Scuba runs in the pool first, then the reef. No certification needed; ages 10 and up. Open Water takes three days.
 
-Common questions: we dive Molasses, French, Pickles, Christ of the Abyss and Benwood, and the Spiegel Grove when the current allows. Water is 78 to 84°F. We rent GoPros. Seasick divers should take medicine the night before.`,
+Common questions: we dive Molasses, French, Pickles, Christ of the Abyss and Benwood, and the Spiegel Grove when the current allows. Water is 78 to 84°F. We rent GoPros.`,
   // i18n-exempt: the shop's own packing list, like its notes for AI.
   packingList: [
     "Swimsuit and towel",
     "Reef-safe sun protection",
     "Light layer for the ride back",
-    "Seasickness tablets, taken the night before",
+    OPTIONAL_SEASICKNESS_SUPPLIES,
     "Refillable water bottle",
-    "Your certification card and logbook",
   ],
   // i18n-exempt: a review link is a URL the shop pastes in.
   reviewUrl: "https://g.page/r/blue-mantis-divers/review",
@@ -93,3 +95,30 @@ Common questions: we dive Molasses, French, Pickles, Christ of the Abyss and Ben
   rentalTerms:
     "Gear is due back at the dock when the boat ties up. A late return is $15 per day. A lost or damaged unit is charged at replacement cost.",
 } satisfies Partial<typeof shops.$inferInsert>;
+
+/** Correct known demo defaults without replacing a shop's own checklist or notes. */
+export async function syncDemoShopPackingCopy(db: DbExecutor): Promise<void> {
+  // i18n-exempt: exact previously seeded shop-authored words, not rendered copy.
+  const timedMedicine = "Seasickness tablets, taken the night before";
+  // i18n-exempt: exact previously seeded shop-authored words, as above.
+  const combinedCardAndLogbook = "Your certification card and logbook";
+  // i18n-exempt: exact previously seeded shop-authored words, as above.
+  const timedReply = " Seasick divers should take medicine the night before.";
+  await db
+    .update(shops)
+    .set({
+      packingList: sql`coalesce((select jsonb_agg(case when item.value = ${timedMedicine} then ${OPTIONAL_SEASICKNESS_SUPPLIES} else item.value end order by item.ordinality) from jsonb_array_elements_text(${shops.packingList}) with ordinality as item(value, ordinality) where item.value <> ${combinedCardAndLogbook}), '[]'::jsonb)`,
+      replyNotes: sql`replace(${shops.replyNotes}, ${timedReply}, '')`,
+    })
+    .where(
+      and(
+        eq(shops.slug, DEMO_SHOP_SLUG),
+        eq(shops.isDemo, true),
+        or(
+          sql`${shops.packingList} ? ${timedMedicine}`,
+          sql`${shops.packingList} ? ${combinedCardAndLogbook}`,
+          sql`strpos(coalesce(${shops.replyNotes}, ''), ${timedReply}) > 0`,
+        ),
+      ),
+    );
+}
