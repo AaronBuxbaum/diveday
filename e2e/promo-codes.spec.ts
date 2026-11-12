@@ -333,7 +333,14 @@ test.describe("as owner", () => {
     // The money resolves in one block above the button now, so the payable
     // shape is "Due now" rather than a price quoted under the card's heading
     // (ADR 20260827-the-divers-thread, decision 2).
-    await expect(page.getByText("Due now")).toBeVisible();
+    // The term is intentionally screen-reader-only when the visible booking
+    // summary states the amount. Follow its description-list association to
+    // the actual payment figure, rather than matching both copies of the label.
+    const dueNow = page
+      .locator("dl > div")
+      .filter({ has: page.locator("dt").filter({ hasText: /^Due now$/ }) })
+      .getByRole("definition");
+    await expect(dueNow.getByText("$120", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Book and pay/ })).toBeVisible();
     await expect(page.getByText("You’ll finish paying on a secure Stripe page.")).toBeVisible();
 
