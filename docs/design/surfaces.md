@@ -775,7 +775,7 @@ invalid field, and returns focus to the updated total after success.
   Credentials group no longer renders a heading over an orphan door: with nothing on file the door
   is the group and names itself.
 - **Composition:** people × days on desktop. Below `lg`, each day groups a departure and its crew
-  once per trip and session window, followed by a quiet Shifts and days away group when needed.
+  once per trip and session window, followed by a quiet Shifts and days off group when needed.
   Each person's clash and away facts remain attached to that person; a gap keeps its existing
   assignment or request action (H-20260825-staff-credentials-renewal-clock keeps credentials inform-only). Critical names, times,
   departure titles and status words use body-size type at both widths.

@@ -40,6 +40,10 @@ vi.mock("./_components/StaffingWeek", () => ({
   weekTailRowClass: "",
 }));
 vi.mock("./_components/CrewPageHeader", () => ({ CrewPageHeader: () => null }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/shop/blue-mantis/staffing",
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+}));
 vi.mock("../schedule/_components/ScheduleViews", () => ({ ScheduleViews: () => null }));
 
 const { requireShopSurface } = await import("../../../../features/session/rules");
@@ -127,12 +131,13 @@ afterEach(() => {
 });
 
 describe("staffing page roster snapshot", () => {
-  it("offers scope links without another-person selector to ordinary crew", async () => {
+  it("offers ordinary crew everyone or themselves, with no other people to pick", async () => {
     awayRead.mockResolvedValue({ blocks: [], canManageStaffAccounts: false });
     await renderPage("me");
-    expect(screen.getByText("My schedule")).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Full shop" })).toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "View a person" })).toBeNull();
+    const picker = screen.getByRole("combobox", { name: "View a person" });
+    expect(picker).toHaveValue("me");
+    expect(within(picker).getAllByRole("option")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Show schedule" })).toBeNull();
   });
   it("offers managers the current shop roster for viewing another person", async () => {
     await renderPage(OTHER_ID);
@@ -142,7 +147,7 @@ describe("staffing page roster snapshot", () => {
   it("uses the staffing view roster for both editing selectors, with public profile settings elsewhere", async () => {
     await renderPage(undefined, "plan");
 
-    const shiftOptions = within(screen.getByRole("combobox", { name: "Staff member" }))
+    const shiftOptions = within(screen.getAllByRole("combobox", { name: "Staff member" })[0])
       .getAllByRole("option")
       .map((option) => ({ value: (option as HTMLOptionElement).value, text: option.textContent }));
     expect(shiftOptions).toEqual([
@@ -151,7 +156,7 @@ describe("staffing page roster snapshot", () => {
       { value: VIEWER_ID, text: "Zoe Zed" },
     ]);
 
-    const awayOptions = within(screen.getByRole("combobox", { name: "Who" }))
+    const awayOptions = within(screen.getAllByRole("combobox", { name: "Staff member" })[1])
       .getAllByRole("option")
       .map((option) => ({ value: (option as HTMLOptionElement).value, text: option.textContent }));
     expect(awayOptions).toEqual([

@@ -70,7 +70,7 @@ describe("the phone staffing day", () => {
 
   it("distinguishes shifts and days away from the departure crew list", () => {
     const { list } = renderPhoneDay({ canManage: true });
-    const heading = within(list).getByRole("heading", { name: "Shifts and days away" });
+    const heading = within(list).getByRole("heading", { name: "Shifts and days off" });
     const person = within(list)
       .getAllByText("Keiko Tanaka")
       .find((node) => node.tagName === "P");
