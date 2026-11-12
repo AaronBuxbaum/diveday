@@ -723,9 +723,19 @@ export const RELOCATED_TEST_PROJECTS: Readonly<Record<string, string>> = {
   "src/features/course-pulse/rules.test.ts": "lib",
 };
 
-export function originalTestPath(file: string): string {
+function relativeTestPath(file: string): string {
   const posix = file.replaceAll("\\", "/");
   const at = posix.lastIndexOf("/src/");
   const relative = at >= 0 ? posix.slice(at + 1) : posix;
+  return relative;
+}
+
+export function originalTestPath(file: string): string {
+  const relative = relativeTestPath(file);
   return RELOCATED_TEST_ORIGINS[relative] ?? relative;
+}
+
+/** A move's explicit project contract takes precedence over worker-sharing heuristics. */
+export function relocatedTestProject(file: string): string | undefined {
+  return RELOCATED_TEST_PROJECTS[relativeTestPath(file)];
 }

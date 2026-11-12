@@ -15,11 +15,11 @@ const FIXTURE = ["@", "test", "db"].join("/");
 const ENV = ["@vitest", "environment"].join("-");
 
 describe("classifyTestFile", () => {
-  it("sends a file that imports the database fixture to dbShared, wherever it lives", () => {
+  it("sends an unregistered database fixture file to dbShared, wherever it lives", () => {
     const source = `import { seededShopContext } from "${FIXTURE}";`;
     expect(classifyTestFile("src/db/bookings.test.ts", source)).toBe("dbShared");
     expect(classifyTestFile("src/app/api/search/route.test.ts", source)).toBe("dbShared");
-    expect(classifyTestFile("src/features/session/rules.test.ts", source)).toBe("dbShared");
+    expect(classifyTestFile("src/features/unregistered/store.test.ts", source)).toBe("dbShared");
     expect(
       classifyTestFile(
         "src/db/x.test.ts",
@@ -29,6 +29,21 @@ describe("classifyTestFile", () => {
     expect(classifyTestFile("src/test/x.test.ts", ["await ", "createTestDb", "();"].join(""))).toBe(
       "dbShared",
     );
+  });
+
+  it("preserves the registered database project's isolation after relocation", () => {
+    const source = `import { seededShopContext } from "${FIXTURE}";`;
+    const moved = "src/features/availability/store.test.ts";
+    for (const file of [
+      moved,
+      `${ROOT}/${moved}`,
+      `C:\\work\\diveday\\${moved.replaceAll("/", "\\")}`,
+    ]) {
+      expect(classifyTestFile(file, source), file).toBe("db");
+    }
+    // The explicit relocation contract does not opt other database files out of the trial.
+    expect(classifyTestFile("src/features/unregistered/store.test.ts", source)).toBe("dbShared");
+    expect(classifyTestFile("src/db/availability.test.ts", source)).toBe("dbShared");
   });
 
   it("keeps a database file that touches process-wide state in the isolated db project", () => {

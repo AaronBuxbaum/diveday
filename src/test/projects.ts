@@ -1,6 +1,6 @@
 import { globSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { originalTestPath } from "./relocated-test-origins.ts";
+import { originalTestPath, relocatedTestProject } from "./relocated-test-origins.ts";
 
 /**
  * **Which Vitest project a test file runs in** (vitest.config.ts).
@@ -117,6 +117,9 @@ export function isSourceGuard(source: string): boolean {
 export function classifyTestFile(file: string, source: string): ProjectName {
   const posix = originalTestPath(file.split(path.sep).join("/"));
   if (posix.startsWith("scripts/")) return "scripts";
+  // Relocation preserves the original per-file module isolation. The shared-worker
+  // trial applies only where no explicit isolated-db ownership was registered.
+  if (relocatedTestProject(file) === "db") return "db";
   if (DB_IMPORT.test(source) || DB_FACTORY.test(source)) {
     return WORKER_STATE.test(source) ? "db" : "dbShared";
   }
