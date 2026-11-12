@@ -246,7 +246,6 @@ export const STAFF_DESTINATION_TITLE_KEYS: Partial<Record<StaffDestinationId, St
   // its lead tab answers to it, so typing "Money" still finds Orders.
   inbox: "shared.shopSections.inbox",
   orders: "shared.shopSections.money",
-  diveSites: "diveSites.list.title",
 };
 
 export type StaffDestination = {
