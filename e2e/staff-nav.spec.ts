@@ -140,7 +140,7 @@ test.describe("owner", () => {
       "Money",
       "Safety",
       "Certifications",
-      "Dive sites",
+      "Dive Sites",
       "Gear",
       "Settings",
     ]);
@@ -395,7 +395,7 @@ test.describe("owner", () => {
   });
 
   for (const [suffix, section, current] of [
-    ["/dive-sites", "Dive sites", "page"],
+    ["/dive-sites", "Dive Sites", "page"],
     ["/settings/team", "Settings", "true"],
     ["/requests", "Inbox", "true"],
     ["/reviews", "Inbox", "true"],
@@ -551,7 +551,7 @@ test.describe("the phone", () => {
       "Money",
       "Safety",
       "Certifications",
-      "Dive sites",
+      "Dive Sites",
       "Gear",
       "Settings",
     ]);

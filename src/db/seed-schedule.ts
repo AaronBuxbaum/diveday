@@ -49,6 +49,7 @@ import { seedSafeCrew } from "./seed-safe-crew";
 import { seedSafetyDrills } from "./seed-safety-drills";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSharedDemoRecapPhoto } from "./seed-shared-demo-recap-photo";
+import { seedShopVoice } from "./seed-shop-voice";
 import { seedSightings } from "./seed-sightings";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
@@ -679,6 +680,9 @@ const THE_DAY: readonly SeedStep[] = [
   // (src/db/seed-waiver-evidence.ts). A seal covers a record's final stored
   // metadata, so nothing may write a waiver row after this.
   demo((db, c) => seedWaiverEvidence(db, c.shopId)),
+  // Adds-only: the shop's replies under its reviews and one note to a departure's
+  // divers (src/db/seed-shop-voice.ts). Writes no waiver row.
+  demo((db, c) => seedShopVoice(db, c.shopId, c.staff.owner.id)),
 ];
 
 /**
