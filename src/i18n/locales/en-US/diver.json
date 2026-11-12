@@ -3818,6 +3818,7 @@
     }
   },
   "demo": {
+    "illustrationDisclosure": "Illustrations are generated placeholders for this fictional demo shop.",
     "shopLabel": "Demo shop",
     "viewingAs": "Viewing as",
     "switchRole": "Switch role",

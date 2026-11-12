@@ -1,10 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
+import { demoIllustration } from "@/content/demo-illustrations";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops } from "./schema";
 import { DEMO_SHOP_BRAND_COLOR } from "./seed-identifiers";
-
-const bundled = (file: string) => `/dive-sites/${encodeURIComponent(file)}`;
 
 /**
  * **Blue Mantis's profile and brand: everything a trading shop fills in on
@@ -15,8 +14,8 @@ const bundled = (file: string) => `/dive-sites/${encodeURIComponent(file)}`;
  * setting up (Aaron, 2026-10-22).
  *
  * The logo is a drawn mark served from `public/demo-shop/`, not a photograph, so it
- * repeats no picture on the storefront (`seed-brand-photos.test.ts`). Every
- * photo is a bundled, credited Commons frame (`public/dive-sites/README.md`):
+ * repeats no picture on the storefront (`seed-brand-photos.test.ts`). Generated
+ * demo-only illustrations are recorded in `src/content/photo-records.json`:
  * the fleet configures no media storage, and a demo that renders broken images
  * the first time a network hiccups is worse than none.
  */
@@ -29,22 +28,15 @@ export const DEMO_SHOP_BRAND = {
   logoUrl: "/demo-shop/blue-mantis-logo.png",
   brandColor: DEMO_SHOP_BRAND_COLOR,
   brandDisplayFont: "outfit",
-  brandHeroImageUrl: bundled("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+  brandHeroImageUrl: demoIllustration("boat").url,
   // i18n-exempt: a shop writes its own alt text, like its tagline.
-  brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
+  brandHeroImageAlt: demoIllustration("boat").alt,
   establishedYear: 1998,
   brandBadges: ["padi_5_star", "padi_idc", "green_fins", "blue_star", "dan_partner", "tripadvisor"],
-  // The photo strip under the cover: the reef, and the divers on it.
-  shopfrontPhotoUrls: [
-    "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
-    "US flag with diver on USS Spiegel Grove (LSD-32) wreck in 2007.jpg",
-    "French Angelfish Pickles Reef 20230713.jpg",
-    "BORSTAR divers training in Panama City, Fla. (29842460786).jpg",
-    "FGBNMS - nurse shark (27551309652).jpg",
-    "Diver at USNS General Hoyt S. Vandenberg (T-AGM-10) wreck off Key West in January 2015.jpg",
-    "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
-    "Sponge 06 Molasses Reef 20230714.jpg",
-  ].map(bundled),
+  // Fictional demo scenes, never claimed as photographs of the operator.
+  shopfrontPhotoUrls: (["dock", "briefing", "student", "reef", "oxygen"] as const).map(
+    (scene) => demoIllustration(scene).url,
+  ),
 } satisfies Partial<typeof shops.$inferInsert>;
 
 /**

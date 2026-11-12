@@ -3818,6 +3818,7 @@
     }
   },
   "demo": {
+    "illustrationDisclosure": "Las ilustraciones son imágenes generadas para este centro de demostración ficticio.",
     "shopLabel": "Centro de demostración",
     "viewingAs": "Viendo como",
     "switchRole": "Cambiar de rol",

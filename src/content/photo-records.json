@@ -7801,5 +7801,67 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-19"
     }
+  },
+  "demoPlaceholders": {
+    "demo-shop/generated/boat.webp": {
+      "subject": "demo:boat",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
+      "reviewed": "2026-11-12",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/dock.webp": {
+      "subject": "demo:dock",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
+      "reviewed": "2026-11-12",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/briefing.webp": {
+      "subject": "demo:briefing",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
+      "reviewed": "2026-11-12",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/student.webp": {
+      "subject": "demo:student",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
+      "reviewed": "2026-11-12",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/reef.webp": {
+      "subject": "demo:reef",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
+      "reviewed": "2026-11-12",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/oxygen.webp": {
+      "subject": "demo:oxygen",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
+      "reviewed": "2026-11-12",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    }
   }
 }

@@ -86,3 +86,26 @@ masters outside the repository; keep useful prompts here so future work does not
    cropping, horizontal overflow, load layout stability, and whether the CTA still leads.
 4. Run the component's locale/dimensions/lazy-loading/size tests and the affected marketing browser
    tests; retain visual captures. Explain the expected pixel change in the PR and review CI's diff.
+
+## Demo shop placeholders
+
+Aaron approved generated demo-shop placeholders on 2026-11-12 in
+[issue #4381](https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938).
+This exception covers fictional boat, dock, briefing, confined-water student, reef and dry oxygen
+classroom scenes. Keep them visibly illustrated, under `public/demo-shop/generated/`, with original
+prompts and provenance in the `demoPlaceholders` section of `src/content/photo-records.json`.
+They are separate from licensed catalog photography; the photo vetting rules remain unchanged.
+
+The public demo chrome visibly identifies generated placeholders in both supported languages.
+Seeded cover/course alt text also names generated demo illustrations. Demo-only seed writers
+refuse real tenants. Do not attach these illustrations to species or published dive-site catalog
+records, name depicted adults as actual staff/customers, or claim the artwork photographs a real
+boat, place or safety procedure. Genuine operator photos are unaffected.
+
+Delivery assets are 1536 × 1024 WebP, below 450 KB each. Masters stay outside the repository.
+The [slot inventory](demo-buying-imagery.md) records every original storefront/course/trip slot
+and the replacement decision. The scenes use the reusable gouache direction above with these
+subjects: small unbranded boat at a dock; two adult staff talking by fins; instructor and adults
+discussing a blank slate; adult student and instructor discussing in a training pool; sunlit
+fictional reef without people or boats; dry oxygen classroom with a closed equipment bag and
+secured, unconnected green cylinder. No scene is a safety instruction.

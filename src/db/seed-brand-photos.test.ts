@@ -2,8 +2,9 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { diveSites, shops } from "./schema";
+import { courses, diveSites, shops } from "./schema";
 import { DEMO_SHOP_BRAND, MINTED_DEMO_BRAND } from "./seed";
+import { seedCoursePhotos } from "./seed-course-photos";
 import { syncDemoShopBrand } from "./seed-shop-brand";
 
 /**
@@ -78,5 +79,23 @@ describe("the demo shop's profile and brand", () => {
     await syncDemoShopBrand(db);
     const [kept] = await db.select().from(shops).where(eq(shops.id, shop.id));
     expect(kept?.tagline).toBe("Ours now");
+  });
+});
+
+describe("demo artwork assignments", () => {
+  it("never overwrites a real tenant’s course media", async () => {
+    const { db, shop } = await seededShopContext();
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    await db
+      .update(courses)
+      .set({ heroImageUrl: "/operator-owned.jpg", heroImageAlt: "Our own photo" })
+      .where(eq(courses.shopId, shop.id));
+    await seedCoursePhotos(db, shop.id);
+    const rows = await db
+      .select({ url: courses.heroImageUrl })
+      .from(courses)
+      .where(eq(courses.shopId, shop.id));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => row.url === "/operator-owned.jpg")).toBe(true);
   });
 });

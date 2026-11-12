@@ -233,6 +233,11 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
           isMintedDemo={shop.slug !== DEMO_SHOP_SLUG}
         />
       ) : null}
+      {showBanner && shop?.brandHeroImageUrl?.startsWith("/demo-shop/generated/") ? (
+        <p className="mx-auto w-full max-w-6xl px-4 pt-3 text-sm text-muted sm:px-6">
+          {t("demo.illustrationDisclosure")}
+        </p>
+      ) : null}
       {showStaffBar && shop ? (
         <LazyPublicStaffPreviewBar
           shopSlug={shop.slug}
