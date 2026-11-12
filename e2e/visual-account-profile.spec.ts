@@ -26,7 +26,9 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/shop/blue-mantis/staffing");
       await page.getByRole("link", { name: staffCopy("staffing.filter.me"), exact: true }).click();
       await expect(
-        page.getByRole("link", { name: staffCopy("staffing.filter.me"), exact: true }),
+        page
+          .getByRole("navigation", { name: staffCopy("staffing.filter.label") })
+          .getByText(staffCopy("staffing.filter.me"), { exact: true }),
       ).toHaveAttribute("aria-current", "page");
       await capture(page, "crew-personal-schedule", scheme);
     });

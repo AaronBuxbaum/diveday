@@ -34,15 +34,18 @@ test("account settings owns public visibility, and crew can switch schedule scop
   await expect(page.getByText(t("staffing.crewConsent.rowLabel"), { exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: t("staffing.filter.me"), exact: true }).click();
   await expect(page).toHaveURL(/person=me/);
-  await expect(
-    page.getByRole("link", { name: t("staffing.filter.me"), exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+  const scope = page.getByRole("navigation", { name: t("staffing.filter.label") });
+  await expect(scope.getByText(t("staffing.filter.me"), { exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await expect(page.getByRole("combobox", { name: t("staffing.filter.person") })).toHaveValue("me");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("link", { name: t("staffing.filter.all"), exact: true }).click();
-  await expect(
-    page.getByRole("link", { name: t("staffing.filter.all"), exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+  await expect(scope.getByText(t("staffing.filter.all"), { exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   const selector = page.getByRole("combobox", { name: t("staffing.filter.person") });
   const other = await selector.locator("option").nth(2).getAttribute("value");
   if (!other) throw new Error("Expected another staff member");

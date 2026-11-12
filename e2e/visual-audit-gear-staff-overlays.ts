@@ -67,10 +67,9 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
       page,
       privateShop,
     }) => {
-      await page.goto(`/shop/${privateShop.slug}/staffing`);
+      await page.goto(`/shop/${privateShop.slug}/staffing?view=plan`);
       await page.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
       const form = page.locator("#add-shift");
-      await form.locator("> summary").click();
       await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
       await form.getByLabel("Date").fill(daysFromNow(2));
       await form.getByLabel("Starts").fill("06:30");
@@ -83,6 +82,8 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
       // caught it depended on how long the capture took (two one-worker runs
       // of one tree disagreed at vw-390). The shift is the subject.
       await expect(page.getByText("Shift saved")).toBeHidden();
+      // The form lives on the Shifts and away tab; the week it adds to is the Crew tab.
+      await page.goto(`/shop/${privateShop.slug}/staffing`);
       const week = page.getByRole("region", { name: "Who’s working" });
       await week.getByText("Boat 2", { exact: true }).first().waitFor();
       await capture(page, "staffing-shift-remove-disclosure", "light", {
