@@ -87,18 +87,18 @@ describe("findNodeVersionDrift", () => {
   });
 
   it("catches an engines floor that drifts from the one dependencies impose", () => {
-    // The original bug: `>=24.0.0` looks right and admits Node 24.0-24.14,
-    // which jsdom refuses.
+    // The original bug: a floor rounded down to the major's `.0` looks right
+    // and admits releases a dependency refuses.
     const files = repoFiles();
-    files.set("package.json", files.get("package.json").replace(`^${NODE_FLOOR}`, ">=24.0.0"));
+    files.set("package.json", files.get("package.json").replace(`^${NODE_FLOOR}`, ">=25.0.0"));
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
-      `package.json (engines.node) says >=24.0.0, and every other declaration says ^${NODE_FLOOR}.`,
+      `package.json (engines.node) says >=25.0.0, and every other declaration says ^${NODE_FLOOR}.`,
     ]);
   });
 
   it("catches an engines range left open at the top of the major", () => {
-    // The caret is load bearing: `>=24.15.0` also advertises every Node 25,
-    // and jsdom excludes the whole odd major.
+    // The caret is load bearing: `>=${NODE_FLOOR}` also advertises every
+    // later major before anyone has run on it.
     const files = repoFiles();
     files.set(
       "package.json",
@@ -143,8 +143,14 @@ describe("findNodeVersionDrift", () => {
     // and the README both make a promise nothing else would notice breaking.
     const files = repoFiles();
     const action = ".github/actions/setup/action.yml";
-    files.set(action, files.get(action).replace("Sets up pnpm, Node 24", "Sets up pnpm, Node 22"));
-    files.set("README.md", files.get("README.md").replace("Requires Node 24", "Requires Node 22"));
+    files.set(
+      action,
+      files.get(action).replace(`Sets up pnpm, Node ${NODE_MAJOR}`, "Sets up pnpm, Node 22"),
+    );
+    files.set(
+      "README.md",
+      files.get("README.md").replace(`Requires Node ${NODE_MAJOR}`, "Requires Node 22"),
+    );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
       `${action} (the description prose) says 22, and every other declaration says ${NODE_MAJOR}.`,
       `README.md (the Quickstart line) says 22, and every other declaration says ${NODE_MAJOR}.`,
@@ -152,14 +158,14 @@ describe("findNodeVersionDrift", () => {
   });
 
   it("catches a type surface describing a major nothing runs", () => {
-    // How `@types/node: ^26` survived: nothing type-checks the types.
+    // How a `@types/node` major nothing runs survived: nothing type-checks the types.
     const files = repoFiles();
     files.set(
       "package.json",
-      files.get("package.json").replace(/"@types\/node": "\^\d+\./, '"@types/node": "^26.'),
+      files.get("package.json").replace(/"@types\/node": "\^\d+\./, '"@types/node": "^24.'),
     );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
-      `package.json (the @types/node major) says 26, and every other declaration says ${NODE_MAJOR}.`,
+      `package.json (the @types/node major) says 24, and every other declaration says ${NODE_MAJOR}.`,
     ]);
   });
 
@@ -195,17 +201,22 @@ describe("findNodeVersionDrift", () => {
     const stack = "infra/lib/infra-stack.ts";
     files.set(
       stack,
-      files.get(stack).replace("lambda.Runtime.NODEJS_24_X", "lambda.Runtime.NODEJS_22_X"),
+      files
+        .get(stack)
+        .replace(`lambda.Runtime.NODEJS_${LAMBDA_NODE_MAJOR}_X`, "lambda.Runtime.NODEJS_22_X"),
     );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
-      `${stack} (every Lambda runtime) says lambda.Runtime.NODEJS_22_X, lambda.Runtime.NODEJS_24_X, and every other declaration says lambda.Runtime.NODEJS_${LAMBDA_NODE_MAJOR}_X.`,
+      `${stack} (every Lambda runtime) says lambda.Runtime.NODEJS_22_X, lambda.Runtime.NODEJS_${LAMBDA_NODE_MAJOR}_X, and every other declaration says lambda.Runtime.NODEJS_${LAMBDA_NODE_MAJOR}_X.`,
     ]);
   });
 
   it("catches a bundling target compiled for a runtime that will not run it", () => {
     const files = repoFiles();
     const stack = "infra/lib/infra-stack.ts";
-    files.set(stack, files.get(stack).replace('target: "node24"', 'target: "node22"'));
+    files.set(
+      stack,
+      files.get(stack).replace(`target: "node${LAMBDA_NODE_MAJOR}"`, 'target: "node22"'),
+    );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
       `${stack} (the esbuild bundling target) says target: "node22", and every other declaration says target: "node${LAMBDA_NODE_MAJOR}".`,
     ]);
@@ -214,7 +225,10 @@ describe("findNodeVersionDrift", () => {
   it("catches the synthesized-runtime assertion drifting from the runtime", () => {
     const files = repoFiles();
     const spec = "infra/lib/visual-bucket-pruner.test.ts";
-    files.set(spec, files.get(spec).replace('Runtime: "nodejs24.x"', 'Runtime: "nodejs22.x"'));
+    files.set(
+      spec,
+      files.get(spec).replace(`Runtime: "nodejs${LAMBDA_NODE_MAJOR}.x"`, 'Runtime: "nodejs22.x"'),
+    );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
       `${spec} (the synthesized-runtime assertion) says nodejs22.x, and every other declaration says nodejs${LAMBDA_NODE_MAJOR}.x.`,
     ]);

@@ -336,7 +336,7 @@ script again.
 | 20260902-crew-requests-and-blackouts | The crew get a voice… |
 | 20260902-sender-standards-for-ses | Every email meets the standards… |
 | 20260902-the-maker-is-the-proof | Put the founder's background back… (proposed) |
-| 20260903-node-24-is-the-floor | DiveDay runs on Node 24,… |
+| 20260903-node-24-is-the-floor | ~~DiveDay runs on Node 24,…~~ → 20261112-node-26-is-the-floor |
 | 20260903-one-process-per-pglite-directory | A file-backed PGlite directory admits… |
 | 20260903-the-dev-server-is-supervised | `pnpm dev` runs under a… |
 | 20260904-reef-all-the-way-down | Take Reef to the bottom… |
@@ -465,6 +465,7 @@ script again.
 | 20261110-whatsapp-delivered-usage | Count verified deliveries by sending… |
 | 20261111-recorded-purchases-not-pos | Record a received purchase, not… |
 | 20261111-square-receipt-evidence | Square is read-only receipt evidence,… |
+| 20261112-node-26-is-the-floor | DiveDay runs on Node 26;… |
 | 20261112-roll-call-observes-evidence | Resolve roll-call conflicts from observed… (proposed) |
 
 <!-- adr-index:end -->

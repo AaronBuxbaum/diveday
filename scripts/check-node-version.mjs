@@ -34,29 +34,29 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-/** The Node major this project runs on and supports (ADR 20260903-node-24-is-the-floor). */
-export const NODE_MAJOR = 24;
+/** The Node major this project runs on and supports (ADR 20261112-node-26-is-the-floor, which supersedes 20260903-node-24-is-the-floor). */
+export const NODE_MAJOR = 26;
 
 /**
- * The floor inside that major, and it is **not** `24.0.0`.
+ * The floor inside that major, taken from the strictest installed dependency
+ * rather than rounded down.
  *
  * `jsdom@30`, the DOM environment the whole unit suite runs in, declares
- * `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"`. So Node 24.0 through
- * 24.14 satisfies a `>=24.0.0` field and violates a dependency we install on
- * every machine. A floor that admits versions the tree cannot actually install
- * on is the same false declaration this guard exists to stop, one level down.
+ * `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"`, so on Node 26 the floor
+ * is `26.0.0`. It was `24.15.0` on the previous major, where `>=24.0.0` would
+ * have admitted releases the tree cannot install on. A floor that admits
+ * versions the tree cannot actually install on is a false declaration, which
+ * is what this guard exists to stop.
  *
- * `engines.node` is therefore `^{NODE_FLOOR}` — a **closed** range — and the
- * caret is load bearing rather than stylistic. `>={NODE_FLOOR}` would also
- * advertise every Node 25 release, and jsdom's range excludes the whole odd
- * major: 25 satisfies neither `^24.15.0` nor `>=26.0.0`. Saying "Node 24" and
- * meaning it closes both ends.
+ * `engines.node` is `^{NODE_FLOOR}` — a **closed** range — and the caret is
+ * load bearing rather than stylistic. `>={NODE_FLOOR}` would also advertise
+ * Node 27 and every later major before anyone has run on it.
  *
  * `check-node-version.test.mjs` derives this number from every installed
  * package's `engines.node` rather than trusting it, so a dependency bump that
  * raises the bar goes red here instead of silently.
  */
-export const NODE_FLOOR = "24.15.0";
+export const NODE_FLOOR = "26.0.0";
 
 /**
  * Artifact producers and consumers need one exact runtime. A major-only
@@ -64,17 +64,19 @@ export const NODE_FLOOR = "24.15.0";
  * (24.22.0 build vs 24.21.0 capture in run 39791953247), invalidating evidence.
  * This CI pin is separate from the supported local runtime range above.
  */
-export const CI_NODE_VERSION = "24.22.0";
+export const CI_NODE_VERSION = "26.13.1";
 
 /**
  * The major AWS Lambda runs the handlers in `infra/` on, stated separately
  * because it is a different question with a different clock: AWS publishes and
  * retires runtimes on its own schedule, so "the major we develop on" and "the
- * major that exists in Lambda" can legitimately diverge for a while. They are
- * equal today, and `aws-cdk-lib`'s own helper Lambdas (the custom-resource
- * provider framework, `AwsCustomResource`, the OIDC provider) already synthesize
- * `nodejs24.x` via `determineLatestNodeRuntime`, so pinning ours lower was
- * making one stack run two majors.
+ * major that exists in Lambda" can legitimately diverge for a while. They do
+ * today: Lambda offers Node 26 only as a public preview, and `aws-cdk-lib`
+ * 2.276 has no `NODEJS_26_X` constant. `aws-cdk-lib`'s own helper Lambdas
+ * (the custom-resource provider framework, `AwsCustomResource`, the OIDC
+ * provider) synthesize `nodejs24.x` via `determineLatestNodeRuntime`, so
+ * staying on 24 keeps the stack on one major. Raise this when Lambda's Node 26
+ * runtime is generally available and CDK names it.
  */
 export const LAMBDA_NODE_MAJOR = 24;
 
@@ -83,7 +85,7 @@ export const LAMBDA_NODE_MAJOR = 24;
  *
  * `lib` is a runtime-floor claim exactly the way `@types/node` is, and it was
  * the hole left open when the Node declarations were reconciled: `esnext` hands
- * the compiler ES2025-and-later library types regardless of what Node 24 or any
+ * the compiler ES2025-and-later library types regardless of what Node 26 or any
  * browser baseline actually has, so an API nothing runs still compiles green
  * (issue #1329). It sits here rather than in a comment because the default in
  * every scaffold is `esnext`, so it drifts back the moment a config is
@@ -237,7 +239,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       "\nThe numbers live in scripts/check-node-version.mjs (NODE_MAJOR, NODE_FLOOR, CI_NODE_VERSION, LAMBDA_NODE_MAJOR, ES_LIB). Change them there first, then bring every file above into line — never the other way round.",
     );
     console.error(
-      "This is a guard rather than a convention because `engines` is warn-only and pnpm writes that warning to stdout, which is how a mismatch took both MCP servers down (issue #1326, ADR 20260903-node-24-is-the-floor).",
+      "This is a guard rather than a convention because `engines` is warn-only and pnpm writes that warning to stdout, which is how a mismatch took both MCP servers down (issue #1326, ADR 20261112-node-26-is-the-floor).",
     );
     process.exit(1);
   }

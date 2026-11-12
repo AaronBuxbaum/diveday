@@ -8,7 +8,7 @@
 // engine: …` as the first line the client reads, the handshake never parses,
 // and the server dies on a 30-second connect timeout. Both stdio entries in
 // `.mcp.json` were like that until 2026-09-03 (ADR
-// 20260903-node-24-is-the-floor). The cost is silent and every session pays it.
+// 20261112-node-26-is-the-floor). The cost is silent and every session pays it.
 //
 // What corrupts the stream is the *command line*, not the executable, so the
 // scan below reads `command` and every entry of `args`, tokenising each arg on
