@@ -173,10 +173,7 @@ test("phone lenses stay in one scrolling row with the filters closed", {
   const chips = rail(page).getByRole("link");
   const geometry = await chips.evaluateAll((links) => {
     const row = links[0].parentElement;
-    const previousOverflow = document.body.style.overflowX;
-    document.body.style.overflowX = "visible";
-    const bodyWidth = document.body.scrollWidth;
-    document.body.style.overflowX = previousOverflow;
+    const bodyWidth = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth);
     return {
       tops: links.map((link) => link.getBoundingClientRect().top),
       scrollWidth: row?.scrollWidth ?? 0,
@@ -187,8 +184,12 @@ test("phone lenses stay in one scrolling row with the filters closed", {
   expect(new Set(geometry.tops).size).toBe(1);
   expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
   expect(geometry.bodyWidth).toBeLessThanOrEqual(390);
+  await expect(page.locator('select[name="tripType"]')).toHaveAttribute("data-hydrated", "true");
   const afterDark = rail(page).getByRole("link", { name: "After dark" });
+  await afterDark.scrollIntoViewIfNeeded();
+  await expect(afterDark).toBeInViewport();
   await afterDark.click();
+  await expect(page).toHaveURL(/[?&]lens=after-dark/);
   await expect(afterDark).toHaveAttribute("aria-current", "true");
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
 });
