@@ -11,15 +11,35 @@ import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 const ctx = fileScopedShopContext({ history: true });
 
 describe("conservation in the actual recap reader", () => {
-  it("seeds only a returned departure, leaving the pinned future boat unannotated", async () => {
+  it("seeds six distinct returned departures, leaving the pinned future boat unannotated", async () => {
     const { db, shop } = ctx;
     const seeded = await db
-      .select({ endsAt: trips.endsAt })
+      .select({
+        tripId: trips.id,
+        endsAt: trips.endsAt,
+        status: trips.status,
+        isRehearsal: trips.isRehearsal,
+        deletedAt: trips.deletedAt,
+      })
       .from(tripConservation)
       .innerJoin(trips, eq(trips.id, tripConservation.tripId))
       .where(eq(tripConservation.shopId, shop.id));
-    expect(seeded).toHaveLength(1);
-    expect(seeded.every(({ endsAt }) => hasReturned(endsAt, nowDate()))).toBe(true);
+    expect(seeded).toHaveLength(6);
+    expect(new Set(seeded.map(({ tripId }) => tripId)).size).toBe(6);
+    for (const departure of seeded) {
+      expect(hasReturned(departure.endsAt, nowDate())).toBe(true);
+      expect(departure.status).toBe("scheduled");
+      expect(departure.isRehearsal).toBe(false);
+      expect(departure.deletedAt).toBeNull();
+    }
+    const [pinned] = await db
+      .select({ id: trips.id, endsAt: trips.endsAt })
+      .from(trips)
+      .innerJoin(bookings, eq(bookings.tripId, trips.id))
+      .where(and(eq(bookings.id, DEMO_RECAP_BOOKING_ID), eq(trips.shopId, shop.id)));
+    if (!pinned) throw new Error("Pinned recap departure missing");
+    expect(pinned.endsAt.getTime()).toBeGreaterThan(nowDate().getTime());
+    expect(seeded.map(({ tripId }) => tripId)).not.toContain(pinned.id);
     const data = await getRecapPageData(db, DEMO_RECAP_BOOKING_ID);
     expect(data?.conservation).toEqual([]);
   });
