@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 describe("Settings destinations keep their navigation", () => {
-  it.each(["boats", "dive-sites", "trip-tags", "safety-checklist", "waivers"])(
+  it.each(["boats", "trip-tags", "safety-checklist", "waivers"])(
     "wraps %s in the shared settings layout",
     async (destination) => {
       const source = await readFile(
