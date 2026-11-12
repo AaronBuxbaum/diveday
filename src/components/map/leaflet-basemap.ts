@@ -1,4 +1,4 @@
-import type { Layer, Map as LeafletMap, MapOptions, ZoomPanOptions } from "leaflet";
+import type { LatLng, Layer, Map as LeafletMap, MapOptions, ZoomPanOptions } from "leaflet";
 import {
   arcgisApiKey,
   BASEMAP_ATTRIBUTION,
@@ -42,7 +42,7 @@ export function createBasemapMap(
     L.tileLayer(BASEMAP_LABELS_URL, tiles).addTo(map);
   };
   const key = arcgisApiKey();
-  if (key) addVectorLabels(map, key, rasterLabels);
+  if (key) addVectorLabels(L, map, key, rasterLabels);
   else rasterLabels();
 
   if (typeof ResizeObserver !== "undefined") {
@@ -83,7 +83,12 @@ export function createBasemapMap(
  * answer is the raster labels, quietly, with one console line for whoever
  * looks: never Esri's error.
  */
-function addVectorLabels(map: LeafletMap, key: string, fallBack: () => void): void {
+function addVectorLabels(
+  L: typeof import("leaflet"),
+  map: LeafletMap,
+  key: string,
+  fallBack: () => void,
+): void {
   const pane = map.createPane("basemapLabels");
   pane.style.zIndex = "250";
   pane.style.pointerEvents = "none";
@@ -121,12 +126,54 @@ function addVectorLabels(map: LeafletMap, key: string, fallBack: () => void): vo
         interactive: false,
       } as Parameters<typeof maplibreGL>[0]);
       layer = labels;
+      guardLateFrames(L, labels);
       labels.addTo(map);
       labels
         .getMaplibreMap()
         .on("error", () => recover("MapLibre could not load the vector label renderer"));
     })
     .catch(() => recover("The vector label renderer failed to initialize"));
+}
+
+/** The parts of the MapLibre layer's internals that `guardLateFrames` touches. */
+type LabelLayerInternals = {
+  _map: LeafletMap | null;
+  _glMap: {
+    _actualCanvas: HTMLElement;
+    once(event: string, handler: () => void): void;
+    jumpTo(options: { center: LatLng; zoom: number }): void;
+  } | null;
+  _resizeContainer(): void;
+  _zoomEnd(): void;
+  _transitionEnd(event?: unknown): void;
+};
+
+/**
+ * **The layer redraws a frame after a resize, and the map may be gone by then.**
+ * `@maplibre/maplibre-gl-leaflet` answers Leaflet's `resize` by waiting for an
+ * animation frame and then reading the map's zoom. Leaving the page in that
+ * frame removes the layer first and nulls its map, and the frame threw
+ * `Cannot read properties of null (reading 'getZoom')` (Sentry). The same
+ * redraw, skipped when the layer or its map is already gone.
+ */
+function guardLateFrames(L: typeof import("leaflet"), layer: Layer): void {
+  const label = layer as unknown as LabelLayerInternals;
+  label._transitionEnd = function (this: LabelLayerInternals) {
+    L.Util.requestAnimFrame(() => {
+      const map = this._map;
+      const gl = this._glMap;
+      if (!map || !gl) return;
+      const zoom = map.getZoom();
+      const center = map.getCenter();
+      const offset = map.latLngToContainerPoint(map.getBounds().getNorthWest());
+      this._resizeContainer();
+      L.DomUtil.setTransform(gl._actualCanvas, offset, 1);
+      gl.once("moveend", () => {
+        if (this._map) this._zoomEnd();
+      });
+      gl.jumpTo({ center, zoom: zoom - 1 });
+    }, this);
+  };
 }
 
 let labelLayerImport: Promise<typeof import("@maplibre/maplibre-gl-leaflet")> | null = null;

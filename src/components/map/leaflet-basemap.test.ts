@@ -13,8 +13,13 @@ vi.mock("@maplibre/maplibre-gl-leaflet", async () => {
   return {
     maplibreGL: (options: Record<string, unknown>) => {
       vectorLabels.options.push(options);
-      const layer = new L.Layer();
+      const layer = new L.Layer() as L.Layer & { _transitionEnd(): void };
       return Object.assign(layer, {
+        // The real layer redraws a frame after Leaflet's `resize`, reading its map then.
+        getEvents: () => ({ resize: () => layer._transitionEnd() }),
+        _transitionEnd() {
+          L.Util.requestAnimFrame(() => (layer as unknown as { _map: L.Map })._map.getZoom());
+        },
         onAdd: () => layer,
         onRemove: () => layer,
         getMaplibreMap: () => ({
@@ -154,6 +159,28 @@ describe("createBasemapMap", () => {
     expect(String(warn.mock.calls[0]?.[0])).not.toContain("refused-key");
 
     map.remove();
+    container.remove();
+  });
+
+  it("does not redraw the place names for a resize after the map is gone", async () => {
+    const L = await import("leaflet");
+    vi.stubEnv("NEXT_PUBLIC_ARCGIS_API_KEY", "test-key");
+    answer(200, STYLE);
+    withWebGL2();
+    const frames: (() => void)[] = [];
+    vi.spyOn(L.Util, "requestAnimFrame").mockImplementation(((frame: () => void) =>
+      frames.push(frame)) as never);
+    const container = document.createElement("div");
+    document.body.append(container);
+    const map = createBasemapMap(L, container, { center: [25, -80], zoom: 10 });
+    await vi.waitFor(() => expect(vectorLabels.options).toHaveLength(1));
+
+    map.fire("resize");
+    map.remove();
+    expect(frames.length).toBeGreaterThan(0);
+    expect(() => {
+      for (const frame of frames) frame();
+    }).not.toThrow();
     container.remove();
   });
 
