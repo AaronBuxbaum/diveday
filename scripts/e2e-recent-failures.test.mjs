@@ -162,15 +162,17 @@ describe("ghJson retries (#3641)", () => {
     expect(pauses).toHaveLength(1);
   });
 
-  it("gives up after three attempts and rethrows the persistent failure", async () => {
+  it("gives up after five attempts, pausing longer each time, and rethrows the failure", async () => {
     const { ghJson } = await import("./e2e-recent-failures.mjs");
+    const pauses = [];
     let calls = 0;
     const read = () => {
       calls += 1;
       throw failure("gh: Bad Gateway (HTTP 502)");
     };
-    expect(() => ghJson("repos/o/r/x", read, () => {})).toThrow("Command failed");
-    expect(calls).toBe(3);
+    expect(() => ghJson("repos/o/r/x", read, (ms) => pauses.push(ms))).toThrow("Command failed");
+    expect(calls).toBe(5);
+    expect(pauses).toEqual([2000, 4000, 8000, 16000]);
   });
 
   it("never retries a 4xx", async () => {

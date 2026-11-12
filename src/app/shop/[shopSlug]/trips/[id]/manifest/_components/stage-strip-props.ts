@@ -1,7 +1,7 @@
 import { checkpointGapLine } from "@/components/checkpoint-gap-words";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { homewardCheckpointGap } from "@/lib/checkpoint-gaps";
-import { formatTime } from "@/lib/format";
+import { formatShortDate, formatTime } from "@/lib/format";
 import type { TripManifest } from "@/lib/manifests";
 import { shopPath } from "@/lib/staff-notices";
 import { boatStageOf, type MeetingWindow } from "@/lib/trip-phase";
@@ -11,6 +11,7 @@ import {
   type TripStage,
   type TripStageReading,
 } from "@/lib/trip-stages";
+import { shopDayBounds } from "@/lib/zoned";
 import type { StageStripCopy } from "./StageStrip";
 
 /** The word each stage takes on a phone, where five full words do not fit one row (B06). */
@@ -77,6 +78,17 @@ export function stageStripProps(
     cancelled: false,
     meetingWindows: input.meetingWindows,
   });
+  // A tap said before the departure's own day is kept but never shown (`boatStageOf`), so until
+  // that day the strip says so and when boat words begin, instead of looking as if nothing
+  // happened (#4457). The write is never refused: the crew's word is final.
+  const departureDay = shopDayBounds(trip.startsAt, input.timeZone);
+  const early =
+    !shown &&
+    input.stage &&
+    input.now.getTime() < departureDay.from.getTime() &&
+    input.stage.recordedAt.getTime() < departureDay.from.getTime()
+      ? input.stage
+      : null;
   return {
     current: shown?.stage ?? null,
     copy: {
@@ -91,6 +103,13 @@ export function stageStripProps(
         ? t("manifest.stage.recordedLine", {
             name: shown.recordedByName ?? "",
             time: formatTime(shown.recordedAt, input.locale, input.timeZone),
+          })
+        : undefined,
+      earlyLine: early
+        ? t("manifest.stage.earlyLine", {
+            stage: t(STAGE_WORD_KEYS[early.stage]),
+            time: formatTime(early.recordedAt, input.locale, input.timeZone),
+            date: formatShortDate(departureDay.from, input.locale, input.timeZone),
           })
         : undefined,
       // Home said with the last after-dive count open (issue #3896): the

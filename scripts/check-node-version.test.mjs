@@ -1,10 +1,10 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 // Hoisted deliberately (`publicHoistPattern` in pnpm-workspace.yaml), and the
 // right tool here: hand-rolling `||`/`^`/`>=` range logic to check a version
 // range would be a subtler bug than the one this test exists to catch.
-import { compare as compareVersions, satisfies, validRange } from "semver";
+import { compare as compareVersions, satisfies } from "semver";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -15,6 +15,7 @@ import {
   NODE_FLOOR,
   NODE_MAJOR,
 } from "./check-node-version.mjs";
+import { installedNodeRanges } from "./installed-node-ranges.mjs";
 import { GUARDS } from "./rules-registry.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -44,61 +45,24 @@ function repoFiles() {
 
 const readerFor = (files) => (file) => files.get(file);
 
-/**
- * Every installed package's `engines.node`, read off the pnpm store.
- *
- * The store is the honest place to look: `package.json`'s own dependency list
- * says what we asked for, and the floor is set by whatever those resolved to,
- * transitively.
- */
-function installedNodeRanges() {
-  const store = path.join(ROOT, "node_modules/.pnpm");
-  const ranges = new Map();
-  const collect = (directory, insideScope) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      if (!insideScope && entry.name.startsWith("@")) {
-        collect(path.join(directory, entry.name), true);
-        continue;
-      }
-      const manifest = path.join(directory, entry.name, "package.json");
-      if (!existsSync(manifest)) continue;
-      let read;
-      try {
-        read = JSON.parse(readFileSync(manifest, "utf8"));
-      } catch {
-        continue;
-      }
-      if (read.engines?.node && validRange(read.engines.node)) {
-        ranges.set(`${read.name}@${read.version}`, read.engines.node);
-      }
-    }
-  };
-  for (const packageDirectory of readdirSync(store)) {
-    const base = path.join(store, packageDirectory, "node_modules");
-    if (existsSync(base)) collect(base, false);
-  }
-  return ranges;
-}
-
 describe("findNodeVersionDrift", () => {
   it("is silent on the tree as it stands", () => {
     expect(findNodeVersionDrift(readerFor(repoFiles()))).toEqual([]);
   });
 
   it("catches an engines floor that drifts from the one dependencies impose", () => {
-    // The original bug: `>=24.0.0` looks right and admits Node 24.0-24.14,
-    // which jsdom refuses.
+    // The original bug: a floor rounded down to the major's `.0` looks right
+    // and admits releases a dependency refuses.
     const files = repoFiles();
-    files.set("package.json", files.get("package.json").replace(`^${NODE_FLOOR}`, ">=24.0.0"));
+    files.set("package.json", files.get("package.json").replace(`^${NODE_FLOOR}`, ">=25.0.0"));
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
-      `package.json (engines.node) says >=24.0.0, and every other declaration says ^${NODE_FLOOR}.`,
+      `package.json (engines.node) says >=25.0.0, and every other declaration says ^${NODE_FLOOR}.`,
     ]);
   });
 
   it("catches an engines range left open at the top of the major", () => {
-    // The caret is load bearing: `>=24.15.0` also advertises every Node 25,
-    // and jsdom excludes the whole odd major.
+    // The caret is load bearing: `>=${NODE_FLOOR}` also advertises every
+    // later major before anyone has run on it.
     const files = repoFiles();
     files.set(
       "package.json",
@@ -143,8 +107,14 @@ describe("findNodeVersionDrift", () => {
     // and the README both make a promise nothing else would notice breaking.
     const files = repoFiles();
     const action = ".github/actions/setup/action.yml";
-    files.set(action, files.get(action).replace("Sets up pnpm, Node 24", "Sets up pnpm, Node 22"));
-    files.set("README.md", files.get("README.md").replace("Requires Node 24", "Requires Node 22"));
+    files.set(
+      action,
+      files.get(action).replace(`Sets up pnpm, Node ${NODE_MAJOR}`, "Sets up pnpm, Node 22"),
+    );
+    files.set(
+      "README.md",
+      files.get("README.md").replace(`Requires Node ${NODE_MAJOR}`, "Requires Node 22"),
+    );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
       `${action} (the description prose) says 22, and every other declaration says ${NODE_MAJOR}.`,
       `README.md (the Quickstart line) says 22, and every other declaration says ${NODE_MAJOR}.`,
@@ -152,14 +122,14 @@ describe("findNodeVersionDrift", () => {
   });
 
   it("catches a type surface describing a major nothing runs", () => {
-    // How `@types/node: ^26` survived: nothing type-checks the types.
+    // How a `@types/node` major nothing runs survived: nothing type-checks the types.
     const files = repoFiles();
     files.set(
       "package.json",
-      files.get("package.json").replace(/"@types\/node": "\^\d+\./, '"@types/node": "^26.'),
+      files.get("package.json").replace(/"@types\/node": "\^\d+\./, '"@types/node": "^24.'),
     );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
-      `package.json (the @types/node major) says 26, and every other declaration says ${NODE_MAJOR}.`,
+      `package.json (the @types/node major) says 24, and every other declaration says ${NODE_MAJOR}.`,
     ]);
   });
 
@@ -195,17 +165,25 @@ describe("findNodeVersionDrift", () => {
     const stack = "infra/lib/infra-stack.ts";
     files.set(
       stack,
-      files.get(stack).replace("lambda.Runtime.NODEJS_24_X", "lambda.Runtime.NODEJS_22_X"),
+      files
+        .get(stack)
+        .replace(
+          `new lambda.Runtime("nodejs${LAMBDA_NODE_MAJOR}.x"`,
+          'new lambda.Runtime("nodejs22.x"',
+        ),
     );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
-      `${stack} (every Lambda runtime) says lambda.Runtime.NODEJS_22_X, lambda.Runtime.NODEJS_24_X, and every other declaration says lambda.Runtime.NODEJS_${LAMBDA_NODE_MAJOR}_X.`,
+      `${stack} (every Lambda runtime) says new lambda.Runtime("nodejs22.x", and every other declaration says new lambda.Runtime("nodejs${LAMBDA_NODE_MAJOR}.x".`,
     ]);
   });
 
   it("catches a bundling target compiled for a runtime that will not run it", () => {
     const files = repoFiles();
     const stack = "infra/lib/infra-stack.ts";
-    files.set(stack, files.get(stack).replace('target: "node24"', 'target: "node22"'));
+    files.set(
+      stack,
+      files.get(stack).replace(`target: "node${LAMBDA_NODE_MAJOR}"`, 'target: "node22"'),
+    );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
       `${stack} (the esbuild bundling target) says target: "node22", and every other declaration says target: "node${LAMBDA_NODE_MAJOR}".`,
     ]);
@@ -214,7 +192,10 @@ describe("findNodeVersionDrift", () => {
   it("catches the synthesized-runtime assertion drifting from the runtime", () => {
     const files = repoFiles();
     const spec = "infra/lib/visual-bucket-pruner.test.ts";
-    files.set(spec, files.get(spec).replace('Runtime: "nodejs24.x"', 'Runtime: "nodejs22.x"'));
+    files.set(
+      spec,
+      files.get(spec).replace(`Runtime: "nodejs${LAMBDA_NODE_MAJOR}.x"`, 'Runtime: "nodejs22.x"'),
+    );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
       `${spec} (the synthesized-runtime assertion) says nodejs22.x, and every other declaration says nodejs${LAMBDA_NODE_MAJOR}.x.`,
     ]);
@@ -263,8 +244,9 @@ describe("the numbers themselves", () => {
     // set it today: reading `jsdom` alone would stay green while some other
     // dependency raised the bar underneath it, which is the invariant this
     // test's name claims and the reason `engines` was wrong to begin with.
-    // 733 of 1169 installed manifests declare a range; the scan costs ~0.15s.
-    const ranges = installedNodeRanges();
+    // Follow the installed graph, including peers; unrelated shared-store entries are excluded.
+    const ranges = installedNodeRanges(ROOT);
+    expect(ranges.size).toBeGreaterThan(0);
     const offenders = [...ranges].filter(([, range]) => !satisfies(NODE_FLOOR, range));
     expect(offenders.map(([name, range]) => `${name} wants ${range}`)).toEqual([]);
 

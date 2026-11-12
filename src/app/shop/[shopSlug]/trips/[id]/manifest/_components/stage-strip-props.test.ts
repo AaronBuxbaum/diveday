@@ -48,6 +48,17 @@ describe("stageStripProps", () => {
     expect(props.current).toBeNull();
     expect(props.copy.recordedLine).toBeUndefined();
   });
+
+  it("says an early tap was saved and when it will show", () => {
+    const early = tap("underway", "2026-10-08T15:00:00Z");
+    const props = read(early, "2026-10-08T15:05:00Z");
+    expect(props.current).toBeNull();
+    expect(props.copy.recordedLine).toBeUndefined();
+    expect(props.copy.earlyLine?.replace(/\s/g, " ")).toBe(
+      "Underway saved at 11:00 AM. Stages show from Sat, Oct 10; tap again then.",
+    );
+    expect(read(early, "2026-10-10T20:00:00Z").copy.earlyLine).toBeUndefined();
+  });
 });
 
 describe("stageStripProps on the way home (batch 6, item 4)", () => {

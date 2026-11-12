@@ -11,7 +11,7 @@ agents that encode how work gets done here.
 
 ## Quickstart
 
-Requires Node 24 and pnpm 12.16.1 — the repository pins both, in `.nvmrc` and `packageManager`,
+Requires Node 26 and pnpm 12.16.1 — the repository pins both, in `.nvmrc` and `packageManager`,
 and `pnpm check:node-version` keeps every other place that names a version agreeing with them.
 
 ```bash

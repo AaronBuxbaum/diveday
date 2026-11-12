@@ -74,6 +74,10 @@
       "seeSchedule": "Ver el calendario"
     },
     "shopPhotos": "Fotos del centro",
+    "photoLarge": "Foto ampliada",
+    "photoClose": "Cerrar",
+    "photoPrevious": "Foto anterior",
+    "photoNext": "Foto siguiente",
     "timesInZone": "Todos los horarios de abajo están en la hora local de {shop} ({zone}).",
     "timesInZoneFooter": "Las horas son locales de {shop} ({zone}).",
     "embedSeeFullSchedule": "Ver el calendario completo",
@@ -148,7 +152,7 @@
   },
   "trip": {
     "coursePlanHeading": "El plan de tu curso",
-    "boatLabel": "Embarcación",
+    "boatYoullBeOn": "Saldrás en {name}",
     "courseSession": "Sesión de curso",
     "privateCharter": "Chárter privado",
     "depositLine": "{deposit} de señal al reservar · {balance} restante en el muelle",

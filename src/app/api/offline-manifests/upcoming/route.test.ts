@@ -528,6 +528,7 @@ it("does not provide a fresh roster to a reader without the causal protocol", as
   } as DiveDaySession);
   const response = await GET(new Request("http://localhost/api/offline-manifests/upcoming"));
   expect(response.status).toBe(426);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   const body = (await response.json()) as Record<string, unknown>;
   expect(body).toEqual({ error: "offline_update_required" });
 });
