@@ -1927,6 +1927,11 @@ export async function listTripsReadiness(
       .filter((row) => row.person.dateOfBirth === null && row.booking.minorDeclaredAt === null)
       .map((row) => row.person.id),
     now,
+    seats: [
+      ...new Map(
+        waiverRows.flatMap((row) => row.minorDeclaredSeats).map((seat) => [seat.bookingId, seat]),
+      ).values(),
+    ],
   });
   const minorDeclared = (row: (typeof waiverRows)[number], mark: TrainingMarkState | undefined) =>
     minorDeclaredOf(row.booking, mark, minorDeclaredElsewhere.has(row.person.id));
