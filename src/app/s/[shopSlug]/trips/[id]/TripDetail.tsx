@@ -375,10 +375,10 @@ export async function TripDetailPage({
               <ConditionsHoldSection />
             ) : full ? (
               <TripFullSection
-                requestedPartySize={isEmbed ? 1 : schedulePartySize(requestedPartySize)}
                 shopSlug={shopSlug}
                 trip={bookingFormTrip(trip)}
                 tripRef={tripRef}
+                requestedPartySize={isEmbed ? 1 : schedulePartySize(requestedPartySize)}
                 withAnchor={false}
                 errorMessage={errorMessage}
                 alternatives={alternatives}

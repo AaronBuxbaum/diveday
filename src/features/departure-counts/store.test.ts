@@ -34,18 +34,23 @@ async function boat(divers: number, plannedDives = 2) {
     checkpoint: Checkpoint,
     status: "boarded" | "not_boarded" | "cleared",
     tripId = made.trip.id,
+    options: { observesPrevious: boolean } = { observesPrevious: false },
   ) => {
     minute += 1;
-    await seedRollCallEvidence(db, {
-      shopId: shop.id,
-      tripId,
-      bookingId: made.bookingIds[seat] as string,
-      recordedByPersonId: made.staffId,
-      status,
-      checkpoint,
-      source: "live",
-      occurredAt: new Date(nowMs() - 3 * HOUR + minute * 60_000),
-    });
+    await seedRollCallEvidence(
+      db,
+      {
+        shopId: shop.id,
+        tripId,
+        bookingId: made.bookingIds[seat] as string,
+        recordedByPersonId: made.staffId,
+        status,
+        checkpoint,
+        source: "live",
+        occurredAt: new Date(nowMs() - 3 * HOUR + minute * 60_000),
+      },
+      options,
+    );
   };
   const mark = (seat: number, status: "no_show" | "cancelled") =>
     db
@@ -139,7 +144,7 @@ describe("departureCounts", () => {
     const { say, mark, count } = await boat(1);
     await mark(0, "no_show");
     await say(0, "after_dive_1", "not_boarded");
-    await say(0, "after_dive_1", "cleared");
+    await say(0, "after_dive_1", "cleared", undefined, { observesPrevious: true });
     expect(await count()).toMatchObject({ sailed: 0, back: 0 });
   });
 

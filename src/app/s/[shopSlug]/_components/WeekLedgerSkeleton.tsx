@@ -45,7 +45,7 @@ export function WeekLedgerSkeleton() {
             <div className="h-px flex-1 bg-border" />
           </div>
           {[0, 1].map((row) => (
-            <div key={row} className={`${WEEK_ROW_BOX_CLASS} sm:items-baseline`}>
+            <div key={row} className={`${WEEK_ROW_BOX_CLASS} lg:items-baseline`}>
               <div className={WEEK_TIME_RAIL_CLASS}>
                 <LineBar height="h-6" width="w-36" />
               </div>

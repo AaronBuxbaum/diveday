@@ -7,7 +7,12 @@ import {
   boardAtDeparture,
   returnedTrip,
 } from "../test/substrate-fixtures/db/roll-call-test-fixtures";
-import { listUnaccountedForByTrip, recordCrewRollCall, recordRollCall } from "./manifests";
+import {
+  getTripManifest,
+  listUnaccountedForByTrip,
+  recordCrewRollCall,
+  recordRollCall,
+} from "./manifests";
 import { tripStageEvents } from "./schema";
 import { tripDetailsAreEditable } from "./trip-editability";
 import { changeTripCrewOutcome, getTripCrewIds } from "./trips";
@@ -53,8 +58,24 @@ describe("a closed definition never closes safety recovery", () => {
           .get(made.trip.id)
           ?.has(input.bookingId),
       ).toBe(true);
+      // Staff read the missing statement before deliberately correcting it.
+      // A later clock alone must not turn an unobserved mark into a correction.
+      const visible = await getTripManifest(db, shop.id, made.trip.id, "after_dive_1");
+      const basis = visible?.divers.find(
+        (row) => row.bookingId === input.bookingId,
+      )?.rollCallContext;
+      expect(basis?.conflict).toBe(false);
+      expect(basis?.observedEvidenceIds).toHaveLength(1);
+      if (!basis) throw new Error("expected the visible missing statement");
       advanceClock();
-      expect(await recordRollCall(db, { ...input, status: "boarded" })).toMatchObject({ ok: true });
+      expect(
+        await recordRollCall(db, {
+          ...input,
+          status: "boarded",
+          observedEvidenceIds: basis.observedEvidenceIds,
+          meetingDay: basis.meetingDay,
+        }),
+      ).toMatchObject({ ok: true });
       expect(
         (await listUnaccountedForByTrip(db, shop.id, [made.trip.id])).get(made.trip.id)?.size ?? 0,
       ).toBe(0);

@@ -410,15 +410,19 @@ describe("trip records (in-memory PGlite)", () => {
     expect((await getTripWithBooked(db, shop.id, reef.id))?.plannedDives).toBe(reef.plannedDives);
 
     // A crew result that was undone is no history: the floor lifts.
-    await seedRollCallEvidence(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      ...crewSubject(staff.person.id),
-      recordedByPersonId: staff.person.id,
-      status: "cleared",
-      checkpoint: "after_dive_2",
-      occurredAt: new Date(nowDate().getTime() + 1000),
-    });
+    await seedRollCallEvidence(
+      db,
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        ...crewSubject(staff.person.id),
+        recordedByPersonId: staff.person.id,
+        status: "cleared",
+        checkpoint: "after_dive_2",
+        occurredAt: new Date(nowDate().getTime() + 1000),
+      },
+      { observesPrevious: true },
+    );
     const accepted = await editTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cachedFormatter } from "@/lib/intl-cache";
 import type { RollCallCausalContext } from "@/lib/roll-call-causality";
+import { DangerDisclosure } from "./ui/disclosure";
 
 export type RollCallEvidenceCopy = {
   heading: string;
@@ -34,10 +35,7 @@ export function RollCallEvidencePanel({
     timeZone,
   });
   return (
-    <details open className="my-4 rounded-lg border border-danger p-4">
-      <summary className="min-h-11 cursor-pointer font-semibold text-danger">
-        {copy.heading}
-      </summary>
+    <DangerDisclosure open className="my-4" summary={copy.heading}>
       {context.orderingUnknown ? <p>{copy.unknownOrder}</p> : null}
       {context.unknownMeetingDay ? <p>{copy.unknownDay}</p> : null}
       <ul className="my-3 space-y-2">
@@ -53,6 +51,6 @@ export function RollCallEvidencePanel({
         ))}
       </ul>
       <div className="flex flex-wrap gap-3">{children}</div>
-    </details>
+    </DangerDisclosure>
   );
 }

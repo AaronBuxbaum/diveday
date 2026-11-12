@@ -48,15 +48,19 @@ describe("a photo shared with the boat (H-20261014-share-photo-with-boat)", () =
     if (!photo.ok) throw new Error("photo not added");
     let minute = 0;
     const record = (bookingId: string, status: "boarded" | "not_boarded", checkpoint: string) =>
-      seedRollCallEvidence(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        bookingId,
-        recordedByPersonId: staff.person.id,
-        status,
-        checkpoint,
-        occurredAt: new Date(reef.startsAt.getTime() + minute++ * 60_000),
-      });
+      seedRollCallEvidence(
+        db,
+        {
+          shopId: shop.id,
+          tripId: reef.id,
+          bookingId,
+          recordedByPersonId: staff.person.id,
+          status,
+          checkpoint,
+          occurredAt: new Date(reef.startsAt.getTime() + minute++ * 60_000),
+        },
+        { observesPrevious: true },
+      );
     await record(viewer, "boarded", "departure");
     await record(sharer, "not_boarded", "departure");
     const ashore = await getRecapPageState(db, viewer);

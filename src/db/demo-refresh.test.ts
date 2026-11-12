@@ -768,7 +768,9 @@ describe("refreshCanonicalDemoSchedule", () => {
         occurredAt: new Date(last.occurredAt.getTime() + 1_000),
       });
       await seedRollCallEvidence(db, [drill(first, "cleared"), drill(second, "not_boarded")], {
-        observesPrevious: false,
+        // These are deliberate edits of the two displayed return marks,
+        // not concurrent statements from a device that has not seen them.
+        observesPrevious: true,
       });
 
       expect(await bringDemoBoatsAtSeaHome(db, anHourLater)).toBeGreaterThanOrEqual(1);
