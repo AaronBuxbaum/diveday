@@ -1,15 +1,16 @@
 import { stageIsStale } from "./departure-clock";
+import type { MeetingWindow } from "./trip-phase";
+import { shopDayBounds } from "./zoned";
 
 /**
  * **The boat says where it is** — ADR 20260904-reef-all-the-way-down, decision
  * 2, Budget rule 4.
  *
  * Five words the crew taps on the manifest, which DiveDay then repeats — with
- * the time the crew said it — everywhere the boat is drawn: a chip on the shop
- * home's station, a panel on the storefront, a line on every diver's link.
+ * the time the crew said it — on the staff boat and the diver’s ready link
+ * and wallet pass.
  *
- * The rules this module exists to keep in one place, because four surfaces
- * read it and four surfaces cannot be trusted to agree:
+ * The rules this module exists to keep in one place:
  *
  * - **Never inferred.** A stage is a thing a person said, not a thing a clock
  *   implied. A departure whose crew tapped nothing has no stage, renders
@@ -47,22 +48,53 @@ export type TripStageReading = {
 /**
  * The stage a surface may show for this departure, or null.
  *
- * Null on three counts, all of them "say nothing": nothing was ever recorded,
- * the departure has no end to measure from, or the last word is older than the
- * boat's own day.
+ * A tap before the departure’s local day or from a past meeting is silent.
+ * A final meeting’s word remains eligible through the public late buffer.
  */
 export function liveStageOf(
   reading: TripStageReading | null | undefined,
-  endsAt: Date | null | undefined,
+  trip: {
+    startsAt: Date;
+    endsAt: Date | null;
+    timeZone: string;
+    meetingWindows?: readonly MeetingWindow[];
+  },
   now: Date,
 ): TripStageReading | null {
   if (!reading) return null;
-  if (!endsAt) return reading;
-  // A word's shelf life, not a departure check: the departure clock's
-  // `stage_stale` rung, two late-arrival buffers past the end, which is the
-  // window the ADR's own risk note argues for. Not `hasReturned`: the whole
-  // point of the line is a boat that is late.
-  if (stageIsStale(endsAt, now)) return null;
+  const at = reading.recordedAt.getTime();
+  if (at < shopDayBounds(trip.startsAt, trip.timeZone).from.getTime()) return null;
+  if (!trip.endsAt) return reading;
+  if (stageIsStale(trip.endsAt, now)) return null;
+  // A previous day's word belongs to that meeting, not a later meeting. A
+  // meeting crossing midnight keeps its own word until the window ends.
+  const dayEnd = shopDayBounds(reading.recordedAt, trip.timeZone).to.getTime();
+  const windows = trip.meetingWindows?.length
+    ? trip.meetingWindows
+    : trip.endsAt && trip.endsAt.getTime() - trip.startsAt.getTime() < 24 * 60 * 60 * 1000
+      ? [{ startsAt: trip.startsAt, endsAt: trip.endsAt }]
+      : [];
+  const windowEnd = windows.reduce(
+    (end, window) =>
+      window.startsAt.getTime() <= at && at < window.endsAt.getTime()
+        ? Math.max(end, window.endsAt.getTime())
+        : end,
+    dayEnd,
+  );
+  const finalDay = trip.endsAt && at >= shopDayBounds(trip.endsAt, trip.timeZone).from.getTime();
+  const finalWindow =
+    trip.endsAt &&
+    windows.some(
+      (window) =>
+        window.endsAt.getTime() === trip.endsAt?.getTime() &&
+        window.startsAt.getTime() <= at &&
+        at < window.endsAt.getTime(),
+    );
+  const oneSailing =
+    trip.endsAt &&
+    windows.length <= 1 &&
+    trip.endsAt.getTime() - trip.startsAt.getTime() < 24 * 60 * 60 * 1000;
+  if (!finalDay && !finalWindow && !oneSailing && now.getTime() >= windowEnd) return null;
   return reading;
 }
 
