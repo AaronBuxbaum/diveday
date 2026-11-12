@@ -84,6 +84,12 @@ describe("floorMarkersIn", () => {
     ]);
   });
 
+  it("names the demo banner's role picker", () => {
+    expect(floorMarkersIn('e.jsx("div",{id:"demo-role-picker",role:"menu"})')).toEqual([
+      "demo-role-picker",
+    ]);
+  });
+
   it("leaves a diver chunk alone", () => {
     expect(floorMarkersIn('e.jsx("a",{href:"/s/blue-mantis",children:"Book"})')).toEqual([]);
   });
