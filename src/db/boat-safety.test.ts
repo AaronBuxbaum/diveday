@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { countQueries } from "@/test/query-count";
 import { createBoat, deleteBoat, editBoat, getBoatById } from "../features/boats/store";
 import {
   departureBoatSafety,
@@ -502,6 +503,33 @@ describe("departureBoatSafetyFor", () => {
     if (!trip) throw new Error("trip insert failed");
     return trip;
   }
+
+  it("reuses an already read boat identity without another trip lookup", async () => {
+    const { db, shop } = await seededShopContext();
+    const boat = await createBoat(db, shop.id, "Known Hull", 14);
+    const trip = await departure(db, shop.id, boat.id, "2026-10-09T18:00:00Z");
+    const counted = countQueries(db);
+    const input = {
+      tripId: trip.id,
+      startsAt: trip.startsAt,
+      timeZone: ZONE,
+      now: NOW,
+      passengers: { booked: 2, boarded: 0 },
+      crew: NO_CREW,
+    };
+    const previous = await departureBoatSafetyFor(counted.db, shop.id, input);
+    const previousCount = counted.count();
+    counted.reset();
+    const reused = await departureBoatSafetyFor(counted.db, shop.id, { ...input, boatId: boat.id });
+    expect(reused).toEqual(previous);
+    expect(counted.count()).toBe(previousCount - 1);
+    expect(counted.statements.some((query) => query.includes('from "trips"'))).toBe(false);
+    counted.reset();
+    expect(
+      await departureBoatSafetyFor(counted.db, shop.id, { ...input, boatId: null }),
+    ).toBeNull();
+    expect(counted.count()).toBe(0);
+  });
 
   it("judges next week's boat by next week's date, and says nothing for one that has sailed", async () => {
     const { db, shop } = ctx;

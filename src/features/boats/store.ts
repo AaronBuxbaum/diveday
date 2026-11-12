@@ -62,11 +62,12 @@ export async function departureVessels(
   db: DbExecutor,
   shopId: string,
   tripIds: readonly string[],
-): Promise<Map<string, VesselIdentity>> {
+): Promise<Map<string, VesselIdentity & { boatId: string }>> {
   if (tripIds.length === 0) return new Map();
   const rows = await db
     .select({
       tripId: trips.id,
+      boatId: boats.id,
       name: boats.name,
       callSign: boats.callSign,
       mmsi: boats.mmsi,
@@ -79,11 +80,12 @@ export async function departureVessels(
     rows.map((row) => [
       row.tripId,
       {
+        boatId: row.boatId,
         name: row.name,
         callSign: row.callSign,
         mmsi: row.mmsi,
         workingChannel: row.workingChannel,
-      } satisfies VesselIdentity,
+      } satisfies VesselIdentity & { boatId: string },
     ]),
   );
 }
