@@ -957,7 +957,7 @@
     "src/db/waiver-issue.test.ts": 1079,
     "src/db/waivers-medical.test.ts": 1001,
     "src/features/anonymize/store.test.ts": 1626,
-    "src/features/check-in/store.test.ts": 1207,
+    "src/features/check-in/store.test.ts": 1197,
     "src/features/courses/store.test.ts": 1676,
     "src/features/divers/store.test.ts": 3034,
     "src/features/import/store.test.ts": 1074,
