@@ -39,17 +39,6 @@ overrides:
   'tmp@<0.2.6': '>=0.2.6 <0.3'
   'undici@<6.29.1': '^6.29.1'
 
-# Reviewed advisories with no patched release (issue #2826). pnpm has no expiry field: re-check
-# with `pnpm audit` monthly (issue #2238) and delete the entry once a patched release exists.
-# braces <=3.0.3, stack exhaustion on deeply nested brace patterns: reached only through
-# micromatch/fast-glob in dev tooling (vercel CLI, reg-suit), which globs our own file names, never
-# untrusted input; no request path imports it. Reviewed 2026-10-18; revisit by 2026-11-18.
-auditConfig:
-  ignoreGhsas:
-    - GHSA-vfj7-8cjw-p6xm
-
 permissions:
   drizzle-kit:
     skills: true
-
-virtualStoreType: global
