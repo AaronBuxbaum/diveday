@@ -16,6 +16,7 @@ test("a boat photo reaches public pages and can be removed", async ({ page, priv
   await page.goto(`/s/${privateShop.slug}`);
   const shelfPhoto = page.getByRole("img", { name: boat.name });
   await expect(shelfPhoto).toBeVisible();
+  await shelfPhoto.scrollIntoViewIfNeeded();
   await expect
     .poll(() => shelfPhoto.evaluate((image: HTMLImageElement) => image.naturalWidth))
     .toBeGreaterThan(0);
@@ -23,6 +24,7 @@ test("a boat photo reaches public pages and can be removed", async ({ page, priv
   await page.goto(`/s/${privateShop.slug}/trips/${trip.id}`);
   const tripPhoto = page.getByRole("img", { name: boat.name });
   await expect(tripPhoto).toBeVisible();
+  await tripPhoto.scrollIntoViewIfNeeded();
   await expect
     .poll(() => tripPhoto.evaluate((image: HTMLImageElement) => image.naturalWidth))
     .toBeGreaterThan(0);

@@ -21,7 +21,10 @@ test.describe("the storefront wears the shop's brand", () => {
     await page.goto("/s/blue-mantis");
     await expect(page.getByRole("heading", { level: 2, name: "Blue Mantis Divers" })).toBeVisible();
     await expect(
-      page.getByAltText("Elkhorn coral on Molasses Reef, sunlight from above"),
+      page.getByAltText(DEMO_SHOP_BRAND.brandHeroImageAlt, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(diverTranslator("en-US")("demo.illustrationDisclosure"), { exact: true }),
     ).toBeVisible();
     await expect(page.getByText("Since 1998")).toBeVisible();
     await expect(page.getByText("PADI 5 Star Dive Center")).toBeVisible();

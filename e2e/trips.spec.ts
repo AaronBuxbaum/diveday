@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
@@ -37,7 +38,12 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   await expect(tripList.getByText("3 seats", { exact: true })).toHaveCount(1); // 11 of 14 booked, two of them not diving
   // The sold-out wreck trip, and the weekly Saturday run sold out on its next
   // date (src/db/seed-booth.ts).
-  await expect(tripList.getByText("Full")).toHaveCount(2);
+  await expect(
+    tripList.getByText(
+      diverTranslator("en-US")("schedule.filters.partySeats", { count: 0, party: 1 }),
+      { exact: true },
+    ),
+  ).toHaveCount(2);
   await expect(page.getByRole("link", { name: "Full trip form" })).toHaveCount(0);
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
   // The hero says only what the shop wrote. DiveDay's own "find your next day

@@ -1047,13 +1047,17 @@ test.describe("courses on the shopfront", () => {
     await expect(shelf).toBeVisible();
     // Three, and no more: a shelf that grew to the whole catalog would be a
     // second page glued under the first.
-    const cards = shelf.getByRole("listitem");
+    // Session dates have their own nested list; the shelf still owns exactly
+    // three course cards, not a second catalog.
+    const cards = shelf.locator(":scope > ul > li");
     await expect(cards).toHaveCount(3);
     await expect(shelf.getByRole("link", { name: "All courses" })).toHaveAttribute(
       "href",
       "/s/blue-mantis/courses",
     );
-    await cards.first().getByRole("link").click();
+    const courseDoor = cards.first().locator(":scope > a");
+    await expect(courseDoor).toHaveAttribute("href", /^\/s\/blue-mantis\/courses\/[a-z0-9-]+$/);
+    await courseDoor.click();
     await expect(page).toHaveURL(/\/s\/blue-mantis\/courses\/[a-z0-9-]+$/);
   });
 

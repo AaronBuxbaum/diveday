@@ -9,6 +9,7 @@ import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { OFFLINE_MANIFEST_SHELL_VERSION } from "../src/lib/offline-manifests";
+import { ROLL_CALL_CAUSAL_HEADERS } from "../src/lib/roll-call-protocol";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
@@ -729,8 +730,16 @@ test("the offline shell asks who it is signed in as without pulling the roster t
   // the identity one matters more, because a cached answer on a shared tablet
   // tells the *next* shop's browser it is the *previous* shop — so the purge
   // deletes the current captain's manifests and keeps the previous shop's.
+  const legacyRoster = await page.request.get(
+    new URL("/api/offline-manifests/upcoming", page.url()).toString(),
+  );
+  expect(legacyRoster.status()).toBe(426);
+  expect(legacyRoster.headers()["cache-control"]).toBe("private, no-store");
+  expect(await legacyRoster.json()).toEqual({ error: "offline_update_required" });
   for (const path of ["/api/offline-manifests/upcoming", "/api/offline-manifests/identity"]) {
-    const response = await page.request.get(new URL(path, page.url()).toString());
+    const response = await page.request.get(new URL(path, page.url()).toString(), {
+      headers: path.endsWith("/upcoming") ? ROLL_CALL_CAUSAL_HEADERS : undefined,
+    });
     expect(response.status()).toBe(200);
     expect(response.headers()["cache-control"]).toBe("private, no-store");
   }
