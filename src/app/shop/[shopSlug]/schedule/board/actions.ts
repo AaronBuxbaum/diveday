@@ -2,8 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { redirectOnScheduleBusy } from "@/app/actions/schedule-busy";
 import { canPersonConfigureTrips } from "@/db/authz";
-import { type AppDb, getDb } from "@/db/client";
+import { getDb } from "@/db/client";
 import { getDiveSite, listDiveSites } from "@/db/dive-sites";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
@@ -16,7 +17,6 @@ import {
   isSeriesBoatOutOfService,
   listStaff,
   moveTrip,
-  setTripCrew,
 } from "@/db/trips";
 import { getBoatById, listBoats } from "@/features/boats";
 import { listActiveCourses } from "@/features/courses";
@@ -29,12 +29,7 @@ import { revalidateAndRedirect } from "@/features/navigation";
 import { signScheduleMoveResult } from "@/features/schedule-move-result";
 import { requireShopSurface, requireStaffSession } from "@/features/session";
 import { getTripLens, listTripLenses } from "@/features/trip-lenses";
-import {
-  type PatternDeparture,
-  patternDives,
-  patternSiteFields,
-  weekdayPatternFor,
-} from "@/features/weekday-pattern";
+import { patternSiteFields, weekdayPatternFor } from "@/features/weekday-pattern";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { staffTideWindowText } from "@/i18n/tide-labels";
@@ -61,8 +56,12 @@ import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { builderCourseOptions } from "./_components/builder-course-options";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
 import { addRefusalLanding, landAfterAdd } from "./add-landing";
+import { addPatternDeparture } from "./add-pattern-departure";
 import { attachRequestedInterests, requestsAskForCharter } from "./attach-interests";
+import { addClashResult } from "./clash-redirect";
 import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
+import { assignCrewAfterCreate } from "./created-crew";
+import { moveSchema } from "./move-schema";
 
 const removeDepartureForm = z.object({ tripId: z.uuid() });
 
@@ -573,9 +572,14 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     if (!firstTrip) return await invalid();
     for (const trip of series.trips) {
       if (crewPersonIds.length > 0) {
-        await setTripCrew(db, shop.id, trip.id, crewPersonIds, {
-          actorPersonId: session.user.personId,
-        });
+        await assignCrewAfterCreate(
+          db,
+          shop.id,
+          trip.id,
+          crewPersonIds,
+          session.user.personId,
+          boardPath(shopSlug),
+        );
       }
     }
     // One line for the series, on its first instance, rather than one per
@@ -613,9 +617,14 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     write: { code: "departure_added", tripId: created.id },
   });
   if (crewPersonIds.length > 0) {
-    await setTripCrew(db, shop.id, created.id, crewPersonIds, {
-      actorPersonId: session.user.personId,
-    });
+    await assignCrewAfterCreate(
+      db,
+      shop.id,
+      created.id,
+      crewPersonIds,
+      session.user.personId,
+      boardPath(shopSlug),
+    );
   }
   // A rehearsal answers nobody's request, and the writer skips it.
   await attachRequestedInterests(db, shop.id, created.id, session.user.personId, formData);
@@ -636,92 +645,12 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
           fallback: { title, endTime, capacity, plannedDives, crewPersonIds },
           boats: boatId ? await listBoats(db, shop.id) : null,
           actorPersonId: session.user.personId,
+          board: boardPath(shopSlug),
         })
       : false;
   await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
   await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
   return await landAfterAdd(db, shop, shopSlug, title, addedAlso ? 2 : 1, created.id, formData);
-}
-
-/**
- * The pattern's second departure on the same day. Its return time, when the
- * days disagreed, keeps this submission's — the desk can move it once it is on
- * the board, and a departure that is there is easier to fix than one that is
- * not. A shape the details reader refuses (a hull too small, an end before its
- * start) simply is not added; the first departure still lands.
- */
-async function addPatternDeparture(
-  db: AppDb,
-  shop: NonNullable<Awaited<ReturnType<typeof getShopById>>>,
-  input: {
-    also: PatternDeparture;
-    date: string;
-    fallback: {
-      title: string;
-      endTime: string;
-      capacity: number;
-      plannedDives: number;
-      crewPersonIds: string[];
-    };
-    boats: Awaited<ReturnType<typeof listBoats>> | null;
-    /** The staffer adding it, who is not told about their own crew choice. */
-    actorPersonId: string;
-  },
-): Promise<boolean> {
-  const { also, date, fallback } = input;
-  const boatId = also.boatId ?? undefined;
-  const boats = boatId ? (input.boats ?? (await listBoats(db, shop.id))) : null;
-  const details = tripDetailsPatch(
-    {
-      date,
-      startTime: also.startTime,
-      endTime: also.endTime ?? fallback.endTime,
-      dayCount: MIN_TRIP_DAYS,
-      priceDollars:
-        also.priceCents === null ? undefined : minorToMajor(also.priceCents, shop.currency),
-      diveMode: (also.diveMode as "boat" | "shore" | "pool" | null) ?? undefined,
-      boatId,
-      capacity: also.capacity ?? fallback.capacity,
-      boatCapacity: boatId ? (boats?.find((boat) => boat.id === boatId)?.capacity ?? null) : null,
-      boatCertifiedPassengers: boatId
-        ? (boats?.find((boat) => boat.id === boatId)?.certifiedPassengers ?? null)
-        : null,
-    },
-    shop,
-  );
-  if (!details.ok) return false;
-  if (also.lensId && !(await getTripLens(db, shop.id, also.lensId))) return false;
-  // Issue #3915: the second departure refuses a hull in the yard as the first
-  // does, in the write (#4009).
-  const created = await createTripOrRefusal(db, {
-    shopId: shop.id,
-    title: also.title ?? fallback.title,
-    capacity: also.capacity ?? fallback.capacity,
-    plannedDives: Math.max(fallback.plannedDives, also.diveSiteIds?.length ?? 0),
-    priceCents: details.patch.priceCents,
-    depositCents: details.patch.depositCents,
-    cancellationWindowHours: details.patch.cancellationWindowHours,
-    minimumBookings: details.patch.minimumBookings,
-    minimumDecisionHours: details.patch.minimumDecisionHours,
-    diveMode: details.patch.diveMode,
-    boatId: details.patch.boatId,
-    lensId: also.lensId,
-    dives: patternDives(also.diveSiteIds),
-    startsAt: details.patch.startsAt,
-    endsAt: details.patch.endsAt,
-    scheduleDays: details.patch.scheduleDays,
-  });
-  if (!created || "refusal" in created) return false;
-  await recordShopActivity(db, {
-    shopId: shop.id,
-    actorPersonId: input.actorPersonId,
-    write: { code: "departure_added", tripId: created.id },
-  });
-  const crew = also.crewPersonIds.length > 0 ? also.crewPersonIds : fallback.crewPersonIds;
-  if (crew.length > 0) {
-    await setTripCrew(db, shop.id, created.id, crew, { actorPersonId: input.actorPersonId });
-  }
-  return true;
 }
 
 /**
@@ -777,12 +706,6 @@ export async function loadMovePreflightAction(
   );
 }
 
-const moveSchema = z.object({
-  tripId: z.uuid(),
-  date: z.string(),
-  startTime: z.string(),
-});
-
 export async function moveDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
   const { session, db, shop } = await requireBoardAuthor(shopSlug);
@@ -803,7 +726,7 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
     parsed.data.tripId,
     wallTimeToUtc(wall, shop.timezone),
     { actorPersonId: session.user.personId, captureRescheduleStart: true },
-  );
+  ).catch((error: unknown) => redirectOnScheduleBusy(error, `${back}?builder=schedule-busy`));
   if (!outcome.ok) {
     await trackEvent({ name: "schedule_builder_action", action: "move", outcome: outcome.reason });
     const on = outcome.reason === "boat_out_of_service" ? `&on=${outcome.on}` : ""; // #4026
@@ -829,6 +752,7 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   // The shop-bound proof keeps a copied or invented gear count from becoming a warning.
   const params = new URLSearchParams({ builder: "moved" });
   params.set("result", signScheduleMoveResult(shop.id, crypto.randomUUID(), outcome.gearReleased));
+  addClashResult(params, shop.id, parsed.data.tripId, parsed.data.date, outcome.scheduleClashes);
   if (notice) {
     params.set("held", notice.id);
     params.set("tell", String(notice.told));
@@ -869,7 +793,10 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
     actorPersonId: session.user.personId,
     write: { code: "departure_copied", tripId: copy.id },
   });
-  revalidateAndRedirect(back, `${back}?builder=${crewCame ? "copied" : "copied-no-crew"}`);
+  revalidateAndRedirect(
+    back,
+    `${back}?builder=${crewCame === "busy" ? "copied-crew-busy" : crewCame ? "copied" : "copied-no-crew"}`,
+  );
 }
 
 export async function removeDepartureAction(shopSlug: string, formData: FormData) {

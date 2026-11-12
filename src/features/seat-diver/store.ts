@@ -566,6 +566,8 @@ export async function moveSeat(
     toTripId: string;
     bookingId: string;
     actorPersonId: string;
+    rejectScheduleClashes?: boolean;
+    expectedDay?: { day: string; timeZone: string; fromProof?: string; toProof?: string };
   },
   notices: SendRescheduleNoticesOptions = {},
 ): Promise<MoveSeatResult> {
@@ -597,6 +599,8 @@ export async function moveParty(
     toTripId: string;
     leadBookingId: string;
     actorPersonId: string;
+    rejectScheduleClashes?: boolean;
+    expectedDay?: { day: string; timeZone: string; fromProof?: string; toProof?: string };
   },
   notices: SendRescheduleNoticesOptions = {},
 ): Promise<MovePartyResult> {

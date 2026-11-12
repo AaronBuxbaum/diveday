@@ -104,6 +104,7 @@
     "seatMoveDateRequestFull": "Las plazas solicitadas para esta fecha ya están reservadas en la salida de destino.",
     "seatMoveCourse": "Una plaza de curso solo se mueve a otra sesión del mismo curso.",
     "seatMoveAlready": "Este buceador ya tiene una plaza en esa salida.",
+    "seatMoveScheduleClash": "Este buceador tiene una reserva en otra salida a esa hora.",
     "seatMoveEarlier": "Este buceador tuvo una plaza en esa salida antes. Resérvalo allí desde su lista y luego quita esta.",
     "seatMoveParty": "Este buceador reservó para otras personas. Mueve primero a cada una.",
     "seatMoveBuddy": "Primero saca a este buceador de su pareja de buceo.",

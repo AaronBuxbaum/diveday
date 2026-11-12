@@ -66,6 +66,7 @@ import {
   replayVerdict,
   type StoredOfflineEvent,
 } from "./offline-replay";
+import { lockShopScheduleShared } from "./person-schedule-lock";
 import { queryAll } from "./query-helpers";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
@@ -2000,7 +2001,12 @@ export async function recordRollCall(
       ? offlineEventInstant(input.occurredAt, now)
       : (input.occurredAt ?? now);
   const outcome = await answeringReplayAsDuplicate(
-    () => db.transaction((tx) => writeRollCall(tx, input, occurredAt)),
+    () =>
+      db.transaction(async (tx) => {
+        if (standingResultMeansSailed(input.checkpoint ?? "departure", input.status))
+          await lockShopScheduleShared(tx, input.shopId);
+        return writeRollCall(tx, input, occurredAt);
+      }),
     {
       indexName: "roll_call_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
@@ -2418,6 +2424,8 @@ export async function recordCrewRollCall(
       db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
         const checkpoint = input.checkpoint ?? "departure";
         const source = input.source ?? "live";
+        if (standingResultMeansSailed(checkpoint, input.status))
+          await lockShopScheduleShared(tx, input.shopId);
 
         // This checks the event author; crew and divers remain historical subjects of the manifest.
         const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);

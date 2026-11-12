@@ -19,6 +19,8 @@ import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
 import { rewindowTripGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
+import { type PersonScheduleClash, personScheduleClashes } from "./person-schedule-clashes";
+import { lockShopSchedule } from "./person-schedule-lock";
 import { queryAll } from "./query-helpers";
 import { rearmTripReminders } from "./reminder-rearm";
 import { crewMarks, seatMarks } from "./roll-call-subject";
@@ -119,6 +121,8 @@ export type MoveTripOutcome =
        * unit somebody thinks is packed (`rewindowTripGearReservations`).
        */
       gearReleased: number;
+      /** Conflicts after this move, read in the same transaction as the new windows. */
+      scheduleClashes?: PersonScheduleClash[];
     }
   | { ok: false; reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" }
   /** The departure's hull is in the yard on a day it would land on (#3915); `on` is the first (#4026). */
@@ -215,6 +219,7 @@ export async function moveTrip(
   const now = options.now ?? nowDate();
   let moved = false;
   const outcome = await db.transaction(async (tx): Promise<MoveTripOutcome> => {
+    await lockShopSchedule(tx, shopId);
     await lockTripRevisionNotificationFence(tx, shopId, tripId, "revision-write");
     const [existing] = await tx
       .select()
@@ -334,6 +339,7 @@ export async function moveTrip(
       trip,
       previousStartsAt: existing.startsAt,
       gearReleased: gear.released,
+      scheduleClashes: await personScheduleClashes(tx, shopId, tripId),
     };
   });
   // Late news goes now, not on the hour (`flushUrgentCrewNotices`).

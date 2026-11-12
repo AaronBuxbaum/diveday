@@ -1,5 +1,6 @@
 "use server";
 import { z } from "zod";
+import { redirectOnScheduleBusy } from "@/app/actions/schedule-busy";
 import { canPersonDeleteDiver, canPersonErasePersonalData, canPersonMergeDiver } from "@/db/authz";
 import { DIVER_MERGE_FIELDS, type DiverMergeChoices, mergeDiverRecords } from "@/db/diver-merge";
 import { getMergedIntoPersonId } from "@/db/people";
@@ -62,6 +63,12 @@ export async function mergeDiverAction(shopSlug: string, personId: string, formD
     choices,
     // The checkbox posts the acknowledgement the staffer read, and only when ticked.
     acknowledged: form.acknowledgement || undefined,
+  }).catch((error: unknown) => {
+    const preview = shopPath(staff.user.shopSlug, "divers", personId, "merge", survivorId);
+    return redirectOnScheduleBusy(
+      error,
+      noticeUrl(preview, "merge-schedule-busy", { form: "merge" }),
+    );
   });
   if (!result.ok) {
     if (result.reason === "not_authorized") {

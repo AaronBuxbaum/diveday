@@ -1,5 +1,6 @@
 import { and, eq, gt, isNotNull, isNull, notExists } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { createBooking } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import {
   activityEvents,
@@ -11,6 +12,8 @@ import {
   tripStageEvents,
   trips,
 } from "@/db/schema";
+import { createTrip, setTripStatus } from "@/db/trips";
+import { openPersonClashResult } from "@/features/person-clash-result";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
 import { advanceClock } from "@/test/clock";
@@ -47,9 +50,13 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("../../../../../features/session/rules");
-const { cancelTripAction, correctDiveSafetyRecord, saveDetails, saveDetailsSection } = await import(
-  "./details-actions"
-);
+const {
+  cancelTripAction,
+  correctDiveSafetyRecord,
+  reinstateTripAction,
+  saveDetails,
+  saveDetailsSection,
+} = await import("./details-actions");
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -122,6 +129,96 @@ async function movedLines(db: AppDb, tripId: string) {
 }
 
 describe("the details form in the activity log", () => {
+  it("carries transaction collisions to the reinstated departure", async () => {
+    const { db, shop } = await context();
+    const make = (title: string) =>
+      createTrip(db, {
+        shopId: shop.id,
+        title,
+        startsAt: new Date("2035-08-04T08:00:00Z"),
+        endsAt: new Date("2035-08-04T10:00:00Z"),
+        capacity: 8,
+      });
+    const other = await make("Other departure");
+    const reinstated = await make("Reinstated");
+    if (!other || !reinstated) throw new Error("expected trips");
+    const first = await createBooking(db, {
+      shopId: shop.id,
+      tripId: other.id,
+      actor: "staff",
+      fullName: "Test Diver",
+      email: "reinstate-clash@example.test",
+    });
+    if (!first.ok) throw new Error(first.reason);
+    const second = await createBooking(db, {
+      shopId: shop.id,
+      tripId: reinstated.id,
+      actor: "staff",
+      personId: first.personId,
+    });
+    if (!second.ok) throw new Error(second.reason);
+    await setTripStatus(db, shop.id, reinstated.id, "cancelled");
+    const url = new URL(
+      await redirectedTo(() => reinstateTripAction(shop.slug, reinstated.id)),
+      "https://dive.day",
+    );
+    expect(
+      openPersonClashResult(
+        url.searchParams.get("clashResult") ?? undefined,
+        shop.id,
+        reinstated.id,
+      ),
+    ).toMatchObject({
+      clashes: [
+        expect.objectContaining({ personName: "Test Diver", otherTitle: "Other departure" }),
+      ],
+      omitted: 0,
+    });
+  });
+
+  it("carries transaction collisions after a timing edit", async () => {
+    const { db, shop, trip } = await context();
+    const targetStart = new Date(trip.startsAt.getTime() + 60 * 60_000);
+    const targetEnd = new Date(trip.endsAt.getTime() + 60 * 60_000);
+    const other = await createTrip(db, {
+      shopId: shop.id,
+      title: "Other departure",
+      startsAt: targetStart,
+      endsAt: targetEnd,
+      capacity: 8,
+    });
+    if (!other) throw new Error("expected departure");
+    const first = await createBooking(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      actor: "staff",
+      fullName: "Test Diver",
+      email: "details-clash@example.test",
+    });
+    if (!first.ok) throw new Error(first.reason);
+    const second = await createBooking(db, {
+      shopId: shop.id,
+      tripId: other.id,
+      actor: "staff",
+      personId: first.personId,
+    });
+    if (!second.ok) throw new Error(second.reason);
+    const url = new URL(
+      await redirectedTo(() =>
+        saveDetails(shop.slug, trip.id, detailsForm(trip, shop.timezone, 60)),
+      ),
+      "https://dive.day",
+    );
+    expect(
+      openPersonClashResult(url.searchParams.get("clashResult") ?? undefined, shop.id, trip.id),
+    ).toMatchObject({
+      clashes: [
+        expect.objectContaining({ personName: "Test Diver", otherTitle: "Other departure" }),
+      ],
+      omitted: 0,
+    });
+  });
+
   it("preserves the Details tab after its one-shot saved notice is removed", async () => {
     const { shop, trip } = await context();
     const redirect = await redirectedTo(() =>

@@ -14,6 +14,7 @@ import {
   recordRollCall,
 } from "./manifests";
 import { CLIENT_EVENT_CONFLICT } from "./offline-replay";
+import { lockShopSchedule } from "./person-schedule-lock";
 import { getBookingReadiness } from "./readiness";
 import { bookings, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";
@@ -118,6 +119,49 @@ async function statusOf(db: AppDb, bookingId: string): Promise<string> {
 }
 
 describePostgres("the counter's mark and the crew's tap, racing for one booking", () => {
+  it("does not hold an unrelated boarding tap behind a schedule edit", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, bookingId, staffId } = await readyDiverAtTheDock(pg.db);
+    let ready!: () => void;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const proceed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const holder = pg.connect().transaction(async (tx) => {
+      await lockShopSchedule(tx, shopId);
+      ready();
+      await proceed;
+    });
+    await held;
+    const tap = recordRollCall(pg.connect(), {
+      shopId,
+      tripId,
+      bookingId,
+      recordedByPersonId: staffId,
+      status: "boarded",
+    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let observed: Awaited<typeof tap> | "parked";
+    try {
+      observed = await Promise.race([
+        tap,
+        new Promise<"parked">((resolve) => {
+          timer = setTimeout(() => resolve("parked"), 3000);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+      release();
+      await holder;
+    }
+    await tap;
+    expect(observed).not.toBe("parked");
+    if (observed !== "parked") expect(observed.ok).toBe(true);
+  });
+
   it("never leaves a boarded diver sitting on a released seat", async () => {
     const pg = await postgresTestDb();
     const { shopId, tripId, startsAt, bookingId, staffId } = await readyDiverAtTheDock(pg.db);

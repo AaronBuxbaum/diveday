@@ -106,6 +106,7 @@
     "seatMoveDateRequestFull": "The requested seats for this date are already booked on the target departure.",
     "seatMoveCourse": "A course seat moves only to another session of the same course.",
     "seatMoveAlready": "This diver already has a seat on that departure.",
+    "seatMoveScheduleClash": "This diver is booked on another departure at that time.",
     "seatMoveEarlier": "This diver had a seat on that departure before. Seat them there from its Divers tab, then remove this one.",
     "seatMoveParty": "This diver booked for others. Move each of them first.",
     "seatMoveBuddy": "Take this diver off their buddy team first.",
