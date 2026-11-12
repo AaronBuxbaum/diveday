@@ -10,9 +10,9 @@ import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { manifestCausalContexts } from "./roll-call-causal-store";
 import { rollCallEvents } from "./schema";
 
-// Published packing layer: its tree predates the causal migrations. Unlike the
-// original local proof branch, this commit is available in a fresh CI checkout.
-const PRE_CAUSAL = "966d40f19b2ae5cd490216b3791947436147373d";
+// Main's pre-causal release tree remains reachable after stack squash/branch
+// deletion. Later migrations are still applied from the current checkout.
+const PRE_CAUSAL = "e45c2e8a9456e9aab5cb26c11fcae2ee815d649c";
 const WITHDRAWAL = "20261112114508_retain-unknown-roll-call-withdrawals";
 const INITIALIZER = "drizzle/20261112045647_initialize-retained-roll-call-evidence/migration.sql";
 
