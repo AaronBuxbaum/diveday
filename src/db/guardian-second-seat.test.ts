@@ -73,11 +73,11 @@ describe("a child marked Under 18 on one seat, with a second seat nobody marked"
     });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
     expect(
-      await getWaiverSignerOnFile(
-        ctx.db,
-        { shopId: ctx.shop.id, personId: ctx.person.id, bookingId: ctx.second.id },
-        now,
-      ),
+      await getWaiverSignerOnFile(ctx.db, {
+        shopId: ctx.shop.id,
+        personId: ctx.person.id,
+        bookingId: ctx.second.id,
+      }),
     ).toMatchObject({ minorDeclared: true });
     expect(
       await completeWaiver(ctx.db, issued.key, {
@@ -87,6 +87,30 @@ describe("a child marked Under 18 on one seat, with a second seat nobody marked"
         now,
       }),
     ).toEqual({ ok: false, reason: "guardian_required" });
+  });
+
+  it("lets an adult with a date of birth on file sign alone, whatever another seat says", async () => {
+    const ctx = await twoSeats();
+    await ctx.db
+      .update(people)
+      .set({ dateOfBirth: "1985-03-02" })
+      .where(eq(people.id, ctx.person.id));
+    const issued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.second.id,
+      now,
+    });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    expect(
+      (
+        await completeWaiver(ctx.db, issued.key, {
+          signerName: ctx.person.fullName,
+          agreed: true,
+          medicalAnswers: clearAnswers,
+          now,
+        })
+      ).ok,
+    ).toBe(true);
   });
 
   it("holds the second seat at the rail over a release the child signed alone", async () => {
