@@ -42,7 +42,7 @@
   a shop fills in, so taking its first whitespace token assumes the given name was typed first and
   publishes the **surname** for a row entered "Tanaka Keiko" or "Smith, John" — to an anonymous,
   indexed page, and not to the disclosure anybody agreed to. Defaulted to that first token so the
-  ordinary case is still one tap, and paired with `crew_public_consent_at` by a check constraint
+  ordinary case is still one tap. This consents to the name alone; a public staff profile has its own separate opt-in. The name is paired with `crew_public_consent_at` by a check constraint
   in both directions: a consent with nothing to show would render an empty crew line, and a name
   left standing after a withdrawal would republish itself the moment anything set the stamp again.
 - **Our year** — the shopfront panel at the foot of the public schedule that states the shop's year
@@ -63,3 +63,5 @@
   as a promise. Beside it, when the shop has connected its own WhatsApp Business sender, "Message
   us on WhatsApp" links its printed number (`shopPublicWhatsAppNumber`, which selects that one
   column and nothing of the stored credential).
+
+- **Public staff profile** — a staff member's self-authored introduction and pictures, published only after that person opts in independently of departure-name consent. A shop can hide all such introductions with its Features switch. Removing the person from the team or disabling their account hides the profile immediately.

@@ -180,6 +180,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "field_guide_enabled",
       "seat_sold_alerts_enabled",
       "private_charters_enabled",
+      "public_staff_profiles_enabled",
       "contact_email",
       "contact_phone",
       "address_street",
@@ -316,6 +317,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.fieldGuideEnabled,
         shop.seatSoldAlertsEnabled,
         shop.privateChartersEnabled,
+        shop.publicStaffProfilesEnabled,
         shop.contactEmail,
         shop.contactPhone,
         shop.addressStreet,
@@ -557,6 +559,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // a shop restoring this bundle needs to know not just that somebody
       // agreed, but to what.
       "crew_public_name",
+      "public_staff_profile_enabled",
+      "public_staff_profile",
       "courtesy_email_opt_out_at",
       // The diver's own "I'm not certified yet", which is a statement
       // about them and not a card — it has no row in cards.csv
@@ -623,6 +627,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.spokenLanguages.length > 0 ? [...row.spokenLanguages].sort().join("; ") : null,
         row.crewPublicConsentAt,
         row.crewPublicName,
+        row.publicStaffProfileEnabled,
+        row.publicStaffProfile ? JSON.stringify(row.publicStaffProfile) : null,
         row.courtesyEmailOptOutAt,
         row.noCertificationDeclaredAt,
         row.noCertificationClearedAt,

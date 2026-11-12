@@ -4602,5 +4602,9 @@
       "heading_in": "Heading in",
       "home": "Home"
     }
+  },
+  "staffProfiles": {
+    "heading": "Who you’ll dive with",
+    "since": "Diving since {year}"
   }
 }

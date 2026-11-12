@@ -97,6 +97,7 @@ describe("the Features page's save", () => {
       "publicConditions",
       "fieldGuide",
       "conservation",
+      "publicStaffProfiles",
       "dateRequests",
       "privateCharters",
       "lastMinuteList",

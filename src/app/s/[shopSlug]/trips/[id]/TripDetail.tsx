@@ -6,6 +6,7 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { getDb } from "@/db/client";
 import { checkoutMode } from "@/db/stripe-accounts";
+import { assignedPublicStaffProfiles } from "@/features/public-staff-profiles";
 import { connectionForRoute } from "@/features/render-connection";
 import { shopBySlugCached } from "@/features/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
@@ -431,6 +432,7 @@ export async function TripDetailPage({
                 two stand a section apart. An empty block takes no room: its
                 margins collapse through it. */}
             <TripSupportingDetails
+              profiles={await assignedPublicStaffProfiles(db, shop.id, [trip], shop.timezone)}
               briefings={diveBriefings}
               crew={publicCrew}
               locale={locale}

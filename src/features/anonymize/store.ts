@@ -338,6 +338,8 @@ const ERASED_PERSON_COLUMNS = {
   // refused by the database.
   crewPublicConsentAt: null,
   crewPublicName: null,
+  publicStaffProfileEnabled: false,
+  publicStaffProfile: null,
 } as const;
 
 /**
@@ -804,7 +806,7 @@ type ScrubSectionContext = ScrubContext & {
   /** Whether the diver holds any booking here — the guard on every booking sweep. */
   owned: boolean;
   retire: (
-    kind: "recap_photo" | "waiver_document" | "payment_receipt",
+    kind: "recap_photo" | "waiver_document" | "payment_receipt" | "staff_profile",
     url: string | null,
   ) => Promise<void>;
   /** What a sweep found that the caller acts on after the commit. */
@@ -824,6 +826,14 @@ async function scrubPersonRecord(
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId, now } = ctx;
+  const profileOwners = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
+  const profileRows = await tx
+    .select({ profile: people.publicStaffProfile })
+    .from(people)
+    // diveday:allow-deleted-people: erasure includes removed staff and merged shells.
+    .where(and(eq(people.shopId, shopId), inArray(people.id, profileOwners)));
+  for (const row of profileRows)
+    for (const url of row.profile?.photoUrls ?? []) await ctx.retire("staff_profile", url);
   await tx
     .update(people)
     .set({

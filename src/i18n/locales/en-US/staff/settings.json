@@ -560,6 +560,11 @@
         "heading": "Wallet passes",
         "label": "Offer departure passes in Apple and Google Wallet",
         "description": "The booked departure follows changes to the plan."
+      },
+      "publicStaffProfiles": {
+        "heading": "Public crew introductions",
+        "label": "Show public crew introductions",
+        "description": "Show introductions written and shared by each staff member."
       }
     },
     "crewSchedule": {
@@ -592,7 +597,8 @@
         "shop_logo": "Shop logo",
         "shop_hero": "Shop cover photo",
         "boat_photo": "Boat photo",
-        "payment_receipt": "Imported receipt"
+        "payment_receipt": "Imported receipt",
+        "staff_profile": "Staff profile picture"
       },
       "mediaDeletions": {
         "sectionLabel": "Photos that didn’t finish deleting",

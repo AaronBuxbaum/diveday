@@ -43,6 +43,7 @@ export const mediaDeletionKind = pgEnum("media_deletion_kind", [
   "shop_logo",
   "arrival_photo",
   "shop_hero",
+  "staff_profile",
   "boat_photo",
   /**
    * A receipt document re-stored from a prior system's export

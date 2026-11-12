@@ -7,6 +7,7 @@ import { ShopReviews } from "@/components/ShopReviews";
 import { PAGE_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { type AppDb, getDb } from "@/db/client";
 import { listRunningPublicSeries, type pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { listPublicStaffProfiles } from "@/features/public-staff-profiles";
 import { connectionForRoute } from "@/features/render-connection";
 import { listPublishedShopReviews } from "@/features/reviews";
 import { shopBySlugCached } from "@/features/shops-cached";
@@ -39,6 +40,7 @@ import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { OurYearSection } from "./_components/OurYear";
 import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
+import { PublicStaffProfiles } from "./_components/PublicStaffProfiles";
 import { ScheduleFilterBar } from "./_components/ScheduleFilterBar";
 import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { SchedulePaperSheet, scheduleSheetEmpty } from "./_components/SchedulePaperSheet";
@@ -63,11 +65,7 @@ import {
 import { SHOP_MAIN_CLASS } from "./_components/shop-main";
 import { WeekLedger } from "./_components/WeekLedger";
 
-// `instant = true`: this route has a real static shell. Every request-scoped
-// read below sits inside this segment's `loading.tsx` boundary, so the frame
-// paints without waiting on the request and the data streams into it —
-// and `next build` fails if that ever stops being true.
-// See ADR 20260804-instant-navigation.
+// Request reads stream inside the loading boundary (ADR 20260804-instant-navigation).
 export const instant = true;
 
 /**
@@ -466,6 +464,7 @@ export default async function SchedulePage({
         t={t}
         className={SECTION_GAP}
       />
+      <PublicStaffProfiles profiles={await listPublicStaffProfiles(db, shop.id)} locale={locale} />
       <BoatsShelf boats={boats} t={t} className={SECTION_GAP} />
       <MonthSightingsSection shop={shop} tz={tz} locale={locale} t={t} />
       {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget

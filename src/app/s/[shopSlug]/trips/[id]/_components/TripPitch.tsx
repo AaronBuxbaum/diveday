@@ -14,6 +14,8 @@ import { diverTranslator } from "@/i18n/messages";
 import { siteFit } from "@/lib/diver-planning";
 import { formatShortDate } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
+import type { PublicStaffProfile } from "@/lib/public-staff-profile";
+import { PublicStaffProfiles } from "../../../_components/PublicStaffProfiles";
 
 import { TripCrewLine } from "./TripCrewLine";
 import type { DiveBriefing } from "./types";
@@ -64,6 +66,7 @@ const EMBED_TILE_PX = [117, 413] as const;
 export function TripPitch({
   briefings,
   crew,
+  profiles = [],
   locale,
   timeZone,
   logEntry,
@@ -72,6 +75,7 @@ export function TripPitch({
   briefings: DiveBriefing[];
   /** Only the crew who said yes (`tripPublicCrew`); empty for nearly every shop. */
   crew: readonly PublicCrewMember[];
+  profiles?: readonly PublicStaffProfile[];
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   /** The shop's zone, for the date on the log entry's miniature. */
@@ -102,7 +106,7 @@ export function TripPitch({
   // row, and the certification the trip asks for is the page's own
   // requirement note under this block.
   const fitWord = dayFitWord(briefings, t);
-  const doorHasContent = pitchHasDoor(briefings, crew, Boolean(logEntry));
+  const doorHasContent = profiles.length > 0 || pitchHasDoor(briefings, crew, Boolean(logEntry));
   if (!fitWord && tiles.length === 0 && !doorHasContent) return null;
   return (
     <section>
@@ -178,6 +182,7 @@ export function TripPitch({
             <TripRoutes briefings={briefings} locale={locale} />
             <TripSiteNotes briefings={briefings} locale={locale} />
             <TripCrewLine crew={crew} locale={locale} className="mt-6" />
+            <PublicStaffProfiles profiles={profiles} locale={locale} />
             {logEntry ? (
               <div className={pitchHasDoor(briefings, crew) ? "mt-6" : undefined}>
                 <LogEntryPreview

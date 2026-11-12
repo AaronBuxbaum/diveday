@@ -4602,5 +4602,9 @@
       "heading_in": "De regreso",
       "home": "En el muelle"
     }
+  },
+  "staffProfiles": {
+    "heading": "Con quién vas a bucear",
+    "since": "Buceando desde {year}"
   }
 }

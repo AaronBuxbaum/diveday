@@ -346,6 +346,7 @@ export const shops = pgTable(
      * nothing already asked is touched.
      */
     privateChartersEnabled: boolean("private_charters_enabled").notNull().default(true),
+    publicStaffProfilesEnabled: boolean("public_staff_profiles_enabled").notNull().default(true),
     /**
      * The instant the last seat-sold alert pass covered, the cursor that makes
      * an hour's batch exactly once: the next pass reports the seats sold after
@@ -1193,6 +1194,11 @@ export const people = pgTable(
      * no failing test, which is the shape that ships silently.
      */
     crewPublicName: text("crew_public_name"),
+    publicStaffProfileEnabled: boolean("public_staff_profile_enabled").notNull().default(false),
+    publicStaffProfile:
+      jsonb("public_staff_profile").$type<
+        import("../../lib/public-staff-profile").PublicStaffProfile
+      >(),
     /**
      * Set once this person self-serves out of courtesy email — every kind
      * that asks something of the diver's attention beyond their own booking

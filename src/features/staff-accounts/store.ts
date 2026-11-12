@@ -736,7 +736,7 @@ export async function removeStaffMember(
     // person is still here to change it.
     await tx
       .update(people)
-      .set({ crewPublicConsentAt: null, crewPublicName: null })
+      .set({ crewPublicConsentAt: null, crewPublicName: null, publicStaffProfileEnabled: false })
       .where(and(eq(people.shopId, input.shopId), eq(people.id, input.personId)));
     return { ok: true };
   });
