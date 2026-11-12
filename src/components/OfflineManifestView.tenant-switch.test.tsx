@@ -279,7 +279,9 @@ it("shows the tenant-neutral recovery notice on a selected trip after shop verif
     ),
   ).toBeInTheDocument();
   await waitFor(() =>
-    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-44", "reef-runners", 1),
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-44", "reef-runners", 1, {
+      refreshWhenQuiet: true,
+    }),
   );
   await act(async () => resolveTripSync({ ...selected, events: [] }));
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
@@ -397,6 +399,7 @@ it("clears caught-up copy while reconnect waits for fresh tenant verification", 
     "trip-reconnect-51",
     "blue-mantis",
     1,
+    { refreshWhenQuiet: true },
   );
   expect(pendingMark.syncStatus).toBe("pending");
 });
@@ -442,7 +445,9 @@ it("withholds selected-trip caught-up copy until the tenant-scoped inventory set
   render(<OfflineManifestView />);
 
   await waitFor(() =>
-    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-45", "reef-runners", 1),
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-45", "reef-runners", 1, {
+      refreshWhenQuiet: true,
+    }),
   );
   await waitFor(() => expect(syncOfflineManifest).toHaveResolved());
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
@@ -482,7 +487,9 @@ it("keeps caught-up copy suppressed when the selected-trip inventory read fails"
   render(<OfflineManifestView />);
 
   await waitFor(() =>
-    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-46", "reef-runners", 1),
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-b-46", "reef-runners", 1, {
+      refreshWhenQuiet: true,
+    }),
   );
   await waitFor(() => expect(syncOfflineManifest).toHaveResolved());
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
@@ -708,7 +715,9 @@ it("keeps a newer sync failure authoritative over inventory captured before it",
   await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(1));
   await waitFor(() => expect(inventoryReads.length).toBeGreaterThan(0));
   await waitFor(() =>
-    expect(syncOfflineManifest).toHaveBeenNthCalledWith(1, "trip-retry-49", "blue-mantis", 1),
+    expect(syncOfflineManifest).toHaveBeenNthCalledWith(1, "trip-retry-49", "blue-mantis", 1, {
+      refreshWhenQuiet: true,
+    }),
   );
 
   await act(async () => window.dispatchEvent(new Event("online")));
@@ -783,7 +792,11 @@ it("quarantines a selected roster through failed verification, then scopes it af
 
   render(<OfflineManifestView />);
   expect(await screen.findByText("Dana Divemaster")).toBeInTheDocument();
-  await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis", 1));
+  await waitFor(() =>
+    expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1", "blue-mantis", 1, {
+      refreshWhenQuiet: true,
+    }),
+  );
 
   const lookupsBeforeMismatch = identityLookups;
   mismatch = true;
