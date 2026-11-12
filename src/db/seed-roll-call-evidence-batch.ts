@@ -106,7 +106,7 @@ function latestRow(rows: readonly EvidenceRow[]): EvidenceRow | undefined {
 /**
  * Array authorship keeps the scalar author's prefix order, not capture-clock
  * order. Read/lock the scopes once, INSERT only fully projected rows in a batch,
- * then run the unchanged SQL refresh once per affected subject/checkpoint.
+ * then retain SQL refresh for existing evidence or scopes not proven fresh.
  * Live crew taps never use this fixture-only path.
  */
 export async function seedRollCallEvidenceBatch(
@@ -126,7 +126,7 @@ export async function seedRollCallEvidenceBatch(
         events.map((value) => [JSON.stringify([value.shopId, value.tripId]), value]),
       ).values(),
     ];
-    await tx
+    const lockedTrips = await tx
       .select({ id: trips.id })
       .from(trips)
       .where(
@@ -141,6 +141,7 @@ export async function seedRollCallEvidenceBatch(
       )
       .orderBy(asc(trips.id))
       .for("no key update");
+    const lockedTripIds = new Set(lockedTrips.map((row) => row.id));
     const dayCounts = await tx
       .select({ tripId: tripScheduleDays.tripId, n: count() })
       .from(tripScheduleDays)
@@ -171,9 +172,17 @@ export async function seedRollCallEvidenceBatch(
             .from(rollCallEvents)
             .where(or(...[...scopes.values()].map(({ subject }) => scopeWhere(subject))))
             .orderBy(...oldestMarkFirst());
+    const preExistingScopes = new Set<string>();
+    let hasUnmappedExistingEvidence = false;
     for (const row of existing) {
       const subject = subjectOf(row);
-      if (subject) scopes.get(scopeKey(subject))?.rows.push(row);
+      if (subject) {
+        const key = scopeKey(subject);
+        preExistingScopes.add(key);
+        const scope = scopes.get(key);
+        if (scope) scope.rows.push(row);
+        else hasUnmappedExistingEvidence = true;
+      } else hasUnmappedExistingEvidence = true;
     }
 
     // Reserve the database's actual default values, in input-auto order.
@@ -331,7 +340,21 @@ export async function seedRollCallEvidenceBatch(
         .set(revision.projection)
         .where(and(scopeWhere(revision.subject), eq(rollCallEvents.id, id)));
     }
-    for (const { subject } of scopes.values()) await refreshCausalRollCall(tx, subject);
+    for (const [key, { subject }] of scopes) {
+      // An initially empty, locked scope contains only these fully projected
+      // INSERT values, including every prefix's latest-per-day revision. A SQL
+      // refresh would only repeat that fold and rewrite the same new rows.
+      // Existing evidence keeps the unchanged SQL refresh and revision path.
+      // An author fixture naming no live lock target retains the old path.
+      // SQL UUID equality can match evidence whose returned identity does not
+      // map to an authored key. Such a result cannot prove any scope fresh.
+      if (
+        hasUnmappedExistingEvidence ||
+        preExistingScopes.has(key) ||
+        !lockedTripIds.has(subject.tripId)
+      )
+        await refreshCausalRollCall(tx, subject);
+    }
     // Preserve authored return order without relying on SQL RETURNING order.
     const byId = new Map(written.map((row) => [row.id, row]));
     return values.map((value) => {

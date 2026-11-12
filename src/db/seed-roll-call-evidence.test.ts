@@ -8,7 +8,7 @@ import type { DbExecutor } from "./client";
 import { getTripManifest } from "./manifests";
 import { createPerson } from "./people";
 import { scopedCausalEvidence } from "./roll-call-causal-store";
-import { bookings, rollCallEvents, tripAssignments, tripScheduleDays } from "./schema";
+import { bookings, rollCallEvents, tripAssignments, tripScheduleDays, trips } from "./schema";
 import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "./seed-roll-call-evidence";
 
 async function fixture() {
@@ -32,6 +32,149 @@ async function fixture() {
 }
 
 describe("fixture evidence authorship", () => {
+  it("retains the scalar stored projection when SQL finds an existing UUID alias outside the input scope keys", async () => {
+    const { db, base } = await fixture();
+    const bookingId = base.bookingId.toUpperCase();
+    expect(bookingId).not.toBe(base.bookingId);
+    await seedRollCallEvidence(db, {
+      ...base,
+      status: "not_boarded",
+      note: "Original prior report",
+    });
+    const input: SeedRollCallEvidenceInput = {
+      ...base,
+      bookingId,
+      id: crypto.randomUUID(),
+      status: "boarded",
+    };
+    const read = async (tx: DbExecutor) => {
+      const [row] = await tx
+        .select()
+        .from(rollCallEvents)
+        .where(eq(rollCallEvents.id, input.id as string));
+      const { seq: _seq, ...stored } = row;
+      return stored;
+    };
+    let scalar: Awaited<ReturnType<typeof read>> | undefined;
+    const rollback = new Error("discard UUID alias scalar oracle");
+    await expect(
+      db.transaction(async (tx) => {
+        await seedRollCallEvidence(tx, input);
+        scalar = await read(tx);
+        throw rollback;
+      }),
+    ).rejects.toBe(rollback);
+    expect(scalar).toMatchObject({ status: "not_boarded", evidenceConflict: true });
+    await seedRollCallEvidence(db, [input]);
+    expect(await read(db)).toEqual(scalar);
+  });
+
+  it("retains scalar refresh when the trip lock found no live row", async () => {
+    const counted = await countingShopContext();
+    const at = nowDate();
+    const [trip] = await counted.db
+      .insert(trips)
+      .values({
+        shopId: counted.shop.id,
+        title: "Deleted fixture lock boundary",
+        startsAt: at,
+        endsAt: new Date(at.getTime() + 3_600_000),
+        capacity: 4,
+        deletedAt: at,
+      })
+      .returning();
+    if (!trip) throw new Error("deleted fixture trip missing");
+    const captain = await createPerson(counted.db, {
+      shopId: counted.shop.id,
+      fullName: "Deleted fixture recorder",
+      email: null,
+      phone: null,
+      origin: "waitlist",
+      roles: ["captain"],
+    });
+    await counted.db.insert(tripAssignments).values({ tripId: trip.id, personId: captain.id });
+    counted.reset();
+    const rows = await seedRollCallEvidence(counted.db, [
+      {
+        shopId: counted.shop.id,
+        tripId: trip.id,
+        subjectKind: "crew",
+        crewPersonId: captain.id,
+        recordedByPersonId: captain.id,
+        checkpoint: "after_dive_1",
+        occurredAt: at,
+        status: "boarded",
+      },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(
+      counted.statements.some((statement) => /^update "roll_call_events"/i.test(statement)),
+    ).toBe(true);
+  });
+
+  it("does not add SQL refresh round trips for each distinct fresh subject", async () => {
+    const counted = await countingShopContext();
+    const at = nowDate();
+    const [trip] = await counted.db
+      .insert(trips)
+      .values({
+        shopId: counted.shop.id,
+        title: "Fresh scope query budget",
+        startsAt: at,
+        endsAt: new Date(at.getTime() + 3_600_000),
+        capacity: 32,
+      })
+      .returning();
+    if (!trip) throw new Error("fresh fixture trip missing");
+    const recorder = await createPerson(counted.db, {
+      shopId: counted.shop.id,
+      fullName: "Fresh fixture recorder",
+      email: null,
+      phone: null,
+      origin: "waitlist",
+      roles: ["captain"],
+    });
+    await counted.db.insert(tripAssignments).values({ tripId: trip.id, personId: recorder.id });
+    const events: SeedRollCallEvidenceInput[] = [];
+    for (let index = 0; index < 25; index++) {
+      const person = await createPerson(counted.db, {
+        shopId: counted.shop.id,
+        fullName: `Fresh fixture diver ${index}`,
+        email: null,
+        phone: null,
+        origin: "waitlist",
+      });
+      const [seat] = await counted.db
+        .insert(bookings)
+        .values({
+          shopId: counted.shop.id,
+          tripId: trip.id,
+          personId: person.id,
+          bookedAs: "diver",
+          status: "booked",
+        })
+        .returning();
+      if (!seat) throw new Error("fresh fixture seat missing");
+      events.push({
+        shopId: counted.shop.id,
+        tripId: trip.id,
+        bookingId: seat.id,
+        recordedByPersonId: recorder.id,
+        checkpoint: "after_dive_1",
+        meetingDay: 0,
+        occurredAt: at,
+        status: "boarded",
+      });
+    }
+    counted.reset();
+    await seedRollCallEvidence(counted.db, events.slice(0, 1));
+    const one = counted.count();
+    counted.reset();
+    await seedRollCallEvidence(counted.db, events.slice(1));
+    console.info("fresh-subject SQL counts", { one, twentyFour: counted.count() });
+    expect(counted.count()).toBe(one);
+  });
+
   for (const role of ["diver", "crew"] as const) {
     for (const sequence of [
       "explicit out of order",
@@ -173,115 +316,151 @@ describe("fixture evidence authorship", () => {
 
   for (const role of ["diver", "crew"] as const) {
     for (const observesPrevious of [false, true]) {
-      it(`stores the scalar author's exact audit and day projections when batched: ${role}, sequential=${observesPrevious}`, async () => {
-        const { db, base, reef, staff } = await fixture();
-        await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, reef.id));
-        await db.insert(tripScheduleDays).values(
-          [0, 1].map((day) => ({
-            tripId: reef.id,
-            dayNumber: day + 1,
-            startsAt: new Date(base.occurredAt.getTime() + day * 86_400_000),
-            endsAt: new Date(base.occurredAt.getTime() + day * 86_400_000 + 3_600_000),
-          })),
-        );
-        const ids = Array.from({ length: 8 }, () => crypto.randomUUID());
-        const common = {
-          ...base,
-          ...(role === "crew"
-            ? { bookingId: null, crewPersonId: staff.id, subjectKind: "crew" as const }
-            : {}),
-        };
-        // An already stored day's latest row is revised by the unknown-day
-        // withdrawal before a later authored mark makes it historical.
-        await seedRollCallEvidence(db, { ...common, id: ids[7], status: "boarded", meetingDay: 1 });
-        const events: SeedRollCallEvidenceInput[] = [
-          { ...common, id: ids[0], status: "not_boarded", note: "Original report" },
-          {
-            ...common,
-            id: ids[1],
-            status: "boarded",
-            occurredAt: new Date(base.occurredAt.getTime() - 60_000),
-          },
-          {
-            ...common,
-            id: ids[3],
-            status: "cleared",
-            meetingDay: undefined,
-            note: "Day not recorded",
-          },
-          { ...common, id: ids[2], status: "boarded", meetingDay: 1 },
-          {
-            ...common,
-            id: ids[4],
-            status: "boarded",
-            meetingDay: 1,
-            observedEvidenceIds: [
-              canonicalRollCallEvidenceId({ id: ids[2] }),
-              canonicalRollCallEvidenceId({ id: ids[3] }),
-            ],
-            reconcilesEvidence: true,
-          },
-          {
-            ...common,
-            id: ids[5],
-            status: "cleared",
-            meetingDay: 1,
-            observedEvidenceIds: [canonicalRollCallEvidenceId({ id: ids[4] })],
-            retractsEventId: ids[4],
-          },
-          {
-            ...common,
-            id: ids[6],
-            status: "not_boarded",
-            checkpoint: "departure",
-            clientEventId: crypto.randomUUID(),
-          },
-        ];
-        const rollback = new Error("discard scalar oracle");
-        let scalar: Omit<typeof rollCallEvents.$inferSelect, "seq">[] = [];
-        const scalarReturned: Omit<typeof rollCallEvents.$inferSelect, "seq">[] = [];
-        await expect(
-          db.transaction(async (tx) => {
-            for (const event of events) {
-              const [{ seq: _seq, ...returned }] = await seedRollCallEvidence(tx, event, {
-                observesPrevious,
-              });
-              scalarReturned.push(returned);
+      for (const hasInitialEvidence of [true, false]) {
+        it(`stores the scalar author's exact audit and day projections when batched: ${role}, sequential=${observesPrevious}, existing=${hasInitialEvidence}`, async () => {
+          const { db, base, reef, staff } = await fixture();
+          await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, reef.id));
+          await db.insert(tripScheduleDays).values(
+            [0, 1].map((day) => ({
+              tripId: reef.id,
+              dayNumber: day + 1,
+              startsAt: new Date(base.occurredAt.getTime() + day * 86_400_000),
+              endsAt: new Date(base.occurredAt.getTime() + day * 86_400_000 + 3_600_000),
+            })),
+          );
+          const ids = Array.from({ length: 8 }, () => crypto.randomUUID());
+          const common = {
+            ...base,
+            ...(role === "crew"
+              ? { bookingId: null, crewPersonId: staff.id, subjectKind: "crew" as const }
+              : {}),
+          };
+          if (!hasInitialEvidence) {
+            const person = await createPerson(db, {
+              shopId: base.shopId,
+              fullName: "Fresh day parity",
+              email: null,
+              phone: null,
+              origin: "waitlist",
+              roles: role === "crew" ? ["captain"] : ["diver"],
+            });
+            if (role === "crew") {
+              await db.insert(tripAssignments).values({ tripId: reef.id, personId: person.id });
+              Object.assign(common, { crewPersonId: person.id });
+            } else {
+              const [seat] = await db
+                .insert(bookings)
+                .values({
+                  shopId: base.shopId,
+                  tripId: reef.id,
+                  personId: person.id,
+                  bookedAs: "diver",
+                  status: "booked",
+                })
+                .returning();
+              if (!seat) throw new Error("fresh parity seat missing");
+              Object.assign(common, { bookingId: seat.id });
             }
-            // Sequence values are allocation machinery and are not rolled back;
-            // every audit and projection column, plus relative order, is compared.
-            scalar = (
-              await tx
-                .select()
-                .from(rollCallEvents)
-                .where(inArray(rollCallEvents.id, ids))
-                .orderBy(asc(rollCallEvents.seq))
-            ).map(({ seq: _seq, ...row }) => row);
-            throw rollback;
-          }),
-        ).rejects.toBe(rollback);
-        const batchReturned = await seedRollCallEvidence(db, events, { observesPrevious });
-        expect(batchReturned.map(({ seq: _seq, ...row }) => row)).toEqual(scalarReturned);
-        const batched = (
-          await db
-            .select()
-            .from(rollCallEvents)
-            .where(inArray(rollCallEvents.id, ids))
-            .orderBy(asc(rollCallEvents.seq))
-        ).map(({ seq: _seq, ...row }) => row);
-        expect(batched).toEqual(scalar);
-        expect(batchReturned.map((row) => row.recordedByPersonId)).toEqual(
-          events.map((row) => row.recordedByPersonId),
-        );
-        // Duplicate audit identities must still fail atomically, never replace
-        // original marks or silently mint a second copy on a repeated call.
-        await expect(seedRollCallEvidence(db, events, { observesPrevious })).rejects.toThrow();
-        expect(
-          (await db.select().from(rollCallEvents).where(inArray(rollCallEvents.id, ids)))
-            .map((row) => row.id)
-            .sort(),
-        ).toEqual([...ids].sort());
-      });
+          }
+          // An already stored day's latest row is revised by the unknown-day
+          // withdrawal before a later authored mark makes it historical.
+          if (hasInitialEvidence)
+            await seedRollCallEvidence(db, {
+              ...common,
+              id: ids[7],
+              status: "boarded",
+              meetingDay: 1,
+            });
+          const writtenIds = hasInitialEvidence ? ids : ids.slice(0, 7);
+          const events: SeedRollCallEvidenceInput[] = [
+            { ...common, id: ids[0], status: "not_boarded", note: "Original report" },
+            {
+              ...common,
+              id: ids[1],
+              status: "boarded",
+              occurredAt: new Date(base.occurredAt.getTime() - 60_000),
+            },
+            {
+              ...common,
+              id: ids[3],
+              status: "cleared",
+              meetingDay: undefined,
+              note: "Day not recorded",
+            },
+            { ...common, id: ids[2], status: "boarded", meetingDay: 1 },
+            {
+              ...common,
+              id: ids[4],
+              status: "boarded",
+              meetingDay: 1,
+              observedEvidenceIds: [
+                canonicalRollCallEvidenceId({ id: ids[2] }),
+                canonicalRollCallEvidenceId({ id: ids[3] }),
+              ],
+              reconcilesEvidence: true,
+            },
+            {
+              ...common,
+              id: ids[5],
+              status: "cleared",
+              meetingDay: 1,
+              observedEvidenceIds: [canonicalRollCallEvidenceId({ id: ids[4] })],
+              retractsEventId: ids[4],
+            },
+            {
+              ...common,
+              id: ids[6],
+              status: "not_boarded",
+              checkpoint: "departure",
+              clientEventId: crypto.randomUUID(),
+            },
+          ];
+          const rollback = new Error("discard scalar oracle");
+          let scalar: Omit<typeof rollCallEvents.$inferSelect, "seq">[] = [];
+          const scalarReturned: Omit<typeof rollCallEvents.$inferSelect, "seq">[] = [];
+          await expect(
+            db.transaction(async (tx) => {
+              for (const event of events) {
+                const [{ seq: _seq, ...returned }] = await seedRollCallEvidence(tx, event, {
+                  observesPrevious,
+                });
+                scalarReturned.push(returned);
+              }
+              // Sequence values are allocation machinery and are not rolled back;
+              // every audit and projection column, plus relative order, is compared.
+              scalar = (
+                await tx
+                  .select()
+                  .from(rollCallEvents)
+                  .where(inArray(rollCallEvents.id, ids))
+                  .orderBy(asc(rollCallEvents.seq))
+              ).map(({ seq: _seq, ...row }) => row);
+              throw rollback;
+            }),
+          ).rejects.toBe(rollback);
+          const batchReturned = await seedRollCallEvidence(db, events, { observesPrevious });
+          expect(batchReturned.map(({ seq: _seq, ...row }) => row)).toEqual(scalarReturned);
+          const batched = (
+            await db
+              .select()
+              .from(rollCallEvents)
+              .where(inArray(rollCallEvents.id, ids))
+              .orderBy(asc(rollCallEvents.seq))
+          ).map(({ seq: _seq, ...row }) => row);
+          expect(batched).toEqual(scalar);
+          expect(batchReturned.map((row) => row.recordedByPersonId)).toEqual(
+            events.map((row) => row.recordedByPersonId),
+          );
+          // Duplicate audit identities must still fail atomically, never replace
+          // original marks or silently mint a second copy on a repeated call.
+          await expect(seedRollCallEvidence(db, events, { observesPrevious })).rejects.toThrow();
+          expect(
+            (await db.select().from(rollCallEvents).where(inArray(rollCallEvents.id, ids)))
+              .map((row) => row.id)
+              .sort(),
+          ).toEqual([...writtenIds].sort());
+        });
+      }
     }
   }
 
@@ -303,7 +482,7 @@ describe("fixture evidence authorship", () => {
     ).toEqual([]);
   });
 
-  it("does not add SQL round trips for each extra authored mark in one scope", async () => {
+  it("does not add SQL round trips for extra authored marks in the same existing scope", async () => {
     // Query-count's logger wraps a real database, not a file-scoped rollback
     // transaction (which intentionally exposes no standalone driver client).
     const counted = await countingShopContext();
@@ -322,6 +501,9 @@ describe("fixture evidence authorship", () => {
       meetingDay: 0,
       occurredAt: nowDate(),
     };
+    // Hold initial state constant: both measured arrays append to an existing
+    // scope. Fresh-subject growth is measured independently above.
+    await seedRollCallEvidence(counted.db, { ...base, status: "boarded" });
     counted.reset();
     await seedRollCallEvidence(counted.db, [{ ...base, status: "boarded" }]);
     const one = counted.count();
@@ -330,6 +512,7 @@ describe("fixture evidence authorship", () => {
       counted.db,
       Array.from({ length: 24 }, () => ({ ...base, status: "boarded" as const })),
     );
+    console.info("existing-scope SQL counts", { one, twentyFour: counted.count() });
     expect(counted.count()).toBe(one);
   });
 

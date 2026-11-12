@@ -69,6 +69,7 @@ test("a staff introduction publishes separately from name consent and can be hid
     .getByRole("checkbox", { name: t("settings.main.features.publicStaffProfiles.label") })
     .uncheck();
   await page.getByRole("button", { name: t("settings.main.features.save"), exact: true }).click();
+  await expect(page.getByText(t("settings.main.features.saved"), { exact: true })).toBeVisible();
   await page.goto(`/s/${privateShop.slug}`);
   await expect(page.getByText("I love the early reef.", { exact: true })).toHaveCount(0);
   await page.goto(`${base}/me/security`);
