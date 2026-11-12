@@ -5,7 +5,7 @@ import { useState } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClass, DateField, Field } from "@/components/ui/form";
 import { ShopNotice } from "@/components/ui/outcome";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { readScheduleDay } from "@/features/schedule-day";
@@ -210,10 +210,9 @@ export function DayBoard({
         </Link>
         <form action={path} className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="view" value="day" />
-          <label>
-            {copy.chooseDay}
-            <input className={controlClass} type="date" name="day" defaultValue={day} required />
-          </label>
+          <Field label={copy.chooseDay} markRequired={false}>
+            <DateField name="day" defaultValue={day} required />
+          </Field>
           <SubmitButton
             pendingLabel={copy.showDay}
             className={buttonClass({ variant: "secondary", size: "sm" })}

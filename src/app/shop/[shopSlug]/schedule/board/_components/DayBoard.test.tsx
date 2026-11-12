@@ -108,6 +108,19 @@ const rows = [
   },
 ];
 
+it("labels the day picker and submits the chosen day", async () => {
+  const user = userEvent.setup();
+  render(<DayBoard shopSlug="reef" day="2035-08-04" rows={rows} copy={copy} />);
+  const picker = screen.getByLabelText("Choose a day");
+  await user.clear(picker);
+  await user.type(picker, "2035-08-05");
+  const form = picker.closest("form");
+  if (!form) throw new Error("missing day form");
+  const data = new FormData(form);
+  expect(data.get("day")).toBe("2035-08-05");
+  expect(data.get("view")).toBe("day");
+});
+
 it("warns before a conflicting move and cancel resets the choice", async () => {
   const user = userEvent.setup();
   render(<DayBoard shopSlug="reef" day="2035-08-04" rows={rows} copy={copy} />);
