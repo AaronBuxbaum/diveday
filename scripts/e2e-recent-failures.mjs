@@ -160,7 +160,7 @@ function flag(name, fallback) {
 }
 
 /** Attempts per `gh api` page, and the pause before each retry. */
-const GH_ATTEMPTS = 3;
+const GH_ATTEMPTS = 5;
 const GH_BACKOFF_MS = 2000;
 
 /**
@@ -185,8 +185,9 @@ function sleepSync(ms) {
  * buffer (1.27 MB on 2026-10-23, which killed gh with ENOBUFS and the flake hunt with it), so
  * the buffer is the one the tracker uses for its own 100-row pages.
  *
- * A transient 5xx or network error is retried up to three times with a short backoff, because
- * one HTTP 502 from GitHub turned the nightly red on 2026-11-02 (#3641). A persistent failure
+ * A transient 5xx or network error is retried up to five times, the pause doubling from two
+ * seconds, because one HTTP 502 turned the nightly red on 2026-11-02 (#3641) and a second that
+ * outlasted three quick tries on 2026-11-12 (#4453). A persistent failure
  * is rethrown, so "could not read CI history" and the workflow's "flake hunt did not run" line
  * still fire.
  */
@@ -202,7 +203,7 @@ export function ghJson(endpoint, read = readBounded, sleep = sleepSync) {
       );
     } catch (error) {
       if (attempt >= GH_ATTEMPTS || !isTransientGhError(error)) throw error;
-      sleep(GH_BACKOFF_MS * attempt);
+      sleep(GH_BACKOFF_MS * 2 ** (attempt - 1));
     }
   }
 }
