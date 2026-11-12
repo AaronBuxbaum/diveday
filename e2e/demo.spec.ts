@@ -27,10 +27,18 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
   expect(dismissBox).not.toBeNull();
   expect(dismissBox?.width).toBeGreaterThanOrEqual(44);
   expect(dismissBox?.height).toBeGreaterThanOrEqual(44);
-  // The dismissal is saved on the demo shop by a server action; a reload that
-  // cuts it off would not prove it was kept.
+  // Pointer input posts session activity, and Today initializes its catch-up
+  // cursor with a separate action. Wait for the dismissal’s one-shop argument.
+  const staffPath = new URL(page.url()).pathname;
+  const shopSlug = staffPath.split("/")[2];
+  if (!shopSlug) throw new Error("Demo shop slug missing");
   const saved = page.waitForResponse(
-    (response) => response.request().method() === "POST" && response.ok(),
+    (response) =>
+      response.request().method() === "POST" &&
+      Boolean(response.request().headers()["next-action"]) &&
+      new URL(response.url()).pathname === staffPath &&
+      response.request().postData() === JSON.stringify([shopSlug]) &&
+      response.ok(),
   );
   await dismiss.click();
   await expect(starts).toHaveCount(0);
