@@ -14,7 +14,11 @@ import {
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
 } from "@/lib/offline-manifests";
-import { type OfflineManifestSyncCopy, useOfflineManifestSync } from "./use-offline-manifest-sync";
+import {
+  forgetSavedOfflineReads,
+  type OfflineManifestSyncCopy,
+  useOfflineManifestSync,
+} from "./use-offline-manifest-sync";
 
 const mockRouter = { refresh: vi.fn() };
 vi.mock("next/navigation", () => ({ useRouter: () => mockRouter }));
@@ -110,6 +114,7 @@ function deferred<T>() {
 }
 
 beforeEach(() => {
+  forgetSavedOfflineReads();
   vi.resetAllMocks();
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   // A browser with service workers but none registered for this page (a
@@ -236,6 +241,43 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
     const claim = fetchMock.mock.calls.find(([url]) => url === SNAPSHOT_URL);
     expect(claim?.[1]?.method).toBe("POST");
     expect(JSON.parse(String(claim?.[1]?.body))).toEqual({ erasureEpoch: 4, snapshotRevision: 9 });
+  });
+
+  it("does not claim the same read twice when the page mounts again on a cached payload", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => issued());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = renderPage(pagePayload);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    first.unmount();
+    const claims = () => fetchMock.mock.calls.filter(([url]) => url === SNAPSHOT_URL).length;
+    expect(claims()).toBe(1);
+
+    // Back or forward: the router serves the same read again.
+    renderPage(pagePayload);
+    await waitFor(() => expect(loadOfflineManifest).toHaveBeenCalled());
+    expect(claims()).toBe(1);
+    expect(mockRouter.refresh).not.toHaveBeenCalled();
+    expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
+  });
+
+  it("claims again when the saved copy is gone, and re-reads the page if that claim is stale", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => issued());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = renderPage(pagePayload);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    first.unmount();
+
+    // Purged, expired or signed out since: nothing on the device to keep.
+    vi.mocked(loadOfflineManifest).mockResolvedValue(null);
+    fetchMock.mockImplementation(async () => stale());
+    renderPage(pagePayload);
+
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+    const claims = fetchMock.mock.calls.filter(([url]) => url === SNAPSHOT_URL).length;
+    expect(claims).toBe(2);
+    expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
   });
 
   it("saves nothing and re-reads the page once when the read is stale, then saves the re-read", async () => {

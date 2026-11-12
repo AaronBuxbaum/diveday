@@ -6,6 +6,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { formatDateTimeTz } from "@/lib/format";
 import { MOVE_ASK_NOTE_MAX_LENGTH } from "@/lib/inbox";
+import { MoveAskTarget } from "./MoveAskTarget";
 
 /**
  * **"Ask to move"** (H-20261014-ask-to-move). Past the free-cancellation window the only
@@ -38,7 +39,7 @@ export function MoveAsk({
 }) {
   if (state !== "open") {
     return (
-      <div id="move-ask" tabIndex={-1} className="scroll-mt-8 flex flex-col gap-2 text-base">
+      <MoveAskTarget className="scroll-mt-8 flex flex-col gap-2 text-base">
         <p className="font-medium">{t("ready.moveAsk.asked", { shop: shopName })}</p>
         {state.note ? <p className="whitespace-pre-wrap wrap-anywhere">{state.note}</p> : null}
         <p className="text-muted">
@@ -47,11 +48,11 @@ export function MoveAsk({
           </time>
         </p>
         <p className="text-muted">{t("ready.moveAsk.bookingUnchanged")}</p>
-      </div>
+      </MoveAskTarget>
     );
   }
   return (
-    <div id="move-ask" tabIndex={-1} className="scroll-mt-8 flex flex-col gap-3">
+    <MoveAskTarget className="scroll-mt-8 flex flex-col gap-3">
       <p className="text-base text-muted">
         {shopPhone
           ? t("ready.moveAsk.body", { shop: shopName, phone: shopPhone })
@@ -75,6 +76,6 @@ export function MoveAsk({
           {t("ready.moveAsk.action")}
         </SubmitButton>
       </form>
-    </div>
+    </MoveAskTarget>
   );
 }

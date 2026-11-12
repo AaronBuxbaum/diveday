@@ -54,18 +54,28 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
     const workerOrigin = new URL(workerBaseURL).origin;
     // Native interception avoids Playwright routing's automatic HTTP-cache disable.
     await cdp.send("Fetch.enable", { patterns: [{ urlPattern: "*", requestStage: "Request" }] });
+    // A paused request can be cancelled by the page (navigation, abort) before
+    // our answer lands; Chrome then rejects with "Invalid InterceptionId". That
+    // request is gone, so there is nothing left to answer.
+    const answer = (
+      method: "Fetch.failRequest" | "Fetch.fulfillRequest" | "Fetch.continueRequest",
+      params: object,
+    ) =>
+      cdp.send(method, params as never).catch((error: unknown) => {
+        if (!/Invalid InterceptionId/.test(String(error))) throw error;
+      });
     cdp.on("Fetch.requestPaused", async ({ requestId, request }) => {
       const prefetch = Object.entries(request.headers).some(
         ([key, value]) => key.toLowerCase() === "next-router-prefetch" && value === "1",
       );
       if (prefetch) {
         blockedPrefetches++;
-        await cdp.send("Fetch.failRequest", { requestId, errorReason: "BlockedByClient" });
+        await answer("Fetch.failRequest", { requestId, errorReason: "BlockedByClient" });
       } else {
         const policy = measurementNetworkPolicy(request.url, workerOrigin);
-        if (policy === "continue") await cdp.send("Fetch.continueRequest", { requestId });
+        if (policy === "continue") await answer("Fetch.continueRequest", { requestId });
         else if (policy === "abort")
-          await cdp.send("Fetch.failRequest", { requestId, errorReason: "BlockedByClient" });
+          await answer("Fetch.failRequest", { requestId, errorReason: "BlockedByClient" });
         else {
           const contentType =
             policy === "tile" ? "image/png" : policy === "stylesheet" ? "text/css" : "text/html";
@@ -75,7 +85,7 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
               : Buffer.from(policy === "frame" ? "<!doctype html><title></title>" : "").toString(
                   "base64",
                 );
-          await cdp.send("Fetch.fulfillRequest", {
+          await answer("Fetch.fulfillRequest", {
             requestId,
             responseCode: 200,
             responseHeaders: [{ name: "content-type", value: contentType }],
