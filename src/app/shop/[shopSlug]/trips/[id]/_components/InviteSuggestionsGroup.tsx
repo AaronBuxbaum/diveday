@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { InviteSuggestions } from "@/features/invite-suggestions";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -62,8 +63,9 @@ export function InviteSuggestionsGroup({
         {suggestions.shown.map(renderPerson)}
       </ul>
       {more > 0 ? (
-        <details>
-          <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-primary sm:px-5">
+        <details className="group/invite-more">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm font-medium text-primary focus-visible:focus-ring-inset sm:px-5 [&::-webkit-details-marker]:hidden">
+            <DisclosureCaret className="group-open/invite-more:rotate-90" />
             {t("trips.inviteSuggestions.more", { count: more })}
           </summary>
           <ul className="divide-y divide-border">{suggestions.remaining.map(renderPerson)}</ul>

@@ -103,8 +103,8 @@ export function TripPageHeader({
   className,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
-  /** The nav's own word for it, so the two cannot drift (issue #824). */
-  backLabel: string;
+  /** The manifest retains a way out when boat mode hides global navigation. */
+  backLabel?: string;
   locale: string;
   /** The shop's own zone — never the host's. See `src/lib/format.ts`. */
   timeZone: string;
@@ -145,27 +145,15 @@ export function TripPageHeader({
 
   return (
     <header className={className ?? "mb-8"}>
-      {/* **The way back up.** These are the deepest pages in the staff app and
-          were once the only ones at depth 2-3 with no link to their parent at
-          all: the first link in the header was a tab strip, which moved you
-          *sideways* between one departure's own pages and never back up (issue
-          #823). A crew member who has finished a roll call and wants the next
-          boat had the global nav or the browser's back button — on a phone in
-          boat-mode, on a deck, the nav is the dock at the bottom of the
-          screen: reachable, but a jump out of the departure rather than a step
-          up from it.
-
-          The strip is gone now (ADR 20260919-one-idea, slice 23c) and this is
-          the only way up, which is why these three name the **departure** they
-          are readings of rather than the board two levels above it. */}
-      <EyebrowWayUp>{backLabel}</EyebrowWayUp>
+      {/* Boat mode hides global navigation, so its header keeps a way back. */}
+      {backLabel ? <EyebrowWayUp>{backLabel}</EyebrowWayUp> : null}
       {/* **The title and its actions are one row, centred on each other.**
           The 48px ••• used to sit in a grid cell beside the 16px eyebrow on a
           phone — 16px under the eyebrow's centre, and holding the title 49px
           below it — and from `sm` to top-align beside the title, 4px above
-          its line (K-196, K-357). The eyebrow keeps a line of its own at
-          every width, and the actions end the title's. */}
-      <div className={`${TRIP_TITLE_GAP} flex items-center gap-4 sm:gap-8`}>
+          its line (K-196, K-357). When present, the eyebrow keeps a line of
+          its own, and the actions end the title's. */}
+      <div className={`${backLabel ? TRIP_TITLE_GAP : ""} flex items-center gap-4 sm:gap-8`}>
         <h1
           className={`min-w-0 flex-1 ${TRIP_TITLE_TYPE} font-semibold tracking-tight text-balance`}
         >
@@ -221,6 +209,7 @@ export function TripPageHeaderSkeleton({
   titleWidth = "w-64 max-w-full",
   titleLines = 1,
   badge = true,
+  showBack = true,
   className = "mb-8",
 }: {
   /** Tailwind width classes for the title bars. */
@@ -229,13 +218,15 @@ export function TripPageHeaderSkeleton({
   titleLines?: SkeletonLines;
   /** The header leads its date row with the capacity pill (every page but the manifest). */
   badge?: boolean;
+  /** Whether the loaded header has the parent link. */
+  showBack?: boolean;
   /** As on the header: the Divers tab stacks it in the page's `space-y-10`. */
   className?: string;
 }) {
   return (
     <div className={className}>
-      <div className="h-4 w-16 rounded bg-surface-sunken" />
-      <div className={TRIP_TITLE_GAP}>
+      {showBack ? <div className="h-4 w-16 rounded bg-surface-sunken" /> : null}
+      <div className={showBack ? TRIP_TITLE_GAP : undefined}>
         <SkeletonLineBars
           lines={titleLines}
           height={`h-lh ${TRIP_TITLE_TYPE}`}

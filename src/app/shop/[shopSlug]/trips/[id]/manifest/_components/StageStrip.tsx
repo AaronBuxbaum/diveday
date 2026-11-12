@@ -100,7 +100,7 @@ export function StageStrip({
           most. */}
       <div className={`mt-2 ${BOAT_SEGMENT_TRACK_CLASS}`}>
         {copy.taps.map((tap, index) => (
-          <form action={formAction} key={tap.stage} className="relative flex">
+          <form action={formAction} key={tap.stage} className="group/stage relative flex">
             <input type="hidden" name="stage" value={tap.stage} />
             <button
               type={tap.stage === "home" && homeConfirm ? "button" : "submit"}
@@ -121,7 +121,7 @@ export function StageStrip({
             {index < copy.taps.length - 1 ? (
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 -end-1 z-10 -translate-y-1/2 rounded-sm bg-surface px-0.5 text-xs font-bold text-foreground"
+                className="pointer-events-none absolute top-1/2 -end-1 z-10 -translate-y-1/2 rounded-sm bg-surface px-0.5 text-xs font-bold text-foreground group-focus-within/stage:invisible"
               >
                 {tap.stage === "underway" ? "↔" : "›"}
               </span>

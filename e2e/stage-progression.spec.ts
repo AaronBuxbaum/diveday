@@ -12,6 +12,10 @@ test("the stage strip keeps repeat and backward taps available", async ({ page }
   await strip.screenshot({ path: testInfo.outputPath("stage-phone.png") });
   const underway = strip.getByRole("button", { name: "Underway" });
   const surface = strip.getByRole("button", { name: "Surface" });
+  const separator = underway.locator("..").locator(":scope > span[aria-hidden=true]");
+  await underway.focus();
+  await expect(underway).toHaveCSS("outline-offset", "-3px");
+  await expect(separator).toBeHidden();
   for (const button of [underway, surface, underway]) {
     await button.click();
     await expect(button).toHaveAttribute("aria-pressed", "true");
