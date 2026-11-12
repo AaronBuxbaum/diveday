@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { RowMenu } from "@/components/RowMenu";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";

@@ -2,8 +2,8 @@
 
 import { type ChangeEvent, useEffect, useId, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { describeImageProblem, IMAGE_ACCEPT } from "@/components/ImageFileInput";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 
 /**
  * Every word the tile can show, resolved by the caller, for the reason

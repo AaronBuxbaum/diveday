@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 
 /**
  * The glyph and the gap beside it, per type size: the chips' `text-xs`, the

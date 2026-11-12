@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/group-label";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { MENU_PANEL, MENU_TICK, MENU_TICK_GUTTER, menuRowClass } from "@/components/ui/menu";

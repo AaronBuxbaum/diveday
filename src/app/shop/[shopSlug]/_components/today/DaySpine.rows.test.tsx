@@ -31,7 +31,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { DayTakings as DayTakingsReading } from "@/features/today";
 import { DaySpine } from "./DaySpine";
@@ -261,7 +261,7 @@ describe("the row glyph", () => {
     for (const row of rows) expect(row.querySelector("[data-site-mark]")).toBeNull();
     // UX review 2026-10-10, item 6: the quiet row's mark is the gear drawing,
     // not the hollow ring that read as a checkbox.
-    const gear = render(<DiveDayIcon name="gear" />).container.querySelector("svg");
+    const gear = render(<StaffDestinationIcon id="gear" />).container.querySelector("svg");
     const ring = render(<StatusMark variant="pending" />).container.querySelector("svg");
     const quiet = rows[2]?.querySelector("span > svg");
     expect(quiet?.innerHTML).toBe(gear?.innerHTML);

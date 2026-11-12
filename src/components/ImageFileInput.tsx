@@ -1,7 +1,7 @@
 "use client";
 
 import { type ChangeEvent, useEffect, useId, useState } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES } from "@/lib/storage/limits";
 
 export const IMAGE_ACCEPT = ALLOWED_IMAGE_CONTENT_TYPES.join(",");

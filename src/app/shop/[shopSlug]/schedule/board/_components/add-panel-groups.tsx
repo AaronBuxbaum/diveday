@@ -1,7 +1,7 @@
 "use client";
 
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { RepeatFields } from "@/components/RepeatFields";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX } from "@/components/ui/card";

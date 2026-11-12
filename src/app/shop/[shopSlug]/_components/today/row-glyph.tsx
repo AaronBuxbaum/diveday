@@ -1,4 +1,5 @@
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
+import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import type { LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { ACTION_KIND_META, TodayAction } from "@/features/today";
@@ -65,12 +66,11 @@ export function quietIcon(kind: TodayAction["kind"]): RowIconName | undefined {
 /** A row's leading mark: the status shape when something is wrong, the category drawing when not. */
 export function RowGlyph({ tone, icon }: { tone: LedgerRowKindTone; icon?: RowIconName }) {
   if (tone === "neutral") {
-    return (
-      <DiveDayIcon
-        name={icon ?? "today"}
-        className={`size-5 shrink-0 ${ROW_GLYPH_INK.neutral}`}
-        strokeWidth={1.6}
-      />
+    const className = `size-5 shrink-0 ${ROW_GLYPH_INK.neutral}`;
+    return icon === "boat" ? (
+      <DiveDayIcon name="boat" className={className} strokeWidth={1.6} />
+    ) : (
+      <StaffDestinationIcon id={icon ?? "today"} className={className} strokeWidth={1.6} />
     );
   }
   return <StatusMark variant={ROW_GLYPH[tone]} size="md" className={ROW_GLYPH_INK[tone]} />;

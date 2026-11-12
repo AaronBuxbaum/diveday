@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { buttonClass } from "@/components/ui/button";
 
 /** How many lines a phone shows before "Show all". */

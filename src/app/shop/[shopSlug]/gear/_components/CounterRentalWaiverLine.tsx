@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { waiverRowStateText, waiverRowStateTone } from "@/i18n/waiver-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";

@@ -1,4 +1,4 @@
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 
 /**

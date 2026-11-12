@@ -6,7 +6,7 @@ export type { WeekSpan } from "./week-span";
 
 import Link from "next/link";
 import { type ReactNode, useRef } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";

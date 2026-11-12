@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";

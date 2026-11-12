@@ -211,8 +211,9 @@ only `transform` and `opacity`, the shared `--ease-out-soft` curve, and a short 
 measurement in the visual suite when changing this: if the motion makes the page feel late or
 janky, remove the effect rather than adding more choreography.
 
-Interface icons come from the one drawn `DiveDayIcon` family in
-`src/components/StaffDestinationIcon.tsx`: a 24px grid, shared stroke language, and
+Interface icons come from the one drawn `DiveDayIcon` family in `src/components/DiveDayIcon.tsx`
+(the staff destinations' set in `src/components/StaffDestinationIcon.tsx` draws through the
+same root): a 24px grid, shared stroke language, and
 `aria-hidden` artwork beside words that carry the meaning. Do not add an icon library or a text
 codepoint as a one-off substitute. The status tones are the exception and stay exactly as the
 emoji vocabulary in `src/components/ui/tone.ts` — emoji carry their own two-color artwork,

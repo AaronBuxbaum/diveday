@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 
 /**
  * **The shared "nothing here yet" card, with a shape rather than a slot.**
