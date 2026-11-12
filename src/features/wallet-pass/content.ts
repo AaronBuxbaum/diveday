@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import type { DbExecutor } from "@/db/client";
 import { queryAll } from "@/db/query-helpers";
 import { boats, bookings, people, shops, trips } from "@/db/schema";
+import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { listTripDives, tripPublicCrew } from "@/db/trips";
 import { latestTripStage } from "@/features/trip-stages";
 import { diverTranslator } from "@/i18n/messages";
@@ -46,10 +47,11 @@ export async function readPassContent(
     plan: t("wallet.plan"),
     description: t("wallet.description"),
   };
-  const [crew, dives, stage] = await queryAll(db, [
+  const [crew, dives, stage, windows] = await queryAll(db, [
     () => tripPublicCrew(db, shopId, trip.id),
     () => listTripDives(db as Parameters<typeof listTripDives>[0], shopId, trip.id),
     () => latestTripStage(db, shopId, trip.id),
+    () => meetingWindowsByTrip(db, [trip]),
   ]);
   const point = meetingPointOf({
     shopName: shop.name,
@@ -75,7 +77,19 @@ export async function readPassContent(
     crew: crew.map((member) => member.firstName),
     sites: dives.flatMap(({ diveSite }) => (diveSite ? [diveSite.name] : [])),
     phone: shop.contactPhone,
-    stage: liveStageOf(stage, trip.endsAt, now) && stage ? t(`wallet.stages.${stage.stage}`) : null,
+    stage:
+      liveStageOf(
+        stage,
+        {
+          startsAt: trip.startsAt,
+          endsAt: trip.endsAt,
+          timeZone: shop.timezone,
+          meetingWindows: windows.get(trip.id),
+        },
+        now,
+      ) && stage
+        ? t(`wallet.stages.${stage.stage}`)
+        : null,
     voided:
       booking.status === "cancelled" ||
       trip.status === "cancelled" ||

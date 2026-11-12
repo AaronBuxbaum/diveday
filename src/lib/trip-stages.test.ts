@@ -18,18 +18,15 @@ const reading = (recordedAt: string): TripStageReading => ({
 
 describe("liveStageOf", () => {
   const endsAt = new Date("2026-07-21T15:00:00.000Z");
+  const trip = { startsAt: new Date("2026-07-21T12:00:00Z"), endsAt, timeZone: "UTC" };
 
   it("says nothing when the crew has tapped nothing", () => {
-    expect(liveStageOf(null, endsAt, new Date("2026-07-21T13:00:00.000Z"))).toBeNull();
+    expect(liveStageOf(null, trip, new Date("2026-07-21T13:00:00.000Z"))).toBeNull();
   });
 
   it("speaks while the departure is running", () => {
     expect(
-      liveStageOf(
-        reading("2026-07-21T12:10:00.000Z"),
-        endsAt,
-        new Date("2026-07-21T13:00:00.000Z"),
-      ),
+      liveStageOf(reading("2026-07-21T12:10:00.000Z"), trip, new Date("2026-07-21T13:00:00.000Z")),
     ).toMatchObject({ stage: "underway" });
   });
 
@@ -37,27 +34,23 @@ describe("liveStageOf", () => {
     // An hour and a half past the scheduled end, which is when the line is
     // worth the most rather than the least.
     expect(
-      liveStageOf(
-        reading("2026-07-21T12:10:00.000Z"),
-        endsAt,
-        new Date("2026-07-21T16:30:00.000Z"),
-      ),
+      liveStageOf(reading("2026-07-21T12:10:00.000Z"), trip, new Date("2026-07-21T16:30:00.000Z")),
     ).toMatchObject({ stage: "underway" });
   });
 
   it("stops speaking once the boat's own day is over", () => {
     expect(
-      liveStageOf(
-        reading("2026-07-21T12:10:00.000Z"),
-        endsAt,
-        new Date("2026-07-22T02:00:00.000Z"),
-      ),
+      liveStageOf(reading("2026-07-21T12:10:00.000Z"), trip, new Date("2026-07-22T02:00:00.000Z")),
     ).toBeNull();
   });
 
   it("keeps a stage on a departure with no end to measure from", () => {
     expect(
-      liveStageOf(reading("2026-07-21T12:10:00.000Z"), null, new Date("2026-07-25T02:00:00.000Z")),
+      liveStageOf(
+        reading("2026-07-21T12:10:00.000Z"),
+        { ...trip, endsAt: null },
+        new Date("2026-07-25T02:00:00.000Z"),
+      ),
     ).toMatchObject({ stage: "underway" });
   });
 });
@@ -134,5 +127,53 @@ describe("the glossary's trip-stage entry", () => {
     expect(text).toContain("`stage_stale` rung");
     expect(text).toMatch(/stale\s+rather than wrong/);
     expect(text).toMatch(/expired staff word hands the question back to the clock/);
+  });
+});
+
+describe("public stage day boundaries", () => {
+  const trip = {
+    startsAt: new Date("2026-10-10T13:00:00Z"),
+    endsAt: new Date("2026-10-10T18:00:00Z"),
+    timeZone: "America/New_York",
+  };
+  it("does not publish a tap from the previous shop day, even on the same UTC date", () => {
+    expect(
+      liveStageOf(reading("2026-10-10T03:59:59Z"), trip, new Date("2026-10-10T13:00:00Z")),
+    ).toBeNull();
+  });
+  it("accepts midnight and keeps the word through the exact late buffer", () => {
+    const tap = reading("2026-10-10T04:00:00Z");
+    expect(liveStageOf(tap, trip, new Date("2026-10-10T20:00:00Z"))).toBe(tap);
+    expect(liveStageOf(tap, trip, new Date("2026-10-10T20:00:00.001Z"))).toBeNull();
+  });
+  it("does not carry a prior meeting into the next meeting or the gap", () => {
+    const run = {
+      ...trip,
+      endsAt: new Date("2026-10-13T18:00:00Z"),
+      meetingWindows: [
+        { startsAt: trip.startsAt, endsAt: trip.endsAt },
+        { startsAt: new Date("2026-10-13T13:00:00Z"), endsAt: new Date("2026-10-13T18:00:00Z") },
+      ],
+    };
+    const tap = reading("2026-10-10T14:00:00Z");
+    expect(liveStageOf(tap, run, new Date("2026-10-11T12:00:00Z"))).toBeNull();
+    expect(liveStageOf(tap, run, new Date("2026-10-13T13:00:00Z"))).toBeNull();
+    expect(
+      liveStageOf(reading("2026-10-13T13:00:00Z"), run, new Date("2026-10-13T14:00:00Z")),
+    ).not.toBeNull();
+  });
+  it("keeps a midnight-crossing meeting's tap into its next local day", () => {
+    const run = {
+      startsAt: new Date("2026-10-10T02:00:00Z"),
+      endsAt: new Date("2026-10-13T06:00:00Z"),
+      timeZone: "America/New_York",
+      meetingWindows: [
+        { startsAt: new Date("2026-10-10T02:00:00Z"), endsAt: new Date("2026-10-10T06:00:00Z") },
+        { startsAt: new Date("2026-10-13T02:00:00Z"), endsAt: new Date("2026-10-13T06:00:00Z") },
+      ],
+    };
+    const tap = reading("2026-10-10T03:30:00Z");
+    expect(liveStageOf(tap, run, new Date("2026-10-10T05:00:00Z"))).toBe(tap);
+    expect(liveStageOf(tap, run, new Date("2026-10-10T06:00:00Z"))).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ import { DIVER_LOCALES } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import type { ThreadStep } from "@/lib/thread-steps";
 import type { ReadyPageData } from "../../../../../features/ready/store";
-import { boatStageLine, readyStepLine, readyThreadFacts } from "./thread-facts";
+import { boatStageLine, readyBoatStageLine, readyStepLine, readyThreadFacts } from "./thread-facts";
 
 const [ENGLISH] = DIVER_LOCALES;
 const t = diverTranslator(ENGLISH);
@@ -142,7 +142,11 @@ describe("readyStepLine", () => {
 });
 
 describe("boatStageLine", () => {
-  const trip = { title: "Two-Tank Reef", endsAt: new Date("2026-07-21T18:00:00Z") };
+  const trip = {
+    title: "Two-Tank Reef",
+    startsAt: new Date("2026-07-21T12:00:00Z"),
+    endsAt: new Date("2026-07-21T18:00:00Z"),
+  };
 
   it("is silent when the crew has said nothing", () => {
     expect(boatStageLine(null, trip, "America/New_York", ENGLISH, t)).toBeNull();
@@ -163,4 +167,62 @@ describe("boatStageLine", () => {
     expect(line?.sentence).toContain("Two-Tank Reef");
     expect(line?.said).toContain("9:00");
   });
+});
+
+describe("boatStageLine public day eligibility", () => {
+  it.each([
+    ["days early", "2026-07-23T12:00:00Z", "2026-07-23T16:00:00Z", "2026-07-21T13:00:00Z"],
+    [
+      "previous local day on the same UTC date",
+      "2026-07-21T12:00:00Z",
+      "2026-07-21T16:00:00Z",
+      "2026-07-21T03:59:59Z",
+    ],
+    [
+      "previous meeting day",
+      "2026-07-20T12:00:00Z",
+      "2026-07-22T16:00:00Z",
+      "2026-07-20T13:00:00Z",
+    ],
+  ])("does not publish %s evidence", (_name, start, end, at) => {
+    const trip = { title: "Day-scoped boat", startsAt: new Date(start), endsAt: new Date(end) };
+    const raw = {
+      stage: "underway",
+      siteName: null,
+      recordedAt: new Date(at),
+      recordedByName: "Crew",
+    } as const;
+    expect(boatStageLine(raw, trip, "America/New_York", ENGLISH, t)).toBeNull();
+    expect(raw.recordedAt.toISOString()).toBe(new Date(at).toISOString());
+  });
+});
+
+it("uses ready data's overnight meeting window when composing the public line", () => {
+  const ready = data({
+    detail: {
+      trip: {
+        title: "Night boat",
+        startsAt: new Date("2026-07-20T12:00:00Z"),
+        endsAt: new Date("2026-07-22T18:00:00Z"),
+      },
+      shop: { timezone: "America/New_York" },
+    },
+    meetingDays: [
+      { startsAt: new Date("2026-07-21T02:00:00Z"), endsAt: new Date("2026-07-21T14:00:00Z") },
+      { startsAt: new Date("2026-07-22T12:00:00Z"), endsAt: new Date("2026-07-22T18:00:00Z") },
+    ],
+  });
+  expect(
+    readyBoatStageLine(
+      {
+        stage: "underway",
+        siteName: null,
+        recordedAt: new Date("2026-07-21T03:30:00Z"),
+        recordedByName: null,
+      },
+      ready,
+      ENGLISH,
+      t,
+    )?.sentence,
+  ).toContain("Night boat");
 });

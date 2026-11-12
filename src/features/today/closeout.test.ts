@@ -275,7 +275,13 @@ describe("assembleDayCloseout", () => {
         stage: stage("underway", new Date(now.getTime() - 10 * MINUTE)),
       });
       // The word is genuinely still speaking here, not quietly stale:
-      expect(liveStageOf(overdue.stage ?? null, overdue.endsAt, now)).not.toBeNull();
+      expect(
+        liveStageOf(
+          overdue.stage ?? null,
+          { startsAt: overdue.startsAt, endsAt: overdue.endsAt, timeZone: "UTC" },
+          now,
+        ),
+      ).not.toBeNull();
 
       expect(statusOf(overdue)).toBe("still_out");
       expect(
