@@ -690,7 +690,7 @@
     "heading": "Última inmersión",
     "monthsAgo": "{count, plural, =0 {hace menos de un mes} one {hace # mes} other {hace # meses}}",
     "yearsAgo": "{count, plural, one {hace # año} other {hace # años}}",
-    "fromShop": "De su último viaje contigo.",
+    "fromShop": "De su última salida contigo.",
     "reported": "Comunicado el {reported}: su último buceo fue el {dived}.",
     "reportedUndated": "Su último buceo, según lo comunicado: {dived}.",
     "fromImport": "De las visitas que importaste.",
