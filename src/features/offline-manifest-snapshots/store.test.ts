@@ -10,6 +10,7 @@ import { fileScopedShopContext } from "../../test/db";
 import { anonymizeDiver } from "../anonymize/store";
 import {
   issueOfflineManifestSnapshot,
+  latestOfflineManifestSnapshotRevisions,
   nextOfflineManifestSnapshotRevision,
   readOfflineManifestRoster,
 } from "./store";
@@ -181,5 +182,30 @@ describe("offline manifest snapshot ordering", () => {
         snapshotId: issued.snapshotId,
       }),
     ).toBe(after.erasureEpoch);
+  });
+
+  it("answers each departure's latest revision, 0 before any, and nothing for another shop", async () => {
+    const { db, shop } = context;
+    const board = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const [issued, untouched] = [board.at(-1), board.at(-2)];
+    if (!issued || !untouched) throw new Error("offline manifest trips missing");
+    const before = (await latestOfflineManifestSnapshotRevisions(db, shop.id, [issued.id]))[
+      issued.id
+    ];
+    await nextOfflineManifestSnapshotRevision(db, shop.id, issued.id);
+    await nextOfflineManifestSnapshotRevision(db, shop.id, issued.id);
+
+    const latest = await latestOfflineManifestSnapshotRevisions(db, shop.id, [
+      issued.id,
+      untouched.id,
+    ]);
+    expect(latest[issued.id]).toBe((before ?? 0) + 2);
+    expect(latest[untouched.id]).toBeGreaterThanOrEqual(0);
+    expect(await latestOfflineManifestSnapshotRevisions(db, shop.id, [])).toEqual({});
+    // Another shop's id reads as no copy ever issued: the row is scoped by shop.
+    const elsewhere = "00000000-0000-4000-8000-000000000000";
+    expect(await latestOfflineManifestSnapshotRevisions(db, elsewhere, [issued.id])).toEqual({
+      [issued.id]: 0,
+    });
   });
 });

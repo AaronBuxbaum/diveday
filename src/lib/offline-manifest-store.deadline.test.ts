@@ -68,14 +68,15 @@ beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-afterEach(
-  () =>
-    new Promise<void>((resolve, reject) => {
-      const request = indexedDB.deleteDatabase("diveday-offline-manifests");
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error ?? new Error("failed to reset IndexedDB"));
-    }),
-);
+function indexedDbReset() {
+  return new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase("diveday-offline-manifests");
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error("failed to reset IndexedDB"));
+  });
+}
+
+afterEach(indexedDbReset);
 
 /**
  * Dock Wi-Fi with full bars that carries nothing: the POST neither answers
@@ -406,5 +407,58 @@ describe("syncOfflineManifest on a network that never answers", () => {
     ]);
     expect(settled?.checklistEvents.map((event) => event.syncStatus)).toEqual(["applied"]);
     expect(settled?.arrivalEvents?.map((event) => event.syncStatus)).toEqual(["applied"]);
+  });
+});
+
+/**
+ * DiveDay answers a sync with the departure's snapshot revision, and the
+ * device keeps it on every event that answer settles: what later lets the
+ * saved copy answer for the tap (`offlineEventInCopy`).
+ */
+describe("syncOfflineManifest and the revision DiveDay answered at", () => {
+  const tripId = payload.manifests[0].trip.id;
+
+  async function syncAnswering(status: "applied" | "duplicate" | "rejected", revision?: unknown) {
+    server.use(
+      http.post("/api/offline-manifests/sync", async ({ request }) => {
+        const body = (await request.json()) as { events: Array<{ clientEventId: string }> };
+        return HttpResponse.json({
+          results: body.events.map((event) => ({ clientEventId: event.clientEventId, status })),
+          ...(revision === undefined ? {} : { snapshotRevisions: { [tripId]: revision } }),
+        });
+      }),
+    );
+    await syncOfflineManifest(tripId);
+    return (await loadOfflineManifest(tripId))?.events ?? [];
+  }
+
+  async function queueOne() {
+    await saveOfflineManifest(payload);
+    await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+    });
+  }
+
+  it("keeps the revision on an applied event, and on a replay answered as a duplicate", async () => {
+    await queueOne();
+    expect((await syncAnswering("applied", 7))[0]?.syncedAtRevision).toBe(7);
+    await indexedDbReset();
+    await queueOne();
+    expect((await syncAnswering("duplicate", 9))[0]?.syncedAtRevision).toBe(9);
+  });
+
+  it("keeps none on a refused event, or from an answer that carries no usable revision", async () => {
+    await queueOne();
+    expect((await syncAnswering("rejected", 7))[0]).toMatchObject({ syncStatus: "rejected" });
+    expect((await loadOfflineManifest(tripId))?.events[0]?.syncedAtRevision).toBeUndefined();
+    for (const unusable of [undefined, "7", -1, 1.5]) {
+      await indexedDbReset();
+      await queueOne();
+      const [event] = await syncAnswering("applied", unusable);
+      expect(event?.syncStatus).toBe("applied");
+      expect(event?.syncedAtRevision).toBeUndefined();
+    }
   });
 });

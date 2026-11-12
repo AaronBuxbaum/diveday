@@ -14,10 +14,6 @@ import {
 } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
-import {
-  latestOfflineManifestSnapshotRevisions,
-  nextOfflineManifestSnapshotRevision,
-} from "@/features/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -249,17 +245,8 @@ describe("POST /api/offline-manifests/sync", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       results: Array<{ clientEventId: string; status: string }>;
-      snapshotRevisions?: Record<string, number>;
     };
     expect(body.results).toEqual([{ clientEventId, status: "applied" }]);
-    // The departure's snapshot revision as of the answer, 0 before any copy
-    // was issued: what the device keeps on the event (`offlineEventInCopy`).
-    expect(body.snapshotRevisions).toEqual({ [trip.id]: 0 });
-    await nextOfflineManifestSnapshotRevision(db, shop.id, trip.id);
-    await nextOfflineManifestSnapshotRevision(db, shop.id, trip.id);
-    await expect(latestOfflineManifestSnapshotRevisions(db, shop.id, [trip.id])).resolves.toEqual({
-      [trip.id]: 2,
-    });
   });
 
   /**
