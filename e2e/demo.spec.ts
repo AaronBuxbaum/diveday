@@ -27,8 +27,14 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
   expect(dismissBox).not.toBeNull();
   expect(dismissBox?.width).toBeGreaterThanOrEqual(44);
   expect(dismissBox?.height).toBeGreaterThanOrEqual(44);
+  // The dismissal is saved on the demo shop by a server action; a reload that
+  // cuts it off would not prove it was kept.
+  const saved = page.waitForResponse(
+    (response) => response.request().method() === "POST" && response.ok(),
+  );
   await dismiss.click();
   await expect(starts).toHaveCount(0);
+  await saved;
   await page.reload();
   await expect(starts).toHaveCount(0);
 
