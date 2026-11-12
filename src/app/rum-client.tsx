@@ -56,7 +56,8 @@ export function rumConfig(): RumConfig | null {
   const identityPoolId = process.env.NEXT_PUBLIC_RUM_IDENTITY_POOL_ID?.trim();
   const guestRoleArn = process.env.NEXT_PUBLIC_RUM_GUEST_ROLE_ARN?.trim();
   const region = process.env.NEXT_PUBLIC_RUM_REGION?.trim();
-  if (!applicationId || !identityPoolId || !guestRoleArn || !region) return null;
+  if (!applicationId || !identityPoolId || !guestRoleArn || !region)
+    return null;
   const raw = process.env.NEXT_PUBLIC_RUM_SAMPLE_RATE?.trim();
   const rate = raw ? Number(raw) : DEFAULT_SAMPLE_RATE;
   return {
@@ -66,8 +67,26 @@ export function rumConfig(): RumConfig | null {
     region,
     // A misconfigured rate must never mean "record everything at full price";
     // anything unparseable or out of range falls back to the documented default.
-    sessionSampleRate: Number.isFinite(rate) && rate >= 0 && rate <= 1 ? rate : DEFAULT_SAMPLE_RATE,
+    sessionSampleRate:
+      Number.isFinite(rate) && rate >= 0 && rate <= 1
+        ? rate
+        : DEFAULT_SAMPLE_RATE,
   };
+}
+
+/**
+ * Crawlers, headless browsers and audit tools are not divers: their sessions
+ * would skew the geography and device numbers RUM exists to show, and
+ * Googlebot cannot reach Cognito at all, so every visit would only fail. They
+ * never start the SDK, so no identity call and no data leaves for them.
+ */
+const AUTOMATED_UA =
+  /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|chrome-lighthouse|gtmetrix|pingdom|facebookexternalhit|preview|monitor|uptime|curl|wget|python-requests|phantomjs/i;
+
+export function looksAutomated(
+  nav: Pick<Navigator, "userAgent" | "webdriver">,
+): boolean {
+  return nav.webdriver === true || AUTOMATED_UA.test(nav.userAgent ?? "");
 }
 
 type PageViewRecorder = { recordPageView: (pageId: string) => void };
@@ -84,38 +103,45 @@ export function CloudWatchRum() {
 
   useEffect(() => {
     const config = rumConfig();
-    if (!config) return;
+    if (!config || looksAutomated(navigator)) return;
     let cancelled = false;
 
     void (async () => {
       try {
         const { AwsRum } = await import("aws-rum-web");
         if (cancelled) return;
-        client.current = new AwsRum(config.applicationId, "1.0.0", config.region, {
-          identityPoolId: config.identityPoolId,
-          guestRoleArn: config.guestRoleArn,
-          sessionSampleRate: config.sessionSampleRate,
-          telemetries: ["performance"],
-          allowCookies: false,
-          enableXRay: false,
-          disableAutoPageView: true,
-          // No `endpoint` here, deliberately: the region argument above is
-          // what picks the data plane. aws-rum-web@3.2.0 passed its whole
-          // default config down as the caller's own, and that default carries
-          // a hardcoded `us-west-2` endpoint — so the library's
-          // "substitute the region unless the caller named an endpoint" branch
-          // saw an endpoint it had supplied itself and never ran
-          // (aws-observability/aws-rum-web#881). Every request outside
-          // us-west-2 was signed for its real region and posted to us-west-2,
-          // and the data plane refused it: "Credential should be scoped to a
-          // valid region." 3.2.1 merges only `signing` and `telemetries`, so
-          // the branch fires and this line is no longer needed;
-          // `rum-client.test.tsx` pins that the endpoint follows the region.
-        });
+        client.current = new AwsRum(
+          config.applicationId,
+          "1.0.0",
+          config.region,
+          {
+            identityPoolId: config.identityPoolId,
+            guestRoleArn: config.guestRoleArn,
+            sessionSampleRate: config.sessionSampleRate,
+            telemetries: ["performance"],
+            allowCookies: false,
+            enableXRay: false,
+            disableAutoPageView: true,
+            // No `endpoint` here, deliberately: the region argument above is
+            // what picks the data plane. aws-rum-web@3.2.0 passed its whole
+            // default config down as the caller's own, and that default carries
+            // a hardcoded `us-west-2` endpoint — so the library's
+            // "substitute the region unless the caller named an endpoint" branch
+            // saw an endpoint it had supplied itself and never ran
+            // (aws-observability/aws-rum-web#881). Every request outside
+            // us-west-2 was signed for its real region and posted to us-west-2,
+            // and the data plane refused it: "Credential should be scoped to a
+            // valid region." 3.2.1 merges only `signing` and `telemetries`, so
+            // the branch fires and this line is no longer needed;
+            // `rum-client.test.tsx` pins that the endpoint follows the region.
+          },
+        );
         // The effect below already ran, against a client that did not exist
         // yet, so the entry page view is recorded here or not at all.
         client.current.recordPageView(
-          redactCapabilityUrl(`${window.location.pathname}${window.location.search}`),
+          redactCapabilityUrl(
+            `${window.location.pathname}${window.location.search}`,
+          ),
         );
       } catch {
         // A blocked SDK fetch, a refused Cognito exchange, an ad blocker: none
