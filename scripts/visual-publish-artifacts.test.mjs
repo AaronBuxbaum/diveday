@@ -1,11 +1,23 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { gunzipSync } from "node:zlib";
 import sharp from "sharp";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-
+import { buildVisualPublishBundle } from "./visual-build-publish-bundle.mjs";
+import { prepareVisualBaseline } from "./visual-prepare-baseline.mjs";
 import {
   parseCaptureShards,
+  readCaptureManifest,
+  readExpectedCaptureTestIds,
   reencodePng,
   sanitizeVisualArtifacts,
   validateCaptureSelection,
@@ -92,6 +104,126 @@ describe("parseCaptureShards", () => {
 });
 
 describe("sanitizeVisualArtifacts", () => {
+  it("carries all 2011 planned PNGs through publication and fake-fetch baseline restoration", async () => {
+    const plan = fixture();
+    for (let index = 0; index < 2011; index++) {
+      const shard = (index % 12) + 1;
+      addCapture(plan.root, shard, `capture-${index}.png`);
+    }
+    setExpectedCaptureTests(
+      plan,
+      ALL_SHARDS.map((shard) => `test-${shard}`),
+    );
+    const sanitized = await sanitizeVisualArtifacts({ ...plan, shards: ALL_SHARDS });
+    expect(sanitized).toMatchObject({ count: 2011, testCount: 12 });
+    const manifest = writeCompleteCaptureManifest(plan.temp, sanitized.captures);
+    const captureTests = readCaptureManifest(manifest);
+    expect(captureTests.size).toBe(2011);
+    const sourceDir = path.join(plan.temp, "reg");
+    mkdirSync(sourceDir);
+    for (const directory of ["actual", "expected", "diff"]) {
+      mkdirSync(path.join(sourceDir, directory));
+    }
+    const names = sanitized.captures.map(({ name }) => name);
+    for (const name of names) {
+      for (const directory of ["actual", "expected", "diff"]) {
+        writeFileSync(
+          path.join(sourceDir, directory, name),
+          readFileSync(path.join(plan.output, name)),
+        );
+      }
+    }
+    writeFileSync(
+      path.join(sourceDir, "out.json"),
+      JSON.stringify({
+        actualDir: "actual",
+        expectedDir: "expected",
+        diffDir: "diff",
+        actualItems: names,
+      }),
+    );
+    const bundleDir = path.join(plan.temp, "bundle");
+    const bundle = buildVisualPublishBundle({
+      sourceDir,
+      bundleDir,
+      publicationId: "4103-1",
+      captureTests,
+    });
+    const key = "a".repeat(40);
+    const calls = [];
+    const fetchImpl = async (url) => {
+      calls.push(String(url));
+      const object = new URL(url).pathname.slice(`/${key}/`.length);
+      return new Response(
+        gunzipSync(readFileSync(path.join(bundleDir, "payload", `${object}.gz`))),
+      );
+    };
+    const outputDir = path.join(plan.temp, "restored");
+    await expect(
+      prepareVisualBaseline({
+        bucket: "diveday-vrt",
+        key,
+        version: bundle.snapshotVersion,
+        outputDir,
+        planFile: path.join(plan.temp, "baseline-plan.json"),
+        fetchImpl,
+      }),
+    ).resolves.toMatchObject({ count: 2011 });
+    expect(calls).toHaveLength(2012);
+    expect(
+      verifyCompleteScreenshotInventory({
+        actualDir: plan.output,
+        expectedDir: outputDir,
+        requireExpected: true,
+      }),
+    ).toMatchObject({ actualCount: 2011, expectedCount: 2011 });
+  });
+
+  it("allows duration-balanced selections with more than 256 PNGs in one shard", async () => {
+    const plan = fixture();
+    for (let index = 0; index < 257; index++) addCapture(plan.root, 1, `selected-${index}.png`);
+    await expect(sanitizeVisualArtifacts({ ...plan, shards: [1] })).resolves.toMatchObject({
+      count: 257,
+    });
+  });
+
+  it("rejects raw aggregate inputs above 2GB before decoding any PNG", async () => {
+    const plan = fixture();
+    for (let index = 0; index < 101; index++) {
+      const name = `sparse-${index}.png`;
+      addCapture(plan.root, 1, name, Buffer.alloc(8));
+      truncateSync(path.join(plan.root, "shard-1", "screenshots", name), 20_000_000);
+    }
+    await expect(sanitizeVisualArtifacts({ ...plan, shards: ALL_SHARDS })).rejects.toThrow(
+      /screenshot artifacts exceed the publisher limits/u,
+    );
+  });
+
+  it("retains a global 3072 screenshot bound and the independent 2000-test plan bound", async () => {
+    const plan = fixture();
+    const captures = Array.from({ length: 3073 }, (_, index) => ({
+      name: `capture-${index}.png`,
+      testId: "test-1",
+    }));
+    expect(() => readCaptureManifest(writeCompleteCaptureManifest(plan.temp, captures))).toThrow(
+      /invalid inventory/u,
+    );
+    expect(
+      readCaptureManifest(writeCompleteCaptureManifest(plan.temp, captures.slice(0, 3072))).size,
+    ).toBe(3072);
+    for (let index = 0; index < 3073; index++) {
+      addCapture(plan.root, (index % 12) + 1, `bound-${index}.png`, Buffer.alloc(8), "test-1");
+    }
+    await expect(sanitizeVisualArtifacts({ ...plan, shards: ALL_SHARDS })).rejects.toThrow(
+      /screenshot artifacts exceed the publisher limits/u,
+    );
+    setExpectedCaptureTests(
+      plan,
+      Array.from({ length: 2001 }, (_, index) => `test-${index}`),
+    );
+    expect(() => readExpectedCaptureTestIds(plan.expectedTests)).toThrow(/invalid test inventory/u);
+  });
+
   it("decodes and re-encodes fixed-name PNGs from each expected shard", async () => {
     const plan = fixture();
     const { root, output } = plan;

@@ -51,6 +51,38 @@ afterEach(() => {
 });
 
 describe("prepareVisualBaseline", () => {
+  it("rejects a baseline above the shared 3072-image budget before fetching images", async () => {
+    const { outputDir } = fixture();
+    const calls = [];
+    const fetchImpl = async (url) => {
+      calls.push(String(url));
+      return new Response(
+        JSON.stringify(report(Array.from({ length: 3073 }, (_, index) => `capture-${index}.png`))),
+      );
+    };
+    await expect(
+      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version: VERSION, outputDir, fetchImpl }),
+    ).rejects.toThrow(/too many screenshots/u);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("bounds raw baseline bytes even when padded PNGs canonicalize to tiny images", async () => {
+    const { outputDir } = fixture();
+    const padded = Buffer.alloc(20_000_000);
+    PNG.copy(padded);
+    const fetchImpl = async (url) =>
+      String(url).endsWith("/out.json")
+        ? new Response(
+            JSON.stringify(
+              report(Array.from({ length: 101 }, (_, index) => `padded-${index}.png`)),
+            ),
+          )
+        : { ok: true, status: 200, bodyBuffer: padded };
+    await expect(
+      prepareVisualBaseline({ bucket: BUCKET, key: KEY, version: VERSION, outputDir, fetchImpl }),
+    ).rejects.toThrow(/baseline screenshots exceed the publisher limits/u);
+  });
+
   it("reads a main snapshot's images from the content-addressed blobs its report names", async () => {
     const { outputDir } = fixture();
     const hash = createHash("sha256").update(PNG).digest("hex");

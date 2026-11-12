@@ -15,6 +15,7 @@ import {
   writePlan,
 } from "./visual-baseline-plan.mjs";
 import { mapConcurrent, reencodePng } from "./visual-publish-artifacts.mjs";
+import { MAX_SCREENSHOTS, MAX_TOTAL_IMAGE_BYTES } from "./visual-publish-limits.mjs";
 import {
   actualObjectKey,
   DEFAULT_BUCKET,
@@ -27,8 +28,6 @@ const COMMIT_SHA = /^[0-9a-f]{40}$/u;
 const BUCKET_NAME = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/u;
 const SAFE_BASELINE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}$/u;
 const SAFE_SCREENSHOT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}\.png$/u;
-const MAX_SCREENSHOTS = 2_000;
-const MAX_TOTAL_BYTES = 2_000_000_000;
 
 /** How many times a missing snapshot hands over to the next main-owned one before none is used. */
 export const MAX_BASELINE_FALLBACKS = 3;
@@ -110,6 +109,7 @@ async function fetchBaseline({ bucket, key, version, fetchImpl, actualDir, selec
   const wanted = plan ? plan.fetch : names;
   const files = [];
   let totalBytes = 0;
+  let rawTotalBytes = 0;
   // Downloads are I/O bound and re-encoding is CPU bound: keep both busy.
   await mapConcurrent(
     wanted,
@@ -123,6 +123,10 @@ async function fetchBaseline({ bucket, key, version, fetchImpl, actualDir, selec
         }
         throw new Error(`could not fetch baseline screenshot ${name} (HTTP ${result.status})`);
       }
+      rawTotalBytes += result.body.length;
+      if (rawTotalBytes > MAX_TOTAL_IMAGE_BYTES) {
+        throw new Error("baseline screenshots exceed the publisher limits");
+      }
       // A content address is a claim until the bytes agree with it.
       const claimed = report.actualBlobs?.[name];
       if (claimed && createHash("sha256").update(result.body).digest("hex") !== claimed) {
@@ -130,7 +134,7 @@ async function fetchBaseline({ bucket, key, version, fetchImpl, actualDir, selec
       }
       const canonical = await reencodePng(result.body, `baseline ${name}`);
       totalBytes += canonical.length;
-      if (totalBytes > MAX_TOTAL_BYTES) {
+      if (totalBytes > MAX_TOTAL_IMAGE_BYTES) {
         throw new Error("baseline screenshots exceed the publisher limits");
       }
       files.push([name, canonical]);

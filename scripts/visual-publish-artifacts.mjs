@@ -8,14 +8,17 @@ import path from "node:path";
 import process from "node:process";
 import sharp from "sharp";
 import { readPlan } from "./visual-baseline-plan.mjs";
+import {
+  MAX_CAPTURE_TEST_IDS,
+  MAX_SCREENSHOTS,
+  MAX_TOTAL_IMAGE_BYTES,
+} from "./visual-publish-limits.mjs";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const SAFE_SCREENSHOT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,179}\.png$/u;
-const MAX_SCREENSHOTS = 2_000;
 /** The most visual capture shards a run deals; scripts/visual-affected.mjs deals the same number on main. */
 export const MAX_CAPTURE_SHARDS = 12;
 const MAX_FILE_BYTES = 20_000_000;
-const MAX_TOTAL_BYTES = 2_000_000_000;
 const MAX_IMAGE_PIXELS = 100_000_000;
 const MAX_CAPTURE_MANIFEST_BYTES = 1_000_000;
 const MAX_VISUAL_PLAN_BYTES = 1_000_000;
@@ -227,7 +230,7 @@ export function readExpectedCaptureTestIds(file) {
   if (
     !Array.isArray(plan.expectedCaptureTestIds) ||
     plan.expectedCaptureTestIds.length < 1 ||
-    plan.expectedCaptureTestIds.length > MAX_SCREENSHOTS
+    plan.expectedCaptureTestIds.length > MAX_CAPTURE_TEST_IDS
   ) {
     throw new Error("the complete visual capture test plan has an invalid test inventory");
   }
@@ -348,6 +351,7 @@ export async function sanitizeVisualArtifacts({ root, output, shards, expectedTe
   const captures = [];
   const encodeJobs = [];
   let totalBytes = 0;
+  let rawTotalBytes = 0;
   for (const shard of validatedShards) {
     const source = path.join(root, `shard-${shard}`);
     requireDirectory(source, `shard ${shard} artifact`);
@@ -388,9 +392,10 @@ export async function sanitizeVisualArtifacts({ root, output, shards, expectedTe
       if (stat.size < PNG_SIGNATURE.length || stat.size > MAX_FILE_BYTES) {
         throw new Error(`screenshot size is outside the allowed range: ${entry.name}`);
       }
-      if (names.size >= MAX_SCREENSHOTS || totalBytes + stat.size > MAX_TOTAL_BYTES) {
+      if (names.size >= MAX_SCREENSHOTS || rawTotalBytes + stat.size > MAX_TOTAL_IMAGE_BYTES) {
         throw new Error("screenshot artifacts exceed the publisher limits");
       }
+      rawTotalBytes += stat.size;
       names.add(entry.name);
       encodeJobs.push({ file, name: entry.name });
     }
@@ -408,7 +413,7 @@ export async function sanitizeVisualArtifacts({ root, output, shards, expectedTe
     const canonical = await reencodePng(readFileSync(file, { encoding: null, flag: "r" }), name);
     writeFileSync(path.join(output, name), canonical, { flag: "wx" });
     totalBytes += canonical.length;
-    if (totalBytes > MAX_TOTAL_BYTES) {
+    if (totalBytes > MAX_TOTAL_IMAGE_BYTES) {
       throw new Error("screenshot artifacts exceed the publisher limits");
     }
   });
