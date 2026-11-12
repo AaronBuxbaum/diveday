@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
 import { SearchField } from "@/components/ui/form";

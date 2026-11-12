@@ -708,6 +708,13 @@ export const shops = pgTable(
     unitsConfirmedAt: timestamp("units_confirmed_at", { withTimezone: true }),
     isDemo: boolean("is_demo").notNull().default(false),
     /**
+     * When the visitor closed the demo banner's "Start here" strip. Null shows it.
+     * On the shop, not the signed-in role: a demo is minted per visitor, and the
+     * visitor switches roles (a different account each time) inside the one shop,
+     * so a per-account stamp would bring the strip back on every switch.
+     */
+    demoStartsDismissedAt: timestamp("demo_starts_dismissed_at", { withTimezone: true }),
+    /**
      * When this shop asked to be left out of search engines. Null — the
      * default — means its public pages are in the sitemap and indexable, which
      * is what a shop is on DiveDay for (ADR 20260813-search-listing-is-a-choice).
@@ -1116,6 +1123,12 @@ export const people = pgTable(
      * recorded". Erasure takes it; a merge keeps the later of the two.
      */
     lastDiveOn: date("last_dive_on", { mode: "string" }),
+    /**
+     * The day `last_dive_on` was reported (in the shop's zone): the record
+     * shows both, "last dived Mar 14, 2024, reported Oct 20, 2026", so a reader
+     * can weigh an old word. Set and cleared with `last_dive_on`, never alone.
+     */
+    lastDiveReportedOn: date("last_dive_reported_on", { mode: "string" }),
     /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and

@@ -583,6 +583,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The last dive anywhere, as staff recorded it. Their dives with the
       // shop are in bookings.csv; the record shows the later of the two.
       "last_dive_on",
+      "last_dive_reported_on",
       // **Where this record came from**, as a code, set once at birth
       // (issue #2726). `self_registration` is a diver who put themselves on
       // file at the shop's counter QR rather than being typed in by staff
@@ -633,6 +634,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.drysuitExperienceSeenByPersonId,
         row.drysuitExperienceSeenNote,
         row.lastDiveOn,
+        row.lastDiveReportedOn,
         row.origin,
         row.createdByBookingId,
         row.deletedAt,

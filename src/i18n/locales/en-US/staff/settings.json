@@ -567,7 +567,7 @@
       "on": "On",
       "off": "Off",
       "label": "Plan crew in DiveDay",
-      "description": "Shifts, days away, and who works each departure.",
+      "description": "Shifts, days off, and who works each departure.",
       "save": "Save crew schedule",
       "saved": "Crew schedule saved",
       "turnOn": "Turn on in Features"

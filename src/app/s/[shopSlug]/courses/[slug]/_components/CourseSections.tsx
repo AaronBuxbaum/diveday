@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";

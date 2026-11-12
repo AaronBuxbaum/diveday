@@ -105,7 +105,7 @@ for (const scheme of ["light", "dark"] as const) {
       privateShop,
     }) => {
       await page.goto(`/shop/${privateShop.slug}/dive-sites`);
-      await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
+      await page.getByRole("heading", { level: 1, name: "Dive Sites" }).waitFor();
       await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
       await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
       await page

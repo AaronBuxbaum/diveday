@@ -3,7 +3,7 @@ import {
   DiveDayIcon,
   type WaiverActionIconName,
   type WaiverDeliveryMarkName,
-} from "@/components/StaffDestinationIcon";
+} from "@/components/DiveDayIcon";
 
 export type { WaiverActionIconName, WaiverDeliveryMarkName };
 

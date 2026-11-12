@@ -3,7 +3,7 @@
 import { unstable_rethrow } from "next/navigation";
 import { useCallback, useRef, useState, useTransition } from "react";
 import { type DemoStartCopy, DemoStartStrip } from "@/components/DemoStartStrip";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { MENU_PANEL } from "@/components/ui/menu";
@@ -49,6 +49,10 @@ interface DemoBannerProps {
    * the surface hands its actions in as props.
    */
   switchRole: (roleId: string, shopSlug: string, start?: string) => Promise<void>;
+  /** Whether this demo's visitor already closed "Start here". */
+  startsDismissed?: boolean;
+  /** Records that dismissal on the shop; passed down for the same reason as `switchRole`. */
+  dismissStarts: (shopSlug: string) => Promise<void>;
 }
 
 export function DemoBanner({
@@ -60,6 +64,8 @@ export function DemoBanner({
   copy,
   isMintedDemo = false,
   switchRole,
+  startsDismissed = false,
+  dismissStarts,
 }: DemoBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -220,7 +226,10 @@ export function DemoBanner({
 
         {isMintedDemo ? (
           <DemoStartStrip
-            shopSlug={shopSlug}
+            dismissed={startsDismissed}
+            onDismiss={() => {
+              void dismissStarts(shopSlug).catch(() => {});
+            }}
             copy={copy}
             choices={starts.filter((start) => roles.some(({ id }) => id === start.role))}
             pending={isPending}

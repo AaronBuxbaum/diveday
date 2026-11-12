@@ -57,6 +57,7 @@ import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
 import { publishManifestEventsForPerson } from "./manifest-events";
+import { peopleMinorDeclared } from "./minor-declared";
 import { paymentsByBooking } from "./payments";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import type {
@@ -1732,12 +1733,25 @@ function byPerson<T extends { personId: string }>(rows: readonly T[]): Map<strin
  * The guardian rule's "Under 18" for a seat: its own booker's, or — on a seat
  * whose training mark stands — the course seat's too, so the charter and the
  * enrollment never disagree about whether a parent signs (fail closed).
+ *
+ * **Or any other seat of theirs still ahead.** "Under 18" is said about a
+ * person. A child ticked on Saturday's seat and added to Sunday's by the desk,
+ * or booked again with the box missed, signed alone on Sunday's link and
+ * boarded, while Saturday's roster held the same release for a guardian. The
+ * person-scoped readers already took any standing seat's word (issue #2553,
+ * Option A); a second seat now does too. A date of birth on file still decides.
  */
 function minorDeclaredOf(
   booking: { minorDeclaredAt: Date | null },
   mark: TrainingMarkState | undefined,
+  /** Another of this person's seats still ahead says so (`peopleMinorDeclared`). */
+  declaredOnAnotherSeat: boolean,
 ): boolean {
-  return booking.minorDeclaredAt !== null || (mark?.valid === true && mark.enrollmentMinorDeclared);
+  return (
+    booking.minorDeclaredAt !== null ||
+    (mark?.valid === true && mark.enrollmentMinorDeclared) ||
+    declaredOnAnotherSeat
+  );
 }
 
 export async function listTripsReadiness(
@@ -1906,6 +1920,21 @@ export async function listTripsReadiness(
   ]);
 
   const currentTemplateGeneration = currentTemplate?.materialGeneration ?? null;
+  // Only where it can change the answer: no date on file, no stamp of its own.
+  const minorDeclaredElsewhere = await peopleMinorDeclared(db, {
+    shopId,
+    personIds: waiverRows
+      .filter((row) => row.person.dateOfBirth === null && row.booking.minorDeclaredAt === null)
+      .map((row) => row.person.id),
+    now,
+    seats: [
+      ...new Map(
+        waiverRows.flatMap((row) => row.minorDeclaredSeats).map((seat) => [seat.bookingId, seat]),
+      ).values(),
+    ],
+  });
+  const minorDeclared = (row: (typeof waiverRows)[number], mark: TrainingMarkState | undefined) =>
+    minorDeclaredOf(row.booking, mark, minorDeclaredElsewhere.has(row.person.id));
 
   const certificationsByPerson = byPerson(certificationRows);
   const specialtiesByPerson = byPerson(specialtyRows);
@@ -1976,7 +2005,7 @@ export async function listTripsReadiness(
             ...courseForms,
             signer: {
               dateOfBirth: row.person.dateOfBirth,
-              minorDeclared: minorDeclaredOf(row.booking, trainingMark),
+              minorDeclared: minorDeclared(row, trainingMark),
               timezone,
             },
           })
@@ -1995,7 +2024,7 @@ export async function listTripsReadiness(
         releaseLapse,
         guardianMissing: seatGuardianMissing(effectiveWaiver, {
           dateOfBirth: row.person.dateOfBirth,
-          minorDeclared: minorDeclaredOf(row.booking, trainingMark),
+          minorDeclared: minorDeclared(row, trainingMark),
           timezone,
         }),
         ownLapsed,
@@ -2072,7 +2101,7 @@ export async function listTripsReadiness(
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
         // The booker's "Under 18" on this seat, for the guardian rule alone.
-        minorDeclared: minorDeclaredOf(row.booking, trainingMark),
+        minorDeclared: minorDeclared(row, trainingMark),
         // The guardian rule measures the diver's age on the shop-local day
         // they signed (src/lib/guardian.ts), so the engine needs the zone.
         timezone,

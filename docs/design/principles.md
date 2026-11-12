@@ -170,7 +170,7 @@ with a personality.
 nothing else renders on the page (see `src/components/OfflineManifestView.tsx`, whose "no saved
 manifests" and "nothing here offline" screens are the whole page) — uses the
 bespoke warm pattern: a **drawn SVG glyph** in a rounded circle (the
-`src/components/StaffDestinationIcon.tsx` set is the existing source), a heading, and subtext,
+`src/components/DiveDayIcon.tsx` set is the existing source), a heading, and subtext,
 with no card border. The mark was an emoji until 2026-08-27; the Clearwater ADRs forbid emoji on
 anything new, so the drawn glyph is now the rule, with shipped emoji grandfathered only until
 their surfaces are next touched (`OfflineManifestView` is the one standing case). An **empty

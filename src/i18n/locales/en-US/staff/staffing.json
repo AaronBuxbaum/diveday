@@ -13,10 +13,10 @@
   },
   "away": {
     "from": "From",
-    "heading": "Add days away",
+    "heading": "Add days off",
     "note": "Note",
     "notePlaceholder": "Anything the shop should know",
-    "person": "Who",
+    "person": "Staff member",
     "remove": "Remove",
     "save": "Save",
     "to": "To"
@@ -121,7 +121,7 @@
     "shiftAria": "Shift for {person} on {day}",
     "thisWeek": "This week",
     "today": "Today",
-    "shiftsAndAway": "Shifts and days away"
+    "shiftsAndAway": "Shifts and days off"
   },
   "working": {
     "remove": "Remove",
@@ -139,10 +139,8 @@
     "save": "Save"
   },
   "filter": {
-    "label": "Schedule scope",
     "all": "Full shop",
     "me": "My schedule",
-    "person": "View a person",
-    "show": "Show schedule"
+    "person": "View a person"
   }
 }

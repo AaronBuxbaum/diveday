@@ -179,7 +179,7 @@ test.describe("capture harness", () => {
       {
         name: "library",
         path: "/shop/blue-mantis/dive-sites",
-        heading: "Dive-site library",
+        heading: "Dive Sites",
         pins: 8,
         ready: waitForSiteLibrary,
       },

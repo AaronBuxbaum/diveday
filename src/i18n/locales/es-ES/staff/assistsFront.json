@@ -21,6 +21,7 @@
   },
   "conversation": {
     "translatedFrom": "Traducido del {language}",
+    "followUp": "Revisar la solicitud de reserva",
     "draft": "Redactar con IA",
     "drafting": "Redactando…",
     "translate": "Traducir al {language}",

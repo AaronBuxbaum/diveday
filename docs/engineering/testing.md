@@ -104,7 +104,7 @@ Renaming a journey's test renames its row in the same change.
 | --- | --- |
 | Before a commit | the guard you touched, `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`; a changed flow's specs; a changed surface's captures in light (the **verify** skill) |
 | Before a push, optional (CI is the gate) | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
-| Every pull request | repo checks, lint, typecheck (one job), all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**`, `src/features/**`, `drizzle/**`, the Postgres test harness or `ci.yml` changed |
+| Every pull request | repo checks, lint, typecheck (one job), all unit tests (6 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**`, `src/features/**`, `drizzle/**`, the Postgres test harness or `ci.yml` changed |
 | Push to `main` | all of the above with every capture, light and dark: the next baseline |
 | Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL (`codeql.yml`, daily 05:30 UTC), the follow-up scan |
 | Hourly | the public schedule canary (`public-schedule-canary.yml`): the demo shop's schedule draws a trip |
@@ -371,12 +371,33 @@ Options: `--dry-run` (shape the issues and print them, file nothing — what a s
 `--judge` (the opt-in judged pass; needs `ANTHROPIC_API_KEY`, and prints `DID NOT JUDGE` and carries
 on without it), `--no-build`, `--keep`, `--out <dir>`.
 
+### Unit CI deadlines and isolation
+
+The unit fleet uses six cost-weighted shards, each keeping the 15-minute job deadline and the
+existing per-file isolation. Every selected test still runs once; the safety coverage job merges
+all six blob reports against the unchanged per-file floors. This adds parallel capacity; it does
+not establish a speedup until the final commit's complete fleet and coverage merge pass.
+
+Issue #4374's investigation found the committed calibrated profile catalog empty. Calibration
+landed on November 9 after that Monday's 05:00 UTC refresh slot, and the suite-overlap fix landed
+on November 11; the next scheduled refresh is November 16. Refresh only adopts a profile after three compatible complete successful histories and held-out validation;
+it must not substitute a cancelled shard's partial map. The weekly refresh recognizes a complete
+fleet by that historical run's job names, so older four-shard and current six-shard runs are both
+eligible. The legacy map remains the fallback until compatible calibration is available.
+
+The #4421 final-head run's latest successful unit jobs took 629.04, 748.32, 845.32 and 840.05 seconds
+in Vitest on Ubuntu 24.04 with V8 coverage. Test bodies were 64–66% and imports 26–27%; setup,
+transform and worker startup made up the remainder. Those timings include a second attempt of
+shard 3, so they describe the latest successful fleet, not a controlled before/after trial.
+Sharing database workers (#4416) changes the isolation requirement and needs a separate explicit
+policy decision plus its shuffled CI trial; a mock-free file can still hold module-level state.
+
 ### Coverage floors
 
 `vitest.config.ts` measures coverage only with `--coverage.enabled`, and only on the safety
 files: every non-test `src/lib` and `src/db` file the `dive-domain-expert` patterns in
 `scripts/check-pr-body.mjs` match (minus seed and copy files), plus `trips`, `authz`, `checkouts`,
-`refunds`, `promo-caps` and `account-security` (`scripts/coverage-safety-files.mjs`). CI's four unit shards run with
+`refunds`, `promo-caps` and `account-security` (`scripts/coverage-safety-files.mjs`). CI's six unit shards run with
 `--coverage.enabled --reporter=blob`; the `coverage-floors` job merges the blobs (`vitest run
 --merge-reports --coverage.enabled`, no second test run) and runs `node scripts/coverage-floors.mjs`,
 which fails when a file's branch coverage falls below its floor in `scripts/coverage-floors.json`. On a pull request that changed none of the safety files, their tests or the shared harness (`scripts/coverage-relevant.mjs`, the `changes` job's `safety` output) the shards run without coverage and the job is skipped; a push to main always runs both.
@@ -679,7 +700,7 @@ server holding anything you care about and it will happily create databases ther
 throwaway.
 
 With the variable unset, `describePostgres` registers a skipped suite: no connection attempted, no
-service required, `pnpm check` and CI's four unit shards completely unaffected. If these ever *fail*
+service required, `pnpm check` and CI's six unit shards completely unaffected. If these ever *fail*
 rather than skip on a plain `pnpm test`, that is a bug in the harness, not a missing server.
 
 The second migration test needs real git history (it reconstructs the previous release's `drizzle/`
@@ -702,6 +723,14 @@ per test file): reusing one process across files skips Node's startup and the mo
 (Next, Drizzle, PGlite's WASM) that every fresh fork repays, without weakening per-file isolation —
 `isolate` still gives each file its own module registry regardless of pool. Measured ~13% faster on
 the full suite locally with identical pass counts across repeated runs.
+
+Database test files that touch no process-wide state (no `vi.` call, no `process.env`, no
+`globalThis`) run in the `dbShared` project, which shares a fork and its module cache between files
+(`isolate: false`); each test still gets its own PGlite. `src/test/projects.ts` selects the files,
+so a file that later adds a mock or a stub moves back to `db` by itself. Locally the 669 files ran
+in 196 s shuffled against 403 s isolated, all passing (issue #4416). A one-week trial from
+2026-11-12: a file that fails only when shared goes back to `db`, and the project is reverted if
+that happens more than once.
 
 ## Conventions
 

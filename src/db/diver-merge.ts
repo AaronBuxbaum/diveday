@@ -1102,6 +1102,10 @@ export async function mergeDiverRecords(input: {
           // The later recorded last dive: both are true, and the later one
           // is the one that says when they last dived.
           lastDiveOn: latestCalendarDate(survivor.lastDiveOn, source.lastDiveOn),
+          // The report travels with the dive day it dated; survivor on a tie.
+          ...((source.lastDiveOn ?? "") > (survivor.lastDiveOn ?? "")
+            ? { lastDiveReportedOn: source.lastDiveReportedOn }
+            : {}),
           courtesyEmailOptOutAt: oldestDate(
             survivor.courtesyEmailOptOutAt,
             source.courtesyEmailOptOutAt,

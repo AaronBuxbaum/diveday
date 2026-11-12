@@ -19,7 +19,7 @@ export const WORDS: StaffingWeekWords = {
   today: "Today",
   person: "Person",
   needsCrew: "Needs crew",
-  shiftsAndAway: "Shifts and days away",
+  shiftsAndAway: "Shifts and days off",
   assign: "Assign",
   assignAria: "Assign crew to {trip}",
   crewing: "Crewing",

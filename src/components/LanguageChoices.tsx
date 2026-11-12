@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { MENU_TICK, menuRowClass } from "@/components/ui/menu";
 
 /** One language on offer: its tag, and its own name for itself. */

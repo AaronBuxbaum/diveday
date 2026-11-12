@@ -29,6 +29,8 @@ export type LastKnownDive = {
   on: CalendarDate | null;
   source: "recorded" | "with_shop" | "imported" | null;
   recorded: CalendarDate | null;
+  /** The day `recorded` was reported, when it has been; the day it was said, not the day dived. */
+  reportedOn: CalendarDate | null;
   withShop: CalendarDate | null;
   imported: CalendarDate | null;
 };
@@ -108,10 +110,15 @@ export async function lastKnownDive(
     timezone: string;
     now: Date;
     recorded: CalendarDate | null;
+    reportedOn: CalendarDate | null;
   },
 ): Promise<LastKnownDive> {
   const known = { recorded: input.recorded, ...(await shopEvidence(db, input)) };
-  return { ...known, ...latestKnownDive(known) };
+  return {
+    ...known,
+    reportedOn: input.recorded ? input.reportedOn : null,
+    ...latestKnownDive(known),
+  };
 }
 
 export type RecordLastDiveOutcome =
@@ -185,10 +192,19 @@ export async function recordLastDive(
       }
       const evidence = await shopEvidence(tx, { ...input, timezone: shop.timezone });
       const known = latestKnownDive({ recorded: null, ...evidence }).on;
-      await tx.update(people).set({ lastDiveOn: input.on }).where(eq(people.id, person.id));
+      await tx
+        .update(people)
+        .set({
+          lastDiveOn: input.on,
+          lastDiveReportedOn: calendarDateInTimezone(input.now, shop.timezone),
+        })
+        .where(eq(people.id, person.id));
       return known && input.on < known ? { ok: true, laterWithShop: known } : { ok: true };
     }
-    await tx.update(people).set({ lastDiveOn: null }).where(eq(people.id, person.id));
+    await tx
+      .update(people)
+      .set({ lastDiveOn: null, lastDiveReportedOn: null })
+      .where(eq(people.id, person.id));
     return { ok: true } as const;
   });
 }

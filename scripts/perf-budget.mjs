@@ -111,12 +111,15 @@ export function sharedFirstLoadChunks(routeStats) {
  * root 404 into all 107 routes at 13.8 KB gzip while the total stayed under its
  * ceiling (code review 2026-10-13b, item 7); the Sentry SDK's `__SENTRY__`
  * carrier was about 57 KB of the floor until `src/instrumentation-client.ts`
- * loaded it on idle (item 34). Exported for the test.
+ * loaded it on idle (item 34). The demo banner's `demo-role-picker` rode the
+ * root 404 in through `PublicShopShell` until `LazyDemoBanner`. Exported for
+ * the test.
  */
 export const FLOOR_MARKERS = {
   "aria-keyshortcuts": "the staff command palette",
   "data-row-menu-open": "the ledger's row menu",
   __SENTRY__: "the Sentry browser SDK, which loads on idle",
+  "demo-role-picker": "the demo banner, which only the demo shop renders",
 };
 
 export function floorMarkersIn(source) {

@@ -49,6 +49,10 @@ export function shellBuildId(html: string): string | null {
  * Assets are written before the shell that references them, so a write failure
  * (quota, eviction) leaves the previous shell in place. Asset names are content
  * hashes, so an interrupted write only adds files the old shell never names.
+ *
+ * The same names make an asset already in this cache the right bytes (the cache
+ * name carries the build id), so only the ones it lacks are fetched; the shell
+ * document is fetched every time.
  */
 export async function cacheOfflineShell(env: OfflineShellCacheEnv): Promise<void> {
   const response = await env.fetch(env.shellPath, { credentials: "same-origin" });
@@ -62,9 +66,12 @@ export async function cacheOfflineShell(env: OfflineShellCacheEnv): Promise<void
       );
     }
   }
-  const assets = build?.assets ?? [];
+  const missing: string[] = [];
+  for (const asset of build?.assets ?? []) {
+    if (!(await env.caches.match(asset, { cacheName: env.cacheName }))) missing.push(asset);
+  }
   const entries = await Promise.all(
-    assets.map(async (asset): Promise<[string, Response]> => {
+    missing.map(async (asset): Promise<[string, Response]> => {
       const assetResponse = await env.fetch(asset, { cache: "reload" });
       if (!assetResponse.ok) {
         throw new Error(`Offline manifest asset ${asset} could not be loaded`);

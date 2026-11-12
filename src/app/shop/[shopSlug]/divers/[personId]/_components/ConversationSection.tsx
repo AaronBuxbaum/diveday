@@ -247,43 +247,42 @@ export function ConversationSection({
                   className={textareaClassFor(4)}
                 />
               </Field>
-              {assist ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <AssistConversationButton
-                    run={assist.run}
-                    fieldId={REPLY_FIELD_ID}
-                    label={t("assistsFront.conversation.draft")}
-                    pendingLabel={t("assistsFront.conversation.drafting")}
-                    failures={{
-                      unavailable: t("assistsFront.conversation.unavailable"),
-                      declined: t("assistsFront.conversation.declined"),
-                      "nothing-to-answer": t("assistsFront.conversation.answered"),
-                      "draft-exists": t("assistsFront.inbox.requestDraftExists"),
-                    }}
-                  />
-                  {assist.translate && assist.diverLanguage ? (
-                    <TranslateReplyButton
+              <div className="flex flex-wrap items-center gap-2">
+                <SubmitButton
+                  pendingLabel={t("words.busy.sending")}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("inbox.reply.send")}
+                </SubmitButton>
+                {assist ? (
+                  <>
+                    <AssistConversationButton
+                      run={assist.run}
                       fieldId={REPLY_FIELD_ID}
-                      translate={assist.translate}
-                      label={t("assistsFront.conversation.translate", {
-                        language: assist.diverLanguage,
-                      })}
-                      pendingLabel={t("assistsFront.conversation.translating")}
-                      yourWords={t.raw("assistsFront.conversation.yourWords")}
+                      label={t("assistsFront.conversation.draft")}
+                      pendingLabel={t("assistsFront.conversation.drafting")}
+                      followUpLabel={t("assistsFront.conversation.followUp")}
+                      failures={{
+                        unavailable: t("assistsFront.conversation.unavailable"),
+                        declined: t("assistsFront.conversation.declined"),
+                        "nothing-to-answer": t("assistsFront.conversation.answered"),
+                        "draft-exists": t("assistsFront.inbox.requestDraftExists"),
+                      }}
                     />
-                  ) : null}
-                </div>
-              ) : null}
-              <SubmitButton
-                pendingLabel={t("words.busy.sending")}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                  className: "justify-self-start",
-                })}
-              >
-                {t("inbox.reply.send")}
-              </SubmitButton>
+                    {assist.translate && assist.diverLanguage ? (
+                      <TranslateReplyButton
+                        fieldId={REPLY_FIELD_ID}
+                        translate={assist.translate}
+                        label={t("assistsFront.conversation.translate", {
+                          language: assist.diverLanguage,
+                        })}
+                        pendingLabel={t("assistsFront.conversation.translating")}
+                        yourWords={t.raw("assistsFront.conversation.yourWords")}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
             </form>
           ) : removed ? (
             // Before the WhatsApp arm on purpose: a removed diver on a stale

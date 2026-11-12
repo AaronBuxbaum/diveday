@@ -1,4 +1,5 @@
-import { and, eq, inArray, isNotNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, or, type SQL, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { seatStandsAhead } from "@/lib/guardian";
 import type { ParticipantType } from "@/lib/participant-types";
 import { trainingMarkProblem } from "@/lib/training-mark";
@@ -6,6 +7,57 @@ import { hasReturned } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { bookings, trips } from "./schema";
 import { readTrainingEnrollments } from "./training-mark-resolve";
+
+/** Candidate facts carried with a roster; the domain rules below still decide standing. */
+export type MinorDeclaredSeat = {
+  bookingId: string;
+  personId: string;
+  status: string;
+  participantType: string;
+  minorDeclaredAt: Date | null;
+  trainingEnrollmentBookingId: string | null;
+  trip: {
+    deletedAt: Date | null;
+    status: string;
+    endsAt: Date;
+    courseId: string | null;
+    startsAt: Date;
+  };
+};
+
+/** Read the same candidate seats inside the roster query, without another round trip. */
+export function minorDeclaredSeatFacts(shopId: string, personId: SQL) {
+  const seat = alias(bookings, "guardian_seat");
+  const trip = alias(trips, "guardian_trip");
+  // diveday:allow-deleted-trips: carry deletion as evidence for seatStandsAhead, as peopleMinorDeclared does.
+  return sql<MinorDeclaredSeat[]>`(
+    select coalesce(jsonb_agg(jsonb_build_object(
+      'bookingId', ${seat.id}, 'personId', ${seat.personId},
+      'status', ${seat.status}, 'participantType', ${seat.participantType},
+      'minorDeclaredAt', ${seat.minorDeclaredAt},
+      'trainingEnrollmentBookingId', ${seat.trainingEnrollmentBookingId},
+      'trip', jsonb_build_object(
+        'deletedAt', ${trip.deletedAt}, 'status', ${trip.status},
+        'endsAt', ${trip.endsAt}, 'courseId', ${trip.courseId}, 'startsAt', ${trip.startsAt}
+      )
+    )), '[]'::jsonb)
+    from ${bookings} as "guardian_seat" inner join ${trips} as "guardian_trip"
+      on ${trip.id} = ${seat.tripId} and ${trip.shopId} = ${shopId}
+    where ${seat.shopId} = ${shopId} and ${seat.personId} = ${personId}
+      and (${seat.minorDeclaredAt} is not null or ${seat.trainingEnrollmentBookingId} is not null)
+  )`.mapWith((rows: MinorDeclaredSeat[]) =>
+    rows.map((row) => ({
+      ...row,
+      minorDeclaredAt: row.minorDeclaredAt === null ? null : new Date(row.minorDeclaredAt),
+      trip: {
+        ...row.trip,
+        deletedAt: row.trip.deletedAt === null ? null : new Date(row.trip.deletedAt),
+        endsAt: new Date(row.trip.endsAt),
+        startsAt: new Date(row.trip.startsAt),
+      },
+    })),
+  );
+}
 
 /**
  * **The seats among these whose training mark stands on an enrollment the booker declared
@@ -75,40 +127,46 @@ export async function peopleMinorDeclared(
      * is about that very day, so its booker's word still speaks for it.
      */
     calledOffToo?: boolean;
+    /** Candidate rows already fetched by the roster, scoped to this shop. */
+    seats?: readonly MinorDeclaredSeat[];
   },
 ): Promise<Set<string>> {
   const declared = new Set<string>();
   const personIds = [...new Set(input.personIds)];
   if (personIds.length === 0) return declared;
-  const seats = await db
-    .select({
-      bookingId: bookings.id,
-      personId: bookings.personId,
-      status: bookings.status,
-      participantType: bookings.participantType,
-      minorDeclaredAt: bookings.minorDeclaredAt,
-      trainingEnrollmentBookingId: bookings.trainingEnrollmentBookingId,
-      trip: {
-        deletedAt: trips.deletedAt,
-        status: trips.status,
-        endsAt: trips.endsAt,
-        courseId: trips.courseId,
-        startsAt: trips.startsAt,
-      },
-    })
-    .from(bookings)
-    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
-    .where(
-      and(
-        eq(bookings.shopId, input.shopId),
-        inArray(bookings.personId, personIds),
-        or(isNotNull(bookings.minorDeclaredAt), isNotNull(bookings.trainingEnrollmentBookingId)),
-      ),
-    );
-  const standing = seats.filter((seat) =>
-    input.calledOffToo
-      ? seat.trip.deletedAt === null && !hasReturned(seat.trip.endsAt, input.now)
-      : seatStandsAhead(seat, input.now),
+  const seats =
+    input.seats ??
+    (await db
+      .select({
+        bookingId: bookings.id,
+        personId: bookings.personId,
+        status: bookings.status,
+        participantType: bookings.participantType,
+        minorDeclaredAt: bookings.minorDeclaredAt,
+        trainingEnrollmentBookingId: bookings.trainingEnrollmentBookingId,
+        trip: {
+          deletedAt: trips.deletedAt,
+          status: trips.status,
+          endsAt: trips.endsAt,
+          courseId: trips.courseId,
+          startsAt: trips.startsAt,
+        },
+      })
+      .from(bookings)
+      .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
+      .where(
+        and(
+          eq(bookings.shopId, input.shopId),
+          inArray(bookings.personId, personIds),
+          or(isNotNull(bookings.minorDeclaredAt), isNotNull(bookings.trainingEnrollmentBookingId)),
+        ),
+      ));
+  const standing = seats.filter(
+    (seat) =>
+      personIds.includes(seat.personId) &&
+      (input.calledOffToo
+        ? seat.trip.deletedAt === null && !hasReturned(seat.trip.endsAt, input.now)
+        : seatStandsAhead(seat, input.now)),
   );
   const viaEnrollment = await enrollmentMinorDeclaredSeats(
     db,

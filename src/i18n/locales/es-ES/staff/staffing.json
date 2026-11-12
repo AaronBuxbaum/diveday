@@ -13,10 +13,10 @@
   },
   "away": {
     "from": "Desde",
-    "heading": "Agregar días de ausencia",
+    "heading": "Agregar días libres",
     "note": "Nota",
     "notePlaceholder": "Algo que el centro deba saber",
-    "person": "Quién",
+    "person": "Miembro del personal",
     "remove": "Quitar",
     "save": "Guardar",
     "to": "Hasta"
@@ -121,7 +121,7 @@
     "shiftAria": "Turno de {person} el {day}",
     "thisWeek": "Esta semana",
     "today": "Hoy",
-    "shiftsAndAway": "Turnos y días de ausencia"
+    "shiftsAndAway": "Turnos y días libres"
   },
   "working": {
     "remove": "Quitar",
@@ -139,10 +139,8 @@
     "save": "Guardar"
   },
   "filter": {
-    "label": "Alcance del horario",
     "all": "Todo el centro",
     "me": "Mi horario",
-    "person": "Ver una persona",
-    "show": "Ver horario"
+    "person": "Ver una persona"
   }
 }

@@ -810,6 +810,13 @@ describe("a charter seat whose training enrollment was declared Under 18", () =>
         actorPersonId: ctx.owner,
       }),
     ).toMatchObject({ ok: true });
+    // The course seat still says "Under 18", and "Under 18" is said about the child, so the
+    // charter seat keeps asking until that word is gone too.
+    expect(await signer(ctx.seat.id)).toMatchObject({ minorDeclared: true });
+    await ctx.db
+      .update(bookings)
+      .set({ minorDeclaredAt: null })
+      .where(eq(bookings.id, ctx.course.bookingId));
     expect(await signer(ctx.seat.id)).toMatchObject({ minorDeclared: false });
   });
 

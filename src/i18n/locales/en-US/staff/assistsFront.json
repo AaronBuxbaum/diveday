@@ -21,6 +21,7 @@
   },
   "conversation": {
     "translatedFrom": "Translated from {language}",
+    "followUp": "Review the booking request",
     "draft": "Draft with AI",
     "drafting": "Drafting…",
     "translate": "Translate into {language}",

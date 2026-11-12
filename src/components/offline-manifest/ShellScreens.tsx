@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { OFFLINE_NOTICE_CLASS } from "@/components/offline-notice";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Bone, Pending } from "@/components/ui/pending";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 import { StatusMessage } from "./StatusMessage";

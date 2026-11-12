@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { buttonClass } from "@/components/ui/button";
 import { MENU_PANEL } from "@/components/ui/menu";
 import { useMenuDismissal } from "@/components/useMenuDismissal";

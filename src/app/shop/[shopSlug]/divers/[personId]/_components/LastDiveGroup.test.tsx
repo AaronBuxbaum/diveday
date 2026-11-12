@@ -30,6 +30,7 @@ function known(overrides: Partial<LastKnownDive> = {}): LastKnownDive {
     on: null,
     source: null,
     recorded: null,
+    reportedOn: null,
     withShop: null,
     imported: null,
     ...overrides,
@@ -88,9 +89,18 @@ describe("newerSaid", () => {
 
 describe("the Last dive row", () => {
   it("puts the date and how long ago on the closed row", () => {
-    renderGroup(diver(), known({ on: "2024-03-14", source: "recorded", recorded: "2024-03-14" }));
+    renderGroup(
+      diver(),
+      known({
+        on: "2024-03-14",
+        source: "recorded",
+        recorded: "2024-03-14",
+        reportedOn: "2026-10-20",
+      }),
+    );
     expect(screen.getByText("Mar 14, 2024 · 2 years ago")).toBeInTheDocument();
     expect(screen.getByText("Mar 14, 2024 · 2 years ago").className).not.toMatch(/warning/);
+    expect(screen.getByText("Reported Oct 20, 2026: last dived Mar 14, 2024.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Clear" })).toBeInTheDocument();
   });
 
@@ -111,7 +121,7 @@ describe("the Last dive row", () => {
       known({ on: "2026-08-02", source: "with_shop", withShop: "2026-08-02" }),
     );
     expect(screen.getByText("Aug 2, 2026 · 2 months ago")).toBeInTheDocument();
-    expect(screen.getByText("Their last dive with you.")).toBeInTheDocument();
+    expect(screen.getByText("From their last trip with you.")).toBeInTheDocument();
     expect(
       screen.getByText("For their Oct 20, 2026 trip: Last dived this season — unverified"),
     ).toBeInTheDocument();

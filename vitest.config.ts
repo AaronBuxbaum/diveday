@@ -187,6 +187,19 @@ export default defineConfig({
           globalSetup: ["./src/test/global-setup.ts"],
         },
       },
+      // The db files that touch no process-wide state share a fork and its
+      // module cache (`isolate: false`); each test still gets its own PGlite.
+      // Selected by src/test/projects.ts (`WORKER_STATE`); a one-week trial,
+      // issue #4416.
+      {
+        extends: true,
+        test: {
+          name: "dbShared",
+          include: only(groups.dbShared),
+          isolate: false,
+          globalSetup: ["./src/test/global-setup.ts"],
+        },
+      },
       // `vmForks`, not the root's `forks`: a fresh fork per file paid a jsdom
       // boot per file, which was 47% of this project's time (305 s of 338
       // files locally, 2026-10-12). A VM pool keeps one process per worker and

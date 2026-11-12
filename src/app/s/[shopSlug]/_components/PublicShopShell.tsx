@@ -23,12 +23,12 @@ import { DEMO_STARTS, demoStartFrom } from "@/features/demo-starts";
  */
 
 import { headers } from "next/headers";
-import { switchDemoRoleAction } from "@/app/actions/demo";
+import { dismissDemoStartsAction, switchDemoRoleAction } from "@/app/actions/demo";
 import { setLocaleAction } from "@/app/actions/set-locale";
 import { BrandStyle } from "@/components/BrandStyle";
-import { DemoBanner } from "@/components/DemoBanner";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
+import { LazyDemoBanner } from "@/components/LazyDemoBanner";
 import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
 import type { PublicShopNavItem } from "@/components/PublicShopNav";
 import { SkipLink } from "@/components/SkipLink";
@@ -198,8 +198,10 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
         level="shell"
       />
       {showBanner && shop ? (
-        <DemoBanner
+        <LazyDemoBanner
           switchRole={switchDemoRoleAction}
+          dismissStarts={dismissDemoStartsAction}
+          startsDismissed={shop?.demoStartsDismissedAt != null}
           currentRole={currentRole}
           starts={DEMO_STARTS.flatMap((start) => {
             const destination = demoStartFrom(start.id);

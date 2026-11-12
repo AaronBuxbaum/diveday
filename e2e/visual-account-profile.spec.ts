@@ -24,12 +24,9 @@ for (const scheme of ["light", "dark"] as const) {
     });
     test("personal crew schedule", async ({ page }) => {
       await page.goto("/shop/blue-mantis/staffing");
-      await page.getByRole("link", { name: staffCopy("staffing.filter.me"), exact: true }).click();
-      await expect(
-        page
-          .getByRole("navigation", { name: staffCopy("staffing.filter.label") })
-          .getByText(staffCopy("staffing.filter.me"), { exact: true }),
-      ).toHaveAttribute("aria-current", "page");
+      const scope = page.getByRole("combobox", { name: staffCopy("staffing.filter.person") });
+      await scope.selectOption("me");
+      await expect(scope).toHaveValue("me");
       await capture(page, "crew-personal-schedule", scheme);
     });
   });

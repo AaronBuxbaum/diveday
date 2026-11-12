@@ -11,7 +11,9 @@ import vm from "node:vm";
  * `entryCSSFiles`) and the chunks every client component under it needs
  * (`clientModules[*].chunks`, which is where lazily imported chunks appear).
  * `build-manifest.json` adds the files every App Router page loads
- * (`rootMainFiles`, `polyfillFiles`). Webpack omits `entryJSFiles`; its own page
+ * (`rootMainFiles`). Its `polyfillFiles` are left out: that is the `noModule`
+ * legacy bundle, which a browser that runs a service worker never requests, so
+ * it can never be an offline miss. Webpack omits `entryJSFiles`; its own page
  * chunk comes from `clientModules`, and its reachable async imports come from
  * `react-loadable-manifest.json`. `next build` itself unions the first
  * two for its route size table (`route-bundle-stats.js`).
@@ -163,7 +165,6 @@ export function collectOfflineShellAssets(distDir, route = SHELL_ROUTE) {
       .map((f) => (typeof f === "string" ? f : f?.path)),
     ...Object.values(manifest.clientModules ?? {}).flatMap((m) => m?.chunks ?? []),
     ...(buildManifest.rootMainFiles ?? []),
-    ...(buildManifest.polyfillFiles ?? []),
     ...(webpack ? webpackAsyncFiles(distDir, clientModules) : []),
   ];
   const listed = [...new Set(raw.map(normalizeAsset).filter(Boolean))];

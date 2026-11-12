@@ -15,7 +15,6 @@ import {
   FormStatus,
 } from "@/components/ui/form";
 import { ShopNotice } from "@/components/ui/outcome";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { noticeRole } from "@/components/ui/tone";
 import { requireShopSurface } from "@/features/session";
 import { requestLocale } from "@/i18n/request";
@@ -26,6 +25,7 @@ import { shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 import { ScheduleViews } from "../schedule/_components/ScheduleViews";
 import { CrewPageHeader } from "./_components/CrewPageHeader";
 import { staffingGapWords } from "./_components/gap-words";
+import { SchedulePicker } from "./_components/SchedulePicker";
 import { StaffingWarnings } from "./_components/StaffingWarnings";
 import { StaffingWeek } from "./_components/StaffingWeek";
 import { readStaffingWeek } from "./_components/staffing-week-read";
@@ -194,48 +194,20 @@ export default async function StaffingPage({
       />
 
       {plan ? null : (
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          <SegmentedControl
-            ariaLabel={t("staffing.filter.label")}
-            currentKey={selectedValue === "all" || selectedValue === "me" ? selectedValue : null}
-            items={(["all", "me"] as const).map((value) => ({
-              key: value,
-              label: t(`staffing.filter.${value}`),
-              href: `${staffingPath}?week=${weekStart}&person=${value}`,
-            }))}
-          />
-          {canManage ? (
-            <form action={staffingPath} className="flex items-center gap-2">
-              <input type="hidden" name="week" value={weekStart} />
-              <select
-                key={selectedValue}
-                name="person"
-                defaultValue={selectedValue}
-                aria-label={t("staffing.filter.person")}
-                className={`${controlClass} w-auto min-w-48`}
-              >
-                <option value="all">{t("staffing.filter.all")}</option>
-                <option value="me">{t("staffing.filter.me")}</option>
-                {view.staff
+        <SchedulePicker
+          week={weekStart}
+          value={selectedValue}
+          label={t("staffing.filter.person")}
+          options={[
+            { value: "all", label: t("staffing.filter.all") },
+            { value: "me", label: t("staffing.filter.me") },
+            ...(canManage
+              ? view.staff
                   .filter((member) => member.person.id !== session.user.personId)
-                  .map((member) => (
-                    <option key={member.person.id} value={member.person.id}>
-                      {member.person.fullName}
-                    </option>
-                  ))}
-              </select>
-              <SubmitButton
-                pendingLabel={t("staffing.filter.show")}
-                className={buttonClass({
-                  variant: "secondary",
-                  className: "shrink-0 whitespace-nowrap",
-                })}
-              >
-                {t("staffing.filter.show")}
-              </SubmitButton>
-            </form>
-          ) : null}
-        </div>
+                  .map((member) => ({ value: member.person.id, label: member.person.fullName }))
+              : []),
+          ]}
+        />
       )}
 
       {pageNotice ? (
@@ -276,7 +248,12 @@ export default async function StaffingPage({
             <PlanSection id="add-shift" label={t("staffing.addShift.heading")}>
               <FieldGrid as="form" action={createShift} columns={2}>
                 <Field label={t("staffing.addShift.person")}>
-                  <select name="personId" required className={controlClass}>
+                  <select
+                    name="personId"
+                    required
+                    defaultValue={session.user.personId}
+                    className={controlClass}
+                  >
                     <option value="">{t("staffing.addShift.choosePerson")}</option>
                     {view.staff.map((member) => (
                       <option key={member.person.id} value={member.person.id}>
@@ -422,7 +399,7 @@ export default async function StaffingPage({
 }
 
 /**
- * One of the Shifts and away tab's two forms: a heading over the form, always
+ * One of the Shifts tab's two forms: a heading over the form, always
  * open, because the tab exists to fill them in.
  */
 function PlanSection({

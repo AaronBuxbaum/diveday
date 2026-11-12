@@ -222,7 +222,7 @@ with `source: "unknown"`. None came from the app's own code:
 
 - no client chunk and no server-emitted inline script contains an eval construct (the first pass
   above), and Zod's `new Function` probe is switched off in the browser
-  (`configureZod({ jitless: true })` in `src/instrumentation-client.ts`);
+  (`makeZodJitless()` from `src/lib/zod-jitless.ts`, called in `src/instrumentation-client.ts`);
 - a report raised by the app's own bundle would normally carry this origin as its `source` and
   arrive from every browser on the same pages; these came from one user agent three years out of
   date, which is consistent with a crawler injecting its own script into the page it loads.

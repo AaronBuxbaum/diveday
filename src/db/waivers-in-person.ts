@@ -151,6 +151,7 @@ async function bookingSigner(
   tx: DbExecutor,
   shopId: string,
   bookingId: string,
+  now: Date,
 ): Promise<WaiverSigner | Extract<InPersonWaiverOutcome, { ok: false }>> {
   const [booking] = await tx
     .select({
@@ -183,7 +184,12 @@ async function bookingSigner(
     personId: booking.personId,
     fullName: booking.fullName,
     dateOfBirth: booking.dateOfBirth,
-    minorDeclared: booking.minorDeclaredAt !== null,
+    // Its own booker's word, or any other seat of theirs still ahead, as readiness reads it.
+    minorDeclared:
+      booking.minorDeclaredAt !== null ||
+      (await peopleMinorDeclared(tx, { shopId, personIds: [booking.personId], now })).has(
+        booking.personId,
+      ),
     seat: {
       startsAt: booking.tripStartsAt,
       endsAt: booking.tripEndsAt,
@@ -386,7 +392,7 @@ export async function recordInPersonWaiver(
     if (!attestedBy) return { ok: false, reason: "staff_not_found" };
 
     const signer = bookingSubject
-      ? await bookingSigner(tx, input.shopId, bookingSubject)
+      ? await bookingSigner(tx, input.shopId, bookingSubject, now)
       : await personSigner(tx, input.shopId, (input.subject as { personId: string }).personId, now);
     if (!signer.ok) return signer;
 

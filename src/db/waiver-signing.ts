@@ -50,7 +50,11 @@ export async function seatMinorDeclared(
     if (row.minorDeclaredAt) return true;
     // The charter seat of a training dive asks the guardian the way its course seat does, as
     // readiness reads it (issue #4103).
-    return (await enrollmentMinorDeclaredSeats(db, record.shopId, [row])).has(row.bookingId);
+    if ((await enrollmentMinorDeclaredSeats(db, record.shopId, [row])).has(row.bookingId)) {
+      return true;
+    }
+    // A seat nobody marked still belongs to a child another seat marked: fall
+    // through to the person's seats still ahead, as readiness does.
   }
   const declared = await peopleMinorDeclared(db, {
     shopId: record.shopId,

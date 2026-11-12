@@ -1,6 +1,6 @@
 {
   "list": {
-    "title": "Dive-site library",
+    "title": "Dive Sites",
     "createSite": "Add a dive site",
     "browseTemplates": "Browse the DiveDay catalog",
     "catalogSiteCount": "{count, plural, one {# published site} other {# published sites}}",
@@ -8,7 +8,7 @@
     "emptyHeading": "Start with a site your crew knows well",
     "emptyBody": "Add a location, a map or route image, and the life divers may encounter.",
     "locationToAdd": "Location to add",
-    "searchAriaLabel": "Search the dive-site library",
+    "searchAriaLabel": "Search dive sites",
     "searchLabel": "Find a site",
     "searchPlaceholder": "Name or location",
     "searchClear": "Clear search",

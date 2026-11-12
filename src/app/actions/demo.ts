@@ -8,7 +8,7 @@ import { getDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { demoRoleEmail } from "@/db/people";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
-import { getShopById, getShopBySlug } from "@/db/shops";
+import { dismissDemoStarts, getShopById, getShopBySlug } from "@/db/shops";
 import {
   DEMO_SEAT_COOKIE,
   DEMO_SEAT_MAX_AGE_SECONDS,
@@ -239,6 +239,17 @@ export async function resetDemoAction() {
       return true;
     }));
   redirect(`/shop/${session.user.shopSlug}?reset=${reset ? "1" : "refused"}`);
+}
+
+/**
+ * Closes the demo banner's "Start here" strip for good. No session is asked for:
+ * the strip shows on public pages too, the slug is the visitor's own demo, and
+ * the worst a stranger can do with it is hide a hint.
+ */
+export async function dismissDemoStartsAction(shopSlug: string) {
+  const db = await getDb();
+  const shop = await getShopBySlug(db, shopSlug);
+  if (shop?.isDemo) await dismissDemoStarts(db, shop.id);
 }
 
 /**

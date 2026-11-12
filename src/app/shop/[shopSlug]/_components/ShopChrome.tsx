@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { after, connection } from "next/server";
 import { cache } from "react";
-import { switchDemoRoleAction } from "@/app/actions/demo";
+import { dismissDemoStartsAction, switchDemoRoleAction } from "@/app/actions/demo";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { setLocaleAction } from "@/app/actions/set-locale";
-import { DemoBanner } from "@/components/DemoBanner";
+import { LazyDemoBanner } from "@/components/LazyDemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { ShopNav, ShopNavSidebar } from "@/components/ShopNav";
 import { SkipLink } from "@/components/SkipLink";
@@ -287,8 +287,10 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
           the manifest's own skip link. */}
       <SkipLink href="#shop-main-content" label={staffT("shared.skipToContent")} level="shell" />
       {ownShop && showBanner && demoT ? (
-        <DemoBanner
+        <LazyDemoBanner
           switchRole={switchDemoRoleAction}
+          dismissStarts={dismissDemoStartsAction}
+          startsDismissed={shop?.demoStartsDismissedAt != null}
           currentRole={currentRole}
           starts={DEMO_STARTS.flatMap((start) => {
             const destination = demoStartFrom(start.id);

@@ -132,7 +132,7 @@ import { seedListedShops } from "./seed-listed-shops";
 import { seedPackages } from "./seed-packages";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { type SeedShape, seedDemoSchedule, shapeHas } from "./seed-schedule";
-import { DEMO_SHOP_BRAND } from "./seed-shop-brand";
+import { DEMO_SHOP_BRAND, DEMO_SHOP_DESK } from "./seed-shop-brand";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 
 const DEMO_BOAT_CAPACITIES = {
@@ -325,6 +325,7 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
       name: "Blue Mantis Divers",
       slug: DEMO_SHOP_SLUG,
       ...DEMO_SHOP_BRAND,
+      ...DEMO_SHOP_DESK,
       timezone: DEMO_SHOP_TIMEZONE,
       ...DEMO_SHOP_UNITS,
       // **Blue Mantis finished its own onboarding**, like the trading shop it

@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { SkeletonLineBars, type SkeletonLines } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 
 /**

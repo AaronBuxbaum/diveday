@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
@@ -359,6 +359,8 @@ export const WEEK_GRID = {
   dayHead: "border-s border-border px-1.5 py-2.5",
   person: "pe-2 py-3",
   day: "flex flex-col items-start gap-1 border-s border-border px-1.5 py-2",
+  // One person on screen: room to read their own week at a glance.
+  dayTall: "flex min-h-40 flex-col items-start gap-1 border-s border-border px-1.5 py-2",
   shiftChip: chipClass("shift"),
 } as const;
 
@@ -463,7 +465,10 @@ export function StaffingWeek({
               {person.days.map((cell, index) => {
                 const day = week.days[index];
                 return (
-                  <td key={cell.date} className={WEEK_GRID.day}>
+                  <td
+                    key={cell.date}
+                    className={week.people.length === 1 ? WEEK_GRID.dayTall : WEEK_GRID.day}
+                  >
                     {cell.shifts.map((shift) => (
                       <ShiftChip
                         key={shift.id}

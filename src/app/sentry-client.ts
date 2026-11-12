@@ -14,7 +14,7 @@ function whenIdle(run: () => void) {
 export const browserSentry =
   SENTRY_DSN && typeof window !== "undefined"
     ? deferSentry({
-        load: () => import("@sentry/nextjs"),
+        load: () => import("./sentry-browser-sdk"),
         init: (Sentry) =>
           Sentry.init({
             dsn: SENTRY_DSN,

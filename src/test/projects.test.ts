@@ -15,20 +15,48 @@ const FIXTURE = ["@", "test", "db"].join("/");
 const ENV = ["@vitest", "environment"].join("-");
 
 describe("classifyTestFile", () => {
-  it("sends a file that imports the database fixture to db, wherever it lives", () => {
+  it("sends an unregistered database fixture file to dbShared, wherever it lives", () => {
     const source = `import { seededShopContext } from "${FIXTURE}";`;
-    expect(classifyTestFile("src/db/bookings.test.ts", source)).toBe("db");
-    expect(classifyTestFile("src/app/api/search/route.test.ts", source)).toBe("db");
-    expect(classifyTestFile("src/features/session/rules.test.ts", source)).toBe("db");
+    expect(classifyTestFile("src/db/bookings.test.ts", source)).toBe("dbShared");
+    expect(classifyTestFile("src/app/api/search/route.test.ts", source)).toBe("dbShared");
+    expect(classifyTestFile("src/features/unregistered/store.test.ts", source)).toBe("dbShared");
     expect(
       classifyTestFile(
         "src/db/x.test.ts",
         `import { x } from "${FIXTURE.replace("db", "query-count")}";`,
       ),
-    ).toBe("db");
+    ).toBe("dbShared");
     expect(classifyTestFile("src/test/x.test.ts", ["await ", "createTestDb", "();"].join(""))).toBe(
-      "db",
+      "dbShared",
     );
+  });
+
+  it("preserves the registered database project's isolation after relocation", () => {
+    const source = `import { seededShopContext } from "${FIXTURE}";`;
+    const moved = "src/features/availability/store.test.ts";
+    for (const file of [
+      moved,
+      `${ROOT}/${moved}`,
+      `C:\\work\\diveday\\${moved.replaceAll("/", "\\")}`,
+    ]) {
+      expect(classifyTestFile(file, source), file).toBe("db");
+    }
+    // The explicit relocation contract does not opt other database files out of the trial.
+    expect(classifyTestFile("src/features/unregistered/store.test.ts", source)).toBe("dbShared");
+    expect(classifyTestFile("src/db/availability.test.ts", source)).toBe("dbShared");
+  });
+
+  it("keeps a database file that touches process-wide state in the isolated db project", () => {
+    const fixture = `import { seededShopContext } from "${FIXTURE}";\n`;
+    for (const trace of [
+      ["v", "i.mock('./x');"].join(""),
+      ["v", "i.useFakeTimers();"].join(""),
+      ["v", "i.spyOn(console, 'log');"].join(""),
+      ["process", ".env.X = '1';"].join(""),
+      ["global", "This.fetch = f;"].join(""),
+    ]) {
+      expect(classifyTestFile("src/db/x.test.ts", fixture + trace)).toBe("db");
+    }
   });
 
   it("sends a jsdom docblock to ui, and only a docblock", () => {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";

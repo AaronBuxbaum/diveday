@@ -90,6 +90,14 @@ export function LastDiveGroup({
       }`
     : t("divers.file.noneOnFile");
   const said = newerSaid(diver, known.on, timezoneDay);
+  const reported = known.recorded
+    ? known.reportedOn
+      ? t("divers.lastDive.reported", {
+          reported: formatCalendarDate(known.reportedOn, locale),
+          dived: formatCalendarDate(known.recorded, locale),
+        })
+      : t("divers.lastDive.reportedUndated", { dived: formatCalendarDate(known.recorded, locale) })
+    : null;
   const source =
     known.source === "with_shop"
       ? t("divers.lastDive.fromShop")
@@ -108,9 +116,10 @@ export function LastDiveGroup({
       open={Boolean(status && !status.silent)}
     >
       <div className="space-y-4">
-        {source || said ? (
+        {source || reported || said ? (
           <div className="space-y-1 text-sm text-muted">
             {source ? <p>{source}</p> : null}
+            {reported ? <p>{reported}</p> : null}
             {said ? (
               <p>
                 {t("divers.lastDive.theySaid", {

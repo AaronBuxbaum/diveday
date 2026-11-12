@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { CaptainRollCallFallback } from "@/components/MarketingScreenFallbacks";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";

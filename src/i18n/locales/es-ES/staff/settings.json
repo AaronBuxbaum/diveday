@@ -567,7 +567,7 @@
       "on": "Activado",
       "off": "Desactivado",
       "label": "Organizar la tripulación en DiveDay",
-      "description": "Turnos, días fuera y quién trabaja en cada salida.",
+      "description": "Turnos, días libres y quién trabaja en cada salida.",
       "save": "Guardar turnos",
       "saved": "Turnos de la tripulación guardados",
       "turnOn": "Activar en Funciones"
