@@ -3,7 +3,7 @@ import { expect, READ_ONLY, test } from "./fixtures";
 const BASELINE_HEADERS = {
   "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
   "x-content-type-options": "nosniff",
-  "permissions-policy": "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
 };
 
 function expectSecurityHeaders(
