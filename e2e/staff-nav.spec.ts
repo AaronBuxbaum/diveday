@@ -311,21 +311,14 @@ test.describe("owner", () => {
       Math.max(0, Math.round(mainTop - bar)),
     );
 
-    // And the defect in its own language: axe failed this page because the
-    // back-link was *half under the bar*, not because a number was wrong.
-    // Asserting the clearance rather than only the offset means a future
-    // change that lands at zero by some other route still has to keep the
-    // masthead readable.
+    // The masthead must remain readable below the fixed staff bar, in addition
+    // to the scroll-position assertion above.
     const clearance = await page.evaluate(() => {
       const bar = document.querySelector("[data-chrome-bar]")?.getBoundingClientRect();
-      // The masthead's way back up, named for the section it returns to.
-      // Read inside `main`: the sidebar carries a "Schedule" link too.
-      const back = [...document.querySelectorAll("main a")]
-        .find((anchor) => /^schedule$/i.test(anchor.textContent?.trim() ?? ""))
-        ?.getBoundingClientRect();
-      return bar && back ? Math.round(back.top - bar.bottom) : null;
+      const heading = document.querySelector("main h1")?.getBoundingClientRect();
+      return bar && heading ? Math.round(heading.top - bar.bottom) : null;
     });
-    expect(clearance, "the back-link was left under the staff bar").not.toBeNull();
+    expect(clearance, "the departure heading was left under the staff bar").not.toBeNull();
     expect(clearance ?? -1).toBeGreaterThanOrEqual(0);
   });
 
@@ -380,9 +373,7 @@ test.describe("owner", () => {
     const landing = await page.evaluate(() => {
       const main = document.querySelector("main");
       const bar = document.querySelector("[data-chrome-bar]")?.getBoundingClientRect();
-      const back = [...document.querySelectorAll("main a")]
-        .find((anchor) => /^schedule$/i.test(anchor.textContent?.trim() ?? ""))
-        ?.getBoundingClientRect();
+      const heading = document.querySelector("main h1")?.getBoundingClientRect();
       return {
         scrollY: window.scrollY,
         maxTop: Math.max(
@@ -391,13 +382,13 @@ test.describe("owner", () => {
             (main?.getBoundingClientRect().top ?? 0) + window.scrollY - (bar?.height ?? 0),
           ),
         ),
-        clearance: bar && back ? Math.round(back.top - bar.bottom) : null,
+        clearance: bar && heading ? Math.round(heading.top - bar.bottom) : null,
       };
     });
     expect(landing.scrollY, "the departure opened partway down itself").toBeLessThanOrEqual(
       landing.maxTop,
     );
-    expect(landing.clearance, "the back-link was left under the staff bar").not.toBeNull();
+    expect(landing.clearance, "the departure heading was left under the staff bar").not.toBeNull();
     expect(landing.clearance ?? -1).toBeGreaterThanOrEqual(0);
 
     // The new departure's forward scroll must not overwrite the board's
