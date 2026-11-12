@@ -2022,7 +2022,21 @@ function explicitResultAt(
 ): OfflineRollCallResult | null | undefined {
   const latestAttempt = latestQueuedAttempt(events, checkpoint, matches);
   if (!latestAttempt) return saved;
-  if (latestAttempt.syncStatus !== "rejected") return recordedResult(latestAttempt);
+  if (latestAttempt.syncStatus !== "rejected") {
+    // **A saved statement newer than this device's own stands.** The device
+    // keeps every event it queued, synced ones included, so without this its
+    // own "back aboard" outlived a second crew member's later "did not come
+    // back" on every refresh that brought it home, and the tablet went on
+    // reading the diver as aboard. DiveDay orders the two the same way: it
+    // holds the synced one beneath the newer mark, and refuses the pending
+    // one as `newer_event_exists`. Fixed-width ISO strings, compared as
+    // `latestQueuedAttempt` compares them. A device clock running fast still
+    // dates its own tap too late to lose here; nothing on the copy says by
+    // how much.
+    return saved && saved.occurredAt > latestAttempt.occurredAt
+      ? saved
+      : recordedResult(latestAttempt);
+  }
   const rescued = latestQueuedAttempt(
     events,
     checkpoint,
