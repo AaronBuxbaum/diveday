@@ -43,6 +43,19 @@ describe("the funnel's two doors", () => {
     expect(container.querySelectorAll("form")).toHaveLength(1);
   });
 
+  it("offers the 20-minute call only where a page asks for it, tagged with the page's source", () => {
+    const { rerender } = render(<FunnelCtas locale="en-US" source="pricing" />);
+    expect(screen.queryByRole("link", { name: "Book a 20-minute call" })).not.toBeInTheDocument();
+    rerender(<FunnelCtas locale="en-US" source="pricing" call />);
+    const door = screen.getByRole("link", { name: "Book a 20-minute call" });
+    expect(door).toHaveAttribute(
+      "href",
+      "https://calendar.app.google/weoxPQBhbZDviHCp9?utm_source=dive.day&utm_content=pricing",
+    );
+    expect(door).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: "Get set up" })).toBeInTheDocument();
+  });
+
   it("fills the column on a phone and hugs its doors from sm up", () => {
     const { container } = render(<FunnelCtas locale="en-US" source="product" />);
     expect(container.firstElementChild).toHaveClass(

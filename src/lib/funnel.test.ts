@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FEATURE_PAGE_SLUGS } from "./feature-pages";
 import {
+  callHref,
   eventSource,
   featureSource,
   guideHref,
@@ -198,5 +199,13 @@ describe("guideOfSource", () => {
 describe("guideHref", () => {
   it("opens one guide carrying the door's own tag", () => {
     expect(guideHref("fareharbor", "setup-sent")).toBe("/switching/fareharbor?from=setup-sent");
+  });
+});
+
+describe("callHref", () => {
+  it("opens the founder's scheduling page and carries the door's tag", () => {
+    expect(callHref("about-closing")).toBe(
+      "https://calendar.app.google/weoxPQBhbZDviHCp9?utm_source=dive.day&utm_content=about-closing",
+    );
   });
 });

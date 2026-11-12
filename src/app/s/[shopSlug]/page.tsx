@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews } from "@/components/ShopReviews";
-import { FilterChips } from "@/components/ui/FilterChips";
 import { PAGE_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { type AppDb, getDb } from "@/db/client";
 import { listRunningPublicSeries, type pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -40,18 +39,18 @@ import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { OurYearSection } from "./_components/OurYear";
 import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
-import { ScheduleFilters } from "./_components/ScheduleFilters";
+import { ScheduleFilterBar } from "./_components/ScheduleFilterBar";
 import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { SchedulePaperSheet, scheduleSheetEmpty } from "./_components/SchedulePaperSheet";
 import { ShopfrontStory } from "./_components/ShopfrontStory";
 import { BoatsShelf } from "./_components/ShopPhotoStrip";
+import { ShopWelcome } from "./_components/ShopWelcome";
 import { readSchedulePage } from "./_components/schedule-reads";
 import { seatPriceLabel, shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
 import {
   aboveStatedLevelIds,
   type ScheduleView,
   scheduleDayWords,
-  scheduleFilterCopy,
   scheduleMonthBounds,
   scheduleMonthRail,
   scheduleNextBoat,
@@ -319,6 +318,15 @@ export default async function SchedulePage({
         t={t}
         now={now}
       />
+      <ShopWelcome
+        shop={shop}
+        aggregate={reviewAggregate}
+        newToDivingHref={shelfCourses.length > 0 ? publicCoursesPath(shopSlug) : null}
+        seeScheduleHref={hasUpcoming ? "#schedule" : null}
+        locale={locale}
+        t={t}
+        className="mb-10"
+      />
       <header>
         <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{t("schedule.title")}</h1>
         {zoneLine ? <p className="mt-2 max-w-xl text-sm text-muted">{zoneLine}</p> : null}
@@ -376,40 +384,17 @@ export default async function SchedulePage({
               the frame promises the host page none. The URL carries the
               filters and the list re-renders server-side (ADR
               20260812-javascript-is-required). */}
-          {hasUpcoming ? (
-            <ScheduleFilters
-              month={month ?? null}
-              lens={activeLens?.slug ?? null}
-              tripTypeFilter={tripTypeFilter ?? null}
-              hasSpaceFilter={hasSpaceFilter}
-              canDiveFilter={canDiveFilter ?? null}
-              hideAboveFilter={hideAboveFilter}
-              copy={scheduleFilterCopy(t)}
-              chips={
-                lenses.length > 0 ? (
-                  <FilterChips
-                    label={t("schedule.lenses.railLabel")}
-                    chips={[
-                      {
-                        key: "all",
-                        href: lensHref(null),
-                        active: !activeLens,
-                        label: t("schedule.lenses.all"),
-                      },
-                      // The shop's own word, verbatim and untranslated.
-                      ...lenses.map((entry) => ({
-                        key: entry.slug,
-                        href: lensHref(entry.slug),
-                        active: activeLens?.id === entry.id,
-                        label: entry.name,
-                      })),
-                    ]}
-                  />
-                ) : null
-              }
-              activeLensLabel={activeLens?.name ?? null}
-            />
-          ) : null}
+          <ScheduleFilterBar
+            month={month ?? null}
+            lenses={lenses}
+            activeLens={activeLens}
+            lensHref={lensHref}
+            tripTypeFilter={tripTypeFilter ?? null}
+            hasSpaceFilter={hasSpaceFilter}
+            canDiveFilter={canDiveFilter ?? null}
+            hideAboveFilter={hideAboveFilter}
+            t={t}
+          />
 
           {/* **The terminal state, now only inside the frame.** On the page
               itself an empty board is the off-season card above plus the

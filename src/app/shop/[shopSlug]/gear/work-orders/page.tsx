@@ -111,8 +111,7 @@ export default async function WorkOrdersPage({
     <StaffPage width="full">
       <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
-        eyebrow={t("shared.shopSections.gear")}
-        title={t("workOrders.title")}
+        title={t("gear.title")}
         actions={
           total > 0 && !adding ? (
             <Link href={newOrderHref} className={buttonClass()}>

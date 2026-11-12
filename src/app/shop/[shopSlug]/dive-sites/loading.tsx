@@ -14,7 +14,7 @@ export default function DiveSitesLoading() {
   return (
     <StaffPage width="full">
       <Pending>
-        <ShopPageHeader pending titleWidth="w-56" description={false} actions />
+        <ShopPageHeader pending eyebrow={false} titleWidth="w-56" description={false} actions />
         {/* The search box, in the `mb-6` toolbar the page draws it in. */}
         <Bone shape="control" className="mb-6 h-12 w-full sm:w-80" />
         <div className="mt-6 flex flex-col gap-8">

@@ -114,7 +114,12 @@ describe("GET /s/[shopSlug]/trips/[id]/calendar", () => {
       expect(event).toContain(`DTSTART:202611${20 + index}T130000Z`);
       expect(event).toContain(`DTEND:202611${20 + index}T${index === 2 ? "21" : "22"}0000Z`);
     }
-    expect(events[0]).toContain(trip.course.scheduleDays[0].title);
+    // A board row carries no course-page content; the course's own row does.
+    const [course] = await db
+      .select({ scheduleDays: courses.scheduleDays })
+      .from(courses)
+      .where(eq(courses.id, trip.course.id));
+    expect(events[0]).toContain(course?.scheduleDays[0]?.title);
     expect(events[0]).toMatch(/confined/i);
     expect(file).not.toMatch(/Dock call|We leave|LOCATION:/);
   });

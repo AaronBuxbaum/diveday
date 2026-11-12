@@ -340,10 +340,11 @@ that layer plus the one below, never main. `.github/workflows/main-tip.yml` clos
 pull request whose base is not main: its `This layer plus main` check merges main's current tip into
 the head and runs `pnpm check:migration-graph`, `pnpm typecheck` and `pnpm check:repo`, stopping at
 the first that fails. The job summary says "This layer plus main: OK" or names the conflict or the
-first error. It is not part of `CI result`, so a red main does not hold every stack; a red check
-here is a break the layer will meet on main, and the time to fix it is now. It was added after a
-migration diamond and run 39823408515 (`Cannot find name 'diverTranslator'`) reddened main on
-2026-10-23, each from two layers that were green alone.
+first error. Like CI, it runs only on the top layer of a stack (the same `Top of the stack?` gate,
+ADR 20261105-ci-runs-on-the-top-of-the-stack). It is not part of `CI result`, so a red main does not
+hold every stack; a red check here is a break the layer will meet on main, and the time to fix it is
+now. It was added after a migration diamond and run 39823408515 (`Cannot find name
+'diverTranslator'`) reddened main on 2026-10-23, each from two layers that were green alone.
 
 ### The weekly CI health check
 

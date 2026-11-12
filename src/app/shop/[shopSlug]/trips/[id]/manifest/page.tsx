@@ -106,7 +106,7 @@ export default async function TripManifestPage({
     shopPickedSpecies,
     reader,
     completeManifests,
-    offlineSnapshot,
+    offlineRoster,
     departureManifest,
     boatSafety,
     checkpoint,
@@ -328,7 +328,7 @@ export default async function TripManifestPage({
           <OfflineManifestManager
             locale={locale}
             payload={offlineManifestPayload({
-              snapshot: offlineSnapshot,
+              roster: offlineRoster,
               shop: { ...shop, emergencyReference },
               ...boatCheck,
               boatSafety,

@@ -483,7 +483,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
               crewPersonId: "crew-dana",
               checkpoint: "after_dive_1",
               status: "not_boarded",
-              occurredAt: new Date(FROZEN_MS).toISOString(),
+              // After the saved copy's own 12:55 result: the newer statement stands.
+              occurredAt: "2026-08-01T14:30:00.000Z",
               syncStatus: "pending",
             },
           ],
@@ -525,7 +526,8 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
               crewPersonId: "crew-dana",
               checkpoint: "after_dive_1",
               status: "not_boarded",
-              occurredAt: new Date(FROZEN_MS).toISOString(),
+              // After the saved copy's own 12:55 result: the newer statement stands.
+              occurredAt: "2026-08-01T14:30:00.000Z",
               syncStatus: "pending",
             },
           ],

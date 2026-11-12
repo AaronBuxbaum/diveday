@@ -28,8 +28,34 @@ permissions:
   contents: read
 
 jobs:
+  # Only the top layer of a stack runs, as in ci.yml (ADR 20261105-ci-runs-on-the-top-of-the-stack):
+  # the top layer's merge with main contains every layer below it. The same script decides, and it
+  # is fail-open, so a layer it cannot place still runs.
+  stack-gate:
+    name: Top of the stack?
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: gate
+        run: node scripts/ci-stack-gate.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
   main-tip:
     name: This layer plus main
+    needs: stack-gate
+    if: needs.stack-gate.outputs.run != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:

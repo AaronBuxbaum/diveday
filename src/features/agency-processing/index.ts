@@ -1,6 +1,6 @@
 /** agency-processing public contract. Internals are imported only within this module. */
 
-export type { CardKind, CardToProcess, CardWhat, IssuedCard } from "./store";
+export type { CardKind, CardToProcess, CardToValidate, CardWhat, IssuedCard } from "./store";
 export {
   CARD_KINDS,
   CARD_PROCESSING_SINCE,
@@ -11,6 +11,7 @@ export {
   isCardKind,
   issuedCardsForTrip,
   listCardsToProcess,
+  listCardsToValidate,
   setCardProcessed,
   splitCardsToProcess,
 } from "./store";

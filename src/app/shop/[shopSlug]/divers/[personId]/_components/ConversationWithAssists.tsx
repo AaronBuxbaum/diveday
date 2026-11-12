@@ -8,8 +8,7 @@ import {
   diverReplyLanguage,
   triageInboundMessagesSafely,
 } from "@/features/inbox-assists";
-import { requestFromMessageAction } from "../../../inbox/assist-actions";
-import { draftReplyAction, translateReplyAction } from "../assist-actions";
+import { assistConversationAction, translateReplyAction } from "../assist-actions";
 import { ConversationSection } from "./ConversationSection";
 
 /**
@@ -45,10 +44,9 @@ export async function ConversationWithAssists(props: ComponentProps<typeof Conve
     <ConversationSection
       {...props}
       assist={{
-        draft: draftReplyAction.bind(null, shopSlug, personId),
+        run: assistConversationAction.bind(null, shopSlug, personId),
         translate: replyLanguage ? translateReplyAction.bind(null, shopSlug, personId) : null,
         diverLanguage: languageName(replyLanguage, locale),
-        requestAction: requestFromMessageAction,
       }}
     />
   );

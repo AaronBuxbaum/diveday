@@ -3,7 +3,8 @@
   "views": {
     "label": "Vistas de la agenda",
     "week": "Semana",
-    "crew": "Tripulación"
+    "crew": "Tripulación",
+    "plan": "Turnos y ausencias"
   },
   "viewPublicPage": "Ver la página pública",
   "more": "Más",

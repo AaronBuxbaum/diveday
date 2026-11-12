@@ -65,6 +65,12 @@ export type WorthALookDeparture = {
    * `same_time_of_day` reason can never disagree about where noon is.
    */
   partOfDay: PartOfDay;
+  /**
+   * Whether this departure leaves earlier or later on the same day, in the shop's zone, than the
+   * one being read; null when it leaves on another day. "The same site, another day" is wrong
+   * for a second boat to the reef the same morning (#4390).
+   */
+  sameDay: "earlier" | "later" | null;
 };
 
 /** The departure the diver is reading. */
@@ -101,6 +107,17 @@ function partOfDay(startsAt: Date, timeZone: string): PartOfDay {
   const { hour } = utcToWallTime(startsAt, timeZone);
   if (hour < 12) return "morning";
   return hour < 17 ? "afternoon" : "evening";
+}
+
+function sameDayRelation(
+  subject: Date,
+  candidate: Date,
+  timeZone: string,
+): "earlier" | "later" | null {
+  const a = utcToWallTime(subject, timeZone);
+  const b = utcToWallTime(candidate, timeZone);
+  if (a.year !== b.year || a.month !== b.month || a.day !== b.day) return null;
+  return candidate.getTime() < subject.getTime() ? "earlier" : "later";
 }
 
 /**
@@ -198,6 +215,7 @@ export function worthALook(input: {
       seatsOpen: candidate.seatsOpen,
       reason,
       partOfDay: partOfDay(candidate.startsAt, input.timeZone),
+      sameDay: sameDayRelation(subject.startsAt, candidate.startsAt, input.timeZone),
     });
   }
 

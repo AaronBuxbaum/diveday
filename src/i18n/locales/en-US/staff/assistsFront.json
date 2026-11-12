@@ -10,9 +10,6 @@
     },
     "urgent": "Urgent",
     "translation": "In {language}: {text}",
-    "makeRequest": "Draft a booking request",
-    "makingRequest": "Reading…",
-    "requestNothing": "Nothing in that message reads as a booking.",
     "requestDraftExists": "Finish or clear your unfinished Log a call form under Add a booking on Today before drafting another request.",
     "draftResponse": "Draft response",
     "responseEmpty": "Couldn’t draft a safe response. Reply in your own words.",
@@ -24,11 +21,14 @@
   },
   "conversation": {
     "translatedFrom": "Translated from {language}",
-    "draft": "Draft a reply",
+    "draft": "Draft with AI",
     "drafting": "Drafting…",
     "translate": "Translate into {language}",
     "translating": "Translating…",
-    "yourWords": "What you wrote: {text}"
+    "yourWords": "What you wrote: {text}",
+    "unavailable": "AI isn’t available right now. Try again in a moment.",
+    "declined": "AI couldn’t draft a safe reply to this one. Reply in your own words.",
+    "answered": "You already replied to the latest message."
   },
   "callNote": {
     "label": "Notes from the call",

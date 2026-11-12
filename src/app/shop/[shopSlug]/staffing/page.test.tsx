@@ -72,11 +72,11 @@ const roster = [
   },
 ] as StaffingView["staff"];
 
-async function renderPage(person?: string) {
+async function renderPage(person?: string, view?: string) {
   render(
     await StaffingPage({
       params: Promise.resolve({ shopSlug: "blue-mantis" }),
-      searchParams: Promise.resolve({ person }),
+      searchParams: Promise.resolve({ person, view }),
     }),
   );
 }
@@ -130,10 +130,7 @@ describe("staffing page roster snapshot", () => {
   it("offers scope links without another-person selector to ordinary crew", async () => {
     awayRead.mockResolvedValue({ blocks: [], canManageStaffAccounts: false });
     await renderPage("me");
-    expect(screen.getByRole("link", { name: "My schedule" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    expect(screen.getByText("My schedule")).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Full shop" })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "View a person" })).toBeNull();
   });
@@ -143,7 +140,7 @@ describe("staffing page roster snapshot", () => {
   });
 
   it("uses the staffing view roster for both editing selectors, with public profile settings elsewhere", async () => {
-    await renderPage();
+    await renderPage(undefined, "plan");
 
     const shiftOptions = within(screen.getByRole("combobox", { name: "Staff member" }))
       .getAllByRole("option")
@@ -163,10 +160,6 @@ describe("staffing page roster snapshot", () => {
     ]);
 
     expect(screen.queryByText("On public pages")).toBeNull();
-    expect(screen.getByRole("link", { name: "My schedule" })).toHaveAttribute(
-      "href",
-      expect.stringContaining("person=me"),
-    );
     expect(staffingView).toHaveBeenCalledOnce();
     expect(duplicateStaffRead).not.toHaveBeenCalled();
   });

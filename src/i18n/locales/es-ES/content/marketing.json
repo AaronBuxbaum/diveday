@@ -61,6 +61,7 @@
     "demoShopName": "El nombre de tu centro",
     "demoShopNameHint": "Lo usamos para nombrar tu demo.",
     "getSetUp": "Pide tu centro",
+    "bookCall": "Reserva una llamada de 20 minutos",
     "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
     "closingSupport": "Cuéntanos sobre tu centro. Una de las personas que construyen DiveDay leerá tu solicitud. También puedes escribir a {email}.",
     "recordsLink": "Ve qué incluye tu exportación"

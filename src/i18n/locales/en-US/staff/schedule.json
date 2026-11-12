@@ -3,7 +3,8 @@
   "views": {
     "label": "Schedule views",
     "week": "Week",
-    "crew": "Crew"
+    "crew": "Crew",
+    "plan": "Shifts and away"
   },
   "viewPublicPage": "View public page",
   "more": "More",

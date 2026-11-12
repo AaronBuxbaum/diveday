@@ -125,14 +125,15 @@ export default async function DiveSitePage({
   if (!resolved) notFound();
   const { db, shop, site: siteRow } = resolved;
   const { locale, t } = await requestTranslator(shop.defaultLocale);
-  // The shop's own Spanish briefing for a reader in Spanish (`shop-translate`).
-  const site = await withTranslatedFields(db, shop, locale, "dive_site", siteRow, [
-    "description",
-    "marineLifeDescription",
-  ]);
-  const [extras, departures] = await Promise.all([
-    listDiveSiteBriefingExtras(db, shop.id, [site.id]),
-    listUpcomingDeparturesForSite(db, shop.id, site.id),
+  // The shop's own Spanish briefing for a reader in Spanish (`shop-translate`),
+  // read alongside the briefing extras and departures, which need only the id.
+  const [site, extras, departures] = await Promise.all([
+    withTranslatedFields(db, shop, locale, "dive_site", siteRow, [
+      "description",
+      "marineLifeDescription",
+    ]),
+    listDiveSiteBriefingExtras(db, shop.id, [siteRow.id]),
+    listUpcomingDeparturesForSite(db, shop.id, siteRow.id),
   ]);
   // One "briefing", for one site and no tank: the beats read the place and
   // its field guide, and nothing about a dive

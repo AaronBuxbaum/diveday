@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED } from "@/lib/pre-departure-check";
@@ -11,6 +12,7 @@ import {
   recordPreDepartureCheck,
   reorderChecklistItems,
 } from "./pre-departure-check";
+import { preDepartureCheckEvents } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 async function checklistContext() {
@@ -291,7 +293,7 @@ describe("recordPreDepartureCheck (in-memory PGlite)", () => {
     expect(replay.ok && replay.duplicate).toBe(true);
   });
 
-  it("refuses an offline event whose claimed occurredAt is in the future relative to the server", async () => {
+  it("keeps an offline event dated in the server's future, at the time it arrived", async () => {
     const { db, shop, reef, owner } = await checklistContext();
     const created = await createChecklistItem(db, {
       shopId: shop.id,
@@ -299,9 +301,10 @@ describe("recordPreDepartureCheck (in-memory PGlite)", () => {
       label: "Emergency oxygen aboard",
     });
     if (!created.ok) throw new Error("setup: expected item to be created");
-    // A device clock running fast enough to land outside the tolerance this
-    // check allows — the same bound `recordRollCall`'s offline branch applies.
-    const farFuture = new Date(nowDate().getTime() + 60 * 60 * 1000);
+    // A device clock running an hour fast: the tap is real, its time is not
+    // (`offlineEventInstant`, the rule `recordRollCall`'s offline branch applies).
+    const now = nowDate();
+    const farFuture = new Date(now.getTime() + 60 * 60 * 1000);
     const outcome = await recordPreDepartureCheck(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -313,7 +316,13 @@ describe("recordPreDepartureCheck (in-memory PGlite)", () => {
       offlineSnapshotSavedAt: farFuture,
       occurredAt: farFuture,
     });
-    expect(outcome).toEqual({ ok: false, reason: "snapshot_invalid" });
+    expect(outcome).toMatchObject({ ok: true });
+    const [stored] = await db
+      .select({ occurredAt: preDepartureCheckEvents.occurredAt })
+      .from(preDepartureCheckEvents)
+      .where(eq(preDepartureCheckEvents.clientEventId, "22222222-2222-2222-2222-222222222222"));
+    expect(stored?.occurredAt.getTime()).toBeLessThanOrEqual(nowDate().getTime());
+    expect(stored?.occurredAt.getTime()).toBeGreaterThanOrEqual(now.getTime());
   });
 
   it("accepts an offline event queued against a snapshot saved up to 14 days ago", async () => {

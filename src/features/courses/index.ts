@@ -25,7 +25,9 @@ export {
   listActiveCourses,
   listActiveCoursesForSitemap,
   listCatalogInProgressionOrder,
+  listShelfCourses,
   pagedCourses,
   pullCourseTemplateUpdates,
+  SHELF_COURSE_COUNT,
   setCourseVisibility,
 } from "./store";

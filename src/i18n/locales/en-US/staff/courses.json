@@ -203,6 +203,13 @@
     "max": "A course holds up to {max, plural, one {# material} other {# materials}}.",
     "empty": "Nothing yet. Add the eLearning or reading students finish before day 1."
   },
+  "validate": {
+    "heading": "Cards to validate",
+    "count": "{count, plural, one {# card on file not yet checked with its agency} other {# cards on file not yet checked with their agencies}}",
+    "cardLine": "{agency} {card}, {number}, added {date}",
+    "noNumber": "no number yet",
+    "open": "Check card"
+  },
   "processing": {
     "heading": "Cards to process",
     "agencyLine": "{count, plural, one {# card to process with {agency}} other {# cards to process with {agency}}}",
@@ -233,6 +240,6 @@
   },
   "followUpEmpty": {
     "title": "All caught up",
-    "body": "Cards to process and next course opportunities will appear here."
+    "body": "Cards to validate, cards to process and next course opportunities will appear here."
   }
 }

@@ -22,6 +22,11 @@ const REASON_KEY: Record<Exclude<WorthALookReason, "same_time_of_day">, DiverMes
   more_room: "booking.worthALook.moreRoom",
 };
 
+const SAME_SITE_SAME_DAY_KEY: Record<"earlier" | "later", DiverMessageKey> = {
+  earlier: "booking.worthALook.sameSiteEarlier",
+  later: "booking.worthALook.sameSiteLater",
+};
+
 const PART_OF_DAY_KEY: Record<PartOfDay, DiverMessageKey> = {
   morning: "booking.worthALook.alsoMorning",
   afternoon: "booking.worthALook.alsoAfternoon",
@@ -38,6 +43,8 @@ export type TripAlternative = {
   reason: WorthALookReason;
   /** Which part of the shop's day this departure leaves in — only read for `same_time_of_day`. */
   partOfDay: PartOfDay;
+  /** Set when the departure leaves on the same day as the one being read; only used for `same_site`. */
+  sameDay?: "earlier" | "later" | null;
 };
 
 /**
@@ -90,7 +97,9 @@ export function TripAlternatives({
               {t(
                 alternative.reason === "same_time_of_day"
                   ? PART_OF_DAY_KEY[alternative.partOfDay]
-                  : REASON_KEY[alternative.reason],
+                  : alternative.reason === "same_site" && alternative.sameDay
+                    ? SAME_SITE_SAME_DAY_KEY[alternative.sameDay]
+                    : REASON_KEY[alternative.reason],
               )}
             </span>
           </LedgerRow>

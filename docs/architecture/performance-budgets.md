@@ -106,6 +106,8 @@ If misses dominate, the in-memory cache is doing nothing: use the platform's rem
 (or none, and drop the directive) and switch the scope to `"use cache: remote"`; if hits
 dominate, keep it and remove the logging. Either way, record the outcome here. **The next cache
 under `/s` starts the same way**: a stamp and a `reportCacheRead`, or a reason here why not.
+The second, the storefront's month sightings (`publicMonthSightings`, `MonthSightingsShelf.tsx`,
+keyed on shop, zone and the shop's month), does: read it with `cache = "month_sightings"`.
 
 ### Published dive-site catalog map
 

@@ -1639,8 +1639,9 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
         status: "not_boarded",
         source: "offline",
         clientEventId: "33333333-3333-4333-8333-333333333333",
-        offlineSnapshotSavedAt: new Date("2099-01-01T00:00:00.000Z"),
-        occurredAt: new Date("2099-01-01T00:01:00.000Z"),
+        // A copy that claims to have been saved an hour after the tap taken from it.
+        offlineSnapshotSavedAt: new Date(nowMs() - 60 * 60 * 1000),
+        occurredAt: new Date(nowMs() - 2 * 60 * 60 * 1000),
       }),
     ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
   });
@@ -2526,15 +2527,14 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
         source: "offline" as const,
       };
 
-      // A snapshot claiming to postdate the result recorded from it, and a
-      // result recorded in the future — the same two clauses the diver path
-      // applies, through the same shared predicate.
+      // A snapshot claiming to postdate the result recorded from it — the
+      // clause the diver path applies, through the same shared predicate.
       await expect(
         recordCrewRollCall(db, {
           ...base,
           clientEventId: "66666666-6666-4666-8666-666666666666",
-          offlineSnapshotSavedAt: new Date("2099-01-01T00:00:00.000Z"),
-          occurredAt: new Date("2099-01-01T00:01:00.000Z"),
+          offlineSnapshotSavedAt: new Date(nowMs() - 60 * 60 * 1000),
+          occurredAt: new Date(nowMs() - 2 * 60 * 60 * 1000),
         }),
       ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
 

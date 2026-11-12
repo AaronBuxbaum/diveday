@@ -246,6 +246,18 @@ export function setUpHref(source: FunnelSource): string {
   return `${SET_UP_PATH}?from=${source}`;
 }
 
+/** The founder's scheduling page: a 20-minute call (Aaron, 2026-11-11, #4316). */
+const CALL_URL = "https://calendar.app.google/weoxPQBhbZDviHCp9";
+
+/**
+ * The "Book a 20-minute call" door: the scheduling page, carrying the tag of the door that sent
+ * the reader as `utm_content` so the booking can be read per page. Only pages that say they offer
+ * a call (`/pricing`, `/about`) render it.
+ */
+export function callHref(source: FunnelSource): string {
+  return `${CALL_URL}?utm_source=dive.day&utm_content=${source}`;
+}
+
 /**
  * The "see a diver's booking page" link's destination — the third door out of
  * a marketing CTA, alongside the demo and the set-up form. Tagged the same way

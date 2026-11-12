@@ -186,3 +186,48 @@ describe("the party receipt (issue 2566)", () => {
     expect(sendPartyPaymentReceipt).toHaveBeenCalledTimes(1);
   });
 });
+
+// A 100% code, or a fixed amount at or above the total, is a Stripe no-cost
+// order: no card, no PaymentIntent, a complete session with a zero total.
+describe("a no-cost booking checkout", () => {
+  const noCost = (object: Record<string, unknown>) => ({
+    id: "evt_1",
+    type: "checkout.session.completed",
+    data: {
+      object: {
+        id: "cs_123",
+        status: "complete",
+        payment_status: "no_payment_required",
+        payment_intent: null,
+        ...object,
+      },
+    },
+  });
+
+  it("settles at zero", async () => {
+    expect((await post(noCost({ amount_total: 0 }))).status).toBe(200);
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
+      FAKE_DB,
+      "cs_123",
+      undefined,
+      0,
+      undefined,
+      {
+        firstCompletion: false,
+        reportedOverCeiling: false,
+      },
+    );
+  });
+
+  it("settles nothing beside a non-zero or missing total, or an open session", async () => {
+    for (const object of [
+      { amount_total: 18_000 },
+      { amount_total: null },
+      {},
+      { amount_total: 0, status: "open" },
+    ]) {
+      expect((await post(noCost(object))).status).toBe(200);
+    }
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+  });
+});

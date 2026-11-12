@@ -7,6 +7,30 @@ import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
 signedInAsOwner();
 test.use({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
 
+test.describe("demo shortcut readability", () => {
+  test.use({
+    privateShopSlug: "demo-device-readability",
+    storageState: { cookies: [], origins: [] },
+  });
+  test("demo shortcuts keep whole words at the largest phone text size", async ({
+    page,
+    privateShop,
+  }) => {
+    await exposeDeviceBody(page, 53);
+    await page.goto(`/shop/${privateShop.slug}/schedule/board`);
+    const starts = page.getByRole("region", { name: "Start here", exact: true });
+    await expect(starts).toBeVisible();
+    const shortcuts = starts.getByRole("button");
+    await expect(shortcuts).not.toHaveCount(0);
+    for (const width of [390, 820, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const button of await shortcuts.all()) {
+        expect.soft(await fragmentedWords(button), `demo shortcut at ${width}`).toEqual([]);
+      }
+    }
+  });
+});
+
 test("largest phone checklist and status labels keep readable words", async ({ page }) => {
   await exposeDeviceBody(page, 53);
   await page.goto("/shop/blue-mantis/schedule/board");

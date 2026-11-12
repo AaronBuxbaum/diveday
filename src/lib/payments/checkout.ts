@@ -115,6 +115,47 @@ export type CheckoutSessionSnapshot = {
   expiresAt: Date | null;
 };
 
+/**
+ * Whether Stripe says this session is settled: nothing more will be collected
+ * through it and the seats it covers are covered.
+ *
+ * `paid` is the ordinary answer. A session discounted to nothing (a 100% code,
+ * or a fixed amount at or above the total) is a Stripe no-cost order: it takes
+ * no card, makes no PaymentIntent, and completes with a zero `amount_total`.
+ * Read as unsettled, that seat stays "unpaid" forever, the diver is emailed to
+ * finish paying, and the dock asks for a fare the shop gave away. So a
+ * **complete** session Stripe says needs no payment, with a total of exactly
+ * zero, is settled too. Anything else is not: an open session, an async
+ * payment still pending, or `no_payment_required` beside a non-zero or
+ * missing total, which nothing DiveDay creates can produce.
+ */
+export function sessionIsSettled(session: {
+  /** Stripe's `status`; undefined when the payload omits it (never for a no-cost order). */
+  stripeStatus?: string | null;
+  paymentStatus?: string | null;
+  amountTotalCents?: number | null;
+}): boolean {
+  if (session.paymentStatus === "paid") return true;
+  return (
+    session.paymentStatus === "no_payment_required" &&
+    session.stripeStatus === "complete" &&
+    session.amountTotalCents === 0
+  );
+}
+
+/** {@link sessionIsSettled} over Stripe's own field names, as a webhook payload carries them. */
+export function stripeSessionIsSettled(session: {
+  status?: string | null;
+  payment_status?: string | null;
+  amount_total?: number | null;
+}): boolean {
+  return sessionIsSettled({
+    stripeStatus: session.status,
+    paymentStatus: session.payment_status,
+    amountTotalCents: session.amount_total,
+  });
+}
+
 export type CreateCheckoutSessionResult =
   | ({ status: "created" } & CheckoutSessionSnapshot)
   | { status: "not_configured" }

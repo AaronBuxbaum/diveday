@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { newestFailedSpecs, rankFailedSpecs } from "./e2e-recent-failures.mjs";
+import { newestFailedSpecs, rankFailedSpecs, rankFailedTests } from "./e2e-recent-failures.mjs";
 
 const failure = (path) => ({ path, annotation_level: "failure" });
 
@@ -182,5 +182,37 @@ describe("ghJson retries (#3641)", () => {
     };
     expect(() => ghJson("repos/o/r/x", read, () => {})).toThrow();
     expect(calls).toBe(1);
+  });
+});
+
+describe("rankFailedTests", () => {
+  const titled = (title) => ({
+    annotation_level: "failure",
+    path: "e2e/helpers.ts",
+    title,
+  });
+
+  it("names the failed tests so the hunt reruns them and not their whole files", () => {
+    const result = rankFailedTests([
+      [
+        titled("[chromium] › e2e/booking.spec.ts:12:3 › booking › pays (deposit)"),
+        titled("[chromium] › e2e/booking.spec.ts:40:3 › booking › pays (deposit)"),
+      ],
+    ]);
+    expect(result.specs).toEqual(["e2e/booking.spec.ts"]);
+    expect(result.tests).toBe(1);
+    expect(new RegExp(result.grep).test("booking pays (deposit)")).toBe(true);
+    expect(new RegExp(result.grep).test("booking pays (deposit) twice")).toBe(false);
+  });
+
+  it("reruns whole files when any failure has no readable title", () => {
+    const result = rankFailedTests([
+      [
+        titled("[chromium] › e2e/booking.spec.ts:12:3 › booking › pays"),
+        { annotation_level: "failure", path: "e2e/staffing.spec.ts" },
+      ],
+    ]);
+    expect(result.specs).toEqual(["e2e/booking.spec.ts", "e2e/staffing.spec.ts"]);
+    expect(result.grep).toBeNull();
   });
 });

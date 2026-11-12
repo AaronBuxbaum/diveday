@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cacheReadOutcome, reportCacheRead } from "./rules";
+import {
+  cacheReadOutcome,
+  expireShopRowsCaches,
+  reportCacheRead,
+  shopRowsCacheGeneration,
+} from "./rules";
 
 /**
  * **Whether a `"use cache"` entry was reused, told from outside the cache**
@@ -39,5 +44,20 @@ describe("reportCacheRead", () => {
       ageS: 60,
       shopId: "shop-1",
     });
+  });
+});
+
+/**
+ * **A cached read of a shop's rows turns over when an e2e route rewrites
+ * them**: the shopfront's month sightings, cached before a test seeded its
+ * `monthSightings` fact, kept the empty answer (CI run 43120376056).
+ */
+describe("shopRowsCacheGeneration", () => {
+  it("starts a new generation, and so a new cache key, on every expiry", () => {
+    const before = shopRowsCacheGeneration();
+    expireShopRowsCaches();
+    expect(shopRowsCacheGeneration()).toBe(before + 1);
+    expireShopRowsCaches();
+    expect(shopRowsCacheGeneration()).toBe(before + 2);
   });
 });

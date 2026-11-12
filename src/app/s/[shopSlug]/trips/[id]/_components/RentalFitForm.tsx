@@ -25,6 +25,7 @@ import {
   type SuitChoice,
   suitFlags,
 } from "@/lib/rentals";
+import { GearSourceChoice, useGearSource } from "./GearSourceChoice";
 import { RentalSizeFields } from "./RentalSizeFields";
 import type { RentalFit } from "./types";
 
@@ -268,6 +269,7 @@ export function RentalFitForm({
           .map((item) => item.kind),
       ),
   );
+  const gear = useGearSource({ ticked, fee, suitOptions, storedSuit, tickedKinds, suit });
   // Everything the diver is renting: the ticks, plus the suit when it is ours.
   const suitRented = suitFlags(suit);
   const rentedKinds = new Set<RentableItemKind>(tickedKinds);
@@ -328,43 +330,7 @@ export function RentalFitForm({
           live region alone, read to a screen reader and drawn as nothing
           (visual review 2026-10-24, B25): the gray banner with two gray icons
           stood over the form saying what the form itself asks. */}
-      <div
-        data-testid="gear-status-indicator"
-        role="status"
-        aria-live="polite"
-        className={
-          isConfirmed
-            ? "flex items-center gap-4 rounded-inset border border-success/30 bg-success/5 p-4 transition-all"
-            : "sr-only"
-        }
-      >
-        {isConfirmed ? (
-          <div className="flex gap-2">
-            <BcdIcon active label={t("rental.bcdIconLabel")} />
-            <FinIcon active label={t("rental.finIconLabel")} />
-          </div>
-        ) : null}
-        <div>
-          <p
-            className={`text-sm font-semibold transition-colors ${
-              isConfirmed ? "text-success" : "text-muted"
-            }`}
-          >
-            {rentedKinds.size === 0
-              ? t("rental.ownGear")
-              : isConfirmed
-                ? t("rental.matched")
-                : t("rental.selectSizes")}
-          </p>
-          <p className="text-xs text-muted mt-0.5">
-            {rentedKinds.size === 0
-              ? t("rental.noCharge")
-              : isConfirmed
-                ? t("rental.sizesLocked")
-                : t("rental.addSizes")}
-          </p>
-        </div>
-      </div>
+      <GearStatus rented={rentedKinds.size} confirmed={isConfirmed} />
 
       {saved ? (
         <p
@@ -378,6 +344,19 @@ export function RentalFitForm({
         <CourseGearLine included={included} personal={personal} />
       ) : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
+        {includesGear ? null : (
+          <GearSourceChoice
+            value={gear.source}
+            onChange={(source) => {
+              gear.setSource(source);
+              const next = gear.apply(source);
+              if (next) {
+                setTickedKinds(next.kinds);
+                setSuit(next.suit);
+              }
+            }}
+          />
+        )}
         <ChoiceFieldset legend={t("rental.suitLegend")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
             {suitOptions.map((choice) => {
@@ -393,7 +372,10 @@ export function RentalFitForm({
                   name="suit"
                   value={choice}
                   checked={suit === choice}
-                  onChange={() => setSuit(choice)}
+                  onChange={() => {
+                    setSuit(choice);
+                    gear.setSource(gear.sourceOf(tickedKinds, choice));
+                  }}
                   aside={
                     hintKey || (hasAnyRentalPricing(pricing) && priceCents !== undefined) ? (
                       <>
@@ -444,12 +426,11 @@ export function RentalFitForm({
                     name={name}
                     checked={tickedKinds.has(kind)}
                     onChange={(event) => {
-                      setTickedKinds((current) => {
-                        const next = new Set(current);
-                        if (event.target.checked) next.add(kind);
-                        else next.delete(kind);
-                        return next;
-                      });
+                      const next = new Set(tickedKinds);
+                      if (event.target.checked) next.add(kind);
+                      else next.delete(kind);
+                      setTickedKinds(next);
+                      gear.setSource(gear.sourceOf(next, suit));
                     }}
                     aside={
                       <>
@@ -605,6 +586,54 @@ export function RentalQuoteAmount({
       ) : null}
       <span className="font-medium">{totalLabel}</span>
     </>
+  );
+}
+
+/**
+ * The gear status. Lit once the sizes are in; until then it is the live region alone, read to a
+ * screen reader and drawn as nothing (visual review 2026-10-24, B25): the gray banner with two
+ * gray icons stood over the form saying what the form itself asks.
+ */
+function GearStatus({ rented, confirmed }: { rented: number; confirmed: boolean }) {
+  const t = useTranslations();
+  return (
+    <div
+      data-testid="gear-status-indicator"
+      role="status"
+      aria-live="polite"
+      className={
+        confirmed
+          ? "flex items-center gap-4 rounded-inset border border-success/30 bg-success/5 p-4 transition-all"
+          : "sr-only"
+      }
+    >
+      {confirmed ? (
+        <div className="flex gap-2">
+          <BcdIcon active label={t("rental.bcdIconLabel")} />
+          <FinIcon active label={t("rental.finIconLabel")} />
+        </div>
+      ) : null}
+      <div>
+        <p
+          className={`text-sm font-semibold transition-colors ${
+            confirmed ? "text-success" : "text-muted"
+          }`}
+        >
+          {rented === 0
+            ? t("rental.ownGear")
+            : confirmed
+              ? t("rental.matched")
+              : t("rental.selectSizes")}
+        </p>
+        <p className="text-xs text-muted mt-0.5">
+          {rented === 0
+            ? t("rental.noCharge")
+            : confirmed
+              ? t("rental.sizesLocked")
+              : t("rental.addSizes")}
+        </p>
+      </div>
+    </div>
   );
 }
 

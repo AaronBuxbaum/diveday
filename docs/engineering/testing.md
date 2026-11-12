@@ -104,23 +104,26 @@ Renaming a journey's test renames its row in the same change.
 | --- | --- |
 | Before a commit | the guard you touched, `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`; a changed flow's specs; a changed surface's captures in light (the **verify** skill) |
 | Before a push, optional (CI is the gate) | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
-| Every pull request | repo checks, lint, typecheck (one job), all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**` or `drizzle/**` changed |
+| Every pull request | repo checks, lint, typecheck (one job), all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**`, `src/features/**`, `drizzle/**`, the Postgres test harness or `ci.yml` changed |
 | Push to `main` | all of the above with every capture, light and dark: the next baseline |
 | Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL (`codeql.yml`, daily 05:30 UTC), the follow-up scan |
 | Hourly | the public schedule canary (`public-schedule-canary.yml`): the demo shop's schedule draws a trip |
 | Weekly | the persona walk, the shard-duration refresh |
 
-**Canceling a run stops its jobs.** Postgres, CI verdicts and the infra jobs use
+**Canceling a run stops its jobs.** Postgres, CI verdicts and the infra comment and deploy jobs use
 `!cancelled()` at job level so failed or skipped dependencies do not suppress needed work, while
 canceling a superseded or closed PR run releases its runners. Artifact and cleanup steps can still
 use `always()` inside a job. `scripts/ci-cancellation-workflow.test.mjs` covers cancellation,
 nightly execution, skipped dependencies and the infra deploy prerequisites.
 
 **A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml`,
-`public-schedule-canary.yml` and `e2e-nightly.yml` end with `node scripts/workflow-alert.mjs`: a red run on the
-default branch opens one `ci-red` + `needs-triage` issue in the follow-up format, each later red
-run comments on it, and the first green run closes it. A manual run on another branch files
-nothing.
+`public-schedule-canary.yml`, `e2e-nightly.yml`, `mobile-behavior.yml`, `restore-drill.yml`,
+`ci-health.yml` and `deploy-gate.yml` (after each main CI run) end with
+`node scripts/workflow-alert.mjs`: a red run on the default branch opens one `ci-red` +
+`needs-triage` issue in the follow-up format, each later red run comments on it, and the first
+green run closes it. A manual run on another branch files nothing. A job that hits its own
+`timeout-minutes` concludes `cancelled` and files nothing, so a long step carries a shorter step
+timeout of its own, which fails the step instead.
 
 **Flakes.** Playwright runs `retries: 0` locally and in CI, so a flake fails the run that meets it.
 One exception, decided 2026-10-16 (#2633): a functional or visual shard may rerun its failed tests
@@ -149,7 +152,8 @@ searching open PRs for a fix in flight, or quarantined; never skipped, never giv
   PR, push-gate and local run. `.github/workflows/e2e-nightly.yml` sets
   `DIVEDAY_RUN_QUARANTINE=1` and runs them every night, then runs each spec that failed on CI in
   the last 7 days five times (`--repeat-each=5`, `scripts/e2e-recent-failures.mjs`, at most 8
-  specs). The history reader paginates failed workflow runs, Playwright and visual jobs, and their
+  specs), rerunning the tests that failed by title (`--grep`) rather than every test in those
+  files; a failure whose title is unreadable reruns its whole file. The history reader paginates failed workflow runs, Playwright and visual jobs, and their
   annotations. It resolves helper-thrown failures from the reporter title's spec identity and
   reports the inspected run count and date window. Authentication, API and partial-page failures
   fail the hunt explicitly. An empty result means no existing spec was identified in those

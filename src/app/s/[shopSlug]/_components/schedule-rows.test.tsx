@@ -134,21 +134,14 @@ describe("shelfCourseCards", () => {
       slug: id,
       title: `Course ${id}`,
       summary: "Down to {depth18}",
-      overview: null,
-      durationText: "3 days",
-      groupSizeText: null,
-      prerequisiteNote: null,
-      includes: [],
-      excludes: [],
-      scheduleDays: [],
-      faqs: [],
-      learningMaterials: [],
+      durationText: "3 days to {depth18}",
       heroImageUrl: null,
       heroImageAlt: null,
       priceCents: 50_000,
+      eLearningPriceCents: null,
     });
     const cards = shelfCourseCards({
-      activeCourses: ["a", "b", "c", "d"].map(course) as never,
+      activeCourses: ["a", "b", "c", "d"].map(course),
       shelfNextStarts: new Map([["a", new Date("2026-08-01T12:00:00Z")]]),
       shop: { depthUnit: "meters", timezone: TZ },
       shopSlug: "blue-mantis",
@@ -162,5 +155,8 @@ describe("shelfCourseCards", () => {
     expect(cards[0]?.href).toBe("/s/blue-mantis/courses/a");
     // Depth markers resolve into the shop's own unit before anything reads them.
     expect(cards[0]?.summary).toBe("Down to 18 meters");
+    expect(cards[0]?.duration).toBe("3 days to 18 meters");
+    expect(cards[0]?.title).toBe("Course a");
+    expect(cards[0]?.price).toBe("$500");
   });
 });

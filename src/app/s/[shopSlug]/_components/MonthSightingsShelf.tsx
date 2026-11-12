@@ -1,12 +1,17 @@
+import { cacheLife } from "next/cache";
 import { Suspense } from "react";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import type { MonthSightings } from "@/features/month-sightings";
 import { monthSightings } from "@/features/month-sightings";
+import { cacheStamp, reportCacheRead, shopRowsCacheGeneration } from "@/features/runtime-cache";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverTranslator } from "@/i18n/messages";
+import { nowDate } from "@/lib/clock";
 import { monthNames } from "@/lib/format";
+import { utcToWallTime } from "@/lib/zoned";
 
 /**
  * The shelf as the shopfront places it: read behind its own `<Suspense>`, so a
@@ -31,6 +36,33 @@ export function MonthSightingsSection({
   );
 }
 
+/**
+ * **The month's sightings, read at most once an hour per shop and month**
+ * (performance audit 2026-11-11, item 4): three statements over every season
+ * the shop has logged, for a shelf whose answer turns over once a month, used
+ * to run on every anonymous view of the shopfront. Cached the way "Our year"
+ * is (`publicShopYear` in `OurYear.tsx`): keyed on the shop, its zone and the
+ * shop's own month, so the entry turns over at the shop's month boundary;
+ * `hours` lets a crew's log from this morning count by the afternoon. The
+ * cached scope opens the database itself, stamps when it computed, and every
+ * read logs `cache.read` (docs/architecture/performance-budgets.md, "Runtime
+ * caches"). Also keyed on `shopRowsCacheGeneration()`, 0 in a deployment, so
+ * the e2e routes that rewrite a shop's rows expire the entry: a seeded
+ * `monthSightings` fact must not meet the empty entry an earlier test cached.
+ */
+async function publicMonthSightings(
+  shopId: string,
+  timeZone: string,
+  // Read by nothing in the body: they are here to be part of the cache key.
+  _shopMonth: number,
+  _rowsGeneration: number,
+) {
+  "use cache";
+  cacheLife("hours");
+  const sightings = await monthSightings(await getDb(), shopId, timeZone, nowDate());
+  return { sightings, computedAtMs: cacheStamp() };
+}
+
 async function MonthSightingsLoaded({
   shopId,
   tz,
@@ -42,7 +74,10 @@ async function MonthSightingsLoaded({
   locale: string;
   t: DiverTranslator;
 }) {
-  const sightings = await monthSightings(await getDb(), shopId, tz);
+  const shopMonth = utcToWallTime(nowDate(), tz).month;
+  const cached = await publicMonthSightings(shopId, tz, shopMonth, shopRowsCacheGeneration());
+  reportCacheRead("month_sightings", cached.computedAtMs, { shopId });
+  const sightings = cached.sightings;
   if (!sightings) return null;
   return <MonthSightingsShelf sightings={sightings} locale={locale} t={t} className="mt-12" />;
 }
@@ -85,14 +120,11 @@ export function MonthSightingsShelf({
       <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {rows.map(({ tally, card }) => (
           <li key={card.slug} className="flex min-w-0 items-center gap-3">
-            {/* biome-ignore lint/performance/noImgElement: a bundled catalog photo, sized here */}
-            <img
+            <StoredPhoto
               src={card.imageUrl}
               alt=""
-              width={56}
-              height={56}
-              loading="lazy"
-              className="size-14 shrink-0 rounded-lg border border-border object-cover"
+              className="size-14 shrink-0 rounded-lg border border-border"
+              sizes="56px"
             />
             <div className="min-w-0">
               <p className="font-medium">{card.name}</p>

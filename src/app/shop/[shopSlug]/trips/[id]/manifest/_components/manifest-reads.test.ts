@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
-import { tripAssignments, trips as tripRows } from "@/db/schema";
+import { offlineManifestSnapshotRevisions, tripAssignments, trips as tripRows } from "@/db/schema";
 import {
   DEMO_MEDICAL_ALERT,
   DEMO_MEDICAL_ALERT_DIVER,
@@ -66,10 +66,46 @@ describe("readManifestPage (in-memory PGlite)", () => {
       readManifestPage(counted, shop.id, reef.id, staff.person.id),
     );
 
-    // 76 today (115 in production before the page stopped reading the manifest
-    // twice and the roll call stopped reading once per checkpoint, issue #3857).
+    // 72 today: 76 before the render stopped issuing the offline snapshot
+    // (its lock_timeout, isolation check, advisory lock, trip key-share and
+    // revision write went; a plain read of the trip's revision came, issue
+    // #4391), 115 in production before the page stopped reading the manifest
+    // twice and the roll call stopped reading once per checkpoint (issue #3857).
     // A tripwire: a change that adds a statement should say so here.
-    expect(stats.queries).toBeLessThanOrEqual(80);
+    expect(stats.queries).toBeLessThanOrEqual(72);
+  });
+
+  it("renders without a write, a lock or a snapshot revision (issue #4391)", async () => {
+    // Its own database, for a logger that keeps every statement it sends.
+    const { db, shop } = await seededShopContext();
+    const sent: string[] = [];
+    const recorded = drizzle({
+      client: db.$client as PGlite,
+      logger: { logQuery: (query: string) => sent.push(query) },
+    }) as unknown as AppDb;
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+
+    const reads = await readManifestPage(recorded, shop.id, reef.id, staff.person.id);
+    await readManifestPage(recorded, shop.id, reef.id, staff.person.id);
+
+    // Every roll-call tap re-renders this page: a render must be a read.
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.filter((query) => /^\s*(insert|update|delete)\b/i.test(query))).toEqual([]);
+    expect(sent.filter((query) => /pg_advisory|for (key )?share|for update/i.test(query))).toEqual(
+      [],
+    );
+    const counters = await db
+      .select()
+      .from(offlineManifestSnapshotRevisions)
+      .where(eq(offlineManifestSnapshotRevisions.tripId, reef.id));
+    expect(counters).toEqual([]);
+    // It carries the epoch and revision its rows were read at, for the device's save.
+    expect(reads.offlineRoster?.erasureEpoch).toBe(shop.offlineErasureEpoch);
+    expect(reads.offlineRoster?.snapshotRevision).toBe(0);
   });
 
   it("reads nothing for a departure that is not this shop's", async () => {

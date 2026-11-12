@@ -12,7 +12,9 @@ import {
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import {
+  claimOfflineManifestSnapshot,
   fetchOfflineManifestShopSlug,
+  OFFLINE_MANIFEST_STALE_READ,
   type OfflineManifestEnvelope,
   type OfflineManifestPayload,
 } from "@/lib/offline-manifests";
@@ -96,6 +98,9 @@ export function useOfflineManifestSync(
   // passing silently, since the save itself only happens once the refreshed
   // payload actually lands as a prop (see the payload effect).
   const manualRefreshPending = useRef(false);
+  // Set when a stale claim asked for one re-read of the page (issue #4391), so
+  // a second stale claim in a row does not ask again.
+  const staleReread = useRef(false);
 
   const runReconcileOnce = useCallback(async () => {
     if (!tripId) return;
@@ -245,7 +250,33 @@ export function useOfflineManifestSync(
           setSaved(existing);
           return;
         }
-        const envelope = await saveOfflineManifest(currentPayload, { tenantRound });
+        // The page issues no snapshot (issue #4391): trade the epoch and
+        // revision its rows were read at for one now. An erasure or another
+        // copy since then means those rows are older than the server holds
+        // (they may name an erased diver or miss a newly seated one), so they
+        // are not saved; the re-read page lands as a new payload and is saved
+        // by the effect below.
+        const claimed = await claimOfflineManifestSnapshot(currentPayload);
+        if (claimed === OFFLINE_MANIFEST_STALE_READ) {
+          // The copy already on this device stands: drop "Saving…" rather
+          // than leave it up if the re-read never lands.
+          if (!opts.silent) {
+            const existing = await loadOfflineManifest(tripId).catch(() => null);
+            setMessage(existing ? "" : copy.saveErrorFallback);
+          }
+          // One re-read per stale claim, never a loop: if the re-read's own
+          // claim is stale too, stop and leave it to the next refresh trigger.
+          if (staleReread.current) {
+            staleReread.current = false;
+          } else {
+            staleReread.current = true;
+            router.refresh();
+          }
+          return;
+        }
+        staleReread.current = false;
+        if (!claimed) throw new Error(copy.saveErrorFallback);
+        const envelope = await saveOfflineManifest(claimed, { tenantRound });
         setSaved(envelope);
         lastPendingCount.current = envelope.events.filter(
           (event) => event.syncStatus === "pending",
@@ -272,7 +303,7 @@ export function useOfflineManifestSync(
         if (!opts.silent) setBusy(false);
       }
     },
-    [copy, tripId],
+    [copy, tripId, router],
   );
 
   const save = useCallback(

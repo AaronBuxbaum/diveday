@@ -11,8 +11,7 @@ import { SkipLink } from "@/components/SkipLink";
 import { StaffActivity } from "@/components/StaffActivity";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { countGearItems } from "@/db/gear";
-import { hasActiveCourses } from "@/features/courses";
+import { shopRenderFacts } from "@/db/shop-render-facts";
 import { DEMO_STARTS, demoStartFrom } from "@/features/demo-starts";
 import { shopClock } from "@/features/shop-clock";
 import { listShopRolesPresent } from "@/features/shop-roles";
@@ -22,7 +21,6 @@ import {
   nextOfTodaysDepartures,
   todaysDepartures,
 } from "@/features/today";
-import { countWorkOrders } from "@/features/work-orders";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -184,24 +182,24 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   const now = nowDate();
   // One clock for the badge and the boarding door, so both read the same day.
   const clock = shop ? shopClock(shop, now) : null;
-  const [navBlockersCount, todays, teaches, gearCount] =
+  const [navBlockersCount, todays, facts] =
     showNav && shop && clock
       ? await Promise.all([
           countBlockedDiversNextBoatDay(db, shop.id, clock).then((blocked) => blocked.total),
           // Today's boats: the boarding door below, and ⌘K's "Today" group
           // before anything is typed (fifth loop, item 13), from one read.
           todaysDepartures(db, shop.id, clock),
-          hasActiveCourses(db, shop.id),
-          // The fleet **or** the bench: a shop that services customers'
-          // regulators and owns no rental kit of its own still has a Gear
-          // section (ADR 20261008-gear-work-orders). A shop that switched gear
-          // servicing off counts its fleet alone.
-          Promise.all([
-            countGearItems(db, shop.id),
-            shop.workOrdersEnabled ? countWorkOrders(db, shop.id) : 0,
-          ]).then(([units, tickets]) => units + tickets),
+          // The shop's facts, one statement shared with Today (`shopRenderFacts`). The gear row
+          // shows for the fleet **or** the bench: a shop that services customers' regulators and
+          // owns no rental kit of its own still has a Gear section (ADR
+          // 20261008-gear-work-orders). A shop that switched gear servicing off counts its
+          // fleet alone.
+          shopRenderFacts(db, shop.id),
         ])
-      : [0, [], false, 0];
+      : [0, [], null];
+  const gearCount = facts
+    ? facts.gearItemCount + (shop?.workOrdersEnabled ? facts.workOrderCount : 0)
+    : 0;
   const boardingTripId = nextOfTodaysDepartures(todays, now);
   // The manifest opens on its "Before departure" checkpoint — the boarding pass.
   const boatBoardingHref = boardingTripId
@@ -239,7 +237,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
     todayBoats,
     navGates,
     navOffers: {
-      courses: teaches,
+      courses: facts?.hasActiveCourses ?? false,
       gear: gearCount > 0,
       switches: shop ? shopSwitchesOn(shop) : ALL_SWITCHES_ON,
     },

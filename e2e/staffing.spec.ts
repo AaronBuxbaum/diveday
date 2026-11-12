@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, openTripFromBoard, seededTripId } from "./helpers";
 import { seedFacts } from "./shop-facts";
@@ -28,6 +29,7 @@ import { seedFacts } from "./shop-facts";
  */
 
 const STAFFING = "/shop/blue-mantis/staffing";
+const t = staffTranslator("en-US");
 
 /**
  * The seeded shift every member of the cast works today (`seedStaffShifts`,
@@ -43,9 +45,8 @@ const STAFFING = "/shop/blue-mantis/staffing";
 const SEEDED_SHIFT = "1:30 PM – 7:00 PM";
 
 /**
- * The Add-a-shift door's form, scoped by the disclosure's own id — the
- * credentials form below it repeats "Staff member" and carries date fields of
- * its own, and `getByLabel` is a case-insensitive substring match.
+ * The Add-a-shift form, scoped by its section's own id — the days-away form
+ * below it also has a staff selector and date fields.
  */
 const addShiftForm = (page: Page) => page.locator("#add-shift");
 
@@ -86,8 +87,8 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   // The seeded shift is on today, which is inside the week the page opens on.
   await expect(week.getByText(SEEDED_SHIFT).first()).toBeVisible();
 
-  // The two add-forms became one door (decision 3), and it opens in place.
-  await page.locator("#add-shift > summary").click();
+  await page.getByRole("link", { name: t("schedule.views.plan"), exact: true }).click();
+  await expect(page).toHaveURL(/view=plan/);
   await addShiftForm(page).getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
   await addShiftForm(page).getByLabel("Date").fill(shiftDay);
   await addShiftForm(page).getByLabel("Starts").fill("06:30");
@@ -95,9 +96,11 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   await addShiftForm(page).getByLabel("Note").fill(note);
   await addShiftForm(page).getByRole("button", { name: "Add shift" }).click();
 
-  // The door answers for itself — the outcome lands in its own action row
+  // The form answers for itself — the outcome lands in its own action row
   // rather than in a banner a screen above it.
   await expect(page.getByText("Shift saved")).toBeVisible();
+  await expect(page).toHaveURL(/view=plan/);
+  await page.getByRole("link", { name: t("schedule.views.crew"), exact: true }).click();
   // Read back through the shop's own timezone, not the wall time it was typed
   // in: this fails if the shift is written or bucketed in the host's zone.
   await expect(week.getByText("6:30 AM – 2:45 PM").first()).toBeVisible();
@@ -141,7 +144,9 @@ test("a shift added on another week comes back to that week", async ({ page, pri
   await expect(page).toHaveURL(/week=/);
   const nextWeekUrl = page.url();
 
-  await page.locator("#add-shift > summary").click();
+  await page.getByRole("link", { name: t("schedule.views.plan"), exact: true }).click();
+  await expect(page).toHaveURL(/view=plan/);
+  await expect(page).toHaveURL(new RegExp(`week=${new URL(nextWeekUrl).searchParams.get("week")}`));
   const form = addShiftForm(page);
   await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
   // The date the form offers is inside the week on screen, so a save needs
@@ -150,8 +155,11 @@ test("a shift added on another week comes back to that week", async ({ page, pri
   await form.getByRole("button", { name: "Add shift" }).click();
 
   await expect(page.getByText("Shift saved")).toBeVisible();
+  await expect(page).toHaveURL(/view=plan/);
   // Same week, and the shift is on it. `FlashParams` keeps `?week=` — it is
   // a reading of the page, not one-shot chrome.
+  await expect(page).toHaveURL(new RegExp(`week=${new URL(nextWeekUrl).searchParams.get("week")}`));
+  await page.getByRole("link", { name: t("schedule.views.crew"), exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`week=${new URL(nextWeekUrl).searchParams.get("week")}`));
   await expect(weekOf(page).getByText(note).first()).toBeVisible();
 });
@@ -246,6 +254,11 @@ test.describe("staffing, as the daily crew", () => {
     await expect(page.getByText("Add a shift")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Remove" })).toHaveCount(0);
     await expect(page.getByText("Add a credential")).toHaveCount(0);
+    await page.getByRole("link", { name: t("schedule.views.plan"), exact: true }).click();
+    await expect(page.getByRole("heading", { name: t("staffing.away.heading") })).toBeVisible();
+    await expect(page.getByRole("heading", { name: t("staffing.addShift.heading") })).toHaveCount(
+      0,
+    );
   });
 
   /**
@@ -264,17 +277,21 @@ test.describe("staffing, as the daily crew", () => {
     await page.goto(STAFFING);
     await page.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
 
-    await page.getByText("Add days away").click();
+    await page.getByRole("link", { name: t("schedule.views.plan"), exact: true }).click();
+    await expect(page).toHaveURL(/view=plan/);
     const away = page.locator("#add-away");
     await away.getByLabel("From").fill(daysFromNow(2));
     await away.getByLabel("To").fill(daysFromNow(3));
     await away.getByLabel("Note").fill("Family trip");
     await away.getByRole("button", { name: "Save", exact: true }).click();
 
-    // The week draws it, quietly, in their own row — and the door lists it
-    // back with the one act that removes it.
+    // The plan lists the saved block, and the Crew tab draws it in their row.
     await expect(page.getByText("Family trip").first()).toBeVisible();
     await expect(page.getByText("Saved. The shop can see those days")).toBeVisible();
+    await expect(page).toHaveURL(/view=plan/);
+    await page.getByRole("link", { name: t("schedule.views.crew"), exact: true }).click();
+    // The two-day block appears once in each day's cell on the visible grid.
+    await expect(weekOf(page).getByText("Family trip")).toHaveCount(2);
   });
 });
 

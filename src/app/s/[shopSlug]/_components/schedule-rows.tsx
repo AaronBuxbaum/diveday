@@ -1,5 +1,5 @@
 import type { nextSessionStartByCourse } from "@/db/trips";
-import type { listActiveCourses } from "@/features/courses";
+import { type listShelfCourses, SHELF_COURSE_COUNT } from "@/features/courses";
 import type { listTripLenses } from "@/features/trip-lenses";
 import type { DiverTranslator } from "@/i18n/messages";
 import { tripRequirementMarkers } from "@/i18n/readiness-labels";
@@ -7,7 +7,7 @@ import { courseDepthFormat } from "@/i18n/unit-labels";
 import {
   courseTotalCents,
   perDiverBookingPriceCents,
-  resolveCourseContentDepths,
+  resolveCourseDepths,
   resolveImageAlt,
 } from "@/lib/courses";
 import { embedTripPath } from "@/lib/embed-routes";
@@ -143,8 +143,9 @@ export function weekLedgerRows({
 
 /**
  * The shelf takes the first three rungs in progression order; "All courses"
- * is the rest. `{depth18}` markers resolve into the shop's own unit before
- * anything reads a field, the same one-shot pass the catalog makes.
+ * is the rest (`listShelfCourses` reads only those three, and only the
+ * columns a card draws). `{depth18}` markers in the two prose fields a card
+ * shows resolve into the shop's own unit, as the catalog's one-shot pass does.
  */
 export function shelfCourseCards({
   activeCourses,
@@ -155,7 +156,7 @@ export function shelfCourseCards({
   locale,
   t,
 }: {
-  activeCourses: Awaited<ReturnType<typeof listActiveCourses>>;
+  activeCourses: Awaited<ReturnType<typeof listShelfCourses>>;
   shelfNextStarts: Awaited<ReturnType<typeof nextSessionStartByCourse>>;
   shop: { depthUnit: Parameters<typeof courseDepthFormat>[1]; timezone: string };
   shopSlug: string;
@@ -164,16 +165,17 @@ export function shelfCourseCards({
   t: DiverTranslator;
 }) {
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
-  return activeCourses.slice(0, 3).map((stored) => {
-    const course = resolveCourseContentDepths(stored, depthFormat);
+  const resolve = (text: string | null) =>
+    text === null ? null : resolveCourseDepths(text, depthFormat);
+  return activeCourses.slice(0, SHELF_COURSE_COUNT).map((course) => {
     const total = courseTotalCents(course);
     const nextStart = shelfNextStarts.get(course.id) ?? null;
     return {
-      duration: course.durationText,
+      duration: resolve(course.durationText),
       nextStart: nextStart ? courseNextStartLabel(nextStart, locale, shop.timezone, t) : null,
       id: course.id,
       title: course.title,
-      summary: course.summary,
+      summary: resolve(course.summary),
       heroImageUrl: course.heroImageUrl,
       heroImageAlt: resolveImageAlt(
         course.heroImageAlt,

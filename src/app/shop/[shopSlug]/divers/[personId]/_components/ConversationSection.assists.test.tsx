@@ -9,6 +9,8 @@ import { HOUR_MS } from "@/lib/clock";
 import { type ConversationAssist, ConversationSection } from "./ConversationSection";
 
 vi.mock("../details-actions", () => ({ replyToDiverAction: vi.fn() }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 afterEach(cleanup);
 
@@ -57,10 +59,12 @@ function renderSection(assist?: ConversationAssist) {
 
 function assist(overrides: Partial<ConversationAssist> = {}): ConversationAssist {
   return {
-    draft: vi.fn(async () => "Yes, there is room on the 8:00 boat."),
+    run: vi.fn(async () => ({
+      kind: "reply" as const,
+      text: "Yes, there is room on the 8:00 boat.",
+    })),
     translate: vi.fn(async () => "Ja, auf dem Boot um 8:00 ist Platz."),
     diverLanguage: "German",
-    requestAction: vi.fn(),
     ...overrides,
   };
 }
@@ -77,9 +81,31 @@ describe("the conversation with the shop's assists on", () => {
     const user = userEvent.setup();
     const offered = assist();
     renderSection(offered);
-    await user.click(screen.getByRole("button", { name: "Draft a reply" }));
+    await user.click(screen.getByRole("button", { name: "Draft with AI" }));
     expect(await screen.findByDisplayValue("Yes, there is room on the 8:00 boat.")).toBeVisible();
-    expect(offered.requestAction).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("opens the call form when the message asks for a booking", async () => {
+    const user = userEvent.setup();
+    renderSection(
+      assist({ run: vi.fn(async () => ({ kind: "request" as const, href: "/shop/x?call=1" })) }),
+    );
+    await user.click(screen.getByRole("button", { name: "Draft with AI" }));
+    expect(push).toHaveBeenCalledWith("/shop/x?call=1");
+    expect(screen.getByRole("textbox")).toHaveValue("");
+  });
+
+  it("says why in a toast when nothing came back, and leaves the box alone", async () => {
+    const user = userEvent.setup();
+    renderSection(
+      assist({
+        run: vi.fn(async () => ({ kind: "none" as const, reason: "unavailable" as const })),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Draft with AI" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("AI isn’t available right now");
+    expect(screen.getByRole("textbox")).toHaveValue("");
   });
 
   it("translates what the staffer wrote and keeps their words in view", async () => {
@@ -95,10 +121,7 @@ describe("the conversation with the shop's assists on", () => {
   it("offers no translation for a diver who writes in the shop's language", () => {
     renderSection(assist({ translate: null, diverLanguage: null }));
     expect(screen.queryByRole("button", { name: /Translate/ })).toBeNull();
-    const request = screen.getByRole("button", { name: "Draft a booking request" });
-    expect(request.closest("form")?.querySelector('input[name="returnPersonId"]')).toHaveValue(
-      "af000000-1111-4222-8333-444444444444",
-    );
+    expect(screen.getByRole("button", { name: "Draft with AI" })).toBeInTheDocument();
   });
 });
 
@@ -107,7 +130,6 @@ describe("the conversation with the assists dark", () => {
     renderSection(undefined);
     expect(screen.queryByText("Translated from German")).toBeNull();
     expect(screen.queryByText("Is there room on Saturday?")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Draft a reply" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Draft a booking request" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Draft with AI" })).toBeNull();
   });
 });

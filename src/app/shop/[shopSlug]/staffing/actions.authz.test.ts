@@ -51,7 +51,9 @@ describe("staffing shift action authorization", () => {
 
     const destination = await redirectedTo(() => createShiftAction(week, form));
 
-    expect(destination).toBe("/shop/blue-mantis/staffing?notice=not-authorized&week=2026-11-02");
+    expect(destination).toBe(
+      "/shop/blue-mantis/staffing?notice=not-authorized&week=2026-11-02&view=plan",
+    );
     expect(mocks.canPersonManageStaffAccounts).toHaveBeenCalledWith({}, shopId, personId);
     expect(mocks.createStaffShift).not.toHaveBeenCalled();
   });

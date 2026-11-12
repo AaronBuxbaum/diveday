@@ -9,6 +9,9 @@ export function median(values) {
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
+/** The share of the held-out run's files the training runs must have measured. */
+const MINIMUM_SUITE_OVERLAP = 0.9;
+
 /** A profile is adopted only after at least three distinct, complete successful runs. */
 export function calibrateProfiles(inputs, minimumRuns = 3) {
   const runs = new Map();
@@ -73,15 +76,13 @@ export function calibrateProfiles(inputs, minimumRuns = 3) {
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([file, values]) => [file, Math.round(median(values))]),
     );
+    // The suite moves between main runs (files are added every day), so demanding identical file
+    // sets would leave every stratum uncalibrated forever. Adopt a profile when the held-out run's
+    // files are nearly all measured by the training runs; the sequencer scales an estimate for
+    // the few it does not know (src/test/shard-sequencer.ts).
     const suite = Object.keys(newest.durations).sort();
-    // Do not validate an intersection and adopt weights for a different suite.
-    if (
-      training.some(
-        (run) => JSON.stringify(Object.keys(run.durations).sort()) !== JSON.stringify(suite),
-      )
-    )
-      continue;
-    const common = suite;
+    const common = suite.filter((file) => observations.has(file));
+    if (common.length < suite.length * MINIMUM_SUITE_OVERLAP) continue;
     const pick = (map) => Object.fromEntries(common.map((file) => [file, map[file]]));
     const proposed = replayWeights(pick(durations), pick(newest.durations), newest.metadata.shards);
     const baseline = replayWeights(

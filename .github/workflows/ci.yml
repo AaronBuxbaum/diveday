@@ -430,8 +430,9 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - name: Cache verified PDF archives
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5.0.5
+      # Read-only here: main's visual shard 1 saves the one copy (see the visual job).
+      - name: Restore verified PDF archives
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/diveday-poppler-archives
           key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs', 'scripts/ci-pdf-tools.lock.json') }}
@@ -545,7 +546,7 @@ jobs:
           exit "$rerun"
         # Six shards at two workers each (2026-11-01). Twelve at one worker
         # (after unrelated timeouts on #3162 and #3163) cost ~77 runner-minutes
-        # a run; `playwright-workers-trial.yml` ran six at two workers 30
+        # a run; a since-deleted trial workflow ran six at two workers 30
         # shard-runs: 29 green (the one red never recurred), 374-633 s a
         # run, ~60 runner-minutes and six fewer jobs against the concurrent-job
         # cap. The price is a slowest shard of ~10 minutes against ~7. If
@@ -647,8 +648,9 @@ jobs:
           # depth-1 checkout.
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - name: Cache verified PDF archives
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5.0.5
+      # Read-only here: main's visual shard 1 saves the one copy (see the visual job).
+      - name: Restore verified PDF archives
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/diveday-poppler-archives
           key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs', 'scripts/ci-pdf-tools.lock.json') }}
@@ -838,8 +840,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - name: Cache verified PDF archives
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v5.0.5
+      # Restored on every event, saved only from main (below): a key saved on a pull request's
+      # ref is readable by that pull request alone, so each one kept its own copy of one key.
+      - name: Restore verified PDF archives
+        id: pdf-archives
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/diveday-poppler-archives
           key: ubuntu24-amd64-poppler-${{ hashFiles('scripts/ci-pdf-tools.mjs', 'scripts/ci-pdf-tools.lock.json') }}
@@ -858,6 +863,12 @@ jobs:
         run: |
           node scripts/ci-pdf-tools.mjs
           export PATH="$RUNNER_TEMP/diveday-poppler/bin:$PATH"
+      - name: Save verified PDF archives
+        if: github.event_name == 'push' && matrix.shard == 1 && steps.pdf-archives.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/diveday-poppler-archives
+          key: ${{ steps.pdf-archives.outputs.cache-primary-key }}
       # Capture screenshots into e2e/screenshots; state and paper-integrity
       # assertions can fail this step. The reg-suit compare against
       # the S3 baseline runs once, in visual-publish below, over every shard's

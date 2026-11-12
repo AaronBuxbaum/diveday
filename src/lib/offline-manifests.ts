@@ -10,9 +10,8 @@ import { type DepthAdvisory, depthAdvisoryIn } from "./findings";
 // Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { TrainingMarkCleared, TripManifest } from "./manifests";
-// Same reasoning as the roll-call import above: dependency-free, so a value
-// import here is safe for the service worker to carry.
-import { latestPreDepartureCheck, type PreDepartureCheckStatus } from "./pre-departure-check";
+import { offlineStoredInstant } from "./offline-events";
+import type { PreDepartureCheckStatus } from "./pre-departure-check";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 // The roll-call rules come from `./roll-call`, never from `./manifests`: this
 // module is compiled into the service worker, and a *value* import from
@@ -150,6 +149,15 @@ export type OfflineManifestPayload = {
   snapshotId?: string;
   /** HMAC-authenticated shop erasure epoch; clients must carry it unchanged. */
   erasureEpochToken?: string;
+  /**
+   * **The manifest page's payload only** (issue #4391): the shop erasure epoch
+   * and the trip's snapshot revision its rows were read at, in place of
+   * `snapshotId` and `erasureEpochToken`. The page render issues no snapshot;
+   * the device trades this for one when it saves
+   * (`claimOfflineManifestSnapshot`), and the claimed payload no longer
+   * carries it, so a saved copy never does.
+   */
+  readAt?: OfflineManifestSnapshotRequest;
   /** Absent on older snapshots, which cannot claim junior checks were captured. */
   juniorAdvisoriesChecked?: true;
   /** Absent on copies made before site-only training readiness; queued events remain intact. */
@@ -715,9 +723,17 @@ export type OfflineRollCallEvent = {
    */
   note?: string | null;
   occurredAt: string;
+  /** Committed server time; raw occurredAt still orders this device's queue. */
+  storedOccurredAt?: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
+  /**
+   * The departure's snapshot revision when DiveDay answered for this event
+   * (`syncOfflineManifest`). See {@link offlineEventInCopy}. Absent on a tap
+   * not yet synced, a refused one, and one settled before the field existed.
+   */
+  syncedAtRevision?: number;
 };
 
 /**
@@ -772,9 +788,13 @@ export type OfflineChecklistEvent = {
   retractsClientEventId?: string;
   note: string | null;
   occurredAt: string;
+  /** Committed server time; raw occurredAt still orders this device's queue. */
+  storedOccurredAt?: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
+  /** See `OfflineRollCallEvent.syncedAtRevision`. */
+  syncedAtRevision?: number;
 };
 
 /**
@@ -812,9 +832,66 @@ export type OfflineArrivalEvent = {
   /** Names the `arrived` this `cleared` takes back — see `OfflineRollCallEvent.retractsClientEventId`. */
   retractsClientEventId?: string;
   occurredAt: string;
+  /** Committed server time; raw occurredAt still orders this device's queue. */
+  storedOccurredAt?: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
+  /** See `OfflineRollCallEvent.syncedAtRevision`. */
+  syncedAtRevision?: number;
 };
+
+/**
+ * What a server-issued snapshot token claims, unverified: the shop's erasure
+ * epoch and the departure's snapshot revision it was issued at
+ * (`signOfflineErasureEpoch`). Null for no token or one in another shape. Only
+ * ever a comparison on the device; DiveDay checks the token's MAC itself.
+ */
+export function offlineSnapshotTokenClaims(
+  token: string | undefined,
+): { epoch: number; revision: number } | null {
+  if (!token) return null;
+  const match = /^(\d{1,16})\.(\d{1,16})\.[A-Za-z0-9_-]{43}$/.exec(token);
+  if (!match) return null;
+  const epoch = Number(match[1]);
+  const revision = Number(match[2]);
+  if (
+    !Number.isSafeInteger(epoch) ||
+    epoch < 0 ||
+    String(epoch) !== match[1] ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1 ||
+    String(revision) !== match[2]
+  ) {
+    return null;
+  }
+  return { epoch, revision };
+}
+
+/**
+ * **Whether the saved copy already holds what DiveDay made of this tap**, so
+ * the copy answers for it and the tap is no longer read ahead of the copy.
+ *
+ * A device keeps every event it queued. Read first for good, a synced "back
+ * aboard" went on showing after somebody undid it on the live manifest: an
+ * undone mark leaves nothing in the copy to outrank it, and the tablet's count
+ * read complete with one person awaiting. The same held for a tick on the boat
+ * check and an arrival at the counter.
+ *
+ * No clock decides this. DiveDay answers a sync with the departure's snapshot
+ * revision as of the answer, and a copy two or more revisions on read its rows
+ * after the tap was written (`latestOfflineManifestSnapshotRevisions`). One
+ * revision on is not enough, since a refresh and a sync can cross; until then
+ * the tap stands as before. A copy with no token, and a tap with no revision,
+ * are never in the copy.
+ */
+export function offlineEventInCopy(
+  snapshot: Pick<OfflineManifestSnapshot, "erasureEpochToken">,
+  event: { syncStatus: "pending" | "applied" | "rejected"; syncedAtRevision?: number },
+): boolean {
+  if (event.syncStatus !== "applied" || event.syncedAtRevision === undefined) return false;
+  const copy = offlineSnapshotTokenClaims(snapshot.erasureEpochToken);
+  return copy !== null && copy.revision >= event.syncedAtRevision + 2;
+}
 
 export type OfflineManifestEnvelope = {
   snapshot: OfflineManifestSnapshot;
@@ -1106,6 +1183,77 @@ export async function fetchOfflineManifestShopSlug(): Promise<string | null> {
     });
     if (!response.ok) return null;
     return offlineManifestShopSlug(await response.json());
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * `POST /api/offline-manifests/[tripId]/snapshot`'s body: what the page read
+ * its rows at, the shop erasure epoch and the trip's snapshot revision (0
+ * before any copy was issued).
+ */
+export type OfflineManifestSnapshotRequest = { erasureEpoch: number; snapshotRevision: number };
+
+/** Its 200 answer: what makes the page's rows a saved, ordered, epoch-signed copy. */
+export type OfflineManifestSnapshotResponse = { snapshotId: string; erasureEpochToken: string };
+
+/**
+ * Its 409 answer, whatever the reason in the body (`erasure_epoch_moved`,
+ * `snapshot_superseded`): the page's rows are older than the server now holds.
+ */
+export const OFFLINE_MANIFEST_STALE_READ = "stale_read";
+
+function offlineManifestSnapshotIssued(body: unknown): OfflineManifestSnapshotResponse | null {
+  if (!body || typeof body !== "object") return null;
+  const { snapshotId, erasureEpochToken } = body as Partial<OfflineManifestSnapshotResponse>;
+  return typeof snapshotId === "string" && typeof erasureEpochToken === "string"
+    ? { snapshotId, erasureEpochToken }
+    : null;
+}
+
+/**
+ * **Make the manifest page's payload a copy this device may save** (issue
+ * #4391). The page reads its rows on the pool and issues no snapshot; this
+ * asks the server for the snapshot id, the next revision and the signed epoch,
+ * under the erasure fence, at the moment the device saves.
+ *
+ * A payload that already carries a token (the background board's) comes back
+ * as it is. `"stale_read"` when an erasure landed, or another copy was issued,
+ * after the page read its rows: those rows may still name the erased diver or
+ * miss a diver the newer copy has, so they are not saved, and the caller
+ * re-reads the page instead. `null` when the answer cannot be established
+ * (offline, signed out, a failed or timed-out request): nothing is saved, as
+ * when the tenant cannot be verified.
+ */
+export async function claimOfflineManifestSnapshot(
+  payload: OfflineManifestPayload,
+): Promise<OfflineManifestPayload | typeof OFFLINE_MANIFEST_STALE_READ | null> {
+  const { readAt, ...rest } = payload;
+  if (readAt === undefined) return payload;
+  const tripId = payload.manifests[0]?.trip.id;
+  if (!tripId) return null;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TENANT_LOOKUP_TIMEOUT_MS);
+  try {
+    const body: OfflineManifestSnapshotRequest = {
+      erasureEpoch: readAt.erasureEpoch,
+      snapshotRevision: readAt.snapshotRevision,
+    };
+    const response = await fetch(`/api/offline-manifests/${encodeURIComponent(tripId)}/snapshot`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (response.status === 409) return OFFLINE_MANIFEST_STALE_READ;
+    if (!response.ok) return null;
+    const issued = offlineManifestSnapshotIssued(await response.json());
+    return issued ? { ...rest, ...issued } : null;
   } catch {
     return null;
   } finally {
@@ -1582,7 +1730,11 @@ export function latestOfflineArrival(
   // missing-diver alarm. Nothing recorded here is that, so the simple rule is
   // the right one.
   const forBooking = queuedEvents.filter(
-    (event) => event.bookingId === bookingId && event.syncStatus !== "rejected",
+    (event) =>
+      event.bookingId === bookingId &&
+      event.syncStatus !== "rejected" &&
+      // A tap the copy already holds is the copy's to answer (`offlineEventInCopy`).
+      !offlineEventInCopy(snapshot, event),
   );
   const latestLocal = latestArrival(forBooking);
   if (latestLocal) {
@@ -1698,25 +1850,39 @@ export function latestOfflineChecklistCheck(
   checklistItemId: string,
   queuedEvents: readonly OfflineChecklistEvent[],
 ): OfflineChecklistCheckResult | undefined {
-  const forItem = queuedEvents.filter((event) => event.checklistItemId === checklistItemId);
-  const latestLocal = latestPreDepartureCheck(forItem);
-  if (latestLocal) {
-    return {
-      state: "checked",
-      occurredAt: latestLocal.occurredAt,
-      note: latestLocal.note,
-      pending: latestLocal.syncStatus === "pending",
-      local: true,
-      clientEventId: latestLocal.clientEventId,
-    };
-  }
-  // A queued `cleared` with nothing standing beneath it must not fall through
-  // to the snapshot's own stale "checked" — that would hand the mark right
-  // back to whoever just tapped it off, the same rule roll call's `cleared`
-  // follows.
-  if (forItem.some((event) => event.status === "cleared")) return undefined;
-  const saved = snapshot.checklist?.items.find((item) => item.id === checklistItemId)?.check;
-  return saved ? { ...saved, pending: false, local: false } : undefined;
+  // **A refused tap does not stand**, as at the counter (`latestOfflineArrival`):
+  // a tick DiveDay refused read "checked" here for good, and a refused undo
+  // hid the tick it failed to take back.
+  const forItem = queuedEvents.filter(
+    (event) =>
+      event.checklistItemId === checklistItemId &&
+      event.syncStatus !== "rejected" &&
+      // A tap the copy already holds is the copy's to answer (`offlineEventInCopy`).
+      !offlineEventInCopy(snapshot, event),
+  );
+  let newest: OfflineChecklistEvent | undefined;
+  // `>=` in queue order: the later-queued of two taps sharing an instant wins,
+  // the tie-break `latestPreDepartureCheck` and the sync route apply.
+  for (const event of forItem) if (!newest || event.occurredAt >= newest.occurredAt) newest = event;
+  const check = snapshot.checklist?.items.find((item) => item.id === checklistItemId)?.check;
+  const saved = check ? { ...check, pending: false, local: false } : undefined;
+  if (!newest) return saved;
+  // A saved tick newer than anything this device queued stands, as roll call's
+  // does (`explicitResultAt`): somebody ticked the item again after this
+  // device unticked it.
+  if (saved && saved.occurredAt > offlineStoredInstant(newest)) return saved;
+  // A queued `cleared` with nothing newer over it must not fall through to
+  // the snapshot's own stale "checked": that would hand the mark right back
+  // to whoever just tapped it off.
+  if (newest.status !== "checked") return undefined;
+  return {
+    state: "checked",
+    occurredAt: offlineStoredInstant(newest),
+    note: newest.note,
+    pending: newest.syncStatus === "pending",
+    local: true,
+    clientEventId: newest.clientEventId,
+  };
 }
 
 /**
@@ -1863,7 +2029,7 @@ function recordedResult(event: OfflineRollCallEvent): OfflineRollCallResult | nu
   if (event.status === "cleared") return null;
   return {
     state: event.status,
-    occurredAt: event.occurredAt,
+    occurredAt: offlineStoredInstant(event),
     pending: event.syncStatus === "pending",
     implied: false,
     local: true,
@@ -1939,10 +2105,43 @@ function explicitResultAt(
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
   matches: (subject: NonNullable<ReturnType<typeof offlineRollCallSubject>>) => boolean,
   saved: OfflineRollCallResult | undefined,
+  allQueued: readonly OfflineRollCallEvent[],
 ): OfflineRollCallResult | null | undefined {
   const latestAttempt = latestQueuedAttempt(events, checkpoint, matches);
   if (!latestAttempt) return saved;
-  if (latestAttempt.syncStatus !== "rejected") return recordedResult(latestAttempt);
+  if (latestAttempt.syncStatus !== "rejected") {
+    // When the copy shows this tablet's own earlier committed statement, its
+    // next pending alarm follows it even on a slow clock. Raw device
+    // time cannot be compared with that saved server instant.
+    const followsOwnSaved =
+      saved &&
+      latestAttempt.syncStatus === "pending" &&
+      latestAttempt.status === "not_boarded" &&
+      allQueued.some((event) => {
+        const subject = offlineRollCallSubject(event);
+        return (
+          subject !== null &&
+          matches(subject) &&
+          event.checkpoint === checkpoint &&
+          event.syncStatus === "applied" &&
+          event.status === saved.state &&
+          event.storedOccurredAt === saved.occurredAt &&
+          event.occurredAt <= latestAttempt.occurredAt
+        );
+      });
+    // **A saved statement newer than this device's own stands.** The device
+    // keeps every event it queued, synced ones included, so without this its
+    // own "back aboard" outlived a second crew member's later "did not come
+    // back" on every refresh that brought it home, and the tablet went on
+    // reading the diver as aboard. DiveDay orders the two the same way: it
+    // holds the synced one beneath the newer mark, and refuses the pending
+    // one as `newer_event_exists`. Fixed-width ISO strings, compared as
+    // `latestQueuedAttempt` compares them. A synced event carries its committed
+    // server instant separately from the raw clock that orders local taps.
+    return saved && !followsOwnSaved && saved.occurredAt > offlineStoredInstant(latestAttempt)
+      ? saved
+      : recordedResult(latestAttempt);
+  }
   const rescued = latestQueuedAttempt(
     events,
     checkpoint,
@@ -2054,13 +2253,14 @@ function offlineRollCallOnOneDay(
   savedAt: (
     checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
   ) => OfflineRollCallResult | undefined,
+  allQueued: readonly OfflineRollCallEvent[],
 ): OfflineRollCallResult | undefined {
   // Only a result recorded *here* feeds the chain: an `implied` value the
   // snapshot carries is the server's own carry-forward, and re-deriving it is
   // the point.
   const explicitAt = (at: OfflineManifestSnapshot["manifests"][number]["checkpoint"]) => {
     const saved = savedAt(at);
-    return explicitResultAt(events, at, matches, saved?.implied ? undefined : saved);
+    return explicitResultAt(events, at, matches, saved?.implied ? undefined : saved, allQueued);
   };
   const order = offlineCheckpointOrder(snapshot);
   const index = order.indexOf(checkpoint);
@@ -2125,16 +2325,42 @@ function offlineDayStarts(snapshot: OfflineManifestSnapshot): number[] {
  */
 function offlineRollCallAt(
   snapshot: OfflineManifestSnapshot,
-  events: readonly OfflineRollCallEvent[],
+  queued: readonly OfflineRollCallEvent[],
   checkpoint: OfflineCheckpoint,
   matches: OfflineSubjectMatch,
-  savedAt: (checkpoint: OfflineCheckpoint) => OfflineRollCallResult | undefined,
+  savedOf: (checkpoint: OfflineCheckpoint) => OfflineRollCallResult | undefined,
   now: Date,
 ): OfflineRollCallResult | undefined {
+  // A tap the copy already holds is the copy's to answer (`offlineEventInCopy`):
+  // whatever was said or undone since is in the saved results below.
+  const events = queued.filter((event) => !offlineEventInCopy(snapshot, event));
+  // **Still this device's own mark when the copy shows exactly it.** The saved
+  // result that stands is the tap this device made (same person, checkpoint,
+  // state and instant), so the row keeps offering its undo and names the event
+  // for it. Without this a "back aboard" tapped on the wrong diver, once in
+  // the copy, could only be corrected offline by raising an alarm about
+  // somebody standing on deck. DiveDay still checks the named event against
+  // the newest one it holds, so a stale undo is refused.
+  const savedAt = (at: OfflineCheckpoint): OfflineRollCallResult | undefined => {
+    const saved = savedOf(at);
+    if (!saved || saved.implied) return saved;
+    const own = queued.find((event) => {
+      const subject = offlineRollCallSubject(event);
+      return (
+        subject !== null &&
+        matches(subject) &&
+        event.checkpoint === at &&
+        event.status === saved.state &&
+        offlineStoredInstant(event) === saved.occurredAt &&
+        offlineEventInCopy(snapshot, event)
+      );
+    });
+    return own ? { ...saved, local: true, clientEventId: own.clientEventId } : saved;
+  };
   const starts = offlineDayStarts(snapshot);
   const today = rollCallDayOf(starts, now);
   const dayOfEvent = (event: OfflineRollCallEvent) =>
-    rollCallDayOf(starts, new Date(event.occurredAt));
+    rollCallDayOf(starts, new Date(offlineStoredInstant(event)));
   // Every time, not only when the copy is older than today: a copy refreshed on
   // the morning of day two still holds day one's queued events, and they are
   // day one's. The saved results speak for today only if the copy was saved
@@ -2147,6 +2373,7 @@ function offlineRollCallAt(
     checkpoint,
     matches,
     savedDay >= today ? savedAt : () => undefined,
+    queued,
   );
   if (here || today === 0 || checkpoint === "departure") return here;
 
@@ -2166,7 +2393,7 @@ function offlineRollCallAt(
       checkpoint: event.checkpoint,
       status: event.status,
       day: dayOfEvent(event),
-      at: event.occurredAt,
+      at: offlineStoredInstant(event),
       result: recordedResult(event),
     });
   }

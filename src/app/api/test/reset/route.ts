@@ -9,6 +9,7 @@ import {
   e2eTestRouteAuthorized,
   testRouteRefused,
 } from "@/features/e2e-test-routes";
+import { expireShopRowsCaches } from "@/features/runtime-cache";
 import {
   type DemoReset,
   resetDemoFromSnapshot,
@@ -41,6 +42,9 @@ export async function POST(request: Request) {
   // The clock is a fact the reset restores, ahead of the rows: a test that moved
   // it (the `clock` fixture) must not hand the next test a later day (#2761).
   restoreBootClock();
+  // Cached reads of a shop's rows (the shopfront's month sightings) are read
+  // afresh after the rows come back, not served from an earlier test's view.
+  expireShopRowsCaches();
   const db = await getDb();
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
   let reset: DemoReset | null = null;

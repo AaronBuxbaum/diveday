@@ -14,7 +14,7 @@ import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
 import { openSnagsForTrip } from "@/features/boat-snags";
 import { departureVessels } from "@/features/boats";
 import { diveIntentTallyForTrip } from "@/features/dive-intent";
-import { issueOfflineManifestSnapshot } from "@/features/offline-manifest-snapshots";
+import { readOfflineManifestRoster } from "@/features/offline-manifest-snapshots";
 import type { SiteHistory } from "@/features/site-history";
 import { lastAtSites } from "@/features/site-history";
 import { listShopPickedSpecies, listTripSightings } from "@/features/trip-sightings";
@@ -37,8 +37,14 @@ export async function readManifestPage(
 ) {
   // The manifest rows, the raw team membership, and the desk's own notes don't
   // depend on one another — resolve them together instead of serially.
+  // The manifests and the erasure epoch they were read at, on the pool and
+  // writing nothing (issue #4391). The page shows these rows and the device
+  // saves these same rows, so the screen and the copy cannot differ; the
+  // save trades the epoch for a signed token, refused if an erasure landed
+  // since (`issueOfflineManifestSnapshot`, `/api/offline-manifests/[tripId]/snapshot`).
+  const roster = readOfflineManifestRoster(db, shopId, tripId);
   const [
-    offlineSnapshot,
+    offlineRoster,
     buddyTeamsList,
     bookingNotes,
     diverNotes,
@@ -61,10 +67,7 @@ export async function readManifestPage(
     mayReadMedicalAlerts,
     emergencyStanding,
   ] = await Promise.all([
-    // The snapshot reads the manifests itself, under the erasure fence, and the
-    // page shows those same rows: one read, so the screen and the copy a
-    // device saves cannot differ (this page used to read them twice).
-    issueOfflineManifestSnapshot(db, shopId, tripId),
+    roster,
     // Raw membership rows, cancelled members included: the teams panel must show
     // a team whose seat was cancelled (it still blocks re-teaming the survivors
     // until dissolved), while the manifest derivation already dropped that
@@ -77,7 +80,11 @@ export async function readManifestPage(
     // trip's booking below so every interface reads the same source of truth.
     listDiverNotesForTrip(db, shopId, tripId),
     listChecklistItems(db, shopId),
-    latestPreDepartureChecksForTrip(db, shopId, tripId),
+    // After the roster, never beside it: the saved copy carries these ticks
+    // under the roster's snapshot revision, and a device reads its own synced
+    // tick as in the copy by that revision (`offlineEventInCopy`). Read before
+    // the revision, a tick could be older than the copy claims.
+    roster.then(() => latestPreDepartureChecksForTrip(db, shopId, tripId)),
     listTripDives(db, shopId, tripId),
     listExecutedDives(db, shopId, tripId),
     listDiveSites(db, shopId),
@@ -121,7 +128,7 @@ export async function readManifestPage(
     // any active staffer, on the days of the trip in the shop's zone.
     emergencyMedicalAlertStanding(db, shopId, personId, tripId),
   ]);
-  const completeManifests = offlineSnapshot?.manifests ?? null;
+  const completeManifests = offlineRoster?.manifests ?? null;
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
   // their ids, and the species a crew may claim to have seen are exactly the
@@ -157,12 +164,12 @@ export async function readManifestPage(
     : undefined;
   return {
     completeManifests,
-    offlineSnapshot,
+    offlineRoster,
     buddyTeamsList,
     bookingNotes,
     diverNotes,
     // The boat check, and what earlier crews on this boat said is wrong with it.
-    boatCheck: { checklistItems, checklistChecks, snags, offlineSnapshot },
+    boatCheck: { checklistItems, checklistChecks, snags, offlineRoster },
     plannedDives,
     executedDives,
     liveDiveSites,

@@ -70,6 +70,24 @@ describe("worthALook", () => {
     expect(rows[1]).toMatchObject({ tripId: "site", reason: "same_site" });
   });
 
+  it("says whether a same-site boat leaves earlier or later the same day, and null otherwise", () => {
+    const subj = subject({ diveSiteId: "molasses", startsAt: at("2026-09-06T16:00:00.000Z") });
+    const rows = look(subj, [
+      candidate("early", { diveSiteId: "molasses", startsAt: at("2026-09-06T12:00:00.000Z") }),
+    ]);
+    expect(rows[0]).toMatchObject({ reason: "same_site", sameDay: "earlier" });
+    expect(
+      look(subj, [
+        candidate("late", { diveSiteId: "molasses", startsAt: at("2026-09-06T19:00:00.000Z") }),
+      ])[0],
+    ).toMatchObject({ sameDay: "later" });
+    expect(
+      look(subj, [
+        candidate("next", { diveSiteId: "molasses", startsAt: at("2026-09-07T16:00:00.000Z") }),
+      ])[0],
+    ).toMatchObject({ sameDay: null });
+  });
+
   it("says gentler for a beginner site, and has no word for the reverse", () => {
     const demanding = subject({ difficultyLevel: "advanced" });
     expect(look(demanding, [candidate("easy", { difficultyLevel: "beginner" })])).toMatchObject([

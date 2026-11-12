@@ -14,7 +14,7 @@ export default function WorkOrdersLoading() {
   return (
     <StaffPage width="full">
       <Pending>
-        <ShopPageHeader pending titleWidth="w-40" description={false} actions />
+        <ShopPageHeader pending eyebrow={false} description={false} actions />
         <StaffSectionTabsSkeleton section="gear" />
         <div className="mt-6 space-y-9">
           {[

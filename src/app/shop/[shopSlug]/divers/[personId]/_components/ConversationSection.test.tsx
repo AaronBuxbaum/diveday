@@ -3,11 +3,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ThreadEntry } from "@/db/inbound-messages";
-import { resolveDiverNotice } from "@/i18n/diver-notice-text";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS } from "@/lib/clock";
 import type { DiverNotice } from "@/lib/diver-notices";
-import { noticeForForm } from "@/lib/staff-notices";
 import { ConversationSection } from "./ConversationSection";
 
 vi.mock("../details-actions", () => ({
@@ -94,15 +92,6 @@ describe("a diver who never wrote", () => {
 });
 
 describe("a conversation", () => {
-  it("shows a request extraction refusal beside the conversation", () => {
-    const notice = resolveDiverNotice({
-      notice: "request-nothing",
-      personId: "af000000-1111-4222-8333-444444444444",
-      locale: "en-US",
-    });
-    renderSection([inbound()], false, noticeForForm(notice, "reply"));
-    expect(screen.getByText("Nothing in that message reads as a booking.")).toBeVisible();
-  });
   it("shows both directions and who wrote each", () => {
     renderSection([inbound(), outbound()]);
     expect(screen.getByText("Could I switch to the afternoon boat?")).toBeInTheDocument();

@@ -412,6 +412,38 @@ describe("sendDueCheckoutRecoveries", () => {
     expect(row?.stripeCustomerId).toBe("cus_recovered");
   });
 
+  it("never emails 'finish paying' for a no-cost order Stripe already completed", async () => {
+    // A code that takes the whole total: no card, a complete session, zero due.
+    const { db, checkoutId } = await pendingCheckoutContext(3);
+    const email = fakeEmail();
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(async () => ({
+        status: "ok",
+        session: {
+          stripeSessionId: "cs_1",
+          stripeStatus: "complete",
+          paymentStatus: "no_payment_required",
+          checkoutUrl: "https://checkout.stripe.test/cs_1",
+          amountTotalCents: 0,
+          taxAmountCents: null,
+          stripeCustomerId: null,
+          expiresAt: null,
+        },
+      })),
+    });
+
+    expect(summary).toMatchObject({ sent: 0, resolved: 1 });
+    expect(email.sent).toHaveLength(0);
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(row?.status).toBe("completed");
+    expect(row?.settledTotalCents).toBe(0);
+  });
+
   it("keeps Stripe tax when recovery resolves a paid tax-enabled checkout", async () => {
     const { db, checkoutId, bookingIds } = await pendingCheckoutContext(3, 1, true);
     const email = fakeEmail();

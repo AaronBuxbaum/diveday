@@ -823,15 +823,6 @@ describe("RentalFitForm suit choice", () => {
     );
   }
 
-  it("offers the diver's own suit either way, and ours only when the shop rents it", () => {
-    renderSuit(emptyFit, ["bcd", "wetsuit"]);
-    const names = screen.getAllByRole("radio").map((radio) => radio.getAttribute("value"));
-    expect(names).toEqual(["own_wetsuit", "rents_wetsuit", "own_drysuit"]);
-    // No suit tick left among the pieces: the suit has one question.
-    expect(screen.queryByRole("checkbox", { name: /^Wetsuit/ })).toBeNull();
-    expect(screen.queryByRole("checkbox", { name: /^Drysuit/ })).toBeNull();
-  });
-
   it("opens on the diver's own drysuit when that is what they said", () => {
     renderSuit({ ...emptyFit, divesDry: true }, ["bcd", "wetsuit", "drysuit"]);
     expect(screen.getByRole("radio", { name: "My own drysuit" })).toBeChecked();

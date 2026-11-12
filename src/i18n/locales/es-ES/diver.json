@@ -69,6 +69,10 @@
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
+    "welcome": {
+      "newToDiving": "¿Nuevo en el buceo?",
+      "seeSchedule": "Ver el calendario"
+    },
     "shopPhotos": "Fotos del centro",
     "timesInZone": "Todos los horarios de abajo están en la hora local de {shop} ({zone}).",
     "timesInZoneFooter": "Las horas son locales de {shop} ({zone}).",
@@ -464,6 +468,8 @@
     "worthALook": {
       "sameCourse": "El mismo curso, otro día",
       "sameSite": "El mismo sitio de buceo, otro día",
+      "sameSiteEarlier": "El mismo sitio de buceo, más temprano ese día",
+      "sameSiteLater": "El mismo sitio de buceo, más tarde ese día",
       "gentler": "El centro califica este sitio para principiantes.",
       "alsoMorning": "También sale por la mañana.",
       "alsoAfternoon": "También sale por la tarde.",
@@ -1417,6 +1423,12 @@
     "noCharge": "No se te cobrará alquiler en esta salida.",
     "sizesLocked": "Tus tallas están listas para que la tripulación las revise en el muelle.",
     "addSizes": "Agrega tallas para todo lo que has marcado.",
+    "gearSourceLegend": "¿Traes tu propio equipo?",
+    "gearSource": {
+      "own": "Todo es mío",
+      "some": "Una parte",
+      "everything": "Necesito todo"
+    },
     "whatToPlan": "¿Qué preparamos para ti?",
     "suitLegend": "Tu neopreno o traje seco",
     "suitChoices": {

@@ -2,7 +2,7 @@ import { and, asc, eq, exists, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
-import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { offlineEventInstant, offlineEventOutOfBounds } from "@/lib/offline-events";
 import {
   PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED,
   type PreDepartureCheckStatus,
@@ -349,7 +349,12 @@ export async function recordPreDepartureCheck(
     () =>
       db.transaction(async (tx): Promise<RecordPreDepartureCheckOutcome> => {
         const source = input.source ?? "live";
-        const occurredAt = input.occurredAt ?? nowDate();
+        // An offline tap is never dated after its own sync (`offlineEventInstant`).
+        const now = nowDate();
+        const occurredAt =
+          source === "offline"
+            ? offlineEventInstant(input.occurredAt, now)
+            : (input.occurredAt ?? now);
         const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
         if (!staffId) return { ok: false, reason: "staff_not_found" };
 
@@ -436,8 +441,8 @@ export async function recordPreDepartureCheck(
             offlineEventOutOfBounds({
               clientEventId: input.clientEventId,
               offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-              occurredAt,
-              now: nowDate(),
+              // The device's own reading, beside its own `savedAt`.
+              occurredAt: input.occurredAt ?? occurredAt,
             })
           ) {
             return refuse("snapshot_invalid");

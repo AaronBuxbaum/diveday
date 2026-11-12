@@ -161,6 +161,36 @@ export async function listActiveCourses(
     .orderBy(...progressionOrder);
 }
 
+/** How many courses the storefront's course shelf shows. */
+export const SHELF_COURSE_COUNT = 3;
+
+/**
+ * **The storefront's course shelf: the first three active courses, only the
+ * columns a card draws** (performance audit 2026-11-11, item 6). The shelf
+ * used to read every column of every active course — the template snapshot
+ * and the course page's long-form content included — and keep three. Same
+ * scope and order as {@link listActiveCourses}, so the shelf shows exactly
+ * the courses it showed before.
+ */
+export async function listShelfCourses(db: DbExecutor, shopId: string) {
+  return db
+    .select({
+      id: courses.id,
+      slug: courses.slug,
+      title: courses.title,
+      summary: courses.summary,
+      durationText: courses.durationText,
+      heroImageUrl: courses.heroImageUrl,
+      heroImageAlt: courses.heroImageAlt,
+      priceCents: courses.priceCents,
+      eLearningPriceCents: courses.eLearningPriceCents,
+    })
+    .from(courses)
+    .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
+    .orderBy(...progressionOrder)
+    .limit(SHELF_COURSE_COUNT);
+}
+
 /**
  * Every course the shop has, hidden ones too, in progression order: the
  * course ladder's catalog (`src/features/course-ladder/store.ts`), where a hidden taster

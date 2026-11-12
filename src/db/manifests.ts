@@ -27,7 +27,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
-import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { offlineEventInstant, offlineEventOutOfBounds } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
 import type { RollCallEventStatus, RollCallSubjectKind } from "@/lib/roll-call";
@@ -61,6 +61,7 @@ import {
   replayVerdict,
   type StoredOfflineEvent,
 } from "./offline-replay";
+import { queryAll } from "./query-helpers";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
 import { newestMarkFirst } from "./roll-call-order";
@@ -1111,31 +1112,34 @@ export async function getTripManifests(
     standingClashes,
     welcomeInputs,
     rollCalls,
-  ] = await Promise.all([
-    getShopById(db, shopId),
-    getTripRoster(db, shopId, tripId),
-    listTripReadiness(db, shopId, tripId),
-    verifiedNitroxPersonIds(db, shopId),
-    rentalFitByBooking(db, shopId, tripId),
+  ] = await queryAll(db, [
+    // `queryAll`: a real fan-out on the pool (the manifest page), one statement
+    // at a time on a transaction's single client (the offline board's
+    // fence), where concurrent queries only queue and warn.
+    () => getShopById(db, shopId),
+    () => getTripRoster(db, shopId, tripId),
+    () => listTripReadiness(db, shopId, tripId),
+    () => verifiedNitroxPersonIds(db, shopId),
+    () => rentalFitByBooking(db, shopId, tripId),
     // The units each booking holds on the register, so a piece it already
     // holds is not marked "no longer rented" on the rail (issue #1811). The
     // same read the Gear tab's prep list hands the same rule.
-    listTripGearAssignments(db, shopId, tripId),
-    listTripCrew(db, shopId, tripId),
-    listLatestCrewRollCalls(db, shopId, tripId),
-    listTripBuddyTeams(db, shopId, tripId),
+    () => listTripGearAssignments(db, shopId, tripId),
+    () => listTripCrew(db, shopId, tripId),
+    () => listLatestCrewRollCalls(db, shopId, tripId),
+    () => listTripBuddyTeams(db, shopId, tripId),
     // Who on this crew is also on another departure these hours overlap. Read
     // here rather than on the page so the offline snapshot and every other
     // consumer of a manifest carry the same fact (issue #1779). It answers
     // nothing for a departure that has come home, which is the rule the week
     // grid already keeps.
-    crewClashes(db, shopId, tripId),
+    () => crewClashes(db, shopId, tripId),
     // The two facts behind the welcome word (issue #1182): who consented, and
     // when this shop last had them on a boat. Read here rather than in the page
     // so the offline serializer and every other consumer of a manifest see the
     // same derived cue.
-    welcomeCueInputsByBooking(db, shopId, tripId),
-    listLatestRollCallsByCheckpoint(db, shopId, tripId, checkpoints),
+    () => welcomeCueInputsByBooking(db, shopId, tripId),
+    () => listLatestRollCallsByCheckpoint(db, shopId, tripId, checkpoints),
   ]);
   if (!shop) return null;
   // The fact of a medical alert for the crew on each seat's standing release
@@ -2093,8 +2097,13 @@ export async function recordRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
-  // One instant for the event and the boat snapshot it keeps (#2300).
-  const occurredAt = input.occurredAt ?? nowDate();
+  // One instant for the event and the boat snapshot it keeps (#2300). An
+  // offline tap is never dated after its own sync (`offlineEventInstant`).
+  const now = nowDate();
+  const occurredAt =
+    input.source === "offline"
+      ? offlineEventInstant(input.occurredAt, now)
+      : (input.occurredAt ?? now);
   const outcome = await answeringReplayAsDuplicate(
     () => db.transaction((tx) => writeRollCall(tx, input, occurredAt)),
     {
@@ -2232,8 +2241,8 @@ async function writeRollCall(
       offlineEventOutOfBounds({
         clientEventId: input.clientEventId,
         offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-        occurredAt,
-        now: nowDate(),
+        // The device's own reading, beside its own `savedAt`.
+        occurredAt: input.occurredAt ?? occurredAt,
       })
     ) {
       return refuse("snapshot_invalid");
@@ -2495,8 +2504,13 @@ export async function recordCrewRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordCrewRollCallOutcome> {
-  // One instant for the event and the boat snapshot it keeps (#2300).
-  const occurredAt = input.occurredAt ?? nowDate();
+  // One instant for the event and the boat snapshot it keeps (#2300). An
+  // offline tap is never dated after its own sync (`offlineEventInstant`).
+  const now = nowDate();
+  const occurredAt =
+    input.source === "offline"
+      ? offlineEventInstant(input.occurredAt, now)
+      : (input.occurredAt ?? now);
   const outcome = await answeringReplayAsDuplicate(
     () =>
       db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
@@ -2661,8 +2675,8 @@ export async function recordCrewRollCall(
             offlineEventOutOfBounds({
               clientEventId: input.clientEventId,
               offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-              occurredAt,
-              now: nowDate(),
+              // The device's own reading, beside its own `savedAt`.
+              occurredAt: input.occurredAt ?? occurredAt,
             })
           ) {
             return refuse("snapshot_invalid");

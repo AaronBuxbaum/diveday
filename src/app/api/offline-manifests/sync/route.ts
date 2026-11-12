@@ -5,8 +5,13 @@ import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
 import { offlineSyncTripsBelongToShop } from "@/db/trips";
 import { checkInBooking, undoCheckInBooking } from "@/features/check-in";
+import {
+  latestOfflineManifestSnapshotRevisions,
+  offlineSyncInstants,
+} from "@/features/offline-manifest-snapshots";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { log } from "@/lib/log";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 
@@ -151,6 +156,7 @@ const bodySchema = z
   .object({
     /** Optimistic tenant fence; session/shop ownership checks below remain authoritative. */
     expectedShopSlug: z.string().min(1).max(64).optional(),
+    includeStoredInstants: z.literal(true).optional(),
     events: z.array(eventSchema).max(200),
     checklistEvents: z.array(checklistEventSchema).max(200).optional(),
     arrivalEvents: z.array(arrivalEventSchema).max(200).optional(),
@@ -372,5 +378,40 @@ export async function POST(request: Request) {
     });
   }
 
-  return Response.json({ results });
+  // Read after every writer above has committed, which is the whole of its
+  // meaning: a copy two revisions past this one has seen these events
+  // (`latestOfflineManifestSnapshotRevisions`). The events are already
+  // written, so a failed read costs the device this hint and never the batch.
+  let snapshotRevisions: Record<string, number> | undefined;
+  try {
+    snapshotRevisions = await latestOfflineManifestSnapshotRevisions(
+      db,
+      session.user.shopId,
+      tripIds,
+    );
+  } catch (error) {
+    log("offline_sync.snapshot_revisions_unread", "error", {
+      error: error instanceof Error ? error.name : "unknown",
+    });
+  }
+  // A failed read fails the request; pending evidence retries with the same ids.
+  // A duplicate must return the original committed instant, never a retry's clock.
+  const stored = parsed.data.includeStoredInstants
+    ? await offlineSyncInstants(
+        db,
+        session.user.shopId,
+        results
+          .filter((result) => result.status !== "rejected")
+          .map((result) => result.clientEventId),
+      )
+    : new Map<string, string>();
+  return Response.json({
+    results: results.map((result) => ({
+      ...result,
+      ...(stored.has(result.clientEventId)
+        ? { storedOccurredAt: stored.get(result.clientEventId) }
+        : {}),
+    })),
+    ...(snapshotRevisions ? { snapshotRevisions } : {}),
+  });
 }

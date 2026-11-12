@@ -195,7 +195,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             No words of its own: the standards above are the caption, and a
             heading here would restate the section it closes. Left-aligned on
             the section's rail, like the heading block and the grid. */}
-        <FunnelCtas locale={locale} source="about-rules" footnotes={{}} className="mt-10" />
+        <FunnelCtas locale={locale} source="about-rules" footnotes={{}} call className="mt-10" />
       </section>
 
       {/* How a shop gets set up and who answers afterwards, beside the
@@ -281,6 +281,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
       <ClosingCta
         locale={locale}
         source="about-closing"
+        call
         title={t("marketing.about.closingTitle")}
       />
     </main>

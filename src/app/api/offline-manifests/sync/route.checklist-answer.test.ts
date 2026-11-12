@@ -248,6 +248,9 @@ describe("POST /api/offline-manifests/sync — the checklist answer on the depar
     // does not discard it (issue #3569); an unauthenticated snapshot still does.
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
+      // The departure's snapshot revision as of the answer, 0 before any copy
+      // was issued: what the device keeps on each event (`offlineEventInCopy`).
+      snapshotRevisions: { [trip.id]: 0 },
       results: [
         { clientEventId: "22222222-2222-4222-8222-222222222222", status: "applied" },
         {

@@ -435,6 +435,8 @@ list, current rental quotes, the meeting address and configured cancellation ter
 the same packing, quote and arrival rules as the booked diver’s page; unset prices and terms
 stay absent. Course inclusions appear here once; the itinerary retains its gear line only when booking facts are absent.
 
+**Meeting address is public before booking (Aaron, 2026-11-11, #4376):** a diver deciding to buy needs to know where they will be, and the place is usually the shop itself. This reverses the 2026-09-01 choice (#1223) to keep the exact label and address for booked divers; `e2e/schedule-trip.spec.ts` pins the public page again. There is no per-trip privacy switch.
+
 **Composition, 2026-10-27 (#3140) — rendered review pending**
 
 - **One idea:** understand the selected day and book in one place.
