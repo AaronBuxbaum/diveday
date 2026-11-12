@@ -2,8 +2,9 @@
  * Waivers: each booking's waiver status on one departure or several, as the
  * rosters read it. Imported through the `./waivers` barrel.
  */
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { DbExecutor } from "./client";
+import { minorDeclaredSeatFacts } from "./minor-declared";
 import { bookings, people, waiverRecords } from "./schema";
 import { seatNotCancelled } from "./trips-queries";
 import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
@@ -55,6 +56,7 @@ export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tr
       booking: bookings,
       person: people,
       waiver: WAIVER_STATE_COLUMNS,
+      minorDeclaredSeats: minorDeclaredSeatFacts(shopId, sql`${people.id}`),
       // Any release of the person failed its seal (issue #3885, review B1).
       personSealFailed: personSealFailed(bookings.shopId, people.id),
     })
