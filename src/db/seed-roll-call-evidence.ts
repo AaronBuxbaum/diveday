@@ -9,6 +9,7 @@ import {
 import { newestMarkFirst } from "./roll-call-order";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import { rollCallEvents, trips } from "./schema";
+import { seedRollCallEvidenceBatch } from "./seed-roll-call-evidence-batch";
 import { liveTrip } from "./trips-live";
 
 export type SeedRollCallEvidenceInput = Omit<
@@ -27,7 +28,11 @@ export async function seedRollCallEvidence(
   db: DbExecutor,
   input: SeedRollCallEvidenceInput | readonly SeedRollCallEvidenceInput[],
   options: { observesPrevious: boolean } = { observesPrevious: false },
-) {
+): Promise<(typeof rollCallEvents.$inferSelect)[]> {
+  if (Array.isArray(input))
+    return seedRollCallEvidenceBatch(db, input, options, (tx, value) =>
+      seedRollCallEvidence(tx, value, options),
+    );
   return db.transaction(async (tx) => {
     const events: readonly SeedRollCallEvidenceInput[] = Array.isArray(input)
       ? input
