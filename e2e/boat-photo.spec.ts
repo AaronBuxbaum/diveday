@@ -14,7 +14,7 @@ test("a boat photo reaches public pages and can be removed", async ({ page, priv
   };
 
   await page.goto(`/s/${privateShop.slug}`);
-  const shelfPhoto = page.getByRole("img", { name: boat.name });
+  const shelfPhoto = page.getByRole("button", { name: boat.name, exact: true }).locator("img");
   await expect(shelfPhoto).toBeVisible();
   await shelfPhoto.scrollIntoViewIfNeeded();
   await expect
@@ -22,7 +22,7 @@ test("a boat photo reaches public pages and can be removed", async ({ page, priv
     .toBeGreaterThan(0);
 
   await page.goto(`/s/${privateShop.slug}/trips/${trip.id}`);
-  const tripPhoto = page.getByRole("img", { name: boat.name });
+  const tripPhoto = page.getByRole("button", { name: boat.name, exact: true }).locator("img");
   await expect(tripPhoto).toBeVisible();
   await tripPhoto.scrollIntoViewIfNeeded();
   await expect
@@ -56,5 +56,5 @@ test("a boat photo reaches public pages and can be removed", async ({ page, priv
   await expect(page.getByText(staff("boats.boatUpdated"))).toBeVisible();
   await page.goto(`/s/${privateShop.slug}`);
   await expect(page.getByRole("heading", { name: "The boats" })).toBeVisible();
-  await expect(page.getByRole("img", { name: boat.name })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: boat.name, exact: true })).toHaveCount(0);
 });
