@@ -97,8 +97,12 @@ test.describe("light mode largest device body person sheet", () => {
 });
 
 test.describe("light mode largest device body after-dive warnings", () => {
-  // privateShop supplies its owner session and keeps these safety marks isolated.
-  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  // Keep the isolated safety marks and the photographed shop identity stable.
+  test.use({
+    privateShopSlug: "manifest-warnings-visual",
+    viewport: { width: 390, height: 844 },
+    reducedMotion: "reduce",
+  });
   test("a missing diver and crew member stay named at a simulated 53px device body", async ({
     page,
     request,
