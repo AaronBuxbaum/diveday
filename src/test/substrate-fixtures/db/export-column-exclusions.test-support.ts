@@ -16,6 +16,8 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
   shops: [
     "jurisdiction",
     "is_demo",
+    // Demo-only banner state: a demo is never a real shop's backup.
+    "demo_starts_dismissed_at",
     "latitude",
     "longitude",
     // Setup-checklist progress, not a shop record (issue #712): a shop
