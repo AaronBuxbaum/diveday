@@ -1,12 +1,12 @@
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import type { requireShopSurface } from "@/features/session";
+import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
 import type { ManifestActionContext } from "../actions";
 import { bindManifestActions } from "./bound-actions";
 import { buddyBuilderView } from "./buddy-builder-view";
-import { departureBoatSafetySection } from "./departure-boat-safety";
 import { emergencyReferenceCopy } from "./manifest-copy";
 import { readManifestPage } from "./manifest-reads";
 import { openCheckpoint } from "./open-checkpoint";
@@ -57,13 +57,13 @@ export async function readManifestView({
   locale: string;
   t: StaffTranslator;
 }) {
-  const read = await readManifestPage(db, shop.id, tripId, session.user.personId);
+  const read = await readManifestPage(db, shop, tripId, session.user.personId);
   const { completeManifests, boatCheck } = read;
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests || !boatCheck.offlineRoster)
     return { status: "missing" as const };
   const offlineRoster = boatCheck.offlineRoster;
-  const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t, locale);
+  const boatSafety = boatSafetySection(t, locale, read.boatSafety);
 
   const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
   if ("stale" in opened) return { status: "stale" as const };

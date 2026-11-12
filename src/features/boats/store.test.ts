@@ -428,12 +428,14 @@ describe("the boat a departure sails on, for its emergency card (fourth review, 
 
     const vessels = await departureVessels(db, shop.id, [onOne.id, onTwo.id, onNone.id]);
     expect(vessels.get(onOne.id)).toEqual({
+      boatId: one.id,
       name: "Mantis I",
       callSign: "WDM2201",
       mmsi: "338055502",
       workingChannel: "68",
     });
     expect(vessels.get(onTwo.id)).toEqual({
+      boatId: two.id,
       name: "Mantis II",
       callSign: null,
       mmsi: null,

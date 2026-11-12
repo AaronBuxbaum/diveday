@@ -31,7 +31,7 @@ describe("readManifestPage (in-memory PGlite)", () => {
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("demo staff missing");
 
-    const reads = await readManifestPage(db, shop.id, reef.id, staff.person.id);
+    const reads = await readManifestPage(db, shop, reef.id, staff.person.id);
 
     // One manifest per checkpoint: the dock, then one after each planned dive.
     expect(reads.completeManifests?.map((entry) => entry.checkpoint)).toEqual([
@@ -40,6 +40,9 @@ describe("readManifestPage (in-memory PGlite)", () => {
     ]);
     expect(reads.completeManifests?.[0]?.divers.length).toBeGreaterThan(0);
     expect(reads.plannedDives.length).toBe(reef.plannedDives);
+    expect(reads.boatSafety?.boatId).toBe(reads.vessel?.boatId);
+    for (const site of reads.liveDiveSites)
+      expect(Object.keys(site).sort()).toEqual(["id", "name"]);
     // Never worked this departure: there is nothing for a catch-up to be "since".
     expect(reads.catchUp.mark).toBeNull();
     // The field guides are keyed by the live sites the first wave returned.
@@ -63,16 +66,20 @@ describe("readManifestPage (in-memory PGlite)", () => {
     if (!staff) throw new Error("demo staff missing");
 
     const { stats } = await withQueryStats(() =>
-      readManifestPage(counted, shop.id, reef.id, staff.person.id),
+      readManifestPage(counted, shop, reef.id, staff.person.id),
     );
 
-    // 72 today: 76 before the render stopped issuing the offline snapshot
+    // 75 including the boat and two safety-kit statements now started beside the
+    // roster-dependent reads (#4393); previously those ran after this reader
+    // plus a redundant trip/boat lookup (76 combined, now 75). This reader
+    // alone cost 72 before consolidation, and 76 before the render stopped
+    // issuing the offline snapshot
     // (its lock_timeout, isolation check, advisory lock, trip key-share and
     // revision write went; a plain read of the trip's revision came, issue
     // #4391), 115 in production before the page stopped reading the manifest
     // twice and the roll call stopped reading once per checkpoint (issue #3857).
     // A tripwire: a change that adds a statement should say so here.
-    expect(stats.queries).toBeLessThanOrEqual(72);
+    expect(stats.queries).toBeLessThanOrEqual(75);
   });
 
   it("renders without a write, a lock or a snapshot revision (issue #4391)", async () => {
@@ -89,8 +96,8 @@ describe("readManifestPage (in-memory PGlite)", () => {
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("demo staff missing");
 
-    const reads = await readManifestPage(recorded, shop.id, reef.id, staff.person.id);
-    await readManifestPage(recorded, shop.id, reef.id, staff.person.id);
+    const reads = await readManifestPage(recorded, shop, reef.id, staff.person.id);
+    await readManifestPage(recorded, shop, reef.id, staff.person.id);
 
     // Every roll-call tap re-renders this page: a render must be a read.
     expect(sent.length).toBeGreaterThan(0);
@@ -113,7 +120,7 @@ describe("readManifestPage (in-memory PGlite)", () => {
     const [staff] = await listStaff(db, shop.id);
     const reads = await readManifestPage(
       db,
-      shop.id,
+      shop,
       "00000000-0000-4000-8000-000000000000",
       staff?.person.id ?? "",
     );
@@ -127,7 +134,7 @@ describe("readManifestPage (in-memory PGlite)", () => {
     if (!departure) throw new Error("seeded alert departure missing");
     const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
 
-    const reads = await readManifestPage(db, shop.id, departure.id, owner);
+    const reads = await readManifestPage(db, shop, departure.id, owner);
 
     // The fact rides, so the chip shows and the reveal is offered.
     expect(reads.reader.mayReadMedicalAlerts).toBe(true);
@@ -158,7 +165,7 @@ describe("readManifestPage (in-memory PGlite)", () => {
         .update(tripRows)
         .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
         .where(eq(tripRows.id, departure.id));
-      return (await readManifestPage(db, shop.id, departure.id, captain)).reader;
+      return (await readManifestPage(db, shop, departure.id, captain)).reader;
     };
     // A tab opened the night before keeps the offer; the server decides on the confirm.
     expect(await leaving(DAY_MS)).toMatchObject({
@@ -171,7 +178,7 @@ describe("readManifestPage (in-memory PGlite)", () => {
     // Never to someone the crew rule already admits.
     const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
     await leaving(0);
-    expect((await readManifestPage(db, shop.id, departure.id, owner)).reader).toMatchObject({
+    expect((await readManifestPage(db, shop, departure.id, owner)).reader).toMatchObject({
       mayReadMedicalAlerts: true,
       mayEmergencyReadMedicalAlerts: false,
     });

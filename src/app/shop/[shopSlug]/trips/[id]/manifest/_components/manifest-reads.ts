@@ -1,8 +1,8 @@
 import { canPersonReadMedicalAlertOnTrip, emergencyMedicalAlertStanding } from "@/db/authz";
-import { departureKitRecord } from "@/db/boat-safety";
+import { departureBoatSafetyFor, departureKitRecord } from "@/db/boat-safety";
 import { listTripBuddyTeams, planPartyTeams } from "@/db/buddy-teams";
 import type { AppDb } from "@/db/client";
-import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
+import { listDiveSiteNames, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { mayStartTripIncidentReport, openMissingAlerts } from "@/db/incident-reports";
 import { rollCallOpenOnTrip } from "@/db/manifests";
@@ -19,18 +19,20 @@ import type { SiteHistory } from "@/features/site-history";
 import { lastAtSites } from "@/features/site-history";
 import { listShopPickedSpecies, listTripSightings } from "@/features/trip-sightings";
 import { latestTripStage } from "@/features/trip-stages";
+import { departureCrewCount } from "@/lib/boat-safety";
+import { nowDate } from "@/lib/clock";
 import { cancelledRollCall } from "@/lib/roll-call";
 
 /**
  * **Everything the boat manifest reads, in the waves the page awaits them**:
- * one `Promise.all` of the departure's own rows, then the field guides keyed
- * by the sites that wave returned, then the two sighting reads beside them.
+ * independent reads start together; each dependent starts when its own inputs
+ * resolve, including the boat safety read beside the roster-dependent reads.
  * Nothing here depends on which checkpoint is open, so the page settles that
  * after the reads resolve.
  */
 export async function readManifestPage(
   db: AppDb,
-  shopId: string,
+  shop: { id: string; timezone: string },
   tripId: string,
   /** The staffer reading: the catch-up strip is "since *you* last looked", and who may report. */
   personId: string,
@@ -42,7 +44,47 @@ export async function readManifestPage(
   // saves these same rows, so the screen and the copy cannot differ; the
   // save trades the epoch for a signed token, refused if an erasure landed
   // since (`issueOfflineManifestSnapshot`, `/api/offline-manifests/[tripId]/snapshot`).
+  const shopId = shop.id;
   const roster = readOfflineManifestRoster(db, shopId, tripId);
+  const sites = listDiveSiteNames(db, shopId);
+  const dives = listTripDives(db, shopId, tripId);
+  const vesselRows = departureVessels(db, shopId, [tripId]);
+  const guides = sites.then((rows) =>
+    listSiteFieldGuides(
+      db,
+      shopId,
+      rows.map((site) => site.id),
+    ),
+  );
+  const windows = roster.then(async (rows) => {
+    const trip = rows?.manifests[0]?.trip;
+    return trip ? (await meetingWindowsByTrip(db, [trip])).get(tripId) : undefined;
+  });
+  const history = Promise.all([roster, dives]).then(([rows, planned]) => {
+    const startsAt = rows?.manifests[0]?.trip.startsAt;
+    return startsAt
+      ? lastAtSites(db, {
+          shopId,
+          siteIds: planned.flatMap(({ diveSite }) => (diveSite ? [diveSite.id] : [])),
+          before: startsAt,
+          excludeTripId: tripId,
+        })
+      : new Map<string, SiteHistory>();
+  });
+  const safety = Promise.all([roster, vesselRows]).then(([rows, vessels]) => {
+    const departure = rows?.manifests[0];
+    return departure
+      ? departureBoatSafetyFor(db, shopId, {
+          tripId,
+          boatId: vessels.get(tripId)?.boatId ?? null,
+          startsAt: departure.trip.startsAt,
+          timeZone: shop.timezone,
+          now: nowDate(),
+          passengers: { booked: departure.summary.totalDivers, boarded: departure.summary.boarded },
+          crew: departureCrewCount(departure.crew),
+        })
+      : null;
+  });
   const [
     offlineRoster,
     buddyTeamsList,
@@ -66,6 +108,12 @@ export async function readManifestPage(
     missingAlerts,
     mayReadMedicalAlerts,
     emergencyStanding,
+    fieldGuides,
+    loggedSightings,
+    shopPickedSpecies,
+    siteHistory,
+    meetingWindows,
+    boatSafety,
   ] = await Promise.all([
     roster,
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -85,9 +133,9 @@ export async function readManifestPage(
     // tick as in the copy by that revision (`offlineEventInCopy`). Read before
     // the revision, a tick could be older than the copy claims.
     roster.then(() => latestPreDepartureChecksForTrip(db, shopId, tripId)),
-    listTripDives(db, shopId, tripId),
+    dives,
     listExecutedDives(db, shopId, tripId),
-    listDiveSites(db, shopId),
+    sites,
     // What the desk did since *this* staffer last looked (issues #1202,
     // #1187). Empty for somebody who has never worked this departure — there is
     // nothing for a catch-up to be "since", and replaying the morning to a
@@ -107,7 +155,7 @@ export async function readManifestPage(
     mayStartTripIncidentReport(db, shopId, tripId, personId),
     // The departure's own boat, for the emergency card and the printed head
     // (fourth review, item 11).
-    departureVessels(db, shopId, [tripId]),
+    vesselRows,
     // The oxygen and first aid kit the register holds aboard that boat, for
     // the printed kit lines (fourth review, item 17).
     departureKitRecord(db, shopId, tripId),
@@ -127,43 +175,18 @@ export async function readManifestPage(
     // Where they stand for opening one in an emergency instead (issue #2990):
     // any active staffer, on the days of the trip in the shop's zone.
     emergencyMedicalAlertStanding(db, shopId, personId, tripId),
-  ]);
-  const completeManifests = offlineRoster?.manifests ?? null;
-  // Each live site's field guide, for the dive log's "one thing you saw"
-  // picker (issue #1190). Read after the sites resolve because it is keyed by
-  // their ids, and the species a crew may claim to have seen are exactly the
-  // ones the shop has said that reef shows.
-  const fieldGuides = await listSiteFieldGuides(
-    db,
-    shopId,
-    liveDiveSites.map((site) => site.id),
-  );
-  // The crew's own tally for this departure, and every species the shop has
-  // picked anywhere — the two rungs under a site's own field guide in
-  // `seenChipSlugs`. Both are shop-wide reads with no dependency on which
-  // checkpoint is open, so they resolve together beside the guides.
-  // What each planned site was like the last time a boat went (fifth-loop
-  // ideas, item 6), keyed by the plan's own site ids and this departure's start.
-  const departureStartsAt = completeManifests?.[0]?.trip.startsAt;
-  const [loggedSightings, shopPickedSpecies, siteHistory] = await Promise.all([
+    guides,
     listTripSightings(db, shopId, tripId),
     listShopPickedSpecies(db, shopId),
-    departureStartsAt
-      ? lastAtSites(db, {
-          shopId,
-          siteIds: plannedDives.flatMap(({ diveSite }) => (diveSite ? [diveSite.id] : [])),
-          before: departureStartsAt,
-          excludeTripId: tripId,
-        })
-      : new Map<string, SiteHistory>(),
+    history,
+    windows,
+    safety,
   ]);
-  // A multi-day run's real windows, for the stage strip's tap (issue #2406).
+  const completeManifests = offlineRoster?.manifests ?? null;
   const dockTrip = completeManifests?.[0]?.trip;
-  const meetingWindows = dockTrip
-    ? (await meetingWindowsByTrip(db, [dockTrip])).get(tripId)
-    : undefined;
   return {
     completeManifests,
+    boatSafety,
     offlineRoster,
     buddyTeamsList,
     bookingNotes,

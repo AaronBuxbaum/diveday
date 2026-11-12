@@ -117,14 +117,18 @@ export async function departureBoatSafety(
   },
 ): Promise<DepartureBoatSafety | null> {
   if (!input.boatId) return null;
-  const [boat] = await db
-    .select({ ...boatPaperColumns, deletedAt: boats.deletedAt })
-    .from(boats)
-    .where(and(eq(boats.shopId, shopId), eq(boats.id, input.boatId)))
-    .limit(1);
+  const boatId = input.boatId;
+  const [[boat], kit] = await queryAll(db, [
+    async () =>
+      db
+        .select({ ...boatPaperColumns, deletedAt: boats.deletedAt })
+        .from(boats)
+        .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId)))
+        .limit(1),
+    () => listSafetyKit(db, shopId),
+  ]);
   if (!boat) return null;
   if (boat.deletedAt) return { boatId: boat.id, boatName: boat.name, notices: [] };
-  const kit = await listSafetyKit(db, shopId);
   return {
     boatId: boat.id,
     boatName: boat.name,
@@ -260,6 +264,8 @@ export async function departureBoatSafetyFor(
   shopId: string,
   input: {
     tripId: string;
+    /** Already read under this shop; null means the departure has no boat. */
+    boatId?: string | null;
     startsAt: Date;
     timeZone: string;
     now: Date;
@@ -270,7 +276,8 @@ export async function departureBoatSafetyFor(
   const onDate = departureSafetyDate(input.startsAt, input.now, input.timeZone);
   if (!onDate) return null;
   return departureBoatSafety(db, shopId, {
-    boatId: await departureBoatId(db, shopId, input.tripId),
+    boatId:
+      input.boatId !== undefined ? input.boatId : await departureBoatId(db, shopId, input.tripId),
     passengers: input.passengers,
     crew: input.crew,
     onDate,
