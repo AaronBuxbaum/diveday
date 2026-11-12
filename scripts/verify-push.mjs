@@ -20,7 +20,7 @@
 // Steps, cheapest first; it stops at the first red one, because a later step on a broken tree
 // spends minutes saying the same thing:
 //
-//   base CI → regen → lint → typecheck → check:repo → guards → unit tests 1/4 … 4/4
+//   base CI → regen → lint → typecheck → check:repo → guards → unit tests 1/6 … 6/6
 //         → e2e build → affected Playwright specs → stamp
 //
 // Every unit test and every affected spec runs, with no time budget (Aaron, 2026-10-15: "run
@@ -162,7 +162,7 @@ const SNAPSHOT_INPUTS = /^src\/db\/(?:schema\/|seed|export)/;
 export const STAMP = "diveday-verified.json";
 
 /** CI's unit shards; each runs here as its own step, so a red one names itself. */
-export const UNIT_SHARDS = 4;
+export const UNIT_SHARDS = 6;
 
 /** The static steps every run starts with, cheapest first. */
 function staticSteps(changed) {

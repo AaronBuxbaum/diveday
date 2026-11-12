@@ -58,7 +58,16 @@ describe("the CI result job", () => {
       const header = `\n  ${id}:\n`;
       return CI.slice(CI.indexOf(header) + header.length).split(/\n {2}[a-z0-9-]+:\n/u)[0];
     };
-    expect(job("unit-tests")).toMatch(/^ {8}shard: \[1, 2, 3, 4\]$/mu);
+    expect(job("unit-tests")).toMatch(/^ {8}shard: \[1, 2, 3, 4, 5, 6\]$/mu);
+    expect(job("unit-tests")).toContain("timeout-minutes: 15");
+    expect(job("unit-tests")).toContain("--shard=${{ matrix.shard }}/6");
+    expect(job("unit-tests")).toContain("--coverage.enabled");
+    expect(job("coverage-floors")).toContain(
+      "pnpm exec vitest run --merge-reports --reporter=dot --coverage.enabled",
+    );
+    expect(job("coverage-floors")).toContain(
+      "node scripts/coverage-floors.mjs coverage/coverage-summary.json",
+    );
     expect(job("playwright")).toMatch(/^ {8}shard: \[1, 2, 3, 4, 5, 6\]$/mu);
     expect(job("playwright")).toMatch(
       /- name: Run non-visual Playwright tests\n {8}env:\n {10}SKIP: [^\n]+\n {10}E2E_WORKERS: "2"/u,
@@ -70,4 +79,12 @@ describe("the CI result job", () => {
       expect(job(id)).not.toMatch(/^\s+exclude:/mu);
     }
   });
+});
+
+it("refreshes complete historical unit fleets rather than assuming today's shard count", () => {
+  const refresh = readFileSync(path.join(ROOT, ".github/workflows/durations-refresh.yml"), "utf8");
+  expect(refresh).toContain("want_unit=$(grep -c");
+  expect(refresh).toContain('"$want_unit" -gt 0');
+  expect(refresh).toContain('-eq "$want_unit"');
+  expect(refresh).not.toContain("-eq 4");
 });
