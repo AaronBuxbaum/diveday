@@ -13,7 +13,7 @@ on:
   # busiest.
   #
   # A workflow-level trigger fires *every* job in the file, so on its own this
-  # would silently start running lint, typecheck, four unit shards, the build,
+  # would silently start running lint, typecheck, six unit shards, the build,
   # and the Playwright/visual matrices every night. Two reasons that is not
   # merely wasteful: it roughly doubles this workflow's runner minutes for no
   # signal (the same commit already went green on merge), and `visual-publish`
@@ -184,14 +184,14 @@ jobs:
         run: node scripts/warn-untested-logic.mjs --base "${STACK_BASE_SHA:-origin/$BASE_REF}"
 
   unit-tests:
-    name: Unit tests shard ${{ matrix.shard }}/4
-    # These four shards are where the `*.postgres.test.ts` files land in the
+    name: Unit tests shard ${{ matrix.shard }}/6
+    # These six shards are where the `*.postgres.test.ts` files land in the
     # ordinary run, and they skip there by design: no `DIVEDAY_TEST_POSTGRES_URL`
     # is set for this job, so `describePostgres` registers a skipped suite and
     # nothing tries to open a connection. `real-postgres` below is the only job
     # that sets it.
     # Nightly runs `real-postgres` only. A change that touches no code skips the
-    # four shards exactly as it skips the build (`changes` below); the
+    # six shards exactly as it skips the build (`changes` below); the
     # `unit-tests-docs` job runs the unit files that read a document instead,
     # so a docs-only pull request still answers to them.
     needs: changes
@@ -204,7 +204,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
@@ -243,7 +243,7 @@ jobs:
       # line. That is what `scripts/test-durations.json` (the sequencer's
       # input, src/test/shard-sequencer.ts) is refreshed from, weekly by
       # durations-refresh.yml; by hand, pass every shard of one green run —
-      # the four artifacts, or the four job logs where the artifact download
+      # the complete artifact fleet, or every job log where the artifact download
       # is out of reach — to `node scripts/merge-test-durations.mjs`.
       #
       # `--project '!guards'`: the source-text guards (src/test/projects.ts)
@@ -254,8 +254,8 @@ jobs:
       # `--coverage.enabled` (only when `changes` says a safety file, its tests or the harness moved:
       # `safety`, scripts/coverage-relevant.mjs; always on main) and the blob reporter feed `coverage-floors` below: v8 coverage of
       # the safety files `vitest.config.ts` names, carried in this shard's blob so that job
-      # can merge all four without running a test (test review 2026-10-14, decision 6).
-      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --reporter=blob ${{ needs.changes.outputs.safety != 'false' && '--coverage.enabled' || '' }} --shard=${{ matrix.shard }}/4
+      # can merge all six without running a test (test review 2026-10-14, decision 6).
+      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --reporter=blob ${{ needs.changes.outputs.safety != 'false' && '--coverage.enabled' || '' }} --shard=${{ matrix.shard }}/6
         env:
           DIVEDAY_TEST_DURATIONS_OUT: test-durations/shard-${{ matrix.shard }}.json
           DIVEDAY_TEMPLATE_CACHE_HIT: ${{ steps.pglite-template.outputs.cache-hit }}
@@ -281,7 +281,7 @@ jobs:
           key: ${{ steps.pglite-template.outputs.cache-primary-key }}
 
   # Branch coverage on the safety-critical files may not drop (test review 2026-10-14, decision 6;
-  # ADR 20261015-coverage-and-mutation-testing). No second test run: the four shards above
+  # ADR 20261015-coverage-and-mutation-testing). No second test run: the six shards above
   # recorded coverage into their blob reports, and `--merge-reports` folds them into one
   # json-summary, which `scripts/coverage-floors.mjs` holds to `scripts/coverage-floors.json`.
   # A shard that failed still uploads its blob, but a red shard already fails the run, so this
@@ -328,7 +328,7 @@ jobs:
     # reads one and is missed costs a red main. Pathspecs are `src/*.test.ts`,
     # not `src/**/…`: without `:(glob)` magic git's `*` already crosses `/`, and
     # `**/` would demand at least one directory and miss `scripts/x.test.mjs`.
-    # On a code change the four shards run everything and this skips.
+    # On a code change the six shards run everything and this skips.
     needs: changes
     if: github.event_name != 'schedule' && needs.changes.outputs.code != 'true'
     # The Mac when it is online (`changes`, scripts/ci-runner-pick.mjs).
@@ -1218,11 +1218,11 @@ jobs:
     # starting ahead of a code run held the code run's jobs back for as long as
     # it took to capture nothing. The safeguards, lint
     # and typecheck still run on every change, because `check:repo` reads the
-    # docs. The four unit shards do not: a docs-only change runs
+    # docs. The six unit shards do not: a docs-only change runs
     # `unit-tests-docs` in their place — the unit files that read a document
     # they hold the code to (`docs/engineering/manual-actions.md` is *generated*
     # by an infra test) — which is what stopped a docs-only run costing the
-    # 13.6 minutes the four shards took.
+    # 13.6 minutes the former four-shard fleet took.
     #
     # Written as a job rather than a workflow-level `paths:` filter because that
     # filter applies to the *whole workflow* — putting one on the `pull_request`

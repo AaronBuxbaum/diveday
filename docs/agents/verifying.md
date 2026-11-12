@@ -13,7 +13,7 @@ sections below are why each line is on it, and why the rest is not.
 
 `vitest.config.ts` splits the suite into Vitest projects by what each file needs, read from its
 source by `src/test/projects.ts`. `pnpm test <file>` and `vitest related` are unchanged: they
-see one run across every project. CI's four unit shards run every project but `guards`
+see one run across every project. CI's six unit shards run every project but `guards`
 (`--project '!guards'`), dealt together by the shard sequencer; `guards` runs once, in the
 `Repository safeguards` job, because it is bounded by reading the repository rather than by test
 count.
@@ -87,10 +87,10 @@ common git dir too, so a push from any worktree finds it):
 1. `pnpm regen` (with the export snapshot when seed, schema or export changed), then a clean
    tree: a generated file the diff left stale is committed, not discovered by CI.
 2. `pnpm lint`, `pnpm typecheck`, `check:repo`, and the `guards` project (seconds).
-3. The whole unit suite, as CI's four shards (`--project '!guards' --shard=n/4`), one step each.
+3. The whole unit suite, as CI's six shards (`--project '!guards' --shard=n/6`), one step each.
    Until 2026-10-15 this was every `src/` test that reads files from disk plus `vitest related`
    over the changed code, and every other unit test was CI's first run; Aaron chose "run
-   everything" over that saving. CI runs the four shards in about six minutes each.
+   everything" over that saving. The CI job deadline stays at 15 minutes per shard.
 4. The Playwright specs `pnpm e2e:affected` selects, after an `e2e:build` it reuses while
    nothing the build reads has changed (`.next/diveday-build-evidence.json`, a content
    fingerprint without tests, written by `scripts/e2e-build-evidence.mjs`, so a commit that only
@@ -293,7 +293,7 @@ minutes without finishing, at a load average above eight, while CI answered the 
 a few. Worse than the wait is what it does to everything else — a saturated box starves the dev
 server, a focused spec, and any parallel session sharing the machine.
 
-A change that touches only `docs/`, Markdown or `.claude/` skips the four unit shards along with
+A change that touches only `docs/`, Markdown or `.claude/` skips the six unit shards along with
 the build and the browser jobs; `Unit tests that read docs` runs the unit files that quote a
 document path instead. Every sharded job is dealt by recorded CI durations, with a source estimate
 for what is new since: the unit shards by file from `scripts/test-durations.json`
