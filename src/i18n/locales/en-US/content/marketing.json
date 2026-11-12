@@ -998,7 +998,7 @@
     "contact": {
       "heading": "Asking us something",
       "body": "Write to <email>{address}</email>. If you are a diver rather than a shop, your shop holds your record and can answer faster; if they cannot, we will help them.",
-      "operator": "DiveDay is operated by {company}, doing business as DiveDay, at {postalAddress}."
+      "operator": "DiveDay is operated by {company}, doing business as DiveDay, at {postalAddress}. {governingLaw} law governs these terms."
     },
     "open": {
       "heading": "What this page does not yet say",
@@ -1085,7 +1085,7 @@
     "contact": {
       "heading": "Asking us something",
       "body": "Write to <email>{address}</email>.",
-      "operator": "DiveDay is operated by {company}, doing business as DiveDay, at {postalAddress}."
+      "operator": "DiveDay is operated by {company}, doing business as DiveDay, at {postalAddress}. {governingLaw} law governs these terms."
     }
   },
   "featureChrome": {

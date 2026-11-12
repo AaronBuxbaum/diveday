@@ -15,6 +15,7 @@ vi.mock("next/headers", () => ({
 vi.mock("next/cache", () => ({ cacheLife: () => {} }));
 
 const { default: TermsPage } = await import("./page");
+const { default: PrivacyPage } = await import("../privacy/page");
 
 /** Every string in a rendered tree, props named `items` and `children` included. */
 async function textOf(node: unknown): Promise<string> {
@@ -31,12 +32,12 @@ async function textOf(node: unknown): Promise<string> {
   return [heading, ...items, await textOf(props.children)].join(" ");
 }
 
-async function termsText(locale: "en-US" | "es-ES" = "en-US") {
+async function legalText(locale: "en-US" | "es-ES" = "en-US", pageComponent = TermsPage) {
   request.headers = new Headers({ "accept-language": locale });
-  const page = (await TermsPage()) as ReactElement<{ children: unknown[] }>;
+  const page = (await pageComponent()) as ReactElement<{ children: unknown[] }>;
   const children = page.props.children as ReactElement<Record<string, unknown>>[];
   const body = children.find((child) => isValidElement(child) && "locale" in (child.props ?? {}));
-  if (!body) throw new Error("no terms body in the page");
+  if (!body) throw new Error("no legal body in the page");
   const render = body.type as (props: unknown) => Promise<unknown>;
   return textOf(await render(body.props));
 }
@@ -51,7 +52,7 @@ afterEach(() => {
 
 describe("/terms percent-plan clause", () => {
   it("states the fee, what counts, refunds, the statement, who pays and the notice", async () => {
-    const text = await termsText();
+    const text = await legalText();
     expect(text).toContain("Plans priced as a percentage of recorded collections");
     expect(text).toContain("3% of the money your shop records as received in DiveDay");
     expect(text).toContain("Your subscription keeps the rate and monthly fee you agreed to.");
@@ -76,7 +77,7 @@ describe("/terms percent-plan clause", () => {
   it("keeps agreed percentage terms when the public offer is monthly-only", async () => {
     vi.stubEnv("PRICING_MONTHLY_CENTS", "9900");
     vi.stubEnv("PRICING_BASIS_POINTS", "0");
-    expect(await termsText()).toContain(
+    expect(await legalText()).toContain(
       "The percentage and any monthly base fee agreed for your shop",
     );
   });
@@ -84,13 +85,13 @@ describe("/terms percent-plan clause", () => {
   it("follows the configured rate and base fee, independently of visitor state", async () => {
     vi.stubEnv("PRICING_BASIS_POINTS", "250");
     vi.stubEnv("PRICING_MONTHLY_CENTS", "2900");
-    const text = await termsText();
+    const text = await legalText();
     expect(text).toContain("2.5% of the money your shop records as received in DiveDay");
     expect(text).toContain("with a base fee of $29 each month");
   });
 
   it("says the same in es-ES", async () => {
-    const text = await termsText("es-ES");
+    const text = await legalText("es-ES");
     expect(text).toContain("Planes con precio en un porcentaje de los cobros registrados");
     expect(text).toMatch(/el 3\s?% del dinero que tu centro registra como recibido/);
     expect(text).toContain("nunca el buceador");
@@ -98,4 +99,21 @@ describe("/terms percent-plan clause", () => {
     expect(text).toContain("El cobro automático admite solo USD por ahora");
     expect(text).toContain("30 días");
   });
+});
+
+describe.each([
+  ["terms", TermsPage],
+  ["privacy", PrivacyPage],
+] as const)("/%s confirmed governing law", (_name, pageComponent) => {
+  it.each(["en-US", "es-ES"] as const)(
+    "renders Massachusetts law with the operator and address in %s",
+    async (locale) => {
+      const text = await legalText(locale, pageComponent);
+      expect(text).toContain("Pseudorandom LLC");
+      expect(text).toContain("12851 Capital St, Suite 100, Oak Park, MI 48237");
+      expect(text).toContain(
+        locale === "en-US" ? "Massachusetts law governs" : "leyes de Massachusetts",
+      );
+    },
+  );
 });

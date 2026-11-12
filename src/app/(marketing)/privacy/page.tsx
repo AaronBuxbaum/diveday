@@ -4,7 +4,11 @@ import { Suspense } from "react";
 import { LegalDocument, LegalList, LegalSection, LegalTermList } from "@/components/LegalDocument";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { proseLinkClass } from "@/components/ui/button";
-import { COMPANY_LEGAL_NAME, COMPANY_POSTAL_ADDRESS } from "@/features/company-identity";
+import {
+  COMPANY_GOVERNING_LAW,
+  COMPANY_LEGAL_NAME,
+  COMPANY_POSTAL_ADDRESS,
+} from "@/features/company-identity";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -63,12 +67,9 @@ export const metadata: Metadata = {
  * `src/lib/capability-urls.ts`. Nothing is aspirational, and where a policy is
  * genuinely unsettled the page says *that* rather than inventing a number.
  *
- * Two things are deliberately absent, and both are somebody else's call to
- * make rather than an oversight:
+ * The operator and Massachusetts governing law are confirmed on #4323 (Aaron, 2026-11-11).
+ * One policy remains deliberately unsettled:
  *
- *  - **No governing law.** The operating company is named in the contact
- *    section (Aaron, 2026-11-11; `src/features/company-identity`); which law governs is
- *    still counsel's call (H-20260724-corporate-footing-diveday-operate).
  *  - **No retention period for waivers and medical answers.** H-20260730-evidence-retention-period-deletion is open. The
  *    page states what the system does today (they stay until the shop removes
  *    them) and says the policy is under review, which is true and is the one
@@ -95,8 +96,8 @@ export const metadata: Metadata = {
  * conversion path asks them to read it first. Adding one of those remaining
  * links is a decision, not a tidy-up.
  *
- * The two open rows above are untouched by that: H-20260724-corporate-footing-diveday-operate and H-20260730-evidence-retention-period-deletion govern what
- * this page may *say*, not who may reach it.
+ * Counsel review before the first paid contract and H-20260730-evidence-retention-period-deletion
+ * still govern what this page may say, not who may reach it.
  */
 export default async function PrivacyPage() {
   const locale = await requestLocale();
@@ -255,6 +256,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
           {t("marketing.privacy.contact.operator", {
             company: COMPANY_LEGAL_NAME,
             postalAddress: COMPANY_POSTAL_ADDRESS,
+            governingLaw: COMPANY_GOVERNING_LAW,
           })}
         </p>
       </LegalSection>
