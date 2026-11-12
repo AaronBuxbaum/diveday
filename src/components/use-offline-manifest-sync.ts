@@ -270,6 +270,9 @@ export function useOfflineManifestSync(
         // follows would refetch the page on every back or forward. Nothing is
         // written here, so an erasure that purged the copy since still gets
         // its fence below: no copy on the device, no skip.
+        // An erasure since the first save reaches the device through the next
+        // refresh trigger (push, interval, reconnect), a new read, not through
+        // a back or forward.
         const readKey = currentPayload.readAt
           ? `${tripId}:${currentPayload.readAt.erasureEpoch}:${currentPayload.readAt.snapshotRevision}`
           : null;

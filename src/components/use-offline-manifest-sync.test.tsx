@@ -261,6 +261,25 @@ describe("useOfflineManifestSync saving the manifest page's rows (issue #4391)",
     expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
   });
 
+  it("claims again when the saved copy is gone, and re-reads the page if that claim is stale", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => issued());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = renderPage(pagePayload);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    first.unmount();
+
+    // Purged, expired or signed out since: nothing on the device to keep.
+    vi.mocked(loadOfflineManifest).mockResolvedValue(null);
+    fetchMock.mockImplementation(async () => stale());
+    renderPage(pagePayload);
+
+    await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(1));
+    const claims = fetchMock.mock.calls.filter(([url]) => url === SNAPSHOT_URL).length;
+    expect(claims).toBe(2);
+    expect(saveOfflineManifest).toHaveBeenCalledTimes(1);
+  });
+
   it("saves nothing and re-reads the page once when the read is stale, then saves the re-read", async () => {
     const fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
       JSON.parse(String(init?.body)).snapshotRevision === 9 ? stale() : issued(),
