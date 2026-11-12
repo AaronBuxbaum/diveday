@@ -6,7 +6,6 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, inject, onTestFinished } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
 import { closePglite } from "@/db/close-pglite";
-import { seedDemo } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { templateBytes as readTemplateBytes, type TemplateVariant } from "./db-template";
 import { openRollbackTransaction } from "./rollback-transaction";
@@ -148,6 +147,7 @@ export async function seededTestDb(options: { history?: boolean } = {}): Promise
     // snapshot would have held.
     warnAboutFullPrice(variant);
     const db = await createTestDb();
+    const { seedDemo } = await import("@/db/seed");
     await seedDemo(db, variant);
     closeWhenTestFinishes(db.$client as PGlite);
     return db;
@@ -316,6 +316,7 @@ async function seededTestDbWithoutTeardown(options: { history?: boolean } = {}):
   if (!bytes) {
     warnAboutFullPrice(variant);
     const db = await createTestDb();
+    const { seedDemo } = await import("@/db/seed");
     await seedDemo(db, variant);
     return db;
   }
