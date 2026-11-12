@@ -116,9 +116,11 @@ export type MoneyBlockContext = {
 export function MoneyBlock({
   context,
   className = "",
+  summary,
 }: {
   context: MoneyBlockContext;
   className?: string;
+  summary?: { people: number; when: string };
 }) {
   const {
     fareCents,
@@ -228,10 +230,28 @@ export function MoneyBlock({
       <div
         className={`flex items-baseline justify-between gap-4 ${hasAddends ? "mt-2 border-t border-border pt-4" : ""}`}
       >
-        <dt className="text-sm font-medium">
+        <dt className={summary ? "sr-only" : "text-sm font-medium"}>
           {dueNow === "checkout" ? t("money.dueNow") : t("money.dueAtShop")}
         </dt>
-        <dd className={FIGURE_INLINE_CLASS}>{money(dueNowCents)}</dd>
+        <dd className={summary ? "text-base font-medium" : FIGURE_INLINE_CLASS}>
+          {summary ? (
+            <span
+              role="status"
+              aria-label={t("money.summaryLabel")}
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {t.rich(dueNow === "checkout" ? "money.summaryCheckout" : "money.summaryAtShop", {
+                count: summary.people,
+                when: summary.when,
+                total: money(dueNowCents),
+                amount: (chunks) => <span className={FIGURE_INLINE_CLASS}>{chunks}</span>,
+              })}
+            </span>
+          ) : (
+            money(dueNowCents)
+          )}
+        </dd>
       </div>
       {/* A `<dd>` in its own group: a `<dl>`'s groups hold only `<dt>`/`<dd>`, and
           the sentence describes the figure above it (axe `definition-list`). */}

@@ -32,6 +32,58 @@ const diverSlots = Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, (_, index) => `
  */
 const SEGMENTED_PARTY_LIMIT = 6;
 
+function PartySizeStepper({
+  size,
+  limit,
+  hydrated,
+  onChange,
+}: {
+  size: number;
+  limit: number;
+  hydrated: boolean;
+  onChange: (size: number) => void;
+}) {
+  const t = useTranslations();
+  return (
+    <div>
+      <p id="party-size-label" className="text-sm font-semibold">
+        {t("party.numberOfDivers")}
+      </p>
+      <fieldset
+        aria-labelledby="party-size-label"
+        className="mt-2 flex w-fit items-center gap-3"
+        data-hydrated={hydrated ? "true" : "false"}
+      >
+        <button
+          type="button"
+          aria-label={t("party.fewerPeople")}
+          disabled={size <= 1}
+          onClick={() => onChange(Math.max(1, size - 1))}
+          className={buttonClass({ variant: "secondary", size: "icon" })}
+        >
+          <span aria-hidden="true">-</span>
+        </button>
+        <output
+          aria-live="polite"
+          className="min-w-11 text-center text-base font-semibold tabular-nums"
+        >
+          {t("party.diverCountOption", { count: size })}
+        </output>
+        <button
+          type="button"
+          aria-label={t("party.morePeople")}
+          disabled={size >= limit}
+          onClick={() => onChange(Math.min(limit, size + 1))}
+          className={buttonClass({ variant: "secondary", size: "icon" })}
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+        <input type="hidden" name="partySize" value={size} />
+      </fieldset>
+    </div>
+  );
+}
+
 /** Per-input error keyed by the field's form name, e.g. `email-0` or `phone`. */
 export type BookingFieldErrors = Record<string, string>;
 
@@ -68,8 +120,11 @@ export function BookingPartyFields({
   participantChoices,
   onTypesChange,
   leadOnly = false,
+  countControl = "choices",
 }: {
   maxPartySize: number;
+  /** Booking uses a bounded stepper; waitlist retains its existing count choices. */
+  countControl?: "choices" | "stepper";
   groupRequestHref?: string;
   /** Show an optional phone field for the lead booker (diver 1). */
   leadPhone?: boolean;
@@ -142,6 +197,7 @@ export function BookingPartyFields({
   useEffect(() => onSizeChange?.(size), [size, onSizeChange]);
   useEffect(() => onTypesChange?.(types.slice(0, size)), [types, size, onTypesChange]);
 
+  const segmented = limit <= SEGMENTED_PARTY_LIMIT;
   const counts = Array.from({ length: limit }, (_, index) => index + 1);
   return (
     <>
@@ -153,7 +209,9 @@ export function BookingPartyFields({
           row up to six, falling back to the select). Both shapes carry the same
           accessible name and the same `data-hydrated` flag, so anything asking
           for "People" finds one element either way. */}
-      {limit <= SEGMENTED_PARTY_LIMIT ? (
+      {countControl === "stepper" ? (
+        <PartySizeStepper size={size} limit={limit} hydrated={hydrated} onChange={setSize} />
+      ) : segmented ? (
         <div>
           <p id="party-size-label" className="text-sm font-semibold">
             {t("party.numberOfDivers")}
