@@ -70,6 +70,19 @@ export function rumConfig(): RumConfig | null {
   };
 }
 
+/**
+ * Crawlers, headless browsers and audit tools are not divers: their sessions
+ * would skew the geography and device numbers RUM exists to show, and
+ * Googlebot cannot reach Cognito at all, so every visit would only fail. They
+ * never start the SDK, so no identity call and no data leaves for them.
+ */
+const AUTOMATED_UA =
+  /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|chrome-lighthouse|gtmetrix|pingdom|facebookexternalhit|preview|monitor|uptime|curl|wget|python-requests|phantomjs/i;
+
+export function looksAutomated(nav: Pick<Navigator, "userAgent" | "webdriver">): boolean {
+  return nav.webdriver === true || AUTOMATED_UA.test(nav.userAgent ?? "");
+}
+
 type PageViewRecorder = { recordPageView: (pageId: string) => void };
 
 export function CloudWatchRum() {
@@ -84,7 +97,7 @@ export function CloudWatchRum() {
 
   useEffect(() => {
     const config = rumConfig();
-    if (!config) return;
+    if (!config || looksAutomated(navigator)) return;
     let cancelled = false;
 
     void (async () => {

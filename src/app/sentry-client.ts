@@ -21,6 +21,10 @@ export const browserSentry =
             environment: process.env.NODE_ENV,
             tracesSampleRate: 0,
             dataCollection: SENTRY_DATA_COLLECTION,
+            // CloudWatch RUM logs a failed Cognito exchange (offline, flaky
+            // network, ad blocker) as an error; it is telemetry failing, not
+            // the app.
+            ignoreErrors: [/^CWR:/],
             beforeSend: redactEvent,
             beforeBreadcrumb: redactBreadcrumb,
           }),
