@@ -94,6 +94,19 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
         }
       }
     });
+    // DIAGNOSTIC (temporary): who asks for RSC payloads, and when.
+    let diagMode = "setup";
+    cdp.on("Network.requestWillBeSent", (event) => {
+      const url = event.request.url.replace(/^https?:\/\/[^/]+/, "");
+      if (/_next\/static|\.(png|woff2?)/.test(url)) return;
+      const frames = (event.initiator.stack?.callFrames ?? [])
+        .slice(0, 6)
+        .map((frame) => `${frame.functionName || "anon"}@${frame.url.split("/").pop()}:${frame.lineNumber}`)
+        .join(" < ");
+      console.log(
+        `DIAG ${diagMode} ${event.request.method} ${url} type=${event.initiator.type} rsc=${event.request.headers.RSC ?? ""} prefetch=${event.request.headers["Next-Router-Prefetch"] ?? ""} ${frames}`,
+      );
+    });
     const samples = [];
     for (const mode of [
       "cold-document",
@@ -149,6 +162,7 @@ for (const [name, [route, sourceRoute]] of Object.entries(routes)) {
       // Only requests initiated in this sample belong to its payload total.
       page.on("request", recordRequest);
       page.on("response", record);
+      diagMode = mode;
       const start = performance.now();
       if (mode === "cached-navigation") {
         await page.goForward();
