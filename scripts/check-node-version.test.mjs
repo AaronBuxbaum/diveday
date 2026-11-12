@@ -203,10 +203,13 @@ describe("findNodeVersionDrift", () => {
       stack,
       files
         .get(stack)
-        .replace(`lambda.Runtime.NODEJS_${LAMBDA_NODE_MAJOR}_X`, "lambda.Runtime.NODEJS_22_X"),
+        .replace(
+          `new lambda.Runtime("nodejs${LAMBDA_NODE_MAJOR}.x"`,
+          'new lambda.Runtime("nodejs22.x"',
+        ),
     );
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
-      `${stack} (every Lambda runtime) says lambda.Runtime.NODEJS_22_X, lambda.Runtime.NODEJS_${LAMBDA_NODE_MAJOR}_X, and every other declaration says lambda.Runtime.NODEJS_${LAMBDA_NODE_MAJOR}_X.`,
+      `${stack} (every Lambda runtime) says new lambda.Runtime("nodejs22.x", and every other declaration says new lambda.Runtime("nodejs${LAMBDA_NODE_MAJOR}.x".`,
     ]);
   });
 

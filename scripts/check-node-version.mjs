@@ -69,16 +69,13 @@ export const CI_NODE_VERSION = "26.13.1";
 /**
  * The major AWS Lambda runs the handlers in `infra/` on, stated separately
  * because it is a different question with a different clock: AWS publishes and
- * retires runtimes on its own schedule, so "the major we develop on" and "the
- * major that exists in Lambda" can legitimately diverge for a while. They do
- * today: Lambda offers Node 26 only as a public preview, and `aws-cdk-lib`
- * 2.276 has no `NODEJS_26_X` constant. `aws-cdk-lib`'s own helper Lambdas
- * (the custom-resource provider framework, `AwsCustomResource`, the OIDC
- * provider) synthesize `nodejs24.x` via `determineLatestNodeRuntime`, so
- * staying on 24 keeps the stack on one major. Raise this when Lambda's Node 26
- * runtime is generally available and CDK names it.
+ * retires runtimes on its own schedule. It equals `NODE_MAJOR` today, on
+ * Lambda's public-preview Node 26 runtime (the owner's call, 2026-11-12).
+ * `aws-cdk-lib` 2.276 has no `NODEJS_26_X` constant, so the stack declares
+ * `NODEJS_RUNTIME = new lambda.Runtime("nodejs26.x", ...)` once and every
+ * function uses it; swap in the library constant when it exists.
  */
-export const LAMBDA_NODE_MAJOR = 24;
+export const LAMBDA_NODE_MAJOR = 26;
 
 /**
  * The ES library floor the compiler describes, in both TypeScript projects.
@@ -137,8 +134,13 @@ const DECLARATIONS = [
   },
   {
     file: "infra/lib/infra-stack.ts",
-    find: (text) => [...new Set(text.match(/lambda\.Runtime\.NODEJS_\d+_X/g) ?? [])].join(", "),
-    want: `lambda.Runtime.NODEJS_${LAMBDA_NODE_MAJOR}_X`,
+    find: (text) =>
+      [
+        ...new Set(
+          text.match(/lambda\.Runtime\.NODEJS_\d+_X|new lambda\.Runtime\("nodejs\d+\.x"/g) ?? [],
+        ),
+      ].join(", "),
+    want: `new lambda.Runtime("nodejs${LAMBDA_NODE_MAJOR}.x"`,
     where: "every Lambda runtime",
   },
   {

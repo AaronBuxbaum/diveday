@@ -85,6 +85,11 @@ function cdkStackArnsFor(partition: string, account: string): string[] {
 }
 
 /** The credential hand-off document. Slash-separated for the `diveday/*` secret namespace. */
+// aws-cdk-lib has no Node 26 constant yet; Lambda's Node 26 runtime is a public preview.
+// Swap this for the library's constant when it names one.
+const NODEJS_RUNTIME = new lambda.Runtime("nodejs26.x", lambda.RuntimeFamily.NODEJS, {
+  supportsInlineCode: true,
+});
 const CREDENTIALS_SECRET_NAME = "diveday/env";
 const APP_SECRET_SEED_NAME = "diveday/app-secret-seed";
 
@@ -986,7 +991,7 @@ export class InfraStack extends cdk.Stack {
 
     const smsReceiptForwarder = new lambda.Function(this, "SmsReceiptForwarder", {
       functionName: "diveday-sms-receipt-forwarder",
-      runtime: lambda.Runtime.NODEJS_24_X,
+      runtime: NODEJS_RUNTIME,
       handler: "index.handler",
       timeout: cdk.Duration.seconds(30),
       logGroup: smsReceiptForwarderLogs,
@@ -1124,7 +1129,7 @@ exports.handler = async (event) => {
         entryPoints: [entryPath],
         write: false,
         bundle: true,
-        target: "node24",
+        target: "node26",
         format: "cjs",
         platform: "node",
         external: ["@aws-sdk/*"],
@@ -1136,7 +1141,7 @@ exports.handler = async (event) => {
     const smsAllowedCountries = ["US"];
     const smsAccountGuard = new lambda.Function(this, "SmsAccountGuard", {
       functionName: "diveday-sms-account-guard",
-      runtime: lambda.Runtime.NODEJS_24_X,
+      runtime: NODEJS_RUNTIME,
       handler: "index.handler",
       timeout: cdk.Duration.minutes(5),
       logGroup: new logs.LogGroup(this, "SmsAccountGuardLogs", {
@@ -2091,7 +2096,7 @@ exports.handler = async (event) => {
     // one key and rotation has the room it needs natively.
     const accessKeyPruner = new lambda.Function(this, "AccessKeyPruner", {
       functionName: "diveday-access-key-pruner",
-      runtime: lambda.Runtime.NODEJS_24_X,
+      runtime: NODEJS_RUNTIME,
       handler: "index.handler",
       timeout: cdk.Duration.minutes(2),
       logGroup: new logs.LogGroup(this, "AccessKeyPrunerLogs", {
@@ -3562,7 +3567,7 @@ exports.handler = async (event) => {
 
     const backupFreshnessCheck = new lambda.Function(this, "BackupFreshnessCheck", {
       functionName: "diveday-backup-freshness-check",
-      runtime: lambda.Runtime.NODEJS_24_X,
+      runtime: NODEJS_RUNTIME,
       handler: "index.handler",
       timeout: cdk.Duration.seconds(60),
       logGroup: backupFreshnessLogs,
@@ -3985,7 +3990,7 @@ exports.handler = async () => {
     ).crons;
     const cronDispatcher = new lambda.Function(this, "CronDispatcher", {
       functionName: "diveday-cron-dispatcher",
-      runtime: lambda.Runtime.NODEJS_24_X,
+      runtime: NODEJS_RUNTIME,
       handler: "index.handler",
       // Above the longest route's maxDuration (300 s), below Lambda's ceiling.
       timeout: cdk.Duration.seconds(345),
@@ -4274,7 +4279,7 @@ exports.handler = async () => {
 
     const visualBucketPruner = new lambda.Function(this, "VisualBucketPruner", {
       functionName: "diveday-visual-bucket-pruner",
-      runtime: lambda.Runtime.NODEJS_24_X,
+      runtime: NODEJS_RUNTIME,
       handler: "index.handler",
       timeout: cdk.Duration.minutes(15),
       memorySize: 512,
