@@ -59,4 +59,21 @@ describe("counter offline timestamp defaults", () => {
       occurredAt: clearedAt,
     });
   });
+  it("refuses an arrival and undo for a seat that does not exist", async () => {
+    const { db, shop, staff } = await manifestContext();
+    const input = {
+      shopId: shop.id,
+      bookingId: crypto.randomUUID(),
+      recordedByPersonId: staff.id,
+      source: "offline" as const,
+      clientEventId: crypto.randomUUID(),
+      occurredAt: nowDate(),
+      offlineSnapshotSavedAt: nowDate(),
+    };
+    await expect(checkInBooking(db, input)).resolves.toEqual({ ok: false, reason: "not_found" });
+    await expect(undoCheckInBooking(db, input)).resolves.toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
 });

@@ -11,6 +11,45 @@ import {
 import { preDepartureCheckEvents } from "./schema";
 
 describe("checklist recorder timestamp defaults", () => {
+  it("refuses an invalid snapshot and an older offline check without replacing a live check", async () => {
+    const { db, shop, reef } = await manifestContext();
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const item = await createChecklistItem(db, {
+      shopId: shop.id,
+      personId: owner,
+      label: "Clock regression: first aid aboard",
+    });
+    if (!item.ok) throw new Error("checklist setup refused");
+    const now = nowDate();
+    const common = {
+      shopId: shop.id,
+      tripId: reef.id,
+      checklistItemId: item.id,
+      recordedByPersonId: owner,
+      status: "checked" as const,
+    };
+    await expect(recordPreDepartureCheck(db, common)).resolves.toMatchObject({ ok: true });
+    const old = new Date(now.getTime() - 60_000);
+    const offline = {
+      ...common,
+      source: "offline" as const,
+      clientEventId: crypto.randomUUID(),
+      occurredAt: old,
+    };
+    await expect(recordPreDepartureCheck(db, offline)).resolves.toEqual({
+      ok: false,
+      reason: "snapshot_invalid",
+    });
+    await expect(
+      recordPreDepartureCheck(db, {
+        ...offline,
+        offlineSnapshotSavedAt: new Date(old.getTime() - 60_000),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "newer_event_exists" });
+    const checks = await latestPreDepartureChecksForTrip(db, shop.id, reef.id);
+    expect(checks.get(item.id)).toMatchObject({ state: "checked", occurredAt: now });
+  });
+
   for (const source of ["live", "offline"] as const) {
     it(`keeps the oxygen check's ${source === "live" ? "explicit live time" : "server-time fallback"}`, async () => {
       const { db, shop, reef } = await manifestContext();
