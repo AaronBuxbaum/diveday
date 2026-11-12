@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { queryAll } from "@/db/query-helpers";
 import { liveTrip } from "@/db/trips";
 import { lockBoardingCertificationEvidence } from "../../db/boarding-certification-snapshot";
@@ -62,6 +62,34 @@ async function currentOfflineManifestSnapshotRevision(
     .where(and(eq(revisions.shopId, shopId), eq(revisions.tripId, tripId)))
     .limit(1);
   return row?.revision ?? 0;
+}
+
+/**
+ * **Each departure's latest issued revision, for the sync route's answer**
+ * (0 before any). A device keeps it on every tap that answer settles, and
+ * reads a tap as already in its saved copy once the copy's own revision is two
+ * or more past it (`offlineEventInCopy`, `src/lib/offline-manifests.ts`).
+ *
+ * Why two: this is read after the tap committed. A copy one revision on may
+ * have read its rows before that (the page reads its revision, then its rows,
+ * and claims the next one later; the background board's increment may be
+ * uncommitted as this reads). A copy two on took or read its revision after
+ * this read, and every copy reads its rows after that, so it saw the tap.
+ */
+export async function latestOfflineManifestSnapshotRevisions(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Record<string, number>> {
+  const latest: Record<string, number> = Object.fromEntries(tripIds.map((id) => [id, 0]));
+  if (tripIds.length === 0) return latest;
+  const revisions = offlineManifestSnapshotRevisions;
+  const rows = await db
+    .select({ tripId: revisions.tripId, revision: revisions.revision })
+    .from(revisions)
+    .where(and(eq(revisions.shopId, shopId), inArray(revisions.tripId, [...tripIds])));
+  for (const row of rows) latest[row.tripId] = row.revision;
+  return latest;
 }
 
 /**

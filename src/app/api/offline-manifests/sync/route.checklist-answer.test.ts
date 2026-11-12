@@ -247,7 +247,7 @@ describe("POST /api/offline-manifests/sync — the checklist answer on the depar
     // A checklist note is nobody's own data, so an erasure since the snapshot
     // does not discard it (issue #3569); an unauthenticated snapshot still does.
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
+    expect(await response.json()).toMatchObject({
       results: [
         { clientEventId: "22222222-2222-4222-8222-222222222222", status: "applied" },
         {

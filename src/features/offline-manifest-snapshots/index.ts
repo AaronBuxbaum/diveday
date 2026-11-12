@@ -2,6 +2,7 @@
 export type { IssuedOfflineManifestSnapshot, OfflineManifestReadAt } from "./store";
 export {
   issueOfflineManifestSnapshot,
+  latestOfflineManifestSnapshotRevisions,
   nextOfflineManifestSnapshotRevision,
   readOfflineManifestRoster,
 } from "./store";

@@ -833,6 +833,7 @@ describe("syncOfflineManifest", () => {
         expect(body.events[0].clientEventId).toBe(pendingEvent.clientEventId);
         return HttpResponse.json({
           results: [{ clientEventId: pendingEvent.clientEventId, status: "applied" }],
+          snapshotRevisions: { [payload.manifests[0].trip.id]: 7 },
         });
       }),
     );
@@ -842,6 +843,8 @@ describe("syncOfflineManifest", () => {
 
     const reloaded = await loadOfflineManifest(payload.manifests[0].trip.id);
     expect(reloaded?.events[0].syncStatus).toBe("applied");
+    // The revision DiveDay answered at stays on the event (`offlineEventInCopy`).
+    expect(reloaded?.events[0].syncedAtRevision).toBe(7);
   });
 
   it("marks a rejected event with the server's reason instead of silently dropping it", async () => {
@@ -870,6 +873,7 @@ describe("syncOfflineManifest", () => {
     const synced = await syncOfflineManifest(payload.manifests[0].trip.id);
     expect(synced?.events[0].syncStatus).toBe("rejected");
     expect(synced?.events[0].rejectionReason).toBe("stale_readiness");
+    expect(synced?.events[0].syncedAtRevision).toBeUndefined();
   });
 
   it("throws instead of silently discarding pending events when the server errors", async () => {

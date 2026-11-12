@@ -19,6 +19,7 @@ import {
   offlineArrivalEvents,
   offlineManifestExpiresAt,
   offlineRollCallSubject,
+  offlineSnapshotTokenClaims,
   pendingOfflineEventCount,
   withMedicalAlertWords,
 } from "./offline-manifests";
@@ -259,6 +260,13 @@ export type OfflineSyncResult = {
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
 };
 
+/** The sync route's answer: one result per event, and each departure's snapshot revision. */
+type OfflineSyncResponse = {
+  results: OfflineSyncResult[];
+  /** Absent from a server that predates it, or when its read failed; see `offlineEventInCopy`. */
+  snapshotRevisions?: Record<string, number>;
+};
+
 /**
  * A code, not a sentence (`src/lib` returns codes, not English — ADR
  * 20260731-domain-layer-copy-leaks) — this module is `"use client"` but still
@@ -313,27 +321,6 @@ async function openDatabase(): Promise<IDBDatabase> {
   return requestResult(request);
 }
 
-function serverSnapshotClaims(
-  token: string | undefined,
-): { epoch: number; revision: number } | null {
-  if (!token) return null;
-  const match = /^(\d{1,16})\.(\d{1,16})\.[A-Za-z0-9_-]{43}$/.exec(token);
-  if (!match) return null;
-  const epoch = Number(match[1]);
-  const revision = Number(match[2]);
-  if (
-    !Number.isSafeInteger(epoch) ||
-    epoch < 0 ||
-    String(epoch) !== match[1] ||
-    !Number.isSafeInteger(revision) ||
-    revision < 1 ||
-    String(revision) !== match[2]
-  ) {
-    return null;
-  }
-  return { epoch, revision };
-}
-
 /**
  * What a refreshed snapshot says about the notes this device holds.
  * `unverified`: the old copy's token never proved its epoch, so none of its
@@ -346,9 +333,9 @@ function refreshForSnapshot(
   previousToken: string | undefined,
   currentToken: string | undefined,
 ): "unverified" | "erasure" | undefined {
-  const current = serverSnapshotClaims(currentToken);
+  const current = offlineSnapshotTokenClaims(currentToken);
   if (!current) return undefined;
-  const previous = serverSnapshotClaims(previousToken);
+  const previous = offlineSnapshotTokenClaims(previousToken);
   if (!previous) return "unverified";
   return current.epoch > previous.epoch ? "erasure" : undefined;
 }
@@ -995,8 +982,8 @@ export async function saveOfflineManifest(
     // verifies the token MAC and compares the epoch server-side before accepting
     // note text. A changed snapshot id at the same epoch is an ordinary refresh
     // and must not erase notes staff added after the last deletion.
-    const previousClaims = serverSnapshotClaims(existing?.snapshot.erasureEpochToken);
-    const currentClaims = serverSnapshotClaims(payload.erasureEpochToken);
+    const previousClaims = offlineSnapshotTokenClaims(existing?.snapshot.erasureEpochToken);
+    const currentClaims = offlineSnapshotTokenClaims(payload.erasureEpochToken);
     if (
       existing &&
       previousClaims &&
@@ -1386,7 +1373,7 @@ async function postPendingEvents(batch: {
   events: OfflineRollCallEvent[];
   checklistEvents: OfflineChecklistEvent[];
   arrivalEvents: OfflineArrivalEvent[];
-}): Promise<{ results: OfflineSyncResult[] }> {
+}): Promise<OfflineSyncResponse> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
@@ -1409,7 +1396,7 @@ async function postPendingEvents(batch: {
       }
       throw new OfflineManifestError("sync_unreachable");
     }
-    return (await response.json()) as { results: OfflineSyncResult[] };
+    return (await response.json()) as OfflineSyncResponse;
   })();
   try {
     // Raced as well as aborted: a fetch (or a body stream) that ignores its
@@ -1457,7 +1444,14 @@ export async function syncOfflineManifest(
   return withManifestLock(tripId, async () => {
     const current = await loadOfflineManifest(tripId);
     if (!current) return null;
-    const applyResult = <T extends { clientEventId: string }>(event: T) => {
+    const revision = body.snapshotRevisions?.[tripId];
+    const syncedAtRevision =
+      typeof revision === "number" && Number.isSafeInteger(revision) && revision >= 0
+        ? revision
+        : undefined;
+    const applyResult = <T extends { clientEventId: string; syncedAtRevision?: number }>(
+      event: T,
+    ) => {
       const result = byId.get(event.clientEventId);
       if (!result) return event;
       return {
@@ -1465,6 +1459,11 @@ export async function syncOfflineManifest(
         ...(result.noteDisposition ? { note: null } : {}),
         syncStatus: result.status === "rejected" ? "rejected" : "applied",
         rejectionReason: result.reason,
+        // The revision DiveDay held this event by (`offlineEventInCopy`). A
+        // replayed answer keeps the first one, which was already true.
+        ...(result.status !== "rejected" && syncedAtRevision !== undefined
+          ? { syncedAtRevision: event.syncedAtRevision ?? syncedAtRevision }
+          : {}),
         ...(result.noteDisposition ? { noteDisposition: result.noteDisposition } : {}),
       };
     };

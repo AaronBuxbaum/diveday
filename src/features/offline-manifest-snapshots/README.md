@@ -16,6 +16,12 @@ This module owns the offline manifest snapshots use case and publishes its contr
   - `nextOfflineManifestSnapshotRevision`: the unconditional increment for the background board,
     which reads its rows after taking the revision in the same fenced transaction.
 
+  - `latestOfflineManifestSnapshotRevisions`: each departure's latest issued revision, returned by
+    the offline sync route with its results. A tap settled at revision `r` is in every copy of
+    revision `r + 2` or later, which is what lets a device stop reading its own synced tap ahead
+    of the copy. This holds only while every issuer reads its rows after taking or reading its
+    revision.
+
 ## Does not own
 
 Schema definitions, shared primitives, routes, and UI stay in their existing layers.

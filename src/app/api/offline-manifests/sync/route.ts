@@ -5,8 +5,10 @@ import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
 import { offlineSyncTripsBelongToShop } from "@/db/trips";
 import { checkInBooking, undoCheckInBooking } from "@/features/check-in";
+import { latestOfflineManifestSnapshotRevisions } from "@/features/offline-manifest-snapshots";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { log } from "@/lib/log";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 
@@ -372,5 +374,21 @@ export async function POST(request: Request) {
     });
   }
 
-  return Response.json({ results });
+  // Read after every writer above has committed, which is the whole of its
+  // meaning: a copy two revisions past this one has seen these events
+  // (`latestOfflineManifestSnapshotRevisions`). The events are already
+  // written, so a failed read costs the device this hint and never the batch.
+  let snapshotRevisions: Record<string, number> | undefined;
+  try {
+    snapshotRevisions = await latestOfflineManifestSnapshotRevisions(
+      db,
+      session.user.shopId,
+      tripIds,
+    );
+  } catch (error) {
+    log("offline_sync.snapshot_revisions_unread", "error", {
+      error: error instanceof Error ? error.name : "unknown",
+    });
+  }
+  return Response.json({ results, ...(snapshotRevisions ? { snapshotRevisions } : {}) });
 }
