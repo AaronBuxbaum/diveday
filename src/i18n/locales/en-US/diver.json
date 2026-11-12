@@ -109,7 +109,9 @@
       "canDive": "What can you dive?",
       "canDiveUnsaid": "Rather not say",
       "hideAboveLevel": "Hide what needs more",
-      "aboveLevelChip": "Above your level"
+      "aboveLevelChip": "Above your level",
+      "partySize": "How many of you?",
+      "partySeats": "{count, plural, one {# seat left} other {# seats left}} · party of {party}"
     },
     "showLater": "Show later departures",
     "showEarlier": "Show earlier departures",
@@ -500,7 +502,9 @@
     "findAnotherTrip": "Find another trip",
     "holdSeats": "Hold these seats",
     "holdGroup": "Hold seats while everyone pays",
-    "holdGroupNote": "Each person pays from their own link within 24 hours, or before departure if sooner. Unpaid seats go back on sale."
+    "holdGroupNote": "Each person pays from their own link within 24 hours, or before departure if sooner. Unpaid seats go back on sale.",
+    "partyExceedsSeats": "Your party has {requested} people; {remaining, plural, one {# seat is available} other {# seats are available}}.",
+    "waitlistPartyExceedsLimit": "Your party has {requested} people; this wait list accepts up to {limit}."
   },
   "bookingGear": {
     "heading": "Rental gear",

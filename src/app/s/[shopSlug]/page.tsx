@@ -17,16 +17,10 @@ import { requestTranslator } from "@/i18n/request";
 import { monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
-import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import {
-  publicAvailabilityPath,
-  publicCoursesPath,
-  publicSchedulePath,
-  publicTripPath,
-} from "@/lib/public-routes";
+import { publicAvailabilityPath, publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
 import type { ReviewAggregate } from "@/lib/reviews";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
@@ -51,14 +45,17 @@ import { readSchedulePage } from "./_components/schedule-reads";
 import { seatPriceLabel, shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
 import {
   aboveStatedLevelIds,
+  type ScheduleQuery,
   type ScheduleView,
   scheduleDayWords,
+  scheduleFiltersFor,
   scheduleMonthBounds,
   scheduleMonthRail,
   scheduleNextBoat,
   scheduleOffSeason,
   schedulePagerHrefs,
   scheduleSeatState,
+  scheduleTripHref,
   scheduleViewLinks,
   scheduleZoneLine,
 } from "./_components/schedule-view";
@@ -118,33 +115,14 @@ export default async function SchedulePage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{
-    month?: string;
-    after?: string;
-    /** The page before this departure: Previous page reads the keyset in reverse. */
-    before?: string;
-    hasSpace?: string;
-    tripType?: string;
-    canDive?: string;
-    hideAbove?: string;
-    /** One of the shop's own words for a kind of day (ADR 20260904-reef-all-the-way-down). */
-    lens?: string;
-  }>;
+  searchParams: Promise<ScheduleQuery>;
 }) {
   await connectionForRoute("/s/[shopSlug]"); // live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, before, hasSpace, tripType, canDive, hideAbove, lens } = await searchParams;
-  const hasSpaceFilter = hasSpace === "1";
-  const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
-  // **A stated preference, never a gate** (issue #696). It marks the list and
-  // nothing else: `src/lib/trip-admission.ts` and `src/lib/readiness.ts` are
-  // untouched by it, a diver who says "Rescue" here and books an Advanced
-  // charter still meets the ordinary admission check, and the answer is not
-  // persisted anywhere or prefilled into the booking form — a casual filter tap
-  // must never become evidence a readiness engine reasons about (ADRs
-  // 20260814-self-declared-cards, 20260820-attested-at-booking-verified-at-boarding).
-  const canDiveFilter = DECLARABLE_CERTIFICATION_LEVELS.find((level) => level === canDive);
-  const hideAboveFilter = Boolean(canDiveFilter) && hideAbove === "1";
+  const query = await searchParams;
+  const { month, after, before, lens } = query;
+  const { partySize, hasSpaceFilter, tripTypeFilter, canDiveFilter, hideAboveFilter } =
+    scheduleFiltersFor(query);
   const db = await getDb();
   // The same row `generateMetadata` above already read: one query for both
   // (issue #1737).
@@ -189,6 +167,7 @@ export default async function SchedulePage({
   });
   const view: ScheduleView = {
     shopSlug,
+    partySize,
     month,
     hasSpaceFilter,
     tripTypeFilter,
@@ -254,6 +233,7 @@ export default async function SchedulePage({
 
   const weekRows = weekLedgerRows({
     listedTrips: visibleUpcoming,
+    partySize,
     lenses,
     diveSitesByTrip,
     requirementsByTrip,
@@ -336,7 +316,7 @@ export default async function SchedulePage({
             ) : null}
             {nextBoat ? (
               <NextBoatCard
-                href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
+                href={`${scheduleTripHref(shopSlug, nextBoat.id, partySize)}#book`}
                 when={whenWord(nextBoat.startsAt)}
                 time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
                 title={nextBoat.title}
@@ -383,6 +363,7 @@ export default async function SchedulePage({
               filters and the list re-renders server-side (ADR
               20260812-javascript-is-required). */}
           <ScheduleFilterBar
+            partySize={partySize}
             month={month ?? null}
             lenses={lenses}
             activeLens={activeLens}

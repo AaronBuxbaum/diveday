@@ -46,6 +46,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule", scheme);
       });
 
+      test(`the schedule shows room for a party (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis?partySize=4");
+        await page.getByRole("group", { name: "How many of you?" }).waitFor();
+        await page
+          .locator("form + ul")
+          .getByText(/party of 4/)
+          .first()
+          .waitFor();
+        await capture(page, "schedule-party-size", scheme);
+      });
+
       /**
        * **"What you might see in July"** (batch 4, K4): the shopfront's shelf of
        * what the shop's crews logged this month in earlier seasons, which stays

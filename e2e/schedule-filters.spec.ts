@@ -352,3 +352,60 @@ test("phone schedule filters reveal the trip tags and summarize a closed selecti
   await openFilters(page);
   await expect(page.getByLabel(copy("schedule.filters.tripType"))).toHaveValue("course");
 });
+
+test("a party preference keeps short boats visible and explains the live booking limit", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  const t = diverTranslator("en-US");
+  await page.goto("/s/blue-mantis?partySize=4");
+  const people = page.getByRole("group", { name: t("schedule.filters.partySize") });
+  await expect(people).toBeVisible();
+  await expect(people.getByRole("status")).toHaveText("4");
+  const list = page.locator("form + ul");
+  await expect(list.getByText(/party of 4/).first()).toBeVisible();
+  const trip = list.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).first();
+  await expect(trip).toHaveAttribute("href", /partySize=4/);
+  await trip.click();
+  const count = page.getByRole("group", { name: t("party.numberOfDivers") });
+  await expect(count).toHaveAttribute("data-hydrated", "true");
+  await expect(count.getByRole("status")).toHaveText(t("party.diverCountOption", { count: 3 }));
+  await expect(
+    page.getByText(t("booking.partyExceedsSeats", { requested: 4, remaining: 3 })),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Diver 4 name" })).toHaveCount(0);
+});
+
+test("a party preference pre-fills four people on a boat with room", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  const t = diverTranslator("en-US");
+  await page.goto("/s/blue-mantis?partySize=4");
+  const trip = page
+    .locator("form + ul")
+    .getByRole("link", { name: /Two-Tank Reef — Benwood & Elbow/ })
+    .first();
+  await expect(trip).toHaveAttribute("href", /partySize=4/);
+  await trip.click();
+  const count = page.getByRole("group", { name: t("party.numberOfDivers") });
+  await expect(count).toHaveAttribute("data-hydrated", "true");
+  await expect(count.getByRole("status")).toHaveText(t("party.diverCountOption", { count: 4 }));
+  await expect(page.getByRole("textbox", { name: "Diver 4 name" })).toBeVisible();
+});
+
+test("the first schedule control changes only the URL party preference", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  const t = diverTranslator("en-US");
+  await page.goto("/s/blue-mantis?partySize=3&tripType=fun_dive");
+  await expect(page.locator('select[name="tripType"]')).toHaveAttribute("data-hydrated", "true");
+  await page
+    .getByRole("group", { name: t("schedule.filters.partySize") })
+    .getByRole("button", { name: t("party.morePeople") })
+    .click();
+  await expect(page).toHaveURL(/partySize=4/);
+  await expect(page).toHaveURL(/tripType=fun_dive/);
+  await page.reload();
+  await expect(
+    page.getByRole("group", { name: t("schedule.filters.partySize") }).getByRole("status"),
+  ).toHaveText("4");
+});

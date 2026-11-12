@@ -163,3 +163,16 @@ export function nextBookableDeparture<T extends TripCapacity & { id: string }>(
 ): T | null {
   return upcoming.find((trip) => !isFull(trip)) ?? null;
 }
+
+/** A schedule preference, never a seat hold; malformed or repeated values mean one person. */
+export function schedulePartySize(value: unknown): number {
+  return typeof value === "string" && /^[1-8]$/.test(value) ? Number(value) : 1;
+}
+
+/** Prefill is bounded by the live booking form, not by a schedule’s earlier seat count. */
+export function initialBookingPartySize(requested: number, remaining: number): number {
+  return Math.max(
+    1,
+    Math.min(MAX_PUBLIC_PARTY_SIZE, remaining, Number.isInteger(requested) ? requested : 1),
+  );
+}

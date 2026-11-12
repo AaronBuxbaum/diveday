@@ -14,9 +14,14 @@ import { embedTripPath } from "@/lib/embed-routes";
 import { formatDayParts, formatMoneyScanned, formatShortDate, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
-import { publicCoursePath, publicTripPath } from "@/lib/public-routes";
+import { publicCoursePath } from "@/lib/public-routes";
 import type { listedDepartureSummaries } from "./schedule-reads";
-import { type RequirementsByTrip, scheduleSeatState, type UpcomingTrips } from "./schedule-view";
+import {
+  type RequirementsByTrip,
+  scheduleSeatState,
+  scheduleTripHref,
+  type UpcomingTrips,
+} from "./schedule-view";
 import type { WeekLedgerRow } from "./WeekLedger";
 
 /**
@@ -55,6 +60,7 @@ export function weekLedgerRows({
   dayKeyOf,
   shopSlug,
   isEmbed = false,
+  partySize = 1,
   timezone,
   currency,
   locale,
@@ -71,6 +77,7 @@ export function weekLedgerRows({
   shopSlug: string;
   /** The framed schedule's rows open the framed trip page (`embed/trip/<id>`). */
   isEmbed?: boolean;
+  partySize?: number;
   timezone: string;
   currency: ShopCurrency;
   locale: string;
@@ -96,7 +103,9 @@ export function weekLedgerRows({
       id: trip.id,
       dayKey: dayKeyOf(trip.startsAt),
       dayParts: formatDayParts(trip.startsAt, locale, timezone),
-      href: isEmbed ? embedTripPath(shopSlug, trip.id) : publicTripPath(shopSlug, trip.id),
+      href: isEmbed
+        ? embedTripPath(shopSlug, trip.id)
+        : scheduleTripHref(shopSlug, trip.id, partySize),
       linkLabel: t("schedule.tripCardLabel", {
         when: `${formatShortDate(trip.startsAt, locale, timezone)} · ${formatTimeRange(trip.startsAt, trip.endsAt, locale, timezone)}`,
         trip: trip.title,
@@ -131,7 +140,14 @@ export function weekLedgerRows({
       // Marked, never removed, unless the reader asked for the shorter list
       // (issue #696) — and the word is what gives the dimming a name.
       aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
-      capacityText: seats.text,
+      insufficientSeats: !isEmbed && trip.capacity - trip.booked < partySize,
+      capacityText:
+        !isEmbed && trip.capacity - trip.booked < partySize
+          ? t("schedule.filters.partySeats", {
+              count: Math.max(0, trip.capacity - trip.booked),
+              party: partySize,
+            })
+          : seats.text,
       capacityTone: seats.tone,
       // A course session reads the course total the booking charges, never
       // the trip row's own figure (fourth UX review item 2, H-20261014-course-session-price).

@@ -8,7 +8,7 @@ import { ChoicePill, ChoiceRow, controlClass, Field, FieldGrid } from "@/compone
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import { suggestEmailTypo } from "@/lib/email-typo";
 import type { ParticipantType } from "@/lib/participant-types";
-import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
+import { initialBookingPartySize, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { emptyMember, usePartyMembers } from "./use-party-members";
 
 // **One slot per bookable seat, derived rather than listed.** This was a
@@ -109,6 +109,7 @@ export type BookingFieldErrors = Record<string, string>;
  */
 export function BookingPartyFields({
   maxPartySize,
+  initialSize = 1,
   groupRequestHref,
   leadPhone = false,
   fieldErrors,
@@ -123,6 +124,7 @@ export function BookingPartyFields({
   countControl = "choices",
 }: {
   maxPartySize: number;
+  initialSize?: number;
   /** Booking uses a bounded stepper; waitlist retains its existing count choices. */
   countControl?: "choices" | "stepper";
   groupRequestHref?: string;
@@ -169,7 +171,7 @@ export function BookingPartyFields({
   leadOnly?: boolean;
 }) {
   const t = useTranslations();
-  const [size, setSize] = useState(1);
+  const [size, setSize] = useState(() => initialBookingPartySize(initialSize, maxPartySize));
   const [hydrated, setHydrated] = useState(false);
   const { party, updateMember, rememberedDiver, forgetRememberedDiver, forgetCouldNotConfirm } =
     usePartyMembers(lead, rememberForShop, getTrustedServerTime);

@@ -23,7 +23,7 @@ import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicGroupRequestPath, publicTripPath } from "@/lib/public-routes";
 import { unionRequirements } from "@/lib/requirement";
 import { shopDayOf } from "@/lib/shop-day";
-import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
+import { hasSailed, isFull, schedulePartySize, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { BookingFinePrint } from "./_components/BookingFinePrint";
 import {
@@ -103,6 +103,7 @@ export async function TripDetailPage({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{
     booking?: string;
+    partySize?: string | string[];
     interest?: string;
     error?: string;
     /** Stripe's cancel return, embed only — see `EmbedBookedNotice`. */
@@ -122,6 +123,7 @@ export async function TripDetailPage({
   if (!uuidParam(tripId)) notFound();
   const {
     booking: bookingToken,
+    partySize: requestedPartySize,
     interest: interestId,
     error,
     pay,
@@ -197,7 +199,6 @@ export async function TripDetailPage({
       />
     );
   }
-  const crewLanguagesLine = crewLanguagesSentence(crewLanguages, locale);
   // Public conditions off drops only the automated outlook (`publicForecast`).
   const { crewPrediction, automatedForecast } = publicForecast(shop, trip);
   const knownDiverPanel = knownDiverPanelFor(knownDiver, t, {
@@ -265,7 +266,7 @@ export async function TripDetailPage({
       trip={trip}
       crewPrediction={crewPrediction}
       automatedForecast={automatedForecast}
-      crewLanguages={crewLanguagesLine}
+      crewLanguages={crewLanguagesSentence(crewLanguages, locale)}
       locale={locale}
       readerUnits={readerUnits}
       paper={paper}
@@ -374,6 +375,7 @@ export async function TripDetailPage({
               <ConditionsHoldSection />
             ) : full ? (
               <TripFullSection
+                requestedPartySize={isEmbed ? 1 : schedulePartySize(requestedPartySize)}
                 shopSlug={shopSlug}
                 trip={bookingFormTrip(trip)}
                 tripRef={tripRef}
@@ -391,6 +393,7 @@ export async function TripDetailPage({
                   withAnchor: false,
                   tripRef,
                   remaining,
+                  requestedPartySize: isEmbed ? 1 : schedulePartySize(requestedPartySize),
                   groupRequestHref: groupRequestFor(shop, trip, remaining),
                   errorMessage,
                   payAtBooking: payAtBooking && checkoutMode(stripeAccount),

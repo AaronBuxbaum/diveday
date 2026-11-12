@@ -11,6 +11,9 @@ vi.mock("next/navigation", () => ({
 afterEach(cleanup);
 
 const copy: ScheduleFiltersCopy = {
+  partySize: "How many of you?",
+  fewerPeople: "Fewer people",
+  morePeople: "More people",
   disclosure: "More filters",
   tripType: "Trip type",
   allTrips: "All trips",
@@ -122,4 +125,13 @@ describe("the collapsed filter selection", () => {
     fireEvent.click(toggle);
     expect(screen.getByRole("checkbox", { name: "Has space" })).toBeChecked();
   });
+});
+
+it("offers the party stepper before the other filters and bounds it to eight", () => {
+  filters(null);
+  expect(screen.getByRole("group", { name: "How many of you?" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "Fewer people" })).toBeDisabled();
+  for (let n = 1; n < 8; n++) fireEvent.click(screen.getByRole("button", { name: "More people" }));
+  expect(screen.getByRole("status")).toHaveTextContent("8");
+  expect(screen.getByRole("button", { name: "More people" })).toBeDisabled();
 });

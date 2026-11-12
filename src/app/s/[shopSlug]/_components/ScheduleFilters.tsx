@@ -5,7 +5,12 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 
+import { SchedulePartySize } from "./SchedulePartySize";
+
 export type ScheduleFiltersCopy = {
+  partySize: string;
+  fewerPeople: string;
+  morePeople: string;
   /** The one word the rail shows at rest, on the disclosure that holds the rest. */
   disclosure: string;
   tripType: string;
@@ -72,6 +77,7 @@ export type ScheduleFiltersCopy = {
  */
 export function ScheduleFilters({
   month,
+  partySize = 1,
   lens,
   tripTypeFilter,
   hasSpaceFilter,
@@ -82,6 +88,7 @@ export function ScheduleFilters({
   monthRail = null,
 }: {
   month: string | null;
+  partySize?: number;
   /**
    * The lens the reader is looking through, or null. Carried as a hidden input
    * below for the same reason `month` is: this is a GET form, so any parameter
@@ -130,6 +137,7 @@ export function ScheduleFilters({
 
   return (
     <QueryForm ref={formRef} className="mb-6">
+      <SchedulePartySize value={partySize} copy={copy} submit={submit} />
       {month ? <input type="hidden" name="month" value={month} /> : null}
       {lens ? <input type="hidden" name="lens" value={lens} /> : null}
       {/* **One filter row** (visual review 2026-10-24, B18): the shop's

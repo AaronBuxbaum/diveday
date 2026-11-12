@@ -175,3 +175,13 @@ describe("acceptsNewDivers", () => {
     expect(acceptsNewDivers({ ...open, conditionsHold: true }, before)).toBe(false);
   });
 });
+
+describe("schedule party size", () => {
+  it("accepts only whole URL counts from one to eight", async () => {
+    const { schedulePartySize } = await import("./trips");
+    expect([undefined, "", "0", "9", "2.5", "2people", ["2", "3"]].map(schedulePartySize)).toEqual([
+      1, 1, 1, 1, 1, 1, 1,
+    ]);
+    expect(["1", "4", "8"].map(schedulePartySize)).toEqual([1, 4, 8]);
+  });
+});

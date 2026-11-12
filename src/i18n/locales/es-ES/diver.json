@@ -109,7 +109,9 @@
       "canDive": "¿Qué puedes bucear?",
       "canDiveUnsaid": "Prefiero no decirlo",
       "hideAboveLevel": "Ocultar las que piden más",
-      "aboveLevelChip": "Por encima de tu nivel"
+      "aboveLevelChip": "Por encima de tu nivel",
+      "partySize": "¿Cuántos vienen?",
+      "partySeats": "{count, plural, one {# plaza libre} other {# plazas libres}} · grupo de {party}"
     },
     "showLater": "Ver salidas posteriores",
     "showEarlier": "Ver salidas anteriores",
@@ -500,7 +502,9 @@
     "findAnotherTrip": "Buscar otra salida",
     "holdSeats": "Reservar estas plazas",
     "holdGroup": "Reservar plazas mientras todos pagan",
-    "holdGroupNote": "Cada persona paga desde su enlace en un plazo de 24 horas, o antes de la salida si es más pronto. Las plazas sin pagar vuelven a estar disponibles."
+    "holdGroupNote": "Cada persona paga desde su enlace en un plazo de 24 horas, o antes de la salida si es más pronto. Las plazas sin pagar vuelven a estar disponibles.",
+    "partyExceedsSeats": "Tu grupo tiene {requested} personas; {remaining, plural, one {queda # plaza libre} other {quedan # plazas libres}}.",
+    "waitlistPartyExceedsLimit": "Tu grupo tiene {requested} personas; esta lista de espera acepta hasta {limit}."
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",

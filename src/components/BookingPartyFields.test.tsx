@@ -417,3 +417,10 @@ describe("the booking people stepper", () => {
     expect(screen.getByRole("button", { name: "More people" })).toBeDisabled();
   });
 });
+
+it("starts with the requested party and clamps it to the seats actually available", () => {
+  renderDiver(<BookingPartyFields maxPartySize={2} initialSize={4} countControl="stepper" />);
+  expect(screen.getByRole("status")).toHaveTextContent("2 people");
+  expect(screen.getByRole("textbox", { name: "Diver 2 name" })).toBeInTheDocument();
+  expect(screen.queryByRole("textbox", { name: "Diver 3 name" })).not.toBeInTheDocument();
+});

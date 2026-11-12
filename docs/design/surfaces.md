@@ -1193,3 +1193,12 @@ Each date is its own link on the course, with seats left, rather than a detached
 The first thing to remove is an explanatory caption: the three plain door labels already do that work.
 A boxed three-card introduction was considered; the chosen open three-column list uses type and top
 rules so it introduces the catalog without competing with the shop’s course titles or date links.
+
+## Public schedule: room for the party (#4378)
+
+The schedule lets a visitor ask whether their party fits before opening a departure.
+A visible count from one to eight leads the filters, while every boat keeps its seat count and link.
+The control changes the URL; the trip’s live booking count sets the actual upper bound.
+A short boat’s muted title repeats no claim of availability: its words name both seats left and party size.
+A separate party-search panel was considered; keeping the count on the existing filter form preserves
+one list and puts the question beside its answer without introducing another browsing surface.

@@ -8,9 +8,9 @@ import { addMonths, type MonthRef, monthKey } from "@/lib/calendar";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { formatRelativeDay, formatShortDate } from "@/lib/format";
-import { publicSchedulePath } from "@/lib/public-routes";
+import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { certificationRank } from "@/lib/readiness";
-import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
+import { capacityLabel, nextBookableDeparture, schedulePartySize } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { offSeasonLine } from "./OffSeasonPanel";
 
@@ -38,6 +38,7 @@ export function scheduleMonthBounds(ref: MonthRef, tz: string) {
 /** The view a diver has built: what every link that re-renders the schedule carries forward. */
 export type ScheduleView = {
   shopSlug: string;
+  partySize?: number;
   month: string | undefined;
   hasSpaceFilter: boolean;
   tripTypeFilter: "fun_dive" | "course" | undefined;
@@ -63,6 +64,7 @@ export function scheduleViewLinks(view: ScheduleView) {
     activeLens,
   } = view;
   const withViewParams = (params: URLSearchParams) => {
+    if ((view.partySize ?? 1) > 1) params.set("partySize", String(view.partySize));
     if (month) params.set("month", month);
     if (hasSpaceFilter) params.set("hasSpace", "1");
     if (tripTypeFilter) params.set("tripType", tripTypeFilter);
@@ -202,6 +204,9 @@ export function scheduleSeatState(t: DiverTranslator, trip: { capacity: number; 
 /** The filter row's words, in the vocabulary the booking form already asked them in. */
 export function scheduleFilterCopy(t: DiverTranslator) {
   return {
+    partySize: t("schedule.filters.partySize"),
+    fewerPeople: t("party.fewerPeople"),
+    morePeople: t("party.morePeople"),
     disclosure: t("schedule.filters.disclosure"),
     tripType: t("schedule.filters.tripType"),
     allTrips: t("schedule.filters.allTrips"),
@@ -251,6 +256,7 @@ export function schedulePagerHrefs({
   // departure", so it keeps the filters but deliberately drops
   // both the cursor and any month bound.
   const params = new URLSearchParams();
+  if ((view.partySize ?? 1) > 1) params.set("partySize", String(view.partySize));
   if (hasSpaceFilter) params.set("hasSpace", "1");
   if (tripTypeFilter) params.set("tripType", tripTypeFilter);
   if (canDiveFilter) params.set("canDive", canDiveFilter);
@@ -398,4 +404,39 @@ export function scheduleZoneLine(
   return anchor
     ? t("schedule.timesInZone", { shop: shopName, zone: timeZoneLabel(anchor, locale, tz) })
     : null;
+}
+
+export type ScheduleQuery = {
+  month?: string;
+  after?: string;
+  before?: string;
+  hasSpace?: string;
+  tripType?: string;
+  canDive?: string;
+  hideAbove?: string;
+  lens?: string;
+  partySize?: string | string[];
+};
+
+type ResolvedScheduleFilters = Pick<
+  ScheduleView,
+  "hasSpaceFilter" | "tripTypeFilter" | "canDiveFilter" | "hideAboveFilter"
+> & { partySize: number };
+
+/** Read preferences once; none changes admission or reserves a place. */
+export function scheduleFiltersFor(query: ScheduleQuery): ResolvedScheduleFilters {
+  const canDiveFilter = DECLARABLE_CERTIFICATION_LEVELS.find((level) => level === query.canDive);
+  return {
+    partySize: schedulePartySize(query.partySize),
+    hasSpaceFilter: query.hasSpace === "1",
+    tripTypeFilter:
+      query.tripType === "fun_dive" || query.tripType === "course" ? query.tripType : undefined,
+    canDiveFilter,
+    hideAboveFilter: Boolean(canDiveFilter) && query.hideAbove === "1",
+  };
+}
+
+export function scheduleTripHref(shopSlug: string, tripId: string, partySize = 1) {
+  const path = publicTripPath(shopSlug, tripId);
+  return partySize > 1 ? `${path}?partySize=${partySize}` : path;
 }

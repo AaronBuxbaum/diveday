@@ -70,6 +70,7 @@ export type WeekLedgerRow = {
   aboveLevel: string | null;
   /** Worded seat state ("Full", "2 seats"). */
   capacityText: string;
+  insufficientSeats?: boolean;
   /** `full` quiets the row's ink; the count itself is always plain muted text (B19). */
   capacityTone: "full" | "quiet";
   /** Already-formatted money, or null for a departure with no price set. */
@@ -299,7 +300,7 @@ function Row({
   // that pattern; a full boat is still the wait-list candidate somebody wants
   // to read). The Full badge and the "Above your level" word carry the state
   // for everyone; the ink change is only the visual echo.
-  const quiet = row.capacityTone === "full" || row.aboveLevel !== null;
+  const quiet = row.capacityTone === "full" || row.aboveLevel !== null || row.insufficientSeats;
   return (
     <li id={anchorId} className={anchorId ? "scroll-mt-16" : undefined}>
       {/* `sm:items-baseline`: the seat group centres a 28px badge, taller than

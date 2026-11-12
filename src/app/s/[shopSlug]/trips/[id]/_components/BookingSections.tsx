@@ -28,7 +28,7 @@ import {
   getOrCreateReturningDiverDeviceToken,
   snapshotReturningDiverClearGenerations,
 } from "@/lib/returning-diver";
-import { capacityLabel } from "@/lib/trips";
+import { capacityLabel, initialBookingPartySize, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import type { BookingFormTrip } from "../_lib/booking-form-trip";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import { BookingGearFields } from "./BookingGearFields";
@@ -177,6 +177,7 @@ export function ConditionsHoldSection() {
 }
 
 export function TripFullSection({
+  requestedPartySize = 1,
   shopSlug,
   trip,
   tripRef,
@@ -187,6 +188,7 @@ export function TripFullSection({
   requirement = null,
   withAnchor = true,
 }: {
+  requestedPartySize?: number;
   shopSlug: string;
   trip: BookingFormTrip;
   tripRef: TripRef;
@@ -316,7 +318,19 @@ export function TripFullSection({
               texting consent) and no certification question for a seat
               that may never open (visual review 2026-10-24, B57). Booking
               asks both when a seat does. */}
-          <BookingPartyFields maxPartySize={trip.capacity} leadOnly />
+          {requestedPartySize > Math.min(trip.capacity, MAX_PUBLIC_PARTY_SIZE) ? (
+            <p className="text-base text-muted">
+              {t("waitlistPartyExceedsLimit", {
+                requested: requestedPartySize,
+                limit: Math.min(trip.capacity, MAX_PUBLIC_PARTY_SIZE),
+              })}
+            </p>
+          ) : null}
+          <BookingPartyFields
+            maxPartySize={trip.capacity}
+            initialSize={requestedPartySize}
+            leadOnly
+          />
           {/* Two joiners from one couple would each count the couple, so the
             shop reads demand that is not there (dive-domain review r4-4, N8). */}
           {trip.capacity > 1 ? (
@@ -343,7 +357,7 @@ export function TripFullSection({
 const INITIAL_BOOKING_STATE: BookingFormState = {};
 
 /** Stable per-slot keys for the gear fieldsets — mirrors `BookingPartyFields`'s `diverSlots`. */
-const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-five", "gear-six"];
+const GEAR_SLOTS = Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, (_, index) => `gear-${index}`);
 
 /** Everything `BookSpotSection` draws, assembled once by its caller and handed over as one object. */
 export type BookSpotSectionContext = {
@@ -351,6 +365,7 @@ export type BookSpotSectionContext = {
   trip: BookingFormTrip;
   tripRef: TripRef;
   remaining: number;
+  requestedPartySize?: number;
   /** False when the page anchors the conditions and this section together. */
   withAnchor?: boolean;
   /**
@@ -500,13 +515,16 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
   // `BookingPartyFields` owns the party-count control, so it reports changes
   // back up rather than this section duplicating that state — `MoneyBlock`
   // multiplies the fare by it.
-  const [partySize, setPartySize] = useState(1);
+  const initialSize = initialBookingPartySize(context.requestedPartySize ?? 1, remaining);
+  const [partySize, setPartySize] = useState(initialSize);
   const [holdChoice, setHoldChoice] = useState(false);
   const groupHold = Boolean(payAtBooking && partySize > 1 && holdChoice);
   // What each person in the party is coming as, reported up by
   // `BookingPartyFields` the same way the size is. Only read when the
   // departure sells more than diver seats.
-  const [partyTypes, setPartyTypes] = useState<ParticipantType[]>(["diver"]);
+  const [partyTypes, setPartyTypes] = useState<ParticipantType[]>(() =>
+    Array.from({ length: initialSize }, () => "diver"),
+  );
   const [memorySlotUnavailable, setMemorySlotUnavailable] = useState(false);
   const typesOffered = otherSeatOffers.length > 0;
   const typeOf = (index: number): ParticipantType =>
@@ -622,6 +640,11 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
           setMemorySlotUnavailable(!token);
         }}
       >
+        {(context.requestedPartySize ?? 1) > remaining ? (
+          <p role="status" className="text-base text-muted">
+            {t("partyExceedsSeats", { requested: context.requestedPartySize ?? 1, remaining })}
+          </p>
+        ) : null}
         {requirement ? <p className="text-sm text-muted">{requirement}</p> : null}
         <input type="hidden" name="returningDiverDeviceToken" defaultValue="" />
         <input type="hidden" name="returningDiverDeviceGeneration" defaultValue="" />
@@ -635,6 +658,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         ) : null}
         <BookingPartyFields
           maxPartySize={remaining}
+          initialSize={initialSize}
           countControl="stepper"
           groupRequestHref={context.groupRequestHref}
           leadPhone
