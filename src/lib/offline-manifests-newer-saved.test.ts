@@ -104,6 +104,36 @@ describe("a saved statement newer than this tablet's own", () => {
     });
   });
 
+  /**
+   * At the dock "not boarded" means never left, and it carries forward as
+   * accounted for. A diver the desk boarded after this tablet's dock mark is in
+   * the water, so the later checkpoints must wait for a count.
+   */
+  it("reopens the after-dive counts when the desk boarded a diver this tablet marked ashore", () => {
+    const saved = snapshot();
+    saved.savedAt = "2026-07-20T12:10:00.000Z";
+    const dock = saved.manifests
+      .find((manifest) => manifest.checkpoint === "departure")
+      ?.divers.find((entry) => entry.bookingId === "ready");
+    if (!dock) throw new Error("fixture lost its diver");
+    dock.rollCall = {
+      state: "boarded",
+      occurredAt: "2026-07-20T12:05:00.000Z",
+      recordedByName: "Sal Ortiz",
+    };
+    const mine = tap(saved, {
+      checkpoint: "departure",
+      status: "not_boarded",
+      occurredAt: "2026-07-20T11:55:00.000Z",
+      syncStatus: "applied",
+    });
+    expect(latestOfflineRollCall(saved, [mine], "ready", "departure")).toMatchObject({
+      state: "boarded",
+      local: false,
+    });
+    expect(latestOfflineRollCall(saved, [mine], "ready", "after_dive_1")).toBeUndefined();
+  });
+
   it("still shows this tablet's own mark when it is the newer of the two", () => {
     const saved = refreshed("boarded");
     const mine = tap(saved, {
@@ -125,7 +155,11 @@ describe("a saved statement newer than this tablet's own", () => {
       .find((manifest) => manifest.checkpoint === "after_dive_1")
       ?.crew.find((entry) => entry.id === "crew-dana");
     if (!member) throw new Error("fixture lost its crew");
-    member.rollCall = { state: "not_boarded", occurredAt: "2026-07-20T14:05:00.000Z" };
+    member.rollCall = {
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:05:00.000Z",
+      recordedByName: "Sal Ortiz",
+    };
     const mine = tap(saved, {
       bookingId: undefined,
       crewPersonId: "crew-dana",

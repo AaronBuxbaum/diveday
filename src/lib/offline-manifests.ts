@@ -10,9 +10,7 @@ import { type DepthAdvisory, depthAdvisoryIn } from "./findings";
 // Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { TrainingMarkCleared, TripManifest } from "./manifests";
-// Same reasoning as the roll-call import above: dependency-free, so a value
-// import here is safe for the service worker to carry.
-import { latestPreDepartureCheck, type PreDepartureCheckStatus } from "./pre-departure-check";
+import type { PreDepartureCheckStatus } from "./pre-departure-check";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 // The roll-call rules come from `./roll-call`, never from `./manifests`: this
 // module is compiled into the service worker, and a *value* import from
@@ -1778,25 +1776,35 @@ export function latestOfflineChecklistCheck(
   checklistItemId: string,
   queuedEvents: readonly OfflineChecklistEvent[],
 ): OfflineChecklistCheckResult | undefined {
-  const forItem = queuedEvents.filter((event) => event.checklistItemId === checklistItemId);
-  const latestLocal = latestPreDepartureCheck(forItem);
-  if (latestLocal) {
-    return {
-      state: "checked",
-      occurredAt: latestLocal.occurredAt,
-      note: latestLocal.note,
-      pending: latestLocal.syncStatus === "pending",
-      local: true,
-      clientEventId: latestLocal.clientEventId,
-    };
-  }
-  // A queued `cleared` with nothing standing beneath it must not fall through
-  // to the snapshot's own stale "checked" — that would hand the mark right
-  // back to whoever just tapped it off, the same rule roll call's `cleared`
-  // follows.
-  if (forItem.some((event) => event.status === "cleared")) return undefined;
-  const saved = snapshot.checklist?.items.find((item) => item.id === checklistItemId)?.check;
-  return saved ? { ...saved, pending: false, local: false } : undefined;
+  // **A refused tap does not stand**, as at the counter (`latestOfflineArrival`):
+  // a tick DiveDay refused read "checked" here for good, and a refused undo
+  // hid the tick it failed to take back.
+  const forItem = queuedEvents.filter(
+    (event) => event.checklistItemId === checklistItemId && event.syncStatus !== "rejected",
+  );
+  let newest: OfflineChecklistEvent | undefined;
+  // `>=` in queue order: the later-queued of two taps sharing an instant wins,
+  // the tie-break `latestPreDepartureCheck` and the sync route apply.
+  for (const event of forItem) if (!newest || event.occurredAt >= newest.occurredAt) newest = event;
+  const check = snapshot.checklist?.items.find((item) => item.id === checklistItemId)?.check;
+  const saved = check ? { ...check, pending: false, local: false } : undefined;
+  if (!newest) return saved;
+  // A saved tick newer than anything this device queued stands, as roll call's
+  // does (`explicitResultAt`): somebody ticked the item again after this
+  // device unticked it.
+  if (saved && saved.occurredAt > newest.occurredAt) return saved;
+  // A queued `cleared` with nothing newer over it must not fall through to
+  // the snapshot's own stale "checked": that would hand the mark right back
+  // to whoever just tapped it off.
+  if (newest.status !== "checked") return undefined;
+  return {
+    state: "checked",
+    occurredAt: newest.occurredAt,
+    note: newest.note,
+    pending: newest.syncStatus === "pending",
+    local: true,
+    clientEventId: newest.clientEventId,
+  };
 }
 
 /**
