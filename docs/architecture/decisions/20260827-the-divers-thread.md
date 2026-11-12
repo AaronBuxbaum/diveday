@@ -71,6 +71,8 @@ When a departure has its own meeting point, **where** is a hero metadata line be
 the day-of thread repeats arrival instructions, but a diver does not need a seat to learn where to
 go.
 
+**Amended 2026-11-12, booking warmth (#4385).** The booking form uses a bounded plus/minus people stepper at every capacity; the waitlist keeps its existing count choices. The money block's single total becomes a live summary of people, the departure time in the shop's zone and the amount due at the shop or now. Itemized gear, fees, deposits and balances keep their existing arithmetic. The cancellation window and the statement that nothing is charged now sit beside the counter-payment booking action.
+
 ### 3. The thread page is a step spine
 
 `/ready` recomposes on the same spine grammar as the staff home: steps in order — **Sign · Your

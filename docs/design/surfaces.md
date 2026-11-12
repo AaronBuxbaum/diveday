@@ -380,8 +380,7 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 - **One idea:** choose a departure before reading the shop’s story.
 - **The arriving question:** “Which departure fits my day?” is answered by the zoned times,
   grouped month and day choices, and bookable departure rows under the Schedule heading.
-- **Controls that dissolved:** the phone’s trip tags and advanced choices share Filter trips,
-  with an active selection summarized when closed and the useful chip row retained on desktop.
+- **Controls that dissolved:** the advanced choices share More filters, with their selection summarized when closed. The shop’s trip tags stay visible as one horizontal scrolling row on phones (#4380), preserving the chip scroller’s focus-ring clearance.
 - **Remove first:** the repeated large shop-name heading and separate calendar row leave the
   opening, while the authored identity stays below the board and Find my booking stays in chrome.
 - **Composition:** date choices lead into departures, then courses and the shop’s story, with
@@ -423,6 +422,8 @@ routes took the display-scale h1 only.
   because a diver is choosing a shop before they are choosing a time slot.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
+
+**Booking decision, 2026-11-12 (#4385) — rendered review pending:** the arriving question is how many people are joining, when they go and what is due. A bounded people stepper replaces the booking dropdown or segmented choices; the existing itemized money block ends in one live people/date/total line with the amount still at figure size. The submit label names multiple seats, and published cancellation terms and the counter-payment reassurance stay beside it. The form keeps its fields, validation, gear choices and single action. Extra explanatory copy is the first thing to remove.
 
 **Course booking, 2026-11-11 (#4332):** a complete course run presents its authored day plan and an
 Enroll action in the existing booking composition. The arriving question is what the student will do

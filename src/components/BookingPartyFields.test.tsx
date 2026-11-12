@@ -391,3 +391,29 @@ it("links a larger group to the trip-prefilled request", () => {
     screen.getByRole("link", { name: "Bringing more than 3? Ask about a group trip." }),
   ).toHaveAttribute("href", "/s/reef?groupTrip=Reef#request-a-date");
 });
+
+describe("the booking people stepper", () => {
+  it("submits each bounded count and preserves names when the party shrinks and grows", () => {
+    renderDiver(<BookingPartyFields maxPartySize={12} countControl="stepper" />);
+    const fewer = screen.getByRole("button", { name: "Fewer people" });
+    const more = screen.getByRole("button", { name: "More people" });
+    expect(fewer).toBeDisabled();
+    fireEvent.click(more);
+    fireEvent.change(screen.getByRole("textbox", { name: "Diver 2 name" }), {
+      target: { value: "Maya" },
+    });
+    expect(document.querySelector('input[name="partySize"]')).toHaveValue("2");
+    fireEvent.click(fewer);
+    fireEvent.click(more);
+    expect(screen.getByRole("textbox", { name: "Diver 2 name" })).toHaveValue("Maya");
+    for (let count = 2; count < 12; count += 1) fireEvent.click(more);
+    expect(more).toBeDisabled();
+    expect(document.querySelector('input[name="partySize"]')).toHaveValue("12");
+  });
+
+  it("keeps both controls disabled when one seat remains", () => {
+    renderDiver(<BookingPartyFields maxPartySize={1} countControl="stepper" />);
+    expect(screen.getByRole("button", { name: "Fewer people" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "More people" })).toBeDisabled();
+  });
+});

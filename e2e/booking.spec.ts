@@ -635,6 +635,14 @@ test.describe("the shopfront on a phone", () => {
       "data-hydrated",
       "true",
     );
+    await choosePartySize(page, 2);
+    const bookingSummary = page.getByRole("status", { name: diver("booking.money.summaryLabel") });
+    await expect(bookingSummary).toContainText("2 people");
+    await expect(bookingSummary).toContainText(/E[DS]T/);
+    await expect(
+      page.getByRole("button", { name: diver("booking.bookSeats", { count: 2 }), exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(diver("booking.payLater"), { exact: true })).toBeVisible();
     const itinerary = page.getByRole("heading", {
       name: diverTranslator("en-US")("trip.theDay"),
       exact: true,

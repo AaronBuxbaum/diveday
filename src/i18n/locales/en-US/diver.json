@@ -374,6 +374,9 @@
       "notYou": "Not {name}? <a>Start with a blank form</a>"
     },
     "money": {
+      "summaryLabel": "Booking summary",
+      "summaryAtShop": "{count, plural, one {# person} other {# people}}, {when}, <amount>{total}</amount> due at the shop",
+      "summaryCheckout": "{count, plural, one {# person} other {# people}}, {when}, <amount>{total}</amount> due now",
       "fare": "{price} × {count, plural, one {# diver} other {# divers}}",
       "courseFee": "Course fee",
       "eLearning": "Online course materials",
@@ -403,6 +406,8 @@
     "bookAndPay": "Book and pay",
     "bookAndPayLastSeat": "Book and pay for the last seat",
     "bookLastSeat": "Book the last seat",
+    "payLater": "Nothing is charged now.",
+    "bookAndPaySeats": "{count, plural, one {Book and pay} other {Book # seats and pay}}",
     "bookSeats": "{count, plural, one {Book this seat} other {Book # seats}}",
     "bookVerb": "Book",
     "headingToPayment": "Heading to payment…",
@@ -1497,6 +1502,8 @@
     "estimatedRentalFullSet": "Estimated rental: {price} per person, the full-set price."
   },
   "party": {
+    "fewerPeople": "Fewer people",
+    "morePeople": "More people",
     "numberOfDivers": "People",
     "yourDetails": "Your details",
     "diverN": "Diver {number}",
