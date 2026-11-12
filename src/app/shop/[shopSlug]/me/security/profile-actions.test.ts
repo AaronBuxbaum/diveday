@@ -15,6 +15,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/headers", () => nextHeadersStub());
 vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
 const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { saveStaffProfileAction } = await import("./staff-profile-actions");
 const { saveCrewPublicConsentAction } = await import("./profile-actions");
 const ctx = fileScopedShopContext();
 
@@ -67,5 +68,48 @@ describe("account public profile", () => {
     expect(
       await getAccountSecurityPage(ctx.db, id, "11111111-1111-4111-8111-111111111111"),
     ).toBeNull();
+  });
+});
+
+function profileForm(personId: string, enabled = true) {
+  const data = new FormData();
+  data.set("personId", personId);
+  if (enabled) data.set("profileEnabled", "on");
+  data.set("profileFirstName", "Sal");
+  data.set("profileRole", "Captain");
+  data.set("profileLanguages", "English");
+  data.set("profileDescription", "I like the early reef.");
+  return data;
+}
+describe("self-authored staff introductions", () => {
+  it("allows an ordinary staff member to publish and withdraw a separate profile", async () => {
+    const id = await captain();
+    await expect(saveStaffProfileAction(ctx.shop.slug, profileForm(id))).rejects.toThrow(
+      "staff-profile-saved",
+    );
+    let [person] = await ctx.db.select().from(people).where(eq(people.id, id));
+    expect(person?.publicStaffProfileEnabled).toBe(true);
+    expect(person?.publicStaffProfile?.description).toBe("I like the early reef.");
+    expect(person?.crewPublicConsentAt).toBeNull();
+    await expect(saveStaffProfileAction(ctx.shop.slug, profileForm(id, false))).rejects.toThrow(
+      "staff-profile-withdrawn",
+    );
+    [person] = await ctx.db.select().from(people).where(eq(people.id, id));
+    expect(person?.publicStaffProfileEnabled).toBe(false);
+    expect(person?.publicStaffProfile).toBeNull();
+  });
+  it("refuses another person's edit and ignores arbitrary photo URLs", async () => {
+    const id = await captain();
+    const other = await seededStaffPersonId(ctx.db, ctx.shop.id, "dana@demo.invalid");
+    await expect(saveStaffProfileAction(ctx.shop.slug, profileForm(other))).rejects.toThrow(
+      "notice=invalid",
+    );
+    const data = profileForm(id);
+    data.set("photoUrls", "https://other.invalid/private.jpg");
+    await expect(saveStaffProfileAction(ctx.shop.slug, data)).rejects.toThrow(
+      "staff-profile-saved",
+    );
+    const [person] = await ctx.db.select().from(people).where(eq(people.id, id));
+    expect(person?.publicStaffProfile?.photoUrls).toEqual([]);
   });
 });

@@ -44,3 +44,36 @@ test("account settings owns public visibility, and crew can switch schedule scop
   await selector.selectOption(other);
   await expect(page).toHaveURL(new RegExp(`person=${other}`));
 });
+
+test("a staff introduction publishes separately from name consent and can be hidden or withdrawn", async ({
+  page,
+  privateShop,
+}) => {
+  const base = `/shop/${privateShop.slug}`;
+  await page.goto(`${base}/me/security`);
+  await page.getByText(t("staffing.publicProfile.heading"), { exact: true }).click();
+  await page.getByRole("checkbox", { name: t("staffing.publicProfile.consent") }).check();
+  await page
+    .getByRole("textbox", { name: t("staffing.publicProfile.firstName") })
+    .fill("Ocean Guide");
+  await page.getByRole("textbox", { name: t("staffing.publicProfile.role") }).fill("Instructor");
+  await page
+    .getByRole("textbox", { name: t("staffing.publicProfile.description") })
+    .fill("I love the early reef.");
+  await page.getByRole("button", { name: t("staffing.crewConsent.save"), exact: true }).click();
+  await expect(page.getByText(t("staffing.publicProfile.saved"))).toBeVisible();
+  await page.goto(`/s/${privateShop.slug}`);
+  await expect(page.getByText("I love the early reef.", { exact: true })).toBeVisible();
+  await page.goto(`${base}/settings/features`);
+  await page
+    .getByRole("checkbox", { name: t("settings.main.features.publicStaffProfiles.label") })
+    .uncheck();
+  await page.getByRole("button", { name: t("settings.main.features.save"), exact: true }).click();
+  await page.goto(`/s/${privateShop.slug}`);
+  await expect(page.getByText("I love the early reef.", { exact: true })).toHaveCount(0);
+  await page.goto(`${base}/me/security`);
+  await page.getByText(t("staffing.publicProfile.heading"), { exact: true }).click();
+  await page.getByRole("checkbox", { name: t("staffing.publicProfile.consent") }).uncheck();
+  await page.getByRole("button", { name: t("staffing.crewConsent.save"), exact: true }).click();
+  await expect(page.getByText(t("staffing.publicProfile.withdrawn"))).toBeVisible();
+});

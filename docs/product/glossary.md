@@ -528,6 +528,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Crew public name
 - Lens
 - Our year
+- Public staff profile
 - Published desk hours
 - Register
 - Setting

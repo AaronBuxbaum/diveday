@@ -79,6 +79,7 @@ describe("the Features page", () => {
       "publicConditions",
       "fieldGuide",
       "conservation",
+      "publicStaffProfiles",
       "dateRequests",
       "privateCharters",
       "lastMinuteList",
@@ -118,6 +119,7 @@ describe("the Features page", () => {
       "feature:publicConditions",
       "feature:fieldGuide",
       "feature:conservation",
+      "feature:publicStaffProfiles",
       "feature:dateRequests",
       "feature:privateCharters",
       "feature:lastMinuteList",
@@ -158,7 +160,7 @@ describe("the Features page", () => {
     expect(findElements(page, SubmitButton)).toHaveLength(1);
     // Every row the page drew is named, so the save knows which rows it may write.
     const [form] = findElements<{ children: unknown }>(page, "form");
-    expect(rowsIn(form)).toHaveLength(33);
+    expect(rowsIn(form)).toHaveLength(34);
   });
 
   it("does not render at all for a divemaster", async () => {

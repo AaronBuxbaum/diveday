@@ -142,5 +142,20 @@
     "all": "Full shop",
     "me": "My schedule",
     "person": "View a person"
+  },
+  "publicProfile": {
+    "heading": "Public introduction",
+    "visible": "Shown to divers",
+    "hidden": "Hidden",
+    "consent": "Show my introduction and pictures on the public shop, trip and course pages. Turning this off deletes my introduction and pictures.",
+    "firstName": "First name to show",
+    "role": "Your role",
+    "since": "Diving since (year)",
+    "languages": "Languages you speak",
+    "description": "In your own words",
+    "photos": "Pictures (up to 4; add 2 per save)",
+    "removePhoto": "Delete picture {number}",
+    "saved": "Your public introduction is saved.",
+    "withdrawn": "Your public introduction is hidden and its pictures are being deleted."
   }
 }

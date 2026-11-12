@@ -38,6 +38,7 @@ const allOn = {
   fieldGuideEnabled: true,
   seatSoldAlertsEnabled: true,
   privateChartersEnabled: true,
+  publicStaffProfilesEnabled: true,
 };
 
 describe("shopOffers", () => {

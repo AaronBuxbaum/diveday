@@ -82,7 +82,7 @@ function prefixesTheAppWrites(): string[] {
   // vacuously true -- the one way a test that reads a file is worse than one
   // that restates a list. Pinned to the exact count rather than a floor, so a
   // new prefix has to come here and choose a side.
-  expect(found.length, "MEDIA_KEY_PREFIXES did not parse as nine prefixes").toBe(9);
+  expect(found.length, "MEDIA_KEY_PREFIXES did not parse as ten prefixes").toBe(10);
   return [...new Set(found)].sort();
 }
 
@@ -100,7 +100,7 @@ describe("media distribution", () => {
     expect(committed.context.cloudfrontVerified).toBe(true);
   });
 
-  it("serves exactly the six public prefixes", () => {
+  it("serves exactly the seven public prefixes", () => {
     const patterns = (mediaDistribution().CacheBehaviors ?? []).map((b) => b.PathPattern).sort();
     expect(patterns).toEqual([
       "arrival/*",
@@ -109,6 +109,7 @@ describe("media distribution", () => {
       "recap/*",
       "shop-heroes/*",
       "shop-logos/*",
+      "staff-profiles/*",
     ]);
   });
 

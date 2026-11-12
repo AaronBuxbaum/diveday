@@ -1,0 +1,148 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "63eff9b2-4025-4cd2-bede-5e53b3706968",
+  "prevIds": [
+    "297cc90a-9890-412a-b6c4-21f2eedae558"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "media_deletion_kind"
+      ],
+      "writes": [
+        "s|enum|public.media_deletion_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "people",
+        "public_staff_profile_enabled"
+      ],
+      "writes": [
+        "s|col|public.people.public_staff_profile_enabled",
+        "n|col|public.people.public_staff_profile_enabled",
+        "e|col|public.people.public_staff_profile_enabled"
+      ],
+      "reads": [
+        "n|tbl|public.people",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "people",
+        "public_staff_profile"
+      ],
+      "writes": [
+        "s|col|public.people.public_staff_profile",
+        "n|col|public.people.public_staff_profile",
+        "e|col|public.people.public_staff_profile"
+      ],
+      "reads": [
+        "n|tbl|public.people",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "public_staff_profiles_enabled"
+      ],
+      "writes": [
+        "s|col|public.shops.public_staff_profiles_enabled",
+        "n|col|public.shops.public_staff_profiles_enabled",
+        "e|col|public.shops.public_staff_profiles_enabled"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "people",
+        "name": "public_staff_profile_enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "people",
+        "name": "public_staff_profile",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "public_staff_profiles_enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"media_deletion_kind\"]",
+      "set": {
+        "values": [
+          "course_photo",
+          "recap_photo",
+          "certification_card",
+          "waiver_document",
+          "dive_site_photo",
+          "shop_logo",
+          "arrival_photo",
+          "shop_hero",
+          "staff_profile",
+          "boat_photo",
+          "payment_receipt"
+        ]
+      }
+    }
+  ]
+}

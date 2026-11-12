@@ -560,6 +560,11 @@
         "heading": "Pases de Wallet",
         "label": "Ofrecer pases de salida en Apple y Google Wallet",
         "description": "La salida reservada se actualiza si cambia el plan."
+      },
+      "publicStaffProfiles": {
+        "heading": "Presentaciones públicas del equipo",
+        "label": "Mostrar las presentaciones públicas del equipo",
+        "description": "Mostrar las presentaciones que cada persona del equipo escribe y comparte."
       }
     },
     "crewSchedule": {
@@ -592,7 +597,8 @@
         "shop_logo": "Logotipo del centro",
         "shop_hero": "Foto de portada del centro",
         "boat_photo": "Foto de la embarcación",
-        "payment_receipt": "Recibo importado"
+        "payment_receipt": "Recibo importado",
+        "staff_profile": "Foto del perfil del equipo"
       },
       "mediaDeletions": {
         "sectionLabel": "Fotos que no terminaron de eliminarse",

@@ -64,6 +64,7 @@ import {
 } from "./mint-tokens";
 import { operationalTrustArgs, seedOperationalTrustFact } from "./operational-trust";
 import { makeRoomForPartyWaiverCaptures } from "./party-waiver-capacity-state";
+import { introduceAssignedInstructor } from "./public-staff-profile";
 import { putARehearsalOnTomorrow } from "./put-a-rehearsal-on-tomorrow";
 import { putOneUnitOutToday } from "./put-one-unit-out-today";
 import { putTheBenchBehind } from "./put-the-bench-behind";
@@ -232,6 +233,7 @@ const FACTS = {
   ),
   fiveDivePrint: ({ db, shop, now }) => logFiveDivesForPrint(db, shop, now),
   flySafeFollowUp: ({ db, shop, now }) => failTheFlySafeCorrections(db, shop, now),
+  publicStaffProfile: privateOnly(introduceAssignedInstructor),
   futureCrew: privateOnly(({ db, shop, now }) => crewARatingThatStartsTomorrow(db, shop, now)),
   executedDepth: withArgs(
     executedDepthArgs,
