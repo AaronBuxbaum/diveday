@@ -25,7 +25,11 @@ import { lockSeatDeparture } from "../../db/seat-locks";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "../../lib/arrival";
 import { nowDate } from "../../lib/clock";
 import { arrivalsWindow } from "../../lib/departure-clock";
-import { OFFLINE_EVENT_SKEW_MS, offlineEventOutOfBounds } from "../../lib/offline-events";
+import {
+  OFFLINE_EVENT_SKEW_MS,
+  offlineEventInstant,
+  offlineEventOutOfBounds,
+} from "../../lib/offline-events";
 import { hasArrived, type StandingArrival } from "../../lib/presence";
 import { priorVisitStanding } from "../../lib/prior-visits";
 import type { ReadinessResult } from "../../lib/readiness";
@@ -597,10 +601,10 @@ export async function checkInBooking(
 ): Promise<CheckInOutcome> {
   const now = input.now ?? nowDate();
   const source = input.source ?? "live";
-  // A device clock ahead of the server's (the bounds allow five minutes) must
-  // not outrank a live tap made after it: the trail is read newest first, so
-  // a stored instant is never later than the moment it reached us (#2702).
-  const occurredAt = input.occurredAt && input.occurredAt < now ? input.occurredAt : now;
+  // A device clock ahead of the server's must not outrank a live tap made
+  // after it: the trail is read newest first, so a stored instant is never
+  // later than the moment it reached us (#2702).
+  const occurredAt = offlineEventInstant(input.occurredAt, now);
   return db.transaction(async (tx) => {
     // The counter actor is durably recorded in the check-in activity trail.
     const recordedBy = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
@@ -667,7 +671,6 @@ export async function checkInBooking(
           clientEventId: input.clientEventId,
           offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
           occurredAt: input.occurredAt ?? now,
-          now: nowDate(),
         })
       ) {
         return { ok: false, reason: "snapshot_invalid" };
@@ -789,10 +792,10 @@ export async function undoCheckInBooking(
 ): Promise<UndoCheckInOutcome> {
   const now = input.now ?? nowDate();
   const source = input.source ?? "live";
-  // A device clock ahead of the server's (the bounds allow five minutes) must
-  // not outrank a live tap made after it: the trail is read newest first, so
-  // a stored instant is never later than the moment it reached us (#2702).
-  const occurredAt = input.occurredAt && input.occurredAt < now ? input.occurredAt : now;
+  // A device clock ahead of the server's must not outrank a live tap made
+  // after it: the trail is read newest first, so a stored instant is never
+  // later than the moment it reached us (#2702).
+  const occurredAt = offlineEventInstant(input.occurredAt, now);
   return db.transaction(async (tx) => {
     // The undo actor is durably recorded alongside the check-in reversal.
     const recordedBy = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
@@ -858,7 +861,6 @@ export async function undoCheckInBooking(
           clientEventId: input.clientEventId,
           offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
           occurredAt: input.occurredAt ?? now,
-          now: nowDate(),
         })
       ) {
         return { ok: false, reason: "snapshot_invalid" };

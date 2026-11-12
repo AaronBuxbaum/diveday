@@ -324,17 +324,19 @@ describe("a queued tap cannot outrank what the desk said since", () => {
     expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: true });
   });
 
-  it("refuses a queued undo stamped past the server's clock, and applies a replay once", async () => {
+  it("takes a queued undo stamped past the server's clock, and applies a replay once", async () => {
     const { db, shop, staff, seat } = await context();
     await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
     const undo = { shopId: shop.id, bookingId: seat.booking.id, recordedByPersonId: staff.id };
+    // A tablet running an hour fast: the tap is kept, dated when it arrived.
     expect(
       await undoCheckInBooking(db, {
         ...undo,
         ...queued(new Date(nowDate().getTime() + 60 * MINUTE)),
       }),
-    ).toEqual({ ok: false, reason: "snapshot_invalid" });
-    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: true });
+    ).toMatchObject({ ok: true });
+    expect(await checkedIn(db, seat.booking.id)).toEqual({ status: "booked", checkedIn: false });
+    await markArrived(db, seat.booking.id, { recordedByPersonId: staff.id });
 
     // No device instant: the server's own moment stands in for it.
     const tap = {

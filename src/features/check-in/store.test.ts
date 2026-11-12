@@ -820,16 +820,6 @@ describe("a counter arrival queued with no signal", () => {
       }),
     ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
 
-    // A tap stamped in the future.
-    await expect(
-      checkInBooking(db, {
-        shopId: shop.id,
-        bookingId: booking.id,
-        recordedByPersonId: staff.id,
-        ...queued({ occurredAt: new Date(nowDate().getTime() + HOUR) }),
-      }),
-    ).resolves.toEqual({ ok: false, reason: "snapshot_invalid" });
-
     // And one with no idempotency key at all, which cannot be applied safely.
     await expect(
       checkInBooking(db, {

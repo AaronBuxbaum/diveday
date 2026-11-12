@@ -27,7 +27,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
-import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { offlineEventInstant, offlineEventOutOfBounds } from "@/lib/offline-events";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
 import type { RollCallEventStatus, RollCallSubjectKind } from "@/lib/roll-call";
@@ -2097,8 +2097,13 @@ export async function recordRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
-  // One instant for the event and the boat snapshot it keeps (#2300).
-  const occurredAt = input.occurredAt ?? nowDate();
+  // One instant for the event and the boat snapshot it keeps (#2300). An
+  // offline tap is never dated after its own sync (`offlineEventInstant`).
+  const now = nowDate();
+  const occurredAt =
+    input.source === "offline"
+      ? offlineEventInstant(input.occurredAt, now)
+      : (input.occurredAt ?? now);
   const outcome = await answeringReplayAsDuplicate(
     () => db.transaction((tx) => writeRollCall(tx, input, occurredAt)),
     {
@@ -2236,8 +2241,8 @@ async function writeRollCall(
       offlineEventOutOfBounds({
         clientEventId: input.clientEventId,
         offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-        occurredAt,
-        now: nowDate(),
+        // The device's own reading, beside its own `savedAt`.
+        occurredAt: input.occurredAt ?? occurredAt,
       })
     ) {
       return refuse("snapshot_invalid");
@@ -2499,8 +2504,13 @@ export async function recordCrewRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordCrewRollCallOutcome> {
-  // One instant for the event and the boat snapshot it keeps (#2300).
-  const occurredAt = input.occurredAt ?? nowDate();
+  // One instant for the event and the boat snapshot it keeps (#2300). An
+  // offline tap is never dated after its own sync (`offlineEventInstant`).
+  const now = nowDate();
+  const occurredAt =
+    input.source === "offline"
+      ? offlineEventInstant(input.occurredAt, now)
+      : (input.occurredAt ?? now);
   const outcome = await answeringReplayAsDuplicate(
     () =>
       db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
@@ -2665,8 +2675,8 @@ export async function recordCrewRollCall(
             offlineEventOutOfBounds({
               clientEventId: input.clientEventId,
               offlineSnapshotSavedAt: input.offlineSnapshotSavedAt,
-              occurredAt,
-              now: nowDate(),
+              // The device's own reading, beside its own `savedAt`.
+              occurredAt: input.occurredAt ?? occurredAt,
             })
           ) {
             return refuse("snapshot_invalid");
