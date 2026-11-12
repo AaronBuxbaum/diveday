@@ -9,7 +9,8 @@ import { buttonClass } from "@/components/ui/button";
  * this component rides in the shared staff and public shells, and importing
  * that module would pull the whole header into the shared first-load chunk.
  */
-const EYEBROW_CLASS = "text-[11px] leading-4 font-bold tracking-[0.16em] uppercase text-primary";
+const EYEBROW_CLASS =
+  "text-[0.6875rem] leading-normal font-bold tracking-[0.16em] uppercase text-primary";
 
 export interface DemoStartCopy {
   startTitle: string;
@@ -53,9 +54,9 @@ export function DemoStartStrip({
     <section
       aria-label={copy.startTitle}
       aria-busy={pending || undefined}
-      className="mt-3 rounded-inset border border-border bg-surface-sunken px-4 py-3"
+      className="mt-3 rounded-inset border border-border bg-surface-sunken px-1 py-3 sm:px-4"
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-1 sm:gap-3">
         <h2 className={EYEBROW_CLASS}>{copy.startTitle}</h2>
         <button
           type="button"
@@ -82,7 +83,7 @@ export function DemoStartStrip({
             className={buttonClass({
               variant: "secondary",
               size: "sm",
-              className: "text-start",
+              className: "max-w-full text-start",
             })}
             onClick={() => onStart(choice.role, choice.id)}
           >

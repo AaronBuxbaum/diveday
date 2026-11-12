@@ -256,6 +256,7 @@ type StoredRecord = {
 export type OfflineSyncResult = {
   clientEventId: string;
   status: "applied" | "duplicate" | "rejected";
+  storedOccurredAt?: string;
   reason?: string;
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
 };
@@ -1386,7 +1387,7 @@ async function postPendingEvents(batch: {
     const response = await fetch("/api/offline-manifests/sync", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(batch),
+      body: JSON.stringify({ ...batch, includeStoredInstants: true }),
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -1459,6 +1460,9 @@ export async function syncOfflineManifest(
         ...(result.noteDisposition ? { note: null } : {}),
         syncStatus: result.status === "rejected" ? "rejected" : "applied",
         rejectionReason: result.reason,
+        ...(result.status !== "rejected" && result.storedOccurredAt
+          ? { storedOccurredAt: result.storedOccurredAt }
+          : {}),
         // The revision DiveDay held this event by (`offlineEventInCopy`). A
         // replayed answer keeps the first one, which was already true.
         ...(result.status !== "rejected" && syncedAtRevision !== undefined

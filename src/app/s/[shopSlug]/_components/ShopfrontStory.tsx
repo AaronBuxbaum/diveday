@@ -4,6 +4,7 @@ import { parseBrandBadges } from "@/lib/brand";
 import type { ReviewAggregate } from "@/lib/reviews";
 import { ShopfrontHero } from "./ShopfrontHero";
 import { ShopPhotoStrip } from "./ShopPhotoStrip";
+import { hasShopWelcomeContent } from "./ShopWelcome";
 
 /** A name is still shown elsewhere in the public shell; this story earns its
  * space only when the shop has contributed something beyond that identity. */
@@ -49,6 +50,12 @@ export function ShopfrontStory({
   t: DiverTranslator;
   className: string;
 }) {
+  // The welcome already introduces the shop. Below the board keep its full
+  // description and additional photos, without repeating its rating or cover.
+  const welcomeShown = hasShopWelcomeContent(shop);
+  if (welcomeShown && !shop.description?.trim() && shop.shopfrontPhotoUrls.length === 0) {
+    return null;
+  }
   if (
     !hasShopfrontStoryContent({
       tagline: shop.tagline,
@@ -68,16 +75,16 @@ export function ShopfrontStory({
       <ShopfrontHero
         headingLevel="h2"
         name={shop.name}
-        tagline={shop.tagline}
+        tagline={welcomeShown ? null : shop.tagline}
         description={shop.description}
-        aggregate={aggregate}
+        aggregate={welcomeShown ? null : aggregate}
         heroImage={
-          shop.brandHeroImageUrl
+          !welcomeShown && shop.brandHeroImageUrl
             ? { url: shop.brandHeroImageUrl, alt: shop.brandHeroImageAlt ?? "" }
             : null
         }
-        badges={parseBrandBadges(shop.brandBadges)}
-        establishedYear={shop.establishedYear}
+        badges={welcomeShown ? [] : parseBrandBadges(shop.brandBadges)}
+        establishedYear={welcomeShown ? null : shop.establishedYear}
         locale={locale}
         t={t}
       />

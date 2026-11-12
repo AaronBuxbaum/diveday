@@ -10,6 +10,7 @@ import { type DepthAdvisory, depthAdvisoryIn } from "./findings";
 // Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { TrainingMarkCleared, TripManifest } from "./manifests";
+import { offlineStoredInstant } from "./offline-events";
 import type { PreDepartureCheckStatus } from "./pre-departure-check";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 // The roll-call rules come from `./roll-call`, never from `./manifests`: this
@@ -722,6 +723,8 @@ export type OfflineRollCallEvent = {
    */
   note?: string | null;
   occurredAt: string;
+  /** Committed server time; raw occurredAt still orders this device's queue. */
+  storedOccurredAt?: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
@@ -785,6 +788,8 @@ export type OfflineChecklistEvent = {
   retractsClientEventId?: string;
   note: string | null;
   occurredAt: string;
+  /** Committed server time; raw occurredAt still orders this device's queue. */
+  storedOccurredAt?: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
@@ -827,6 +832,8 @@ export type OfflineArrivalEvent = {
   /** Names the `arrived` this `cleared` takes back — see `OfflineRollCallEvent.retractsClientEventId`. */
   retractsClientEventId?: string;
   occurredAt: string;
+  /** Committed server time; raw occurredAt still orders this device's queue. */
+  storedOccurredAt?: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;
   /** See `OfflineRollCallEvent.syncedAtRevision`. */
@@ -1863,14 +1870,14 @@ export function latestOfflineChecklistCheck(
   // A saved tick newer than anything this device queued stands, as roll call's
   // does (`explicitResultAt`): somebody ticked the item again after this
   // device unticked it.
-  if (saved && saved.occurredAt > newest.occurredAt) return saved;
+  if (saved && saved.occurredAt > offlineStoredInstant(newest)) return saved;
   // A queued `cleared` with nothing newer over it must not fall through to
   // the snapshot's own stale "checked": that would hand the mark right back
   // to whoever just tapped it off.
   if (newest.status !== "checked") return undefined;
   return {
     state: "checked",
-    occurredAt: newest.occurredAt,
+    occurredAt: offlineStoredInstant(newest),
     note: newest.note,
     pending: newest.syncStatus === "pending",
     local: true,
@@ -2022,7 +2029,7 @@ function recordedResult(event: OfflineRollCallEvent): OfflineRollCallResult | nu
   if (event.status === "cleared") return null;
   return {
     state: event.status,
-    occurredAt: event.occurredAt,
+    occurredAt: offlineStoredInstant(event),
     pending: event.syncStatus === "pending",
     implied: false,
     local: true,
@@ -2098,10 +2105,30 @@ function explicitResultAt(
   checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
   matches: (subject: NonNullable<ReturnType<typeof offlineRollCallSubject>>) => boolean,
   saved: OfflineRollCallResult | undefined,
+  allQueued: readonly OfflineRollCallEvent[],
 ): OfflineRollCallResult | null | undefined {
   const latestAttempt = latestQueuedAttempt(events, checkpoint, matches);
   if (!latestAttempt) return saved;
   if (latestAttempt.syncStatus !== "rejected") {
+    // When the copy shows this tablet's own earlier committed statement, its
+    // next pending alarm follows it even on a slow clock. Raw device
+    // time cannot be compared with that saved server instant.
+    const followsOwnSaved =
+      saved &&
+      latestAttempt.syncStatus === "pending" &&
+      latestAttempt.status === "not_boarded" &&
+      allQueued.some((event) => {
+        const subject = offlineRollCallSubject(event);
+        return (
+          subject !== null &&
+          matches(subject) &&
+          event.checkpoint === checkpoint &&
+          event.syncStatus === "applied" &&
+          event.status === saved.state &&
+          event.storedOccurredAt === saved.occurredAt &&
+          event.occurredAt <= latestAttempt.occurredAt
+        );
+      });
     // **A saved statement newer than this device's own stands.** The device
     // keeps every event it queued, synced ones included, so without this its
     // own "back aboard" outlived a second crew member's later "did not come
@@ -2109,10 +2136,9 @@ function explicitResultAt(
     // reading the diver as aboard. DiveDay orders the two the same way: it
     // holds the synced one beneath the newer mark, and refuses the pending
     // one as `newer_event_exists`. Fixed-width ISO strings, compared as
-    // `latestQueuedAttempt` compares them. A device clock running fast still
-    // dates its own tap too late to lose here; nothing on the copy says by
-    // how much.
-    return saved && saved.occurredAt > latestAttempt.occurredAt
+    // `latestQueuedAttempt` compares them. A synced event carries its committed
+    // server instant separately from the raw clock that orders local taps.
+    return saved && !followsOwnSaved && saved.occurredAt > offlineStoredInstant(latestAttempt)
       ? saved
       : recordedResult(latestAttempt);
   }
@@ -2227,13 +2253,14 @@ function offlineRollCallOnOneDay(
   savedAt: (
     checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
   ) => OfflineRollCallResult | undefined,
+  allQueued: readonly OfflineRollCallEvent[],
 ): OfflineRollCallResult | undefined {
   // Only a result recorded *here* feeds the chain: an `implied` value the
   // snapshot carries is the server's own carry-forward, and re-deriving it is
   // the point.
   const explicitAt = (at: OfflineManifestSnapshot["manifests"][number]["checkpoint"]) => {
     const saved = savedAt(at);
-    return explicitResultAt(events, at, matches, saved?.implied ? undefined : saved);
+    return explicitResultAt(events, at, matches, saved?.implied ? undefined : saved, allQueued);
   };
   const order = offlineCheckpointOrder(snapshot);
   const index = order.indexOf(checkpoint);
@@ -2324,7 +2351,7 @@ function offlineRollCallAt(
         matches(subject) &&
         event.checkpoint === at &&
         event.status === saved.state &&
-        event.occurredAt === saved.occurredAt &&
+        offlineStoredInstant(event) === saved.occurredAt &&
         offlineEventInCopy(snapshot, event)
       );
     });
@@ -2333,7 +2360,7 @@ function offlineRollCallAt(
   const starts = offlineDayStarts(snapshot);
   const today = rollCallDayOf(starts, now);
   const dayOfEvent = (event: OfflineRollCallEvent) =>
-    rollCallDayOf(starts, new Date(event.occurredAt));
+    rollCallDayOf(starts, new Date(offlineStoredInstant(event)));
   // Every time, not only when the copy is older than today: a copy refreshed on
   // the morning of day two still holds day one's queued events, and they are
   // day one's. The saved results speak for today only if the copy was saved
@@ -2346,6 +2373,7 @@ function offlineRollCallAt(
     checkpoint,
     matches,
     savedDay >= today ? savedAt : () => undefined,
+    queued,
   );
   if (here || today === 0 || checkpoint === "departure") return here;
 
@@ -2365,7 +2393,7 @@ function offlineRollCallAt(
       checkpoint: event.checkpoint,
       status: event.status,
       day: dayOfEvent(event),
-      at: event.occurredAt,
+      at: offlineStoredInstant(event),
       result: recordedResult(event),
     });
   }

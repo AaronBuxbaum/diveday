@@ -73,3 +73,11 @@ export function offlineEventOutOfBounds(input: {
 export function offlineEventInstant(occurredAt: Date | undefined, now: Date): Date {
   return occurredAt && occurredAt.getTime() < now.getTime() ? occurredAt : now;
 }
+
+/** Keep the raw capture clock for local queue order; compare stored marks in server time. */
+export function offlineStoredInstant(event: {
+  occurredAt: string;
+  storedOccurredAt?: string;
+}): string {
+  return event.storedOccurredAt ?? event.occurredAt;
+}

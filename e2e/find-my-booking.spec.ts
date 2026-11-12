@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, makeActivitySafe, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
@@ -145,7 +146,14 @@ for (const [device, viewport] of [
       }
       await page.goto("/s/blue-mantis");
       await expect(page.locator("details#find-my-booking")).not.toHaveAttribute("open");
-      await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeInViewport();
+      const seeSchedule = page.getByRole("link", {
+        name: diverTranslator("en-US")("schedule.welcome.seeSchedule"),
+        exact: true,
+      });
+      await expect(seeSchedule).toBeVisible();
+      await seeSchedule.click();
+      await expect(page).toHaveURL(/#schedule$/);
+      await expect(page.locator("#schedule").filter({ visible: true })).toBeInViewport();
     });
   });
 }

@@ -10,6 +10,16 @@ import { cachedFormatter } from "@/lib/intl-cache";
 import type { ReviewAggregate } from "@/lib/reviews";
 import { BadgeWall } from "./BadgeWall";
 
+/** The lower story uses the same rule to avoid repeating the welcome's identity. */
+export function hasShopWelcomeContent(
+  shop: Pick<
+    NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>,
+    "tagline" | "description" | "brandHeroImageUrl"
+  >,
+) {
+  return Boolean(shop.tagline?.trim() || shop.description?.trim() || shop.brandHeroImageUrl);
+}
+
 /**
  * **A short welcome above the timetable** (Aaron, 2026-11-11, #4336, option B). A returning diver
  * wants the schedule first and still gets it one short scroll down; a first-timer, a parent or a
@@ -41,7 +51,7 @@ export function ShopWelcome({
 }) {
   const line = shop.tagline?.trim() || shop.description?.trim() || null;
   // Nothing the shop wrote and no photo: no welcome, rather than a name over two buttons.
-  if (!line && !shop.brandHeroImageUrl) return null;
+  if (!hasShopWelcomeContent(shop)) return null;
   const badges = parseBrandBadges(shop.brandBadges);
   const average = aggregate.count > 0 ? aggregate.average : null;
   return (

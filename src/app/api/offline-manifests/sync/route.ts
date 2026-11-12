@@ -5,7 +5,10 @@ import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
 import { offlineSyncTripsBelongToShop } from "@/db/trips";
 import { checkInBooking, undoCheckInBooking } from "@/features/check-in";
-import { latestOfflineManifestSnapshotRevisions } from "@/features/offline-manifest-snapshots";
+import {
+  latestOfflineManifestSnapshotRevisions,
+  offlineSyncInstants,
+} from "@/features/offline-manifest-snapshots";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { log } from "@/lib/log";
@@ -153,6 +156,7 @@ const bodySchema = z
   .object({
     /** Optimistic tenant fence; session/shop ownership checks below remain authoritative. */
     expectedShopSlug: z.string().min(1).max(64).optional(),
+    includeStoredInstants: z.literal(true).optional(),
     events: z.array(eventSchema).max(200),
     checklistEvents: z.array(checklistEventSchema).max(200).optional(),
     arrivalEvents: z.array(arrivalEventSchema).max(200).optional(),
@@ -390,5 +394,24 @@ export async function POST(request: Request) {
       error: error instanceof Error ? error.name : "unknown",
     });
   }
-  return Response.json({ results, ...(snapshotRevisions ? { snapshotRevisions } : {}) });
+  // A failed read fails the request; pending evidence retries with the same ids.
+  // A duplicate must return the original committed instant, never a retry's clock.
+  const stored = parsed.data.includeStoredInstants
+    ? await offlineSyncInstants(
+        db,
+        session.user.shopId,
+        results
+          .filter((result) => result.status !== "rejected")
+          .map((result) => result.clientEventId),
+      )
+    : new Map<string, string>();
+  return Response.json({
+    results: results.map((result) => ({
+      ...result,
+      ...(stored.has(result.clientEventId)
+        ? { storedOccurredAt: stored.get(result.clientEventId) }
+        : {}),
+    })),
+    ...(snapshotRevisions ? { snapshotRevisions } : {}),
+  });
 }

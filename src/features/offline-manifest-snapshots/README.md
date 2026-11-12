@@ -32,3 +32,9 @@ Imports from other features use their published index. Database reads and mutati
 existing tenant and authorization checks. A saved copy's token never carries an epoch newer than
 the erasures its rows reflect, and a higher revision always belongs to a later read of the rows,
 so a newer copy on a device is never replaced by an older read.
+
+## Committed instants at sync
+
+A client requesting `includeStoredInstants` gets the committed timestamp for successful event ids, including duplicates. `offlineSyncInstants` reads these timestamps after the writers commit; a retry never invents a new stored time. The browser preserves raw `occurredAt` for local queue ordering and keeps `storedOccurredAt` for comparisons with server snapshots. An unsynced missing-diver mark following the same device's saved applied mark remains visible even when its raw clock is behind the server.
+
+This does not infer cross-device chronology. Fast and slow clocks, a clock corrected between taps, and late sync remain unresolved in #4418. A send/receive offset was investigated and rejected: transport delay can shift an old aboard mark past a newer missing-diver mark. Resolving that needs causal conflict handling, not a guessed wall-clock offset. The automated route/database and IndexedDB tests simulate devices; they are not a physical two-device rehearsal.

@@ -6,3 +6,5 @@ export {
   nextOfflineManifestSnapshotRevision,
   readOfflineManifestRoster,
 } from "./store";
+
+export { offlineSyncInstants } from "./sync-instants";
