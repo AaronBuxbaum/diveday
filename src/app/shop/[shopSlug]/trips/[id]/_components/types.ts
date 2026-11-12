@@ -15,10 +15,10 @@ export type Waitlist = DepartureInterestRow[];
 export type StaffList = Awaited<ReturnType<typeof listStaff>>;
 export type TripDiveList = Awaited<ReturnType<typeof listTripDives>>;
 export type DiveSiteList = Awaited<ReturnType<typeof listDiveSites>>;
-/** The seat's release. A failed seal reaches the roster through readiness, not this row. */
+/** The seat's release; seal state and guardian prefetch facts stay in the server reader. */
 export type WaiverRow = Omit<
   Awaited<ReturnType<typeof listTripWaiverStatuses>>[number],
-  "personSealFailed"
+  "personSealFailed" | "minorDeclaredSeats"
 >;
 export type ReadinessRow = Awaited<ReturnType<typeof listTripReadiness>>[number];
 export type Requirement = Awaited<ReturnType<typeof getTripRequirements>>;
