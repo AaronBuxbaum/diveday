@@ -58,9 +58,7 @@ test.describe("warm navigation with a viewport-height fallback", () => {
     const landing = await page.evaluate(() => {
       const main = document.querySelector("main");
       const bar = document.querySelector("[data-chrome-bar]")?.getBoundingClientRect();
-      const back = [...document.querySelectorAll("main a")]
-        .find((anchor) => /^schedule$/i.test(anchor.textContent?.trim() ?? ""))
-        ?.getBoundingClientRect();
+      const heading = document.querySelector("main h1")?.getBoundingClientRect();
       return {
         scrollY: window.scrollY,
         maxTop: Math.max(
@@ -69,13 +67,13 @@ test.describe("warm navigation with a viewport-height fallback", () => {
             (main?.getBoundingClientRect().top ?? 0) + window.scrollY - (bar?.height ?? 0),
           ),
         ),
-        clearance: bar && back ? Math.round(back.top - bar.bottom) : null,
+        clearance: bar && heading ? Math.round(heading.top - bar.bottom) : null,
       };
     });
     expect(landing.scrollY, "the departure opened partway down itself").toBeLessThanOrEqual(
       landing.maxTop,
     );
-    expect(landing.clearance, "the back-link was left under the staff bar").not.toBeNull();
+    expect(landing.clearance, "the departure heading was left under the staff bar").not.toBeNull();
     expect(landing.clearance ?? -1).toBeGreaterThanOrEqual(0);
   });
 });
